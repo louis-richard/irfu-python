@@ -9,7 +9,9 @@
 #-----------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------------
 
-import pyRF as pyrf
+from pyrfu import pyrf
+from pyrfu import mms
+from pyrfu import plot as pltrf
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt

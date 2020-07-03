@@ -11,7 +11,9 @@
 
 
 import os
-import pyrf
+from pyrfu import pyrf
+from pyrfu import mms
+from pyrfu import plot as pltrf
 import xarray as xr
 import numpy as np
 import seaborn as sns

@@ -30,6 +30,7 @@ def edb(inp=None, b0=None, angle_lim=20, flag_method="E.B=0"):
 	if b0 is None:
 		raise ValueError("edb requires at least two inputs")
 	
+	defaultValue = 0
 	if flag_method == "Eperp+NaN":
 		defaultValue = np.nan
 		flag_method = "E.B=0"

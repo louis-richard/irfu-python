@@ -13,7 +13,9 @@
 #-----------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------------
 
-import pyRF
+from pyrfu import pyrf
+from pyrfu import mms
+from pyrfu import plot as pltrf
 import seaborn as sns
 from cycler import cycler
 import matplotlib.pyplot as plt

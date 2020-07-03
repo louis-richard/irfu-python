@@ -12,7 +12,11 @@
 #
 #-----------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------------
-import pyRF as pyrf
+
+
+from pyrfu import pyrf
+from pyrfu import mms
+from pyrfu import plot as pltrf
 import numpy as np
 import pdb
 from astropy import constants
