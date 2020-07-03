@@ -1,11 +1,33 @@
 # Plots of B, J, E, JxB electric field, and J.E. Calculates J using
 # Curlometer method. 
-# Written by D. B. Graham
+# Written by L. RICHARD
 
 from pyrfu import pyrf
 from pyrfu import mms
 from pyrfu import plot as pltrf
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from cycler import cycler
+from matplotlib import cm
+from matplotlib import colors
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib._color_data as mcd
+from astropy import constants
+date_form = mdates.DateFormatter("%H:%M:%S")
+sns.set()
+sns.set_style("ticks", {"xtick.major.size": 8, "ytick.major.size": 8,'axes.grid': True,\
+                        'font.family': ['sans-serif']})
+
+sns.set_context("paper")
+
+plt.rc('lines', linewidth=0.8)
+color = ["k","b","r","g","c","m","y"]
+default_cycler = cycler(color=color)
+plt.rc('axes',prop_cycle=default_cycler)
+plt.close("all")
+
 
 Tint = ["2016-06-07T01:53:44.000","2016-06-07T19:30:34.000"]
 
@@ -28,7 +50,7 @@ Exyzav = pyrf.ts_vec_xyz(Exyz1.time.data,(Exyz1.data+Exyz2.data+Exyz3.data+Exyz4
 
 
 for i in ic:
-	exec("ni? = mms.get_data('Ni_fpi_fast_l2',Tint,?)".replace("?",str(i))) 			# For MP phases
+	#exec("ni? = mms.get_data('Ni_fpi_fast_l2',Tint,?)".replace("?",str(i))) 			# For MP phases
 	exec("ni? = mms.get_data('Nhplus_hpca_srvy_l2',Tint,?)".replace("?",str(i))) 		# For 1x phases
 	exec("ni? = pyrf.resample(ni?,ni1)".replace("?",str(i)))
 
@@ -41,7 +63,7 @@ for i in ic:
 
 
 # Assuming GSE and DMPA are the same coordinate system.
-[j,divB,B,jxB,divTshear,divPb] = pyrf.c_4_j(Rxyz1,Rxyz2,Rxyz3,Rxyz4,Bxyz1,Bxyz2,Bxyz3,Bxyz4)
+j, divB, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz1,Rxyz2,Rxyz3,Rxyz4,Bxyz1,Bxyz2,Bxyz3,Bxyz4)
 
 divovercurl 		= divB
 divovercurl.data 	= np.abs(divB.data)/np.linalg.norm(j)
@@ -50,88 +72,61 @@ divovercurl.data 	= np.abs(divB.data)/np.linalg.norm(j)
 jfac = pyrf.convert_fac(j,Bxyzav,[1,0,0])
 
 
-
-
-
-
+# plot
 fig, axs = plt.subplots(8,sharex=True,figsize=(6.5,9))
 fig.subplots_adjust(bottom=0.1,top=0.95,left=0.15,right=0.85,hspace=0)
 pltrf.plot_line(axs[0],Bxyzav)
-
+axs[0].set_ylabel("$B_{DMPA}$"+"\n"+"[nT]")
+axs[0].legend(["$B_x$","$B_y$","$B_z$"],frameon=False,ncol=3,loc="upper right")
+axs[0].set_ylim([-70,70])
+axs[0].text(0.02,0.83,"(a)", transform=axs[0].transAxes)
 
 pltrf.plot_line(axs[1],ni1)
 pltrf.plot_line(axs[1],ni2)
 pltrf.plot_line(axs[1],ni3)
 pltrf.plot_line(axs[1],ni4)
+axs[1].set_ylabel("$n_i$"+"\n"+"[cm$^{-3}$]")
+axs[1].set_yscale("log")
+axs[1].set_ylim([1e-4,1e1])
+axs[1].text(0.02,0.83,"(b)", transform=axs[1].transAxes)
+axs[1].legend(["MMS1","MMS2","MMS3","MMS4"],frameon=False,ncol=4,loc="upper right")
 
+j.data *= 1e9
+pltrf.plot_line(axs[2],j)
+axs[2].set_ylabel("$J_{DMPA}$"+"\n"+"[nA.m$^{-2}$]")
+axs[2].legend(["$J_x$","$J_y$","$J_z$"],frameon=False,ncol=3,loc="upper right")
+axs[2].text(0.02,0.83,"(c)", transform=axs[2].transAxes)
 
+jfac.data *= 1e9
+pltrf.plot_line(axs[3],jfac)
+axs[3].set_ylabel("$J_{FAC}$"+"\n"+"[nA.m$^{-2}$]")
+axs[3].legend(["$J_{\\perp 1}$","$J_{\\perp 2}$","$J_{\\parallel}$"],frameon=False,ncol=3,loc="upper right")
+axs[3].text(0.02,0.83,"(d)", transform=axs[3].transAxes)
 
+pltrf.plot_line(axs[4],divovercurl)
+axs[4].set_ylabel("$\\frac{|\\nabla . B|}{|\\nabla \\times B|}$")
+axs[4].text(0.02,0.83,"(e)", transform=axs[4].transAxes)
 
+pltrf.plot_line(axs[5],Exyzav)
+axs[5].set_ylabel("$E_{DSL}$"+"\n"+"[mV.m$^{-1}$]")
+axs[5].legend(["$E_x$","$E_y$","$E_z$"],frameon=False,ncol=3,loc="upper right")
+axs[5].text(0.02,0.83,"(f)", transform=axs[5].transAxes)
 
+jxB.data /= ni.data[:,np.newaxis]
+jxB.data /= 1.6e-19*1000 								# Convert to (mV/m)
+jxB.data[np.linalg.norm(jxB.data,axis=1)>100] = np.nan 	# Remove some questionable fields
+pltrf.plot_line(axs[6],jxB)
+axs[6].set_ylabel("$J \\times B/n_{e}q_{e}$"+"\n"+"[mV.m$^{-1}$]")
+axs[6].text(0.02,0.83,"(g)", transform=axs[6].transAxes)
 
+j 		= pyrf.resample(j,Exyzav)
+EdotJ 	= pyrf.dot(Exyzav,j)/1000 #J (nA/m^2), E (mV/m), E.J (nW/m^3)
 
-%%
-h = irf_plot(8,'newfigure');
+pltrf.plot_line(axs[7],EdotJ)
+axs[7].set_ylabel("$E . J$"+"\n"+"[nW.m$^{-3}]$");
+axs[7].text(0.02,0.83,"(h)", transform=axs[7].transAxes)
 
-hca = irf_panel('BMMS');
-irf_plot(hca,Bxyzav);
-ylabel(hca,{'B_{DMPA}','(nT)'},'Interpreter','tex');
-irf_legend(hca,{'B_{x}','B_{y}','B_{z}'},[0.88 0.10])
-irf_zoom(hca,'y',[-70 70]);
-irf_legend(hca,'(a)',[0.99 0.98],'color','k')
+axs[0].set_title("MMS - Current density and fields")
+fig.align_ylabels(axs)
+axs[-1].set_xlim(Tint)
 
-mmsColors=[0 0 0; 1 0 0 ; 0 0.5 0 ; 0 0 1];
-hca = irf_panel('niMMS4'); set(hca,'ColorOrder',mmsColors)
-irf_pl_tx(hca,'ni?',1);
-ylabel(hca,{'n_i','(cm^{-3})'},'Interpreter','tex');
-set(hca,'yscale','log');
-irf_zoom(hca,'y',[1e-4 10]);
-irf_legend(hca,'(b)',[0.99 0.98],'color','k')
-irf_legend(hca,{'MMS1','MMS2','MMS3','MMS4'},[0.99 0.1],'color','cluster')
-
-hca = irf_panel('J');
-j.data = j.data*1e9;
-irf_plot(hca,j);
-ylabel(hca,{'J_{DMPA}','(nA m^{-2})'},'Interpreter','tex');
-irf_legend(hca,{'J_{x}','J_{y}','J_{z}'},[0.88 0.10])
-irf_legend(hca,'(c)',[0.99 0.98],'color','k')
-
-hca = irf_panel('Jfac');
-jfac.data = jfac.data*1e9;
-irf_plot(hca,jfac);
-ylabel(hca,{'J_{FAC}','(nA m^{-2})'},'Interpreter','tex');
-irf_legend(hca,{'J_{\perp 1}','J_{\perp 2}','J_{||}'},[0.88 0.10])
-irf_legend(hca,'(d)',[0.99 0.98],'color','k')
-
-hca = irf_panel('divovercurl');
-irf_plot(hca,divovercurl);
-ylabel(hca,{'|\nabla . B|','|\nabla \times B|'},'Interpreter','tex');
-irf_legend(hca,'(e)',[0.99 0.98],'color','k')
-
-hca = irf_panel('EMMS1');
-irf_plot(hca,Exyzav);
-ylabel(hca,{'E_{DSL}','(mV m^{-1})'},'Interpreter','tex');
-irf_legend(hca,{'E_{x}','E_{y}','E_{z}'},[0.88 0.10])
-irf_legend(hca,'(b)',[0.99 0.98],'color','k')
-
-hca = irf_panel('jxB');
-jxB.data = jxB.data./[ni.data ni.data ni.data]; 
-jxB.data = jxB.data/1.6e-19/1000; %Convert to (mV/m)
-jxB.data(abs(jxB.data) > 100) = NaN; % Remove some questionable fields
-irf_plot(hca,jxB);
-ylabel(hca,{'J \times B/n_{e} q_{e}','(mV m^{-1})'},'Interpreter','tex');
-irf_legend(hca,'(f)',[0.99 0.98],'color','k')
-
-j = j.resample(Exyzav);
-EdotJ = dot(Exyzav.data,j.data,2)/1000; %J (nA/m^2), E (mV/m), E.J (nW/m^3)
-EdotJ = TSeries(Exyzav.time,EdotJ);
-
-hca = irf_panel('jdotE');
-irf_plot(hca,EdotJ);
-ylabel(hca,{'E . J','(nW m^{-3})'},'Interpreter','tex');
-irf_legend(hca,'(g)',[0.99 0.98],'color','k')
-
-title(h(1),'MMS - Current density and fields');
-
-irf_plot_axis_align(1,h(1:8))
-irf_zoom(h(1:8),'x',Tint);

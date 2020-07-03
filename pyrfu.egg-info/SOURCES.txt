@@ -26,6 +26,7 @@ pyrfu/pyrf/__init__.py
 pyrfu/pyrf/abs.py
 pyrfu/pyrf/agyro_coeff.py
 pyrfu/pyrf/c_4_grad.py
+pyrfu/pyrf/c_4_j.py
 pyrfu/pyrf/c_4_k.py
 pyrfu/pyrf/calc_disprel.py
 pyrfu/pyrf/calc_dt.py

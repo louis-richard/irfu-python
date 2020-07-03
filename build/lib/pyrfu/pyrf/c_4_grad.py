@@ -4,7 +4,8 @@ import xarray as xr
 from .resample import resample
 from .c_4_k import c_4_k
 from .norm import norm
-
+from .dot import dot
+from .cross import cross
 
 
 
