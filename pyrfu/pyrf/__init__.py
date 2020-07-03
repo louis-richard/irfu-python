@@ -57,6 +57,6 @@ from .psd import *
 
 from .c_4_k import c_4_k
 from .c_4_grad import c_4_grad
-from .c_4_j import c_4_j	
+from .c_4_j import c_4_j
 
 from .fname import fname

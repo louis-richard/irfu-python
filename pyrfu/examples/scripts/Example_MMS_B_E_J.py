@@ -1,6 +1,6 @@
-% Plots of B, J, E, JxB electric field, and J.E. Calculates J using
-% Curlometer method. 
-% Written by D. B. Graham
+# Plots of B, J, E, JxB electric field, and J.E. Calculates J using
+# Curlometer method. 
+# Written by D. B. Graham
 
 from pyrfu import pyrf
 from pyrfu import mms
@@ -40,15 +40,32 @@ for i in ic:
 	exec("Rxyz? = pyrf.resample(Rxyz?,Bxyz1)".replace("?",str(i)))
 
 
-% Assuming GSE and DMPA are the same coordinate system.
-[j,divB,B,jxB,divTshear,divPb] = c_4_j('Rxyz?','Bxyz?');
+# Assuming GSE and DMPA are the same coordinate system.
+[j,divB,B,jxB,divTshear,divPb] = pyrf.c_4_j(Rxyz1,Rxyz2,Rxyz3,Rxyz4,Bxyz1,Bxyz2,Bxyz3,Bxyz4)
 
-divovercurl = divB;
-divovercurl.data = abs(divovercurl.data)./j.abs.data;
+divovercurl 		= divB
+divovercurl.data 	= np.abs(divB.data)/np.linalg.norm(j)
 
-% Transform current density into field-aligned coordinates
-jfac = irf_convert_fac(j,Bxyzav,[1 0 0]);
-jfac.coordinateSystem = 'FAC';
+# Transform current density into field-aligned coordinates
+jfac = pyrf.convert_fac(j,Bxyzav,[1,0,0])
+
+
+
+
+
+
+fig, axs = plt.subplots(8,sharex=True,figsize=(6.5,9))
+fig.subplots_adjust(bottom=0.1,top=0.95,left=0.15,right=0.85,hspace=0)
+pltrf.plot_line(axs[0],Bxyzav)
+
+
+pltrf.plot_line(axs[1],ni1)
+pltrf.plot_line(axs[1],ni2)
+pltrf.plot_line(axs[1],ni3)
+pltrf.plot_line(axs[1],ni4)
+
+
+
 
 
 
