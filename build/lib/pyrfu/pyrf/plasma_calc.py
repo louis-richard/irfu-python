@@ -61,9 +61,9 @@ def plasma_calc(B=None,Ti=None,Te=None,Ni=None,Ne=None):
 	Ne = 1e6*Ne
 	Ni = 1e6*Ni
 	if B.ndim == 2:
-		B_SI = 1e-9*abs(B)
+		B_SI = 1e-9*np.linalg.norm(B,axis=1)
 	else :
-		B_SI = 1e-9*np.abs(B)
+		B_SI = 1e-9*np.linalg.norm(B,axis=1)
 
 	
 	Wpe = np.sqrt(Ne*e**2/(m_e*epso)) # rad/s
