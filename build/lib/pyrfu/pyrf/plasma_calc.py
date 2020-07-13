@@ -49,13 +49,13 @@ def plasma_calc(B=None,Ti=None,Te=None,Ni=None,Ne=None):
 	c       = constants.c.value
 	epso    = constants.eps0.value
 	mp_me   = m_p/m_e
-	
+
 	# Resample all variables with respect to the magnetic field
 	nt = len(B)
-	if len(Ti) != nt: Ti = resample(Ti,B)
-	if len(Te) != nt: Te = resample(Te,B)
-	if len(Ni) != nt: Ni = resample(Ni,B)
-	if len(Ne) != nt: Ne = resample(Ne,B)
+	if len(Ti) != nt: Ti = resample(Ti,B).data
+	if len(Te) != nt: Te = resample(Te,B).data
+	if len(Ni) != nt: Ni = resample(Ni,B).data
+	if len(Ne) != nt: Ne = resample(Ne,B).data
 
 	# Transform number density and magnetic field to SI units
 	Ne = 1e6*Ne
@@ -75,7 +75,7 @@ def plasma_calc(B=None,Ti=None,Te=None,Ni=None,Ne=None):
 	Vte = c*np.sqrt(1-1/(Te*e/(m_e*c**2)+1)**2);           # m/s (relativ. correct), particle with Vte has energy e*Te
 	Vtp = c*np.sqrt(1-1/(Ti*e/(m_p*c**2)+1)**2);           # m/s
 	Vts = np.sqrt((Te*e+3*Ti*e)/m_p);                      # Sound speed formula (F. Chen, Springer 1984). Relativistic?
-	
+
 	gamma_e = 1/np.sqrt(1-(Vte/c)**2);
 	gamma_p = 1/np.sqrt(1-(Vtp/c)**2);
 
@@ -95,10 +95,29 @@ def plasma_calc(B=None,Ti=None,Te=None,Ni=None,Ne=None):
 	Rop = m_p*c/(e*B_SI)*np.sqrt(gamma_p**2-1); # m, relativistically correct
 	Ros = Vts/(Fcp*2*np.pi) # m
 
-	out = xr.Dataset({"Wpe" : Wpe, "Wce" : Wce, "Wpp" : Wpp, "Va" : Va, "Vae" : Vae, \
-						"Vte" : Vte, "Vtp" : Vtp, "Vts" : Vts, "gamma_e" : gamma_e, \
-						"gamma_p" : gamma_p, "Le" : Le, "Li" : Li, "Ld" : Ld, "Nd" : Nd, \
-						"Fpe" : Fpe, "Fce" : Fce, "Fuh" : Fuh, "Fpp" : Fpp, "Fcp" : Fcp, 
-						"Flh" : Flh, "Roe" : Roe, "Rop" : Rop, "Ros" : Ros})
+	out = xr.Dataset({"time"		: B.time.data,			\
+						"Wpe" 		: (["time"], Wpe), 		\
+						"Wce" 		: (["time"], Wce), 		\
+						"Wpp" 		: (["time"], Wpp), 		\
+						"Va" 		: (["time"], Va), 		\
+						"Vae" 		: (["time"], Vae), 		\
+						"Vte" 		: (["time"], Vte), 		\
+						"Vtp" 		: (["time"], Vtp),		\
+						"Vts" 		: (["time"], Vts), 		\
+						"gamma_e" 	: (["time"], gamma_e), 	\
+						"gamma_p" 	: (["time"], gamma_p), 	\
+						"Le" 		: (["time"], Le), 		\
+						"Li" 		: (["time"], Li), 		\
+						"Ld" 		: (["time"], Ld), 		\
+						"Nd" 		: (["time"], Nd),		\
+						"Fpe" 		: (["time"], Fpe),	 	\
+						"Fce" 		: (["time"], Fce), 		\
+						"Fuh" 		: (["time"], Fuh), 		\
+						"Fpp" 		: (["time"], Fpp), 		\
+						"Fcp" 		: (["time"], Fcp), 		\
+						"Flh" 		: (["time"], Flh), 		\
+						"Roe" 		: (["time"], Roe), 		\
+						"Rop" 		: (["time"], Rop), 		\
+						"Ros" 		: (["time"], Ros)})
 	
 	return out

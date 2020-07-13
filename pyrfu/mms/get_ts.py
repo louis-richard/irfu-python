@@ -65,8 +65,8 @@ def get_ts(file_path="",cdfname="",trange=None):
 				y["attrs"]  = {"LABLAXIS": "comp"}
 			else :
 				try :
-					y["data"] = f[depend1_key][start_ind:stop_ind]
-				except :
+					y["data"] = f[depend1_key][start_ind:stop_ind,:]
+				except IndexError:
 					y["data"] = f[depend1_key][...]
 
 				# If vector componenents remove magnitude index
