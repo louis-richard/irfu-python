@@ -7,6 +7,7 @@ def db_get_ts(dsetName,cdfName,trange):
 	Var = {}
 
 	dset = dsetName.split("_")
+
 	probe 			= dset[0][-1]
 	Var["inst"] 	= dset[1]
 	Var["tmmode"] 	= dset[2]

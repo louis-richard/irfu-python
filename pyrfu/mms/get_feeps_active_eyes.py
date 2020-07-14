@@ -113,7 +113,7 @@ def get_feeps_active_eyes(trange, probe, Var):
         active_table["4-ion"]["bottom"]         = [6, 7, 8]
        
         
-        sensors = active_table["-".join([probe.lower(),Var["dtype"].lower()])]
+        sensors = active_table["{:d}-{}".format(probe,Var["dtype"].lower())]
         
         if level.lower() == "sitl":
             sensors["top"]      = list(set(sensors['top']) & set([5, 11, 12]))

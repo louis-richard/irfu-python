@@ -6,6 +6,8 @@ def get_feeps_eye(tar_var="fluxe_brst_l2", mmsId="1", eId="bottom-4",trange=None
     if trange is None:
         raise ValueError("empty time interval")
     
+    if isinstance(mmsId,str): mmsId = int(mmsId)
+
     Var = {}
     Var["inst"] = "feeps"
 
@@ -22,8 +24,8 @@ def get_feeps_eye(tar_var="fluxe_brst_l2", mmsId="1", eId="bottom-4",trange=None
     Var["tmmode"] = tar_var.split("_")[1]
     Var["lev"] = tar_var.split("_")[2]
 
-    dsetName = "mms{}_feeps_{}_l2_{}".format(mmsId,Var["tmmode"],Var["dtype"])
-    dsetPref = "mms{}_epd_feeps_{}_{}_{}".format(mmsId,Var["tmmode"],Var["lev"],Var["dtype"])
+    dsetName = "mms{:d}_feeps_{}_l2_{}".format(mmsId,Var["tmmode"],Var["dtype"])
+    dsetPref = "mms{:d}_epd_feeps_{}_{}_{}".format(mmsId,Var["tmmode"],Var["lev"],Var["dtype"])
 
     active_eyes = get_feeps_active_eyes(trange,mmsId,Var)
 
@@ -35,6 +37,8 @@ def get_feeps_eye(tar_var="fluxe_brst_l2", mmsId="1", eId="bottom-4",trange=None
             if data_units == "flux":
                 suf = "_".join([suf,"intensity","sensorid",str(eId)])
             elif data_units == "counts":
+                suf = "_".join([suf,"counts","sensorid",str(eId)])
+            elif data_units == "countrate":
                 suf = "_".join([suf,"count_rate","sensorid",str(eId)])
             elif data_units == "mask":
                 suf = "_".join([suf,"sector_mask","sensorid",str(eId)])
@@ -44,5 +48,10 @@ def get_feeps_eye(tar_var="fluxe_brst_l2", mmsId="1", eId="bottom-4",trange=None
             raise ValueError("Unactive eye")
 
     out = db_get_ts(dsetName,"_".join([dsetPref,suf]),trange)
+    out.attrs["tmmode"] = Var["tmmode"]
+    out.attrs["lev"] = Var["lev"]
+    out.attrs["mmsId"] = mmsId
+    out.attrs["dtype"] = Var["dtype"]
+
     
     return out

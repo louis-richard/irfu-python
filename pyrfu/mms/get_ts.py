@@ -102,6 +102,10 @@ def get_ts(file_path="",cdfname="",trange=None):
 				# Remove spaces in label
 				try:
 					y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ","_")
+					
+					if y["attrs"]["LABLAXIS"] == "Diffential_energy_channels":
+						y["attrs"]["LABLAXIS"] = "Differential_energy_channels"
+						
 				except KeyError:
 					y["attrs"]["LABLAXIS"] = "comp"
 

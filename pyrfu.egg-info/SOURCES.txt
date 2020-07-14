@@ -7,7 +7,10 @@ pyrfu.egg-info/dependency_links.txt
 pyrfu.egg-info/requires.txt
 pyrfu.egg-info/top_level.txt
 pyrfu/mms/__init__.py
+pyrfu/mms/calc_feeps_omni.py
 pyrfu/mms/db_get_ts.py
+pyrfu/mms/feeps_remove_sun.py
+pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py

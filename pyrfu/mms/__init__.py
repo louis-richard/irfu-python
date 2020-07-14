@@ -13,5 +13,9 @@ from .get_feeps_omni import get_feeps_omni
 from .get_feeps_all import get_feeps_all
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 from .feeps_split_integral_ch import feeps_split_integral_ch
+from .feeps_remove_sun import feeps_remove_sun
+from .calc_feeps_omni import calc_feeps_omni
+from .feeps_spin_avg import feeps_spin_avg
+
 
 from .remove_idist_background import remove_idist_background

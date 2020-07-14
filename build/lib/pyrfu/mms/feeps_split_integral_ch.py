@@ -37,10 +37,10 @@ def feeps_split_integral_ch(inp_dset):
 		except IndexError:
 			pass
 
-	out 		= xr.Dataset(outdict)
-	out_500keV 	= xr.Dataset(outdict_500keV)
+	out 		= xr.Dataset(outdict,attrs=inp_dset.attrs)
+	out_500keV 	= xr.Dataset(outdict_500keV,attrs=inp_dset.attrs)
 
-	out["spin_sectors"] 		= inp_dset["spin_sectors"]
-	out_500keV["spin_sectors"] 	= inp_dset["spin_sectors"]
+	#out.attrs["spin_sectors"] 		   = inp_dset.attrs["spin_sectors"]
+	#out_500keV.attrs["spin_sectors"]   = inp_dset.attrs["spin_sectors"]
 
 	return (out,out_500keV)
