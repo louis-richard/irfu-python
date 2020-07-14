@@ -5,7 +5,7 @@ from .get_feeps_eye import get_feeps_eye
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def get_feeps_all(tar_var="fluxe_brst_l2",mmsId=1,trange=None):
+def get_feeps_alleyes(tar_var="fluxe_brst_l2",mmsId=1,trange=None):
 
 	Var = {}
 
@@ -22,13 +22,13 @@ def get_feeps_all(tar_var="fluxe_brst_l2",mmsId=1,trange=None):
 	else :
 		raise ValueError("Invalid specie")
 
-	active_eyes = get_feeps_active_eyes(trange, mmsId, Var)
+	active_eyes = get_feeps_active_eyes(Var,trange,mmsId)
 
 	eIds = ["{}-{:d}".format(k,s)  for k in active_eyes for s in active_eyes[k]]
 
 	outdict = {}
 
-	for eId in eIds: outdict[eId] = get_feeps_eye(tar_var,mmsId,eId,trange)
+	for eId in eIds: outdict[eId] = get_feeps_oneeye(tar_var,eId,trange,mmsId)
 
 	out 		= xr.Dataset(outdict)
 	out.attrs 	= Var

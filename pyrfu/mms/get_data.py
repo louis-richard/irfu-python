@@ -31,103 +31,104 @@ from ..pyrf import dist_append
 
 
 #-----------------------------------------------------------------------------------------------------------------------
-def get_data(varStr="", tint=None, probe="1", silent=False):
+def get_data(varStr="", tint=None, mmsId="1", silent=False):
 	"""
 	Load a variable. varStr must in var (see below)
 
 	Parameters :
-		- varStr            [xarray]                Key of the target variable
-		- tint              [list]                  Time interval
-		- probe             [str/int/float]         Index of the target probe
-		- silent            [bool]                  Set to False (default) to follow the loading
+		varStr : str
+			Key of the target variable (see below)
+
+		tint : list of str
+			Time interval
+
+		mmsId : str/int
+			Index of the target spacecraft
+
+		silent : bool
+			Set to False (default) to follow the loading
 
 	Returns :
-		- out               [xarray]                Time serie of the target variable of measured by the target 
-													spacecraft over the selected time interval
+		out : DataArray
+			Time series of the target variable of measured by the target spacecraft over the selected time interval
 	
 	Example :
-		>>> # path of MMS data
-		>>> data_path = "/Volumes/mms"
-		>>> # Time interval
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> # index of the spacecraft
-		>>> ic = 1
-		>>> Bxyz = pyrf.get_data("B_gse_fgm_brst_l2",Tint,ic)
+		>>> gseB = mms.get_data("B_gse_fgm_brst_l2",Tint,1)
 
 	EPHEMERIS :
 	"R_gse", "R_gsm"
 
 	FGM : 
-	"B_gsm_fgm_srvy_l2", "B_gsm_fgm_brst_l2", "B_gse_fgm_srvy_l2"
-	"B_gse_fgm_brst_l2", "B_bcs_fgm_srvy_l2", "B_bcs_fgm_brst_l2"
+	"B_gsm_fgm_srvy_l2", "B_gsm_fgm_brst_l2", "B_gse_fgm_srvy_l2",
+	"B_gse_fgm_brst_l2", "B_bcs_fgm_srvy_l2", "B_bcs_fgm_brst_l2",
 	"B_dmpa_fgm_srvy_l2", "B_dmpa_fgm_brst_l2"
 
 	DFG & AFG :
-	"B_gsm_dfg_srvy_l2pre", "B_gse_dfg_srvy_l2pre", "B_dmpa_dfg_srvy_l2pre"
-	"B_bcs_dfg_srvy_l2pre", "B_gsm_afg_srvy_l2pre", "B_gse_afg_srvy_l2pre"
+	"B_gsm_dfg_srvy_l2pre", "B_gse_dfg_srvy_l2pre", "B_dmpa_dfg_srvy_l2pre",
+	"B_bcs_dfg_srvy_l2pre", "B_gsm_afg_srvy_l2pre", "B_gse_afg_srvy_l2pre",
 	"B_dmpa_afg_srvy_l2pre", "B_bcs_afg_srvy_l2pre"
 
 	SCM :
 	"B_gse_scm_brst_l2"
 
 	EDP :
-	"Phase_edp_fast_l2a", "Phase_edp_slow_l2a", "Sdev12_edp_slow_l2a"
-	"Sdev34_edp_slow_l2a", "Sdev12_edp_fast_l2a", "Sdev34_edp_fast_l2a"
-	"E_dsl_edp_brst_l2"
-	"E_dsl_edp_fast_l2", "E_dsl_edp_brst_ql", "E_dsl_edp_fast_ql"
-	"E_dsl_edp_slow_l2", "E_gse_edp_brst_l2", "E_gse_edp_fast_l2"
-	"E_gse_edp_slow_l2", "E2d_dsl_edp_brst_l2pre", "E2d_dsl_edp_fast_l2pre"
-	"E2d_dsl_edp_brst_ql", "E2d_dsl_edp_fast_ql", "E2d_dsl_edp_l2pre"
-	"E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_l2pre", "E_dsl_edp_l2pre"
-	"E_dsl_edp_fast_l2pre", "E_dsl_edp_brst_l2pre", "E_dsl_edp_slow_l2pre"
-	"E_ssc_edp_brst_l2a", "E_ssc_edp_fast_l2a", "E_ssc_edp_slow_l2a"
-	"V_edp_fast_sitl", "V_edp_slow_sitl", "V_edp_slow_l2"
-	"V_edp_fast_l2", "V_edp_brst_l2"
+	"Phase_edp_fast_l2a", "Phase_edp_slow_l2a", "Sdev12_edp_slow_l2a",
+	"Sdev34_edp_slow_l2a", "Sdev12_edp_fast_l2a", "Sdev34_edp_fast_l2a",
+	"E_dsl_edp_brst_l2", "E_dsl_edp_fast_l2", "E_dsl_edp_brst_ql", 
+	"E_dsl_edp_fast_ql", "E_dsl_edp_slow_l2", "E_gse_edp_brst_l2", 
+	"E_gse_edp_fast_l2", "E_gse_edp_slow_l2", "E2d_dsl_edp_brst_l2pre", 
+	"E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_ql", "E2d_dsl_edp_fast_ql", 
+	"E2d_dsl_edp_l2pre", "E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_l2pre", 
+	"E_dsl_edp_l2pre", "E_dsl_edp_fast_l2pre", "E_dsl_edp_brst_l2pre", 
+	"E_dsl_edp_slow_l2pre", "E_ssc_edp_brst_l2a", "E_ssc_edp_fast_l2a", 
+	"E_ssc_edp_slow_l2a", "V_edp_fast_sitl", "V_edp_slow_sitl", 
+	"V_edp_slow_l2", "V_edp_fast_l2", "V_edp_brst_l2"
 
 	FPI Ions : 
-	"Vi_dbcs_fpi_brst_l2", "Vi_dbcs_fpi_fast_l2", "Vi_dbcs_fpi_l2"
-	"Vi_gse_fpi_ql", "Vi_gse_fpi_fast_ql", "Vi_dbcs_fpi_fast_ql"
-	"Vi_gse_fpi_fast_l2", "Vi_gse_fpi_brst_l2", "partVi_gse_fpi_brst_l2"
-	"Ni_fpi_brst_l2", "partNi_fpi_brst_l2", "Ni_fpi_brst"
-	"Ni_fpi_fast_l2", "Ni_fpi_ql", "Enfluxi_fpi_fast_ql"
-	"Enfluxi_fpi_fast_l2", "Tperpi_fpi_brst_l2", "Tparai_fpi_brst_l2"
-	"partTperpi_fpi_brst_l2", "partTparai_fpi_brst_l2", "Ti_dbcs_fpi_brst_l2"
-	"Ti_dbcs_fpi_brst", "Ti_dbcs_fpi_fast_l2", "Ti_gse_fpi_ql"
-	"Ti_dbcs_fpi_ql", "Ti_gse_fpi_brst_l2", "Pi_dbcs_fpi_brst_l2"
-	"Pi_dbcs_fpi_brst", "Pi_dbcs_fpi_fast_l2", "Pi_gse_fpi_ql"
+	"Vi_dbcs_fpi_brst_l2", "Vi_dbcs_fpi_fast_l2", "Vi_dbcs_fpi_l2",
+	"Vi_gse_fpi_ql", "Vi_gse_fpi_fast_ql", "Vi_dbcs_fpi_fast_ql",
+	"Vi_gse_fpi_fast_l2", "Vi_gse_fpi_brst_l2", "partVi_gse_fpi_brst_l2",
+	"Ni_fpi_brst_l2", "partNi_fpi_brst_l2", "Ni_fpi_brst",
+	"Ni_fpi_fast_l2", "Ni_fpi_ql", "Enfluxi_fpi_fast_ql",
+	"Enfluxi_fpi_fast_l2", "Tperpi_fpi_brst_l2", "Tparai_fpi_brst_l2",
+	"partTperpi_fpi_brst_l2", "partTparai_fpi_brst_l2", "Ti_dbcs_fpi_brst_l2",
+	"Ti_dbcs_fpi_brst", "Ti_dbcs_fpi_fast_l2", "Ti_gse_fpi_ql",
+	"Ti_dbcs_fpi_ql", "Ti_gse_fpi_brst_l2", "Pi_dbcs_fpi_brst_l2",
+	"Pi_dbcs_fpi_brst", "Pi_dbcs_fpi_fast_l2", "Pi_gse_fpi_ql",
 	"Pi_gse_fpi_brst_l2"
 
 	FPI Electrons :
-	"Ve_dbcs_fpi_brst_l2", "Ve_dbcs_fpi_brst", "Ve_dbcs_fpi_ql"
-	"Ve_dbcs_fpi_fast_l2", "Ve_gse_fpi_ql", "Ve_gse_fpi_fast_l2"
-	"Ve_gse_fpi_brst_l2", "partVe_gse_fpi_brst_l2", "Enfluxe_fpi_fast_ql"
-	"Enfluxe_fpi_fast_l2", "Ne_fpi_brst_l2", "partNe_fpi_brst_l2"
-	"Ne_fpi_brst", "Ne_fpi_fast_l2", "Ne_fpi_ql"
-	"Tperpe_fpi_brst_l2", "Tparae_fpi_brst_l2", "partTperpe_fpi_brst_l2"
-	"partTparae_fpi_brst_l2", "Te_dbcs_fpi_brst_l2", "Te_dbcs_fpi_brst"
-	"Te_dbcs_fpi_fast_l2", "Te_gse_fpi_ql", "Te_dbcs_fpi_ql"
-	"Te_gse_fpi_brst_l2", "Pe_dbcs_fpi_brst_l2", "Pe_dbcs_fpi_brst"
-	"Pe_dbcs_fpi_fast_l2", "Pe_gse_fpi_ql", "Pe_gse_fpi_brst_l2"
+	"Ve_dbcs_fpi_brst_l2", "Ve_dbcs_fpi_brst", "Ve_dbcs_fpi_ql",
+	"Ve_dbcs_fpi_fast_l2", "Ve_gse_fpi_ql", "Ve_gse_fpi_fast_l2",
+	"Ve_gse_fpi_brst_l2", "partVe_gse_fpi_brst_l2", "Enfluxe_fpi_fast_ql",
+	"Enfluxe_fpi_fast_l2", "Ne_fpi_brst_l2", "partNe_fpi_brst_l2",
+	"Ne_fpi_brst", "Ne_fpi_fast_l2", "Ne_fpi_ql",
+	"Tperpe_fpi_brst_l2", "Tparae_fpi_brst_l2", "partTperpe_fpi_brst_l2",
+	"partTparae_fpi_brst_l2", "Te_dbcs_fpi_brst_l2", "Te_dbcs_fpi_brst",
+	"Te_dbcs_fpi_fast_l2", "Te_gse_fpi_ql", "Te_dbcs_fpi_ql",
+	"Te_gse_fpi_brst_l2", "Pe_dbcs_fpi_brst_l2", "Pe_dbcs_fpi_brst",
+	"Pe_dbcs_fpi_fast_l2", "Pe_gse_fpi_ql", "Pe_gse_fpi_brst_l2",
 
 	HPCA : 
-	"Nhplus_hpca_srvy_l2", "Nheplus_hpca_srvy_l2", "Nheplusplus_hpca_srvy_l2"
-	"Noplus_hpca_srvy_l2", "Tshplus_hpca_srvy_l2", "Tsheplus_hpca_srvy_l2"
-	"Tsheplusplus_hpca_srvy_l2", "Tsoplus_hpca_srvy_l2", "Vhplus_dbcs_hpca_srvy_l2"
-	"Vheplus_dbcs_hpca_srvy_l2", "Vheplusplus_dbcs_hpca_srvy_l2", "Voplus_dbcs_hpca_srvy_l2"
-	"Phplus_dbcs_hpca_srvy_l2", "Pheplus_dbcs_hpca_srvy_l2", "Pheplusplus_dbcs_hpca_srvy_l2"
-	"Poplus_dbcs_hpca_srvy_l2", "Thplus_dbcs_hpca_srvy_l2", "Theplus_dbcs_hpca_srvy_l2"
-	"Theplusplus_dbcs_hpca_srvy_l2", "Toplus_dbcs_hpca_srvy_l2", "Vhplus_gsm_hpca_srvy_l2"
-	"Vheplus_gsm_hpca_srvy_l2", "Vheplusplus_gsm_hpca_srvy_l2", "Voplus_gsm_hpca_srvy_l2"
-	"Nhplus_hpca_brst_l2", "Nheplus_hpca_brst_l2", "Nheplusplus_hpca_brst_l2"
-	"Noplus_hpca_brst_l2", "Tshplus_hpca_brst_l2", "Tsheplus_hpca_brst_l2"
-	"Tsheplusplus_hpca_brst_l2", "Tsoplus_hpca_brst_l2", "Vhplus_dbcs_hpca_brst_l2"
-	"Vheplus_dbcs_hpca_brst_l2", "Vheplusplus_dbcs_hpca_brst_l2", "Voplus_dbcs_hpca_brst_l2"
-	"Phplus_dbcs_hpca_brst_l2", "Pheplus_dbcs_hpca_brst_l2", "Pheplusplus_dbcs_hpca_brst_l2"
-	"Poplus_dbcs_hpca_brst_l2", "Thplus_dbcs_hpca_brst_l2", "Theplus_dbcs_hpca_brst_l2"
-	"Theplusplus_dbcs_hpca_brst_l2", "Toplus_dbcs_hpca_brst_l2", "Vhplus_gsm_hpca_brst_l2"
-	"Vheplus_gsm_hpca_brst_l2", "Vheplusplus_gsm_hpca_brst_l2", "Voplus_gsm_hpca_brst_l2"
-	"Phplus_gsm_hpca_brst_l2", "Pheplus_gsm_hpca_brst_l2", "Pheplusplus_gsm_hpca_brst_l2"
-	"Poplus_gsm_hpca_brst_l2", "Thplus_gsm_hpca_brst_l2", "Theplus_gsm_hpca_brst_l2"
+	"Nhplus_hpca_srvy_l2", "Nheplus_hpca_srvy_l2", "Nheplusplus_hpca_srvy_l2",
+	"Noplus_hpca_srvy_l2", "Tshplus_hpca_srvy_l2", "Tsheplus_hpca_srvy_l2",
+	"Tsheplusplus_hpca_srvy_l2", "Tsoplus_hpca_srvy_l2", "Vhplus_dbcs_hpca_srvy_l2",
+	"Vheplus_dbcs_hpca_srvy_l2", "Vheplusplus_dbcs_hpca_srvy_l2", "Voplus_dbcs_hpca_srvy_l2",
+	"Phplus_dbcs_hpca_srvy_l2", "Pheplus_dbcs_hpca_srvy_l2", "Pheplusplus_dbcs_hpca_srvy_l2",
+	"Poplus_dbcs_hpca_srvy_l2", "Thplus_dbcs_hpca_srvy_l2", "Theplus_dbcs_hpca_srvy_l2",
+	"Theplusplus_dbcs_hpca_srvy_l2", "Toplus_dbcs_hpca_srvy_l2", "Vhplus_gsm_hpca_srvy_l2",
+	"Vheplus_gsm_hpca_srvy_l2", "Vheplusplus_gsm_hpca_srvy_l2", "Voplus_gsm_hpca_srvy_l2",
+	"Nhplus_hpca_brst_l2", "Nheplus_hpca_brst_l2", "Nheplusplus_hpca_brst_l2",
+	"Noplus_hpca_brst_l2", "Tshplus_hpca_brst_l2", "Tsheplus_hpca_brst_l2",
+	"Tsheplusplus_hpca_brst_l2", "Tsoplus_hpca_brst_l2", "Vhplus_dbcs_hpca_brst_l2",
+	"Vheplus_dbcs_hpca_brst_l2", "Vheplusplus_dbcs_hpca_brst_l2", "Voplus_dbcs_hpca_brst_l2",
+	"Phplus_dbcs_hpca_brst_l2", "Pheplus_dbcs_hpca_brst_l2", "Pheplusplus_dbcs_hpca_brst_l2",
+	"Poplus_dbcs_hpca_brst_l2", "Thplus_dbcs_hpca_brst_l2", "Theplus_dbcs_hpca_brst_l2",
+	"Theplusplus_dbcs_hpca_brst_l2", "Toplus_dbcs_hpca_brst_l2", "Vhplus_gsm_hpca_brst_l2",
+	"Vheplus_gsm_hpca_brst_l2", "Vheplusplus_gsm_hpca_brst_l2", "Voplus_gsm_hpca_brst_l2",
+	"Phplus_gsm_hpca_brst_l2", "Pheplus_gsm_hpca_brst_l2", "Pheplusplus_gsm_hpca_brst_l2",
+	"Poplus_gsm_hpca_brst_l2", "Thplus_gsm_hpca_brst_l2", "Theplus_gsm_hpca_brst_l2",
 	"Theplusplus_gsm_hpca_brst_l2", "Toplus_gsm_hpca_brst_l2"
 	"""
 
@@ -143,8 +144,8 @@ def get_data(varStr="", tint=None, probe="1", silent=False):
 		raise ValueError("get_data requires at least 2 arguments")
 
 
-	if isinstance(probe,int) or isinstance(probe,float):
-		probe = str(probe)
+	if isinstance(mmsId,int) or isinstance(mmsId,float):
+		mmsId = str(mmsId)
 
 		
 	# Translate short names to names readable for splitVs
@@ -159,10 +160,10 @@ def get_data(varStr="", tint=None, probe="1", silent=False):
 		
 
 	Vr = splitVs(varStr)
-	mmsIdS = "mms"+probe
+	mmsIdS = "mms"+mmsId
 	Vr["dtype"] = None
 	vdf_flag = False
-	#pdb.set_trace()
+	
 
 	if Vr["inst"] == "mec":
 		cdfname     = "_".join([mmsIdS,"mec",Vr["param"].lower(),Vr["cs"]])
@@ -414,7 +415,7 @@ def get_data(varStr="", tint=None, probe="1", silent=False):
 			else : 
 				raise ValueError("Should not be here")
 
-	# Spin-plane Double Probe instrument 
+	# Spin-plane Double mmsId instrument 
 	elif Vr["inst"] == "edp":
 		if Vr["lev"] == "sitl":
 			if Vr["param"] == "E":
@@ -817,8 +818,8 @@ def get_data(varStr="", tint=None, probe="1", silent=False):
 	else :
 		raise ValueError("not implemented yet")
 
-	files = list_files(tint,probe,Vr)
-	#files = list_files(data_path,tint,probe,Vr)
+	files = list_files(tint,mmsId,Vr)
+	#files = list_files(data_path,tint,mmsId,Vr)
 	if not files:
 		raise ValueError("No files found. Make sure that the data_path is correct")
 
@@ -843,5 +844,5 @@ def get_data(varStr="", tint=None, probe="1", silent=False):
 				out.time.data = Time(1e-9*out.time.data,format="unix").datetime
 
 	return out
-		#files = pyRF.list_files(data_path,tint,probe,Vr["inst"],datatype,Vr["tmmode"],Vr["lev"])
+		#files = pyRF.list_files(data_path,tint,mmsId,Vr["inst"],datatype,Vr["tmmode"],Vr["lev"])
 #-----------------------------------------------------------------------------------------------------------------------

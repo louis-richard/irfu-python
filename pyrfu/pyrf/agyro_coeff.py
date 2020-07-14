@@ -4,13 +4,22 @@ import xarray as xr
 
 def agyro_coeff(P=None):
 	"""
-	Compues agyrotropy coefficient (Swidak2016 https://doi.org/10.1002/2015GL066980)
+	Computes agyrotropy coefficient (Swidak2016 https://doi.org/10.1002/2015GL066980)
 	
 	Parameters :
-		- P                 [xarray]                Time serie of the pressure tensor
+		- P : DataArray
+			Time series of the pressure tensor
 		
 	Returns :
-		- Q                 [xarray]                Time serie of the agyrotropy coefficient of the specie
+		- Q : DataArray
+			Time series of the agyrotropy coefficient of the specie
+
+	Example :
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> gseB = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+		>>> gsePe = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
+		>>> facPe = pyrf.rotate_tensor(gsePe,"fac",gseB,"pp")
+		>>> facPe = pyrf.agyro_coeff(facPe)
 		
 	"""
 	

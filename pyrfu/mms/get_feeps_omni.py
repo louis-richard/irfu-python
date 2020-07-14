@@ -26,7 +26,7 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2",mmsId=1,trange=None):
     energies += eval("{}Ecorr[{:d}]".format(specie,mmsId))
 
 
-    active_eyes = get_feeps_active_eyes(Tint,mmsId,Var)
+    active_eyes = get_feeps_active_eyes(Var,trange,mmsId)
 
     # percent error around energy bin center to accept data for averaging; 
     # anything outside of energies[i] +/- en_chk*energies[i] will be changed 

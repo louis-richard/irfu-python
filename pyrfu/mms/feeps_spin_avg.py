@@ -14,6 +14,7 @@ def feeps_spin_avg(inp_dset_omni):
     Parameters:
         probe: str
             probe #, e.g., '4' for MMS4
+            
         data_units: str
             'intensity' or 'count_rate'
         datatype: str

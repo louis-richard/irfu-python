@@ -11,12 +11,15 @@ def get_feeps_energy_table(probe, eye, sensor_id):
     Parameters:
         probe: str
             probe #, e.g., "4" for MMS4
+
         eye: str
             sensor eye #
+
         sensor_id: int
             sensor ID
     Returns:
         Energy table 
+        
     Notes:
         BAD EYES are replaced by NaNs
         - different original energy tables are used depending on if the sensor head is 6-8 (ions) or not (electrons)

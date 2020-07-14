@@ -10,17 +10,24 @@ from dateutil import parser
 
 def get_ts(file_path="",cdfname="",trange=None):
 	"""
-	Read field named cdfname in file and convert to time serie
+	Read field named cdfname in file and convert to time series
 
 	Parameters :
-		- file_path         [str]                   Path of the cdf file
-		- cdfname           [str]                   Name of the target variable in the cdf file
-		- tramge            [list]                  Time interval
+		file_path : str
+			Path of the cdf file
+
+		cdfname : str
+			Name of the target variable in the cdf file
+
+		trange : list 
+			Time interval
 
 	Returns :
-		- out               [xarray]                Time serie of the target variable in the selected time interval
+		out : DataArray
+			Time series of the target variable in the selected time interval
 
 	"""
+	
 	if not file_path or not cdfname or trange is None:
 		raise ValueError("get_ts requires at least 3 arguments")
 	

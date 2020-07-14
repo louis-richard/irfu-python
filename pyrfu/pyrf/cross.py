@@ -10,13 +10,25 @@ def cross(inp1=None,inp2=None):
 	Computes cross product of two fields z = xxy
 
 	Parameters :
-		- inp1              [xarray]                Time serie of the first field x
-		- inp2              [xarray]                Time serie of the second field y
+		- inp1 : DataArray
+			Time series of the first field x
+
+		- inp2 : DataArray
+			Time series of the second field y
 
 	Returns :
-		- out               [xarray]                Cross product
+		- out : DataArray
+			Time series of the cross product inp1xinp2
+
+	Example :
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> gseB = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+		>>> gseE = mms.get_data("E_gse_edp_fast_l2",Tint,1)
+		>>> Bmag = pyrf.norm(gseB)
+		>>> gseExB = pyrf.cross(gseE,gseB)/Bmag**2
 
 	"""
+
 	if not isinstance(inp1,xr.DataArray):
 		raise TypeError("Inputs must be DataArrays")
 

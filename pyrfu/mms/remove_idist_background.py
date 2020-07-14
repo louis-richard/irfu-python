@@ -11,20 +11,27 @@ def remove_idist_background(N_i=None,V_gse_i=None,P_gse_i=None,N_bg_i=None,P_bg_
 	Removes penetrating radiation background from ion moments
 
 	Parameters :
-		- N_i               [xarray]                Ion number density
-		- V_gse_i           [xarray]                Ion bulk velocity
-		- P_gse_i           [xarray]                Ion pressure tensor 
-		- N_bg_i            [xarray]                Background ion number density
-		- P_bg_i            [xarray]                Background ion pressure scalar
+		N_i : DataArray
+			Time series of the ion density
+		V_gse_i : DataArray
+			Time series of the ion bulk velocity
+		P_gse_i : DataArray
+			Time series of the ion pressure tensor
+		N_bg_i : DataArray
+			Time series of the background ion number density
+		P_bg_i : DataArray
+			Time series of the background ion pressure scalar
 
 	Returns :
-		- N_i_new           [xarray]                Corrected ion number density
-		- V_gse_i_new       [xarray]                Corrected ion bulk velocity
-		- P_gse_i_new       [xarray]                Corrected ion pressure tensor
-
-
+		N_i_new : DataArray
+			Time series of the corrected ion number density
+		V_gse_i_new : DataArray
+			Time series of the corrected ion bulk velocity
+		P_gse_i : DataArray
+			Time series of the corrected ion pressure tensor
+	
 	References:
-		- MMS DIS Penetrating radiation correction methods: 
+		MMS DIS Penetrating radiation correction methods: 
 			https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data
 
 	"""

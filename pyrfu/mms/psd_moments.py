@@ -100,32 +100,50 @@ def psd_moments(pdist=None, SCpot=None, **kwargs):
 	Computes moments from the FPI particle phase-space densities
 	
 	Parameters :
-		- pdist 			[xarray] 				3D skymap distribution
-		- SCpot 			[xarray]				Spacecraft potential
+		pdist : DataArray
+			3D skymap velocity distribution
+
+		SCpot : DataArray
+			Time series of the spacecraft potential
 
 	Options :
-		- energyrange 		[list/ndarray] 			Set energy range in eV to integrate over [E_min E_max]. 
-													Energy range is applied to energy0 and the same elements are used 
-													for energy1 to ensure that the same number of points are 
-													integrated over.
-		- noscpot 			[bool] 					Set to 1 to set spacecraft potential to zero. Calculates moments 
-													without correcting for spacecraft potential.
-		- enchannels 		[list/ndarray] 			Set energy channels to integrate over [min max]; min and max 
-													between must be between 1 and 32.
-		- partialmoms 		[ndarray,xarray]		Use a binary array (or Dataarray) (pmomsarr) to select which psd 
-													points are used in the moments calculation. pmomsarr must be a 
-													binary array (1s and 0s, 1s correspond to points used). 
-													Array (or data of Dataarray) must be the same size as pdist.data.
-		- innerelec			["on"/"off"]			Innerelectron potential for electron moments
+		energyrange : list/ndarray 
+			Set energy range in eV to integrate over [E_min E_max]. Energy range is applied to energy0 and the same 
+			elements are used for energy1 to ensure that the same number of points are integrated over.
+
+		noscpot : bool
+			Set to 1 to set spacecraft potential to zero. Calculates moments 
+			without correcting for spacecraft potential.
+
+		enchannels : list/ndarray
+			Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
+
+		partialmoms : ndarray,DataArray
+			Use a binary array (or DataArray) (pmomsarr) to select which psd points are used in the moments 
+			calculation. pmomsarr must be a binary array (1s and 0s, 1s correspond to points used). 
+			Array (or data of Dataarray) must be the same size as pdist.data.
+
+		innerelec : "on"/"off"
+			Innerelectron potential for electron moments
 
 	Returns :
-		- n_psd 			[xarray] 				Number density 	(1rst moment)
-		- V_psd 			[xarray] 				Bulk velocity 	(2nd moment)
-		- P_psd 			[xarray] 				Pressure tensor (3rd moment)
-		- P2_psd 			[xarray] 				Pressure tensor 
-		- T_psd 			[xarray] 				Temperature tensor 
-		- H_psd 			[xarray] 				??
+		n_psd : DataArray
+			Time series of the number density (1rst moment)
 
+		V_psd : DataArray
+			Time series of the bulk velocity (2nd moment)
+
+		P_psd : DataArrya
+			Time series of the pressure tensor (3rd moment)
+
+		P2_psd : DataArray
+			Time series of the pressure tensor 
+
+		T_psd : DataArray
+			Time series of the temperature tensor 
+
+		H_psd : DataArray
+			??
 	
 	Example :
 		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]

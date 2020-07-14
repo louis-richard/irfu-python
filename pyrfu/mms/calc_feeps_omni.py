@@ -10,22 +10,13 @@ def calc_feeps_omni(inp_dset):
     Computes the omni-directional FEEPS spectrograms from a Dataset that contains the spectrograms of all eyes.
     
     Parameters:
-        eyes: dict
-            Hash table containing the active sensor eyes
-        probe: str
-            probe #, e.g., '4' for MMS4
-        datatype: str
-            'electron' or 'ion'
-        data_units: str
-            'intensity'
-        data_rate: str
-            instrument data rate, e.g., 'srvy' or 'brst'
-        level: str
-            data level
-        suffix: str
-            suffix of the loaded data
+        inp_dset : Dataset
+        	Dataset with energy spectrum of every eyes
+
     Returns:
-        List of tplot variables created.
+        out : DataArray
+        	OMNI energy spectrum from the input
+
     """
 
 

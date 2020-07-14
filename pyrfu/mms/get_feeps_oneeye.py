@@ -2,7 +2,35 @@ import numpy as np
 from .get_feeps_active_eyes import get_feeps_active_eyes
 from .db_get_ts import db_get_ts
 
-def get_feeps_eye(tar_var="fluxe_brst_l2", mmsId="1", eId="bottom-4",trange=None):
+def get_feeps_oneeye(tar_var="fluxe_brst_l2", eId="bottom-4", trange=None, mmsId=1):
+    """
+    Load energy spectrum all the target eye
+
+    Parameters :
+        tar_var : str
+            target variable "{data_units}{specie}_{data_rate}_{level}"
+                data_units : 
+                    flux -> intensity (1/cm sr)
+                    count -> counts (-)
+                    CPS -> counts per second (1/s)
+                specie : 
+                    i -> ion
+                    e -> electron
+                data_rate : brst/srvy
+                level : l1/l1b/l2/l3??
+
+        eId : str
+            index of the eye "{deck}-{id}"
+                deck : top/bottom
+                id : see get_feeps_active_eyes
+
+        trange : list of str
+            Time interval
+
+        mmsId : int/str
+            Index of the spacecraft
+        
+    """
     if trange is None:
         raise ValueError("empty time interval")
     

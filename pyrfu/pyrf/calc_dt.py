@@ -7,10 +7,12 @@ def calc_dt(inp=None):
 	Compute time step of the input time series
 
 	Parameters :
-		- inp               [xarray]                Input time series
+		- inp : DataArray
+			Time series of the input variable
 
 	Returns :
-		- out               [float]                 Time step in seconds
+		- out : float
+			Time step in seconds
 
 	"""
 
