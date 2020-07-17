@@ -2,17 +2,20 @@ from dateutil import parser
 import datetime
 
 
-def get_feeps_active_eyes(trange, probe, Var):
+def get_feeps_active_eyes(Var=None, trange=None, mmsId=1):
     """
-    This function returns the FEEPS active eyes, based on date/probe/species/rate
+    This function returns the FEEPS active eyes, based on date/mmsId/species/rate
     
     Parameters:
         trange: list of str
             time range
-        probe: str
-            probe #, e.g., '4' for MMS4
+
+        mmsId: str
+            mmsId #, e.g., '4' for MMS4
+
         data_rate: str
             instrument data rate, e.g., 'srvy' or 'brst'
+            
         species: str
             'electron' or 'ion'
         level: str
@@ -50,6 +53,8 @@ def get_feeps_active_eyes(trange, probe, Var):
                  Top Eyes: 3, 4, 5, 6, 8, 9, 10, 11
                  Bot Eyes: 3, 5, 6, 7, 8, 9, 10, 12
     """
+
+    if isinstance(mmsId, str): mmsId = int(mmsId)
 
     sensors = {}
 
@@ -113,7 +118,7 @@ def get_feeps_active_eyes(trange, probe, Var):
         active_table["4-ion"]["bottom"]         = [6, 7, 8]
        
         
-        sensors = active_table["{:d}-{}".format(probe,Var["dtype"].lower())]
+        sensors = active_table["{:d}-{}".format(mmsId,Var["dtype"].lower())]
         
         if level.lower() == "sitl":
             sensors["top"]      = list(set(sensors['top']) & set([5, 11, 12]))

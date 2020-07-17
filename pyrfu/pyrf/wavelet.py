@@ -21,25 +21,40 @@ plt.rc('axes',prop_cycle=default_cycler)
 plt.rc('lines', linewidth=0.8)
 plt.close("all")
 
+
 def wavelet(inp=None,**kwargs):
 	"""
-	Calculate wavevelet spectrogram based on fast FFT algorithm
+	Calculate wavelet spectrogram based on fast FFT algorithm
 	
 	Parameters :
-		- inp               [xarray]                Input quantity
-		- fs                [int/float]             Sampling frequency
-		- f                 [ndarray/list]          Vector [fmin fmax], calculate spectra between frequencies fmin
-													and fmax
-		- nf                [int/float]             Number of frequency bins
-		- wavelet_width     [int/float]             Width of the Morlet wavelet, default 5.36
-		- linear            [float]                 Linear spacing between frequencies of df
-		- returnpower       [bool]                  Set to True (default) to return the power, False for complex
-													wavelet transform
-		- cutedge           [bool]                  Set to True (default) to set points affected by edge effects to NaN, 
-													False to keep edge affect points
+		inp : DataArray
+			Input quantity
+
+	Options :
+		fs : int/float
+			Sampling frequency of the input time series
+
+		f : list/np.ndarray
+			Vector [fmin fmax], calculate spectra between frequencies fmin and fmax
+
+		nf : int/float
+			Number of frequency bins
+
+		wavelet_width : int/float
+			Width of the Morlet wavelet, default 5.36
+
+		linear : float
+			Linear spacing between frequencies of df
+
+		returnpower : bool
+			Set to True (default) to return the power, False for complex wavelet transform
+
+		cutedge : bool
+			Set to True (default) to set points affected by edge effects to NaN, False to keep edge affect points
 	
 	Returns :
-		- out               [xarray]                Wavelet transform of the input
+		out : DataArray/Dataset
+			Wavelet transform of the input
 
 	"""
 

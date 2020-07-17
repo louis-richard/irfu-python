@@ -9,46 +9,42 @@ from .ts_tensor_xyz import ts_tensor_xyz
 
 def rotate_tensor(*args):
 	"""
-	Rotate pressure or temperature tensor into another coordinate system
-
-
-
-	Function to rotate the pressure tensor term into field-aligned coordinates or 
-	another coordinate system. 
-	 
+	Rotates pressure or temperature tensor into another coordinate system
 	
 	Parameters :
-		- PeIJ/Peall    [xarray]            Time series of either separated terms of the tensor or the complete 
-											tensor. If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
-		- flag          [str]               Flag of the target coordinates system : 
-												- field-aligned coordinates "fac", requires background magnetic field 
-												Bback, optionnal flag "pp" P_perp1 = P_perp2 or "qq" P_perp1 and 
-												P_perp2 are most unequal, sets P23 to zero.
+		PeIJ/Peall : DataArray
+			Time series of either separated terms of the tensor or the complete tensor. 
+			If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
+		flag : str
+			Flag of the target coordinates system : 
+				Field-aligned coordinates "fac", requires background magnetic field Bback, optional 
+				flag "pp" P_perp1 = P_perp2 or "qq" P_perp1 and P_perp2 are most unequal, sets P23 to zero.
 
-												- arbitrary coordinate system "rot", requires new x-direction xnew, 
-												new y and z directions ynew, znew (if not included y and z directions 
-												are orthogonal to xnew and closest to the orginal y and z directions)
+				Arbitrary coordinate system "rot", requires new x-direction xnew, new y and z directions 
+				ynew, znew (if not included y and z directions are orthogonal to xnew and closest to the 
+				original y and z directions)
 	 
-												- GSE coordinates "gse", requires MMS spacecraft number 1--4 MMSnum
+				GSE coordinates "gse", requires MMS spacecraft number 1--4 MMSnum
+
 	Returns : 
-		- Pe            [xarray]            Pressure or temperature terms in field-aligned, user-defined, or GSE 
-											coordinates. Tseries with 3*3 in data. 
-											For 'fac' Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
-											For 'rot' and 'gse' Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
+		Pe : DataArray
+			Time series of the pressure or temperature tensor in field-aligned, user-defined, or GSE coordinates.
+			For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
+			For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
 	 
 	Examples :
-	
-	Rotate tensor into field-aligned coordinates
-		>>> Pe = pyrf.rotate_tensor(PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ,'fac',Bback)
-		>>> Pe = pyrf.rotate_tensor(Peall,'fac',Bback)
-		>>> Pe = pyrf.rotate_tensor(Peall,'fac',Bback,'pp' or 'qq')
+		>>> #Rotate tensor into field-aligned coordinates
+		>>> Pe = pyrf.rotate_tensor(PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ,"fac",Bback)
+		>>> Pe = pyrf.rotate_tensor(Peall,"fac",Bback)
+		>>> Pe = pyrf.rotate_tensor(Peall,"fac",Bback,"pp")
+		>>> 
+		>>> #Rotate tensor into user-defined coordinate system
+		>>> Pe = pyrf.rotate_tensor(Peall,"rot",xnew)
+		>>> Pe = pyrf.rotate_tensor(Peall,"rot",xnew,ynew,znew)
+		>>> 
+		>>> # Rotate tensor from spacecraft coordinates into GSE coordinates
+		>>> Pe = pyrf.rotate_tensor(Peall,"gse",MMSnum)
 
-	Rotate tensor into user-defined coordinate system
-		>>> Pe = pyrf.rotate_tensor(Peall,'rot',xnew)
-		>>> Pe = pyrf.rotate_tensor(Peall,'rot',xnew,ynew,znew)
-
-	Rotate tensor from spacecraft coordinates into GSE coordinates
-		>>> Pe = pyrf.rotate_tensor(Peall,'gse',MMSnum)
 	"""
 
 	nargin = len(args)

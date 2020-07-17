@@ -12,22 +12,12 @@ def feeps_spin_avg(inp_dset_omni):
     This function will spin-average the omni-directional FEEPS energy spectra
     
     Parameters:
-        probe: str
-            probe #, e.g., '4' for MMS4
-            
-        data_units: str
-            'intensity' or 'count_rate'
-        datatype: str
-            'electron' or 'ion'
-        data_rate: str
-            instrument data rate, e.g., 'srvy' or 'brst'
-        level: str
-            data level, e.g., 'l2'
-            
-        suffix: str
-            suffix of the loaded data
+        inp_dset_omni : DataArray
+            Spectrogram of all eyes in OMNI
+
     Returns:
-        Name of tplot variable created.
+        out : DataArray
+            Spin-averaged OMNI energy spectrum
     """
 
     Var = inp_dset_omni.attrs

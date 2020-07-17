@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 from spacepy import pycdf
 from dateutil import parser
-from ..pyrf import pyrf
+from ..pyrf.ts_skymap import ts_skymap
 
 
 def get_dist(file_path="",cdfname="",trange=None):
@@ -48,7 +48,7 @@ def get_dist(file_path="",cdfname="",trange=None):
 				energy0 = f[en0name][...]
 				energy1 = f[en1name][...]
 
-			res = pyrf.ts_skymap(t,dist,None,ph,th,energy0=energy0,energy1=energy1,esteptable=stepTable)
+			res = ts_skymap(t,dist,None,ph,th,energy0=energy0,energy1=energy1,esteptable=stepTable)
 			if "delta_plus_var" in locals() and "delta_minus_var" in locals():
 				res.attrs["delta_energy_minus"] = delta_minus_var
 				res.attrs["delta_energy_plus"] = delta_plus_var
@@ -79,6 +79,6 @@ def get_dist(file_path="",cdfname="",trange=None):
 			ph = f[DEPEND_1][...]
 			th = f[DEPEND_2][...]
 			en = f[DEPEND_3][idxl:idxr,...]
-			res = pyrf.ts_skymap(t,dist,en,ph,th)
+			res = ts_skymap(t,dist,en,ph,th)
 	return res
 

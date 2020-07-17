@@ -10,11 +10,15 @@ def ts_append(inp1=None,inp2=None):
 	Note : the time series have to be in the correct time order
 
 	Parameters :
-		- inp1              [xarray]                First time series
-		- inp2              [xarray]                Second time series
+		inp1 : DataArray
+			Time series of the first input (early times)
+
+		inp2 DataArray
+			Time series of the second input (late times)
 
 	Returns :
-		- out               [xarray]                Concatenated time series
+		out : DataArray
+			Concatenated time series
 
 	"""
 

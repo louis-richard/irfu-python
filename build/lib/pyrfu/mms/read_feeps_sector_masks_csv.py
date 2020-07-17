@@ -6,7 +6,7 @@ from astropy.time import Time
 
 def read_feeps_sector_masks_csv(trange):
     """
-    This function returns the FEEPS sectors to mask due to sunlight contamination
+    Reads the FEEPS sectors to mask due to sunlight contamination from csv files.x
     
     Parameters:
         trange : list of str

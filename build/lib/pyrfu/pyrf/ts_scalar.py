@@ -5,15 +5,22 @@ import xarray as xr
 
 def ts_scalar(t=None,data=None,attrs=None):
 	"""
-	Create a time serie containing a 0th order tensor
+	Create a time series containing a 0th order tensor
 
 	Parameters :
-		- t                 [ndarray]               Array of times  
-		- data              [ndarray]               Data corresponding to the time list
-		- attrs             [dict]                  Attributes of the data list (optionnal)
+		t : np.ndarray
+			Array of times
+
+		data : np.ndarray
+			Data corresponding to the time list
+	
+	Options :
+		attrs : dict
+			Attributes of the data list
 
 	Returns :
-		- out               [xarray]                0th order tensor time serie
+		out DataArray
+			0th order tensor time series
 	"""
 
 	# Check inputs are not empty

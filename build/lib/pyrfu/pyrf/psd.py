@@ -16,23 +16,26 @@ def psd(inp=None, nfft=256, noverlap=128, window="hamming", dflag="constant", sc
 	segments, computing a modified periodogram for each segment and averaging the periodograms.
 	
 	Parameters : 
-		- inp               [xarray]                Time series of measurement values
+		- inp : DataArray
+			Time series of measurement values
 	
-		- window            [str]                   (optional) Desired window to use. It is passed to `get_window` to 
+	Options :
+		- window str
+			Desired window to use. It is passed to `get_window` to 
 													generate the window values, which are DFT-even by default. See 
-													`get_window` or a list of windows and required parameters. 
+													"get_window" or a list of windows and required parameters. 
 													Defaults Hanning
 		- noverlap          [int]                   (optional) Number of points to overlap between segments. 
 													Defaults to 128.
 		- nfft              [int]                   (optional) Length of the FFT used, if a zero padded FFT is desired 
 													Defaults to 256
 		- dflag             [str]                   (optional) Specifies how to detrend each segment. It is passed as 
-													the `type` argument to the `detrend` function. 
-													Defaults to 'constant'.
+													the "type" argument to the "detrend" function. 
+													Defaults to "constant".
 		- scaling           [str]                   (optional) Selects between computing the power spectral density 
 													('density') where `Pxx` has units of V**2/Hz and computing the 
-													power spectrum ('spectrum') where `Pxx` has units of V**2, if `x`
-													is measured in V and `fs` is measured in Hz. Defaults to 'density'
+													power spectrum ("spectrum") where "Pxx" has units of V**2, if `x`
+													is measured in V and "fs" is measured in Hz. Defaults to 'density'
 
 	Returns : 
 		- out               [xarray]                Power spectral density or power spectrum of inp

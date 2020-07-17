@@ -9,10 +9,13 @@ def get_feeps_active_eyes(Var=None, trange=None, mmsId=1):
     Parameters:
         trange: list of str
             time range
+
         mmsId: str
             mmsId #, e.g., '4' for MMS4
+
         data_rate: str
             instrument data rate, e.g., 'srvy' or 'brst'
+            
         species: str
             'electron' or 'ion'
         level: str

@@ -3,7 +3,7 @@ import xarray as xr
 
 from .resample import resample
 from .c_4_k import c_4_k
-from .norm import norm
+from .normalize import normalize
 from .dot import dot
 from .cross import cross
 
@@ -11,18 +11,38 @@ from .cross import cross
 
 def c_4_grad(R1=None,R2=None,R3=None,R4=None,B1=None,B2=None,B3=None,B4=None,method="grad"):
 	"""
-	Calculate gradient of physical field using 4 spacecraft technique. Reference: ISSI book  Eq. 14.16, 14.17 p. 353
-
-	See also : c_4_k
+	Calculate gradient of physical field using 4 spacecraft technique. 
 	
 	Parameters :
-		- R1...R4           [xarray]                Time series of the positions of the spacecraft
-		- B1...B4           [xarray]                Time series of the magnetic field at the corresponding positions
-		- method            [str]                   Method : grad (default), div, curl, bdivb, curv
+		R1...R4 : DataArray
+			Time series of the positions of the spacecraft
+
+		B1...B4 : DataArray
+			Time series of the magnetic field at the corresponding positions
+
+		method : str
+			Method flag : 
+				"grad" -> compute gradient (default)
+				"div" -> compute divergence
+				"curl" -> compute curl
+				"bdivb" -> compute b.div(b)
+				"curv" -> compute curvature
 
 	Returns :
-		- out               [xarray]                Time serie of the derivative of the input field corresponding to 
-													the method
+		- out : DataArray
+			Time series of the derivative of the input field corresponding to the method
+
+	Example :
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> gseB1, gseB2, gseB3, gseB4 = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in range(1,5)]
+		>>> gseR1, gseR2, gseR3, gseR4 = [mms.get_data("R_gse",Tint,i) for i in range(1,5)]
+		>>> gradB = pyrf.c_4_grad(gseR1,gseR2,gseR3,gseR4,gseB1,gseB2,gseB3,gseB4,"grad")
+
+	Reference : 
+		ISSI book  Eq. 14.16, 14.17 p. 353
+
+	See also : 
+		c_4_k
 	
 	"""
 
@@ -89,10 +109,10 @@ def c_4_grad(R1=None,R2=None,R3=None,R4=None,B1=None,B2=None,B3=None,B4=None,met
 		outdata     = bdivb
 		
 	elif method.lower() == "curv":
-		bhat1   = norm(rB1)
-		bhat2   = norm(rB2)
-		bhat3   = norm(rB3)
-		bhat4   = norm(rB4)
+		bhat1   = normalize(rB1)
+		bhat2   = normalize(rB2)
+		bhat3   = normalize(rB3)
+		bhat4   = normalize(rB4)
 		curv    = c_4_grad(rR1,rR2,rR3,rR4,bhat1,bhat2,bhat3,bhat4,method="bdivb")
 		outdata = curv.data
 		

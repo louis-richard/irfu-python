@@ -11,11 +11,15 @@ def tlim(inp=None, tint=None):
 	Time clip the input (if time interval is TSeries clip between start and stop)
 
 	Parameters :
-		- inp               [xarray]                Quantity to clip
-		- tint              [xarray/ndarray/list]   Time interval can be a time series, a array of datetime64 or a list
+		inp : DataArray
+			Quantity to clip
+
+		tint : DataArrya/np.ndarray/list
+			Time interval can be a time series, a array of datetime64 or a list
 
 	Returns : 
-		- out               [xarray]                Normalized TSeries
+		out : DataArray
+			Time series of the time clipped input
 
 	"""
 

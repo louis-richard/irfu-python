@@ -16,6 +16,7 @@ from .feeps_split_integral_ch import feeps_split_integral_ch
 from .feeps_remove_sun import feeps_remove_sun
 from .calc_feeps_omni import calc_feeps_omni
 from .feeps_spin_avg import feeps_spin_avg
-
+from .feeps_pitch_angles import feeps_pitch_angles
+from .calc_feeps_pad import calc_feeps_pad
 
 from .remove_idist_background import remove_idist_background

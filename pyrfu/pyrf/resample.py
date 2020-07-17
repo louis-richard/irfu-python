@@ -13,19 +13,38 @@ def resample(inp=None,ref=None,**kwargs):
 	we interpolate X.
 	
 	Parameters :
-		- inp               [xarray]                Time serie to resample
-		- ref               [xarray]                Reference time line
-		- method            [str]                   Method of interpolation 'spline', 'linear' etc. (default 'linear') 
-													if method is given then interpolate independant of sampling
-		- fs                [float]                 Sampling frequency of the Y signal, 1/window (optionnal)
-		- window            [int/float/array]       Length of the averaging window, 1/fsample (optionnal)
-		- fs                [str]                   Sampling frequency of the Y signal, 1/window (optionnal)
-		- mean              [bool]                  Use mean when averaging (optionnal)
-		- median            [bool]                  Use median instead of mean when averaging (optionnal)
-		- max               [bool]                  Use max instead of mean when averaging (optionnal)
+		inp : DataArray
+			Time series to resample
+
+		ref : DataArray
+			Reference time line
+
+	Options :
+		method : str
+			Method of interpolation "spline", "linear" etc. (default "linear") if method is given then interpolate 
+			independent of sampling.
+
+		fs : float
+			Sampling frequency of the Y signal, 1/window
+
+		window : int/float/array
+			Length of the averaging window, 1/fsample
+
+		fs : str
+			Sampling frequency of the Y signal, 1/window
+
+		mean : bool
+			Use mean when averaging
+
+		median : bool
+			Use median instead of mean when averaging
+
+		max : bool
+			Use max instead of mean when averaging
 
 	Returns :
-		- out               [xarray]                Resampled input to the reference time line using the selected method
+		out : DataArray
+			Resampled input to the reference time line using the selected method
 		
 	"""
 

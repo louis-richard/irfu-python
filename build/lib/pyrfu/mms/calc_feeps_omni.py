@@ -6,6 +6,20 @@ from .feeps_split_integral_ch import feeps_split_integral_ch
 from .feeps_remove_sun import feeps_remove_sun
 
 def calc_feeps_omni(inp_dset):
+	"""
+	Computes the omni-directional FEEPS spectrograms from a Dataset that contains the spectrograms of all eyes.
+
+	Parameters:
+	    inp_dset : Dataset
+	    	Dataset with energy spectrum of every eyes
+
+	Returns:
+	    out : DataArray
+	    	OMNI energy spectrum from the input
+
+	"""
+
+
 	Var = inp_dset.attrs
 
 	if Var["dtype"] == "electron":

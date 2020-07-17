@@ -8,17 +8,19 @@ pyrfu.egg-info/requires.txt
 pyrfu.egg-info/top_level.txt
 pyrfu/mms/__init__.py
 pyrfu/mms/calc_feeps_omni.py
+pyrfu/mms/calc_feeps_pad.py
 pyrfu/mms/db_get_ts.py
+pyrfu/mms/feeps_pitch_angles.py
 pyrfu/mms/feeps_remove_sun.py
 pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py
 pyrfu/mms/get_feeps_active_eyes.py
-pyrfu/mms/get_feeps_all.py
+pyrfu/mms/get_feeps_alleyes.py
 pyrfu/mms/get_feeps_energy_table.py
-pyrfu/mms/get_feeps_eye.py
 pyrfu/mms/get_feeps_omni.py
+pyrfu/mms/get_feeps_oneeye.py
 pyrfu/mms/get_ts.py
 pyrfu/mms/list_files.py
 pyrfu/mms/mms_config.py
@@ -34,7 +36,6 @@ pyrfu/plot/plot_line.py
 pyrfu/plot/plot_spectr.py
 pyrfu/plot/zoom.py
 pyrfu/pyrf/__init__.py
-pyrfu/pyrf/abs.py
 pyrfu/pyrf/agyro_coeff.py
 pyrfu/pyrf/c_4_grad.py
 pyrfu/pyrf/c_4_j.py
@@ -65,6 +66,7 @@ pyrfu/pyrf/minvar.py
 pyrfu/pyrf/movmean.py
 pyrfu/pyrf/new_xyz.py
 pyrfu/pyrf/norm.py
+pyrfu/pyrf/normalize.py
 pyrfu/pyrf/nv2p.py
 pyrfu/pyrf/plasma_calc.py
 pyrfu/pyrf/pres_anis.py

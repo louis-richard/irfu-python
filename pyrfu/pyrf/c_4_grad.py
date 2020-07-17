@@ -3,7 +3,7 @@ import xarray as xr
 
 from .resample import resample
 from .c_4_k import c_4_k
-from .norm import norm
+from .normalize import normalize
 from .dot import dot
 from .cross import cross
 
@@ -109,10 +109,10 @@ def c_4_grad(R1=None,R2=None,R3=None,R4=None,B1=None,B2=None,B3=None,B4=None,met
 		outdata     = bdivb
 		
 	elif method.lower() == "curv":
-		bhat1   = norm(rB1)
-		bhat2   = norm(rB2)
-		bhat3   = norm(rB3)
-		bhat4   = norm(rB4)
+		bhat1   = normalize(rB1)
+		bhat2   = normalize(rB2)
+		bhat3   = normalize(rB3)
+		bhat4   = normalize(rB4)
 		curv    = c_4_grad(rR1,rR2,rR3,rR4,bhat1,bhat2,bhat3,bhat4,method="bdivb")
 		outdata = curv.data
 		

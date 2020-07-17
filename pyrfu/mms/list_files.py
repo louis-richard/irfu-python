@@ -43,20 +43,17 @@ def list_files(trange=None,mmsId="1",Var=None):
 	
 	files_out = []
 	
-	if isinstance(mmsId, str):
-		mmsId = int(mmsId)
+	if not isinstance(mmsId, str):
+		mmsId = str(mmsId)
 	# directory and file name search patterns
 	#   -assume directories are of the form:
 	#      (srvy, SITL): spacecraft/instrument/rate/level[/datatype]/year/month/
 	#      (brst): spacecraft/instrument/rate/level[/datatype]/year/month/day/
 	#   -assume file names are of the form:
 	#      spacecraft_instrument_rate_level[_datatype]_YYYYMMDD[hhmmss]_version.cdf
-
-	file_name = "mms{:d}_{}_{}_{}(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf".format(mmsId,\
-					Var["inst"],Var["tmmode"],Var["lev"])
 	
-	#file_name = "mms"+mmsId+"_"+Var["inst"]+"_"+Var["tmmode"]+"_"+Var["lev"]\
-	#			+"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+	file_name = "mms"+mmsId+"_"+Var["inst"]+"_"+Var["tmmode"]+"_"+Var["lev"]\
+					+"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
 	
 	days = rrule(DAILY, dtstart=parser.parse(parser.parse(trange[0]).strftime("%Y-%m-%d")),\
 				 until=parser.parse(trange[1])-datetime.timedelta(seconds=1))

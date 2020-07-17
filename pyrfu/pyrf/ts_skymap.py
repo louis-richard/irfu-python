@@ -4,17 +4,27 @@ import xarray as xr
 
 def ts_skymap(time,data,energy,phi,theta,**kwargs):
 	"""
-	Createes a skymap of the distribution function
+	Creates a skymap of the distribution function
 
 	Parameters :
-		- time              [ndarray]               List of times
-		- data              [ndarray]               Values of the distribution function
-		- energy            [ndarray]               Energy levels 
-		- phi               [ndarray]               Azymutal angles
-		- theta             [ndarray]               Elevation angles
+		time : np.ndarray
+			List of times
+
+		data : np.ndarray
+			Values of the distribution function
+
+		energy : np.ndarray
+			Energy levels
+
+		phi : np.ndarray
+			Azimuthal angles
+			
+		theta : np.ndarray
+			Elevation angles
 
 	Returns :
-		- out               [xarray]                Skymap of the distribution function
+		out : DataArray
+			Skymap of the distribution function
 
 	"""
 	

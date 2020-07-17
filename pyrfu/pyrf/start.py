@@ -8,11 +8,15 @@ def start(inp=None,fmt="unix"):
 	Gives the first time of the time series
 
 	Parameters :
-		- inp               [xarray]                Time series
-		- fmt               [str]                   Format of the output
+		inp : DataArray
+			Time series
+
+		fmt : str
+			Format of the output
 
 	Returns :
-		- out               [float/str]             Value of the first time in the desired format
+		out : float/str
+			Value of the first time in the desired format
 	"""
 
 	if not isinstance(inp,xr.DataArray):

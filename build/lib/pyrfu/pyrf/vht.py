@@ -7,17 +7,27 @@ from .e_vxb import e_vxb
 
 def vht(e=None,b=None,flag=1):
 	"""
-	Estimate velocity of the De Hoffmann-Teller frame from the velocity estimate the electric field eht=-vhtxb
+	Estimate velocity of the De Hoffman-Teller frame from the velocity estimate the electric field eht=-vhtxb
 
 	Parameters :
-		- e                 [xarray]                Electric field
-		- b                 [xarray]                Magnetic field
-		- flag              [int]                   Flag. If 2 assumed no Ez.
+		e : DataArray
+			Time series of the electric field
+
+		b : DataArray
+			Time series of the magnetic field
+
+		flag : int 
+			If 2 assumed no Ez.
 
 	Returns :
-		- vht               [ndarray]               De Hoffmann Teller frame velocity [km/s]
-		- vht               [xarray]                Electric field in the De Hoffmann frame             
-		- dvht              [ndarray]               Error of De Hoffmann Teller frame
+		vht : np.ndarray
+			De Hoffman Teller frame velocity [km/s]
+
+		vht : DataArray
+			Time series of the electric field in the De Hoffman frame             
+
+		dvht : np.ndarray
+			Error of De Hoffman Teller frame
 	
 	"""
 	
@@ -51,10 +61,10 @@ def vht(e=None,b=None,flag=1):
 	if flag == 2:   # assume only Ex and Ey
 		z       = 0       # put z component to 0 when using only Ex and Ey
 		K       = np.array([[p[5],0,-p[2]],[0,p[5],-p[4]],[-p[2],-p[4],p[0]+p[3]]])
-		comm    = "De Hoffmann-Teller frame is calculated using 2 components of E=(Ex,Ey,0)"
+		comm    = "De Hoffman-Teller frame is calculated using 2 components of E=(Ex,Ey,0)"
 	else :
 		K   = np.array([[p[3]+p[5],-p[1],-p[2]],[-p[1],p[0]+p[5],-p[4]],[-p[2],-p[4],p[0]+p[3]]])
-		com = "De Hoffmann-Teller frame is calculated using all 3 components of E=(Ex,Ey,Ez)"
+		com = "De Hoffman-Teller frame is calculated using all 3 components of E=(Ex,Ey,Ez)"
 
 	ExB     = np.cross(e,b)
 	indData = np.where(~np.isnan(ExB[:,0].data))[0]

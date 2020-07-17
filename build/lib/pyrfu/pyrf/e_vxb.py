@@ -10,13 +10,26 @@ def e_vxb(v=None, b=None, flag=0):
 	Compute VxB and ExB/B^2
 
 	Parameters :
-		- v                 [xarray]                Velocity/Electric field
-		- b                 [xarray]                Magnetic field
-		- flag              [int]                   Flag. If vxb (default) computes electric field. If exb compute drift
-													velocity
+		- v : DataArray
+			Time series of the velocity/electric field
+
+		- b : DataArray
+			Time series of the magnetic field
+
+		- flag : str
+			Method flag : 
+				"vxb" -> computes electric field (default)
+				"exb" -> computes drift velocity
 	
 	Returns :
-		- out               [xarray]                Electric/velocity field time serie
+		- out : DataArray
+			Time series of the electric/velocity field
+
+	Example :
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> gseB = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+		>>> gseE = mms.get_data("E_gse_edp_fast_l2",Tint,1)
+		>>> gseExB = pyrf.e_vxb(gseE,gseB,"ExB")
 
 	"""
 	if v is None:
@@ -32,7 +45,7 @@ def e_vxb(v=None, b=None, flag=0):
 	inputNumeric   = False
 	inputVConstant = False
 
-	if flag == -1:
+	if flag.lower() == "exb":
 		estimateExB    = True
 		estimateVxB    = False
 

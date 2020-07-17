@@ -6,38 +6,67 @@ import warnings
 from .resample import resample
 
 
-def wavepolarize_means(Bwave=None, Bbgd= None, minPsd=1e-25, nopfft=256):
+def wavepolarize_means(Bwave=None, Bbgd= None, **kwargs):
 	"""
 	Analysis the polarization of magnetic wave using "means" method
 
 	Parameters :
-		- Bwave             [xarray]                Time serie of the magnetic field from SCM
-		- Bbgd              [xarray]                Time serie of the magnetic field from FGM
-		- minPsd            [float]                 (optional) thresold for the analysis (for example: 1.0e-7). 
-													Below this value, the SVD analysis is meaningless if minPsd is not 
-													given, SVD analysis will be done for all waves
-		- nopfft            [int]                   (optional) Number of points in FFT (for example: 256).
-													If nopfft is not given, it will be automatically set as 256
+		Bwave : DataArray
+			Time series of the magnetic field from SCM
+
+		Bbgd : DataArray
+			Time series of the magnetic field from FGM.
+		
+	Options :
+		minPsd : float
+			Threshold for the analysis (e.g 1.0e-7). Below this value, the SVD analysis is meaningless if minPsd is 
+			not given, SVD analysis will be done for all waves. (default 1e-25)
+
+		nopfft : int
+			Number of points in FFT. (default 256)
 
 	Returns :
-		- Bpsd              [xarray]                Power spectra density of magnetic filed wave
-		- degpol            [xarray]                Degeree of polarization (form 0 to 1)
-		- waveangle         [xarray]                (form 0 to 90)
-		- elliptict         [xarray]                (form -1 to 1)
-		- helict            [xarray]                (form -1 to 1)
+		Bpsd : DataArray
+			Power spectrum density of magnetic filed wave.
 
+		degpol : DataArray
+			Spectrogram of the degree of polarization (form 0 to 1).
+
+		waveangle : DataArray
+			(form 0 to 90)
+
+		elliptict : DataArray
+			Spectrogram of the ellipticity (form -1 to 1)
+
+		helict    : DataArray
+			Spectrogram of the helicity (form -1 to 1)
+
+	Example :
+		>>> [Bpsd,degpol,waveangle,elliptict,helict] = pyrf.wavepolarize_means(Bwave,Bbgd)
+		>>> [Bpsd,degpol,waveangle,elliptict,helict] = pyrf.wavepolarize_means(Bwave,Bbgd,1.0e-7)
+		>>> [Bpsd,degpol,waveangle,elliptict,helict] = pyrf.wavepolarize_means(Bwave,Bbgd,1.0e-7,256)
 
 	Notice: Bwave and Bbgd should be from the same satellite and in the same coordinates 
 
-	WARNING: If one component is an order of magnitude or more  greater than the other two then the polarisation 
-	results saturate and erroneously indicate high degrees of polarisation at all times and frequencies. Time 
+	WARNING: If one component is an order of magnitude or more  greater than the other two then the polarization 
+	results saturate and erroneously indicate high degrees of polarization at all times and frequencies. Time 
 	series should be eyeballed before running the program.
 	For time series containing very rapid changes or spikes the usual problems with Fourier analysis arise.
-	Care should be taken in evaluating degree of polarisation results.
-	For meaningful results there should be significant wave power at the frequency where the polarisation 
-	approaches 100%. Remembercomparing two straight lines yields 100% polarisation.
+	Care should be taken in evaluating degree of polarization results.
+	For meaningful results there should be significant wave power at the frequency where the polarization 
+	approaches 100%. Remember comparing two straight lines yields 100% polarization.
 
 	"""
+
+	if (Bwave is None) or (Bbgd is None):
+		raise ValueError("wavepolarize_means requires at least two arguments")
+
+	minPsd = 1e-25
+	nopfft = 256
+
+	if "minPsd" in kwargs: minPsd = kwargs["minPsd"]
+	if "nopfft" in kwargs: minPsd = kwargs["nopfft"]
+
 
 	steplength=nopfft/2
 	nopoints = len(Bwave)

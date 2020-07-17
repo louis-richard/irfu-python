@@ -16,6 +16,7 @@ from .dot import dot
 from .cross import cross
 from .trace import trace
 from .norm import norm
+from .normalize import normalize
 
 from .calc_dt import calc_dt
 from .calc_fs import calc_fs

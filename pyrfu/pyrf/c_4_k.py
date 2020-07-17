@@ -9,14 +9,17 @@ def c_4_k(r1=None,r2=None,r3=None,r4=None):
 	"""
 	Calculate reciprocal vectors in barycentric coordinates. Reference: ISSI book 14.7
 	
-	Note : The units of reciprocal vectors are the same as [1/r]
-
 	Parameters :
-		- r1...r4           [xarray]                Position of the spacecrafts
+		r1...r4 : DataArray
+			Position of the spacecrafts
 
 	Returns :
-		- k1...k4           [xarray]                Reciprocal vectors in barycentric coordinates
+		k1...k4 : DataArray
+			Reciprocal vectors in barycentric coordinates
 	
+	Note : 
+		The units of reciprocal vectors are the same as [1/r]
+
 	"""
 
 	if not isinstance(r1,xr.DataArray): raise TypeError("Inputs must be DataArrays")

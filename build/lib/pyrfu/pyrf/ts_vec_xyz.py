@@ -3,17 +3,23 @@ import xarray as xr
 
 
 
-def ts_vec_xyz(t,data,attrs=None):
+def ts_vec_xyz(t=None, data=None, attrs=None):
 	"""
-	Create a time serie containing a 1st order tensor
+	Create a time series containing a 1st order tensor
 
 	Parameters :
-		- t                 [ndarray]               Array of times  
-		- data              [ndarray]               Data corresponding to the time list
-		- attrs             [dict]                  Attributes of the data list (optionnal)
+		t : np.ndarray
+			Array of times  
+		data : np.ndarray
+			Data corresponding to the time list
+	
+	Options :
+		attrs : dict
+			Attributes of the data list
 
 	Returns :
-		- out               [xarray]                1st order tensor time serie
+		out : DataArray
+			1st order tensor time series
 
 	"""
 

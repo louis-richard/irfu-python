@@ -3,7 +3,26 @@ from .get_ts import get_ts
 from ..pyrf import ts_append
 
 
-def db_get_ts(dsetName,cdfName,trange):
+def db_get_ts(dsetName="", cdfName="", trange=None):
+	"""
+	Get variable time series in the cdf file
+
+	Parameters :
+		dsetName : str
+			Name of the dataset
+
+		cdfName : str
+			Name of the target field in cdf file
+
+		trange : list of str
+			Time interval
+
+	Returns : 
+		out : DataArray
+			Time series of the target variable
+
+	"""
+
 	Var = {}
 
 	dset = dsetName.split("_")
@@ -25,4 +44,5 @@ def db_get_ts(dsetName,cdfName,trange):
 			out = temp
 		else :
 			out = ts_append(out,temp)
+			
 	return out

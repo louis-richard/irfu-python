@@ -5,17 +5,21 @@ import bisect
 
 def t_eval(inp=None,t=None):
 	"""
-	Evaluates the input time serie at the target time
+	Evaluates the input time series at the target time
 
 	Parameters :
-		- inp               [xarray]                Input time serie to evaluate
-		- t                 [ndaray]                Times at which the input will be evaluated
+		- inp : DataArray
+			Time series if the input to evaluate
+
+		- t : np.ndarray
+			Times at which the input will be evaluated
 
 	Returns :
-		- out               [xarray]                Time serie of inp at times t
+		- out : DataArray
+			Time series of the input at times t
 
 	"""
-	if inp is None:
+	if (inp is None) or (t is None):
 		raise ValueError("t_eval requires at least 2 arguments")
 
 	

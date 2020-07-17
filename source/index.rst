@@ -1,0 +1,461 @@
+.. pyrfu documentation master file, created by
+   sphinx-quickstart on Thu Jul 16 10:17:35 2020.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to pyrfu's documentation!
+=================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+
+
+	
+
+.. py:function:: enumerate(sequence[, start=0])
+
+   Return an iterator that yields tuples of an index and an item of the
+   *sequence*. (And so on.)
+
+.. py:module:: mms
+
+.. py:function:: calc_feeps_omni(inp_dset)
+	
+    Computes the omni-directional FEEPS spectrograms from a Dataset that contains the spectrograms of all eyes.
+    
+    Parameters:
+        *inp_dset* : Dataset
+        	Dataset with energy spectrum of every eyes
+
+    Returns:
+        *out* : DataArray
+        	OMNI energy spectrum from the input
+
+.. py:function:: db_get_ts(dsetName="", cdfName="", trange=None)
+	
+	Get variable time series in the cdf file
+
+	Parameters :
+		*dsetName* : str
+			Name of the dataset
+
+		*cdfName* : str
+			Name of the target field in cdf file
+
+		*trange* : list of str
+			Time interval
+
+	Returns : 
+		*out* : DataArray
+			Time series of the target variable
+
+.. py:function:: feeps_remove_sun(inp_dset)
+	
+	Removes the sunlight contamination from FEEPS data
+
+	Parameters :
+		*inp_dset* : Dataset
+			Dataset of energy spectrum of all eyes (see get_feeps_alleyes)
+
+	Returns :
+		*out* : Dataset
+			Dataset of cleaned energy spectrum of all eyes 
+
+	Example : 
+		>>> Tint = ["2017-07-18T13:04:00.000","2017-07-18T13:07:00.000"]
+		>>> iCPS = mms.get_feeps_alleyes("CPSi_brst_l2",Tint,2)
+		>>> iCPS_clean = mms.feeps_split_integral_ch(iCPS)
+		>>> iCPS_clean_sun_removed = mms.feeps_remove_sun(iCPS_clean)
+
+.. py:function:: feeps_spin_avg(inp_dset_omni)
+    
+    This function will spin-average the omni-directional FEEPS energy spectra
+    
+    Parameters:
+        *inp_dset_omniv : DataArray
+            Spectrogram of all eyes in OMNI
+
+    Returns:
+        *out* : DataArray
+            Spin-averaged OMNI energy spectrum
+
+
+.. py:function:: get_feeps_energy_table(probe, eye, sensor_id)
+    
+    This function returns the energy table based on
+    each spacecraft and eye; based on the table from:
+       FlatFieldResults_V3.xlsx
+       
+    from Drew Turner, 1/19/2017
+    
+    Parameters:
+        *probe* : str
+            probe #, e.g., "4" for MMS4
+
+        *eye* : str
+            sensor eye #
+
+        *sensor_id* : int
+            sensor ID
+    Returns:
+        *Energy table 
+        
+    Notes:
+        BAD EYES are replaced by NaNs
+        - different original energy tables are used depending on if the sensor head is 6-8 (ions) or not (electrons)
+        Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
+        Ion Eyes: 6, 7, 8
+
+.. py:function:: get_feeps_oneeye(tar_var="fluxe_brst_l2", eId="bottom-4", trange=None, mmsId=1)
+    
+    Load energy spectrum all the target eye
+
+    Parameters :
+        *tar_var* : str
+            target variable "{data_units}{specie}_{data_rate}_{level}"
+                - data_units : 
+                    - "flux" : intensity (1/cm sr)
+                    - "count" : counts (-)
+                    - "CPS" : counts per second (1/s)
+                
+                - specie : 
+                    - "i" : ion
+                    - "e" : electron
+                
+                - data_rate : brst/srvy
+                
+                - level : l1/l1b/l2/l3??
+
+        *eId* : str
+            index of the eye "{deck}-{id}"
+                - deck : top/bottom
+                - id : see get_feeps_active_eyes
+
+        *trange* : list of str
+            Time interval
+
+        *mmsId* : int/str
+            Index of the spacecraft
+
+
+.. py:function:: get_data(varStr,tint,mmsId[, silent=False])
+
+	Load a variable. varStr must in var (see below)
+
+	Parameters :
+		*varStr* : str
+			Key of the target variable (see below)
+
+		*tint* : list of str
+			Time interval
+
+		*mmsId* : str/int
+			Index of the target spacecraft
+
+		*silent* : bool
+			Set to False (default) to follow the loading
+
+	Returns :
+		*out* : DataArray
+			Time series of the target variable of measured by the target spacecraft over the selected time interval
+	
+	Example :
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> gseB = mms.get_data("B_gse_fgm_brst_l2",Tint,1)
+
+	EPHEMERIS :
+	"R_gse", "R_gsm"
+
+	FGM : 
+	"B_gsm_fgm_srvy_l2", "B_gsm_fgm_brst_l2", "B_gse_fgm_srvy_l2",
+	"B_gse_fgm_brst_l2", "B_bcs_fgm_srvy_l2", "B_bcs_fgm_brst_l2",
+	"B_dmpa_fgm_srvy_l2", "B_dmpa_fgm_brst_l2"
+
+	DFG & AFG :
+	"B_gsm_dfg_srvy_l2pre", "B_gse_dfg_srvy_l2pre", "B_dmpa_dfg_srvy_l2pre",
+	"B_bcs_dfg_srvy_l2pre", "B_gsm_afg_srvy_l2pre", "B_gse_afg_srvy_l2pre",
+	"B_dmpa_afg_srvy_l2pre", "B_bcs_afg_srvy_l2pre"
+
+	SCM :
+	"B_gse_scm_brst_l2"
+
+	EDP :
+	"Phase_edp_fast_l2a", "Phase_edp_slow_l2a", "Sdev12_edp_slow_l2a",
+	"Sdev34_edp_slow_l2a", "Sdev12_edp_fast_l2a", "Sdev34_edp_fast_l2a",
+	"E_dsl_edp_brst_l2", "E_dsl_edp_fast_l2", "E_dsl_edp_brst_ql", 
+	"E_dsl_edp_fast_ql", "E_dsl_edp_slow_l2", "E_gse_edp_brst_l2", 
+	"E_gse_edp_fast_l2", "E_gse_edp_slow_l2", "E2d_dsl_edp_brst_l2pre", 
+	"E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_ql", "E2d_dsl_edp_fast_ql", 
+	"E2d_dsl_edp_l2pre", "E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_l2pre", 
+	"E_dsl_edp_l2pre", "E_dsl_edp_fast_l2pre", "E_dsl_edp_brst_l2pre", 
+	"E_dsl_edp_slow_l2pre", "E_ssc_edp_brst_l2a", "E_ssc_edp_fast_l2a", 
+	"E_ssc_edp_slow_l2a", "V_edp_fast_sitl", "V_edp_slow_sitl", 
+	"V_edp_slow_l2", "V_edp_fast_l2", "V_edp_brst_l2"
+
+	FPI Ions : 
+	"Vi_dbcs_fpi_brst_l2", "Vi_dbcs_fpi_fast_l2", "Vi_dbcs_fpi_l2",
+	"Vi_gse_fpi_ql", "Vi_gse_fpi_fast_ql", "Vi_dbcs_fpi_fast_ql",
+	"Vi_gse_fpi_fast_l2", "Vi_gse_fpi_brst_l2", "partVi_gse_fpi_brst_l2",
+	"Ni_fpi_brst_l2", "partNi_fpi_brst_l2", "Ni_fpi_brst",
+	"Ni_fpi_fast_l2", "Ni_fpi_ql", "Enfluxi_fpi_fast_ql",
+	"Enfluxi_fpi_fast_l2", "Tperpi_fpi_brst_l2", "Tparai_fpi_brst_l2",
+	"partTperpi_fpi_brst_l2", "partTparai_fpi_brst_l2", "Ti_dbcs_fpi_brst_l2",
+	"Ti_dbcs_fpi_brst", "Ti_dbcs_fpi_fast_l2", "Ti_gse_fpi_ql",
+	"Ti_dbcs_fpi_ql", "Ti_gse_fpi_brst_l2", "Pi_dbcs_fpi_brst_l2",
+	"Pi_dbcs_fpi_brst", "Pi_dbcs_fpi_fast_l2", "Pi_gse_fpi_ql",
+	"Pi_gse_fpi_brst_l2"
+
+	FPI Electrons :
+	"Ve_dbcs_fpi_brst_l2", "Ve_dbcs_fpi_brst", "Ve_dbcs_fpi_ql",
+	"Ve_dbcs_fpi_fast_l2", "Ve_gse_fpi_ql", "Ve_gse_fpi_fast_l2",
+	"Ve_gse_fpi_brst_l2", "partVe_gse_fpi_brst_l2", "Enfluxe_fpi_fast_ql",
+	"Enfluxe_fpi_fast_l2", "Ne_fpi_brst_l2", "partNe_fpi_brst_l2",
+	"Ne_fpi_brst", "Ne_fpi_fast_l2", "Ne_fpi_ql",
+	"Tperpe_fpi_brst_l2", "Tparae_fpi_brst_l2", "partTperpe_fpi_brst_l2",
+	"partTparae_fpi_brst_l2", "Te_dbcs_fpi_brst_l2", "Te_dbcs_fpi_brst",
+	"Te_dbcs_fpi_fast_l2", "Te_gse_fpi_ql", "Te_dbcs_fpi_ql",
+	"Te_gse_fpi_brst_l2", "Pe_dbcs_fpi_brst_l2", "Pe_dbcs_fpi_brst",
+	"Pe_dbcs_fpi_fast_l2", "Pe_gse_fpi_ql", "Pe_gse_fpi_brst_l2",
+
+	HPCA : 
+	"Nhplus_hpca_srvy_l2", "Nheplus_hpca_srvy_l2", "Nheplusplus_hpca_srvy_l2",
+	"Noplus_hpca_srvy_l2", "Tshplus_hpca_srvy_l2", "Tsheplus_hpca_srvy_l2",
+	"Tsheplusplus_hpca_srvy_l2", "Tsoplus_hpca_srvy_l2", "Vhplus_dbcs_hpca_srvy_l2",
+	"Vheplus_dbcs_hpca_srvy_l2", "Vheplusplus_dbcs_hpca_srvy_l2", "Voplus_dbcs_hpca_srvy_l2",
+	"Phplus_dbcs_hpca_srvy_l2", "Pheplus_dbcs_hpca_srvy_l2", "Pheplusplus_dbcs_hpca_srvy_l2",
+	"Poplus_dbcs_hpca_srvy_l2", "Thplus_dbcs_hpca_srvy_l2", "Theplus_dbcs_hpca_srvy_l2",
+	"Theplusplus_dbcs_hpca_srvy_l2", "Toplus_dbcs_hpca_srvy_l2", "Vhplus_gsm_hpca_srvy_l2",
+	"Vheplus_gsm_hpca_srvy_l2", "Vheplusplus_gsm_hpca_srvy_l2", "Voplus_gsm_hpca_srvy_l2",
+	"Nhplus_hpca_brst_l2", "Nheplus_hpca_brst_l2", "Nheplusplus_hpca_brst_l2",
+	"Noplus_hpca_brst_l2", "Tshplus_hpca_brst_l2", "Tsheplus_hpca_brst_l2",
+	"Tsheplusplus_hpca_brst_l2", "Tsoplus_hpca_brst_l2", "Vhplus_dbcs_hpca_brst_l2",
+	"Vheplus_dbcs_hpca_brst_l2", "Vheplusplus_dbcs_hpca_brst_l2", "Voplus_dbcs_hpca_brst_l2",
+	"Phplus_dbcs_hpca_brst_l2", "Pheplus_dbcs_hpca_brst_l2", "Pheplusplus_dbcs_hpca_brst_l2",
+	"Poplus_dbcs_hpca_brst_l2", "Thplus_dbcs_hpca_brst_l2", "Theplus_dbcs_hpca_brst_l2",
+	"Theplusplus_dbcs_hpca_brst_l2", "Toplus_dbcs_hpca_brst_l2", "Vhplus_gsm_hpca_brst_l2",
+	"Vheplus_gsm_hpca_brst_l2", "Vheplusplus_gsm_hpca_brst_l2", "Voplus_gsm_hpca_brst_l2",
+	"Phplus_gsm_hpca_brst_l2", "Pheplus_gsm_hpca_brst_l2", "Pheplusplus_gsm_hpca_brst_l2",
+	"Poplus_gsm_hpca_brst_l2", "Thplus_gsm_hpca_brst_l2", "Theplus_gsm_hpca_brst_l2",
+	"Theplusplus_gsm_hpca_brst_l2", "Toplus_gsm_hpca_brst_l2"
+
+
+.. py:module:: pyrf
+
+.. py:function:: agyro_coeff(P=None)
+
+	Computes agyrotropy coefficient (Swidak2016 https://doi.org/10.1002/2015GL066980)
+	
+	Parameters :
+		*P* : DataArray
+			Time series of the pressure tensor
+		
+	Returns :
+		*Q* : DataArray
+			Time series of the agyrotropy coefficient of the specie
+
+	Example :
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> gseB = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+		>>> gsePe = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
+		>>> facPe = pyrf.rotate_tensor(gsePe,"fac",gseB,"pp")
+		>>> facPe = pyrf.agyro_coeff(facPe)
+
+.. py:function:: c_4_grad(R1=None,R2=None,R3=None,R4=None,B1=None,B2=None,B3=None,B4=None,method="grad")
+	
+	Calculate gradient of physical field using 4 spacecraft technique. 
+	
+	Parameters :
+		*R1*...*R4* : DataArray
+			Time series of the positions of the spacecraft
+
+		*B1*...*B4* : DataArray
+			Time series of the magnetic field at the corresponding positions
+
+		*method* : str
+			Method flag : 
+				- "grad" : compute gradient (default)
+				- "div" : compute divergence
+				- "curl" : compute curl
+				- "bdivb" : compute b.div(b)
+				- "curv" : compute curvature
+
+	Returns :
+		*out* : DataArray
+			Time series of the derivative of the input field corresponding to the method
+
+	Example :
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> gseB1, gseB2, gseB3, gseB4 = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in range(1,5)]
+		>>> gseR1, gseR2, gseR3, gseR4 = [mms.get_data("R_gse",Tint,i) for i in range(1,5)]
+		>>> gradB = pyrf.c_4_grad(gseR1,gseR2,gseR3,gseR4,gseB1,gseB2,gseB3,gseB4,"grad")
+
+	Reference : 
+		ISSI book  Eq. 14.16, 14.17 p. 353
+
+	See also : 
+		c_4_k
+
+.. py:function:: c_4_k(r1=None,r2=None,r3=None,r4=None)
+	
+	Calculate reciprocal vectors in barycentric coordinates. Reference: ISSI book 14.7
+	
+	Parameters :
+		*r1*, *r2*, *r3*, *r4* : DataArray
+			Position of the spacecrafts
+
+	Returns :
+		*k1*, *k2*, *k3*, *k4* : DataArray
+			Reciprocal vectors in barycentric coordinates
+	
+	Note : 
+		The units of reciprocal vectors are the same as [1/r]
+
+
+
+.. py:function:: ts_scalar(t=None,data=None,attrs=None)
+	
+	Create a time series containing a 0th order tensor
+
+	Parameters :
+		t : np.ndarray
+			Array of times
+
+		data : np.ndarray
+			Data corresponding to the time list
+	
+	Options :
+		attrs : dict
+			Attributes of the data list
+
+	Returns :
+		out DataArray
+			0th order tensor time series
+
+
+.. py:function:: ts_skymap(time,data,energy,phi,theta,**kwargs)
+	
+	Creates a skymap of the distribution function
+
+	Parameters :
+		time : np.ndarray
+			List of times
+
+		data : np.ndarray
+			Values of the distribution function
+
+		energy : np.ndarray
+			Energy levels
+
+		phi : np.ndarray
+			Azimuthal angles
+			
+		theta : np.ndarray
+			Elevation angles
+
+	Returns :
+		out : DataArray
+
+.. py:function:: ts_tensor_xyz(t=None, data=None[, attrs=None])
+	
+	Create a time series containing a 2nd order tensor
+
+	Parameters :
+		t : np.ndarray
+			Array of times
+
+		data : np.ndarray
+			Data corresponding to the time list
+
+	Options :
+		attrs : dict
+			Attributes of the data list
+
+	Returns :
+		out : DataArray
+			2nd order tensor time series
+
+.. py:function:: ts_vec_xyz(t=None, data=None, [attrs=None])
+	
+	Create a time series containing a 1st order tensor
+
+	Parameters :
+		*t* : np.ndarray
+			Array of times  
+		*data* : np.ndarray
+			Data corresponding to the time list
+	
+	Options :
+		*attrs* : dict
+			Attributes of the data list
+
+	Returns :
+		*out* : DataArray
+			1st order tensor time series
+
+
+.. py:function:: vht(e=None,b=None[,flag=1])
+	
+	Estimate velocity of the De Hoffman-Teller frame from the velocity estimate the electric field eht=-vhtxb
+
+	Parameters :
+		*e* : DataArray
+			Time series of the electric field
+
+		*b* : DataArray
+			Time series of the magnetic field
+
+		*flag* : int 
+			If 2 assumed no Ez.
+
+	Returns :
+		*vht* : np.ndarray
+			De Hoffman Teller frame velocity [km/s]
+
+		*vht* : DataArray
+			Time series of the electric field in the De Hoffman frame             
+
+		*dvht* : np.ndarray
+			Error of De Hoffman Teller frame
+
+.. py:function:: wavelet(inp=None,**kwargs)
+	
+	Calculate wavelet spectrogram based on fast FFT algorithm
+	
+	Parameters :
+		*inp* : DataArray
+			Input quantity
+
+	Options :
+		*fs* : int/float
+			Sampling frequency of the input time series
+
+		*f* : list/np.ndarray
+			Vector [fmin fmax], calculate spectra between frequencies fmin and fmax
+
+		*nf* : int/float
+			Number of frequency bins
+
+		*wavelet_width : int/float
+			Width of the Morlet wavelet, default 5.36
+
+		*linear* : float
+			Linear spacing between frequencies of df
+
+		*returnpower* : bool
+			Set to True (default) to return the power, False for complex wavelet transform
+
+		*cutedge* : bool
+			Set to True (default) to set points affected by edge effects to NaN, False to keep edge affect points
+	
+	Returns :
+		*out* : DataArray/Dataset
+			Wavelet transform of the input
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

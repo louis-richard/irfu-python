@@ -5,20 +5,22 @@ import xarray as xr
 
 def trace(inp=None):
 	"""
-	Computes trace of the time serie of 2nd order tensors
+	Computes trace of the time series of 2nd order tensors
 
-	Paramters :
-		- inp               [xarray]                Input time serie of 2nd order tensor
+	Parameters :
+		inp : DataArray
+			Time series of the input 2nd order tensor.
 
 	Returns :
-		- out               [xarray]                Trace of the input tensor
+		out : DataArray
+			Time series of the trace of the input tensor
 
 	"""
 
 	if not isinstance(inp, xr.DataArray):
 		raise TypeError("Input must be a DataArray")
 
-	if len(inp.shape) != 3:
+	if inp.data.ndim != 3:
 		raise TypeError("Input must be a 2nd order tensor")
 
 	inp_data    = inp.data

@@ -25,11 +25,19 @@ def movmean(inp=None, N=100):
 	if not isinstance(N,int): 
 		N = int(N)
 
+	if N%2: N -=1
+
 	# Computes moving average
-	cumsum 	= np.cumsum(inp.data,axs=0)
+	cumsum 	= np.cumsum(inp.data,axis=0)
 	outdata = (cumsum[N:]-cumsum[:-N])/N
 
+	for k in keys: 
+		if k == "time": 
+			coords.append(inp.coords[k][int(N/2):-int(N/2)]) 
+		else: 
+			coords.append(inp.coords[k]) 
+
 	# Output in DataArray type
-	out = xr.DataArray(outdata,coords=inp.coords,dims=inp.dims,attrs= inp.attrs)
+	out = xr.DataArray(outdata,coords=coords,dims=inp.dims,attrs= inp.attrs)
 
 	return out

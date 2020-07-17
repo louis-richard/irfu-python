@@ -1,0 +1,613 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to pyrfu’s documentation! &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">pyrfu  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Welcome to pyrfu’s documentation!</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-pyrfu-s-documentation">
+<h1>Welcome to pyrfu’s documentation!<a class="headerlink" href="#welcome-to-pyrfu-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<dl class="py function">
+<dt id="enumerate">
+<code class="sig-name descname">enumerate</code><span class="sig-paren">(</span><em class="sig-param">sequence</em><span class="optional">[</span>, <em class="sig-param">start=0</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#enumerate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an iterator that yields tuples of an index and an item of the
+<em>sequence</em>. (And so on.)</p>
+</dd></dl>
+
+<span class="target" id="module-mms"></span><dl class="py function">
+<dt id="mms.calc_feeps_omni">
+<code class="sig-prename descclassname">mms.</code><code class="sig-name descname">calc_feeps_omni</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dset</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mms.calc_feeps_omni" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the omni-directional FEEPS spectrograms from a Dataset that contains the spectrograms of all eyes.</p>
+<dl class="simple">
+<dt>Parameters:</dt><dd><dl class="simple">
+<dt><em>inp_dset</em><span class="classifier">Dataset</span></dt><dd><p>Dataset with energy spectrum of every eyes</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">DataArray</span></dt><dd><p>OMNI energy spectrum from the input</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mms.db_get_ts">
+<code class="sig-prename descclassname">mms.</code><code class="sig-name descname">db_get_ts</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dsetName</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cdfName</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">trange</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mms.db_get_ts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get variable time series in the cdf file</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>dsetName</em><span class="classifier">str</span></dt><dd><p>Name of the dataset</p>
+</dd>
+<dt><em>cdfName</em><span class="classifier">str</span></dt><dd><p>Name of the target field in cdf file</p>
+</dd>
+<dt><em>trange</em><span class="classifier">list of str</span></dt><dd><p>Time interval</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the target variable</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mms.feeps_remove_sun">
+<code class="sig-prename descclassname">mms.</code><code class="sig-name descname">feeps_remove_sun</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dset</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mms.feeps_remove_sun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the sunlight contamination from FEEPS data</p>
+<dl>
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>inp_dset</em><span class="classifier">Dataset</span></dt><dd><p>Dataset of energy spectrum of all eyes (see get_feeps_alleyes)</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">Dataset</span></dt><dd><p>Dataset of cleaned energy spectrum of all eyes</p>
+</dd>
+</dl>
+</dd>
+<dt>Example :</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2017-07-18T13:04:00.000&quot;</span><span class="p">,</span><span class="s2">&quot;2017-07-18T13:07:00.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iCPS</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_feeps_alleyes</span><span class="p">(</span><span class="s2">&quot;CPSi_brst_l2&quot;</span><span class="p">,</span><span class="n">Tint</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iCPS_clean</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">feeps_split_integral_ch</span><span class="p">(</span><span class="n">iCPS</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iCPS_clean_sun_removed</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">feeps_remove_sun</span><span class="p">(</span><span class="n">iCPS_clean</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mms.feeps_spin_avg">
+<code class="sig-prename descclassname">mms.</code><code class="sig-name descname">feeps_spin_avg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dset_omni</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mms.feeps_spin_avg" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function will spin-average the omni-directional FEEPS energy spectra</p>
+<dl class="simple">
+<dt>Parameters:</dt><dd><dl class="simple">
+<dt><a href="#id1"><span class="problematic" id="id2">*</span></a>inp_dset_omniv<span class="classifier">DataArray</span></dt><dd><p>Spectrogram of all eyes in OMNI</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">DataArray</span></dt><dd><p>Spin-averaged OMNI energy spectrum</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mms.get_feeps_energy_table">
+<code class="sig-prename descclassname">mms.</code><code class="sig-name descname">get_feeps_energy_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">probe</span></em>, <em class="sig-param"><span class="n">eye</span></em>, <em class="sig-param"><span class="n">sensor_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mms.get_feeps_energy_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function returns the energy table based on
+each spacecraft and eye; based on the table from:</p>
+<blockquote>
+<div><p>FlatFieldResults_V3.xlsx</p>
+</div></blockquote>
+<p>from Drew Turner, 1/19/2017</p>
+<dl class="simple">
+<dt>Parameters:</dt><dd><dl class="simple">
+<dt><em>probe</em><span class="classifier">str</span></dt><dd><p>probe #, e.g., “4” for MMS4</p>
+</dd>
+<dt><em>eye</em><span class="classifier">str</span></dt><dd><p>sensor eye #</p>
+</dd>
+<dt><em>sensor_id</em><span class="classifier">int</span></dt><dd><p>sensor ID</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p><a href="#id3"><span class="problematic" id="id4">*</span></a>Energy table</p>
+</dd>
+<dt>Notes:</dt><dd><p>BAD EYES are replaced by NaNs
+- different original energy tables are used depending on if the sensor head is 6-8 (ions) or not (electrons)
+Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
+Ion Eyes: 6, 7, 8</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mms.get_feeps_oneeye">
+<code class="sig-prename descclassname">mms.</code><code class="sig-name descname">get_feeps_oneeye</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tar_var</span><span class="o">=</span><span class="default_value">'fluxe_brst_l2'</span></em>, <em class="sig-param"><span class="n">eId</span><span class="o">=</span><span class="default_value">'bottom-4'</span></em>, <em class="sig-param"><span class="n">trange</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mmsId</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mms.get_feeps_oneeye" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load energy spectrum all the target eye</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>tar_var</em><span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>target variable “{data_units}{specie}_{data_rate}_{level}”</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>data_units :</dt><dd><ul>
+<li><p>“flux” : intensity (1/cm sr)</p></li>
+<li><p>“count” : counts (-)</p></li>
+<li><p>“CPS” : counts per second (1/s)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>specie :</dt><dd><ul>
+<li><p>“i” : ion</p></li>
+<li><p>“e” : electron</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>data_rate : brst/srvy</p></li>
+<li><p>level : l1/l1b/l2/l3??</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt><em>eId</em><span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>index of the eye “{deck}-{id}”</dt><dd><ul class="simple">
+<li><p>deck : top/bottom</p></li>
+<li><p>id : see get_feeps_active_eyes</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt><em>trange</em><span class="classifier">list of str</span></dt><dd><p>Time interval</p>
+</dd>
+<dt><em>mmsId</em><span class="classifier">int/str</span></dt><dd><p>Index of the spacecraft</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mms.get_data">
+<code class="sig-prename descclassname">mms.</code><code class="sig-name descname">get_data</code><span class="sig-paren">(</span><em class="sig-param">varStr</em>, <em class="sig-param">tint</em>, <em class="sig-param">mmsId</em><span class="optional">[</span>, <em class="sig-param">silent=False</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#mms.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a variable. varStr must in var (see below)</p>
+<dl>
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>varStr</em><span class="classifier">str</span></dt><dd><p>Key of the target variable (see below)</p>
+</dd>
+<dt><em>tint</em><span class="classifier">list of str</span></dt><dd><p>Time interval</p>
+</dd>
+<dt><em>mmsId</em><span class="classifier">str/int</span></dt><dd><p>Index of the target spacecraft</p>
+</dd>
+<dt><em>silent</em><span class="classifier">bool</span></dt><dd><p>Set to False (default) to follow the loading</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the target variable of measured by the target spacecraft over the selected time interval</p>
+</dd>
+</dl>
+</dd>
+<dt>Example :</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2019-09-14T07:54:00.000&quot;</span><span class="p">,</span><span class="s2">&quot;2019-09-14T08:11:00.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gseB</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_fgm_brst_l2&quot;</span><span class="p">,</span><span class="n">Tint</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<p>EPHEMERIS :
+“R_gse”, “R_gsm”</p>
+<p>FGM :
+“B_gsm_fgm_srvy_l2”, “B_gsm_fgm_brst_l2”, “B_gse_fgm_srvy_l2”,
+“B_gse_fgm_brst_l2”, “B_bcs_fgm_srvy_l2”, “B_bcs_fgm_brst_l2”,
+“B_dmpa_fgm_srvy_l2”, “B_dmpa_fgm_brst_l2”</p>
+<p>DFG &amp; AFG :
+“B_gsm_dfg_srvy_l2pre”, “B_gse_dfg_srvy_l2pre”, “B_dmpa_dfg_srvy_l2pre”,
+“B_bcs_dfg_srvy_l2pre”, “B_gsm_afg_srvy_l2pre”, “B_gse_afg_srvy_l2pre”,
+“B_dmpa_afg_srvy_l2pre”, “B_bcs_afg_srvy_l2pre”</p>
+<p>SCM :
+“B_gse_scm_brst_l2”</p>
+<p>EDP :
+“Phase_edp_fast_l2a”, “Phase_edp_slow_l2a”, “Sdev12_edp_slow_l2a”,
+“Sdev34_edp_slow_l2a”, “Sdev12_edp_fast_l2a”, “Sdev34_edp_fast_l2a”,
+“E_dsl_edp_brst_l2”, “E_dsl_edp_fast_l2”, “E_dsl_edp_brst_ql”,
+“E_dsl_edp_fast_ql”, “E_dsl_edp_slow_l2”, “E_gse_edp_brst_l2”,
+“E_gse_edp_fast_l2”, “E_gse_edp_slow_l2”, “E2d_dsl_edp_brst_l2pre”,
+“E2d_dsl_edp_fast_l2pre”, “E2d_dsl_edp_brst_ql”, “E2d_dsl_edp_fast_ql”,
+“E2d_dsl_edp_l2pre”, “E2d_dsl_edp_fast_l2pre”, “E2d_dsl_edp_brst_l2pre”,
+“E_dsl_edp_l2pre”, “E_dsl_edp_fast_l2pre”, “E_dsl_edp_brst_l2pre”,
+“E_dsl_edp_slow_l2pre”, “E_ssc_edp_brst_l2a”, “E_ssc_edp_fast_l2a”,
+“E_ssc_edp_slow_l2a”, “V_edp_fast_sitl”, “V_edp_slow_sitl”,
+“V_edp_slow_l2”, “V_edp_fast_l2”, “V_edp_brst_l2”</p>
+<p>FPI Ions :
+“Vi_dbcs_fpi_brst_l2”, “Vi_dbcs_fpi_fast_l2”, “Vi_dbcs_fpi_l2”,
+“Vi_gse_fpi_ql”, “Vi_gse_fpi_fast_ql”, “Vi_dbcs_fpi_fast_ql”,
+“Vi_gse_fpi_fast_l2”, “Vi_gse_fpi_brst_l2”, “partVi_gse_fpi_brst_l2”,
+“Ni_fpi_brst_l2”, “partNi_fpi_brst_l2”, “Ni_fpi_brst”,
+“Ni_fpi_fast_l2”, “Ni_fpi_ql”, “Enfluxi_fpi_fast_ql”,
+“Enfluxi_fpi_fast_l2”, “Tperpi_fpi_brst_l2”, “Tparai_fpi_brst_l2”,
+“partTperpi_fpi_brst_l2”, “partTparai_fpi_brst_l2”, “Ti_dbcs_fpi_brst_l2”,
+“Ti_dbcs_fpi_brst”, “Ti_dbcs_fpi_fast_l2”, “Ti_gse_fpi_ql”,
+“Ti_dbcs_fpi_ql”, “Ti_gse_fpi_brst_l2”, “Pi_dbcs_fpi_brst_l2”,
+“Pi_dbcs_fpi_brst”, “Pi_dbcs_fpi_fast_l2”, “Pi_gse_fpi_ql”,
+“Pi_gse_fpi_brst_l2”</p>
+<p>FPI Electrons :
+“Ve_dbcs_fpi_brst_l2”, “Ve_dbcs_fpi_brst”, “Ve_dbcs_fpi_ql”,
+“Ve_dbcs_fpi_fast_l2”, “Ve_gse_fpi_ql”, “Ve_gse_fpi_fast_l2”,
+“Ve_gse_fpi_brst_l2”, “partVe_gse_fpi_brst_l2”, “Enfluxe_fpi_fast_ql”,
+“Enfluxe_fpi_fast_l2”, “Ne_fpi_brst_l2”, “partNe_fpi_brst_l2”,
+“Ne_fpi_brst”, “Ne_fpi_fast_l2”, “Ne_fpi_ql”,
+“Tperpe_fpi_brst_l2”, “Tparae_fpi_brst_l2”, “partTperpe_fpi_brst_l2”,
+“partTparae_fpi_brst_l2”, “Te_dbcs_fpi_brst_l2”, “Te_dbcs_fpi_brst”,
+“Te_dbcs_fpi_fast_l2”, “Te_gse_fpi_ql”, “Te_dbcs_fpi_ql”,
+“Te_gse_fpi_brst_l2”, “Pe_dbcs_fpi_brst_l2”, “Pe_dbcs_fpi_brst”,
+“Pe_dbcs_fpi_fast_l2”, “Pe_gse_fpi_ql”, “Pe_gse_fpi_brst_l2”,</p>
+<p>HPCA :
+“Nhplus_hpca_srvy_l2”, “Nheplus_hpca_srvy_l2”, “Nheplusplus_hpca_srvy_l2”,
+“Noplus_hpca_srvy_l2”, “Tshplus_hpca_srvy_l2”, “Tsheplus_hpca_srvy_l2”,
+“Tsheplusplus_hpca_srvy_l2”, “Tsoplus_hpca_srvy_l2”, “Vhplus_dbcs_hpca_srvy_l2”,
+“Vheplus_dbcs_hpca_srvy_l2”, “Vheplusplus_dbcs_hpca_srvy_l2”, “Voplus_dbcs_hpca_srvy_l2”,
+“Phplus_dbcs_hpca_srvy_l2”, “Pheplus_dbcs_hpca_srvy_l2”, “Pheplusplus_dbcs_hpca_srvy_l2”,
+“Poplus_dbcs_hpca_srvy_l2”, “Thplus_dbcs_hpca_srvy_l2”, “Theplus_dbcs_hpca_srvy_l2”,
+“Theplusplus_dbcs_hpca_srvy_l2”, “Toplus_dbcs_hpca_srvy_l2”, “Vhplus_gsm_hpca_srvy_l2”,
+“Vheplus_gsm_hpca_srvy_l2”, “Vheplusplus_gsm_hpca_srvy_l2”, “Voplus_gsm_hpca_srvy_l2”,
+“Nhplus_hpca_brst_l2”, “Nheplus_hpca_brst_l2”, “Nheplusplus_hpca_brst_l2”,
+“Noplus_hpca_brst_l2”, “Tshplus_hpca_brst_l2”, “Tsheplus_hpca_brst_l2”,
+“Tsheplusplus_hpca_brst_l2”, “Tsoplus_hpca_brst_l2”, “Vhplus_dbcs_hpca_brst_l2”,
+“Vheplus_dbcs_hpca_brst_l2”, “Vheplusplus_dbcs_hpca_brst_l2”, “Voplus_dbcs_hpca_brst_l2”,
+“Phplus_dbcs_hpca_brst_l2”, “Pheplus_dbcs_hpca_brst_l2”, “Pheplusplus_dbcs_hpca_brst_l2”,
+“Poplus_dbcs_hpca_brst_l2”, “Thplus_dbcs_hpca_brst_l2”, “Theplus_dbcs_hpca_brst_l2”,
+“Theplusplus_dbcs_hpca_brst_l2”, “Toplus_dbcs_hpca_brst_l2”, “Vhplus_gsm_hpca_brst_l2”,
+“Vheplus_gsm_hpca_brst_l2”, “Vheplusplus_gsm_hpca_brst_l2”, “Voplus_gsm_hpca_brst_l2”,
+“Phplus_gsm_hpca_brst_l2”, “Pheplus_gsm_hpca_brst_l2”, “Pheplusplus_gsm_hpca_brst_l2”,
+“Poplus_gsm_hpca_brst_l2”, “Thplus_gsm_hpca_brst_l2”, “Theplus_gsm_hpca_brst_l2”,
+“Theplusplus_gsm_hpca_brst_l2”, “Toplus_gsm_hpca_brst_l2”</p>
+</dd></dl>
+
+<span class="target" id="module-pyrf"></span><dl class="py function">
+<dt id="pyrf.agyro_coeff">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">agyro_coeff</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">P</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.agyro_coeff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes agyrotropy coefficient (Swidak2016 <a class="reference external" href="https://doi.org/10.1002/2015GL066980">https://doi.org/10.1002/2015GL066980</a>)</p>
+<dl>
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>P</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the pressure tensor</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>Q</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the agyrotropy coefficient of the specie</p>
+</dd>
+</dl>
+</dd>
+<dt>Example :</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2019-09-14T07:54:00.000&quot;</span><span class="p">,</span><span class="s2">&quot;2019-09-14T08:11:00.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gseB</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_fgm_srvy_l2&quot;</span><span class="p">,</span><span class="n">Tint</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gsePe</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;Pe_gse_fpi_fast_l2&quot;</span><span class="p">,</span><span class="n">Tint</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">facPe</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">rotate_tensor</span><span class="p">(</span><span class="n">gsePe</span><span class="p">,</span><span class="s2">&quot;fac&quot;</span><span class="p">,</span><span class="n">gseB</span><span class="p">,</span><span class="s2">&quot;pp&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">facPe</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">agyro_coeff</span><span class="p">(</span><span class="n">facPe</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyrf.c_4_grad">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">c_4_grad</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">R1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">R2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">R3</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">R4</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">B1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">B2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">B3</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">B4</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">method</span><span class="o">=</span><span class="default_value">'grad'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.c_4_grad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate gradient of physical field using 4 spacecraft technique.</p>
+<dl>
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>R1</em>…*R4*<span class="classifier">DataArray</span></dt><dd><p>Time series of the positions of the spacecraft</p>
+</dd>
+<dt><em>B1</em>…*B4*<span class="classifier">DataArray</span></dt><dd><p>Time series of the magnetic field at the corresponding positions</p>
+</dd>
+<dt><em>method</em><span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>Method flag :</dt><dd><ul class="simple">
+<li><p>“grad” : compute gradient (default)</p></li>
+<li><p>“div” : compute divergence</p></li>
+<li><p>“curl” : compute curl</p></li>
+<li><p>“bdivb” : compute b.div(b)</p></li>
+<li><p>“curv” : compute curvature</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the derivative of the input field corresponding to the method</p>
+</dd>
+</dl>
+</dd>
+<dt>Example :</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2019-09-14T07:54:00.000&quot;</span><span class="p">,</span><span class="s2">&quot;2019-09-14T08:11:00.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gseB1</span><span class="p">,</span> <span class="n">gseB2</span><span class="p">,</span> <span class="n">gseB3</span><span class="p">,</span> <span class="n">gseB4</span> <span class="o">=</span> <span class="p">[</span><span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_fgm_srvy_l2&quot;</span><span class="p">,</span><span class="n">Tint</span><span class="p">,</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gseR1</span><span class="p">,</span> <span class="n">gseR2</span><span class="p">,</span> <span class="n">gseR3</span><span class="p">,</span> <span class="n">gseR4</span> <span class="o">=</span> <span class="p">[</span><span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;R_gse&quot;</span><span class="p">,</span><span class="n">Tint</span><span class="p">,</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gradB</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">c_4_grad</span><span class="p">(</span><span class="n">gseR1</span><span class="p">,</span><span class="n">gseR2</span><span class="p">,</span><span class="n">gseR3</span><span class="p">,</span><span class="n">gseR4</span><span class="p">,</span><span class="n">gseB1</span><span class="p">,</span><span class="n">gseB2</span><span class="p">,</span><span class="n">gseB3</span><span class="p">,</span><span class="n">gseB4</span><span class="p">,</span><span class="s2">&quot;grad&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt>Reference :</dt><dd><p>ISSI book  Eq. 14.16, 14.17 p. 353</p>
+</dd>
+<dt>See also :</dt><dd><p>c_4_k</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyrf.c_4_k">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">c_4_k</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">r1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">r2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">r3</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">r4</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.c_4_k" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate reciprocal vectors in barycentric coordinates. Reference: ISSI book 14.7</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>r1</em>, <em>r2</em>, <em>r3</em>, <em>r4</em><span class="classifier">DataArray</span></dt><dd><p>Position of the spacecrafts</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>k1</em>, <em>k2</em>, <em>k3</em>, <em>k4</em><span class="classifier">DataArray</span></dt><dd><p>Reciprocal vectors in barycentric coordinates</p>
+</dd>
+</dl>
+</dd>
+<dt>Note :</dt><dd><p>The units of reciprocal vectors are the same as [1/r]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyrf.ts_scalar">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">ts_scalar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">t</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">data</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">attrs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.ts_scalar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a time series containing a 0th order tensor</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt>t<span class="classifier">np.ndarray</span></dt><dd><p>Array of times</p>
+</dd>
+<dt>data<span class="classifier">np.ndarray</span></dt><dd><p>Data corresponding to the time list</p>
+</dd>
+</dl>
+</dd>
+<dt>Options :</dt><dd><dl class="simple">
+<dt>attrs<span class="classifier">dict</span></dt><dd><p>Attributes of the data list</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt>out DataArray</dt><dd><p>0th order tensor time series</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyrf.ts_skymap">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">ts_skymap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">time</span></em>, <em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">energy</span></em>, <em class="sig-param"><span class="n">phi</span></em>, <em class="sig-param"><span class="n">theta</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.ts_skymap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a skymap of the distribution function</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt>time<span class="classifier">np.ndarray</span></dt><dd><p>List of times</p>
+</dd>
+<dt>data<span class="classifier">np.ndarray</span></dt><dd><p>Values of the distribution function</p>
+</dd>
+<dt>energy<span class="classifier">np.ndarray</span></dt><dd><p>Energy levels</p>
+</dd>
+<dt>phi<span class="classifier">np.ndarray</span></dt><dd><p>Azimuthal angles</p>
+</dd>
+<dt>theta<span class="classifier">np.ndarray</span></dt><dd><p>Elevation angles</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><p>out : DataArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyrf.ts_tensor_xyz">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">ts_tensor_xyz</code><span class="sig-paren">(</span><em class="sig-param">t=None</em>, <em class="sig-param">data=None</em><span class="optional">[</span>, <em class="sig-param">attrs=None</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.ts_tensor_xyz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a time series containing a 2nd order tensor</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt>t<span class="classifier">np.ndarray</span></dt><dd><p>Array of times</p>
+</dd>
+<dt>data<span class="classifier">np.ndarray</span></dt><dd><p>Data corresponding to the time list</p>
+</dd>
+</dl>
+</dd>
+<dt>Options :</dt><dd><dl class="simple">
+<dt>attrs<span class="classifier">dict</span></dt><dd><p>Attributes of the data list</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt>out<span class="classifier">DataArray</span></dt><dd><p>2nd order tensor time series</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyrf.ts_vec_xyz">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">ts_vec_xyz</code><span class="sig-paren">(</span><em class="sig-param">t=None</em>, <em class="sig-param">data=None</em><span class="optional">[</span>, <em class="sig-param">attrs=None</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.ts_vec_xyz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a time series containing a 1st order tensor</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>t</em><span class="classifier">np.ndarray</span></dt><dd><p>Array of times</p>
+</dd>
+<dt><em>data</em><span class="classifier">np.ndarray</span></dt><dd><p>Data corresponding to the time list</p>
+</dd>
+</dl>
+</dd>
+<dt>Options :</dt><dd><dl class="simple">
+<dt><em>attrs</em><span class="classifier">dict</span></dt><dd><p>Attributes of the data list</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">DataArray</span></dt><dd><p>1st order tensor time series</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyrf.vht">
+<code class="sig-prename descclassname">pyrf.</code><code class="sig-name descname">vht</code><span class="sig-paren">(</span><em class="sig-param">e=None</em>, <em class="sig-param">b=None</em><span class="optional">[</span>, <em class="sig-param">flag=1</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#pyrf.vht" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimate velocity of the De Hoffman-Teller frame from the velocity estimate the electric field eht=-vhtxb</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>e</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the electric field</p>
+</dd>
+<dt><em>b</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the magnetic field</p>
+</dd>
+<dt><em>flag</em><span class="classifier">int</span></dt><dd><p>If 2 assumed no Ez.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>vht</em><span class="classifier">np.ndarray</span></dt><dd><p>De Hoffman Teller frame velocity [km/s]</p>
+</dd>
+<dt><em>vht</em><span class="classifier">DataArray</span></dt><dd><p>Time series of the electric field in the De Hoffman frame</p>
+</dd>
+<dt><em>dvht</em><span class="classifier">np.ndarray</span></dt><dd><p>Error of De Hoffman Teller frame</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<blockquote>
+<div><p>Calculate wavelet spectrogram based on fast FFT algorithm</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><dl class="simple">
+<dt><em>inp</em><span class="classifier">DataArray</span></dt><dd><p>Input quantity</p>
+</dd>
+</dl>
+</dd>
+<dt>Options :</dt><dd><dl class="simple">
+<dt><em>fs</em><span class="classifier">int/float</span></dt><dd><p>Sampling frequency of the input time series</p>
+</dd>
+<dt><em>f</em><span class="classifier">list/np.ndarray</span></dt><dd><p>Vector [fmin fmax], calculate spectra between frequencies fmin and fmax</p>
+</dd>
+<dt><em>nf</em><span class="classifier">int/float</span></dt><dd><p>Number of frequency bins</p>
+</dd>
+<dt><a href="#id5"><span class="problematic" id="id6">*</span></a>wavelet_width<span class="classifier">int/float</span></dt><dd><p>Width of the Morlet wavelet, default 5.36</p>
+</dd>
+<dt><em>linear</em><span class="classifier">float</span></dt><dd><p>Linear spacing between frequencies of df</p>
+</dd>
+<dt><em>returnpower</em><span class="classifier">bool</span></dt><dd><p>Set to True (default) to return the power, False for complex wavelet transform</p>
+</dd>
+<dt><em>cutedge</em><span class="classifier">bool</span></dt><dd><p>Set to True (default) to set points affected by edge effects to NaN, False to keep edge affect points</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns :</dt><dd><dl class="simple">
+<dt><em>out</em><span class="classifier">DataArray/Dataset</span></dt><dd><p>Wavelet transform of the input</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to pyrfu’s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">pyrfu  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Welcome to pyrfu’s documentation!</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, L. Richard.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>
