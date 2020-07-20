@@ -62,11 +62,11 @@ def get_feeps_oneeye(tar_var="fluxe_brst_l2", eId="bottom-4", trange=None, mmsId
         suf = eId.split("-")[0]
         eId = int(eId.split("-")[1])
         if eId in active_eyes[suf]:
-            if data_units == "flux":
+            if data_units.lower() == "flux":
                 suf = "_".join([suf,"intensity","sensorid",str(eId)])
-            elif data_units == "counts":
+            elif data_units.lower() == "counts":
                 suf = "_".join([suf,"counts","sensorid",str(eId)])
-            elif data_units == "countrate":
+            elif data_units.lower() == "cps":
                 suf = "_".join([suf,"count_rate","sensorid",str(eId)])
             elif data_units == "mask":
                 suf = "_".join([suf,"sector_mask","sensorid",str(eId)])

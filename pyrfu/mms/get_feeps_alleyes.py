@@ -5,7 +5,7 @@ from .get_feeps_oneeye import get_feeps_oneeye
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def get_feeps_alleyes(tar_var="fluxe_brst_l2",mmsId=1,trange=None):
+def get_feeps_alleyes(tar_var="fluxe_brst_l2",trange=None,mmsId=1):
 
 	Var = {}
 
