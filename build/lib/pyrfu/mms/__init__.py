@@ -19,4 +19,7 @@ from .feeps_spin_avg import feeps_spin_avg
 from .feeps_pitch_angles import feeps_pitch_angles
 from .calc_feeps_pad import calc_feeps_pad
 
+from .get_eis_allt import get_eis_allt
+from .get_eis_omni import get_eis_omni
+
 from .remove_idist_background import remove_idist_background

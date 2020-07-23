@@ -13,13 +13,15 @@ register_matplotlib_converters()
 import matplotlib._color_data as mcd
 
 plt.style.use("seaborn-whitegrid")
-date_form = mdates.DateFormatter("%H:%M:%S")
+#date_form = mdates.DateFormatter("%H:%M:%S")
+locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+date_form = mdates.ConciseDateFormatter(locator)
 sns.set_context("paper")
 #plt.rc('text',usetex=True)
 plt.rc('font',family='serif')
-plt.rc('lines', linewidth=0.5)
-color = ["k","b","r","g"]
-plt.close("all")
+plt.rc('lines', linewidth=0.7)
+#color = ["k","b","r","g"]
+#plt.close("all")
 
 
 def plot_line(ax=None,inp=None,color="",yscale="",ylim=None):

@@ -16,6 +16,8 @@ pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py
+pyrfu/mms/get_eis_allt.py
+pyrfu/mms/get_eis_omni.py
 pyrfu/mms/get_feeps_active_eyes.py
 pyrfu/mms/get_feeps_alleyes.py
 pyrfu/mms/get_feeps_energy_table.py
