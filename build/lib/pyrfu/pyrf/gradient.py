@@ -5,13 +5,25 @@ import xarray as xr
 
 def gradient(inp=None):
 	"""
-	Computes time derivative of the input time serie
+	Computes time derivative of the input variable
 
 	Parameters :
-		- inp               [xarray]                Input time serie
+		inp : DataArray
+			Time series of the input variable
 
 	Returns :
-		- out               [xarray]                Time derivative of the input time serie
+		out : DataArray
+			Time series of the time derivative of the input variable
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2017-07-18T13:03:34.000","2017-07-18T13:07:00.000"]
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> # Load magnetic field
+		>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+		>>> # Time derivative of the magnetic field
+		>>> dtB = pyrf.gradient(Bxyz)
 
 	"""
 

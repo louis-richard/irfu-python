@@ -5,16 +5,38 @@ import numpy as np
 
 def minvar(inp=None, flag="mvar"):
 	"""
-	Compute the mimimum variance frame
+	Compute the minimum variance frame
 
 	Parameters :
-		- inp               [xarray]                Quantity to find minimum variance frame
-		- flag              [str]                   Constrain (optionnal)
+		inp : DataArray
+			Time series of the quantity to find minimum variance frame
+
+	Options :
+		flag : str
+			Constrain
 
 	Returns : 
-		- out               [xarray]                Input quantity in LMN coordianates
-		- l                 [array]                 Eigenvalues l1>l2>l3
-		- V                 [array]                 Eigenvectors LMN coordinates
+		out : DataArray
+			Time series of the input quantity in LMN coordinates
+
+		l : array
+			Eigenvalues l[0]>l[1]>l[2]
+
+		V : array
+			Eigenvectors LMN coordinates
+
+	See also :
+		new_xyz
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> # Load magnetic field
+		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+		>>> # Compute MVA frame
+		>>> Blmn, l, V = pyrf.minvar(Bxyz)
 
 	"""
 

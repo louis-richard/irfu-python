@@ -14,33 +14,46 @@ def convert_fac(inp=None, Bbgd=None, r=np.array([1,0,0])):
 	If inp is one vector along r direction, out is inp[perp, para] projection
 	
 	Parameters :
-		- inp : DataArray
+		inp : DataArray
 			Time series of the input field
 
-		- Bbgd : DataArray
-			Background magnetic field
+		Bbgd : DataArray
+			Time series of the background magnetic field
 
-		- r : DataArray/ndarray
+		r : DataArray/ndarray/list
 			Position vector of spacecraft
 
 	Returns :
-		- out : DataArray
+		out : DataArray
 			Time series of the input field in field aligned coordinates system
 
 	Example :
+		>>> # Time interval
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> gseB = mms.get_data("B_gse_fgm_brst_l2",Tint,1)
-		>>> gseE = mms.get_data("E_gse_edp_brst_l2",Tint,1)
-		>>> Efac = pyrf.convert_fac(gseE,gseB)
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> # Load magnetic field (FGM) and electric field (EDP)
+		>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+		>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+		>>> # Convert to field aligned coordinates
+		>>> Exyzfac = pyrf.convert_fac(Exyz,Bxyz,[1,0,0])
 	
 	Note : 
 		all input parameters must be in the same coordinate system
 	
 	"""
 	
+	if (inp is None) or (Bbgd is None):
+		raise ValueError("convert_fac requires at least 2 arguments")
+
+	if not isinstance(inp,xr.DataArray):
+		raise TypeError("inp must be a DataArray")
+
+	if not isinstance(Bbgd,xr.DataArray):
+		raise TypeError("Bbgd must be a DataArray")
+
 	if len(inp) != len(Bbgd):
 		Bbgd = resample(Bbgd,inp)
-
 	
 	t           = inp.time
 	inp_data    = inp.data

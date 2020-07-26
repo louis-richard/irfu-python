@@ -7,13 +7,42 @@ def median_bins(x=None,y=None,nbins=10):
 	Computes median of values of y corresponding to bins of x
 	
 	Parameters :
-		- x                 [xarray]                Time serie of the quantity of bins
-		- y                 [xarray]                Time serie of the quantity to the median
-		- nbins             [int]                   Number of bins   
+		x : DataArray
+			Time series of the quantity of bins
+
+		y : DataArray
+			Time series of the quantity to the median
+
+		nbins : int
+			Number of bins   
 		
 	Returns :
-		- b                 [ndarray]               Array of bins values
-		- m                 [ndarray]               Median of y for each bin
+		out : Dataset
+			Dataset with :
+				* bins : DataArray
+					bin values of the x variable
+
+				* data : DataArray
+					Median values of y corresponding to each bin of x
+					
+				* sigma : DataArray
+					Standard deviation
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> # Spacecraft indices
+		>>> ic = np.arange(1,5)
+		>>> # Load magnetic field and electric field
+		>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,1) for i in ic]
+		>>> Rxyz = [mms.get_data("R_gse",Tint,1) for i in ic]
+		>>> # Compute current density, etc
+		>>> J, divB, Bavg, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+		>>> # Compute magnitude of B and J
+		>>> Bmag = pyrf.norm(Bavg)
+		>>> Jmag = pyrf.norm(J)
+		>>> # Median value of |J| for 10 bins of |B|
+		>>> MedBJ = pyrf.mean_bins(Bmag,Jmag)
 		
 	"""
 	

@@ -15,11 +15,17 @@ def agyro_coeff(P=None):
 			Time series of the agyrotropy coefficient of the specie
 
 	Example :
+		>>> # Time interval
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> gseB = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
-		>>> gsePe = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
-		>>> facPe = pyrf.rotate_tensor(gsePe,"fac",gseB,"pp")
-		>>> facPe = pyrf.agyro_coeff(facPe)
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> # Load magnetic field and electron pressure tensor
+		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+		>>> Pexyz = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
+		>>> # Rotate electron pressure tensor to field aligned coordinates
+		>>> Pexyzfac = pyrf.rotate_tensor(Pexyz,"fac",Bxyz,"pp")
+		>>> # Compute agyrotropy coefficient
+		>>> Qe = pyrf.agyro_coeff(Pexyzfac)
 		
 	"""
 	

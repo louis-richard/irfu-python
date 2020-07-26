@@ -8,17 +8,21 @@ def fname(Tint=None,frmt=1):
 	Creates a string corresponding to time interval for output plot naming
 
 	Parameters :
-		- Tint              [list]                  Time interval
-		- frmt              [int]                   Format of the output. 
-													1 : "%Y%m%d_%H%M"
-													2 : "%y%m%d%H%M%S"
-													3 : "%Y%m%d_%H%M%S"_"%H%M%S"
-													4 : "%Y%m%d_%H%M%S"_"%Y%m%d_%H%M%S"
+		- Tint : list of str
+			Time interval
+		- frmt : int
+			Format of the output :
+				1 -> "%Y%m%d_%H%M",
+				2 -> "%y%m%d%H%M%S",
+				3 -> "%Y%m%d_%H%M%S"_"%H%M%S",
+				4 -> "%Y%m%d_%H%M%S"_"%Y%m%d_%H%M%S"
 	
 	Returns :
-		- out               [str]                   String corresponding to the time interval in the desired format.
+		- out : str
+			String corresponding to the time interval in the desired format.
 
 	"""
+	
 	if Tint is None:
 		raise ValueError("fname requires at least one argument")
 

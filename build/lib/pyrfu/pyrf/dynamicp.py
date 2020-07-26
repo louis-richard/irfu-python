@@ -8,16 +8,37 @@ def dynamicp(N=None, V=None, s="i"):
 	Computes dynamic pressure
 
 	Parameters :
-		- N                 [xarray]                Time serie of the number density of the specie
-		- V                 [xarray]                Time serie of the bulk velocity of the specie
-		- s                 [i/e]                   Specie (default i)
+		N : DataArray
+			Time series of the number density of the specie
+		V : DataArray
+			Time series of the bulk velocity of the specie
+	
+	Options :
+		s : "i"/"e"
+			Specie (default "i")
 	
 	Returns :
-		- Pdyn              [xarray]                Time serie of the dynamic pressure of the specie
+		Pdyn : DataArray
+			Time series of the dynamic pressure of the specie
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> # Ion bluk velocity
+		>>> Vixyz = mms.get_data("Vi_gse_fpi_fast_l2",Tint,ic)
+		>>> # Remove spintone
+		>>> STixyz 	= mms.get_data("STi_gse_fpi_fast_l2",Tint,ic)
+		>>> Vixyz 	= Vixyz-STixyz
+		>>> # Ion number density
+		>>> Ni = mms.get_data("Ni_fpi_fast_l2",Tint,ic)
+		>>> # Compute dynamic pressure
+		>>> Pdyn = pyrf.dynamicp(Ni,Vixyz, s="i")
 
 	"""
 
-	if N is None or V is None:
+	if (N is None) or (V is None):
 		raise ValueError("dynamicp requires at least 2 arguments")
 
 	if not isinstance(N, xr.DataArray):

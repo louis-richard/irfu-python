@@ -134,18 +134,14 @@ def get_data(varStr="", tint=None, mmsId="1", silent=False):
 
 	
 
-
-
-
 	if not varStr:
 		raise ValueError("get_data requires at least 2 arguments")
 
 	if tint is None:
 		raise ValueError("get_data requires at least 2 arguments")
 
-
-	if isinstance(mmsId,int) or isinstance(mmsId,float):
-		mmsId = str(mmsId)
+	if not isinstance(mmsId,str):
+			mmsId = str(mmsId)
 
 		
 	# Translate short names to names readable for splitVs

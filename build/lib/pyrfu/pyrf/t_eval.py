@@ -8,17 +8,21 @@ def t_eval(inp=None,t=None):
 	Evaluates the input time series at the target time
 
 	Parameters :
-		- inp : DataArray
+		inp : DataArray
 			Time series if the input to evaluate
 
-		- t : np.ndarray
+		t : array
 			Times at which the input will be evaluated
 
 	Returns :
-		- out : DataArray
+		out : DataArray
 			Time series of the input at times t
 
+	Example :
+		
+
 	"""
+
 	if (inp is None) or (t is None):
 		raise ValueError("t_eval requires at least 2 arguments")
 

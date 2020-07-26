@@ -12,7 +12,7 @@ def tlim(inp=None, tint=None):
 
 	Parameters :
 		inp : DataArray
-			Quantity to clip
+			Time series of the quantity to clip
 
 		tint : DataArrya/np.ndarray/list
 			Time interval can be a time series, a array of datetime64 or a list
@@ -20,6 +20,9 @@ def tlim(inp=None, tint=None):
 	Returns : 
 		out : DataArray
 			Time series of the time clipped input
+
+	Example :
+		
 
 	"""
 

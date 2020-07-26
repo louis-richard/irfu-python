@@ -5,16 +5,16 @@ from .dot import dot
 
 
 
-def c_4_k(r1=None,r2=None,r3=None,r4=None):
+def c_4_k(R=None):
 	"""
 	Calculate reciprocal vectors in barycentric coordinates. Reference: ISSI book 14.7
 	
 	Parameters :
-		r1...r4 : DataArray
+		R : list of DataArray
 			Position of the spacecrafts
 
 	Returns :
-		k1...k4 : DataArray
+		K : list of DataArray
 			Reciprocal vectors in barycentric coordinates
 	
 	Note : 
@@ -22,15 +22,22 @@ def c_4_k(r1=None,r2=None,r3=None,r4=None):
 
 	"""
 
-	if not isinstance(r1,xr.DataArray): raise TypeError("Inputs must be DataArrays")
-	if not isinstance(r2,xr.DataArray): raise TypeError("Inputs must be DataArrays")
-	if not isinstance(r3,xr.DataArray): raise TypeError("Inputs must be DataArrays")
-	if not isinstance(r4,xr.DataArray): raise TypeError("Inputs must be DataArrays")
-		
-	R = [r1,r2,r3,r4,r1,r2,r3]
-	for j in range(4):
-		cc      = cross(R[2+j]-R[1+j],R[3+j]-R[1+j])
-		dr12    = R[j]-R[1+j]
-		exec("vars()['K"+str(j+1)+"'] = cc/dot(cc,dr12)")
+	if R is None:
+		raise ValueError("c_4_k requires one argument")
 
-	return(vars()['K1'],vars()['K2'],vars()['K3'],vars()['K4'])
+	if not isinstance(R,list) or len(R) != 4:
+		raise TypeError("R must be a list of 4SC position")
+
+	for i in range(4):
+		if not isinstance(R[i],xr.DataArray):
+			raise TypeError("Spacecraft position must be DataArray")
+		
+	r = [r1,r2,r3,r4,r1,r2,r3]
+	K = [None]*4
+
+	for j in range(4):
+		cc 		= cross(r[2+j]-r[1+j],r[3+j]-r[1+j])
+		dr12 	= r[j]-r[1+j]
+		K[j] 	= cc/dot(cc,dr12)
+
+	return K

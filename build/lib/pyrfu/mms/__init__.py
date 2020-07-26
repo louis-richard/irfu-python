@@ -5,6 +5,10 @@ from .get_dist import get_dist
 from .get_data import get_data
 from .db_get_ts import db_get_ts
 
+# Wave analysis
+from .fk_powerspec4SC import fk_powerspec4SC
+from .lhwaveanalysis import lhwaveanalysis
+
 # FEEPS
 from .get_feeps_energy_table import get_feeps_energy_table
 from .get_feeps_active_eyes import get_feeps_active_eyes

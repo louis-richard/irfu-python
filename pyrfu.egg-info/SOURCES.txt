@@ -14,6 +14,8 @@ pyrfu/mms/feeps_pitch_angles.py
 pyrfu/mms/feeps_remove_sun.py
 pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
+pyrfu/mms/fk_powerspec4SC.py
+pyrfu/mms/fk_powerspectrum.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py
 pyrfu/mms/get_eis_allt.py
@@ -24,6 +26,7 @@ pyrfu/mms/get_feeps_energy_table.py
 pyrfu/mms/get_feeps_omni.py
 pyrfu/mms/get_feeps_oneeye.py
 pyrfu/mms/get_ts.py
+pyrfu/mms/lhwaveanalysis.py
 pyrfu/mms/list_files.py
 pyrfu/mms/mms_config.py
 pyrfu/mms/psd_moments.py
@@ -39,10 +42,11 @@ pyrfu/plot/plot_spectr.py
 pyrfu/plot/zoom.py
 pyrfu/pyrf/__init__.py
 pyrfu/pyrf/agyro_coeff.py
+pyrfu/pyrf/avg_4sc.py
 pyrfu/pyrf/c_4_grad.py
 pyrfu/pyrf/c_4_j.py
 pyrfu/pyrf/c_4_k.py
-pyrfu/pyrf/calc_disprel.py
+pyrfu/pyrf/calc_disprel_tm.py
 pyrfu/pyrf/calc_dt.py
 pyrfu/pyrf/calc_fs.py
 pyrfu/pyrf/convert_fac.py
@@ -55,10 +59,12 @@ pyrfu/pyrf/e_vxb.py
 pyrfu/pyrf/ebsp.py
 pyrfu/pyrf/edb.py
 pyrfu/pyrf/end.py
+pyrfu/pyrf/extend_tint.py
 pyrfu/pyrf/filt.py
 pyrfu/pyrf/fname.py
 pyrfu/pyrf/gradient.py
 pyrfu/pyrf/histogram2d.py
+pyrfu/pyrf/int_sph_dist.py
 pyrfu/pyrf/integrate.py
 pyrfu/pyrf/iso2unix.py
 pyrfu/pyrf/mean_bins.py
@@ -69,7 +75,6 @@ pyrfu/pyrf/movmean.py
 pyrfu/pyrf/new_xyz.py
 pyrfu/pyrf/norm.py
 pyrfu/pyrf/normalize.py
-pyrfu/pyrf/nv2p.py
 pyrfu/pyrf/plasma_calc.py
 pyrfu/pyrf/pres_anis.py
 pyrfu/pyrf/psd.py

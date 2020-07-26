@@ -5,65 +5,79 @@ from .cross import cross
 from .resample import resample
 
 
-def c_4_j(r1=None,r2=None,r3=None,r4=None,b1=None,b2=None,b3=None,b4=None):
+def c_4_j(R=None, B=None):
 	"""
 	Calculate current from using 4 spacecraft technique in addition one can obtain average magnetic field and jxB 
 	values. Estimate also divergence B as the error estimate
 	
+	Parameters :
+		R : list of DataArrays
+			Time series of the spacecraft position [km]
 
-	%
-	%  [j,divB,B,jxB,curvature,divTshear,divPb] = c_4_j(R1,R2,R3,R4,B1,B2,B3,B4)
-	%  [j,divB,B,jxB,divTshear,divPb] = c_4_j('R?','B?')
-	%  
-	%
-	%  r1..r4 are row vectors
-	%         column 1     is time
-	%         column 2-4   are satellite position in km
-	%  b1..b4 are row vectors
-	%         column 1     is time b1 time is used for all interpolation of r1..r4 and b2..b4
-	%         column 2-4   is magnetic field components in nT
-	%  j      is row vector,
-	%         column 1     time
-	%         column 2-4   current, units A/m^2
-	%  divB   column 1     time
-	%         column 2     div(B)/mu0, units A/m^2
-	%  B      - average magnetic field, sampled at b1 time steps [nT]
-	%  jxB    - j x B force [T A]
-	%         - jxB=(1/muo) ( (B div)B + grad (B^2/2) )= divTshear+divPb
-	%  divTshear = (1/muo) (B div) B.  the part of the divergence of stress 
-	%                                   associated with curvature units [T A/m^2]
-	%  divPb = (1/muo) grad(B^2/2). gradient of magnetic pressure
-	% 
-	%   See also C_4_K
-	%
-	%  Reference: ISSI book  Eq. 14.16, 14.17
+		B : list of DataArray
+			Time series of the magnetic field [nT]
 
-	% TODO fix that it works for vector inputs without time column!
+	Returns :
+		j : DataArray
+			Time series of the current density j = curl(B)/mu0 [A.m^{-2}]
+
+		divB : DataArray
+			Time series of the divergence of the magnetic field div(B)/mu0 [A.m^{-2}]
+
+		Bav : DataArray
+			Time series of the magnetic field at the center of mass of the tetrahedron, 
+			sampled at 1st SC time steps [nT]
+
+		jxB : DataArray
+			Time series of the j x B force [T.A]. jxB = ((B.div)B + grad(B^2/2))/mu0 = divTshear+divPb
+
+		divTshear : DataArray
+			Time series of the part of the divergence of stress associated with curvature units 
+			divTshear = (1/muo) (B div) B. [T A/m^2]
+
+		divPb : DataArray
+			Time series of the gradient of the magnetic pressure divPb = grad(B^2/2)/mu0
+
+	Example : 
+		>>> # Time interval
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> # Spacecraft indices
+		>>> ic = np.arange(1,5)
+		>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
+		>>> Rxyz = [mms.get_data("R_gse",Tint,i) for i in ic]
+		>>> j, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+
+	Reference : 
+		ISSI book  Eq. 14.16, 14.17 p. 353
+
+	See also : 
+		c_4_k
+
 	"""
 
 
 	mu0 = constants.mu0.value
 
-	B = (b1+resample(b2,b1)+resample(b3,b1)+resample(b4,b1))/4
+	Bav = (b1+resample(b2,b1)+resample(b3,b1)+resample(b4,b1))/4
 
 	# Estimate divB/mu0. unit is A/m2
-	divB 	= c_4_grad(r1,r2,r3,r4,b1,b2,b3,b4,"div")
+	divB 	= c_4_grad(R,B,"div")
 	divB 	*= 1.0e-3*1e-9/mu0 									# to get right units why 
 
 	# estimate current j [A/m2]
-	curl_B 	= c_4_grad(r1,r2,r3,r4,b1,b2,b3,b4,"curl")
-	j		= curl_B*1.0e-3*1e-9/mu0 									# to get right units [A/m2]
+	curl_B 	= c_4_grad(R,B,"curl")
+	j		= curl_B*1.0e-3*1e-9/mu0 							# to get right units [A.m^{-2}]
 
 	# estimate jxB force [T A/m2]
-	jxB = 1e-9*cross(j,B)										# to get units [T A/m2]
+	jxB = 1e-9*cross(j,Bav)										# to get units [T.A.m^{-2}]
 
 
 	# estimate divTshear = (1/muo) (B*div)B [T A/m2]
-	BdivB 		= c_4_grad(r1,r2,r3,r4,b1,b2,b3,b4,"bdivb")
-	divTshear	= BdivB*1.0e-3*1e-9*1e-9/mu0 									# to get right units [T A/m2]
+	BdivB 		= c_4_grad(R,B,"bdivb")
+	divTshear	= BdivB*1.0e-3*1e-9*1e-9/mu0 					# to get right units [T.A.m^{-2}]
 
 	# estimate divPb = (1/muo) grad (B^2/2) = divTshear-jxB
 	divPb = divTshear-jxB
 
-	return (j,divB,jxB,divTshear,divPb)
+	return (j,divB,Bav,jxB,divTshear,divPb)
 

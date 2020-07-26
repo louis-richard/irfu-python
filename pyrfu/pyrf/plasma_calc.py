@@ -11,14 +11,114 @@ def plasma_calc(B=None,Ti=None,Te=None,Ni=None,Ne=None):
 	Computes plasma parameters including characteristic length and time scales
 
 	Parameters :
-		- B                 [xarray]                Magnetic field (nT)
-		- Ti                [xarray]                Ions tempertature (eV)
-		- Te                [xarray]                Electrons tempertature (eV)
-		- Ni                [xarray]                Ions number density (1/cm3)
-		- Ne                [xarray]                Electrons number density (1/cm3)
+		B : DataArray
+			Time series of the magnetic field [nT]
+
+		Ti : DataArray
+			Time series of the ions temperature [eV]
+
+		Te : DataArray
+			Time series of the electrons temperature [eV]
+
+		Ni : DataArray
+			Time series of the ions number density [cm^{-3}]
+
+		Ne : DataArray
+			Time series of the electrons number density [cm^{-3}]
 
 	Returns :
-		- out               [xarray]                DataSet containong all the plasma parameters
+		out : Dataset:
+			Dataset of the plasma parameters :
+				* time : DataArray
+					Time
+
+				* Wpe : DataArray
+					Time series of the electron plasma frequency [rad.s^{-1}]
+
+				* Fpe : DataArray
+					Time series of the electron plasma frequency [Hz]
+
+				* Wce : DataArray
+					Time series of the electron cyclotron frequency [rad.s^{-1}]
+
+				* Fce : DataArray
+					Time series of the electron cyclotron frequency [Hz]
+
+				* Wpp : DataArray
+					Time series of the ion plasma frequency [rad.s^{-1}]
+
+				* Fpp : DataArray
+					Time series of the ion plasma frequency [Hz]
+
+				* Fcp : DataArray
+					Time series of the ion cyclotron frequency [Hz]
+
+				* Fuh : DataArray
+					Time series of the upper hybrid frequency [Hz]
+
+				* Flh : DataArray
+					Time series of the lower hybrid frequency [Hz]
+
+				* Va : DataArray
+					Time series of the Alfvèn velocity (ions) [m.s^{-1}]
+
+				* Vae : DataArray
+					Time series of the Alfvèn velocity (electrons) [m.s^{-1}]
+
+				* Vte : DataArray
+					Time series of the electron thermal velocity [m.s^{-1}]
+
+				* Vtp : DataArray
+					Time series of the electron thermal velocity [m.s^{-1}]
+
+				* Vts : DataArray
+					Time series of the sound speed [m.s^{-1}]
+
+				* gamma_e : DataArray
+					Time series of the electron Lorentz factor
+
+				* gamma_p : DataArray
+					Time series of the electron Lorentz factor
+
+				* Le : DataArray
+					Time series of the electron inertial length [m]
+
+				* Li : DataArray
+					Time series of the electron inertial length [m]
+
+				* Ld : DataArray
+					Time series of the Debye length [m]
+
+				* Nd : DataArray
+					Time series of the number of electrons in the Debye sphere
+
+				* Roe : DataArray
+					Time series of the electron Larmor radius [m]
+
+				* Rop : DataArray
+					Time series of the ion Larmor radius [m]
+
+				* Ros : DataArray
+					Time series of the length associated to the sound speed [m]
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> # Load magnetic field, ion/electron temperature and number density
+		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+		>>> Tixyz = mms.get_data("Ti_gse_fpi_fast_l2",Tint,ic)
+		>>> Texyz = mms.get_data("Te_gse_fpi_fast_l2",Tint,ic)
+		>>> Ni = mms.get_data("Ni_fpi_fast_l2",Tint,ic)
+		>>> Ne = mms.get_data("Ne_fpi_fast_l2",Tint,ic)
+		>>> # Compute scalar temperature
+		>>> Tixyzfac = pyrf.rotate_tensor(Tixyz,"fac",Bxyz,"pp")
+		>>> Texyzfac = pyrf.rotate_tensor(Texyz,"fac",Bxyz,"pp")
+		>>> Ti = pyrf.trace(Tixyzfac)
+		>>> Te = pyrf.trace(Texyzfac)
+		>>> # Compute plasma parameters
+		>>> pparam = pyrf.plasma_calc(Bxyz,Ti,Te,Ni,Ne)
 
 	"""
 

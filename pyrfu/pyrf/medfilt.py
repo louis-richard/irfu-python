@@ -10,11 +10,31 @@ def medfilt(inp=None,npts=11):
 	Applies a median filter over npts points to inp
 
 	Parameters :
-		- inp               [xarray]                Input time serie
-		- npts              [int]                   Number of points of median filter
+		inp : DataArray
+			Time series of the input variable
+
+		npts : float/int
+			Number of points of median filter
 
 	Returns :
-		- out               [xarray]                Filtered time serie
+		out : DataArry
+			Time series of the median filtered input variable
+	
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> # Spacecraft indices
+		>>> ic = np.arange(1,5)
+		>>> # Load magnetic field and electric field
+		>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,1) for i in ic]
+		>>> Rxyz = [mms.get_data("R_gse",Tint,1) for i in ic]
+		>>> # Compute current density, etc
+		>>> J, divB, Bavg, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+		>>> # Get J sampling frequency
+		>>> fs = pyrf.calc_fs(J)
+		>>> # Median filter over 1s
+		>>> J = pyrf.medfilt(J,fs)
+
 
 	"""
 
@@ -24,6 +44,12 @@ def medfilt(inp=None,npts=11):
 	if not isinstance(inp,xr.DataArray):
 		raise TypeError("inp must be a DataArray")
 	
+	if not isinstance(npts,(float,int)):
+		raise TypeError("npts must be a float or int")
+
+	if isinstance(npts,float):
+		npts = np.floor(npts).astype(int)
+
 	if npts%2 == 0:
 		npts +=1
 

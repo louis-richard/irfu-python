@@ -8,12 +8,29 @@ def new_xyz(inp=None,M=None):
 	"""
 	Transform the input field to the new frame
 
-	Paramters:
-		- inp               [xarray]                Input field
-		- M                 [ndarray]               Transformation matrix
+	Parameters:
+		inp : DataArray
+			Time series of the input field in the original coordinate system
+
+		M : array
+			Transformation matrix
 
 	Returns :
-		- out               [xarray]                Input in the new frame
+		out : DataArray
+			Time series of the input in the new frame
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> # Spacecraft indices
+		>>> ic = 1
+		>>> # Load magnetic field and electric field
+		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+		>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,ic)
+		>>> # Compute MVA frame
+		>>> Blmn, l, V = pyrf.minvar(Bxyz)
+		>>> # Move electric field to the MVA frame
+		>>> Elmn = pyrf.new_xyz(Exyz,V)
 
 	"""
 

@@ -46,6 +46,17 @@ def resample(inp=None,ref=None,**kwargs):
 		out : DataArray
 			Resampled input to the reference time line using the selected method
 		
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> 
+		>>> # Load magnetic field and electric field
+		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+		>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,ic)
+		
 	"""
 
 	haveoptions = False

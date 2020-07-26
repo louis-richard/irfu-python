@@ -56,64 +56,128 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 	and then averaged over a number of wave periods.
 	
 	Parameters :
-		- e 				[xarray] 				Wave electric field time series
-		- dB 				[xarray]	 			Wave magnetic field time series
-		- fullB 			[xarray] 				High resolution background magnetic field time series used for 
-													E*B=0
-		- B0 				[xarray] 				Background magnetic field time series used for field aligned 
-													coordinates
-		- xyz 				[xarray] 				Position time series of spacecraft used for field aligned 
-													coordinates
-		- freq_int 			[str/list/ndarray] 		Frequency interval : either "pc12", "pc35" or arbitrary interval 
-													[fmin,fmax]
+		e : DataArray
+			Time series of the wave electric field
+
+		dB : DataArray
+			Time series of the wave magnetic field
+
+		fullB : DataArray
+			Time series of the high resolution background magnetic field used for E.B=0
+
+		B0 : DataArray
+			Time series of the background magnetic field used for field aligned coordinates
+
+		xyz : DataArray
+			Time series of the position time series of spacecraft used for field aligned coordinates
+
+		freq_int : str/list/ndarray
+			Frequency interval : 
+				"pc12" 			-> [0.1, 5.0]
+				"pc35" 			-> [2e-3, 0.1]
+				[fmin, fmax] 	-> arbitrary interval [fmin,fmax]
 
 	Options : 
-		- polarization 		[bool]					Compute polarization parameters 
-													(default False)
-		- noresamp 			[bool] 					No resampling, E and dB are given at the same timeline 
-													(default False)
-		- fac 				[bool] 					Use FAC coordinate system (defined by B0 and optionally xyz), 
-													otherwise no coordinate system transformation is performed 
-													(default False)
+		polarization : bool
+			Computes polarization parameters (default False)
 
-		- dEdotB_0     		[bool] 					Compute dEz from dB dot B = 0, uses fullB 
-													(default False)
-		- fullB_dB     		[bool]					dB contains DC field 
-													(default False)
-		- nAv           	[int] 					Number of wave periods to average 
-													(default 8)
-		- facMatrix 		[ndarray] 				Specify rotation matrix to FAC system 
-													(default None)
-		- mwidthcoef 		[float] 				Specify coefficient to multiple Morlet wavelet width by.
-													(default 1)
+		noresamp : bool
+			No resampling, E and dB are given at the same time line (default False)
+
+		fac : bool
+			Uses FAC coordinate system (defined by B0 and optionally xyz), otherwise no coordinate system 
+			transformation is performed (default False)
+
+		dEdotB_0 : bool
+			Computes dEz from dB dot B = 0, uses fullB (default False)
+
+		fullB_dB : bool
+			dB contains DC field (default False)
+
+		nAv : int
+			Number of wave periods to average (default 8)
+
+		facMatrix : ndarray
+			Specify rotation matrix to FAC system (default None)
+
+		mwidthcoef : int/float
+			Specify coefficient to multiple Morlet wavelet width by. (default 1)
 
 	Returns : 
-		- t           		[xarray] 				Time
-		- f           		[xarray]				Frequency
-		- bb          		[xarray]				B power spectrum (xx, yy, zz)
-		- ee_ss 			[xarray] 				E power spectrum (xx+yy spacecraft coords, e.g. ISR2)
-		- ee 				[xarray] 				E power spectrum (xx, yy, zz)
-		- pf_xyz 			[xarray]				Poynting flux (xyz)
-		- pf_rtp     		[xarray]				Poynting flux (r, theta, phi) [angles in degrees]
-		- dop         		[xarray]				3D degree of polarization
-		- dop2d       		[xarray]				2D degree of polarization in the polarization plane
-		- planarity   		[xarray]				Planarity of polarization
-		- ellipticity 		[xarray]				Ellipticity of polarization ellipse
-		- k           		[xarray]				k-vector (theta, phi FAC) [angles in degrees]
+		res : Dataset
+			Dataset with :
+				t : DataArray
+					Time
+
+				f : DataArray
+					Frequencies
+
+				bb_xxyyzzss : DataArray
+					dB power spectrum with :
+						[...,0] -> x
+						[...,1] -> y
+						[...,2] -> z
+						[...,3] -> sum
+
+				ee_xxyyzzss : DataArray
+					E power spectrum with :
+						[...,0] -> x
+						[...,1] -> y
+						[...,2] -> z
+						[...,3] -> sum
+
+				ee_ss : DataArray
+					E power spectrum (xx+yy spacecraft coordinates, e.g. ISR2)
+
+				pf_xyz : DataArray
+					Poynting flux (xyz)
+
+				pf_rtp : DataArray
+					Poynting flux (r, theta, phi) [angles in degrees]
+
+				dop : DataArray
+					3D degree of polarization
+
+				dop2d : DataArray
+					2D degree of polarization in the polarization plane
+
+				planarity : DataArray
+					Planarity of polarization
+
+				ellipticity : DataArray
+					Ellipticity of polarization ellipse
+
+				k : DataArray
+					k-vector (theta, phi FAC) [angles in degrees]
 
 	
 	Examples :
-		>>> res = pyrf.ebsp(e,b,B,B0,xyz,"pc12")
-		>>> res = pyrf.ebsp(e,b,None,B0,xyz,"pc35",polarization=True,fullB_dB=True)
-		>>> res = pyrf.ebsp(e,b,None,B0,xyz,"pc12",fullB_dB=True,dEdotB_0=True)
+		>>> # Time interval
+		>>> Tint = ["2015-10-30T05:15:42.000","2015-10-30T05:15:54.000"]
+		>>> 
+		>>> # Spacecraft index
+		>>> ic = 3
+		>>> 
+		>>> # Load spacecraft position
+		>>> Tintl = pyrf.extend_tint(Tint,[-100,100])
+		>>> Rxyz = mms.get_data("R_gse",Tintl,ic)
+		>>> 
+		>>> # Load background magnetic field, electric field and magnetic field fluctuations
+		>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+		>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+		>>> Bscm = mms.get_data("B_gse_scm_brst_l2",Tint,ic)
+		>>> 
+		>>> # Polarization analysis
+		>>> polarization = pyrf.ebsp(Exyz,Bscm,Bxyz,Bxyz,Rxyz,freq_int=[10,4000],polarization=True,fac=True)
 
-	See also: PL_EBSP, CONVERT_FAC
+	See also :
+		PL_EBSP, CONVERT_FAC
 
-	This software was developed as part of the MAARBLE (Monitoring,
-	Analyzing and Assessing Radiation Belt Energization and Loss)
-	collaborative research project which has received funding from the
-	European Community's Seventh Framework Programme (FP7-SPACE-2011-1)
-	under grant agreement n. 284520.
+	Notes :
+		This software was developed as part of the MAARBLE (Monitoring, Analyzing and Assessing Radiation Belt 
+		Energization and Loss) collaborative research project which has received funding from the European 
+		Community's Seventh Framework Programme (FP7-SPACE-2011-1) under grant agreement n. 284520.
+		
 	"""
 
 

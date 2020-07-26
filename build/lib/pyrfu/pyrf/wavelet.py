@@ -144,7 +144,7 @@ def wavelet(inp=None,**kwargs):
 
 	if lineardf :
 		fmin    = deltaf
-		anumber = np.floor(w0/deltaf)
+		anumber = np.floor(w0/deltaf).astype(int)
 		fmax    = anumber*deltaf
 		a       = w0/(np.linspace(fmax,fmin,anumber))
 	else :

@@ -5,29 +5,32 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def cross(inp1=None,inp2=None):
+def cross(inp1=None, inp2=None):
 	"""
-	Computes cross product of two fields z = xxy
+	Computes cross product of two fields.
 
 	Parameters :
-		- inp1 : DataArray
-			Time series of the first field x
+		inp1 : DataArray
+			Time series of the first field X
 
-		- inp2 : DataArray
-			Time series of the second field y
+		inp2 : DataArray
+			Time series of the second field Y
 
 	Returns :
-		- out : DataArray
-			Time series of the cross product inp1xinp2
+		out : DataArray
+			Time series of the cross product Z = XxY
 
 	Example :
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> gseB = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
-		>>> gseE = mms.get_data("E_gse_edp_fast_l2",Tint,1)
-		>>> Bmag = pyrf.norm(gseB)
-		>>> gseExB = pyrf.cross(gseE,gseB)/Bmag**2
+		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+		>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,1)
+		>>> Bmag = pyrf.norm(Bxyz)
+		>>> ExBxyz = pyrf.cross(Exyz,Bxyz)/Bmag**2
 
 	"""
+
+	if (inp1 is None) or (inp2 is None):
+		raise ValueError("cross requires 2 arguments")
 
 	if not isinstance(inp1,xr.DataArray):
 		raise TypeError("Inputs must be DataArrays")

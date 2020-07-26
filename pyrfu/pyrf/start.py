@@ -17,6 +17,7 @@ def start(inp=None,fmt="unix"):
 	Returns :
 		out : float/str
 			Value of the first time in the desired format
+			
 	"""
 
 	if not isinstance(inp,xr.DataArray):

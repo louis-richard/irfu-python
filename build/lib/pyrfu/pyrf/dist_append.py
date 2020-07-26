@@ -9,11 +9,15 @@ def dist_append(inp0=None,inp1=None):
 	Note : the time series have to be in the correct time order
 
 	Parameters :
-		- inp1              [xarray]                First skymap
-		- inp2              [xarray]                Second skymap
+		inp1 : DataArray
+			3D skymap distribution at early times 
+
+		inp2 : DataArray
+			3D skymap distribution at late times 
 
 	Returns :
-		- out               [xarray]                Concatenated skymap
+		out : DataArray
+			3D skymap of the concatenated 3D skymaps 
 
 	"""
 

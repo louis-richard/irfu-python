@@ -32,18 +32,18 @@ def rotate_tensor(*args):
 			For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
 			For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
 	 
-	Examples :
-		>>> #Rotate tensor into field-aligned coordinates
-		>>> Pe = pyrf.rotate_tensor(PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ,"fac",Bback)
-		>>> Pe = pyrf.rotate_tensor(Peall,"fac",Bback)
-		>>> Pe = pyrf.rotate_tensor(Peall,"fac",Bback,"pp")
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]
+		>>> # Spacecraft index
+		>>> ic = 1
 		>>> 
-		>>> #Rotate tensor into user-defined coordinate system
-		>>> Pe = pyrf.rotate_tensor(Peall,"rot",xnew)
-		>>> Pe = pyrf.rotate_tensor(Peall,"rot",xnew,ynew,znew)
+		>>> # Load magnetic field and ion temperature tensor
+		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+		>>> Tixyz = mms.get_data("Ti_gse_fpi_fast_l2",Tint,ic)
 		>>> 
-		>>> # Rotate tensor from spacecraft coordinates into GSE coordinates
-		>>> Pe = pyrf.rotate_tensor(Peall,"gse",MMSnum)
+		>>> # Compute ion temperature in field aligned coordinates
+		>>> Tixyzfac = pyrf.rotate_tensor(Tixyz,"fac",Bxyz,"pp")
 
 	"""
 

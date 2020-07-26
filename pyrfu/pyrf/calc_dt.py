@@ -4,14 +4,14 @@ import xarray as xr
 
 def calc_dt(inp=None):
 	"""
-	Compute time step of the input time series
+	Computes time step of the input time series
 
 	Parameters :
-		- inp : DataArray
+		inp : DataArray
 			Time series of the input variable
 
 	Returns :
-		- out : float
+		out : float
 			Time step in seconds
 
 	"""

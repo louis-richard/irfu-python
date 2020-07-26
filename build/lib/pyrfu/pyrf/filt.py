@@ -6,16 +6,39 @@ from scipy import signal
 
 def filt(inp=None, fmin=0, fmax=1, n=-1):
 	"""
-	Filter input quantity
+	Filters input quantity
 
 	Parameters :
-		- inp               [xarray]                Quantity to filter
-		- fmin              [float]                 Lower limit of the frequency range
-		- fmax              [float]                 Upper limit of the frequency range
-		- n                 [int]                   Order rof the elliptic filter
+		inp : DataArray
+			Time series of the variable to filter
+
+		fmin : float
+			Lower limit of the frequency range
+
+		fmax : float
+			Upper limit of the frequency range
+
+		n : int
+			Order of the elliptic filter
 
 	Returns : 
-		- out               [xarray]                Filtered signal
+		out : DataArray
+			Time series of the filtered signal
+
+	Example :
+		>>> # Time interval
+		>>> Tint = ["2017-07-18T13:03:34.000","2017-07-18T13:07:00.000"]
+		>>> # Spacecraft index
+		>>> ic = 1
+		>>> # Load magnetic and electric fields
+		>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+		>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+		>>> # Convert E to field aligned coordinates
+		>>> Exyzfac = pyrf.convert_fac(Exyz,Bxyz,[1,0,0])
+		>>> # Bandpass filter E waveform
+		>>> fmin = 4
+		>>> Exyzfachf = pyrf.filt(Exyzfac,fmin,0,3)
+		>>> Exyzfaclf = pyrf.filt(Exyzfac,0,fmin,3)
 
 	"""
 

@@ -1,0 +1,1827 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "PYRFU" "1" "Jul 25, 2020" "" "pyrfu"
+.SH NAME
+pyrfu \- pyrfu 
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SUPPORT
+.sp
+The easiest way to get help with the project is to join the \fB#crawler\fP
+channel on \fI\%Freenode\fP\&. We hang out there and you can get real\-time help with
+your projects.  The other good way is to open an issue on \fI\%Github\fP\&.
+.sp
+The mailing list at \fI\%https://groups.google.com/forum/#!forum/crawler\fP is also available for support.
+.SH PYRF
+.INDENT 0.0
+.TP
+.B pyrf.agyro_coeff(P=None)
+Computes agyrotropy coefficient (Swidak2016 \fI\%https://doi.org/10.1002/2015GL066980\fP)
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIP\fP
+DataArray
+Time series of the pressure tensor
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIQ\fP
+DataArray
+Time series of the agyrotropy coefficient of the specie
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft index
+>>> ic = 1
+>>>
+>>> # Load magnetic field and electron pressure tensor
+>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+>>> Pexyz = mms.get_data("Pe_gse_fpi_fast_l2",Tint,ic)
+>>>
+>>> # Rotate pressure tensor to field aligned coordinates
+>>> Pexyzfac = pyrf.rotate_tensor(Pexyz,"fac",Bxyz,"pp")
+>>>
+>>> # Compute agyrotropy coefficient
+>>> Qe = pyrf.agyro_coeff(Pexyzfac)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.avg_4sc(B=None)
+Computes the input quantity at the center of mass of the MMS tetrahedron
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIB\fP
+list of DataArray
+List of the time series of the quantity for each spacecraft
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIBavg\fP
+DataArray
+Time series of the input quantity a the enter of mass of the MMS tetrahedron
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft indices
+>>> ic = np.arange(1,5)
+>>>
+>>> # Load magnetic field
+>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
+>>>
+>>> # Compute the magnetic field at the center of mass of the MMS tetrahedron
+>>> Bxyzavg = pyrf.avg_4sc(Bxyz)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.c_4_grad(R=None, B=None, method=\(aqgrad\(aq)
+.TP
+.B """
+.TP
+.B Calculate gradient of physical field using 4 spacecraft technique.
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIR\fP
+list of DataArray
+Time series of the positions of the spacecraft
+.TP
+.B \fIB\fP
+list of DataArray
+Time series of the magnetic field at the corresponding positions
+.TP
+.B \fImethod\fP
+str.INDENT 7.0
+.TP
+.B Method flag :
+"grad" \-> compute gradient (default)
+"div" \-> compute divergence
+"curl" \-> compute curl
+"bdivb" \-> compute b.div(b)
+"curv" \-> compute curvature
+.UNINDENT
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B \fIout\fP
+DataArray
+Time series of the derivative of the input field corresponding to the method
+.UNINDENT
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft indices
+>>> ic = np.arange(1,5)
+>>>
+>>> # Load magnetic field and spacecraft position
+>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
+>>> Rxyz = [mms.get_data("R_gse",Tint,i) for i in ic]
+>>>
+>>> # Compute gradient of the magnetic field
+>>> gradB = pyrf.c_4_grad(Rxyz,Bxyz,"grad")
+.ft P
+.fi
+.TP
+.B Reference :
+ISSI book  Eq. 14.16, 14.17 p. 353
+.TP
+.B See also :
+c_4_k
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.c_4_j(R=None, B=None)
+Calculate current from using 4 spacecraft technique in addition one can obtain average magnetic field and \emathbf{J}\etimes\emathbf{B}
+values. Estimate also divergence B as the error estimate
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIR\fP
+list of DataArrays
+Time series of the spacecraft position [km]
+.TP
+.B \fIB\fP
+list of DataArray
+Time series of the magnetic field [nT]
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIj\fP
+DataArray
+Time series of the current density \emathbf{J} = \emu_0^{\-1} \enabla \etimes \emathbf{B}
+.TP
+.B \fIdivB\fP
+DataArray
+Time series of the divergence of the magnetic field \emu_0^{\-1} \enabla . \emathbf{B}
+.TP
+.B \fIBav\fP
+DataArray
+Time series of the magnetic field at the center of mass of the tetrahedron,
+sampled at 1st SC time steps [nT]
+.TP
+.B \fIjxB\fP
+DataArray
+Time series of the \emathbf{J}\etimes\emathbf{B} = \emu_0^{\-1}\eleft[\eleft(\emathbf{B}.\enabla\eright)\emathbf{B} + \enabla \eleft(\efrac{B^2}{2}\eright)\eright] force.
+.TP
+.B \fIdivTshear\fP
+DataArray
+Time series of the part of the divergence of stress associated with curvature units \emu_0^{\-1}\eleft(\emathbf{B}.\enabla\eright)\emathbf{B}\&.
+.TP
+.B \fIdivPb\fP
+DataArray
+Time series of the gradient of the magnetic pressure \emu_0^{\-1}\enabla \eleft(\efrac{B^2}{2}\eright)
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft indices
+>>> ic = np.arange(1,5)
+>>>
+>>> # Load magnetic field and spacecraft position
+>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
+>>> Rxyz = [mms.get_data("R_gse",Tint,i) for i in ic]
+>>>
+>>> # Compute current density, etc
+>>> j, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+.ft P
+.fi
+.TP
+.B Reference :
+ISSI book  Eq. 14.16, 14.17 p. 353
+.TP
+.B See also :
+c_4_k
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B c_4_k(R=None):
+Calculate reciprocal vectors in barycentric coordinates.
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIR\fP
+list of DataArray
+Time series of the position of the spacecrafts
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIK\fP
+list of DataArray
+Time series of the reciprocal vectors in barycentric coordinates
+.UNINDENT
+.TP
+.B Reference:
+ISSI book 14.7
+.TP
+.B Note :
+The units of reciprocal vectors are the same as [1/r]
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.calc_disprel_tm(V=None, dV=None, T=None, dT=None)
+Computes dispersion relation from velocities and period given by the timing method
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIV\fP
+DataArray
+Time series of the velocities
+.TP
+.B \fIdV\fP
+DataArray
+Time series of the error on velocities
+.TP
+.B \fIT\fP
+DataArray
+Time series of the periods
+.TP
+.B \fIdT\fP
+DataArray
+Time series of the error on period
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+Dataset
+DataSet containing the frequency, the wavelength, the wavenumber. Also includes the errors and the fit
+(e.g Vph phase velocity)
+.UNINDENT
+.TP
+.B See also :
+c_4_v_xcorr
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.calc_dt(inp=None)
+Computes time step of the input time series
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp\fP
+DataArray
+Time series of the input variable
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+float
+Time step in seconds
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.calc_fs(inp=None)
+Computes the sampling frequency of the input time series
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp\fP
+DataArray
+Time series of the input variable
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+float
+Sampling frequency in Hz
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.convert_fac(inp=None, Bbgd=None, r=np.array([1, 0, 0]))
+Transforms to a field\-aligned coordinate (FAC) system defined as:
+R_parallel_z aligned with the background magnetic field
+R_perp_y defined by R_parallel cross the position vector of the spacecraft (nominally eastward at the equator)
+R_perp_x defined by R_perp_y cross R_par
+If inp is one vector along r direction, out is inp[perp, para] projection
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp\fP
+DataArray
+Time series of the input field
+.TP
+.B \fIBbgd\fP
+DataArray
+Time series of the background magnetic field
+.TP
+.B \fIr\fP
+DataArray/ndarray/list
+Position vector of spacecraft
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+Time series of the input field in field aligned coordinates system
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft index
+>>> ic = 1
+>>>
+>>> # Load magnetic field (FGM) and electric field (EDP)
+>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+>>>
+>>> # Convert to field aligned coordinates
+>>> Exyzfac = pyrf.convert_fac(Exyz,Bxyz,[1,0,0])
+.ft P
+.fi
+.TP
+.B Note :
+all input parameters must be in the same coordinate system
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.cross(inp1=None, inp2=None)
+Computes cross product of two fields.
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B inp1
+DataArray
+Time series of the first field \emathbf{Y}
+.TP
+.B inp2
+DataArray
+Time series of the second field \emathbf{Y}
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B out
+DataArray
+Time series of the cross product \emathbf{Z} = \emathbf{X}\etimes\emathbf{Y}
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft index
+>>> ic = 1
+>>>
+>>> # Load magnetic and electric fields
+>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,ic)
+>>>
+>>> # Magnitude of the magnetic field
+>>> Bmag = pyrf.norm(Bxyz)
+>>>
+>>> # Compute ExB drit velocity
+>>> ExBxyz = pyrf.cross(Exyz,Bxyz)/Bmag**2
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.dec_parperp(inp=None, b0=None, flagspinplane=False)
+Decomposes a vector into par/perp to B components. If flagspinplane decomposes components to the projection of B
+into the XY plane. Alpha_XY gives the angle between B0 and the XY plane.
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp\fP
+DataArray
+Time series of the field to decompose
+.TP
+.B \fIb0\fP
+DataArray
+Time series of the background magnetic field
+.UNINDENT
+.TP
+.B Options :
+.INDENT 7.0
+.TP
+.B \fIflagspinplane\fP
+bool
+Flag if True gives the projection in XY plane
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIapar\fP
+DataArray
+Time series of the input field parallel to the background magnetic field
+.TP
+.B \fIaperp\fP
+DataArray
+Time series of the input field perpendicular to the background magnetic field
+.TP
+.B \fIalpha\fP
+DataArray
+Time series of the angle between the background magnetic field and the XY plane
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft index
+>>> ic = 1
+>>>
+>>> # Load magnetic field (FGM) and electric field (EDP)
+>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+>>>
+>>> # Decompose Exyz into parallel and perpendicular to Bxyz components
+>>> Epar, Eperp, alpha = pyrf.dec_parperp(Exyz,Bxyz)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.dist_append(inp0=None, inp1=None)
+Concatenate two distribution skymaps along the time axis
+.sp
+Note : the time series have to be in the correct time order
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp1\fP
+DataArray
+3D skymap distribution at early times
+.TP
+.B \fIinp2\fP
+DataArray
+3D skymap distribution at late times
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+3D skymap of the concatenated 3D skymaps
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.dot(inp1=None, inp2=None)
+Computes dot product of two fields
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B inp1
+DataArray
+Time series of the first field \emathbf{X}
+.TP
+.B inp2
+DataArray
+Time series of the second field \emathbf{Y}
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B out
+DataArray
+Time series of the dot product \emathbf{Z} = \emathbf{X}\etimes\emathbf{Y}
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft indices
+>>> ic = np.arange(1,5)
+>>>
+>>> # Load magnetic field, electric field and spacecraft position
+>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
+>>> Exyz = [mms.get_data("E_gse_edp_fast_l2",Tint,i) for i in ic]
+>>> Rxyz = [mms.get_data("R_gse",Tint,i) for i in ic]
+>>> Jxyz, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+>>>
+>>> # Compute the electric at the center of mass of the tetrahedron
+>>> Exyzavg = pyrf.avg_4sc(Exyz)
+>>>
+>>> # Compute J.E dissipation
+>>> JE = pyrf.dot(Jxyz,Exyz)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.dynamicp(N=None, V=None, s=\(aqi\(aq)
+Computes dynamic pressure
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIN\fP
+DataArray
+Time series of the number density of the specie
+.TP
+.B \fIV\fP
+DataArray
+Time series of the bulk velocity of the specie
+.UNINDENT
+.TP
+.B Options :
+.INDENT 7.0
+.TP
+.B \fIs\fP
+"i"/"e"
+Specie (default "i")
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIPdyn\fP
+DataArray
+Time series of the dynamic pressure of the specie P_{dyn,\ealpha} = n_\ealpha V_\ealpha^2
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft index
+>>> ic = 1
+>>>
+>>> # Ion bluk velocity
+>>> Vixyz = mms.get_data("Vi_gse_fpi_fast_l2",Tint,ic)
+>>>
+>>> # Remove spintone
+>>> STixyz = mms.get_data("STi_gse_fpi_fast_l2",Tint,ic)
+>>> Vixyz = Vixyz\-STixyz
+>>>
+>>> # Ion number density
+>>> Ni = mms.get_data("Ni_fpi_fast_l2",Tint,ic)
+>>>
+>>> # Compute dynamic pressure
+>>> Pdyn = pyrf.dynamicp(Ni,Vixyz, s="i")
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.e_vxb(v=None, b=None, flag=\(aqvxb\(aq)
+Computes the convection electric field \emathbf{V}\etimes\emathbf{B} (default) or the ExB drift velocity \efrac{\emathbf{E}\etimes\emathbf{B}}{B^2} (flag="exb")
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B v
+DataArray
+Time series of the velocity/electric field
+.TP
+.B b
+DataArray
+Time series of the magnetic field
+.TP
+.B flag
+str.INDENT 7.0
+.TP
+.B Method flag :
+"vxb" \-> computes convection electric field (default)
+"exb" \-> computes ExB drift velocity
+.UNINDENT
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B out
+DataArray
+Time series of the convection electric field/ExB drift velocity
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>>
+>>> # Spacecraft index
+>>> ic = 1
+>>>
+>>> # Load magnetic field and electric field
+>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,1)
+>>>
+>>> # Compute ExB drift velocity
+>>> ExB = pyrf.e_vxb(Exyz,Bxyz,"ExB")
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.ebsp(e=None, dB=None, fullB=None, B0=None, xyz=None, freq_int=None, **kwargs)
+Calculates wavelet spectra of E&B and Poynting flux using wavelets (Morlet wavelet). Also computes polarization
+parameters of B using SVD. SVD is performed on spectral matrices computed from the time series of B using wavelets
+and then averaged over a number of wave periods.
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIe\fP
+DataArray
+Time series of the wave electric field
+.TP
+.B \fIdB\fP
+DataArray
+Time series of the wave magnetic field
+.TP
+.B \fIfullB\fP
+DataArray
+Time series of the high resolution background magnetic field used for \emathbf{E}.\emathbf{B}=0
+.TP
+.B \fIB0\fP
+DataArray
+Time series of the background magnetic field used for field aligned coordinates
+.TP
+.B \fIxyz\fP
+DataArray
+Time series of the position time series of spacecraft used for field aligned coordinates
+.TP
+.B \fIfreq_int\fP
+str/list/ndarray.INDENT 7.0
+.TP
+.B Frequency interval :
+"pc12"                  \-> [0.1, 5.0],
+"pc35"                  \-> [2e\-3, 0.1],
+[fmin, fmax]    \-> arbitrary interval [fmin,fmax]
+.UNINDENT
+.UNINDENT
+.TP
+.B Options :
+.INDENT 7.0
+.TP
+.B \fIpolarization\fP
+bool
+Computes polarization parameters (default False)
+.TP
+.B \fInoresamp\fP
+bool
+No resampling, \fIE\fP and \fIdB\fP are given at the same time line (default False)
+.TP
+.B \fIfac\fP
+bool
+Uses FAC coordinate system (defined by \fIB0\fP and optionally \fIxyz\fP), otherwise no coordinate system
+transformation is performed (default False)
+.TP
+.B \fIdEdotB_0\fP
+bool
+Computes \fIdEz\fP from \edelta\emathbf{B}.\emathbf{B} = 0, uses \fIfullB\fP (default False)
+.TP
+.B \fIfullB_dB\fP
+bool
+\fIdB\fP contains DC field (default False)
+.TP
+.B \fInAv\fP
+int
+Number of wave periods to average (default 8)
+.TP
+.B \fIfacMatrix\fP
+ndarray
+Specify rotation matrix to FAC system (default None)
+.TP
+.B \fImwidthcoef\fP
+int/float
+Specify coefficient to multiple Morlet wavelet width by. (default 1)
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIres\fP
+Dataset.INDENT 7.0
+.TP
+.B Dataset with :
+.INDENT 7.0
+.TP
+.B \fIt\fP
+DataArray
+Time
+.TP
+.B \fIf\fP
+DataArray
+Frequencies
+.TP
+.B \fIbb_xxyyzzss\fP
+DataArray.INDENT 7.0
+.TP
+.B \edelta\emathbf{B} power spectrum with :
+[...,0] \-> x,
+[...,1] \-> y,
+[...,2] \-> z,
+[...,3] \-> sum
+.UNINDENT
+.TP
+.B \fIee_xxyyzzss\fP
+DataArray.INDENT 7.0
+.TP
+.B \emathbf{E} power spectrum with :
+[...,0] \-> x,
+[...,1] \-> y,
+[...,2] \-> z,
+[...,3] \-> sum
+.UNINDENT
+.TP
+.B \fIee_ss\fP
+DataArray
+\emathbf{E} power spectrum (xx+yy spacecraft coordinates, e.g. ISR2)
+.TP
+.B \fIpf_xyz\fP
+DataArray
+Poynting flux (xyz)
+.TP
+.B \fIpf_rtp\fP
+DataArray
+Poynting flux (r, theta, phi) [angles in degrees]
+.TP
+.B \fIdop\fP
+DataArray
+3D degree of polarization
+.TP
+.B \fIdop2d\fP
+DataArray
+2D degree of polarization in the polarization plane
+.TP
+.B \fIplanarity\fP
+DataArray
+Planarity of polarization
+.TP
+.B \fIellipticity\fP
+DataArray
+Ellipticity of polarization ellipse
+.TP
+.B \fIk\fP
+DataArray
+k\-vector (theta, phi FAC) [angles in degrees]
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.TP
+.B Examples :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2015\-10\-30T05:15:42.000","2015\-10\-30T05:15:54.000"]
+>>>
+>>> # Spacecraft index
+>>> ic = 3
+>>>
+>>> # Load spacecraft position
+>>> Tintl = pyrf.extend_tint(Tint,[\-100,100])
+>>> Rxyz = mms.get_data("R_gse",Tintl,ic)
+>>>
+>>> # Load background magnetic field, electric field and magnetic field fluctuations
+>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+>>> Bscm = mms.get_data("B_gse_scm_brst_l2",Tint,ic)
+>>>
+>>> # Polarization analysis
+>>> polarization = pyrf.ebsp(Exyz,Bscm,Bxyz,Bxyz,Rxyz,freq_int=[10,4000],polarization=True,fac=True)
+.ft P
+.fi
+.TP
+.B See also :
+pl_ebsp, convert_fac
+.TP
+.B Notes :
+This software was developed as part of the MAARBLE (Monitoring, Analyzing and Assessing Radiation Belt
+Energization and Loss) collaborative research project which has received funding from the European
+Community\(aqs Seventh Framework Program (FP7\-SPACE\-2011\-1) under grant agreement n. 284520.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.edb(E=None, b0=None, angle_lim=20, flag_method=\(aqE.B=0\(aq)
+Compute Ez under assumption E.B=0 or E.B~=0
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIE\fP
+DataArray
+Time series of the electric field
+.TP
+.B \fIb0\fP
+DataArray
+Time series of the background magnetic field
+.TP
+.B \fIflag_method\fP
+str.INDENT 7.0
+.TP
+.B Assumption on the direction of the measured electric field :
+"E.B=0" \-> E.B = 0
+"Epar"  \-> E field along the B projection is coming from parallel electric field
+.UNINDENT
+.TP
+.B \fIangle_lim\fP
+float
+B angle with respect to the spin plane should be less than angle_lim degrees otherwise Ez is set to 0
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIed\fP
+DataArray
+Time series of the electric field output
+.TP
+.B \fId\fP
+DataArray
+Time series of the B elevation angle above spin plane
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>> # Spacecraft indices
+>>> ic = np.arange(1,5)
+>>> # Load magnetic field, electric field and spacecraft position
+>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
+>>> Exyz = [mms.get_data("E_gse_edp_fast_l2",Tint,i) for i in ic]
+>>> # Compute Ez
+>>> Ed, d = pyrf.edb(Exyz,Bxyz)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.end(inp=None, fmt=\(aqunix\(aq)
+Gives the last time of the time series
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp\fP
+DataArray
+Time series of the input variable
+.TP
+.B \fIfmt\fP
+str
+Format of the output time (see Rots et al. 2015 \fI\%https://arxiv.org/pdf/1409.7583.pdf\fP)
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+float/str
+Value of the last time in the desired format
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.extend_tint(Tint, ext=[\- 60, 60])
+Extends time interval
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fITint\fP
+list of str
+Reference time interval to extend
+.TP
+.B \fIext\fP
+list of flot/int
+Number of seconds to extend time interval [left extend, right extend]
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fItint\fP
+list of str
+Extended time interval
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2015\-10\-30T05:15:42.000","2015\-10\-30T05:15:54.000"]
+>>> # Spacecraft index
+>>> ic = 3
+>>> # Load spacecraft position
+>>> Tintl = pyrf.extend_tint(Tint,[\-100,100])
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.filt(inp=None, fmin=0, fmax=1, n=\- 1)
+Filters input quantity
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp\fP
+DataArray
+Time series of the variable to filter
+.TP
+.B \fIfmin\fP
+float
+Lower limit of the frequency range
+.TP
+.B \fIfmax\fP
+float
+Upper limit of the frequency range
+.TP
+.B \fIn\fP
+int
+Order of the elliptic filter
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+Time series of the filtered signal
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2017\-07\-18T13:03:34.000","2017\-07\-18T13:07:00.000"]
+>>> # Spacecraft index
+>>> ic = 1
+>>> # Load magnetic and electric fields
+>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+>>> # Convert E to field aligned coordinates
+>>> Exyzfac = pyrf.convert_fac(Exyz,Bxyz,[1,0,0])
+>>> # Bandpass filter E waveform
+>>> fmin = 4
+>>> Exyzfachf = pyrf.filt(Exyzfac,fmin,0,3)
+>>> Exyzfaclf = pyrf.filt(Exyzfac,0,fmin,3)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.fname(Tint=None, frmt=1)
+Creates a string corresponding to time interval for output plot naming
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B Tint
+list of str
+Time interval
+.UNINDENT
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B frmt
+int.INDENT 7.0
+.TP
+.B Format of the output :
+1 \-> "%Y%m%d_%H%M",
+2 \-> "%y%m%d%H%M%S",
+3 \-> "%Y%m%d_%H%M%S"_"%H%M%S",
+4 \-> "%Y%m%d_%H%M%S"_"%Y%m%d_%H%M%S"
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B out
+str
+String corresponding to the time interval in the desired format.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.gradient(inp=None)
+Computes time derivative of the input variable
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B inp
+DataArray
+Time series of the input variable
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B out
+DataArray
+Time series of the time derivative of the input variable
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2017\-07\-18T13:03:34.000","2017\-07\-18T13:07:00.000"]
+>>> # Spacecraft index
+>>> ic = 1
+>>> # Load magnetic field
+>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
+>>> # Time derivative of the magnetic field
+>>> dtB = pyrf.gradient(Bxyz)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.histogram2d(inp1=None, inp2=None, nbins=100)
+Computes 2d histogram of inp2 vs inp1 with nbins number of bins
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp1\fP
+DataArray
+Time series of the x values
+.TP
+.B \fIinp2\fP
+DataArray
+Time series of the y values
+.TP
+.B \fInbins\fP
+int
+Number of bins
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+2D map of the density of inp2 vs inp1
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> # Time interval
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>> # Spacecraft indices
+>>> ic = np.arange(1,5)
+>>> # Load magnetic field and electric field
+>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,1) for i in ic]
+>>> Rxyz = [mms.get_data("R_gse",Tint,1) for i in ic]
+>>> # Compute current density, etc
+>>> J, divB, Bavg, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+>>> # Compute magnitude of B and J
+>>> Bmag = pyrf.norm(Bavg)
+>>> Jmag = pyrf.norm(J)
+>>> # Histogram of |J| vs |B|
+>>> HBJ = pyrf.histogram2d(Bmag,Jmag)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.ts_scalar(t=None, data=None, attrs=None)
+Create a time series containing a 0th order tensor
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B t
+np.ndarray
+Array of times
+.TP
+.B data
+np.ndarray
+Data corresponding to the time list
+.UNINDENT
+.TP
+.B Options :
+.INDENT 7.0
+.TP
+.B attrs
+dict
+Attributes of the data list
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B out DataArray
+0th order tensor time series
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.ts_skymap(time, data, energy, phi, theta, **kwargs)
+Creates a skymap of the distribution function
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B time
+np.ndarray
+List of times
+.TP
+.B data
+np.ndarray
+Values of the distribution function
+.TP
+.B energy
+np.ndarray
+Energy levels
+.TP
+.B phi
+np.ndarray
+Azimuthal angles
+.TP
+.B theta
+np.ndarray
+Elevation angles
+.UNINDENT
+.TP
+.B Returns :
+out : DataArray
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.ts_tensor_xyz(t=None, data=None[, attrs=None])
+Create a time series containing a 2nd order tensor
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B t
+np.ndarray
+Array of times
+.TP
+.B data
+np.ndarray
+Data corresponding to the time list
+.UNINDENT
+.TP
+.B Options :
+.INDENT 7.0
+.TP
+.B attrs
+dict
+Attributes of the data list
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B out
+DataArray
+2nd order tensor time series
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.ts_vec_xyz(t=None, data=None[, attrs=None])
+Create a time series containing a 1st order tensor
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIt\fP
+np.ndarray
+Array of times
+.TP
+.B \fIdata\fP
+np.ndarray
+Data corresponding to the time list
+.UNINDENT
+.TP
+.B Options :
+.INDENT 7.0
+.TP
+.B \fIattrs\fP
+dict
+Attributes of the data list
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+1st order tensor time series
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.vht(e=None, b=None[, flag=1])
+Estimate velocity of the De Hoffman\-Teller frame from the velocity estimate the electric field eht=\-vhtxb
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIe\fP
+DataArray
+Time series of the electric field
+.TP
+.B \fIb\fP
+DataArray
+Time series of the magnetic field
+.TP
+.B \fIflag\fP
+int
+If 2 assumed no Ez.
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIvht\fP
+np.ndarray
+De Hoffman Teller frame velocity [km/s]
+.TP
+.B \fIvht\fP
+DataArray
+Time series of the electric field in the De Hoffman frame
+.TP
+.B \fIdvht\fP
+np.ndarray
+Error of De Hoffman Teller frame
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B pyrf.wavelet(inp=None, **kwargs)
+Calculate wavelet spectrogram based on fast FFT algorithm
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp\fP
+DataArray
+Input quantity
+.UNINDENT
+.TP
+.B Options :
+.INDENT 7.0
+.TP
+.B \fIfs\fP
+int/float
+Sampling frequency of the input time series
+.TP
+.B \fIf\fP
+list/np.ndarray
+Vector [fmin fmax], calculate spectra between frequencies fmin and fmax
+.TP
+.B \fInf\fP
+int/float
+Number of frequency bins
+.TP
+.B \fIwavelet_width\fP
+int/float
+Width of the Morlet wavelet, default 5.36
+.TP
+.B \fIlinear\fP
+float
+Linear spacing between frequencies of df
+.TP
+.B \fIreturnpower\fP
+bool
+Set to True (default) to return the power, False for complex wavelet transform
+.TP
+.B \fIcutedge\fP
+bool
+Set to True (default) to set points affected by edge effects to NaN, False to keep edge affect points
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray/Dataset
+Wavelet transform of the input
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SH MMS
+.SS \fI\%calc_feeps_omni()\fP
+.INDENT 0.0
+.TP
+.B mms.calc_feeps_omni(inp_dset)
+Computes the omni\-directional FEEPS spectrograms from a Dataset that contains the spectrograms of all eyes.
+.INDENT 7.0
+.TP
+.B Parameters:
+.INDENT 7.0
+.TP
+.B \fIinp_dset\fP
+Dataset
+Dataset with energy spectrum of every eyes
+.UNINDENT
+.TP
+.B Returns:
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+OMNI energy spectrum from the input
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B mms.db_get_ts(dsetName=\(aq\(aq, cdfName=\(aq\(aq, trange=None)
+Get variable time series in the cdf file
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIdsetName\fP
+str
+Name of the dataset
+.TP
+.B \fIcdfName\fP
+str
+Name of the target field in cdf file
+.TP
+.B \fItrange\fP
+list of str
+Time interval
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+Time series of the target variable
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B mms.feeps_remove_sun(inp_dset)
+Removes the sunlight contamination from FEEPS data
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIinp_dset\fP
+Dataset
+Dataset of energy spectrum of all eyes (see get_feeps_alleyes)
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+Dataset
+Dataset of cleaned energy spectrum of all eyes
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> Tint = ["2017\-07\-18T13:04:00.000","2017\-07\-18T13:07:00.000"]
+>>> iCPS = mms.get_feeps_alleyes("CPSi_brst_l2",Tint,2)
+>>> iCPS_clean = mms.feeps_split_integral_ch(iCPS)
+>>> iCPS_clean_sun_removed = mms.feeps_remove_sun(iCPS_clean)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B mms.feeps_spin_avg(inp_dset_omni)
+This function will spin\-average the omni\-directional FEEPS energy spectra
+.INDENT 7.0
+.TP
+.B Parameters:
+.INDENT 7.0
+.TP
+.B \fIinp_dset_omniv\fP
+DataArray
+Spectrogram of all eyes in OMNI
+.UNINDENT
+.TP
+.B Returns:
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+Spin\-averaged OMNI energy spectrum
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B mms.get_feeps_energy_table(probe, eye, sensor_id)
+This function returns the energy table based on each spacecraft and eye.
+Based on the table from: FlatFieldResults_V3.xlsx
+.sp
+from Drew Turner, 1/19/2017
+.INDENT 7.0
+.TP
+.B Parameters:
+.INDENT 7.0
+.TP
+.B \fIprobe\fP
+str
+probe #, e.g., "4" for MMS4
+.TP
+.B \fIeye\fP
+str
+sensor eye #
+.TP
+.B \fIsensor_id\fP
+int
+sensor ID
+.UNINDENT
+.TP
+.B Returns:
+.INDENT 7.0
+.TP
+.B \fIEnergy_table\fP
+list
+Energy table
+.UNINDENT
+.TP
+.B Notes:
+BAD EYES are replaced by NaNs
+\- different original energy tables are used depending on if the sensor head is 6\-8 (ions) or not (electrons)
+Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
+Ion Eyes: 6, 7, 8
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B mms.get_feeps_oneeye(tar_var=\(aqfluxe_brst_l2\(aq, eId=\(aqbottom\-4\(aq, trange=None, mmsId=1)
+Load energy spectrum all the target eye
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fItar_var\fP
+str.INDENT 7.0
+.TP
+.B target variable "{data_units}{specie}_{data_rate}_{level}"
+.INDENT 7.0
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B data_units :
+.INDENT 7.0
+.IP \(bu 2
+"flux" : intensity (1/cm sr)
+.IP \(bu 2
+"count" : counts (\-)
+.IP \(bu 2
+"CPS" : counts per second (1/s)
+.UNINDENT
+.UNINDENT
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B specie :
+.INDENT 7.0
+.IP \(bu 2
+"i" : ion
+.IP \(bu 2
+"e" : electron
+.UNINDENT
+.UNINDENT
+.IP \(bu 2
+data_rate : brst/srvy
+.IP \(bu 2
+level : l1/l1b/l2/l3??
+.UNINDENT
+.UNINDENT
+.TP
+.B \fIeId\fP
+str.INDENT 7.0
+.TP
+.B index of the eye "{deck}\-{id}"
+.INDENT 7.0
+.IP \(bu 2
+deck : top/bottom
+.IP \(bu 2
+id : see get_feeps_active_eyes
+.UNINDENT
+.UNINDENT
+.TP
+.B \fItrange\fP
+list of str
+Time interval
+.TP
+.B \fImmsId\fP
+int/str
+Index of the spacecraft
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B mms.get_data(varStr, tint, mmsId[, silent=False])
+Load a variable. varStr must in var (see below)
+.INDENT 7.0
+.TP
+.B Parameters :
+.INDENT 7.0
+.TP
+.B \fIvarStr\fP
+str
+Key of the target variable (see below)
+.TP
+.B \fItint\fP
+list of str
+Time interval
+.TP
+.B \fImmsId\fP
+str/int
+Index of the target spacecraft
+.TP
+.B \fIsilent\fP
+bool
+Set to False (default) to follow the loading
+.UNINDENT
+.TP
+.B Returns :
+.INDENT 7.0
+.TP
+.B \fIout\fP
+DataArray
+Time series of the target variable of measured by the target spacecraft over the selected time interval
+.UNINDENT
+.TP
+.B Example :
+.sp
+.nf
+.ft C
+>>> Tint = ["2019\-09\-14T07:54:00.000","2019\-09\-14T08:11:00.000"]
+>>> gseB = mms.get_data("B_gse_fgm_brst_l2",Tint,1)
+.ft P
+.fi
+.UNINDENT
+.sp
+EPHEMERIS :
+"R_gse", "R_gsm"
+.sp
+FGM :
+"B_gsm_fgm_srvy_l2", "B_gsm_fgm_brst_l2", "B_gse_fgm_srvy_l2",
+"B_gse_fgm_brst_l2", "B_bcs_fgm_srvy_l2", "B_bcs_fgm_brst_l2",
+"B_dmpa_fgm_srvy_l2", "B_dmpa_fgm_brst_l2"
+.sp
+DFG & AFG :
+"B_gsm_dfg_srvy_l2pre", "B_gse_dfg_srvy_l2pre", "B_dmpa_dfg_srvy_l2pre",
+"B_bcs_dfg_srvy_l2pre", "B_gsm_afg_srvy_l2pre", "B_gse_afg_srvy_l2pre",
+"B_dmpa_afg_srvy_l2pre", "B_bcs_afg_srvy_l2pre"
+.sp
+SCM :
+"B_gse_scm_brst_l2"
+.sp
+EDP :
+"Phase_edp_fast_l2a", "Phase_edp_slow_l2a", "Sdev12_edp_slow_l2a",
+"Sdev34_edp_slow_l2a", "Sdev12_edp_fast_l2a", "Sdev34_edp_fast_l2a",
+"E_dsl_edp_brst_l2", "E_dsl_edp_fast_l2", "E_dsl_edp_brst_ql",
+"E_dsl_edp_fast_ql", "E_dsl_edp_slow_l2", "E_gse_edp_brst_l2",
+"E_gse_edp_fast_l2", "E_gse_edp_slow_l2", "E2d_dsl_edp_brst_l2pre",
+"E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_ql", "E2d_dsl_edp_fast_ql",
+"E2d_dsl_edp_l2pre", "E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_l2pre",
+"E_dsl_edp_l2pre", "E_dsl_edp_fast_l2pre", "E_dsl_edp_brst_l2pre",
+"E_dsl_edp_slow_l2pre", "E_ssc_edp_brst_l2a", "E_ssc_edp_fast_l2a",
+"E_ssc_edp_slow_l2a", "V_edp_fast_sitl", "V_edp_slow_sitl",
+"V_edp_slow_l2", "V_edp_fast_l2", "V_edp_brst_l2"
+.sp
+FPI Ions :
+"Vi_dbcs_fpi_brst_l2", "Vi_dbcs_fpi_fast_l2", "Vi_dbcs_fpi_l2",
+"Vi_gse_fpi_ql", "Vi_gse_fpi_fast_ql", "Vi_dbcs_fpi_fast_ql",
+"Vi_gse_fpi_fast_l2", "Vi_gse_fpi_brst_l2", "partVi_gse_fpi_brst_l2",
+"Ni_fpi_brst_l2", "partNi_fpi_brst_l2", "Ni_fpi_brst",
+"Ni_fpi_fast_l2", "Ni_fpi_ql", "Enfluxi_fpi_fast_ql",
+"Enfluxi_fpi_fast_l2", "Tperpi_fpi_brst_l2", "Tparai_fpi_brst_l2",
+"partTperpi_fpi_brst_l2", "partTparai_fpi_brst_l2", "Ti_dbcs_fpi_brst_l2",
+"Ti_dbcs_fpi_brst", "Ti_dbcs_fpi_fast_l2", "Ti_gse_fpi_ql",
+"Ti_dbcs_fpi_ql", "Ti_gse_fpi_brst_l2", "Pi_dbcs_fpi_brst_l2",
+"Pi_dbcs_fpi_brst", "Pi_dbcs_fpi_fast_l2", "Pi_gse_fpi_ql",
+"Pi_gse_fpi_brst_l2"
+.sp
+FPI Electrons :
+"Ve_dbcs_fpi_brst_l2", "Ve_dbcs_fpi_brst", "Ve_dbcs_fpi_ql",
+"Ve_dbcs_fpi_fast_l2", "Ve_gse_fpi_ql", "Ve_gse_fpi_fast_l2",
+"Ve_gse_fpi_brst_l2", "partVe_gse_fpi_brst_l2", "Enfluxe_fpi_fast_ql",
+"Enfluxe_fpi_fast_l2", "Ne_fpi_brst_l2", "partNe_fpi_brst_l2",
+"Ne_fpi_brst", "Ne_fpi_fast_l2", "Ne_fpi_ql",
+"Tperpe_fpi_brst_l2", "Tparae_fpi_brst_l2", "partTperpe_fpi_brst_l2",
+"partTparae_fpi_brst_l2", "Te_dbcs_fpi_brst_l2", "Te_dbcs_fpi_brst",
+"Te_dbcs_fpi_fast_l2", "Te_gse_fpi_ql", "Te_dbcs_fpi_ql",
+"Te_gse_fpi_brst_l2", "Pe_dbcs_fpi_brst_l2", "Pe_dbcs_fpi_brst",
+"Pe_dbcs_fpi_fast_l2", "Pe_gse_fpi_ql", "Pe_gse_fpi_brst_l2",
+.sp
+HPCA :
+"Nhplus_hpca_srvy_l2", "Nheplus_hpca_srvy_l2", "Nheplusplus_hpca_srvy_l2",
+"Noplus_hpca_srvy_l2", "Tshplus_hpca_srvy_l2", "Tsheplus_hpca_srvy_l2",
+"Tsheplusplus_hpca_srvy_l2", "Tsoplus_hpca_srvy_l2", "Vhplus_dbcs_hpca_srvy_l2",
+"Vheplus_dbcs_hpca_srvy_l2", "Vheplusplus_dbcs_hpca_srvy_l2", "Voplus_dbcs_hpca_srvy_l2",
+"Phplus_dbcs_hpca_srvy_l2", "Pheplus_dbcs_hpca_srvy_l2", "Pheplusplus_dbcs_hpca_srvy_l2",
+"Poplus_dbcs_hpca_srvy_l2", "Thplus_dbcs_hpca_srvy_l2", "Theplus_dbcs_hpca_srvy_l2",
+"Theplusplus_dbcs_hpca_srvy_l2", "Toplus_dbcs_hpca_srvy_l2", "Vhplus_gsm_hpca_srvy_l2",
+"Vheplus_gsm_hpca_srvy_l2", "Vheplusplus_gsm_hpca_srvy_l2", "Voplus_gsm_hpca_srvy_l2",
+"Nhplus_hpca_brst_l2", "Nheplus_hpca_brst_l2", "Nheplusplus_hpca_brst_l2",
+"Noplus_hpca_brst_l2", "Tshplus_hpca_brst_l2", "Tsheplus_hpca_brst_l2",
+"Tsheplusplus_hpca_brst_l2", "Tsoplus_hpca_brst_l2", "Vhplus_dbcs_hpca_brst_l2",
+"Vheplus_dbcs_hpca_brst_l2", "Vheplusplus_dbcs_hpca_brst_l2", "Voplus_dbcs_hpca_brst_l2",
+"Phplus_dbcs_hpca_brst_l2", "Pheplus_dbcs_hpca_brst_l2", "Pheplusplus_dbcs_hpca_brst_l2",
+"Poplus_dbcs_hpca_brst_l2", "Thplus_dbcs_hpca_brst_l2", "Theplus_dbcs_hpca_brst_l2",
+"Theplusplus_dbcs_hpca_brst_l2", "Toplus_dbcs_hpca_brst_l2", "Vhplus_gsm_hpca_brst_l2",
+"Vheplus_gsm_hpca_brst_l2", "Vheplusplus_gsm_hpca_brst_l2", "Voplus_gsm_hpca_brst_l2",
+"Phplus_gsm_hpca_brst_l2", "Pheplus_gsm_hpca_brst_l2", "Pheplusplus_gsm_hpca_brst_l2",
+"Poplus_gsm_hpca_brst_l2", "Thplus_gsm_hpca_brst_l2", "Theplus_gsm_hpca_brst_l2",
+"Theplusplus_gsm_hpca_brst_l2", "Toplus_gsm_hpca_brst_l2"
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+genindex
+.IP \(bu 2
+modindex
+.IP \(bu 2
+search
+.UNINDENT
+.SH AUTHOR
+L. Richard
+.SH COPYRIGHT
+2020, L. Richard
+.\" Generated by docutils manpage writer.
+.

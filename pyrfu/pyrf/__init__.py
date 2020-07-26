@@ -3,13 +3,15 @@ from .ts_vec_xyz import ts_vec_xyz
 from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_skymap import ts_skymap
 
+
+
 from .ts_append import ts_append
 from .dist_append import dist_append
 
 from .start import start
 from .end import end
 from .iso2unix import iso2unix
-
+from .extend_tint import extend_tint
 
 
 from .dot import dot
@@ -52,7 +54,7 @@ from .median_bins import median_bins
 from .mean_bins import mean_bins
 from .histogram2d import histogram2d
 
-
+from .calc_disprel_tm import calc_disprel_tm
 from .wavepolarize_means import wavepolarize_means
 from .psd import *
 

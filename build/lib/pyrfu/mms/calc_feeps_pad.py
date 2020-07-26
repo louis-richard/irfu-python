@@ -6,7 +6,28 @@ from astropy.time import Time
 from .feeps_pitch_angles import feeps_pitch_angles
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
-def calc_feeps_pad(inp_dset=None, Bbcs=None, bin_size=16.3636, energy=[70, 600]):
+def calc_feeps_pad(inp_dset=None, Bbcs=None, bin_size=16.3636, energy=[70,600]):
+	"""
+	Compute pitch angle distribution using FEEPS data.
+
+	Parameters :
+		inp_dset : Dataset
+			Energy spectrum of all eyes
+
+		Bbcs : DataArray
+			Time series of the magnetic field in spacecraft coordinates
+
+		bin_size : float
+			Width of the pitch angles bins
+
+		energy : list of float
+			Energy range of particles
+
+	Returns :
+		pad : DataArray
+			Time series of the pitch angle distribution
+			
+	"""
 	Var = inp_dset.attrs
 	mmsId = Var["mmsId"]
 

@@ -3,21 +3,47 @@ import xarray as xr
 from scipy import optimize
 
 
-def calc_disprel(V,dV,T,dT):
+def calc_disprel_tm(V=None, dV=None, T=None, dT=None):
 	"""
-	Computes diespertion relation from velocities and period
+	Computes dispersion relation from velocities and period given by the timing method
 
 	Parameters :
-		- V                 [xarray]                Time serie of the velocities
-		- dV                [xarray]                Time serie of the error on velocities
-		- T                 [xarray]                Time serie of the periods
-		- dT                [xarray]                Time serie of the error on period
+		V : DataArray
+			Time series of the velocities
+
+		dV : DataArray
+			Time series of the error on velocities
+
+		T : DataArray
+			Time series of the periods
+		
+		dT : DataArray
+			Time series of the error on period
 
 	Returns :
-		- out               [xarray]                DataSet containing the frequency, the wavelenth, the wavenumber.
-													Also includes the errors and the fit (e.g .Vph phase velocity)
+		out : Dataset
+			DataSet containing the frequency, the wavelength, the wavenumber. Also includes the errors and the fit 
+			(e.g Vph phase velocity)
+
+	See also :
+		c_4_v_xcorr
 
 	"""
+
+	if (V is None) or (dV is None) or (T is None) or (dT is None):
+		raise ValueError("calc_disprel_tm requires at least 4 arguments")
+
+	if not isinstance(V,xr.DataArray):
+		raise TypeError("V must a DataArray")
+
+	if not isinstance(dV,xr.DataArray):
+		raise TypeError("dV must a DataArray")
+
+	if not isinstance(T,xr.DataArray):
+		raise TypeError("T must a DataArray")
+
+	if not isinstance(dT,xr.DataArray):
+		raise TypeError("dT must a DataArray")
 
 	omega   = 2*np.pi/T                             # Frequency
 	lamb    = V*T                                   # Wave length
