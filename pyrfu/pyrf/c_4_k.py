@@ -32,6 +32,8 @@ def c_4_k(R=None):
 		if not isinstance(R[i],xr.DataArray):
 			raise TypeError("Spacecraft position must be DataArray")
 		
+	r1, r2, r3, r4 = R
+
 	r = [r1,r2,r3,r4,r1,r2,r3]
 	K = [None]*4
 

@@ -1,3 +1,4 @@
+from .ts_time import ts_time
 from .ts_scalar import ts_scalar
 from .ts_vec_xyz import ts_vec_xyz
 from .ts_tensor_xyz import ts_tensor_xyz
@@ -22,6 +23,7 @@ from .normalize import normalize
 
 from .calc_dt import calc_dt
 from .calc_fs import calc_fs
+from .avg_4sc import avg_4sc
 from .gradient import gradient
 from .integrate import integrate
 
@@ -45,7 +47,6 @@ from .e_vxb import e_vxb
 
 from .plasma_calc import plasma_calc
 
-from .nv2p import nv2p
 from .dynamicp import dynamicp
 from .pres_anis import pres_anis
 from .agyro_coeff import agyro_coeff
@@ -62,4 +63,7 @@ from .c_4_k import c_4_k
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
 
+from .ebsp import ebsp
+
 from .fname import fname
+

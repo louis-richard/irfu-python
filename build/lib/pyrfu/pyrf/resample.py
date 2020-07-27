@@ -195,7 +195,7 @@ def resample(inp=None,ref=None,**kwargs):
 
 			if not_found:
 				sfy = sfy1
-				raise RuntimeError("{Cannot guess sampling frequency. Tried {:d} times}".format(MAXTRY))
+				raise RuntimeError("Cannot guess sampling frequency. Tried {:d} times".format(MAXTRY))
 			del sfy1
 
 		dt2 = 0.5 / sfy  # Half interval

@@ -2,11 +2,15 @@ import numpy as np
 import xarray as xr
 import pyfftw
 from astropy.time import Time
+import bisect
 import warnings
 from tqdm import tqdm
-import multiprocessing as np
+import multiprocessing as mp
 import sfs
 
+import pdb
+
+from .ts_time import ts_time
 from .ts_vec_xyz import ts_vec_xyz
 from .resample import resample
 from .iso2unix import iso2unix
@@ -38,7 +42,7 @@ def AverageData(data=None,x=None,y=None,avWindow=None):
 	padTime     = dtx*np.arange(nPointToAdd)
 	x           = np.hstack([x[0]-np.flip(padTime), x, x[-1]+padTime])
 
-	out = np.zeros((ndataOut,data.shape[1]))
+	out = np.zeros((ndataOut,data.shape[1]),dtype="complex128")
 	
 	for i, iy in enumerate(y):
 		il = bisect.bisect_left(x,iy-dt2)
@@ -262,9 +266,10 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 			xyz = [1,0,0]
 			xyz = ts_vec_xyz(dB.time.data,np.tile(xyz,(len(dB,1))))
 
-		xyz = resample(xyz,dB)
+		fsb = calc_fs(dB)
+		xyz = resample(xyz,dB,fs=fsb)
 
-	B0 = resample(B0,dB)
+	B0 = resample(B0,dB,fs=fsb)
 
 	if flag_fullB_dB:
 		fullB           = dB
@@ -322,8 +327,8 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 			inSampling = sampl_e
 		else :
 			if sampl_b > 1.5*sampl_e:
-				e   = resample(e,dB)
-				B0  = resample(B0,dB)
+				e   = resample(e,dB,fs=fsb)
+				B0  = resample(B0,dB,fs=fsb)
 				
 				inSampling = sampl_b
 				warnings.warn("Interpolating e to b",UserWarning)
@@ -402,7 +407,7 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 	# If E has all three components, transform E and B waveforms to a magnetic field aligned coordinate (FAC)
 	# and save eISR for computation of ESUM. Ohterwise we compute Ez within the main loop and do the
 	# transformation to FAC there.
-
+	
 	timeB0 = 0
 	if flag_want_fac:
 		res["flagFac"] = True
@@ -665,8 +670,8 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 			V[1,2,:]    = V[1,2,:]*signKz
 			V[0,2,:]    = V[0,2,:]*signKz
 
-			thetaSVD_fac[:,ind_a]   = np.abs(np.squeeze(np.arctan(np.sqrt(V[0,2,:]**2+V[1,2,:]**2)/V[2,2,:])*180/np.pi))    #ok<PFOUS>
-			phiSVD_fac[:,ind_a]     = np.squeeze(np.arctan2(V[1,2,:],V[0,2,:])*180/np.pi)                                   #ok<PFOUS>
+			thetaSVD_fac[:,ind_a]   = np.abs(np.squeeze(np.arctan(np.sqrt(V[0,2,:]**2+V[1,2,:]**2)/V[2,2,:])))    #ok<PFOUS>
+			phiSVD_fac[:,ind_a]     = np.squeeze(np.arctan2(V[1,2,:],V[0,2,:]))                                   #ok<PFOUS>
 
 			## Calculate polarization parameters
 			planarityLocal              = np.squeeze(1-np.sqrt(W[2,2,:]/W[0,0,:]))
@@ -674,6 +679,7 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 			planarity[:,ind_a]          = planarityLocal
 
 			#ellipticity: ratio of axes of polarization ellipse axes*sign of polarization
+			
 			ellipticityLocal            = np.squeeze(W[1,1,:]/W[0,0,:])*np.sign(np.imag(avSM[:,0,1]))
 			ellipticityLocal[censurIdx] = np.nan
 			ellipticity[:,ind_a]        = ellipticityLocal
@@ -836,9 +842,9 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 		power2E_ISR2_plot = AverageData(power2E_ISR2_plot,inTime,outTime)
 		power2E_ISR2_plot = power2E_ISR2_plot.astype(float)
 
-		S_plot_x = AverageData(S_plot_x,inTime,outTime)
-		S_plot_y = AverageData(S_plot_y,inTime,outTime)
-		S_plot_z = AverageData(S_plot_z,inTime,outTime)
+		S_plot_x = np.real(AverageData(S_plot_x,inTime,outTime))
+		S_plot_y = np.real(AverageData(S_plot_y,inTime,outTime))
+		S_plot_z = np.real(AverageData(S_plot_z,inTime,outTime))
 		[S_azimuth,S_elevation,S_r] = sfs.util.cart2sph(S_plot_x,S_plot_y,S_plot_z)
 		
 		ee_xxyyzzss         = np.tile(powerEx_plot,(4,1,1))

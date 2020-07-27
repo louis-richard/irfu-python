@@ -56,9 +56,11 @@ def c_4_j(R=None, B=None):
 	"""
 
 
+
+
 	mu0 = constants.mu0.value
 
-	Bav = (b1+resample(b2,b1)+resample(b3,b1)+resample(b4,b1))/4
+	Bav = (B[0]+resample(B[1],B[0])+resample(B[2],B[0])+resample(B[3],B[0]))/4
 
 	# Estimate divB/mu0. unit is A/m2
 	divB 	= c_4_grad(R,B,"div")

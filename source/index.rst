@@ -829,6 +829,29 @@ Example :
 	>>> dtB = pyrf.gradient(Bxyz)
 
 
+:func:`histogram`
+=================
+.. py:function:: histogram(inp=None[, nbins=100, normed=True])
+
+Computes 1D histogram of the *inp* with *nbins* bins
+
+Parameters :
+    *inp* : DataArray
+        Time series of the input scalar variable
+    
+Options :
+    *nbins* : int
+        Number of bins
+    
+    *normed* : bool
+        Normalize the PDF
+    
+Returns :
+    *out* : DataArray
+        1D distribution of the input time series
+            
+
+
 :func:`histogram2d`
 ====================
 .. py:function:: histogram2d(inp1=None, inp2=None[, nbins=100])

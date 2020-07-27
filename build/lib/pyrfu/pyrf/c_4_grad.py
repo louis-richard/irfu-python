@@ -68,7 +68,8 @@ def c_4_grad(R=None, B=None,method="grad"):
 	# Unpack spacecraft position and magnetic field
 	R1, R2, R3, R4 = R 
 	B1, B2, B3, B4 = B
-		
+	
+
 	# Resample with respect to 1st spacecraft
 	rR1 = resample(R1,B1)
 	rR2 = resample(R2,B1)
@@ -81,7 +82,7 @@ def c_4_grad(R=None, B=None,method="grad"):
 	rB4 = resample(B4,B1)
 
 	# Compute reciprocal vectors in barycentric coordinates (see c_4_k)
-	K1, K2, K3, K4 = c_4_k(rR1,rR2,rR3,rR4)
+	K1, K2, K3, K4 = c_4_k([rR1,rR2,rR3,rR4])
 
 	# Magnetic field at the center of mass of the tetrahedron
 	b = 0.25*(rB1 + rB2 + rB3 + rB4)

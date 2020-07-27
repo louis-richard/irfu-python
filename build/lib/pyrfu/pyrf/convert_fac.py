@@ -57,7 +57,7 @@ def convert_fac(inp=None, Bbgd=None, r=np.array([1,0,0])):
 	
 	t           = inp.time
 	inp_data    = inp.data
-	Bbgd        = Bbgd.data
+	Bbgd        = Bbgd
 	Bn          = Bbgd/np.linalg.norm(Bbgd,axis=1,keepdims=True)
 
 	if isinstance(r,(list,np.ndarray)) and len(r) == 3:

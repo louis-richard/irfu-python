@@ -101,23 +101,7 @@ def log(message=""):
 	print("# {}".format(message))
 	print(sepline)
 	return
-#-----------------------------------------------------------------------------------------------------------------------
-def extend_tint(Tint,ext=[-60,60]):
-	# Convert to unix format
-	tstart  = Time(parser.parse(Tint[0]),format="datetime").unix
-	tstop   = Time(parser.parse(Tint[1]),format="datetime").unix
 
-	# extend interval
-	tstart  = tstart+ext[0]
-	tstop   = tstop+ext[1]
-
-	# back to iso format
-	tstart  = Time(tstart,format="unix").iso
-	tstop   = Time(tstop,format="unix").iso
-
-	tint = [tstart,tstop]
-
-	return tint
 #-----------------------------------------------------------------------------------------------------------------------
 def dt642unix(t=None):
 	out = Time(t,format="datetime64").unix

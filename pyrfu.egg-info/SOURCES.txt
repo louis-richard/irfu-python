@@ -89,6 +89,7 @@ pyrfu/pyrf/ts_append.py
 pyrfu/pyrf/ts_scalar.py
 pyrfu/pyrf/ts_skymap.py
 pyrfu/pyrf/ts_tensor_xyz.py
+pyrfu/pyrf/ts_time.py
 pyrfu/pyrf/ts_vec_xyz.py
 pyrfu/pyrf/vht.py
 pyrfu/pyrf/wavelet.py
