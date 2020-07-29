@@ -202,6 +202,11 @@ def get_ts(file_path="",cdfname="",trange=None):
 		exec("out."+dims[0]+".attrs = x['attrs']")
 		exec("out."+dims[1]+".attrs = y['attrs']")
 	elif x and y and z and not w:
+
+		if y["attrs"]["LABLAXIS"] == z["attrs"]["LABLAXIS"]:
+			y["attrs"]["LABLAXIS"] = "rcomp"
+			z["attrs"]["LABLAXIS"] = "ccomp"
+
 		dims    = ["time",y["attrs"]["LABLAXIS"],z["attrs"]["LABLAXIS"]]
 		coords  = [x["data"],y["data"],z["data"]]
 		out     = xr.DataArray(outdict["data"],coords=coords,dims=dims,attrs=outdict["attrs"])
@@ -209,6 +214,10 @@ def get_ts(file_path="",cdfname="",trange=None):
 		exec("out."+dims[1]+".attrs = y['attrs']")
 		exec("out."+dims[2]+".attrs = z['attrs']")
 	elif x and y and z and w:
+		if z["attrs"]["LABLAXIS"] == w["attrs"]["LABLAXIS"]:
+			z["attrs"]["LABLAXIS"] = "rcomp"
+			w["attrs"]["LABLAXIS"] = "ccomp"
+
 		dims    = ["time",y["attrs"]["LABLAXIS"],z["attrs"]["LABLAXIS"],w["attrs"]["LABLAXIS"]]
 		coords  = [x["data"],y["data"],z["data"],w["data"]]
 		out     = xr.DataArray(outdict["data"],coords=coords,dims=dims,attrs=outdict["attrs"])

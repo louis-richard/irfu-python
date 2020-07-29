@@ -33,6 +33,7 @@ pyrfu/mms/psd_moments.py
 pyrfu/mms/read_feeps_sector_masks_csv.py
 pyrfu/mms/remove_idist_background.py
 pyrfu/mms/splitVs.py
+pyrfu/mms/whistlerBtoE.py
 pyrfu/plot/__init__.py
 pyrfu/plot/colorbar.py
 pyrfu/plot/mms_pl_config.py
@@ -63,6 +64,7 @@ pyrfu/pyrf/extend_tint.py
 pyrfu/pyrf/filt.py
 pyrfu/pyrf/fname.py
 pyrfu/pyrf/gradient.py
+pyrfu/pyrf/histogram.py
 pyrfu/pyrf/histogram2d.py
 pyrfu/pyrf/int_sph_dist.py
 pyrfu/pyrf/integrate.py

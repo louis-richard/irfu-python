@@ -8,6 +8,7 @@ from .db_get_ts import db_get_ts
 # Wave analysis
 from .fk_powerspec4SC import fk_powerspec4SC
 from .lhwaveanalysis import lhwaveanalysis
+from .whistlerBtoE import whistlerBtoE
 
 # FEEPS
 from .get_feeps_energy_table import get_feeps_energy_table

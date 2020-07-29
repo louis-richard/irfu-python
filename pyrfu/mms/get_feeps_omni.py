@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xr
 
 from .get_feeps_active_eyes import get_feeps_active_eyes
-from .get_feeps_eye import get_feeps_eye
+from .get_feeps_oneeye import get_feeps_oneeye
 
 def get_feeps_omni(tar_var="flux_ion_brst_l2",mmsId=1,trange=None):
     Var = {}

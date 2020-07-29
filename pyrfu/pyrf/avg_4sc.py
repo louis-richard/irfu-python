@@ -32,12 +32,12 @@ def avg_4sc(B=None):
 	if not isinstance(B,list):
 		raise TypeError("B must be a list of the 4 spacecraft data")
 
-	for i in range(4):
-		if not isinstance(B[i],xr.DataArray):
+	for i, b in enumerate(B):
+		if not isinstance(b,xr.DataArray):
 			raise TypeError("B[{:d}] must be a DataArray".format(i))
 
 	B = [resample(b,B[0]) for b in B]
 
-	Bavg = (B[0]+B[1]+B[2]+B[3])/4
+	Bavg = sum(B)/len(B)
 
 	return Bavg
