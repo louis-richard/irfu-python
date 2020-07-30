@@ -15,11 +15,11 @@ import matplotlib._color_data as mcd
 plt.style.use("seaborn-whitegrid")
 #date_form = mdates.DateFormatter("%H:%M:%S")
 locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-date_form = mdates.ConciseDateFormatter(locator)
+formatter = mdates.ConciseDateFormatter(locator)
 sns.set_context("paper")
 #plt.rc('text',usetex=True)
-plt.rc('font',family='serif')
-plt.rc('lines', linewidth=0.7)
+#plt.rc('font',family='serif')
+plt.rc('lines', linewidth=1)
 #color = ["k","b","r","g"]
 #plt.close("all")
 
@@ -75,7 +75,9 @@ def plot_spectr(ax=None,inp=None,yscale="",ylim=None,cscale="",clim=None,cmap=""
 	t = inp.coords[inp.dims[0]]
 	y = inp.coords[inp.dims[1]]
 	im = ax.pcolormesh(t,y,inp.data.T,norm=norm,cmap=cmap,vmin=vmin,vmax=vmax)
-
+	
+	
+	
 	if yscale == "log": ax.set_yscale("log")
 
 	if cbar:
