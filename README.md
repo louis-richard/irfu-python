@@ -6,7 +6,12 @@ PYRFU is a software based on the IRFU-MATLAB library to work with space data, pa
 
 
 # Instalation
-pip install --index-url https://test.pypi.org/project/ --no-deps pyrf 
+pyRFU supports Windows, macOS and Linux. pyrfu uses TestPyPI a separated instance to not affect the index. To get started, install the pyrfu package using TestPyPI:
+
+```python
+pip install --index-url https://test.pypi.org/project/ --no-deps pyrfu 
+```
+
 
 # Usage
 To import generic space plasma physics functions
