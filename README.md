@@ -33,6 +33,6 @@ from pyrfu import plot as pltrf
 This software was developped by Louis RICHARD (louisr@irfu.se) based on the IRFU-MATLAB library.
 
 
-# Acknowloedgement
+# Acknowledgement
 Please use the following to acknowledge use of pyrfu in your publications:
 Data analysis was performed using the pyrfu analysis package available at https://github.com/louis-richard/irfu-python
