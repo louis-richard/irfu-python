@@ -32,7 +32,7 @@ def read_feeps_sector_masks_csv(trange):
 
 
     for mms_sc in np.arange(1,5):
-        csv_file = os.sep.join(["../sun","MMS{:d}_FEEPS_ContaminatedSectors_{}.csv".format(mms_sc,str_date)])
+        csv_file = os.sep.join([os.path.dirname(os.path.abspath(__file__)),"sun","MMS{:d}_FEEPS_ContaminatedSectors_{}.csv".format(mms_sc,str_date)])
         csv_file = open(csv_file, 'r')
         csv_reader = csv.reader(csv_file)
         csv_data = []

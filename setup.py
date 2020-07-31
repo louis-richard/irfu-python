@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.0.0"
+VERSION = "1.0.2"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -11,7 +11,7 @@ URL = "https://github.com/louis-richard/irfu-python"
 
 LICENSE = "MIT License"
 DESCRIPTION = "Python Space Physics Environment Data Analysis"
-LONG_DESCRIPTION = (HERE / "/pyrfu/README.md").read_text()
+LONG_DESCRIPTION = (HERE / "README.md").read_text()
 LONG_DESC_TYPE = "text/markdown"
 
 INSTALL_REQUIRES = [
@@ -54,5 +54,7 @@ setup(name=PACKAGE_NAME,
       install_requires=INSTALL_REQUIRES,
       python_requires=PYTHON_REQUIRES,
       packages=find_packages(),
+      include_package_data=True,
+
       
       )

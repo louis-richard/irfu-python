@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: pyrfu
-Version: 1.0.0
+Version: 1.0.2
 Summary: Python Space Physics Environment Data Analysis
 Home-page: https://github.com/louis-richard/irfu-python
 Author: Louis RICHARD
@@ -14,7 +14,17 @@ Description:
         
         
         # Instalation
-        pyRFU supports Windows, macOS and Linux. pyRFU uses TestPyPI a separate instance of the Python Package index to not affect the real index. To get started, install the pyrfu package using TestPyPI:
+        pyRFU supports Windows, macOS and Linux. 
+        
+        ## Requirements
+        pyRFU uses packages not included in python3. To get started, install the required packages using :
+        
+        ```python
+        pip install -r requirements.txt
+        ```
+        
+        ## From TestPyPi
+        pyRFU uses TestPyPI a separate instance of the Python Package index to not affect the real index. To get started, install the pyrfu package using TestPyPI:
         
         ```python
         pip install --index-url https://test.pypi.org/project/ --no-deps pyrfu 
