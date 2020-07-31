@@ -3,7 +3,7 @@ import xarray as xr
 
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
-
+from .calc_fs import calc_fs
 
 def convert_fac(inp=None, Bbgd=None, r=np.array([1,0,0])):
 	"""
@@ -53,7 +53,8 @@ def convert_fac(inp=None, Bbgd=None, r=np.array([1,0,0])):
 		raise TypeError("Bbgd must be a DataArray")
 
 	if len(inp) != len(Bbgd):
-		Bbgd = resample(Bbgd,inp)
+		#Bbgd = resample(Bbgd,inp)	# issues with frequency estimation of Bscm
+		Bbgd = resample(Bbgd,inp,fs=calc_fs(inp))
 	
 	t           = inp.time
 	inp_data    = inp.data

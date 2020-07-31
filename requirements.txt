@@ -1,0 +1,15 @@
+# cat requirements.txt 
+astropy>=4.0.0
+cycler>=0.10.0
+matplotlib>=3.2.1
+numpy>=1.18.1
+pandas>=1.0.3
+psychopy>=2020.1.2
+pvlib>=0.7.2
+pyfftw>=0.12.0
+scipy>=1.4.1
+seaborn>=0.10.1
+sfs>=0.5.0
+spacepy>=0.2.1
+tqdm>=4.46.0
+xarray>=0.15.0
