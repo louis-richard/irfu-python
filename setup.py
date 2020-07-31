@@ -11,7 +11,7 @@ URL = "https://github.com/louis-richard/irfu-python"
 
 LICENSE = "MIT License"
 DESCRIPTION = "Python Space Physics Environment Data Analysis"
-LONG_DESCRIPTION = (HERE / "README.md").read_text()
+LONG_DESCRIPTION = (HERE / "/pyrfu/README.md").read_text()
 LONG_DESC_TYPE = "text/markdown"
 
 INSTALL_REQUIRES = [
