@@ -9,6 +9,13 @@ pyRFU is a software based on the IRFU-MATLAB library to work with space data, pa
 pyRFU supports Windows, macOS and Linux. 
 
 ## Requirements
+pyRFU uses packages not included in python3. To get started, install the required packages using :
+
+```python
+pip install -r requirements.txt
+```
+
+## From TestPyPi
 pyRFU uses TestPyPI a separate instance of the Python Package index to not affect the real index. To get started, install the pyrfu package using TestPyPI:
 
 ```python
