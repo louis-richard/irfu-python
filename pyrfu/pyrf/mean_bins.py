@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 
 
-def mean_bins(x=None,y=None,nbins=10):
+def mean_bins(x=None, y=None, nbins=10):
 	"""
 	Computes mean of values of y corresponding to bins of x
 	
@@ -29,20 +29,22 @@ def mean_bins(x=None,y=None,nbins=10):
 					Standard deviation
 
 	Example :
+		>>> import numpy as np
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices
-		>>> ic = np.arange(1,5)
+		>>> mms_list = np.arange(1,5)
 		>>> # Load magnetic field and electric field
-		>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,1) for i in ic]
-		>>> Rxyz = [mms.get_data("R_gse",Tint,1) for i in ic]
+		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
+		>>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
 		>>> # Compute current density, etc
-		>>> J, divB, Bavg, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+		>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
 		>>> # Compute magnitude of B and J
-		>>> Bmag = pyrf.norm(Bavg)
-		>>> Jmag = pyrf.norm(J)
+		>>> b_mag = pyrf.norm(b_xyz)
+		>>> j_mag = pyrf.norm(j_xyz)
 		>>> # Mean value of |J| for 10 bins of |B|
-		>>> MeanBJ = pyrf.mean_bins(Bmag,Jmag)
+		>>> m_b_j = pyrf.mean_bins(b_mag, j_mag)
 		
 	"""
 	
@@ -52,28 +54,29 @@ def mean_bins(x=None,y=None,nbins=10):
 	if y is None:
 		y = x
 	
-	if isinstance(x,xr.DataArray):
+	if isinstance(x, xr.DataArray):
 		x = x.data
 		
-	if isinstance(y,xr.DataArray):
+	if isinstance(y, xr.DataArray):
 		y = y.data
 	
-	xs      = np.sort(x)
-	xedges  = np.linspace(xs[0],xs[-1],nbins+1)
-	m       = np.zeros(nbins)
-	s       = np.zeros(nbins)
+	x_sort = np.sort(x)
+	x_edge = np.linspace(x_sort[0], x_sort[-1], nbins+1)
+
+	m, s = [np.zeros(nbins), np.zeros(nbins)]
 
 	for i in range(nbins):
-		idxl    = x > xedges[i]
-		idxr    = x < xedges[i+1]
-		yb      = np.abs(y[idxl*idxr])
-		m[i]    = np.mean(yb)
-		s[i]    = np.std(yb)
-		
-	bins = xedges[:-1]+np.median(np.diff(xedges))/2
+		idx_l = x > x_edge[i]
+		idx_r = x < x_edge[i+1]
 
-	outdict = {"data": (["bins"], m), "sigma": (["bins"], s),"bins":bins}
+		y_bins = np.abs(y[idx_l * idx_r])
+
+		m[i], s[i] = [np.mean(y_bins), np.std(y_bins)]
+
+	bins = x_edge[:-1] + np.median(np.diff(x_edge)) / 2
+
+	outdict = {"data": (["bins"], m), "sigma": (["bins"], s), "bins": bins}
 
 	out = xr.Dataset(outdict)
 
-	return (bins,m)
+	return bins, m, out
