@@ -5,15 +5,15 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def cross(inp1=None, inp2=None):
+def cross(x=None, y=None):
 	"""
 	Computes cross product of two fields.
 
 	Parameters :
-		inp1 : DataArray
+		x : DataArray
 			Time series of the first field X
 
-		inp2 : DataArray
+		y : DataArray
 			Time series of the second field Y
 
 	Returns :
@@ -21,30 +21,28 @@ def cross(inp1=None, inp2=None):
 			Time series of the cross product Z = XxY
 
 	Example :
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
-		>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,1)
-		>>> Bmag = pyrf.norm(Bxyz)
-		>>> ExBxyz = pyrf.cross(Exyz,Bxyz)/Bmag**2
-
+		>>> from pyrfu import mms, pyrf
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, 1)
+		>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, 1)
+		>>> b_mag = pyrf.norm(b_xyz)
+		>>> ExBxyz = pyrf.cross(e_xyz, b_xyz)/b_mag ** 2
 	"""
 
-	if (inp1 is None) or (inp2 is None):
+	if (x is None) or (y is None):
 		raise ValueError("cross requires 2 arguments")
 
-	if not isinstance(inp1,xr.DataArray):
+	if not isinstance(x, xr.DataArray):
 		raise TypeError("Inputs must be DataArrays")
 
-	if not isinstance(inp2,xr.DataArray):
+	if not isinstance(y, xr.DataArray):
 		raise TypeError("Inputs must be DataArrays")
 		
-	if len(inp1) != len(inp2):
-		inp2 = resample(inp2,inp1)
+	if len(x) != len(y):
+		y = resample(y, x)
 		
-	outdata = np.cross(inp1.data,inp2.data,axis=1)
+	outdata = np.cross(x.data, y.data, axis=1)
 
-	out = ts_vec_xyz(inp1.time.data,outdata)
+	out = ts_vec_xyz(x.time.data, outdata)
 	
 	return out
-
-

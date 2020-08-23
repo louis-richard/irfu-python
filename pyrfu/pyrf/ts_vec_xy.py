@@ -1,8 +1,6 @@
 import numpy as np
 import xarray as xr
 
-
-
 def ts_vec_xy(t=None, data=None, attrs=None):
 	"""
 	Create a time series containing a 1st order tensor
@@ -30,10 +28,10 @@ def ts_vec_xy(t=None, data=None, attrs=None):
 		raise ValueError("ts_vec_xyz requires at least two inputs")
 
 	# Check inputs are numpy arrays
-	if not isinstance(t,np.ndarray):
+	if not isinstance(t, np.ndarray):
 		raise TypeError("Time must be a np.datetime64 array")
 
-	if not isinstance(data,np.ndarray):
+	if not isinstance(data, np.ndarray):
 		raise TypeError("Data must be a np array")
 
 	if data.ndim != 2:

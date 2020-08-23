@@ -36,7 +36,6 @@ def dynamicp(n=None, v=None, s="i"):
 		>>> Ni = mms.get_data("Ni_fpi_fast_l2",Tint,ic)
 		>>> # Compute dynamic pressure
 		>>> Pdyn = pyrf.dynamicp(Ni,Vixyz, s="i")
-
 	"""
 
 	if (n is None) or (v is None):
@@ -54,9 +53,7 @@ def dynamicp(n=None, v=None, s="i"):
 		m = constants.m_e.value
 	else:
 		raise ValueError("Unknown specie")
-	
-	v2 = np.linalg.norm(v, axis=0)**2
 
-	p_dyn = n*v2
+	p_dyn = n * m * np.linalg.norm(v, axis=0) ** 2
 
 	return p_dyn

@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 
 
-def agyro_coeff(P=None):
+def agyro_coeff(p=None):
 	"""
 	Computes agyrotropy coefficient (Swidak2016 https://doi.org/10.1002/2015GL066980)
 	
@@ -15,35 +15,36 @@ def agyro_coeff(P=None):
 			Time series of the agyrotropy coefficient of the specie
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
 		>>> ic = 1
 		>>> # Load magnetic field and electron pressure tensor
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
-		>>> Pexyz = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+		>>> p_xyz_e = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
 		>>> # Rotate electron pressure tensor to field aligned coordinates
-		>>> Pexyzfac = pyrf.rotate_tensor(Pexyz,"fac",Bxyz,"pp")
+		>>> p_xyzfac_e = pyrf.rotate_tensor(p_xyz_e,"fac",b_xyz,"pp")
 		>>> # Compute agyrotropy coefficient
-		>>> Qe = pyrf.agyro_coeff(Pexyzfac)
+		>>> q_e = pyrf.agyro_coeff(p_xyzfac_e)
 		
 	"""
 	
-	if P is None:
+	if p is None:
 		raise ValueError("agyro_coeff requires at least one argument")
 
-	if not isinstance(P,xr.DataArray):
+	if not isinstance(p, xr.DataArray):
 		raise TypeError("Input must be a DataArray")
 
-	if P.ndim != 3:
+	if p.ndim != 3:
 		raise TypeError("Input must be a second order tensor")
 
-	P_para  = P[:,0,0]
-	P_perp  = (P[:,1,1]+P[:,2,2])/2
-	P_12    = P[:,0,1]
-	P_13    = P[:,0,2]
-	P_23    = P[:,1,2]
+	# Parallel and perpandicular components
+	p_para, p_perp = [p[:, 0, 0], (p[:, 1, 1] + p[:, 2, 2])/2]
 
-	Q = (P_12**2+P_13**2+P_23**2)/(P_perp**2+2*P_perp*P_para)
+	# Off-diagonal terms
+	p_12, p_13, p_23 = [p[:, 0, 1], p[:, 0, 2], p[:, 1, 2]]
 
-	return Q
+	q = (p_12 ** 2 + p_13 ** 2 + p_23 ** 2) / (p_perp ** 2 + 2 * p_perp * p_para)
+
+	return q

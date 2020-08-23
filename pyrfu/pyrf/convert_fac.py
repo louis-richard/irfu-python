@@ -2,10 +2,11 @@ import numpy as np
 import xarray as xr
 
 from .resample import resample
-from .ts_vec_xyz import ts_vec_xyz
+from .ts_vec_xy import ts_vec_xy
 from .calc_fs import calc_fs
 
-def convert_fac(inp=None, b_bgd=None, r=np.array([1,0,0])):
+
+def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 	"""
 	Transforms to a field-aligned coordinate (FAC) system defined as:
 	R_parallel_z aligned with the background magnetic field
@@ -17,7 +18,7 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1,0,0])):
 		inp : DataArray
 			Time series of the input field
 
-		Bbgd : DataArray
+		b_bgd : DataArray
 			Time series of the background magnetic field
 
 		r : DataArray/ndarray/list
@@ -30,14 +31,14 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1,0,0])):
 	Example :
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
 		>>> ic = 1
 		>>> # Load magnetic field (FGM) and electric field (EDP)
-		>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
-		>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
+		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2",tint,ic)
+		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2",tint,ic)
 		>>> # Convert to field aligned coordinates
-		>>> Exyzfac = pyrf.convert_fac(Exyz,Bxyz,[1,0,0])
+		>>> e_xyzfac = pyrf.convert_fac(e_xyz,b_xyz,[1,0,0])
 	
 	Note : 
 		all input parameters must be in the same coordinate system
@@ -96,5 +97,7 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1,0,0])):
 		outdata[:, 1] = inp[:, 0]*(r_par[:, 0] * r[:, 0] + r_par[:, 1] * r[:, 1] + r_par[:, 2] * r[:, 2])
 
 		out = ts_vec_xy(inp.time.data, outdata, attrs=inp.attrs)
+	else:
+		raise TypeError("Invalid dimension of inp")
 
 	return out
