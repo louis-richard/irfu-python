@@ -64,6 +64,8 @@ from .c_4_k import c_4_k
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
 
+from .avg_4sc import avg_4sc
+
 from .ebsp import ebsp
 
 from .fname import fname

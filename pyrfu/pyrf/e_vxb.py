@@ -1,10 +1,8 @@
 import numpy as np
 import xarray as xr
 
-
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
-
 
 
 def e_vxb(v=None, b=None, flag="vxb"):
@@ -82,7 +80,10 @@ def e_vxb(v=None, b=None, flag="vxb"):
 			v = []
 
 		else :
-			res = np.cross(v.data,b.data)*(-1)*1e-3;
+			if len(v) != len(b):
+				b = resample(b,v)
+
+			res = np.cross(v.data,b.data)*(-1)*1e-3
 
 		attrs["UNITS"]      = "mV/s"
 		attrs["FIELDNAM"]   = "Electric field"

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.0.2"
+VERSION = "1.0.7"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -55,6 +55,4 @@ setup(name=PACKAGE_NAME,
       python_requires=PYTHON_REQUIRES,
       packages=find_packages(),
       include_package_data=True,
-
-      
       )

@@ -84,8 +84,6 @@ Ve_dbcs_fpi.data[Ne_fpi.data < 0.06,:] = np.nan
 
 # HPCA
 Vhplus_dbcs_hpca = pyRF.get_data("Vhplus_dbcs_hpca_srvy_l2",Tint,mmsId)
-if Vhplus_dbcs_hpca is None:
-  Vhplus_dbcs_hpca = pyRF.get_data("Vhplus_dbcs_hpca_srvy_l1b",Tint,mmsId)
 
 
 # correct Ez in E2d 
@@ -101,12 +99,8 @@ VExB_l2pre  = pyRF.e_vxb(E2d_dsl_edp_l2pre,B_dmpa_fgm_srvy_l2,-1);
 EVixB       = pyRF.e_vxb(Vi_dbcs_fpi,pyRF.resample(B_dmpa_fgm_srvy_l2,Vi_dbcs_fpi))
 EVexB       = pyRF.e_vxb(Ve_dbcs_fpi,pyRF.resample(B_dmpa_fgm_srvy_l2,Ve_dbcs_fpi))
 
-if Vhplus_dbcs_hpca is None:
-    Vhplus_perp = None
-    EVphlusxB = None
-else :
-    [Vhplus_para, Vhplus_perp, alpha] = pyRF.dec_parperp(Vhplus_dbcs_hpca,B_dmpa_fgm_srvy_l2,)
-    EVhplusxB = pyRF.e_vxb(Vhplus_dbcs_hpca,pyRF.resample(B_dmpa_fgm_srvy_l2,Vhplus_dbcs_hpca))
+[Vhplus_para, Vhplus_perp, alpha] = pyRF.dec_parperp(Vhplus_dbcs_hpca,B_dmpa_fgm_srvy_l2,)
+EVhplusxB = pyRF.e_vxb(Vhplus_dbcs_hpca,pyRF.resample(B_dmpa_fgm_srvy_l2,Vhplus_dbcs_hpca))
 
 
 #---------------------------------------------------------------------------------------------------------------------

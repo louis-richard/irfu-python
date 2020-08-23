@@ -3,14 +3,14 @@ import xarray as xr
 from astropy import constants
 
 
-def dynamicp(N=None, V=None, s="i"):
+def dynamicp(n=None, v=None, s="i"):
 	"""
 	Computes dynamic pressure
 
 	Parameters :
-		N : DataArray
+		n : DataArray
 			Time series of the number density of the specie
-		V : DataArray
+		v : DataArray
 			Time series of the bulk velocity of the specie
 	
 	Options :
@@ -22,6 +22,7 @@ def dynamicp(N=None, V=None, s="i"):
 			Time series of the dynamic pressure of the specie
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
@@ -38,24 +39,24 @@ def dynamicp(N=None, V=None, s="i"):
 
 	"""
 
-	if (N is None) or (V is None):
+	if (n is None) or (v is None):
 		raise ValueError("dynamicp requires at least 2 arguments")
 
-	if not isinstance(N, xr.DataArray):
+	if not isinstance(n, xr.DataArray):
 		raise TypeError("N must be a DataArray")
 
-	if not isinstance(V, xr.DataArray):
+	if not isinstance(v, xr.DataArray):
 		raise TypeError("V must be a DataArray")
 
 	if s == "i":
 		m = constants.m_p.value
 	elif s == "e":
 		m = constants.m_e.value
-	else :
+	else:
 		raise ValueError("Unknown specie")
 	
-	V2 = np.linalg.norm(V,axis=0)**2
+	v2 = np.linalg.norm(v, axis=0)**2
 
-	Pdyn = N*V2
+	p_dyn = n*v2
 
-	return Pdyn
+	return p_dyn

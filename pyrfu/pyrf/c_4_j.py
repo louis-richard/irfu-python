@@ -1,44 +1,46 @@
 from astropy import constants
+from .avg_4sc import avg_4sc
 
 from .c_4_grad import c_4_grad
 from .cross import cross
-from .resample import resample
 
 
-def c_4_j(R=None, B=None):
+def c_4_j(r_list=None, b_list=None):
 	"""
 	Calculate current from using 4 spacecraft technique in addition one can obtain average magnetic field and jxB 
 	values. Estimate also divergence B as the error estimate
 	
 	Parameters :
-		R : list of DataArrays
+		r_list : list of DataArrays
 			Time series of the spacecraft position [km]
 
-		B : list of DataArray
+		b_list : list of DataArray
 			Time series of the magnetic field [nT]
 
 	Returns :
 		j : DataArray
 			Time series of the current density j = curl(B)/mu0 [A.m^{-2}]
 
-		divB : DataArray
+		div_b : DataArray
 			Time series of the divergence of the magnetic field div(B)/mu0 [A.m^{-2}]
 
-		Bav : DataArray
+		b_avg : DataArray
 			Time series of the magnetic field at the center of mass of the tetrahedron, 
 			sampled at 1st SC time steps [nT]
 
-		jxB : DataArray
+		jxb : DataArray
 			Time series of the j x B force [T.A]. jxB = ((B.div)B + grad(B^2/2))/mu0 = divTshear+divPb
 
-		divTshear : DataArray
+		div_t_shear : DataArray
 			Time series of the part of the divergence of stress associated with curvature units 
 			divTshear = (1/muo) (B div) B. [T A/m^2]
 
-		divPb : DataArray
+		div_pb : DataArray
 			Time series of the gradient of the magnetic pressure divPb = grad(B^2/2)/mu0
 
 	Example : 
+		>>> import numpy as np
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices
@@ -55,31 +57,32 @@ def c_4_j(R=None, B=None):
 
 	"""
 
-
-
-
 	mu0 = constants.mu0.value
 
-	Bav = (B[0]+resample(B[1],B[0])+resample(B[2],B[0])+resample(B[3],B[0]))/4
+	b_avg = avg_4sc(b_list)
 
 	# Estimate divB/mu0. unit is A/m2
-	divB 	= c_4_grad(R,B,"div")
-	divB 	*= 1.0e-3*1e-9/mu0 									# to get right units why 
+	div_b = c_4_grad(r_list, b_list, "div")
+
+	# to get right units
+	div_b *= 1.0e-3*1e-9/mu0
 
 	# estimate current j [A/m2]
-	curl_B 	= c_4_grad(R,B,"curl")
-	j		= curl_B*1.0e-3*1e-9/mu0 							# to get right units [A.m^{-2}]
+	curl_b = c_4_grad(r_list, b_list, "curl")
+
+	# to get right units [A.m^{-2}]
+	j = curl_b*1.0e-3*1e-9/mu0
 
 	# estimate jxB force [T A/m2]
-	jxB = 1e-9*cross(j,Bav)										# to get units [T.A.m^{-2}]
-
+	jxb = 1e-9*cross(j, b_avg)
 
 	# estimate divTshear = (1/muo) (B*div)B [T A/m2]
-	BdivB 		= c_4_grad(R,B,"bdivb")
-	divTshear	= BdivB*1.0e-3*1e-9*1e-9/mu0 					# to get right units [T.A.m^{-2}]
+	b_div_b = c_4_grad(r_list, b_list, "bdivb")
+
+	# to get right units [T.A.m^{-2}]
+	div_t_shear = b_div_b*1.0e-3*1e-9*1e-9/mu0
 
 	# estimate divPb = (1/muo) grad (B^2/2) = divTshear-jxB
-	divPb = divTshear-jxB
+	div_pb = div_t_shear - jxb
 
-	return (j,divB,Bav,jxB,divTshear,divPb)
-
+	return j, div_b, b_avg, jxb, div_t_shear, div_pb

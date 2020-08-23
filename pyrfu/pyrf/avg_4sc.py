@@ -4,7 +4,7 @@ import xarray as xr
 from .resample import resample
 
 
-def avg_4sc(B=None):
+def avg_4sc(b_list=None):
 	"""
 	Computes the input quantity at the center of mass of the MMS tetrahedron
 
@@ -17,6 +17,7 @@ def avg_4sc(B=None):
 			Time series of the input quantity a the enter of mass of the MMS tetrahedron
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
 		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices
@@ -26,18 +27,18 @@ def avg_4sc(B=None):
 
 	"""
 
-	if B is None:
+	if b_list is None:
 		raise ValueError("avg_4sc requires 1 argument")
 
-	if not isinstance(B,list):
+	if not isinstance(b_list, list):
 		raise TypeError("B must be a list of the 4 spacecraft data")
 
-	for i, b in enumerate(B):
-		if not isinstance(b,xr.DataArray):
+	for i, b in enumerate(b_list):
+		if not isinstance(b, xr.DataArray):
 			raise TypeError("B[{:d}] must be a DataArray".format(i))
 
-	B = [resample(b,B[0]) for b in B]
+	b_list = [resample(b, b_list[0]) for b in b_list]
 
-	Bavg = sum(B)/len(B)
+	b_avg = sum(b_list)/len(b_list)
 
-	return Bavg
+	return b_avg

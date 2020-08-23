@@ -82,6 +82,9 @@ def e_vxb(v=None, b=None, flag="vxb"):
 			v = []
 
 		else :
+			if len(v) != len(b):
+				b = resample(b,v)
+
 			res = np.cross(v.data,b.data)*(-1)*1e-3;
 
 		attrs["UNITS"]      = "mV/s"
