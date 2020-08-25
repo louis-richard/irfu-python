@@ -5,25 +5,24 @@ from astropy import constants
 from .resample import resample
 
 
-
-def plasma_calc(B=None,Ti=None,Te=None,Ni=None,Ne=None):
+def plasma_calc(b=None, t_i=None, t_e=None, n_i=None, n_e=None):
 	"""
 	Computes plasma parameters including characteristic length and time scales
 
 	Parameters :
-		B : DataArray
+		b : DataArray
 			Time series of the magnetic field [nT]
 
-		Ti : DataArray
+		t_i : DataArray
 			Time series of the ions temperature [eV]
 
-		Te : DataArray
+		t_e : DataArray
 			Time series of the electrons temperature [eV]
 
-		Ni : DataArray
+		n_i : DataArray
 			Time series of the ions number density [cm^{-3}]
 
-		Ne : DataArray
+		n_e : DataArray
 			Time series of the electrons number density [cm^{-3}]
 
 	Returns :
@@ -102,122 +101,125 @@ def plasma_calc(B=None,Ti=None,Te=None,Ni=None,Ne=None):
 					Time series of the length associated to the sound speed [m]
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]
+		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
+		>>> mms_id = 1
 		>>> # Load magnetic field, ion/electron temperature and number density
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
-		>>> Tixyz = mms.get_data("Ti_gse_fpi_fast_l2",Tint,ic)
-		>>> Texyz = mms.get_data("Te_gse_fpi_fast_l2",Tint,ic)
-		>>> Ni = mms.get_data("Ni_fpi_fast_l2",Tint,ic)
-		>>> Ne = mms.get_data("Ne_fpi_fast_l2",Tint,ic)
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+		>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
+		>>> t_xyz_e = mms.get_data("Te_gse_fpi_fast_l2", tint, mms_id)
+		>>> n_i = mms.get_data("Ni_fpi_fast_l2", tint, mms_id)
+		>>> n_e = mms.get_data("Ne_fpi_fast_l2", tint, mms_id)
 		>>> # Compute scalar temperature
-		>>> Tixyzfac = pyrf.rotate_tensor(Tixyz,"fac",Bxyz,"pp")
-		>>> Texyzfac = pyrf.rotate_tensor(Texyz,"fac",Bxyz,"pp")
-		>>> Ti = pyrf.trace(Tixyzfac)
-		>>> Te = pyrf.trace(Texyzfac)
+		>>> t_xyzfac_i = pyrf.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
+		>>> t_xyzfac_e = pyrf.rotate_tensor(t_xyz_e, "fac", b_xyz, "pp")
+		>>> t_i = pyrf.trace(t_xyzfac_i)
+		>>> t_e = pyrf.trace(t_xyzfac_e)
 		>>> # Compute plasma parameters
-		>>> pparam = pyrf.plasma_calc(Bxyz,Ti,Te,Ni,Ne)
+		>>> pparam = pyrf.plasma_calc(b_xyz, t_i, t_e, n_i, n_e)
 
 	"""
 
-
-	if B is None or Ti is None or Te is None or Ni is None or Ne is None:
+	if b is None or t_i is None or t_e is None or n_i is None or n_e is None:
 		raise ValueError("plasma_calc requires at least 5 arguments")
 	
-	if not isinstance(B,xr.DataArray):
-		raise TypeError("Inpouts must be DataArrays")
+	if not isinstance(b, xr.DataArray):
+		raise TypeError("Inputs must be DataArrays")
 
-	if not isinstance(Ti,xr.DataArray):
-		raise TypeError("Inpouts must be DataArrays")
+	if not isinstance(t_i, xr.DataArray):
+		raise TypeError("Inputs must be DataArrays")
 
-	if not isinstance(Te,xr.DataArray):
-		raise TypeError("Inpouts must be DataArrays")
+	if not isinstance(t_e, xr.DataArray):
+		raise TypeError("Inputs must be DataArrays")
 
-	if not isinstance(Ni,xr.DataArray):
-		raise TypeError("Inpouts must be DataArrays")
+	if not isinstance(n_i, xr.DataArray):
+		raise TypeError("Inputs must be DataArrays")
 
-	if not isinstance(Ne,xr.DataArray):
-		raise TypeError("Inpouts must be DataArrays")
+	if not isinstance(n_e, xr.DataArray):
+		raise TypeError("Inputs must be DataArrays")
 
 	# Get constants
-	e       = constants.e.value
-	m_p     = constants.m_p.value
-	m_e     = constants.m_e.value
-	mu0     = constants.mu0.value
-	c       = constants.c.value
-	epso    = constants.eps0.value
-	mp_me   = m_p/m_e
+	e, mu0, c, eps0 = [constants.e.value, constants.mu0.value, constants.c.value, constants.eps0.value]
+	m_p, m_e, mp_me = [constants.m_p.value, constants.m_e.value, constants.m_p.value / constants.m_e.value]
 
 	# Resample all variables with respect to the magnetic field
-	nt = len(B)
-	if len(Ti) != nt: Ti = resample(Ti,B).data
-	if len(Te) != nt: Te = resample(Te,B).data
-	if len(Ni) != nt: Ni = resample(Ni,B).data
-	if len(Ne) != nt: Ne = resample(Ne,B).data
+	n_t = len(b)
+
+	if len(t_i) != n_t:
+		t_i = resample(t_i, b).data
+
+	if len(t_e) != n_t:
+		t_e = resample(t_e, b).data
+
+	if len(n_i) != n_t:
+		n_i = resample(n_i, b).data
+
+	if len(n_e) != n_t:
+		n_e = resample(n_e, b).data
 
 	# Transform number density and magnetic field to SI units
-	Ne = 1e6*Ne
-	Ni = 1e6*Ni
-	if B.ndim == 2:
-		B_SI = 1e-9*np.linalg.norm(B,axis=1)
-	else :
-		B_SI = 1e-9*np.linalg.norm(B,axis=1)
+	n_i, n_e = [1e6 * n_i, 1e6 * n_e]
 
-	
-	Wpe = np.sqrt(Ne*e**2/(m_e*epso)) # rad/s
-	Wce = e*B_SI/m_e;   # rad/s
-	Wpp = np.sqrt(Ni*e**2/(m_p*epso))
+	if b.ndim == 2:
+		b_si = 1e-9 * np.linalg.norm(b, axis=1)
+	else:
+		b_si = 1e-9 * np.linalg.norm(b, axis=1)
 
-	Va  = B_SI/np.sqrt(mu0*Ni*m_p)
-	Vae = B_SI/np.sqrt(mu0*Ne*m_e);
-	Vte = c*np.sqrt(1-1/(Te*e/(m_e*c**2)+1)**2);           # m/s (relativ. correct), particle with Vte has energy e*Te
-	Vtp = c*np.sqrt(1-1/(Ti*e/(m_p*c**2)+1)**2);           # m/s
-	Vts = np.sqrt((Te*e+3*Ti*e)/m_p);                      # Sound speed formula (F. Chen, Springer 1984). Relativistic?
+	w_pe = np.sqrt(n_e * e ** 2 / (m_e * eps0)) 	# rad/s
+	w_ce = e * b_si / m_e   						# rad/s
+	w_pp = np.sqrt(n_i * e ** 2 / (m_p * eps0))
 
-	gamma_e = 1/np.sqrt(1-(Vte/c)**2);
-	gamma_p = 1/np.sqrt(1-(Vtp/c)**2);
+	v_a = b_si / np.sqrt(mu0 * n_i * m_p)
 
-	Le = c/Wpe
-	Li = c/Wpp
-	Ld = Vte/(Wpe*np.sqrt(2)) # Debye length scale, sqrt(2) needed because of Vte definition
-	Nd = Ld*epso*m_e*Vte**2/e**2;                           # number of e- in Debye sphere
+	v_ae = b_si / np.sqrt(mu0 * n_e * m_e)
+	v_te = c * np.sqrt(1 - 1 / (t_e * e / (m_e * c ** 2) + 1) ** 2) 	# m/s (relativ. correct)
+	v_tp = c * np.sqrt(1 - 1 / (t_i * e / (m_p * c ** 2) + 1) ** 2)     # m/s
+	v_ts = np.sqrt((t_e * e + 3 * t_i * e) / m_p)              			# Sound speed formula (F. Chen, Springer 1984).
 
-	Fpe = Wpe/(2*np.pi) # Hz
-	Fce = Wce/(2*np.pi)
-	Fuh = np.sqrt(Fce**2+Fpe**2);
-	Fpp = Wpp/(2*np.pi)
-	Fcp = Fce/mp_me;
-	Flh = np.sqrt(Fcp*Fce/(1+Fce**2/Fpe**2)+Fcp**2)
+	gamma_e = 1 / np.sqrt(1 - (v_te / c) ** 2)
+	gamma_p = 1 / np.sqrt(1 - (v_tp / c) ** 2)
 
-	Roe = m_e*c/(e*B_SI)*np.sqrt(gamma_e**2-1); # m, relativistically correct
-	Rop = m_p*c/(e*B_SI)*np.sqrt(gamma_p**2-1); # m, relativistically correct
-	Ros = Vts/(Fcp*2*np.pi) # m
+	l_e = c / w_pe
+	l_i = c / w_pp
+	l_d = v_te / (w_pe * np.sqrt(2)) 				# Debye length scale, sqrt(2) needed because of Vte definition
+	n_d = l_d * eps0 * m_e * v_te ** 2 / e ** 2 	# number of e- in Debye sphere
 
-	out = xr.Dataset({"time"		: B.time.data,			\
-						"Wpe" 		: (["time"], Wpe), 		\
-						"Wce" 		: (["time"], Wce), 		\
-						"Wpp" 		: (["time"], Wpp), 		\
-						"Va" 		: (["time"], Va), 		\
-						"Vae" 		: (["time"], Vae), 		\
-						"Vte" 		: (["time"], Vte), 		\
-						"Vtp" 		: (["time"], Vtp),		\
-						"Vts" 		: (["time"], Vts), 		\
+	f_pe = w_pe / (2 * np.pi) 				# Hz
+	f_ce = w_ce / (2 * np.pi)
+	f_uh = np.sqrt(f_ce ** 2 + f_pe ** 2)
+	f_pp = w_pp / (2 * np.pi)
+	f_cp = f_ce / mp_me
+	f_lh = np.sqrt(f_cp * f_ce / (1 + f_ce ** 2 / f_pe ** 2) + f_cp ** 2)
+
+	rho_e = m_e * c / (e * b_si) * np.sqrt(gamma_e ** 2 - 1) 	# m, relativistically correct
+	rho_p = m_p * c / (e * b_si) * np.sqrt(gamma_p ** 2 - 1) 	# m, relativistically correct
+	rho_s = v_ts / (f_cp * 2 * np.pi) 							# m
+
+	out = xr.Dataset({"time"		: b.time.data,			\
+						"w_pe" 		: (["time"], w_pe), 	\
+						"w_ce" 		: (["time"], w_ce), 	\
+						"w_pp" 		: (["time"], w_pp), 	\
+						"v_a" 		: (["time"], v_a), 		\
+						"v_ae" 		: (["time"], v_ae), 	\
+						"v_te" 		: (["time"], v_te), 	\
+						"v_tp" 		: (["time"], v_tp),		\
+						"v_ts" 		: (["time"], v_ts), 	\
 						"gamma_e" 	: (["time"], gamma_e), 	\
 						"gamma_p" 	: (["time"], gamma_p), 	\
-						"Le" 		: (["time"], Le), 		\
-						"Li" 		: (["time"], Li), 		\
-						"Ld" 		: (["time"], Ld), 		\
-						"Nd" 		: (["time"], Nd),		\
-						"Fpe" 		: (["time"], Fpe),	 	\
-						"Fce" 		: (["time"], Fce), 		\
-						"Fuh" 		: (["time"], Fuh), 		\
-						"Fpp" 		: (["time"], Fpp), 		\
-						"Fcp" 		: (["time"], Fcp), 		\
-						"Flh" 		: (["time"], Flh), 		\
-						"Roe" 		: (["time"], Roe), 		\
-						"Rop" 		: (["time"], Rop), 		\
-						"Ros" 		: (["time"], Ros)})
+						"l_e" 		: (["time"], l_e), 		\
+						"l_i" 		: (["time"], l_i), 		\
+						"l_d" 		: (["time"], l_d), 		\
+						"n_d" 		: (["time"], n_d),		\
+						"f_pe" 		: (["time"], f_pe),	 	\
+						"f_ce" 		: (["time"], f_ce), 	\
+						"f_uh" 		: (["time"], f_uh), 	\
+						"f_pp" 		: (["time"], f_pp), 	\
+						"f_cp" 		: (["time"], f_cp), 	\
+						"f_lh" 		: (["time"], f_lh), 	\
+						"rho_e" 	: (["time"], rho_e), 	\
+						"rho_p" 	: (["time"], rho_p), 	\
+						"rho_s" 	: (["time"], rho_s)})
 	
 	return out
