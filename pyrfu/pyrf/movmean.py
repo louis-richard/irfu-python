@@ -2,8 +2,7 @@ import xarray as xr
 import numpy as np
 
 
-
-def movmean(inp=None, npts=100):
+def movmean(inp=None, n_pts=100):
 	"""
 	Computes running average of the inp over npts points.
 	
@@ -11,7 +10,7 @@ def movmean(inp=None, npts=100):
 		inp : DataArray
 			Time series of the input variable
 
-		npts : int
+		n_pts : int
 			Number of points to average over
 
 	Returns :
@@ -22,40 +21,44 @@ def movmean(inp=None, npts=100):
 		Works also with 3D skymap distribution
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
+		>>> mms_id = 1
 		>>> # Load ion pressure tensor
-		>>> Pixyz = mms.get_data("Pi_gse_fpi_brst_l2",Tint,ic)
+		>>> p_xyz_i = mms.get_data("Pi_gse_fpi_brst_l2", tint, mms_id)
 		>>> # Running average the pressure tensor over 10s
-		>>> fs = pyrf.calc_fs(Pixyz)
-		>>>> Pixyz = pyrf.movmean(Pixyz,10*fs)
+		>>> fs = pyrf.calc_fs(p_xyz_i)
+		>>>> p_xyz_i = pyrf.movmean(p_xyz_i,10 * fs)
 
 	"""
 
 	if inp is None:
 		raise ValueError("movmean requires at least one argument")
 
-	if not isinstance(inp,xr.DataArray):
+	if not isinstance(inp, xr.DataArray):
 		raise TypeError("inp must be a DataArray")
 
-	if not isinstance(npts,int): 
-		npts = np.floor(npts).astype(int)
+	if not isinstance(n_pts, int):
+		n_pts = np.floor(n_pts).astype(int)
 
-	if npts%2: npts -=1
+	if n_pts % 2:
+		n_pts -= 1
 
 	# Computes moving average
-	cumsum 	= np.cumsum(inp.data,axis=0)
-	outdata = (cumsum[npts:,...]-cumsum[:-npts,...])/npts
+	cum_sum = np.cumsum(inp.data, axis=0)
+	out_dat = (cum_sum[n_pts:, ...] - cum_sum[:-n_pts, ...]) / n_pts
 
-	for k in keys: 
+	coords = []
+
+	for k in inp.dims:
 		if k == "time": 
-			coords.append(inp.coords[k][int(npts/2):-int(npts/2)]) 
+			coords.append(inp.coords[k][int(n_pts / 2):-int(n_pts / 2)])
 		else: 
 			coords.append(inp.coords[k]) 
 
 	# Output in DataArray type
-	out = xr.DataArray(outdata,coords=coords,dims=inp.dims,attrs= inp.attrs)
+	out = xr.DataArray(out_dat, coords=coords, dims=inp.dims, attrs=inp.attrs)
 
 	return out
