@@ -71,103 +71,97 @@ def wavelet(inp=None,**kwargs):
 	# wavelet_width
 	wavelet_width = 5.36
 
-	#Other
-	returnpower = True
-	cutedge     = True
-	lineardf    = False
-	plot_flag   = True
-
+	return_power, cut_edge, linear_df, plot_flag = [True, True, False, True]
 
 	if "returnpower" in kwargs:
-		returnpower = kwargs["returnpower"]
+		return_power = kwargs["returnpower"]
 
 	if "cutedge" in kwargs:
-		cutedge = kwargs["cutedge"]
+		cut_edge = kwargs["cutedge"]
 
 	if "fs" in kwargs:
-		if isinstance(kwargs["fs"],int) or isinstance(kwargs["fs"],float):
+		if isinstance(kwargs["fs"], (int, float)):
 			fs = kwargs["fs"]
-		else :
+		else:
 			raise TypeError("fs must be numeric")
 
 	if "nf" in kwargs:
-		if isinstance(kwargs["nf"],int) or isinstance(kwargs["nf"],float):
+		if isinstance(kwargs["nf"], (int, float)):
 			nf = kwargs["nf"]
-		else :
+		else:
 			raise TypeError("nf must be numeric")
 
 	if "linear" in kwargs:
-		lineardf = True
-		if isinstance(kwargs["linear"],int) or isinstance(kwargs["linear"],float):
+		linear_df = True
+		if isinstance(kwargs["linear"], (int, float)):
 			deltaf = kwargs["linear"]
 		else:
 			deltaf = 100
 			raise Warning("Unknow input for linear deltaf set to 100")
 
 	if "wavelet_width" in kwargs:
-		if isinstance(kwargs["wavelet_width"],int) or isinstance(kwargs["wavelet_width"],float):
+		if isinstance(kwargs["wavelet_width"], (int, float)):
 			wavelet_width = kwargs["wavelet_width"]
-		else :
+		else:
 			raise TypeError("wavelet_width must be numeric")
 
 	if "f" in kwargs:
-		if isinstance(kwargs["f"],np.ndarray) or isinstance(kwargs["f"],list):
+		if isinstance(kwargs["f"], (np.ndarray, list)):
 			if len(kwargs["f"]) == 2:
 				fmin = kwargs["f"][0]
 				fmax = kwargs["f"][1]
-			else :
+			else:
 				raise IndexError("f should have vector with 2 elements as parameter value")
-		else :
+		else:
 			raise TypeError("f must be a list or array")
 
 	if "plot" in kwargs:
-		plot_flag =  kwargs["plot"]
+		plot_flag = kwargs["plot"]
 
-	sampl   = Fs
-	w0      = sampl/2               # The maximum frequency
-	anumber = nf                    # The number of frequencies
-	sigma   = wavelet_width/(Fs/2)  # The width of the Morlet wavelet
+	sampl, w0, anumber, sigma = [fs, fs / 2, nf, wavelet_width / (fs / 2)]
 
+	if linear_df:
+		anumber = np.floor(w0 / deltaf).astype(int)
 
-	if lineardf :
-		fmin    = deltaf
-		anumber = np.floor(w0/deltaf).astype(int)
-		fmax    = anumber*deltaf
-		a       = w0/(np.linspace(fmax,fmin,anumber))
-	else :
-		amin    = np.log10(0.5*Fs/fmax)             # The highest frequency to consider is 0.5*sampl/10^amin
-		amax    = np.log10(0.5*Fs/fmin)             # The lowest frequency to consider is 0.5*sampl/10^amax
-		a       = np.logspace(amin,amax,anumber)
+		fmin, fmax = [deltaf, anumber * deltaf]
+
+		a = w0 / (np.linspace(fmax, fmin, anumber))
+	else:
+		amin, amax = [np.log10(.5 * fs / fmax), np.log10(.5 * fs / fmin)]
+
+		a = np.logspace(amin, amax, anumber)
 
 	# Remove the last sample if the total number of samples is odd
-	if len(data)/2 != np.floor(len(data)/2):
-		data    = data[:-1,...]
-		t       = t[:-1]
-
+	if len(data) / 2 != np.floor(len(data) / 2):
+		t, data = [t[:-1], data[:-1, ...]]
 
 	# Check for NaNs
 	a[np.isnan(a)] = 0
 
 	# Find the frequencies for an FFT of all data
-	nd2     = len(data)/2
-	nyq 	= 1/2
-	freq 	= sampl*np.arange(1, nd2+1)/(nd2)*nyq
-	w       = np.hstack([0, freq, -np.flip(freq[:-1])]) # The frequencies corresponding to FFT
+	nd2, nyq = [len(data) / 2, 1 / 2]
+
+	freq = sampl * np.arange(1, nd2 + 1) / nd2 * nyq
+
+	# The frequencies corresponding to FFT
+	w = np.hstack([0, freq, -np.flip(freq[:-1])])
 	
 	# Get the correct frequencies for the wavelet transform
-	newfreq = w0/a
+	newfreq = w0 / a
 
 	if len(data.shape) == 2:
 		outdict = {}
 
-	newfreqmat,temp = np.meshgrid(newfreq, w)
-	temp, ww       	= np.meshgrid(a, w) 		# Matrix form
+	newfreqmat, temp = np.meshgrid(newfreq, w)
+
+	temp, ww = np.meshgrid(a, w)  # Matrix form
 
 	# if scalar add virtual axis
 	if len(inp.shape) == 1:
 		data = data[:, np.newaxis]
 
-	for i in range(data.shape[1]): # go through all the datacolumns
+	# go through all the datacolumns
+	for i in range(data.shape[1]):
 		# Make the FFT of all data
 		datacol = data[:, i]
 
@@ -176,42 +170,46 @@ def wavelet(inp=None,**kwargs):
 		"""
 
 		# Forward FFT
-		Sw = pyfftw.interfaces.numpy_fft.fft(datacol,threads=mp.cpu_count())
+		s_w = pyfftw.interfaces.numpy_fft.fft(datacol, threads=mp.cpu_count())
 
-		aa, Sww = np.meshgrid(a, Sw) # Matrix form
+		aa, s_ww = np.meshgrid(a, s_w)  # Matrix form
 		
 		# Calculate the FFT of the wavelet transform
-		Ww = np.sqrt(1)*Sww*np.exp(-sigma*sigma*((aa*ww-w0)**2)/2)
+		w_w = np.sqrt(1) * s_ww * np.exp(-sigma * sigma * ((aa * ww - w0) ** 2) / 2)
 
 		# Backward FFT
-		W = pyfftw.interfaces.numpy_fft.ifft(Ww,axis=0,threads=mp.cpu_count())
-		
-		power = W
-		
+		power = pyfftw.interfaces.numpy_fft.ifft(w_w, axis=0, threads=mp.cpu_count())
+
 		# Calculate the power spectrum
-		if returnpower :
-			power = np.absolute((2*np.pi)*np.conj(W)*W/newfreqmat)
-		else :
-			power = np.sqrt(np.absolute((2*np.pi)/newfreqmat))*power
+		if return_power:
+			power = np.absolute((2 * np.pi) * np.conj(power) * power / newfreqmat)
+		else:
+			power = np.sqrt(np.absolute((2 * np.pi) / newfreqmat)) * power
 
 		# Remove data possibly influenced by edge effects
 		power2 = power
 
-		if cutedge:
-			censur = np.floor(2*a).astype(int)
+		if cut_edge:
+			censur = np.floor(2 * a).astype(int)
 
 			for j in range(anumber):
 				power2[1:censur[j], j] = np.nan
 
-				power2[len(datacol)-censur[j]:len(datacol), j] = np.nan
+				power2[len(datacol) - censur[j]:len(datacol), j] = np.nan
+		else:
+			continue
 				
 		if len(inp.shape) == 2:
 			outdict[inp.comp.data[i]] = (["time", "frequency"], power2)
+		else:
+			continue
 			
 	if len(inp.shape) == 1:
 		out = xr.DataArray(power2, coords=[Time(t, format="unix").datetime64, newfreq], dims=["time", "frequency"])
 	elif len(inp.shape) == 2:
-		out = xr.Dataset(outdict, coords={"time" : Time(t, format="unix").datetime64, "frequency" : newfreq})
+		out = xr.Dataset(outdict, coords={"time": Time(t, format="unix").datetime64, "frequency": newfreq})
+	else:
+		raise TypeError("Invalid shape")
 
 	if plot_flag:
 		if isinstance(out, xr.Dataset):
@@ -226,9 +224,10 @@ def wavelet(inp=None,**kwargs):
 			axs[2].pcolormesh(out.time, out.frequency, out.z.data, cmap="jet")
 			axs[2].set_yscale('log')
 			axs[2].set_ylabel("f [Hz]")
-		else :
+		else:
 			fig, axs = plt.subplots(1)
-			axs.pcolormesh(out.time,out.frequency,out.data.T,cmap="jet")
+			axs.pcolormesh(out.time, out.frequency, out.data.T, cmap="jet")
 			axs.set_yscale('log')
 			axs.set_ylabel("f [Hz]")
+
 	return out
