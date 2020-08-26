@@ -2,8 +2,7 @@ import numpy as np
 import xarray as xr
 
 
-
-def ts_scalar(t=None,data=None,attrs=None):
+def ts_scalar(t=None, data=None, attrs=None):
 	"""
 	Create a time series containing a 0th order tensor
 
@@ -30,10 +29,10 @@ def ts_scalar(t=None,data=None,attrs=None):
 		raise ValueError("ts_scalar requires at least two inputs")
 		
 	# Check inputs are numpy arrays
-	if not isinstance(t,np.ndarray):
+	if not isinstance(t, np.ndarray):
 		raise TypeError("Time must be a np.datetime64 array")
 	
-	if not isinstance(data,np.ndarray):
+	if not isinstance(data, np.ndarray):
 		raise TypeError("Data must be a np array")
 	
 	if data.ndim != 1:
@@ -41,13 +40,17 @@ def ts_scalar(t=None,data=None,attrs=None):
 	
 	if len(t) != len(data):
 		raise IndexError("Time and data must have the same length")
-	flagAttrs = False
-	if attrs != None:
-		flagAttrs = True
+
+	flag_attrs = True
+
+	if attrs is None:
+		flag_attrs = False
 	
-	out = xr.DataArray(data,coords=[t],dims="time")
+	out = xr.DataArray(data, coords=[t], dims="time")
 	
-	if flagAttrs :
+	if flag_attrs:
 		out.attrs = attrs
+
 	out.attrs["TENSOR_ORDER"] = 0
+
 	return out

@@ -26,14 +26,15 @@ def ts_tensor_xyz(t=None, data=None, attrs=None):
 	# Check inputs are not empty
 	if t is None:
 		raise ValueError("ts_tensor_xyz requires at least two inputs")
+
 	if data is None:
 		raise ValueError("ts_tensor_xyz requires at least two inputs")
 		
 	# Check inputs are numpy arrays
-	if not isinstance(t,np.ndarray):
+	if not isinstance(t, np.ndarray):
 		raise TypeError("Time must be a np.datetime64 array")
 	
-	if not isinstance(data,np.ndarray):
+	if not isinstance(data, np.ndarray):
 		raise TypeError("Data must be a np array")
 	
 	if data.ndim != 3:
@@ -45,15 +46,18 @@ def ts_tensor_xyz(t=None, data=None, attrs=None):
 	if len(t) != len(data):
 		raise IndexError("Time and data must have the same length")
 	
-	flagAttrs = False
-	if attrs != None:
-		flagAttrs = True
+	flag_attrs = True
+
+	if attrs is None:
+		flag_attrs = False
 	
-	out = xr.DataArray(data,coords=[t,["x","y","z"],["x","y","z"]],dims=["time","comph","compv"])
+	out = xr.DataArray(data, coords=[t, ["x", "y", "z"], ["x", "y", "z"]], dims=["time", "comph", "compv"])
 	
-	if flagAttrs :
+	if flag_attrs:
 		out.attrs = attrs
 
-	out.attrs["TENSOR_ORDER"] = 2
+		out.attrs["TENSOR_ORDER"] = 2
+	else:
+		out.attrs["TENSOR_ORDER"] = 2
 
 	return out

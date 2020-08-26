@@ -46,21 +46,24 @@ def wavelet(inp=None,**kwargs):
 	# Default values
 	# Fs
 	if isinstance(inp, xr.DataArray):
-		tstart 	= Time(inp.time.data[0], format="datetime64").unix
-		tstop 	= Time(inp.time.data[-1], format="datetime64").unix
-		timeint = tstop - tstart 
+		# Time bounds
+		tstart, tstop = [Time(t_bound, format="datetime64").unix for t_bound in [inp.time.data[0], inp.time.data[-1]]]
 
-		Fs  	= len(inp)/timeint
-		t   	= inp.time.data.view("i8")*1e-9
-		data 	= inp.data
+		# Time interval
+		timeint = tstop - tstart
+
+		# Sampling frequency
+		fs = len(inp) / timeint
+
+		# Unpack time and data
+		t, data = [inp.time.data.view("i8") * 1e-9, inp.data]
+
 	else:
 		raise TypeError("Input must be a DataArray")
 
 	# f
-	amin = 0.01             # The highest frequency to consider is 0.5*sampl/10^amin
-	fmax = 0.5*Fs/10**amin
-	amax = 2                # The lowest frequency to consider is 0.5*sampl/10^amax
-	fmin = 0.5*Fs/10**amax
+	amin, amax = [0.01, 2]
+	fmin, fmax = [.5 * fs / 10 ** amax, .5 * fs / 10 ** amin]
 
 	# nf
 	nf = 200
