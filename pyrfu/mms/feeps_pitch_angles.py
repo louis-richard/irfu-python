@@ -33,15 +33,11 @@ def feeps_pitch_angles(inp_dset=None, b_bcs=None):
 			"7": [0.654, -0.377, 0.656], "8": [0.654, -0.377, -0.656], "9": [0.837, 0.347, 0.423],
 			"10": [0.837, 0.347, -0.423], "11": [0.347, 0.837, 0.423], "12": [0.347, 0.837, -0.423]}
 
-
-	telescope_map = {}
-	telescope_map["bottom-electron"], telescope_map["bottom-ion"] = [[1, 2, 3, 4, 5, 9, 10, 11, 12], [6, 7, 8]]
-
-	telescope_map["top-electron"], telescope_map["top-ion"] = [[1, 2, 3, 4, 5, 9, 10, 11, 12], [6, 7, 8]]
+	telescope_map = {"bottom-electron": [1, 2, 3, 4, 5, 9, 10, 11, 12], "bottom-ion": [6, 7, 8],
+					 "top-electron": [1, 2, 3, 4, 5, 9, 10, 11, 12], "top-ion": [6, 7, 8]}
 
 	top_tele_idx_map, bot_tele_idx_map = [{}, {}]
 
-if var["dtype"] == "electron":
 	pas = np.empty([len(btimes), 18])  # pitch angles for each eye at each time
 
 	# Telescope vectors in Body Coordinate System:
@@ -101,75 +97,7 @@ if var["dtype"] == "electron":
 		else:
 			new_pas = pas
 
-
-
-
-	elif Var["dtype"] == "ion":
-		pas = np.empty([len(btimes), 6]) # pitch angles for each eye at each time
-
-		# Telescope vectors in Body Coordinate System:
-		#   Factors of -1 account for 180 deg shift between particle velocity and telescope normal direction:
-		# Top:
-		Vt6bcs = [-1.*(Ttop[0][0]*V6fcs[0] + Ttop[0][1]*V6fcs[1] + Ttop[0][2]*V6fcs[2]),\
-					-1.*(Ttop[1][0]*V6fcs[0] + Ttop[1][1]*V6fcs[1] + Ttop[1][2]*V6fcs[2]),\
-					-1.*(Ttop[2][0]*V6fcs[0] + Ttop[2][1]*V6fcs[1] + Ttop[2][2]*V6fcs[2])]
-
-		Vt7bcs = [-1.*(Ttop[0][0]*V7fcs[0] + Ttop[0][1]*V7fcs[1] + Ttop[0][2]*V7fcs[2]),\
-					-1.*(Ttop[1][0]*V7fcs[0] + Ttop[1][1]*V7fcs[1] + Ttop[1][2]*V7fcs[2]),\
-					-1.*(Ttop[2][0]*V7fcs[0] + Ttop[2][1]*V7fcs[1] + Ttop[2][2]*V7fcs[2])]
-
-		Vt8bcs = [-1.*(Ttop[0][0]*V8fcs[0] + Ttop[0][1]*V8fcs[1] + Ttop[0][2]*V8fcs[2]),\
-					-1.*( Ttop[1][0]*V8fcs[0] + Ttop[1][1]*V8fcs[1] + Ttop[1][2]*V8fcs[2]),\
-					-1.*(Ttop[2][0]*V8fcs[0] + Ttop[2][1]*V8fcs[1] + Ttop[2][2]*V8fcs[2])]
-
-		# Bottom:
-		Vb6bcs = [-1.*(Tbot[0][0]*V6fcs[0] + Tbot[0][1]*V6fcs[1] + Tbot[0][2]*V6fcs[2]),\
-					-1.*(Tbot[1][0]*V6fcs[0] + Tbot[1][1]*V6fcs[1] + Tbot[1][2]*V6fcs[2]),\
-					-1.*( Tbot[2][0]*V6fcs[0] + Tbot[2][1]*V6fcs[1] + Tbot[2][2]*V6fcs[2])]
-
-		Vb7bcs = [-1.*(Tbot[0][0]*V7fcs[0] + Tbot[0][1]*V7fcs[1] + Tbot[0][2]*V7fcs[2]),\
-					-1.*(Tbot[1][0]*V7fcs[0] + Tbot[1][1]*V7fcs[1] + Tbot[1][2]*V7fcs[2]),\
-					-1.*(Tbot[2][0]*V7fcs[0] + Tbot[2][1]*V7fcs[1] + Tbot[2][2]*V7fcs[2])]
-
-		Vb8bcs = [-1.*(Tbot[0][0]*V8fcs[0] + Tbot[0][1]*V8fcs[1] + Tbot[0][2]*V8fcs[2]),\
-					-1.*(Tbot[1][0]*V8fcs[0] + Tbot[1][1]*V8fcs[1] + Tbot[1][2]*V8fcs[2]),\
-					-1.*(Tbot[2][0]*V8fcs[0] + Tbot[2][1]*V8fcs[1] + Tbot[2][2]*V8fcs[2])]
-
-		for i in range(0, 6):
-			if i == 0:	Vbcs = Vt6bcs
-			if i == 1:	Vbcs = Vt7bcs
-			if i == 2:	Vbcs = Vt8bcs
-			if i == 3:	Vbcs = Vb6bcs
-			if i == 4:	Vbcs = Vb7bcs
-			if i == 5:	Vbcs = Vb8bcs
-			pas[:, i] = 180./math.pi*np.arccos((Vbcs[0]*Bbcs[:, 0] + Vbcs[1]*Bbcs[:, 1] + Vbcs[2]*Bbcs[:, 2])/(np.sqrt(Vbcs[0]**2+Vbcs[1]**2+Vbcs[2]**2) * np.sqrt(Bbcs[:, 0]**2+Bbcs[:, 1]**2+Bbcs[:, 2]**2)))
-
-			# the following 2 hash tables map TOP/BOTTOM telescope #s to index of the PA array created above
-			top_tele_idx_map = {}
-			bot_tele_idx_map = {}
-			top_tele_idx_map[6] = 0
-			top_tele_idx_map[7] = 1
-			top_tele_idx_map[8] = 2
-			bot_tele_idx_map[6] = 3
-			bot_tele_idx_map[7] = 4
-			bot_tele_idx_map[8] = 5
-
-			top_idxs = []
-			bot_idxs = []
-
-			# PAs for only active eyes
-			new_pas = np.empty([len(btimes), len(eyes["top"])+len(eyes["bottom"])]) # pitch angles for each eye at eaceh time
-
-			for top_idx, top_eye in enumerate(eyes["top"]):
-				new_pas[:, top_idx] = pas[:, top_tele_idx_map[top_eye]]
-				top_idxs.append(top_idx)
-
-			for bot_idx, bot_eye in enumerate(eyes["bottom"]):
-				new_pas[:, bot_idx+len(eyes["top"])] = pas[:, bot_tele_idx_map[bot_eye]]
-				bot_idxs.append(bot_idx+len(eyes["top"]))
-
-
-	outdata = xr.DataArray(new_pas,coords=[btimes,np.arange(18)],dims=["time","idx"])
+	outdata = xr.DataArray(new_pas, coords=[btimes, np.arange(18)], dims=["time", "idx"])
 
 	# interpolate to the PA time stamps
 	out = outdata.interp({'time': times})
