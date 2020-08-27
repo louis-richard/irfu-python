@@ -6,18 +6,18 @@ from astropy.time import Time
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def feeps_pitch_angles(inp_dset=None, Bbcs=None):
+def feeps_pitch_angles(inp_dset=None, b_bcs=None):
 	"""
 	Computes the FEEPS pitch angles for each telescope from magnetic field data.
 	"""
-	Var = inp_dset.attrs
-	mmsId = Var["mmsId"]
+	var = inp_dset.attrs
+	mms_id = var["mmsId"]
 	times = inp_dset.time
-	btimes = Bbcs.time
+	btimes = b_bcs.time
 
-	trange = Time(np.hstack([times.data.min(), times.data.max()]),format="datetime64").isot
+	trange = Time(np.hstack([times.data.min(), times.data.max()]), format="datetime64").isot
 
-	eyes = get_feeps_active_eyes(Var,trange,Var["mmsId"])
+	eyes = get_feeps_active_eyes(var, trange, var["mmsId"])
 
 	idx_maps = None
 	nbins = 13 # number of pitch angle bins; 10 deg = 17 bins, 15 deg = 13 bins
@@ -47,20 +47,20 @@ def feeps_pitch_angles(inp_dset=None, Bbcs=None):
 		# Telescope vectors in Body Coordinate System:
 		#   Factors of -1 account for 180 deg shift between particle velocity and telescope normal direction:
 		# Top:
-		Vt1bcs 	= [-1.*(Ttop[0][0]*V1fcs[0] + Ttop[0][1]*V1fcs[1] + Ttop[0][2]*V1fcs[2]),\
-					-1.*(Ttop[1][0]*V1fcs[0] + Ttop[1][1]*V1fcs[1] + Ttop[1][2]*V1fcs[2]),\
-					-1.*(Ttop[2][0]*V1fcs[0] + Ttop[2][1]*V1fcs[1] + Ttop[2][2]*V1fcs[2])]
+		Vt1bcs 	= [-1. * (Ttop[0][0] * V1fcs[0] + Ttop[0][1] * V1fcs[1] + Ttop[0][2] * V1fcs[2]),
+					-1. * (Ttop[1][0] * V1fcs[0] + Ttop[1][1] * V1fcs[1] + Ttop[1][2] * V1fcs[2]),
+					-1. * (Ttop[2][0] * V1fcs[0] + Ttop[2][1] * V1fcs[1] + Ttop[2][2] * V1fcs[2])]
 
-		Vt2bcs 	= [-1.*(Ttop[0][0]*V2fcs[0] + Ttop[0][1]*V2fcs[1] + Ttop[0][2]*V2fcs[2]),\
-					-1.*(Ttop[1][0]*V2fcs[0] + Ttop[1][1]*V2fcs[1] + Ttop[1][2]*V2fcs[2]),\
-					-1.*(Ttop[2][0]*V2fcs[0] + Ttop[2][1]*V2fcs[1] + Ttop[2][2]*V2fcs[2])]
+		Vt2bcs 	= [-1. * (Ttop[0][0] * V2fcs[0] + Ttop[0][1] * V2fcs[1] + Ttop[0][2] * V2fcs[2]),
+					-1. * (Ttop[1][0] * V2fcs[0] + Ttop[1][1] * V2fcs[1] + Ttop[1][2] * V2fcs[2]),
+					-1. * (Ttop[2][0] * V2fcs[0] + Ttop[2][1] * V2fcs[1] + Ttop[2][2] * V2fcs[2])]
 
-		Vt3bcs 	= [-1.*(Ttop[0][0]*V3fcs[0] + Ttop[0][1]*V3fcs[1] + Ttop[0][2]*V3fcs[2]),\
-					-1.*(Ttop[1][0]*V3fcs[0] + Ttop[1][1]*V3fcs[1] + Ttop[1][2]*V3fcs[2]),\
-					-1.*(Ttop[2][0]*V3fcs[0] + Ttop[2][1]*V3fcs[1] + Ttop[2][2]*V3fcs[2])]
+		Vt3bcs 	= [-1. * (Ttop[0][0] * V3fcs[0] + Ttop[0][1] * V3fcs[1] + Ttop[0][2] * V3fcs[2]),
+					-1. * (Ttop[1][0] * V3fcs[0] + Ttop[1][1] * V3fcs[1] + Ttop[1][2] * V3fcs[2]),
+					-1. * (Ttop[2][0] * V3fcs[0] + Ttop[2][1] * V3fcs[1] + Ttop[2][2] * V3fcs[2])]
 
-		Vt4bcs 	= [-1.*(Ttop[0][0]*V4fcs[0] + Ttop[0][1]*V4fcs[1] + Ttop[0][2]*V4fcs[2]),\
-					-1.*(Ttop[1][0]*V4fcs[0] + Ttop[1][1]*V4fcs[1] + Ttop[1][2]*V4fcs[2]),\
+		Vt4bcs 	= [-1.*(Ttop[0][0]*V4fcs[0] + Ttop[0][1]*V4fcs[1] + Ttop[0][2]*V4fcs[2]),
+					-1.*(Ttop[1][0]*V4fcs[0] + Ttop[1][1]*V4fcs[1] + Ttop[1][2]*V4fcs[2]),
 					-1.*(Ttop[2][0]*V4fcs[0] + Ttop[2][1]*V4fcs[1] + Ttop[2][2]*V4fcs[2])]
 
 		Vt5bcs 	= [-1.*(Ttop[0][0]*V5fcs[0] + Ttop[0][1]*V5fcs[1] + Ttop[0][2]*V5fcs[2]),\

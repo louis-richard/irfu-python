@@ -3,7 +3,7 @@ from .get_ts import get_ts
 from ..pyrf import ts_append
 
 
-def db_get_ts(dsetName="", cdfName="", trange=None):
+def db_get_ts(dset_name="", cdf_name="", trange=None):
 	"""
 	Get variable time series in the cdf file
 
@@ -23,26 +23,25 @@ def db_get_ts(dsetName="", cdfName="", trange=None):
 
 	"""
 
-	Var = {}
+	dset = dset_name.split("_")
 
-	dset = dsetName.split("_")
+	# Index of the MMS spacecraft
+	probe = dset[0][-1]
 
-	probe 			= dset[0][-1]
-	Var["inst"] 	= dset[1]
-	Var["tmmode"] 	= dset[2]
-	Var["lev"] 		= dset[3]
+	var = {"inst": dset[1], "tmmode": dset[2], "lev": dset[3]}
+
 	try:
-		Var["dtype"] = dset[4]
+		var["dtype"] = dset[4]
 	except IndexError:
 		pass	
 
-	files = list_files(trange,probe,Var)
+	files = list_files(trange, probe, var)
 
 	for i, file in enumerate(files):
-		temp = get_ts(file,cdfName,trange)
+		temp = get_ts(file, cdf_name, trange)
 		if i == 0:
 			out = temp
-		else :
-			out = ts_append(out,temp)
+		else:
+			out = ts_append(out, temp)
 			
 	return out
