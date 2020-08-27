@@ -20,169 +20,89 @@ def feeps_pitch_angles(inp_dset=None, b_bcs=None):
 	eyes = get_feeps_active_eyes(var, trange, var["mmsId"])
 
 	idx_maps = None
-	nbins = 13 # number of pitch angle bins; 10 deg = 17 bins, 15 deg = 13 bins
-	dpa = 180.0/nbins # delta-pitch angle for each bin
+	nbins = 13  # number of pitch angle bins; 10 deg = 17 bins, 15 deg = 13 bins
+	dpa = 180.0 / nbins  # delta-pitch angle for each bin
 
 	# Rotation matrices for FEEPS coord system (FCS) into body coordinate system (BCS):
-	Ttop = [[1./np.sqrt(2.), -1./np.sqrt(2.), 0], [1./np.sqrt(2.), 1./np.sqrt(2.), 0], [0, 0, 1]]
-	Tbot = [[-1./np.sqrt(2.), -1./np.sqrt(2.), 0], [-1./np.sqrt(2.), 1./np.sqrt(2.), 0], [0, 0, -1]]
+	t_top = [[1./np.sqrt(2.), -1./np.sqrt(2.), 0], [1./np.sqrt(2.), 1./np.sqrt(2.), 0], [0, 0, 1]]
+	t_bot = [[-1./np.sqrt(2.), -1./np.sqrt(2.), 0], [-1./np.sqrt(2.), 1./np.sqrt(2.), 0], [0, 0, -1]]
 
 	# Telescope vectors in FCS:
-	V1fcs = [0.347, -0.837, 0.423]
-	V2fcs = [0.347, -0.837, -0.423]
-	V3fcs = [0.837, -0.347, 0.423]
-	V4fcs = [0.837, -0.347, -0.423]
-	V5fcs = [-0.087, 0.000, 0.996]
-	V6fcs = [0.104, 0.180, 0.978]
-	V7fcs = [0.654, -0.377, 0.656]
-	V8fcs = [0.654, -0.377, -0.656]
-	V9fcs = [0.837, 0.347, 0.423]
-	V10fcs = [0.837, 0.347, -0.423]
-	V11fcs = [0.347, 0.837, 0.423]
-	V12fcs = [0.347, 0.837, -0.423]
+	v_fcs = {"1": [0.347, -0.837, 0.423], "2": [0.347, -0.837, -0.423], "3": [0.837, -0.347, 0.423],
+			"4": [0.837, -0.347, -0.423], "5": [-0.087, 0.000, 0.996], "6": [0.104, 0.180, 0.978],
+			"7": [0.654, -0.377, 0.656], "8": [0.654, -0.377, -0.656], "9": [0.837, 0.347, 0.423],
+			"10": [0.837, 0.347, -0.423], "11": [0.347, 0.837, 0.423], "12": [0.347, 0.837, -0.423]}
 
-	if Var["dtype"] == "electron":
-		pas = np.empty([len(btimes), 18]) # pitch angles for each eye at each time
 
-		# Telescope vectors in Body Coordinate System:
-		#   Factors of -1 account for 180 deg shift between particle velocity and telescope normal direction:
-		# Top:
-		Vt1bcs 	= [-1. * (Ttop[0][0] * V1fcs[0] + Ttop[0][1] * V1fcs[1] + Ttop[0][2] * V1fcs[2]),
-					-1. * (Ttop[1][0] * V1fcs[0] + Ttop[1][1] * V1fcs[1] + Ttop[1][2] * V1fcs[2]),
-					-1. * (Ttop[2][0] * V1fcs[0] + Ttop[2][1] * V1fcs[1] + Ttop[2][2] * V1fcs[2])]
+	telescope_map = {}
+	telescope_map["bottom-electron"], telescope_map["bottom-ion"] = [[1, 2, 3, 4, 5, 9, 10, 11, 12], [6, 7, 8]]
 
-		Vt2bcs 	= [-1. * (Ttop[0][0] * V2fcs[0] + Ttop[0][1] * V2fcs[1] + Ttop[0][2] * V2fcs[2]),
-					-1. * (Ttop[1][0] * V2fcs[0] + Ttop[1][1] * V2fcs[1] + Ttop[1][2] * V2fcs[2]),
-					-1. * (Ttop[2][0] * V2fcs[0] + Ttop[2][1] * V2fcs[1] + Ttop[2][2] * V2fcs[2])]
+	telescope_map["top-electron"], telescope_map["top-ion"] = [[1, 2, 3, 4, 5, 9, 10, 11, 12], [6, 7, 8]]
 
-		Vt3bcs 	= [-1. * (Ttop[0][0] * V3fcs[0] + Ttop[0][1] * V3fcs[1] + Ttop[0][2] * V3fcs[2]),
-					-1. * (Ttop[1][0] * V3fcs[0] + Ttop[1][1] * V3fcs[1] + Ttop[1][2] * V3fcs[2]),
-					-1. * (Ttop[2][0] * V3fcs[0] + Ttop[2][1] * V3fcs[1] + Ttop[2][2] * V3fcs[2])]
+	top_tele_idx_map, bot_tele_idx_map = [{}, {}]
 
-		Vt4bcs 	= [-1.*(Ttop[0][0]*V4fcs[0] + Ttop[0][1]*V4fcs[1] + Ttop[0][2]*V4fcs[2]),
-					-1.*(Ttop[1][0]*V4fcs[0] + Ttop[1][1]*V4fcs[1] + Ttop[1][2]*V4fcs[2]),
-					-1.*(Ttop[2][0]*V4fcs[0] + Ttop[2][1]*V4fcs[1] + Ttop[2][2]*V4fcs[2])]
+if var["dtype"] == "electron":
+	pas = np.empty([len(btimes), 18])  # pitch angles for each eye at each time
 
-		Vt5bcs 	= [-1.*(Ttop[0][0]*V5fcs[0] + Ttop[0][1]*V5fcs[1] + Ttop[0][2]*V5fcs[2]),\
-					-1.*(Ttop[1][0]*V5fcs[0] + Ttop[1][1]*V5fcs[1] + Ttop[1][2]*V5fcs[2]),\
-					-1.*( Ttop[2][0]*V5fcs[0] + Ttop[2][1]*V5fcs[1] + Ttop[2][2]*V5fcs[2])]
+	# Telescope vectors in Body Coordinate System:
+	#   Factors of -1 account for 180 deg shift between particle velocity and telescope normal direction:
+	# Top:
+	vt_bcs, vb_bcs = [{}, {}]
 
-		Vt9bcs 	= [-1.*(Ttop[0][0]*V9fcs[0] + Ttop[0][1]*V9fcs[1] + Ttop[0][2]*V9fcs[2]),\
-					-1.*(Ttop[1][0]*V9fcs[0] + Ttop[1][1]*V9fcs[1] + Ttop[1][2]*V9fcs[2]),\
-					-1.*(Ttop[2][0]*V9fcs[0] + Ttop[2][1]*V9fcs[1] + Ttop[2][2]*V9fcs[2])]
+	for s in telescope_map["top-{}".format(var["dtype"])]:
+		s = str(s)
 
-		Vt10bcs = [-1.*(Ttop[0][0]*V10fcs[0] + Ttop[0][1]*V10fcs[1] + Ttop[0][2]*V10fcs[2]),\
-					-1.*(Ttop[1][0]*V10fcs[0] + Ttop[1][1]*V10fcs[1] + Ttop[1][2]*V10fcs[2]),\
-					-1.*(Ttop[2][0]*V10fcs[0] + Ttop[2][1]*V10fcs[1] + Ttop[2][2]*V10fcs[2])]
+		vt_bcs[s] = [-1. * (t_top[0][0] * v_fcs[s][0] + t_top[0][1] * v_fcs[s][1] + t_top[0][2] * v_fcs[s][2]),
+					 -1. * (t_top[1][0] * v_fcs[s][0] + t_top[1][1] * v_fcs[s][1] + t_top[1][2] * v_fcs[s][2]),
+					 -1. * (t_top[2][0] * v_fcs[s][0] + t_top[2][1] * v_fcs[s][1] + t_top[2][2] * v_fcs[s][2])]
 
-		Vt11bcs = [-1.*(Ttop[0][0]*V11fcs[0] + Ttop[0][1]*V11fcs[1] + Ttop[0][2]*V11fcs[2]),\
-					-1.*(Ttop[1][0]*V11fcs[0] + Ttop[1][1]*V11fcs[1] + Ttop[1][2]*V11fcs[2]),\
-					-1.*(Ttop[2][0]*V11fcs[0] + Ttop[2][1]*V11fcs[1] + Ttop[2][2]*V11fcs[2])]
+	for s in telescope_map["bottom-{}".format(var["dtype"])]:
+		s = str(s)
 
-		Vt12bcs = [-1.*(Ttop[0][0]*V12fcs[0] + Ttop[0][1]*V12fcs[1] + Ttop[0][2]*V12fcs[2]),\
-					-1.*(Ttop[1][0]*V12fcs[0] + Ttop[1][1]*V12fcs[1] + Ttop[1][2]*V12fcs[2]),\
-					-1.*(Ttop[2][0]*V12fcs[0] + Ttop[2][1]*V12fcs[1] + Ttop[2][2]*V12fcs[2])]
+		vb_bcs[s] = [-1. * (t_bot[0][0] * v_fcs[s][0] + t_bot[0][1] * v_fcs[s][1] + t_bot[0][2] * v_fcs[s][2]),
+					 -1. * (t_bot[1][0] * v_fcs[s][0] + t_bot[1][1] * v_fcs[s][1] + t_bot[1][2] * v_fcs[s][2]),
+					 -1. * (t_bot[2][0] * v_fcs[s][0] + t_bot[2][1] * v_fcs[s][1] + t_bot[2][2] * v_fcs[s][2])]
 
-		# Bottom:
-		Vb1bcs 	= [-1.*(Tbot[0][0]*V1fcs[0] + Tbot[0][1]*V1fcs[1] + Tbot[0][2]*V1fcs[2]),\
-					-1.*(Tbot[1][0]*V1fcs[0] + Tbot[1][1]*V1fcs[1] + Tbot[1][2]*V1fcs[2]),\
-					-1.*(Tbot[2][0]*V1fcs[0] + Tbot[2][1]*V1fcs[1] + Tbot[2][2]*V1fcs[2])]
+	for i, k in zip(np.arange(18),
+					np.hstack([telescope_map["bottom-{}".format(var["dtype"])], telescope_map["top-{}".format(var["dtype"])]])):
+		if i < 8:
+			v_bcs = vt_bcs[str(k)]
+		else:
+			v_bcs = vb_bcs[str(k)]
+		"""
+		pas[:, i] = 180. / math.pi * np.arccos(
+			(v_bcs[0] * b_bcs[:, 0] + v_bcs[1] * b_bcs[:, 1] + v_bcs[2] * b_bcs[:, 2]) / (
+						np.sqrt(v_bcs[0] ** 2 + v_bcs[1] ** 2 + v_bcs[2] ** 2) * np.sqrt(
+					b_bcs[:, 0] ** 2 + b_bcs[:, 1] ** 2 + b_bcs[:, 2] ** 2)))
+		"""
 
-		Vb2bcs 	= [-1.*(Tbot[0][0]*V2fcs[0] + Tbot[0][1]*V2fcs[1] + Tbot[0][2]*V2fcs[2]),\
-					-1.*(Tbot[1][0]*V2fcs[0] + Tbot[1][1]*V2fcs[1] + Tbot[1][2]*V2fcs[2]),\
-					-1.*(Tbot[2][0]*V2fcs[0] + Tbot[2][1]*V2fcs[1] + Tbot[2][2]*V2fcs[2])]
-
-		Vb3bcs 	= [-1.*(Tbot[0][0]*V3fcs[0] + Tbot[0][1]*V3fcs[1] + Tbot[0][2]*V3fcs[2]),\
-					-1.*(Tbot[1][0]*V3fcs[0] + Tbot[1][1]*V3fcs[1] + Tbot[1][2]*V3fcs[2]),\
-					-1.*(Tbot[2][0]*V3fcs[0] + Tbot[2][1]*V3fcs[1] + Tbot[2][2]*V3fcs[2])]
-
-		Vb4bcs 	= [-1.*(Tbot[0][0]*V4fcs[0] + Tbot[0][1]*V4fcs[1] + Tbot[0][2]*V4fcs[2]),\
-					-1.*(Tbot[1][0]*V4fcs[0] + Tbot[1][1]*V4fcs[1] + Tbot[1][2]*V4fcs[2]),\
-					-1.*(Tbot[2][0]*V4fcs[0] + Tbot[2][1]*V4fcs[1] + Tbot[2][2]*V4fcs[2])]
-
-		Vb5bcs 	= [-1.*(Tbot[0][0]*V5fcs[0] + Tbot[0][1]*V5fcs[1] + Tbot[0][2]*V5fcs[2]),\
-					-1.*(Tbot[1][0]*V5fcs[0] + Tbot[1][1]*V5fcs[1] + Tbot[1][2]*V5fcs[2]),\
-					-1.*(Tbot[2][0]*V5fcs[0] + Tbot[2][1]*V5fcs[1] + Tbot[2][2]*V5fcs[2])]
-		
-		Vb9bcs 	= [-1.*(Tbot[0][0]*V9fcs[0] + Tbot[0][1]*V9fcs[1] + Tbot[0][2]*V9fcs[2]),\
-					-1.*(Tbot[1][0]*V9fcs[0] + Tbot[1][1]*V9fcs[1] + Tbot[1][2]*V9fcs[2]),\
-					-1.*(Tbot[2][0]*V9fcs[0] + Tbot[2][1]*V9fcs[1] + Tbot[2][2]*V9fcs[2])]
-		
-		Vb10bcs = [-1.*(Tbot[0][0]*V10fcs[0] + Tbot[0][1]*V10fcs[1] + Tbot[0][2]*V10fcs[2]),\
-					-1.*(Tbot[1][0]*V10fcs[0] + Tbot[1][1]*V10fcs[1] + Tbot[1][2]*V10fcs[2]),\
-					-1.*(Tbot[2][0]*V10fcs[0] + Tbot[2][1]*V10fcs[1] + Tbot[2][2]*V10fcs[2])]
-		
-		Vb11bcs = [-1.*(Tbot[0][0]*V11fcs[0] + Tbot[0][1]*V11fcs[1] + Tbot[0][2]*V11fcs[2]),\
-					-1.*(Tbot[1][0]*V11fcs[0] + Tbot[1][1]*V11fcs[1] + Tbot[1][2]*V11fcs[2]),\
-					-1.*(Tbot[2][0]*V11fcs[0] + Tbot[2][1]*V11fcs[1] + Tbot[2][2]*V11fcs[2])]
-		
-		Vb12bcs = [-1.*(Tbot[0][0]*V12fcs[0] + Tbot[0][1]*V12fcs[1] + Tbot[0][2]*V12fcs[2]),\
-					-1.*(Tbot[1][0]*V12fcs[0] + Tbot[1][1]*V12fcs[1] + Tbot[1][2]*V12fcs[2]),\
-					-1.*(Tbot[2][0]*V12fcs[0] + Tbot[2][1]*V12fcs[1] + Tbot[2][2]*V12fcs[2])]
-
-		for i in range(0, 18):
-			if i == 0:	Vbcs = Vt1bcs
-			if i == 1:	Vbcs = Vt2bcs
-			if i == 2:	Vbcs = Vt3bcs
-			if i == 3:	Vbcs = Vt4bcs
-			if i == 4:	Vbcs = Vt5bcs
-			if i == 5:	Vbcs = Vt9bcs
-			if i == 6:	Vbcs = Vt10bcs
-			if i == 7:	Vbcs = Vt11bcs
-			if i == 8:	Vbcs = Vt12bcs
-			if i == 9: 	Vbcs = Vb1bcs
-			if i == 10:	Vbcs = Vb2bcs
-			if i == 11: Vbcs = Vb3bcs
-			if i == 12: Vbcs = Vb4bcs
-			if i == 13: Vbcs = Vb5bcs
-			if i == 14: Vbcs = Vb9bcs
-			if i == 15: Vbcs = Vb10bcs
-			if i == 16: Vbcs = Vb11bcs
-			if i == 17: Vbcs = Vb12bcs
-
-			pas[:, i] = 180./math.pi*np.arccos((Vbcs[0]*Bbcs[:, 0] + Vbcs[1]*Bbcs[:, 1] + Vbcs[2]*Bbcs[:, 2])/(np.sqrt(Vbcs[0]**2+Vbcs[1]**2+Vbcs[2]**2) * np.sqrt(Bbcs[:, 0]**2+Bbcs[:, 1]**2+Bbcs[:, 2]**2)))
-
-			if Var["tmmode"] == "srvy":
-				# the following 2 hash tables map TOP/BOTTOM telescope #s to index of the PA array created above
-				top_tele_idx_map = {}
-				bot_tele_idx_map = {}
-				top_tele_idx_map[1] = 0
-				top_tele_idx_map[2] = 1
-				top_tele_idx_map[3] = 2
-				top_tele_idx_map[4] = 3
-				top_tele_idx_map[5] = 4
-				top_tele_idx_map[9] = 5
-				top_tele_idx_map[10] = 6
-				top_tele_idx_map[11] = 7
-				top_tele_idx_map[12] = 8
-				bot_tele_idx_map[1] = 9
-				bot_tele_idx_map[2] = 10
-				bot_tele_idx_map[3] = 11
-				bot_tele_idx_map[4] = 12
-				bot_tele_idx_map[5] = 13
-				bot_tele_idx_map[9] = 14
-				bot_tele_idx_map[10] = 15
-				bot_tele_idx_map[11] = 16
-				bot_tele_idx_map[12] = 17
-
-				top_idxs = []
-				bot_idxs = []
-
-				# PAs for only active eyes
-				new_pas = np.empty([len(btimes), len(eyes["top"])+len(eyes["bottom"])]) # pitch angles for each eye at eaceh time
-
-				for top_idx, top_eye in enumerate(eyes["top"]):
-					new_pas[:, top_idx] = pas[:, top_tele_idx_map[top_eye]]
-					top_idxs.append(top_idx)
-
-				for bot_idx, bot_eye in enumerate(eyes["bottom"]):
-					new_pas[:, bot_idx+len(eyes["top"])] = pas[:, bot_tele_idx_map[bot_eye]]
-					bot_idxs.append(bot_idx+len(eyes["top"]))
-
-				idx_maps = {"electron-top": top_idxs, "electron-bottom": bot_idxs}
-
+		if var["tmmode"] == "srvy":
+			if i < 8:
+				top_tele_idx_map[k] = i
 			else:
-				new_pas = pas
+				bot_tele_idx_map[k] = i
+
+			top_idxs, bot_idxs = [[], []]
+
+			# PAs for only active eyes
+			new_pas = np.empty(
+				[len(btimes), len(eyes["top"]) + len(eyes["bottom"])])  # pitch angles for each eye at eaceh time
+
+			for top_idx, top_eye in enumerate(eyes["top"]):
+				new_pas[:, top_idx] = pas[:, top_tele_idx_map[top_eye]]
+				top_idxs.append(top_idx)
+
+			for bot_idx, bot_eye in enumerate(eyes["bottom"]):
+				new_pas[:, bot_idx + len(eyes["top"])] = pas[:, bot_tele_idx_map[bot_eye]]
+				bot_idxs.append(bot_idx + len(eyes["top"]))
+
+			idx_maps = {"electron-top": top_idxs, "electron-bottom": bot_idxs}
+
+		else:
+			new_pas = pas
+
+
+
 
 	elif Var["dtype"] == "ion":
 		pas = np.empty([len(btimes), 6]) # pitch angles for each eye at each time
