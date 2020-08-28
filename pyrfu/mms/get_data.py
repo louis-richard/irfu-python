@@ -1,26 +1,7 @@
-import os
 import re
-# debugger
-import pdb
-import bisect
-# array modules
-import numpy as np
-import xarray as xr
-
-# cdf module
-from spacepy import pycdf
-# physical constants
-from astropy import constants
-# signal porcessing, and optimizing
-from scipy import interpolate, optimize, signal, fft
-
-import warnings 
 
 # Time modules
-import datetime
 from astropy.time import Time
-from dateutil import parser
-
 
 from .splitVs import splitVs
 from .list_files import list_files
@@ -30,13 +11,12 @@ from ..pyrf import ts_append
 from ..pyrf import dist_append
 
 
-#-----------------------------------------------------------------------------------------------------------------------
-def get_data(varStr="", tint=None, mmsId="1", silent=False):
-	"""
-	Load a variable. varStr must in var (see below)
+def get_data(var_str="", tint=None, mms_id="1", silent=False):
+    """
+	Load a variable. var_str must in var (see below)
 
 	Parameters :
-		varStr : str
+		var_str : str
 			Key of the target variable (see below)
 
 		tint : list of str
@@ -132,713 +112,740 @@ def get_data(varStr="", tint=None, mmsId="1", silent=False):
 	"Theplusplus_gsm_hpca_brst_l2", "Toplus_gsm_hpca_brst_l2"
 	"""
 
-	
-
-	if not varStr:
-		raise ValueError("get_data requires at least 2 arguments")
-
-	if tint is None:
-		raise ValueError("get_data requires at least 2 arguments")
-
-	if not isinstance(mmsId,str):
-			mmsId = str(mmsId)
-
-		
-	# Translate short names to names readable for splitVs
-	if varStr == "dfg_ql_srvy":
-		varStr = "B_dmpa_dfg_srvy_ql"
-	elif varStr == "afg_ql_srvy":
-		varStr = "B_dmpa_afg_srvy_ql"
-	elif varStr == "Nhplus_hpca_sitl":
-		varStr = "Nhplus_hpca_srvy_sitl"
-	elif varStr in ["R_gse","R_gsm","V_gse","V_gsm"]:
-		varStr = "_".join([varStr,"mec","srvy","l2"])
-		
-
-	Vr = splitVs(varStr)
-	mmsIdS = "mms"+mmsId
-	Vr["dtype"] = None
-	vdf_flag = False
-	
-
-	if Vr["inst"] == "mec":
-		cdfname     = "_".join([mmsIdS,"mec",Vr["param"].lower(),Vr["cs"]])
-		Vr["dtype"] = "epht89d"
-	elif Vr["inst"] == "fsm":
-		cdfname     = "_".join([mmsIdS,Vr["inst"],"b",Vr["cs"],Vr["tmmode"],Vr["lev"]])
-		Vr["dtype"] = "8khz"
-
-	elif Vr["inst"] in ["fgm","dfg","afg"]:
-		if Vr["lev"] == "l2":
-			cdfname = "_".join([mmsIdS,Vr["inst"],"b",Vr["cs"],Vr["tmmode"],Vr["lev"]])
-		elif Vr["lev"] == "l2pre":
-			cdfname = "_".join([mmsIdS,Vr["inst"],"b",Vr["cs"],Vr["tmmode"],Vr["lev"]])
-		elif Vr["lev"] == "ql":
-			cdfname = "_".join([mmsIdS,Vr["inst"],Vr["tmmode"],Vr["lev"]])
-		else :
-			raise InterruptedError("Should not be here")
-
-
-	elif Vr["inst"] == "fpi":
-		# get specie
-		if Vr["param"][-1] == "i":
-			sensor = "dis"
-		elif Vr["param"][-1] == "e":
-			sensor = "des"
-		else :
-			raise ValueError("invalid specie")
-
-		if Vr["lev"] in ["l2","l2pre","l1b"]:
-			if Vr["param"][:2] == "PD":
-				vdf_flag = True
-				Vr["dtype"] = sensor+"-dist"
-			else :
-				if len(Vr["param"]) > 4:
-					if Vr["param"][:4] == "part":
-						Vr["dtype"] = sensor+"-partmoms"
-					else :
-						Vr["dtype"] = sensor+"-moms"
-				else :
-					Vr["dtype"] = sensor+"-moms"
-		elif Vr["lev"] == "ql":
-			Vr["dtype"] = sensor
-		else :
-			raise InterruptedError("Should not be here")
-		
-		if Vr["param"] in ["PDi","PDe","PDerri","PDerre"]:
-			if Vr["param"][:-1].lower() == "pd":
-				cdfname = "_".join([mmsIdS,sensor,"dist",Vr["tmmode"]])
-			elif len(Vr["param"]) == 6 and Vr["param"][:-1].lower() == "pderr":
-				cdfname = "_".join([mmsIdS,sensor,"disterr",Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-		# Number density
-		elif Vr["param"] in ["Ne","Ni"]:
-			if Vr["lev"] in ["l2","l2pre"]:
-				cdfname = "_".join([mmsIdS,sensor,"numberdensity",Vr["tmmode"]])
-			elif Vr["lev"] == "l1b":
-				cdfname = "_".join([mmsIdS,sensor,"numberdensity"])
-			elif Vr["lev"] == "ql":
-				cdfname = "_".join([mmsIdS,sensor,"numberdensity","fast"])
-			elif Vr["lev"] == "sitl":
-				cdfname = "_".join([mmsIdS,"fpi",sensor.upper(),"numberDensity"])
-			else :
-				raise InterruptedError("Should not be here")
-
-		# Number density
-		elif Vr["param"] in ["Nbge","Nbgi"]:
-			if Vr["lev"] in ["l2","l2pre"]:
-				cdfname = "_".join([mmsIdS,sensor,"numberdensity_bg",Vr["tmmode"]])
-			elif Vr["lev"] == "l1b":
-				cdfname = "_".join([mmsIdS,sensor,"numberdensity_bg"])
-			elif Vr["lev"] == "ql":
-				cdfname = "_".join([mmsIdS,sensor,"numberdensity_bg","fast"])
-			else :
-				raise InterruptedError("Should not be here")
-
-		# Partial number density
-		elif Vr["param"] in ["partNi","partNe"]:
-			if Vr["lev"] == "l2":
-				# only for l2 data
-				cdfname = "_".join([mmsIdS,sensor,"numberdensity","part",Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-
-		# Energy flux omni
-		elif Vr["param"] in ["Enfluxi","Enfluxe"]:
-			if Vr["lev"] == "ql":
-				cdfname = "_".join([mmsIdS,sensor,"energyspectr","omni","fast"])
-			elif Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"energyspectr","omni",Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-
-		elif Vr["param"] in ["Enfluxbgi","Enfluxbge"]:
-			if Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"spectr_bg",Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-		
-
-		# Energies
-		elif Vr["param"] in ["Energyi","Energye"]:
-			if Vr["lev"] == "ql":
-				cdfname = "_".join([mmsIdS,sensor,"energy","fast"])
-			elif Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"energy",Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-
-		# Parallel and perpandiculat temperatures
-		elif Vr["param"] in ["Tparai","Tparae", "Tperpi","Tperpe"]:
-			tmpFAC = Vr["param"][1:5]
-			if Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"temp"+tmpFAC,Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-
-		# Partial moments parallel and perpandiculat temperatures
-		elif Vr["param"] in ["partTparai","partTparae","partTperpi","partTperpe"]:
-			tmpFAC = Vr["param"][5:9]
-			if Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"temp"+tmpFAC,"part",Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-
-		# Temperature and pressure tensors
-		elif Vr["param"] in ["Ti","Te","Pi","Pe"]:
-			if Vr["param"][0] == "T":
-				momType = "temptensor" # temperature
-			elif Vr["param"][0] == "P":
-				momType = "prestensor" # pressure
-			else :
-				raise InterruptedError("Should not be here")
-
-			cdfname = "_".join([mmsIdS,sensor,momType,Vr["cs"],Vr["tmmode"]])
-
-		elif Vr["param"] in ["Pbgi","Pbge"]:
-			momType = "pres_bg"
-			cdfname = "_".join([mmsIdS,sensor,momType,Vr["tmmode"]])
-
-		# Partial temperature and pressure tensors
-		elif Vr["param"] in ["partTi","partTe","partPi","partPe"]:
-			if Vr["param"][4] == "T":
-				momType = "temptensor" # temperature
-			elif Vr["param"][4] == "P":
-				momType = "prestensor" # pressure
-			else :
-				raise InterruptedError("Should not be here")
-
-			cdfname = "_".join([mmsIdS,sensor,momType,"part",Vr["cs"],Vr["tmmode"]])
-
-		# spintone
-		elif Vr["param"] in ["STi","STe"]:
-			if Vr["lev"] in ["l2","l2pre"]:
-				cdfname = "_".join([mmsIdS,sensor,"bulkv_spintone",Vr["cs"],Vr["tmmode"]])
-			elif Vr["lev"] == "ql":
-				cdfname = "_".join([mmsIdS,sensor,"bulkv_spintone",Vr["cs"],Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-		# Bulk velocities
-		elif Vr["param"] in ["Vi","Ve"]:
-			if Vr["lev"] in ["l2","l2pre"]:
-				cdfname = "_".join([mmsIdS,sensor,"bulkv",Vr["cs"],Vr["tmmode"]])
-			elif Vr["lev"] == "ql":
-				cdfname = "_".join([mmsIdS,sensor,"bulkv",Vr["cs"],Vr["tmmode"]])
-			else :
-				raise InterruptedError("Should not be here")
-
-		#Error bulk velocities
-		elif Vr["param"] in ["errVi","errVe"]:
-			if Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"bulkv","err",Vr["tmmode"]])
-			else :
-				raise InterruptedError("Only l2 partmoms available now")
-
-		# Partial bulk velocities
-		elif Vr["param"] in ["partVi","partVe"]:
-			if Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"bulkv","part",Vr["cs"],Vr["tmmode"]])
-			else :
-				raise InterruptedError("Only l2 partmoms available now")
-
-		elif Vr["param"] in ["PADlowene","PADmidene","PADhighene"]:
-			if Vr["lev"] == "l2":
-				cdfname = "_".join([mmsIdS,sensor,"pitchangdist",Vr["param"][3:-1],Vr["tmmode"]])
-			else :
-				raise InterruptedError("Only l2 partmoms available now")                
-		else :
-			raise InterruptedError("Should not be here")
-
-	# Hot Plasma Composition Analyser
-	elif Vr["inst"] == "hpca":
-		param       = Vr["param"][0]
-		Vr["dtype"] = "moments"
-		# Get specie name
-		ion = Vr["param"][1:]
-		if ion[0] == "s":
-			param   = param+ion[0]
-			ion     = ion[1:]
-
-		if not ion in ["hplus","heplus","heplusplus","oplus"]:
-			raise ValueError("Unrecognized ion")
-
-		# Number density
-		if "N" in Vr["param"]:
-			cdfname = "_".join([mmsIdS,"hpca",ion,"number_density"])
-		# Bulk velocity
-		elif "V" in Vr["param"]:
-			cdfname = "_".join([mmsIdS,"hpca",ion,"ion_bulk_velocity"])
-		# Scalar temperature
-		elif "Ts" in Vr["param"]:
-			cdfname = "_".join([mmsIdS,"hpca",ion,"scalar_temperature"])
-		# Pressure tensor
-		elif "P" in Vr["param"]:
-			cdfname = "_".join([mmsIdS,"hpca",ion,"ion_pressure"])
-		# Temperature tensor
-		elif "T" in Vr["param"]:
-			cdfname = "_".join([mmsIdS,"hpca",ion,"temperature_tensor"])
-		elif "PSD" in Vr["param"]:
-			cdfname = "_".join([mmsIdS,"hpca",ion,"phase_space_density"])
-		else :
-			raise ValueError("Unrecognized param")
-
-		# Tensor (vector or matrix) add coordinate system to cdfname
-		if Vr["to"] > 0:
-			if Vr["cs"] == "gsm":
-				cdfname = "_".join([cdfname,"GSM"])
-			elif Vr["cs"] == "dbcs":
-				pass
-			else :
-				raise ValueError("invalid CS")
-
-	# Search Coil Magnetometer
-	elif Vr["inst"] == "scm":
-		if Vr["lev"] != "l2":
-			raise InterruptedError("not implemented yet")
-
-		cdfname     = "_".join([mmsIdS,"scm","acb",Vr["cs"],"scb",Vr["tmmode"],Vr["lev"]])
-		Vr["dtype"] = "scb"
-		
-	elif Vr["inst"] == "dsp":
-		if Vr["lev"] == "l2":
-			if Vr["param"][0].lower() == "e":
-				Vr["dtype"] = "{}psd".format(Vr["param"][0].lower())
-				cdfname = "_".join([mmsIdS,"dsp",Vr["dtype"],"omni"])
-			elif Vr["param"][0].lower() == "b":
-				Vr["dtype"] = "{}psd".format(Vr["param"][0].lower())
-				cdfname = "_".join([mmsIdS,"dsp",Vr["dtype"],"omni",Vr["tmmode"],Vr["lev"]])
-			else : 
-				raise ValueError("Should not be here")
-
-	# Spin-plane Double mmsId instrument 
-	elif Vr["inst"] == "edp":
-		if Vr["lev"] == "sitl":
-			if Vr["param"] == "E":
-				param       = "_".join(["dce_xyz",Vr["cs"]])
-				Vr["dtype"] = "dce"
-
-			elif Vr["param"] == "E2d":
-				param       = "_".join(["dce_xyz",Vr["cs"]])
-				Vr["dtype"] = "dce2d"
-
-			elif Vr["param"] == "V":
-				param       = "scpot"
-				Vr["dtype"] = "scpot"
-
-			cdfname = "_".join([mmsIdS,"edp",param,Vr["tmmode"],Vr["lev"]])
-
-		elif Vr["lev"] == "ql":
-			if Vr["param"] == "E":
-				param       = "_".join(["dce_xyz",Vr["cs"]])
-				Vr["dtype"] = "dce"
-
-			elif Vr["param"] == "E2d":
-				param       = "_".join(["dce_xyz",Vr["cs"]])
-				Vr["dtype"] = "dce2d"
-
-			cdfname = "_".join([mmsIdS,"edp",param])
-
-		elif Vr["lev"] == "l1b":
-			if Vr["param"] == "E":
-				param       = "dce_sensor"
-				Vr["dtype"] = "dce"
-
-			elif Vr["param"] == "V":
-				param       = "dcv_sensor"
-				Vr["dtype"] = "dce"
-
-			cdfname = "_".join([mmsIdS,"edp",param])
-
-		elif Vr["lev"] == "l2a":
-			Vr["dtype"] = "dce2d"
-
-			if Vr["param"] == "Phase":
-				param = "phase"
-
-			elif Vr["param"] in ["Es12","Es34"]:
-				param = "espin_p"+Vr["param"][2:4]
-
-			elif Vr["param"] == "Adcoff":
-				param = "adc_offset"
-
-			elif Vr["param"] in ["Sdev12","Sdev34"]:
-				param = "sdevfit_p"+Vr["param"][4:6]
-
-			elif Vr["param"] == "E":
-				param = "dce"
-
-			cdfname = "_".join([mmsIdS,"edp",param,Vr["tmmode"],Vr["lev"]])
-
-		else :
-			if Vr["param"] == "E":
-				param       = "dce_"+Vr["cs"]
-				Vr["dtype"] = "dce"
-
-			elif Vr["param"] == "Epar":
-				param       = "dce_par_epar"
-				Vr["dtype"] = "dce"
-
-			elif Vr["param"] == "E2d":
-				param       = "dce_"+Vr["cs"]
-				Vr["dtype"] = "dce2d"
-
-			elif Vr["param"] == "V":
-				param       = "scpot"
-				Vr["dtype"] = "scpot"
-
-			elif Vr["param"] == "V6":
-				Vr["dtype"] = "scpot"
-				param = "dcv"
-
-			cdfname = "_".join([mmsIdS,"edp",param,Vr["tmmode"],Vr["lev"]])
-
-	elif Vr["inst"] == "epd-eis":
-		if int(tint[0][2:4]) < 17:
-			ver = "3"
-		else :
-			ver = "4"
-		if Vr["lev"] == "l2":
-			if "len" in Vr["param"]:
-				Vr["dtype"] = "phxtof"
-				if "proton" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","phxtof","proton","P4","flux",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"phxtof","proton","P4","flux",\
-												Vr["param"][-2:]])
-
-					elif "cps" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","phxtof","proton","P4","cps",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"phxtof","proton","P4","cps",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "counts" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","phxtof","proton","P4","counts",Vr["param"][-2:]])
-						
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"phxtof","proton","P4","counts",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				elif "oxygen" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","phxtof","oxygen","P4","flux",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"phxtof","oxygen","P4","flux",\
-												Vr["param"][-2:]])
-
-					elif "cps" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","phxtof","oxygen","P4","cps",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"phxtof","oxygen","P4","cps",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "counts" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","phxtof","oxygen","P4","counts",Vr["param"][-2:]])
-						
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"phxtof","oxygen","P4","counts",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				else :
-					raise InterruptedError("Should not be here")
-						
-			elif Vr["param"][:3] == "hen":
-				Vr["dtype"] = "extof"
-				if "proton" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","proton","P4","flux",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","proton","P4","flux",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "cps" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","proton","P4","cps",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","proton","P4","cps",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "counts" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","proton","P4","counts",Vr["param"][-2:]])
-						
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","proton","P4","counts",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				elif "oxygen" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","oxygen","P4","flux",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","oxygen","P4","flux",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "cps" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","oxygen","P4","cps",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","oxygen","P4","cps",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "counts" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","oxygen","P4","counts",Vr["param"][-2:]])
-						
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","oxygen","P4","counts",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				elif "alpha" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","alpha","P4","flux",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","alpha","P4","flux",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "cps" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","alpha","P4","cps",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","alpha","P4","cps",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "counts" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","alpha","P4","counts",Vr["param"][-2:]])
-						
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","alpha","P4","counts",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					else :
-						raise InterruptedError("Should not be here")
-						
-				elif "dump" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","dump","P4","flux",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"dump","alpha","P4","flux",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "cps" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","dump","P4","cps",Vr["param"][-2:]])
-
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","dump","P4","cps",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					elif "counts" in Vr["param"].lower():
-						if Vr["tmmode"] == "srvy":
-							cdfname = "_".join([mmsIdS,"epd_eis","extof","dump","P4","counts",Vr["param"][-2:]])
-						
-						elif Vr["tmmode"] == "brst":
-							cdfname = "_".join([mmsIdS,"epd_eis",Vr["tmmode"],"extof","dump","P4","counts",\
-												Vr["param"][-2:]])
-
-						else :
-							raise InterruptedError("Should not be here")
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				else :
-					raise InterruptedError("Should not be here")
-					
-			else :
-				raise InterruptedError("Should not be here")
-			
-		else :
-			raise ValueError("not implemented yet")
-
-	elif Vr["inst"] == "feeps":
-		sid = re.findall(r'\d+',Vr["param"])[0]
-		if Vr["lev"] == "l2":
-			if Vr["param"][-1] == "e":
-				Vr["dtype"] = "electron"
-				if "top" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"top",\
-											"intensity","sensorid",sid])
-
-					elif "cps" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"top",\
-											"count_rate","sensorid",sid])
-
-					elif "mask" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"top",\
-											"sector_mask","sensorid",sid])
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				elif "bottom" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"bottom",\
-											"intensity","sensorid",sid])
-
-					elif "cps" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"bottom",\
-											"count_rate","sensorid",sid])
-
-					elif "mask" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"bottom",\
-											"sector_mask","sensorid",sid])
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				else :
-					raise InterruptedError("Should not be here")
-
-			elif Vr["param"][-1] == "i":
-				Vr["dtype"] = "ion"
-				if "top" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"top",\
-											"intensity","sensorid",sid])
-
-					elif "cps" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"top",\
-											"count_rate","sensorid",sid])
-
-					elif "mask" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"top",\
-											"sector_mask","sensorid",sid])
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				elif "bottom" in Vr["param"].lower():
-					if "flux" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"bottom",\
-											"intensity","sensorid",sid])
-
-					elif "cps" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"bottom",\
-											"count_rate","sensorid",sid])
-
-					elif "mask" in Vr["param"].lower():
-						cdfname = "_".join([mmsIdS,"epd_feeps",Vr["tmmode"],Vr["lev"],Vr["dtype"],"bottom",\
-											"sector_mask","sensorid",sid])
-
-					else :
-						raise InterruptedError("Should not be here")
-
-				else :
-					raise InterruptedError("Should not be here")
-
-		else :
-			raise ValueError("not implemented yet")
-	
-	else :
-		raise ValueError("not implemented yet")
-
-	files = list_files(tint,mmsId,Vr)
-	#files = list_files(data_path,tint,mmsId,Vr)
-	if not files:
-		raise ValueError("No files found. Make sure that the data_path is correct")
-
-	if silent == False: print("Loading "+ cdfname+"...")
-
-
-	for i, file in enumerate(files):
-		if vdf_flag:
-			temp = get_dist(file,cdfname,tint)
-			if i == 0:
-				out = temp
-			else :
-				out = dist_append(out,temp)
-		else :
-			temp = get_ts(file,cdfname,tint)
-			if i == 0:
-				out = temp
-			else :
-				out = ts_append(out,temp)
-
-	if out.time.data.dtype == "float64":
-				out.time.data = Time(1e-9*out.time.data,format="unix").datetime
-
-	return out
-		#files = pyRF.list_files(data_path,tint,mmsId,Vr["inst"],datatype,Vr["tmmode"],Vr["lev"])
-#-----------------------------------------------------------------------------------------------------------------------
+    if not var_str:
+        raise ValueError("get_data requires at least 2 arguments")
+
+    if tint is None:
+        raise ValueError("get_data requires at least 2 arguments")
+
+    if not isinstance(mms_id, str):
+        mms_id = str(mms_id)
+
+    # Translate short names to names readable for splitVs
+    if var_str == "dfg_ql_srvy":
+        var_str = "B_dmpa_dfg_srvy_ql"
+    elif var_str == "afg_ql_srvy":
+        var_str = "B_dmpa_afg_srvy_ql"
+    elif var_str == "Nhplus_hpca_sitl":
+        var_str = "Nhplus_hpca_srvy_sitl"
+    elif var_str in ["R_gse", "R_gsm", "V_gse", "V_gsm"]:
+        var_str = "_".join([var_str, "mec", "srvy", "l2"])
+
+    var = splitVs(var_str)
+    mms_id_str = "mms{}".format(mms_id)
+    var["dtype"] = None
+
+    vdf_flag = False
+
+    if var["inst"] == "mec":
+        cdf_name = "_".join([mms_id_str, "mec", var["param"].lower(), var["cs"]])
+
+        var["dtype"] = "epht89d"
+
+    elif var["inst"] == "fsm":
+        cdf_name = "_".join([mms_id_str, var["inst"], "b", var["cs"], var["tmmode"], var["lev"]])
+
+        var["dtype"] = "8khz"
+
+    elif var["inst"] in ["fgm", "dfg", "afg"]:
+        if var["lev"] == "l2":
+            cdf_name = "_".join([mms_id_str, var["inst"], "b", var["cs"], var["tmmode"], var["lev"]])
+        elif var["lev"] == "l2pre":
+            cdf_name = "_".join([mms_id_str, var["inst"], "b", var["cs"], var["tmmode"], var["lev"]])
+        elif var["lev"] == "ql":
+            cdf_name = "_".join([mms_id_str, var["inst"], var["tmmode"], var["lev"]])
+        else:
+            raise InterruptedError("Should not be here")
+
+    elif var["inst"] == "fpi":
+        # get specie
+        if var["param"][-1] == "i":
+            sensor = "dis"
+        elif var["param"][-1] == "e":
+            sensor = "des"
+        else:
+            raise ValueError("invalid specie")
+
+        if var["lev"] in ["l2", "l2pre", "l1b"]:
+            if var["param"][:2].lower() == "pd":
+                vdf_flag = True
+
+                var["dtype"] = "{}-dist".format(sensor)
+            else:
+                if len(var["param"]) > 4:
+                    if var["param"][:4] == "part":
+                        var["dtype"] = "{}-partmoms".format(sensor)
+                    else:
+                        var["dtype"] = "{}-moms".format(sensor)
+                else:
+                    var["dtype"] = "-moms".format(sensor)
+        elif var["lev"] == "ql":
+            var["dtype"] = sensor
+        else:
+            raise InterruptedError("Should not be here")
+
+        if var["param"].lower() in ["pdi", "pde", "pderri", "pderre"]:
+            if var["param"][:-1].lower() == "pd":
+                cdf_name = "_".join([mms_id_str, sensor, "dist", var["tmmode"]])
+            elif len(var["param"]) == 6 and var["param"][:-1].lower() == "pderr":
+                cdf_name = "_".join([mms_id_str, sensor, "disterr", var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+        # Number density
+        elif var["param"].lower() in ["ne", "ni"]:
+            if var["lev"] in ["l2", "l2pre"]:
+                cdf_name = "_".join([mms_id_str, sensor, "numberdensity", var["tmmode"]])
+            elif var["lev"] == "l1b":
+                cdf_name = "_".join([mms_id_str, sensor, "numberdensity"])
+            elif var["lev"] == "ql":
+                cdf_name = "_".join([mms_id_str, sensor, "numberdensity", "fast"])
+            elif var["lev"] == "sitl":
+                cdf_name = "_".join([mms_id_str, "fpi", sensor.upper(), "numberDensity"])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Number density
+        elif var["param"].lower() in ["nbge", "nbgi"]:
+            if var["lev"] in ["l2", "l2pre"]:
+                cdf_name = "_".join([mms_id_str, sensor, "numberdensity_bg", var["tmmode"]])
+            elif var["lev"] == "l1b":
+                cdf_name = "_".join([mms_id_str, sensor, "numberdensity_bg"])
+            elif var["lev"] == "ql":
+                cdf_name = "_".join([mms_id_str, sensor, "numberdensity_bg", "fast"])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Partial number density
+        elif var["param"].lower() in ["partni", "partne"]:
+            if var["lev"] == "l2":
+                # only for l2 data
+                cdf_name = "_".join([mms_id_str, sensor, "numberdensity", "part", var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Energy flux omni
+        elif var["param"].lower() in ["enfluxi", "enfluxe"]:
+            if var["lev"] == "ql":
+                cdf_name = "_".join([mms_id_str, sensor, "energyspectr", "omni", "fast"])
+            elif var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "energyspectr", "omni", var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Energy flux omni
+        elif var["param"].lower() in ["enfluxbgi", "enfluxbge"]:
+            if var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "spectr_bg", var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Energies
+        elif var["param"].lower() in ["energyi", "energye"]:
+            if var["lev"] == "ql":
+                cdf_name = "_".join([mms_id_str, sensor, "energy", "fast"])
+            elif var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "energy", var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Parallel and perpendicular temperatures
+        elif var["param"].lower() in ["tparai", "tparae", "tperpi", "tperpe"]:
+            # Field Aligned component (either para or perp)
+            tmp_fac = var["param"][1:5]
+
+            if var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "temp{}".format(tmp_fac), var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Partial moments parallel and perpandiculat temperatures
+        elif var["param"].lower() in ["parttparai", "parttparae", "parttperpi", "parttperpe"]:
+            # Field Aligned component (either para or perp)
+            tmp_fac = var["param"][5:9]
+
+            if var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "temp{}".format(tmp_fac), "part", var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Temperature and pressure tensors
+        elif var["param"].lower() in ["ti", "te", "pi", "pe"]:
+            if var["param"][0].lower() == "t":
+                mom_type = "temptensor"  # temperature
+            elif var["param"][0].lower() == "p":
+                mom_type = "prestensor"  # pressure
+            else:
+                raise InterruptedError("Should not be here")
+
+            cdf_name = "_".join([mms_id_str, sensor, mom_type, var["cs"], var["tmmode"]])
+
+        elif var["param"].lower() in ["pbgi", "pbge"]:
+            mom_type = "pres_bg"
+            cdf_name = "_".join([mms_id_str, sensor, mom_type, var["tmmode"]])
+
+        # Partial temperature and pressure tensors
+        elif var["param"].lower() in ["partti", "partte", "partpi", "partpe"]:
+            if var["param"][4] == "T":
+                mom_type = "temptensor"  # temperature
+            elif var["param"][4] == "P":
+                mom_type = "prestensor"  # pressure
+            else:
+                raise InterruptedError("Should not be here")
+
+            cdf_name = "_".join([mms_id_str, sensor, mom_type, "part", var["cs"], var["tmmode"]])
+
+        # spintone
+        elif var["param"].lower() in ["sti", "ste"]:
+            if var["lev"] in ["l2", "l2pre"]:
+                cdf_name = "_".join([mms_id_str, sensor, "bulkv_spintone", var["cs"], var["tmmode"]])
+            elif var["lev"] == "ql":
+                cdf_name = "_".join([mms_id_str, sensor, "bulkv_spintone", var["cs"], var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+        # Bulk velocities
+        elif var["param"].lower() in ["vi", "ve"]:
+            if var["lev"] in ["l2", "l2pre"]:
+                cdf_name = "_".join([mms_id_str, sensor, "bulkv", var["cs"], var["tmmode"]])
+            elif var["lev"] == "ql":
+                cdf_name = "_".join([mms_id_str, sensor, "bulkv", var["cs"], var["tmmode"]])
+            else:
+                raise InterruptedError("Should not be here")
+
+        # Error bulk velocities
+        elif var["param"].lower() in ["errvi", "errve"]:
+            if var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "bulkv", "err", var["tmmode"]])
+            else:
+                raise InterruptedError("Only l2 partmoms available now")
+
+        # Partial bulk velocities
+        elif var["param"].lower() in ["partvi", "partve"]:
+            if var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "bulkv", "part", var["cs"], var["tmmode"]])
+            else:
+                raise InterruptedError("Only l2 partmoms available now")
+
+        elif var["param"].lower() in ["padlowene", "padmidene", "padhighene"]:
+            # Energy range
+            en_range = var["param"][3:-1]
+
+            if var["lev"] == "l2":
+                cdf_name = "_".join([mms_id_str, sensor, "pitchangdist", en_range, var["tmmode"]])
+            else:
+                raise InterruptedError("Only l2 partmoms available now")
+        else:
+            raise InterruptedError("Should not be here")
+
+    # Hot Plasma Composition Analyser
+    elif var["inst"] == "hpca":
+        param, var["dtype"] = [var["param"][0], "moments"]
+
+        # Get specie name
+        ion = var["param"][1:]
+
+        if ion[0] == "s":
+            param, ion = [param + ion[0], ion[1:]]
+
+        if not ion in ["hplus", "heplus", "heplusplus", "oplus"]:
+            raise ValueError("Unrecognized ion")
+
+        # Number density
+        if "N" in var["param"]:
+            cdf_name = "_".join([mms_id_str, "hpca", ion, "number_density"])
+        # Bulk velocity
+        elif "V" in var["param"]:
+            cdf_name = "_".join([mms_id_str, "hpca", ion, "ion_bulk_velocity"])
+        # Scalar temperature
+        elif "Ts" in var["param"]:
+            cdf_name = "_".join([mms_id_str, "hpca", ion, "scalar_temperature"])
+        # Pressure tensor
+        elif "P" in var["param"]:
+            cdf_name = "_".join([mms_id_str, "hpca", ion, "ion_pressure"])
+        # Temperature tensor
+        elif "T" in var["param"]:
+            cdf_name = "_".join([mms_id_str, "hpca", ion, "temperature_tensor"])
+        elif "PSD" in var["param"]:
+            cdf_name = "_".join([mms_id_str, "hpca", ion, "phase_space_density"])
+        else:
+            raise ValueError("Unrecognized param")
+
+        # Tensor (vector or matrix) add coordinate system to cdf_name
+        if var["to"] > 0:
+            if var["cs"] == "gsm":
+                cdf_name = "_".join([cdf_name, "GSM"])
+            elif var["cs"] == "dbcs":
+                pass
+            else:
+                raise ValueError("invalid CS")
+
+    # Search Coil Magnetometer
+    elif var["inst"] == "scm":
+        if var["lev"] != "l2":
+            raise InterruptedError("not implemented yet")
+
+        cdf_name = "_".join([mms_id_str, "scm", "acb", var["cs"], "scb", var["tmmode"], var["lev"]])
+        var["dtype"] = "scb"
+
+    elif var["inst"] == "dsp":
+        if var["lev"] == "l2":
+            if var["param"][0].lower() == "e":
+                var["dtype"] = "{}psd".format(var["param"][0].lower())
+                cdf_name = "_".join([mms_id_str, "dsp", var["dtype"], "omni"])
+            elif var["param"][0].lower() == "b":
+                var["dtype"] = "{}psd".format(var["param"][0].lower())
+                cdf_name = "_".join([mms_id_str, "dsp", var["dtype"], "omni", var["tmmode"], var["lev"]])
+            else:
+                raise ValueError("Should not be here")
+
+    # Spin-plane Double mmsId instrument
+    elif var["inst"] == "edp":
+        if var["lev"] == "sitl":
+            if var["param"] == "E":
+                param = "_".join(["dce_xyz", var["cs"]])
+                var["dtype"] = "dce"
+
+            elif var["param"] == "E2d":
+                param = "_".join(["dce_xyz", var["cs"]])
+                var["dtype"] = "dce2d"
+
+            elif var["param"] == "V":
+                param = "scpot"
+                var["dtype"] = "scpot"
+
+            cdf_name = "_".join([mms_id_str, "edp", param, var["tmmode"], var["lev"]])
+
+        elif var["lev"] == "ql":
+            if var["param"] == "E":
+                param = "_".join(["dce_xyz", var["cs"]])
+                var["dtype"] = "dce"
+
+            elif var["param"] == "E2d":
+                param = "_".join(["dce_xyz", var["cs"]])
+                var["dtype"] = "dce2d"
+
+            cdf_name = "_".join([mms_id_str, "edp", param])
+
+        elif var["lev"] == "l1b":
+            if var["param"] == "E":
+                param = "dce_sensor"
+                var["dtype"] = "dce"
+
+            elif var["param"] == "V":
+                param = "dcv_sensor"
+                var["dtype"] = "dce"
+
+            cdf_name = "_".join([mms_id_str, "edp", param])
+
+        elif var["lev"] == "l2a":
+            var["dtype"] = "dce2d"
+
+            if var["param"] == "Phase":
+                param = "phase"
+
+            elif var["param"] in ["Es12", "Es34"]:
+                param = "espin_p" + var["param"][2:4]
+
+            elif var["param"] == "Adcoff":
+                param = "adc_offset"
+
+            elif var["param"] in ["Sdev12", "Sdev34"]:
+                param = "sdevfit_p" + var["param"][4:6]
+
+            elif var["param"] == "E":
+                param = "dce"
+
+            cdf_name = "_".join([mms_id_str, "edp", param, var["tmmode"], var["lev"]])
+
+        else:
+            if var["param"] == "E":
+                param = "dce_" + var["cs"]
+                var["dtype"] = "dce"
+
+            elif var["param"] == "Epar":
+                param = "dce_par_epar"
+                var["dtype"] = "dce"
+
+            elif var["param"] == "E2d":
+                param = "dce_" + var["cs"]
+                var["dtype"] = "dce2d"
+
+            elif var["param"] == "V":
+                param = "scpot"
+                var["dtype"] = "scpot"
+
+            elif var["param"] == "V6":
+                var["dtype"] = "scpot"
+                param = "dcv"
+
+            cdf_name = "_".join([mms_id_str, "edp", param, var["tmmode"], var["lev"]])
+
+    elif var["inst"] == "epd-eis":
+        if int(tint[0][2:4]) < 17:
+            ver = "3"
+        else:
+            ver = "4"
+        if var["lev"] == "l2":
+            if "len" in var["param"]:
+                var["dtype"] = "phxtof"
+                if "proton" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "phxtof", "proton", "P4", "flux", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "phxtof", "proton", "P4", "flux", \
+                                                 var["param"][-2:]])
+
+                    elif "cps" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "phxtof", "proton", "P4", "cps", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "phxtof", "proton", "P4", "cps", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "counts" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "phxtof", "proton", "P4", "counts", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", var["tmmode"], "phxtof", "proton", "P4", "counts", \
+                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                elif "oxygen" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "phxtof", "oxygen", "P4", "flux", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "phxtof", "oxygen", "P4", "flux", \
+                                                 var["param"][-2:]])
+
+                    elif "cps" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "phxtof", "oxygen", "P4", "cps", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "phxtof", "oxygen", "P4", "cps", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "counts" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "phxtof", "oxygen", "P4", "counts", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", var["tmmode"], "phxtof", "oxygen", "P4", "counts", \
+                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                else:
+                    raise InterruptedError("Should not be here")
+
+            elif var["param"][:3] == "hen":
+                var["dtype"] = "extof"
+                if "proton" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "proton", "P4", "flux", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "proton", "P4", "flux", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "cps" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "proton", "P4", "cps", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "proton", "P4", "cps", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "counts" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "proton", "P4", "counts", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", var["tmmode"], "extof", "proton", "P4", "counts", \
+                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                elif "oxygen" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "oxygen", "P4", "flux", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "oxygen", "P4", "flux", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "cps" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "oxygen", "P4", "cps", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "oxygen", "P4", "cps", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "counts" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "oxygen", "P4", "counts", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", var["tmmode"], "extof", "oxygen", "P4", "counts", \
+                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                elif "alpha" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "alpha", "P4", "flux", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "alpha", "P4", "flux", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "cps" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "alpha", "P4", "cps", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "alpha", "P4", "cps", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "counts" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "alpha", "P4", "counts", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "alpha", "P4", "counts", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                elif "dump" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "dump", "P4", "flux", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "dump", "alpha", "P4", "flux", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "cps" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "dump", "P4", "cps", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "dump", "P4", "cps", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    elif "counts" in var["param"].lower():
+                        if var["tmmode"] == "srvy":
+                            cdf_name = "_".join(
+                                [mms_id_str, "epd_eis", "extof", "dump", "P4", "counts", var["param"][-2:]])
+
+                        elif var["tmmode"] == "brst":
+                            cdf_name = "_".join([mms_id_str, "epd_eis", var["tmmode"], "extof", "dump", "P4", "counts", \
+                                                 var["param"][-2:]])
+
+                        else:
+                            raise InterruptedError("Should not be here")
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                else:
+                    raise InterruptedError("Should not be here")
+
+            else:
+                raise InterruptedError("Should not be here")
+
+        else:
+            raise ValueError("not implemented yet")
+
+    elif var["inst"] == "feeps":
+        sid = re.findall(r'\d+', var["param"])[0]
+        if var["lev"] == "l2":
+            if var["param"][-1] == "e":
+                var["dtype"] = "electron"
+                if "top" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "top", \
+                                             "intensity", "sensorid", sid])
+
+                    elif "cps" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "top", \
+                                             "count_rate", "sensorid", sid])
+
+                    elif "mask" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "top", \
+                                             "sector_mask", "sensorid", sid])
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                elif "bottom" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "bottom", \
+                                             "intensity", "sensorid", sid])
+
+                    elif "cps" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "bottom", \
+                                             "count_rate", "sensorid", sid])
+
+                    elif "mask" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "bottom", \
+                                             "sector_mask", "sensorid", sid])
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                else:
+                    raise InterruptedError("Should not be here")
+
+            elif var["param"][-1] == "i":
+                var["dtype"] = "ion"
+                if "top" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "top", \
+                                             "intensity", "sensorid", sid])
+
+                    elif "cps" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "top", \
+                                             "count_rate", "sensorid", sid])
+
+                    elif "mask" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "top", \
+                                             "sector_mask", "sensorid", sid])
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                elif "bottom" in var["param"].lower():
+                    if "flux" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "bottom", \
+                                             "intensity", "sensorid", sid])
+
+                    elif "cps" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "bottom", \
+                                             "count_rate", "sensorid", sid])
+
+                    elif "mask" in var["param"].lower():
+                        cdf_name = "_".join([mms_id_str, "epd_feeps", var["tmmode"], var["lev"], var["dtype"], "bottom", \
+                                             "sector_mask", "sensorid", sid])
+
+                    else:
+                        raise InterruptedError("Should not be here")
+
+                else:
+                    raise InterruptedError("Should not be here")
+
+        else:
+            raise ValueError("not implemented yet")
+
+    else:
+        raise ValueError("not implemented yet")
+
+    files = list_files(tint, mmsId, Vr)
+    # files = list_files(data_path,tint,mmsId,Vr)
+    if not files:
+        raise ValueError("No files found. Make sure that the data_path is correct")
+
+    if silent == False: print("Loading " + cdf_name + "...")
+
+    for i, file in enumerate(files):
+        if vdf_flag:
+            temp = get_dist(file, cdf_name, tint)
+            if i == 0:
+                out = temp
+            else:
+                out = dist_append(out, temp)
+        else:
+            temp = get_ts(file, cdf_name, tint)
+            if i == 0:
+                out = temp
+            else:
+                out = ts_append(out, temp)
+
+    if out.time.data.dtype == "float64":
+        out.time.data = Time(1e-9 * out.time.data, format="unix").datetime
+
+    return out
+# files = pyRF.list_files(data_path,tint,mmsId, var["inst"],datatype, var["tmmode"], var["lev"])
+# -----------------------------------------------------------------------------------------------------------------------
