@@ -146,8 +146,8 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 		out = xr.DataArray(outdata, coords=[b_dict["1"].time, ["x", "y", "z"]], dims=["time", "comp"])
 
 	elif len(outdata.shape) == 3:
-		out = xr.DataArray(outdata, coords=[b_dict["1"].time, ["x", "y", "z"], ["x", "y", "z"]],\
-						dims=["time", "vcomp", "hcomp"])
+		out = xr.DataArray(
+			outdata, coords=[b_dict["1"].time, ["x", "y", "z"], ["x", "y", "z"]], dims=["time", "vcomp", "hcomp"])
 
 	else:
 		raise TypeError("Invalid type")
