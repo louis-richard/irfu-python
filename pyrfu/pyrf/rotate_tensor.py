@@ -1,5 +1,4 @@
 import numpy as np
-import xarray as xr
 
 from .resample import resample
 from .ts_tensor_xyz import ts_tensor_xyz
@@ -167,8 +166,8 @@ def rotate_tensor(*args):
 
 			rot_temp = np.array([[1, 0, 0], [0, np.cos(theta), np.sin(theta)], [0, -np.sin(theta), np.cos(theta)]])
 
-			p_tensor_p[ii, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])),\
-											 np.transpose(rot_temp))
+			p_tensor_p[ii, :, :] = np.matmul(
+				np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])), np.transpose(rot_temp))
 
 	if qqeq:
 		print("notice : Rotating tensor so perpendicular diagonal components are most unequal.")
@@ -177,8 +176,8 @@ def rotate_tensor(*args):
 		for ii, theta in enumerate(thetas):
 			rot_temp = np.array([[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
 
-			p_tensor_p[ii, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])),\
-											 np.transpose(rot_temp))
+			p_tensor_p[ii, :, :] = np.matmul(
+				np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])), np.transpose(rot_temp))
 
 	# Construct output
 	p = ts_tensor_xyz(p_times, p_tensor_p)

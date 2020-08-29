@@ -33,7 +33,7 @@ def dot(x=None, y=None):
 		>>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
 		>>> j_xyz, div_b, b_avg, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
 		>>> # Compute the electric at the center of mass of the tetrahedron
-		>>> e_avg = pyrf.avg_4sc(e_mms)
+		>>> e_xyz = pyrf.avg_4sc(e_mms)
 		>>> # Compute J.E dissipation
 		>>> je = pyrf.dot(j_xyz, e_xyz)
 

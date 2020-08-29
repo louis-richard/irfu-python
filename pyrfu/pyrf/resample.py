@@ -47,14 +47,16 @@ def resample(inp=None, ref=None, **kwargs):
 		
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]
+		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
-		>>> 
+		>>> mms_id = 1
 		>>> # Load magnetic field and electric field
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
-		>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,ic)
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+		>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
+		>>> # Resample magnetic field to electric field sampling
+		>>> b_xyz = pyrf.resample(b_xyz, e_xyz)
 		
 	"""
 
@@ -89,8 +91,8 @@ def resample(inp=None, ref=None, **kwargs):
 		if sfy:
 			raise ValueError("fs/window already specified")
 
-		if (isinstance(kwargs["window"], int) or isinstance(kwargs["window"], float)
-				or isinstance(kwargs["window"], np.ndarray)):
+		if (not (not isinstance(kwargs["window"], int) and not isinstance(kwargs["window"], float) and not isinstance(
+				kwargs["window"], np.ndarray))):
 
 			sfy = 1 / kwargs["window"]
 		else:
@@ -120,9 +122,9 @@ def resample(inp=None, ref=None, **kwargs):
 	
 	if len(inp) == 1:
 		if len(inp.shape) == 1:
-			outdata = np.tile(inp_data, len(ref_time))
+			out_data = np.tile(inp_data, len(ref_time))
 		else:
-			outdata = np.tile(inp_data, (len(ref_time), 1))
+			out_data = np.tile(inp_data, (len(ref_time), 1))
 
 	ndata = len(ref_time)
 
@@ -210,7 +212,7 @@ def resample(inp=None, ref=None, **kwargs):
 
 		inp_shape = tuple(inp_shape)
 
-		outdata = np.zeros(inp_shape)
+		out_data = np.zeros(inp_shape)
 
 		for i in range(ndata):
 			idx_l = bisect.bisect_left(inp_time, ref_time[i] - dt2)
@@ -219,7 +221,7 @@ def resample(inp=None, ref=None, **kwargs):
 			ii = np.arange(idx_l, idx_r)
 
 			if ii.size == 0:
-				outdata[i, ...] = np.nan
+				out_data[i, ...] = np.nan
 			else:
 				if thresh:
 					sdev = np.std(inp_data[ii, ...], axis=0)
@@ -232,22 +234,22 @@ def resample(inp=None, ref=None, **kwargs):
 								kk = bisect.bisect_right(inp_data[ii, k + 1] - mm[k], thresh * sdev[k])
 								if kk:
 									if median_flag:
-										outdata[i, k + 1] = np.median(inp_data[ii[kk], k + 1], axis=0)
+										out_data[i, k + 1] = np.median(inp_data[ii[kk], k + 1], axis=0)
 									elif max_flag:
-										outdata[i, k + 1] = np.max(inp_data[ii[kk], k + 1], axis=0)
+										out_data[i, k + 1] = np.max(inp_data[ii[kk], k + 1], axis=0)
 									else:
-										outdata[i, k + 1] = np.mean(inp_data[ii[kk], k + 1], axis=0)
+										out_data[i, k + 1] = np.mean(inp_data[ii[kk], k + 1], axis=0)
 								else:
-									outdata[i, k + 1] = np.nan
+									out_data[i, k + 1] = np.nan
 							else:
-								outdata[i, ...] = np.nan
+								out_data[i, ...] = np.nan
 				else:
 					if median_flag:
-						outdata[i, ...] = np.median(inp_data[ii, ...], axis=0)
+						out_data[i, ...] = np.median(inp_data[ii, ...], axis=0)
 					elif max_flag:
-						outdata[i, ...] = np.max(inp_data[ii, ...], axis=0)
+						out_data[i, ...] = np.max(inp_data[ii, ...], axis=0)
 					else:
-						outdata[i, ...] = np.mean(inp_data[ii, ...], axis=0)
+						out_data[i, ...] = np.mean(inp_data[ii, ...], axis=0)
 
 	elif flag_do == "interpolation":
 		if any([mean_flag, median_flag, max_flag]):
@@ -258,25 +260,28 @@ def resample(inp=None, ref=None, **kwargs):
 
 		# If time series agree, no interpolation is necessary.
 		if len(inp_time) == len(ref_time) and all(inp_time == ref_time):
-			outdata = inp_data
-			coords = [ref.coords["time"]]
+			out_data = inp_data
+			coords = [ref.coords["time"].data]
 
 			if len(inp.coords) > 1:
 				for k in inp.dims[1:]:
-					coords.append(inp.coords[k])
+					coords.append(inp.coords[k].data)
 
-			out = xr.DataArray(outdata, coords=coords, dims=inp.dims,attrs=inp.attrs)
+			out = xr.DataArray(out_data, coords=coords, dims=inp.dims, attrs=inp.attrs)
 			
 			return out
 
 		tck = interpolate.interp1d(inp_time, inp_data, kind=method, axis=0, fill_value="extrapolate")
 		out_data = tck(ref_time)
 
+	else:
+		raise NameError("Invalid method")
+
 	coords = [ref.coords["time"]]
 
 	if len(inp.coords) > 1:
 		for k in inp.dims[1:]:
-			coords.append(inp.coords[k])
+			coords.append(inp.coords[k].data)
 
 	out = xr.DataArray(out_data, coords=coords, dims=inp.dims,attrs=inp.attrs)
 	

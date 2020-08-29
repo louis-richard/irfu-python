@@ -46,7 +46,7 @@ def ts_scalar(t=None, data=None, attrs=None):
 	if attrs is None:
 		flag_attrs = False
 	
-	out = xr.DataArray(data, coords=[t], dims="time")
+	out = xr.DataArray(data, coords=[t[:]], dims="time")
 	
 	if flag_attrs:
 		out.attrs = attrs

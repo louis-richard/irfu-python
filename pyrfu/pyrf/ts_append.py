@@ -62,7 +62,7 @@ def ts_append(inp1=None, inp2=None):
 			# add attributes
 			exec("dim"+str(i)+"['attrs'] = {}")
 
-			for k in eval("inp1." + dim + ".attrs"):
+			for k in eval("inp1.{}.attrs".format(dim)):
 
 				# if attrs is array time append
 				if isinstance(eval("inp1." + dim + ".attrs[k]"), np.ndarray):

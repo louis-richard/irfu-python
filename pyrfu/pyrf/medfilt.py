@@ -63,7 +63,8 @@ def medfilt(inp=None, npts=11):
 	try:
 		ncomp = inpdata.shape[1]
 	except IndexError:
-		ncomp 	= 1
+		ncomp = 1
+
 		inpdata = inpdata[..., None]
 
 	outdata = np.zeros(inpdata.shape)

@@ -49,7 +49,7 @@ def ts_vec_xyz(t=None, data=None, attrs=None):
 	if attrs is None:
 		flag_attrs = False
 	
-	out = xr.DataArray(data, coords=[t, ["x", "y", "z"]], dims=["time", "comp"])
+	out = xr.DataArray(data, coords=[t[:], ["x", "y", "z"]], dims=["time", "comp"])
 	
 	if flag_attrs:
 		out.attrs = attrs

@@ -3,7 +3,7 @@ import xarray as xr
 from scipy import optimize
 
 
-def calc_disprel_tm(V=None, dV=None, T=None, dT=None):
+def calc_disprel_tm(v=None, dv=None, tau=None, dtau=None):
 	"""
 	Computes dispersion relation from velocities and period given by the timing method
 
@@ -30,53 +30,58 @@ def calc_disprel_tm(V=None, dV=None, T=None, dT=None):
 
 	"""
 
-	if (V is None) or (dV is None) or (T is None) or (dT is None):
+	if (v is None) or (dv is None) or (tau is None) or (dtau is None):
 		raise ValueError("calc_disprel_tm requires at least 4 arguments")
 
-	if not isinstance(V,xr.DataArray):
+	if not isinstance(v, xr.DataArray):
 		raise TypeError("V must a DataArray")
 
-	if not isinstance(dV,xr.DataArray):
+	if not isinstance(dv, xr.DataArray):
 		raise TypeError("dV must a DataArray")
 
-	if not isinstance(T,xr.DataArray):
+	if not isinstance(tau, xr.DataArray):
 		raise TypeError("T must a DataArray")
 
-	if not isinstance(dT,xr.DataArray):
+	if not isinstance(dtau, xr.DataArray):
 		raise TypeError("dT must a DataArray")
 
-	omega   = 2*np.pi/T                             # Frequency
-	lamb    = V*T                                   # Wave length
-	k       = 2*np.pi/lamb                          # Wave number
+	omega, lamb, k = [2 * np.pi / tau, v * tau, 2 * np.pi/(v * tau)]  # Frequency, wavelength, wave number
 
-	# Estimate errors
-	domega  = omega*((dT/T)/(1+dT/T))               # Error on frequency
-	dlamb   = dV*T                                  # Error on wave length
-	dk      = k*((dlamb/lamb)/(1+dlamb/lamb))       # Error on wave number
-	
-	
-	modelTV         = lambda x,a: a/x
-	fitTV, covTV    = optimize.curve_fit(modelTV,T,V,1,sigma=np.sqrt(dV**2+dT**2))
-	sigmaTV         = np.sqrt(np.diagonal(covTV))
-	hires_T         = np.logspace(np.log10(5),np.log10(2e3),int(1e4))
-	bound_upper_V   = modelTV(hires_T, *(fitTV + 1.96*sigmaTV))
-	bound_lower_V   = modelTV(hires_T, *(fitTV - 1.96*sigmaTV))
-	pred_V          = modelTV(hires_T,*fitTV)
-	
-	
-	model       = lambda x,a: a*x
-	fit, cov    = optimize.curve_fit(model,k,omega,1,sigma=np.sqrt(domega**2+dk**2))
-	sigma       = np.sqrt(np.diagonal(cov))
-	hires_k     = np.linspace(0,0.003,int(1e4))
-	bound_upper = model(hires_k, *(fit + 1.96*sigma))
-	bound_lower = model(hires_k, *(fit - 1.96*sigma))
-	pred_omega  = model(hires_k,*fit)
-	
-	
-	outdict     = { "T"             : T                             ,\
-					"dT"            : (["T"], dT)                   ,\
-					"V"             : (["T"], V)                    ,\
-					"dV"            : (["T"], dV)                   ,\
+	# Estimate propagation of the errors
+	# Error on frequency
+	domega = omega*((dtau / tau) / (1 + dtau / tau))
+
+	# Error on wavelength
+	dlamb = dv * tau
+
+	# Error on wave number
+	dk = k*((dlamb/lamb)/(1+dlamb/lamb))
+
+	def model_tau_v(x, a):
+		return a / x
+
+	fit_tau_v, cov_tau_v = optimize.curve_fit(model_tau_v, tau, v, 1, sigma=np.sqrt(dv ** 2 + dtau ** 2))
+	sigma_tau_v = np.sqrt(np.diagonal(cov_tau_v))
+	hires_tau = np.logspace(np.log10(5), np.log10(2e3), int(1e4))
+	bound_upper_v = model_tau_v(hires_tau, *(fit_tau_v + 1.96*sigma_tau_v))
+	bound_lower_v = model_tau_v(hires_tau, *(fit_tau_v - 1.96*sigma_tau_v))
+	pred_v = model_tau_v(hires_tau, *fit_tau_v)
+
+	def model_k_w(x, a):
+		return a * x
+
+	fit, cov = optimize.curve_fit(model_k_w, k, omega, 1, sigma=np.sqrt(domega ** 2 + dk ** 2))
+	sigma_k_w = np.sqrt(np.diagonal(cov))
+	hires_k = np.linspace(0, 0.003,int(1e4))
+	bound_upper_w = model_k_w(hires_k, *(fit + 1.96 * sigma_k_w))
+	bound_lower_w = model_k_w(hires_k, *(fit - 1.96 * sigma_k_w))
+	pred_w = model_k_w(hires_k, *fit)
+
+
+	outdict     = { "T"             : tau                             ,\
+					"dT"            : (["T"], dtau)                   ,\
+					"V"             : (["T"], v)                    ,\
+					"dV"            : (["T"], dv)                   ,\
 					"lamb"          : (["T"], lamb)                 ,\
 					"dlamb"         : (["T"], dlamb)                ,\
 					"k"             : k                             ,\
@@ -87,14 +92,14 @@ def calc_disprel_tm(V=None, dV=None, T=None, dT=None):
 					"pred_omega"    : (["hires_k"],pred_omega)      ,\
 					"bound_upper"   : (["hires_k"], bound_upper)    ,\
 					"bound_lower"   : (["hires_k"], bound_lower)    ,\
-					"hires_T"       : hires_T                       ,\
-					"pred_V"        : (["hires_T"], pred_V)         ,\
-					"bound_upper_V" : (["hires_T"], bound_upper_V)  ,\
-					"bound_lower_V" : (["hires_T"], bound_lower_V)  ,\
-					"l"             : fitTV                         ,\
+					"hires_tau"       : hires_tau                       ,\
+					"pred_v"        : (["hires_tau"], pred_v)         ,\
+					"bound_upper_v" : (["hires_tau"], bound_upper_v)  ,\
+					"bound_lower_v" : (["hires_tau"], bound_lower_v)  ,\
+					"l"             : fit_tau_v                         ,\
 					"Vph"           : fit                           ,\
 					}
 
-	
+
 	out = xr.Dataset(outdict)
 	return out

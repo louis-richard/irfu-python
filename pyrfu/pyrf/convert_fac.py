@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 
 from .resample import resample
-from .ts_vec_xy import ts_vec_xy
+from .ts_vec_xyz import ts_vec_xyz
 from .calc_fs import calc_fs
 
 
@@ -57,10 +57,10 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 	if len(inp) != len(b_bgd):
 		b_bgd = resample(b_bgd, inp, fs=calc_fs(inp))
 	
-	t 			= inp.time
-	inp_data 	= inp.data
-	b_bgd 		= b_bgd
-	bn 			= b_bgd/np.linalg.norm(b_bgd, axis=1, keepdims=True)
+	t, inp_data = [inp.time.data, inp.data]
+
+	# Normalize background magnetic field
+	bn = b_bgd/np.linalg.norm(b_bgd, axis=1, keepdims=True)
 
 	if isinstance(r, (list, np.ndarray)) and len(r) == 3:
 		r = np.tile(r, (len(b_bgd), 1))
@@ -88,15 +88,15 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 		outdata[:, 2] = np.sum(r_par * inp_data, axis=1)
 
 		# xarray
-		out = xr.DataArray(outdata, coords=[inp.time.data, inp.comp], dims=["time", "comp"])
+		out = xr.DataArray(outdata, coords=[t, inp.comp], dims=["time", "comp"])
 
 	elif ndim == 1:
-		outdata = np.zeros((2, ndata))
+		outdata = np.zeros((3, ndata))
 
 		outdata[:, 0] = inp[:, 0]*(r_perp_x[:, 0] * r[:, 0] + r_perp_x[:, 1] * r[:, 1] + r_perp_x[:, 2] * r[:, 2])
 		outdata[:, 1] = inp[:, 0]*(r_par[:, 0] * r[:, 0] + r_par[:, 1] * r[:, 1] + r_par[:, 2] * r[:, 2])
 
-		out = ts_vec_xy(inp.time.data, outdata, attrs=inp.attrs)
+		out = ts_vec_xyz(t, outdata, attrs=inp.attrs)
 	else:
 		raise TypeError("Invalid dimension of inp")
 

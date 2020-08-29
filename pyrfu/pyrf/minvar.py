@@ -67,8 +67,8 @@ def minvar(inp=None, flag="mvar"):
 	mva[:, 2] = np.cross(mva[:, 0], mva[:, 1])
 
 	if flag.lower() == "<bn>=0":
-		inp_mvar_mean = np.mean(np.sum(np.tile(inp_data, (3, 1, 1)) * np.transpose(np.tile(mva, (inp_data.shape[0], 1, 1)),\
-																				(2, 0, 1)), 1), 1)
+		inp_mvar_mean = np.mean(
+			np.sum(np.tile(inp_data, (3, 1, 1)) * np.transpose(np.tile(mva, (inp_data.shape[0], 1, 1)), (2, 0, 1)), 1), 1)
 
 		a = np.sum(inp_mvar_mean ** 2)
 

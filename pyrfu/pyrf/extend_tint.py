@@ -1,7 +1,8 @@
 from dateutil import parser
 from astropy.time import Time
 
-def extend_tint(tint, ext=[-60, 60]):
+
+def extend_tint(tint=None, ext=None):
 	"""
 	Extends time interval
 
@@ -26,6 +27,9 @@ def extend_tint(tint, ext=[-60, 60]):
 		>>> tintl = pyrf.extend_tint(tint,[-100,100])
 		
 	"""
+
+	if ext is None:
+		ext = [-60, 60]
 
 	# Convert to unix format
 	tstart, tstop = [Time(parser.parse(tint_bound), format="datetime").unix for tint_bound in tint]

@@ -37,7 +37,7 @@ def median_bins(x=None, y=None, nbins=10):
 		>>> mms_list = np.arange(1,5)
 		>>> # Load magnetic field and electric field
 		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
-		>>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
+		>>> r_mms = [mms.get_data("R_gse", tint, ic) for mms_id in mms_list]
 		>>> # Compute current density, etc
 		>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
 		>>> # Compute magnitude of B and J

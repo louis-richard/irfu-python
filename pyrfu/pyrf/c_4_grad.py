@@ -9,7 +9,6 @@ from .dot import dot
 from .cross import cross
 
 
-
 def c_4_grad(r_list=None, b_list=None, method="grad"):
 	"""
 	Calculate gradient of physical field using 4 spacecraft technique. 

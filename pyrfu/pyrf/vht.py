@@ -76,8 +76,8 @@ def vht(e=None, b=None, flag=1):
 	v_ht_hat = v_ht/np.linalg.norm(v_ht, keepdims=True)
 	
 	print(u_msg)
-	frmt = "v_ht ={:7.4f} * [{v_ht_hat[0]:7.4f}, {v_ht_hat[1]:7.4f}, {v_ht_hat[2]:7.4f}] "\
-			+ "= [{v_ht[0]:7.4f}, {v_ht[1]:7.4f}, {v_ht[2]:7.4f}] km/s"
+	frmt = "v_ht ={:7.4f} * [{v_ht_hat[0]:7.4f}, {v_ht_hat[1]:7.4f}, {v_ht_hat[2]:7.4f}] = [{v_ht[0]:7.4f}, " \
+		   "{v_ht[1]:7.4f}, {v_ht[2]:7.4f}] km/s "
 
 	print(frmt.format(np.linalg.norm(v_ht), v_ht_hat=v_ht_hat, v_ht=v_ht))
 
@@ -104,8 +104,8 @@ def vht(e=None, b=None, flag=1):
 
 	dv_ht_hat = dv_ht / np.linalg.norm(dv_ht)
 
-	frmt = "\delta v_ht ={:7.4f}*[{dv_ht_hat[0]:7.4f}, {dv_ht_hat[1]:7.4f}, {dv_ht_hat[2]:7.4f}] "\
-				+ "= [{dv_ht[0]:7.4f}, {dv_ht[1]:7.4f}, {dv_ht[2]:7.4f}] km/s"
+	frmt = "\\delta v_ht ={:7.4f}*[{dv_ht_hat[0]:7.4f}, {dv_ht_hat[1]:7.4f}, {dv_ht_hat[2]:7.4f}] = [{dv_ht[0]:7.4f}, " \
+			"{dv_ht[1]:7.4f}, {dv_ht[2]:7.4f}] km/s"
 
 	print(frmt.format(np.linalg.norm(dv_ht), dv_ht_hat=dv_ht_hat, dv_ht=dv_ht))
 

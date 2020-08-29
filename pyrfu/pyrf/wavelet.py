@@ -7,7 +7,7 @@ from astropy.time import Time
 import matplotlib.pyplot as plt
 
 
-def wavelet(inp=None,**kwargs):
+def wavelet(inp=None, **kwargs):
 	"""
 	Calculate wavelet spectrogram based on fast FFT algorithm
 	
@@ -45,6 +45,7 @@ def wavelet(inp=None,**kwargs):
 
 	# Default values
 	# Fs
+
 	if isinstance(inp, xr.DataArray):
 		# Time bounds
 		tstart, tstop = [Time(t_bound, format="datetime64").unix for t_bound in [inp.time.data[0], inp.time.data[-1]]]
@@ -69,7 +70,7 @@ def wavelet(inp=None,**kwargs):
 	nf = 200
 
 	# wavelet_width
-	wavelet_width = 5.36
+	wavelet_width, deltaf = [5.36, 100]
 
 	return_power, cut_edge, linear_df, plot_flag = [True, True, False, True]
 
@@ -96,7 +97,6 @@ def wavelet(inp=None,**kwargs):
 		if isinstance(kwargs["linear"], (int, float)):
 			deltaf = kwargs["linear"]
 		else:
-			deltaf = 100
 			raise Warning("Unknow input for linear deltaf set to 100")
 
 	if "wavelet_width" in kwargs:
@@ -149,8 +149,12 @@ def wavelet(inp=None,**kwargs):
 	# Get the correct frequencies for the wavelet transform
 	newfreq = w0 / a
 
-	if len(data.shape) == 2:
-		outdict = {}
+	if len(inp.shape) == 1:
+		outdict, power2 = [None, np.zeros((len(inp.data), nf))]
+	elif len(inp.shape) == 2:
+		outdict, power2 = [{}, None]
+	else:
+		raise TypeError("Invalid shape of the inp")
 
 	newfreqmat, temp = np.meshgrid(newfreq, w)
 
@@ -213,8 +217,8 @@ def wavelet(inp=None,**kwargs):
 
 	if plot_flag:
 		if isinstance(out, xr.Dataset):
-			fig, axs = plt.subplots(3, sharex=True)
-			#fig.subplots_adjust(hspace=0)
+			fig, axs = plt.subplots(3, sharex="all")
+			# fig.subplots_adjust(hspace=0)
 			axs[0].pcolormesh(out.time, out.frequency, out.x.data, cmap="jet")
 			axs[0].set_yscale('log')
 			axs[0].set_ylabel("f [Hz]")

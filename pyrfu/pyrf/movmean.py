@@ -56,7 +56,7 @@ def movmean(inp=None, n_pts=100):
 		if k == "time": 
 			coords.append(inp.coords[k][int(n_pts / 2):-int(n_pts / 2)])
 		else: 
-			coords.append(inp.coords[k]) 
+			coords.append(inp.coords[k].data)
 
 	# Output in DataArray type
 	out = xr.DataArray(out_dat, coords=coords, dims=inp.dims, attrs=inp.attrs)
