@@ -1,4 +1,3 @@
-import os
 import bisect
 import numpy as np
 import xarray as xr
@@ -6,17 +5,15 @@ from spacepy import pycdf
 from dateutil import parser
 
 
-
-
-def get_ts(file_path="",cdfname="",trange=None):
+def get_ts(file_path="", cdf_name="", trange=None):
 	"""
-	Read field named cdfname in file and convert to time series
+	Read field named cdf_name in file and convert to time series
 
 	Parameters :
 		file_path : str
 			Path of the cdf file
 
-		cdfname : str
+		cdf_name : str
 			Name of the target variable in the cdf file
 
 		trange : list 
@@ -28,51 +25,44 @@ def get_ts(file_path="",cdfname="",trange=None):
 
 	"""
 	
-	if not file_path or not cdfname or trange is None:
+	if not file_path or not cdf_name or trange is None:
 		raise ValueError("get_ts requires at least 3 arguments")
+
+	assert isinstance(file_path, str)
+	assert isinstance(cdf_name, str)
 	
-	if not isinstance(file_path,str):
-		raise TypeError("file_path must be a str in UNIX format")
-	
-	if not isinstance(cdfname,str):
-		raise TypeError("cdfname must be a str")
-	
-	x = {}
-	y = {}
-	z = {}
-	w = {}
-	outdict = {}
+	x, y, z, w = [{}, {}, {}, {}]
+
+	out_dict = {}
+
 	with pycdf.CDF(file_path) as f:
-		depend0_key = f[cdfname].attrs["DEPEND_0"]
-		start_ind   = bisect.bisect_left(f[depend0_key], parser.parse(trange[0]))
-		stop_ind    = bisect.bisect_left(f[depend0_key], parser.parse(trange[1]))
-		x["data"]   = f[depend0_key][start_ind:stop_ind]
-		x["attrs"]  = {}
+		depend0_key = f[cdf_name].attrs["DEPEND_0"]
+		start_ind, stop_ind = [bisect.bisect_left(f[depend0_key], parser.parse(trange[0])),
+							   bisect.bisect_left(f[depend0_key], parser.parse(trange[1]))]
+
+		x["data"], x["attrs"] = [f[depend0_key][start_ind:stop_ind], {}]
+
 		for k in f[depend0_key].attrs.keys():
 			x["attrs"][k] = f[depend0_key].attrs[k]
-			if isinstance(x["attrs"][k],str) and x["attrs"][k] in f.keys() and not k == "LABLAXIS":
-				try :
+			if isinstance(x["attrs"][k], str) and x["attrs"][k] in f.keys() and not k == "LABLAXIS":
+				try:
 					# If array
-					x["attrs"][k] = f[x["attrs"][k]][start_ind:stop_ind,...]
+					x["attrs"][k] = f[x["attrs"][k]][start_ind:stop_ind, ...]
 				except IndexError:
 					# If scalar
 					x["attrs"][k] = f[x["attrs"][k]][...]
 
-		
-		if "DEPEND_1" in f[cdfname].attrs or "REPRESENTATION_1" in f[cdfname].attrs:
-			try :
-				depend1_key = f[cdfname].attrs["DEPEND_1"]
+		if "DEPEND_1" in f[cdf_name].attrs or "REPRESENTATION_1" in f[cdf_name].attrs:
+			try:
+				depend1_key = f[cdf_name].attrs["DEPEND_1"]
 			except KeyError:
-				depend1_key = f[cdfname].attrs["REPRESENTATION_1"]
-
-			#pdb.set_trace()
+				depend1_key = f[cdf_name].attrs["REPRESENTATION_1"]
 
 			if depend1_key == "x,y,z":
-				y["data"]   = np.array(depend1_key.split(","))
-				y["attrs"]  = {"LABLAXIS": "comp"}
-			else :
-				try :
-					y["data"] = f[depend1_key][start_ind:stop_ind,:]
+				y["data"], y["attrs"] = [np.array(depend1_key.split(",")), {"LABLAXIS": "comp"}]
+			else:
+				try:
+					y["data"] = f[depend1_key][start_ind:stop_ind, :]
 				except IndexError:
 					y["data"] = f[depend1_key][...]
 
@@ -117,11 +107,11 @@ def get_ts(file_path="",cdfname="",trange=None):
 					y["attrs"]["LABLAXIS"] = "comp"
 
 
-		if "DEPEND_2" in f[cdfname].attrs or "REPRESENTATION_2" in f[cdfname].attrs:
+		if "DEPEND_2" in f[cdf_name].attrs or "REPRESENTATION_2" in f[cdf_name].attrs:
 			try :
-				depend2_key = f[cdfname].attrs["DEPEND_2"]
+				depend2_key = f[cdf_name].attrs["DEPEND_2"]
 			except KeyError:
-				depend2_key = f[cdfname].attrs["REPRESENTATION_2"]
+				depend2_key = f[cdf_name].attrs["REPRESENTATION_2"]
 
 			if depend2_key == "x,y,z":
 				z["data"]   = np.array(depend2_key.split(","))
@@ -138,14 +128,14 @@ def get_ts(file_path="",cdfname="",trange=None):
 				if not "LABLAXIS" in z["attrs"].keys():
 					z["attrs"]["LABLAXIS"] = "comp"
 
-		if ("DEPEND_3" in f[cdfname].attrs 
-			or "REPRESENTATION_3" in f[cdfname].attrs 
-			and f[cdfname].attrs["REPRESENTATION_3"] != "x,y,z"):
+		if ("DEPEND_3" in f[cdf_name].attrs 
+			or "REPRESENTATION_3" in f[cdf_name].attrs 
+			and f[cdf_name].attrs["REPRESENTATION_3"] != "x,y,z"):
 
 			try :
-				depend3_key = f[cdfname].attrs["DEPEND_3"]
+				depend3_key = f[cdf_name].attrs["DEPEND_3"]
 			except KeyError:
-				depend3_key = f[cdfname].attrs["REPRESENTATION_3"]
+				depend3_key = f[cdf_name].attrs["REPRESENTATION_3"]
 
 			w["data"] = f[depend3_key][...]
 
@@ -166,39 +156,39 @@ def get_ts(file_path="",cdfname="",trange=None):
 				w["attrs"]["LABLAXIS"] = "comp"
 
 
-		if "sector_mask" in cdfname:
-			y["data"]   = f[f[cdfname.replace("sector_mask","intensity")].attrs["DEPEND_1"]][...]
+		if "sector_mask" in cdf_name:
+			y["data"]   = f[f[cdf_name.replace("sector_mask","intensity")].attrs["DEPEND_1"]][...]
 			y["attrs"]  = {}
-			for k in f[f[cdfname.replace("sector_mask","intensity")].attrs["DEPEND_1"]].attrs.keys():
-				y["attrs"][k] = f[f[cdfname.replace("sector_mask","intensity")].attrs["DEPEND_1"]].attrs[k]
+			for k in f[f[cdf_name.replace("sector_mask","intensity")].attrs["DEPEND_1"]].attrs.keys():
+				y["attrs"][k] = f[f[cdf_name.replace("sector_mask","intensity")].attrs["DEPEND_1"]].attrs[k]
 
 			y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ","_")
 
 
-		if "edp_dce_sensor" in cdfname:
+		if "edp_dce_sensor" in cdf_name:
 			y["data"] = ["x","y","z"]
 			y["attrs"] = {"LABLAXIS": "comp"}
 			
-		outdict["data"] = f[cdfname][start_ind:stop_ind,...]
+		out_dict["data"] = f[cdf_name][start_ind:stop_ind,...]
 
-		if outdict["data"].ndim == 2 and outdict["data"].shape[1] == 4:
-			outdict["data"] = outdict["data"][:,:-1]
+		if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
+			out_dict["data"] = out_dict["data"][:,:-1]
 
-		outdict["attrs"] = {}
+		out_dict["attrs"] = {}
 
-		for k in f[cdfname].attrs:
-			outdict["attrs"][k] = f[cdfname].attrs[k]
+		for k in f[cdf_name].attrs:
+			out_dict["attrs"][k] = f[cdf_name].attrs[k]
 
 
 	if x and not y and not z and not w:
 		dims    = ["time"]
 		coords  = [x["data"]]
-		out     = xr.DataArray(outdict["data"],coords=coords,dims=dims,attrs=outdict["attrs"])
+		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
 	elif x and y and not z and not w:
 		dims    = ["time",y["attrs"]["LABLAXIS"]]
 		coords  = [x["data"],y["data"]]
-		out     = xr.DataArray(outdict["data"],coords=coords,dims=dims,attrs=outdict["attrs"])
+		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
 		exec("out."+dims[1]+".attrs = y['attrs']")
 	elif x and y and z and not w:
@@ -209,7 +199,7 @@ def get_ts(file_path="",cdfname="",trange=None):
 
 		dims    = ["time",y["attrs"]["LABLAXIS"],z["attrs"]["LABLAXIS"]]
 		coords  = [x["data"],y["data"],z["data"]]
-		out     = xr.DataArray(outdict["data"],coords=coords,dims=dims,attrs=outdict["attrs"])
+		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
 		exec("out."+dims[1]+".attrs = y['attrs']")
 		exec("out."+dims[2]+".attrs = z['attrs']")
@@ -220,7 +210,7 @@ def get_ts(file_path="",cdfname="",trange=None):
 
 		dims    = ["time",y["attrs"]["LABLAXIS"],z["attrs"]["LABLAXIS"],w["attrs"]["LABLAXIS"]]
 		coords  = [x["data"],y["data"],z["data"],w["data"]]
-		out     = xr.DataArray(outdict["data"],coords=coords,dims=dims,attrs=outdict["attrs"])
+		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
 		exec("out."+dims[1]+".attrs = y['attrs']")
 		exec("out."+dims[2]+".attrs = z['attrs']")

@@ -1,4 +1,4 @@
-from .splitVs import splitVs
+from .split_vs import split_vs
 from .list_files import list_files
 from .get_ts import get_ts
 from .get_dist import get_dist
@@ -8,7 +8,7 @@ from .db_get_ts import db_get_ts
 # Wave analysis
 from .fk_powerspec4SC import fk_powerspec4SC
 from .lhwaveanalysis import lhwaveanalysis
-from .whistlerBtoE import whistlerBtoE
+from .whistler_b2e import whistler_b2e
 
 # FEEPS
 from .get_feeps_energy_table import get_feeps_energy_table

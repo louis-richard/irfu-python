@@ -1,9 +1,6 @@
-import re
-
-# Time modules
 from astropy.time import Time
 
-from .splitVs import splitVs
+from .split_vs import split_vs
 from .list_files import list_files
 from .get_dist import get_dist
 from .get_ts import get_ts
@@ -33,8 +30,13 @@ def get_data(var_str="", tint=None, mms_id="1", /, silent=False):
 			Time series of the target variable of measured by the target spacecraft over the selected time interval
 	
 	Example :
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> gseB = mms.get_data("B_gse_fgm_brst_l2",Tint,1)
+		>>> from pyrfu import mms
+		>>> # Define time interval
+		>>> Ttnt = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+		>>> # Index of mms spacecraft
+		>>> mms_id = 1
+		>>> # Load magnetic field from FGM
+		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
 
 	EPHEMERIS :
 	"R_gse", "R_gsm"
@@ -134,7 +136,7 @@ def get_data(var_str="", tint=None, mms_id="1", /, silent=False):
 	elif var_str in ["R_gse", "R_gsm", "V_gse", "V_gsm"]:
 		var_str = "_".join([var_str, "mec", "srvy", "l2"])
 
-	var = splitVs(var_str)
+	var = split_vs(var_str)
 
 	mms_id_str = "mms{}".format(mms_id)
 

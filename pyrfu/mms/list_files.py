@@ -1,13 +1,11 @@
 import os
 import re
 import bisect
-from .mms_config import CONFIG
-# Time modules
 import datetime
-from astropy.time import Time
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
 
+from .mms_config import CONFIG
 
 
 def list_files(trange=None,mmsId="1",Var=None):

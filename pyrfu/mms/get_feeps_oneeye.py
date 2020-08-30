@@ -1,8 +1,8 @@
-import numpy as np
 from .get_feeps_active_eyes import get_feeps_active_eyes
 from .db_get_ts import db_get_ts
 
-def get_feeps_oneeye(tar_var="fluxe_brst_l2", eId="bottom-4", trange=None, mmsId=1):
+
+def get_feeps_oneeye(tar_var="fluxe_brst_l2", e_id="bottom-4", tint=None, mms_id=1):
     """
     Load energy spectrum all the target eye
 
@@ -19,67 +19,71 @@ def get_feeps_oneeye(tar_var="fluxe_brst_l2", eId="bottom-4", trange=None, mmsId
                 data_rate : brst/srvy
                 level : l1/l1b/l2/l3??
 
-        eId : str
+        e_id : str
             index of the eye "{deck}-{id}"
                 deck : top/bottom
                 id : see get_feeps_active_eyes
 
-        trange : list of str
+        tint : list of str
             Time interval
 
-        mmsId : int/str
+        mms_id : int/str
             Index of the spacecraft
         
     """
-    if trange is None:
+
+    if tint is None:
         raise ValueError("empty time interval")
     
-    if isinstance(mmsId,str): mmsId = int(mmsId)
+    if isinstance(mms_id, str):
+        mms_id = int(mms_id)
 
-    Var = {}
-    Var["inst"] = "feeps"
+    var = {"inst": "feeps"}
 
     data_units = tar_var.split("_")[0][:-1]
     specie = tar_var.split("_")[0][-1]
 
     if specie == "e":
-        Var["dtype"] = "electron"
+        var["dtype"] = "electron"
     elif specie == "i":
-        Var["dtype"] = "ion"
-    else :
+        var["dtype"] = "ion"
+    else:
         raise ValueError("invalid specie")
 
-    Var["tmmode"] = tar_var.split("_")[1]
-    Var["lev"] = tar_var.split("_")[2]
+    var["tmmode"] = tar_var.split("_")[1]
+    var["lev"] = tar_var.split("_")[2]
 
-    dsetName = "mms{:d}_feeps_{}_l2_{}".format(mmsId,Var["tmmode"],Var["dtype"])
-    dsetPref = "mms{:d}_epd_feeps_{}_{}_{}".format(mmsId,Var["tmmode"],Var["lev"],Var["dtype"])
+    dset_name = f"mms{mms_id:d}_feeps_{var['tmmode']}_l2_{var['dtype']}"
+    dset_pref = f"mms{mms_id:d}_epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
 
-    active_eyes = get_feeps_active_eyes(Var,trange,mmsId)
+    active_eyes = get_feeps_active_eyes(var, tint, mms_id)
 
+    if e_id.split("-")[0] in ["top", "bottom"]:
+        suf = e_id.split("-")[0]
 
-    if eId.split("-")[0] in ["top","bottom"]:
-        suf = eId.split("-")[0]
-        eId = int(eId.split("-")[1])
-        if eId in active_eyes[suf]:
+        e_id = int(e_id.split("-")[1])
+
+        if e_id in active_eyes[suf]:
             if data_units.lower() == "flux":
-                suf = "_".join([suf,"intensity","sensorid",str(eId)])
+                suf = "_".join([suf, "intensity", "sensorid", str(e_id)])
             elif data_units.lower() == "counts":
-                suf = "_".join([suf,"counts","sensorid",str(eId)])
+                suf = "_".join([suf, "counts", "sensorid", str(e_id)])
             elif data_units.lower() == "cps":
-                suf = "_".join([suf,"count_rate","sensorid",str(eId)])
+                suf = "_".join([suf, "count_rate", "sensorid", str(e_id)])
             elif data_units == "mask":
-                suf = "_".join([suf,"sector_mask","sensorid",str(eId)])
-            else :
+                suf = "_".join([suf, "sector_mask", "sensorid", str(e_id)])
+            else:
                 raise ValueError("undefined variable")
-        else :
+        else:
             raise ValueError("Unactive eye")
+    else:
+        raise ValueError("Invalid format of eye id")
 
-    out = db_get_ts(dsetName,"_".join([dsetPref,suf]),trange)
-    out.attrs["tmmode"] = Var["tmmode"]
-    out.attrs["lev"] = Var["lev"]
-    out.attrs["mmsId"] = mmsId
-    out.attrs["dtype"] = Var["dtype"]
+    out = db_get_ts(dset_name, "_".join([dset_pref, suf]), tint)
 
-    
+    out.attrs["tmmode"] = var["tmmode"]
+    out.attrs["lev"] = var["lev"]
+    out.attrs["mms_id"] = mms_id
+    out.attrs["dtype"] = var["dtype"]
+
     return out

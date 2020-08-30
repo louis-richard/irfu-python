@@ -1,7 +1,6 @@
 from .ts_time import ts_time
 from .ts_scalar import ts_scalar
 
-from .ts_vec_xy import ts_vec_xy
 from .ts_vec_xyz import ts_vec_xyz
 from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_skymap import ts_skymap
