@@ -5,7 +5,7 @@ from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2",trange=None,mmsId=2,silent=False):
+def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, /, silent=False):
 	"""
 	Computes omni directional energy spectrum of the target data unit for the target specie over the target energy range
 
@@ -13,10 +13,10 @@ def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2",trange=None,mmsId=2,silent=
 		inp_str : str
 			Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}
 
-		trange : list of str
+		tint : list of str
 			Time interval
 
-		mmsId : int/float/str
+		mms_id : int/float/str
 			Index of the spacecraft
 
 	Returns :
@@ -24,99 +24,93 @@ def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2",trange=None,mmsId=2,silent=
 			Energy spectrum of the target data unit for the target specie in omni direction
 	"""
 
-	if not isinstance(mmsId,int):
-		mmsId = int(mmsId)
+	if not isinstance(mms_id, int):
+		mms_id = int(mms_id)
 
 	data_unit, data_type, specie, data_rate, data_lvl = inp_str.split("_")
 
-	Var = {}
-	Var["mmsId"] 	= mmsId
-	Var["inst"] 	= "epd-eis"
+	var = {"mms_id": mms_id, "inst": "epd-eis"}
 
-	pref = "mms{:d}_epd_eis".format(mmsId)
+	pref = f"mms{mms_id:d}_epd_eis"
 
 	if data_rate == "brst":
-		Var["tmmode"] 	= data_rate
-		pref = "{}_{}".format(pref,data_rate)
+		var["tmmode"] = data_rate
+
+		pref = f"{pref}_{data_rate}"
 	elif data_rate == "srvy":
-		Var["tmmode"] 	= data_rate
+		var["tmmode"] = data_rate
+
 		pref = pref
-	else :
+	else:
 		raise ValueError("Invalid data rate")
 
-	Var["lev"] 		= data_lvl
+	var["lev"] = data_lvl
 
 	if data_type == "electronenergy":
 		if specie == "electron":
-			Var["dtype"] 	= data_type
-			Var["specie"] 	= specie
+			var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = "{}_{}_{}".format(pref,data_type,specie)
-		else :
+			pref = f"{pref}_{data_type}_{specie}"
+		else:
 			raise ValueError("invalid specie")
 	elif data_type == "extof":
 		if specie == "proton":
-			Var["dtype"] 	= data_type
-			Var["specie"] 	= specie
+			var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = "{}_{}_{}".format(pref,data_type,specie)
+			pref = f"{pref}_{data_type}_{specie}"
 		elif specie == "oxygen":
-			Var["dtype"] 	= data_type
-			Var["specie"] 	= specie
+			var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = "{}_{}_{}".format(pref,data_type,specie)
+			pref = f"{pref}_{data_type}_{specie}"
 		elif specie == "alpha":
-			Var["dtype"] 	= data_type
-			Var["specie"] 	= specie
+			var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = "{}_{}_{}".format(pref,data_type,specie)
-		else :
+			pref = f"{pref}_{data_type}_{specie}"
+		else:
 			raise ValueError("invalid specie")
 	elif data_type == "phxtof":
 		if specie == "proton":
-			Var["dtype"] 	= data_type
-			Var["specie"] 	= specie
+			var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = "{}_{}_{}".format(pref,data_type,specie)
+			pref = f"{pref}_{data_type}_{specie}"
 		elif specie == "oxygen":
-			Var["dtype"] 	= data_type
-			Var["specie"] 	= specie
+			var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = "{}_{}_{}".format(pref,data_type,specie)
-		else :
+			pref = f"{pref}_{data_type}_{specie}"
+		else:
 			raise ValueError("Invalid specie")
-	else :
+	else:
 		raise ValueError("Invalid data type")
 
-	files = list_files(trange,mmsId,Var)
+	files = list_files(tint, mms_id, var)
 	
-	file_version 	= int(files[0].split("_")[-1][1])
-	Var["version"] 	= file_version
+	file_version = int(files[0].split("_")[-1][1])
 
-	if data_unit.lower() in ["flux","counts","cps"]:
-		suf = "P{:d}_{}_t".format(file_version,data_unit.lower())
-	else :
+	var["version"] = file_version
+
+	if data_unit.lower() in ["flux", "counts", "cps"]:
+		suf = f"P{file_version:d}_{data_unit.lower()}_t"
+	else:
 		raise ValueError("Invalid data unit")
 
-	dsetName = "mms{:d}_{}_{}_{}_{}".format(Var["mmsId"],Var["inst"],Var["tmmode"],Var["lev"],Var["dtype"])
-	cdfnames = ["{}_{}{:d}".format(pref,suf,t) for t in range(6)]
+	dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+	cdf_names = [f"{pref}_{suf}{t:d}" for t in range(6)]
 
+	out_dict = {}
 
-	outdict = {}
 	flux_omni = None
 
-	for i, cdfname in enumerate(cdfnames):
-		scope_key = "t{:d}".format(i)
+	for i, cdfname in enumerate(cdf_names):
+		scope_key = f"t{i:d}"
 		
-		if silent == False:
-			print("Loading "+ cdfname+"...")
+		if not silent:
+			print(f"Loading {cdfname}...")
 
-		outdict[scope_key] = db_get_ts(dsetName,cdfname,trange)
-		try :
-			flux_omni += outdict[scope_key]
+		out_dict[scope_key] = db_get_ts(dset_name, cdfname, tint)
+		try:
+			flux_omni += out_dict[scope_key]
 		except TypeError:
-			flux_omni = outdict[scope_key]
-
+			flux_omni = out_dict[scope_key]
 
 	flux_omni /= 6
 

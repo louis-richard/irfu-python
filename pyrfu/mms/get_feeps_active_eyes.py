@@ -2,24 +2,19 @@ from dateutil import parser
 import datetime
 
 
-def get_feeps_active_eyes(Var=None, trange=None, mmsId=1):
+def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
     """
-    This function returns the FEEPS active eyes, based on date/mmsId/species/rate
+    This function returns the FEEPS active eyes, based on date/mms_id/species/rate
     
     Parameters:
-        trange: list of str
+        var : dict
+            Dictionnary containing parameters
+
+        tint: list of str
             time range
 
-        mmsId: str
-            mmsId #, e.g., '4' for MMS4
-
-        data_rate: str
-            instrument data rate, e.g., 'srvy' or 'brst'
-            
-        species: str
-            'electron' or 'ion'
-        level: str
-            data level
+        mms_id: str
+            mms_id #, e.g., '4' for MMS4
     Returns:
         Hash table containing 2 keys:
             output['top'] -> maps to the active top eyes
@@ -54,80 +49,70 @@ def get_feeps_active_eyes(Var=None, trange=None, mmsId=1):
                  Bot Eyes: 3, 5, 6, 7, 8, 9, 10, 12
     """
 
-    if isinstance(mmsId, str): mmsId = int(mmsId)
+    if isinstance(mms_id, str):
+        mms_id = int(mms_id)
 
     sensors = {}
 
-    if Var["tmmode"].lower() == "brst" and Var["dtype"].lower() == "electron": 
-        sensors["top"]      = [1, 2, 3, 4, 5, 9, 10, 11, 12]
-        sensors["bottom"]   = [1, 2, 3, 4, 5, 9, 10, 11, 12]
-        
+    if var["tmmode"].lower() == "brst" and var["dtype"].lower() == "electron": 
+        sensors["top"] = [1, 2, 3, 4, 5, 9, 10, 11, 12]
+        sensors["bottom"] = [1, 2, 3, 4, 5, 9, 10, 11, 12]
 
-    if Var["tmmode"].lower() == "brst" and Var["dtype"].lower() == "ion": 
-        sensors["top"]      = [6, 7, 8]
-        sensors["bottom"]   = [6, 7, 8]
+    if var["tmmode"].lower() == "brst" and var["dtype"].lower() == "ion": 
+        sensors["top"] = [6, 7, 8]
+        sensors["bottom"] = [6, 7, 8]
 
     # old eyes, srvy mode, prior to 16 August 2017
-    if Var["dtype"].lower() == "electron":
-        sensors["top"]      = [3, 4, 5, 11, 12]
-        sensors["bottom"]   = [3, 4, 5, 11, 12]
+    if var["dtype"].lower() == "electron":
+        sensors["top"] = [3, 4, 5, 11, 12]
+        sensors["bottom"] = [3, 4, 5, 11, 12]
     else:
-        sensors["top"]      = [6, 7, 8]
-        sensors["bottom"]   = [6, 7, 8]
+        sensors["top"] = [6, 7, 8]
+        sensors["bottom"] = [6, 7, 8]
 
-    if isinstance(trange[0], str): 
-        start_time = parser.parse(trange[0])
+    if isinstance(tint[0], str): 
+        start_time = parser.parse(tint[0])
     else:
-        start_time = trange[0]
+        start_time = tint[0]
 
     # srvy mode, after 16 August 2017
-    if start_time >= datetime.datetime(2017,8,16)  and Var["tmmode"].lower() == "srvy":
-        active_table = {}
+    if start_time >= datetime.datetime(2017, 8, 16) and var["tmmode"].lower() == "srvy":
+        active_table = {"1-electron": {}, "1-ion": {}, "2-electron": {}, "2-ion": {}, "3-electron": {}, "3-ion": {},
+                        "4-electron": {}, "4-ion": {}}
 
-        
-        active_table["1-electron"]              = {}
-        active_table["1-electron"]["top"]       = [3, 5, 9, 10, 12]
-        active_table["1-electron"]["bottom"]    = [2, 4, 5, 9, 10]
+        active_table["1-electron"]["top"] = [3, 5, 9, 10, 12]
+        active_table["1-electron"]["bottom"] = [2, 4, 5, 9, 10]
 
-        active_table["1-ion"]                   = {}
-        active_table["1-ion"]["top"]            = [6, 7, 8]
-        active_table["1-ion"]["bottom"]         = [6, 7, 8]
+        active_table["1-ion"]["top"] = [6, 7, 8]
+        active_table["1-ion"]["bottom"] = [6, 7, 8]
 
-        active_table["2-electron"]              = {}
-        active_table["2-electron"]["top"]       = [1, 2, 3, 5, 10, 11]
-        active_table["2-electron"]["bottom"]    = [1, 4, 5, 9, 11]
+        active_table["2-electron"]["top"] = [1, 2, 3, 5, 10, 11]
+        active_table["2-electron"]["bottom"] = [1, 4, 5, 9, 11]
 
-        active_table["2-ion"]                   = {}
-        active_table["2-ion"]["top"]            = [6, 8]
-        active_table["2-ion"]["bottom"]         = [6, 7, 8]
+        active_table["2-ion"]["top"] = [6, 8]
+        active_table["2-ion"]["bottom"] = [6, 7, 8]
 
-        active_table["3-electron"]              = {}
-        active_table["3-electron"]["top"]       = [3, 5, 9, 10, 12]
-        active_table["3-electron"]["bottom"]    = [1, 2, 3, 9, 10]
+        active_table["3-electron"]["top"] = [3, 5, 9, 10, 12]
+        active_table["3-electron"]["bottom"] = [1, 2, 3, 9, 10]
 
-        active_table["3-ion"]                   = {}
-        active_table["3-ion"]["top"]            = [6, 7, 8]
-        active_table["3-ion"]["bottom"]         = [6, 7, 8]
+        active_table["3-ion"]["top"] = [6, 7, 8]
+        active_table["3-ion"]["bottom"] = [6, 7, 8]
 
-        active_table["4-electron"]              = {}
-        active_table["4-electron"]["top"]       = [3, 4, 5, 9, 10, 11]
-        active_table["4-electron"]["bottom"]    = [3, 5, 9, 10, 12]
+        active_table["4-electron"]["top"] = [3, 4, 5, 9, 10, 11]
+        active_table["4-electron"]["bottom"] = [3, 5, 9, 10, 12]
 
-        active_table["4-ion"]                   = {}
-        active_table["4-ion"]["top"]            = [6, 8]
-        active_table["4-ion"]["bottom"]         = [6, 7, 8]
+        active_table["4-ion"]["top"] = [6, 8]
+        active_table["4-ion"]["bottom"] = [6, 7, 8]
        
+        sensors = active_table["{:d}-{}".format(mms_id, var["dtype"].lower())]
         
-        sensors = active_table["{:d}-{}".format(mmsId,Var["dtype"].lower())]
-        
-        if level.lower() == "sitl":
-            sensors["top"]      = list(set(sensors['top']) & set([5, 11, 12]))
-            sensors["bottom"]   = []
-            return {'top': list(set(sensors['top']) & set([5, 11, 12])), 'bottom': []}
+        if var["lev"].lower() == "sitl":
+            sensors["top"] = list(set(sensors["top"]) & {5, 11, 12})
+            sensors["bottom"] = []
+            return {"top": list(set(sensors["top"]) & {5, 11, 12}), "bottom": []}
 
-    if Var["lev"].lower() == "sitl":
-        sensors["top"]      = [5, 11, 12]
-        sensors["bottom"]   = []
+    if var["lev"].lower() == "sitl":
+        sensors["top"] = [5, 11, 12]
+        sensors["bottom"] = []
         
-
     return sensors

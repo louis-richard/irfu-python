@@ -10,8 +10,7 @@ from ..pyrf.extend_tint import extend_tint
 from ..pyrf.tlim import tlim
 
 
-
-def lhwaveanalysis(tints=None, Exyz=None, Bscm=None, Bxyz=None, ne=None,**kwargs):
+def lhwaveanalysis(tints=None, e_xyz=None, b_scm=None, Bxyz=None, ne=None,**kwargs):
     """
     Calculates lower-hybrid wave properties from MMS data
 
