@@ -24,11 +24,6 @@ def feeps_spin_avg(inp_dset_omni=None):
 
     var = inp_dset_omni.attrs
 
-    if var["dtype"] == "electron":
-        lower_en = 71.0
-    else:
-        lower_en = 78.0
-
     # get the spin sectors
     # v5.5+ = mms1_epd_feeps_srvy_l1b_electron_spinsectnum
     trange = list(Time(inp_dset_omni.time.data[[0, -1]], format="datetime64").isot)

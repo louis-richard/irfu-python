@@ -37,8 +37,10 @@ def c_4_k(r_list=None):
 	k_list = [None]*4
 
 	for i, j, k, l in zip(mms_list, np.roll(mms_list, 1), np.roll(mms_list, 2), np.roll(mms_list, 3)):
-		cc 			= cross(r_list[k]-r_list[j], r_list[l]-r_list[j])
-		dr12 		= r_list[i]-r_list[j]
-		k_list[j] 	= cc/dot(cc, dr12)
+		cc = cross(r_list[k]-r_list[j], r_list[l]-r_list[j])
+
+		dr12 = r_list[i]-r_list[j]
+
+		k_list[j] = cc/dot(cc, dr12)
 
 	return k_list

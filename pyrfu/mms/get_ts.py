@@ -68,37 +68,37 @@ def get_ts(file_path="", cdf_name="", trange=None):
 
 				# If vector componenents remove magnitude index
 				
-				if len(y["data"]) == 4 and all(y["data"] == ['x', 'y', 'z', 'r']):
+				if len(y["data"]) == 4 and all(y["data"] == ["x", "y", "z", "r"]):
 					y["data"] = y["data"][:-1]
 				# if y is 2d get only first row assuming that the bins are the same
 				elif y["data"].ndim == 2:
-					try :  
-						y["data"] = y["data"][0,:]
-					except IndexError :
+					try:
+						y["data"] = y["data"][0, :]
+					except IndexError:
 						pass
 
-
 				y["attrs"] = {}
+
 				# Get attributes
 				for k in f[depend1_key].attrs.keys():
 					y["attrs"][k] = f[depend1_key].attrs[k]
 
-					if isinstance(y["attrs"][k],str) and y["attrs"][k] in f.keys():
-						if not k in ["DEPEND_0","LABLAXIS"]:
-							try :
-								y["attrs"][k] = f[y["attrs"][k]][start_ind:stop_ind,...]
-							except :
+					if isinstance(y["attrs"][k], str) and y["attrs"][k] in f.keys():
+						if k not in ["DEPEND_0", "LABLAXIS"]:
+							try:
+								y["attrs"][k] = f[y["attrs"][k]][start_ind:stop_ind, ...]
+							except:
 								y["attrs"][k] = f[y["attrs"][k]][...]
 							# If attrs is 2D get only first row
 							if y["attrs"][k].ndim == 2:
-								try :
-									y["attrs"][k] = y["attrs"][k][0,:]
+								try:
+									y["attrs"][k] = y["attrs"][k][0, :]
 								except IndexError:
 									pass
 
 				# Remove spaces in label
 				try:
-					y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ","_")
+					y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ", "_")
 					
 					if y["attrs"]["LABLAXIS"] == "Diffential_energy_channels":
 						y["attrs"]["LABLAXIS"] = "Differential_energy_channels"
@@ -106,33 +106,34 @@ def get_ts(file_path="", cdf_name="", trange=None):
 				except KeyError:
 					y["attrs"]["LABLAXIS"] = "comp"
 
-
 		if "DEPEND_2" in f[cdf_name].attrs or "REPRESENTATION_2" in f[cdf_name].attrs:
-			try :
+			try:
 				depend2_key = f[cdf_name].attrs["DEPEND_2"]
 			except KeyError:
 				depend2_key = f[cdf_name].attrs["REPRESENTATION_2"]
 
 			if depend2_key == "x,y,z":
-				z["data"]   = np.array(depend2_key.split(","))
-				z["attrs"]  = {"LABLAXIS": "comp"}
-			else :
-				z["data"]   = f[depend2_key][...]
-				z["attrs"]  = {}
+				z["data"] = np.array(depend2_key.split(","))
+
+				z["attrs"] = {"LABLAXIS": "comp"}
+			else:
+				z["data"] = f[depend2_key][...]
+
+				z["attrs"] = {}
+
 				for k in f[depend2_key].attrs.keys():
 					z["attrs"][k] = f[depend2_key].attrs[k]
 
-					if isinstance(z["attrs"][k],str) and z["attrs"][k] in f.keys() and not k == "DEPEND_0":
-						z["attrs"][k] = f[z["attrs"][k]][start_ind:stop_ind,...]
+					if isinstance(z["attrs"][k], str) and z["attrs"][k] in f.keys() and not k == "DEPEND_0":
+						z["attrs"][k] = f[z["attrs"][k]][start_ind:stop_ind, ...]
 
-				if not "LABLAXIS" in z["attrs"].keys():
+				if "LABLAXIS" not in z["attrs"].keys():
 					z["attrs"]["LABLAXIS"] = "comp"
 
-		if ("DEPEND_3" in f[cdf_name].attrs 
-			or "REPRESENTATION_3" in f[cdf_name].attrs 
-			and f[cdf_name].attrs["REPRESENTATION_3"] != "x,y,z"):
+		if "DEPEND_3" in f[cdf_name].attrs or "REPRESENTATION_3" in f[cdf_name].attrs and f[cdf_name].attrs[
+			"REPRESENTATION_3"] != "x,y,z":
 
-			try :
+			try:
 				depend3_key = f[cdf_name].attrs["DEPEND_3"]
 			except KeyError:
 				depend3_key = f[cdf_name].attrs["REPRESENTATION_3"]
@@ -140,66 +141,68 @@ def get_ts(file_path="", cdf_name="", trange=None):
 			w["data"] = f[depend3_key][...]
 
 			if w["data"].ndim == 2:
-				try :  
-					w["data"] = w["data"][0,:]
-				except IndexError :
+				try:
+					w["data"] = w["data"][0, :]
+				except IndexError:
 					pass
 			
 			w["attrs"] = {}
 			for k in f[depend3_key].attrs.keys():
 				w["attrs"][k] = f[depend3_key].attrs[k]
 
-				if isinstance(w["attrs"][k],str) and w["attrs"][k] in f.keys() and not k == "DEPEND_0":
-					w["attrs"][k] = f[w["attrs"][k]][start_ind:stop_ind,...]
+				if isinstance(w["attrs"][k], str) and w["attrs"][k] in f.keys() and not k == "DEPEND_0":
+					w["attrs"][k] = f[w["attrs"][k]][start_ind:stop_ind, ...]
 
-			if not "LABLAXIS" in w["attrs"].keys():
+			if "LABLAXIS" not in w["attrs"].keys():
 				w["attrs"]["LABLAXIS"] = "comp"
 
-
 		if "sector_mask" in cdf_name:
-			y["data"]   = f[f[cdf_name.replace("sector_mask","intensity")].attrs["DEPEND_1"]][...]
-			y["attrs"]  = {}
-			for k in f[f[cdf_name.replace("sector_mask","intensity")].attrs["DEPEND_1"]].attrs.keys():
-				y["attrs"][k] = f[f[cdf_name.replace("sector_mask","intensity")].attrs["DEPEND_1"]].attrs[k]
+			y["data"] = f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]][...]
 
-			y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ","_")
+			y["attrs"] = {}
 
+			for k in f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs.keys():
+				y["attrs"][k] = f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs[k]
+
+			y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ", "_")
 
 		if "edp_dce_sensor" in cdf_name:
-			y["data"] = ["x","y","z"]
+			y["data"] = ["x", "y", "z"]
+
 			y["attrs"] = {"LABLAXIS": "comp"}
 			
-		out_dict["data"] = f[cdf_name][start_ind:stop_ind,...]
+		out_dict["data"] = f[cdf_name][start_ind:stop_ind, ...]
 
 		if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
-			out_dict["data"] = out_dict["data"][:,:-1]
+			out_dict["data"] = out_dict["data"][:, :-1]
 
 		out_dict["attrs"] = {}
 
 		for k in f[cdf_name].attrs:
 			out_dict["attrs"][k] = f[cdf_name].attrs[k]
 
-
 	if x and not y and not z and not w:
-		dims    = ["time"]
-		coords  = [x["data"]]
-		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
+		dims, coords = [["time"], [x["data"]]]
+
+		out = xr.DataArray(out_dict["data"], coords=coords, dims=dims, attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
+
 	elif x and y and not z and not w:
-		dims    = ["time",y["attrs"]["LABLAXIS"]]
-		coords  = [x["data"],y["data"]]
-		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
+		dims, coords = [["time", y["attrs"]["LABLAXIS"]], [x["data"], y["data"]]]
+
+		out = xr.DataArray(out_dict["data"], coords=coords, dims=dims, attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
 		exec("out."+dims[1]+".attrs = y['attrs']")
+
 	elif x and y and z and not w:
 
 		if y["attrs"]["LABLAXIS"] == z["attrs"]["LABLAXIS"]:
 			y["attrs"]["LABLAXIS"] = "rcomp"
 			z["attrs"]["LABLAXIS"] = "ccomp"
 
-		dims    = ["time",y["attrs"]["LABLAXIS"],z["attrs"]["LABLAXIS"]]
-		coords  = [x["data"],y["data"],z["data"]]
-		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
+		dims, coords = [["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"]], [x["data"], y["data"], z["data"]]]
+
+		out = xr.DataArray(out_dict["data"], coords=coords, dims=dims, attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
 		exec("out."+dims[1]+".attrs = y['attrs']")
 		exec("out."+dims[2]+".attrs = z['attrs']")
@@ -208,12 +211,16 @@ def get_ts(file_path="", cdf_name="", trange=None):
 			z["attrs"]["LABLAXIS"] = "rcomp"
 			w["attrs"]["LABLAXIS"] = "ccomp"
 
-		dims    = ["time",y["attrs"]["LABLAXIS"],z["attrs"]["LABLAXIS"],w["attrs"]["LABLAXIS"]]
-		coords  = [x["data"],y["data"],z["data"],w["data"]]
-		out     = xr.DataArray(out_dict["data"],coords=coords,dims=dims,attrs=out_dict["attrs"])
+		dims, coords = [["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"], w["attrs"]["LABLAXIS"]],
+						[x["data"], y["data"], z["data"], w["data"]]]
+
+		out = xr.DataArray(out_dict["data"], coords=coords, dims=dims, attrs=out_dict["attrs"])
 		exec("out."+dims[0]+".attrs = x['attrs']")
 		exec("out."+dims[1]+".attrs = y['attrs']")
 		exec("out."+dims[2]+".attrs = z['attrs']")
 		exec("out."+dims[3]+".attrs = w['attrs']")
+
+	else:
+		raise NotImplementedError
 		
 	return out

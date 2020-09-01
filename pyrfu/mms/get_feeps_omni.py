@@ -5,6 +5,8 @@ import xarray as xr
 from .get_feeps_active_eyes import get_feeps_active_eyes
 from .get_feeps_oneeye import get_feeps_oneeye
 
+
+# noinspection PyUnboundLocalVariable
 def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None):
 
     data_units = tar_var.split("_")[0]
@@ -32,7 +34,7 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None):
     # percent error around energy bin center to accept data for averaging; 
     # anything outside of energies[i] +/- en_chk*energies[i] will be changed 
     # to NAN and not averaged   
-    en_chk = 0.1
+    # en_chk = 0.1
 
     top_sensors = active_eyes["top"]
     bot_sensors = active_eyes["bottom"]

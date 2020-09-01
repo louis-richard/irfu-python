@@ -5,7 +5,6 @@ from scipy import interpolate
 import xarray as xr
 
 
-
 def resample(inp=None, ref=None, **kwargs):
 	"""
 	Resample inp to the time line of ref. If sampling of X is more than two times higher than Y, we average X, otherwise
@@ -157,8 +156,6 @@ def resample(inp=None, ref=None, **kwargs):
 					cur += 1
 
 				if not_found:
-					sfy = sfy1
-
 					raise RuntimeError("Cannot guess sampling frequency. Tried {:d} times".format(max_try))
 				
 				del sfy1
@@ -200,7 +197,6 @@ def resample(inp=None, ref=None, **kwargs):
 				cur += 1
 
 			if not_found:
-				sfy = sfy1
 				raise RuntimeError("Cannot guess sampling frequency. Tried {:d} times".format(max_try))
 
 			del sfy1
@@ -283,6 +279,6 @@ def resample(inp=None, ref=None, **kwargs):
 		for k in inp.dims[1:]:
 			coords.append(inp.coords[k].data)
 
-	out = xr.DataArray(out_data, coords=coords, dims=inp.dims,attrs=inp.attrs)
+	out = xr.DataArray(out_data, coords=coords, dims=inp.dims, attrs=inp.attrs)
 	
 	return out

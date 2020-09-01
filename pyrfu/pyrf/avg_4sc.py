@@ -19,11 +19,11 @@ def avg_4sc(b_list=None):
 	Example :
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices
-		>>> ic = np.arange(1,5)
-		>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
-		>>> Bxyzavg = pyrf.avg_4sc(Bxyz)
+		>>> mms_list = np.arange(1,5)
+		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
+		>>> b_xyz = pyrf.avg_4sc(b_mms)
 
 	"""
 

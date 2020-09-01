@@ -6,8 +6,8 @@ from .get_data import get_data
 from .db_get_ts import db_get_ts
 
 # Wave analysis
-from .fk_powerspec4SC import fk_powerspec4SC
-from .lhwaveanalysis import lhwaveanalysis
+from .fk_powerspec_4sc import fk_powerspec_4sc
+from .lh_wave_analysis import lh_wave_analysis
 from .whistler_b2e import whistler_b2e
 
 # FEEPS
@@ -28,3 +28,4 @@ from .get_eis_allt import get_eis_allt
 from .get_eis_omni import get_eis_omni
 
 from .remove_idist_background import remove_idist_background
+from .psd_moments import psd_moments

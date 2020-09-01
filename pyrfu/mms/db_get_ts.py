@@ -3,6 +3,7 @@ from .get_ts import get_ts
 from ..pyrf import ts_append
 
 
+# noinspection PyUnboundLocalVariable
 def db_get_ts(dset_name="", cdf_name="", trange=None):
 	"""
 	Get variable time series in the cdf file

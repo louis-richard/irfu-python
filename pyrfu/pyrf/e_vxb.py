@@ -28,14 +28,14 @@ def e_vxb(v=None, b=None, flag="vxb"):
 	Example :
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
+		>>> mms_id = 1
 		>>> # Load magnetic field and electric field
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
-		>>> Exyz = mms.get_data("E_gse_edp_fast_l2",Tint,1)
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+		>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
 		>>> # Compute ExB drift velocity
-		>>> ExB = pyrf.e_vxb(Exyz,Bxyz,"ExB")
+		>>> v_xyz_exb = pyrf.e_vxb(e_xyz, b_xyz,"ExB")
 
 	"""
 

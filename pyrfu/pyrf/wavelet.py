@@ -72,7 +72,7 @@ def wavelet(inp=None, **kwargs):
 	# wavelet_width
 	wavelet_width, deltaf = [5.36, 100]
 
-	return_power, cut_edge, linear_df, plot_flag = [True, True, False, True]
+	return_power, cut_edge, linear_df, plot_flag = [True, True, False, False]
 
 	if "returnpower" in kwargs:
 		return_power = kwargs["returnpower"]

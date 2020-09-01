@@ -8,8 +8,6 @@ from tqdm import tqdm
 import multiprocessing as mp
 import sfs
 
-import pdb
-
 from .ts_time import ts_time
 from .ts_vec_xyz import ts_vec_xyz
 from .resample import resample
@@ -19,41 +17,40 @@ from .end import end
 from .calc_fs import calc_fs
 from .convert_fac import convert_fac
 
+# TODO parrallelized average_data
 
-# TODO parrallelized AverageData
-
-def AverageData(data=None,x=None,y=None,avWindow=None):
+def average_data(data=None, x=None, y=None, av_window=None):
 	# average data with time x to time y using window
 	
-	dtx = np.median(np.diff(x))
-	dty = np.median(np.diff(y))
+	dtx, dty = [np.median(np.diff(x)), np.median(np.diff(y))]
 
-	if avWindow is None :
-		avWindow = dty
+	if av_window is None:
+		av_window = dty
 
-	
-	dt2         = avWindow/2
-	ndataOut    = len(y)
+	dt2 = av_window / 2
+
+	n_data_out = len(y)
 	
 	# Pad data with NaNs from each side
-	nPointToAdd = int(np.ceil(dt2/dtx))
-	padNan      = np.zeros((nPointToAdd,data.shape[1]))*np.nan
-	data        = np.vstack([padNan,data,padNan])
-	padTime     = dtx*np.arange(nPointToAdd)
-	x           = np.hstack([x[0]-np.flip(padTime), x, x[-1]+padTime])
+	n_point_to_add = int(np.ceil(dt2 / dtx))
+	pad_nan = np.zeros((n_point_to_add, data.shape[1])) * np.nan
+	data = np.vstack([pad_nan, data, pad_nan])
+	pad_time = dtx * np.arange(n_point_to_add)
+	x = np.hstack([x[0] - np.flip(pad_time), x, x[-1] + pad_time])
 
-	out = np.zeros((ndataOut,data.shape[1]),dtype="complex128")
+	out = np.zeros((n_data_out, data.shape[1]), dtype="complex128")
 	
 	for i, iy in enumerate(y):
-		il = bisect.bisect_left(x,iy-dt2)
-		ir = bisect.bisect_left(x,iy+dt2)
-		out[i,:] = np.nanmean(data[il:ir,:],axis=0)
+		il = bisect.bisect_left(x, iy - dt2)
+		ir = bisect.bisect_left(x, iy + dt2)
+
+		out[i, :] = np.nanmean(data[il:ir, :], axis=0)
 	
 	return out
 
 
-#---------------------------------------------------------------------------------------------------------------------
-def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
+# noinspection PyUnboundLocalVariable
+def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwargs):
 	"""
 	Calculates wavelet spectra of E&B and Poynting flux using wavelets (Morlet wavelet). Also computes polarization 
 	parameters of B using SVD. SVD is performed on spectral matrices computed from the time series of B using wavelets
@@ -63,13 +60,13 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 		e : DataArray
 			Time series of the wave electric field
 
-		dB : DataArray
+		db : DataArray
 			Time series of the wave magnetic field
 
-		fullB : DataArray
+		full_b : DataArray
 			Time series of the high resolution background magnetic field used for E.B=0
 
-		B0 : DataArray
+		b0 : DataArray
 			Time series of the background magnetic field used for field aligned coordinates
 
 		xyz : DataArray
@@ -86,25 +83,25 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 			Computes polarization parameters (default False)
 
 		noresamp : bool
-			No resampling, E and dB are given at the same time line (default False)
+			No resampling, E and db are given at the same time line (default False)
 
 		fac : bool
-			Uses FAC coordinate system (defined by B0 and optionally xyz), otherwise no coordinate system 
+			Uses FAC coordinate system (defined by b0 and optionally xyz), otherwise no coordinate system 
 			transformation is performed (default False)
 
 		dEdotB_0 : bool
-			Computes dEz from dB dot B = 0, uses fullB (default False)
+			Computes dEz from db dot B = 0, uses full_b (default False)
 
-		fullB_dB : bool
-			dB contains DC field (default False)
+		full_b_db : bool
+			db contains DC field (default False)
 
 		nAv : int
 			Number of wave periods to average (default 8)
 
-		facMatrix : ndarray
+		fac_matrix : ndarray
 			Specify rotation matrix to FAC system (default None)
 
-		mwidthcoef : int/float
+		m_width_coef : int/float
 			Specify coefficient to multiple Morlet wavelet width by. (default 1)
 
 	Returns : 
@@ -117,7 +114,7 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 					Frequencies
 
 				bb_xxyyzzss : DataArray
-					dB power spectrum with :
+					db power spectrum with :
 						[...,0] -> x
 						[...,1] -> y
 						[...,2] -> z
@@ -156,23 +153,20 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 
 	
 	Examples :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2015-10-30T05:15:42.000","2015-10-30T05:15:54.000"]
-		>>> 
+		>>> tint = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
 		>>> # Spacecraft index
-		>>> ic = 3
-		>>> 
+		>>> mms_id = 3
 		>>> # Load spacecraft position
-		>>> Tintl = pyrf.extend_tint(Tint,[-100,100])
-		>>> Rxyz = mms.get_data("R_gse",Tintl,ic)
-		>>> 
+		>>> tint_long = pyrf.extend_tint(tint, [-100, 100])
+		>>> r_xyz = mms.get_data("R_gse", tint_long, mms_id)
 		>>> # Load background magnetic field, electric field and magnetic field fluctuations
-		>>> Bxyz = mms.get_data("B_gse_fgm_brst_l2",Tint,ic)
-		>>> Exyz = mms.get_data("E_gse_edp_brst_l2",Tint,ic)
-		>>> Bscm = mms.get_data("B_gse_scm_brst_l2",Tint,ic)
-		>>> 
+		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
+		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
+		>>> b_scm = mms.get_data("B_gse_scm_brst_l2", tint, mms_id)
 		>>> # Polarization analysis
-		>>> polarization = pyrf.ebsp(Exyz,Bscm,Bxyz,Bxyz,Rxyz,freq_int=[10,4000],polarization=True,fac=True)
+		>>> polarization = pyrf.ebsp(e_xyz, b_scm, b_xyz, b_xyz, r_xyz, freq_int=[10, 4000], polarization=True, fac=True)
 
 	See also :
 		PL_EBSP, CONVERT_FAC
@@ -184,53 +178,54 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 		
 	"""
 
+	if not isinstance(db, xr.DataArray):
+		raise TypeError("db must be a DataArray")
 
-	if not isinstance(dB, xr.DataArray):
-		raise TypeError("dB must be a DataArray")
+	if not isinstance(full_b, xr.DataArray):
+		raise TypeError("full_b must be a DataArray")
 
-	if not isinstance(fullB, xr.DataArray):
-		raise TypeError("fullB must be a DataArray")
-
-	if not isinstance(B0, xr.DataArray):
-		raise TypeError("B0 must be a DataArray")
+	if not isinstance(b0, xr.DataArray):
+		raise TypeError("b0 must be a DataArray")
 
 	if not isinstance(xyz, xr.DataArray):
 		raise TypeError("xyz must be a DataArray")
 
+	# Compute magnetic field fluctuations sampling frequency
+	fsb = calc_fs(db)
+
 	# Check the input
-	nWavePeriodToAverage    = 8         # Number of wave periods to average
-	angleBElevationMax      = 15        # Below which we cannot apply E*B=0
-	facMatrix               = None      # matrix for totation to FAC
-	mwidthcoef              = 1
-	wantPolarization        = False
+	# Number of wave periods to average
+	n_wave_period_to_average = 8
+
+	# Below which we cannot apply E*B=0
+	angle_b_elevation_max = 15
+
+	# matrix for rotation to FAC
+	fac_matrix = None
+
+	m_width_coef = 1
+
+	want_polarization = False
 
 	if e is None:
-		wantEE = 0
-	else :
-		wantEE = 1
+		want_ee = 0
+	else:
+		want_ee = 1
 
-	res   = {"t"            : None, "f"           : None,           "flagFac"     : 0     ,\
-			  "bb_xxyyzzss" : None, "ee_xxyyzzss" : None,           "ee_ss"       : None  ,\
-			  "pf_xyz"      : None, "pf_rtp"      : None,           "dop"         : None  ,\
-			  "dop2d"       : None, "planarity"   : None,           "ellipticity" : None  ,\
-			  "k_tp"        : None, "fullB"       : fullB,          "B0"          : B0    ,\
-			  "r"           : xyz}
+	res = {"t": None, "f": None, "flagFac": 0, "bb_xxyyzzss": None, "ee_xxyyzzss": None, "ee_ss": None, "pf_xyz": None,
+		   "pf_rtp": None, "dop": None, "dop2d": None, "planarity": None, "ellipticity": None, "k_tp": None,
+		   "full_b": full_b, "b0": b0, "r": xyz}
 
-
-	flag_no_resamp  = False
-	flag_want_fac   = False
-	flag_dEdotB0    = False
-	flag_fullB_dB   = False
-
+	flag_no_resamp, flag_want_fac, flag_dedotb0, flag_full_b_db = [False, False, False, False]
 
 	if "polarization" in kwargs:
-		wantPolarization = True
+		want_polarization = True
 
-	if "mwidthcoef" in kwargs:
-		if not kwargs["mwidthcoef"] is None  and isinstance(kwargs["mwidthcoef"],float):
-			mwidthcoef = kwargs["mwidthcoef"]
-		else :
-			raise ValueError("parameter ''mwidthcoef'' without parameter value")
+	if "m_width_coef" in kwargs:
+		if not kwargs["m_width_coef"] is None and isinstance(kwargs["m_width_coef"], float):
+			m_width_coef = kwargs["m_width_coef"]
+		else:
+			raise ValueError("parameter ''m_width_coef'' without parameter value")
 
 	if "noresamp" in kwargs:
 		flag_no_resamp = True
@@ -239,661 +234,683 @@ def ebsp(e=None,dB=None,fullB=None,B0=None,xyz=None,freq_int=None,**kwargs):
 		flag_want_fac = True
 
 	if "dedotb_0" in kwargs:
-		flag_dEdotB0 = True
+		flag_dedotb0 = True
 
-	if "fullb_db" in kwargs:
-		flag_fullB_dB = True
+	if "full_b_db" in kwargs:
+		flag_full_b_db = True
 
 	if "nav" in kwargs:
-		if kwargs["nav"] is None or not isinstance(kwargs["nav"],int):
+		if kwargs["nav"] is None or not isinstance(kwargs["nav"], int):
 			raise TypeError("NAV requires  must be an integer")
-			  
-		nWavePeriodToAverage = kwargs["nav"]
 
-	if "facmatrix" in kwargs:
-		if kwargs["facmatrix"] is None or not isinstance(kwargs["facmatrix"],xr.DataArray) or not "time" in kwargs["facmatrix"].coords:
-			raise ValueError("FACMATRIX requires a second argument struct(t,rotMatrix)")
-			  
-		facMatrix = kwargs["facmatrix"]
+		n_wave_period_to_average = kwargs["nav"]
 
+	if "fac_matrix" in kwargs:
+		if kwargs["fac_matrix"] is None or not isinstance(kwargs["fac_matrix"], xr.DataArray) or "time" not in kwargs[
+			"fac_matrix"].coords:
+			raise ValueError("fac_matrix requires a second argument struct(t,rotMatrix)")
 
-	if flag_want_fac and facMatrix is None:
-		if B0 is None:
-			raise ValueError("ebsp(): at least B0 should be given for option FAC")
+		fac_matrix = kwargs["fac_matrix"]
+
+	if flag_want_fac and fac_matrix is None:
+		if b0 is None:
+			raise ValueError("ebsp(): at least b0 should be given for option FAC")
 		
 		if xyz is None:
 			print("fcal : assuming s/c position [1 0 0] for estimating FAC")
-			xyz = [1,0,0]
-			xyz = ts_vec_xyz(dB.time.data,np.tile(xyz,(len(dB,1))))
+			xyz = [1, 0, 0]
+			xyz = ts_vec_xyz(db.time.data, np.tile(xyz, (len(db), 1)))
 
-		fsb = calc_fs(dB)
-		xyz = resample(xyz,dB,fs=fsb)
+		xyz = resample(xyz, db, fs=fsb)
 
-	B0 = resample(B0,dB,fs=fsb)
+	b0 = resample(b0, db, fs=fsb)
 
-	if flag_fullB_dB:
-		fullB           = dB
-		res["fullB"]    = fullB
-		dB              = dB - B0
+	if flag_full_b_db:
+		full_b = db
+		res["full_b"] = full_b
+		db = db - b0
 
-	if flag_dEdotB0 and fullB is None:
-		raise ValueError("fullB must be given for option dEdotB=0")
+	if flag_dedotb0 and full_b is None:
+		raise ValueError("full_b must be given for option dEdotB=0")
 
+	pc12_range, pc35_range, other_range = [0, 0, 0]
 
-	pc12_range  = 0
-	pc35_range  = 0
-	other_range = 0
-
-	if isinstance(freq_int,str):
+	if isinstance(freq_int, str):
 		if freq_int.lower() == "pc12":
-			pc12_range  = 1
-			freq_int    = [.1,5]
-			deltaT      = 1
-			tint        = list(Time(np.round([start(dB),end(dB)]),format="unix").iso)
+			pc12_range = 1
+
+			freq_int = [.1, 5]
+
+			delta_t = 1
+
+			tint = list(Time(np.round([start(db), end(db)]), format="unix").iso)
 
 		elif freq_int.lower() == "pc35":
-			pc35_range  = 1
-			freq_int    = [.002,.1]
-			deltaT      = 60
-			tint        = list(Time(np.round([start(dB),end(dB)]/60)*60,format="unix").iso)
+			pc35_range = 1
 
-		outSampling = 1/deltaT
-		nt          = np.round((iso2unix(tint[1])-iso2unix(tint[0]))/deltaT).astype(int)
-		outTime     = np.linspace(iso2unix(tint[0]),iso2unix(tint[1]),nt) + deltaT/2
-		outTime     = outTime[:-1]
-	else : 
+			freq_int = [.002, .1]
+
+			delta_t = 60
+
+			tint = list(Time(np.round([start(db), end(db)] / 60) * 60, format="unix").iso)
+		else:
+			raise ValueError("Invalid format of interval")
+
+		out_sampling = 1 / delta_t
+
+		nt = np.round((iso2unix(tint[1]) - iso2unix(tint[0])) / delta_t).astype(int)
+
+		out_time = np.linspace(iso2unix(tint[0]), iso2unix(tint[1]), nt) + delta_t / 2
+		out_time = out_time[:-1]
+	else:
 		if freq_int[1] >= freq_int[0]:
-			other_range   = True
-			outSampling   = freq_int[1]/5
-			deltaT        = 1/outSampling
-			nt            = np.round((end(dB)-start(dB))/deltaT).astype(int)
-			outTime       = np.linspace(start(dB),end(dB),nt) + deltaT/2
-			outTime       = outTime[:-1]
-		else :
+			other_range = True
+
+			out_sampling = freq_int[1]/5
+
+			delta_t = 1 / out_sampling
+
+			nt = np.round((end(db) - start(db)) / delta_t).astype(int)
+
+			out_time = np.linspace(start(db), end(db), nt) + delta_t / 2
+			out_time = out_time[:-1]
+		else:
 			raise ValueError("FREQ_INT must be [f_min f_max], f_min<f_max")
 
-	if wantEE :# Check the sampling rate
+	if want_ee:  # Check the sampling rate
 		if e is None:
 			raise ValueError("E cannot be empty for the chosen output parameters")
 
-		sampl_e = calc_fs(e)
-		sampl_b = calc_fs(dB)
+		sampl_e, sampl_b = [calc_fs(e), calc_fs(db)]
+
 		if flag_no_resamp:
 			if sampl_e != sampl_b:
 				raise IndexError("E and B must have the same sampling for NORESAMP")
-			elif len(e) != len(dB):
+			elif len(e) != len(db):
 				raise IndexError("E and B must have the same number of points for NORESAMP")
 
-			inSampling = sampl_e
-		else :
-			if sampl_b > 1.5*sampl_e:
-				e   = resample(e,dB,fs=fsb)
-				B0  = resample(B0,dB,fs=fsb)
+			in_sampling = sampl_e
+		else:
+			if sampl_b > 1.5 * sampl_e:
+				e = resample(e, db, fs=fsb)
+
+				b0 = resample(b0, db, fs=fsb)
 				
-				inSampling = sampl_b
-				warnings.warn("Interpolating e to b",UserWarning)
-			elif sampl_e > 1.5*sampl_b:
-				dB = resample(dB,e)
-				B0 = resample(B0,e)
+				in_sampling = sampl_b
+				warnings.warn("Interpolating e to b", UserWarning)
+			elif sampl_e > 1.5 * sampl_b:
+				db = resample(db, e)
+				b0 = resample(b0, e)
 				
-				inSampling = sampl_e
-				warnings.warn("Interpolating b to e",UserWarning)
-			elif sampl_e == sampl_b and len(e) == len(dB):
-				inSampling = sampl_e
-			else :
-				inSampling = 2*sampl_e
+				in_sampling = sampl_e
+				warnings.warn("Interpolating b to e", UserWarning)
+			elif sampl_e == sampl_b and len(e) == len(db):
+				in_sampling = sampl_e
+			else:
+				in_sampling = 2 * sampl_e
 				
-				nt  = (np.min([end(e),end(dB)])-np.max([start(e),start(dB)]))/(1/inSampling)
-				t   = np.linspace(np.max([start(e),start(dB)]),np.min([end(e),end(dB)]),int(nt))
+				nt = (np.min([end(e), end(db)]) - np.max([start(e), start(db)])) / (1 / in_sampling)
+				t = np.linspace(np.max([start(e), start(db)]), np.min([end(e), end(db)]), int(nt))
 				
-				t   = ts_time(t) 
+				t = ts_time(t)
+
+				e, db, b0, full_b = [resample(field, t) for field in [e, db, b0, full_b]]
+
+				warnings.warn("Interpolating b and e to 2x e sampling", UserWarning)
 				
-				e       = resample(e,t)
-				dB      = resample(dB,t)
-				B0      = resample(B0,t)
-				fullB   = resample(fullB,t)
-				warnings.warn("Interpolating b and e to 2x e sampling",UserWarning)
-				
+		print(f"Fs = {in_sampling:4.2f}, Fs_e = {sampl_e:4.2f}, Fs_b = {sampl_b:4.2f}")
 		
-		print("Fs = {:4.2f}, Fs_e = {:4.2f}, Fs_b = {:4.2f}".format(inSampling,sampl_e,sampl_b))
-		
-	  
-	else :
-		inSampling = calc_fs(dB)
+	else:
+		in_sampling = calc_fs(db)
+
 		e = None
 
-	if inSampling/2<freq_int[1]:
-	  raise ValueError("F_MAX must be lower than the Nyquist frequecy")
+	if in_sampling / 2 < freq_int[1]:
+		raise ValueError("F_MAX must be lower than the Nyquist frequecy")
 
-	if wantEE and e.shape[1] < 3 and not flag_dEdotB0:
-	  raise ValueError("E must have all 3 components or flag ''dEdotdB=0'' must be given")
+	if want_ee and e.shape[1] < 3 and not flag_dedotb0:
+		raise ValueError("E must have all 3 components or flag ''dEdotdb=0'' must be given")
 
+	if len(db) % 2:
+		db = db[:-1, :]
+		b0 = b0[:-1, :]
 
-	if len(dB)%2 :
-		dB = dB[:-1,:]
-		B0 = B0[:-1,:]
+		if fac_matrix is None:
+			xyz = xyz[:-1, :]
+		else:
+			fac_matrix["t"] = fac_matrix["t"][:-1, :]
 
-		if facMatrix is None:
-			xyz = xyz[:-1,:]
-		else :
-			facMatrix["t"]          = facMatrix["t"][:-1,:]
-			facMatrix["rotMatrix"]  = facMatrix["rotMatrix"][:-1,:,:]
+			fac_matrix["rotMatrix"] = fac_matrix["rotMatrix"][:-1, :, :]
 
-		if wantEE:
-			e = e[:-1,:]
+		if want_ee:
+			e = e[:-1, :]
 
-	inTime = dB.time.data.view("i8")*1e-9
+	in_time = db.time.data.view("i8")*1e-9
 
-	Bx = None
-	By = None
-	Bz = None
-	idxBparSpinPlane = None
+	b_x, b_y, b_z = [None, None, None]
 
-	if flag_dEdotB0:
-		Bx = fullB[:,0].data  # Needed for parfor
-		By = fullB[:,1].data
-		Bz = fullB[:,2].data
+	idx_bpar_spin_plane = None
+
+	if flag_dedotb0:
+		b_x = full_b[:, 0].data
+		b_y = full_b[:, 1].data
+		b_z = full_b[:, 2].data
 
 		# Remove the last sample if the total number of samples is odd
-		if len(fullB)%2 :
-			Bx = Bx[:-1,:]
-			By = By[:-1,:]
-			Bz = Bz[:-1,:]
+		if len(full_b) % 2:
+			b_x = b_x[:-1, :]
+			b_y = b_y[:-1, :]
+			b_z = b_z[:-1, :]
 
-		angleBElevation     = np.arctan(Bz/np.sqrt(Bx**2+By**2))*180/np.pi
-		idxBparSpinPlane    = np.abs(angleBElevation)<angleBElevationMax
-
+		angle_b_elevation = np.arctan(b_z / np.sqrt(b_x ** 2 + b_y ** 2)) * 180 / np.pi
+		idx_bpar_spin_plane = np.abs(angle_b_elevation) < angle_b_elevation_max
 
 	# If E has all three components, transform E and B waveforms to a magnetic field aligned coordinate (FAC)
-	# and save eISR for computation of ESUM. Ohterwise we compute Ez within the main loop and do the
+	# and save eisr for computation of ESUM. Ohterwise we compute Ez within the main loop and do the
 	# transformation to FAC there.
 	
-	timeB0 = 0
+	time_b0 = 0
 	if flag_want_fac:
 		res["flagFac"] = True
-		timeB0 = B0.time.data.view("i8")*1e-9
-		if wantEE:
-			if  not flag_dEdotB0:
-				eISR2 = e[:,:2]
+
+		time_b0 = b0.time.data.view("i8")*1e-9
+
+		if want_ee:
+			if not flag_dedotb0:
+				eisr2 = e[:, :2]
+
 				if e.shape[1] < 3:
 					raise TypeError("E must be a 3D vector to be rotated to FAC")
 
-				if facMatrix is None:
-					e = convert_fac(e,B0,xyz)
+				if fac_matrix is None:
+					e = convert_fac(e, b0, xyz)
 				else:
-					e = convert_fac(e,facMatrix)
+					e = convert_fac(e, fac_matrix)
 		
-		if facMatrix is None:
-			dB = convert_fac(dB,B0,xyz)
+		if fac_matrix is None:
+			db = convert_fac(db, b0, xyz)
 		else:
-			dB = convert_fac(dB,facMatrix)
-
+			db = convert_fac(db, fac_matrix)
 
 	# Find the frequencies for an FFT of all data and set important parameters
-	nd2     = len(inTime)/2
-	nyq     = 1/2
-	freq    = inSampling*np.arange(nd2)/(nd2)*nyq
-	w       = np.hstack([0,freq,-np.flip(freq[:-1])])    # The frequencies corresponding to FFT
+	nd2 = len(in_time)/2
 
-	Morlet_width    = 5.36*mwidthcoef
-	freq_number     = np.ceil((np.log10(freq_int[1]) - np.log10(freq_int[0]))*12*mwidthcoef) #to get proper overlap for Morlet
-	amin            = np.log10(0.5*inSampling/freq_int[1])
-	amax            = np.log10(0.5*inSampling/freq_int[0])
-	anumber         = freq_number
-	# amin           = 0.01      # The highest frequency to consider is 0.5*sampl/10^amin
-	# amax           = 2         # The lowest frequency to consider is 0.5*sampl/10^amax
-	# anumber        = 400    # The number of frequencies
+	nyq = 0.5
 
-	a = np.logspace(amin,amax,int(anumber))
-	# a = np.logspace(0.01,2.4,100)
+	freq = in_sampling * np.arange(nd2) / nd2 * nyq
 
-	w0      = inSampling/2      # The maximum frequency
-	# sigma  = 5.36/w0           # The width of the Morlet wavelet
-	sigma   = Morlet_width/w0   # The width of the Morlet wavelet
-	
+	w = np.hstack([0, freq, -np.flip(freq[:-1])])    # The frequencies corresponding to FFT
+
+	morlet_width = 5.36 * m_width_coef
+
+	# to get proper overlap for Morlet
+	freq_number = np.ceil((np.log10(freq_int[1]) - np.log10(freq_int[0])) * 12 * m_width_coef)
+
+	amin, amax = [np.log10(0.5 * in_sampling / freq_int[1]), np.log10(0.5 * in_sampling / freq_int[0])]
+	# amin, amax = [0.01, 2]
+
+	anumber = freq_number
+	# anumber = 400
+
+	a = np.logspace(amin, amax, int(anumber))
+
+	# Maximum frequency
+	w0 = in_sampling / 2
+
+	# Width of the Morlet wavelet
+	sigma = morlet_width / w0
+	# sigma = 5.36 / w0
+
 	# Make the FFT of all data
-	idxNanB             = np.isnan(dB.data)
-	dB.data[idxNanB]    = 0
-	Swb                 = pyfftw.interfaces.numpy_fft.fft(dB,axis=0,threads=mp.cpu_count())
+	idx_nan_b = np.isnan(db.data)
 
-	Swe         = None
-	idxNanE     = None
-	SweISR2     = None
-	idxNanEISR2 = None # Needed for parfor
+	db.data[idx_nan_b] = 0
 
-	if wantEE:
+	swb = pyfftw.interfaces.numpy_fft.fft(db, axis=0, threads=mp.cpu_count())
+
+	idx_nan_e, idx_nan_eisr2 = [None, None]
+
+	swe, sweisr2 = [None, None]
+
+	if want_ee:
 		print("ebsp ... calculate E and B wavelet transform ... ")
-		idxNanE             = np.isnan(e.data)
-		e.data[idxNanE]     = 0
-		Swe                 = pyfftw.interfaces.numpy_fft.fft(e,axis=0,threads=mp.cpu_count())
 
-		if flag_want_fac and not flag_dEdotB0:
-			idxNanEISR2                 = np.isnan(eISR2.data)
-			eISR2.data[idxNanEISR2]     = 0
-			SweISR2                     = pyfftw.interfaces.numpy_fft.fft(eISR2,axis=0,threads=mp.cpu_count())
-	else :
+		idx_nan_e = np.isnan(e.data)
+
+		e.data[idx_nan_e] = 0
+
+		swe = pyfftw.interfaces.numpy_fft.fft(e, axis=0, threads=mp.cpu_count())
+
+		if flag_want_fac and not flag_dedotb0:
+			idx_nan_eisr2 = np.isnan(eisr2.data)
+
+			eisr2.data[idx_nan_eisr2] = 0
+
+			sweisr2 = pyfftw.interfaces.numpy_fft.fft(eisr2, axis=0, threads=mp.cpu_count())
+	else:
 		print("ebsp ... calculate B wavelet transform ....")
 
 	# Loop through all frequencies
-	ndata       = len(inTime)
-	nfreq       = len(a)
-	ndataOut    = len(outTime)
+	ndata, nfreq, ndata_out = [len(in_time), len(a), len(out_time)]
 
-	powerEx_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	powerEy_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	powerEz_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	power2E_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	power2E_ISR2_plot       = np.zeros((ndata,nfreq),dtype="complex128")
-	power2B_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	powerBx_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	powerBy_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	powerBz_plot            = np.zeros((ndata,nfreq),dtype="complex128")
-	S_plot_x                = np.zeros((ndata,nfreq))
-	S_plot_y                = np.zeros((ndata,nfreq))
-	S_plot_z                = np.zeros((ndata,nfreq))
-	planarity               = np.zeros((ndataOut,nfreq))
-	ellipticity             = np.zeros((ndataOut,nfreq))
-	degreeOfPolarization3D  = np.zeros((ndataOut,nfreq),dtype="complex128")
-	degreeOfPolarization2D  = np.zeros((ndataOut,nfreq),dtype="complex128")
-	thetaSVD_fac            = np.zeros((ndataOut,nfreq))
-	phiSVD_fac              = np.zeros((ndataOut,nfreq))
+	#
+	power_ex_plot, power_ey_plot, power_ez_plot = [np.zeros((ndata, nfreq), dtype="complex128") for _ in range(3)]
+
+	power_2e_plot, power_2e_isr2_plot = [np.zeros((ndata, nfreq), dtype="complex128") for _ in range(2)]
+
+	power_bx_plot, power_by_plot, power_bz_plot = [np.zeros((ndata, nfreq), dtype="complex128") for _ in range(3)]
+
+	power_2b_plot = np.zeros((ndata, nfreq), dtype="complex128")
+
+	s_plot_x, s_plot_y, s_plot_z = [np.zeros((ndata, nfreq)) for _ in range(3)]
+
+	planarity, ellipticity = [np.zeros((ndata_out, nfreq)) for _ in range(2)]
+	dop_3d, dop_2d = [np.zeros((ndata_out, nfreq), dtype="complex128") for _ in range(2)]
+
+	theta_svd_fac, phi_svd_fac = [np.zeros((ndata_out, nfreq)) for _ in range(2)]
 
 	# Get the correct frequencies for the wavelet transform
-	frequencyVec    = w0/a
-	censur          = np.floor(2*a*outSampling/inSampling*nWavePeriodToAverage)
-	
-	#---------------------------------------------------------------------------------------------------------------------
-	#---------------------------------------------------------------------------------------------------------------------
-	
+	frequency_vec = w0/a
+
+	censur = np.floor(2 * a * out_sampling / in_sampling * n_wave_period_to_average)
+
 	"""
 	pdb.set_trace()
-	mpi_args = (frequencyVec,nWavePeriodToAverage,outSampling,sigma,a,w,w0,Swb,Swe,flag_want_fac,flag_dEdotB0,\
-			Bx,By,Bz,B0,xyz,facMatrix,inTime,outTime,idxNanB,idxNanE,idxNanEISR2,idxBparSpinPlane,wantEE,wantPolarization,SweISR2)
+	mpi_args = (frequency_vec,n_wave_period_to_average,out_sampling,sigma,a,w,w0,Swb,Swe,flag_want_fac,flag_dEdotb0,\
+			Bx,By,Bz,b0,xyz,fac_matrix,in_time,out_time,idxNanB,idxNanE,idxNaneisr2,idxBparSpinPlane,wantEE,wantPolarization,Sweisr2)
 	pool = mp.Pool(mp.cpu_count())
 	pool.starmap(my_func, [(*mpi_args,ind_a) for ind_a in range(2)])
 	"""
 	# begin for
-	# inputs (frequencyVec,nWavePeriodToAverage,outSampling,sigma,w,w0,Swb,)
+	# inputs (frequency_vec,n_wave_period_to_average,out_sampling,sigma,w,w0,Swb,)
 
 	for ind_a in tqdm(range(len(a))):
-	#for ind_a in range(len(a)): # Main loop over frequencies
-		#disp([num2str(ind_a) '. frequency, ' num2str(newfreq(ind_a)) ' Hz.']);
-
-		## resample to 1 second sampling for Pc1-2 or 1 minute sampling for Pc3-5
+		# resample to 1 second sampling for Pc1-2 or 1 minute sampling for Pc3-5
 		# average top frequencies to 1 second/1 minute
 		# below will be an average over 8 wave periods. first find where one
 		# sample is less than eight wave periods
-		if frequencyVec[ind_a]/nWavePeriodToAverage > outSampling :
-			avWindow = 1/outSampling
-		else :
-			avWindow = nWavePeriodToAverage/frequencyVec[ind_a]
 
+		if frequency_vec[ind_a] / n_wave_period_to_average > out_sampling:
+			av_window = 1 / out_sampling
+		else:
+			av_window = n_wave_period_to_average / frequency_vec[ind_a]
 
 		# Get the wavelet transform by IFFT of the FFT
-		mWexp     = np.exp(-sigma*sigma*((a[ind_a]*w-w0)**2)/2)
-		mWexp2    = np.tile(mWexp,(2,1)).T
-		mWexp     = np.tile(mWexp,(3,1)).T
+		wexp_mat = np.exp(-sigma * sigma * ((a[ind_a] * w - w0) ** 2) / 2)
+		wexp_mat = np.tile(wexp_mat, (3, 1)).T
 		
-		Wb          = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1)*Swb*mWexp,axis=0,threads=mp.cpu_count())
-		Wb[idxNanB] = np.nan
+		wexp_mat2 = np.tile(wexp_mat, (2, 1)).T
+		
+		wb = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * swb * wexp_mat, axis=0, threads=mp.cpu_count())
+		wb[idx_nan_b] = np.nan
 
-		We          = None
-		WeISR2      = None
-		if wantEE :
-			if Swe.shape[1] == 2 :
-				We = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1)*Swe*mWexp2,axis=0,threads=mp.cpu_count())
-			else :
-				We = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1)*Swe*mWexp,axis=0,threads=mp.cpu_count())
+		we, weisr2 = [None, None]
 
-			We[idxNanE] = np.nan
+		if want_ee:
+			if swe.shape[1] == 2:
+				we = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * swe * wexp_mat2, axis=0, threads=mp.cpu_count())
+			else:
+				we = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * swe * wexp_mat, axis=0, threads=mp.cpu_count())
 
-			if flag_want_fac and not flag_dEdotB0 :
-				WeISR2              = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1)*SweISR2*mWexp2,axis=0,threads=mp.cpu_count())
-				WeISR2[idxNanEISR2] = np.nan
+			we[idx_nan_e] = np.nan
 
-		newfreqmat=w0/a[ind_a]
-		## Power spectrum of E and Poynting flux
-		if wantEE : 
+			if flag_want_fac and not flag_dedotb0:
+				weisr2 = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * sweisr2 * wexp_mat2, axis=0,
+														  threads=mp.cpu_count())
+				weisr2[idx_nan_eisr2] = np.nan
+
+		newfreqmat = w0 / a[ind_a]
+		# Power spectrum of E and Poynting flux
+
+		if want_ee:
 			# Power spectrum of E, power = (2*pi)*conj(W).*W./newfreqmat
-			if flag_want_fac and not flag_dEdotB0 :
-				SUMpowerEISR2 = np.sum(2*np.pi*(WeISR2*np.conj(WeISR2))/newfreqmat,axis=1)
-			else :
-				SUMpowerEISR2 = np.sum(2*np.pi*(We*np.conj(We))/newfreqmat,axis=1)
-			end
+			if flag_want_fac and not flag_dedotb0:
+				sum_power_eisr2 = np.sum(2 * np.pi * (weisr2 * np.conj(weisr2)) / newfreqmat, axis=1)
+			else:
+				sum_power_eisr2 = np.sum(2 * np.pi * (we * np.conj(we)) / newfreqmat, axis=1)
 
-			power2E_ISR2_plot[:,ind_a] = SUMpowerEISR2
+			power_2e_isr2_plot[:, ind_a] = sum_power_eisr2
 
-			if flag_dEdotB0 :# Compute Ez from dE * B = 0
-				rWe = np.real(We)
-				iWe = np.imag(We)
-				wEz = -(rWe[:,0]*Bx+rWe[:,1]*By)/Bz-1j*(iWe[:,0]*Bx+iWe[:,1]*By)/Bz
-				wEz[idxBparSpinPlane] = np.nan
-				if flag_want_fac :
-					if facMatrix is None :
-						We = convert_fac(ts_vec_xyz(timesB0,np.hstack([We[:,:2],wEz])),B0,xyz)
-					else :
-						We = convert_fac(ts_vec_xyz(timesB0,np.hstack([We[:,:2],wEz])),facMatrix)
+			# Compute Ez from dE * B = 0
+			if flag_dedotb0:
+				we_real, we_imag = [np.real(we), np.imag(we)]
+
+				we_z = -(we_real[:, 0] * b_x + we_real[:, 1] * b_y) / b_z - 1j * (
+							we_imag[:, 0] * b_x + we_imag[:, 1] * b_y) / b_z
+				we_z[idx_bpar_spin_plane] = np.nan
+
+				if flag_want_fac:
+					if fac_matrix is None:
+						we = convert_fac(ts_vec_xyz(time_b0, np.hstack([we[:, :2], we_z])), b0, xyz)
+					else:
+						we = convert_fac(ts_vec_xyz(time_b0, np.hstack([we[:, :2], we_z])), fac_matrix)
 					
-					We = We[:,1:]
-				else :
-					We = np.hstack([We[:,:2],wEz])
+					we = we[:, 1:]
+				else:
+					we = np.hstack([we[:, :2], we_z])
 			
-			powerE = 2*np.pi*(We*np.conj(We))/newfreqmat
-			powerE = np.vstack([powerE.T,np.sum(powerE,axis=1)]).T
+			power_e = 2 * np.pi * (we * np.conj(we)) / newfreqmat
+			power_e = np.vstack([power_e.T, np.sum(power_e, axis=1)]).T
 
-			powerEx_plot[:,ind_a] = powerE[:,0]
-			powerEy_plot[:,ind_a] = powerE[:,1]
-			powerEz_plot[:,ind_a] = powerE[:,2]
-			power2E_plot[:,ind_a] = powerE[:,3]
+			power_ex_plot[:, ind_a] = power_e[:, 0]
+			power_ey_plot[:, ind_a] = power_e[:, 1]
+			power_ez_plot[:, ind_a] = power_e[:, 2]
+			power_2e_plot[:, ind_a] = power_e[:, 3]
 
 			# Poynting flux calculations, assume E and b units mV/m and nT, get  S in uW/m^2
-			coef_poynt = 10/4/np.pi*(1/4)*(4*np.pi); # 4pi from wavelets, see A. Tjulins power estimates a few lines above
+			coef_poynt = 10 / 4 / np.pi * (1/4) * (4 * np.pi)  # 4pi from wavelets, see A. Tjulins power estimates
 			
-			S = np.zeros((ndata,3))
+			s = np.zeros((ndata, 3))
 
-			Wex = We[:,0]
-			Wey = We[:,1]
-			Wez = We[:,2]
+			we_x, we_y, we_z = [we[:, i] for i in range(3)]
+			wb_x, wb_y, wb_z = [wb[:, i] for i in range(3)]
 
-			Wbx = Wb[:,0]
-			Wby = Wb[:,1]
-			Wbz = Wb[:,2]
+			s[:, 0] = coef_poynt * np.real(
+				we_y * np.conj(wb_z) + np.conj(we_y) * wb_z - we_z * np.conj(wb_y) - np.conj(we_z) * wb_y) / newfreqmat
+			s[:, 1] = coef_poynt * np.real(
+				we_z * np.conj(wb_x) + np.conj(we_z) * wb_x - we_x * np.conj(wb_z) - np.conj(we_x) * wb_z) / newfreqmat
+			s[:, 2] = coef_poynt * np.real(
+				we_x * np.conj(wb_y) + np.conj(we_x) * wb_y - we_y * np.conj(wb_x) - np.conj(we_y) * wb_x) / newfreqmat
 
-			S[:,0] = coef_poynt*np.real(Wey*np.conj(Wbz)+np.conj(Wey)*Wbz-Wez*np.conj(Wby)-np.conj(Wez)*Wby)/newfreqmat
-			S[:,1] = coef_poynt*np.real(Wez*np.conj(Wbx)+np.conj(Wez)*Wbx-Wex*np.conj(Wbz)-np.conj(Wex)*Wbz)/newfreqmat
-			S[:,2] = coef_poynt*np.real(Wex*np.conj(Wby)+np.conj(Wex)*Wby-Wey*np.conj(Wbx)-np.conj(Wey)*Wbx)/newfreqmat
+			s_plot_x[:, ind_a], s_plot_y[:, ind_a], s_plot_z[:, ind_a] = [s[:, i] for i in range(3)]
 
-			S_plot_x[:,ind_a] = S[:,0]
-			S_plot_y[:,ind_a] = S[:,1]
-			S_plot_z[:,ind_a] = S[:,2]
-	  
-	  #---------------------------------------------------------------------------------------------------------------------
-	  
-		## Power spectrum of B
-		powerB = 2*np.pi*(Wb*np.conj(Wb))/newfreqmat
-		powerB = np.vstack([powerB.T,np.sum(powerB,axis=1)]).T
+		# Power spectrum of B
+		power_b = 2 * np.pi * (wb * np.conj(wb)) / newfreqmat
+		power_b = np.vstack([power_b.T, np.sum(power_b, axis=1)]).T
 
-		powerBx_plot[:,ind_a] = powerB[:,0]
-		powerBy_plot[:,ind_a] = powerB[:,1]
-		powerBz_plot[:,ind_a] = powerB[:,2]
-		power2B_plot[:,ind_a] = powerB[:,3]
-		
-		if wantPolarization : # Polarization parameters
-			## Construct spectral matrix and average it
-			SM          = np.zeros((3,3,ndata),dtype="complex128")
-			SM[0,0,:]   = 2*np.pi*(Wb[:,0]*np.conj(Wb[:,0]))/newfreqmat
-			SM[0,1,:]   = 2*np.pi*(Wb[:,0]*np.conj(Wb[:,1]))/newfreqmat
-			SM[0,2,:]   = 2*np.pi*(Wb[:,0]*np.conj(Wb[:,2]))/newfreqmat
-			SM[1,0,:]   = 2*np.pi*(Wb[:,1]*np.conj(Wb[:,0]))/newfreqmat
-			SM[1,1,:]   = 2*np.pi*(Wb[:,1]*np.conj(Wb[:,1]))/newfreqmat
-			SM[1,2,:]   = 2*np.pi*(Wb[:,1]*np.conj(Wb[:,2]))/newfreqmat
-			SM[2,0,:]   = 2*np.pi*(Wb[:,2]*np.conj(Wb[:,0]))/newfreqmat
-			SM[2,1,:]   = 2*np.pi*(Wb[:,2]*np.conj(Wb[:,1]))/newfreqmat
-			SM[2,2,:]   = 2*np.pi*(Wb[:,2]*np.conj(Wb[:,2]))/newfreqmat
-			SM          = np.transpose(SM,[2,0,1])
+		power_bx_plot, power_by_plot, power_bz_plot = [power_b[:, i] for i in range(3)]
 
-			avSM = np.zeros((ndataOut,3,3),dtype="complex128") # Averaged SM
+		power_2b_plot = power_b[:, 3]
+
+		# Polarization parameters
+		if want_polarization:
+			# Construct spectral matrix and average it
+			s_mat = np.zeros((3, 3, ndata), dtype="complex128")
+
+			for i in range(3):
+				for j in range(3):
+					s_mat[i, j, :] = 2 * np.pi * (wb[:, i] * np.conj(wb[:, j])) / newfreqmat
+
+			s_mat = np.transpose(s_mat, [2, 0, 1])
+
+			# Averaged s_mat
+			s_mat_avg = np.zeros((ndata_out, 3, 3), dtype="complex128")
 			
 			for comp in range(3):
-				avSM[...,comp] = AverageData(SM[...,comp],inTime,outTime,avWindow)
-			#---------------------------------------------------------------------------------------------------------------------    
+				s_mat_avg[..., comp] = average_data(s_mat[..., comp], in_time, out_time, av_window)
+
 			# Remove data possibly influenced by edge effects
+			censur_idx = np.hstack([np.arange(np.min([censur[ind_a], len(out_time)])),
+									np.arange(np.max([0, len(out_time) - censur[ind_a] - 1]), len(out_time))])
+			censur_idx = censur_idx.astype(int)
+
+			s_mat_avg[censur_idx, ...] = np.nan
+
+			# compute singular value decomposition
+			# real matrix which is superposition of real part of spectral matrix over imaginary part
+			a_mat, u_mat, w_mat, v_mat = [np.zeros((6, 3, ndata_out)) for _ in range(4)]
+
+			# wSingularValues = zeros(3,ndata2);
+			# R = zeros(3,3,ndata2); #spectral matrix in coordinate defined by V axes
+			a_mat[:3, ...] = np.real(np.transpose(s_mat_avg, [1, 2, 0]))
+			a_mat[3:6, ...] = -np.imag(np.transpose(s_mat_avg, [1, 2, 0]))
+
+			for i in range(ndata_out):
+				if np.isnan(a_mat[..., i]).any():
+					u_mat[..., i], w_mat[..., i], v_mat[..., i] = [np.nan, np.nan, np.nan]
+				else:
+					u_mat[..., i], w_mat[..., i], v_mat[..., i] = np.linalg.svd(a_mat[..., i], full_matrices=False)
 			
-			censurIdx           = np.hstack([np.arange(np.min([censur[ind_a],len(outTime)])),\
-												np.arange(np.max([0,len(outTime)-censur[ind_a]-1]),len(outTime))])
-			censurIdx           = censurIdx.astype(int)
-			avSM[censurIdx,...] = np.nan
+			# compute direction of propagation
+			sign_kz = np.sign(v_mat[2, 2, :])
+			v_mat[2, 2, :] = v_mat[2, 2, :] * sign_kz
+			v_mat[1, 2, :] = v_mat[1, 2, :] * sign_kz
+			v_mat[0, 2, :] = v_mat[0, 2, :] * sign_kz
 
-			## compute singular value decomposition
-			A = np.zeros((6,3,ndataOut)) #real matrix which is superposition of real part of spectral matrix over imaginary part
-			U = np.zeros((6,3,ndataOut))
-			W = np.zeros((3,3,ndataOut))
-			V = np.zeros((3,3,ndataOut))
-			#wSingularValues = zeros(3,ndata2);
-			#R = zeros(3,3,ndata2); #spectral matrix in coordinate defined by V axes
-			A[:3,...]   = np.real(np.transpose(avSM,[1,2,0]))
-			A[3:6,...]  = -np.imag(np.transpose(avSM,[1,2,0]))
+			theta_svd_fac[:, ind_a] = np.abs(
+				np.squeeze(np.arctan(np.sqrt(v_mat[0, 2, :] ** 2 + v_mat[1, 2, :] ** 2) / v_mat[2, 2, :])))
 
-			for i in range(ndataOut):
-				
-				if np.isnan(A[...,i]).any() :
-					U[...,i] = np.nan
-					W[...,i] = np.nan
-					V[...,i] = np.nan
-				else : 
-					
-					[U[...,i],W[...,i],V[...,i]] = np.linalg.svd(A[...,i],full_matrices=False)
+			phi_svd_fac[:, ind_a] = np.squeeze(np.arctan2(v_mat[1, 2, :], v_mat[0, 2, :]))
+
+			# Calculate polarization parameters
+			planarity_local = np.squeeze(1-np.sqrt(w_mat[2, 2, :] / w_mat[0, 0, :]))
+			planarity_local[censur_idx] = np.nan
 			
-			# compute direction of propogation
-			signKz      = np.sign(V[2,2,:])
-			V[2,2,:]    = V[2,2,:]*signKz
-			V[1,2,:]    = V[1,2,:]*signKz
-			V[0,2,:]    = V[0,2,:]*signKz
+			planarity[:, ind_a] = planarity_local
 
-			thetaSVD_fac[:,ind_a]   = np.abs(np.squeeze(np.arctan(np.sqrt(V[0,2,:]**2+V[1,2,:]**2)/V[2,2,:])))    #ok<PFOUS>
-			phiSVD_fac[:,ind_a]     = np.squeeze(np.arctan2(V[1,2,:],V[0,2,:]))                                   #ok<PFOUS>
-
-			## Calculate polarization parameters
-			planarityLocal              = np.squeeze(1-np.sqrt(W[2,2,:]/W[0,0,:]))
-			planarityLocal[censurIdx]   = np.nan
-			planarity[:,ind_a]          = planarityLocal
-
-			#ellipticity: ratio of axes of polarization ellipse axes*sign of polarization
+			# ellipticity: ratio of axes of polarization ellipse axes*sign of polarization
 			
-			ellipticityLocal            = np.squeeze(W[1,1,:]/W[0,0,:])*np.sign(np.imag(avSM[:,0,1]))
-			ellipticityLocal[censurIdx] = np.nan
-			ellipticity[:,ind_a]        = ellipticityLocal
-			#---------------------------------------------------------------------------------------------------------------------    
+			ellipticity_local = np.squeeze(w_mat[1, 1, :] / w_mat[0, 0, :]) * np.sign(np.imag(s_mat_avg[:, 0, 1]))
+			ellipticity_local[censur_idx] = np.nan
+
+			ellipticity[:, ind_a] = ellipticity_local
+
 			# DOP = sqrt[(3/2.*trace(SM^2)./(trace(SM))^2 - 1/2)]; Samson, 1973, JGR
-			dop = np.sqrt((3/2)*(np.trace(np.matmul(avSM,avSM),axis1=1,axis2=2)/np.trace(avSM,axis1=1,axis2=2)**2)-1/2)
+			dop = np.sqrt((3 / 2) * (
+						np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2) / np.trace(s_mat_avg, axis1=1,
+																							   axis2=2) ** 2) - 1 / 2)
 
-			dop[censurIdx]                  = np.nan
-			degreeOfPolarization3D[:,ind_a] = dop
-
-
+			dop[censur_idx] = np.nan
+			dop_3d[:, ind_a] = dop
 
 			# DOP in 2D = sqrt[2*trace(rA^2)/trace(rA)^2 - 1)]; Ulrich
-			Vnew = np.transpose(V,[2,0,1])
+			v_mat_new = np.transpose(v_mat, [2, 0, 1])
 
-			avSM2dim    = np.matmul(Vnew,np.matmul(avSM,np.transpose(Vnew,[0,2,1])))
-			avSM2dim    = avSM2dim[:,:2,:2]
-			avSM        = avSM2dim;
-			dop2dim     = np.sqrt(2*(np.trace(np.matmul(avSM,avSM),axis1=1,axis2=2)/np.trace(avSM,axis1=1,axis2=2)**2)-1)
+			s_mat_avg2dim = np.matmul(v_mat_new, np.matmul(s_mat_avg, np.transpose(v_mat_new, [0, 2, 1])))
+			s_mat_avg2dim = s_mat_avg2dim[:, :2, :2]
+			s_mat_avg = s_mat_avg2dim
 
-			dop2dim[censurIdx]              = np.nan
-			degreeOfPolarization2D[:,ind_a] = dop
-	#---------------------------------------------------------------------------------------------------------------------
-	#---------------------------------------------------------------------------------------------------------------------
-	
-	
+			dop2dim = np.sqrt(2 * (
+						np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2) / np.trace(s_mat_avg, axis1=1,
+																							   axis2=2) ** 2) - 1)
+			dop2dim[censur_idx] = np.nan
+			dop_2d[:, ind_a] = dop
 
 	# set data gaps to NaN and remove edge effects
 	censur = np.floor(2*a)
 	for ind_a in range(len(a)):
-		censurIdx = np.hstack([np.arange(np.min([censur[ind_a],len(inTime)])),\
-								np.arange(np.max([1,len(inTime)-censur[ind_a]]),len(inTime))])
+		censur_idx = np.hstack([np.arange(np.min([censur[ind_a], len(in_time)])),
+								np.arange(np.max([1, len(in_time) - censur[ind_a]]), len(in_time))])
 		
-		
-		censurIdx = censurIdx.astype(int)
-		powerBx_plot[censurIdx,ind_a] = np.nan
-		powerBy_plot[censurIdx,ind_a] = np.nan
-		powerBz_plot[censurIdx,ind_a] = np.nan
-		power2B_plot[censurIdx,ind_a] = np.nan
-		if wantEE:
-			powerEx_plot[censurIdx,ind_a]       = np.nan
-			powerEy_plot[censurIdx,ind_a]       = np.nan
-			powerEz_plot[censurIdx,ind_a]       = np.nan
-			power2E_plot[censurIdx,ind_a]       = np.nan
-			power2E_ISR2_plot[censurIdx,ind_a]  = np.nan
-			S_plot_x[censurIdx,ind_a]           = np.nan
-			S_plot_y[censurIdx,ind_a]           = np.nan
-			S_plot_z[censurIdx,ind_a]           = np.nan
+		censur_idx = censur_idx.astype(int)
 
+		power_bx_plot[censur_idx, ind_a] = np.nan
+		power_by_plot[censur_idx, ind_a] = np.nan
+		power_bz_plot[censur_idx, ind_a] = np.nan
+		power_2b_plot[censur_idx, ind_a] = np.nan
+
+		if want_ee:
+			power_ex_plot[censur_idx, ind_a] = np.nan
+			power_ey_plot[censur_idx, ind_a] = np.nan
+			power_ez_plot[censur_idx, ind_a] = np.nan
+			power_2e_plot[censur_idx, ind_a] = np.nan
+
+			power_2e_isr2_plot[censur_idx, ind_a] = np.nan
+
+			s_plot_x[censur_idx, ind_a] = np.nan
+			s_plot_y[censur_idx, ind_a] = np.nan
+			s_plot_z[censur_idx, ind_a] = np.nan
 
 	# remove edge effects from data gaps
-	idxNanE     = np.sum(idxNanE,axis=1)>0
-	idxNanB     = np.sum(idxNanB,axis=1)>0
-	idxNanEISR2 = np.sum(idxNanEISR2,axis=1)>0
+	idx_nan_e = np.sum(idx_nan_e, axis=1) > 0
+	idx_nan_b = np.sum(idx_nan_b, axis=1) > 0
+	idx_nan_eisr2 = np.sum(idx_nan_eisr2, axis=1) > 0
 
-	ndata2 = len(power2B_plot)
+	ndata2 = len(power_2b_plot)
 	if pc12_range or other_range:
 		censur3 = np.floor(1.8*a)
-
-	if pc35_range:
+	elif pc35_range:
 		censur3 = np.floor(.4*a)
+	else:
+		raise ValueError("Invalid range")
 
-	for i in range(len(idxNanB)-1):
-		if idxNanB[i] < idxNanB[i+1]:
+	for i in range(len(idx_nan_b) - 1):
+		if idx_nan_b[i] < idx_nan_b[i + 1]:
 			for j in range(len(a)):
-				censur_index_front = np.arange(np.max([i-censur3[j],0]),i)
+				censur_index_front = np.arange(np.max([i - censur3[j], 0]), i)
 
-				powerBx_plot[censur_index_front,j]  = np.nan
-				powerBy_plot[censur_index_front,j]  = np.nan
-				powerBz_plot[censur_index_front,j]  = np.nan
-				power2B_plot[censur_index_front,j]  = np.nan
-				S_plot_x[censur_index_front,j]      = np.nan
-				S_plot_y[censur_index_front,j]      = np.nan
-				S_plot_z[censur_index_front,j]      = np.nan
+				power_bx_plot[censur_index_front, j] = np.nan
+				power_by_plot[censur_index_front, j] = np.nan
+				power_bz_plot[censur_index_front, j] = np.nan
+				power_2b_plot[censur_index_front, j] = np.nan
 
-		if idxNanB[i] > idxNanB[i+1]:
+				s_plot_x[censur_index_front, j] = np.nan
+				s_plot_y[censur_index_front, j] = np.nan
+				s_plot_z[censur_index_front, j] = np.nan
+
+		if idx_nan_b[i] > idx_nan_b[i + 1]:
 			for j in range(len(a)):
-				censur_index_back = np.arange(i,np.min([i+censur3[j],ndata2]))
+				censur_index_back = np.arange(i, np.min([i + censur3[j], ndata2]))
 
-				powerBx_plot[censur_index_back,j]   = np.nan
-				powerBy_plot[censur_index_back,j]   = np.nan
-				powerBz_plot[censur_index_back,j]   = np.nan
-				power2B_plot[censur_index_back,j]   = np.nan
-				S_plot_x[censur_index_back,j]       = np.nan
-				S_plot_y[censur_index_back,j]       = np.nan
-				S_plot_z[censur_index_back,j]       = np.nan
+				power_bx_plot[censur_index_back, j] = np.nan
+				power_by_plot[censur_index_back, j] = np.nan
+				power_bz_plot[censur_index_back, j] = np.nan
+				power_2b_plot[censur_index_back, j] = np.nan
 
+				s_plot_x[censur_index_back, j] = np.nan
+				s_plot_y[censur_index_back, j] = np.nan
+				s_plot_z[censur_index_back, j] = np.nan
 
-	ndata3 = len(power2E_plot)
+	ndata3 = len(power_2e_plot)
 
-	for i in range(len(idxNanE)-1):
-		if idxNanE[i] < idxNanE[i+1]:
+	for i in range(len(idx_nan_e) - 1):
+		if idx_nan_e[i] < idx_nan_e[i + 1]:
 			for j in range(len(a)):
-				censur_index_front = np.arange(np.max([i-censur3[j],1]),i)
+				censur_index_front = np.arange(np.max([i - censur3[j], 1]), i)
 
-				powerEx_plot[censur_index_front,j]      = np.nan
-				powerEy_plot[censur_index_front,j]      = np.nan
-				powerEz_plot[censur_index_front,j]      = np.nan
-				power2E_plot[censur_index_front,j]      = np.nan
-				power2E_ISR2_plot[censur_index_front,j] = np.nan
-				S_plot_x[censur_index_front,j]          = np.nan
-				S_plot_y[censur_index_front,j]          = np.nan
-				S_plot_z[censur_index_front,j]          = np.nan
+				power_ex_plot[censur_index_front, j] = np.nan
+				power_ey_plot[censur_index_front, j] = np.nan
+				power_ez_plot[censur_index_front, j] = np.nan
+				power_2e_plot[censur_index_front, j] = np.nan
 
-		if idxNanE[i] > idxNanE[i+1]:
+				power_2e_isr2_plot[censur_index_front, j] = np.nan
+
+				s_plot_x[censur_index_front, j] = np.nan
+				s_plot_y[censur_index_front, j] = np.nan
+				s_plot_z[censur_index_front, j] = np.nan
+
+		elif idx_nan_e[i] > idx_nan_e[i + 1]:
 			for j in range(len(a)):
-				censur_index_back = np.arange(i,np.min([i+censur3[j],ndata3]))
+				censur_index_back = np.arange(i, np.min([i+censur3[j], ndata3]))
 
-				powerEx_plot[censur_index_back,j]       = np.nan
-				powerEy_plot[censur_index_back,j]       = np.nan
-				powerEz_plot[censur_index_back,j]       = np.nan
-				power2E_plot[censur_index_back,j]       = np.nan
-				power2E_ISR2_plot[censur_index_back,j]  = np.nan
-				S_plot_x[censur_index_back,j]           = np.nan
-				S_plot_y[censur_index_back,j]           = np.nan
-				S_plot_z[censur_index_back,j]           = np.nan
+				power_ex_plot[censur_index_back, j] = np.nan
+				power_ey_plot[censur_index_back, j] = np.nan
+				power_ez_plot[censur_index_back, j] = np.nan
+				power_2e_plot[censur_index_back, j] = np.nan
 
+				power_2e_isr2_plot[censur_index_back, j] = np.nan
 
-	ndata4 = len(power2E_ISR2_plot)
+				s_plot_x[censur_index_back, j] = np.nan
+				s_plot_y[censur_index_back, j] = np.nan
+				s_plot_z[censur_index_back, j] = np.nan
 
-	for i in range(len(idxNanEISR2)-1):
-		if idxNanEISR2[i] < idxNanEISR2[i+1]:
+		else:
+			raise IndexError
+
+	ndata4 = len(power_2e_isr2_plot)
+
+	for i in range(len(idx_nan_eisr2) - 1):
+		if idx_nan_eisr2[i] < idx_nan_eisr2[i + 1]:
 			for j in range(len(a)):
-				censur_index_front = np.arange(np.max([i-censur3[j],0]),i)
+				censur_index_front = np.arange(np.max([i - censur3[j], 0]), i)
 
-				power2E_ISR2_plot[censur_index_front,j] = np.nan
+				power_2e_isr2_plot[censur_index_front, j] = np.nan
 
-		if idxNanEISR2[i] > idxNanEISR2[i+1]:
+		elif idx_nan_eisr2[i] > idx_nan_eisr2[i + 1]:
 			for j in range(len(a)):
-				censur_index_back = np.arange(i,np.min([i+censur3[j],ndata4]))
+				censur_index_back = np.arange(i, np.min([i + censur3[j], ndata4]))
 
-				power2E_ISR2_plot[censur_index_back,j]  = np.nan
+				power_2e_isr2_plot[censur_index_back, j] = np.nan
 
-	#
-	powerBx_plot    = AverageData(powerBx_plot,inTime,outTime)
-	powerBy_plot    = AverageData(powerBy_plot,inTime,outTime)
-	powerBz_plot    = AverageData(powerBz_plot,inTime,outTime)
-	power2B_plot    = AverageData(power2B_plot,inTime,outTime)
+	power_bx_plot = average_data(power_bx_plot, in_time, out_time)
+	power_by_plot = average_data(power_by_plot, in_time, out_time)
+	power_bz_plot = average_data(power_bz_plot, in_time, out_time)
+	power_2b_plot = average_data(power_2b_plot, in_time, out_time)
 	
-	
-	bb_xxyyzzss         = np.tile(powerBx_plot,(4,1,1))
-	bb_xxyyzzss         = np.transpose(bb_xxyyzzss,[1,2,0])
-	bb_xxyyzzss[:,:,1]  = powerBy_plot
-	bb_xxyyzzss[:,:,2]  = powerBz_plot
-	bb_xxyyzzss[:,:,3]  = power2B_plot
-	bb_xxyyzzss         = bb_xxyyzzss.astype(float)
-
+	bb_xxyyzzss = np.tile(power_bx_plot, (4, 1, 1))
+	bb_xxyyzzss = np.transpose(bb_xxyyzzss, [1, 2, 0])
+	bb_xxyyzzss[:, :, 1] = power_by_plot
+	bb_xxyyzzss[:, :, 2] = power_bz_plot
+	bb_xxyyzzss[:, :, 3] = power_2b_plot
+	bb_xxyyzzss = bb_xxyyzzss.astype(float)
 
 	# Output
-	res["t"]            = Time(outTime,format="unix").datetime64
-	res["f"]            = frequencyVec
-	res["bb_xxyyzzss"]  = xr.DataArray(bb_xxyyzzss,coords=[res["t"],res["f"],["xx","yy","zz","ss"]],dims=["time","frequency","comp"])
+	res["t"] = Time(out_time, format="unix").datetime64
+	res["f"] = frequency_vec
+	res["bb_xxyyzzss"] = xr.DataArray(bb_xxyyzzss, coords=[res["t"], res["f"], ["xx", "yy", "zz", "ss"]],
+									  dims=["time", "frequency", "comp"])
 
-	
-	if wantEE:
-		powerEx_plot      = AverageData(powerEx_plot,inTime,outTime)
-		powerEy_plot      = AverageData(powerEy_plot,inTime,outTime)
-		powerEz_plot      = AverageData(powerEz_plot,inTime,outTime)
-		power2E_plot      = AverageData(power2E_plot,inTime,outTime)
-		power2E_ISR2_plot = AverageData(power2E_ISR2_plot,inTime,outTime)
-		power2E_ISR2_plot = power2E_ISR2_plot.astype(float)
+	if want_ee:
+		power_ex_plot = average_data(power_ex_plot, in_time, out_time)
+		power_ey_plot = average_data(power_ey_plot, in_time, out_time)
+		power_ez_plot = average_data(power_ez_plot, in_time, out_time)
+		power_2e_plot = average_data(power_2e_plot, in_time, out_time)
 
-		S_plot_x = np.real(AverageData(S_plot_x,inTime,outTime))
-		S_plot_y = np.real(AverageData(S_plot_y,inTime,outTime))
-		S_plot_z = np.real(AverageData(S_plot_z,inTime,outTime))
-		[S_azimuth,S_elevation,S_r] = sfs.util.cart2sph(S_plot_x,S_plot_y,S_plot_z)
+		power_2e_isr2_plot = average_data(power_2e_isr2_plot, in_time, out_time)
+		power_2e_isr2_plot = power_2e_isr2_plot.astype(float)
+
+		s_plot_x = np.real(average_data(s_plot_x, in_time, out_time))
+		s_plot_y = np.real(average_data(s_plot_y, in_time, out_time))
+		s_plot_z = np.real(average_data(s_plot_z, in_time, out_time))
+		s_azimuth, s_elevation, s_r = sfs.util.cart2sph(s_plot_x, s_plot_y, s_plot_z)
 		
-		ee_xxyyzzss         = np.tile(powerEx_plot,(4,1,1))
-		ee_xxyyzzss         = np.transpose(ee_xxyyzzss,[1,2,0])
-		ee_xxyyzzss[:,:,1]  = powerEy_plot
-		ee_xxyyzzss[:,:,2]  = powerEz_plot
-		ee_xxyyzzss[:,:,3]  = power2E_plot
-		ee_xxyyzzss         = ee_xxyyzzss.astype(float)
+		ee_xxyyzzss = np.tile(power_ex_plot, (4, 1, 1))
+		ee_xxyyzzss = np.transpose(ee_xxyyzzss, [1, 2, 0])
+		ee_xxyyzzss[:, :, 1] = power_ey_plot
+		ee_xxyyzzss[:, :, 2] = power_ez_plot
+		ee_xxyyzzss[:, :, 3] = power_2e_plot
+		ee_xxyyzzss = ee_xxyyzzss.astype(float)
 
-		Poynting_XYZ        = np.tile(S_plot_x,(3,1,1))
-		Poynting_XYZ        = np.transpose(Poynting_XYZ,[1,2,0])
-		Poynting_XYZ[:,:,1] = S_plot_y
-		Poynting_XYZ[:,:,2] = S_plot_z
-		Poynting_XYZ        = Poynting_XYZ.astype(float)
+		poynting_xyz = np.tile(s_plot_x, (3, 1, 1))
+		poynting_xyz = np.transpose(poynting_xyz, [1, 2, 0])
+		poynting_xyz[:, :, 1] = s_plot_y
+		poynting_xyz[:, :, 2] = s_plot_z
+		poynting_xyz = poynting_xyz.astype(float)
 
-		Poynting_RThPh          = np.tile(S_r,(3,1,1))
-		Poynting_RThPh          = np.transpose(Poynting_RThPh,[1,2,0])
-		Poynting_RThPh[...,1]   = np.pi/2-S_elevation
-		Poynting_RThPh[...,2]   = S_azimuth
-		Poynting_RThPh[...,1:]  = Poynting_RThPh[...,1:]*180/np.pi
-		Poynting_RThPh          = Poynting_RThPh.astype(float)
+		poynting_rthph = np.tile(s_r, (3, 1, 1))
+		poynting_rthph = np.transpose(poynting_rthph, [1, 2, 0])
+		poynting_rthph[..., 1] = np.pi / 2 - s_elevation
+		poynting_rthph[..., 2] = s_azimuth
+		poynting_rthph[..., 1:] = poynting_rthph[..., 1:] * 180 / np.pi
+		poynting_rthph = poynting_rthph.astype(float)
 
 		# Output
-		res["ee_ss"]          = power2E_ISR2_plot.astype(float)
-		res["ee_xxyyzzss"]    = xr.DataArray(ee_xxyyzzss,coords=[res["t"],res["f"],["xx","yy","zz","ss"]],dims=["time","frequency","comp"])
-		res["pf_xyz"]         = xr.DataArray(Poynting_XYZ,coords=[res["t"],res["f"],["x","y","z"]],dims=["time","frequency","comp"])
-		res["pf_rtp"]         = xr.DataArray(Poynting_RThPh,coords=[res["t"],res["f"],["rho","theta","phi"]],dims=["time","frequency","comp"])
+		res["ee_ss"] = power_2e_isr2_plot.astype(float)
 
-	if wantPolarization :
-	  # Define parameters for which we cannot compute the wave vector
-	  indLowPlanarity   = planarity < 0.5
-	  indLowEllipticity = np.abs(ellipticity) < .2
-	  
-	  thetaSVD_fac[indLowPlanarity] = np.nan
-	  phiSVD_fac[indLowPlanarity]   = np.nan
-	  
-	  thetaSVD_fac[indLowEllipticity]   = np.nan
-	  phiSVD_fac[indLowEllipticity]     = np.nan
-	  
-	  k_ThPhSVD_fac			= np.zeros((thetaSVD_fac.shape[0],thetaSVD_fac.shape[1],2))
-	  k_ThPhSVD_fac[...,0]  = thetaSVD_fac
-	  k_ThPhSVD_fac[...,1]  = phiSVD_fac
-	  
-	  # Output
-	  res["dop"]            = xr.DataArray(np.real(degreeOfPolarization3D),coords=[res["t"],res["f"]],dims=["time","frequency"])
-	  res["dop2d"]          = xr.DataArray(np.real(degreeOfPolarization2D),coords=[res["t"],res["f"]],dims=["time","frequency"])
-	  res["planarity"]      = xr.DataArray(planarity,coords=[res["t"],res["f"]],dims=["time","frequency"])
-	  res["ellipticity"]    = xr.DataArray(ellipticity,coords=[res["t"],res["f"]],dims=["time","frequency"])
-	  res["k_tp"]           = xr.DataArray(k_ThPhSVD_fac,coords=[res["t"],res["f"],["theta","phi"]],dims=["time","frequency","comp"])
+		res["ee_xxyyzzss"] = xr.DataArray(ee_xxyyzzss, coords=[res["t"], res["f"], ["xx", "yy", "zz", "ss"]],
+										  dims=["time", "frequency", "comp"])
 
+		res["pf_xyz"] = xr.DataArray(poynting_xyz, coords=[res["t"], res["f"], ["x", "y", "z"]],
+									 dims=["time", "frequency", "comp"])
+
+		res["pf_rtp"] = xr.DataArray(poynting_rthph, coords=[res["t"], res["f"], ["rho", "theta", "phi"]],
+									 dims=["time", "frequency", "comp"])
+
+	if want_polarization:
+		# Define parameters for which we cannot compute the wave vector
+		ind_low_planarity = planarity < 0.5
+		ind_low_ellipticity = np.abs(ellipticity) < .2
+		
+		theta_svd_fac[ind_low_planarity] = np.nan
+		phi_svd_fac[ind_low_planarity] = np.nan
+		
+		theta_svd_fac[ind_low_ellipticity] = np.nan
+		phi_svd_fac[ind_low_ellipticity] = np.nan
+		
+		k_thph_svd_fac = np.zeros((theta_svd_fac.shape[0], theta_svd_fac.shape[1], 2))
+		k_thph_svd_fac[..., 0] = theta_svd_fac
+		k_thph_svd_fac[..., 1] = phi_svd_fac
+		
+		# Output
+		res["dop"] = xr.DataArray(np.real(dop_3d), coords=[res["t"], res["f"]], dims=["time", "frequency"])
+
+		res["dop2d"] = xr.DataArray(np.real(dop_2d), coords=[res["t"], res["f"]], dims=["time", "frequency"])
+
+		res["planarity"] = xr.DataArray(planarity, coords=[res["t"], res["f"]], dims=["time", "frequency"])
+
+		res["ellipticity"] = xr.DataArray(ellipticity, coords=[res["t"], res["f"]], dims=["time", "frequency"])
+
+		res["k_tp"] = xr.DataArray(k_thph_svd_fac, coords=[res["t"], res["f"], ["theta", "phi"]],
+								   dims=["time", "frequency", "comp"])
 
 	return res

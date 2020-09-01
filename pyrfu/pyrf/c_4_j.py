@@ -42,12 +42,13 @@ def c_4_j(r_list=None, b_list=None):
 		>>> import numpy as np
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices
-		>>> ic = np.arange(1,5)
-		>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
-		>>> Rxyz = [mms.get_data("R_gse",Tint,i) for i in ic]
-		>>> j, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+		>>> mms_list = np.arange(1,5)
+		>>> # Load magnetic field and spacecraft position
+		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
+		>>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
+		>>> j, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(r_mms, b_mms)
 
 	Reference : 
 		ISSI book  Eq. 14.16, 14.17 p. 353

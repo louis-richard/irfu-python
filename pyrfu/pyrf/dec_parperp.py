@@ -34,13 +34,13 @@ def dec_parperp(inp=None, b0=None, flag_spin_plane=False):
 	Example :
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
+		>>> mms_id = 1
 		>>> # Load magnetic field (FGM) and electric field (EDP)
-		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, ic)
-		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, ic)
-		>>> # Decompose Exyz into parallel and perpendicular to Bxyz components
+		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
+		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
+		>>> # Decompose e_xyz into parallel and perpendicular to b_xyz components
 		>>> e_para, e_perp, alpha = pyrf.dec_parperp(e_xyz, b_xyz)
 
 	"""
