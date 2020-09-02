@@ -91,9 +91,9 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 	else:
 		grad_b = np.zeros((len(b_dict["1"]), 3, 3))
 
-		for mms_id in mms_list:
-			for i in range(3):
-				for j in range(3):
+		for i in range(3):
+			for j in range(3):
+				for mms_id in mms_list:
 					grad_b[:, j, i] += k_dict[mms_id][:, i].data * b_dict[mms_id][:, j].data
 
 	# Gradient

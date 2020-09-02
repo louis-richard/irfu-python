@@ -82,9 +82,7 @@ color = [mcd.XKCD_COLORS["xkcd:navy"],\
 		 mcd.XKCD_COLORS["xkcd:khaki"],\
 		 mcd.XKCD_COLORS["xkcd:crimson"],\
 		 mcd.XKCD_COLORS["xkcd:darkgreen"]]
-default_cycler = cycler(color=color)
-plt.style.use("bmh')
-plt.rc('axes',prop_cycle=default_cycler)
+
 """
 plt.style.use("seaborn-whitegrid")
 date_form = mdates.DateFormatter("%H:%M:%S")

@@ -1,34 +1,31 @@
 import os
 import re
 import bisect
-from .mms_config import CONFIG
-# Time modules
 import datetime
-from astropy.time import Time
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
 
+from .mms_config import CONFIG
 
 
-def list_files(trange=None,mmsId="1",Var=None):
+def list_files(tint=None, mms_id="1", var=None):
 	"""
-	Find files in the data directories of the target instrument, data type, data rate, mmsId and level during the 
+	Find files in the data directories of the target instrument, data type, data rate, mms_id and level during the 
 	target time interval
 
 	Parameters : 
-		trange : list
+		tint : list
 			Time interval
 
-		mmsId : str/int 
+		mms_id : str/int 
 			Index of the spacecraft
 
-		Var : dict
+		var : dict
 			Dictionary containing 4 keys
-				Var["inst"] 	-> name of the instrument
-	            Var["tmmode"] 	-> data rate
-	            Var["lev"] 		-> data level
-	            Var["dtype"] 	-> data type
-
+				* var["inst"] : name of the instrument
+				* var["tmmode"] : data rate
+				* var["lev"] : data level
+				* var["dtype"] : data type
 
 	Returns :
 		files : list 
@@ -38,46 +35,48 @@ def list_files(trange=None,mmsId="1",Var=None):
 
 	data_path = CONFIG["local_data_dir"]
 	
-	if Var is None:
-		raise ValueError("Var is empty")
+	if var is None:
+		raise ValueError("var is empty")
 	
 	files_out = []
 	
-	if not isinstance(mmsId, str):
-		mmsId = str(mmsId)
+	if not isinstance(mms_id, str):
+		mms_id = str(mms_id)
 	# directory and file name search patterns
 	#   -assume directories are of the form:
 	#      (srvy, SITL): spacecraft/instrument/rate/level[/datatype]/year/month/
 	#      (brst): spacecraft/instrument/rate/level[/datatype]/year/month/day/
 	#   -assume file names are of the form:
 	#      spacecraft_instrument_rate_level[_datatype]_YYYYMMDD[hhmmss]_version.cdf
-	
-	file_name = "mms"+mmsId+"_"+Var["inst"]+"_"+Var["tmmode"]+"_"+Var["lev"]\
-					+"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
-	
-	days = rrule(DAILY, dtstart=parser.parse(parser.parse(trange[0]).strftime("%Y-%m-%d")),\
-				 until=parser.parse(trange[1])-datetime.timedelta(seconds=1))
 
-	if Var["dtype"] == "" or Var["dtype"] == None:
-		level_and_dtype = Var["lev"]
+	file_name = "mms" + mms_id + "_" + var["inst"] + "_" + var["tmmode"] + "_" + var[
+		"lev"] + "(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+
+	days = rrule(DAILY, dtstart=parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d")),
+				 until=parser.parse(tint[1]) - datetime.timedelta(seconds=1))
+
+	if var["dtype"] == "" or var["dtype"] is None:
+		level_and_dtype = var["lev"]
 	else:
-		level_and_dtype = os.sep.join([Var["lev"], Var["dtype"]])
+		level_and_dtype = os.sep.join([var["lev"], var["dtype"]])
 
 	for date in days:
-		if Var["tmmode"] == "brst":
-			local_dir = os.sep.join([data_path, "mms"+mmsId,Var["inst"],Var["tmmode"], level_and_dtype, \
-									 date.strftime("%Y"), date.strftime("%m"), date.strftime("%d")])
+		if var["tmmode"] == "brst":
+			local_dir = os.sep.join(
+				[data_path, f"mms{mms_id}", var["inst"], var["tmmode"], level_and_dtype, date.strftime("%Y"),
+				 date.strftime("%m"), date.strftime("%d")])
 		else:
-			local_dir = os.sep.join([data_path, "mms"+mmsId,Var["inst"],Var["tmmode"], level_and_dtype, \
-									 date.strftime("%Y"), date.strftime("%m")])
+			local_dir = os.sep.join(
+				[data_path, f"mms{mms_id}", var["inst"], var["tmmode"], level_and_dtype, date.strftime("%Y"),
+				 date.strftime("%m")])
 
 		if os.name == "nt":
 			full_path = os.sep.join([re.escape(local_dir)+os.sep, file_name])
 		else:
 			full_path = os.sep.join([re.escape(local_dir), file_name])
 		
-		
 		regex = re.compile(full_path)
+
 		for root, dirs, files in os.walk(local_dir):
 			for file in files:
 				this_file = os.sep.join([root, file])
@@ -85,11 +84,10 @@ def list_files(trange=None,mmsId="1",Var=None):
 				matches = regex.match(this_file)
 				if matches:
 					this_time = parser.parse(matches.groups()[1])
-					if (this_time >= parser.parse(parser.parse(trange[0]).strftime("%Y-%m-%d"))
-							and this_time <= parser.parse(trange[1])-datetime.timedelta(seconds=1)):
+					if (parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d")) <= this_time <= parser.parse(
+							tint[1]) - datetime.timedelta(seconds=1)):
 						if this_file not in files_out:
-							files_out.append({"file_name":file,"timetag":"","full_name":this_file,"file_size":""})
-
+							files_out.append({"file_name": file, "timetag": "", "full_name": this_file, "file_size": ""})
 
 	in_files = files_out
 	
@@ -102,21 +100,21 @@ def list_files(trange=None,mmsId="1",Var=None):
 	for file in in_files:
 		matches = regex.match(file["file_name"])
 		if matches:
-			file_times.append((file["file_name"], parser.parse(matches.groups()[0]).timestamp(),\
-							   file["timetag"], file["file_size"]))
+			file_times.append(
+				(file["file_name"], parser.parse(matches.groups()[0]).timestamp(), file["timetag"], file["file_size"]))
 
 	# sort in time
 	sorted_files = sorted(file_times, key=lambda x: x[1])
 
 	times = [t[1] for t in sorted_files]
 
-	idx_min = bisect.bisect_left(times, parser.parse(trange[0]).timestamp())
+	idx_min = bisect.bisect_left(times, parser.parse(tint[0]).timestamp())
 
 	# note: purposefully liberal here; include one extra file so that we always get the burst mode data
 	if idx_min == 0:
-		files_in_interval = [{"file_name": f[0],"timetag": f[2],"file_size": f[3]} for f in sorted_files[idx_min:]]
+		files_in_interval = [{"file_name": f[0], "timetag": f[2], "file_size": f[3]} for f in sorted_files[idx_min:]]
 	else:
-		files_in_interval = [{"file_name": f[0],"timetag": f[2],"file_size": f[3]} for f in sorted_files[idx_min-1:]]
+		files_in_interval = [{"file_name": f[0], "timetag": f[2], "file_size": f[3]} for f in sorted_files[idx_min-1:]]
 
 	local_files = []
 

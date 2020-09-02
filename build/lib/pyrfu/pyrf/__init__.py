@@ -1,10 +1,9 @@
 from .ts_time import ts_time
 from .ts_scalar import ts_scalar
+
 from .ts_vec_xyz import ts_vec_xyz
 from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_skymap import ts_skymap
-
-
 
 from .ts_append import ts_append
 from .dist_append import dist_append
@@ -13,7 +12,6 @@ from .start import start
 from .end import end
 from .iso2unix import iso2unix
 from .extend_tint import extend_tint
-
 
 from .dot import dot
 from .cross import cross
@@ -26,7 +24,6 @@ from .calc_fs import calc_fs
 from .avg_4sc import avg_4sc
 from .gradient import gradient
 from .integrate import integrate
-
 
 from .tlim import tlim
 from .resample import resample
@@ -63,8 +60,10 @@ from .psd import *
 from .c_4_k import c_4_k
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
+from .c_4_v import c_4_v
+
+from .avg_4sc import avg_4sc
 
 from .ebsp import ebsp
 
 from .fname import fname
-

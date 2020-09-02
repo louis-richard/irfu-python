@@ -23,37 +23,39 @@ def histogram2d(inp1=None, inp2=None, nbins=100):
 			2D map of the density of inp2 vs inp1
 
 	Example :
+		>>> import numpy as np
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices
-		>>> ic = np.arange(1,5)
+		>>> mms_id = 1
 		>>> # Load magnetic field and electric field
-		>>> Bxyz = [mms.get_data("B_gse_fgm_srvy_l2",Tint,1) for i in ic]
-		>>> Rxyz = [mms.get_data("R_gse",Tint,1) for i in ic]
+		>>> b = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+		>>> r = mms.get_data("R_gse", tint, mms_id)
 		>>> # Compute current density, etc
-		>>> J, divB, Bavg, jxB, divTshear, divPb = pyrf.c_4_j(Rxyz,Bxyz)
+		>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r, b)
 		>>> # Compute magnitude of B and J
-		>>> Bmag = pyrf.norm(Bavg)
-		>>> Jmag = pyrf.norm(J)
+		>>> b_mag = pyrf.norm(b_xyz)
+		>>> j_mag = pyrf.norm(j_xyz)
 		>>> # Histogram of |J| vs |B|
-		>>> HBJ = pyrf.histogram2d(Bmag,Jmag)
+		>>> h2d_b_j = pyrf.histogram2d(b_mag, j_mag)
 
 	"""
 
 	if inp1 is None or inp2 is None:
 		raise ValueError("histogram2d requiers at least 2 arguments")
 
-	if not isinstance(inp1,xr.DataArray) or not isinstance(inp2,xr.DataArray):
+	if not isinstance(inp1, xr.DataArray) or not isinstance(inp2, xr.DataArray):
 		raise TypeError("Inputs must be DataArrays")
 
 	# resample inp2 with respect to inp1
 	if len(inp2) != len(inp1):
-		inp2 = resample(inp2,inp1)
+		inp2 = resample(inp2, inp1)
 
-	H, xedges, yedges = np.histogram2d(inp1.data,inp2.data,bins=nbins)
+	h2d, xedges, yedges = np.histogram2d(inp1.data, inp2.data, bins=nbins)
 
-	x = xedges[:-1]+np.median(np.diff(xedges))/2
-	y = yedges[:-1]+np.median(np.diff(yedges))/2
+	x, y = [xedges[:-1] + np.median(np.diff(xedges)) / 2, yedges[:-1] + np.median(np.diff(yedges)) / 2]
 
-	out = xr.DataArray(H,coords=[x,y],dims=["xbins","ybins"])
+	out = xr.DataArray(h2d, coords=[x, y], dims=["xbins", "ybins"])
+
 	return out

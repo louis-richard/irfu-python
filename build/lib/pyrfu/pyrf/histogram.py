@@ -24,17 +24,15 @@ def histogram(inp=None, nbins=100, normed=True):
     
     """
     
-    
     if inp is None:
         raise ValueError("histogram requires at least one argument")
     
-    if not isinstance(inp,xr.DataArray):
+    if not isinstance(inp, xr.DataArray):
         raise TypeError("inp must be DataArray")
     
+    hist, bins = np.histogram(inp.data, bins=nbins, normed=normed)
+    bin_center = (bins[1:] + bins[:-1]) * 0.5
     
-    hist, bins = np.histogram(inp.data, bins=100, normed=True)
-    bin_centers = (bins[1:]+bins[:-1])*0.5
-    
-    out = xr.DataArray(hist,coords=[bin_centers],dims=["bins"])
+    out = xr.DataArray(hist, coords=[bin_center], dims=["bins"])
     
     return out

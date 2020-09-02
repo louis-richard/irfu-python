@@ -2,7 +2,6 @@ import xarray as xr
 import numpy as np
 
 
-
 def minvar(inp=None, flag="mvar"):
 	"""
 	Compute the minimum variance frame
@@ -29,99 +28,108 @@ def minvar(inp=None, flag="mvar"):
 		new_xyz
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
+		>>> mms_id = 1
 		>>> # Load magnetic field
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
 		>>> # Compute MVA frame
-		>>> Blmn, l, V = pyrf.minvar(Bxyz)
+		>>> b_lmn, l, mva = pyrf.minvar(b_xyz)
 
 	"""
 
-	inpdata = inp.data
+	inp_data = inp.data
 
-	ooo=inpdata
-	try:
-		lx = inpdata.shape[0]
-	except IndexError:
-		lx = 1
+	inp_m = np.mean(inp_data, 0)
 
-	inp_m   = np.mean(inpdata,0)
-	Mm2     = inp_m[[0,1,2,0,0,1]]*inp_m[[0,1,2,1,2,2]]
-	Mm1     = np.mean(inpdata[:,[0,1,2,0,0,1]]*inpdata[:,[0,1,2,1,2,2]],0)
-
-	if flag in ["mvar","<bn>=0"]:
-		Mm  = Mm1-Mm2
-		M   = np.array([Mm[[0,3,4]],Mm[[3,1,5]],Mm[[4,5,2]]])
-	elif flag.lower()=="td":
-		Mm  = Mm1
-		M   = np.array([Mm[[0,3,4]],Mm[[3,1,5]],Mm[[4,5,2]]])
-
-	[l,V]   = np.linalg.eig(M)
-	idx     = l.argsort()[::-1] 
-	l       = l[idx]
-	V       = V[:,idx]
-	V[:,2]  = np.cross(V[:,0],V[:,1])
-
-	if flag.lower() == "<bn>=0":
-		inp_mvar_mean = np.mean(np.sum(np.tile(inpdata,(3,1,1))\
-									   *np.transpose(np.tile(V,(inpdata.shape[0],1,1)),(2,0,1)),1),1)
-
-		a = np.sum(inp_mvar_mean**2)
-
-		b = -(l[1]+l[2])*inp_mvar_mean[0]**2
-		b -= (l[0]+l[2])*inp_mvar_mean[1]**2 
-		b -= (l[0]+l[1])*inp_mvar_mean[2]**2
-
-		c = l[1]*l[2]*inp_mvar_mean[0]**2 
-		c += l[0]*l[2]*inp_mvar_mean[1]**2 
-		c += l[0]*l[1]*inp_mvar_mean[2]**2
-
-		r = np.roots([a,b,c])
-		lmin=np.min(r)
-
-		n = inp_mvar_mean/(l - lmin)
-		nnorm = np.linalg.norm(n)
-		n = n/nnorm
-
-		n = np.matmul(V,n)
-
-		bn          = np.sum(inpdata*np.tile(n,(inpdata.shape[0],1)),axis=1)
-		inpdata_2   = inpdata - np.tile(bn,(3,1)).T*np.tile(n,(inpdata.shape[0],1))
-		inpdata_2_m = np.mean(inpdata_2,0)
-		Mm2         = inpdata_2_m[[0,1,2,0,0,1]]*inpdata_2_m[[0,1,2,1,2,2]]
-		Mm1         = np.mean(inpdata_2[:,[0,1,2,0,0,1]]*inpdata_2[:,[0,1,2,1,2,2]],0)
-		Mm          = Mm1-Mm2
-		M           = np.array([Mm[[0,3,4]],Mm[[3,1,5]],Mm[[4,5,2]]])
-		[l,V]       = np.linalg.eig(M)
-		idx         = l.argsort()[::-1] 
-		l           = l[idx]
-		V           = V[:,idx]
-		V[:,2]      = np.cross(V[:,0],V[:,1])
-		l[2]        = lmin
+	if flag in ["mvar", "<bn>=0"]:
+		m_mu_nu_m = np.mean(inp_data[:, [0, 1, 2, 0, 0, 1]] * inp_data[:, [0, 1, 2, 1, 2, 2]], 0)
+		m_mu_nu_m -= inp_m[[0, 1, 2, 0, 0, 1]] * inp_m[[0, 1, 2, 1, 2, 2]]
 
 	elif flag.lower() == "td":
-		ln          = l[2]
-		bn          = np.sum(inpdata*np.tile(V[:,2],(inpdata.shape[0],1)),axis=1)
-		inpdata_2   = inpdata - np.tile(bn,(3,1)).T*np.tile(V[:,2],(inpdata.shape[0],1))
-		inpdata_2_m = np.mean(inpdata_2,0)
-		Mm2         = inpdata_2_m[[0,1,2,0,0,1]]*inpdata_2_m[[0,1,2,1,2,2]]
-		Mm1         = np.mean(inpdata_2[:,[0,1,2,0,0,1]]*inpdata_2[:,[0,1,2,1,2,2]],0)
-		Mm          = Mm1-Mm2
-		M           = np.array([Mm[[0,3,4]],Mm[[3,1,5]],Mm[[4,5,2]]])
-		[l,V]       = np.linalg.eig(M)
-		idx         = l.argsort()[::-1] 
-		l           = l[idx]
-		V           = V[:,idx]
-		V[:,2]      = np.cross(V[:,0],V[:,1])
-		l[2]        = ln
+		m_mu_nu_m = np.mean(inp_data[:, [0, 1, 2, 0, 0, 1]] * inp_data[:, [0, 1, 2, 1, 2, 2]], 0)
 
-	outdata = (V.T @ inpdata.T).T
+	else:
+		raise ValueError("invalid flag")
 
-	out = xr.DataArray(outdata,coords=inp.coords,dims=inp.dims)
+	m_mu_nu = np.array([m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]])
 
-	
+	# Compute eigenvalues and eigenvectors
+	[l, mva] = np.linalg.eig(m_mu_nu)
 
-	return(out,l,V)
+	# Sort eigenvalues
+	idx = l.argsort()[::-1]
+	l, mva = [l[idx], mva[:, idx]]
+
+	# ensure that the frame is right handed
+	mva[:, 2] = np.cross(mva[:, 0], mva[:, 1])
+
+	if flag.lower() == "<bn>=0":
+		inp_mvar_mean = np.mean(
+			np.sum(np.tile(inp_data, (3, 1, 1)) * np.transpose(np.tile(mva, (inp_data.shape[0], 1, 1)), (2, 0, 1)), 1), 1)
+
+		a = np.sum(inp_mvar_mean ** 2)
+
+		b = -(l[1] + l[2]) * inp_mvar_mean[0] ** 2
+		b -= (l[0] + l[2]) * inp_mvar_mean[1] ** 2
+		b -= (l[0] + l[1]) * inp_mvar_mean[2] ** 2
+
+		c = l[1] * l[2] * inp_mvar_mean[0] ** 2
+		c += l[0] * l[2] * inp_mvar_mean[1] ** 2
+		c += l[0] * l[1] * inp_mvar_mean[2] ** 2
+
+		r = np.roots([a, b, c])
+
+		l_min = np.min(r)
+
+		n = inp_mvar_mean / (l - l_min)
+		n /= np.linalg.norm(n, keepdims=True)
+		n = np.matmul(mva, n)
+
+		bn = np.sum(inp_data * np.tile(n, (inp_data.shape[0], 1)), axis=1)
+
+		inp_data_2 = inp_data - np.tile(bn, (3, 1)).T * np.tile(n, (inp_data.shape[0], 1))
+
+		inp_data_2_m = np.mean(inp_data_2, 0)
+
+		m_mu_nu_m = np.mean(inp_data_2[:, [0, 1, 2, 0, 0, 1]] * inp_data_2[:, [0, 1, 2, 1, 2, 2]], 0)
+		m_mu_nu_m -= inp_data_2_m[[0, 1, 2, 0, 0, 1]] * inp_data_2_m[[0, 1, 2, 1, 2, 2]]
+
+		m_mu_nu = np.array([m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]])
+
+		l, mva = np.linalg.eig(m_mu_nu)
+
+		idx = l.argsort()[::-1]
+
+		l, mva = [l[idx], mva[:, idx]]
+
+		l[2], mva[:, 2] = [l_min, np.cross(mva[:, 0], mva[:, 1])]
+
+	elif flag.lower() == "td":
+		ln = l[2]
+		bn = np.sum(inp_data * np.tile(mva[:, 2], (inp_data.shape[0], 1)), axis=1)
+
+		inp_data_2 = inp_data - np.tile(bn, (3, 1)).T * np.tile(mva[:, 2], (inp_data.shape[0], 1))
+
+		inp_data_2_m = np.mean(inp_data_2, 0)
+
+		m_mu_nu_m = np.mean(inp_data_2[:, [0, 1, 2, 0, 0, 1]] * inp_data_2[:, [0, 1, 2, 1, 2, 2]], 0)
+		m_mu_nu_m -= inp_data_2_m[[0, 1, 2, 0, 0, 1]] * inp_data_2_m[[0, 1, 2, 1, 2, 2]]
+
+		m_mu_nu = np.array([m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]])
+
+		l, mva = np.linalg.eig(m_mu_nu)
+
+		idx = l.argsort()[::-1]
+
+		l, mva = [l[idx], mva[:, idx]]
+
+		l[2], mva[:, 2] = [ln, np.cross(mva[:, 0], mva[:, 1])]
+
+	out_data = (mva.T @ inp_data.T).T
+
+	out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims)
+
+	return out, l, mva

@@ -41,6 +41,6 @@ def c_4_k(r_list=None):
 
 		dr12 = r_list[i]-r_list[j]
 
-		k_list[j] = cc/dot(cc, dr12)
+		k_list[i] = cc/dot(cc, dr12)
 
 	return k_list

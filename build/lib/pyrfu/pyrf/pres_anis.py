@@ -2,20 +2,18 @@ import numpy as np
 import xarray as xr
 from astropy import constants
 
-
 from .resample import resample
-from .ts_scalar import ts_scalar
 from .rotate_tensor import rotate_tensor
 
 
-def pres_anis(P=None, B=None):
+def pres_anis(p_xyz=None, b_xyz=None):
 	"""
 	Compute pressure anisotropy factor: (P_para - P_perp) * mu0 / B^2
 
 	Parameters :
-		P : DataArray
+		p_xyz : DataArray
 			Time series of the pressure tensor
-		B : DataArray
+		b_xyz : DataArray
 			Time series of the background magnetic field
 
 	Returns :
@@ -26,41 +24,41 @@ def pres_anis(P=None, B=None):
 		rotate_tensor
 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]
-		>>> 
+		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
-		>>> 
+		>>> mms_id = 1
 		>>> # Load magnetic field, ion/electron temperature and number density
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
-		>>> Pixyz = mms.get_data("Pi_gse_fpi_fast_l2",Tint,ic)
-		>>> 
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+		>>> p_xyz_i = mms.get_data("Pi_gse_fpi_fast_l2", tint, mms_id)
 		>>> # Compute pressure anistropy
-		>>> p_anis = pyrf.pres_anis(Pxyz,Bxyz)
+		>>> p_anis = pyrf.pres_anis(p_xyz_i, b_xyz)
 
 	"""
 
-	if (P is None) or (B is None):
+	if (p_xyz is None) or (b_xyz is None):
 		raise ValueError("pres_anis requires at least 2 arguments")
 
-	if not isinstance(P,xr.Datarray):
-		raise TypeError("P must be a DataArray")
+	if not isinstance(p_xyz, xr.DataArray):
+		raise TypeError("p_xyz must be a DataArray")
 
-	if not isinstance(B,xr.Datarray):
-		raise TypeError("B must be a DataArray")
+	if not isinstance(b_xyz, xr.DataArray):
+		raise TypeError("b_xyz must be a DataArray")
 
-	B  = resample(B,Pi)
+	b_xyz = resample(b_xyz, p_xyz)
 
 	# rotate pressure tensor to field aligned coordinates
-	P = rotate_tensor(P,"fac",B,"pp")
+	p_xyzfac = rotate_tensor(p_xyz, "fac", b_xyz, "pp")
 	
 	# Get parallel and perpendicular pressure
-	P_para 	= Pi[:,0,0]
-	P_perp 	= (Pi[:,1,1]+Pi[:,2,2])/2
+	p_para = p_xyzfac[:, 0, 0]
+	p_perp = (p_xyzfac[:, 1, 1] + p_xyzfac[:, 2, 2]) / 2
 	
+	# Load permitivity
+	mu0 = constants.mu0.value
+
 	# Compute pressure anistropy
-	mu0 	= constants.mu0.value
-	p_anis 	= 1e9*mu0*(Pi_para - Pi_perp)/np.linalg.norm(Bres)**2
+	p_anis = 1e9 * mu0 * (p_para - p_perp) / np.linalg.norm(b_xyz) ** 2
 	
 	return p_anis

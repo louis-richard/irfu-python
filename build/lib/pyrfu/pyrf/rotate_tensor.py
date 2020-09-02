@@ -1,10 +1,7 @@
 import numpy as np
-import xarray as xr
 
 from .resample import resample
 from .ts_tensor_xyz import ts_tensor_xyz
-
-
 
 
 def rotate_tensor(*args):
@@ -23,7 +20,7 @@ def rotate_tensor(*args):
 				Arbitrary coordinate system "rot", requires new x-direction xnew, new y and z directions 
 				ynew, znew (if not included y and z directions are orthogonal to xnew and closest to the 
 				original y and z directions)
-	 
+
 				GSE coordinates "gse", requires MMS spacecraft number 1--4 MMSnum
 
 	Returns : 
@@ -31,199 +28,164 @@ def rotate_tensor(*args):
 			Time series of the pressure or temperature tensor in field-aligned, user-defined, or GSE coordinates.
 			For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
 			For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
-	 
 	Example :
+		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2015-10-30T05:15:20.000","2015-10-30T05:16:20.000"]
+		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
-		>>> 
+		>>> mms_id = 1
 		>>> # Load magnetic field and ion temperature tensor
-		>>> Bxyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,ic)
-		>>> Tixyz = mms.get_data("Ti_gse_fpi_fast_l2",Tint,ic)
-		>>> 
+		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+		>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
 		>>> # Compute ion temperature in field aligned coordinates
-		>>> Tixyzfac = pyrf.rotate_tensor(Tixyz,"fac",Bxyz,"pp")
+		>>> t_xyzfac_i = pyrf.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 
 	"""
 
 	nargin = len(args)
 
-	rtntensor = 0;
 	# Check input and load pressure/temperature terms
-	if isinstance(args[1],str):
-		rotflag = args[1]
-		rotflagpos = 1
-		Peall = args[0]
-		Petimes = Peall.time.data
-		if Peall.data.ndim == 3:
-		  Ptensor = Peall.data
-		  rtntensor = 1
-		else :
-		  Ptensor = np.zeros((len(Petimes),3,3))
-		  Ptensor[:,0,0] = Peall.data[:,0]
-		  Ptensor[:,1,0] = Peall.data[:,1]
-		  Ptensor[:,2,0] = Peall.data[:,2]
-		  Ptensor[:,0,1] = Peall.data[:,3]
-		  Ptensor[:,1,1] = Peall.data[:,4]
-		  Ptensor[:,2,1] = Peall.data[:,5]
-		  Ptensor[:,0,2] = Peall.data[:,6]
-		  Ptensor[:,1,2] = Peall.data[:,7]
-		  Ptensor[:,2,2] = Peall.data[:,8]
-	elif isnstance(args[6],str):
-		rotflag = args[6]
-		rotflagpos = 6
-		Petimes = args[0].time.data
-		Ptensor = np.zeros((len(args[0].time.data),3,3))
-		Ptensor[:,0,0] = args[0].data
-		Ptensor[:,1,0] = args[1].data
-		Ptensor[:,2,0] = args[2].data
-		Ptensor[:,0,1] = args[1].data
-		Ptensor[:,1,1] = args[3].data
-		Ptensor[:,2,1] = args[4].data
-		Ptensor[:,0,2] = args[2].data
-		Ptensor[:,1,2] = args[4].data
-		Ptensor[:,2,2] = args[5].data
-	else :
+	if isinstance(args[1], str):
+		rot_flag = args[1]
+		rot_flag_pos = 1
+		p_all = args[0]
+		p_times = p_all.time.data
+
+		if p_all.data.ndim == 3:
+			p_tensor = p_all
+		else:
+			p_tensor = np.reshape(p_all.data, (p_all.shape[0], 3, 3))
+			p_tensor = ts_tensor_xyz(p_times, p_tensor)
+
+	elif isinstance(args[6], str):
+		rot_flag = args[6]
+		rot_flag_pos = 6
+		p_times = args[0].time.data
+		p_tensor = np.zeros((len(args[0].time.data), 3, 3))
+		p_tensor[:, 0, 0] = args[0].data
+		p_tensor[:, 1, 0] = args[1].data
+		p_tensor[:, 2, 0] = args[2].data
+		p_tensor[:, 0, 1] = args[1].data
+		p_tensor[:, 1, 1] = args[3].data
+		p_tensor[:, 2, 1] = args[4].data
+		p_tensor[:, 0, 2] = args[2].data
+		p_tensor[:, 1, 2] = args[4].data
+		p_tensor[:, 2, 2] = args[5].data
+
+		p_tensor = ts_tensor_xyz(p_times, p_tensor)
+
+	else:
 		raise SystemError("critical','Something is wrong with the input.")
 
-	
-	ppeq = 0
-	qqeq = 0
-	Rotmat = np.zeros((len(Petimes),3,3))
+	ppeq, qqeq = [0, 0]
 
-	if rotflag[0] == "f":
-		print("notice Transforming tensor into field-aligned coordinates.")
-		if nargin == rotflagpos:
+	rot_mat = np.zeros((len(p_times), 3, 3))
+
+	if rot_flag[0] == "f":
+		print("notice : Transforming tensor into field-aligned coordinates.")
+
+		if nargin == rot_flag_pos:
 			raise ValueError("B TSeries is missing.")
 		
-		Bback = args[rotflagpos+1]
-		Bback = resample(Bback,Peall)
+		b_back = args[rot_flag_pos + 1]
+		b_back = resample(b_back, p_tensor)
+
 		if nargin == 4:
-			if isinstance(args[3],str) and args[3][0] == "p":
+			if isinstance(args[3], str) and args[3][0] == "p":
 				ppeq = 1
-			elif isinstance(args[3],str) and args[3][0] == "q":
+			elif isinstance(args[3], str) and args[3][0] == "q":
 				qqeq = 1
-			else :
+			else:
 				raise ValueError("Flag not recognized no additional rotations applied.")
 		
-		if nargin == 9 :
-			if isinstance(args[8],str) and args[8][0] == "p":
+		if nargin == 9:
+			if isinstance(args[8], str) and args[8][0] == "p":
 				ppeq = 1
-			elif isinstance(args[8],str) and args[8][0] == "q":
+			elif isinstance(args[8], str) and args[8][0] == "q":
 				qqeq = 1
-			else :
+			else:
 				raise ValueError("Flag not recognized no additional rotations applied.")
 		
-		Bvec = Bback/np.linalg.norm(Bback,axis=1,keepdims=True)
-		Rx = Bvec.data
-		Ry = np.array([1,0,0])
-		Rz = np.cross(Rx,Ry);
-		Rmag = np.linalg.norm(Rz,axis=1,keepdims=True)
-		Rz = Rz/Rmag
-		Ry = np.cross(Rz, Rx);
-		Rmag = np.linalg.norm(Ry,axis=1,keepdims=True)
-		Ry = Ry/Rmag
-		Rotmat[:,0,:] = Rx
-		Rotmat[:,1,:] = Ry
-		Rotmat[:,2,:] = Rz
-	elif rotflag[0] == "r":
+		b_vec = b_back / np.linalg.norm(b_back, axis=1, keepdims=True)
+
+		r_x = b_vec.data
+		r_y = np.array([1, 0, 0])
+		r_z = np.cross(r_x, r_y)
+		r_z /= np.linalg.norm(r_z, axis=1, keepdims=True)
+		r_y = np.cross(r_z, r_x)
+		r_y /= np.linalg.norm(r_y, axis=1, keepdims=True)
+
+		rot_mat[:, 0, :], rot_mat[:, 1, :], rot_mat[:, 2, :] = [r_x, r_y, r_z]
+
+	elif rot_flag[0] == "r":
 		print("notice : Transforming tensor into user defined coordinate system.")
-		if nargin == rotflagpos:
+
+		if nargin == rot_flag_pos:
 			raise ValueError("Vector(s) is(are) missing.")
 		
-		vectors = list(args[rotflagpos+1:])
+		vectors = list(args[rot_flag_pos + 1:])
+
 		if len(vectors) == 1:
-			Rx = vectors[0]
-			if len(Rx) != 3:
+			r_x = vectors[0]
+
+			if len(r_x) != 3:
 				raise TypeError("Vector format not recognized.")
 			
-			Rx = Rx/np.linalg.norm(Rx,keepdims=True)
-			Ry = np.array([0,1,0])
-			Rz = np.cross(Rx,Ry)
-			Rz = Rz/np.linalg.norm(Rz,keepdims=True)
-			Ry = np.cross(Rz,Rx)
-			Ry = Ry/np.linalg.norm(Ry,keepdims=True)
+			r_x /= np.linalg.norm(r_x, keepdims=True)
+			r_y = np.array([0, 1, 0])
+			r_z = np.cross(r_x, r_y)
+			r_z /= np.linalg.norm(r_z, keepdims=True)
+			r_y = np.cross(r_z, r_x)
+			r_y /= np.linalg.norm(r_y, keepdims=True)
+
 		elif len(vectors) == 3:
-			Rx = vectors[0]
-			Ry = vectors[1]
-			Rz = vectors[2]
-			Rx = Rx/np.linalg.norm(Rx,keepdims=True)
-			Ry = Ry/np.linalg.norm(Ry,keepdims=True)
-			Rz = Rz/np.linalg.norm(Rz,keepdims=True)
-			# TO DO: add check that vectors are orthogonal
-		else :
+			r_x, r_y, r_z = [r / np.linalg.norm(r, keepdims=True) for r in vectors]
+			# TODO : add check that vectors are orthogonal
+		else:
 			raise TypeError("Vector format not recognized.")
-			
-		
-		Rotmat[:,0,:] = np.ones((len(Petimes),1))*Rx
-		Rotmat[:,1,:] = np.ones((len(Petimes),1))*Ry
-		Rotmat[:,2,:] = np.ones((len(Petimes),1))*Rz
-	elif rotflag[0] == "g":
-		"""
-		print("notice : Transforming tensor into GSE coordinates.")
-		SCnum = args[rotflagpos+1]
-		Tint = irf.tint(Petimes.start.utc,Petimes.stop.utc); %#ok<NASGU>
-		c_eval('defatt = mms.db_get_variable(''mms?_ancillary_defatt'',''zra'',Tint);',SCnum);
-		c_eval('defatt.zdec = mms.db_get_variable(''mms?_ancillary_defatt'',''zdec'',Tint).zdec;',SCnum);
-		defatt = mms_removerepeatpnts(defatt); %#ok<NODEF>
-		
-		% Development of transformation matrix follows modified version of mms_dsl2gse.m
-		ttDefatt = EpochTT(defatt.time);
-		zra = irf.ts_scalar(ttDefatt,defatt.zra);
-		zdec = irf.ts_scalar(ttDefatt,defatt.zdec);
-		zra = zra.resample(Petimes);
-		zdec = zdec.resample(Petimes);
-		[x,y,z] = sph2cart(zra.data*pi/180,zdec.data*pi/180,1);
-		saxTmp = irf.geocentric_coordinate_transformation([Petimes.epochUnix x y z],'gei>gse');
-		spin_axis = saxTmp(:,2:4);
-		Rx = spin_axis(:,1); 
-		Ry = spin_axis(:,2); 
-		Rz = spin_axis(:,3);
-		a = 1./sqrt(Ry.^2+Rz.^2);
-		Rotmat(:,1,:) = [a.*(Ry.^2+Rz.^2) -a.*Rx.*Ry -a.*Rx.*Rz];
-		Rotmat(:,2,:) = [0*a a.*Rz  -a.*Ry];
-		Rotmat(:,3,:) = [Rx Ry Rz];
-		"""
-	else :
+
+		rot_mat[:, 0, :], rot_mat[:, 1, :], rot_mat[:, 2, :] = [np.ones((len(p_times), 1)) * r for r in [r_x, r_y, r_z]]
+
+	else:
 		raise ValueError("Flag is not recognized.")
 
+	p_tensor_p = np.zeros((len(p_times), 3, 3))
 
-	Ptensorp = np.zeros((len(Petimes),3,3))
-	for ii in range(len(Petimes)):
+	for ii in range(len(p_times)):
+		rot_temp = np.squeeze(rot_mat[ii, :, :])
 
-		rottemp = np.squeeze(Rotmat[ii,:,:])
-		Ptensorp[ii,:,:] = np.matmul(np.matmul(rottemp,np.squeeze(Ptensor[ii,:,:])),np.transpose(rottemp))
-
+		p_tensor_p[ii, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor.data[ii, :, :])),
+										 np.transpose(rot_temp))
 
 	if ppeq:
 		print("notice : Rotating tensor so perpendicular diagonal components are equal.")
-		thetas = 0.5*np.arctan((Ptensorp[:,2,2]-Ptensorp[:,1,1])/(2*Ptensorp[:,1,2]))
+		thetas = 0.5 * np.arctan((p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]))
 		
 		for ii, theta in enumerate(thetas):
 			if np.isnan(theta):
 				theta = 0
 
-			rottemp = np.array([[1,0,0],[0,np.cos(theta),np.sin(theta)],[0,-np.sin(theta),np.cos(theta)]])
-			Ptensorp[ii,:,:] = np.matmul(np.matmul(rottemp,np.squeeze(Ptensorp[ii,:,:])),np.transpose(rottemp))
+			rot_temp = np.array([[1, 0, 0], [0, np.cos(theta), np.sin(theta)], [0, -np.sin(theta), np.cos(theta)]])
 
+			p_tensor_p[ii, :, :] = np.matmul(
+				np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])), np.transpose(rot_temp))
 
 	if qqeq:
 		print("notice : Rotating tensor so perpendicular diagonal components are most unequal.")
-		thetas = 0.5*np.arctan((2*Ptensorp[:,1,2])/(Ptensorp[:,2,2]-Ptensorp[:,1,1]))
+		thetas = 0.5 * np.arctan((2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]))
 
 		for ii, theta in enumerate(thetas):
-			rottemp = np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
-			Ptensorp[ii,:,:] = np.matmul(np.matmul(rottemp,np.squeeze(Ptensorp[ii,:,:])),np.transpose(rottemp))
+			rot_temp = np.array([[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
 
+			p_tensor_p[ii, :, :] = np.matmul(
+				np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])), np.transpose(rot_temp))
 
 	# Construct output
-	Pe = ts_tensor_xyz(Petimes,Ptensorp)
+	p = ts_tensor_xyz(p_times, p_tensor_p)
 
-
-	try :
-		Pe.attrs["units"] = args[0].attrs["units"]
+	try:
+		p.attrs["units"] = args[0].attrs["units"]
 	except KeyError:
 		pass
 
-	return Pe
+	return p

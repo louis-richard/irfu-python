@@ -5,29 +5,28 @@ from astropy import constants
 from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 
-
-def remove_idist_background(N_i=None,V_gse_i=None,P_gse_i=None,N_bg_i=None,P_bg_i=None):
+def remove_idist_background(n_i=None, v_gse_i=None, p_gse_i=None, n_bg_i=None, p_bg_i=None):
 	"""
 	Removes penetrating radiation background from ion moments
 
 	Parameters :
-		N_i : DataArray
+		n_i : DataArray
 			Time series of the ion density
-		V_gse_i : DataArray
+		v_gse_i : DataArray
 			Time series of the ion bulk velocity
-		P_gse_i : DataArray
+		p_gse_i : DataArray
 			Time series of the ion pressure tensor
-		N_bg_i : DataArray
+		n_bg_i : DataArray
 			Time series of the background ion number density
-		P_bg_i : DataArray
+		p_bg_i : DataArray
 			Time series of the background ion pressure scalar
 
 	Returns :
-		N_i_new : DataArray
+		n_i_new : DataArray
 			Time series of the corrected ion number density
-		V_gse_i_new : DataArray
+		v_gse_i_new : DataArray
 			Time series of the corrected ion bulk velocity
-		P_gse_i : DataArray
+		p_gse_i : DataArray
 			Time series of the corrected ion pressure tensor
 	
 	References:
@@ -35,71 +34,64 @@ def remove_idist_background(N_i=None,V_gse_i=None,P_gse_i=None,N_bg_i=None,P_bg_
 			https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data
 
 	"""
-	
-	if (N_i is None) or (V_gse_i is None) or (P_gse_i is None) or (N_bg_i is None) or (P_bg_i is None):
+
+	if (n_i is None) or (v_gse_i is None) or (p_gse_i is None) or (n_bg_i is None) or (p_bg_i is None):
 		raise ValueError("remove_idist_background requires exactly 5 arguments")
 
-	if not isinstance(N_i, xr.DataArray):
-		raise TypeError("N_i must be a DataArray")
+	assert isinstance(n_i, xr.DataArray)
+	assert isinstance(v_gse_i, xr.DataArray)
+	assert isinstance(p_gse_i, xr.DataArray)
+	assert isinstance(n_bg_i, xr.DataArray)
+	assert isinstance(p_bg_i, xr.DataArray)
 
-	if not isinstance(V_gse_i, xr.DataArray):
-		raise TypeError("V_gse_i must be a DataArray")
-
-	if not isinstance(P_gse_i, xr.DataArray):
-		raise TypeError("P_gse_i must be a DataArray")
-
-	if not isinstance(N_bg_i, xr.DataArray):
-		raise TypeError("N_bg_i must be a DataArray")
-
-	if not isinstance(P_bg_i, xr.DataArray):
-		raise TypeError("P_bg_i must be a DataArray")
+	m_p = constants.m_p.value
 
 	# Number density
-	N_i_new      = N_i - N_bg_i.data
+	n_i_new = n_i - n_bg_i.data
 
 	# Bulk velocity
-	V_gse_i_new = V_gse_i
-	V_gse_i_new *= N_i/N_i_new
+	v_gse_i_new = v_gse_i
+	v_gse_i_new *= n_i / n_i_new
 	
 	# Pressure tensor
-	P_gse_i_new_data = np.zeros(P_gse_i.shape)
+	p_gse_i_new_data = np.zeros(p_gse_i.shape)
 	
 	# P_xx_i
-	P_gse_i_new_data[:,0,0] += P_gse_i.data[:,0,0]
-	P_gse_i_new_data[:,0,0] -= P_bg_i.data
-	P_gse_i_new_data[:,0,0] += constants.m_p.value*N_i.data*V_gse_i.data[:,0]*V_gse_i.data[:,0]
-	P_gse_i_new_data[:,0,0] -= constants.m_p.value*N_i_new.data*V_gse_i_new.data[:,0]*V_gse_i_new.data[:,0]
+	p_gse_i_new_data[:, 0, 0] += p_gse_i.data[:, 0, 0]
+	p_gse_i_new_data[:, 0, 0] -= p_bg_i.data
+	p_gse_i_new_data[:, 0, 0] += m_p * n_i.data * v_gse_i.data[:, 0] * v_gse_i.data[:, 0]
+	p_gse_i_new_data[:, 0, 0] -= m_p * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 0]
 
 	# P_yy_i
-	P_gse_i_new_data[:,1,1] += P_gse_i.data[:,1,1]
-	P_gse_i_new_data[:,1,1] -= P_bg_i.data
-	P_gse_i_new_data[:,1,1] += constants.m_p.value*N_i.data*V_gse_i.data[:,1]*V_gse_i.data[:,1]
-	P_gse_i_new_data[:,1,1] -= constants.m_p.value*N_i_new.data*V_gse_i_new.data[:,1]*V_gse_i_new.data[:,1]
+	p_gse_i_new_data[:, 1, 1] += p_gse_i.data[:, 1, 1]
+	p_gse_i_new_data[:, 1, 1] -= p_bg_i.data
+	p_gse_i_new_data[:, 1, 1] += m_p * n_i.data * v_gse_i.data[:, 1] * v_gse_i.data[:, 1]
+	p_gse_i_new_data[:, 1, 1] -= m_p * n_i_new.data * v_gse_i_new.data[:, 1] * v_gse_i_new.data[:, 1]
 
 	# P_zz_i
-	P_gse_i_new_data[:,2,2] += P_gse_i.data[:,2,2]
-	P_gse_i_new_data[:,2,2] -= P_bg_i.data
-	P_gse_i_new_data[:,2,2] += constants.m_p.value*N_i.data*V_gse_i.data[:,2]*V_gse_i.data[:,2]
-	P_gse_i_new_data[:,2,2] -= constants.m_p.value*N_i_new.data*V_gse_i_new.data[:,2]*V_gse_i_new.data[:,2]
+	p_gse_i_new_data[:, 2, 2] += p_gse_i.data[:, 2, 2]
+	p_gse_i_new_data[:, 2, 2] -= p_bg_i.data
+	p_gse_i_new_data[:, 2, 2] += m_p * n_i.data * v_gse_i.data[:, 2] * v_gse_i.data[:, 2]
+	p_gse_i_new_data[:, 2, 2] -= m_p * n_i_new.data * v_gse_i_new.data[:, 2] * v_gse_i_new.data[:, 2]
 
 	# P_xy_i & P_yx_i
-	P_gse_i_new_data[:,0,1] += P_gse_i.data[:,0,1]
-	P_gse_i_new_data[:,0,1] += constants.m_p.value*N_i.data*V_gse_i.data[:,0]*V_gse_i.data[:,1]
-	P_gse_i_new_data[:,0,1] -= constants.m_p.value*N_i_new.data*V_gse_i_new.data[:,0]*V_gse_i_new.data[:,1]
-	P_gse_i_new_data[:,1,0] = P_gse_i_new_data[:,0,1]
+	p_gse_i_new_data[:, 0, 1] += p_gse_i.data[:, 0, 1]
+	p_gse_i_new_data[:, 0, 1] += m_p * n_i.data * v_gse_i.data[:, 0] * v_gse_i.data[:, 1]
+	p_gse_i_new_data[:, 0, 1] -= m_p * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 1]
+	p_gse_i_new_data[:, 1, 0] = p_gse_i_new_data[:, 0, 1]
 
 	# P_xz_i & P_zx_i
-	P_gse_i_new_data[:,0,2] += P_gse_i.data[:,0,2]
-	P_gse_i_new_data[:,0,2] += constants.m_p.value*N_i.data*V_gse_i.data[:,0]*V_gse_i.data[:,2]
-	P_gse_i_new_data[:,0,2] -= constants.m_p.value*N_i_new.data*V_gse_i_new.data[:,0]*V_gse_i_new.data[:,2]
-	P_gse_i_new_data[:,2,0] = P_gse_i_new_data[:,0,2]
+	p_gse_i_new_data[:, 0, 2] += p_gse_i.data[:, 0, 2]
+	p_gse_i_new_data[:, 0, 2] += m_p * n_i.data*v_gse_i.data[:, 0] * v_gse_i.data[:, 2]
+	p_gse_i_new_data[:, 0, 2] -= m_p * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 2]
+	p_gse_i_new_data[:, 2, 0] = p_gse_i_new_data[:, 0, 2]
 
 	# P_yz_i & P_zy_i
-	P_gse_i_new_data[:,1,2] += P_gse_i.data[:,1,2]
-	P_gse_i_new_data[:,1,2] += constants.m_p.value*N_i.data*V_gse_i.data[:,1]*V_gse_i.data[:,2]
-	P_gse_i_new_data[:,1,2] -= constants.m_p.value*N_i_new.data*V_gse_i_new.data[:,1]*V_gse_i_new.data[:,2]
-	P_gse_i_new_data[:,2,1] = P_gse_i_new_data[:,1,2]
+	p_gse_i_new_data[:, 1, 2] += p_gse_i.data[:, 1, 2]
+	p_gse_i_new_data[:, 1, 2] += m_p * n_i.data * v_gse_i.data[:, 1] * v_gse_i.data[:, 2]
+	p_gse_i_new_data[:, 1, 2] -= m_p * n_i_new.data * v_gse_i_new.data[:, 1] * v_gse_i_new.data[:, 2]
+	p_gse_i_new_data[:, 2, 1] = p_gse_i_new_data[:, 1, 2]
 
-	P_gse_i_new = ts_tensor_xyz(P_gse_i.time.data,P_gse_i_new_data)
+	p_gse_i_new = ts_tensor_xyz(p_gse_i.time.data, p_gse_i_new_data)
 	
-	return (N_i_new,V_gse_i_new,P_gse_i_new)
+	return n_i_new, v_gse_i_new, p_gse_i_new

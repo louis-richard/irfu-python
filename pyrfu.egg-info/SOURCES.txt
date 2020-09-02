@@ -15,7 +15,7 @@ pyrfu/mms/feeps_pitch_angles.py
 pyrfu/mms/feeps_remove_sun.py
 pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
-pyrfu/mms/fk_powerspec4SC.py
+pyrfu/mms/fk_powerspec_4sc.py
 pyrfu/mms/fk_powerspectrum.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py
@@ -27,14 +27,14 @@ pyrfu/mms/get_feeps_energy_table.py
 pyrfu/mms/get_feeps_omni.py
 pyrfu/mms/get_feeps_oneeye.py
 pyrfu/mms/get_ts.py
-pyrfu/mms/lhwaveanalysis.py
+pyrfu/mms/lh_wave_analysis.py
 pyrfu/mms/list_files.py
 pyrfu/mms/mms_config.py
 pyrfu/mms/psd_moments.py
 pyrfu/mms/read_feeps_sector_masks_csv.py
 pyrfu/mms/remove_idist_background.py
-pyrfu/mms/splitVs.py
-pyrfu/mms/whistlerBtoE.py
+pyrfu/mms/split_vs.py
+pyrfu/mms/whistler_b2e.py
 pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20151111.csv
 pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20160709.csv
 pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20161028.csv
@@ -72,6 +72,7 @@ pyrfu/pyrf/avg_4sc.py
 pyrfu/pyrf/c_4_grad.py
 pyrfu/pyrf/c_4_j.py
 pyrfu/pyrf/c_4_k.py
+pyrfu/pyrf/c_4_v.py
 pyrfu/pyrf/calc_disprel_tm.py
 pyrfu/pyrf/calc_dt.py
 pyrfu/pyrf/calc_fs.py

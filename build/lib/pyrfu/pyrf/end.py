@@ -2,8 +2,7 @@ import xarray as xr
 from astropy.time import Time
 
 
-
-def end(inp=None,fmt="unix"):
+def end(inp=None):
 	"""
 	Gives the last time of the time series
 
@@ -22,8 +21,9 @@ def end(inp=None,fmt="unix"):
 	if inp is None:
 		raise ValueError("end requires at least one argument")
 
-	if not isinstance(inp,xr.DataArray):
+	if not isinstance(inp, xr.DataArray):
 		raise TypeError("in must be a time series")
 
-	out = Time(inp.time.data[-1],format="datetime64").unix
-	return out 
+	out = Time(inp.time.data[-1], format="datetime64").unix
+
+	return out

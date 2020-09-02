@@ -128,9 +128,6 @@ def minvar(inp=None, flag="mvar"):
 
 		l[2], mva[:, 2] = [ln, np.cross(mva[:, 0], mva[:, 1])]
 
-	else:
-		raise ValueError("Invalid flag")
-
 	out_data = (mva.T @ inp_data.T).T
 
 	out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims)

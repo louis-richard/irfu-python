@@ -5,78 +5,77 @@ import warnings
 from .feeps_split_integral_ch import feeps_split_integral_ch
 from .feeps_remove_sun import feeps_remove_sun
 
+
 def calc_feeps_omni(inp_dset):
 	"""
 	Computes the omni-directional FEEPS spectrograms from a Dataset that contains the spectrograms of all eyes.
 
 	Parameters:
-	    inp_dset : Dataset
-	    	Dataset with energy spectrum of every eyes
+		inp_dset : Dataset
+			Dataset with energy spectrum of every eyes
 
 	Returns:
-	    out : DataArray
-	    	OMNI energy spectrum from the input
+		out : DataArray
+			OMNI energy spectrum from the input
 
 	"""
 
+	var = inp_dset.attrs
 
-	Var = inp_dset.attrs
-
-	if Var["dtype"] == "electron":
-		energies 	= np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3,
-								200.2, 234.0, 273.4, 319.4, 373.2, 436.0, 509.2])
+	if var["dtype"] == "electron":
+		energies = np.array(
+			[33.2, 51.90, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3, 200.2, 234.0, 273.4, 319.4, 373.2, 436.0, 509.2])
 	else:
-		energies 	= np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6,
-								205.1, 236.7, 273.2, 315.4, 363.8, 419.7, 484.2,  558.6])
+		energies = np.array(
+			[57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6, 205.1, 236.7, 273.2, 315.4, 363.8, 419.7, 484.2, 558.6])
 
 	# set unique energy bins per spacecraft; from DLT on 31 Jan 2017
-	eEcorr = [14.0, -1.0, -3.0, -3.0]
-	iEcorr = [0.0, 0.0, 0.0, 0.0]
-	eGfact = [1.0, 1.0, 1.0, 1.0]
-	iGfact = [0.84, 1.0, 1.0, 1.0]
+	ecorr = {"e": [14.0, -1.0, -3.0, -3.0], "i": [0.0, 0.0, 0.0, 0.0]}
+	gfact = {"e": [1.0, 1.0, 1.0, 1.0], "i": [0.84, 1.0, 1.0, 1.0]}
 
-	energies += eval("{}Ecorr[{:d}]".format(Var["dtype"][0],Var["mmsId"]-1))
+	energies += ecorr[var["dtype"][0]][var["mmsId"]-1]
 
 	# percent error around energy bin center to accept data for averaging; 
 	# anything outside of energies[i] +/- en_chk*energies[i] will be changed 
 	# to NAN and not averaged   
 	en_chk = 0.10
 
-	#top_sensors = eyes['top']
-	#bot_sensors = eyes['bottom']
+	"""
+	top_sensors = eyes['top']
+	bot_sensors = eyes['bottom']
+	"""
 
-	inp_dset_clean, inp_dset_500keV 	= feeps_split_integral_ch(inp_dset)
-	inp_dset_clean_sun_removed 			= feeps_remove_sun(inp_dset_clean)
+	inp_dset_clean, inp_dset_500kev = feeps_split_integral_ch(inp_dset)
 
-	eyes_list 	= list(inp_dset_clean_sun_removed.keys())
-	tmpdata 	= inp_dset_clean_sun_removed[eyes_list[0]]
+	inp_dset_clean_sun_removed = feeps_remove_sun(inp_dset_clean)
 
-	dalleyes 	= np.empty((tmpdata.shape[0],tmpdata.shape[1],len(inp_dset_clean_sun_removed)))
-	dalleyes[:] = np.nan
+	eye_list = list(inp_dset_clean_sun_removed.keys())
+	tmp_data = inp_dset_clean_sun_removed[eye_list[0]]
 
+	d_all_eyes = np.empty((tmp_data.shape[0], tmp_data.shape[1], len(inp_dset_clean_sun_removed)))
+	d_all_eyes[:] = np.nan
 
-	for i, k in enumerate(eyes_list):
-		dalleyes[...,i] = inp_dset_clean_sun_removed[k].data
+	for i, k in enumerate(eye_list):
+		d_all_eyes[..., i] = inp_dset_clean_sun_removed[k].data
 
 		try:
 			diff_en_ch = inp_dset_clean_sun_removed[k].coords["Differential_energy_channels"].data
-			iE = np.where(np.abs(energies-diff_en_ch) > en_chk*energies)
+			ie = np.where(np.abs(energies - diff_en_ch) > en_chk * energies)
 			
-			if iE[0].size != 0:
-				dalleyes[:,iE[0],i] = np.nan
+			if ie[0].size != 0:
+				d_all_eyes[:, ie[0], i] = np.nan
 
 		except Warning:
-			print('NaN in energy table encountered; sensor T' + str(sensor))
+			print('NaN in energy table encountered; sensor T{}'.format(k))
 
 	with warnings.catch_warnings():
 		warnings.simplefilter("ignore", category=RuntimeWarning)
-		flux_omni = np.nanmean(dalleyes, axis=2)
+		flux_omni = np.nanmean(d_all_eyes, axis=2)
 
-	flux_omni *= eval("{}Gfact[{:d}]".format(Var["dtype"][0],Var["mmsId"]-1))
+	flux_omni *= gfact[var["dtype"][0]][var["mmsId"]-1]
 
-	t 		= inp_dset_clean_sun_removed.time  
-	attrs 	= inp_dset_clean_sun_removed[eyes_list[0]].attrs
-	out 	= xr.DataArray(flux_omni,coords=[t,energies],dims=["time","energy"],attrs=attrs)
+	t, attrs = [inp_dset_clean_sun_removed.time, inp_dset_clean_sun_removed[eye_list[0]].attrs]
+
+	out = xr.DataArray(flux_omni, coords=[t, energies], dims=["time", "energy"], attrs=attrs)
 
 	return out
-

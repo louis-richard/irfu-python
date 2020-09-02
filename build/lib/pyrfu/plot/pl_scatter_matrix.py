@@ -2,14 +2,8 @@ import xarray as xr
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-
 from ..pyrf import histogram2d
 from . import plot_spectr
-
-
-
-
-
 
 
 def pl_scatter_matrix(inp1=None,inp2=None, m="+", pdf = False, cmap="jet"):
@@ -59,4 +53,3 @@ def pl_scatter_matrix(inp1=None,inp2=None, m="+", pdf = False, cmap="jet"):
 				axs[j,i], caxs[j][i] = plot_spectr(axs[j,i],H[j][i],cmap=cmap,cscale="log")
 				axs[j,i].grid()
 		return (fig, axs, caxs)
-#-----------------------------------------------------------------------------------------------------------------------

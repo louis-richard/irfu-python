@@ -72,34 +72,18 @@ def calc_disprel_tm(v=None, dv=None, tau=None, dtau=None):
 
 	fit, cov = optimize.curve_fit(model_k_w, k, omega, 1, sigma=np.sqrt(domega ** 2 + dk ** 2))
 	sigma_k_w = np.sqrt(np.diagonal(cov))
-	hires_k = np.linspace(0, 0.003,int(1e4))
+	hires_k = np.linspace(0, 0.003, int(1e4))
 	bound_upper_w = model_k_w(hires_k, *(fit + 1.96 * sigma_k_w))
 	bound_lower_w = model_k_w(hires_k, *(fit - 1.96 * sigma_k_w))
 	pred_w = model_k_w(hires_k, *fit)
 
-
-	outdict     = { "T"             : tau                             ,\
-					"dT"            : (["T"], dtau)                   ,\
-					"V"             : (["T"], v)                    ,\
-					"dV"            : (["T"], dv)                   ,\
-					"lamb"          : (["T"], lamb)                 ,\
-					"dlamb"         : (["T"], dlamb)                ,\
-					"k"             : k                             ,\
-					"dk"            : (["k"], dk)                   ,\
-					"omega"         : (["k"], omega)                ,\
-					"domega"        : (["k"], domega)               ,\
-					"hires_k"       : hires_k                       ,\
-					"pred_omega"    : (["hires_k"],pred_omega)      ,\
-					"bound_upper"   : (["hires_k"], bound_upper)    ,\
-					"bound_lower"   : (["hires_k"], bound_lower)    ,\
-					"hires_tau"       : hires_tau                       ,\
-					"pred_v"        : (["hires_tau"], pred_v)         ,\
-					"bound_upper_v" : (["hires_tau"], bound_upper_v)  ,\
-					"bound_lower_v" : (["hires_tau"], bound_lower_v)  ,\
-					"l"             : fit_tau_v                         ,\
-					"Vph"           : fit                           ,\
-					}
-
+	outdict = {"T": tau, "dT": (["T"], dtau), "V": (["T"], v), "dV": (["T"], dv), "lamb": (["T"], lamb),
+			   "dlamb": (["T"], dlamb), "k": k, "dk": (["k"], dk), "omega": (["k"], omega), "domega": (["k"], domega),
+			   "hires_k": hires_k, "pred_omega": (["hires_k"], pred_w), "bound_upper": (["hires_k"], bound_upper_w),
+			   "bound_lower": (["hires_k"], bound_lower_w), "hires_tau": hires_tau, "pred_v": (["hires_tau"], pred_v),
+			   "bound_upper_v": (["hires_tau"], bound_upper_v), "bound_lower_v": (["hires_tau"], bound_lower_v),
+			   "l": fit_tau_v, "Vph": fit}
 
 	out = xr.Dataset(outdict)
+
 	return out

@@ -193,7 +193,7 @@ def get_data(var_str="", tint=None, mms_id="1", /, silent=False):
 						var["dtype"] = "{}-moms".format(sensor)
 
 				else:
-					var["dtype"] = "-moms".format(sensor)
+					var["dtype"] = "{}-moms".format(sensor)
 
 		elif var["lev"] == "ql":
 			var["dtype"] = sensor

@@ -52,7 +52,7 @@ def rotate_tensor(*args):
 		p_times = p_all.time.data
 
 		if p_all.data.ndim == 3:
-			p_tensor = p_all.data
+			p_tensor = p_all
 		else:
 			p_tensor = np.reshape(p_all.data, (p_all.shape[0], 3, 3))
 			p_tensor = ts_tensor_xyz(p_times, p_tensor)
@@ -154,7 +154,8 @@ def rotate_tensor(*args):
 	for ii in range(len(p_times)):
 		rot_temp = np.squeeze(rot_mat[ii, :, :])
 
-		p_tensor_p[ii, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor[ii, :, :])), np.transpose(rot_temp))
+		p_tensor_p[ii, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor.data[ii, :, :])),
+										 np.transpose(rot_temp))
 
 	if ppeq:
 		print("notice : Rotating tensor so perpendicular diagonal components are equal.")

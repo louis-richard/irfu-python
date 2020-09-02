@@ -1,9 +1,9 @@
 import xarray as xr
 import numpy as np
+import datetime
 from dateutil import parser
 from astropy.time import Time
 import bisect
-
 
 
 def tlim(inp=None, tint=None):
@@ -26,31 +26,35 @@ def tlim(inp=None, tint=None):
 
 	"""
 
-	if type(inp) != xr.DataArray: raise TypeError('Input must be a TSeries')
+	if type(inp) != xr.DataArray:
+		raise TypeError('Input must be a TSeries')
 	
 	if type(tint) == xr.DataArray:
-		tstart  = tint.time.data[0]
-		tstop   = tint.time.data[-1]
+		t_start, t_stop = [tint.time.data[0], tint.time.data[-1]]
+
 	elif type(tint) == np.ndarray:
 		if type(tint[0]) == datetime.datetime and type(tint[-1]) == datetime.datetime:
-			tstart  = tint.time[0]
-			tstop   = tint.time[-1]
-		else :
+			t_start, t_stop = [tint.time[0], tint.time[-1]]
+
+		else:
 			raise TypeError('Values must be in Datetime64')
+
 	elif type(tint) == list:
-		tstart  = parser.parse(tint[0])
-		tstop   = parser.parse(tint[-1])
-	
-	
+		t_start, t_stop = [parser.parse(tint[0]), parser.parse(tint[-1])]
 
-	idxmin = bisect.bisect_left(inp.time.data,Time(tstart,format="datetime").datetime64)
-	idxmax = bisect.bisect_right(inp.time.data,Time(tstop,format="datetime").datetime64)
+	else:
+		raise TypeError("Invalid type of time interval")
 
-	coords = [inp.time.data[idxmin:idxmax]]
+	idx_min = bisect.bisect_left(inp.time.data, Time(t_start, format="datetime").datetime64)
+	idx_max = bisect.bisect_right(inp.time.data, Time(t_stop, format="datetime").datetime64)
+
+	coords = [inp.time.data[idx_min:idx_max]]
+
 	if len(inp.coords) > 1:
 		for k in inp.dims[1:]:
 			coords.append(inp.coords[k])
 
-	out = xr.DataArray(inp.data[idxmin:idxmax,...],coords=coords,dims=inp.dims,attrs=inp.attrs)
+	out = xr.DataArray(inp.data[idx_min:idx_max, ...], coords=coords, dims=inp.dims, attrs=inp.attrs)
 	out.time.attrs = inp.time.attrs
+
 	return out
