@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+movmean.py
+
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 import numpy as np
 

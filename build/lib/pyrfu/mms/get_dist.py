@@ -1,9 +1,16 @@
-import os
+# -*- coding: utf-8 -*-
+"""
+get_dist.py
+
+@author : Louis RICHARD
+"""
+
 import bisect
 import numpy as np
-import xarray as xr
+
 from spacepy import pycdf
 from dateutil import parser
+
 from ..pyrf.ts_skymap import ts_skymap
 
 

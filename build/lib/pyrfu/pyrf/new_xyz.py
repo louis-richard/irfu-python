@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+new_xyz.py
+
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 import numpy as np
 

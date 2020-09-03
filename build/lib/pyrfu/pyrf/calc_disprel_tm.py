@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+calc_disprel_tm.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 from scipy import optimize

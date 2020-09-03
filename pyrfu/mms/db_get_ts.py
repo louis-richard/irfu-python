@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+db_get_ts.py
+
+@author : Louis RICHARD
+"""
+
 from .list_files import list_files
 from .get_ts import get_ts
 from ..pyrf import ts_append

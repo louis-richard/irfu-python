@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+trace.py
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 
 from .ts_scalar import ts_scalar

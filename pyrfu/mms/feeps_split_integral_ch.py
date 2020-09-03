@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+feeps_split_integral_ch.py
+
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 
 

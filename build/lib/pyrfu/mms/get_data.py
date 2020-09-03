@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+get_data.py
+
+@author : Louis RICHARD
+"""
+
 from astropy.time import Time
 
 from .split_vs import split_vs
@@ -8,7 +15,7 @@ from ..pyrf import ts_append
 from ..pyrf import dist_append
 
 
-def get_data(var_str="", tint=None, mms_id="1", /, silent=False):
+def get_data(var_str="", tint=None, mms_id="1", silent=False):
 	"""
 	Load a variable. var_str must in var (see below)
 

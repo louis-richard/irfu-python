@@ -1,10 +1,17 @@
+# -*- coding: utf-8 -*-
+"""
+get_eis_allt.py
+
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 
 from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_allt(inp_str="Flux_extof_proton_srvy_l2", trange=None, mms_id=2, /, silent=False):
+def get_eis_allt(inp_str="Flux_extof_proton_srvy_l2", trange=None, mms_id=2, silent=False):
 	"""
 	Read energy spectrum of the selected specie in the selected energy range for all telescopes.
 	

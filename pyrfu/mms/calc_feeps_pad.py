@@ -1,6 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+calc_feeps_pad.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 import warnings
+
 from astropy.time import Time
 
 from .feeps_pitch_angles import feeps_pitch_angles

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+pres_anis.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 from astropy import constants

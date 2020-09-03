@@ -1,5 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+remove_idist_background.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
+
 from astropy import constants
 
 from ..pyrf.ts_tensor_xyz import ts_tensor_xyz

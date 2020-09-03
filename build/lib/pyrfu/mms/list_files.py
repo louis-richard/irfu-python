@@ -1,7 +1,15 @@
+# -*- coding: utf-8 -*-
+"""
+list_files.py
+
+@author : Louis RICHARD
+"""
+
 import os
 import re
 import bisect
 import datetime
+
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
 

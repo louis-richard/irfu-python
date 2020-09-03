@@ -1,5 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+feeps_remove_sun.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
+
 from astropy.time import Time
 
 from .db_get_ts import db_get_ts

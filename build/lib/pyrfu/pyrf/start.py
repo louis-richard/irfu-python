@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+start.py
+
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 from astropy.time import Time
 

@@ -1,9 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+lh_wave_analysis.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
+
 from astropy import constants
 
 from ..pyrf.filt import filt
-
 from ..pyrf.calc_dt import calc_dt
 from ..pyrf.resample import resample
 from ..pyrf.convert_fac import convert_fac

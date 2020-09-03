@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+wavepolarize_means.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 from astropy.time import Time

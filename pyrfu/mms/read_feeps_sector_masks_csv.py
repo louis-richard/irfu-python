@@ -1,6 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+read_feeps_sector_mask_csv.py
+
+@author : Louis RICHARD
+"""
+
 import os
 import csv
 import numpy as np
+
 from astropy.time import Time
 
 

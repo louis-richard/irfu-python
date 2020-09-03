@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+plot_line.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import seaborn as sns
 from cycler import cycler

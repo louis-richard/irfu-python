@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+iso2unix.py
+
+@author : Louis RICHARD
+"""
+
 from astropy.time import Time
 
 

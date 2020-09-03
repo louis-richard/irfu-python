@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+dist_append.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 from .ts_skymap import ts_skymap

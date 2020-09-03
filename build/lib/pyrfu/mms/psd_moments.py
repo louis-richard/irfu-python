@@ -1,7 +1,15 @@
+# -*- coding: utf-8 -*-
+"""
+psd_moments.py
+
+@author : Louis RICHARD
+"""
+
+import bisect
 import numpy as np
 import xarray as xr
-import bisect
 import multiprocessing as mp
+
 from astropy import constants
 
 from ..pyrf.resample import resample

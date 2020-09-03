@@ -1,4 +1,10 @@
-import os
+# -*- coding: utf-8 -*-
+"""
+split_vs.py
+
+@author : Louis RICHARD
+"""
+
 import warnings
 
 

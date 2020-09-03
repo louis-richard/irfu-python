@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+get_feeps_energy_table.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 
 

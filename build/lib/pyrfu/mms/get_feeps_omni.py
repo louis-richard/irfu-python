@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+get_feeps_omni.py
+
+@author : Louis RICHARD
+"""
+
 import warnings
 import numpy as np
 import xarray as xr

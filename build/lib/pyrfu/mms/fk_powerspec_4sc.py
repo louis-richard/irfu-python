@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+fk_powerspec_4sc.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import bisect
 import xarray as xr

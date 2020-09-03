@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+c_4_j.py
+
+@author : Louis RICHARD
+"""
 from astropy import constants
 from .avg_4sc import avg_4sc
 

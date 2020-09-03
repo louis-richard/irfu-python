@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+__init__.py
+
+@author : Louis RICHARD
+"""
+
 from .ts_time import ts_time
 from .ts_scalar import ts_scalar
 

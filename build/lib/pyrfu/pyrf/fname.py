@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+fname.py
+
+@author : Louis RICHARD
+"""
+
 from dateutil import parser
 
 

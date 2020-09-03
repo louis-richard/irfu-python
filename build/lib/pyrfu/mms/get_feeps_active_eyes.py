@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+get_feeps_active_eyes.py
+
+@author : Louis RICHARD
+"""
+
 from dateutil import parser
 import datetime
 

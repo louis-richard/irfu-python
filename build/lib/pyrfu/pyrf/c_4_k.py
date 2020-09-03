@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+c_4_k.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 

@@ -1,11 +1,15 @@
-import numpy as np
-import xarray as xr
+# -*- coding: utf-8 -*-
+"""
+get_eis_omni.py
+
+@author : Louis RICHARD
+"""
 
 from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, /, silent=False):
+def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, silent=False):
 	"""
 	Computes omni directional energy spectrum of the target data unit for the target specie over the target energy range
 

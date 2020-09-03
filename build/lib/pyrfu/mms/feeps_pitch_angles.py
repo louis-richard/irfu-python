@@ -1,6 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+feeps_pitch_angles.py
+
+@author : Louis RICHARD
+"""
+
 import math
 import numpy as np
 import xarray as xr
+
 from astropy.time import Time
 
 from .get_feeps_active_eyes import get_feeps_active_eyes

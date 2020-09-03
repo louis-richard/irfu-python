@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+resample.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import warnings
 import bisect

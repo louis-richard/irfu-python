@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+fk_powerspectrum.py
+
+@author : Louis RICHARD
+"""
 
 def fk_powerspectrum(probecomb=None, trange=None, V6=None, Bxyz=None, zphase=None, **kwargs):
 """

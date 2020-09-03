@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+feeps_spin_avg.py
+
+@author : Louis RICHARD
+"""
+
 import warnings
 import numpy as np
 import xarray as xr

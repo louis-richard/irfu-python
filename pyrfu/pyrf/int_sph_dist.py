@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+int_sph_dist.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 import psychopy.tools.coordinatetools as ct

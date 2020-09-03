@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+extend_tint.py
+
+@author : Louis RICHARD
+"""
+
 from dateutil import parser
 from astropy.time import Time
 

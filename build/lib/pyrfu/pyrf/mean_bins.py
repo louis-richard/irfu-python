@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+mean_bins.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 

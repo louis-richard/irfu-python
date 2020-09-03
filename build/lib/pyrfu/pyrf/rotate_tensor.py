@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+rotate_tensor.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 
 from .resample import resample

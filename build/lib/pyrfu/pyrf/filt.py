@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+filt.py
+
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 import numpy as np
 from scipy import signal

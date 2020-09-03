@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+avg_4sc.py
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 

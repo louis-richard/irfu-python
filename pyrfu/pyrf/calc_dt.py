@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+calc_dt.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 

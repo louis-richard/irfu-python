@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+get_feeps_alleyes.py
+
+@author : Louis RICHARD
+"""
+
 import xarray as xr
 
 from .get_feeps_oneeye import get_feeps_oneeye

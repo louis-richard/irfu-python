@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+integrate.py
+@author : Louis RICHARD
+"""
+
 import numpy as np
 import xarray as xr
 from astropy.time import Time

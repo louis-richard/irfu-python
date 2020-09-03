@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+c_4_v.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 from scipy import interpolate
 from astropy.time import Time

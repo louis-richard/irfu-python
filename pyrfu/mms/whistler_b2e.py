@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+whistler_b2e.py
+
+@author : Louis RICHARD
+"""
+
 import numpy as np
 from astropy import constants
 

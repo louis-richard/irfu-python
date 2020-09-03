@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+__init__.py
+
+@author : Louis RICHARD
+"""
+
 from .split_vs import split_vs
 from .list_files import list_files
 from .get_ts import get_ts

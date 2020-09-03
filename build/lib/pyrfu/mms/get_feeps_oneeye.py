@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+get_feeps_oneeye.py
+
+@author : Louis RICHARD
+"""
+
 from .get_feeps_active_eyes import get_feeps_active_eyes
 from .db_get_ts import db_get_ts
 
