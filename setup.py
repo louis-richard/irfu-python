@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.1.9"
+VERSION = "1.2.0"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -15,29 +15,21 @@ LONG_DESCRIPTION = (HERE / "README.md").read_text()
 LONG_DESC_TYPE = "text/markdown"
 
 INSTALL_REQUIRES = [
-      "os",
-      "re",
-      "pdb",
-      "warnings",
-      "numpy",
-      "xarray",
-      "scipy",
-      "spacepy",
       "astropy",
-      "datetime",
-      "dateutil",
-      "bisect",
-      "multiprocessing",
-      "pyfftw",
-      "tqdm",
-      "sfs",
+      "cycler",
+      "python-dateutil",
+      "matplotlib",
+      "numpy",
+      "pandas",
       "psychopy",
       "pvlib",
-      "pandas",
+      "pyfftw",
+      "scipy",
       "seaborn",
-      "cycler",
-      "matplotlib",
-      "mpl_toolkits"
+      "sfs",
+      "spacepy",
+      "tqdm",
+      "xarray"
 ]
 
 PYTHON_REQUIRES = ">=3.7"
