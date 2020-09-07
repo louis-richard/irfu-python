@@ -1,6 +1,8 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 agyro_coeff.py
+
 @author : Louis RICHARD
 """
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 whistler_b2e.py
@@ -36,7 +37,8 @@ def whistler_b2e(b2=None, freq=None, thetak=None, b_mag=None, n_e=None):
 			Time series of the electric field power
 
 	Example :
-		>>> Epower = mms.whistlerBtoE(Bpower,freq,thetak,Bmag,ne)
+		>>> from pyrfu import mms
+		>>> Epower = mms.whistler_b2e(b_power, freq, theta_k, b_mag, n_e)
 	"""
 
 	# Calculate plasma parameters

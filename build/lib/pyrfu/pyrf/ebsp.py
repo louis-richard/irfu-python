@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 ebsp.py
@@ -25,6 +26,7 @@ from .calc_fs import calc_fs
 from .convert_fac import convert_fac
 
 # TODO parrallelized average_data
+
 
 def average_data(data=None, x=None, y=None, av_window=None):
 	# average data with time x to time y using window

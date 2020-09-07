@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 lh_wave_analysis.py
@@ -61,7 +62,7 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
         >>> # Time interval of focus
         >>> Tint    = ["2015-12-14T01:17:40.200","2015-12-14T01:17:41.500"]
         >>>
-        >>> phiEB, vbest, dirbest, thetas, corrs = mms.lhwaveanalysis(Tint,Exyz,Bscm,Bxyz,ne,lhfilt=[5,100],blpass=5)
+        >>> phiEB, vbest, dirbest, thetas, corrs = mms.lh_wave_analysis(Tint,Exyz,Bscm,Bxyz,ne,lhfilt=[5,100],blpass=5)
 
     """
 
