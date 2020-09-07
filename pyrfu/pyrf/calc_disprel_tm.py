@@ -90,7 +90,7 @@ def calc_disprel_tm(v=None, dv=None, tau=None, dtau=None):
 			   "hires_k": hires_k, "pred_omega": (["hires_k"], pred_w), "bound_upper": (["hires_k"], bound_upper_w),
 			   "bound_lower": (["hires_k"], bound_lower_w), "hires_tau": hires_tau, "pred_v": (["hires_tau"], pred_v),
 			   "bound_upper_v": (["hires_tau"], bound_upper_v), "bound_lower_v": (["hires_tau"], bound_lower_v),
-			   "l": fit_tau_v, "Vph": fit}
+			   "l": fit_tau_v, "Vph": fit, "sigma_k_w": sigma_k_w}
 
 	out = xr.Dataset(outdict)
 
