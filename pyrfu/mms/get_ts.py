@@ -115,6 +115,12 @@ def get_ts(file_path="", cdf_name="", trange=None):
 				except KeyError:
 					y["attrs"]["LABLAXIS"] = "comp"
 
+		elif "afg" in cdf_name or "dfg" in cdf_name:
+			y["data"] = ["x", "y", "z"]
+			y["attrs"] = {"LABLAXIS": "comp"}
+
+
+
 		if "DEPEND_2" in f[cdf_name].attrs or "REPRESENTATION_2" in f[cdf_name].attrs:
 			try:
 				depend2_key = f[cdf_name].attrs["DEPEND_2"]

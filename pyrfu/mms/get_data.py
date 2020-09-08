@@ -16,9 +16,9 @@ from ..pyrf import ts_append
 from ..pyrf import dist_append
 
 
-def get_data(var_str="", tint=None, mms_id="1", silent=False):
+def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	"""
-	Load a variable. var_str must in var (see below)
+	Load a variable. var_str must be in var (see below)
 
 	Parameters :
 		var_str : str
@@ -27,7 +27,7 @@ def get_data(var_str="", tint=None, mms_id="1", silent=False):
 		tint : list of str
 			Time interval
 
-		mmsId : str/int
+		mms_id : str/int
 			Index of the target spacecraft
 
 		silent : bool
@@ -170,8 +170,12 @@ def get_data(var_str="", tint=None, mms_id="1", silent=False):
 			cdf_name = "_".join([mms_id_str, var["inst"], "b", var["cs"], var["tmmode"], var["lev"]])
 
 		elif var["lev"] == "ql":
-			cdf_name = "_".join([mms_id_str, var["inst"], var["tmmode"], var["lev"]])
-
+			if var["cs"] == "dmpa":
+				cdf_name = "_".join([mms_id_str, var["inst"], var["tmmode"], var["cs"]])
+			elif var["cs"] == "gsm":
+				cdf_name = "_".join([mms_id_str, var["inst"], var["tmmode"], var["cs"], "dmpa"])
+			else:
+				raise ValueError("Invalid coordinates")
 		else:
 			raise InterruptedError("Should not be here")
 
@@ -580,7 +584,7 @@ def get_data(var_str="", tint=None, mms_id="1", silent=False):
 	if not files:
 		raise ValueError("No files found. Make sure that the data_path is correct")
 
-	if not silent:
+	if verbose:
 		print(f"Loading {cdf_name}...")
 
 	for i, file in enumerate(files):

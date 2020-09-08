@@ -19,8 +19,7 @@ plt.style.use("seaborn-whitegrid")
 date_form = mdates.DateFormatter("%H:%M:%S")
 sns.set_context("paper")
 
-plt.rc("font", family="serif")
-plt.rc("lines", linewidth=0.5)
+plt.rc("lines", linewidth=1)
 color = ["k", "b", "r", "g"]
 
 

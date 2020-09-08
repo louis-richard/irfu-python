@@ -16,7 +16,7 @@ from ..pyrf.tlim import tlim
 from ..pyrf.wavelet import wavelet
 
 
-def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=200, df=None, wwidth=1, frange=None):
+def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f=200, df=None, w_width=1, f_range=None):
 	"""
 	Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of 
 	mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to calculate the phase difference each 
@@ -36,27 +36,26 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=2
 			wave numbers using 4SC average.
 
 		tints : list of str
-			Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time 
+			Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time
 			interval for e and b. 
-
-	Options :
+		
 		cav : int
-			Number of points in time series used to estimate phase. (default cav = 8)
+			(Optional) Number of points in time series used to estimate phase. (default cav = 8)
 
-		numk : int
-			Number of wave numbers used in spectrogram. (default numk = 500)
+		num_k : int
+			(Optional) Number of wave numbers used in spectrogram. (default num_k = 500)
 
 		df : float
-			Linear spacing of frequencies (default log spacing).
+			(Optional) Linear spacing of frequencies (default log spacing).
 
-		numf : int
-			Number of frequencies used in spectrogram. (default numf = 200)
+		num_f : int
+			(Optional) Number of frequencies used in spectrogram. (default num_f = 200)
 
-		wwidth : float
-			Multiplier for Morlet wavelet width. (default wwidth = 1)
+		w_width : float
+			(Optional) Multiplier for Morlet wavelet width. (default w_width = 1)
 
-		frange : list of float
-			Frequency range for k-k plots. [minf maxf]
+		f_range : list of float
+			(Optional) Frequency range for k-k plots. [minf maxf]
 
 	returns :
 		out : Dataset
@@ -66,12 +65,12 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=2
 	Notes: 
 		Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur. 
 
-	example:
+	Example:
 		>>> from pyrfu import mms
 		>>> power = mms.fk_powerspec_4sc(e_par, r_xyz, b_xyz, tints)
-		>>> power = mms.fk_powerspec_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, numk=500, cav=4, wwidth=2)
+		>>> power = mms.fk_powerspec_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, num_k=500, cav=4, w_width=2)
 
-	example to plot:
+	Example to plot:
 		>>> import matplotlib.pyplot as plt
 		>>> from pyrfu.plot import plot_spectr
 		>>> fig, ax = plt.subplots(1)
@@ -102,11 +101,11 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=2
 		idx = idx[:-1]
 
 	if use_linear:
-		w = [wavelet(e[i], linear=df, returnpower=False, wavelet_width=5.36 * wwidth) for i in range(4)]
+		w = [wavelet(e[i], linear=df, returnpower=False, wavelet_width=5.36 * w_width) for i in range(4)]
 	else:
-		w = [wavelet(e[i], nf=numf, returnpower=False, wavelet_width=5.36 * wwidth) for i in range(4)]
+		w = [wavelet(e[i], nf=num_f, returnpower=False, wavelet_width=5.36 * w_width) for i in range(4)]
 
-	numf = len(w[0].frequency)
+	num_f = len(w[0].frequency)
 
 	times = tlim(times, tints)
 	nt = len(times)
@@ -125,9 +124,9 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=2
 
 	r = [resample(r[i], avtimes) for i in range(4)]
 
-	cx12, cx13, cx14, cx23, cx24, cx34 = [np.zeros((n, numf), dtype="complex128") for _ in range(6)]
+	cx12, cx13, cx14, cx23, cx24, cx34 = [np.zeros((n, num_f), dtype="complex128") for _ in range(6)]
 
-	power_avg = np.zeros((n, numf), dtype="complex128")
+	power_avg = np.zeros((n, num_f), dtype="complex128")
 
 	for m, posavm in enumerate(posav):
 		lb, ub = [int(posavm - cav / 2 + 1), int(posavm + cav / 2)]
@@ -162,17 +161,17 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=2
 	# Compute phase speeds
 	r = [r[i].data for i in range(4)]
 
-	k_x, k_y, k_z = [np.zeros((n, numf)) for _ in range(3)]
+	k_x, k_y, k_z = [np.zeros((n, num_f)) for _ in range(3)]
 
 	# Volumetric tensor with SC1 as center.
 	dr = np.reshape(np.hstack(r[1:]), (n, 3, 3)) - np.reshape(np.tile(r[0], (1, 3)), (n, 3, 3))
 	dr = np.transpose(dr, [0, 2, 1])
 
 	# Delay tensor with SC1 as center.
-	# dT = np.reshape(np.hstack([dt2,dt3,dt4]),(N,numf,3))
+	# dT = np.reshape(np.hstack([dt2,dt3,dt4]),(N,num_f,3))
 	tau = np.dstack([dt2, dt3, dt4])
 
-	for ii in range(numf):
+	for ii in range(num_f):
 		m = np.linalg.solve(dr, np.squeeze(tau[:, ii, :]))
 
 		k_x[:, ii], k_y[:, ii], k_z[:, ii] = [2 * np.pi * w[0].frequency[ii].data * m[:, i] for i in range(3)]
@@ -181,30 +180,30 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=2
 
 	k_mag = np.linalg.norm(np.array([k_x, k_y, k_z]), axis=0)
 
-	b_avg_x_mat = np.tile(b_avg.data[:, 0], (numf, 1)).T
-	b_avg_y_mat = np.tile(b_avg.data[:, 1], (numf, 1)).T
-	b_avg_z_mat = np.tile(b_avg.data[:, 2], (numf, 1)).T
+	b_avg_x_mat = np.tile(b_avg.data[:, 0], (num_f, 1)).T
+	b_avg_y_mat = np.tile(b_avg.data[:, 1], (num_f, 1)).T
+	b_avg_z_mat = np.tile(b_avg.data[:, 2], (num_f, 1)).T
 
 	b_avg_abs = np.linalg.norm(b_avg, axis=1)
-	b_avg_abs_mat = np.tile(b_avg_abs, (numf, 1)).T
+	b_avg_abs_mat = np.tile(b_avg_abs, (num_f, 1)).T
 
 	k_par = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
 	k_perp = np.sqrt(k_mag ** 2 - k_par ** 2)
 
 	k_max = np.max(k_mag) * 1.1
 	k_min = -k_max
-	k_vec = np.linspace(-k_max, k_max, numk)
-	k_mag_vec = np.linspace(0, k_max, numk)
+	k_vec = np.linspace(-k_max, k_max, num_k)
+	k_mag_vec = np.linspace(0, k_max, num_k)
 
-	dkmag = k_max / numk
-	dk = 2 * k_max / numk
+	dkmag = k_max / num_k
+	dk = 2 * k_max / num_k
 
 	# Sort power into frequency and wave vector
 	print("notice : Computing power versus kx,f; ky,f, kz,f")
-	power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((numf, numk)) for _ in range(3)]
-	power_k_mag_f = np.zeros((numf, numk))
+	power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
+	power_k_mag_f = np.zeros((num_f, num_k))
 
-	for nn in range(numf):
+	for nn in range(num_f):
 		k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(int)
 		k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(int)
 		k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(int)
@@ -232,18 +231,18 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, numk=500, numf=2
 	# powerkmagf[powerkmagf < 1.0e-6] 	= 1e-6
 
 	freqs = w[0].frequency.data
-	idxf = np.arange(numf)
+	idxf = np.arange(num_f)
 
-	if frange is not None:
-		idx_minfreq, idx_maxfreq = [bisect.bisect_left(np.min(frange)), bisect.bisect_left(np.max(frange))]
+	if f_range is not None:
+		idx_minfreq, idx_maxfreq = [bisect.bisect_left(np.min(f_range)), bisect.bisect_left(np.max(f_range))]
 
 		idxf = idxf[idx_minfreq:idx_maxfreq]
 
 	print("notice : Computing power versus kx,ky; kx,kz; ky,kz\n")
-	power_k_x_k_y = np.zeros((numk, numk))
-	power_k_x_k_z = np.zeros((numk, numk))
-	power_k_y_k_z = np.zeros((numk, numk))
-	power_k_perp_k_par = np.zeros((numk, numk))
+	power_k_x_k_y = np.zeros((num_k, num_k))
+	power_k_x_k_z = np.zeros((num_k, num_k))
+	power_k_y_k_z = np.zeros((num_k, num_k))
+	power_k_perp_k_par = np.zeros((num_k, num_k))
 
 	for nn in idxf:
 		k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(int)
