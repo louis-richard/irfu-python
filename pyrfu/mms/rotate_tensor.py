@@ -8,8 +8,8 @@ rotate_tensor.py
 
 import numpy as np
 
-from .resample import resample
-from .ts_tensor_xyz import ts_tensor_xyz
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 
 def rotate_tensor(*args):

@@ -37,7 +37,6 @@ from .wavelet import wavelet
 from .minvar import minvar
 from .vht import vht
 from .new_xyz import new_xyz
-from .rotate_tensor import rotate_tensor
 from .dec_parperp import dec_parperp
 from .convert_fac import convert_fac
 from .edb import edb
