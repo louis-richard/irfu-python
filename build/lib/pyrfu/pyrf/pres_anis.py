@@ -11,7 +11,7 @@ import xarray as xr
 from astropy import constants
 
 from .resample import resample
-from .rotate_tensor import rotate_tensor
+from ..mms import rotate_tensor
 
 
 def pres_anis(p_xyz=None, b_xyz=None):

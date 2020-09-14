@@ -8,8 +8,8 @@ rotate_tensor.py
 
 import numpy as np
 
-from .resample import resample
-from .ts_tensor_xyz import ts_tensor_xyz
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 
 def rotate_tensor(*args):
@@ -46,7 +46,7 @@ def rotate_tensor(*args):
 		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
 		>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
 		>>> # Compute ion temperature in field aligned coordinates
-		>>> t_xyzfac_i = pyrf.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
+		>>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 
 	"""
 

@@ -121,8 +121,10 @@ def main(tint, mms_id):
 
 
 if __name__ == "__main__":
-    # Define time interval
+    # Time interval
     tint = ["2016-08-10T09:50:00", "2016-08-10T10:15:00"]
 
     # Spacecraft index
     mms_id = 1
+
+    main(tint, mms_id)

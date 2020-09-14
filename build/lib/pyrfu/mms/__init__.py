@@ -30,9 +30,20 @@ from .calc_feeps_omni import calc_feeps_omni
 from .feeps_spin_avg import feeps_spin_avg
 from .feeps_pitch_angles import feeps_pitch_angles
 from .calc_feeps_pad import calc_feeps_pad
-
 from .get_eis_allt import get_eis_allt
 from .get_eis_omni import get_eis_omni
-
 from .remove_idist_background import remove_idist_background
 from .psd_moments import psd_moments
+from .rotate_tensor import rotate_tensor
+
+
+# 2020-09-09
+from .calculate_epsilon import calculate_epsilon
+from .dft_timeshift import dft_timeshift
+from .estimate_phase_speed import estimate_phase_speed
+from .fft_bandpass import fft_bandpass
+from .get_pitchangle_dist import get_pitchangle_dist
+from .make_model_vdf import make_model_vdf
+from .psd_rebin import psd_rebin
+
+

@@ -10,7 +10,7 @@ from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, silent=False):
+def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbosity=True):
 	"""
 	Computes omni directional energy spectrum of the target data unit for the target specie over the target energy range
 
@@ -108,7 +108,7 @@ def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, silen
 	for i, cdfname in enumerate(cdf_names):
 		scope_key = f"t{i:d}"
 		
-		if not silent:
+		if verbosity:
 			print(f"Loading {cdfname}...")
 
 		out_dict[scope_key] = db_get_ts(dset_name, cdfname, tint)

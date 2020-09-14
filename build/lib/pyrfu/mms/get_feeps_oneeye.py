@@ -10,7 +10,7 @@ from .get_feeps_active_eyes import get_feeps_active_eyes
 from .db_get_ts import db_get_ts
 
 
-def get_feeps_oneeye(tar_var="fluxe_brst_l2", e_id="bottom-4", tint=None, mms_id=1):
+def get_feeps_oneeye(tar_var="fluxe_brst_l2", e_id="bottom-4", tint=None, mms_id=1, verbose=True):
     """
     Load energy spectrum all the target eye
 
@@ -86,6 +86,9 @@ def get_feeps_oneeye(tar_var="fluxe_brst_l2", e_id="bottom-4", tint=None, mms_id
             raise ValueError("Unactive eye")
     else:
         raise ValueError("Invalid format of eye id")
+
+    if verbose:
+        print("Loading {}...".format("_".join([dset_pref, suf])))
 
     out = db_get_ts(dset_name, "_".join([dset_pref, suf]), tint)
 
