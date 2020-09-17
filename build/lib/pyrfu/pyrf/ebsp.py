@@ -221,9 +221,8 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 	else:
 		want_ee = 1
 
-	res = {"t": None, "f": None, "flagFac": 0, "bb_xxyyzzss": None, "ee_xxyyzzss": None, "ee_ss": None, "pf_xyz": None,
-		   "pf_rtp": None, "dop": None, "dop2d": None, "planarity": None, "ellipticity": None, "k_tp": None,
-		   "full_b": full_b, "b0": b0, "r": xyz}
+	res = dict(t=None, f=None, flagFac=0, bb_xxyyzzss=None, ee_xxyyzzss=None, ee_ss=None, pf_xyz=None, pf_rtp=None,
+			   dop=None, dop2d=None, planarity=None, ellipticity=None, k_tp=None, full_b=full_b, b0=b0, r=xyz)
 
 	flag_no_resamp, flag_want_fac, flag_dedotb0, flag_full_b_db = [False, False, False, False]
 
@@ -301,7 +300,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 
 			delta_t = 60
 
-			tint = list(Time(np.round([start(db), end(db)] / 60) * 60, format="unix").iso)
+			tint = list(Time([np.round(start(db) / 60), np.round(end(db) / 60)] * 60, format="unix").iso)
 		else:
 			raise ValueError("Invalid format of interval")
 
@@ -546,10 +545,9 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 
 		# Get the wavelet transform by IFFT of the FFT
 		wexp_mat = np.exp(-sigma * sigma * ((a[ind_a] * w - w0) ** 2) / 2)
-		wexp_mat = np.tile(wexp_mat, (3, 1)).T
-		
 		wexp_mat2 = np.tile(wexp_mat, (2, 1)).T
-		
+		wexp_mat = np.tile(wexp_mat, (3, 1)).T
+
 		wb = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * swb * wexp_mat, axis=0, threads=mp.cpu_count())
 		wb[idx_nan_b] = np.nan
 
@@ -601,9 +599,8 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 			power_e = 2 * np.pi * (we * np.conj(we)) / newfreqmat
 			power_e = np.vstack([power_e.T, np.sum(power_e, axis=1)]).T
 
-			power_ex_plot[:, ind_a] = power_e[:, 0]
-			power_ey_plot[:, ind_a] = power_e[:, 1]
-			power_ez_plot[:, ind_a] = power_e[:, 2]
+			power_ex_plot[:, ind_a], power_ey_plot[:, ind_a], power_ez_plot[:, ind_a] = [power_e[:, i] for i in range(3)]
+
 			power_2e_plot[:, ind_a] = power_e[:, 3]
 
 			# Poynting flux calculations, assume E and b units mV/m and nT, get  S in uW/m^2
@@ -627,9 +624,9 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 		power_b = 2 * np.pi * (wb * np.conj(wb)) / newfreqmat
 		power_b = np.vstack([power_b.T, np.sum(power_b, axis=1)]).T
 
-		power_bx_plot, power_by_plot, power_bz_plot = [power_b[:, i] for i in range(3)]
+		power_bx_plot[:, ind_a], power_by_plot[:, ind_a], power_bz_plot[:, ind_a] = [power_b[:, i] for i in range(3)]
 
-		power_2b_plot = power_b[:, 3]
+		power_2b_plot[:, ind_a] = power_b[:, 3]
 
 		# Polarization parameters
 		if want_polarization:
@@ -657,7 +654,8 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 
 			# compute singular value decomposition
 			# real matrix which is superposition of real part of spectral matrix over imaginary part
-			a_mat, u_mat, w_mat, v_mat = [np.zeros((6, 3, ndata_out)) for _ in range(4)]
+			a_mat, u_mat = [np.zeros((6, 3, ndata_out)) for _ in range(2)]
+			w_mat, v_mat = [np.zeros((3, 3, ndata_out)) for _ in range(2)]
 
 			# wSingularValues = zeros(3,ndata2);
 			# R = zeros(3,3,ndata2); #spectral matrix in coordinate defined by V axes
@@ -717,6 +715,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 
 	# set data gaps to NaN and remove edge effects
 	censur = np.floor(2*a)
+
 	for ind_a in range(len(a)):
 		censur_idx = np.hstack([np.arange(np.min([censur[ind_a], len(in_time)])),
 								np.arange(np.max([1, len(in_time) - censur[ind_a]]), len(in_time))])
@@ -814,7 +813,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 				s_plot_z[censur_index_back, j] = np.nan
 
 		else:
-			raise IndexError
+			continue
 
 	ndata4 = len(power_2e_isr2_plot)
 
@@ -841,7 +840,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 	bb_xxyyzzss[:, :, 1] = power_by_plot
 	bb_xxyyzzss[:, :, 2] = power_bz_plot
 	bb_xxyyzzss[:, :, 3] = power_2b_plot
-	bb_xxyyzzss = bb_xxyyzzss.astype(float)
+	bb_xxyyzzss = np.real(bb_xxyyzzss)
 
 	# Output
 	res["t"] = Time(out_time, format="unix").datetime64
@@ -856,7 +855,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 		power_2e_plot = average_data(power_2e_plot, in_time, out_time)
 
 		power_2e_isr2_plot = average_data(power_2e_isr2_plot, in_time, out_time)
-		power_2e_isr2_plot = power_2e_isr2_plot.astype(float)
+		power_2e_isr2_plot = np.real(power_2e_isr2_plot)
 
 		s_plot_x = np.real(average_data(s_plot_x, in_time, out_time))
 		s_plot_y = np.real(average_data(s_plot_y, in_time, out_time))
@@ -868,7 +867,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 		ee_xxyyzzss[:, :, 1] = power_ey_plot
 		ee_xxyyzzss[:, :, 2] = power_ez_plot
 		ee_xxyyzzss[:, :, 3] = power_2e_plot
-		ee_xxyyzzss = ee_xxyyzzss.astype(float)
+		ee_xxyyzzss = np.real(ee_xxyyzzss)
 
 		poynting_xyz = np.tile(s_plot_x, (3, 1, 1))
 		poynting_xyz = np.transpose(poynting_xyz, [1, 2, 0])
@@ -897,8 +896,10 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 
 	if want_polarization:
 		# Define parameters for which we cannot compute the wave vector
-		ind_low_planarity = planarity < 0.5
-		ind_low_ellipticity = np.abs(ellipticity) < .2
+		with warnings.catch_warnings():
+			warnings.simplefilter(action="ignore", category=RuntimeWarning)
+			ind_low_planarity = planarity < 0.5
+			ind_low_ellipticity = np.abs(ellipticity) < .2
 		
 		theta_svd_fac[ind_low_planarity] = np.nan
 		phi_svd_fac[ind_low_planarity] = np.nan

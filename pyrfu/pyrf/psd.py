@@ -70,8 +70,8 @@ def psd(inp=None, nfft=256, n_overlap=128, window="hamming", dflag="constant", s
 	dt = np.median(np.diff(inp.time.data)).astype(float) * 1e-9
 	fs = 1 / dt
 
-	f, p_xx = signal.welch(inp.data, nfft=nfft, fs=fs, window=window, noverlap=n_overlap, detrend=dflag, \
-							nperseg=n_persegs, scaling=scalling, return_onesided=True, axis=-1)
+	f, p_xx = signal.welch(inp.data, nfft=nfft, fs=fs, window=window, noverlap=n_overlap, detrend=dflag,
+						   nperseg=n_persegs, scaling=scalling, return_onesided=True, axis=-1)
 
 	out = xr.DataArray(p_xx, coords=[f], dims=["f"])
 
