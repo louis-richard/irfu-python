@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dft_timeshift.py
+dft_time_shift.py
 
 @author : Louis RICHARD
 """

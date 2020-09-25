@@ -11,15 +11,15 @@ import xarray as xr
 from scipy import signal
 
 
-def lowpass(inp=None, fcut=None, fhz=None):
+def lowpass(inp=None, f_cut=None, fhz=None):
     """
-    Filter the data through low or highpas filter with max frequency fcut and subtract from the original
+    Filter the data through low or highpass filter with max frequency f_cut and subtract from the original
 
     Parameters :
         inp : DataArray
             Time series of the input variable
 
-        fcut : float
+        f_cut : float
             Cutoff frequency
 
         fhz : float
@@ -31,32 +31,32 @@ def lowpass(inp=None, fcut=None, fhz=None):
 
     """
 
-    if inp is None or fcut is None or fhz is None:
+    if inp is None or f_cut is None or fhz is None:
         raise ValueError("lowpass requires at least 3 arguments")
 
     if not isinstance(inp, xr.DataArray):
         raise TypeError("inp must be a DataArray")
 
-    if not isinstance(fcut, float):
-        raise TypeError("fcut must be a float")
+    if not isinstance(f_cut, float):
+        raise TypeError("f_cut must be a float")
 
     if not isinstance(fhz, float):
         raise TypeError("fhz must be a float")
 
     data = inp.data
 
-    # Remove detrend
+    # Remove trend
     data_detrend = signal.detrend(data, type='linear')
     rest = data - data_detrend
 
     # Elliptic filter
-    fnyq, rp, rs, n = [fhz / 2, 0.1, 60, 4]
+    f_nyq, rp, rs, n = [fhz / 2, 0.1, 60, 4]
 
-    [b, a] = signal.ellip(n, rp, rs, fcut / fnyq, output='ba')
+    [b, a] = signal.ellip(n, rp, rs, f_cut / f_nyq, output='ba')
 
     # Filter data
-    outdata = signal.filtfilt(b, a, data_detrend) + rest
+    out_data = signal.filtfilt(b, a, data_detrend) + rest
 
-    out = xr.DataArray(outdata, coords=inp.coords, dims=inp.dims)
+    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims)
 
     return out

@@ -70,11 +70,11 @@ def ts_skymap(t=None, data=None, energy=None, phi=None, theta=None, **kwargs):
 
 		energy0_ok, energy1_ok, esteptable_ok = [False] * 3
 
-	mydict = {"data": (["time", "idx0", "idx1", "idx2"], data), "phi": (["time", "idx1"], phi),
-			  "theta": (["idx2"], theta), "energy": (["time", "idx0"], energy), "time": t, "idx0": np.arange(32),
-			  "idx1": np.arange(32), "idx2": np.arange(16)}
+	out_dict = {"data": (["time", "idx0", "idx1", "idx2"], data), "phi": (["time", "idx1"], phi),
+				"theta": (["idx2"], theta), "energy": (["time", "idx0"], energy), "time": t, "idx0": np.arange(32),
+				"idx1": np.arange(32), "idx2": np.arange(16)}
 
-	out = xr.Dataset(mydict)
+	out = xr.Dataset(out_dict)
 
 	if energy0_ok:
 		out.attrs["energy0"] = energy0

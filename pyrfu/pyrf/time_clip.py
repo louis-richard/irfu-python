@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-tlim.py
+time_clip.py
 
 @author : Louis RICHARD
 """
@@ -14,7 +14,7 @@ from astropy.time import Time
 import bisect
 
 
-def tlim(inp=None, tint=None):
+def time_clip(inp=None, tint=None):
 	"""
 	Time clip the input (if time interval is TSeries clip between start and stop)
 
@@ -22,7 +22,7 @@ def tlim(inp=None, tint=None):
 		inp : DataArray
 			Time series of the quantity to clip
 
-		tint : DataArrya/np.ndarray/list
+		tint : DataArray/np.ndarray/list
 			Time interval can be a time series, a array of datetime64 or a list
 
 	Returns : 
@@ -56,13 +56,13 @@ def tlim(inp=None, tint=None):
 	idx_min = bisect.bisect_left(inp.time.data, Time(t_start, format="datetime").datetime64)
 	idx_max = bisect.bisect_right(inp.time.data, Time(t_stop, format="datetime").datetime64)
 
-	coords = [inp.time.data[idx_min:idx_max]]
+	coord = [inp.time.data[idx_min:idx_max]]
 
 	if len(inp.coords) > 1:
 		for k in inp.dims[1:]:
-			coords.append(inp.coords[k])
+			coord.append(inp.coords[k])
 
-	out = xr.DataArray(inp.data[idx_min:idx_max, ...], coords=coords, dims=inp.dims, attrs=inp.attrs)
+	out = xr.DataArray(inp.data[idx_min:idx_max, ...], coords=coord, dims=inp.dims, attrs=inp.attrs)
 	out.time.attrs = inp.time.attrs
 
 	return out

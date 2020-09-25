@@ -55,8 +55,8 @@ def cross(x=None, y=None):
 	if len(x) != len(y):
 		y = resample(y, x)
 		
-	outdata = np.cross(x.data, y.data, axis=1)
+	out_data = np.cross(x.data, y.data, axis=1)
 
-	out = ts_vec_xyz(x.time.data, outdata)
+	out = ts_vec_xyz(x.time.data, out_data)
 	
 	return out

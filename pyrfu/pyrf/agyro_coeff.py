@@ -31,7 +31,7 @@ def agyro_coeff(p=None):
         >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
         >>> p_xyz_e = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
         >>> # Rotate electron pressure tensor to field aligned coordinates
-        >>> p_xyzfac_e = pyrf.rotate_tensor(p_xyz_e,"fac",b_xyz,"pp")
+        >>> p_xyzfac_e = mms.rotate_tensor(p_xyz_e,"fac",b_xyz,"pp")
         >>> # Compute agyrotropy coefficient
         >>> q_e = pyrf.agyro_coeff(p_xyzfac_e)
 
@@ -46,7 +46,7 @@ def agyro_coeff(p=None):
     if p.ndim != 3:
         raise TypeError("Input must be a second order tensor")
 
-    # Parallel and perpandicular components
+    # Parallel and perpendicular components
     p_para, p_perp = [p[:, 0, 0], (p[:, 1, 1] + p[:, 2, 2]) / 2]
 
     # Off-diagonal terms

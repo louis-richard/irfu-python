@@ -17,7 +17,7 @@ from ..pyrf.resample import resample
 from ..pyrf.convert_fac import convert_fac
 from ..pyrf.ts_scalar import ts_scalar
 from ..pyrf.extend_tint import extend_tint
-from ..pyrf.tlim import tlim
+from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 
@@ -104,11 +104,11 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     # short buffer so phi_E does not begin at zero.
     tint = extend_tint(tints, [-.2, .2])
 
-    e_xyz = tlim(e_xyz, tint)
-    phi_bs = tlim(phi_b, tints)
+    e_xyz = time_clip(e_xyz, tint)
+    phi_bs = time_clip(phi_b, tints)
 
     # Rotate Exyz into field-aligned coordinates
-    b_xyzs = tlim(b_xyz, tints)
+    b_xyzs = time_clip(b_xyz, tints)
     b_mean = np.mean(b_xyzs.data, axis=0)
     b_vec = b_mean / np.linalg.norm(b_mean)
     r_temp = [1, 0, 0]
@@ -130,7 +130,7 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
         e_temp = np.cos(theta) * e_fac.data[:, 0] + np.sin(theta) * e_fac.data[:, 1]
 
         phi_temp = ts_scalar(e_xyz.time.data, np.cumsum(e_temp) * dt_e_fac)
-        phi_temp = tlim(phi_temp, tints)
+        phi_temp = time_clip(phi_temp, tints)
         phi_temp -= np.mean(phi_temp)
 
         corrs[ii] = np.corrcoef(phi_bs.data, phi_temp.data)
@@ -139,7 +139,7 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     e_best = np.cos(thetas[corrpos]) * e_fac.data[:, 0] + np.sin(thetas[corrpos]) * e_fac.data[:, 1]
     e_best = ts_scalar(e_xyz.time.data, e_best)
     phi_best = ts_scalar(e_xyz.time.data, np.cumsum(e_best) * dt_e_fac)
-    phi_best = tlim(phi_best, tints)
+    phi_best = time_clip(phi_best, tints)
     phi_best -= np.mean(phi_best)
     theta_best = thetas[corrpos]
     dir_best = r1 * np.cos(theta_best) + r2 * np.sin(theta_best)

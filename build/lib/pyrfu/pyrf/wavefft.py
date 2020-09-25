@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-wavefft.py
+wave_fft.py
 
 @author : Louis RICHARD
 """

@@ -46,7 +46,7 @@ def ts_tensor_xyz(t=None, data=None, attrs=None):
 		raise TypeError("Data must be a np array")
 	
 	if data.ndim != 3:
-		raise TypeError("Input must be a tensor time serie")
+		raise TypeError("Input must be a tensor time series")
 	
 	if data.shape[1] != 3 or data.shape[2] != 3:
 		raise TypeError("Input must be a xyz tensor")
@@ -59,7 +59,7 @@ def ts_tensor_xyz(t=None, data=None, attrs=None):
 	if attrs is None:
 		flag_attrs = False
 	
-	out = xr.DataArray(data, coords=[t[:], ["x", "y", "z"], ["x", "y", "z"]], dims=["time", "comph", "compv"])
+	out = xr.DataArray(data, coords=[t[:], ["x", "y", "z"], ["x", "y", "z"]], dims=["time", "comp_h", "comp_v"])
 	
 	if flag_attrs:
 		out.attrs = attrs

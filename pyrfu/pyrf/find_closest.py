@@ -13,7 +13,7 @@ from scipy import interpolate
 
 def find_closest(t1=None, t2=None):
     """
-    Finds pairs that are closest to each other in two timeseries
+    Finds pairs that are closest to each other in two time series
 
     Parameters :
         t1 : np.ndarray

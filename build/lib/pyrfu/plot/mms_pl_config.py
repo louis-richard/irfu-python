@@ -20,7 +20,7 @@ date_form = mdates.DateFormatter("%H:%M:%S")
 sns.set_context("paper")
 
 plt.rc("lines", linewidth=1)
-color = ["k", "b", "r", "g"]
+color = np.array([[0, 0, 0], [213, 94, 0], [0, 158, 115], [86, 180, 233]]) / 255
 
 
 def mms_pl_config(r_mms):

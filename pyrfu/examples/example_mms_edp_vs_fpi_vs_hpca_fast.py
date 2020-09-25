@@ -40,8 +40,8 @@ def main(tint, mms_id):
     e2d_dsl_edp_l2pre, d = pyrf.edb(e2d_dsl_edp_l2pre, b_dmpa_fgm_srvy_l2, 10, "Eperp+NaN")
 
     # Comp VxB
-    [v_para_i, v_perp_i, alpha] = pyrf.dec_parperp(v_i_dbcs_fpi, b_dmpa_fgm_srvy_l2)
-    [v_para_e, v_perp_e, alpha] = pyrf.dec_parperp(v_e_dbcs_fpi, b_dmpa_fgm_srvy_l2)
+    [v_para_i, v_perp_i, alpha] = pyrf.dec_par_perp(v_i_dbcs_fpi, b_dmpa_fgm_srvy_l2)
+    [v_para_e, v_perp_e, alpha] = pyrf.dec_par_perp(v_e_dbcs_fpi, b_dmpa_fgm_srvy_l2)
 
     # ExB drift
     vexb_xyz = pyrf.e_vxb(e_dsl_edp_l2, b_dmpa_fgm_srvy_l2, -1)
@@ -51,7 +51,7 @@ def main(tint, mms_id):
     evxb_xyz_i = pyrf.e_vxb(v_i_dbcs_fpi, pyrf.resample(b_dmpa_fgm_srvy_l2, v_i_dbcs_fpi))
     evxb_xyz_e = pyrf.e_vxb(v_e_dbcs_fpi, pyrf.resample(b_dmpa_fgm_srvy_l2, v_e_dbcs_fpi))
 
-    [v_para_hplus, v_perp_hplus, alpha] = pyrf.dec_parperp(v_hplus_dbcs_hpca, b_dmpa_fgm_srvy_l2)
+    [v_para_hplus, v_perp_hplus, alpha] = pyrf.dec_par_perp(v_hplus_dbcs_hpca, b_dmpa_fgm_srvy_l2)
     evxb_xyz_hplus = pyrf.e_vxb(v_hplus_dbcs_hpca, pyrf.resample(b_dmpa_fgm_srvy_l2, v_hplus_dbcs_hpca))
 
     # plots
@@ -85,7 +85,7 @@ def main(tint, mms_id):
     axs[-1].set_xlabel("{} UTC".format(tint[0][:10]))
     axs[-1].set_xlim(tint)
 
-    fig_name = "_".join([pyrf.fname(tint, 3), "e_edp_fast_vs_fpi_fast_vs_hpca_fast.png"])
+    fig_name = "_".join([pyrf.date_str(tint, 3), "e_edp_fast_vs_fpi_fast_vs_hpca_fast.png"])
     fig.savefig(os.path.join("figures_examples", fig_name), format="png")
 
     # Plot velocity
@@ -114,7 +114,7 @@ def main(tint, mms_id):
     axs[-1].set_xlabel("{} UTC".format(tint[0][:10]))
     axs[-1].set_xlim(tint)
 
-    fig_name = "_".join([pyrf.fname(tint, 3), "vexb_edp_fast_vs_fpi_fast_vs_hpca_fast.png"])
+    fig_name = "_".join([pyrf.date_str(tint, 3), "vexb_edp_fast_vs_fpi_fast_vs_hpca_fast.png"])
     fig.savefig(os.path.join("figures_examples", fig_name), format="png")
 
     plt.show()

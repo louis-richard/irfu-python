@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-tlim.py
+time_clip.py
 
 @author : Louis RICHARD
 """

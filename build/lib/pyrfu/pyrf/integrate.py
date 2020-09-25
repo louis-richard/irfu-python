@@ -65,11 +65,11 @@ def integrate(inp=None, time_step=None):
 
 	dt[dt > 3 * time_step] = 0
 
-	xint = x
-	for j in range(1, xint.shape[1]):
-		j_ok = ~np.isnan(xint[:, j])
+	x_int = x
+	for j in range(1, x_int.shape[1]):
+		j_ok = ~np.isnan(x_int[:, j])
 
-		xint[j_ok, j] = np.cumsum(x[j_ok, j] * dt[j_ok])
+		x_int[j_ok, j] = np.cumsum(x[j_ok, j] * dt[j_ok])
 
 	out = xr.DataArray(x[:, 1:], coords=inp.coords, dims=inp.dims)
 	out.attrs["UNITS"] = unit_tmp + "*s"

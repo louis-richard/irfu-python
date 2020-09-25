@@ -39,7 +39,7 @@ from .rotate_tensor import rotate_tensor
 
 # 2020-09-09
 from .calculate_epsilon import calculate_epsilon
-from .dft_timeshift import dft_timeshift
+from .dft_time_shift import dft_time_shift
 from .estimate_phase_speed import estimate_phase_speed
 from .fft_bandpass import fft_bandpass
 from .get_pitchangle_dist import get_pitchangle_dist

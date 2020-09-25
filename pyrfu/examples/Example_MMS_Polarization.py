@@ -154,7 +154,7 @@ def main(tint, mms_id):
 	axs[7].set_ylabel("$f$ [Hz]")
 	caxs7.set_ylabel("$S_\\parallel/|S|$")
 
-	fig_name = "_".join([pyrf.fname(tint, 3), "ebfields.png"])
+	fig_name = "_".join([pyrf.date_str(tint, 3), "ebfields.png"])
 	fig.savefig(os.path.join("figures_examples", fig_name), format="png")
 
 	plt.show()

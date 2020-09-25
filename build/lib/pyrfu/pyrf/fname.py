@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-fname.py
+date_str.py
 
 @author : Louis RICHARD
 """

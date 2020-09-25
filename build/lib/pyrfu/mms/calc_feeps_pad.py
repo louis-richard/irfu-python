@@ -16,7 +16,7 @@ from .feeps_pitch_angles import feeps_pitch_angles
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def calc_feeps_pad(inp_dset=None, b_bcs=None, bin_size=16.3636, energy=[70, 600]):
+def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
 	"""
 	Compute pitch angle distribution using FEEPS data.
 
@@ -38,7 +38,10 @@ def calc_feeps_pad(inp_dset=None, b_bcs=None, bin_size=16.3636, energy=[70, 600]
 			Time series of the pitch angle distribution
 			
 	"""
-	var = inp_dset.attrs
+	if energy is None:
+		energy = [70, 600]
+
+	var = inp_dataset.attrs
 	mms_id = var["mmsId"]
 
 	if var["dtype"] == "electron":
@@ -56,7 +59,7 @@ def calc_feeps_pad(inp_dset=None, b_bcs=None, bin_size=16.3636, energy=[70, 600]
 	pa_bins = [180. * pa_bin / n_pabins for pa_bin in range(0, int(n_pabins)+1)]
 	pa_label = [180. * pa_bin / n_pabins + bin_size / 2. for pa_bin in range(0, int(n_pabins))]
 
-	pitch_angles = feeps_pitch_angles(inp_dset, b_bcs)
+	pitch_angles = feeps_pitch_angles(inp_dataset, b_bcs)
 	pa_times = pitch_angles.time
 	pa_data = pitch_angles.data
 
@@ -105,8 +108,8 @@ def calc_feeps_pad(inp_dset=None, b_bcs=None, bin_size=16.3636, energy=[70, 600]
 		for isen, sensor_num in enumerate(particle_idxs):
 			var_name = "{}-{:d}".format(s_type, sensor_num + 1)
 
-			t, data, = inp_dset[var_name].time.data, inp_dset[var_name].data
-			energies = inp_dset[var_name].Differential_energy_channels.data
+			t, data, = inp_dataset[var_name].time.data, inp_dataset[var_name].data
+			energies = inp_dataset[var_name].Differential_energy_channels.data
 
 			# remove any 0s before averaging
 			data[data == 0] = "nan"

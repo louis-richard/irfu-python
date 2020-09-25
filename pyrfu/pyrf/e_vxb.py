@@ -74,8 +74,8 @@ def e_vxb(v=None, b=None, flag="vxb"):
 		if len(e) != len(b):
 			b = resample(b, e)
 
-		res = np.cross(e.data, b.data, axis=1)
-		res /= np.linalg.norm(b.data, axis=1)[:, None] ** 2 * 1e3
+		res = 1e3 * np.cross(e.data, b.data, axis=1)
+		res /= np.linalg.norm(b.data, axis=1)[:, None] ** 2
 
 		attrs = {"UNITS": "km/s", "FIELDNAM": "Velocity", "LABLAXIS": "V"}
 

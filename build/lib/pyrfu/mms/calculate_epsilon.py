@@ -44,7 +44,7 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
 
     Example :
         >>> from pyrfu import mms
-        >>> epsilon = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, en_channel=[4, 32])
+        >>> eps = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, en_channel=[4, 32])
 
     """
 
@@ -73,11 +73,11 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
 
     # Check whether particles are electrons or ions
     if vdf.attrs["specie"] == "e":
-        pmass = constants.m_e.value
+        mp = constants.m_e.value
         print("notice : Particles are electrons")
     elif vdf.attrs["specie"] == "i":
         sc_pot.data = -sc_pot.data
-        pmass = constants.m_p.value
+        mp = constants.m_p.value
         print("notice : Particles are electrons")
     else:
         raise ValueError("Invalid specie")
@@ -85,14 +85,14 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
     # Define lengths of variables
     n_ph = len(vdf.phi.data[0, :])
 
-    # Define corrected energy levels using SCpot
+    # Define corrected energy levels using spacecraft potential
     energy_arr = vdf.energy.data
-    v, deltav = [np.zeros(energy_arr.shape) for _ in range(2)]
+    v, delta_v = [np.zeros(energy_arr.shape) for _ in range(2)]
 
     for it in range(len(vdf.time)):
         energy_vec, energy_log = [energy_arr[it, :], np.log10(energy_arr[it, :])]
 
-        v[it, :] = np.real(np.sqrt(2 * (energy_vec - sc_pot.data[it]) * qe / pmass))
+        v[it, :] = np.real(np.sqrt(2 * (energy_vec - sc_pot.data[it]) * qe / mp))
 
         temp0, temp33 = [2 * energy_log[0] - energy_log[1], 2 * energy_log[-1] - energy_log[-2]]
 
@@ -103,13 +103,13 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
         energy_upper = 10 ** (energy_log + diff_en_all[1:34] / 2)
         energy_lower = 10 ** (energy_log - diff_en_all[0:33] / 2)
 
-        v_upper = np.sqrt(2 * qe * energy_upper / pmass)
-        v_lower = np.sqrt(2 * qe * energy_lower / pmass)
+        v_upper = np.sqrt(2 * qe * energy_upper / mp)
+        v_lower = np.sqrt(2 * qe * energy_lower / mp)
 
         v_lower[np.isnan(v_lower)] = 0
         v_upper[np.isnan(v_upper)] = 0
 
-        deltav[it, :] = (v_upper - v_lower)
+        delta_v[it, :] = (v_upper - v_lower)
 
     v[v < 0] = 0
 
@@ -123,7 +123,7 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
         for ii in int_energies:
             tmp = np.squeeze(vdf_diff[it, ii, ...])
 
-            epsilon[it] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * v[it, ii] ** 2 * deltav[
+            epsilon[it] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * v[it, ii] ** 2 * delta_v[
                 it, ii] * delta_ang
 
     epsilon /= 1e6 * n.data * 2

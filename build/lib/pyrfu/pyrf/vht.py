@@ -14,7 +14,7 @@ from .e_vxb import e_vxb
 
 def vht(e=None, b=None, flag=1):
 	"""
-	Estimate velocity of the De Hoffman-Teller frame from the velocity estimate the electric field eht=-vhtxb
+	Estimate velocity of the De Hoffman-Teller frame from the velocity estimate the electric field eht=-vht x b
 
 	Parameters :
 		e : DataArray
@@ -46,7 +46,7 @@ def vht(e=None, b=None, flag=1):
 	
 	n_samples = len(e)
 
-	# Resample magnetic field to electric field sampling (usualy higher)
+	# Resample magnetic field to electric field sampling (usually higher)
 
 	if n_samples != len(b):
 		b = resample(b, e)
@@ -84,10 +84,7 @@ def vht(e=None, b=None, flag=1):
 	v_ht_hat = v_ht/np.linalg.norm(v_ht, keepdims=True)
 	
 	print(u_msg)
-	frmt = "v_ht ={:7.4f} * [{v_ht_hat[0]:7.4f}, {v_ht_hat[1]:7.4f}, {v_ht_hat[2]:7.4f}] = [{v_ht[0]:7.4f}, " \
-		   "{v_ht[1]:7.4f}, {v_ht[2]:7.4f}] km/s "
-
-	print(frmt.format(np.linalg.norm(v_ht), v_ht_hat=v_ht_hat, v_ht=v_ht))
+	print("v_ht ={:7.4f} * {} = {} km/s".format(np.linalg.norm(v_ht), np.array_str(v_ht_hat), np.array_str(v_ht)))
 
 	# Calculate the goodness of the Hoffman Teller frame
 	e_ht = e_vxb(v_ht, b)
@@ -98,23 +95,20 @@ def vht(e=None, b=None, flag=1):
 	else:
 		e_p, e_ht_p = [e[ind_data], e_ht[ind_data]]
 
-	deltae = e_p.data - e_ht_p.data
+	delta_e = e_p.data - e_ht_p.data
 
 	poly_fit = np.polyfit(e_ht_p.data.reshape([len(e_ht_p) * 3]), e_p.data.reshape([len(e_p) * 3]), 1)
-	cor_coef = np.corrcoef(e_ht_p.data.reshape([len(e_ht_p) * 3]), e_p.data.reshape([len(e_p) * 3]))
+	corr_coeff = np.corrcoef(e_ht_p.data.reshape([len(e_ht_p) * 3]), e_p.data.reshape([len(e_p) * 3]))
 
 	print("slope = {p[0]:6.4f}, offs = {p[1]:6.4f}".format(p=poly_fit))
-	print("cc = {:6.4f}".format(cor_coef[0, 1]))
+	print("cc = {:6.4f}".format(corr_coeff[0, 1]))
 
-	dv_ht = np.sum(np.sum(deltae ** 2)) / len(ind_data)
+	dv_ht = np.sum(np.sum(delta_e ** 2)) / len(ind_data)
 	s_mat = (dv_ht / (2 * len(ind_data) - 3)) / k_mat
 	dv_ht = np.sqrt(np.diag(s_mat)) * 1e3
 
 	dv_ht_hat = dv_ht / np.linalg.norm(dv_ht)
 
-	frmt = "\\delta v_ht ={:7.4f}*[{dv_ht_hat[0]:7.4f}, {dv_ht_hat[1]:7.4f}, {dv_ht_hat[2]:7.4f}] = [{dv_ht[0]:7.4f}, " \
-			"{dv_ht[1]:7.4f}, {dv_ht[2]:7.4f}] km/s"
-
-	print(frmt.format(np.linalg.norm(dv_ht), dv_ht_hat=dv_ht_hat, dv_ht=dv_ht))
+	print("dv_ht ={:7.4f} * {} = {} km/s".format(np.linalg.norm(dv_ht), np.array_str(dv_ht_hat), np.array_str(dv_ht)))
 
 	return v_ht, e_ht, dv_ht

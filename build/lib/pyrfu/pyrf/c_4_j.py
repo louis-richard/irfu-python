@@ -73,22 +73,22 @@ def c_4_j(r_list=None, b_list=None):
 	div_b = c_4_grad(r_list, b_list, "div")
 
 	# to get right units
-	div_b *= 1.0e-3*1e-9/mu0
+	div_b *= 1.0e-3 * 1e-9 / mu0
 
 	# estimate current j [A/m2]
 	curl_b = c_4_grad(r_list, b_list, "curl")
 
 	# to get right units [A.m^{-2}]
-	j = curl_b*1.0e-3*1e-9/mu0
+	j = curl_b * 1.0e-3 * 1e-9 / mu0
 
 	# estimate jxB force [T A/m2]
-	jxb = 1e-9*cross(j, b_avg)
+	jxb = 1e-9 * cross(j, b_avg)
 
 	# estimate divTshear = (1/muo) (B*div)B [T A/m2]
 	b_div_b = c_4_grad(r_list, b_list, "bdivb")
 
 	# to get right units [T.A.m^{-2}]
-	div_t_shear = b_div_b*1.0e-3*1e-9*1e-9/mu0
+	div_t_shear = b_div_b * 1.0e-3 * 1e-9 * 1e-9 / mu0
 
 	# estimate divPb = (1/muo) grad (B^2/2) = divTshear-jxB
 	div_pb = div_t_shear - jxb

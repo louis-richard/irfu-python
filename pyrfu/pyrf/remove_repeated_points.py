@@ -14,7 +14,7 @@ from . import ts_vec_xyz, ts_scalar
 
 def remove_repeated_points(inp=None):
     """
-    Remove repeated elements in DataArray or structure data. Important when using DEFATT products.
+    Remove repeated elements in DataArray or structure data. Important when using defatt products.
     Must have a time variable.
 
     Parameters :
@@ -31,18 +31,17 @@ def remove_repeated_points(inp=None):
     if isinstance(inp, xr.DataArray):
         diffs = np.diff(inp.time.data.view("i8") * 1e-9)
 
-        norepeat = np.ones(len(inp))
-        norepeat[diffs < threshold] = 0
+        no_repeat = np.ones(len(inp))
+        no_repeat[diffs < threshold] = 0
 
-        newtstime = inp.time.data[norepeat == 1]
-        newinp = inp.data[norepeat == 1, :]
+        new_time, new_inp = [inp.time.data[no_repeat == 1], inp.data[no_repeat == 1, :]]
 
-        if newinp.ndim == 1:
-            newdata = ts_scalar(newtstime, newinp)
-        elif newinp.ndim == 2:
-            newdata = ts_vec_xyz(newtstime, newinp)
-        elif newinp.ndim == 3:
-            newdata = ts_vec_xyz(newtstime, newinp)
+        if new_inp.ndim == 1:
+            new_data = ts_scalar(new_time, new_inp)
+        elif new_inp.ndim == 2:
+            new_data = ts_vec_xyz(new_time, new_inp)
+        elif new_inp.ndim == 3:
+            new_data = ts_vec_xyz(new_time, new_inp)
         else:
             raise TypeError("Invalid data dimension")
 
@@ -52,16 +51,16 @@ def remove_repeated_points(inp=None):
         else:
             diffs = np.diff(inp["time"])
 
-        norepeat = np.ones(len(inp["time"]))
-        norepeat[diffs < threshold] = 0
+        no_repeat = np.ones(len(inp["time"]))
+        no_repeat[diffs < threshold] = 0
 
-        varnames = inp.keys()
+        var_names = inp.keys()
 
-        for varname in varnames:
-            inp[varname] = inp[varname][norepeat == 1, :]
+        for var_name in var_names:
+            inp[var_name] = inp[var_name][no_repeat == 1, :]
 
-        newdata = inp
+        new_data = inp
     else:
-        newdata = inp  # no change to input if it's not a TSERIES or structure
+        new_data = inp  # no change to input if it's not a DataArray or structure
 
-    return newdata
+    return new_data

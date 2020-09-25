@@ -9,7 +9,7 @@ make_model_vdf.py
 import numpy as np
 from astropy import constants
 
-from ..pyrf import resample, dec_parperp, norm
+from ..pyrf import resample, dec_par_perp, norm
 from . import rotate_tensor
 
 
@@ -67,7 +67,7 @@ def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=
     t_xyzfac = rotate_tensor(t_xyz, "fac", b_xyz, "pp")  # N.B makes final distribution gyrotropic
     t_para, t_rati = [t_xyzfac[:, 0, 0], t_xyzfac[:, 0, 0] / t_xyzfac[:, 1, 1]]
 
-    v_para, v_perp, alpha = dec_parperp(v_xyz, b_xyz)
+    v_para, v_perp, alpha = dec_par_perp(v_xyz, b_xyz)
 
     v_perp_mag, b_xyz_mag = [norm(v_perp), norm(b_xyz)]
     v_perp_dir, b_xyz_dir = [v_perp / v_perp_mag, b_xyz / b_xyz_mag]

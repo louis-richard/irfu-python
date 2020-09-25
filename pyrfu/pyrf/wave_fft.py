@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-wavefft.py
+wave_fft.py
 
 @author : Louis RICHARD
 """
@@ -12,7 +12,7 @@ import xarray as xr
 from scipy import signal
 
 
-def waveftt(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=None):
+def wave_fft(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=None):
     """
     Short-Time Fourier Transform
 
@@ -51,9 +51,9 @@ def waveftt(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=None
         dt = np.median(np.diff(x.time.data).astype(float)) * 1e-9
         fs = 1 / dt
 
-    nperseg = np.round(frame_length * fs).astype(int)  # convert ms to points
-    noverlap = np.round(frame_overlap * fs).astype(int)  # convert ms to points
+    n_per_seg = np.round(frame_length * fs).astype(int)  # convert ms to points
+    n_overlap = np.round(frame_overlap * fs).astype(int)  # convert ms to points
 
-    f, t, s = signal.spectrogram(x, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap, mode='complex')
+    f, t, s = signal.spectrogram(x, fs=fs, window=window, nperseg=n_per_seg, noverlap=n_overlap, mode='complex')
 
     return f, t, s

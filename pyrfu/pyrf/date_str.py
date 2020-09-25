@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-fname.py
+date_str.py
 
 @author : Louis RICHARD
 """
@@ -9,14 +9,14 @@ fname.py
 from dateutil import parser
 
 
-def fname(tint=None, frmt=1):
+def date_str(tint=None, fmt=1):
 	"""
 	Creates a string corresponding to time interval for output plot naming
 
 	Parameters :
 		- Tint : list of str
 			Time interval
-		- frmt : int
+		- fmt : int
 			Format of the output :
 				1 -> "%Y%m%d_%H%M",
 				2 -> "%y%m%d%H%M%S",
@@ -30,7 +30,7 @@ def fname(tint=None, frmt=1):
 	"""
 	
 	if tint is None:
-		raise ValueError("fname requires at least one argument")
+		raise ValueError("date_str requires at least one argument")
 
 	if not isinstance(tint, list) or len(tint) != 2:
 		raise TypeError("Time interval must be a list")
@@ -41,13 +41,13 @@ def fname(tint=None, frmt=1):
 	t1 = parser.parse(tint[0])
 	t2 = parser.parse(tint[1])
 
-	if frmt == 1:
+	if fmt == 1:
 		out = t1.strftime("%Y%m%d_%H%M")
-	elif frmt == 2:
+	elif fmt == 2:
 		out = t1.strftime("%y%m%d%H%M%S")
-	elif frmt == 3:
+	elif fmt == 3:
 		out = "_".join([t1.strftime("%Y%m%d_%H%M%S"), t2.strftime("%H%M%S")])
-	elif frmt == 4:
+	elif fmt == 4:
 		out = "_".join([t1.strftime("%Y%m%d_%H%M%S"), t2.strftime("%Y%m%d_%H%M%S")])
 	else:
 		raise ValueError("Unknown format")

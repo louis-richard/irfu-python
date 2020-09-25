@@ -50,12 +50,12 @@ def main(tint, mms_id):
         v_hplus_dbcs_hpca = mms.get_data("Vhplus_dbcs_hpca_brst_l1b", tint, mms_id)
 
     # Decompose parallel and perpandicular components
-    v_para_i, v_perp_i, _ = pyrf.dec_parperp(v_i_dbcs_fpi, b_dmpa_fgm_srvy)
-    v_para_e, v_perp_e, _ = pyrf.dec_parperp(v_e_dbcs_fpi, b_dmpa_fgm_srvy)
+    v_para_i, v_perp_i, _ = pyrf.dec_par_perp(v_i_dbcs_fpi, b_dmpa_fgm_srvy)
+    v_para_e, v_perp_e, _ = pyrf.dec_par_perp(v_e_dbcs_fpi, b_dmpa_fgm_srvy)
 
-    e_para, e_perp, _ = pyrf.dec_parperp(e_dsl_edp, b_dmpa_fgm_srvy)
+    e_para, e_perp, _ = pyrf.dec_par_perp(e_dsl_edp, b_dmpa_fgm_srvy)
 
-    v_para_hplus, v_perp_hplus, _ = pyrf.dec_parperp(v_hplus_dbcs_hpca, b_dmpa_fgm_srvy)
+    v_para_hplus, v_perp_hplus, _ = pyrf.dec_par_perp(v_hplus_dbcs_hpca, b_dmpa_fgm_srvy)
 
     # Compute velocity from electric fields
     vexb_xyz = pyrf.e_vxb(e_dsl_edp, b_dmpa_fgm_srvy, -1)
@@ -87,7 +87,7 @@ def main(tint, mms_id):
     axs[0].set_title("MMS{:d}".format(mms_id))
     axs[-1].set_xlabel("{} UTC".format(tint[0][:10]))
 
-    fig_name = "_".join([pyrf.fname(tint, 3), "vexb_edp_vs_fpi_vs_hpca_brst.png"])
+    fig_name = "_".join([pyrf.date_str(tint, 3), "vexb_edp_vs_fpi_vs_hpca_brst.png"])
     fig.savefig(os.path.join("figures_examples", fig_name), format="png")
 
     fig, axs = plt.subplots(3, sharex="all", figsize=(16, 9))
@@ -119,7 +119,7 @@ def main(tint, mms_id):
     axs[0].set_title("MMS{:d}".format(mms_id))
     axs[-1].set_xlabel("{} UTC".format(tint[0][:10]))
 
-    fig_name = "_".join([pyrf.fname(tint, 3), "e_edp_vs_fpi_vs_hpca_brst.png"])
+    fig_name = "_".join([pyrf.date_str(tint, 3), "e_edp_vs_fpi_vs_hpca_brst.png"])
     fig.savefig(os.path.join("figures_examples", fig_name), format="png")
 
     plt.show()

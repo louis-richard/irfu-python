@@ -29,4 +29,3 @@ def start(inp=None):
 
 	out = Time(inp.time.data[0], format="datetime64").unix
 	return out
-

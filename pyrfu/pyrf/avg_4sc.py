@@ -24,7 +24,8 @@ def avg_4sc(b_list=None):
 			Time series of the input quantity a the enter of mass of the MMS tetrahedron
 
 	Example :
-		>>> from pyrfu import mms, pyrf
+		>>> from pyrfu.mms import get_data
+		>>> from pyrfu.pyrf import avg_4sc
 		>>> # Time interval
 		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices

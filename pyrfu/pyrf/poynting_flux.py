@@ -10,7 +10,7 @@ import numpy as np
 
 from astropy.time import Time
 
-from . import calc_fs, cross, dot, normalize, resample, tlim
+from . import calc_fs, cross, dot, normalize, resample, time_clip
 
 
 def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
@@ -63,7 +63,7 @@ def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
     tmin = Time(max([min(e_xyz.time.data), min(b_xyz.time.data)]), format="datetime64").iso
     tmax = Time(min([max(e_xyz.time.data), max(b_xyz.time.data)]), format="datetime64").iso
     tint = [tmin, tmax]
-    ee, bb = [tlim(e_xyz, tint), tlim(b_xyz, tint)]
+    ee, bb = [time_clip(e_xyz, tint), time_clip(b_xyz, tint)]
     
     if fs_e < fs_b:
         e = resample(ee, bb)

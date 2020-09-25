@@ -11,7 +11,8 @@ import numpy as np
 from scipy import signal
 
 
-def filt(inp=None, fmin=0, fmax=1, n=-1):
+# noinspection PyTupleAssignmentBalance
+def filt(inp=None, f_min=0, f_max=1, n=-1):
 	"""
 	Filters input quantity
 
@@ -44,9 +45,8 @@ def filt(inp=None, fmin=0, fmax=1, n=-1):
 		>>> # Convert E to field aligned coordinates
 		>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, [1,0,0])
 		>>> # Bandpass filter E waveform
-		>>> fmin = 4
-		>>> e_xyzfac_hf = pyrf.filt(e_xyzfac, fmin, 0, 3)
-		>>> e_xyzfac_lf = pyrf.filt(e_xyzfac, 0, fmin, 3)
+		>>> e_xyzfac_hf = pyrf.filt(e_xyzfac, 4, 0, 3)
+		>>> e_xyzfac_lf = pyrf.filt(e_xyzfac, 0, 4, 3)
 
 	"""
 
@@ -56,64 +56,64 @@ def filt(inp=None, fmin=0, fmax=1, n=-1):
 	fs = 1 / (np.median(np.diff(inp.time)).astype(int) * 1e-9)
 
 	# Data of the input
-	inpdata = inp.data
+	inp_data = inp.data
 
-	fmin, fmax = [fmin / (fs / 2), fmax / (fs / 2)]
+	f_min, f_max = [f_min / (fs / 2), f_max / (fs / 2)]
 
-	if fmax > 1:
-		fmax = 1
+	if f_max > 1:
+		f_max = 1
 
 	# Parameters of the elliptic filter. fact defines the width between stopband and passband
 	r_p, r_s, fact = [0.5, 60, 1.1]
 
-	if fmin == 0:
+	if f_min == 0:
 		b1, a1 = [None] * 2
 		b2, a2 = [None] * 2
 
 		if n == -1:
-			n, fmax = signal.ellipord(fmax, np.min([fmax * fact, 0.9999]), r_p, r_s)
+			n, f_max = signal.ellipord(f_max, np.min([f_max * fact, 0.9999]), r_p, r_s)
 
-		b, a = signal.ellip(n, r_p, r_s, fmax, btype="lowpass")
-	elif fmax == 0:
+		b, a = signal.ellip(n, r_p, r_s, f_max, btype="lowpass")
+	elif f_max == 0:
 		b1, a1 = [None] * 2
 		b2, a2 = [None] * 2
 
 		if n == -1:
-			n, fmin = signal.ellipord(fmin, np.min([fmin * fact, 0.9999]), r_p, r_s)
+			n, f_min = signal.ellipord(f_min, np.min([f_min * fact, 0.9999]), r_p, r_s)
 
-		b, a = signal.ellip(n, r_p, r_s, fmin, btype="highpass")
+		b, a = signal.ellip(n, r_p, r_s, f_min, btype="highpass")
 	else:
 		b, a = [None] * 2
 
 		if n == -1:
-			n, fmax = signal.ellipord(fmax, np.min([fmax * 1.3, 0.9999]), r_p, r_s)
+			n, f_max = signal.ellipord(f_max, np.min([f_max * 1.3, 0.9999]), r_p, r_s)
 
-		b1, a1 = signal.ellip(n, r_p, r_s, fmax)
+		b1, a1 = signal.ellip(n, r_p, r_s, f_max)
 
 		if n == -1:
-			n, fmin = signal.ellipord(fmin, fmin * .75, r_p, r_s)
+			n, f_min = signal.ellipord(f_min, f_min * .75, r_p, r_s)
 
-		b2, a2 = signal.ellip(n, r_p, r_s, fmin)
+		b2, a2 = signal.ellip(n, r_p, r_s, f_min)
 
 	try:
-		n_c = inpdata.shape[1]
+		n_c = inp_data.shape[1]
 	except IndexError:
 		n_c = 1
-		inpdata = inpdata[:, np.newaxis]
+		inp_data = inp_data[:, np.newaxis]
 
-	outdata = np.zeros(inpdata.shape)
+	out_data = np.zeros(inp_data.shape)
 
-	if fmin != 0 and fmax != 0:
+	if f_min != 0 and f_max != 0:
 		for i_col in range(n_c):
-			outdata[:, i_col] = signal.filtfilt(b1, a1, inpdata[:, i_col])
-			outdata[:, i_col] = signal.filtfilt(b2, a2, outdata[:, i_col])
+			out_data[:, i_col] = signal.filtfilt(b1, a1, inp_data[:, i_col])
+			out_data[:, i_col] = signal.filtfilt(b2, a2, out_data[:, i_col])
 	else:
 		for i_col in range(n_c):
-			outdata[:, i_col] = signal.filtfilt(b, a, inpdata[:, i_col])
+			out_data[:, i_col] = signal.filtfilt(b, a, inp_data[:, i_col])
 
 	if n_c == 1:
-		outdata = outdata[:, 0]
+		out_data = out_data[:, 0]
 
-	out = xr.DataArray(outdata, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
+	out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
 	
 	return out

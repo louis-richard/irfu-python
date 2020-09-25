@@ -15,22 +15,22 @@ from astropy.time import Time
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def feeps_pitch_angles(inp_dset=None, b_bcs=None):
+def feeps_pitch_angles(inp_dataset=None, b_bcs=None):
 	"""
 	Computes the FEEPS pitch angles for each telescope from magnetic field data.
 	"""
-	var = inp_dset.attrs
+	var = inp_dataset.attrs
 	mms_id = var["mmsId"]
-	times = inp_dset.time
-	btimes = b_bcs.time
+	times = inp_dataset.time
+	b_times = b_bcs.time
 
-	trange = Time(np.hstack([times.data.min(), times.data.max()]), format="datetime64").isot
+	tint = Time(np.hstack([times.data.min(), times.data.max()]), format="datetime64").isot
 
-	eyes = get_feeps_active_eyes(var, trange, var["mmsId"])
+	eyes = get_feeps_active_eyes(var, tint, var["mmsId"])
 
 	idx_maps = None
-	nbins = 13  # number of pitch angle bins; 10 deg = 17 bins, 15 deg = 13 bins
-	dpa = 180.0 / nbins  # delta-pitch angle for each bin
+	bins = 13  # number of pitch angle bins; 10 deg = 17 bins, 15 deg = 13 bins
+	dpa = 180.0 / bins  # delta-pitch angle for each bin
 
 	# Rotation matrices for FEEPS coord system (FCS) into body coordinate system (BCS):
 	t_top = [[1./np.sqrt(2.), -1./np.sqrt(2.), 0], [1./np.sqrt(2.), 1./np.sqrt(2.), 0], [0, 0, 1]]
@@ -47,7 +47,7 @@ def feeps_pitch_angles(inp_dset=None, b_bcs=None):
 
 	top_tele_idx_map, bot_tele_idx_map = [{}, {}]
 
-	pas = np.empty([len(btimes), 18])  # pitch angles for each eye at each time
+	pas = np.empty([len(b_times), 18])  # pitch angles for each eye at each time
 
 	# Telescope vectors in Body Coordinate System:
 	#   Factors of -1 account for 180 deg shift between particle velocity and telescope normal direction:
@@ -87,28 +87,28 @@ def feeps_pitch_angles(inp_dset=None, b_bcs=None):
 			else:
 				bot_tele_idx_map[k] = i
 
-			top_idxs, bot_idxs = [[], []]
+			top_idx, bot_idx = [[], []]
 
 			# PAs for only active eyes
 			new_pas = np.empty(
-				[len(btimes), len(eyes["top"]) + len(eyes["bottom"])])  # pitch angles for each eye at eaceh time
+				[len(b_times), len(eyes["top"]) + len(eyes["bottom"])])  # pitch angles for each eye at each time
 
 			for top_idx, top_eye in enumerate(eyes["top"]):
 				new_pas[:, top_idx] = pas[:, top_tele_idx_map[top_eye]]
-				top_idxs.append(top_idx)
+				top_idx.append(top_idx)
 
 			for bot_idx, bot_eye in enumerate(eyes["bottom"]):
 				new_pas[:, bot_idx + len(eyes["top"])] = pas[:, bot_tele_idx_map[bot_eye]]
-				bot_idxs.append(bot_idx + len(eyes["top"]))
+				bot_idx.append(bot_idx + len(eyes["top"]))
 
-			idx_maps = {"electron-top": top_idxs, "electron-bottom": bot_idxs}
+			idx_maps = {"electron-top": top_idx, "electron-bottom": bot_idx}
 
 		else:
 			new_pas = pas
 
-	outdata = xr.DataArray(new_pas, coords=[btimes, np.arange(18)], dims=["time", "idx"])
+	out_data = xr.DataArray(new_pas, coords=[b_times, np.arange(18)], dims=["time", "idx"])
 
 	# interpolate to the PA time stamps
-	out = outdata.interp({'time': times})
+	out = out_data.interp({'time': times})
 
 	return out

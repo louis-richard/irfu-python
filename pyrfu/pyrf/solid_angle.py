@@ -28,7 +28,7 @@ def solid_angle(x=None, y=None, z=None):
     """
 
     if x is None or y is None or z is None:
-        raise ValueError("solidangle requires at least 3 arguments")
+        raise ValueError("solid_angle requires at least 3 arguments")
 
     # Check x is a vector
     if not isinstance(x, np.ndarray):
@@ -69,9 +69,9 @@ def solid_angle(x=None, y=None, z=None):
     # Calculate the sign of the area
     var = np.cross(z, y)
     div = np.sum(var * x)
-    signarea = np.sign(div)
+    sgn = np.sign(div)
 
     # Solid angle with sign taken into account
-    angle = signarea * angle
+    angle = sgn * angle
 
     return angle

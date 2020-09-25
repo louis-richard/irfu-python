@@ -21,10 +21,12 @@ date_form = mdates.ConciseDateFormatter(locator)
 plt.style.use("seaborn-whitegrid")
 sns.set_context("paper")
 
-color = ["k", "b", "r", "g"]
-default_cycler = cycler(color=color)
-plt.rc('axes', prop_cycle=default_cycler)
-plt.rc('lines', linewidth=1)
+# color = ["k", "b", "r", "g"]
+# color = np.array([[0, 0, 0], [213, 94, 0], [0, 158, 115], [86, 180, 233]]) / 255
+
+# default_cycler = cycler(color=color)
+# plt.rc('axes', prop_cycle=default_cycler)
+# plt.rc('lines', linewidth=1)
 
 
 def plot_line(ax=None, inp=None, c=""):

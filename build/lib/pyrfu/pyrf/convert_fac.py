@@ -37,16 +37,17 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 			Time series of the input field in field aligned coordinates system
 
 	Example :
+		>>> import numpy
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft index
-		>>> ic = 1
+		>>> mms_id = 1
 		>>> # Load magnetic field (FGM) and electric field (EDP)
-		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2",tint,ic)
-		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2",tint,ic)
+		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
+		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
 		>>> # Convert to field aligned coordinates
-		>>> e_xyzfac = pyrf.convert_fac(e_xyz,b_xyz,[1,0,0])
+		>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, numpy.array([1, 0, 0]))
 	
 	Note : 
 		all input parameters must be in the same coordinate system
@@ -60,7 +61,7 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 		raise TypeError("inp must be a DataArray")
 
 	if not isinstance(b_bgd, xr.DataArray):
-		raise TypeError("Bbgd must be a DataArray")
+		raise TypeError("b_bgd must be a DataArray")
 
 	if len(inp) != len(b_bgd):
 		b_bgd = resample(b_bgd, inp, fs=calc_fs(inp))
@@ -80,31 +81,31 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 	# Parallel
 	r_par = bn
 
-	# Perpandicular
+	# Perpendicular
 	r_perp_y = np.cross(r_par, r, axis=1)
 	r_perp_y /= np.linalg.norm(r_perp_y, axis=1, keepdims=True)
 	r_perp_x = np.cross(r_perp_y, b_bgd, axis=1)
 	r_perp_x /= np.linalg.norm(r_perp_x, axis=1, keepdims=True)
 	
-	(ndata, ndim) = inp_data.shape
+	n_data, n_dim = inp_data.shape
 	
-	if ndim == 3:
-		outdata = np.zeros(inp.shape)
+	if n_dim == 3:
+		out_data = np.zeros(inp.shape)
 
-		outdata[:, 0] = np.sum(r_perp_x * inp_data, axis=1)
-		outdata[:, 1] = np.sum(r_perp_y * inp_data, axis=1)
-		outdata[:, 2] = np.sum(r_par * inp_data, axis=1)
+		out_data[:, 0] = np.sum(r_perp_x * inp_data, axis=1)
+		out_data[:, 1] = np.sum(r_perp_y * inp_data, axis=1)
+		out_data[:, 2] = np.sum(r_par * inp_data, axis=1)
 
 		# xarray
-		out = xr.DataArray(outdata, coords=[t, inp.comp], dims=["time", "comp"])
+		out = xr.DataArray(out_data, coords=[t, inp.comp], dims=["time", "comp"])
 
-	elif ndim == 1:
-		outdata = np.zeros((3, ndata))
+	elif n_dim == 1:
+		out_data = np.zeros([3, n_data])
 
-		outdata[:, 0] = inp[:, 0]*(r_perp_x[:, 0] * r[:, 0] + r_perp_x[:, 1] * r[:, 1] + r_perp_x[:, 2] * r[:, 2])
-		outdata[:, 1] = inp[:, 0]*(r_par[:, 0] * r[:, 0] + r_par[:, 1] * r[:, 1] + r_par[:, 2] * r[:, 2])
+		out_data[:, 0] = inp[:, 0]*(r_perp_x[:, 0] * r[:, 0] + r_perp_x[:, 1] * r[:, 1] + r_perp_x[:, 2] * r[:, 2])
+		out_data[:, 1] = inp[:, 0]*(r_par[:, 0] * r[:, 0] + r_par[:, 1] * r[:, 1] + r_par[:, 2] * r[:, 2])
 
-		out = ts_vec_xyz(t, outdata, attrs=inp.attrs)
+		out = ts_vec_xyz(t, out_data, attrs=inp.attrs)
 	else:
 		raise TypeError("Invalid dimension of inp")
 

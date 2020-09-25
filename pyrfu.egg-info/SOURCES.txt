@@ -12,7 +12,7 @@ pyrfu/mms/calc_feeps_omni.py
 pyrfu/mms/calc_feeps_pad.py
 pyrfu/mms/calculate_epsilon.py
 pyrfu/mms/db_get_ts.py
-pyrfu/mms/dft_timeshift.py
+pyrfu/mms/dft_time_shift.py
 pyrfu/mms/estimate_phase_speed.py
 pyrfu/mms/feeps_pitch_angles.py
 pyrfu/mms/feeps_remove_sun.py
@@ -88,10 +88,11 @@ pyrfu/pyrf/cart2sph.py
 pyrfu/pyrf/convert_fac.py
 pyrfu/pyrf/corr_deriv.py
 pyrfu/pyrf/cross.py
-pyrfu/pyrf/dec_parperp.py
+pyrfu/pyrf/date_str.py
+pyrfu/pyrf/dec_par_perp.py
 pyrfu/pyrf/dist_append.py
 pyrfu/pyrf/dot.py
-pyrfu/pyrf/dynamicp.py
+pyrfu/pyrf/dynamic_press.py
 pyrfu/pyrf/e_vxb.py
 pyrfu/pyrf/eb_nrf.py
 pyrfu/pyrf/ebsp.py
@@ -100,7 +101,6 @@ pyrfu/pyrf/end.py
 pyrfu/pyrf/extend_tint.py
 pyrfu/pyrf/filt.py
 pyrfu/pyrf/find_closest.py
-pyrfu/pyrf/fname.py
 pyrfu/pyrf/gradient.py
 pyrfu/pyrf/histogram.py
 pyrfu/pyrf/histogram2d.py
@@ -112,8 +112,8 @@ pyrfu/pyrf/mean.py
 pyrfu/pyrf/mean_bins.py
 pyrfu/pyrf/medfilt.py
 pyrfu/pyrf/median_bins.py
-pyrfu/pyrf/minvar.py
 pyrfu/pyrf/movmean.py
+pyrfu/pyrf/mva.py
 pyrfu/pyrf/new_xyz.py
 pyrfu/pyrf/norm.py
 pyrfu/pyrf/normalize.py
@@ -126,7 +126,7 @@ pyrfu/pyrf/resample.py
 pyrfu/pyrf/solid_angle.py
 pyrfu/pyrf/start.py
 pyrfu/pyrf/t_eval.py
-pyrfu/pyrf/tlim.py
+pyrfu/pyrf/time_clip.py
 pyrfu/pyrf/trace.py
 pyrfu/pyrf/ts_append.py
 pyrfu/pyrf/ts_scalar.py
@@ -135,6 +135,6 @@ pyrfu/pyrf/ts_tensor_xyz.py
 pyrfu/pyrf/ts_time.py
 pyrfu/pyrf/ts_vec_xyz.py
 pyrfu/pyrf/vht.py
-pyrfu/pyrf/wavefft.py
+pyrfu/pyrf/wave_fft.py
 pyrfu/pyrf/wavelet.py
 pyrfu/pyrf/wavepolarize_means.py

@@ -18,7 +18,7 @@ plt.style.use("seaborn-whitegrid")
 locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
 formatter = mdates.ConciseDateFormatter(locator)
 sns.set_context("paper")
-plt.rc('lines', linewidth=1)
+# plt.rc('lines', linewidth=1)
 
 
 def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cbar=True, **kwargs):

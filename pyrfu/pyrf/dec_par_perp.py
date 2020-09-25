@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dec_parperp.py
+dec_par_perp.py
 
 @author : Louis RICHARD
 """
@@ -13,7 +13,7 @@ from .resample import resample
 from .dot import dot
 
 
-def dec_parperp(inp=None, b0=None, flag_spin_plane=False):
+def dec_par_perp(inp=None, b0=None, flag_spin_plane=False):
 	"""
 	Decomposes a vector into par/perp to B components. If flagspinplane decomposes components to the projection of B 
 	into the XY plane. Alpha_XY gives the angle between B0 and the XY plane.
@@ -49,12 +49,12 @@ def dec_parperp(inp=None, b0=None, flag_spin_plane=False):
 		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
 		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
 		>>> # Decompose e_xyz into parallel and perpendicular to b_xyz components
-		>>> e_para, e_perp, alpha = pyrf.dec_parperp(e_xyz, b_xyz)
+		>>> e_para, e_perp, _ = pyrf.dec_par_perp(e_xyz, b_xyz)
 
 	"""
 
 	if (inp is None) or (b0 is None):
-		raise ValueError("dec_parperp requires at least 2 arguments")
+		raise ValueError("dec_par_perp requires at least 2 arguments")
 	
 	if not isinstance(inp, xr.DataArray):
 		raise TypeError("Inputs must be DataArrays")
@@ -63,26 +63,26 @@ def dec_parperp(inp=None, b0=None, flag_spin_plane=False):
 		raise TypeError("Inputs must be DataArrays")
 	
 	if not flag_spin_plane:
-		btot = np.linalg.norm(b0, axis=1, keepdims=True)
+		b_mag = np.linalg.norm(b0, axis=1, keepdims=True)
 
-		ii = np.where(btot < 1e-3)[0]
+		ii = np.where(b_mag < 1e-3)[0]
 
 		if ii.size > 0:
-			btot[ii] = np.ones(len(ii))*1e-3
+			b_mag[ii] = np.ones(len(ii))*1e-3
 
-		bhat = b0 / btot
-		bhat = resample(bhat, inp)
+		b_hat = b0 / b_mag
+		b_hat = resample(b_hat, inp)
 
-		apara = dot(bhat, inp)
-		aperp = inp.data - (bhat * np.tile(apara.data, (3, 1)).T)
+		a_para = dot(b_hat, inp)
+		a_perp = inp.data - (b_hat * np.tile(a_para.data, (3, 1)).T)
 		alpha = []
 	else:
 		b0 = resample(b0, inp)
 		bt = np.sqrt(b0[:, 0] ** 2 + b0[:, 1] ** 2)
 		b0 /= bt[:, np.newaxis]
 
-		apara = inp[:, 0] * b0[:, 0] + inp[:, 1] * b0[:, 1]
-		aperp = inp[:, 0] * b0[:, 1] - inp[:, 1] * b0[:, 0]
+		a_para = inp[:, 0] * b0[:, 0] + inp[:, 1] * b0[:, 1]
+		a_perp = inp[:, 0] * b0[:, 1] - inp[:, 1] * b0[:, 0]
 		alpha = np.arctan2(b0[:, 2], bt)
 
-	return apara, aperp, alpha
+	return a_para, a_perp, alpha

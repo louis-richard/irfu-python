@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dec_parperp.py
+dec_par_perp.py
 
 @author : Louis RICHARD
 """

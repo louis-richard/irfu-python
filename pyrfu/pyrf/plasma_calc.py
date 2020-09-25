@@ -121,8 +121,8 @@ def plasma_calc(b=None, t_i=None, t_e=None, n_i=None, n_e=None):
         >>> n_i = mms.get_data("Ni_fpi_fast_l2", tint, mms_id)
         >>> n_e = mms.get_data("Ne_fpi_fast_l2", tint, mms_id)
         >>> # Compute scalar temperature
-        >>> t_xyzfac_i = pyrf.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
-        >>> t_xyzfac_e = pyrf.rotate_tensor(t_xyz_e, "fac", b_xyz, "pp")
+        >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
+        >>> t_xyzfac_e = mms.rotate_tensor(t_xyz_e, "fac", b_xyz, "pp")
         >>> t_i = pyrf.trace(t_xyzfac_i)
         >>> t_e = pyrf.trace(t_xyzfac_e)
         >>> # Compute plasma parameters

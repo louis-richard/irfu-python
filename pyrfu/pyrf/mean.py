@@ -61,6 +61,7 @@ def mean(inp=None, r=None, b=None, z=None):
             zz = z
     else:
         flag_dipole = False
+        zz = None
 
     if len(r) != len(inp):
         rr = resample(r, inp)
@@ -90,11 +91,11 @@ def mean(inp=None, r=None, b=None, z=None):
     # in case rotation axis is used as reference uncomment next line
     # rot_axis=rr;rot_axis(:,[2 3])=0;yv=irf_norm(irf_cross(irf_cross(bb,rot_axis),bb));xv=irf_cross(yv,zv);
 
-    outdata = np.zeros(inp.data.shape)
-    outdata[:, 0] = np.sum(xv * inp, axis=1)
-    outdata[:, 1] = np.sum(yv * inp, axis=1)
-    outdata[:, 2] = np.sum(zv * inp, axis=1)
+    out_data = np.zeros(inp.data.shape)
+    out_data[:, 0] = np.sum(xv * inp, axis=1)
+    out_data[:, 1] = np.sum(yv * inp, axis=1)
+    out_data[:, 2] = np.sum(zv * inp, axis=1)
 
-    out = ts_vec_xyz(inp.time.data, outdata, inp.attrs)
+    out = ts_vec_xyz(inp.time.data, out_data, inp.attrs)
 
     return out

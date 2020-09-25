@@ -46,9 +46,9 @@ def gradient(inp=None):
 	# guess time step
 	dt = calc_dt(inp)
 
-	dinpdt = np.gradient(inp.data, axis=0) / dt
+	d_inp_dt = np.gradient(inp.data, axis=0) / dt
 
-	out = xr.DataArray(dinpdt, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
+	out = xr.DataArray(d_inp_dt, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
 
 	if "UNITS" in out.attrs:
 		out.attrs["UNITS"] += "/s"

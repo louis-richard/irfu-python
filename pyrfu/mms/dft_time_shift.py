@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dft_timeshift.py
+dft_time_shift.py
 
 @author : Louis RICHARD
 """
@@ -12,11 +12,11 @@ import xarray as xr
 from ..pyrf import calc_fs, ts_scalar
 
 
-def dft_timeshift(inp=None, tau=None):
+def dft_time_shift(inp=None, tau=None):
     """
     Shifts the input signal "sig" by "tau" seconds using discrete fourier transform (DFT).
     Particularly useful when calculating the frequency-wavenumber spectrum of the mms' spin-plane or axial probes.
-    See: mms.fk_powerspectrum.
+    See: mms.fk_power_spectrum.
 
     Parameters :
         inp : DataArray

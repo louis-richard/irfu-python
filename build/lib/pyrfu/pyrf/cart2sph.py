@@ -14,7 +14,7 @@ from . import ts_vec_xyz
 
 def cart2sph(inp=None, direction_flag=1):
     """
-    Computes magnitude, theta and phi angle from column vector xyz (first coloumn is x ....) theta is 0 at equator.
+    Computes magnitude, theta and phi angle from column vector xyz (first column is x ....) theta is 0 at equator.
 
     direction_flag = -1  -> to make transformation in opposite direction
 
@@ -54,7 +54,7 @@ def cart2sph(inp=None, direction_flag=1):
         x = r * ct * cp
         y = r * ct * sp
 
-        outdata = np.hstack([x, y, z])
+        out_data = np.hstack([x, y, z])
 
     else:
         xy = xyz[:, 0] ** 2 + xyz[:, 1] ** 2
@@ -63,8 +63,8 @@ def cart2sph(inp=None, direction_flag=1):
         t = np.arctan2(xyz[:, 2], np.sqrt(xy)) * 180 / np.pi
         p = np.arctan2(xyz[:, 1], xyz[:, 0]) * 180 / np.pi
 
-        outdata = np.hstack([r, t, p])
+        out_data = np.hstack([r, t, p])
 
-    out = ts_vec_xyz(inp.time.data, outdata, inp.attrs)
+    out = ts_vec_xyz(inp.time.data, out_data, inp.attrs)
 
     return out

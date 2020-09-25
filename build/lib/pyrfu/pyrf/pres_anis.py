@@ -63,7 +63,7 @@ def pres_anis(p_xyz=None, b_xyz=None):
 	p_para = p_xyzfac[:, 0, 0]
 	p_perp = (p_xyzfac[:, 1, 1] + p_xyzfac[:, 2, 2]) / 2
 	
-	# Load permitivity
+	# Load permittivity
 	mu0 = constants.mu0.value
 
 	# Compute pressure anistropy

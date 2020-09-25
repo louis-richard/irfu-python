@@ -13,7 +13,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 from pyrfu.mms import get_data
-from pyrfu.pyrf import convert_fac, filt, wavelet, plasma_calc, fname
+from pyrfu.pyrf import convert_fac, filt, wavelet, plasma_calc, date_str
 from pyrfu.plot import plot_line, plot_spectr
 
 
@@ -148,7 +148,7 @@ def main(tint, mms_id):
 
     axs[2].text(0.02, 0.15, "$f > ${:2.1f} Hz".format(fmin), transform=axs[2].transAxes)
 
-    fig_name = "_".join([fname(tint, 3), "ebfields.png"])
+    fig_name = "_".join([date_str(tint, 3), "ebfields.png"])
     fig.savefig(os.path.join("figures_examples", fig_name), format="png")
 
     plt.show()

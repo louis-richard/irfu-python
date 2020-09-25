@@ -31,7 +31,7 @@ def norm(inp=None):
 		>>> # Load magnetic field
 		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
 		>>> # Compute magnitude of the magnetic field
-		>>> Bmag = pyrf.norm(b_xyz)
+		>>> b_mag = pyrf.norm(b_xyz)
 
 	"""
 

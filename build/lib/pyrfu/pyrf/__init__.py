@@ -27,22 +27,22 @@ from .calc_fs import calc_fs
 from .avg_4sc import avg_4sc
 from .gradient import gradient
 from .integrate import integrate
-from .tlim import tlim
+from .time_clip import time_clip
 from .resample import resample
 from .t_eval import t_eval
 from .filt import filt
 from .medfilt import medfilt
 from .movmean import movmean
 from .wavelet import wavelet
-from .minvar import minvar
+from .mva import mva
 from .vht import vht
 from .new_xyz import new_xyz
-from .dec_parperp import dec_parperp
+from .dec_par_perp import dec_par_perp
 from .convert_fac import convert_fac
 from .edb import edb
 from .e_vxb import e_vxb
 from .plasma_calc import plasma_calc
-from .dynamicp import dynamicp
+from .dynamic_press import dynamic_press
 from .pres_anis import pres_anis
 from .agyro_coeff import agyro_coeff
 from .median_bins import median_bins
@@ -58,7 +58,7 @@ from .c_4_j import c_4_j
 from .c_4_v import c_4_v
 from .avg_4sc import avg_4sc
 from .ebsp import ebsp
-from .fname import fname
+from .date_str import date_str
 
 # 2020/09/04
 from .find_closest import find_closest
@@ -71,4 +71,4 @@ from .mean import mean
 from .poynting_flux import poynting_flux
 from .remove_repeated_points import remove_repeated_points
 from .solid_angle import solid_angle
-from .wavefft import waveftt
+from .wave_fft import wave_fft

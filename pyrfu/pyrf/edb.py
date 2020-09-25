@@ -26,8 +26,9 @@ def edb(e=None, b0=None, angle_lim=20, flag_method="E.B=0"):
 
 		flag_method : str
 			Assumption on the direction of the measured electric field :
-				"E.B=0" -> E.B = 0
-				"Epar" 	-> E field along the B projection is coming from parallel electric field
+				"e.b=0" 		-> E.B = 0
+				"e_par" 		-> E field along the B projection is coming from parallel electric field
+				"e_perp+nan" 	-> ?
 
 		angle_lim : float
 			B angle with respect to the spin plane should be less than angle_lim degrees otherwise Ez is set to 0
@@ -49,7 +50,7 @@ def edb(e=None, b0=None, angle_lim=20, flag_method="E.B=0"):
 		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
 		>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
 		>>> # Compute Ez
-		>>> ed, d = pyrf.edb(e_xyz, b_xyz)
+		>>> e_z, alpha = pyrf.edb(e_xyz, b_xyz)
 
 	"""
 
@@ -59,7 +60,7 @@ def edb(e=None, b0=None, angle_lim=20, flag_method="E.B=0"):
 		raise ValueError("edb requires at least two inputs")
 	
 	default_value = 0
-	if flag_method.lower() == "eperp+nan":
+	if flag_method.lower() == "e_perp+nan":
 		default_value = np.nan
 
 		flag_method = "e.b=0"
@@ -80,7 +81,7 @@ def edb(e=None, b0=None, angle_lim=20, flag_method="E.B=0"):
 		if True in ind:
 			ed[ind, 2] = -(ed[ind, 0] * bd[ind, 0] + ed[ind, 1] * bd[ind, 1]) / bd[ind, 2]
 
-	elif flag_method.lower() == "epar":
+	elif flag_method.lower() == "e_par":
 		# Calculate using assumption that E field along the B projection is coming from parallel electric field
 		d = np.arctan2(bd[:, 2], np.sqrt(bd[:, 0] ** 2 + bd[:, 1] ** 2)) * 180 / np.pi
 
@@ -93,6 +94,6 @@ def edb(e=None, b0=None, angle_lim=20, flag_method="E.B=0"):
 	else:
 		raise ValueError("Invalid flag")
 
-	ed, d = [ts_vec_xyz(e.time.data, ed, {"UNITS": e.attrs["UNITS"]}), ts_scalar(e.time.data, d, {"UNITS": "degres"})]
+	ed, d = [ts_vec_xyz(e.time.data, ed, {"UNITS": e.attrs["UNITS"]}), ts_scalar(e.time.data, d, {"UNITS": "degrees"})]
 
 	return ed, d

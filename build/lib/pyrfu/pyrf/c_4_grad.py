@@ -43,12 +43,11 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 	Example :
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
-		>>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> # Spacecraft indices
-		>>> ic = np.arange(1,5)
-		>>> b = [mms.get_data("B_gse_fgm_srvy_l2",Tint,i) for i in ic]
-		>>> r = [mms.get_data("R_gse",Tint,i) for i in ic]
-		>>> grad_b = pyrf.c_4_grad(r,b,"grad")
+		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+		>>> # Load magnetic field and spacecraft position
+		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, ic) for ic in range(1, 5)]
+		>>> r_mms = [mms.get_data("R_gse", tint, ic) for ic in range(1, 5)]
+		>>> grad_b = pyrf.c_4_grad(r_mms, b_mms, "grad")
 
 	Reference : 
 		ISSI book  Eq. 14.16, 14.17 p. 353

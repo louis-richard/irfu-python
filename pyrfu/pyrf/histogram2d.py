@@ -12,7 +12,7 @@ import xarray as xr
 from .resample import resample
 
 
-def histogram2d(inp1=None, inp2=None, nbins=100):
+def histogram2d(inp1=None, inp2=None, bins=100):
 	"""
 	Computes 2d histogram of inp2 vs inp1 with nbins number of bins
 
@@ -31,7 +31,6 @@ def histogram2d(inp1=None, inp2=None, nbins=100):
 			2D map of the density of inp2 vs inp1
 
 	Example :
-		>>> import numpy as np
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
 		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
@@ -51,7 +50,7 @@ def histogram2d(inp1=None, inp2=None, nbins=100):
 	"""
 
 	if inp1 is None or inp2 is None:
-		raise ValueError("histogram2d requiers at least 2 arguments")
+		raise ValueError("histogram2d requires at least 2 arguments")
 
 	if not isinstance(inp1, xr.DataArray) or not isinstance(inp2, xr.DataArray):
 		raise TypeError("Inputs must be DataArrays")
@@ -60,10 +59,10 @@ def histogram2d(inp1=None, inp2=None, nbins=100):
 	if len(inp2) != len(inp1):
 		inp2 = resample(inp2, inp1)
 
-	h2d, xedges, yedges = np.histogram2d(inp1.data, inp2.data, bins=nbins)
+	h2d, x_edges, y_edges = np.histogram2d(inp1.data, inp2.data, bins=bins)
 
-	x, y = [xedges[:-1] + np.median(np.diff(xedges)) / 2, yedges[:-1] + np.median(np.diff(yedges)) / 2]
+	x, y = [x_edges[:-1] + np.median(np.diff(x_edges)) / 2, y_edges[:-1] + np.median(np.diff(y_edges)) / 2]
 
-	out = xr.DataArray(h2d, coords=[x, y], dims=["xbins", "ybins"])
+	out = xr.DataArray(h2d, coords=[x, y], dims=["x_bins", "y_bins"])
 
 	return out

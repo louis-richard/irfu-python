@@ -10,7 +10,7 @@ import numpy as np
 import xarray as xr
 
 
-def mean_bins(x=None, y=None, nbins=10):
+def mean_bins(x=None, y=None, bins=10):
 	"""
 	Computes mean of values of y corresponding to bins of x
 	
@@ -37,15 +37,18 @@ def mean_bins(x=None, y=None, nbins=10):
 					Standard deviation
 
 	Example :
-		>>> import numpy as np
+		>>> import numpy
 		>>> from pyrfu import mms, pyrf
 		>>> # Time interval
 		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
 		>>> # Spacecraft indices
-		>>> mms_list = np.arange(1,5)
+		>>> mms_list = numpy.arange(1,5)
 		>>> # Load magnetic field and electric field
-		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
-		>>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
+		>>> r_mms, b_mms = [[] * 4 for _ in range(2)]
+		>>> for mms_id in range(1, 5):
+		>>> 	r_mms.append(mms.get_data("R_gse", tint, mms_id))
+		>>> 	b_mms.append(mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id))
+		>>>
 		>>> # Compute current density, etc
 		>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
 		>>> # Compute magnitude of B and J
@@ -69,11 +72,11 @@ def mean_bins(x=None, y=None, nbins=10):
 		y = y.data
 	
 	x_sort = np.sort(x)
-	x_edge = np.linspace(x_sort[0], x_sort[-1], nbins+1)
+	x_edge = np.linspace(x_sort[0], x_sort[-1], bins + 1)
 
-	m, s = [np.zeros(nbins), np.zeros(nbins)]
+	m, s = [np.zeros(bins), np.zeros(bins)]
 
-	for i in range(nbins):
+	for i in range(bins):
 		idx_l = x > x_edge[i]
 		idx_r = x < x_edge[i+1]
 
@@ -83,8 +86,8 @@ def mean_bins(x=None, y=None, nbins=10):
 
 	bins = x_edge[:-1] + np.median(np.diff(x_edge)) / 2
 
-	outdict = {"data": (["bins"], m), "sigma": (["bins"], s), "bins": bins}
+	out_dict = {"data": (["bins"], m), "sigma": (["bins"], s), "bins": bins}
 
-	out = xr.Dataset(outdict)
+	out = xr.Dataset(out_dict)
 
 	return bins, m, out

@@ -12,18 +12,18 @@ from ..pyrf import ts_append
 
 
 # noinspection PyUnboundLocalVariable
-def db_get_ts(dset_name="", cdf_name="", trange=None):
+def db_get_ts(dataset_name="", cdf_name="", tint=None):
 	"""
 	Get variable time series in the cdf file
 
 	Parameters :
-		dsetName : str
+		dataset_name : str
 			Name of the dataset
 
-		cdfName : str
+		cdf_name : str
 			Name of the target field in cdf file
 
-		trange : list of str
+		tint : list of str
 			Time interval
 
 	Returns : 
@@ -32,22 +32,22 @@ def db_get_ts(dset_name="", cdf_name="", trange=None):
 
 	"""
 
-	dset = dset_name.split("_")
+	dataset = dataset_name.split("_")
 
 	# Index of the MMS spacecraft
-	probe = dset[0][-1]
+	probe = dataset[0][-1]
 
-	var = {"inst": dset[1], "tmmode": dset[2], "lev": dset[3]}
+	var = {"inst": dataset[1], "tmmode": dataset[2], "lev": dataset[3]}
 
 	try:
-		var["dtype"] = dset[4]
+		var["dtype"] = dataset[4]
 	except IndexError:
 		pass	
 
-	files = list_files(trange, probe, var)
+	files = list_files(tint, probe, var)
 
 	for i, file in enumerate(files):
-		temp = get_ts(file, cdf_name, trange)
+		temp = get_ts(file, cdf_name, tint)
 		if i == 0:
 			out = temp
 		else:

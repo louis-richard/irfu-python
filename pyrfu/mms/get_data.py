@@ -80,8 +80,8 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	"Vi_gse_fpi_ql", "Vi_gse_fpi_fast_ql", "Vi_dbcs_fpi_fast_ql",
 	"Vi_gse_fpi_fast_l2", "Vi_gse_fpi_brst_l2", "partVi_gse_fpi_brst_l2",
 	"Ni_fpi_brst_l2", "partNi_fpi_brst_l2", "Ni_fpi_brst",
-	"Ni_fpi_fast_l2", "Ni_fpi_ql", "Enfluxi_fpi_fast_ql",
-	"Enfluxi_fpi_fast_l2", "Tperpi_fpi_brst_l2", "Tparai_fpi_brst_l2",
+	"Ni_fpi_fast_l2", "Ni_fpi_ql", "DEFi_fpi_fast_ql",
+	"DEFi_fpi_fast_l2", "Tperpi_fpi_brst_l2", "Tparai_fpi_brst_l2",
 	"partTperpi_fpi_brst_l2", "partTparai_fpi_brst_l2", "Ti_dbcs_fpi_brst_l2",
 	"Ti_dbcs_fpi_brst", "Ti_dbcs_fpi_fast_l2", "Ti_gse_fpi_ql",
 	"Ti_dbcs_fpi_ql", "Ti_gse_fpi_brst_l2", "Pi_dbcs_fpi_brst_l2",
@@ -91,8 +91,8 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	FPI Electrons :
 	"Ve_dbcs_fpi_brst_l2", "Ve_dbcs_fpi_brst", "Ve_dbcs_fpi_ql",
 	"Ve_dbcs_fpi_fast_l2", "Ve_gse_fpi_ql", "Ve_gse_fpi_fast_l2",
-	"Ve_gse_fpi_brst_l2", "partVe_gse_fpi_brst_l2", "Enfluxe_fpi_fast_ql",
-	"Enfluxe_fpi_fast_l2", "Ne_fpi_brst_l2", "partNe_fpi_brst_l2",
+	"Ve_gse_fpi_brst_l2", "partVe_gse_fpi_brst_l2", "DEFe_fpi_fast_ql",
+	"DEFe_fpi_fast_l2", "Ne_fpi_brst_l2", "partNe_fpi_brst_l2",
 	"Ne_fpi_brst", "Ne_fpi_fast_l2", "Ne_fpi_ql",
 	"Tperpe_fpi_brst_l2", "Tparae_fpi_brst_l2", "partTperpe_fpi_brst_l2",
 	"partTparae_fpi_brst_l2", "Te_dbcs_fpi_brst_l2", "Te_dbcs_fpi_brst",
@@ -264,7 +264,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 				raise InterruptedError("Should not be here")
 
 		# Energy flux omni
-		elif var["param"].lower() in ["enfluxi", "enfluxe"]:
+		elif var["param"].lower() in ["defi", "defe"]:
 			if var["lev"] == "ql":
 				cdf_name = "_".join([mms_id_str, sensor, "energyspectr", "omni", "fast"])
 
@@ -275,7 +275,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 				raise InterruptedError("Should not be here")
 
 		# Energy flux omni
-		elif var["param"].lower() in ["enfluxbgi", "enfluxbge"]:
+		elif var["param"].lower() in ["defbgi", "defbge"]:
 			if var["lev"] == "l2":
 				cdf_name = "_".join([mms_id_str, sensor, "spectr_bg", var["tmmode"]])
 
@@ -587,6 +587,8 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	if verbose:
 		print(f"Loading {cdf_name}...")
 
+	out = None
+
 	for i, file in enumerate(files):
 		if vdf_flag:
 			temp = get_dist(file, cdf_name, tint)
@@ -598,13 +600,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 				out = dist_append(out, temp)
 
 		else:
-			temp = get_ts(file, cdf_name, tint)
-
-			if i == 0:
-				out = temp
-
-			else:
-				out = ts_append(out, temp)
+			out = ts_append(out, get_ts(file, cdf_name, tint))
 
 	if out.time.data.dtype == "float64":
 		out.time.data = Time(1e-9*out.time.data, format="unix").datetime

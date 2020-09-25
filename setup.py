@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.3.8"
+VERSION = "1.4.1"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"

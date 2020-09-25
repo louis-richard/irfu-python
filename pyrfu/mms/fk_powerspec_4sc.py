@@ -12,7 +12,7 @@ import xarray as xr
 
 from ..pyrf.resample import resample
 from ..pyrf.avg_4sc import avg_4sc
-from ..pyrf.tlim import tlim
+from ..pyrf.time_clip import time_clip
 from ..pyrf.wavelet import wavelet
 
 
@@ -94,7 +94,7 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 	times = e[0].time
 	use_linear = not(df is None)
 
-	idx = tlim(e[0].time, tints)
+	idx = time_clip(e[0].time, tints)
 
 	# If odd, remove last data point (as is done in irf_wavelet)
 	if len(idx) % 2:
@@ -107,10 +107,10 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 
 	num_f = len(w[0].frequency)
 
-	times = tlim(times, tints)
+	times = time_clip(times, tints)
 	nt = len(times)
 
-	w = [tlim(w[i], tints) for i in range(4)]
+	w = [time_clip(w[i], tints) for i in range(4)]
 
 	fk_power = 0
 	for i in range(4):

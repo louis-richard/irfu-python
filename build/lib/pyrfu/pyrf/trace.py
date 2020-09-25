@@ -32,7 +32,7 @@ def trace(inp=None):
 		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
 		>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
 		>>> # Rotate to ion temperature tensor to field aligned coordinates
-		>>> t_xyzfac_i = pyrf.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
+		>>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 		>>> # Compute scalar temperature
 		>>> t_i = pyrf.trace(t_xyzfac_i)
 
