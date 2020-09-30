@@ -2,6 +2,7 @@ MANIFEST.in
 README.md
 setup.py
 pyrfu/__init__.py
+pyrfu/test_pyrf.py
 pyrfu.egg-info/PKG-INFO
 pyrfu.egg-info/SOURCES.txt
 pyrfu.egg-info/dependency_links.txt

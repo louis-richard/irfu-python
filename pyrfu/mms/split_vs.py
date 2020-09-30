@@ -40,7 +40,7 @@ def split_vs(var_str=""):
 
 	all_params_scal = ["ni", "nbgi", "pbgi", "partni", "ne", "pbge", "nbge", "partne", "tsi", "tperpi",
 					   "tparai", "parttperpi", "parttparai", "tse", "tperpe", "tparae", "parttperpe", "parttparae",
-					   "pde", "pdi", "pderre", "pderri", "v", "v6", "enfluxi", "enfluxbgi", "enfluxe", "enfluxbge",
+					   "pde", "pdi", "pderre", "pderri", "v", "v6", "defi", "defbgi", "defe", "defbge",
 					   "energyi", "bnergye", "epar", "sdev12", "sdev34", "flux-amb-pm2", "padlowene", "padmidene",
 					   "padhighene", "bpsd", "epsd"]
 
