@@ -2,9 +2,6 @@
 
 # pyRFU
 
-.. |LicenseMIT| image:: https://img.shields.io/badge/License-MIT-yellow.svg
-
-
 pyRFU is a software based on the IRFU-MATLAB library to work with space data, particularly the Magnetospheric MultiScale (MMS) mission. 
 
 
