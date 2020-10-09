@@ -42,5 +42,5 @@ class TestPyrf(unittest.TestCase):
         self.assertTrue(all(pyrf.resample(e_xyz, self.b_xyz).time.data == self.b_xyz.time.data))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

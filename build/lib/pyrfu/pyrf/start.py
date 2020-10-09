@@ -14,13 +14,15 @@ def start(inp=None):
 	"""
 	Gives the first time of the time series
 
-	Parameters :
-		inp : DataArray
-			Time series
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series
 
-	Returns :
-		out : float/str
-			Value of the first time in the desired format
+	Returns
+	-------
+	out : float or str
+		Value of the first time in the desired format
 			
 	"""
 

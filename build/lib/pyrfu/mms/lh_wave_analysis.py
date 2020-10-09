@@ -25,58 +25,76 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     """
     Calculates lower-hybrid wave properties from MMS data
 
-    Parameters :
-        tints : list of str
-            Time interval
+    Parameters
+    ----------
+    tints : list of str
+        Time interval
 
-        e_xyz : DataArray
-            Time series pf the electric field
+    e_xyz : xarray.DataArray
+        Time series pf the electric field
 
-        b_scm : DataArray
-            Time series of the fluctuations of the magnetic field
+    b_scm : xarray.DataArray
+        Time series of the fluctuations of the magnetic field
 
-        b_xyz : DataArray
-            Time series of the background magnetic field
+    b_xyz : xarray.DataArray
+        Time series of the background magnetic field
 
-        n_e : DataArray
-            Time series of the number density
+    n_e : xarray.DataArray
+        Time series of the number density
 
-    Options :
-        lhfilt : float/int/list of float/list of int
-            Filter for LH fluctuations. For one element it is the minimum frequency in the highpass filter.
-            For two elements the fields are bandpassed between the frequencies.
+    Keyword Arguments
+    -----------------
+    lhfilt : float or int or list of float or list of int
+        Filter for LH fluctuations. For one element it is the minimum frequency in the highpass filter.
+        For two elements the fields are bandpassed between the frequencies.
 
-        blpass : float/int
-            Set maximum frequency for low-pass filter of background magnetic field (FGM)
+    blpass : float or int
+        Set maximum frequency for low-pass filter of background magnetic field (FGM)
 
-    Example :
-        >>> from pyrfu import mms
-        >>> # Large time interval
-        >>> Tintl   = ["2015-12-14T01:17:39.000","2015-12-14T01:17:43.000"]
-        >>> # Load fields and density
-        >>> Bxyz    = mms.get_data("B_gse_fgm_brst_l2",Tintl,2)
-        >>> Exyz    = mms.get_data("E_gse_edp_brst_l2",Tintl,2)
-        >>> Bscm    = mms.get_data("B_gse_scm_brst_l2",Tintl,2)
-        >>> ne      = mms.get_data("Ne_fpi_brst_l2",Tintl,2)
-        >>>
-        >>> # Time interval of focus
-        >>> Tint    = ["2015-12-14T01:17:40.200","2015-12-14T01:17:41.500"]
-        >>>
-        >>> phiEB, vbest, dirbest, thetas, corrs = mms.lh_wave_analysis(Tint,Exyz,Bscm,Bxyz,ne,lhfilt=[5,100],blpass=5)
+    Returns
+    -------
+    phi_eb : xarray.DataArray
+        to fill
+
+    v_best : numpy.ndarray
+        to fill
+
+    dir_best : numpy.ndarray
+        to fill
+
+    thetas : numpy.ndarray
+        to fill
+
+    corrs : numpy.ndarray
+        to fill
+
+    Example
+    -------
+    >>> from pyrfu import mms
+    >>> # Large time interval
+    >>> tint_long = ["2015-12-14T01:17:39.000", "2015-12-14T01:17:43.000"]
+    >>> # Load fields and density
+    >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_long, 2)
+    >>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint_long, 2)
+    >>> b_scm = mms.get_data("B_gse_scm_brst_l2", tint_long, 2)
+    >>> n_e = mms.get_data("Ne_fpi_brst_l2", tint_long, 2)
+    >>> # Time interval of focus
+    >>> tint = ["2015-12-14T01:17:40.200","2015-12-14T01:17:41.500"]
+    >>> phi_eb, v_best, dir_best, theta, _ = mms.lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, lhfilt=[5, 100])
 
     """
 
-    # Default bandpasses
-    minfreq = 10
-    maxfreq = 0
+    # Default band passes
+    min_freq = 10
+    max_freq = 0
     lowpass_b_xyz = 2
 
     if "lhfilt" in kwargs:
         if isinstance(kwargs["lhfilt"], (float, int)):
-            minfreq = kwargs["lhfilt"]
+            min_freq = kwargs["lhfilt"]
         elif isinstance(kwargs["lhfilt"], (list, np.ndarray)) and len(kwargs["lhfilt"]):
-            minfreq = kwargs["lhfilt"][0]
-            maxfreq = kwargs["lhfilt"][1]
+            min_freq = kwargs["lhfilt"][0]
+            max_freq = kwargs["lhfilt"][1]
         else:
             raise ValueError("lhfilt option not recognized")
 
@@ -91,15 +109,15 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     e_xyz = resample(e_xyz, b_scm)
     n_e = resample(n_e, b_scm)
     b_xyz = resample(b_xyz, b_scm)
-    b_scmfac = convert_fac(b_scm, b_xyz, [1, 0, 0])
-    b_scmfac = filt(b_scmfac, minfreq, maxfreq, 5)
-    e_xyz = filt(e_xyz, minfreq, maxfreq, 5)
+    b_scm_fac = convert_fac(b_scm, b_xyz, [1, 0, 0])
+    b_scm_fac = filt(b_scm_fac, min_freq, max_freq, 5)
+    e_xyz = filt(e_xyz, min_freq, max_freq, 5)
 
     qe, mu0 = [constants.e.value, constants.mu0.value]
 
     b_mag = np.linalg.norm(b_xyz, axis=1)
-    phi_b = (b_scmfac.data[:, 2]) * b_mag * 1e-18 / (n_e.data * qe * mu0 * 1e6)
-    phi_b = ts_scalar(b_scmfac.time.data, phi_b)
+    phi_b = (b_scm_fac.data[:, 2]) * b_mag * 1e-18 / (n_e.data * qe * mu0 * 1e6)
+    phi_b = ts_scalar(b_scm_fac.time.data, phi_b)
 
     # short buffer so phi_E does not begin at zero.
     tint = extend_tint(tints, [-.2, .2])
@@ -107,9 +125,9 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     e_xyz = time_clip(e_xyz, tint)
     phi_bs = time_clip(phi_b, tints)
 
-    # Rotate Exyz into field-aligned coordinates
-    b_xyzs = time_clip(b_xyz, tints)
-    b_mean = np.mean(b_xyzs.data, axis=0)
+    # Rotate e_xyz into field-aligned coordinates
+    b_xyz_tc = time_clip(b_xyz, tints)
+    b_mean = np.mean(b_xyz_tc.data, axis=0)
     b_vec = b_mean / np.linalg.norm(b_mean)
     r_temp = [1, 0, 0]
     r2 = np.cross(b_vec, r_temp)

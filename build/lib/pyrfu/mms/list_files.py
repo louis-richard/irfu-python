@@ -19,26 +19,28 @@ from .mms_config import CONFIG
 
 def list_files(tint=None, mms_id="1", var=None):
 	"""
-	Find files in the data directories of the target instrument, data type, data rate, mms_id and level during the 
+	Find files in the data directories of the target instrument, data type, data rate, mms_id and level during the
 	target time interval
 
-	Parameters : 
-		tint : list
-			Time interval
+	Parameters
+	----------
+	tint : list
+		Time interval
 
-		mms_id : str/int 
-			Index of the spacecraft
+	mms_id : str or int
+		Index of the spacecraft
 
-		var : dict
-			Dictionary containing 4 keys
-				* var["inst"] : name of the instrument
-				* var["tmmode"] : data rate
-				* var["lev"] : data level
-				* var["dtype"] : data type
+	var : dict
+		Dictionary containing 4 keys
+			* var["inst"] : name of the instrument
+			* var["tmmode"] : data rate
+			* var["lev"] : data level
+			* var["dtype"] : data type
 
-	Returns :
-		files : list 
-			List of files corresponding to the parameters in the selected time interval
+	Returns
+	-------
+	files : list
+		List of files corresponding to the parameters in the selected time interval
 
 	"""
 

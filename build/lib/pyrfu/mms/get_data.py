@@ -20,62 +20,36 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	"""
 	Load a variable. var_str must be in var (see below)
 
-	Parameters :
-		var_str : str
-			Key of the target variable (see below)
-
-		tint : list of str
-			Time interval
-
-		mms_id : str/int
-			Index of the target spacecraft
-
-		silent : bool
-			Set to False (default) to follow the loading
-
-	Returns :
-		out : DataArray
-			Time series of the target variable of measured by the target spacecraft over the selected time interval
-	
-	Example :
-		>>> from pyrfu import mms
-		>>> # Define time interval
-		>>> Ttnt = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Index of mms spacecraft
-		>>> mms_id = 1
-		>>> # Load magnetic field from FGM
-		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
-
-	EPHEMERIS :
+	* EPHEMERIS :
 	"R_gse", "R_gsm"
 
-	FGM : 
+	* FGM :
 	"B_gsm_fgm_srvy_l2", "B_gsm_fgm_brst_l2", "B_gse_fgm_srvy_l2",
 	"B_gse_fgm_brst_l2", "B_bcs_fgm_srvy_l2", "B_bcs_fgm_brst_l2",
 	"B_dmpa_fgm_srvy_l2", "B_dmpa_fgm_brst_l2"
 
-	DFG & AFG :
+	* DFG & AFG :
 	"B_gsm_dfg_srvy_l2pre", "B_gse_dfg_srvy_l2pre", "B_dmpa_dfg_srvy_l2pre",
 	"B_bcs_dfg_srvy_l2pre", "B_gsm_afg_srvy_l2pre", "B_gse_afg_srvy_l2pre",
 	"B_dmpa_afg_srvy_l2pre", "B_bcs_afg_srvy_l2pre"
 
-	SCM :
+	* SCM :
 	"B_gse_scm_brst_l2"
 
-	EDP :
+	* EDP :
 	"Phase_edp_fast_l2a", "Phase_edp_slow_l2a", "Sdev12_edp_slow_l2a",
 	"Sdev34_edp_slow_l2a", "Sdev12_edp_fast_l2a", "Sdev34_edp_fast_l2a",
-	"E_dsl_edp_brst_l2", "E_dsl_edp_fast_l2", "E_dsl_edp_brst_ql", 
-	"E_dsl_edp_fast_ql", "E_dsl_edp_slow_l2", "E_gse_edp_brst_l2", 
-	"E_gse_edp_fast_l2", "E_gse_edp_slow_l2", "E2d_dsl_edp_brst_l2pre", 
-	"E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_ql", "E2d_dsl_edp_fast_ql", 
-	"E2d_dsl_edp_l2pre", "E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_l2pre", 
-	"E_dsl_edp_l2pre", "E_dsl_edp_fast_l2pre", "E_dsl_edp_brst_l2pre", 
-	"E_dsl_edp_slow_l2pre", "E_ssc_edp_brst_l2a", "E_ssc_edp_fast_l2a", 
-	"E_ssc_edp_slow_l2a", "V_edp_fast_sitl", "V_edp_slow_sitl", 
+	"E_dsl_edp_brst_l2", "E_dsl_edp_fast_l2", "E_dsl_edp_brst_ql",
+	"E_dsl_edp_fast_ql", "E_dsl_edp_slow_l2", "E_gse_edp_brst_l2",
+	"E_gse_edp_fast_l2", "E_gse_edp_slow_l2", "E2d_dsl_edp_brst_l2pre",
+	"E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_ql", "E2d_dsl_edp_fast_ql",
+	"E2d_dsl_edp_l2pre", "E2d_dsl_edp_fast_l2pre", "E2d_dsl_edp_brst_l2pre",
+	"E_dsl_edp_l2pre", "E_dsl_edp_fast_l2pre", "E_dsl_edp_brst_l2pre",
+	"E_dsl_edp_slow_l2pre", "E_ssc_edp_brst_l2a", "E_ssc_edp_fast_l2a",
+	"E_ssc_edp_slow_l2a", "V_edp_fast_sitl", "V_edp_slow_sitl",
 	"V_edp_slow_l2", "V_edp_fast_l2", "V_edp_brst_l2"
 
-	FPI Ions : 
+	* FPI Ions :
 	"Vi_dbcs_fpi_brst_l2", "Vi_dbcs_fpi_fast_l2", "Vi_dbcs_fpi_l2",
 	"Vi_gse_fpi_ql", "Vi_gse_fpi_fast_ql", "Vi_dbcs_fpi_fast_ql",
 	"Vi_gse_fpi_fast_l2", "Vi_gse_fpi_brst_l2", "partVi_gse_fpi_brst_l2",
@@ -88,7 +62,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	"Pi_dbcs_fpi_brst", "Pi_dbcs_fpi_fast_l2", "Pi_gse_fpi_ql",
 	"Pi_gse_fpi_brst_l2"
 
-	FPI Electrons :
+	* FPI Electrons :
 	"Ve_dbcs_fpi_brst_l2", "Ve_dbcs_fpi_brst", "Ve_dbcs_fpi_ql",
 	"Ve_dbcs_fpi_fast_l2", "Ve_gse_fpi_ql", "Ve_gse_fpi_fast_l2",
 	"Ve_gse_fpi_brst_l2", "partVe_gse_fpi_brst_l2", "DEFe_fpi_fast_ql",
@@ -100,7 +74,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	"Te_gse_fpi_brst_l2", "Pe_dbcs_fpi_brst_l2", "Pe_dbcs_fpi_brst",
 	"Pe_dbcs_fpi_fast_l2", "Pe_gse_fpi_ql", "Pe_gse_fpi_brst_l2",
 
-	HPCA : 
+	* HPCA :
 	"Nhplus_hpca_srvy_l2", "Nheplus_hpca_srvy_l2", "Nheplusplus_hpca_srvy_l2",
 	"Noplus_hpca_srvy_l2", "Tshplus_hpca_srvy_l2", "Tsheplus_hpca_srvy_l2",
 	"Tsheplusplus_hpca_srvy_l2", "Tsoplus_hpca_srvy_l2", "Vhplus_dbcs_hpca_srvy_l2",
@@ -120,6 +94,36 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	"Phplus_gsm_hpca_brst_l2", "Pheplus_gsm_hpca_brst_l2", "Pheplusplus_gsm_hpca_brst_l2",
 	"Poplus_gsm_hpca_brst_l2", "Thplus_gsm_hpca_brst_l2", "Theplus_gsm_hpca_brst_l2",
 	"Theplusplus_gsm_hpca_brst_l2", "Toplus_gsm_hpca_brst_l2"
+
+	Parameters
+	----------
+	var_str : str
+		Key of the target variable (see below)
+
+	tint : list of str
+		Time interval
+
+	mms_id : str or int
+		Index of the target spacecraft
+
+	silent : bool
+		Set to False (default) to follow the loading
+
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the target variable of measured by the target spacecraft over the selected time interval
+
+	Example
+	-------
+	>>> from pyrfu import mms
+	>>> # Define time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Index of mms spacecraft
+	>>> mms_id = 1
+	>>> # Load magnetic field from FGM
+	>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
+
 	"""
 
 	if not var_str:
@@ -383,6 +387,24 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 
 			else:
 				raise InterruptedError("Only l2 partmoms available now")
+
+		# Heat flux
+		elif var["param"].lower() in ["qi", "qe"]:
+			if var["lev"] in ["l2", "l2pre"]:
+				cdf_name = "_".join([mms_id_str, sensor, "heatq", var["cs"], var["tmmode"]])
+
+			elif var["lev"] == "ql":
+				cdf_name = "_".join([mms_id_str, sensor, "heatq", var["cs"], var["tmmode"]])
+
+			else:
+				raise InterruptedError("Should not be here")
+
+		# Heat flux error
+		elif var["param"].lower() in ["errqi", "errqe"]:
+			if var["lev"] in ["l2"]:
+				cdf_name = "_".join([mms_id_str, sensor, "heatq", "err", var["tmmode"]])
+			else:
+				raise InterruptedError("Should not be here")
 
 		elif var["param"].lower() in ["padlowene", "padmidene", "padhighene"]:
 			# Energy range

@@ -16,41 +16,46 @@ from .calc_fs import calc_fs
 
 def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 	"""
-	Transforms to a field-aligned coordinate (FAC) system defined as:
-	R_parallel_z aligned with the background magnetic field
-	R_perp_y defined by R_parallel cross the position vector of the spacecraft (nominally eastward at the equator)
-	R_perp_x defined by R_perp_y cross R_par
+	Transforms to a field-aligned coordinate (FAC) system defined as :
+		*  R_parallel_z aligned with the background magnetic field
+		* R_perp_y defined by R_parallel cross the position vector of the spacecraft (nominally eastward at the equator)
+		* R_perp_x defined by R_perp_y cross R_par
+
 	If inp is one vector along r direction, out is inp[perp, para] projection
-	
-	Parameters :
-		inp : DataArray
-			Time series of the input field
 
-		b_bgd : DataArray
-			Time series of the background magnetic field
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the input field
 
-		r : DataArray/ndarray/list
-			Position vector of spacecraft
+	b_bgd : xarray.DataArray
+		Time series of the background magnetic field
 
-	Returns :
-		out : DataArray
-			Time series of the input field in field aligned coordinates system
+	r : xarray.DataArray/numpy.ndarray/list
+		Position vector of spacecraft
 
-	Example :
-		>>> import numpy
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load magnetic field (FGM) and electric field (EDP)
-		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
-		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
-		>>> # Convert to field aligned coordinates
-		>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, numpy.array([1, 0, 0]))
-	
-	Note : 
-		all input parameters must be in the same coordinate system
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the input field in field aligned coordinates system
+
+	Example
+	-------
+	>>> import numpy
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load magnetic field (FGM) and electric field (EDP)
+	>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
+	>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
+	>>> # Convert to field aligned coordinates
+	>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, numpy.array([1, 0, 0]))
+
+	Note
+	----
+	all input parameters must be in the same coordinate system
 	
 	"""
 	

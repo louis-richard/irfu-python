@@ -16,26 +16,28 @@ def vht(e=None, b=None, flag=1):
 	"""
 	Estimate velocity of the De Hoffman-Teller frame from the velocity estimate the electric field eht=-vht x b
 
-	Parameters :
-		e : DataArray
-			Time series of the electric field
+	Parameters
+	----------
+	e : xarray.DataArray
+		Time series of the electric field
 
-		b : DataArray
-			Time series of the magnetic field
+	b : xarray.DataArray
+		Time series of the magnetic field
 
-		flag : int 
-			If 2 assumed no Ez.
+	flag : int
+		If 2 assumed no Ez.
 
-	Returns :
-		vht : np.ndarray
-			De Hoffman Teller frame velocity [km/s]
+	Returns
+	-------
+	vht : numpy.ndarray
+		De Hoffman Teller frame velocity [km/s]
 
-		vht : DataArray
-			Time series of the electric field in the De Hoffman frame             
+	vht : xarray.DataArray
+		Time series of the electric field in the De Hoffman frame
 
-		dv_ht : np.ndarray
-			Error of De Hoffman Teller frame
-	
+	dv_ht : numpy.ndarray
+		Error of De Hoffman Teller frame
+
 	"""
 	
 	if e is None:

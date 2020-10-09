@@ -13,100 +13,102 @@ from astropy import constants
 from .resample import resample
 
 
-def plasma_calc(b=None, t_i=None, t_e=None, n_i=None, n_e=None):
+def plasma_calc(b_xyz=None, t_i=None, t_e=None, n_i=None, n_e=None):
     """
     Computes plasma parameters including characteristic length and time scales
+    
+    Parameters
+    ----------
+    b_xyz : xarray.DataArray
+        Time series of the magnetic field [nT]
+    
+    t_i : xarray.DataArray
+        Time series of the ions scalar temperature [eV]
+    
+    t_e : xarray.DataArray
+        Time series of the electrons scalar temperature [eV]
+    
+    n_i : xarray.DataArray
+        Time series of the ions number density [cm^{-3}]
+    
+    n_e : xarray.DataArray
+        Time series of the electrons number density [cm^{-3}]
 
-    Parameters :
-        b : DataArray
-            Time series of the magnetic field [nT]
+    Returns
+    -------
+    out : xarray.Dataset
+        Dataset of the plasma parameters :
+            * time : xarray.DataArray
+                Time
 
-        t_i : DataArray
-            Time series of the ions temperature [eV]
+            * Wpe : xarray.DataArray
+                Time series of the electron plasma frequency [rad.s^{-1}]
 
-        t_e : DataArray
-            Time series of the electrons temperature [eV]
+            * Fpe : xarray.DataArray
+                Time series of the electron plasma frequency [Hz]
 
-        n_i : DataArray
-            Time series of the ions number density [cm^{-3}]
+            * Wce : xarray.DataArray
+                Time series of the electron cyclotron frequency [rad.s^{-1}]
 
-        n_e : DataArray
-            Time series of the electrons number density [cm^{-3}]
+            * Fce : xarray.DataArray
+                Time series of the electron cyclotron frequency [Hz]
 
-    Returns :
-        out : Dataset:
-            Dataset of the plasma parameters :
-                * time : DataArray
-                    Time
+            * Wpp : xarray.DataArray
+                Time series of the ion plasma frequency [rad.s^{-1}]
 
-                * Wpe : DataArray
-                    Time series of the electron plasma frequency [rad.s^{-1}]
+            * Fpp : xarray.DataArray
+                Time series of the ion plasma frequency [Hz]
 
-                * Fpe : DataArray
-                    Time series of the electron plasma frequency [Hz]
+            * Fcp : xarray.DataArray
+                Time series of the ion cyclotron frequency [Hz]
 
-                * Wce : DataArray
-                    Time series of the electron cyclotron frequency [rad.s^{-1}]
+            * Fuh : xarray.DataArray
+                Time series of the upper hybrid frequency [Hz]
 
-                * Fce : DataArray
-                    Time series of the electron cyclotron frequency [Hz]
+            * Flh : xarray.DataArray
+                Time series of the lower hybrid frequency [Hz]
 
-                * Wpp : DataArray
-                    Time series of the ion plasma frequency [rad.s^{-1}]
+            * Va : xarray.DataArray
+                Time series of the Alfvèn velocity (ions) [m.s^{-1}]
 
-                * Fpp : DataArray
-                    Time series of the ion plasma frequency [Hz]
+            * Vae : xarray.DataArray
+                Time series of the Alfvèn velocity (electrons) [m.s^{-1}]
 
-                * Fcp : DataArray
-                    Time series of the ion cyclotron frequency [Hz]
+            * Vte : xarray.DataArray
+                Time series of the electron thermal velocity [m.s^{-1}]
 
-                * Fuh : DataArray
-                    Time series of the upper hybrid frequency [Hz]
+            * Vtp : xarray.DataArray
+                Time series of the electron thermal velocity [m.s^{-1}]
 
-                * Flh : DataArray
-                    Time series of the lower hybrid frequency [Hz]
+            * Vts : xarray.DataArray
+                Time series of the sound speed [m.s^{-1}]
 
-                * Va : DataArray
-                    Time series of the Alfvèn velocity (ions) [m.s^{-1}]
+            * gamma_e : xarray.DataArray
+                Time series of the electron Lorentz factor
 
-                * Vae : DataArray
-                    Time series of the Alfvèn velocity (electrons) [m.s^{-1}]
+            * gamma_p : xarray.DataArray
+                Time series of the electron Lorentz factor
 
-                * Vte : DataArray
-                    Time series of the electron thermal velocity [m.s^{-1}]
+            * Le : xarray.DataArray
+                Time series of the electron inertial length [m]
 
-                * Vtp : DataArray
-                    Time series of the electron thermal velocity [m.s^{-1}]
+            * Li : xarray.DataArray
+                Time series of the electron inertial length [m]
 
-                * Vts : DataArray
-                    Time series of the sound speed [m.s^{-1}]
+            * Ld : xarray.DataArray
+                Time series of the Debye length [m]
 
-                * gamma_e : DataArray
-                    Time series of the electron Lorentz factor
+            * Nd : xarray.DataArray
+                Time series of the number of electrons in the Debye sphere
 
-                * gamma_p : DataArray
-                    Time series of the electron Lorentz factor
+            * Roe : xarray.DataArray
+                Time series of the electron Larmor radius [m]
 
-                * Le : DataArray
-                    Time series of the electron inertial length [m]
+            * Rop : xarray.DataArray
+                Time series of the ion Larmor radius [m]
 
-                * Li : DataArray
-                    Time series of the electron inertial length [m]
-
-                * Ld : DataArray
-                    Time series of the Debye length [m]
-
-                * Nd : DataArray
-                    Time series of the number of electrons in the Debye sphere
-
-                * Roe : DataArray
-                    Time series of the electron Larmor radius [m]
-
-                * Rop : DataArray
-                    Time series of the ion Larmor radius [m]
-
-                * Ros : DataArray
-                    Time series of the length associated to the sound speed [m]
+            * Ros : xarray.DataArray
+                Time series of the length associated to the sound speed [m]
 
     Example :
         >>> from pyrfu import mms, pyrf
@@ -126,54 +128,54 @@ def plasma_calc(b=None, t_i=None, t_e=None, n_i=None, n_e=None):
         >>> t_i = pyrf.trace(t_xyzfac_i)
         >>> t_e = pyrf.trace(t_xyzfac_e)
         >>> # Compute plasma parameters
-        >>> pparam = pyrf.plasma_calc(b_xyz, t_i, t_e, n_i, n_e)
+        >>> plasma_params = pyrf.plasma_calc(b_xyz, t_i, t_e, n_i, n_e)
 
     """
 
-    if b is None or t_i is None or t_e is None or n_i is None or n_e is None:
+    if b_xyz is None or t_i is None or t_e is None or n_i is None or n_e is None:
         raise ValueError("plasma_calc requires at least 5 arguments")
 
-    if not isinstance(b, xr.DataArray):
-        raise TypeError("Inputs must be DataArrays")
+    if not isinstance(b_xyz, xr.DataArray):
+        raise TypeError("Inputs must be xarray.DataArrays")
 
     if not isinstance(t_i, xr.DataArray):
-        raise TypeError("Inputs must be DataArrays")
+        raise TypeError("Inputs must be xarray.DataArrays")
 
     if not isinstance(t_e, xr.DataArray):
-        raise TypeError("Inputs must be DataArrays")
+        raise TypeError("Inputs must be xarray.DataArrays")
 
     if not isinstance(n_i, xr.DataArray):
-        raise TypeError("Inputs must be DataArrays")
+        raise TypeError("Inputs must be xarray.DataArrays")
 
     if not isinstance(n_e, xr.DataArray):
-        raise TypeError("Inputs must be DataArrays")
+        raise TypeError("Inputs must be xarray.DataArrays")
 
     # Get constants
     e, mu0, c, eps0 = [constants.e.value, constants.mu0.value, constants.c.value, constants.eps0.value]
     m_p, m_e, mp_me = [constants.m_p.value, constants.m_e.value, constants.m_p.value / constants.m_e.value]
 
     # Resample all variables with respect to the magnetic field
-    n_t = len(b)
+    n_t = len(b_xyz)
 
     if len(t_i) != n_t:
-        t_i = resample(t_i, b).data
+        t_i = resample(t_i, b_xyz).data
 
     if len(t_e) != n_t:
-        t_e = resample(t_e, b).data
+        t_e = resample(t_e, b_xyz).data
 
     if len(n_i) != n_t:
-        n_i = resample(n_i, b).data
+        n_i = resample(n_i, b_xyz).data
 
     if len(n_e) != n_t:
-        n_e = resample(n_e, b).data
+        n_e = resample(n_e, b_xyz).data
 
     # Transform number density and magnetic field to SI units
     n_i, n_e = [1e6 * n_i, 1e6 * n_e]
 
-    if b.ndim == 2:
-        b_si = 1e-9 * np.linalg.norm(b, axis=1)
+    if b_xyz.ndim == 2:
+        b_si = 1e-9 * np.linalg.norm(b_xyz, axis=1)
     else:
-        b_si = 1e-9 * np.linalg.norm(b, axis=1)
+        b_si = 1e-9 * np.linalg.norm(b_xyz, axis=1)
 
     w_pe = np.sqrt(n_e * e ** 2 / (m_e * eps0)) 	# rad/s
     w_ce = e * b_si / m_e   						# rad/s
@@ -205,13 +207,14 @@ def plasma_calc(b=None, t_i=None, t_e=None, n_i=None, n_e=None):
     rho_p = m_p * c / (e * b_si) * np.sqrt(gamma_p ** 2 - 1) 	# m, relativistically correct
     rho_s = v_ts / (f_cp * 2 * np.pi) 							# m
 
-    out = xr.Dataset({"time": b.time.data, "w_pe": (["time"], w_pe), "w_ce": (["time"], w_ce), "w_pp": (["time"], w_pp),
-                      "v_a": (["time"], v_a), "v_ae": (["time"], v_ae), "v_te": (["time"], v_te),
-                      "v_tp": (["time"], v_tp), "v_ts": (["time"], v_ts), "gamma_e": (["time"], gamma_e),
-                      "gamma_p": (["time"], gamma_p), "l_e": (["time"], l_e), "l_i": (["time"], l_i),
-                      "l_d": (["time"], l_d), "n_d": (["time"], n_d), "f_pe": (["time"], f_pe),
-                      "f_ce": (["time"], f_ce), "f_uh": (["time"], f_uh), "f_pp": (["time"], f_pp),
-                      "f_cp": (["time"], f_cp), "f_lh": (["time"], f_lh), "rho_e": (["time"], rho_e),
-                      "rho_p": (["time"], rho_p), "rho_s": (["time"], rho_s)})
+    out = xr.Dataset(
+        {"time": b_xyz.time.data, "w_pe": (["time"], w_pe), "w_ce": (["time"], w_ce), "w_pp": (["time"], w_pp),
+         "v_a": (["time"], v_a), "v_ae": (["time"], v_ae), "v_te": (["time"], v_te),
+         "v_tp": (["time"], v_tp), "v_ts": (["time"], v_ts), "gamma_e": (["time"], gamma_e),
+         "gamma_p": (["time"], gamma_p), "l_e": (["time"], l_e), "l_i": (["time"], l_i),
+         "l_d": (["time"], l_d), "n_d": (["time"], n_d), "f_pe": (["time"], f_pe),
+         "f_ce": (["time"], f_ce), "f_uh": (["time"], f_uh), "f_pp": (["time"], f_pp),
+         "f_cp": (["time"], f_cp), "f_lh": (["time"], f_lh), "rho_e": (["time"], rho_e),
+         "rho_p": (["time"], rho_p), "rho_s": (["time"], rho_s)})
 
     return out

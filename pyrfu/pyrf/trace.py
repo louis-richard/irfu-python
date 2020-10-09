@@ -14,27 +14,30 @@ def trace(inp=None):
 	"""
 	Computes trace of the time series of 2nd order tensors
 
-	Parameters :
-		inp : DataArray
-			Time series of the input 2nd order tensor.
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the input 2nd order tensor.
 
-	Returns :
-		out : DataArray
-			Time series of the trace of the input tensor
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the trace of the input tensor
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load magnetic field and ion temperature
-		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-		>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
-		>>> # Rotate to ion temperature tensor to field aligned coordinates
-		>>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
-		>>> # Compute scalar temperature
-		>>> t_i = pyrf.trace(t_xyzfac_i)
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load magnetic field and ion temperature
+	>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+	>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
+	>>> # Rotate to ion temperature tensor to field aligned coordinates
+	>>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
+	>>> # Compute scalar temperature
+	>>> t_i = pyrf.trace(t_xyzfac_i)
 
 	"""
 

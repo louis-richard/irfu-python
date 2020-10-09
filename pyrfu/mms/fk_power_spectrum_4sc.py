@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-fk_powerspec_4sc.py
+fk_power_spectrum_4sc.py
 
 @author : Louis RICHARD
 """
@@ -16,67 +16,69 @@ from ..pyrf.time_clip import time_clip
 from ..pyrf.wavelet import wavelet
 
 
-def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f=200, df=None, w_width=1, f_range=None):
+def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f=200, df=None, w_width=1, f_range=None):
 	"""
-	Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of 
-	mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to calculate the phase difference each 
-	spacecraft pair and determine 3D wave vector. A generalization of the method used in mms.fk_powerspectrum 
-	to four point measurements. 
+	Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of
+	mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to calculate the phase difference each
+	spacecraft pair and determine 3D wave vector. A generalization of the method used in mms.fk_powerspectrum
+	to four point measurements.
 
-	Parameters :
-		e : list of DataArray
-			Fields to apply 4SC cross-spectral analysis to. e.g., e or b fields 
-			(if multiple components only the first is used).
+	Parameters
+	----------
+	e : list of xarray.DataArray
+		Fields to apply 4SC cross-spectral analysis to. e.g., e or b fields
+		(if multiple components only the first is used).
 
-		r : list of DataArray
-			Positions of the four spacecraft
+	r : list of xarray.DataArray
+		Positions of the four spacecraft
 
-		b : list of DataArray
-			background magnetic field in the same coordinates as r. Used to determine the parallel and perpendicular 
-			wave numbers using 4SC average.
+	b : list of xarray.DataArray
+		background magnetic field in the same coordinates as r. Used to determine the parallel and perpendicular
+		wave numbers using 4SC average.
 
-		tints : list of str
-			Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time
-			interval for e and b. 
-		
-		cav : int
-			(Optional) Number of points in time series used to estimate phase. (default cav = 8)
+	tints : list of str
+		Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time
+		interval for e and b.
 
-		num_k : int
-			(Optional) Number of wave numbers used in spectrogram. (default num_k = 500)
+	cav : int
+		(Optional) Number of points in time series used to estimate phase. (default cav = 8)
 
-		df : float
-			(Optional) Linear spacing of frequencies (default log spacing).
+	num_k : int
+		(Optional) Number of wave numbers used in spectrogram. (default num_k = 500)
 
-		num_f : int
-			(Optional) Number of frequencies used in spectrogram. (default num_f = 200)
+	df : float
+		(Optional) Linear spacing of frequencies (default log spacing).
 
-		w_width : float
-			(Optional) Multiplier for Morlet wavelet width. (default w_width = 1)
+	num_f : int
+		(Optional) Number of frequencies used in spectrogram. (default num_f = 200)
 
-		f_range : list of float
-			(Optional) Frequency range for k-k plots. [minf maxf]
+	w_width : float
+		(Optional) Multiplier for Morlet wavelet width. (default w_width = 1)
 
-	returns :
-		out : Dataset
-			Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum 
-			value.
+	f_range : list of float
+		(Optional) Frequency range for k-k plots. [minf maxf]
 
-	Notes: 
-		Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur. 
+	Returns
+	-------
+	out : xarray.Dataset
+		Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum
+		value.
+
+	Notes:
+	Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur.
 
 	Example:
-		>>> from pyrfu import mms
-		>>> power = mms.fk_powerspec_4sc(e_par, r_xyz, b_xyz, tints)
-		>>> power = mms.fk_powerspec_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, num_k=500, cav=4, w_width=2)
+	>>> from pyrfu import mms
+	>>> power = mms.fk_power_spectrum_4sc(e_par, r_xyz, b_xyz, tints)
+	>>> power = mms.fk_power_spectrum_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, num_k=500, cav=4, w_width=2)
 
 	Example to plot:
-		>>> import matplotlib.pyplot as plt
-		>>> from pyrfu.plot import plot_spectr
-		>>> fig, ax = plt.subplots(1)
-		>>> ax, cax = plot_spectr(ax, power.kmagf, cscale="log", cmap="viridis")
-		>>> ax.set_xlabel("$|k|$ [m$^{-1}$]")
-		>>> ax.set_ylabel("$f$ [Hz]")
+	>>> import matplotlib.pyplot as plt
+	>>> from pyrfu.plot import plot_spectr
+	>>> fig, ax = plt.subplots(1)
+	>>> ax, cax = plot_spectr(ax, power.kmagf, cscale="log", cmap="viridis")
+	>>> ax.set_xlabel("$|k|$ [m$^{-1}$]")
+	>>> ax.set_ylabel("$f$ [Hz]")
 
 	"""
 
@@ -117,19 +119,19 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 		fk_power += w[i].data * np.conj(w[i].data) / 4
 
 	n = int(np.floor(nt/cav)-1)
-	posav = cav / 2 + np.arange(n) * cav
-	avtimes = times[posav.astype(int)]
+	pos_av = cav / 2 + np.arange(n) * cav
+	av_times = times[pos_av.astype(int)]
 
-	b_avg = resample(b_avg, avtimes)
+	b_avg = resample(b_avg, av_times)
 
-	r = [resample(r[i], avtimes) for i in range(4)]
+	r = [resample(r[i], av_times) for i in range(4)]
 
 	cx12, cx13, cx14, cx23, cx24, cx34 = [np.zeros((n, num_f), dtype="complex128") for _ in range(6)]
 
 	power_avg = np.zeros((n, num_f), dtype="complex128")
 
-	for m, posavm in enumerate(posav):
-		lb, ub = [int(posavm - cav / 2 + 1), int(posavm + cav / 2)]
+	for m, pos_avm in enumerate(pos_av):
+		lb, ub = [int(pos_avm - cav / 2 + 1), int(pos_avm + cav / 2)]
 
 		cx12[m, :] = np.nanmean(w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]), axis=0)
 		cx13[m, :] = np.nanmean(w[0].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]), axis=0)
@@ -195,7 +197,7 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 	k_vec = np.linspace(-k_max, k_max, num_k)
 	k_mag_vec = np.linspace(0, k_max, num_k)
 
-	dkmag = k_max / num_k
+	dk_mag = k_max / num_k
 	dk = 2 * k_max / num_k
 
 	# Sort power into frequency and wave vector
@@ -207,7 +209,7 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 		k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(int)
 		k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(int)
 		k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(int)
-		k_number = np.floor((k_mag[:, nn]) / dkmag).astype(int)
+		k_number = np.floor((k_mag[:, nn]) / dk_mag).astype(int)
 
 		power_k_x_f[nn, k_x_number] += np.real(power_avg[:, nn])
 		power_k_y_f[nn, k_y_number] += np.real(power_avg[:, nn])
@@ -215,28 +217,28 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 
 		power_k_mag_f[nn, k_number] += np.real(power_avg[:, nn])
 
-	# powerkxf[powerkxf == 0] 	= np.nan
-	# powerkyf[powerkyf == 0] 	= np.nan
-	# powerkzf[powerkzf == 0] 	= np.nan
-	# powerkmagf[powerkmagf == 0] = np.nan
+	# power_k_x_f[power_k_x_f == 0] 	= np.nan
+	# power_k_y_f[power_k_y_f == 0] 	= np.nan
+	# power_k_z_f[power_k_z_f == 0] 	= np.nan
+	# power_k_mag_f[power_k_mag_f == 0] = np.nan
 
 	power_k_x_f /= np.max(power_k_x_f)
 	power_k_y_f /= np.max(power_k_y_f)
 	power_k_z_f /= np.max(power_k_z_f)
 	power_k_mag_f /= np.max(power_k_mag_f)
 
-	# powerkxf[powerkxf < 1.0e-6] 		= 1e-6
-	# powerkyf[powerkyf < 1.0e-6] 		= 1e-6
-	# powerkzf[powerkzf < 1.0e-6] 		= 1e-6
-	# powerkmagf[powerkmagf < 1.0e-6] 	= 1e-6
+	# power_k_x_f[power_k_x_f < 1.0e-6] 		= 1e-6
+	# power_k_y_f[power_k_y_f < 1.0e-6] 		= 1e-6
+	# power_k_z_f[power_k_z_f < 1.0e-6] 		= 1e-6
+	# power_k_mag_f[power_k_mag_f < 1.0e-6] 	= 1e-6
 
-	freqs = w[0].frequency.data
-	idxf = np.arange(num_f)
+	frequencies = w[0].frequency.data
+	idx_f = np.arange(num_f)
 
 	if f_range is not None:
-		idx_minfreq, idx_maxfreq = [bisect.bisect_left(np.min(f_range)), bisect.bisect_left(np.max(f_range))]
+		idx_min_freq, idx_max_freq = [bisect.bisect_left(np.min(f_range)), bisect.bisect_left(np.max(f_range))]
 
-		idxf = idxf[idx_minfreq:idx_maxfreq]
+		idx_f = idx_f[idx_min_freq:idx_max_freq]
 
 	print("notice : Computing power versus kx,ky; kx,kz; ky,kz\n")
 	power_k_x_k_y = np.zeros((num_k, num_k))
@@ -244,13 +246,13 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 	power_k_y_k_z = np.zeros((num_k, num_k))
 	power_k_perp_k_par = np.zeros((num_k, num_k))
 
-	for nn in idxf:
+	for nn in idx_f:
 		k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(int)
 		k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(int)
 		k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(int)
 
 		k_par_number = np.floor((k_par[:, nn] - k_min) / dk).astype(int)
-		k_perp_number = np.floor((k_perp[:, nn]) / dkmag).astype(int)
+		k_perp_number = np.floor((k_perp[:, nn]) / dk_mag).astype(int)
 
 		power_k_x_k_y[k_y_number, k_x_number] += np.real(power_avg[:, nn])
 		power_k_x_k_z[k_z_number, k_x_number] += np.real(power_avg[:, nn])
@@ -258,27 +260,29 @@ def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f
 
 		power_k_perp_k_par[k_par_number, k_perp_number] += np.real(power_avg[:, nn])
 
-	# powerkxky[powerkxky == 0] = np.nan
-	# powerkxkz[powerkxkz == 0] = np.nan
-	# powerkykz[powerkykz == 0] = np.nan
-	# powerkperpkpar[powerkperpkpar == 0] = np.nan
+	# power_k_x_k_y[power_k_x_k_y == 0] = np.nan
+	# power_k_x_k_z[power_k_x_k_z == 0] = np.nan
+	# power_k_y_k_z[power_k_y_k_z == 0] = np.nan
+	# power_k_perp_k_par[power_k_perp_k_par == 0] = np.nan
 
 	power_k_x_k_y /= np.max(power_k_x_k_y)
 	power_k_x_k_z /= np.max(power_k_x_k_z)
 	power_k_y_k_z /= np.max(power_k_y_k_z)
 	power_k_perp_k_par /= np.max(power_k_perp_k_par)
 
-	# powerkxky(powerkxky < 1.0e-6) 				= 1e-6
-	# powerkxkz(powerkxkz < 1.0e-6) 				= 1e-6
-	# powerkykz(powerkykz < 1.0e-6) 				= 1e-6
-	# powerkperpkpar[powerkperpkpar < 1.0e-6] 	= 1e-6
+	# power_k_x_k_y(power_k_x_k_y < 1.0e-6) 				= 1e-6
+	# power_k_x_k_z(power_k_x_k_z < 1.0e-6) 				= 1e-6
+	# power_k_y_k_z(power_k_y_k_z < 1.0e-6) 				= 1e-6
+	# power_k_perp_k_par[power_k_perp_k_par < 1.0e-6] 	= 1e-6
 
-	outdict = {"kxf": (["kx", "f"], power_k_x_f.T), "kyf": (["kx", "f"], power_k_y_f.T),
-			   "kzf": (["kx", "f"], power_k_z_f.T), "kmagf": (["kmag", "f"], power_k_mag_f.T),
-			   "kxky": (["kx", "ky"], power_k_x_k_y.T), "kxkz": (["kx", "kz"], power_k_x_k_z.T),
-			   "kykz": (["ky", "kz"], power_k_y_k_z.T), "kperpkpar": (["kperp", "kpar"], power_k_perp_k_par.T),
-			   "kx": k_vec, "ky": k_vec, "kz": k_vec, "kmag": k_mag_vec, "kperp": k_mag_vec, "kpar": k_vec, "f": freqs}
+	out_dict = {"k_x_f": (["k_x", "f"], power_k_x_f.T), "k_y_f": (["k_x", "f"], power_k_y_f.T),
+			   "k_z_f": (["k_x", "f"], power_k_z_f.T), "k_mag_f": (["k_mag", "f"], power_k_mag_f.T),
+			   "k_x_k_y": (["k_x", "k_y"], power_k_x_k_y.T), "k_x_k_z": (["kx", "kz"], power_k_x_k_z.T),
+			   "k_y_k_z": (["k_y", "k_z"], power_k_y_k_z.T),
+			   "k_perp_k_par": (["k_perp", "k_par"], power_k_perp_k_par.T),
+			   "k_x": k_vec, "k_y": k_vec, "k_z": k_vec, "k_mag": k_mag_vec, "k_perp": k_mag_vec, "k_par": k_vec,
+			   "f": frequencies}
 
-	out = xr.Dataset(outdict)
+	out = xr.Dataset(out_dict)
 
 	return out

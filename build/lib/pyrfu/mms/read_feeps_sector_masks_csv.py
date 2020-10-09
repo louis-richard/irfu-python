@@ -16,15 +16,16 @@ from astropy.time import Time
 def read_feeps_sector_masks_csv(tint=None):
     """
     Reads the FEEPS sectors to mask due to sunlight contamination from csv files.x
-    
-    Parameters:
-        tint : list of str
-            time range of interest [starttime, endtime] with the format 
-            'YYYY-MM-DD','YYYY-MM-DD'] or to specify more or less than a day 
-            ['YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
-            
-    Returns:
-        Hash table containing the sectors to mask for each spacecraft and sensor ID
+
+    Parameters
+    ----------
+    tint : list of str
+        time range of interest [starttime, endtime] with the format "YYYY-MM-DD", "YYYY-MM-DD"] or to specify more or
+        less than a day ['YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
+
+    Returns
+    -------
+    Hash table containing the sectors to mask for each spacecraft and sensor ID
     """
     masks = {}
 

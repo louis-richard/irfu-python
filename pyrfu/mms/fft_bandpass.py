@@ -16,26 +16,30 @@ def fft_bandpass(inp=None, f_min=None, f_max=None):
     """
     Perform simple bandpass using FFT - returns fields between with fmin < f < fmax
 
-    Parameters :
-        inp : DataArray
-            Time series to be bandpassed filtered.
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Time series to be bandpassed filtered.
 
-        f_min : float/int
-            Minimum frequency of filter, f < fmin are removed.
+    f_min : float or int
+        Minimum frequency of filter, f < fmin are removed.
 
-        f_max : float/int
-            Maximum frequency of filter, f > fmin are removed.
+    f_max : float or int
+        Maximum frequency of filter, f > fmin are removed.
 
-    Returns :
-        out : DataArray
-            Time series of the bandpassed filtered data.
+    Returns
+    -------
+    out : xarray.DataArray
+        Time series of the bandpassed filtered data.
 
-    Caviates :
-        Can be some spurius effects near boundary. Can take longer interval then use tlim to remove
+    Notes
+    -----
+    Can be some spurius effects near boundary. Can take longer interval then use tlim to remove
 
-    Example :
-        >>> from pyrfu import mms
-        >>> b_xyz_bp = mms.fft_bandpass(e_xyz, f_min, f_max)
+    Example
+    -------
+    >>> from pyrfu import mms
+    >>> b_xyz_bp = mms.fft_bandpass(e_xyz, f_min, f_max)
 
     """
 

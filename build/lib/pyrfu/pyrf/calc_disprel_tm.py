@@ -15,26 +15,29 @@ def calc_disprel_tm(v=None, v_err=None, tau=None, tau_err=None):
 	"""
 	Computes dispersion relation from velocities and period given by the timing method
 
-	Parameters :
-		v : DataArray
-			Time series of the velocities
+	Parameters
+	----------
+	v : xarray.DataArray
+		Time series of the velocities
 
-		v_err : DataArray
-			Time series of the error on velocities
+	v_err : xarray.DataArray
+		Time series of the error on velocities
 
-		tau : DataArray
-			Time series of the periods
-		
-		tau_err : DataArray
-			Time series of the error on period
+	tau : xarray.DataArray
+		Time series of the periods
 
-	Returns :
-		out : Dataset
-			DataSet containing the frequency, the wavelength, the wavenumber. Also includes the errors and the fit 
-			(e.g Vph phase velocity)
+	tau_err : xarray.DataArray
+		Time series of the error on period
 
-	See also :
-		c_4_v_xcorr
+	Returns
+	-------
+	out : xarray.Dataset
+		DataSet containing the frequency, the wavelength, the wavenumber. Also includes the errors and the fit
+		(e.g Vph phase velocity)
+
+	See also
+	--------
+	c_4_v_xcorr
 
 	"""
 

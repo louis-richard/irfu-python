@@ -13,32 +13,36 @@ import numpy as np
 def movmean(inp=None, n_pts=100):
 	"""
 	Computes running average of the inp over npts points.
-	
-	Parameters :
-		inp : DataArray
-			Time series of the input variable
 
-		n_pts : int
-			Number of points to average over
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the input variable
 
-	Returns :
-		out : DataArray
-			Time series of the input variable averaged over npts points
+	n_pts : int
+		Number of points to average over
 
-	Notes :
-		Works also with 3D skymap distribution
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the input variable averaged over npts points
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load ion pressure tensor
-		>>> p_xyz_i = mms.get_data("Pi_gse_fpi_brst_l2", tint, mms_id)
-		>>> # Running average the pressure tensor over 10s
-		>>> fs = pyrf.calc_fs(p_xyz_i)
-		>>>> p_xyz_i = pyrf.movmean(p_xyz_i,10 * fs)
+	Notes
+	-----
+	Works also with 3D skymap distribution
+
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load ion pressure tensor
+	>>> p_xyz_i = mms.get_data("Pi_gse_fpi_brst_l2", tint, mms_id)
+	>>> # Running average the pressure tensor over 10s
+	>>> fs = pyrf.calc_fs(p_xyz_i)
+	>>>> p_xyz_i = pyrf.movmean(p_xyz_i, int(10 * fs))
 
 	"""
 

@@ -16,32 +16,41 @@ from ..mms import rotate_tensor
 
 def pres_anis(p_xyz=None, b_xyz=None):
 	"""
-	Compute pressure anisotropy factor: (P_para - P_perp) * mu0 / B^2
+	Compute pressure anisotropy factor:
 
-	Parameters :
-		p_xyz : DataArray
-			Time series of the pressure tensor
-		b_xyz : DataArray
-			Time series of the background magnetic field
+	.. math::
 
-	Returns :
-		p_anis : DataArray
-			Time series of the pressure anisotropy
+		\\mu_0 \\frac{P_\\parallel - P_\\perp}{|\\mathbf{B}|^2}
 
-	See also :
-		rotate_tensor
+	Parameters
+	----------
+	p_xyz : xarray.DataArray
+		Time series of the pressure tensor
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load magnetic field, ion/electron temperature and number density
-		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-		>>> p_xyz_i = mms.get_data("Pi_gse_fpi_fast_l2", tint, mms_id)
-		>>> # Compute pressure anistropy
-		>>> p_anis = pyrf.pres_anis(p_xyz_i, b_xyz)
+	b_xyz : xarray.DataArray
+		Time series of the background magnetic field
+
+	Returns
+	-------
+	p_anis : xarray.DataArray
+		Time series of the pressure anisotropy
+
+	See also
+	--------
+	rotate_tensor
+
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load magnetic field, ion/electron temperature and number density
+	>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+	>>> p_xyz_i = mms.get_data("Pi_gse_fpi_fast_l2", tint, mms_id)
+	>>> # Compute pressure anistropy
+	>>> p_anis = pyrf.pres_anis(p_xyz_i, b_xyz)
 
 	"""
 

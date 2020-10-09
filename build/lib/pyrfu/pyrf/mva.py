@@ -14,37 +14,40 @@ def mva(inp=None, flag="mvar"):
 	"""
 	Compute the minimum variance frame
 
-	Parameters :
-		inp : DataArray
-			Time series of the quantity to find minimum variance frame
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the quantity to find minimum variance frame
 
-	Options :
-		flag : str
-			Constrain
+	flag : {"mvar", "<bn>=0", "td"}
+		Constrain
 
-	Returns : 
-		out : DataArray
-			Time series of the input quantity in LMN coordinates
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the input quantity in LMN coordinates
 
-		l : array
-			Eigenvalues l[0]>l[1]>l[2]
+	l : numpy.ndarray
+		Eigenvalues l[0]>l[1]>l[2]
 
-		V : array
-			Eigenvectors LMN coordinates
+	lmn : numpy.ndarray
+		Eigenvectors LMN coordinates
 
-	See also :
-		new_xyz
+	See also
+	--------
+	new_xyz
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load magnetic field
-		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-		>>> # Compute MVA frame
-		>>> b_lmn, lamb, frame = pyrf.mva(b_xyz)
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load magnetic field
+	>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+	>>> # Compute MVA frame
+	>>> b_lmn, lamb, frame = pyrf.mva(b_xyz)
 
 	"""
 

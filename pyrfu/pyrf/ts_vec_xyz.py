@@ -14,19 +14,21 @@ def ts_vec_xyz(t=None, data=None, attrs=None):
 	"""
 	Create a time series containing a 1st order tensor
 
-	Parameters :
-		t : np.ndarray
-			Array of times  
-		data : np.ndarray
-			Data corresponding to the time list
-	
-	Options :
-		attrs : dict
-			Attributes of the data list
+	Parameters
+	----------
+	t : numpy.ndarray
+		Array of times
 
-	Returns :
-		out : DataArray
-			1st order tensor time series
+	data : numpy.ndarray
+		Data corresponding to the time list
+
+	attrs : dict
+		Attributes of the data list
+
+	Returns
+	-------
+	out : xaray.DataArray
+		1st order tensor time series
 
 	"""
 

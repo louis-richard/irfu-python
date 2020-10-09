@@ -14,30 +14,33 @@ def new_xyz(inp=None, trans_mat=None):
 	"""
 	Transform the input field to the new frame
 
-	Parameters:
-		inp : DataArray
-			Time series of the input field in the original coordinate system
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the input field in the original coordinate system
 
-		trans_mat : array
-			Transformation matrix
+	trans_mat : numpy.ndarray
+		Transformation matrix
 
-	Returns :
-		out : DataArray
-			Time series of the input in the new frame
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the input in the new frame
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Spacecraft indices
-		>>> mms_id = 1
-		>>> # Load magnetic field and electric field
-		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-		>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
-		>>> # Compute MVA frame
-		>>> b_lmn, l, mva = pyrf.mva(b_xyz)
-		>>> # Move electric field to the MVA frame
-		>>> e_lmn = pyrf.new_xyz(e_xyz, mva)
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft indices
+	>>> mms_id = 1
+	>>> # Load magnetic field and electric field
+	>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+	>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
+	>>> # Compute MVA frame
+	>>> b_lmn, l, mva = pyrf.mva(b_xyz)
+	>>> # Move electric field to the MVA frame
+	>>> e_lmn = pyrf.new_xyz(e_xyz, mva)
 
 	"""
 

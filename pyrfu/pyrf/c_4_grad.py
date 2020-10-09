@@ -21,39 +21,44 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 	"""
 	Calculate gradient of physical field using 4 spacecraft technique. 
 	
-	Parameters :
-		r_list : list of DataArray
-			Time series of the positions of the spacecraft
+	Parameters
+	----------
+	r_list : list of xarray.DataArray
+		Time series of the positions of the spacecraft
 
-		b_list : list of DataArray
-			Time series of the magnetic field at the corresponding positions
+	b_list : list of xarray.DataArray
+		Time series of the magnetic field at the corresponding positions
 
-		method : str
-			Method flag : 
-				"grad" -> compute gradient (default)
-				"div" -> compute divergence
-				"curl" -> compute curl
-				"bdivb" -> compute b.div(b)
-				"curv" -> compute curvature
+	method : str
+		Method flag :
+			"grad" -> compute gradient (default)
+			"div" -> compute divergence
+			"curl" -> compute curl
+			"bdivb" -> compute b.div(b)
+			"curv" -> compute curvature
 
-	Returns :
-		- out : DataArray
-			Time series of the derivative of the input field corresponding to the method
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the derivative of the input field corresponding to the method
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Load magnetic field and spacecraft position
-		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, ic) for ic in range(1, 5)]
-		>>> r_mms = [mms.get_data("R_gse", tint, ic) for ic in range(1, 5)]
-		>>> grad_b = pyrf.c_4_grad(r_mms, b_mms, "grad")
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Load magnetic field and spacecraft position
+	>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, ic) for ic in range(1, 5)]
+	>>> r_mms = [mms.get_data("R_gse", tint, ic) for ic in range(1, 5)]
+	>>> grad_b = pyrf.c_4_grad(r_mms, b_mms, "grad")
 
-	Reference : 
-		ISSI book  Eq. 14.16, 14.17 p. 353
+	Reference
+	---------
+	ISSI book  Eq. 14.16, 14.17 p. 353
 
-	See also : 
-		c_4_k
+	See also
+	--------
+	c_4_k
 	
 	"""
 
@@ -105,7 +110,7 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 
 	# Gradient
 	if method.lower() == "grad":
-		outdata = grad_b
+		out_data = grad_b
 
 	# Divergence
 	elif method.lower() == "div":
@@ -114,7 +119,7 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 		for mms_id in mms_list:
 			div_b += dot(k_dict[mms_id], b_dict[mms_id]).data
 
-		outdata = div_b
+		out_data = div_b
 	
 	# Curl
 	elif method.lower() == "curl":
@@ -123,7 +128,7 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 		for mms_id in mms_list:
 			curl_b += cross(k_dict[mms_id], b_dict[mms_id]).data
 
-		outdata = curl_b
+		out_data = curl_b
 		
 	# B.div(B)
 	elif method.lower() == "bdivb":
@@ -132,28 +137,28 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 		for i in range(3):
 			b_div_b[:, i] = np.sum(b_avg.data * grad_b[:, i, :], axis=1)
 
-		outdata = b_div_b
+		out_data = b_div_b
 		
 	# Curvature
 	elif method.lower() == "curv":
-		bhat_list = [normalize(b) for b in b_list]
+		b_hat_list = [normalize(b) for b in b_list]
 
-		curv = c_4_grad(r_list, bhat_list, method="bdivb")
+		curv = c_4_grad(r_list, b_hat_list, method="bdivb")
 
-		outdata = curv.data
+		out_data = curv.data
 
 	else:
 		raise ValueError("Invalid method")
 		
-	if len(outdata.shape) == 1:
-		out = xr.DataArray(outdata, coords=[b_dict["1"].time], dims=["time"])
+	if len(out_data.shape) == 1:
+		out = xr.DataArray(out_data, coords=[b_dict["1"].time], dims=["time"])
 
-	elif len(outdata.shape) == 2:
-		out = xr.DataArray(outdata, coords=[b_dict["1"].time, ["x", "y", "z"]], dims=["time", "comp"])
+	elif len(out_data.shape) == 2:
+		out = xr.DataArray(out_data, coords=[b_dict["1"].time, ["x", "y", "z"]], dims=["time", "comp"])
 
-	elif len(outdata.shape) == 3:
+	elif len(out_data.shape) == 3:
 		out = xr.DataArray(
-			outdata, coords=[b_dict["1"].time, ["x", "y", "z"], ["x", "y", "z"]], dims=["time", "vcomp", "hcomp"])
+			out_data, coords=[b_dict["1"].time, ["x", "y", "z"], ["x", "y", "z"]], dims=["time", "vcomp", "hcomp"])
 
 	else:
 		raise TypeError("Invalid type")

@@ -16,17 +16,18 @@ def ts_time(t=None, fmt="unix"):
 	"""
 	Creates time line in DataArray
 
-	Parameters :
-		t : array
-			Input time line
+	Parameters
+	----------
+	t : numpy.ndarray
+		Input time line
 
-	Options :
-		fmt : str
-			Format of the input time line
+	fmt : str
+		Format of the input time line
 
-	Returns :
-		out : DataArray
-			Time series of the time line
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the time line
 
 	"""
 

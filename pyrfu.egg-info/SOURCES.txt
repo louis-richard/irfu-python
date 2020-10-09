@@ -20,7 +20,7 @@ pyrfu/mms/feeps_remove_sun.py
 pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
 pyrfu/mms/fft_bandpass.py
-pyrfu/mms/fk_powerspec_4sc.py
+pyrfu/mms/fk_power_spectrum_4sc.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py
 pyrfu/mms/get_eis_allt.py
@@ -105,6 +105,7 @@ pyrfu/pyrf/find_closest.py
 pyrfu/pyrf/gradient.py
 pyrfu/pyrf/histogram.py
 pyrfu/pyrf/histogram2d.py
+pyrfu/pyrf/increments.py
 pyrfu/pyrf/int_sph_dist.py
 pyrfu/pyrf/integrate.py
 pyrfu/pyrf/iso2unix.py
@@ -118,14 +119,17 @@ pyrfu/pyrf/mva.py
 pyrfu/pyrf/new_xyz.py
 pyrfu/pyrf/norm.py
 pyrfu/pyrf/normalize.py
+pyrfu/pyrf/plasma_beta.py
 pyrfu/pyrf/plasma_calc.py
 pyrfu/pyrf/poynting_flux.py
 pyrfu/pyrf/pres_anis.py
 pyrfu/pyrf/psd.py
+pyrfu/pyrf/pvi.py
 pyrfu/pyrf/remove_repeated_points.py
 pyrfu/pyrf/resample.py
 pyrfu/pyrf/solid_angle.py
 pyrfu/pyrf/start.py
+pyrfu/pyrf/struct_func.py
 pyrfu/pyrf/t_eval.py
 pyrfu/pyrf/time_clip.py
 pyrfu/pyrf/trace.py
@@ -139,3 +143,7 @@ pyrfu/pyrf/vht.py
 pyrfu/pyrf/wave_fft.py
 pyrfu/pyrf/wavelet.py
 pyrfu/pyrf/wavepolarize_means.py
+pyrfu/solo/__init__.py
+pyrfu/solo/get_ts.py
+pyrfu/solo/list_files.py
+pyrfu/solo/solo_config.py

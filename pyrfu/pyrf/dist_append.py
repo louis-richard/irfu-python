@@ -15,18 +15,22 @@ def dist_append(inp0=None, inp1=None):
 	"""
 	Concatenate two distribution skymaps along the time axis
 
-	Note : the time series have to be in the correct time order
+	Parameters
+	----------
+	inp0 : xarray.DataArray
+		3D skymap distribution at early times
 
-	Parameters :
-		inp1 : DataArray
-			3D skymap distribution at early times 
+	inp1 : xarray.DataArray
+		3D skymap distribution at late times
 
-		inp2 : DataArray
-			3D skymap distribution at late times 
+	Returns
+	-------
+	out : xarray.DataArray
+		3D skymap of the concatenated 3D skymaps
 
-	Returns :
-		out : DataArray
-			3D skymap of the concatenated 3D skymaps 
+	Note
+	----
+	The time series have to be in the correct time order
 
 	"""
 

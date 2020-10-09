@@ -14,18 +14,22 @@ def ts_append(inp1=None, inp2=None):
 	"""
 	Concatenate two time series along the time axis
 
-	Note : the time series have to be in the correct time order
+	Parameters
+	----------
+	inp1 : xarray.DataArray
+		Time series of the first input (early times)
 
-	Parameters :
-		inp1 : DataArray
-			Time series of the first input (early times)
+	inp2 : xarray.DataArray
+		Time series of the second input (late times)
 
-		inp2 DataArray
-			Time series of the second input (late times)
+	Returns
+	-------
+	out : xarray.DataArray
+		Concatenated time series
 
-	Returns :
-		out : DataArray
-			Concatenated time series
+	Notes
+	-----
+	The time series must be in the correct time order
 
 	"""
 

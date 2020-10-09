@@ -17,53 +17,57 @@ def resample(inp=None, ref=None, **kwargs):
 	"""
 	Resample inp to the time line of ref. If sampling of X is more than two times higher than Y, we average X, otherwise
 	we interpolate X.
-	
-	Parameters :
-		inp : DataArray
-			Time series to resample
 
-		ref : DataArray
-			Reference time line
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series to resample
 
-	Options :
-		method : str
-			Method of interpolation "spline", "linear" etc. (default "linear") if method is given then interpolate 
-			independent of sampling.
+	ref : xarray.DataArray
+		Reference time line
 
-		fs : float
-			Sampling frequency of the Y signal, 1/window
+	Keyword Arguments
+	-----------------
+	method : str
+		Method of interpolation "spline", "linear" etc. (default "linear") if method is given then interpolate
+		independent of sampling.
 
-		window : int/float/array
-			Length of the averaging window, 1/fsample
+	fs : float
+		Sampling frequency of the Y signal, 1/window
 
-		fs : str
-			Sampling frequency of the Y signal, 1/window
+	window : int or float or np.ndarray
+		Length of the averaging window, 1/fsample
 
-		mean : bool
-			Use mean when averaging
+	fs : str
+		Sampling frequency of the Y signal, 1/window
 
-		median : bool
-			Use median instead of mean when averaging
+	mean : bool
+		Use mean when averaging
 
-		max : bool
-			Use max instead of mean when averaging
+	median : bool
+		Use median instead of mean when averaging
 
-	Returns :
-		out : DataArray
-			Resampled input to the reference time line using the selected method
+	max : bool
+		Use max instead of mean when averaging
+
+	Returns
+	-------
+	out : xarray.DataArray
+		Resampled input to the reference time line using the selected method
 		
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load magnetic field and electric field
-		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-		>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
-		>>> # Resample magnetic field to electric field sampling
-		>>> b_xyz = pyrf.resample(b_xyz, e_xyz)
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load magnetic field and electric field
+	>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+	>>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
+	>>> # Resample magnetic field to electric field sampling
+	>>> b_xyz = pyrf.resample(b_xyz, e_xyz)
 		
 	"""
 

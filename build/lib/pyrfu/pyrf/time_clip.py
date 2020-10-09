@@ -18,19 +18,18 @@ def time_clip(inp=None, tint=None):
 	"""
 	Time clip the input (if time interval is TSeries clip between start and stop)
 
-	Parameters :
-		inp : DataArray
-			Time series of the quantity to clip
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the quantity to clip
 
-		tint : DataArray/np.ndarray/list
-			Time interval can be a time series, a array of datetime64 or a list
+	tint : xarray.DataArray or numpy.ndarray or list
+		Time interval can be a time series, a array of datetime64 or a list
 
-	Returns : 
-		out : DataArray
-			Time series of the time clipped input
-
-	Example :
-		
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the time clipped input
 
 	"""
 
@@ -60,7 +59,7 @@ def time_clip(inp=None, tint=None):
 
 	if len(inp.coords) > 1:
 		for k in inp.dims[1:]:
-			coord.append(inp.coords[k])
+			coord.append(inp.coords[k].data)
 
 	out = xr.DataArray(inp.data[idx_min:idx_max, ...], coords=coord, dims=inp.dims, attrs=inp.attrs)
 	out.time.attrs = inp.time.attrs

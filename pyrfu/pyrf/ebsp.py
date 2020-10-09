@@ -65,126 +65,132 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 	parameters of B using SVD. SVD is performed on spectral matrices computed from the time series of B using wavelets
 	and then averaged over a number of wave periods.
 	
-	Parameters :
-		e : DataArray
-			Time series of the wave electric field
+	Parameters
+	----------
+	e : xarray.DataArray
+		Time series of the wave electric field
 
-		db : DataArray
-			Time series of the wave magnetic field
+	db : xarray.DataArray
+		Time series of the wave magnetic field
 
-		full_b : DataArray
-			Time series of the high resolution background magnetic field used for E.B=0
+	full_b : xarray.DataArray
+		Time series of the high resolution background magnetic field used for E.B=0
 
-		b0 : DataArray
-			Time series of the background magnetic field used for field aligned coordinates
+	b0 : xarray.DataArray
+		Time series of the background magnetic field used for field aligned coordinates
 
-		xyz : DataArray
-			Time series of the position time series of spacecraft used for field aligned coordinates
+	xyz : xarray.DataArray
+		Time series of the position time series of spacecraft used for field aligned coordinates
 
-		freq_int : str/list/ndarray
-			Frequency interval : 
-				"pc12" 			-> [0.1, 5.0]
-				"pc35" 			-> [2e-3, 0.1]
-				[fmin, fmax] 	-> arbitrary interval [fmin,fmax]
+	freq_int : str or list or numpy.ndarray
+		Frequency interval :
+			* "pc12" : [0.1, 5.0]
+			* "pc35" : [2e-3, 0.1]
+			* [fmin, fmax] : arbitrary interval [fmin,fmax]
 
-	Options : 
-		polarization : bool
-			Computes polarization parameters (default False)
+	Keyword Arguments
+	-----------------
+	polarization : bool
+		Computes polarization parameters. Default False.
 
-		noresamp : bool
-			No resampling, E and db are given at the same time line (default False)
+	noresamp : bool
+		No resampling, E and db are given at the same time line Default False.
 
-		fac : bool
-			Uses FAC coordinate system (defined by b0 and optionally xyz), otherwise no coordinate system 
-			transformation is performed (default False)
+	fac : bool
+		Uses FAC coordinate system (defined by b0 and optionally xyz), otherwise no coordinate system
+		transformation is performed. Default False.
 
-		dEdotB_0 : bool
-			Computes dEz from db dot B = 0, uses full_b (default False)
+	de_dot_b0 : bool
+		Computes dEz from db dot B = 0, uses full_b. Default False.
 
-		full_b_db : bool
-			db contains DC field (default False)
+	full_b_db : bool
+		db contains DC field. Default False.
 
-		nAv : int
-			Number of wave periods to average (default 8)
+	nav : int
+		Number of wave periods to average Default 8.
 
-		fac_matrix : ndarray
-			Specify rotation matrix to FAC system (default None)
+	fac_matrix : numpy.ndarray
+		Specify rotation matrix to FAC system Default None.
 
-		m_width_coeff : int/float
-			Specify coefficient to multiple Morlet wavelet width by. (default 1)
+	m_width_coeff : int or float
+		Specify coefficient to multiple Morlet wavelet width by. Default 1.
 
-	Returns : 
-		res : Dataset
-			Dataset with :
-				t : DataArray
-					Time
+	Returns
+	-------
+	res : xarray.Dataset
+		Dataset with :
+			t : xarray.DataArray
+				Time
 
-				f : DataArray
-					Frequencies
+			f : xarray.DataArray
+				Frequencies
 
-				bb_xxyyzzss : DataArray
-					db power spectrum with :
-						[...,0] -> x
-						[...,1] -> y
-						[...,2] -> z
-						[...,3] -> sum
+			bb_xxyyzzss : xarray.DataArray
+				db power spectrum with :
+					[...,0] -> x
+					[...,1] -> y
+					[...,2] -> z
+					[...,3] -> sum
 
-				ee_xxyyzzss : DataArray
-					E power spectrum with :
-						[...,0] -> x
-						[...,1] -> y
-						[...,2] -> z
-						[...,3] -> sum
+			ee_xxyyzzss : xarray.DataArray
+				E power spectrum with :
+					[...,0] -> x
+					[...,1] -> y
+					[...,2] -> z
+					[...,3] -> sum
 
-				ee_ss : DataArray
-					E power spectrum (xx+yy spacecraft coordinates, e.g. ISR2)
+			ee_ss : xarray.DataArray
+				E power spectrum (xx+yy spacecraft coordinates, e.g. ISR2)
 
-				pf_xyz : DataArray
-					Poynting flux (xyz)
+			pf_xyz : xarray.DataArray
+				Poynting flux (xyz)
 
-				pf_rtp : DataArray
-					Poynting flux (r, theta, phi) [angles in degrees]
+			pf_rtp : xarray.DataArray
+				Poynting flux (r, theta, phi) [angles in degrees]
 
-				dop : DataArray
-					3D degree of polarization
+			dop : xarray.DataArray
+				3D degree of polarization
 
-				dop2d : DataArray
-					2D degree of polarization in the polarization plane
+			dop2d : xarray.DataArray
+				2D degree of polarization in the polarization plane
 
-				planarity : DataArray
-					Planarity of polarization
+			planarity : xarray.DataArray
+				Planarity of polarization
 
-				ellipticity : DataArray
-					Ellipticity of polarization ellipse
+			ellipticity : xarray.DataArray
+				Ellipticity of polarization ellipse
 
-				k : DataArray
-					k-vector (theta, phi FAC) [angles in degrees]
+			k : xarray.DataArray
+				k-vector (theta, phi FAC) [angles in degrees]
 
 	
-	Examples :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint_brst = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 3
-		>>> # Load spacecraft position
-		>>> tint_long = pyrf.extend_tint(tint_brst, [-100, 100])
-		>>> r_xyz = mms.get_data("R_gse", tint_long, mms_id)
-		>>> # Load background magnetic field, electric field and magnetic field fluctuations
-		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_brst, mms_id)
-		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint_brst, mms_id)
-		>>> b_scm = mms.get_data("B_gse_scm_brst_l2", tint_brst, mms_id)
-		>>> # Polarization analysis
-		>>> polarization = pyrf.ebsp(e_xyz, b_scm, b_xyz, b_xyz, r_xyz, freq_int=[10, 4000], polarization=True, fac=True)
+	Examples
+	--------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint_brst = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 3
+	>>> # Load spacecraft position
+	>>> tint_long = pyrf.extend_tint(tint_brst, [-100, 100])
+	>>> r_xyz = mms.get_data("R_gse", tint_long, mms_id)
+	>>> # Load background magnetic field, electric field and magnetic field fluctuations
+	>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_brst, mms_id)
+	>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint_brst, mms_id)
+	>>> b_scm = mms.get_data("B_gse_scm_brst_l2", tint_brst, mms_id)
+	>>> # Polarization analysis
+	>>> polarization = pyrf.ebsp(e_xyz, b_scm, b_xyz, b_xyz, r_xyz, freq_int=[10, 4000], polarization=True, fac=True)
 
-	See also :
-		PL_EBSP, CONVERT_FAC
+	See also
+	--------
+	PL_EBSP, CONVERT_FAC
 
-	Notes :
-		This software was developed as part of the MAARBLE (Monitoring, Analyzing and Assessing Radiation Belt 
-		Energization and Loss) collaborative research project which has received funding from the European 
-		Community's Seventh Framework Programme (FP7-SPACE-2011-1) under grant agreement n. 284520.
-		
+	Notes
+	-----
+	This software was developed as part of the MAARBLE (Monitoring, Analyzing and Assessing Radiation Belt
+	Energization and Loss) collaborative research project which has received funding from the European
+	Community's Seventh Framework Programme (FP7-SPACE-2011-1) under grant agreement n. 284520.
+
 	"""
 
 	if not isinstance(db, xr.DataArray):

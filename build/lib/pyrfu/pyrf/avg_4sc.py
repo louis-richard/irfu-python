@@ -15,23 +15,26 @@ def avg_4sc(b_list=None):
 	"""
 	Computes the input quantity at the center of mass of the MMS tetrahedron
 
-	Parameters :
-		B : list of DataArray
-			List of the time series of the quantity for each spacecraft
+	Parameters
+	----------
+	b_list : list of xarray.DataArray
+		List of the time series of the quantity for each spacecraft
 
-	Returns :
-		Bavg : DataArray
-			Time series of the input quantity a the enter of mass of the MMS tetrahedron
+	Returns
+	-------
+	b_avg : xarray.DataArray
+		Time series of the input quantity a the enter of mass of the MMS tetrahedron
 
-	Example :
-		>>> from pyrfu.mms import get_data
-		>>> from pyrfu.pyrf import avg_4sc
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Spacecraft indices
-		>>> mms_list = np.arange(1,5)
-		>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
-		>>> b_xyz = pyrf.avg_4sc(b_mms)
+	Example
+	-------
+	>>> from pyrfu.mms import get_data
+	>>> from pyrfu.pyrf import avg_4sc
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft indices
+	>>> mms_list = np.arange(1,5)
+	>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
+	>>> b_xyz = pyrf.avg_4sc(b_mms)
 
 	"""
 

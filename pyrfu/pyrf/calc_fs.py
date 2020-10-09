@@ -14,13 +14,15 @@ def calc_fs(inp=None):
 	"""
 	Computes the sampling frequency of the input time series
 
-	Parameters :
-		inp : DataArray
-			Time series of the input variable
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the input variable
 
-	Returns :
-		out : float
-			Sampling frequency in Hz
+	Returns
+	-------
+	out : float
+		Sampling frequency in Hz
 
 	"""
 

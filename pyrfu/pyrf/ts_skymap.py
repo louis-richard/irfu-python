@@ -14,25 +14,39 @@ def ts_skymap(t=None, data=None, energy=None, phi=None, theta=None, **kwargs):
 	"""
 	Creates a skymap of the distribution function
 
-	Parameters :
-		time : np.ndarray
-			List of times
+	Parameters
+	----------
+	t : numpy.ndarray
+		List of times
 
-		data : np.ndarray
-			Values of the distribution function
+	data : numpy.ndarray
+		Values of the distribution function
 
-		energy : np.ndarray
-			Energy levels
+	energy : numpy.ndarray
+		Energy levels
 
-		phi : np.ndarray
-			Azimuthal angles
+	phi : numpy.ndarray
+		Azimuthal angles
 
-		theta : np.ndarray
-			Elevation angles
+	theta : numpy.ndarray
+		Elevation angles
 
-	Returns :
-		out : DataArray
-			Skymap of the distribution function
+	Keyword Arguments
+	-----------------
+	energy0 : numpy.ndarray
+		Energy table 0 (odd time indices)
+
+	energy1 : numpy.ndarray
+		Energy table 1 (even time indices)
+
+	esteptable : numpy.ndarray
+		Time series of the stepping table between energies (burst)
+
+
+	Returns
+	-------
+	out : xarray.DataArray
+		Skymap of the distribution function
 
 	"""
 

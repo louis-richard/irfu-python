@@ -14,30 +14,32 @@ def integrate(inp=None, time_step=None):
 	"""
 	Integrate time series
 
-	Parameters :
-		inp : DataArray
-			Time series of the variable to integrate
-	
-	Options :
-		time_step : float
-			Time steps threshold. All time_steps larger than 3*time_step are assumed data gaps, default is that 
-			time_step is the smallest value of all time_steps of the time series
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the variable to integrate
 
-	Returns :
-		out : DataArray
-			Time series of the time integrated input
+	time_step : float
+		Time steps threshold. All time_steps larger than 3*time_step are assumed data gaps, default is that
+		time_step is the smallest value of all time_steps of the time series
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2015-12-14T01:17:40.200", "2015-12-14T01:17:41.500"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load magnetic field and electric field
-		>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
-		>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
-		>>> # Convert electric field to field aligned coordinates
-		>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, [1,0,0])
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the time integrated input
+
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2015-12-14T01:17:40.200", "2015-12-14T01:17:41.500"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load magnetic field and electric field
+	>>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
+	>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
+	>>> # Convert electric field to field aligned coordinates
+	>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, [1, 0, 0])
 	"""
 
 	if inp is None:

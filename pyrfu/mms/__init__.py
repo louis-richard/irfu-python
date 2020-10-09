@@ -13,7 +13,7 @@ from .get_data import get_data
 from .db_get_ts import db_get_ts
 
 # Wave analysis
-from .fk_powerspec_4sc import fk_powerspec_4sc
+from .fk_power_spectrum_4sc import fk_power_spectrum_4sc
 from .lh_wave_analysis import lh_wave_analysis
 from .whistler_b2e import whistler_b2e
 

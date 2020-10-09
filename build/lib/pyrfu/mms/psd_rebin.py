@@ -14,38 +14,41 @@ from ..pyrf import calc_dt
 
 def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
     """
-    Convert burst mode distribution into 64 energy channel distribution. 
-    Functions takes the burst mode distribution sampled in two energy tables and converts to a single energy table 
+    Convert burst mode distribution into 64 energy channel distribution.
+    Functions takes the burst mode distribution sampled in two energy tables and converts to a single energy table
     with 64 energy channels. Time resolution is halved and phi angles are averaged over adjacent times.
-    
-    Parameters :
-        vdf : DataArray
-            Time series of the particle distribution.
-            
-        phi : DataArray
-            Time series of the phi angles
-            
-        energy0 : DataArray/array
-            Energy table 0
-            
-        energy1 : DataArray/array
-            Energy table 1
-            
-        step_table : DataArray
-            Time series of the stepping table between energies (burst)
-    
-    Returns :
-        vdf_r : array
-            Rebinned particle distribution.
-            
-        phi_r : array
-            Time series of the recalculated phi angle.
-    
-        energy_r : array
-            Revised energy table.
-    
-    Notes: 
-        I'm assuming no gaps in the burst data interval. If there is a gap use tlim before running. To be updated later.
+
+    Parameters
+    ----------
+    vdf : xarray.Dataset
+        Time series of the particle distribution.
+
+    phi : xarray.DataArray
+        Time series of the phi angles
+
+    energy0 : xarray.DataArray or numpy.ndarray
+        Energy table 0
+
+    energy1 : xarray.DataArray or numpy.ndarray
+        Energy table 1
+
+    step_table : xarray.DataArray
+        Time series of the stepping table between energies (burst)
+
+    Returns
+    -------
+    vdf_r : numpy.ndarray
+        Rebinned particle distribution.
+
+    phi_r : numpy.ndarray
+        Time series of the recalculated phi angle.
+
+    energy_r : numpy.ndarray
+        Revised energy table.
+
+    Notes
+    -----
+    I'm assuming no gaps in the burst data interval. If there is a gap use tlim before running. To be updated later.
     
     """
 

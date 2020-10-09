@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: pyrfu
-Version: 1.4.3
+Version: 1.4.4
 Summary: Python Space Physics Environment Data Analysis
 Home-page: https://github.com/louis-richard/irfu-python
 Author: Louis RICHARD
@@ -65,6 +65,7 @@ Description:
         MMS Datasets: https://lasp.colorado.edu/mms/sdc/public/datasets/
         
         MMS - Goddard Space Flight Center: http://mms.gsfc.nasa.gov/
+        
 Platform: UNKNOWN
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown

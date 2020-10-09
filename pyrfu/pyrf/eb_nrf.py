@@ -16,17 +16,23 @@ def eb_nrf(e=None, b=None, v=None, flag=0):
     """
     Find E and B in MP system given B and MP normal vector
 
-    Parameters :
-        e : DataArray
-            Time series of the electric field
-        b : DataArray
-            Time series of the magnetic field
+    Parameters
+    ----------
+    e : xarray.DataArray
+        Time series of the electric field
 
-        v : DataArray
-            Normal vector
+    b : xarray.DataArray
+        Time series of the magnetic field
 
-    Return :
-        out : DataArray
+    v : xarray.DataArray
+        Normal vector
+
+    flag : int or numpy.ndarray
+        to fill
+
+    Returns
+    -------
+    out : DataArray
 
     """
 

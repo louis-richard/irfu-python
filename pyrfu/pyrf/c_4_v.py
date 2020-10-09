@@ -35,15 +35,18 @@ def c_4_v(r=None, x=None):
 	"""
 	Calculate velocity or time shift of discontinuity.
 
-	Parameters : 
-		r : list of DataArray
-			Time series of the positions of the spacecraft
-		x : list
-			Crossing times or time and velocity
+	Parameters
+	----------
+	r : list of xarray.DataArray
+		Time series of the positions of the spacecraft
+	x : list
+		Crossing times or time and velocity
 	
-	Returns :
-		out : ndarray
-			Discontinuity velocity or time shift with respect to mms1
+	Returns
+	----------
+	out : numpy.ndarray
+		Discontinuity velocity or time shift with respect to mms1
+
 	"""
 	if isinstance(x, np.ndarray) and x.dtype == np.datetime64:
 		flag = "v_from_t"

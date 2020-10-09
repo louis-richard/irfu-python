@@ -13,27 +13,35 @@ def agyro_coeff(p=None):
     """
     Computes agyrotropy coefficient (Swidak2016 https://doi.org/10.1002/2015GL066980)
 
-    Parameters :
-        P : DataArray
-            Time series of the pressure tensor
+    .. math::
 
-    Returns :
-        Q : DataArray
-            Time series of the agyrotropy coefficient of the specie
+        Q = \\frac{P_12^2 + P_13^2 + P_23^2}{P_\\perp^2 + 2 P_\\perp P_\\parallel}
 
-    Example :
-        >>> from pyrfu import mms, pyrf
-        >>> # Time interval
-        >>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-        >>> # Spacecraft index
-        >>> ic = 1
-        >>> # Load magnetic field and electron pressure tensor
-        >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
-        >>> p_xyz_e = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
-        >>> # Rotate electron pressure tensor to field aligned coordinates
-        >>> p_xyzfac_e = mms.rotate_tensor(p_xyz_e,"fac",b_xyz,"pp")
-        >>> # Compute agyrotropy coefficient
-        >>> q_e = pyrf.agyro_coeff(p_xyzfac_e)
+
+    Parameters
+    ----------
+    p : xarray.DataArray
+        Time series of the pressure tensor
+
+    Returns
+    -------
+    q : xarray.DataArray
+        Time series of the agyrotropy coefficient of the specie
+
+    Example
+    -------
+    >>> from pyrfu import mms, pyrf
+    >>> # Time interval
+    >>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
+    >>> # Spacecraft index
+    >>> ic = 1
+    >>> # Load magnetic field and electron pressure tensor
+    >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2",Tint,1)
+    >>> p_xyz_e = mms.get_data("Pe_gse_fpi_fast_l2",Tint,1)
+    >>> # Rotate electron pressure tensor to field aligned coordinates
+    >>> p_xyzfac_e = mms.rotate_tensor(p_xyz_e,"fac",b_xyz,"pp")
+    >>> # Compute agyrotropy coefficient
+    >>> q_e = pyrf.agyro_coeff(p_xyzfac_e)
 
     """
 

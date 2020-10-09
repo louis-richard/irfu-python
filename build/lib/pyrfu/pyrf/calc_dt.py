@@ -14,13 +14,15 @@ def calc_dt(inp=None):
 	"""
 	Computes time step of the input time series
 
-	Parameters :
-		inp : DataArray
-			Time series of the input variable
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the input variable
 
-	Returns :
-		out : float
-			Time step in seconds
+	Returns
+	-------
+	out : float
+		Time step in seconds
 
 	"""
 

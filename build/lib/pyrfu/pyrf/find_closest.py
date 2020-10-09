@@ -15,24 +15,27 @@ def find_closest(t1=None, t2=None):
     """
     Finds pairs that are closest to each other in two time series
 
-    Parameters :
-        t1 : np.ndarray
-            Vector with time instants
-        t2 : np.ndarray
-            Vector with time instants
+    Parameters
+    ----------
+    t1 : numpy.ndarray
+        Vector with time instants
 
-    Returns :
-        t1new : np.ndarray
-            Identified time instants that are closest each other
+    t2 : numpy.ndarray
+        Vector with time instants
 
-        t2new : np.ndarray
-            Identified time instants that are closest each other
+    Returns
+    -------
+    t1new : numpy.ndarray
+        Identified time instants that are closest each other
 
-        ind1new : np.ndarray
-            Identified time instants that are closest each other
+    t2new : numpy.ndarray
+        Identified time instants that are closest each other
 
-        ind2new : np.ndarray
-            Identified time instants that are closest each other
+    ind1new : numpy.ndarray
+        Identified time instants that are closest each other
+
+    ind2new : numpy.ndarray
+        Identified time instants that are closest each other
 
     """
 

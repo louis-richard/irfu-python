@@ -16,19 +16,21 @@ def db_get_ts(dataset_name="", cdf_name="", tint=None):
 	"""
 	Get variable time series in the cdf file
 
-	Parameters :
-		dataset_name : str
-			Name of the dataset
+	Parameters
+	----------
+	dataset_name : str
+		Name of the dataset
 
-		cdf_name : str
-			Name of the target field in cdf file
+	cdf_name : str
+		Name of the target field in cdf file
 
-		tint : list of str
-			Time interval
+	tint : list of str
+		Time interval
 
-	Returns : 
-		out : DataArray
-			Time series of the target variable
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the target variable
 
 	"""
 

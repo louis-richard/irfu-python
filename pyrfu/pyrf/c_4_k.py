@@ -15,18 +15,25 @@ from .dot import dot
 
 def c_4_k(r_list=None):
 	"""
-	Calculate reciprocal vectors in barycentric coordinates. Reference: ISSI book 14.7
+	Calculates reciprocal vectors in barycentric coordinates.
 	
-	Parameters :
-		R : list of DataArray
-			Position of the spacecrafts
+	Parameters
+	----------
+	r_list : list of xarray.DataArray
+		Position of the spacecrafts
 
-	Returns :
-		K : list of DataArray
-			Reciprocal vectors in barycentric coordinates
-	
-	Note : 
-		The units of reciprocal vectors are the same as [1/r]
+	Returns
+	-------
+	k_list : list of xarray.DataArray
+		Reciprocal vectors in barycentric coordinates
+
+	Reference
+	---------
+	ISSI book  Eq. 14.16, 14.17 p. 353
+
+	Note
+	----
+	The units of reciprocal vectors are the same as [1/r]
 
 	"""
 

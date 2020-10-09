@@ -17,34 +17,38 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
     """
     Calculate epsilon parameter using model distribution
 
-    Parameters :
-        vdf : Dataset
-            Observed particle distribution (skymap).
+    Parameters
+    ----------
+    vdf : xarray.Dataset
+        Observed particle distribution (skymap).
 
-        model_vdf : Dataset
-            Model particle distribution (skymap).
+    model_vdf : xarray.Dataset
+        Model particle distribution (skymap).
 
-        n : DataArray
-            Time series of the number density
+    n : xarray.DataArray
+        Time series of the number density
 
-        sc_pot : DataArray
-            Time series of the spacecraft potential
+    sc_pot : xarray.DataArray
+        Time series of the spacecraft potential
 
-    Options :
-        en_channels : list/array
-            Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
+    Keyword Arguments
+    -----------------
+    en_channels : list or numpy.ndarray
+        Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
 
+    Returns
+    -------
+    epsilon : xarray.DataArray
+        Time series of the epsilon parameter.
 
-    Returns :
-        epsilon : DataArray
-            Time series of the epsilon parameter.
+    See also
+    --------
+    mms.make_model_vdf
 
-    See also :
-        mms.make_model_vdf
-
-    Example :
-        >>> from pyrfu import mms
-        >>> eps = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, en_channel=[4, 32])
+    Example
+    -------
+    >>> from pyrfu import mms
+    >>> eps = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, en_channel=[4, 32])
 
     """
 

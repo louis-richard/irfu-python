@@ -19,28 +19,36 @@ def remove_idist_background(n_i=None, v_gse_i=None, p_gse_i=None, n_bg_i=None, p
 	Removes penetrating radiation background from ion moments
 
 	Parameters :
-		n_i : DataArray
-			Time series of the ion density
-		v_gse_i : DataArray
-			Time series of the ion bulk velocity
-		p_gse_i : DataArray
-			Time series of the ion pressure tensor
-		n_bg_i : DataArray
-			Time series of the background ion number density
-		p_bg_i : DataArray
-			Time series of the background ion pressure scalar
+	n_i : xarray.DataArray
+		Time series of the ion density
 
-	Returns :
-		n_i_new : DataArray
-			Time series of the corrected ion number density
-		v_gse_i_new : DataArray
-			Time series of the corrected ion bulk velocity
-		p_gse_i : DataArray
-			Time series of the corrected ion pressure tensor
-	
-	References:
-		MMS DIS Penetrating radiation correction methods: 
-			https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data
+	v_gse_i : xarray.DataArray
+		Time series of the ion bulk velocity
+
+	p_gse_i : xarray.DataArray
+		Time series of the ion pressure tensor
+
+	n_bg_i : xarray.DataArray
+		Time series of the background ion number density
+
+	p_bg_i : xarray.DataArray
+		Time series of the background ion pressure scalar
+
+	Returns
+	-------
+	n_i_new : xarray.DataArray
+		Time series of the corrected ion number density
+
+	v_gse_i_new : xarray.DataArray
+		Time series of the corrected ion bulk velocity
+
+	p_gse_i : xarray.DataArray
+		Time series of the corrected ion pressure tensor
+
+	References
+	----------
+	MMS DIS Penetrating radiation correction methods:
+	https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data
 
 	"""
 

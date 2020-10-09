@@ -15,38 +15,38 @@ from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 def rotate_tensor(*args):
 	"""
 	Rotates pressure or temperature tensor into another coordinate system
-	
+
 	Parameters :
-		PeIJ/Peall : DataArray
-			Time series of either separated terms of the tensor or the complete tensor. 
-			If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
-		flag : str
-			Flag of the target coordinates system : 
-				Field-aligned coordinates "fac", requires background magnetic field Bback, optional 
-				flag "pp" P_perp1 = P_perp2 or "qq" P_perp1 and P_perp2 are most unequal, sets P23 to zero.
+	PeIJ/Peall : DataArray
+		Time series of either separated terms of the tensor or the complete tensor.
+		If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
+	flag : str
+		Flag of the target coordinates system :
+			Field-aligned coordinates "fac", requires background magnetic field Bback, optional
+			flag "pp" P_perp1 = P_perp2 or "qq" P_perp1 and P_perp2 are most unequal, sets P23 to zero.
 
-				Arbitrary coordinate system "rot", requires new x-direction xnew, new y and z directions 
-				ynew, znew (if not included y and z directions are orthogonal to xnew and closest to the 
-				original y and z directions)
+			Arbitrary coordinate system "rot", requires new x-direction xnew, new y and z directions
+			ynew, znew (if not included y and z directions are orthogonal to xnew and closest to the
+			original y and z directions)
 
-				GSE coordinates "gse", requires MMS spacecraft number 1--4 MMSnum
+			GSE coordinates "gse", requires MMS spacecraft number 1--4 MMSnum
 
-	Returns : 
-		Pe : DataArray
-			Time series of the pressure or temperature tensor in field-aligned, user-defined, or GSE coordinates.
-			For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
-			For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
+	Returns :
+	Pe : DataArray
+		Time series of the pressure or temperature tensor in field-aligned, user-defined, or GSE coordinates.
+		For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
+		For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
 	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 1
-		>>> # Load magnetic field and ion temperature tensor
-		>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-		>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
-		>>> # Compute ion temperature in field aligned coordinates
-		>>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 1
+	>>> # Load magnetic field and ion temperature tensor
+	>>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+	>>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
+	>>> # Compute ion temperature in field aligned coordinates
+	>>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 
 	"""
 

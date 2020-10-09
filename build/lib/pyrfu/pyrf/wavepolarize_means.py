@@ -18,52 +18,59 @@ def wavepolarize_means(b_wave=None, b_bgd=None, **kwargs):
 	"""
 	Analysis the polarization of magnetic wave using "means" method
 
-	Parameters :
-		Bwave : DataArray
-			Time series of the magnetic field from SCM
+	Parameters
+	-----------
+	b_wave : xarray.DataArray
+		Time series of the magnetic field from SCM
 
-		Bbgd : DataArray
-			Time series of the magnetic field from FGM.
-		
-	Options :
-		min_psd : float
-			Threshold for the analysis (e.g 1.0e-7). Below this value, the SVD analysis is meaningless if min_psd is
-			not given, SVD analysis will be done for all waves. (default 1e-25)
+	b_bgd : xarray.DataArray
+		Time series of the magnetic field from FGM.
 
-		nop_fft : int
-			Number of points in FFT. (default 256)
+	Keyword Arguments
+	-----------------
+	min_psd : float
+		Threshold for the analysis (e.g 1.0e-7). Below this value, the SVD analysis is meaningless if min_psd is
+		not given, SVD analysis will be done for all waves. (default 1e-25)
 
-	Returns :
-		Bpsd : DataArray
-			Power spectrum density of magnetic filed wave.
+	nop_fft : int
+		Number of points in FFT. (default 256)
 
-		degpol : DataArray
-			Spectrogram of the degree of polarization (form 0 to 1).
+	Returns
+	-------
+	b_psd : xarray.DataArray
+		Power spectrum density of magnetic filed wave.
 
-		waveangle : DataArray
-			(form 0 to 90)
+	wave_angle : xarray.DataArray
+		(form 0 to 90)
 
-		elliptict : DataArray
-			Spectrogram of the ellipticity (form -1 to 1)
+	deg_pol : xarray.DataArray
+		Spectrogram of the degree of polarization (form 0 to 1).
 
-		helict    : DataArray
-			Spectrogram of the helicity (form -1 to 1)
+	elliptict : xarray.DataArray
+		Spectrogram of the ellipticity (form -1 to 1)
 
-	Example :
-		>>> from pyrfu import pyrf
-		>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd)
-		>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7)
-		>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7, 256)
+	helict : xarray.DataArray
+		Spectrogram of the helicity (form -1 to 1)
 
-	Notice: Bwave and Bbgd should be from the same satellite and in the same coordinates 
+	Examples
+	--------
+	>>> from pyrfu import pyrf
+	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd)
+	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7)
+	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7, 256)
 
-	WARNING: If one component is an order of magnitude or more  greater than the other two then the polarization 
-	results saturate and erroneously indicate high degrees of polarization at all times and frequencies. Time 
-	series should be eyeballed before running the program.
-	For time series containing very rapid changes or spikes the usual problems with Fourier analysis arise.
-	Care should be taken in evaluating degree of polarization results.
-	For meaningful results there should be significant wave power at the frequency where the polarization 
-	approaches 100%. Remember comparing two straight lines yields 100% polarization.
+	Note
+	------
+	`b_wave` and `b_bgd` should be from the same satellite and in the same coordinates
+
+	.. warning::
+		If one component is an order of magnitude or more  greater than the other two then the polarization
+		results saturate and erroneously indicate high degrees of polarization at all times and frequencies. Time
+		series should be eyeballed before running the program.
+		For time series containing very rapid changes or spikes the usual problems with Fourier analysis arise.
+		Care should be taken in evaluating degree of polarization results.
+		For meaningful results there should be significant wave power at the frequency where the polarization
+		approaches 100%. Remember comparing two straight lines yields 100% polarization.
 
 	"""
 

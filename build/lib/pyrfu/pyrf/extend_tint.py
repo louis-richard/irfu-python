@@ -14,25 +14,29 @@ def extend_tint(tint=None, ext=None):
 	"""
 	Extends time interval
 
-	Parameters :
-		Tint : list of str
-			Reference time interval to extend
+	Parameters
+	----------
+	tint : list of str
+		Reference time interval to extend
 
-		ext : list of flot/int
-			Number of seconds to extend time interval [left extend, right extend]
+	ext : list of float or int
+		Number of seconds to extend time interval [left extend, right extend]
 
-	Returns :
-		tint : list of str
-			Extended time interval
+	Returns
+	-------
+	tint : list of str
+		Extended time interval
 
-	Example :
-		>>> from pyrfu import pyrf
-		>>> # Time interval
-		>>> tint = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
-		>>> # Spacecraft index
-		>>> ic = 3
-		>>> # Load spacecraft position
-		>>> tint_long = pyrf.extend_tint(tint, [-100, 100])
+	Example
+	-------
+	>>> from pyrfu import pyrf
+	>>> # Time interval
+	>>> tint = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
+	>>> # Spacecraft index
+	>>> ic = 3
+	>>> # Load spacecraft position
+	>>> tint_long = pyrf.extend_tint(tint, [-100, 100])
+
 	"""
 
 	if ext is None:

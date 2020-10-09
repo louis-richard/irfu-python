@@ -13,17 +13,21 @@ def split_vs(var_str=""):
 	"""
 	Parse the variable keys
 
-	Paramters :
-		- var_str            [str]                   Input key of variable
+	Parameters
+	----------
+	var_str : str
+		Input key of variable
 
-	Returns :
-		- out               [dict]                  Dictionary containing : 
-														- ["param"]     Variable key
-														- ["to"]        Tensor order
-														- ["cs"]        Coordinate system
-														- ["inst"]      Instrument
-														- ["tmmode"]    Time mode
-														- ["lev"]       Level of data
+	Returns
+	-------
+	out : dict
+		Hash table containing :
+			* param : Variable key
+			* to : Tensor order
+			* cs : Coordinate system
+			* inst : Instrument
+			* tmmode : Time mode
+			* lev" : Level of data
 	"""
 
 	if not var_str:
@@ -38,34 +42,34 @@ def split_vs(var_str=""):
 	if n_tk < 3 or n_tk > 5:
 		raise ValueError("invalid STRING format")
 
-	all_params_scal = ["ni", "nbgi", "pbgi", "partni", "ne", "pbge", "nbge", "partne", "tsi", "tperpi",
+	all_params_scalars = ["ni", "nbgi", "pbgi", "partni", "ne", "pbge", "nbge", "partne", "tsi", "tperpi",
 					   "tparai", "parttperpi", "parttparai", "tse", "tperpe", "tparae", "parttperpe", "parttparae",
 					   "pde", "pdi", "pderre", "pderri", "v", "v6", "defi", "defbgi", "defe", "defbge",
 					   "energyi", "bnergye", "epar", "sdev12", "sdev34", "flux-amb-pm2", "padlowene", "padmidene",
 					   "padhighene", "bpsd", "epsd"]
 
-	all_params_vect = ["r", "sti", "vi", "errvi", "partvi", "ste", "ve", "errve", "partve", "b", "e", "e2d", "es12",
+	all_params_vectors = ["r", "sti", "vi", "errvi", "partvi", "ste", "ve", "errve", "partve", "b", "e", "e2d", "es12",
 					   "es34"]
 
-	all_params_tens = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te", "partte"]
+	all_params_tensors = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te", "partte"]
 
-	hpca_params_scal = ["nhplus", "nheplus", "nheplusplus", "noplus", "tshplus", "tsheplus", "tsheplusplus", "tsoplus",
+	hpca_params_scalars = ["nhplus", "nheplus", "nheplusplus", "noplus", "tshplus", "tsheplus", "tsheplusplus", "tsoplus",
 						"phase", "adcoff"]
 
-	hpca_params_tens = ["vhplus", "vheplus", "vheplusplus", "voplus", "phplus", "pheplus", "pheplusplus", "poplus",
+	hpca_params_tensors = ["vhplus", "vheplus", "vheplusplus", "voplus", "phplus", "pheplus", "pheplusplus", "poplus",
 						"thplus", "theplus", "theplusplus", "toplus"]
 
 	param = tk[0]
 
-	if param.lower() in all_params_scal:
+	if param.lower() in all_params_scalars:
 		tensor_order = 0
-	elif param.lower() in all_params_vect:
+	elif param.lower() in all_params_vectors:
 		tensor_order = 1
-	elif param.lower() in all_params_tens:
+	elif param.lower() in all_params_tensors:
 		tensor_order = 2
-	elif param.lower() in hpca_params_scal:
+	elif param.lower() in hpca_params_scalars:
 		tensor_order = 0
-	elif param.lower() in hpca_params_tens:
+	elif param.lower() in hpca_params_tensors:
 		tensor_order = 1
 	else:
 		raise ValueError(f"invalid PARAM : {param}")

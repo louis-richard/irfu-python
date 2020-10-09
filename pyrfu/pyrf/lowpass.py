@@ -15,19 +15,21 @@ def lowpass(inp=None, f_cut=None, fhz=None):
     """
     Filter the data through low or highpass filter with max frequency f_cut and subtract from the original
 
-    Parameters :
-        inp : DataArray
-            Time series of the input variable
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Time series of the input variable
 
-        f_cut : float
-            Cutoff frequency
+    f_cut : float
+        Cutoff frequency
 
-        fhz : float
-            Sampling frequency
+    fhz : float
+        Sampling frequency
 
-    Returns :
-        out : DataArray
-            Time series of the filter data
+    Returns
+    -------
+    out : xarray.DataArray
+        Time series of the filter data
 
     """
 

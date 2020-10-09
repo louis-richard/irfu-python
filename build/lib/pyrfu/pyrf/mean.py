@@ -17,19 +17,24 @@ def mean(inp=None, r=None, b=None, z=None):
     Put inp into mean field coordinates defined by position vector r and magnetic field b
     if earth magnetic dipole axis z is given then uses another algorithm (good for auroral passages)
 
-    Parameters :
-        inp : DataArray
-            Input field to put into MF coordinates
-        r : DataArray
-            Position of the spacecraft
-        b : DataArray
-            Magnetic field
-        z : DataArray
-            Earth magnetic dipole axis
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Input field to put into MF coordinates
 
-    Returns :
-        out : DataArray
-            Input field in mean field coordinates
+    r : xarray.DataArray
+        Time series of the spacecraft position.
+
+    b : xarray.DataArray
+        Time series of the background magnetic field
+
+    z : xarray.DataArray
+        Earth magnetic dipole axis
+
+    Returns
+    -------
+    out : xarray.DataArray
+        Input field in mean field coordinates
 
     """
 

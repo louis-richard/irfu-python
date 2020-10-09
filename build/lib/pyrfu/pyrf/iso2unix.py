@@ -13,13 +13,15 @@ def iso2unix(t=None):
 	"""
 	Converts time in iso format to unix
 
-	Parameters :
-		t : list of str
-			Time
+	Parameters
+	----------
+	t : list of str
+		Time
 
-	Returns :
-		out : list of float
-			Time in unix format
+	Returns
+	-------
+	out : list of float
+		Time in unix format
 
 	"""
 	

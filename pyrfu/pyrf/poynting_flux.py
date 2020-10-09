@@ -15,30 +15,36 @@ from . import calc_fs, cross, dot, normalize, resample, time_clip
 
 def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
     """
-    Estimates Poynting flux S and Poynting flux along Bo from electric field E and magnetic field B.
+    Estimates Poynting flux at electric field sampling as
 
-    If E and B have different sampling then the lowest sampling is resampled at the highest sampling
+    .. math::
 
-    Parameters :
-        e_xyz : DataArray
-            Time series of the electric field
+        \\mathbf{S} = \\frac{\\mathbf{E}\\times\\mathbf{B}}{\\mu_0}
 
-        b_xyz : DataArray
-            Time series of the magnetic field
+    if `b0` is given project the Poynting flux along `b0`
 
-    Option :
-        b0 : DataArray
-            Time series of the direction to project the Pointing flux (optional)
 
-    Returns :
-        s : DataArray
-            Time series of the Pointing flux
+    Parameters
+    ----------
+    e_xyz : xarray.DataArray
+        Time series of the electric field
 
-        s_z : DataArray
-            Time series of the projection of the Pointing flux (only if b0)
+    b_xyz : xarray.DataArray
+        Time series of the magnetic field
 
-        int_s : DataArray
-            Time series of the time integral of the Pointing flux (if b0 integral along b0)
+    b0 : xarray.DataArray
+        Time series of the direction to project the Pointing flux (optional)
+
+    Returns
+    -------
+    s : xarray.DataArray
+        Time series of the Pointing flux
+
+    s_z : xarray.DataArray
+        Time series of the projection of the Pointing flux (only if b0)
+
+    int_s : xarray.DataArray
+        Time series of the time integral of the Pointing flux (if b0 integral along b0)
 
     """
 

@@ -13,49 +13,52 @@ import xarray as xr
 def mean_bins(x=None, y=None, bins=10):
 	"""
 	Computes mean of values of y corresponding to bins of x
-	
-	Parameters :
-		x : DataArray
-			Time series of the quantity of bins
 
-		y : DataArray
-			Time series of the quantity to the mean
+	Parameters
+	----------
+	x : xarray.DataArray
+		Time series of the quantity of bins
 
-		nbins : int
-			Number of bins   
-		
-	Returns :
-		out : Dataset
-			Dataset with :
-				* bins : DataArray
-					bin values of the x variable
+	y : xarray.DataArray
+		Time series of the quantity to the mean
 
-				* data : DataArray
-					Mean values of y corresponding to each bin of x
+	bins : int
+		Number of bins
 
-				* sigma : DataArray
-					Standard deviation
+	Returns
+	-------
+	out : xarray.Dataset
+		Dataset with :
+			* bins : xarray.DataArray
+				bin values of the x variable
 
-	Example :
-		>>> import numpy
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Spacecraft indices
-		>>> mms_list = numpy.arange(1,5)
-		>>> # Load magnetic field and electric field
-		>>> r_mms, b_mms = [[] * 4 for _ in range(2)]
-		>>> for mms_id in range(1, 5):
-		>>> 	r_mms.append(mms.get_data("R_gse", tint, mms_id))
-		>>> 	b_mms.append(mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id))
-		>>>
-		>>> # Compute current density, etc
-		>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
-		>>> # Compute magnitude of B and J
-		>>> b_mag = pyrf.norm(b_xyz)
-		>>> j_mag = pyrf.norm(j_xyz)
-		>>> # Mean value of |J| for 10 bins of |B|
-		>>> m_b_j = pyrf.mean_bins(b_mag, j_mag)
+			* data : xarray.DataArray
+				Mean values of y corresponding to each bin of x
+
+			* sigma : xarray.DataArray
+				Standard deviation
+
+	Example
+	-------
+	>>> import numpy
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft indices
+	>>> mms_list = numpy.arange(1,5)
+	>>> # Load magnetic field and electric field
+	>>> r_mms, b_mms = [[] * 4 for _ in range(2)]
+	>>> for mms_id in range(1, 5):
+	>>> 	r_mms.append(mms.get_data("R_gse", tint, mms_id))
+	>>> 	b_mms.append(mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id))
+	>>>
+	>>> # Compute current density, etc
+	>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
+	>>> # Compute magnitude of B and J
+	>>> b_mag = pyrf.norm(b_xyz)
+	>>> j_mag = pyrf.norm(j_xyz)
+	>>> # Mean value of |J| for 10 bins of |B|
+	>>> m_b_j = pyrf.mean_bins(b_mag, j_mag)
 		
 	"""
 	

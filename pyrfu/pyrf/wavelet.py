@@ -17,37 +17,40 @@ import matplotlib.pyplot as plt
 
 def wavelet(inp=None, **kwargs):
 	"""
-	Calculate wavelet spectrogram based on fast FFT algorithm
-	
-	Parameters :
-		inp : DataArray
-			Input quantity
+	Computes wavelet spectrogram based on fast FFT algorithm
 
-	Options :
-		fs : int/float
-			Sampling frequency of the input time series
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Input quantity
 
-		f : list/np.ndarray
-			Vector [f_min f_max], calculate spectra between frequencies f_min and f_max
+	Keyword Arguments
+	-----------------
+	fs : int or float
+		Sampling frequency of the input time series
 
-		nf : int/float
-			Number of frequency bins
+	f : list or numpy.ndarray
+		Vector [f_min f_max], calculate spectra between frequencies f_min and f_max
 
-		wavelet_width : int/float
-			Width of the Morlet wavelet, default 5.36
+	nf : int or float
+		Number of frequency bins
 
-		linear : float
-			Linear spacing between frequencies of df
+	wavelet_width : int or float
+		Width of the Morlet wavelet. Default 5.36
 
-		return_power : bool
-			Set to True (default) to return the power, False for complex wavelet transform
+	linear : float
+		Linear spacing between frequencies of df
 
-		cut_edge : bool
-			Set to True (default) to set points affected by edge effects to NaN, False to keep edge affect points
-	
-	Returns :
-		out : DataArray/Dataset
-			Wavelet transform of the input
+	return_power : bool
+		Set to True to return the power, False for complex wavelet transform. Default True
+
+	cut_edge : bool
+		Set to True to set points affected by edge effects to NaN, False to keep edge affect points. Default True
+
+	Returns
+	-------
+	out : xarray.DataArray or xarray.Dataset
+		Wavelet transform of the input
 
 	"""
 

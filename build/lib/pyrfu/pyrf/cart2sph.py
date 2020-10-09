@@ -18,16 +18,19 @@ def cart2sph(inp=None, direction_flag=1):
 
     direction_flag = -1  -> to make transformation in opposite direction
 
-    Parameters :
-        inp : DataArray
-            Time series to convert
-        direction_flag : +/- 1
-            Set to 1 (default) to transform from cartesian to spherical coordinates.
-            Set to -1 to transform from spherical to cartesian coordinates.
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Time series to convert
 
-    Return :
-        out : DataArray
-            Input field in spherical/cartesian coordinate system
+    direction_flag : {1, -1}
+        Set to 1 (default) to transform from cartesian to spherical coordinates.
+        Set to -1 to transform from spherical to cartesian coordinates.
+
+    Returns
+    -------
+    out : xarray.DataArray
+        Input field in spherical/cartesian coordinate system
 
     """
 

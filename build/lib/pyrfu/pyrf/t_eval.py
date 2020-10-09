@@ -15,19 +15,18 @@ def t_eval(inp=None, t=None):
 	"""
 	Evaluates the input time series at the target time
 
-	Parameters :
-		inp : DataArray
-			Time series if the input to evaluate
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series if the input to evaluate
 
-		t : array
-			Times at which the input will be evaluated
+	t : numpy.ndarray
+		Times at which the input will be evaluated
 
-	Returns :
-		out : DataArray
-			Time series of the input at times t
-
-	Example :
-		
+	Returns
+	-------
+	out : DataArray
+		Time series of the input at times t
 
 	"""
 
@@ -44,6 +43,6 @@ def t_eval(inp=None, t=None):
 	if inp.ndim == 2:
 		out = xr.DataArray(inp.data[idx, :], coords=[t, inp.comp], dims=["time", "comp"])
 	else:
-		out = xr.DataArray(inp.data[idx], coords=[t], dims=["time"])
+		out = xr.DataArray(inp.data[idx], coords=t, dims=["time"])
 
 	return out

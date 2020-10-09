@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-fk_powerspec_4sc.py
+fk_power_spectrum_4sc.py
 
 @author : Louis RICHARD
 """
@@ -17,68 +17,68 @@ from ..pyrf.wavelet import wavelet
 
 
 def fk_powerspec_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f=200, df=None, w_width=1, f_range=None):
-	"""
-	Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of 
-	mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to calculate the phase difference each 
-	spacecraft pair and determine 3D wave vector. A generalization of the method used in mms.fk_powerspectrum 
-	to four point measurements. 
+    """
+    Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of
+    mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to calculate the phase difference each
+    spacecraft pair and determine 3D wave vector. A generalization of the method used in mms.fk_powerspectrum
+    to four point measurements.
 
-	Parameters :
-		e : list of DataArray
-			Fields to apply 4SC cross-spectral analysis to. e.g., e or b fields 
-			(if multiple components only the first is used).
+    Parameters :
+        e : list of DataArray
+            Fields to apply 4SC cross-spectral analysis to. e.g., e or b fields
+            (if multiple components only the first is used).
 
-		r : list of DataArray
-			Positions of the four spacecraft
+        r : list of DataArray
+            Positions of the four spacecraft
 
-		b : list of DataArray
-			background magnetic field in the same coordinates as r. Used to determine the parallel and perpendicular 
-			wave numbers using 4SC average.
+        b : list of DataArray
+            background magnetic field in the same coordinates as r. Used to determine the parallel and perpendicular
+            wave numbers using 4SC average.
 
-		tints : list of str
-			Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time
-			interval for e and b. 
-		
-		cav : int
-			(Optional) Number of points in time series used to estimate phase. (default cav = 8)
+        tints : list of str
+            Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time
+            interval for e and b.
 
-		num_k : int
-			(Optional) Number of wave numbers used in spectrogram. (default num_k = 500)
+        cav : int
+            (Optional) Number of points in time series used to estimate phase. (default cav = 8)
 
-		df : float
-			(Optional) Linear spacing of frequencies (default log spacing).
+        num_k : int
+            (Optional) Number of wave numbers used in spectrogram. (default num_k = 500)
 
-		num_f : int
-			(Optional) Number of frequencies used in spectrogram. (default num_f = 200)
+        df : float
+            (Optional) Linear spacing of frequencies (default log spacing).
 
-		w_width : float
-			(Optional) Multiplier for Morlet wavelet width. (default w_width = 1)
+        num_f : int
+            (Optional) Number of frequencies used in spectrogram. (default num_f = 200)
 
-		f_range : list of float
-			(Optional) Frequency range for k-k plots. [minf maxf]
+        w_width : float
+            (Optional) Multiplier for Morlet wavelet width. (default w_width = 1)
 
-	returns :
-		out : Dataset
-			Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum 
-			value.
+        f_range : list of float
+            (Optional) Frequency range for k-k plots. [minf maxf]
 
-	Notes: 
-		Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur. 
+    returns :
+        out : Dataset
+            Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum
+            value.
 
-	Example:
-		>>> from pyrfu import mms
-		>>> power = mms.fk_powerspec_4sc(e_par, r_xyz, b_xyz, tints)
-		>>> power = mms.fk_powerspec_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, num_k=500, cav=4, w_width=2)
+    Notes:
+        Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur.
 
-	Example to plot:
-		>>> import matplotlib.pyplot as plt
-		>>> from pyrfu.plot import plot_spectr
-		>>> fig, ax = plt.subplots(1)
-		>>> ax, cax = plot_spectr(ax, power.kmagf, cscale="log", cmap="viridis")
-		>>> ax.set_xlabel("$|k|$ [m$^{-1}$]")
-		>>> ax.set_ylabel("$f$ [Hz]")
+    Example:
+        >>> from pyrfu import mms
+        >>> power = mms.fk_power_spectrum_4sc(e_par, r_xyz, b_xyz, tints)
+        >>> power = mms.fk_power_spectrum_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, num_k=500, cav=4, w_width=2)
 
-	"""
+    Example to plot:
+        >>> import matplotlib.pyplot as plt
+        >>> from pyrfu.plot import plot_spectr
+        >>> fig, ax = plt.subplots(1)
+        >>> ax, cax = plot_spectr(ax, power.kmagf, cscale="log", cmap="viridis")
+        >>> ax.set_xlabel("$|k|$ [m$^{-1}$]")
+        >>> ax.set_ylabel("$f$ [Hz]")
+
+    """
 
 	if (e is None) or (r is None) or (b is None) or (tints is None):
 		raise ValueError("fk_powerspec4SC requires at least 4 arguments")

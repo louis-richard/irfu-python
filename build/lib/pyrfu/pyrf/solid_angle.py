@@ -13,17 +13,21 @@ def solid_angle(x=None, y=None, z=None):
     """
     Calculates the solid angle of three vectors making up a triangle in a unit sphere with the sign taken into account
 
-    Parameters :
-        x : array
-            First vector
-        y : array
-            Second vector
-        z : array
-            Third vector
+    Parameters
+    ----------
+    x : numpy.ndarray
+        First vector
 
-    Return :
-        angle : float
-            Solid angle
+    y : numpy.ndarray
+        Second vector
+
+    z : numpy.ndarray
+        Third vector
+
+    Returns
+    -------
+    angle : float
+        Solid angle
 
     """
 

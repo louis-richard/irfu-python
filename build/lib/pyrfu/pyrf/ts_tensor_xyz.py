@@ -14,20 +14,21 @@ def ts_tensor_xyz(t=None, data=None, attrs=None):
 	"""
 	Create a time series containing a 2nd order tensor
 
-	Parameters :
-		t : np.ndarray
-			Array of times
+	Parameters
+	----------
+	t : numpy.ndarray
+		Array of times
 
-		data : np.ndarray
-			Data corresponding to the time list
+	data : numpy.ndarray
+		Data corresponding to the time list
 
-	Options :
-		attrs : dict
-			Attributes of the data list
+	attrs : dict
+		Attributes of the data list
 
-	Returns :
-		out : DataArray
-			2nd order tensor time series
+	Returns
+	-------
+	out : xarray.DataArray
+		2nd order tensor time series
 
 	"""
 

@@ -15,37 +15,39 @@ def medfilt(inp=None, n_pts=11):
 	"""
 	Applies a median filter over npts points to inp
 
-	Parameters :
-		inp : DataArray
-			Time series of the input variable
+	Parameters
+	----------
+	inp : xarray.DataArray
+		Time series of the input variable
 
-		npts : float/int
-			Number of points of median filter
+	n_pts : float or int
+		Number of points of median filter
 
-	Returns :
-		out : DataArry
-			Time series of the median filtered input variable
-	
-	Example :
-		>>> import numpy
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Spacecraft indices
-		>>> mms_list = numpy.arange(1,5)
-		>>> # Load magnetic field and electric field
-		>>> r_mms, b_mms = [[] * 4 for _ in range(2)]
-		>>> for mms_id in range(1, 5):
-		>>> 	r_mms.append(mms.get_data("R_gse", tint, mms_id))
-		>>> 	b_mms.append(mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id))
-		>>>
-		>>> # Compute current density, etc
-		>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
-		>>> # Get J sampling frequency
-		>>> fs = pyrf.calc_fs(j_xyz)
-		>>> # Median filter over 1s
-		>>> j_xyz = pyrf.medfilt(j_xyz,fs)
+	Returns
+	-------
+	out : xarray.DataArry
+		Time series of the median filtered input variable
 
+	Example
+	-------
+	>>> import numpy
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft indices
+	>>> mms_list = numpy.arange(1,5)
+	>>> # Load magnetic field and electric field
+	>>> r_mms, b_mms = [[] * 4 for _ in range(2)]
+	>>> for mms_id in range(1, 5):
+	>>> 	r_mms.append(mms.get_data("R_gse", tint, mms_id))
+	>>> 	b_mms.append(mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id))
+	>>>
+	>>> # Compute current density, etc
+	>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
+	>>> # Get J sampling frequency
+	>>> fs = pyrf.calc_fs(j_xyz)
+	>>> # Median filter over 1s
+	>>> j_xyz = pyrf.medfilt(j_xyz,fs)
 
 	"""
 

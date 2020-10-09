@@ -13,21 +13,22 @@ import xarray as xr
 def histogram(inp=None, bins=100, normed=True):
     """
     Computes 1D histogram of the inp with bins bins
-    
-    Parameters :
-        inp : DataArray
-            Time series of the input scalar variable
-        
-    Options :
-        bins : int
-            Number of bins
-        
-        normed : bool
-            Normalize the PDF
-        
-    Returns :
-        out : DataArray
-            1D distribution of the input time series
+
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Time series of the input scalar variable
+
+    bins : int
+        Number of bins
+
+    normed : bool
+        Normalize the PDF
+
+    Returns
+    -------
+    out : xarray.DataArray
+        1D distribution of the input time series
             
     
     """

@@ -12,33 +12,37 @@ from astropy import constants
 from ..pyrf.plasma_calc import plasma_calc
 
 
-def whistler_b2e(b2=None, freq=None, thetak=None, b_mag=None, n_e=None):
+def whistler_b2e(b2=None, freq=None, theta_k=None, b_mag=None, n_e=None):
 	"""
-	Computes electric field E power as a function of frequency for whistler waves using B power and cold plasma theory
+	Computes electric field power as a function of frequency for whistler waves using magnetic field power and cold
+	plasma theory
 
-	Parameters :
-		B2 : DataArray
-			Time series of the power of whistler magnetic field in nT^2 Hz^{-1}
+	Parameters
+	----------
+	b2 : xarray.DataArray
+		Time series of the power of whistler magnetic field in nT^2 Hz^{-1}
 
-		freq : array
-			frequencies in Hz corresponding B2
+	freq : array
+		frequencies in Hz corresponding B2
 
-		thetak : float
-			wave-normal angle of whistler waves in radians
+	theta_k : float
+		wave-normal angle of whistler waves in radians
 
-		Bmag : DataArray
-			Time series of the magnitude of the magnetic field in nT
+	b_mag : xarray.DataArray
+		Time series of the magnitude of the magnetic field in nT
 
-		ne : DataArray
-			Time series of the electron number density in cm^{-3}
+	n_e : xarray.DataArray
+		Time series of the electron number density in cm^{-3}
 
-	Returns :
-		E2 : DataArray
-			Time series of the electric field power
+	Returns
+	-------
+	e2 : xarray.DataArray
+		Time series of the electric field power
 
-	Example :
-		>>> from pyrfu import mms
-		>>> Epower = mms.whistler_b2e(b_power, freq, theta_k, b_mag, n_e)
+	Example
+	-------
+	>>> from pyrfu import mms
+	>>> e_power = mms.whistler_b2e(b_power, freq, theta_k, b_mag, n_e)
 	"""
 
 	# Calculate plasma parameters
@@ -58,15 +62,15 @@ def whistler_b2e(b2=None, freq=None, thetak=None, b_mag=None, n_e=None):
 	d = 0.5 * (r - l)
 	s = 0.5 * (r + l)
 
-	n2 = r * l * np.sin(thetak) ** 2
-	n2 += p * s * (1 + np.cos(thetak) ** 2)
-	n2 -= np.sqrt((r * l - p * s) ** 2 * np.sin(thetak) ** 4 + 4 * (p ** 2) * (d ** 2) * np.cos(thetak) ** 2)
-	n2 /= (2 * (s * np.sin(thetak) ** 2 + p * np.cos(thetak) ** 2))
+	n2 = r * l * np.sin(theta_k) ** 2
+	n2 += p * s * (1 + np.cos(theta_k) ** 2)
+	n2 -= np.sqrt((r * l - p * s) ** 2 * np.sin(theta_k) ** 4 + 4 * (p ** 2) * (d ** 2) * np.cos(theta_k) ** 2)
+	n2 /= (2 * (s * np.sin(theta_k) ** 2 + p * np.cos(theta_k) ** 2))
 
-	e_temp1 = (p - n2 * np.sin(thetak) ** 2) ** 2. * ((d / (s - n2)) ** 2 + 1) + (
-				n2 * np.cos(thetak) * np.sin(thetak)) ** 2
+	e_temp1 = (p - n2 * np.sin(theta_k) ** 2) ** 2. * ((d / (s - n2)) ** 2 + 1) + (
+			n2 * np.cos(theta_k) * np.sin(theta_k)) ** 2
 
-	e_temp2 = (d / (s - n2)) ** 2 * (p - n2 * np.sin(thetak) ** 2) ** 2 + p ** 2 * np.cos(thetak) ** 2
+	e_temp2 = (d / (s - n2)) ** 2 * (p - n2 * np.sin(theta_k) ** 2) ** 2 + p ** 2 * np.cos(theta_k) ** 2
 
 	e2 = (c ** 2 / n2) * e_temp1 / e_temp2 * b2 * 1e-12
 

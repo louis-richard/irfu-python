@@ -16,36 +16,39 @@ def histogram2d(inp1=None, inp2=None, bins=100):
 	"""
 	Computes 2d histogram of inp2 vs inp1 with nbins number of bins
 
-	Parameters :
-		inp1 : DataArray
-			Time series of the x values
+	Parameters
+	----------
+	inp1 : xarray.DataArray
+		Time series of the x values
 
-		inp2 : DataArray
-			Time series of the y values
-		
-		nbins : int
-			Number of bins
+	inp2 : xarray.DataArray
+		Time series of the y values
 
-	Returns :
-		out : DataArray
-			2D map of the density of inp2 vs inp1
+	bins : int
+		Number of bins
 
-	Example :
-		>>> from pyrfu import mms, pyrf
-		>>> # Time interval
-		>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-		>>> # Spacecraft indices
-		>>> mms_id = 1
-		>>> # Load magnetic field and electric field
-		>>> b = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-		>>> r = mms.get_data("R_gse", tint, mms_id)
-		>>> # Compute current density, etc
-		>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r, b)
-		>>> # Compute magnitude of B and J
-		>>> b_mag = pyrf.norm(b_xyz)
-		>>> j_mag = pyrf.norm(j_xyz)
-		>>> # Histogram of |J| vs |B|
-		>>> h2d_b_j = pyrf.histogram2d(b_mag, j_mag)
+	Returns
+	-------
+	out : xarray.DataArray
+		2D map of the density of inp2 vs inp1
+
+	Example
+	-------
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft indices
+	>>> mms_id = 1
+	>>> # Load magnetic field and electric field
+	>>> b = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+	>>> r = mms.get_data("R_gse", tint, mms_id)
+	>>> # Compute current density, etc
+	>>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r, b)
+	>>> # Compute magnitude of B and J
+	>>> b_mag = pyrf.norm(b_xyz)
+	>>> j_mag = pyrf.norm(j_xyz)
+	>>> # Histogram of |J| vs |B|
+	>>> h2d_b_j = pyrf.histogram2d(b_mag, j_mag)
 
 	"""
 
