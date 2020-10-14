@@ -48,8 +48,8 @@ def split_vs(var_str=""):
 					   "energyi", "bnergye", "epar", "sdev12", "sdev34", "flux-amb-pm2", "padlowene", "padmidene",
 					   "padhighene", "bpsd", "epsd"]
 
-	all_params_vectors = ["r", "sti", "vi", "errvi", "partvi", "ste", "ve", "errve", "partve", "b", "e", "e2d", "es12",
-					   "es34"]
+	all_params_vectors = ["r", "sti", "vi", "errvi", "partvi", "ste", "ve", "errve", "partve", "qi", "errqi", "qe",
+						  "errqe", "b", "e", "e2d", "es12", "es34"]
 
 	all_params_tensors = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te", "partte"]
 
