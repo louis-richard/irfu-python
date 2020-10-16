@@ -46,4 +46,10 @@ from .get_pitchangle_dist import get_pitchangle_dist
 from .make_model_vdf import make_model_vdf
 from .psd_rebin import psd_rebin
 
-
+from .load_ancillary import load_ancillary
+from .vdf_omni import vdf_omni
+from .spectr_to_dataset import spectr_to_dataset
+from .vdf_to_deflux import vdf_to_deflux
+from .vdf_to_dpflux import vdf_to_dpflux
+from .dpflux_to_vdf import dpflux_to_vdf
+from .deflux_to_vdf import deflux_to_vdf

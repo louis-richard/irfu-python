@@ -19,7 +19,7 @@ from .cross import cross
 
 def c_4_grad(r_list=None, b_list=None, method="grad"):
 	"""
-	Calculate gradient of physical field using 4 spacecraft technique. 
+	Calculate gradient of physical field using 4 spacecraft technique in [1]_ [2]_.
 	
 	Parameters
 	----------
@@ -52,9 +52,15 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 	>>> r_mms = [mms.get_data("R_gse", tint, ic) for ic in range(1, 5)]
 	>>> grad_b = pyrf.c_4_grad(r_mms, b_mms, "grad")
 
-	Reference
-	---------
-	ISSI book  Eq. 14.16, 14.17 p. 353
+	References
+	----------
+	.. [1]	Dunlop, M. W., A. Balogh, K.-H. Glassmeier, and P. Robert (2002a), Four-point Cluster application of	\
+			magnetic field analysis tools: The Curl- ometer, J. Geophys. Res., 107(A11), 1384, 						\
+			doi : https://doi.org/10.1029/2001JA005088.
+
+	.. [2]	Robert, P., et al. (1998), Accuracy of current determination, in Analysis Methods for Multi-Spacecraft \
+			Data, edited by G. Paschmann and P. W. Daly, pp. 395–418, Int. Space Sci. Inst., Bern.
+			url : http://www.issibern.ch/forads/sr-001-16.pdf
 
 	See also
 	--------

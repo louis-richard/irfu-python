@@ -34,7 +34,10 @@ def dist_append(inp0=None, inp1=None):
 
 	"""
 
-	if inp0 is None or inp1 is None:
+	if inp0 is None:
+		return inp1
+
+	if inp1 is None:
 		raise ValueError("dist_append requires at least two arguments")
 		
 	if not isinstance(inp0, xr.Dataset) or not isinstance(inp1, xr.Dataset):
@@ -77,10 +80,15 @@ def dist_append(inp0=None, inp1=None):
 	
 	# attributes
 	attrs = inp0.attrs
-	attrs.pop("esteptable")
 
-	attrs["delta_energy_minus"] = delta_energy_minus
-	attrs["delta_energy_plus"] = delta_energy_plus
+	if "esteptable" in attrs.keys():
+		attrs.pop("esteptable")
+
+	if "delta_energy_minus" in attrs.keys():
+		attrs["delta_energy_minus"] = delta_energy_minus
+
+	if "delta_energy_plus" in attrs.keys():
+		attrs["delta_energy_plus"] = delta_energy_plus
 
 	for k in attrs:
 		out.attrs[k] = attrs[k]

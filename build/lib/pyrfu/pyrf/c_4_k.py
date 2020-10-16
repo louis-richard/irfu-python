@@ -27,10 +27,6 @@ def c_4_k(r_list=None):
 	k_list : list of xarray.DataArray
 		Reciprocal vectors in barycentric coordinates
 
-	Reference
-	---------
-	ISSI book  Eq. 14.16, 14.17 p. 353
-
 	Note
 	----
 	The units of reciprocal vectors are the same as [1/r]

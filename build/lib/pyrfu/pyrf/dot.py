@@ -8,6 +8,7 @@ dot.py
 
 import xarray as xr
 import numpy as np
+import xarray
 
 from .resample import resample
 from .ts_scalar import ts_scalar

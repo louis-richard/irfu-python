@@ -613,13 +613,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 
 	for i, file in enumerate(files):
 		if vdf_flag:
-			temp = get_dist(file, cdf_name, tint)
-
-			if i == 0:
-				out = temp
-
-			else:
-				out = dist_append(out, temp)
+			out = dist_append(out, get_dist(file, cdf_name, tint))
 
 		else:
 			out = ts_append(out, get_ts(file, cdf_name, tint))

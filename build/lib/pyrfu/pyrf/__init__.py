@@ -72,3 +72,7 @@ from .poynting_flux import poynting_flux
 from .remove_repeated_points import remove_repeated_points
 from .solid_angle import solid_angle
 from .wave_fft import wave_fft
+
+from .pvi import pvi
+from .pvi_4sc import pvi_4sc
+from .pid_4sc import pid_4sc

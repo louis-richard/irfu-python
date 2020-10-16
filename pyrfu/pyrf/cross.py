@@ -8,6 +8,7 @@ cross.py
 
 import xarray as xr
 import numpy as np
+import xarray
 
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
