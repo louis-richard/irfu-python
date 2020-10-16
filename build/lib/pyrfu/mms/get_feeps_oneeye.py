@@ -96,5 +96,5 @@ def get_feeps_oneeye(tar_var="fluxe_brst_l2", e_id="bottom-4", tint=None, mms_id
     out.attrs["lev"] = var["lev"]
     out.attrs["mms_id"] = mms_id
     out.attrs["dtype"] = var["dtype"]
-
+    out.attrs["species"] = "{}s".format(var["dtype"])
     return out

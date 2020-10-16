@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.py
+deflux_to_vdf.py
 
 @author : Louis RICHARD
 """
@@ -44,7 +44,7 @@ def deflux_to_vdf(deflux=None):
     else:
         raise ValueError("Invalid specie")
 
-    if deflux.attrs["UNITS"].lower() == "keV/(cm^2 s sr keV)":
+    if deflux.attrs["UNITS"] == "keV/(cm^2 s sr keV)":
         tmp_data = deflux.data.data / 1e12 * 0.53707 * mm ** 2
     else:
         raise ValueError("Invalid unit")

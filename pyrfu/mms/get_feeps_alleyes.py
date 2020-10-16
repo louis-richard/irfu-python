@@ -38,4 +38,6 @@ def get_feeps_alleyes(tar_var="fluxe_brst_l2", tint=None, mms_id=1):
 
 	out.attrs = var
 
+	out.attrs["species"] = "{}s".format(var["dtype"])
+
 	return out

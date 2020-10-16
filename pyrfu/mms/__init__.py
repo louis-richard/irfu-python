@@ -42,7 +42,7 @@ from .calculate_epsilon import calculate_epsilon
 from .dft_time_shift import dft_time_shift
 from .estimate_phase_speed import estimate_phase_speed
 from .fft_bandpass import fft_bandpass
-from .get_pitchangle_dist import get_pitchangle_dist
+from .get_pitch_angle_dist import get_pitch_angle_dist
 from .make_model_vdf import make_model_vdf
 from .psd_rebin import psd_rebin
 

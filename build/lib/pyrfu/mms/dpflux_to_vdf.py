@@ -44,7 +44,7 @@ def dpflux_to_vdf(dpflux=None):
     else:
         raise ValueError("Invalid specie")
 
-    if dpflux.attrs["UNITS"].lower() == "1/(cm^2 s sr keV)":
+    if dpflux.attrs["UNITS"] == "1/(cm^2 s sr keV)":
         tmp_data = dpflux.data.data / 1e12 * 0.53707 * mm ** 2
     else:
         raise ValueError("Invalid unit")

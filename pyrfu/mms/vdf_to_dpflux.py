@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.py
+vdf_to_dpflux.py
 
 @author : Louis RICHARD
 """

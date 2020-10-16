@@ -32,7 +32,7 @@ pyrfu/mms/get_feeps_alleyes.py
 pyrfu/mms/get_feeps_energy_table.py
 pyrfu/mms/get_feeps_omni.py
 pyrfu/mms/get_feeps_oneeye.py
-pyrfu/mms/get_pitchangle_dist.py
+pyrfu/mms/get_pitch_angle_dist.py
 pyrfu/mms/get_ts.py
 pyrfu/mms/lh_wave_analysis.py
 pyrfu/mms/list_files.py

@@ -91,4 +91,6 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None):
 
     out = xr.DataArray(flux_omni[:], coords=[time, energies], dims=["time", "energy"])
 
+
+
     return out
