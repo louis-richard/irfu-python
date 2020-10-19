@@ -16,27 +16,31 @@ def rotate_tensor(*args):
 	"""
 	Rotates pressure or temperature tensor into another coordinate system
 
-	Parameters :
-	PeIJ/Peall : DataArray
+	Parameters
+	----------
+	PeIJ/Peall : xarray.DataArray
 		Time series of either separated terms of the tensor or the complete tensor.
 		If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
+
 	flag : str
 		Flag of the target coordinates system :
-			Field-aligned coordinates "fac", requires background magnetic field Bback, optional
-			flag "pp" P_perp1 = P_perp2 or "qq" P_perp1 and P_perp2 are most unequal, sets P23 to zero.
+			* "fac" : Field-aligned coordinates, requires background magnetic field Bback, optional flag "pp"
+			P_perp1 = P_perp2 or "qq" P_perp1 and P_perp2 are most unequal, sets P23 to zero.
 
-			Arbitrary coordinate system "rot", requires new x-direction xnew, new y and z directions
-			ynew, znew (if not included y and z directions are orthogonal to xnew and closest to the
-			original y and z directions)
+			* "rot" : Arbitrary coordinate system, requires new x-direction xnew, new y and z directions ynew, znew
+			(if not included y and z directions are orthogonal to xnew and closest to the original y and z directions)
 
-			GSE coordinates "gse", requires MMS spacecraft number 1--4 MMSnum
+			* "gse" : GSE coordinates, requires MMS spacecraft number 1--4 MMSnum
 
-	Returns :
-	Pe : DataArray
+	Returns
+	-------
+	Pe : xarray.DataArray
 		Time series of the pressure or temperature tensor in field-aligned, user-defined, or GSE coordinates.
 		For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
 		For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
-	Example :
+
+	Example
+	-------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
@@ -48,6 +52,7 @@ def rotate_tensor(*args):
 	>>> # Compute ion temperature in field aligned coordinates
 	>>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 
+	TODO : change input
 	"""
 
 	nargin = len(args)
@@ -64,24 +69,6 @@ def rotate_tensor(*args):
 		else:
 			p_tensor = np.reshape(p_all.data, (p_all.shape[0], 3, 3))
 			p_tensor = ts_tensor_xyz(p_times, p_tensor)
-
-	elif isinstance(args[6], str):
-		rot_flag = args[6]
-		rot_flag_pos = 6
-		p_times = args[0].time.data
-		p_tensor = np.zeros((len(args[0].time.data), 3, 3))
-		p_tensor[:, 0, 0] = args[0].data
-		p_tensor[:, 1, 0] = args[1].data
-		p_tensor[:, 2, 0] = args[2].data
-		p_tensor[:, 0, 1] = args[1].data
-		p_tensor[:, 1, 1] = args[3].data
-		p_tensor[:, 2, 1] = args[4].data
-		p_tensor[:, 0, 2] = args[2].data
-		p_tensor[:, 1, 2] = args[4].data
-		p_tensor[:, 2, 2] = args[5].data
-
-		p_tensor = ts_tensor_xyz(p_times, p_tensor)
-
 	else:
 		raise SystemError("critical','Something is wrong with the input.")
 

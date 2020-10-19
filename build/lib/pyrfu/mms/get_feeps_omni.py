@@ -15,7 +15,30 @@ from .get_feeps_oneeye import get_feeps_oneeye
 
 
 # noinspection PyUnboundLocalVariable
-def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None):
+def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True):
+    """
+    Computes omni directional energy spectrum of the target data unit for the target specie over the target energy range
+
+    Parameters
+    ----------
+    tar_var : str
+        Key of the target variable like {data_unit}_{specie}_{data_rate}_{data_lvl}
+
+    tint : list of str
+        Time interval
+
+    mms_id : int or float or str
+        Index of the spacecraft
+
+    verbose : bool
+        Set to True to follow the loading. Default is True
+
+    Returns
+    --------
+    out : xarray.DataArray
+        Energy spectrum of the target data unit for the target specie in omni direction
+
+    """
 
     data_units = tar_var.split("_")[0]
 
@@ -63,9 +86,10 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None):
 
     for bsen in bot_sensors:
         bot = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id,
-                               f"bottom-{bsen:d}", tint)
+                               f"bottom-{bsen:d}", tint, verbose)
 
-        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id, f"bottom-{bsen:d}", tint)
+        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id, f"bottom-{bsen:d}", tint,
+                                verbose)
 
         mask.data = np.tile(mask.data[:, 0], (mask.shape[1], 1)).T
 
@@ -90,7 +114,5 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None):
     time = top_it[top_sensors[0]]
 
     out = xr.DataArray(flux_omni[:], coords=[time, energies], dims=["time", "energy"])
-
-
 
     return out

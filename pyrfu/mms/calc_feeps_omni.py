@@ -18,13 +18,15 @@ def calc_feeps_omni(inp_dataset):
 	"""
 	Computes the omni-directional FEEPS spectrogram from a Dataset that contains the spectrogram of all eyes.
 
-	Parameters:
-		inp_dataset : Dataset
-			Dataset with energy spectrum of every eyes
+	Parameters
+	----------
+	inp_dataset : xarray.Dataset
+		Dataset with energy spectrum of every eyes
 
-	Returns:
-		out : DataArray
-			OMNI energy spectrum from the input
+	Returns
+	-------
+	out : xarray.DataArray
+		OMNI energy spectrum from the input
 
 	"""
 

@@ -18,6 +18,20 @@ from .get_feeps_active_eyes import get_feeps_active_eyes
 def feeps_pitch_angles(inp_dataset=None, b_bcs=None):
 	"""
 	Computes the FEEPS pitch angles for each telescope from magnetic field data.
+
+	Parameters
+	----------
+	inp_dataset : xarray.Dataset
+		Dataset of the time series of the energy spectrum for each eye of FEEPS telescopes
+
+	b_bcs : xarray.DataArray
+		Time series of the magnetic in spacecraft coordinates system
+
+	Returns
+	-------
+	out : xarray.DataArray
+		Time series of the pitch angles
+
 	"""
 	var = inp_dataset.attrs
 	mms_id = var["mmsId"]

@@ -33,7 +33,7 @@ def get_vol_ten(r=None, t=None):
 
 def c_4_v(r=None, x=None):
 	"""
-	Calculate velocity or time shift of discontinuity.
+	Calculate velocity or time shift of discontinuity as in [1]_.
 
 	Parameters
 	----------
@@ -46,6 +46,11 @@ def c_4_v(r=None, x=None):
 	----------
 	out : numpy.ndarray
 		Discontinuity velocity or time shift with respect to mms1
+
+	References
+	----------
+	.. [1]	Vogt, J., Haaland, S., and Paschmann, G. (2011) Accuracy of multi-point boundary crossing time analysis,   \
+			Ann. Geophys., 29, 2239-2252, doi : https://doi.org/10.5194/angeo-29-2239-2011
 
 	"""
 	if isinstance(x, np.ndarray) and x.dtype == np.datetime64:

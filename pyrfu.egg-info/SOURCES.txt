@@ -12,6 +12,7 @@ pyrfu/mms/__init__.py
 pyrfu/mms/calc_feeps_omni.py
 pyrfu/mms/calc_feeps_pad.py
 pyrfu/mms/calculate_epsilon.py
+pyrfu/mms/correct_edp_probe_timing.py
 pyrfu/mms/db_get_ts.py
 pyrfu/mms/deflux_to_vdf.py
 pyrfu/mms/dft_time_shift.py
@@ -39,6 +40,7 @@ pyrfu/mms/list_files.py
 pyrfu/mms/load_ancillary.py
 pyrfu/mms/make_model_vdf.py
 pyrfu/mms/mms_config.py
+pyrfu/mms/probe_align_times.py
 pyrfu/mms/psd_moments.py
 pyrfu/mms/psd_rebin.py
 pyrfu/mms/read_feeps_sector_masks_csv.py
@@ -98,6 +100,7 @@ pyrfu/pyrf/corr_deriv.py
 pyrfu/pyrf/cross.py
 pyrfu/pyrf/date_str.py
 pyrfu/pyrf/dec_par_perp.py
+pyrfu/pyrf/disp_surf_calc.py
 pyrfu/pyrf/dist_append.py
 pyrfu/pyrf/dot.py
 pyrfu/pyrf/dynamic_press.py
@@ -109,6 +112,7 @@ pyrfu/pyrf/end.py
 pyrfu/pyrf/extend_tint.py
 pyrfu/pyrf/filt.py
 pyrfu/pyrf/find_closest.py
+pyrfu/pyrf/generic_minimum_residue_analysis.py
 pyrfu/pyrf/gradient.py
 pyrfu/pyrf/histogram.py
 pyrfu/pyrf/histogram2d.py

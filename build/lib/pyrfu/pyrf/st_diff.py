@@ -42,13 +42,13 @@ def st_diff(r_mms=None, b_mms=None, lmn=None):
 
     References
     ----------
-    .. [1]  Shi, Q. Q., Shen, C., Pu, Z. Y., Dunlop, M. W., Zong, Q. G., Zhang, H., et al. (2005). Dimensional         \
-            analysis of observed structures using multipoint magnetic field measurements: Application to Cluster.      \
-            Geophysical Research Letters, 32, L12105. https://doi.org/10.1029/2005GL022454
+    .. [1]  Shi, Q. Q., Shen, C., Pu, Z. Y., Dunlop, M. W., Zong, Q. G., Zhang, H., et al. (2005), Dimensional analysis
+        of observed structures using multipoint magnetic field measurements: Application to Cluster. Geophysical
+        Research Letters, 32, L12105. doi : https://doi.org/10.1029/2005GL022454.
 
-    .. [2]  Shi, Q. Q., Shen, C., Dunlop, M. W., Pu, Z. Y., Zong, Q. G., Liu, Z. X., et al. (2006). Motion of observed \
-            structures calculated from multi‐point magnetic field measurements: Application to Cluster. Geophysical    \
-            Research Letters, 33, L08109. https://doi.org/10.1029/2005GL025073
+    .. [2]  Shi, Q. Q., Shen, C., Dunlop, M. W., Pu, Z. Y., Zong, Q. G., Liu, Z. X., et al. (2006), Motion of observed
+        structures calculated from multi‐point magnetic field measurements: Application to Cluster. Geophysical
+        Research Letters, 33, L08109. doi : https://doi.org/10.1029/2005GL025073.
     """
 
     assert r_mms is not None and isinstance(r_mms, list) and len(r_mms) == 4 and isinstance(r_mms[0], xr.DataArray)

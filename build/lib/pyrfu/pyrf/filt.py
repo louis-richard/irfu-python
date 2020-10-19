@@ -18,7 +18,7 @@ def filt(inp=None, f_min=0, f_max=1, n=-1):
 
 	Parameters
 	----------
-	inp : DataArray
+	inp : xarray.DataArray
 		Time series of the variable to filter
 
 	f_min : float
@@ -32,7 +32,7 @@ def filt(inp=None, f_min=0, f_max=1, n=-1):
 
 	Returns
 	-------
-	out : DataArray
+	out : xarray.DataArray
 		Time series of the filtered signal
 
 	Example

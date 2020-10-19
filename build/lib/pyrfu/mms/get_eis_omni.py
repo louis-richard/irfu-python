@@ -10,23 +10,29 @@ from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbosity=True):
+def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
 	"""
 	Computes omni directional energy spectrum of the target data unit for the target specie over the target energy range
 
-	Parameters :
-		inp_str : str
-			Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}
+	Parameters
+	----------
+	inp_str : str
+		Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}
 
-		tint : list of str
-			Time interval
+	tint : list of str
+		Time interval
 
-		mms_id : int/float/str
-			Index of the spacecraft
+	mms_id : int or float or str
+		Index of the spacecraft
 
-	Returns :
-		out : DataArray
-			Energy spectrum of the target data unit for the target specie in omni direction
+	verbose : bool
+		Set to True to follow the loading. Default is True
+
+	Returns
+	--------
+	out : xarray.DataArray
+		Energy spectrum of the target data unit for the target specie in omni direction
+
 	"""
 
 	if not isinstance(mms_id, int):
@@ -108,7 +114,7 @@ def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbo
 	for i, cdfname in enumerate(cdf_names):
 		scope_key = f"t{i:d}"
 		
-		if verbosity:
+		if verbose:
 			print(f"Loading {cdfname}...")
 
 		out_dict[scope_key] = db_get_ts(dset_name, cdfname, tint)

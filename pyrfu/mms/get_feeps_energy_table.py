@@ -9,31 +9,33 @@ get_feeps_energy_table.py
 import numpy as np
 
 
-def get_feeps_energy_table(probe="1", eye="top", sensor_id=1):
+def get_feeps_energy_table(mms_id="1", eye="top", sensor_id=1):
     """
-    This function returns the energy table based on
-    each spacecraft and eye; based on the table from:
-       FlatFieldResults_V3.xlsx
-       
-    from Drew Turner, 1/19/2017
+    This function returns the energy table based on each spacecraft and eye; based on the table from :
+    FlatFieldResults_V3.xlsx
     
-    Parameters:
-        probe: str
-            probe #, e.g., "4" for MMS4
+    Parameters
+    ----------
+    mms_id: str
+        Spacecraft index e.g., "4" for MMS4
 
-        eye: str
-            sensor eye #
+    eye: str
+        Sensor eye #
 
-        sensor_id: int
-            sensor ID
-    Returns:
+    sensor_id: int
+        sensor ID
+    Returns
+    -------
+    out : list
         Energy table 
         
-    Notes:
-        BAD EYES are replaced by NaNs
-        - different original energy tables are used depending on if the sensor head is 6-8 (ions) or not (electrons)
-        Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
-        Ion Eyes: 6, 7, 8
+    Notes
+    -----
+    Bad eyes are replaced by NaNs.
+    Different original energy tables are used depending on if the sensor head is 6-8 (ions) or not (electrons) :
+        * Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
+        * Ion Eyes: 6, 7, 8
+
     """
 
     table = {"mms1-top": [14.0, 7.0, 16.0, 14.0, 14.0, 0.0, 0.0, 0.0, 14.0, 14.0, 17.0, 15.0],
@@ -52,4 +54,6 @@ def get_feeps_energy_table(probe="1", eye="top", sensor_id=1):
         mms_energies = [33.200000, 51.900000, 70.600000, 89.400000, 107.10000, 125.20000, 146.50000, 171.30000, 
             200.20000, 234.00000, 273.40000, 319.40000, 373.20000, 436.00000, 509.20000, 575.80000]
 
-    return [energy + table[f"mms{probe}-{eye}"][sensor_id - 1] for energy in mms_energies]
+    out = [energy + table[f"mms{mms_id}-{eye}"][sensor_id - 1] for energy in mms_energies]
+
+    return out

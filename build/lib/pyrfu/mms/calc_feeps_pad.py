@@ -20,22 +20,24 @@ def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
 	"""
 	Compute pitch angle distribution using FEEPS data.
 
-	Parameters :
-		inp_dset : Dataset
-			Energy spectrum of all eyes
+	Parameters
+	----------
+	inp_dataset : xarray.Dataset
+		Energy spectrum of all eyes.
 
-		Bbcs : DataArray
-			Time series of the magnetic field in spacecraft coordinates
+	b_bcs : xarray.DataArray
+		Time series of the magnetic field in spacecraft coordinates.
 
-		bin_size : float
-			Width of the pitch angles bins
+	bin_size : float
+		Width of the pitch angles bins.
 
-		energy : list of float
-			Energy range of particles
+	energy : list of float
+		Energy range of particles.
 
-	Returns :
-		pad : DataArray
-			Time series of the pitch angle distribution
+	Returns
+	-------
+	pad : xarray.DataArray
+		Time series of the pitch angle distribution
 			
 	"""
 	if energy is None:

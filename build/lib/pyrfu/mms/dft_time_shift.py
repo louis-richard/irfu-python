@@ -18,16 +18,18 @@ def dft_time_shift(inp=None, tau=None):
     Particularly useful when calculating the frequency-wavenumber spectrum of the mms' spin-plane or axial probes.
     See: mms.fk_power_spectrum.
 
-    Parameters :
-        inp : DataArray
-            Time series to be shifted (Note : Only tensor order 1)
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Time series to be shifted (Note : Only tensor order 1)
 
-        tau : float
-            Applied shift in seconds
+    tau : float
+        Applied shift in seconds
 
-    Returns :
-        out : DataArray
-            Time series of the shifted input.
+    Returns
+    -------
+    out : xarray.DataArray
+        Time series of the shifted input.
 
     """
 

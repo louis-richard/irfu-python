@@ -11,11 +11,11 @@ import xarray as xr
 
 def agyro_coeff(p=None):
     """
-    Computes agyrotropy coefficient (Swidak2016 https://doi.org/10.1002/2015GL066980)
+    Computes agyrotropy coefficient as in [1]_
 
     .. math::
 
-        Q = \\frac{P_12^2 + P_13^2 + P_23^2}{P_\\perp^2 + 2 P_\\perp P_\\parallel}
+        Q = \\frac{P_{12}^2 + P_{13}^2 + P_{23}^2}{P_\\perp^2 + 2 P_\\perp P_\\parallel}
 
 
     Parameters
@@ -42,6 +42,11 @@ def agyro_coeff(p=None):
     >>> p_xyzfac_e = mms.rotate_tensor(p_xyz_e,"fac",b_xyz,"pp")
     >>> # Compute agyrotropy coefficient
     >>> q_e = pyrf.agyro_coeff(p_xyzfac_e)
+
+    References
+    ----------
+    .. [1]  Swisdak, M. (2016), Quantifying gyrotropy in magnetic reconnection, Geophys. Res. Lett., 43, 43–49,
+            doi: https://doi.org/10.1002/2015GL066980.
 
     """
 

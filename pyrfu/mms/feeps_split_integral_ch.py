@@ -9,36 +9,39 @@ feeps_split_integral_ch.py
 import xarray as xr
 
 
-def feeps_split_integral_ch(inp_dset=None):
+def feeps_split_integral_ch(inp_dataset=None):
 	"""
-	This function splits the last integral channel from the FEEPS spectra,
-	creating 2 new DataArrays:
+	This function splits the last integral channel from the FEEPS spectra, creating 2 new DataArrays
 
-	Parameters:
-		inp_dset: xr.DataArray
-			Energetic particles energy spectrum from FEEPS
+	Parameters
+	----------
+	inp_dataset: xarray.DataArray
+		Energetic particles energy spectrum from FEEPS
 
-	Returns:
-		out: xr.DataArray
-			Energetic particles energy spectra with the integral channel removed
-		out_500kev: xr.DataArray
-			Integral channel that was removed
+	Returns
+	-------
+	out: xarray.DataArray
+		Energetic particles energy spectra with the integral channel removed
+		
+	out_500kev: xarray.DataArray
+		Integral channel that was removed
+		
 	"""
 
 	outdict, outdict_500kev = [{}, {}]
 
-	for k in inp_dset:
+	for k in inp_dataset:
 		try:
 			# Energy spectra with the integral channel removed
-			outdict[k] = inp_dset[k][:, :-1]
+			outdict[k] = inp_dataset[k][:, :-1]
 
 			# Integral channel that was removed
-			outdict_500kev[k] = inp_dset[k][:, -1]
+			outdict_500kev[k] = inp_dataset[k][:, -1]
 		except IndexError:
 			pass
 
-	out = xr.Dataset(outdict, attrs=inp_dset.attrs)
+	out = xr.Dataset(outdict, attrs=inp_dataset.attrs)
 
-	out_500kev = xr.Dataset(outdict_500kev, attrs=inp_dset.attrs)
+	out_500kev = xr.Dataset(outdict_500kev, attrs=inp_dataset.attrs)
 
 	return out, out_500kev

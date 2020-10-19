@@ -12,25 +12,29 @@ from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_allt(inp_str="Flux_extof_proton_srvy_l2", trange=None, mms_id=2, silent=False):
+def get_eis_allt(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
 	"""
 	Read energy spectrum of the selected specie in the selected energy range for all telescopes.
 	
-	Parameters :
-		inp_str : str
-			Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}
+	Parameters
+	----------
+	inp_str : str
+		Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}
 
-		trange : list of str
-			Time interval
-	
-		mms_id : int/float/str
-			Index of the spacecraft
+	tint : list of str
+		Time interval
 
-		silent : bool
+	mms_id : int or float or str
+		Index of the spacecraft
+
+	verbose : bool
+    	Set to True to follow the loading. Default is True
 	
-	Returns :
-		out : Dataset
-			Dataset containing the energy spectrum of the 6 telescopes of the Energy Ion Spectrometer
+	Returns
+	-------
+	out : xarray.Dataset
+		Dataset containing the energy spectrum of the 6 telescopes of the Energy Ion Spectrometer
+
 	"""
 	
 	# Convert mms_id to integer
@@ -80,7 +84,7 @@ def get_eis_allt(inp_str="Flux_extof_proton_srvy_l2", trange=None, mms_id=2, sil
 		raise ValueError("Invalid data type")
 	
 	# EIS includes the version of the files in the cdfname need to read it before.
-	files = list_files(trange, mms_id, var)
+	files = list_files(tint, mms_id, var)
 	
 	file_version = int(files[0].split("_")[-1][1])
 	var["version"] = file_version
@@ -100,10 +104,10 @@ def get_eis_allt(inp_str="Flux_extof_proton_srvy_l2", trange=None, mms_id=2, sil
 	for i, cdfname in enumerate(cdfnames):
 		scope_key = f"t{i:d}"
 	
-		if not silent:
+		if verbose:
 			print(f"Loading {cdfname}...")
 
-		outdict[scope_key] = db_get_ts(dset_name, cdfname, trange)
+		outdict[scope_key] = db_get_ts(dset_name, cdfname, tint)
 	
 	# Build Dataset
 	out = xr.Dataset(outdict, attrs=var)

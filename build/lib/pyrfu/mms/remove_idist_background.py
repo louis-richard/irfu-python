@@ -18,7 +18,8 @@ def remove_idist_background(n_i=None, v_gse_i=None, p_gse_i=None, n_bg_i=None, p
 	"""
 	Removes penetrating radiation background from ion moments
 
-	Parameters :
+	Parameters
+	----------
 	n_i : xarray.DataArray
 		Time series of the ion density
 

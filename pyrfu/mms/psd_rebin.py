@@ -48,7 +48,7 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
 
     Notes
     -----
-    I'm assuming no gaps in the burst data interval. If there is a gap use tlim before running. To be updated later.
+    I'm assuming no gaps in the burst data interval. If there is a gap use time_clip before running. To be updated later
     
     """
 

@@ -18,13 +18,15 @@ def feeps_spin_avg(inp_dset_omni=None):
     """
     This function will spin-average the omni-directional FEEPS energy spectra
     
-    Parameters:
-        inp_dset_omni : DataArray
-            Spectrogram of all eyes in OMNI
+    Parameters
+    ----------
+    inp_dset_omni : xarray.DataArray
+        Spectrogram of all eyes in OMNI
 
-    Returns:
-        out : DataArray
-            Spin-averaged OMNI energy spectrum
+    Returns
+    -------
+    out : xarray.DataArray
+        Spin-averaged OMNI energy spectrum
     """
 
     if inp_dset_omni is None:

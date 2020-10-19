@@ -31,7 +31,7 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 	b_bgd : xarray.DataArray
 		Time series of the background magnetic field
 
-	r : xarray.DataArray/numpy.ndarray/list
+	r : xarray.DataArray or numpy.ndarray or list
 		Position vector of spacecraft
 
 	Returns
@@ -55,7 +55,7 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 
 	Note
 	----
-	all input parameters must be in the same coordinate system
+	All input parameters must be in the same coordinate system
 	
 	"""
 	

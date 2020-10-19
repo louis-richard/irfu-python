@@ -23,6 +23,7 @@ def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, 
 	spacecraft pair and determine 3D wave vector. A generalization of the method used in mms.fk_powerspectrum
 	to four point measurements.
 
+
 	Parameters
 	----------
 	e : list of xarray.DataArray
@@ -58,27 +59,34 @@ def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, 
 	f_range : list of float
 		(Optional) Frequency range for k-k plots. [minf maxf]
 
+
 	Returns
 	-------
 	out : xarray.Dataset
 		Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum
 		value.
 
-	Notes:
+
+	Notes
+	-----
 	Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur.
 
-	Example:
+
+	Examples
+	--------
 	>>> from pyrfu import mms
 	>>> power = mms.fk_power_spectrum_4sc(e_par, r_xyz, b_xyz, tints)
 	>>> power = mms.fk_power_spectrum_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, num_k=500, cav=4, w_width=2)
 
-	Example to plot:
+	Example to plot
+	---------------
 	>>> import matplotlib.pyplot as plt
 	>>> from pyrfu.plot import plot_spectr
 	>>> fig, ax = plt.subplots(1)
 	>>> ax, cax = plot_spectr(ax, power.kmagf, cscale="log", cmap="viridis")
 	>>> ax.set_xlabel("$|k|$ [m$^{-1}$]")
 	>>> ax.set_ylabel("$f$ [Hz]")
+
 
 	"""
 

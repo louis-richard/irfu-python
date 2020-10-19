@@ -16,6 +16,26 @@ from ..pyrf.ts_skymap import ts_skymap
 
 
 def get_dist(file_path="", cdf_name="", tint=None):
+	"""
+	Read field named cdf_name in file and convert to velocity distribution function
+
+	Parameters
+	----------
+	file_path : str
+		Path of the cdf file
+
+	cdf_name : str
+		Name of the target variable in the cdf file
+
+	tint : list
+		Time interval
+
+	Returns
+	-------
+	out : xarray.Dataset
+		Time series of the velocity distribution function if the target specie in the selected time interval
+
+	"""
 
 	tmmode = cdf_name.split("_")[-1]
 	with pycdf.CDF(file_path) as f:

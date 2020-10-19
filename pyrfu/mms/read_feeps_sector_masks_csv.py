@@ -25,7 +25,9 @@ def read_feeps_sector_masks_csv(tint=None):
 
     Returns
     -------
-    Hash table containing the sectors to mask for each spacecraft and sensor ID
+    mask : dict
+        Hash table containing the sectors to mask for each spacecraft and sensor ID
+
     """
     masks = {}
 

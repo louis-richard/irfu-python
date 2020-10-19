@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.py
+dpflux_to_vdf.py
 
 @author : Louis RICHARD
 """
@@ -13,6 +13,7 @@ import xarray as xr
 from astropy import constants
 
 from .spectr_to_dataset import spectr_to_dataset
+
 
 def dpflux_to_vdf(dpflux=None):
     """

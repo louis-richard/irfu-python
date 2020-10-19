@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.py
+vdf_to_dpflux.py
 
 @author : Louis RICHARD
 """
@@ -20,12 +20,22 @@ def vdf_to_dpflux(vdf=None):
     Parameters
     ----------
     vdf : xarray.Dataset
-        Time series of the velocity distribution function. Units must be either s^3/cm^6 or s^3/m^6 or s^3/km^6.
+        Time series of the velocity distribution function with :
+            * time : Time samples
+            * data : 3D velocity distribution
+            * energy : Energy levels
+            * phi : Azimuthal angles
+            * theta : Elevation angle
 
     Returns
     -------
     dpflux : xarray.Dataset
-        Time series of the density particle flux in 1/(cm^2 s sr keV).
+        Time series of the 3D density particle flux with :
+            * time : Time samples
+            * data : 3D density particle flux
+            * energy : Energy levels
+            * phi : Azimuthal angles
+            * theta : Elevation angle
 
     """
 

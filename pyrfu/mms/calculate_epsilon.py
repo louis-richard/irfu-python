@@ -14,8 +14,7 @@ from ..pyrf import resample, ts_scalar
 
 
 def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
-    """
-    Calculate epsilon parameter using model distribution
+    """Calculate epsilon parameter using model distribution.
 
     Parameters
     ----------
@@ -26,10 +25,10 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
         Model particle distribution (skymap).
 
     n : xarray.DataArray
-        Time series of the number density
+        Time series of the number density.
 
     sc_pot : xarray.DataArray
-        Time series of the spacecraft potential
+        Time series of the spacecraft potential.
 
     Keyword Arguments
     -----------------
@@ -41,12 +40,8 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
     epsilon : xarray.DataArray
         Time series of the epsilon parameter.
 
-    See also
+    Examples
     --------
-    mms.make_model_vdf
-
-    Example
-    -------
     >>> from pyrfu import mms
     >>> eps = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, en_channel=[4, 32])
 

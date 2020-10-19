@@ -119,48 +119,48 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 	-------
 	res : xarray.Dataset
 		Dataset with :
-			t : xarray.DataArray
+			* t : xarray.DataArray
 				Time
 
-			f : xarray.DataArray
+			* f : xarray.DataArray
 				Frequencies
 
-			bb_xxyyzzss : xarray.DataArray
+			* bb_xxyyzzss : xarray.DataArray
 				db power spectrum with :
 					[...,0] -> x
 					[...,1] -> y
 					[...,2] -> z
 					[...,3] -> sum
 
-			ee_xxyyzzss : xarray.DataArray
+			* ee_xxyyzzss : xarray.DataArray
 				E power spectrum with :
-					[...,0] -> x
-					[...,1] -> y
-					[...,2] -> z
-					[...,3] -> sum
+					* [...,0] : x
+					* [...,1] : y
+					* [...,2] : z
+					* [...,3] : sum
 
-			ee_ss : xarray.DataArray
+			* ee_ss : xarray.DataArray
 				E power spectrum (xx+yy spacecraft coordinates, e.g. ISR2)
 
-			pf_xyz : xarray.DataArray
+			* pf_xyz : xarray.DataArray
 				Poynting flux (xyz)
 
-			pf_rtp : xarray.DataArray
+			* pf_rtp : xarray.DataArray
 				Poynting flux (r, theta, phi) [angles in degrees]
 
-			dop : xarray.DataArray
+			* dop : xarray.DataArray
 				3D degree of polarization
 
-			dop2d : xarray.DataArray
+			* dop2d : xarray.DataArray
 				2D degree of polarization in the polarization plane
 
-			planarity : xarray.DataArray
+			* planarity : xarray.DataArray
 				Planarity of polarization
 
-			ellipticity : xarray.DataArray
+			* ellipticity : xarray.DataArray
 				Ellipticity of polarization ellipse
 
-			k : xarray.DataArray
+			* k : xarray.DataArray
 				k-vector (theta, phi FAC) [angles in degrees]
 
 	

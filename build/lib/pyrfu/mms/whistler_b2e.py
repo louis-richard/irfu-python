@@ -22,7 +22,7 @@ def whistler_b2e(b2=None, freq=None, theta_k=None, b_mag=None, n_e=None):
 	b2 : xarray.DataArray
 		Time series of the power of whistler magnetic field in nT^2 Hz^{-1}
 
-	freq : array
+	freq : numpy.ndarray
 		frequencies in Hz corresponding B2
 
 	theta_k : float
@@ -43,6 +43,7 @@ def whistler_b2e(b2=None, freq=None, theta_k=None, b_mag=None, n_e=None):
 	-------
 	>>> from pyrfu import mms
 	>>> e_power = mms.whistler_b2e(b_power, freq, theta_k, b_mag, n_e)
+
 	"""
 
 	# Calculate plasma parameters

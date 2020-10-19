@@ -34,9 +34,9 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
 
     meanorsum : str
         Method :
-        - mean : to fill
-        - sum : to fill
-        - sum_weighted : to fill
+            * mean : to fill
+            * sum : to fill
+            * sum_weighted : to fill
 
     Returns
     -------

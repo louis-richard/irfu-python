@@ -14,30 +14,48 @@ def get_feeps_oneeye(tar_var="fluxe_brst_l2", e_id="bottom-4", tint=None, mms_id
     """
     Load energy spectrum all the target eye
 
-    Parameters :
-        tar_var : str
-            target variable "{data_units}{specie}_{data_rate}_{level}"
-                data_units : 
-                    flux -> intensity (1/cm sr)
-                    count -> counts (-)
-                    CPS -> counts per second (1/s)
-                specie : 
-                    i -> ion
-                    e -> electron
-                data_rate : brst/srvy
-                level : l1/l1b/l2/l3??
+    Parameters
+    ----------
+    tar_var : str
+        target variable "{data_units}{specie}_{data_rate}_{level}" :
+            * data_units :
+                * flux : intensity (1/cm sr)
+                * count : counts (-)
+                * CPS : counts per second (1/s)
 
-        e_id : str
-            index of the eye "{deck}-{id}"
-                deck : top/bottom
-                id : see get_feeps_active_eyes
+            * specie :
+                * i : ion
+                * e : electron
 
-        tint : list of str
-            Time interval
+            * data_rate :
+                * brst
+                * srvy
 
-        mms_id : int/str
-            Index of the spacecraft
-        
+            * level :
+                * l1
+                * l1b
+                * l2
+                * l3 ??
+
+    e_id : str
+        index of the eye "{deck}-{id}" :
+            * deck : top/bottom
+            * id : see get_feeps_active_eyes
+
+    tint : list of str
+        Time interval
+
+    mms_id : int or str
+        Index of the spacecraft
+
+    verbose : bool
+        Set to True to follow the loading. Default is True
+
+    Returns
+    -------
+    out : xarray.DataArray
+        Energy spectrum of the target eye
+
     """
 
     if tint is None:

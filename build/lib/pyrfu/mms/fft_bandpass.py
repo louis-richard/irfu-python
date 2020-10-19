@@ -14,7 +14,7 @@ from ..pyrf import calc_fs, ts_scalar, ts_vec_xyz
 
 def fft_bandpass(inp=None, f_min=None, f_max=None):
     """
-    Perform simple bandpass using FFT - returns fields between with fmin < f < fmax
+    Perform simple bandpass using FFT - returns fields between with f_min < f < f_max
 
     Parameters
     ----------
@@ -22,10 +22,10 @@ def fft_bandpass(inp=None, f_min=None, f_max=None):
         Time series to be bandpassed filtered.
 
     f_min : float or int
-        Minimum frequency of filter, f < fmin are removed.
+        Minimum frequency of filter, f < f_min are removed.
 
     f_max : float or int
-        Maximum frequency of filter, f > fmin are removed.
+        Maximum frequency of filter, f > f_min are removed.
 
     Returns
     -------

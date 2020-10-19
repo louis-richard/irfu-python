@@ -22,8 +22,8 @@ def dynamic_press(n=None, v=None, s="i"):
 	v : xarray.DataArray
 		Time series of the bulk velocity of the specie
 
-	s : {"i", "e"}, optionnal
-		Specie. default "i"
+	s : {"i", "e"}
+		(Optionnal) Specie. default "i"
 
 	Returns
 	-------

@@ -14,7 +14,7 @@ from .cross import cross
 
 def c_4_j(r_list=None, b_list=None):
 	"""
-	Calculate current density :math:`\\mathbf{J}` from using 4 spacecraft technique [1]_, the divergence of the magnetic
+	Calculate current density :math:`\\mathbf{J}` from using 4 spacecraft technique [4]_, the divergence of the magnetic
 	field :math:`\\nabla . \\mathbf{B}`, magnetic field at the center of mass of the tetrahedron,
 	:math:`\\mathbf{J}\\times\\mathbf{B}` force, part of the divergence of stress associated with curvature
 	:math:`\\nabla.\\mathbf{T}_{shear}` and gradient of the magnetic pressure :math:`\\nabla P_b`.
@@ -31,7 +31,7 @@ def c_4_j(r_list=None, b_list=None):
 		\\nabla P_b = \\nabla \\frac{B^2}{2\\mu_0}
 
 	The divergence of the magnetic field is current density units as it shows the error on the estimation of the
-	current density [2]_
+	current density [5]_
 	
 	Parameters
 	----------
@@ -77,19 +77,17 @@ def c_4_j(r_list=None, b_list=None):
 
 	References
 	----------
-	.. [1]	Dunlop, M. W., A. Balogh, K.-H. Glassmeier, and P. Robert (2002a), Four-point Cluster application of	\
+	.. [4]	Dunlop, M. W., A. Balogh, K.-H. Glassmeier, and P. Robert (2002a), Four-point Cluster application of	\
 			magnetic field analysis tools: The Curl- ometer, J. Geophys. Res., 107(A11), 1384, 						\
 			doi : https://doi.org/10.1029/2001JA005088.
 
-	.. [2]	Robert, P., et al. (1998), Accuracy of current determination, in Analysis Methods for Multi-Spacecraft \
+	.. [5]	Robert, P., et al. (1998), Accuracy of current determination, in Analysis Methods for Multi-Spacecraft \
 			Data, edited by G. Paschmann and P. W. Daly, pp. 395–418, Int. Space Sci. Inst., Bern.
 			url : http://www.issibern.ch/forads/sr-001-16.pdf
 
 	See also
 	--------
 	c_4_k, c_4_grad
-
-
 
 	"""
 

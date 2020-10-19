@@ -19,24 +19,27 @@ def feeps_remove_sun(inp_dset=None):
 	"""
 	Removes the sunlight contamination from FEEPS data
 
-	Parameters :
-		inp_dset : Dataset
-			Dataset of energy spectrum of all eyes (see get_feeps_alleyes)
+	Parameters
+	----------
+	inp_dset : xarray.Dataset
+		Dataset of energy spectrum of all eyes (see mms.get_feeps_alleyes)
 
-	Returns :
-		out : Dataset
-			Dataset of cleaned energy spectrum of all eyes 
+	Returns
+	-------
+	out : xarray.Dataset
+		Dataset of cleaned energy spectrum of all eyes
 
-	Example :
-		>>> from pyrfu import mms
-		>>> # Define time interval
-		>>> tint = ["2017-07-18T13:04:00.000", "2017-07-18T13:07:00.000"]
-		>>> # Spacecraft index
-		>>> mms_id = 2
-		>>> # Load data from FEEPS
-		>>> cps_i = mms.get_feeps_alleyes("CPSi_brst_l2", tint, mms_id)
-		>>> cps_i_clean = mms.feeps_split_integral_ch(cps_i)
-		>>> cps_i_clean_sun_removed = mms.feeps_remove_sun(cps_i_clean)
+	Example
+	-------
+	>>> from pyrfu import mms
+	>>> # Define time interval
+	>>> tint = ["2017-07-18T13:04:00.000", "2017-07-18T13:07:00.000"]
+	>>> # Spacecraft index
+	>>> mms_id = 2
+	>>> # Load data from FEEPS
+	>>> cps_i = mms.get_feeps_alleyes("CPSi_brst_l2", tint, mms_id)
+	>>> cps_i_clean = mms.feeps_split_integral_ch(cps_i)
+	>>> cps_i_clean_sun_removed = mms.feeps_remove_sun(cps_i_clean)
 
 	"""
 

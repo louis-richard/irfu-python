@@ -13,34 +13,34 @@ from scipy.optimize import curve_fit
 
 def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
     """
-    function vph = estimate_phase_speed(varargin)
-    %
     Simple function to estimate the phase speed from the frequency wave number power spectrum.
-    Fits f = v k/2 pi to the power spectrum.
+    Fits :math:`f = v k/ 2 \\pi` to the power spectrum.
 
     N.B. Draft version but seems to work well. Does not yet handle multiple modes in the same power spectrum.
 
-    Parameters :
-        f_k_power : array
-            2D array of powers (from mms.fk_powerspectrum)
+    Parameters
+    ----------
+    f_k_power : numpy.ndarray
+        2D array of powers (from mms.fk_power_spectrum)
 
-        f : array
-            1D array of frequencies (from mms.fk_powerspectrum)
+    f : numpy.ndarray
+        1D array of frequencies (from mms.fk_power_spectrum)
 
-        k : array
-            1D array of wavenumbers (from mms.fk_powerspectrum)
+    k : numpy.ndarray
+        1D array of wavenumbers (from mms.fk_power_spectrum)
 
-    Options :
-        f_min : float/int
-            Set low frequency threshold of points used to estimate the speed. (default 100)
+    f_min : float or int
+        (Optionnal) Set low frequency threshold of points used to estimate the speed. (default 100)
 
 
-    Returns :
-        vph : float
-            Estimated phase speed by fitting linear dispersion relation to data.
+    Returns
+    -------
+    vph : float
+        Estimated phase speed by fitting linear dispersion relation to data.
 
-    See also :
-        mms.fk_powerspectrum, mms.probe_align_times
+    See also
+    --------
+    mms.fk_power_spectrum, mms.probe_align_times
 
     """
 
