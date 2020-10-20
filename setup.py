@@ -23,6 +23,8 @@ INSTALL_REQUIRES = [
       "python-dateutil",
       "matplotlib",
       "numpy",
+      "sphinx"
+      "numpydoc"
       "pandas",
       "psychopy",
       "pvlib",
