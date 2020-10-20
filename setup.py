@@ -1,9 +1,10 @@
 import pathlib
 from setuptools import setup, find_packages
+from sphinx.setup_command import BuildDoc
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.6.7"
+VERSION = "1.6.8"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -34,9 +35,9 @@ INSTALL_REQUIRES = [
       "xarray"
 ]
 
-PYTHON_REQUIRES = ">=3.7"
+PYTHON_REQUIRES = ">=3.8"
 
-from sphinx.setup_command import BuildDoc
+
 cmdclass = {'build_sphinx': BuildDoc}
 
 setup(

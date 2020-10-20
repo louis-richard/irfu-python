@@ -1,9 +1,8 @@
 MANIFEST.in
-README.md
+README.rst
 setup.cfg
 setup.py
 pyrfu/__init__.py
-pyrfu/test_pyrf.py
 pyrfu.egg-info/PKG-INFO
 pyrfu.egg-info/SOURCES.txt
 pyrfu.egg-info/dependency_links.txt
@@ -163,3 +162,5 @@ pyrfu/solo/__init__.py
 pyrfu/solo/get_ts.py
 pyrfu/solo/list_files.py
 pyrfu/solo/solo_config.py
+pyrfu/tests/__init__.py
+pyrfu/tests/test_pyrf.py
