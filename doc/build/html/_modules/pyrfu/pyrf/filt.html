@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.filt &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.filt</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.filt</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">filt.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
+
+
+<span class="c1"># noinspection PyTupleAssignmentBalance</span>
+<div class="viewcode-block" id="filt"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.filt.filt">[docs]</a><span class="k">def</span> <span class="nf">filt</span><span class="p">(</span><span class="n">inp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">f_min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">f_max</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Filters input quantity.</span>
+
+<span class="sd">	Parameters</span>
+<span class="sd">	----------</span>
+<span class="sd">	inp : xarray.DataArray</span>
+<span class="sd">		Time series of the variable to filter.</span>
+
+<span class="sd">	f_min : float</span>
+<span class="sd">		Lower limit of the frequency range.</span>
+
+<span class="sd">	f_max : float</span>
+<span class="sd">		Upper limit of the frequency range.</span>
+
+<span class="sd">	n : int</span>
+<span class="sd">		Order of the elliptic filter.</span>
+
+<span class="sd">	Returns</span>
+<span class="sd">	-------</span>
+<span class="sd">	out : xarray.DataArray</span>
+<span class="sd">		Time series of the filtered signal.</span>
+
+<span class="sd">	Examples</span>
+<span class="sd">	--------</span>
+<span class="sd">	&gt;&gt;&gt; from pyrfu import mms, pyrf</span>
+<span class="sd">	&gt;&gt;&gt; # Time interval</span>
+<span class="sd">	&gt;&gt;&gt; tint = [&quot;2017-07-18T13:03:34.000&quot;, &quot;2017-07-18T13:07:00.000&quot;]</span>
+<span class="sd">	&gt;&gt;&gt; # Spacecraft index</span>
+<span class="sd">	&gt;&gt;&gt; mms_id = 1</span>
+<span class="sd">	&gt;&gt;&gt; # Load magnetic and electric fields</span>
+<span class="sd">	&gt;&gt;&gt; b_xyz = mms.get_data(&quot;B_gse_fgm_brst_l2&quot;, tint, mms_id)</span>
+<span class="sd">	&gt;&gt;&gt; e_xyz = mms.get_data(&quot;E_gse_edp_brst_l2&quot;, tint, mms_id)</span>
+<span class="sd">	&gt;&gt;&gt; # Convert E to field aligned coordinates</span>
+<span class="sd">	&gt;&gt;&gt; e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, [1,0,0])</span>
+<span class="sd">	&gt;&gt;&gt; # Bandpass filter E waveform</span>
+<span class="sd">	&gt;&gt;&gt; e_xyzfac_hf = pyrf.filt(e_xyzfac, 4, 0, 3)</span>
+<span class="sd">	&gt;&gt;&gt; e_xyzfac_lf = pyrf.filt(e_xyzfac, 0, 4, 3)</span>
+
+<span class="sd">	&quot;&quot;&quot;</span>
+
+	<span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span> <span class="o">!=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Input must be a DataArray&#39;</span><span class="p">)</span>
+
+	<span class="n">fs</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">time</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-9</span><span class="p">)</span>
+
+	<span class="c1"># Data of the input</span>
+	<span class="n">inp_data</span> <span class="o">=</span> <span class="n">inp</span><span class="o">.</span><span class="n">data</span>
+
+	<span class="n">f_min</span><span class="p">,</span> <span class="n">f_max</span> <span class="o">=</span> <span class="p">[</span><span class="n">f_min</span> <span class="o">/</span> <span class="p">(</span><span class="n">fs</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="n">f_max</span> <span class="o">/</span> <span class="p">(</span><span class="n">fs</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)]</span>
+
+	<span class="k">if</span> <span class="n">f_max</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">f_max</span> <span class="o">=</span> <span class="mi">1</span>
+
+	<span class="c1"># Parameters of the elliptic filter. fact defines the width between stopband and passband</span>
+	<span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">,</span> <span class="n">fact</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="n">f_min</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+		<span class="n">b1</span><span class="p">,</span> <span class="n">a1</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
+		<span class="n">b2</span><span class="p">,</span> <span class="n">a2</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
+
+		<span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+			<span class="n">n</span><span class="p">,</span> <span class="n">f_max</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellipord</span><span class="p">(</span><span class="n">f_max</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">f_max</span> <span class="o">*</span> <span class="n">fact</span><span class="p">,</span> <span class="mf">0.9999</span><span class="p">]),</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">)</span>
+
+		<span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellip</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">,</span> <span class="n">f_max</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s2">&quot;lowpass&quot;</span><span class="p">)</span>
+	<span class="k">elif</span> <span class="n">f_max</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+		<span class="n">b1</span><span class="p">,</span> <span class="n">a1</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
+		<span class="n">b2</span><span class="p">,</span> <span class="n">a2</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
+
+		<span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+			<span class="n">n</span><span class="p">,</span> <span class="n">f_min</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellipord</span><span class="p">(</span><span class="n">f_min</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">f_min</span> <span class="o">*</span> <span class="n">fact</span><span class="p">,</span> <span class="mf">0.9999</span><span class="p">]),</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">)</span>
+
+		<span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellip</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">,</span> <span class="n">f_min</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s2">&quot;highpass&quot;</span><span class="p">)</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
+
+		<span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+			<span class="n">n</span><span class="p">,</span> <span class="n">f_max</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellipord</span><span class="p">(</span><span class="n">f_max</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">f_max</span> <span class="o">*</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mf">0.9999</span><span class="p">]),</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">)</span>
+
+		<span class="n">b1</span><span class="p">,</span> <span class="n">a1</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellip</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">,</span> <span class="n">f_max</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+			<span class="n">n</span><span class="p">,</span> <span class="n">f_min</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellipord</span><span class="p">(</span><span class="n">f_min</span><span class="p">,</span> <span class="n">f_min</span> <span class="o">*</span> <span class="o">.</span><span class="mi">75</span><span class="p">,</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">)</span>
+
+		<span class="n">b2</span><span class="p">,</span> <span class="n">a2</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">ellip</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">r_p</span><span class="p">,</span> <span class="n">r_s</span><span class="p">,</span> <span class="n">f_min</span><span class="p">)</span>
+
+	<span class="k">try</span><span class="p">:</span>
+		<span class="n">n_c</span> <span class="o">=</span> <span class="n">inp_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+	<span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+		<span class="n">n_c</span> <span class="o">=</span> <span class="mi">1</span>
+		<span class="n">inp_data</span> <span class="o">=</span> <span class="n">inp_data</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+	<span class="n">out_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">inp_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">f_min</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">f_max</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">i_col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_c</span><span class="p">):</span>
+			<span class="n">out_data</span><span class="p">[:,</span> <span class="n">i_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">filtfilt</span><span class="p">(</span><span class="n">b1</span><span class="p">,</span> <span class="n">a1</span><span class="p">,</span> <span class="n">inp_data</span><span class="p">[:,</span> <span class="n">i_col</span><span class="p">])</span>
+			<span class="n">out_data</span><span class="p">[:,</span> <span class="n">i_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">filtfilt</span><span class="p">(</span><span class="n">b2</span><span class="p">,</span> <span class="n">a2</span><span class="p">,</span> <span class="n">out_data</span><span class="p">[:,</span> <span class="n">i_col</span><span class="p">])</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="k">for</span> <span class="n">i_col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_c</span><span class="p">):</span>
+			<span class="n">out_data</span><span class="p">[:,</span> <span class="n">i_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">filtfilt</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">inp_data</span><span class="p">[:,</span> <span class="n">i_col</span><span class="p">])</span>
+
+	<span class="k">if</span> <span class="n">n_c</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">out_data</span> <span class="o">=</span> <span class="n">out_data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+
+	<span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">out_data</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">inp</span><span class="o">.</span><span class="n">coords</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="n">inp</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">inp</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
+	
+	<span class="k">return</span> <span class="n">out</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.filt</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

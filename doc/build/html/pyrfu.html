@@ -1,0 +1,549 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu package &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pyrfu.mms package" href="pyrfu.mms.html" />
+    <link rel="prev" title="Welcome to pyrfu’s documentation!" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.mms.html" title="pyrfu.mms package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to pyrfu’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu package</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="pyrfu-package">
+<h1>pyrfu package<a class="headerlink" href="#pyrfu-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.mms.html">pyrfu.mms package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.calc_feeps_omni">pyrfu.mms.calc_feeps_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.calc_feeps_pad">pyrfu.mms.calc_feeps_pad module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.calculate_epsilon">pyrfu.mms.calculate_epsilon module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.correct_edp_probe_timing">pyrfu.mms.correct_edp_probe_timing module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.db_get_ts">pyrfu.mms.db_get_ts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.deflux_to_vdf">pyrfu.mms.deflux_to_vdf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.dft_time_shift">pyrfu.mms.dft_time_shift module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.dpflux_to_vdf">pyrfu.mms.dpflux_to_vdf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.estimate_phase_speed">pyrfu.mms.estimate_phase_speed module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_pitch_angles">pyrfu.mms.feeps_pitch_angles module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_remove_sun">pyrfu.mms.feeps_remove_sun module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_spin_avg">pyrfu.mms.feeps_spin_avg module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_split_integral_ch">pyrfu.mms.feeps_split_integral_ch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.fft_bandpass">pyrfu.mms.fft_bandpass module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.fk_power_spectrum">pyrfu.mms.fk_power_spectrum module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.fk_power_spectrum_4sc">pyrfu.mms.fk_power_spectrum_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_data">pyrfu.mms.get_data module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_dist">pyrfu.mms.get_dist module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_eis_allt">pyrfu.mms.get_eis_allt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_eis_omni">pyrfu.mms.get_eis_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_active_eyes">pyrfu.mms.get_feeps_active_eyes module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_alleyes">pyrfu.mms.get_feeps_alleyes module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_energy_table">pyrfu.mms.get_feeps_energy_table module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_omni">pyrfu.mms.get_feeps_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_oneeye">pyrfu.mms.get_feeps_oneeye module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_pitch_angle_dist">pyrfu.mms.get_pitch_angle_dist module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_ts">pyrfu.mms.get_ts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.lh_wave_analysis">pyrfu.mms.lh_wave_analysis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.list_files">pyrfu.mms.list_files module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.load_ancillary">pyrfu.mms.load_ancillary module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.make_model_vdf">pyrfu.mms.make_model_vdf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.mms_config">pyrfu.mms.mms_config module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.probe_align_times">pyrfu.mms.probe_align_times module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.psd_moments">pyrfu.mms.psd_moments module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.psd_rebin">pyrfu.mms.psd_rebin module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.read_feeps_sector_masks_csv">pyrfu.mms.read_feeps_sector_masks_csv module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.reduce">pyrfu.mms.reduce module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.remove_idist_background">pyrfu.mms.remove_idist_background module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.rotate_tensor">pyrfu.mms.rotate_tensor module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.spectr_to_dataset">pyrfu.mms.spectr_to_dataset module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.split_vs">pyrfu.mms.split_vs module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.vdf_omni">pyrfu.mms.vdf_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.vdf_to_deflux">pyrfu.mms.vdf_to_deflux module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.vdf_to_dpflux">pyrfu.mms.vdf_to_dpflux module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.whistler_b2e">pyrfu.mms.whistler_b2e module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.plot.html">pyrfu.plot package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.colorbar">pyrfu.plot.colorbar module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.mms_pl_config">pyrfu.plot.mms_pl_config module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.pl_scatter_matrix">pyrfu.plot.pl_scatter_matrix module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.plot_line">pyrfu.plot.plot_line module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.plot_spectr">pyrfu.plot.plot_spectr module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.zoom">pyrfu.plot.zoom module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.pyrf.html">pyrfu.pyrf package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.agyro_coeff">pyrfu.pyrf.agyro_coeff module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.avg_4sc">pyrfu.pyrf.avg_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_grad">pyrfu.pyrf.c_4_grad module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_j">pyrfu.pyrf.c_4_j module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_k">pyrfu.pyrf.c_4_k module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_v">pyrfu.pyrf.c_4_v module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.calc_disprel_tm">pyrfu.pyrf.calc_disprel_tm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.calc_dt">pyrfu.pyrf.calc_dt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.calc_fs">pyrfu.pyrf.calc_fs module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.cart2sph">pyrfu.pyrf.cart2sph module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.convert_fac">pyrfu.pyrf.convert_fac module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.corr_deriv">pyrfu.pyrf.corr_deriv module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.cross">pyrfu.pyrf.cross module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.date_str">pyrfu.pyrf.date_str module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dec_par_perp">pyrfu.pyrf.dec_par_perp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.disp_surf_calc">pyrfu.pyrf.disp_surf_calc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dist_append">pyrfu.pyrf.dist_append module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dot">pyrfu.pyrf.dot module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dynamic_press">pyrfu.pyrf.dynamic_press module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.e_vxb">pyrfu.pyrf.e_vxb module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.eb_nrf">pyrfu.pyrf.eb_nrf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ebsp">pyrfu.pyrf.ebsp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.edb">pyrfu.pyrf.edb module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.end">pyrfu.pyrf.end module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.extend_tint">pyrfu.pyrf.extend_tint module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.filt">pyrfu.pyrf.filt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.find_closest">pyrfu.pyrf.find_closest module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.generic_minimum_residue_analysis">pyrfu.pyrf.generic_minimum_residue_analysis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.gradient">pyrfu.pyrf.gradient module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.histogram">pyrfu.pyrf.histogram module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.histogram2d">pyrfu.pyrf.histogram2d module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.increments">pyrfu.pyrf.increments module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.int_sph_dist">pyrfu.pyrf.int_sph_dist module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.integrate">pyrfu.pyrf.integrate module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.iso2unix">pyrfu.pyrf.iso2unix module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.lowpass">pyrfu.pyrf.lowpass module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.mean">pyrfu.pyrf.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.mean_bins">pyrfu.pyrf.mean_bins module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.medfilt">pyrfu.pyrf.medfilt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.median_bins">pyrfu.pyrf.median_bins module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.movmean">pyrfu.pyrf.movmean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.mva">pyrfu.pyrf.mva module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.new_xyz">pyrfu.pyrf.new_xyz module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.norm">pyrfu.pyrf.norm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.normalize">pyrfu.pyrf.normalize module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pid_4sc">pyrfu.pyrf.pid_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.plasma_beta">pyrfu.pyrf.plasma_beta module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.plasma_calc">pyrfu.pyrf.plasma_calc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.poynting_flux">pyrfu.pyrf.poynting_flux module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pres_anis">pyrfu.pyrf.pres_anis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.psd">pyrfu.pyrf.psd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pvi">pyrfu.pyrf.pvi module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pvi_4sc">pyrfu.pyrf.pvi_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.remove_repeated_points">pyrfu.pyrf.remove_repeated_points module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.resample">pyrfu.pyrf.resample module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.solid_angle">pyrfu.pyrf.solid_angle module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.st_diff">pyrfu.pyrf.st_diff module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.start">pyrfu.pyrf.start module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.struct_func">pyrfu.pyrf.struct_func module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.t_eval">pyrfu.pyrf.t_eval module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.time_clip">pyrfu.pyrf.time_clip module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.trace">pyrfu.pyrf.trace module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_append">pyrfu.pyrf.ts_append module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_scalar">pyrfu.pyrf.ts_scalar module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_skymap">pyrfu.pyrf.ts_skymap module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_tensor_xyz">pyrfu.pyrf.ts_tensor_xyz module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_time">pyrfu.pyrf.ts_time module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_vec_xyz">pyrfu.pyrf.ts_vec_xyz module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.vht">pyrfu.pyrf.vht module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.wave_fft">pyrfu.pyrf.wave_fft module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.wavelet">pyrfu.pyrf.wavelet module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.wavepolarize_means">pyrfu.pyrf.wavepolarize_means module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.solo.html">pyrfu.solo package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo.get_ts">pyrfu.solo.get_ts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo.list_files">pyrfu.solo.list_files module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo.solo_config">pyrfu.solo.solo_config module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyrfu.test_pyrf">
+<span id="pyrfu-test-pyrf-module"></span><h2>pyrfu.test_pyrf module<a class="headerlink" href="#module-pyrfu.test_pyrf" title="Permalink to this headline">¶</a></h2>
+<p>.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py class">
+<dt id="pyrfu.test_pyrf.TestPyrf">
+<em class="property">class </em><code class="sig-prename descclassname">pyrfu.test_pyrf.</code><code class="sig-name descname">TestPyrf</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">methodName</span><span class="o">=</span><span class="default_value">'runTest'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">__call__</span></code>(*args, **kwds)</p></td>
+<td><p>Call self as a function.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">addClassCleanup</span></code>(function, /, *args, **kwargs)</p></td>
+<td><p>Same as addCleanup, except the cleanup items are called even if setUpClass fails (unlike tearDownClass).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">addCleanup</span></code>(function, *args, **kwargs)</p></td>
+<td><p>Add a function, with arguments, to be called when the test is completed.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">addTypeEqualityFunc</span></code>(typeobj, function)</p></td>
+<td><p>Add a type specific assertEqual style function to compare a type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertAlmostEqual</span></code>(first, second[, places, …])</p></td>
+<td><p>Fail if the two objects are unequal as determined by their difference rounded to the given number of decimal places (default 7) and comparing to zero, or by comparing that the difference between the two objects is more than the given delta.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertCountEqual</span></code>(first, second[, msg])</p></td>
+<td><p>Asserts that two iterables have the same elements, the same number of times, without regard to order.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertDictContainsSubset</span></code>(subset, dictionary)</p></td>
+<td><p>Checks whether dictionary is a superset of subset.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertEqual</span></code>(first, second[, msg])</p></td>
+<td><p>Fail if the two objects are unequal as determined by the ‘==’ operator.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertFalse</span></code>(expr[, msg])</p></td>
+<td><p>Check that the expression is false.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertGreater</span></code>(a, b[, msg])</p></td>
+<td><p>Just like self.assertTrue(a &gt; b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertGreaterEqual</span></code>(a, b[, msg])</p></td>
+<td><p>Just like self.assertTrue(a &gt;= b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIn</span></code>(member, container[, msg])</p></td>
+<td><p>Just like self.assertTrue(a in b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIs</span></code>(expr1, expr2[, msg])</p></td>
+<td><p>Just like self.assertTrue(a is b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsInstance</span></code>(obj, cls[, msg])</p></td>
+<td><p>Same as self.assertTrue(isinstance(obj, cls)), with a nicer default message.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsNone</span></code>(obj[, msg])</p></td>
+<td><p>Same as self.assertTrue(obj is None), with a nicer default message.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsNot</span></code>(expr1, expr2[, msg])</p></td>
+<td><p>Just like self.assertTrue(a is not b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsNotNone</span></code>(obj[, msg])</p></td>
+<td><p>Included for symmetry with assertIsNone.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertLess</span></code>(a, b[, msg])</p></td>
+<td><p>Just like self.assertTrue(a &lt; b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertLessEqual</span></code>(a, b[, msg])</p></td>
+<td><p>Just like self.assertTrue(a &lt;= b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertListEqual</span></code>(list1, list2[, msg])</p></td>
+<td><p>A list-specific equality assertion.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertLogs</span></code>([logger, level])</p></td>
+<td><p>Fail unless a log message of level <em>level</em> or higher is emitted on <em>logger_name</em> or its children.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertMultiLineEqual</span></code>(first, second[, msg])</p></td>
+<td><p>Assert that two multi-line strings are equal.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotAlmostEqual</span></code>(first, second[, …])</p></td>
+<td><p>Fail if the two objects are equal as determined by their difference rounded to the given number of decimal places (default 7) and comparing to zero, or by comparing that the difference between the two objects is less than the given delta.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotEqual</span></code>(first, second[, msg])</p></td>
+<td><p>Fail if the two objects are equal as determined by the ‘!=’ operator.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotIn</span></code>(member, container[, msg])</p></td>
+<td><p>Just like self.assertTrue(a not in b), but with a nicer default message.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotIsInstance</span></code>(obj, cls[, msg])</p></td>
+<td><p>Included for symmetry with assertIsInstance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotRegex</span></code>(text, unexpected_regex[, msg])</p></td>
+<td><p>Fail the test if the text matches the regular expression.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertRaises</span></code>(expected_exception, *args, **kwargs)</p></td>
+<td><p>Fail unless an exception of class expected_exception is raised by the callable when invoked with specified positional and keyword arguments.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertRaisesRegex</span></code>(expected_exception, …)</p></td>
+<td><p>Asserts that the message in a raised exception matches a regex.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertRegex</span></code>(text, expected_regex[, msg])</p></td>
+<td><p>Fail the test unless the text matches the regular expression.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertSequenceEqual</span></code>(seq1, seq2[, msg, seq_type])</p></td>
+<td><p>An equality assertion for ordered sequences (like lists and tuples).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertSetEqual</span></code>(set1, set2[, msg])</p></td>
+<td><p>A set-specific equality assertion.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertTrue</span></code>(expr[, msg])</p></td>
+<td><p>Check that the expression is true.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertTupleEqual</span></code>(tuple1, tuple2[, msg])</p></td>
+<td><p>A tuple-specific equality assertion.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertWarns</span></code>(expected_warning, *args, **kwargs)</p></td>
+<td><p>Fail unless a warning of class warnClass is triggered by the callable when invoked with specified positional and keyword arguments.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertWarnsRegex</span></code>(expected_warning, …)</p></td>
+<td><p>Asserts that the message in a triggered warning matches a regexp.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">debug</span></code>()</p></td>
+<td><p>Run the test without collecting errors in a TestResult</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">doClassCleanups</span></code>()</p></td>
+<td><p>Execute all class cleanup functions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">doCleanups</span></code>()</p></td>
+<td><p>Execute all cleanup functions.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fail</span></code>([msg])</p></td>
+<td><p>Fail immediately, with the given message.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">failureException</span></code></p></td>
+<td><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">builtins.AssertionError</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pyrfu.test_pyrf.TestPyrf.setUp" title="pyrfu.test_pyrf.TestPyrf.setUp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setUp</span></code></a>()</p></td>
+<td><p>Hook method for setting up the test fixture before exercising it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setUpClass</span></code>()</p></td>
+<td><p>Hook method for setting up class fixture before running tests in the class.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">shortDescription</span></code>()</p></td>
+<td><p>Returns a one-line description of the test, or None if no description has been provided.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">skipTest</span></code>(reason)</p></td>
+<td><p>Skip this test.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">subTest</span></code>([msg])</p></td>
+<td><p>Return a context manager that will return the enclosed block of code in a subtest identified by the optional message and keyword parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tearDown</span></code>()</p></td>
+<td><p>Hook method for deconstructing the test fixture after testing it.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tearDownClass</span></code>()</p></td>
+<td><p>Hook method for deconstructing the class fixture after running all tests in the class.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 72%" />
+<col style="width: 28%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>assertAlmostEquals</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>assertDictEqual</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>assertEquals</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>assertNotAlmostEquals</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>assertNotEquals</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>assertNotRegexpMatches</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>assertRaisesRegexp</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>assertRegexpMatches</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>assert_</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>countTestCases</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>defaultTestResult</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>failIf</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>failIfAlmostEqual</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>failIfEqual</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>failUnless</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>failUnlessAlmostEqual</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>failUnlessEqual</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>failUnlessRaises</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>id</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>run</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>test_calc_dt</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>test_calc_fs</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>test_cross</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>test_resample</strong></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt id="pyrfu.test_pyrf.TestPyrf.setUp">
+<code class="sig-name descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.setUp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook method for setting up the test fixture before exercising it.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyrfu.test_pyrf.TestPyrf.test_calc_dt">
+<code class="sig-name descname">test_calc_dt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_calc_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_calc_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyrfu.test_pyrf.TestPyrf.test_calc_fs">
+<code class="sig-name descname">test_calc_fs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_calc_fs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_calc_fs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyrfu.test_pyrf.TestPyrf.test_cross">
+<code class="sig-name descname">test_cross</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_cross"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_cross" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyrfu.test_pyrf.TestPyrf.test_resample">
+<code class="sig-name descname">test_resample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_resample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_resample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyrfu" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">pyrfu package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-pyrfu.test_pyrf">pyrfu.test_pyrf module</a></li>
+<li><a class="reference internal" href="#module-pyrfu">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to pyrfu’s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pyrfu.mms.html"
+                        title="next chapter">pyrfu.mms package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pyrfu.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.mms.html" title="pyrfu.mms package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to pyrfu’s documentation!"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu package</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

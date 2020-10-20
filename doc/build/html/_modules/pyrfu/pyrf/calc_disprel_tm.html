@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.calc_disprel_tm &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.calc_disprel_tm</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.calc_disprel_tm</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">calc_disprel_tm.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+
+
+<div class="viewcode-block" id="calc_disprel_tm"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.calc_disprel_tm.calc_disprel_tm">[docs]</a><span class="k">def</span> <span class="nf">calc_disprel_tm</span><span class="p">(</span><span class="n">v</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">v_err</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tau_err</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Computes dispersion relation from velocities and period given by the timing method.</span>
+
+<span class="sd">	Parameters</span>
+<span class="sd">	----------</span>
+<span class="sd">	v : xarray.DataArray</span>
+<span class="sd">		Time series of the velocities.</span>
+
+<span class="sd">	v_err : xarray.DataArray</span>
+<span class="sd">		Time series of the error on velocities.</span>
+
+<span class="sd">	tau : xarray.DataArray</span>
+<span class="sd">		Time series of the periods.</span>
+
+<span class="sd">	tau_err : xarray.DataArray</span>
+<span class="sd">		Time series of the error on period.</span>
+
+<span class="sd">	Returns</span>
+<span class="sd">	-------</span>
+<span class="sd">	out : xarray.Dataset</span>
+<span class="sd">		DataSet containing the frequency, the wavelength, the wavenumber. Also includes the errors and the fit</span>
+<span class="sd">		(e.g Vph phase velocity).</span>
+
+<span class="sd">	See also</span>
+<span class="sd">	--------</span>
+<span class="sd">	pyrfu.pyrf.c_4_v : Calculates velocity or time shift of discontinuity.</span>
+
+<span class="sd">	&quot;&quot;&quot;</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">v_err</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">tau</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">tau_err</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;calc_disprel_tm requires at least 4 arguments&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;V must a DataArray&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v_err</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;dV must a DataArray&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;T must a DataArray&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tau_err</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;dT must a DataArray&quot;</span><span class="p">)</span>
+
+	<span class="n">omega</span><span class="p">,</span> <span class="n">lamb</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">tau</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v</span> <span class="o">*</span> <span class="n">tau</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">tau</span><span class="o">.</span><span class="n">data</span><span class="p">)]</span>  <span class="c1"># Frequency, wavelength, wave number</span>
+
+	<span class="c1"># Estimate propagation of the errors</span>
+	<span class="c1"># Error on frequency</span>
+	<span class="n">omega_err</span> <span class="o">=</span> <span class="n">omega</span><span class="o">*</span><span class="p">((</span><span class="n">tau_err</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tau_err</span> <span class="o">/</span> <span class="n">tau</span><span class="p">))</span>
+
+	<span class="c1"># Error on wavelength</span>
+	<span class="n">lamb_err</span> <span class="o">=</span> <span class="n">v_err</span> <span class="o">*</span> <span class="n">tau</span>
+
+	<span class="c1"># Error on wave number</span>
+	<span class="n">k_err</span> <span class="o">=</span> <span class="n">k</span><span class="o">*</span><span class="p">((</span><span class="n">lamb_err</span><span class="o">/</span><span class="n">lamb</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">lamb_err</span><span class="o">/</span><span class="n">lamb</span><span class="p">))</span>
+
+	<span class="k">def</span> <span class="nf">model_tau_v</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+		<span class="k">return</span> <span class="n">a</span> <span class="o">/</span> <span class="n">x</span>
+
+	<span class="n">fit_tau_v</span><span class="p">,</span> <span class="n">cov_tau_v</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">curve_fit</span><span class="p">(</span><span class="n">model_tau_v</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v_err</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">tau_err</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+	<span class="n">sigma_tau_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">cov_tau_v</span><span class="p">))</span>
+
+	<span class="c1"># High resolution prediction</span>
+	<span class="n">hires_tau</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mf">2e3</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e4</span><span class="p">))</span>
+	<span class="n">predict_v</span> <span class="o">=</span> <span class="n">model_tau_v</span><span class="p">(</span><span class="n">hires_tau</span><span class="p">,</span> <span class="o">*</span><span class="n">fit_tau_v</span><span class="p">)</span>
+
+	<span class="c1"># 95% confidence interval</span>
+	<span class="n">bound_upper_v</span> <span class="o">=</span> <span class="n">model_tau_v</span><span class="p">(</span><span class="n">hires_tau</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">fit_tau_v</span> <span class="o">+</span> <span class="mf">1.96</span><span class="o">*</span><span class="n">sigma_tau_v</span><span class="p">))</span>
+	<span class="n">bound_lower_v</span> <span class="o">=</span> <span class="n">model_tau_v</span><span class="p">(</span><span class="n">hires_tau</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">fit_tau_v</span> <span class="o">-</span> <span class="mf">1.96</span><span class="o">*</span><span class="n">sigma_tau_v</span><span class="p">))</span>
+
+	<span class="k">def</span> <span class="nf">model_k_w</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+		<span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">x</span>
+
+	<span class="n">fit</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">curve_fit</span><span class="p">(</span><span class="n">model_k_w</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">omega</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">omega_err</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">k_err</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+	<span class="n">sigma_k_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">cov</span><span class="p">))</span>
+
+	<span class="c1"># High resolution prediction</span>
+	<span class="n">hires_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.003</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e4</span><span class="p">))</span>
+	<span class="n">predict_w</span> <span class="o">=</span> <span class="n">model_k_w</span><span class="p">(</span><span class="n">hires_k</span><span class="p">,</span> <span class="o">*</span><span class="n">fit</span><span class="p">)</span>
+
+	<span class="c1"># 95% confidence interval</span>
+	<span class="n">bound_upper_w</span> <span class="o">=</span> <span class="n">model_k_w</span><span class="p">(</span><span class="n">hires_k</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">fit</span> <span class="o">+</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">sigma_k_w</span><span class="p">))</span>
+	<span class="n">bound_lower_w</span> <span class="o">=</span> <span class="n">model_k_w</span><span class="p">(</span><span class="n">hires_k</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">fit</span> <span class="o">-</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">sigma_k_w</span><span class="p">))</span>
+
+	<span class="n">out_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;tau&#39;</span><span class="p">:</span> <span class="n">tau</span><span class="p">,</span> <span class="s1">&#39;tau_err&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;tau&quot;</span><span class="p">],</span> <span class="n">tau_err</span><span class="p">),</span> <span class="s1">&#39;v&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;tau&quot;</span><span class="p">],</span> <span class="n">v</span><span class="p">),</span> <span class="s1">&#39;v_err&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;tau&quot;</span><span class="p">],</span> <span class="n">v_err</span><span class="p">),</span>
+				<span class="s1">&#39;lamb&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;tau&quot;</span><span class="p">],</span> <span class="n">lamb</span><span class="p">),</span>
+				<span class="s1">&#39;lamb_err&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;tau&quot;</span><span class="p">],</span> <span class="n">lamb_err</span><span class="p">),</span> <span class="s1">&#39;k&#39;</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span> <span class="s1">&#39;k_err&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;k&quot;</span><span class="p">],</span> <span class="n">k_err</span><span class="p">),</span> <span class="s1">&#39;omega&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;k&quot;</span><span class="p">],</span> <span class="n">omega</span><span class="p">),</span>
+				<span class="s1">&#39;omega_err&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;k&quot;</span><span class="p">],</span> <span class="n">omega_err</span><span class="p">),</span> <span class="s1">&#39;hires_k&#39;</span><span class="p">:</span> <span class="n">hires_k</span><span class="p">,</span> <span class="s1">&#39;pred_omega&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;hires_k&quot;</span><span class="p">],</span> <span class="n">predict_w</span><span class="p">),</span>
+				<span class="s1">&#39;bound_upper&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;hires_k&quot;</span><span class="p">],</span> <span class="n">bound_upper_w</span><span class="p">),</span> <span class="s1">&#39;bound_lower&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;hires_k&quot;</span><span class="p">],</span> <span class="n">bound_lower_w</span><span class="p">),</span>
+				<span class="s1">&#39;hires_tau&#39;</span><span class="p">:</span> <span class="n">hires_tau</span><span class="p">,</span> <span class="s1">&#39;pred_v&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;hires_tau&quot;</span><span class="p">],</span> <span class="n">predict_v</span><span class="p">),</span>
+				<span class="s1">&#39;bound_upper_v&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;hires_tau&quot;</span><span class="p">],</span> <span class="n">bound_upper_v</span><span class="p">),</span> <span class="s1">&#39;bound_lower_v&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;hires_tau&quot;</span><span class="p">],</span> <span class="n">bound_lower_v</span><span class="p">),</span>
+				<span class="s1">&#39;l&#39;</span><span class="p">:</span> <span class="n">fit_tau_v</span><span class="p">,</span> <span class="s1">&#39;vph&#39;</span><span class="p">:</span> <span class="n">fit</span><span class="p">,</span> <span class="s1">&#39;sigma_k_w&#39;</span><span class="p">:</span> <span class="n">sigma_k_w</span><span class="p">}</span>
+
+	<span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">out_dict</span><span class="p">)</span>
+
+	<span class="k">return</span> <span class="n">out</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.calc_disprel_tm</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.mms.correct_edp_probe_timing &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.correct_edp_probe_timing</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.correct_edp_probe_timing</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">correct_edp_probe_timing.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="kn">from</span> <span class="nn">..pyrf</span> <span class="kn">import</span> <span class="n">ts_scalar</span><span class="p">,</span> <span class="n">resample</span>
+
+
+<div class="viewcode-block" id="correct_edp_probe_timing"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.correct_edp_probe_timing.correct_edp_probe_timing">[docs]</a><span class="k">def</span> <span class="nf">correct_edp_probe_timing</span><span class="p">(</span><span class="n">v_org</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Corrects for the channel delays not accounted for in the MMS EDP processing. As described in the MMS EDP data</span>
+<span class="sd">    products guide.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    v_org : xarray.DataArray</span>
+<span class="sd">        Time series created from L2 sc_pot files, from the variable &quot;mms#_edp_dcv_brst_l2&quot; containing individual probe</span>
+<span class="sd">        potentials.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    v_corrected : xarray.DataArray</span>
+<span class="sd">        Time series where the channel delay for each probe have been accounted and corrected for.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function is only useful for Burst mode data. For the other telemetry modes (i.e. slow and fast) the channel</span>
+<span class="sd">    delays are completely negligible and the interpolation and resampling applied here will have no effect other than</span>
+<span class="sd">    possibly introduce numerical noise.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Verify input</span>
+    <span class="k">assert</span> <span class="n">v_org</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v_org</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+
+    <span class="n">e_fact</span> <span class="o">=</span> <span class="p">[</span><span class="o">.</span><span class="mi">1200</span><span class="p">,</span> <span class="o">.</span><span class="mi">1200</span><span class="p">,</span> <span class="o">.</span><span class="mi">0292</span><span class="p">]</span>
+
+    <span class="c1"># Reconstruct E12, E34, E56 as computed in MMS processing</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">v_org</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">es</span> <span class="o">=</span> <span class="p">[</span><span class="n">ts_scalar</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="p">(</span><span class="n">v_org</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">v_org</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">fact</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">fact</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">e_fact</span><span class="p">)]</span>
+
+    <span class="c1"># Correct the time tags to create individual time series</span>
+    <span class="n">tau_vs</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">7629</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">15259</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">)]</span>
+    <span class="n">tau_es</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">26703</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">30518</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">34332</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">)]</span>
+
+    <span class="c1"># Odds probes potential 1, 3, 5</span>
+    <span class="n">vo</span> <span class="o">=</span> <span class="p">[</span><span class="n">ts_scalar</span><span class="p">(</span><span class="n">time</span> <span class="o">+</span> <span class="n">tau</span><span class="p">,</span> <span class="n">v_org</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">tau</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tau_vs</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">])]</span>
+
+    <span class="c1"># Electric field</span>
+    <span class="n">es</span> <span class="o">=</span> <span class="p">[</span><span class="n">ts_scalar</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">+</span> <span class="n">tau</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">tau</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">es</span><span class="p">,</span> <span class="n">tau_es</span><span class="p">)]</span>
+
+    <span class="c1"># Resample all data to time tags of V1 (i.e. timeOrig).</span>
+    <span class="n">vo</span> <span class="o">=</span> <span class="p">[</span><span class="n">resample</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">v_org</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vo</span><span class="p">]</span>
+    <span class="n">es</span> <span class="o">=</span> <span class="p">[</span><span class="n">resample</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">v_org</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">es</span><span class="p">]</span>
+
+    <span class="c1"># Recompute individual even probe potentials 2, 4, 6</span>
+    <span class="n">ve</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">fact</span> <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">fact</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">vo</span><span class="p">,</span> <span class="n">es</span><span class="p">,</span> <span class="n">e_fact</span><span class="p">)]</span>
+
+    <span class="n">v</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">tup</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ve</span><span class="p">,</span> <span class="n">vo</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">tup</span><span class="p">]</span>
+
+    <span class="c1"># Create the new time series with the corrected values</span>
+    <span class="n">probe_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">v_corrected</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">time</span><span class="p">,</span> <span class="n">probe_index</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;probe&quot;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">v_corrected</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.correct_edp_probe_timing</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

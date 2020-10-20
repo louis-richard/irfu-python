@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.mms.reduce &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.reduce</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.reduce</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">reduce.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="kn">from</span> <span class="nn">astropy</span> <span class="kn">import</span> <span class="n">constants</span>
+<span class="kn">from</span> <span class="nn">astropy.time</span> <span class="kn">import</span> <span class="n">Time</span>
+
+<span class="kn">from</span> <span class="nn">..pyrf</span> <span class="kn">import</span> <span class="n">resample</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">int_sph_dist</span>
+
+
+<div class="viewcode-block" id="reduce"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.reduce.reduce">[docs]</a><span class="k">def</span> <span class="nf">reduce</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="c1"># Check to what dimension the distribution is to be reduced</span>
+    <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="s2">&quot;1D&quot;</span> <span class="ow">or</span> <span class="n">dim</span> <span class="o">==</span> <span class="s2">&quot;2D&quot;</span><span class="p">:</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  <span class="c1"># input dim can either be &#39;1D&#39; or &#39;2D&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;First input must be a string deciding projection type, either &#39;&#39;1D&#39;&#39; or &#39;&#39;2D&#39;&#39;.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># 1D: projection to line</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">norm</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dist</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="p">),</span> <span class="mi">3</span><span class="p">):</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Invalid type for x&quot;</span><span class="p">)</span>
+
+        <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">norm</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dist</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+        <span class="n">xphat_amplitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">xphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">xphat_amplitude</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-2</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">xphat_amplitude</span><span class="p">):</span>  <span class="c1"># make sure x are unit vectors</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">xphat_mat</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">xphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;warning : |&lt;x/|x|&gt;-1| &gt; 1e-2 or std(x/|x|) &gt; 1e-2: x is recalculated as x = x/|x|.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># assume other coordinate for perpendicular plane is given after and in same format</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">norm</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dist</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">yphat_mat</span> <span class="o">=</span> <span class="n">norm</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dist</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># assume other coordinate for perpendicular plane is given after and in same format</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">yphat_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="p">),</span> <span class="mi">3</span><span class="p">):</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># assume other coordinate for perpendicular plane is given after and in same format</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">x</span>
+            <span class="n">yphat_mat</span> <span class="o">=</span> <span class="n">y</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;&#39;t recognize second vector for the projection plane, &#39;&#39;y&#39;&#39;: PDist.reduce(&#39;&#39;2D&#39;&#39;,x,y,...)</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># it&#39;s x and z that are used as input to irf_int_sph_dist</span>
+        <span class="c1"># x and y are given, but might not be orthogonal</span>
+        <span class="c1"># first make x and y unit vectors</span>
+        <span class="n">xphat_amplitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">xphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">yphat_amplitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">yphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># These ifs are not really necessary, but could be there if one</span>
+        <span class="c1"># wants to add some output saying that they were not put in</span>
+        <span class="c1"># (inputted) as unit vectors. The definition of unit vectors is not</span>
+        <span class="c1"># quite clear, due to tiny roundoff(?) errors</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">xphat_amplitude</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-2</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">xphat_amplitude</span><span class="p">):</span>  <span class="c1"># make sure x are unit vectors,</span>
+            <span class="n">xphat_mat</span> <span class="o">=</span> <span class="n">xphat_mat</span> <span class="o">/</span> <span class="n">xphat_amplitude</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;warning |&lt;x/|x|&gt;-1| &gt; 1e-2 or std(x/|x|) &gt; 1e-2: x is recalculated as x = x/|x|.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">yphat_amplitude</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-2</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">yphat_amplitude</span><span class="p">):</span>  <span class="c1"># make sure y are unit vectors,</span>
+            <span class="n">yphat_mat</span> <span class="o">=</span> <span class="n">yphat_mat</span> <span class="o">/</span> <span class="n">yphat_amplitude</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;warning |&lt;y/|y|&gt;-1| &gt; 1e-2 or std(y/|y|) &gt; 1e-2: y is recalculated as y = y/|y|.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># make z orthogonal to x and y</span>
+        <span class="n">zphat_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">xphat_mat</span><span class="p">,</span> <span class="n">yphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">zphat_amplitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">zphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">zphat_mat</span> <span class="o">=</span> <span class="n">zphat_mat</span> <span class="o">/</span> <span class="n">zphat_amplitude</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="c1"># make y orthogonal to z and x</span>
+        <span class="n">yphat_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">zphat_mat</span><span class="p">,</span> <span class="n">xphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># check amplitude again, incase x and y were not orthogonal</span>
+        <span class="n">yphat_amplitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">yphat_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">yphat_amplitude</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-2</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">yphat_amplitude</span><span class="p">):</span>  <span class="c1"># make sure y are unit vectors,</span>
+            <span class="n">yphat_mat</span> <span class="o">=</span> <span class="n">yphat_mat</span> <span class="o">/</span> <span class="n">yphat_amplitude</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;warning |&lt;y/|y|&gt;-1| &gt; 1e-2 or std(y/|y|) &gt; 1e-2: y is recalculated as y = y/|y|.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">nargs</span> <span class="o">=</span> <span class="n">nargs</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="c1"># Set default projection grid, can be overriden by given input &#39;phig&#39;</span>
+        <span class="n">nAzg</span> <span class="o">=</span> <span class="mi">32</span>
+        <span class="n">dPhig</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">nAzg</span>
+        <span class="n">phig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">-</span> <span class="n">dPhig</span><span class="p">,</span> <span class="n">nAzg</span><span class="p">)</span> <span class="o">+</span> <span class="n">dPhig</span> <span class="o">/</span> <span class="mi">2</span>  <span class="c1"># centers</span>
+
+    <span class="c1"># make input distribution to SI units, s^3/m^6</span>
+    <span class="c1"># dist = dist.convertto(&#39;s^3/m^6&#39;);</span>
+
+    <span class="c1"># Check for input flags</span>
+    <span class="c1"># Default options and values</span>
+    <span class="n">doTint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">doLowerElim</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">nMC</span> <span class="o">=</span> <span class="mi">100</span>  <span class="c1"># number of Monte Carlo iterations</span>
+    <span class="n">vint</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">]</span>
+    <span class="n">aint</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>  <span class="c1"># azimuthal intherval</span>
+    <span class="n">vgInput</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">vgInputEdges</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">weight</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span>
+    <span class="n">correct4scpot</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;cart&quot;</span>  <span class="c1"># coordinate base, cart or pol</span>
+
+    <span class="k">if</span> <span class="n">dist</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;electrons&quot;</span><span class="p">:</span>
+        <span class="n">isDes</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">isDes</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="n">ancillary_data</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="s2">&quot;tint&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">tint</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;tint&quot;</span><span class="p">]</span>
+        <span class="n">doTint</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="s2">&quot;nmc&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">nMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;nmc&quot;</span><span class="p">]</span>
+        <span class="n">ancillary_data</span><span class="p">[</span><span class="s2">&quot;nMC&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nMC</span>
+
+    <span class="k">if</span> <span class="s2">&quot;vint&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">vint</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;vint&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s2">&quot;aint&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">aint</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;aint&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s2">&quot;phig&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">phig</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;phig&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s2">&quot;vg&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">vgInput</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">vg</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;vg&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e3</span>
+
+    <span class="k">if</span> <span class="s2">&quot;vg_edges&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">vgInputEdges</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">vg_edges</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;vg_edges&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e3</span>
+
+    <span class="k">if</span> <span class="s2">&quot;weight&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span>
+        <span class="n">ancillary_data</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">weight</span>
+
+    <span class="k">if</span> <span class="s2">&quot;scpot&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">scpot</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;scpot&quot;</span><span class="p">]</span>
+        <span class="n">ancillary_data</span><span class="p">[</span><span class="s2">&quot;scpot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scpot</span>
+        <span class="n">correct4scpot</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="s2">&quot;lowerelim&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">lowerelim</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;lowerelim&quot;</span><span class="p">]</span>
+        <span class="n">ancillary_data</span><span class="p">[</span><span class="s2">&quot;lowerelim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lowerelim</span>
+        <span class="n">doLowerElim</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lowerelim</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+            <span class="n">lowerelim</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">inp</span><span class="o">=</span><span class="n">lowerelim</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="n">dist</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lowerelim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">lowerelim</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="p">):</span>
+            <span class="n">lowerelim</span> <span class="o">=</span> <span class="n">lowerelim</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lowerelim</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">lowerelim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">lowerelim</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Can not recognize input for flag lowerelim&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;base&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;base&quot;</span><span class="p">]</span>
+
+    <span class="c1"># set vint ancillary data</span>
+    <span class="n">ancillary_data</span><span class="p">[</span><span class="s2">&quot;vint&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vint</span><span class="p">;</span>
+    <span class="n">ancillary_data</span><span class="p">[</span><span class="s2">&quot;vint_unit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;km/s&quot;</span>
+
+    <span class="c1"># Get angles and velocities for spherical instrument grid, set projection</span>
+    <span class="c1"># grid and perform projection</span>
+
+    <span class="n">emat</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">energy</span><span class="o">.</span><span class="n">data</span>
+    <span class="k">if</span> <span class="n">doLowerElim</span><span class="p">:</span>
+        <span class="n">lowerelim_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">lowerelim</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">emat</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]))</span>
+
+    <span class="k">if</span> <span class="n">correct4scpot</span><span class="p">:</span>
+        <span class="n">scpot</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">tlim</span><span class="p">(</span><span class="n">scpot</span><span class="p">,</span> <span class="n">dist</span><span class="p">),</span> <span class="n">dist</span><span class="p">)</span>
+        <span class="n">scpot_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">scpot</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">emat</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]))</span>
+
+    <span class="k">if</span> <span class="n">isDes</span><span class="p">:</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_e</span><span class="o">.</span><span class="n">value</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_p</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">if</span> <span class="n">doTint</span><span class="p">:</span>  <span class="c1"># get time indicies</span>
+        <span class="n">tck</span> <span class="o">=</span> <span class="n">interpolate</span><span class="o">.</span><span class="n">interp1</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="s2">&quot;i8&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-9</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">time</span><span class="p">)),</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tint</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># single time</span>
+            <span class="n">its</span> <span class="o">=</span> <span class="n">tck</span><span class="p">(</span><span class="n">Time</span><span class="p">(</span><span class="n">tint</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;isot&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unix</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># time interval</span>
+            <span class="n">it1</span> <span class="o">=</span> <span class="n">tck</span><span class="p">(</span><span class="n">Time</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;isot&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unix</span><span class="p">)</span>
+            <span class="n">it2</span> <span class="o">=</span> <span class="n">tck</span><span class="p">(</span><span class="n">Time</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;isot&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unix</span><span class="p">)</span>
+            <span class="n">its</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">it1</span><span class="p">,</span> <span class="n">it2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># use entire PDist</span>
+        <span class="n">its</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+
+    <span class="n">nt</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">its</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Empty time array. Please verify the time(s) given.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># try to make initialization and scPot correction outside time-loop</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">vgInput</span><span class="p">,</span> <span class="n">vgInputEdges</span><span class="p">]):</span>  <span class="c1"># prepare a single grid outside the time-loop</span>
+        <span class="n">emax</span> <span class="o">=</span> <span class="n">emat</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">dist</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;delta_energy_plus&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">vmax</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">value</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">emax</span> <span class="o">*</span> <span class="n">constants</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">value</span> <span class="o">/</span> <span class="p">(</span><span class="n">M</span> <span class="o">*</span> <span class="n">constants</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">value</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">nv</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="n">vgcart_noinput</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">vmax</span><span class="p">,</span> <span class="n">vmax</span><span class="p">,</span> <span class="n">nv</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;warning : No velocity grid specified, using a default vg = linspace(-vmax,vmax,</span><span class="si">{:d}</span><span class="s2">), with vmax = </span><span class="si">{:3.2f}</span><span class="s2"> km/s.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">nv</span><span class="p">,</span> <span class="n">vmax</span> <span class="o">*</span> <span class="mf">1e-3</span><span class="p">))</span>
+
+    <span class="c1"># loop to get projection</span>
+
+    <span class="n">all_vg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+    <span class="n">all_vg_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="mi">101</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">it</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tqdm</span><span class="p">(</span><span class="n">its</span><span class="p">)):</span>  <span class="c1"># display progress</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">xphat</span> <span class="o">=</span> <span class="n">xphat_mat</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">xphat</span> <span class="o">=</span> <span class="n">xphat_mat</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># corresponding to phi = 0 in &#39;phig&#39;</span>
+            <span class="n">zphat</span> <span class="o">=</span> <span class="n">zphat_mat</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># normal to the projection plane</span>
+
+        <span class="c1"># 3d data matrix for time index it</span>
+        <span class="n">F3d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>  <span class="c1"># s^3/m^6</span>
+        <span class="n">energy</span> <span class="o">=</span> <span class="n">emat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">doLowerElim</span><span class="p">:</span>
+            <span class="n">remove_extra_ind</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># for margin, remove extra energy channels</span>
+            <span class="n">ie_below_elim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">emat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">lowerelim_mat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:])</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">emat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">lowerelim_mat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:])))</span>  <span class="c1"># closest energy channel</span>
+
+            <span class="n">F3d</span><span class="p">[:(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">ie_below_elim</span><span class="p">)</span> <span class="o">+</span> <span class="n">remove_extra_ind</span><span class="p">),</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">correct4scpot</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;delta_energy_minus&quot;</span> <span class="ow">in</span> <span class="n">dist</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>  <span class="c1"># remove all that satisfies E-Eminus&lt;Vsc</span>
+                <span class="n">ie_below_scpot</span> <span class="o">=</span> \
+                <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">emat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">dist</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;delta_energy_minus&quot;</span><span class="p">][</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">scpot_mat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ie_below_scpot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">emat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">scpot_mat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:])</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">emat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">scpot_mat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:])))</span>  <span class="c1"># closest energy channel</span>
+
+            <span class="n">remove_extra_ind</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># for margin, remove extra energy channels</span>
+
+            <span class="n">F3d</span><span class="p">[</span><span class="mi">1</span><span class="p">:(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">ie_below_scpot</span><span class="p">)</span> <span class="o">+</span> <span class="n">remove_extra_ind</span><span class="p">),</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="n">energy</span> <span class="o">=</span> <span class="n">energy</span> <span class="o">-</span> <span class="n">scpot_mat</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">energy</span><span class="p">[</span><span class="n">energy</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">v</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">value</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">energy</span> <span class="o">*</span> <span class="n">constants</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">value</span> <span class="o">/</span> <span class="p">(</span><span class="n">M</span> <span class="o">*</span> <span class="n">constants</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">value</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># m/s</span>
+
+        <span class="c1"># azimuthal angle</span>
+        <span class="k">if</span> <span class="n">dist</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">phi</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">it</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># in degrees</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># fast mode</span>
+            <span class="n">phi</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">data</span>  <span class="c1"># in degrees</span>
+
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">-</span> <span class="mi">180</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>  <span class="c1"># in radians</span>
+
+        <span class="c1"># elevation angle</span>
+        <span class="n">th</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">theta</span><span class="o">.</span><span class="n">data</span>  <span class="c1"># polar angle in degrees</span>
+        <span class="n">th</span> <span class="o">=</span> <span class="n">th</span> <span class="o">-</span> <span class="mi">90</span>  <span class="c1"># elevation angle in degrees</span>
+        <span class="n">th</span> <span class="o">=</span> <span class="n">th</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>  <span class="c1"># in radians</span>
+
+        <span class="c1"># Set projection grid after the first distribution function</span>
+        <span class="c1"># bin centers</span>
+        <span class="k">if</span> <span class="n">vgInputEdges</span><span class="p">:</span>  <span class="c1"># redefine vg (which is vg_center)</span>
+            <span class="n">vg</span> <span class="o">=</span> <span class="n">vg_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg_edges</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">vgInput</span><span class="p">:</span>
+            <span class="n">vg</span> <span class="o">=</span> <span class="n">vg</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># define from instrument velocity bins</span>
+            <span class="k">if</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+                <span class="n">vg</span> <span class="o">=</span> <span class="n">vgcart_noinput</span>  <span class="c1"># maybe just bypass this and go directly through input vg_edges?</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">vg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">V</span><span class="p">),</span> <span class="n">v</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">vg</span> <span class="o">=</span> <span class="n">v</span>
+
+        <span class="c1"># initiate projected f</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">Fg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">vg</span><span class="p">)))</span>
+                <span class="n">vel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">:</span>
+                <span class="n">Fg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">phig</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">vg</span><span class="p">)))</span>
+                <span class="n">vel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+                <span class="n">Fg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">vg</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">vg</span><span class="p">)))</span>
+                <span class="n">vel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+            <span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="c1"># perform projection</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># 1D plane</span>
+            <span class="c1"># v, phi, th corresponds to the bins of F3d</span>
+            <span class="k">if</span> <span class="n">vgInputEdges</span><span class="p">:</span>
+                <span class="n">tmpst</span> <span class="o">=</span> <span class="n">int_sph_dist</span><span class="p">(</span><span class="n">F3d</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">th</span><span class="p">,</span> <span class="n">vg</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">xphat</span><span class="p">,</span> <span class="n">nmc</span><span class="o">=</span><span class="n">nMC</span><span class="p">,</span> <span class="n">vzint</span><span class="o">=</span><span class="n">vint</span> <span class="o">*</span> <span class="mf">1e3</span><span class="p">,</span> <span class="n">aint</span><span class="o">=</span><span class="n">aint</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">,</span>
+                                     <span class="n">vg_edges</span><span class="o">=</span><span class="n">vg_edges</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+
+                <span class="n">tmpst</span> <span class="o">=</span> <span class="n">int_sph_dist</span><span class="p">(</span><span class="n">F3d</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">th</span><span class="p">,</span> <span class="n">vg</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">xphat</span><span class="p">,</span> <span class="n">nmc</span><span class="o">=</span><span class="n">nMC</span><span class="p">,</span> <span class="n">vzint</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vint</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e3</span><span class="p">,</span> <span class="n">aint</span><span class="o">=</span><span class="n">aint</span><span class="p">,</span>
+                                     <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">)</span>
+                <span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
+            <span class="n">all_vg</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">]</span>  <span class="c1"># normally vg, but if vg_edges is used, vg is overriden</span>
+            <span class="n">all_vg_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;v_edges&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># is &#39;vg_edges&#39; implemented for 2d?</span>
+            <span class="n">tmpst</span> <span class="o">=</span> <span class="n">int_sph_dist</span><span class="p">(</span><span class="n">F3d</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">th</span><span class="p">,</span> <span class="n">vg</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">xphat</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">zphat</span><span class="p">,</span> <span class="n">phig</span><span class="o">=</span><span class="n">phig</span><span class="p">,</span> <span class="n">nmc</span><span class="o">=</span><span class="n">nMC</span><span class="p">,</span> <span class="n">vzint</span><span class="o">=</span><span class="n">vint</span> <span class="o">*</span> <span class="mf">1e3</span><span class="p">,</span>
+                                 <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">)</span>
+
+            <span class="n">all_vx</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;vx&quot;</span><span class="p">]</span>
+            <span class="n">all_vy</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;vy&quot;</span><span class="p">]</span>
+            <span class="n">all_vx_edges</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;vx_edges&quot;</span><span class="p">]</span>
+            <span class="n">all_vy_edges</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;vy_edges&quot;</span><span class="p">]</span>
+
+        <span class="c1"># fix for special cases</span>
+        <span class="c1"># dimension of projection, 1D if projection onto line, 2D if projection onto plane</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+            <span class="n">Fg</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;F&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">Fg</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;F_using_edges&quot;</span><span class="p">]</span>
+
+        <span class="c1"># set moments from reduced distribution (for debug)</span>
+        <span class="n">dens</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;dens&quot;</span><span class="p">]</span>
+        <span class="n">vel</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">tmpst</span><span class="p">[</span><span class="s2">&quot;vel&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Construct PDist objects with reduced distribution</span>
+    <span class="c1"># vg is m/s, transform to km/s</span>
+    <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Make output</span>
+        <span class="n">PD</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">Fg</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">dist</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="n">its</span><span class="p">],</span> <span class="n">all_vg</span> <span class="o">*</span> <span class="mf">1e-3</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;vg&quot;</span><span class="p">])</span>
+        <span class="c1"># attributes</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;vg_edges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_vg_edges</span>
+    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">:</span>
+        <span class="n">Fg_tmp</span> <span class="o">=</span> <span class="n">Fg</span>
+        <span class="n">all_vx_tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transose</span><span class="p">(</span><span class="n">all_vx</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="n">end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e-3</span>
+        <span class="n">all_vy_tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transose</span><span class="p">(</span><span class="n">all_vy</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="n">end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e-3</span>
+        <span class="n">all_vx_edges_tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transose</span><span class="p">(</span><span class="n">all_vx_edges</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e-3</span>
+        <span class="n">all_vy_edges_tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transose</span><span class="p">(</span><span class="n">all_vy_edges</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e-3</span>
+        <span class="c1"># Make output</span>
+        <span class="n">PD</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">Fg_tmp</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">dist</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="n">its</span><span class="p">],</span> <span class="n">all_vx_tmp</span><span class="p">,</span> <span class="n">all_vy_tmp</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;vx&quot;</span><span class="p">,</span> <span class="s2">&quot;vy&quot;</span><span class="p">])</span>
+        <span class="c1"># attributes</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;vx_edges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_vx_edges_tmp</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;vy_edges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_vy_edges_tmp</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;base&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;pol&quot;</span>
+    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+        <span class="c1"># Make output</span>
+        <span class="n">PD</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">Fg_tmp</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">dist</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="n">its</span><span class="p">],</span> <span class="n">all_vx</span> <span class="o">*</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="n">all_vx</span> <span class="o">*</span> <span class="mf">1e-3</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;vx&quot;</span><span class="p">,</span> <span class="s2">&quot;vx&quot;</span><span class="p">])</span>
+        <span class="c1"># attributes</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;vx_edges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_vx_edges</span> <span class="o">*</span> <span class="mf">1e-3</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;vy_edges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_vx_edges</span> <span class="o">*</span> <span class="mf">1e-3</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;base&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cart&quot;</span>
+
+    <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span>
+    <span class="c1"># PD.userData = dist.userData;</span>
+    <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;v_units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;km/s&quot;</span>
+
+    <span class="c1"># set units and projection directions</span>
+    <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;s/m^4&#39;</span><span class="p">;</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;projection_direction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xphat_mat</span><span class="p">[</span><span class="n">its</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;s^2/m^5&#39;</span><span class="p">;</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;projection_dir_1&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xphat_mat</span><span class="p">[</span><span class="n">its</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;projection_dir_2&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">yphat_mat</span><span class="p">[</span><span class="n">its</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;projection_axis&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zphat_mat</span><span class="p">[</span><span class="n">its</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="k">if</span> <span class="n">doLowerElim</span><span class="p">:</span>
+        <span class="n">PD</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;lowerelim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lowerelim_mat</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.reduce</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

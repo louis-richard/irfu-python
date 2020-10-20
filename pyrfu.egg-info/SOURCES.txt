@@ -1,5 +1,6 @@
 MANIFEST.in
 README.md
+setup.cfg
 setup.py
 pyrfu/__init__.py
 pyrfu/test_pyrf.py

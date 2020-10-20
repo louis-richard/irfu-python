@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.plot package &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pyrfu.pyrf package" href="pyrfu.pyrf.html" />
+    <link rel="prev" title="pyrfu.mms package" href="pyrfu.mms.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.pyrf.html" title="pyrfu.pyrf package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.mms.html" title="pyrfu.mms package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="pyrfu.html" accesskey="U">pyrfu package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.plot package</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="pyrfu-plot-package">
+<h1>pyrfu.plot package<a class="headerlink" href="#pyrfu-plot-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyrfu.plot.colorbar">
+<span id="pyrfu-plot-colorbar-module"></span><h2>pyrfu.plot.colorbar module<a class="headerlink" href="#module-pyrfu.plot.colorbar" title="Permalink to this headline">¶</a></h2>
+<p>colorbar.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.plot.colorbar.colorbar">
+<code class="sig-prename descclassname">pyrfu.plot.colorbar.</code><code class="sig-name descname">colorbar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">im</span></em>, <em class="sig-param"><span class="n">ax</span></em>, <em class="sig-param"><span class="n">pad</span><span class="o">=</span><span class="default_value">0.01</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/plot/colorbar.html#colorbar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.plot.colorbar.colorbar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add colorbar to ax corresponding to im.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>im</strong><span class="classifier">to fill</span></dt><dd><p>to fill.</p>
+</dd>
+<dt><strong>ax</strong><span class="classifier">matplotlib.pyplot.subplotsaxes</span></dt><dd><p>Axis of plot.</p>
+</dd>
+<dt><strong>pad</strong><span class="classifier">float, optional</span></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>cax</strong><span class="classifier">coloraxis</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.plot.mms_pl_config">
+<span id="pyrfu-plot-mms-pl-config-module"></span><h2>pyrfu.plot.mms_pl_config module<a class="headerlink" href="#module-pyrfu.plot.mms_pl_config" title="Permalink to this headline">¶</a></h2>
+<p>mms_pl_config.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.plot.mms_pl_config.mms_pl_config">
+<code class="sig-prename descclassname">pyrfu.plot.mms_pl_config.</code><code class="sig-name descname">mms_pl_config</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">r_mms</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/plot/mms_pl_config.html#mms_pl_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.plot.mms_pl_config.mms_pl_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot spacecraft configuaration with three 2d plots of the position in re and one 3d plot of the relative position of
+the spacecraft:</p>
+<dl class="simple">
+<dt>Parameters :</dt><dd><ul class="simple">
+<li><p>r1…r4           [xarray]                Position of the spacecraft 1…4</p></li>
+</ul>
+</dd>
+<dt>returns :</dt><dd><ul class="simple">
+<li><p>fig               [figure]</p></li>
+<li><p>axs               [axes]</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.plot.pl_scatter_matrix">
+<span id="pyrfu-plot-pl-scatter-matrix-module"></span><h2>pyrfu.plot.pl_scatter_matrix module<a class="headerlink" href="#module-pyrfu.plot.pl_scatter_matrix" title="Permalink to this headline">¶</a></h2>
+<p>pl_scatter_matrix.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.plot.pl_scatter_matrix.pl_scatter_matrix">
+<code class="sig-prename descclassname">pyrfu.plot.pl_scatter_matrix.</code><code class="sig-name descname">pl_scatter_matrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">inp2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pdf</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">'jet'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/plot/pl_scatter_matrix.html#pl_scatter_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.plot.pl_scatter_matrix.pl_scatter_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produces a scatter plot of each components of field inp1 with respect to every component of field inp2. If pdf is
+set to True, the scatter plot becomes a 2d histogram.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp1</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>First time series (x-axis).</p>
+</dd>
+<dt><strong>inp2</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Second time series (y-axis).</p>
+</dd>
+<dt><strong>m</strong><span class="classifier">str, optional</span></dt><dd><p>Marker type. Default is “+”. Not used if pdf is True</p>
+</dd>
+<dt><strong>pdf</strong><span class="classifier">bool</span></dt><dd><p>Flag to plot the 2d histogram. If False the figure is a scatter plot. If True the figure is a 2d histogram.</p>
+</dd>
+<dt><strong>cmap</strong><span class="classifier">str</span></dt><dd><p>Colormap. Default : “jet”</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>fig</strong><span class="classifier">matplotlib.pyplot.figure</span></dt><dd><p>to fill.</p>
+</dd>
+<dt><strong>axs</strong><span class="classifier">matplotlib.pyplot.axes</span></dt><dd><p>to fill.</p>
+</dd>
+<dt><strong>caxs</strong><span class="classifier">matplotlib.pyplot.colorbar</span></dt><dd><p>Only if pdf is True</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.plot.plot_line">
+<span id="pyrfu-plot-plot-line-module"></span><h2>pyrfu.plot.plot_line module<a class="headerlink" href="#module-pyrfu.plot.plot_line" title="Permalink to this headline">¶</a></h2>
+<p>plot_line.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.plot.plot_line.plot_line">
+<code class="sig-prename descclassname">pyrfu.plot.plot_line.</code><code class="sig-name descname">plot_line</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">inp</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">c</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/plot/plot_line.html#plot_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.plot.plot_line.plot_line" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.plot.plot_spectr">
+<span id="pyrfu-plot-plot-spectr-module"></span><h2>pyrfu.plot.plot_spectr module<a class="headerlink" href="#module-pyrfu.plot.plot_spectr" title="Permalink to this headline">¶</a></h2>
+<p>plot_spectr.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.plot.plot_spectr.plot_spectr">
+<code class="sig-prename descclassname">pyrfu.plot.plot_spectr.</code><code class="sig-name descname">plot_spectr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">inp</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">yscale</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cscale</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">clim</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cbar</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/plot/plot_spectr.html#plot_spectr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.plot.plot_spectr.plot_spectr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a spectrogram using pcolormesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>ax</strong><span class="classifier">axes</span></dt><dd><p>Target axis to plot. If None create a new figure.</p>
+</dd>
+<dt><strong>inp</strong><span class="classifier">DataArray</span></dt><dd><p>Input 2D data to plot.</p>
+</dd>
+<dt><strong>yscale</strong><span class="classifier">str</span></dt><dd><p>Y-axis flag. Default is “” (linear).</p>
+</dd>
+<dt><strong>cscale</strong><span class="classifier">str</span></dt><dd><p>C-axis flag. Default is “” (linear).</p>
+</dd>
+<dt><strong>clim</strong><span class="classifier">list</span></dt><dd><p>C-axis bounds. Default is None (autolim).</p>
+</dd>
+<dt><strong>cmap</strong><span class="classifier">str</span></dt><dd><p>Colormap. Default is jet.</p>
+</dd>
+<dt><strong>cbar</strong><span class="classifier">bool</span></dt><dd><p>Flag for colorbar. Set to False to hide.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>fig</strong><span class="classifier">figure</span></dt><dd><p>to fill.</p>
+</dd>
+<dt><strong>axs</strong><span class="classifier">axes</span></dt><dd><p>to fill.</p>
+</dd>
+<dt><strong>caxs</strong><span class="classifier">caxes</span></dt><dd><p>Only if cbar is True.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.plot.zoom">
+<span id="pyrfu-plot-zoom-module"></span><h2>pyrfu.plot.zoom module<a class="headerlink" href="#module-pyrfu.plot.zoom" title="Permalink to this headline">¶</a></h2>
+<p>zoom.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.plot.zoom.connect_bbox">
+<code class="sig-prename descclassname">pyrfu.plot.zoom.</code><code class="sig-name descname">connect_bbox</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bbox1</span></em>, <em class="sig-param"><span class="n">bbox2</span></em>, <em class="sig-param"><span class="n">loc1a</span></em>, <em class="sig-param"><span class="n">loc2a</span></em>, <em class="sig-param"><span class="n">loc1b</span></em>, <em class="sig-param"><span class="n">loc2b</span></em>, <em class="sig-param"><span class="n">prop_lines</span></em>, <em class="sig-param"><span class="n">prop_patches</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/plot/zoom.html#connect_bbox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.plot.zoom.connect_bbox" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyrfu.plot.zoom.zoom">
+<code class="sig-prename descclassname">pyrfu.plot.zoom.</code><code class="sig-name descname">zoom</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax1</span></em>, <em class="sig-param"><span class="n">ax2</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/plot/zoom.html#zoom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.plot.zoom.zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Similar to zoom_effect01.  The xmin &amp; xmax will be taken from the ax1.viewLim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>ax1</strong><span class="classifier">axs</span></dt><dd><p>The main axes.</p>
+</dd>
+<dt><strong>ax2</strong><span class="classifier">axs</span></dt><dd><p>The zoomed axes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.plot">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyrfu.plot" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">pyrfu.plot package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-pyrfu.plot.colorbar">pyrfu.plot.colorbar module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.plot.mms_pl_config">pyrfu.plot.mms_pl_config module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.plot.pl_scatter_matrix">pyrfu.plot.pl_scatter_matrix module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.plot.plot_line">pyrfu.plot.plot_line module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.plot.plot_spectr">pyrfu.plot.plot_spectr module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.plot.zoom">pyrfu.plot.zoom module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.plot">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pyrfu.mms.html"
+                        title="previous chapter">pyrfu.mms package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pyrfu.pyrf.html"
+                        title="next chapter">pyrfu.pyrf package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pyrfu.plot.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.pyrf.html" title="pyrfu.pyrf package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.mms.html" title="pyrfu.mms package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="pyrfu.html" >pyrfu package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.plot package</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

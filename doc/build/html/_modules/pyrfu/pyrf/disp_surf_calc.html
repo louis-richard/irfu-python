@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.disp_surf_calc &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.disp_surf_calc</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.disp_surf_calc</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">dispersion_surface_calc.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="dispersion_surface_calc"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.disp_surf_calc.dispersion_surface_calc">[docs]</a><span class="k">def</span> <span class="nf">dispersion_surface_calc</span><span class="p">(</span><span class="n">kc_x_max</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kc_z_max</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">m_i</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">w_pe</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculates the cold plasma dispersion surfaces according to equation 2.64 in Plasma Waves by Swanson (2nd ed.),</span>
+<span class="sd">    and puts them in the matrix W. Additional parameters that are needed in dispersion_surface is returned as</span>
+<span class="sd">    extra_param.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kc_x_max : float or int</span>
+<span class="sd">        Max value of k_perpendicular*c/w_c.</span>
+
+<span class="sd">    kc_z_max : float or int</span>
+<span class="sd">        Max value of k_parallel*c/w_c.</span>
+
+<span class="sd">    m_i : float</span>
+<span class="sd">        Ion mass in terms of electron masses.</span>
+
+<span class="sd">    w_pe : float</span>
+<span class="sd">        Electron plasma frequency in terms of electron gyro frequency.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    w_final : numpy.ndarray</span>
+<span class="sd">        to fill.</span>
+
+<span class="sd">    extra_param : numpy.ndarray</span>
+<span class="sd">        to fill.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function is essential for dispersion_surface to work.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="n">kc_x_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kc_x_max</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span>
+    <span class="k">assert</span> <span class="n">kc_z_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kc_z_max</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kc_x_max</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="n">kc_x_max</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">kc_x_max</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kc_z_max</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="n">kc_z_max</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">kc_z_max</span><span class="p">)</span>
+        
+    <span class="c1"># First get rid of those annoying &quot;division by zero&quot; - warnings</span>
+
+    <span class="c1"># Make vectors of the wave numbers</span>
+    <span class="n">kc_x</span><span class="p">,</span> <span class="n">kc_z</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.000001</span><span class="p">,</span> <span class="n">kc_max</span><span class="p">,</span> <span class="mi">35</span><span class="p">)</span> <span class="k">for</span> <span class="n">kc_max</span> <span class="ow">in</span> <span class="p">[</span><span class="n">kc_x_max</span><span class="p">,</span> <span class="n">kc_z_max</span><span class="p">]]</span>
+
+    <span class="c1"># Turn those vectors into matrices</span>
+    <span class="p">[</span><span class="n">kc_x_mat</span><span class="p">,</span> <span class="n">kc_z_mat</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">kc_x</span><span class="p">,</span> <span class="n">kc_z</span><span class="p">)</span>
+
+    <span class="c1"># Find some of the numbers that appear later in the calculations</span>
+    <span class="n">kc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">kc_x_mat</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">kc_z_mat</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>     <span class="c1"># Absolute value of k</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">kc_x_mat</span><span class="p">,</span> <span class="n">kc_z_mat</span><span class="p">)</span>          <span class="c1"># The angle between k and B</span>
+
+    <span class="n">w_ci</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">m_i</span>                                  <span class="c1"># The ion gyro frequency</span>
+    <span class="n">w_pi</span> <span class="o">=</span> <span class="n">w_pe</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">m_i</span><span class="p">)</span>                      <span class="c1"># The ion plasma frequency</span>
+    <span class="n">w_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">w_pe</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">w_pi</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>            <span class="c1"># The total plasma frequency</span>
+
+    <span class="c1"># To speed up the program somewhat introduce these</span>
+    <span class="n">kc2</span> <span class="o">=</span> <span class="n">kc</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">kc4</span> <span class="o">=</span> <span class="n">kc2</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">w_ci2</span> <span class="o">=</span> <span class="n">w_ci</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">w_p2</span> <span class="o">=</span> <span class="n">w_p</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">w_extra</span> <span class="o">=</span> <span class="n">w_p2</span> <span class="o">+</span> <span class="n">w_ci</span>
+    <span class="n">w_extra2</span> <span class="o">=</span> <span class="n">w_extra</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">cos_theta2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="c1"># For every k_perp and k_par, turn the dispersion relation into a polynomial equation and solve it.</span>
+    <span class="c1"># The polynomial coefficients are calculated</span>
+    <span class="n">pol_k_coeff8</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">kc2</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">w_ci2</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">w_p2</span><span class="p">)</span>
+    <span class="n">pol_k_coeff6</span> <span class="o">=</span> <span class="p">(</span><span class="n">kc4</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">kc2</span> <span class="o">+</span> <span class="n">w_p2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">w_ci2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">w_p2</span><span class="p">)</span> <span class="o">+</span> <span class="n">w_extra2</span><span class="p">)</span>
+    <span class="n">pol_k_coeff4</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">kc4</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">w_ci2</span> <span class="o">+</span> <span class="n">w_p2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">kc2</span> <span class="o">*</span> <span class="n">w_extra2</span> <span class="o">+</span> <span class="n">kc2</span> <span class="o">*</span> <span class="n">w_p2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">w_ci2</span> <span class="o">-</span> <span class="n">w_ci</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+                <span class="mi">1</span> <span class="o">+</span> <span class="n">cos_theta2</span><span class="p">)</span> <span class="o">+</span> <span class="n">w_p2</span> <span class="o">*</span> <span class="n">w_extra2</span><span class="p">)</span>
+    <span class="n">pol_k_coeff2</span> <span class="o">=</span> <span class="p">(</span><span class="n">kc4</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_p2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">w_ci2</span> <span class="o">-</span> <span class="n">w_ci</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos_theta2</span> <span class="o">+</span> <span class="n">w_ci</span> <span class="o">*</span> <span class="n">w_extra</span><span class="p">)</span> <span class="o">+</span> <span class="n">kc2</span> <span class="o">*</span> <span class="n">w_p2</span> <span class="o">*</span> <span class="n">w_ci</span> <span class="o">*</span> <span class="n">w_extra</span> <span class="o">*</span> <span class="p">(</span>
+                <span class="mi">1</span> <span class="o">+</span> <span class="n">cos_theta2</span><span class="p">))</span>
+    <span class="n">pol_k_coeff0</span> <span class="o">=</span> <span class="o">-</span><span class="n">kc4</span> <span class="o">*</span> <span class="n">w_ci2</span> <span class="o">*</span> <span class="n">w_p2</span> <span class="o">*</span> <span class="n">cos_theta2</span>
+
+    <span class="c1"># For each k, solve the equation</span>
+    <span class="n">w_final</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">35</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">k_z</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">kc_z</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">k_x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">kc_x</span><span class="p">)):</span>
+            <span class="n">dispersion_polynomial</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pol_k_coeff8</span><span class="p">[</span><span class="n">k_z</span><span class="p">,</span> <span class="n">k_x</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pol_k_coeff6</span><span class="p">[</span><span class="n">k_z</span><span class="p">,</span> <span class="n">k_x</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pol_k_coeff4</span><span class="p">[</span><span class="n">k_z</span><span class="p">,</span> <span class="n">k_x</span><span class="p">],</span>
+                                     <span class="mi">0</span><span class="p">,</span> <span class="n">pol_k_coeff2</span><span class="p">[</span><span class="n">k_z</span><span class="p">,</span> <span class="n">k_x</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pol_k_coeff0</span><span class="p">[</span><span class="n">k_z</span><span class="p">,</span> <span class="n">k_x</span><span class="p">]]</span>
+            <span class="c1"># theoretically should be real (A. Tjulin)</span>
+            <span class="n">w_temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">roots</span><span class="p">(</span><span class="n">dispersion_polynomial</span><span class="p">))</span>
+            <span class="c1"># We need to sort the answers to get nice surfaces.</span>
+            <span class="n">w_final</span><span class="p">[:,</span> <span class="n">k_z</span><span class="p">,</span> <span class="n">k_x</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">w_temp</span><span class="p">)</span>
+
+    <span class="c1"># Now we have solved the dispersion relation. Let us find some other interesting parameters in this context.</span>
+    <span class="c1"># The elements of the dielectric tensor, using Swanson&#39;s notation</span>
+    <span class="n">dielectric_s</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">w_pe</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">w_pi</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">w_ci2</span><span class="p">)</span>
+    <span class="n">dielectric_p</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">w_pe</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">w_pi</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">dielectric_d</span> <span class="o">=</span> <span class="o">-</span><span class="n">w_pe</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="n">w_ci</span> <span class="o">*</span> <span class="n">w_pi</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">w_ci2</span><span class="p">))</span>
+
+    <span class="c1"># The rest of this function is not cleaned yet. The calculations could probably be much shorter ! Use tile instead.</span>
+    <span class="n">kc2_mat</span><span class="p">,</span> <span class="n">k_x_mat</span><span class="p">,</span> <span class="n">k_z_mat</span><span class="p">,</span> <span class="n">theta_mat</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">35</span><span class="p">))</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+        <span class="n">kc2_mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">kc2</span>
+        <span class="n">k_x_mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">kc_x_mat</span>
+        <span class="n">k_z_mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">kc_z_mat</span>
+        <span class="n">theta_mat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">theta</span>
+
+    <span class="n">n2</span> <span class="o">=</span> <span class="n">kc2_mat</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">v_phase_to_c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">n2</span><span class="p">)</span>
+    <span class="n">va_to_c</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_pe</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">m_i</span><span class="p">))</span>
+    <span class="n">v_phase_to_va</span> <span class="o">=</span> <span class="n">v_phase_to_c</span> <span class="o">/</span> <span class="n">va_to_c</span>
+
+    <span class="n">dielectric_xx</span> <span class="o">=</span> <span class="n">dielectric_s</span> <span class="o">-</span> <span class="n">n2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_mat</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">dielectric_xy</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">dielectric_d</span>
+    <span class="n">dielectric_xz</span> <span class="o">=</span> <span class="n">n2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_mat</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_mat</span><span class="p">)</span>
+    <span class="n">dielectric_yy</span> <span class="o">=</span> <span class="n">dielectric_s</span> <span class="o">-</span> <span class="n">n2</span>
+    <span class="n">dielectric_zz</span> <span class="o">=</span> <span class="n">dielectric_p</span> <span class="o">-</span> <span class="n">n2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_mat</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="n">e_x</span> <span class="o">=</span> <span class="o">-</span> <span class="n">dielectric_zz</span> <span class="o">/</span> <span class="n">dielectric_xz</span>
+    <span class="n">e_y</span> <span class="o">=</span> <span class="n">dielectric_xy</span> <span class="o">/</span> <span class="n">dielectric_yy</span> <span class="o">*</span> <span class="n">e_x</span>
+    <span class="n">e_z</span> <span class="o">=</span> <span class="mi">1</span>
+    
+    <span class="n">e_perp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">e_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">e_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">e_y</span><span class="p">))</span>
+    <span class="n">e_tot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">e_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">e_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">e_y</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">e_par_k</span> <span class="o">=</span> <span class="p">(</span><span class="n">k_x_mat</span> <span class="o">*</span> <span class="n">e_x</span> <span class="o">+</span> <span class="n">k_z_mat</span> <span class="o">*</span> <span class="n">e_z</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">kc2_mat</span><span class="p">)</span>
+    <span class="n">e_polar</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">e_y</span><span class="p">))</span> <span class="o">/</span> <span class="n">e_perp</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="n">b_x</span> <span class="o">=</span> <span class="o">-</span><span class="n">k_z_mat</span> <span class="o">*</span> <span class="n">e_y</span> <span class="o">/</span> <span class="n">w_final</span>
+    <span class="n">b_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">k_z_mat</span> <span class="o">*</span> <span class="n">e_x</span> <span class="o">-</span> <span class="n">k_x_mat</span> <span class="o">*</span> <span class="n">e_z</span><span class="p">)</span> <span class="o">/</span> <span class="n">w_final</span>
+    <span class="n">b_z</span> <span class="o">=</span> <span class="n">k_x_mat</span> <span class="o">*</span> <span class="n">e_y</span> <span class="o">/</span> <span class="n">w_final</span>
+    <span class="n">b_tot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">b_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_y</span><span class="p">)</span> <span class="o">+</span> <span class="n">b_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_z</span><span class="p">))</span>
+    <span class="n">b_par</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_z</span><span class="p">))</span>
+    <span class="n">b_perp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">b_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_y</span><span class="p">))</span>
+    <span class="n">b_polar</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">b_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_y</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">b_perp</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># Poynting flux</span>
+    <span class="n">s_x</span> <span class="o">=</span> <span class="n">e_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_z</span><span class="p">)</span> <span class="o">-</span> <span class="n">e_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_y</span><span class="p">)</span>
+    <span class="n">s_y</span> <span class="o">=</span> <span class="n">e_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_x</span><span class="p">)</span> <span class="o">-</span> <span class="n">e_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_z</span><span class="p">)</span>
+    <span class="n">s_z</span> <span class="o">=</span> <span class="n">e_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_y</span><span class="p">)</span> <span class="o">-</span> <span class="n">e_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_x</span><span class="p">)</span>
+    <span class="n">s_par</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">s_z</span><span class="p">)</span>
+    <span class="n">s_tot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">s_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">s_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">s_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">s_y</span><span class="p">)</span> <span class="o">+</span> <span class="n">s_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">s_z</span><span class="p">))</span>
+
+    <span class="n">temp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">kc_x</span><span class="p">)</span>
+    <span class="n">dk_x</span> <span class="o">=</span> <span class="n">kc_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">dk_z</span> <span class="o">=</span> <span class="n">kc_z</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">dw_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">w_final</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">dw_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">w_final</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">dw_x</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">temp</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">dw_z</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">temp</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">v_x</span> <span class="o">=</span> <span class="n">dw_x</span> <span class="o">/</span> <span class="n">dk_x</span>
+    <span class="n">v_z</span> <span class="o">=</span> <span class="n">dw_z</span> <span class="o">/</span> <span class="n">dk_z</span>
+
+    <span class="c1"># Compute ion and electron velocities</span>
+    <span class="n">q_e</span><span class="p">,</span> <span class="n">q_i</span><span class="p">,</span> <span class="n">m_e</span><span class="p">,</span> <span class="n">w_ce</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">v_x_e</span> <span class="o">=</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">q_e</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_e</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">w_ce</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">*</span> <span class="n">e_x</span> <span class="o">-</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">w_ce</span> <span class="o">*</span> <span class="n">e_y</span><span class="p">)</span>
+    <span class="n">v_y_e</span> <span class="o">=</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">q_e</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_e</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">w_ce</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">*</span> <span class="n">e_y</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">w_ce</span> <span class="o">*</span> <span class="n">e_x</span><span class="p">)</span>
+    <span class="n">v_z_e</span> <span class="o">=</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">q_e</span> <span class="o">*</span> <span class="n">e_z</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_e</span> <span class="o">*</span> <span class="n">w_final</span><span class="p">)</span>
+
+    <span class="n">v_x_i</span> <span class="o">=</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">q_i</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_i</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">w_ci</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">*</span> <span class="n">e_x</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">w_ci</span> <span class="o">*</span> <span class="n">e_y</span><span class="p">)</span>
+    <span class="n">v_y_i</span> <span class="o">=</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">q_i</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_i</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">w_ci</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_final</span> <span class="o">*</span> <span class="n">e_y</span> <span class="o">-</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">w_ci</span> <span class="o">*</span> <span class="n">e_x</span><span class="p">)</span>
+    <span class="n">v_z_i</span> <span class="o">=</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">q_i</span> <span class="o">*</span> <span class="n">e_z</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_i</span> <span class="o">*</span> <span class="n">w_final</span><span class="p">)</span>
+
+    <span class="c1"># Ratio of parallel and perpendicular to B speed</span>
+    <span class="n">v_par_o_perp_e</span> <span class="o">=</span> <span class="n">v_z_e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_z_e</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">v_x_e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_x_e</span><span class="p">)</span> <span class="o">+</span> <span class="n">v_y_e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_y_e</span><span class="p">))</span>
+    <span class="n">v_par_o_perp_i</span> <span class="o">=</span> <span class="n">v_z_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_z_i</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">v_x_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_x_i</span><span class="p">)</span> <span class="o">+</span> <span class="n">v_y_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_y_i</span><span class="p">))</span>
+
+    <span class="c1"># Total particle speeds</span>
+    <span class="n">v_e2</span> <span class="o">=</span> <span class="n">v_x_e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_x_e</span><span class="p">)</span> <span class="o">+</span> <span class="n">v_y_e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_y_e</span><span class="p">)</span> <span class="o">+</span> <span class="n">v_z_e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_z_e</span><span class="p">)</span>
+    <span class="n">v_i2</span> <span class="o">=</span> <span class="n">v_x_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_x_i</span><span class="p">)</span> <span class="o">+</span> <span class="n">v_y_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_y_i</span><span class="p">)</span> <span class="o">+</span> <span class="n">v_z_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">v_z_i</span><span class="p">)</span>
+
+    <span class="c1"># Ion and electron energies</span>
+    <span class="n">e_e</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">m_e</span> <span class="o">*</span> <span class="n">v_e2</span>
+    <span class="n">e_i</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">m_i</span> <span class="o">*</span> <span class="n">v_i2</span>
+
+    <span class="c1"># Ratio of particle and field energy densities</span>
+    <span class="n">ne</span> <span class="o">=</span> <span class="n">w_pe</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">e_en</span> <span class="o">=</span> <span class="n">e_e</span> <span class="o">*</span> <span class="n">ne</span>
+    <span class="n">e_in</span> <span class="o">=</span> <span class="n">e_i</span> <span class="o">*</span> <span class="n">ne</span>
+    <span class="n">ee</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">e_tot</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">eb</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">b_tot</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">ratio_pf</span> <span class="o">=</span> <span class="p">(</span><span class="n">e_en</span> <span class="o">+</span> <span class="n">e_in</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ee</span> <span class="o">+</span> <span class="n">eb</span><span class="p">)</span>
+
+    <span class="c1"># Continuity equation</span>
+    <span class="n">dn_eon</span> <span class="o">=</span> <span class="p">(</span><span class="n">k_x_mat</span> <span class="o">*</span> <span class="n">v_x_e</span> <span class="o">+</span> <span class="n">k_z_mat</span> <span class="o">*</span> <span class="n">v_z_e</span><span class="p">)</span> <span class="o">/</span> <span class="n">w_final</span>
+    <span class="n">dn_eon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dn_eon</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">dn_eon</span><span class="p">))</span>
+    <span class="n">dn_ion</span> <span class="o">=</span> <span class="p">(</span><span class="n">k_x_mat</span> <span class="o">*</span> <span class="n">v_x_i</span> <span class="o">+</span> <span class="n">k_z_mat</span> <span class="o">*</span> <span class="n">v_z_i</span><span class="p">)</span> <span class="o">/</span> <span class="n">w_final</span>
+    <span class="n">dn_ion</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dn_ion</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">dn_ion</span><span class="p">))</span>
+    <span class="n">dn_e_dn_i</span> <span class="o">=</span> <span class="n">dn_eon</span> <span class="o">/</span> <span class="n">dn_ion</span>
+    
+    <span class="n">dn_eon_o_db_o_b</span> <span class="o">=</span> <span class="n">dn_eon</span> <span class="o">/</span> <span class="n">b_tot</span>
+    <span class="n">dn_ion_o_db_o_b</span> <span class="o">=</span> <span class="n">dn_ion</span> <span class="o">/</span> <span class="n">b_tot</span>
+    
+    <span class="n">dn_eon_o_db_par_o_b</span> <span class="o">=</span> <span class="n">dn_eon</span> <span class="o">/</span> <span class="n">b_par</span>
+    <span class="n">dn_ion_o_db_par_o_b</span> <span class="o">=</span> <span class="n">dn_ion</span> <span class="o">/</span> <span class="n">b_par</span>
+
+    <span class="n">dn_e</span> <span class="o">=</span> <span class="n">dn_eon</span> <span class="o">*</span> <span class="n">w_pe</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">k_dot_e</span> <span class="o">=</span> <span class="n">e_x</span> <span class="o">*</span> <span class="n">k_x_mat</span> <span class="o">+</span> <span class="n">e_z</span> <span class="o">*</span> <span class="n">k_z_mat</span>
+    <span class="n">k_dot_e</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">k_dot_e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">k_dot_e</span><span class="p">))</span>
+
+    <span class="c1"># Degree of electromagnetism</span>
+    <span class="n">extra_param</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">35</span><span class="p">))</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">b_tot</span> <span class="o">/</span> <span class="n">e_tot</span><span class="p">)</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">e_par_k</span><span class="p">)</span> <span class="o">/</span> <span class="n">e_tot</span>                      <span class="c1"># Degree of longitudinally</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">e_z</span> <span class="o">/</span> <span class="n">e_tot</span>                               <span class="c1"># Degree of parallelism</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">b_z</span><span class="p">))</span> <span class="o">/</span> <span class="n">b_tot</span>       <span class="c1"># Degree of parallelism</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v_x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">v_z</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>              <span class="c1"># Value of the group vel.</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">e_polar</span>                                   <span class="c1"># Ellipticity</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">e_tot</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">b_tot</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>         <span class="c1"># Degree of electromagnetism</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">ee</span> <span class="o">/</span> <span class="n">e_i</span><span class="p">)</span>                        <span class="c1"># Ratio of electron to ion energy</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v_e2</span> <span class="o">/</span> <span class="n">v_i2</span><span class="p">))</span>            <span class="c1"># Ratio of electron to ion velocity fluctuations</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">ratio_pf</span><span class="p">)</span>                       <span class="c1"># Ratio of particle to field energy densities</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">b_polar</span>                                  <span class="c1"># Ellipticity based on B</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">v_phase_to_va</span><span class="p">)</span>                  <span class="c1"># Phase speed divided by Alfven speed</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">v_par_o_perp_e</span><span class="p">)</span>                 <span class="c1"># Ratio of parallel to perpendicular electron speed</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">14</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">v_par_o_perp_i</span><span class="p">)</span>                 <span class="c1"># Ratio of parallel to perpendicular ion speed</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">e_en</span> <span class="o">/</span> <span class="p">(</span><span class="n">ee</span> <span class="o">+</span> <span class="n">eb</span><span class="p">))</span>               <span class="c1">#</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">dn_e_dn_i</span><span class="p">)</span>                      <span class="c1"># Ratio of electron to ion density perturbations</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">17</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">dn_eon_o_db_o_b</span><span class="p">)</span>                <span class="c1"># (dn_e / n) / (dB / B)</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">18</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">dn_ion_o_db_o_b</span><span class="p">)</span>                <span class="c1"># (dn_i / n) / (dB / B)</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">19</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">dn_eon_o_db_par_o_b</span><span class="p">)</span>            <span class="c1"># (dn_e / n) / (dB_par / B)</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">dn_ion_o_db_par_o_b</span><span class="p">)</span>            <span class="c1"># (dn_i / n) / (dB_par / B)</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">21</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">dn_e</span> <span class="o">/</span> <span class="n">k_dot_e</span><span class="p">)</span>                 <span class="c1"># (dn_i / n) / (dB / B)</span>
+    <span class="n">extra_param</span><span class="p">[</span><span class="mi">22</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_par</span> <span class="o">/</span> <span class="n">s_tot</span>                            <span class="c1"># S_par / S_tot</span>
+
+    <span class="k">return</span> <span class="n">w_final</span><span class="p">,</span> <span class="n">extra_param</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.disp_surf_calc</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

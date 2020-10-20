@@ -1,0 +1,492 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.int_sph_dist &#8212; pyrfu 1.6.6 documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.int_sph_dist</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.int_sph_dist</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">int_sph_dist.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">import</span> <span class="nn">psychopy.tools.coordinatetools</span> <span class="k">as</span> <span class="nn">ct</span>
+
+
+
+<div class="viewcode-block" id="int_sph_dist"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.int_sph_dist.int_sph_dist">[docs]</a><span class="k">def</span> <span class="nf">int_sph_dist</span><span class="p">(</span><span class="n">F</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">phi</span><span class="p">,</span><span class="n">th</span><span class="p">,</span><span class="n">vg</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Calculates the integrated distribution function of a 3D distribution function in a spherical grid. F is a 3D </span>
+<span class="sd">	matrix containing values of the flux (index order of F is [velocity,phi,th]), phi is the azimuthal and th the </span>
+<span class="sd">	elevation angles in radians, and vg is the .</span>
+
+<span class="sd">	Parameters :</span>
+<span class="sd">		F : array</span>
+<span class="sd">			3D skymap of the distribution function</span>
+<span class="sd">		</span>
+<span class="sd">		v : array</span>
+<span class="sd">			Velocity</span>
+
+<span class="sd">		ph : array</span>
+<span class="sd">			Azimuthal angle</span>
+
+<span class="sd">		th : array</span>
+<span class="sd">			Elevation angle</span>
+
+<span class="sd">		vg : array</span>
+<span class="sd">			Bin centers of the velocity of the projection grid</span>
+
+<span class="sd">	Options:</span>
+<span class="sd">		phig : array</span>
+<span class="sd">			Bin centers of the azimuthal angle of the projection in radians in the span [0,2*pi]. If this input is </span>
+<span class="sd">			given, the projection will be 2D. If it is omitted, the projection will be 1D.c</span>
+<span class="sd">		x : list/array</span>
+<span class="sd">			Axis that is not integrated along in 1D and x-axis (phig = 0) in 2D. x = [1,0,0] if omitted.</span>
+
+<span class="sd">		z : list/array</span>
+<span class="sd">			Axis that is integrated along in 2D. z = [0,0,1] if omitted.</span>
+
+<span class="sd">		nMC : int</span>
+<span class="sd">			Average number of Monte Carlo iterations used per bin for integration, default is 10. Number of iterations </span>
+<span class="sd">			can be weighted data value in each bin.</span>
+
+<span class="sd">		weight : str</span>
+<span class="sd">			How the number of MC iterations per bin is weighted, can be None (default), &quot;lin&quot; or &quot;log&quot;</span>
+
+<span class="sd">		vzint : list of float</span>
+<span class="sd">			Set limits on the out-of-plane velocity interval in 2D and &quot;transverse&quot; velocity in 1D.</span>
+
+<span class="sd">		aint : list of float</span>
+<span class="sd">			Angular limit in degrees, can be combined with vzlim</span>
+<span class="sd">		</span>
+<span class="sd">		base : str</span>
+<span class="sd">			coordinate base, &#39;pol&#39; for polar or &#39;cart&#39; for Cartesian, does not matter in 1D case</span>
+<span class="sd">		</span>
+<span class="sd">		ve : list of float</span>
+<span class="sd">			Velocity edges of instrument (from delta_energy) with same units as v and one element longer than v</span>
+
+<span class="sd">	Returns :</span>
+<span class="sd">		out : DataArray</span>
+<span class="sd">			Time series of the projected distribution function</span>
+
+<span class="sd">	Notes :</span>
+<span class="sd">		The function goes through all instrument bins and finds the best match on the projection bin. The value in </span>
+<span class="sd">		the projection bin, F, is updated as F = F+f*dTau/dA, where f is the instrument value in the bin, dTau is the </span>
+<span class="sd">		volume element in velocity space of the instrument bin and dA is the area or line element in the projection </span>
+<span class="sd">		bin. An instrument bin can actually cover several projection bin and the value should be added to all those </span>
+<span class="sd">		bins, scaled to the area the instrument bin covers of a given projection bin. This area is calculated with a </span>
+<span class="sd">		Monte Carlo integration scheme, where many &quot;particles&quot; are generated somewhere inside the instrument bin, each </span>
+<span class="sd">		assigned a fraction of f. The &quot;particles&quot; are then projected onto the line or plane.</span>
+
+<span class="sd">	See also: </span>
+<span class="sd">		mms.plot_int_projection</span>
+
+<span class="sd">	TODO : </span>
+<span class="sd">		Optimization</span>
+
+<span class="sd">	&quot;&quot;&quot;</span>
+	
+	<span class="c1"># Check for flags in input</span>
+	<span class="c1"># Set default values</span>
+	<span class="n">xphat</span>           <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>             <span class="c1"># axes projection is done against in 1D, x-axis in 2D</span>
+	<span class="n">zphat</span>           <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>             <span class="c1"># integrate along this axes in 2D, has no use in 1D</span>
+	<span class="n">nMC</span>             <span class="o">=</span> <span class="mi">10</span>                            <span class="c1"># number of Monte Carlo iterations</span>
+	<span class="n">vzint</span>           <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">])</span>    <span class="c1"># limit on out-of-plane velocity</span>
+	<span class="n">aint</span>            <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span><span class="mi">180</span><span class="p">])</span>          <span class="c1"># limit on out-of-plane velocity</span>
+	<span class="n">projDim</span>         <span class="o">=</span> <span class="mi">1</span>                             <span class="c1"># number of dimensions of the projection</span>
+	<span class="n">weight</span>          <span class="o">=</span> <span class="s2">&quot;none&quot;</span>                        <span class="c1"># how number of MC points is weighted to data</span>
+	<span class="n">base</span>            <span class="o">=</span> <span class="s2">&quot;pol&quot;</span>                         <span class="c1"># If 1D then this does not matter</span>
+	<span class="n">veInput</span>         <span class="o">=</span> <span class="kc">False</span>                         <span class="c1"># input energy differences</span>
+	<span class="n">veInputEdges</span>    <span class="o">=</span> <span class="kc">False</span>                         <span class="c1"># </span>
+
+	<span class="c1"># read options</span>
+	<span class="k">if</span> <span class="s2">&quot;x&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">xphat</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="s2">&quot;z&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">zphat</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">]</span>
+		<span class="c1"># If this flag is given, it assumes 2D projection</span>
+		<span class="n">projDim</span> <span class="o">=</span> <span class="mi">2</span>
+
+	<span class="k">if</span> <span class="s2">&quot;phig&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">phig</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;phig&quot;</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="s2">&quot;nmc&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">nMC</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;nmc&quot;</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="s2">&quot;vzint&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">vzint</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;vzint&quot;</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="s2">&quot;aint&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">aint</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;aint&quot;</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="s2">&quot;weight&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">weight</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="s2">&quot;base&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">base</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;base&quot;</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="s2">&quot;ve&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">ve</span> 		<span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;ve&quot;</span><span class="p">]</span>
+		<span class="n">veInput</span> <span class="o">=</span> <span class="kc">True</span>
+
+	<span class="k">if</span> <span class="s2">&quot;vg_edges&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="p">:</span>
+		<span class="n">vg_edges</span> 		<span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;vg_edges&quot;</span><span class="p">]</span>
+		<span class="n">veInputEdges</span> 	<span class="o">=</span> <span class="kc">True</span>
+
+
+	<span class="c1"># Initiate initiate various things</span>
+
+	<span class="c1"># complete RH system</span>
+	<span class="n">xphat</span> <span class="o">=</span> <span class="n">xphat</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">xphat</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+	<span class="n">yphat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">zphat</span><span class="p">,</span><span class="n">xphat</span><span class="p">)</span> <span class="c1"># zphat define as default [0 0 1] or read in as optional input above</span>
+	<span class="n">yphat</span> <span class="o">=</span> <span class="n">yphat</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">yphat</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+	<span class="n">zphat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">xphat</span><span class="p">,</span><span class="n">yphat</span><span class="p">)</span> <span class="c1"># z = cross(x,cross(z,x)) % enforce z to be orthogonal to x</span>
+	<span class="n">zphat</span> <span class="o">=</span> <span class="n">zphat</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">zphat</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+	<span class="c1"># diffs of instrument bins</span>
+	<span class="c1"># velocity</span>
+	<span class="k">if</span> <span class="n">veInput</span> <span class="p">:</span>
+		<span class="n">dVm</span> <span class="o">=</span> <span class="n">v</span><span class="o">-</span><span class="n">ve</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+		<span class="n">dVp</span> <span class="o">=</span> <span class="n">ve</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">-</span><span class="n">v</span>  <span class="c1"># minus and plus velocity from center</span>
+		<span class="n">dV</span>  <span class="o">=</span> <span class="n">dVm</span><span class="o">+</span><span class="n">dVp</span>   <span class="c1"># total difference</span>
+	<span class="k">else</span> <span class="p">:</span>
+		<span class="n">dV</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+		<span class="n">dV</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">dV</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">dV</span><span class="p">])</span>     <span class="c1"># quick and dirty</span>
+		<span class="n">dVm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>              <span class="c1"># minus velocity from center</span>
+		<span class="c1">#dVp = np.diff(v)/2              # plus velocity from center</span>
+
+	<span class="n">dPhi</span>    <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">phi</span><span class="p">)))</span>   <span class="c1"># constant</span>
+	<span class="n">dTh</span>     <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">th</span><span class="p">)))</span>    <span class="c1"># constant</span>
+
+	<span class="c1"># primed (grid) diffs</span>
+	<span class="c1"># dVg = diff(vg); dVg = [dVg(1),dVg]; % quick and dirty</span>
+	<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span>
+		<span class="n">dPhig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">phig</span><span class="p">))</span>    <span class="c1"># constant</span>
+	<span class="k">else</span> <span class="p">:</span>
+		<span class="n">dPhig</span> <span class="o">=</span> <span class="mi">1</span>                           <span class="c1"># unity for 1D</span>
+
+	<span class="c1"># Number of projection bins</span>
+	<span class="n">nVg</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vg</span><span class="p">);</span>
+	<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span>
+		<span class="n">nAzg</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">phig</span><span class="p">);</span>
+	<span class="k">else</span> <span class="p">:</span>
+		<span class="n">nAzg</span> <span class="o">=</span> <span class="mi">0</span>    <span class="c1"># for 1D</span>
+
+	<span class="c1"># Number of instrument bins</span>
+	<span class="n">nAz</span>     <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">phi</span><span class="p">);</span>
+	<span class="n">nEle</span>    <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">th</span><span class="p">);</span>
+	<span class="n">nV</span>      <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>
+
+	
+	<span class="c1"># bin edges</span>
+	<span class="k">if</span> <span class="n">veInputEdges</span> <span class="p">:</span> <span class="c1"># get vg from vg_edges</span>
+		<span class="n">vg_edges</span>    <span class="o">=</span> <span class="n">vg_edges</span>
+		<span class="n">vg</span>          <span class="o">=</span> <span class="n">vg_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mf">0.5</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg_edges</span><span class="p">)</span>
+		<span class="n">nVg</span>         <span class="o">=</span> <span class="n">vg</span><span class="o">.</span><span class="n">size</span>
+	<span class="k">else</span> <span class="p">:</span> <span class="c1"># get vg_edges from vg</span>
+		<span class="n">vg_edges</span>        <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vg</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+		<span class="n">vg_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>   	<span class="o">=</span> <span class="n">vg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span><span class="o">/</span><span class="mi">2</span>
+		<span class="n">vg_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="o">=</span> <span class="n">vg</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+		<span class="n">vg_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  	<span class="o">=</span> <span class="n">vg</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:])</span><span class="o">/</span><span class="mi">2</span>
+
+	
+	<span class="k">if</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+			<span class="n">phig_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">phig</span><span class="o">-</span><span class="n">dPhig</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span><span class="n">phig</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">dPhig</span><span class="o">/</span><span class="mi">2</span><span class="p">])</span>
+
+		<span class="c1"># primed (grid) diffs</span>
+		<span class="n">dVg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg_edges</span><span class="p">)</span>
+
+		<span class="c1"># convert to cartesian mesh, only for output</span>
+		<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+			<span class="p">[</span><span class="n">phiMesh</span><span class="p">,</span><span class="n">vMesh</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">phig_edges</span><span class="o">+</span><span class="n">dPhig</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span><span class="n">vg</span><span class="p">)</span>    <span class="c1"># Creates the mesh, center of bins, phi has one extra bin at the end</span>
+			<span class="p">[</span><span class="n">vxMesh</span><span class="p">,</span><span class="n">vyMesh</span><span class="p">]</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">pol2cart</span><span class="p">(</span><span class="n">phiMesh</span><span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="n">nAzg</span><span class="p">,</span><span class="n">vMesh</span><span class="p">)</span>  <span class="c1"># Converts to cartesian</span>
+
+			<span class="p">[</span><span class="n">phiMesh_edges</span><span class="p">,</span><span class="n">vMesh_edges</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">phig_edges</span><span class="p">,</span><span class="n">vg_edges</span><span class="p">)</span>          <span class="c1"># Creates the mesh, edges of bins</span>
+			<span class="p">[</span><span class="n">vxMesh_edges</span><span class="p">,</span><span class="n">vyMesh_edges</span><span class="p">]</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">pol2cart</span><span class="p">(</span><span class="n">phiMesh_edges</span><span class="p">,</span><span class="n">vMesh_edges</span><span class="p">)</span>    <span class="c1"># Converts to cartesian, edges</span>
+
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span> <span class="p">:</span>
+		<span class="c1"># for cartesian grid, the velocity bins must all be equal</span>
+		<span class="c1"># a linearly spaced grid can have small roundoff differences in step</span>
+		<span class="c1"># with std, there could potentially be some outlier? i dont know</span>
+		<span class="n">meandiff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg</span><span class="p">))</span>
+		<span class="n">errtol</span> <span class="o">=</span> <span class="mf">1e-2</span> <span class="c1"># 1%</span>
+
+		<span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg</span><span class="p">)</span><span class="o">/</span><span class="n">meandiff</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">&lt;</span><span class="n">errtol</span><span class="p">):</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;For a cartesian grid (default), all velocity bins diff(vg) must be equal.&quot;</span><span class="p">)</span>
+
+		<span class="n">dVg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vg</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+
+
+	<span class="c1"># 3D matrices for instrumental bin centers</span>
+
+	<span class="n">TH</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">th</span><span class="p">,(</span><span class="n">nV</span><span class="p">,</span><span class="n">nAz</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>        <span class="c1"># [v,phi,th]</span>
+	<span class="n">PHI</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">phi</span><span class="p">,(</span><span class="n">nV</span><span class="p">,</span><span class="n">nEle</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>      <span class="c1"># [v,th,phi]</span>
+	<span class="n">PHI</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">PHI</span><span class="p">,[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>     <span class="c1"># [v,phi,th]</span>
+	<span class="n">VEL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">v</span><span class="p">,(</span><span class="n">nAz</span><span class="p">,</span><span class="n">nEle</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>       <span class="c1"># [phi,th,v]</span>
+	<span class="n">VEL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">VEL</span><span class="p">,[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>     <span class="c1"># [v,phi,th]</span>
+	<span class="n">DV</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">dV</span><span class="p">,(</span><span class="n">nAz</span><span class="p">,</span><span class="n">nEle</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>      <span class="c1"># [phi,th,v]</span>
+	<span class="n">DV</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">DV</span><span class="p">,[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>      <span class="c1"># [v,phi,th]</span>
+
+	<span class="c1"># Weighting of number of Monte Carlo particles</span>
+	<span class="n">Nsum</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nMC</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span>   <span class="c1"># total number of Monte Carlo particles</span>
+
+	<span class="k">if</span> <span class="n">weight</span> <span class="o">==</span> <span class="s2">&quot;none&quot;</span><span class="p">:</span>
+		<span class="c1"># 3D matrix with values of nMC for each bin</span>
+		<span class="n">NMC</span>         <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="c1"># no points when data is 0</span>
+		<span class="n">NMC</span><span class="p">[</span><span class="n">F</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span>   <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nMC</span><span class="p">)</span>
+	<span class="k">elif</span> <span class="n">weight</span> <span class="o">==</span> <span class="s2">&quot;lin&quot;</span><span class="p">:</span>
+		<span class="n">NMC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">Nsum</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">F</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">F</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+	<span class="k">elif</span> <span class="n">weight</span> <span class="o">==</span> <span class="s2">&quot;log&quot;</span><span class="p">:</span>
+		<span class="n">NMC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">Nsum</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">F</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">F</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+	<span class="c1"># &quot;Volume&quot; element in velocity space of an instrument bin</span>
+	<span class="c1">#pdb.set_trace()</span>
+	<span class="n">dtau</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">TH</span><span class="p">)</span><span class="o">*</span><span class="n">DV</span><span class="o">*</span><span class="n">dPhi</span><span class="o">*</span><span class="n">dTh</span><span class="o">*</span><span class="n">VEL</span><span class="o">**</span><span class="mi">2</span>
+	<span class="c1"># set grid data matrix and grid &quot;area&quot; element</span>
+	<span class="k">if</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">:</span>
+		<span class="c1"># init Fp</span>
+		<span class="n">Fg</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nAzg</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">nVg</span><span class="p">))</span>
+		<span class="n">Fg_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nAzg</span><span class="p">,</span><span class="n">nVg</span><span class="p">))</span> <span class="c1"># use this one with &#39;edges bins&#39;</span>
+		<span class="c1"># Area or line element (primed)</span>
+		<span class="n">dAg</span> <span class="o">=</span> <span class="n">dVg</span><span class="o">*</span><span class="n">dPhig</span><span class="o">*</span><span class="n">vg</span><span class="o">**</span><span class="p">(</span><span class="n">projDim</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+		<span class="n">Fg</span>  <span class="o">=</span> <span class="n">zeros</span><span class="p">((</span><span class="n">nVg</span><span class="p">,</span><span class="n">nVg</span><span class="p">))</span>
+		<span class="n">dAg</span> <span class="o">=</span> <span class="n">dVg</span><span class="o">**</span><span class="mi">2</span>
+
+	<span class="c1"># Perform projection</span>
+	<span class="c1"># Loop through all instrument bins</span>
+	<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nV</span><span class="p">):</span>     <span class="c1"># velocity (energy)</span>
+		<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nAz</span><span class="p">):</span>    <span class="c1"># phi</span>
+			<span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nEle</span><span class="p">):</span>   <span class="c1"># theta</span>
+				
+				<span class="c1"># generate MC points</span>
+				<span class="n">nMCt</span> <span class="o">=</span> <span class="n">NMC</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span> <span class="c1"># temporary number</span>
+				<span class="c1"># Ignore bin if value of F is zero to save computations</span>
+				<span class="k">if</span> <span class="n">F</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+					<span class="k">continue</span>
+
+				<span class="c1"># Construct Monte Carlo particles within particle bins</span>
+				<span class="c1"># first is not random</span>
+				
+				<span class="n">dV_MC</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">nMCt</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">dV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="n">dVm</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="c1"># velocity within [-dVm,+dVp]</span>
+				<span class="n">dPHI_MC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="mi">0</span><span class="p">,(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">nMCt</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">-.</span><span class="mi">5</span><span class="p">)</span><span class="o">*</span><span class="n">dPhi</span><span class="p">])</span>
+				<span class="n">dTH_MC</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="mi">0</span><span class="p">,(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">nMCt</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">-.</span><span class="mi">5</span><span class="p">)</span><span class="o">*</span><span class="n">dTh</span><span class="p">])</span>
+
+				<span class="c1"># convert instrument bin to cartesian velocity</span>
+				<span class="p">[</span><span class="n">vx</span><span class="p">,</span><span class="n">vy</span><span class="p">,</span><span class="n">vz</span><span class="p">]</span> <span class="o">=</span> <span class="n">sfs</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">sph2cart</span><span class="p">(</span><span class="n">PHI</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">+</span><span class="n">dPHI_MC</span><span class="p">,</span><span class="n">TH</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">+</span><span class="n">dTH_MC</span><span class="p">,</span><span class="n">VEL</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">+</span><span class="n">dV_MC</span><span class="p">)</span>
+
+				<span class="c1"># Get velocities in primed coordinate system</span>
+				<span class="n">vxp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">vx</span><span class="p">,</span><span class="n">vy</span><span class="p">,</span><span class="n">vz</span><span class="p">]),</span><span class="n">xphat</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>    <span class="c1"># all MC points</span>
+				<span class="n">vyp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">vx</span><span class="p">,</span><span class="n">vy</span><span class="p">,</span><span class="n">vz</span><span class="p">]),</span><span class="n">yphat</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+				<span class="n">vzp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">vx</span><span class="p">,</span><span class="n">vy</span><span class="p">,</span><span class="n">vz</span><span class="p">]),</span><span class="n">zphat</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>    <span class="c1"># all MC points</span>
+				<span class="n">vabsp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vxp</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">vyp</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">vzp</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+				<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">:</span>   <span class="c1"># get transverse velocity sqrt(vy^2+vz^2)</span>
+					<span class="n">vzp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vyp</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">vzp</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>    <span class="c1"># call it vzp</span>
+
+				<span class="n">alpha</span> <span class="o">=</span> <span class="n">pvlib</span><span class="o">.</span><span class="n">tools</span><span class="o">.</span><span class="n">asind</span><span class="p">(</span><span class="n">vzp</span><span class="o">/</span><span class="n">vabsp</span><span class="p">)</span>
+
+				<span class="c1"># If &quot;particle&quot; is outside allowed interval, don&#39;t use point</span>
+				
+				<span class="n">usePoint</span>    <span class="o">=</span> <span class="p">((</span><span class="n">vzp</span> <span class="o">&gt;=</span> <span class="n">vzint</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="p">(</span><span class="n">vzp</span> <span class="o">&lt;=</span> <span class="n">vzint</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="p">(</span><span class="n">alpha</span> <span class="o">&gt;=</span> <span class="n">aint</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="p">(</span><span class="n">alpha</span> <span class="o">&lt;=</span> <span class="n">aint</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+				<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+					<span class="n">vp</span> <span class="o">=</span> <span class="n">vxp</span>
+				<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span> <span class="p">:</span>
+					<span class="c1"># convert to polar coordinates (phip could become negative)</span>
+					<span class="p">[</span><span class="n">phip</span><span class="p">,</span><span class="n">vp</span><span class="p">]</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">cart2pol</span><span class="p">(</span><span class="n">vxp</span><span class="p">,</span><span class="n">vyp</span><span class="p">);</span>
+					<span class="c1"># fix if negative</span>
+					<span class="n">phip</span><span class="p">[</span><span class="n">phip</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">+</span><span class="n">phip</span><span class="p">[</span><span class="n">phip</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">]</span>
+				
+				<span class="c1"># different procedure for 1D or polar OR cartesian</span>
+				<span class="k">if</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span> <span class="ow">or</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">:</span>
+					<span class="c1"># ------ 1D AND POLAR CASE ------</span>
+					<span class="c1"># get indicies for all MC points</span>
+					<span class="n">iVg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">vp</span><span class="p">,</span><span class="n">vg_edges</span><span class="p">[:])</span>
+					<span class="c1"># fixes bug that exists on some systems, may influence</span>
+					<span class="c1"># performance</span>
+					<span class="k">if</span> <span class="n">iVg</span><span class="p">[</span><span class="n">iVg</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+						<span class="n">iVg</span><span class="p">[</span><span class="n">iVg</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">999999</span>
+
+
+					<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span>
+						<span class="n">iAzg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">phip</span><span class="p">,</span><span class="n">phig_edges</span><span class="p">);</span>
+					<span class="k">else</span><span class="p">:</span>
+						<span class="n">iAzg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="n">nMCt</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+
+					<span class="c1"># Loop through MC points and add value of instrument bin to the</span>
+					<span class="c1"># appropriate projection bin</span>
+					<span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+					<span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nMCt</span><span class="p">):</span>
+						
+						<span class="c1"># add value to appropriate projection bin</span>
+						<span class="k">if</span> <span class="p">(</span><span class="n">usePoint</span><span class="p">[</span><span class="n">l</span><span class="p">]</span> <span class="ow">and</span> <span class="p">(</span><span class="n">iAzg</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">iAzg</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">l</span><span class="p">]</span><span class="o">&lt;</span><span class="n">nAzg</span><span class="o">+</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">iAzg</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">l</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">&lt;</span><span class="n">nVg</span><span class="p">)):</span>
+							
+							<span class="n">Fg</span><span class="p">[</span><span class="n">iAzg</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">l</span><span class="p">],</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Fg</span><span class="p">[</span><span class="n">iAzg</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">l</span><span class="p">],</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span><span class="o">+</span><span class="n">F</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">*</span><span class="n">dtau</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">dAg</span><span class="p">[</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span><span class="o">*</span><span class="n">nMCt</span><span class="p">)</span>
+							<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span>
+								<span class="n">Fg_</span><span class="p">[</span><span class="n">iAzg</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">l</span><span class="p">],</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Fg</span><span class="p">[</span><span class="n">iAzg</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">l</span><span class="p">],</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span><span class="o">+</span><span class="n">F</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">*</span><span class="n">dtau</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">dAg</span><span class="p">[</span><span class="n">iVg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span><span class="o">*</span><span class="n">nMCt</span><span class="p">)</span>
+
+					<span class="n">enlapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t</span>
+					<span class="nb">print</span><span class="p">(</span><span class="n">enlapsed</span><span class="p">)</span>
+				<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span> <span class="p">:</span>
+					<span class="c1"># ------ CARTESIAN CASE ------</span>
+					<span class="c1"># get indicies for all MC points</span>
+					<span class="n">iVxg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">vxp</span><span class="p">,</span><span class="n">vg_edges</span><span class="p">);</span>
+					<span class="n">iVyg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">vyp</span><span class="p">,</span><span class="n">vg_edges</span><span class="p">);</span>
+					<span class="c1"># fixes bug that exists on some systems, may influence</span>
+					<span class="c1"># performance</span>
+					<span class="n">iVxg</span><span class="p">[</span><span class="n">iVxg</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+					<span class="n">iVyg</span><span class="p">[</span><span class="n">iVyg</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+					<span class="c1"># Loop through MC points and add value of instrument bin to the</span>
+					<span class="c1"># appropriate projection bin</span>
+					
+					<span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nMCt</span><span class="p">):</span>
+						<span class="k">if</span> <span class="p">((</span><span class="n">usePoint</span><span class="p">[</span><span class="n">l</span><span class="p">])</span> <span class="ow">and</span> <span class="p">(</span><span class="n">vxp</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">&gt;</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">vg_edges</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">vxp</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">&lt;</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">vg_edges</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">vyp</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">&gt;</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">vg_edges</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">vyp</span><span class="p">[</span><span class="n">l</span><span class="p">]</span><span class="o">&lt;</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">vg_edges</span><span class="p">))):</span>
+							<span class="n">Fg</span><span class="p">[</span><span class="n">iVxg</span><span class="p">[</span><span class="n">l</span><span class="p">],</span><span class="n">iVyg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Fg</span><span class="p">[</span><span class="n">iVxg</span><span class="p">[</span><span class="n">l</span><span class="p">],</span><span class="n">iVyg</span><span class="p">[</span><span class="n">l</span><span class="p">]]</span><span class="o">+</span><span class="n">F</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">*</span><span class="n">dtau</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">dAg</span><span class="o">*</span><span class="n">nMCt</span><span class="p">)</span>
+
+
+
+	<span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
+	<span class="c1"># Output</span>
+	<span class="k">if</span> <span class="p">((</span><span class="n">projDim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">)):</span>
+		<span class="c1"># fix for interp shading, otherwise the last row can be whatever</span>
+		<span class="n">Fg</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">Fg</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,:],</span><span class="n">Fg</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]]))</span>
+
+	<span class="c1"># Calculate density</span>
+	<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">dens</span>    <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Fg</span><span class="o">*</span><span class="n">dAg</span><span class="p">)</span>
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">:</span>
+		<span class="n">dAG</span>     <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">dAg</span><span class="p">,(</span><span class="n">nAzg</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+		<span class="n">dens</span>    <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Fg</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,:]</span><span class="o">*</span><span class="n">dAG</span><span class="p">))</span>
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+		<span class="n">dens</span>    <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Fg</span><span class="o">*</span><span class="n">dAg</span><span class="p">))</span>
+
+	<span class="c1"># Calculate velocity moment</span>
+	<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">vel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">Fg</span><span class="o">*</span><span class="n">dAg</span><span class="o">*</span><span class="n">vg</span><span class="p">);</span>
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">:</span>
+		<span class="n">VG</span>          <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">vg</span><span class="o">.</span><span class="n">T</span><span class="p">,(</span><span class="mi">1</span><span class="p">,</span><span class="n">nAzg</span><span class="p">))</span>
+		<span class="n">PHIG</span>        <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">phig</span><span class="p">,(</span><span class="n">nVg</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+		<span class="p">[</span><span class="n">VXG</span><span class="p">,</span><span class="n">VYG</span><span class="p">]</span>   <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">pol2cart</span><span class="p">(</span><span class="n">PHIG</span><span class="p">,</span><span class="n">VG</span><span class="p">)</span>
+
+		<span class="n">vel</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+		<span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nVg</span><span class="p">):</span>
+			<span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nAzg</span><span class="p">):</span>
+				<span class="n">vel</span> <span class="o">=</span> <span class="n">vel</span><span class="o">+</span><span class="p">[</span><span class="n">VXG</span><span class="p">[</span><span class="n">l</span><span class="p">,</span><span class="n">m</span><span class="p">],</span><span class="n">VYG</span><span class="p">[</span><span class="n">l</span><span class="p">,</span><span class="n">m</span><span class="p">]]</span><span class="o">*</span><span class="n">Fg</span><span class="p">[</span><span class="n">m</span><span class="p">,</span><span class="n">l</span><span class="p">]</span><span class="o">*</span><span class="n">dAg</span><span class="p">[</span><span class="n">l</span><span class="p">]</span>
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+		<span class="n">vel</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># whatever</span>
+
+	<span class="n">vel</span> <span class="o">=</span> <span class="n">vel</span><span class="o">/</span><span class="n">dens</span>
+
+
+	<span class="c1"># output</span>
+	<span class="n">pstdict</span> <span class="o">=</span> <span class="p">{}</span>
+	<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;F&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Fg</span>
+	<span class="k">if</span> <span class="n">projDim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">]</span>                <span class="o">=</span> <span class="n">vg</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;v_edges&quot;</span><span class="p">]</span>          <span class="o">=</span> <span class="n">vg_edges</span>
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;pol&quot;</span><span class="p">:</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vx&quot;</span><span class="p">]</span>               <span class="o">=</span> <span class="n">vxMesh</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vy&quot;</span><span class="p">]</span>               <span class="o">=</span> <span class="n">vyMesh</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;F_using_edges&quot;</span><span class="p">]</span>    <span class="o">=</span> <span class="n">Fg_</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vx_edges&quot;</span><span class="p">]</span>         <span class="o">=</span> <span class="n">vxMesh_edges</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vy_edges&quot;</span><span class="p">]</span>         <span class="o">=</span> <span class="n">vyMesh_edges</span>
+	<span class="k">elif</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;cart&quot;</span><span class="p">:</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vx&quot;</span><span class="p">]</span>               <span class="o">=</span> <span class="n">vg</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vy&quot;</span><span class="p">]</span>               <span class="o">=</span> <span class="n">vg</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;F_using_edges&quot;</span><span class="p">]</span>    <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">Fg</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nVg</span><span class="p">,</span><span class="mi">1</span><span class="p">))]),</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="n">nVg</span><span class="o">+</span><span class="mi">1</span><span class="p">))])</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vx_edges&quot;</span><span class="p">]</span>         <span class="o">=</span> <span class="n">vg_edges</span>
+		<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vy_edges&quot;</span><span class="p">]</span>         <span class="o">=</span> <span class="n">vg_edges</span>
+		
+	<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;dens&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dens</span>
+	<span class="n">pstdict</span><span class="p">[</span><span class="s2">&quot;vel&quot;</span><span class="p">]</span>  <span class="o">=</span> <span class="n">vel</span>
+
+	<span class="k">return</span> <span class="n">pstdict</span></div>
+<span class="c1">#---------------------------------------------------------------------------------------------------------------------</span>
+<span class="c1"># End main function</span>
+<span class="c1">#---------------------------------------------------------------------------------------------------------------------</span>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.int_sph_dist</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

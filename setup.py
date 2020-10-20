@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.6.6"
+VERSION = "1.6.7"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -34,7 +34,11 @@ INSTALL_REQUIRES = [
 
 PYTHON_REQUIRES = ">=3.7"
 
-setup(name=PACKAGE_NAME,
+from sphinx.setup_command import BuildDoc
+cmdclass = {'build_sphinx': BuildDoc}
+
+setup(
+      name=PACKAGE_NAME,
       version=VERSION,
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
@@ -47,4 +51,12 @@ setup(name=PACKAGE_NAME,
       python_requires=PYTHON_REQUIRES,
       packages=find_packages(),
       include_package_data=True,
+      cmdclass=cmdclass,
+      # these are optional and override conf.py settings
+      command_options={
+        'build_sphinx': {
+            'project': ('setup.py', PACKAGE_NAME),
+            'version': ('setup.py', VERSION),
+            'release': ('setup.py', VERSION),
+            'source_dir': ('setup.py', 'docs')}},
       )
