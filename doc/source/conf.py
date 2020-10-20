@@ -75,8 +75,6 @@ pygments_style = None
 # Avoid execution of Jupyter notebook
 nbsphinx_execute = 'never'
 
-html_logo = 'fig/IRF_logo_blue_on_white.jpg'
-
 # -- Extension configuration -------------------------------------------------
 
 # -- Options for todo extension ----------------------------------------------
