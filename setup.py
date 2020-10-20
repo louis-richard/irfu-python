@@ -30,7 +30,6 @@ INSTALL_REQUIRES = [
       "scipy",
       "seaborn",
       "sfs",
-      "spacepy",
       "tqdm",
       "xarray"
 ]
