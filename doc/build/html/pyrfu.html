@@ -5,15 +5,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>pyrfu package &#8212; pyrfu 1.6.6 documentation</title>
-    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <title>pyrfu package &#8212; pyrfu 1.6.7 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/language_data.js"></script>
     <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="pyrfu.mms package" href="pyrfu.mms.html" />
@@ -34,7 +36,7 @@
         <li class="right" >
           <a href="index.html" title="Welcome to pyrfu’s documentation!"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.7 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">pyrfu package</a></li> 
       </ul>
     </div>  
@@ -202,275 +204,8 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-pyrfu.test_pyrf">
-<span id="pyrfu-test-pyrf-module"></span><h2>pyrfu.test_pyrf module<a class="headerlink" href="#module-pyrfu.test_pyrf" title="Permalink to this headline">¶</a></h2>
-<p>.py</p>
-<p>&#64;author : Louis RICHARD</p>
-<dl class="py class">
-<dt id="pyrfu.test_pyrf.TestPyrf">
-<em class="property">class </em><code class="sig-prename descclassname">pyrfu.test_pyrf.</code><code class="sig-name descname">TestPyrf</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">methodName</span><span class="o">=</span><span class="default_value">'runTest'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
-<p class="rubric">Methods</p>
-<table class="longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">__call__</span></code>(*args, **kwds)</p></td>
-<td><p>Call self as a function.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">addClassCleanup</span></code>(function, /, *args, **kwargs)</p></td>
-<td><p>Same as addCleanup, except the cleanup items are called even if setUpClass fails (unlike tearDownClass).</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">addCleanup</span></code>(function, *args, **kwargs)</p></td>
-<td><p>Add a function, with arguments, to be called when the test is completed.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">addTypeEqualityFunc</span></code>(typeobj, function)</p></td>
-<td><p>Add a type specific assertEqual style function to compare a type.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertAlmostEqual</span></code>(first, second[, places, …])</p></td>
-<td><p>Fail if the two objects are unequal as determined by their difference rounded to the given number of decimal places (default 7) and comparing to zero, or by comparing that the difference between the two objects is more than the given delta.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertCountEqual</span></code>(first, second[, msg])</p></td>
-<td><p>Asserts that two iterables have the same elements, the same number of times, without regard to order.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertDictContainsSubset</span></code>(subset, dictionary)</p></td>
-<td><p>Checks whether dictionary is a superset of subset.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertEqual</span></code>(first, second[, msg])</p></td>
-<td><p>Fail if the two objects are unequal as determined by the ‘==’ operator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertFalse</span></code>(expr[, msg])</p></td>
-<td><p>Check that the expression is false.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertGreater</span></code>(a, b[, msg])</p></td>
-<td><p>Just like self.assertTrue(a &gt; b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertGreaterEqual</span></code>(a, b[, msg])</p></td>
-<td><p>Just like self.assertTrue(a &gt;= b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIn</span></code>(member, container[, msg])</p></td>
-<td><p>Just like self.assertTrue(a in b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIs</span></code>(expr1, expr2[, msg])</p></td>
-<td><p>Just like self.assertTrue(a is b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsInstance</span></code>(obj, cls[, msg])</p></td>
-<td><p>Same as self.assertTrue(isinstance(obj, cls)), with a nicer default message.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsNone</span></code>(obj[, msg])</p></td>
-<td><p>Same as self.assertTrue(obj is None), with a nicer default message.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsNot</span></code>(expr1, expr2[, msg])</p></td>
-<td><p>Just like self.assertTrue(a is not b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertIsNotNone</span></code>(obj[, msg])</p></td>
-<td><p>Included for symmetry with assertIsNone.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertLess</span></code>(a, b[, msg])</p></td>
-<td><p>Just like self.assertTrue(a &lt; b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertLessEqual</span></code>(a, b[, msg])</p></td>
-<td><p>Just like self.assertTrue(a &lt;= b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertListEqual</span></code>(list1, list2[, msg])</p></td>
-<td><p>A list-specific equality assertion.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertLogs</span></code>([logger, level])</p></td>
-<td><p>Fail unless a log message of level <em>level</em> or higher is emitted on <em>logger_name</em> or its children.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertMultiLineEqual</span></code>(first, second[, msg])</p></td>
-<td><p>Assert that two multi-line strings are equal.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotAlmostEqual</span></code>(first, second[, …])</p></td>
-<td><p>Fail if the two objects are equal as determined by their difference rounded to the given number of decimal places (default 7) and comparing to zero, or by comparing that the difference between the two objects is less than the given delta.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotEqual</span></code>(first, second[, msg])</p></td>
-<td><p>Fail if the two objects are equal as determined by the ‘!=’ operator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotIn</span></code>(member, container[, msg])</p></td>
-<td><p>Just like self.assertTrue(a not in b), but with a nicer default message.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotIsInstance</span></code>(obj, cls[, msg])</p></td>
-<td><p>Included for symmetry with assertIsInstance.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertNotRegex</span></code>(text, unexpected_regex[, msg])</p></td>
-<td><p>Fail the test if the text matches the regular expression.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertRaises</span></code>(expected_exception, *args, **kwargs)</p></td>
-<td><p>Fail unless an exception of class expected_exception is raised by the callable when invoked with specified positional and keyword arguments.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertRaisesRegex</span></code>(expected_exception, …)</p></td>
-<td><p>Asserts that the message in a raised exception matches a regex.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertRegex</span></code>(text, expected_regex[, msg])</p></td>
-<td><p>Fail the test unless the text matches the regular expression.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertSequenceEqual</span></code>(seq1, seq2[, msg, seq_type])</p></td>
-<td><p>An equality assertion for ordered sequences (like lists and tuples).</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertSetEqual</span></code>(set1, set2[, msg])</p></td>
-<td><p>A set-specific equality assertion.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertTrue</span></code>(expr[, msg])</p></td>
-<td><p>Check that the expression is true.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertTupleEqual</span></code>(tuple1, tuple2[, msg])</p></td>
-<td><p>A tuple-specific equality assertion.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertWarns</span></code>(expected_warning, *args, **kwargs)</p></td>
-<td><p>Fail unless a warning of class warnClass is triggered by the callable when invoked with specified positional and keyword arguments.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">assertWarnsRegex</span></code>(expected_warning, …)</p></td>
-<td><p>Asserts that the message in a triggered warning matches a regexp.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">debug</span></code>()</p></td>
-<td><p>Run the test without collecting errors in a TestResult</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">doClassCleanups</span></code>()</p></td>
-<td><p>Execute all class cleanup functions.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">doCleanups</span></code>()</p></td>
-<td><p>Execute all cleanup functions.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fail</span></code>([msg])</p></td>
-<td><p>Fail immediately, with the given message.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">failureException</span></code></p></td>
-<td><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">builtins.AssertionError</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pyrfu.test_pyrf.TestPyrf.setUp" title="pyrfu.test_pyrf.TestPyrf.setUp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setUp</span></code></a>()</p></td>
-<td><p>Hook method for setting up the test fixture before exercising it.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setUpClass</span></code>()</p></td>
-<td><p>Hook method for setting up class fixture before running tests in the class.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">shortDescription</span></code>()</p></td>
-<td><p>Returns a one-line description of the test, or None if no description has been provided.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">skipTest</span></code>(reason)</p></td>
-<td><p>Skip this test.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">subTest</span></code>([msg])</p></td>
-<td><p>Return a context manager that will return the enclosed block of code in a subtest identified by the optional message and keyword parameters.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tearDown</span></code>()</p></td>
-<td><p>Hook method for deconstructing the test fixture after testing it.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tearDownClass</span></code>()</p></td>
-<td><p>Hook method for deconstructing the class fixture after running all tests in the class.</p></td>
-</tr>
-</tbody>
-</table>
-<table class="docutils align-default">
-<colgroup>
-<col style="width: 72%" />
-<col style="width: 28%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p><strong>assertAlmostEquals</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>assertDictEqual</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>assertEquals</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>assertNotAlmostEquals</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>assertNotEquals</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>assertNotRegexpMatches</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>assertRaisesRegexp</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>assertRegexpMatches</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>assert_</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>countTestCases</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>defaultTestResult</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>failIf</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>failIfAlmostEqual</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>failIfEqual</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>failUnless</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>failUnlessAlmostEqual</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>failUnlessEqual</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>failUnlessRaises</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>id</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>run</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>test_calc_dt</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>test_calc_fs</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><strong>test_cross</strong></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><strong>test_resample</strong></p></td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<dl class="py method">
-<dt id="pyrfu.test_pyrf.TestPyrf.setUp">
-<code class="sig-name descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.setUp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.setUp" title="Permalink to this definition">¶</a></dt>
-<dd><p>Hook method for setting up the test fixture before exercising it.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pyrfu.test_pyrf.TestPyrf.test_calc_dt">
-<code class="sig-name descname">test_calc_dt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_calc_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_calc_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="pyrfu.test_pyrf.TestPyrf.test_calc_fs">
-<code class="sig-name descname">test_calc_fs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_calc_fs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_calc_fs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="pyrfu.test_pyrf.TestPyrf.test_cross">
-<code class="sig-name descname">test_cross</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_cross"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_cross" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="pyrfu.test_pyrf.TestPyrf.test_resample">
-<code class="sig-name descname">test_resample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/test_pyrf.html#TestPyrf.test_resample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.test_pyrf.TestPyrf.test_resample" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+<div class="section" id="pyrfu-test-pyrf-module">
+<h2>pyrfu.test_pyrf module<a class="headerlink" href="#pyrfu-test-pyrf-module" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="module-pyrfu">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyrfu" title="Permalink to this headline">¶</a></h2>
@@ -484,12 +219,15 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/IRF_logo_blue_on_white.jpg" alt="Logo"/>
+            </a></p>
   <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">pyrfu package</a><ul>
 <li><a class="reference internal" href="#subpackages">Subpackages</a></li>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-pyrfu.test_pyrf">pyrfu.test_pyrf module</a></li>
+<li><a class="reference internal" href="#pyrfu-test-pyrf-module">pyrfu.test_pyrf module</a></li>
 <li><a class="reference internal" href="#module-pyrfu">Module contents</a></li>
 </ul>
 </li>
@@ -537,7 +275,7 @@
         <li class="right" >
           <a href="index.html" title="Welcome to pyrfu’s documentation!"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.6 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu 1.6.7 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">pyrfu package</a></li> 
       </ul>
     </div>

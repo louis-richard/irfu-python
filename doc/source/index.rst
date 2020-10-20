@@ -6,8 +6,12 @@
 Welcome to pyrfu's documentation!
 =================================
 
+.. include:: ../../README.rst
+   :end-before: end-marker-intro-do-not-remove
+
+
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
    :caption: Contents:
 
    pyrfu

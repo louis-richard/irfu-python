@@ -1,4 +1,10 @@
 
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/louis-richard/irfu-python/network/dependencies)
+[![DocSphinx](https://img.shields.io/static/v1.svg?label=sphinx&message=documentation&color=blue)](https://github.com/louis-richard/irfu-python/blob/master/doc/build/html/pyrfu.html)
+[![TestPyPi](https://img.shields.io/badge/install_with-pypi-brightgreen.svg)](https://test.pypi.org/project/pyrfu/)
+
 
 # pyRFU
 

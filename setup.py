@@ -11,8 +11,10 @@ URL = "https://github.com/louis-richard/irfu-python"
 
 LICENSE = "MIT License"
 DESCRIPTION = "Python Space Physics Environment Data Analysis"
-LONG_DESCRIPTION = (HERE / "README.md").read_text()
-LONG_DESC_TYPE = "text/markdown"
+
+with open("README.rst", "r") as fh:
+    LONG_DESCRIPTION = fh.read()
+
 
 INSTALL_REQUIRES = [
       "astropy",
@@ -42,7 +44,6 @@ setup(
       version=VERSION,
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
-      long_description_content_type=LONG_DESC_TYPE,
       author=AUTHOR,
       license=LICENSE,
       author_email=AUTHOR_EMAIL,
