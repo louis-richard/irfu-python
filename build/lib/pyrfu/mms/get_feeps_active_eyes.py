@@ -11,41 +11,40 @@ import datetime
 
 
 def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
-    """
-    This function returns the FEEPS active eyes, based on date/mms_id/species/rate
+    """This function returns the FEEPS active eyes, based on date/mms_id/species/rate.
     
     Parameters
     ----------
     var : dict
-        Hash table containing parameters
+        Hash table containing parameters.
 
-    tint: list of str
-        time range
+    tint : list of str
+        Time range.
 
-    mms_id: str
-        mms_id e.g., '4' for MMS4
+    mms_id : str
+        mms_id e.g., '4' for MMS4.
 
     Returns
     -------
     sensors : dict
-        Hash table containing 2 keys:
-            * out["top"] : maps to the active top eyes
-            * out["bottom"] : maps to the active bottom eyes
+        Hash table containing 2 keys :
+            * out["top"] : maps to the active top eyes.
+            * out["bottom"] : maps to the active bottom eyes.
+
     Notes
     -----
     1) Burst mode should include all sensors (TOP and BOTTOM) :
-        * electrons : [1, 2, 3, 4, 5, 9, 10, 11, 12]
-        * ions : [6, 7, 8]
+        * electrons : [1, 2, 3, 4, 5, 9, 10, 11, 12].
+        * ions : [6, 7, 8].
 
     2) SITL should return (TOP only) :
-        * electrons : set_intersection([5, 11, 12], active_eyes)
-        * ions : None
+        * electrons : set_intersection([5, 11, 12], active_eyes).
+        * ions : None.
 
     3) From Drew Turner, 9/7/2017, srvy mode :
-
         * before 16 August 2017 :
-            * electrons : [3, 4, 5, 11, 12]
-            * ion : [6, 7, 8]
+            * electrons : [3, 4, 5, 11, 12].
+            * ion : [6, 7, 8].
 
         * after 16 August 2017 :
             * MMS1 :
@@ -60,6 +59,7 @@ def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
             * MMS4 :
                 * Top Eyes : 3, 4, 5, 6, 8, 9, 10, 11
                 * Bot Eyes : 3, 5, 6, 7, 8, 9, 10, 12
+
     """
 
     if isinstance(mms_id, str):

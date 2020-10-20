@@ -13,30 +13,29 @@ from scipy import signal
 
 # noinspection PyTupleAssignmentBalance
 def filt(inp=None, f_min=0, f_max=1, n=-1):
-	"""
-	Filters input quantity
+	"""Filters input quantity.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the variable to filter
+		Time series of the variable to filter.
 
 	f_min : float
-		Lower limit of the frequency range
+		Lower limit of the frequency range.
 
 	f_max : float
-		Upper limit of the frequency range
+		Upper limit of the frequency range.
 
 	n : int
-		Order of the elliptic filter
+		Order of the elliptic filter.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the filtered signal
+		Time series of the filtered signal.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2017-07-18T13:03:34.000", "2017-07-18T13:07:00.000"]

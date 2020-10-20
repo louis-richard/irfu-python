@@ -11,42 +11,41 @@ import xarray as xr
 
 
 def ts_skymap(t=None, data=None, energy=None, phi=None, theta=None, **kwargs):
-	"""
-	Creates a skymap of the distribution function
+	"""Creates a skymap of the distribution function.
 
 	Parameters
 	----------
 	t : numpy.ndarray
-		List of times
+		List of times.
 
 	data : numpy.ndarray
-		Values of the distribution function
+		Values of the distribution function.
 
 	energy : numpy.ndarray
-		Energy levels
+		Energy levels.
 
 	phi : numpy.ndarray
-		Azimuthal angles
+		Azimuthal angles.
 
 	theta : numpy.ndarray
-		Elevation angles
+		Elevation angles.
 
-	Keyword Arguments
-	-----------------
-	energy0 : numpy.ndarray
-		Energy table 0 (odd time indices)
+	**kwargs : dict
+		Hash table of keyword arguments with :
+			* energy0 : numpy.ndarray
+				Energy table 0 (odd time indices).
 
-	energy1 : numpy.ndarray
-		Energy table 1 (even time indices)
+			* energy1 : numpy.ndarray
+				Energy table 1 (even time indices).
 
-	esteptable : numpy.ndarray
-		Time series of the stepping table between energies (burst)
+			* esteptable : numpy.ndarray
+				Time series of the stepping table between energies (burst).
 
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Skymap of the distribution function
+		Skymap of the distribution function.
 
 	"""
 

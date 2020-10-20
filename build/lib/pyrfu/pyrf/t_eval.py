@@ -12,21 +12,20 @@ import bisect
 
 
 def t_eval(inp=None, t=None):
-	"""
-	Evaluates the input time series at the target time
+	"""Evaluates the input time series at the target time.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series if the input to evaluate
+		Time series if the input to evaluate.
 
 	t : numpy.ndarray
-		Times at which the input will be evaluated
+		Times at which the input will be evaluated.
 
 	Returns
 	-------
 	out : DataArray
-		Time series of the input at times t
+		Time series of the input at times t.
 
 	"""
 

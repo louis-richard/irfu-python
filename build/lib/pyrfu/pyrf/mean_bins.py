@@ -11,35 +11,34 @@ import xarray as xr
 
 
 def mean_bins(x=None, y=None, bins=10):
-	"""
-	Computes mean of values of y corresponding to bins of x
+	"""Computes mean of values of y corresponding to bins of x.
 
 	Parameters
 	----------
 	x : xarray.DataArray
-		Time series of the quantity of bins
+		Time series of the quantity of bins.
 
 	y : xarray.DataArray
-		Time series of the quantity to the mean
+		Time series of the quantity to the mean.
 
 	bins : int
-		Number of bins
+		Number of bins.
 
 	Returns
 	-------
 	out : xarray.Dataset
 		Dataset with :
 			* bins : xarray.DataArray
-				bin values of the x variable
+				bin values of the x variable.
 
 			* data : xarray.DataArray
-				Mean values of y corresponding to each bin of x
+				Mean values of y corresponding to each bin of x.
 
 			* sigma : xarray.DataArray
-				Standard deviation
+				Standard deviation.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> import numpy
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval

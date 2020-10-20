@@ -24,19 +24,20 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     b_xyz : xarray.DataArray
         to fill
 
-    tint : list of str
-        (Optionnal) Time interval for closeup.
+    tint : list of str, optional
+        Time interval for closeup.
 
-    Keyword Arguments
-    -----------------
-    angles : int or float or list of numpy.ndarray
-        User defined angles
+    **kwargs : dict
+        Hash table of keyword arguments with :
+            * angles : int or float or list of numpy.ndarray
+                User defined angles
 
-    meanorsum : str
-        Method :
-            * mean : to fill
-            * sum : to fill
-            * sum_weighted : to fill
+            * meanorsum : str
+                Method :
+                    * mean : to fill
+                    * sum : to fill
+                    * sum_weighted : to fill
+
 
     Returns
     -------
@@ -57,7 +58,6 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     >>> tint_zoom = ["2017-07-24T12:49:18.000", "2017-07-24T12:49:30.000"]
     >>> # Compute pitch angle distribution
     >>> pad_i = mms.get_pitch_angle_dist(vdf, b_dmpa, tint_zoom, angles=24)
-
 
     """
 

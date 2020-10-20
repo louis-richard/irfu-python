@@ -12,21 +12,20 @@ from .resample import resample
 
 
 def avg_4sc(b_list=None):
-	"""
-	Computes the input quantity at the center of mass of the MMS tetrahedron
+	"""Computes the input quantity at the center of mass of the MMS tetrahedron.
 
 	Parameters
 	----------
 	b_list : list of xarray.DataArray
-		List of the time series of the quantity for each spacecraft
+		List of the time series of the quantity for each spacecraft.
 
 	Returns
 	-------
 	b_avg : xarray.DataArray
-		Time series of the input quantity a the enter of mass of the MMS tetrahedron
+		Time series of the input quantity a the enter of mass of the MMS tetrahedron.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu.mms import get_data
 	>>> from pyrfu.pyrf import avg_4sc
 	>>> # Time interval

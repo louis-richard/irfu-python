@@ -11,8 +11,7 @@ import xarray as xr
 
 
 def struct_func(x=None, scale=None, order=2):
-    """
-    Returns the structure function of a time series
+    """Returns the structure function of a time series
 
     .. math::
 
@@ -23,7 +22,7 @@ def struct_func(x=None, scale=None, order=2):
     Parameters
     ----------
     x : xarray.DataArray
-        Input time series
+        Input time series.
 
     scale : list or numpy.ndarray
         A list or an array containing the scales to calculate.
@@ -34,10 +33,9 @@ def struct_func(x=None, scale=None, order=2):
     Returns
     -------
     values : xarray.DataArray
-        An xarray containing the structure functions, one per
-        product in the original time series. The index coordinate
-        contains the scale value, and the attribute 'order' keeps
-        a record on the order used for its calculation.
+        An xarray containing the structure functions, one per product in the original time series. The index coordinate
+        contains the scale value, and the attribute 'order' keeps a record on the order used for its calculation.
+
     """
 
     assert x is not None and isinstance(x, xr.DataArray)

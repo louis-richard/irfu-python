@@ -13,8 +13,7 @@ from scipy.stats import kurtosis
 
 
 def increments(x=None, scale=None):
-    """
-    Returns the increments of a time series
+    """Returns the increments of a time series.
 
     .. math:: y = |x_i - x_{i+s}|
 
@@ -23,7 +22,7 @@ def increments(x=None, scale=None):
     Parameters
     ----------
     x : xarray.DataArray
-        Input time series
+        Input time series.
 
     scale : int
         Scale at which to compute the increments.

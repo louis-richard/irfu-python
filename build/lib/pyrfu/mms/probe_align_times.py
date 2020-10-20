@@ -15,11 +15,10 @@ from ..pyrf import ts_scalar, resample, extend_tint, time_clip, convert_fac
 
 
 def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fig=False):
-    """
-    Returns times when field-aligned electrostatic waves can be characterized using interferometry techniques. The same
-    alignment conditions as Graham et al., JGR, 2015 are used. Optional figure produced showing E_FAC, probe fields,
-    and probe potentials to view  time delays between electric fields aligned with B. Currently p5-p6 are not used in
-    this routine; the analysis is the same as the one used for Cluster.
+    """Returns times when field-aligned electrostatic waves can be characterized using interferometry techniques. The
+    same alignment conditions as Graham et al., JGR, 2015 are used. Optional figure produced showing E_FAC, probe
+    fields, and probe potentials to view  time delays between electric fields aligned with B. Currently p5-p6 are not
+    used in this routine; the analysis is the same as the one used for Cluster.
 
     For the figure the panels are :
         * (a) B in DMPA Coordinates
@@ -29,6 +28,7 @@ def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fi
         * (e) E fields from p1-p4 and SC for probes closely aligned with B
         * (f) E in field-aligned coordinates
         * (g) E from probes p1-p2 and p3-p4.
+
 
     Parameters
     ----------
@@ -44,8 +44,8 @@ def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fi
     z_phase : xarray.DataArray
         Spacecraft phase (z_phase). Obtained from ancillary_defatt.
 
-    plot_fig : bool
-        (Optional) Flag to plot fields and potentials which satisfy alignment conditions. Default is False
+    plot_fig : bool, optional
+        Flag to plot fields and potentials which satisfy alignment conditions. Default is False
 
     Returns
     -------
@@ -60,7 +60,6 @@ def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fi
 
     end_time3 : to fill
         End times of intervals which satisfy the probe alignment conditions for probe combinates p3-p4.
-
 
     """
 

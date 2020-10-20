@@ -27,24 +27,24 @@ def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
     Parameters
     ----------
     e_xyz : xarray.DataArray
-        Time series of the electric field
+        Time series of the electric field.
 
     b_xyz : xarray.DataArray
-        Time series of the magnetic field
+        Time series of the magnetic field.
 
-    b0 : xarray.DataArray
-        Time series of the direction to project the Pointing flux (optional)
+    b0 : xarray.DataArray, optional
+        Time series of the direction to project the Pointing flux.
 
     Returns
     -------
     s : xarray.DataArray
-        Time series of the Pointing flux
+        Time series of the Pointing flux.
 
     s_z : xarray.DataArray
-        Time series of the projection of the Pointing flux (only if b0)
+        Time series of the projection of the Pointing flux (only if b0).
 
     int_s : xarray.DataArray
-        Time series of the time integral of the Pointing flux (if b0 integral along b0)
+        Time series of the time integral of the Pointing flux (if b0 integral along b0).
 
     """
 

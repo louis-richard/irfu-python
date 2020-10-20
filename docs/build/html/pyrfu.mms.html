@@ -1,0 +1,2133 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.mms package &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pyrfu.plot package" href="pyrfu.plot.html" />
+    <link rel="prev" title="pyrfu package" href="pyrfu.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.plot.html" title="pyrfu.plot package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.html" title="pyrfu package"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="pyrfu.html" accesskey="U">pyrfu package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms package</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="pyrfu-mms-package">
+<h1>pyrfu.mms package<a class="headerlink" href="#pyrfu-mms-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyrfu.mms.calc_feeps_omni">
+<span id="pyrfu-mms-calc-feeps-omni-module"></span><h2>pyrfu.mms.calc_feeps_omni module<a class="headerlink" href="#module-pyrfu.mms.calc_feeps_omni" title="Permalink to this headline">¶</a></h2>
+<p>calc_feeps_omni.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.calc_feeps_omni.calc_feeps_omni">
+<code class="sig-prename descclassname">pyrfu.mms.calc_feeps_omni.</code><code class="sig-name descname">calc_feeps_omni</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dataset</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/calc_feeps_omni.html#calc_feeps_omni"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.calc_feeps_omni.calc_feeps_omni" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the omni-directional FEEPS spectrogram from a Dataset that contains the spectrogram of all eyes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_dataset</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Dataset with energy spectrum of every eyes.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>OMNI energy spectrum from the input.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.calc_feeps_pad">
+<span id="pyrfu-mms-calc-feeps-pad-module"></span><h2>pyrfu.mms.calc_feeps_pad module<a class="headerlink" href="#module-pyrfu.mms.calc_feeps_pad" title="Permalink to this headline">¶</a></h2>
+<p>calc_feeps_pad.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.calc_feeps_pad.calc_feeps_pad">
+<code class="sig-prename descclassname">pyrfu.mms.calc_feeps_pad.</code><code class="sig-name descname">calc_feeps_pad</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dataset</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_bcs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bin_size</span><span class="o">=</span><span class="default_value">16.3636</span></em>, <em class="sig-param"><span class="n">energy</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/calc_feeps_pad.html#calc_feeps_pad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.calc_feeps_pad.calc_feeps_pad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute pitch angle distribution using FEEPS data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_dataset</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Energy spectrum of all eyes.</p>
+</dd>
+<dt><strong>b_bcs</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the magnetic field in spacecraft coordinates.</p>
+</dd>
+<dt><strong>bin_size</strong><span class="classifier">float</span></dt><dd><p>Width of the pitch angles bins.</p>
+</dd>
+<dt><strong>energy</strong><span class="classifier">list of float</span></dt><dd><p>Energy range of particles.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>pad</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the pitch angle distribution.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.calculate_epsilon">
+<span id="pyrfu-mms-calculate-epsilon-module"></span><h2>pyrfu.mms.calculate_epsilon module<a class="headerlink" href="#module-pyrfu.mms.calculate_epsilon" title="Permalink to this headline">¶</a></h2>
+<p>calculate_epsilon.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.calculate_epsilon.calculate_epsilon">
+<code class="sig-prename descclassname">pyrfu.mms.calculate_epsilon.</code><code class="sig-name descname">calculate_epsilon</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">model_vdf</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sc_pot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/calculate_epsilon.html#calculate_epsilon"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.calculate_epsilon.calculate_epsilon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates epsilon parameter using model distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Observed particle distribution (skymap).</p>
+</dd>
+<dt><strong>model_vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Model particle distribution (skymap).</p>
+</dd>
+<dt><strong>n</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the number density.</p>
+</dd>
+<dt><strong>sc_pot</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the spacecraft potential.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier">dict</span></dt><dd><dl class="simple">
+<dt>Hash table of keyword arguments with :</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>en_channels<span class="classifier">list or numpy.ndarray</span></dt><dd><p>Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>epsilon</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the epsilon parameter.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">eps</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">calculate_epsilon</span><span class="p">(</span><span class="n">vdf</span><span class="p">,</span> <span class="n">model_vdf</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">,</span> <span class="n">en_channel</span><span class="o">=</span><span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">32</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.correct_edp_probe_timing">
+<span id="pyrfu-mms-correct-edp-probe-timing-module"></span><h2>pyrfu.mms.correct_edp_probe_timing module<a class="headerlink" href="#module-pyrfu.mms.correct_edp_probe_timing" title="Permalink to this headline">¶</a></h2>
+<p>correct_edp_probe_timing.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.correct_edp_probe_timing.correct_edp_probe_timing">
+<code class="sig-prename descclassname">pyrfu.mms.correct_edp_probe_timing.</code><code class="sig-name descname">correct_edp_probe_timing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">v_org</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/correct_edp_probe_timing.html#correct_edp_probe_timing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.correct_edp_probe_timing.correct_edp_probe_timing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Corrects for the channel delays not accounted for in the MMS EDP processing. As described in the MMS EDP data
+products guide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>v_org</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series created from L2 sc_pot files, from the variable “mms#_edp_dcv_brst_l2” containing individual probe
+potentials.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>v_corrected</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series where the channel delay for each probe have been accounted and corrected for.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This function is only useful for Burst mode data. For the other telemetry modes (i.e. slow and fast) the channel
+delays are completely negligible and the interpolation and resampling applied here will have no effect other than
+possibly introduce numerical noise.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.db_get_ts">
+<span id="pyrfu-mms-db-get-ts-module"></span><h2>pyrfu.mms.db_get_ts module<a class="headerlink" href="#module-pyrfu.mms.db_get_ts" title="Permalink to this headline">¶</a></h2>
+<p>db_get_ts.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.db_get_ts.db_get_ts">
+<code class="sig-prename descclassname">pyrfu.mms.db_get_ts.</code><code class="sig-name descname">db_get_ts</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataset_name</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cdf_name</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/db_get_ts.html#db_get_ts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.db_get_ts.db_get_ts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get variable time series in the cdf file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dataset_name</strong><span class="classifier">str</span></dt><dd><p>Name of the dataset.</p>
+</dd>
+<dt><strong>cdf_name</strong><span class="classifier">str</span></dt><dd><p>Name of the target field in cdf file.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the target variable.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.deflux_to_vdf">
+<span id="pyrfu-mms-deflux-to-vdf-module"></span><h2>pyrfu.mms.deflux_to_vdf module<a class="headerlink" href="#module-pyrfu.mms.deflux_to_vdf" title="Permalink to this headline">¶</a></h2>
+<p>deflux_to_vdf.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.deflux_to_vdf.deflux_to_vdf">
+<code class="sig-prename descclassname">pyrfu.mms.deflux_to_vdf.</code><code class="sig-name descname">deflux_to_vdf</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">deflux</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/deflux_to_vdf.html#deflux_to_vdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.deflux_to_vdf.deflux_to_vdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute density energy flux from velocity distribution function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>deflux</strong><span class="classifier">xarray.Dataset or xarray.DataArray</span></dt><dd><p>Time series of the density energy flux in 1/(cm^2 s sr keV).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Time series of the velocity distribution function. Units must be either s^3/m^6.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.dft_time_shift">
+<span id="pyrfu-mms-dft-time-shift-module"></span><h2>pyrfu.mms.dft_time_shift module<a class="headerlink" href="#module-pyrfu.mms.dft_time_shift" title="Permalink to this headline">¶</a></h2>
+<p>dft_time_shift.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.dft_time_shift.dft_time_shift">
+<code class="sig-prename descclassname">pyrfu.mms.dft_time_shift.</code><code class="sig-name descname">dft_time_shift</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">tau</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/dft_time_shift.html#dft_time_shift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.dft_time_shift.dft_time_shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shifts the input signal <code class="docutils literal notranslate"><span class="pre">inp</span></code> by <code class="docutils literal notranslate"><span class="pre">tau</span></code> seconds using discrete fourier transform (DFT). Particularly useful
+when calculating the frequency-wavenumber spectrum of the mms’ spin-plane or axial probes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series to be shifted (Note : Only tensor order 1).</p>
+</dd>
+<dt><strong>tau</strong><span class="classifier">float</span></dt><dd><p>Applied shift in seconds.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the shifted input.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#module-pyrfu.mms.fk_power_spectrum" title="pyrfu.mms.fk_power_spectrum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyrfu.mms.fk_power_spectrum</span></code></a></dt><dd><p>Calculates the frequency-wave number power spectrum.</p>
+</dd>
+</dl>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.dpflux_to_vdf">
+<span id="pyrfu-mms-dpflux-to-vdf-module"></span><h2>pyrfu.mms.dpflux_to_vdf module<a class="headerlink" href="#module-pyrfu.mms.dpflux_to_vdf" title="Permalink to this headline">¶</a></h2>
+<p>dpflux_to_vdf.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.dpflux_to_vdf.dpflux_to_vdf">
+<code class="sig-prename descclassname">pyrfu.mms.dpflux_to_vdf.</code><code class="sig-name descname">dpflux_to_vdf</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dpflux</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/dpflux_to_vdf.html#dpflux_to_vdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.dpflux_to_vdf.dpflux_to_vdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute density particle flux from velocity distribution function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dpflux</strong><span class="classifier">xarray.Dataset or xarray.DataArray</span></dt><dd><p>Time series of the density particle flux in 1/(cm^2 s sr keV).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Time series of the velocity distribution function. Units must be either s^3/m^6.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.estimate_phase_speed">
+<span id="pyrfu-mms-estimate-phase-speed-module"></span><h2>pyrfu.mms.estimate_phase_speed module<a class="headerlink" href="#module-pyrfu.mms.estimate_phase_speed" title="Permalink to this headline">¶</a></h2>
+<p>estimate_phase_speed.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.estimate_phase_speed.estimate_phase_speed">
+<code class="sig-prename descclassname">pyrfu.mms.estimate_phase_speed.</code><code class="sig-name descname">estimate_phase_speed</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">f_k_power</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">f</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">k</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">f_min</span><span class="o">=</span><span class="default_value">100.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/estimate_phase_speed.html#estimate_phase_speed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.estimate_phase_speed.estimate_phase_speed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple function to estimate the phase speed from the frequency wave number power spectrum. Fits
+<span class="math notranslate nohighlight">\(f = v k/ 2 \pi\)</span> to the power spectrum.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>f_k_power</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>2D array of powers.</p>
+</dd>
+<dt><strong>f</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>1D array of frequencies.</p>
+</dd>
+<dt><strong>k</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>1D array of wave numbers.</p>
+</dd>
+<dt><strong>f_min</strong><span class="classifier">float or int, optional</span></dt><dd><p>Set low frequency threshold of points used to estimate the speed. Default <code class="docutils literal notranslate"><span class="pre">f_min</span></code> = 100</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>vph</strong><span class="classifier">float</span></dt><dd><p>Estimated phase speed by fitting linear dispersion relation to data.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#module-pyrfu.mms.fk_power_spectrum" title="pyrfu.mms.fk_power_spectrum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyrfu.mms.fk_power_spectrum</span></code></a></dt><dd><p>Calculates the frequency-wave number power spectrum</p>
+</dd>
+<dt><a class="reference internal" href="#module-pyrfu.mms.probe_align_times" title="pyrfu.mms.probe_align_times"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyrfu.mms.probe_align_times</span></code></a></dt><dd><p>Returns times when field-aligned electrostatic waves can be characterized.</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>Draft version but seems to work well. Does not yet handle multiple modes in the same power spectrum.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.feeps_pitch_angles">
+<span id="pyrfu-mms-feeps-pitch-angles-module"></span><h2>pyrfu.mms.feeps_pitch_angles module<a class="headerlink" href="#module-pyrfu.mms.feeps_pitch_angles" title="Permalink to this headline">¶</a></h2>
+<p>feeps_pitch_angles.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.feeps_pitch_angles.feeps_pitch_angles">
+<code class="sig-prename descclassname">pyrfu.mms.feeps_pitch_angles.</code><code class="sig-name descname">feeps_pitch_angles</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dataset</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_bcs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/feeps_pitch_angles.html#feeps_pitch_angles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.feeps_pitch_angles.feeps_pitch_angles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the FEEPS pitch angles for each telescope from magnetic field data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_dataset</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Dataset of the time series of the energy spectrum for each eye of FEEPS telescopes.</p>
+</dd>
+<dt><strong>b_bcs</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the magnetic in spacecraft coordinates system.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the pitch angles.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.feeps_remove_sun">
+<span id="pyrfu-mms-feeps-remove-sun-module"></span><h2>pyrfu.mms.feeps_remove_sun module<a class="headerlink" href="#module-pyrfu.mms.feeps_remove_sun" title="Permalink to this headline">¶</a></h2>
+<p>feeps_remove_sun.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.feeps_remove_sun.feeps_remove_sun">
+<code class="sig-prename descclassname">pyrfu.mms.feeps_remove_sun.</code><code class="sig-name descname">feeps_remove_sun</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dataset</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/feeps_remove_sun.html#feeps_remove_sun"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.feeps_remove_sun.feeps_remove_sun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes the sunlight contamination from FEEPS data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_dataset</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Dataset of energy spectrum of all eyes.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Dataset of cleaned energy spectrum of all eyes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#module-pyrfu.mms.get_feeps_alleyes" title="pyrfu.mms.get_feeps_alleyes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyrfu.mms.get_feeps_alleyes</span></code></a></dt><dd><p>Read energy spectrum for all FEEPS eyes.</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Define time interval</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2017-07-18T13:04:00.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2017-07-18T13:07:00.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Spacecraft index</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mms_id</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load data from FEEPS</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cps_i</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_feeps_alleyes</span><span class="p">(</span><span class="s2">&quot;CPSi_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="n">mms_id</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cps_i_clean</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">feeps_split_integral_ch</span><span class="p">(</span><span class="n">cps_i</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cps_i_clean_sun_removed</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">feeps_remove_sun</span><span class="p">(</span><span class="n">cps_i_clean</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.feeps_spin_avg">
+<span id="pyrfu-mms-feeps-spin-avg-module"></span><h2>pyrfu.mms.feeps_spin_avg module<a class="headerlink" href="#module-pyrfu.mms.feeps_spin_avg" title="Permalink to this headline">¶</a></h2>
+<p>feeps_spin_avg.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.feeps_spin_avg.feeps_spin_avg">
+<code class="sig-prename descclassname">pyrfu.mms.feeps_spin_avg.</code><code class="sig-name descname">feeps_spin_avg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dataset_omni</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/feeps_spin_avg.html#feeps_spin_avg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.feeps_spin_avg.feeps_spin_avg" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function will spin-average the omni-directional FEEPS energy spectra.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_dataset_omni</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Spectrogram of all eyes in OMNI.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Spin-averaged OMNI energy spectrum.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.feeps_split_integral_ch">
+<span id="pyrfu-mms-feeps-split-integral-ch-module"></span><h2>pyrfu.mms.feeps_split_integral_ch module<a class="headerlink" href="#module-pyrfu.mms.feeps_split_integral_ch" title="Permalink to this headline">¶</a></h2>
+<p>feeps_split_integral_ch.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.feeps_split_integral_ch.feeps_split_integral_ch">
+<code class="sig-prename descclassname">pyrfu.mms.feeps_split_integral_ch.</code><code class="sig-name descname">feeps_split_integral_ch</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_dataset</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/feeps_split_integral_ch.html#feeps_split_integral_ch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.feeps_split_integral_ch.feeps_split_integral_ch" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function splits the last integral channel from the FEEPS spectra, creating 2 new DataArrays</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_dataset</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Energetic particles energy spectrum from FEEPS.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Energetic particles energy spectra with the integral channel removed.</p>
+</dd>
+<dt><strong>out_500kev</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Integral channel that was removed.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.fft_bandpass">
+<span id="pyrfu-mms-fft-bandpass-module"></span><h2>pyrfu.mms.fft_bandpass module<a class="headerlink" href="#module-pyrfu.mms.fft_bandpass" title="Permalink to this headline">¶</a></h2>
+<p>fft_bandpass.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.fft_bandpass.fft_bandpass">
+<code class="sig-prename descclassname">pyrfu.mms.fft_bandpass.</code><code class="sig-name descname">fft_bandpass</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">f_min</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">f_max</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/fft_bandpass.html#fft_bandpass"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.fft_bandpass.fft_bandpass" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform simple bandpass using FFT - returns fields between with <code class="docutils literal notranslate"><span class="pre">f_min</span></code> &lt; f &lt; <code class="docutils literal notranslate"><span class="pre">f_max</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series to be bandpassed filtered.</p>
+</dd>
+<dt><strong>f_min</strong><span class="classifier">float or int</span></dt><dd><p>Minimum frequency of filter, f &lt; <code class="docutils literal notranslate"><span class="pre">f_min</span></code> are removed.</p>
+</dd>
+<dt><strong>f_max</strong><span class="classifier">float or int</span></dt><dd><p>Maximum frequency of filter, f &gt; <code class="docutils literal notranslate"><span class="pre">f_max</span></code> are removed.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the bandpassed filtered data.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Can be some spurius effects near boundary. Can take longer interval then use tlim to remove.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_xyz_bp</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">fft_bandpass</span><span class="p">(</span><span class="n">e_xyz</span><span class="p">,</span> <span class="n">f_min</span><span class="p">,</span> <span class="n">f_max</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.fk_power_spectrum">
+<span id="pyrfu-mms-fk-power-spectrum-module"></span><h2>pyrfu.mms.fk_power_spectrum module<a class="headerlink" href="#module-pyrfu.mms.fk_power_spectrum" title="Permalink to this headline">¶</a></h2>
+<p>fk_power_spectrum.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.fk_power_spectrum.fk_power_spectrum">
+<code class="sig-prename descclassname">pyrfu.mms.fk_power_spectrum.</code><code class="sig-name descname">fk_power_spectrum</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pc</span><span class="o">=</span><span class="default_value">- 1</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">v6</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">z_phase</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cav</span><span class="o">=</span><span class="default_value">128</span></em>, <em class="sig-param"><span class="n">field</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">num_k</span><span class="o">=</span><span class="default_value">101</span></em>, <em class="sig-param"><span class="n">num_f</span><span class="o">=</span><span class="default_value">200</span></em>, <em class="sig-param"><span class="n">df</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/fk_power_spectrum.html#fk_power_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.fk_power_spectrum.fk_power_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the frequency-wave number power spectrum using MMS’s four spin plane probes. Follows the same
+procedure as c_wk_powerspec. Function uses L2 scpot probe potential data to construct electric fields aligned
+with B separated by 60 m. Wavelet based cross-spectral analysis is used to calculate the phase difference between
+and the fields, and hence the wave number. The power is then binned according to frequency and wave number
+(Graham et al., JGR, 2016).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>pc</strong><span class="classifier">int</span></dt><dd><p>Probe combination to use :
+* 1 : <code class="docutils literal notranslate"><span class="pre">b_xyz</span></code> aligned with probes 1 and 2.
+* 3 : <code class="docutils literal notranslate"><span class="pre">b_xyz</span></code> aligned with probes 3 and 4.
+* 5 : <code class="docutils literal notranslate"><span class="pre">b_xyz</span></code> aligned with probes 5 and 6.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval over which the power spectrum is calculated. <code class="docutils literal notranslate"><span class="pre">b_xyz</span></code> should be closely aligned with one probe
+pair over this time.</p>
+</dd>
+<dt><strong>v6</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>L2 probe potentials.</p>
+</dd>
+<dt><strong>b_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the magnetic field in DMPA coordinates.</p>
+</dd>
+<dt><strong>z_phase</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Spacecraft phase (zphase). Obtained from ancillary_defatt. Needed only if <code class="docutils literal notranslate"><span class="pre">pc</span></code> = 1 or 3.</p>
+</dd>
+<dt><strong>cav</strong><span class="classifier">int, optional</span></dt><dd><p>Number of points in time series used to estimate phase. Default is <code class="docutils literal notranslate"><span class="pre">cav</span></code> = 128.</p>
+</dd>
+<dt><strong>field</strong><span class="classifier">bool, optional</span></dt><dd><p>Set to True to use electric fields calculated from opposing probes and sc_pot. Set to False to use only
+opposing probe potentials. Default is True.</p>
+</dd>
+<dt><strong>num_k</strong><span class="classifier">int, optional</span></dt><dd><blockquote>
+<div><p>Set number of wave numbers used in spectrogram. Default <code class="docutils literal notranslate"><span class="pre">num_k</span></code> = 101.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>df<span class="classifier">float, optional</span></dt><dd><p>Linearly spaced frequencies. Default is logarithmic spacing.</p>
+</dd>
+<dt>num_f<span class="classifier">int, optional</span></dt><dd><p>Set number of frequencies used in spectrogram. Default <code class="docutils literal notranslate"><span class="pre">num_f</span></code> = 200.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>fk_power</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Powers as a function of frequency and wavenumber. Power is normalized to the maximum value.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#module-pyrfu.mms.probe_align_times" title="pyrfu.mms.probe_align_times"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyrfu.mms.probe_align_times</span></code></a></dt><dd><p>Returns times when field-aligned electrostatic waves can be characterized.</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>Timing corrections are applied to <code class="docutils literal notranslate"><span class="pre">v6</span></code> in this function. Do not apply them before running this function.
+Directions and speeds are consistent with expectations based on time delays. Work still in progress. Time
+corrections for the probes need to be revised.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fk_power</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">fk_power_spectrum</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="n">v6</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="n">z_phase</span><span class="p">,</span> <span class="n">cav</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fk_power</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">fk_power_spectrum</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="n">v6</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="n">z_phase</span><span class="p">,</span> <span class="n">cav</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">num_k</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.fk_power_spectrum_4sc">
+<span id="pyrfu-mms-fk-power-spectrum-4sc-module"></span><h2>pyrfu.mms.fk_power_spectrum_4sc module<a class="headerlink" href="#module-pyrfu.mms.fk_power_spectrum_4sc" title="Permalink to this headline">¶</a></h2>
+<p>fk_power_spectrum_4sc.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.fk_power_spectrum_4sc.fk_power_spectrum_4sc">
+<code class="sig-prename descclassname">pyrfu.mms.fk_power_spectrum_4sc.</code><code class="sig-name descname">fk_power_spectrum_4sc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">e</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">r</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">tints</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cav</span><span class="o">=</span><span class="default_value">8</span></em>, <em class="sig-param"><span class="n">num_k</span><span class="o">=</span><span class="default_value">500</span></em>, <em class="sig-param"><span class="n">num_f</span><span class="o">=</span><span class="default_value">200</span></em>, <em class="sig-param"><span class="n">df</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">w_width</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">f_range</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/fk_power_spectrum_4sc.html#fk_power_spectrum_4sc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.fk_power_spectrum_4sc.fk_power_spectrum_4sc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of
+mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to calculate the phase difference each
+spacecraft pair and determine 3D wave vector. A generalization of the method used in mms.fk_powerspectrum
+to four point measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>e</strong><span class="classifier">list of xarray.DataArray</span></dt><dd><p>Fields to apply 4SC cross-spectral analysis to. e.g., e or b fields (if multiple components only the first is
+used).</p>
+</dd>
+<dt><strong>r</strong><span class="classifier">list of xarray.DataArray</span></dt><dd><p>Positions of the four spacecraft.</p>
+</dd>
+<dt><strong>b</strong><span class="classifier">list of xarray.DataArray</span></dt><dd><p>background magnetic field in the same coordinates as r. Used to determine the parallel and perpendicular wave
+numbers using 4SC average.</p>
+</dd>
+<dt><strong>tints</strong><span class="classifier">list of str</span></dt><dd><p>Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time interval
+for e and b.</p>
+</dd>
+<dt><strong>cav</strong><span class="classifier">int, optional</span></dt><dd><p>Number of points in time series used to estimate phase. Default <code class="docutils literal notranslate"><span class="pre">cav</span></code> = 8.</p>
+</dd>
+<dt><strong>num_k</strong><span class="classifier">int, optional</span></dt><dd><p>Number of wave numbers used in spectrogram. Default <code class="docutils literal notranslate"><span class="pre">num_k</span></code> = 500.</p>
+</dd>
+<dt><strong>df</strong><span class="classifier">float, optional</span></dt><dd><p>Linear spacing of frequencies. Default <code class="docutils literal notranslate"><span class="pre">df</span></code> = None (log spacing).</p>
+</dd>
+<dt><strong>num_f</strong><span class="classifier">int, optional</span></dt><dd><p>Number of frequencies used in spectrogram. Default <code class="docutils literal notranslate"><span class="pre">num_f</span></code> = 200.</p>
+</dd>
+<dt><strong>w_width</strong><span class="classifier">float, optional</span></dt><dd><p>Multiplier for Morlet wavelet width. Default <code class="docutils literal notranslate"><span class="pre">w_width</span></code> = 1.</p>
+</dd>
+<dt><strong>f_range</strong><span class="classifier">list of float, optional</span></dt><dd><p>Frequency range for k-k plots. [minf maxf].</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum value.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">power</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">fk_power_spectrum_4sc</span><span class="p">(</span><span class="n">e_par</span><span class="p">,</span> <span class="n">r_xyz</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="n">tints</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">power</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">fk_power_spectrum_4sc</span><span class="p">(</span><span class="n">b_scmfac_x</span><span class="p">,</span> <span class="n">r_xyz</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="n">tints</span><span class="p">,</span> <span class="n">linear</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">num_k</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cav</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">w_width</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Plot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu.plot</span> <span class="kn">import</span> <span class="n">plot_spectr</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="p">,</span> <span class="n">cax</span> <span class="o">=</span> <span class="n">plot_spectr</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">power</span><span class="o">.</span><span class="n">kmagf</span><span class="p">,</span> <span class="n">cscale</span><span class="o">=</span><span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;$|k|$ [m$^{-1}$]&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$f$ [Hz]&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_data">
+<span id="pyrfu-mms-get-data-module"></span><h2>pyrfu.mms.get_data module<a class="headerlink" href="#module-pyrfu.mms.get_data" title="Permalink to this headline">¶</a></h2>
+<p>get_data.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_data.get_data">
+<code class="sig-prename descclassname">pyrfu.mms.get_data.</code><code class="sig-name descname">get_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">var_str</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">'1'</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_data.html#get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_data.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a variable. var_str must be in var (see below)</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>EPHEMERIS :</dt><dd><p>“R_gse”, “R_gsm”</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>FGM :</dt><dd><p>“B_gsm_fgm_srvy_l2”, “B_gsm_fgm_brst_l2”, “B_gse_fgm_srvy_l2”,
+“B_gse_fgm_brst_l2”, “B_bcs_fgm_srvy_l2”, “B_bcs_fgm_brst_l2”,
+“B_dmpa_fgm_srvy_l2”, “B_dmpa_fgm_brst_l2”</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>DFG &amp; AFG :</dt><dd><p>“B_gsm_dfg_srvy_l2pre”, “B_gse_dfg_srvy_l2pre”, “B_dmpa_dfg_srvy_l2pre”,
+“B_bcs_dfg_srvy_l2pre”, “B_gsm_afg_srvy_l2pre”, “B_gse_afg_srvy_l2pre”,
+“B_dmpa_afg_srvy_l2pre”, “B_bcs_afg_srvy_l2pre”</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>SCM :</dt><dd><p>“B_gse_scm_brst_l2”</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>EDP :</dt><dd><p>“Phase_edp_fast_l2a”, “Phase_edp_slow_l2a”, “Sdev12_edp_slow_l2a”,
+“Sdev34_edp_slow_l2a”, “Sdev12_edp_fast_l2a”, “Sdev34_edp_fast_l2a”,
+“E_dsl_edp_brst_l2”, “E_dsl_edp_fast_l2”, “E_dsl_edp_brst_ql”,
+“E_dsl_edp_fast_ql”, “E_dsl_edp_slow_l2”, “E_gse_edp_brst_l2”,
+“E_gse_edp_fast_l2”, “E_gse_edp_slow_l2”, “E2d_dsl_edp_brst_l2pre”,
+“E2d_dsl_edp_fast_l2pre”, “E2d_dsl_edp_brst_ql”, “E2d_dsl_edp_fast_ql”,
+“E2d_dsl_edp_l2pre”, “E2d_dsl_edp_fast_l2pre”, “E2d_dsl_edp_brst_l2pre”,
+“E_dsl_edp_l2pre”, “E_dsl_edp_fast_l2pre”, “E_dsl_edp_brst_l2pre”,
+“E_dsl_edp_slow_l2pre”, “E_ssc_edp_brst_l2a”, “E_ssc_edp_fast_l2a”,
+“E_ssc_edp_slow_l2a”, “V_edp_fast_sitl”, “V_edp_slow_sitl”,
+“V_edp_slow_l2”, “V_edp_fast_l2”, “V_edp_brst_l2”</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>FPI Ions :</dt><dd><p>“Vi_dbcs_fpi_brst_l2”, “Vi_dbcs_fpi_fast_l2”, “Vi_dbcs_fpi_l2”,
+“Vi_gse_fpi_ql”, “Vi_gse_fpi_fast_ql”, “Vi_dbcs_fpi_fast_ql”,
+“Vi_gse_fpi_fast_l2”, “Vi_gse_fpi_brst_l2”, “partVi_gse_fpi_brst_l2”,
+“Ni_fpi_brst_l2”, “partNi_fpi_brst_l2”, “Ni_fpi_brst”,
+“Ni_fpi_fast_l2”, “Ni_fpi_ql”, “DEFi_fpi_fast_ql”,
+“DEFi_fpi_fast_l2”, “Tperpi_fpi_brst_l2”, “Tparai_fpi_brst_l2”,
+“partTperpi_fpi_brst_l2”, “partTparai_fpi_brst_l2”, “Ti_dbcs_fpi_brst_l2”,
+“Ti_dbcs_fpi_brst”, “Ti_dbcs_fpi_fast_l2”, “Ti_gse_fpi_ql”,
+“Ti_dbcs_fpi_ql”, “Ti_gse_fpi_brst_l2”, “Pi_dbcs_fpi_brst_l2”,
+“Pi_dbcs_fpi_brst”, “Pi_dbcs_fpi_fast_l2”, “Pi_gse_fpi_ql”,
+“Pi_gse_fpi_brst_l2”</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>FPI Electrons :</dt><dd><p>“Ve_dbcs_fpi_brst_l2”, “Ve_dbcs_fpi_brst”, “Ve_dbcs_fpi_ql”,
+“Ve_dbcs_fpi_fast_l2”, “Ve_gse_fpi_ql”, “Ve_gse_fpi_fast_l2”,
+“Ve_gse_fpi_brst_l2”, “partVe_gse_fpi_brst_l2”, “DEFe_fpi_fast_ql”,
+“DEFe_fpi_fast_l2”, “Ne_fpi_brst_l2”, “partNe_fpi_brst_l2”,
+“Ne_fpi_brst”, “Ne_fpi_fast_l2”, “Ne_fpi_ql”,
+“Tperpe_fpi_brst_l2”, “Tparae_fpi_brst_l2”, “partTperpe_fpi_brst_l2”,
+“partTparae_fpi_brst_l2”, “Te_dbcs_fpi_brst_l2”, “Te_dbcs_fpi_brst”,
+“Te_dbcs_fpi_fast_l2”, “Te_gse_fpi_ql”, “Te_dbcs_fpi_ql”,
+“Te_gse_fpi_brst_l2”, “Pe_dbcs_fpi_brst_l2”, “Pe_dbcs_fpi_brst”,
+“Pe_dbcs_fpi_fast_l2”, “Pe_gse_fpi_ql”, “Pe_gse_fpi_brst_l2”,</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>HPCA :</dt><dd><p>“Nhplus_hpca_srvy_l2”, “Nheplus_hpca_srvy_l2”, “Nheplusplus_hpca_srvy_l2”,
+“Noplus_hpca_srvy_l2”, “Tshplus_hpca_srvy_l2”, “Tsheplus_hpca_srvy_l2”,
+“Tsheplusplus_hpca_srvy_l2”, “Tsoplus_hpca_srvy_l2”, “Vhplus_dbcs_hpca_srvy_l2”,
+“Vheplus_dbcs_hpca_srvy_l2”, “Vheplusplus_dbcs_hpca_srvy_l2”, “Voplus_dbcs_hpca_srvy_l2”,
+“Phplus_dbcs_hpca_srvy_l2”, “Pheplus_dbcs_hpca_srvy_l2”, “Pheplusplus_dbcs_hpca_srvy_l2”,
+“Poplus_dbcs_hpca_srvy_l2”, “Thplus_dbcs_hpca_srvy_l2”, “Theplus_dbcs_hpca_srvy_l2”,
+“Theplusplus_dbcs_hpca_srvy_l2”, “Toplus_dbcs_hpca_srvy_l2”, “Vhplus_gsm_hpca_srvy_l2”,
+“Vheplus_gsm_hpca_srvy_l2”, “Vheplusplus_gsm_hpca_srvy_l2”, “Voplus_gsm_hpca_srvy_l2”,
+“Nhplus_hpca_brst_l2”, “Nheplus_hpca_brst_l2”, “Nheplusplus_hpca_brst_l2”,
+“Noplus_hpca_brst_l2”, “Tshplus_hpca_brst_l2”, “Tsheplus_hpca_brst_l2”,
+“Tsheplusplus_hpca_brst_l2”, “Tsoplus_hpca_brst_l2”, “Vhplus_dbcs_hpca_brst_l2”,
+“Vheplus_dbcs_hpca_brst_l2”, “Vheplusplus_dbcs_hpca_brst_l2”, “Voplus_dbcs_hpca_brst_l2”,
+“Phplus_dbcs_hpca_brst_l2”, “Pheplus_dbcs_hpca_brst_l2”, “Pheplusplus_dbcs_hpca_brst_l2”,
+“Poplus_dbcs_hpca_brst_l2”, “Thplus_dbcs_hpca_brst_l2”, “Theplus_dbcs_hpca_brst_l2”,
+“Theplusplus_dbcs_hpca_brst_l2”, “Toplus_dbcs_hpca_brst_l2”, “Vhplus_gsm_hpca_brst_l2”,
+“Vheplus_gsm_hpca_brst_l2”, “Vheplusplus_gsm_hpca_brst_l2”, “Voplus_gsm_hpca_brst_l2”,
+“Phplus_gsm_hpca_brst_l2”, “Pheplus_gsm_hpca_brst_l2”, “Pheplusplus_gsm_hpca_brst_l2”,
+“Poplus_gsm_hpca_brst_l2”, “Thplus_gsm_hpca_brst_l2”, “Theplus_gsm_hpca_brst_l2”,
+“Theplusplus_gsm_hpca_brst_l2”, “Toplus_gsm_hpca_brst_l2”</p>
+</dd>
+</dl>
+</li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>var_str</strong><span class="classifier">str</span></dt><dd><p>Key of the target variable (see above).</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval.</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">str or int</span></dt><dd><p>Index of the target spacecraft.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool</span></dt><dd><p>Set to True to follow the loading. Default is True.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the target variable of measured by the target spacecraft over the selected time interval.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Define time interval</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2019-09-14T07:54:00.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2019-09-14T08:11:00.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Index of mms spacecraft</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mms_id</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load magnetic field from FGM</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_xyz</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_fgm_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="n">mms_id</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_dist">
+<span id="pyrfu-mms-get-dist-module"></span><h2>pyrfu.mms.get_dist module<a class="headerlink" href="#module-pyrfu.mms.get_dist" title="Permalink to this headline">¶</a></h2>
+<p>get_dist.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_dist.get_dist">
+<code class="sig-prename descclassname">pyrfu.mms.get_dist.</code><code class="sig-name descname">get_dist</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">file_path</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cdf_name</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_dist.html#get_dist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_dist.get_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read field named cdf_name in file and convert to velocity distribution function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file_path</strong><span class="classifier">str</span></dt><dd><p>Path of the cdf file.</p>
+</dd>
+<dt><strong>cdf_name</strong><span class="classifier">str</span></dt><dd><p>Name of the target variable in the cdf file.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list</span></dt><dd><p>Time interval.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Time series of the velocity distribution function if the target specie in the selected time interval.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_eis_allt">
+<span id="pyrfu-mms-get-eis-allt-module"></span><h2>pyrfu.mms.get_eis_allt module<a class="headerlink" href="#module-pyrfu.mms.get_eis_allt" title="Permalink to this headline">¶</a></h2>
+<p>get_eis_allt.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_eis_allt.get_eis_allt">
+<code class="sig-prename descclassname">pyrfu.mms.get_eis_allt.</code><code class="sig-name descname">get_eis_allt</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_str</span><span class="o">=</span><span class="default_value">'Flux_extof_proton_srvy_l2'</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">2</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_eis_allt.html#get_eis_allt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_eis_allt.get_eis_allt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read energy spectrum of the selected specie in the selected energy range for all telescopes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_str</strong><span class="classifier">str</span></dt><dd><p>Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval.</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">int or float or str</span></dt><dd><p>Index of the spacecraft.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool</span></dt><dd></dd>
+<dt><strong>Set to True to follow the loading. Default is True.</strong></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Dataset containing the energy spectrum of the 6 telescopes of the Energy Ion Spectrometer.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_eis_omni">
+<span id="pyrfu-mms-get-eis-omni-module"></span><h2>pyrfu.mms.get_eis_omni module<a class="headerlink" href="#module-pyrfu.mms.get_eis_omni" title="Permalink to this headline">¶</a></h2>
+<p>get_eis_omni.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_eis_omni.get_eis_omni">
+<code class="sig-prename descclassname">pyrfu.mms.get_eis_omni.</code><code class="sig-name descname">get_eis_omni</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_str</span><span class="o">=</span><span class="default_value">'Flux_extof_proton_srvy_l2'</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">2</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_eis_omni.html#get_eis_omni"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_eis_omni.get_eis_omni" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes omni directional energy spectrum of the target data unit for the target specie over the target energy
+range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>inp_str</strong><span class="classifier">str</span></dt><dd><p>Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval.</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">int or float or str</span></dt><dd><p>Index of the spacecraft.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool</span></dt><dd><p>Set to True to follow the loading. Default is True.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Energy spectrum of the target data unit for the target specie in omni direction.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_feeps_active_eyes">
+<span id="pyrfu-mms-get-feeps-active-eyes-module"></span><h2>pyrfu.mms.get_feeps_active_eyes module<a class="headerlink" href="#module-pyrfu.mms.get_feeps_active_eyes" title="Permalink to this headline">¶</a></h2>
+<p>get_feeps_active_eyes.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_feeps_active_eyes.get_feeps_active_eyes">
+<code class="sig-prename descclassname">pyrfu.mms.get_feeps_active_eyes.</code><code class="sig-name descname">get_feeps_active_eyes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">var</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_feeps_active_eyes.html#get_feeps_active_eyes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_feeps_active_eyes.get_feeps_active_eyes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function returns the FEEPS active eyes, based on date/mms_id/species/rate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>var</strong><span class="classifier">dict</span></dt><dd><p>Hash table containing parameters.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time range.</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">str</span></dt><dd><p>mms_id e.g., ‘4’ for MMS4.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>sensors</strong><span class="classifier">dict</span></dt><dd><dl class="simple">
+<dt>Hash table containing 2 keys :</dt><dd><ul class="simple">
+<li><p>out[“top”] : maps to the active top eyes.</p></li>
+<li><p>out[“bottom”] : maps to the active bottom eyes.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>Burst mode should include all sensors (TOP and BOTTOM) :</dt><dd><ul class="simple">
+<li><p>electrons : [1, 2, 3, 4, 5, 9, 10, 11, 12].</p></li>
+<li><p>ions : [6, 7, 8].</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>SITL should return (TOP only) :</dt><dd><ul class="simple">
+<li><p>electrons : set_intersection([5, 11, 12], active_eyes).</p></li>
+<li><p>ions : None.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>From Drew Turner, 9/7/2017, srvy mode :</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>before 16 August 2017 :</dt><dd><ul>
+<li><p>electrons : [3, 4, 5, 11, 12].</p></li>
+<li><p>ion : [6, 7, 8].</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>after 16 August 2017 :</dt><dd><ul>
+<li><dl class="simple">
+<dt>MMS1 :</dt><dd><ul>
+<li><p>Top Eyes : 3, 5, 6, 7, 8, 9, 10, 12</p></li>
+<li><p>Bot Eyes : 2, 4, 5, 6, 7, 8, 9, 10</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>MMS2 :</dt><dd><ul>
+<li><p>Top Eyes : 1, 2, 3, 5, 6, 8, 10, 11</p></li>
+<li><p>Bot Eyes : 1, 4, 5, 6, 7, 8, 9, 11</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>MMS3</dt><dd><ul>
+<li><p>Top Eyes : 3, 5, 6, 7, 8, 9, 10, 12</p></li>
+<li><p>Bot Eyes : 1, 2, 3, 6, 7, 8, 9, 10</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>MMS4 :</dt><dd><ul>
+<li><p>Top Eyes : 3, 4, 5, 6, 8, 9, 10, 11</p></li>
+<li><p>Bot Eyes : 3, 5, 6, 7, 8, 9, 10, 12</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ol>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_feeps_alleyes">
+<span id="pyrfu-mms-get-feeps-alleyes-module"></span><h2>pyrfu.mms.get_feeps_alleyes module<a class="headerlink" href="#module-pyrfu.mms.get_feeps_alleyes" title="Permalink to this headline">¶</a></h2>
+<p>get_feeps_alleyes.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_feeps_alleyes.get_feeps_alleyes">
+<code class="sig-prename descclassname">pyrfu.mms.get_feeps_alleyes.</code><code class="sig-name descname">get_feeps_alleyes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tar_var</span><span class="o">=</span><span class="default_value">'fluxe_brst_l2'</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_feeps_alleyes.html#get_feeps_alleyes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_feeps_alleyes.get_feeps_alleyes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read energy spectrum of the selected specie in the selected energy range for all FEEPS eyes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tar_var</strong><span class="classifier">str</span></dt><dd><p>Key of the target variable like {data_unit}{specie}_{data_rate}_{data_lvl}.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval.</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">int or float or str</span></dt><dd><p>Index of the spacecraft.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool</span></dt><dd><p>Set to True to follow the loading. Default is True.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Dataset containing the energy spectrum of the available eyes of the Fly’s Eye Energetic Particle Spectrometer.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_feeps_energy_table">
+<span id="pyrfu-mms-get-feeps-energy-table-module"></span><h2>pyrfu.mms.get_feeps_energy_table module<a class="headerlink" href="#module-pyrfu.mms.get_feeps_energy_table" title="Permalink to this headline">¶</a></h2>
+<p>get_feeps_energy_table.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_feeps_energy_table.get_feeps_energy_table">
+<code class="sig-prename descclassname">pyrfu.mms.get_feeps_energy_table.</code><code class="sig-name descname">get_feeps_energy_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">'1'</span></em>, <em class="sig-param"><span class="n">eye</span><span class="o">=</span><span class="default_value">'top'</span></em>, <em class="sig-param"><span class="n">sensor_id</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_feeps_energy_table.html#get_feeps_energy_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_feeps_energy_table.get_feeps_energy_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function returns the energy table based on each spacecraft and eye; based on the table from :
+FlatFieldResults_V3.xlsx</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>mms_id</strong><span class="classifier">str</span></dt><dd><p>Spacecraft index e.g., “4” for MMS4.</p>
+</dd>
+<dt><strong>eye</strong><span class="classifier">str</span></dt><dd><p>Sensor eye #.</p>
+</dd>
+<dt><strong>sensor_id</strong><span class="classifier">int</span></dt><dd><p>Sensor ID.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">list</span></dt><dd><p>Energy table.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Bad eyes are replaced by NaNs.
+Different original energy tables are used depending on if the sensor head is 6-8 (ions) or not (electrons) :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12</p></li>
+<li><p>Ion Eyes: 6, 7, 8</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_feeps_omni">
+<span id="pyrfu-mms-get-feeps-omni-module"></span><h2>pyrfu.mms.get_feeps_omni module<a class="headerlink" href="#module-pyrfu.mms.get_feeps_omni" title="Permalink to this headline">¶</a></h2>
+<p>get_feeps_omni.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_feeps_omni.get_feeps_omni">
+<code class="sig-prename descclassname">pyrfu.mms.get_feeps_omni.</code><code class="sig-name descname">get_feeps_omni</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tar_var</span><span class="o">=</span><span class="default_value">'flux_ion_brst_l2'</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_feeps_omni.html#get_feeps_omni"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_feeps_omni.get_feeps_omni" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes omni directional energy spectrum of the target data unit for the target specie over the target energy
+range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tar_var</strong><span class="classifier">str</span></dt><dd><p>Key of the target variable like {data_unit}_{specie}_{data_rate}_{data_lvl}.</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval.</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">int or float or str</span></dt><dd><p>Index of the spacecraft.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool</span></dt><dd><p>Set to True to follow the loading. Default is True.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Energy spectrum of the target data unit for the target specie in omni direction.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_feeps_oneeye">
+<span id="pyrfu-mms-get-feeps-oneeye-module"></span><h2>pyrfu.mms.get_feeps_oneeye module<a class="headerlink" href="#module-pyrfu.mms.get_feeps_oneeye" title="Permalink to this headline">¶</a></h2>
+<p>get_feeps_oneeye.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_feeps_oneeye.get_feeps_oneeye">
+<code class="sig-prename descclassname">pyrfu.mms.get_feeps_oneeye.</code><code class="sig-name descname">get_feeps_oneeye</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tar_var</span><span class="o">=</span><span class="default_value">'fluxe_brst_l2'</span></em>, <em class="sig-param"><span class="n">e_id</span><span class="o">=</span><span class="default_value">'bottom-4'</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_feeps_oneeye.html#get_feeps_oneeye"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_feeps_oneeye.get_feeps_oneeye" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load energy spectrum all the target eye</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tar_var</strong><span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>target variable “{data_units}{specie}_{data_rate}_{level}” :</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>data_units :</dt><dd><ul>
+<li><p>flux : intensity (1/cm sr).</p></li>
+<li><p>count : counts (-).</p></li>
+<li><p>CPS : counts per second (1/s).</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>specie :</dt><dd><ul>
+<li><p>i : ion.</p></li>
+<li><p>e : electron.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>data_rate :</dt><dd><ul>
+<li><p>brst : high resolution data.</p></li>
+<li><p>srvy : low resolution data.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>level :</dt><dd><ul>
+<li><p>l1 : level 1 data</p></li>
+<li><p>l1b : level 1b data</p></li>
+<li><p>l2 : level 2 data</p></li>
+<li><p>l3 : level 3 data</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt><strong>e_id</strong><span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>index of the eye “{deck}-{id}” :</dt><dd><ul class="simple">
+<li><p>deck : top/bottom</p></li>
+<li><p>id : see get_feeps_active_eyes</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval.</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">int or str</span></dt><dd><p>Index of the spacecraft.</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool, optional</span></dt><dd><p>Set to True to follow the loading. Default is True.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Energy spectrum of the target eye.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_pitch_angle_dist">
+<span id="pyrfu-mms-get-pitch-angle-dist-module"></span><h2>pyrfu.mms.get_pitch_angle_dist module<a class="headerlink" href="#module-pyrfu.mms.get_pitch_angle_dist" title="Permalink to this headline">¶</a></h2>
+<p>get_pitch_angle_dist.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_pitch_angle_dist.get_pitch_angle_dist">
+<code class="sig-prename descclassname">pyrfu.mms.get_pitch_angle_dist.</code><code class="sig-name descname">get_pitch_angle_dist</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_pitch_angle_dist.html#get_pitch_angle_dist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_pitch_angle_dist.get_pitch_angle_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the pitch angle distributions from l1b brst particle data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>to fill</p>
+</dd>
+<dt><strong>b_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>to fill</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str, optional</span></dt><dd><p>Time interval for closeup.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier">dict</span></dt><dd><dl class="simple">
+<dt>Hash table of keyword arguments with :</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>angles<span class="classifier">int or float or list of numpy.ndarray</span></dt><dd><p>User defined angles</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>meanorsum<span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>Method :</dt><dd><ul>
+<li><p>mean : to fill</p></li>
+<li><p>sum : to fill</p></li>
+<li><p>sum_weighted : to fill</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>pad</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Particle pitch angle distribution</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Define time interval</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint_long</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2017-07-24T12:48:34.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2017-07-24T12:58:20.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load ions velocity distribution for MMS1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">vdf_i</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;pdi_fpi_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint_long</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load magnetic field in the spacecraft coordinates system.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_dmpa</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;b_dmpa_fgm_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint_long</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Define closeup time interval</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint_zoom</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2017-07-24T12:49:18.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2017-07-24T12:49:30.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Compute pitch angle distribution</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pad_i</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_pitch_angle_dist</span><span class="p">(</span><span class="n">vdf</span><span class="p">,</span> <span class="n">b_dmpa</span><span class="p">,</span> <span class="n">tint_zoom</span><span class="p">,</span> <span class="n">angles</span><span class="o">=</span><span class="mi">24</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.get_ts">
+<span id="pyrfu-mms-get-ts-module"></span><h2>pyrfu.mms.get_ts module<a class="headerlink" href="#module-pyrfu.mms.get_ts" title="Permalink to this headline">¶</a></h2>
+<p>get_ts.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.get_ts.get_ts">
+<code class="sig-prename descclassname">pyrfu.mms.get_ts.</code><code class="sig-name descname">get_ts</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">file_path</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">cdf_name</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/get_ts.html#get_ts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.get_ts.get_ts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read field named cdf_name in file and convert to time series</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>file_path</strong><span class="classifier">str</span></dt><dd><p>Path of the cdf file</p>
+</dd>
+<dt><strong>cdf_name</strong><span class="classifier">str</span></dt><dd><p>Name of the target variable in the cdf file</p>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list</span></dt><dd><p>Time interval</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the target variable in the selected time interval</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.lh_wave_analysis">
+<span id="pyrfu-mms-lh-wave-analysis-module"></span><h2>pyrfu.mms.lh_wave_analysis module<a class="headerlink" href="#module-pyrfu.mms.lh_wave_analysis" title="Permalink to this headline">¶</a></h2>
+<p>lh_wave_analysis.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.lh_wave_analysis.lh_wave_analysis">
+<code class="sig-prename descclassname">pyrfu.mms.lh_wave_analysis.</code><code class="sig-name descname">lh_wave_analysis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tints</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">e_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_scm</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">n_e</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/lh_wave_analysis.html#lh_wave_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.lh_wave_analysis.lh_wave_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates lower-hybrid wave properties from MMS data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tints</strong><span class="classifier">list of str</span></dt><dd><p>Time interval</p>
+</dd>
+<dt><strong>e_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series pf the electric field</p>
+</dd>
+<dt><strong>b_scm</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the fluctuations of the magnetic field</p>
+</dd>
+<dt><strong>b_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the background magnetic field</p>
+</dd>
+<dt><strong>n_e</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the number density</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier">dict</span></dt><dd><dl class="simple">
+<dt>Hash table of keyword arguments with :</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>lhfilt<span class="classifier">float or int or list of float or list of int</span></dt><dd><p>Filter for LH fluctuations. For one element it is the minimum frequency in the highpass filter.
+For two elements the fields are bandpassed between the frequencies.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>blpass<span class="classifier">float or int</span></dt><dd><p>Set maximum frequency for low-pass filter of background magnetic field (FGM)</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>phi_eb</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>to fill</p>
+</dd>
+<dt><strong>v_best</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>to fill</p>
+</dd>
+<dt><strong>dir_best</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>to fill</p>
+</dd>
+<dt><strong>thetas</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>to fill</p>
+</dd>
+<dt><strong>corrs</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>to fill</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Large time interval</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint_long</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2015-12-14T01:17:39.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2015-12-14T01:17:43.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load fields and density</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_xyz</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_fgm_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint_long</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">e_xyz</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;E_gse_edp_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint_long</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_scm</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_scm_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint_long</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">n_e</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;Ne_fpi_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint_long</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Time interval of focus</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2015-12-14T01:17:40.200&quot;</span><span class="p">,</span><span class="s2">&quot;2015-12-14T01:17:41.500&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi_eb</span><span class="p">,</span> <span class="n">v_best</span><span class="p">,</span> <span class="n">dir_best</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">lh_wave_analysis</span><span class="p">(</span><span class="n">tint</span><span class="p">,</span> <span class="n">e_xyz</span><span class="p">,</span> <span class="n">b_scm</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="n">n_e</span><span class="p">,</span> <span class="n">lhfilt</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">100</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.list_files">
+<span id="pyrfu-mms-list-files-module"></span><h2>pyrfu.mms.list_files module<a class="headerlink" href="#module-pyrfu.mms.list_files" title="Permalink to this headline">¶</a></h2>
+<p>list_files.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.list_files.list_files">
+<code class="sig-prename descclassname">pyrfu.mms.list_files.</code><code class="sig-name descname">list_files</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">mms_id</span><span class="o">=</span><span class="default_value">'1'</span></em>, <em class="sig-param"><span class="n">var</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/list_files.html#list_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.list_files.list_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find files in the data directories of the target instrument, data type, data rate, mms_id and level during the
+target time interval</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tint</strong><span class="classifier">list</span></dt><dd><p>Time interval</p>
+</dd>
+<dt><strong>mms_id</strong><span class="classifier">str or int</span></dt><dd><p>Index of the spacecraft</p>
+</dd>
+<dt><strong>var</strong><span class="classifier">dict</span></dt><dd><dl class="simple">
+<dt>Dictionary containing 4 keys</dt><dd><ul class="simple">
+<li><p>var[“inst”] : name of the instrument</p></li>
+<li><p>var[“tmmode”] : data rate</p></li>
+<li><p>var[“lev”] : data level</p></li>
+<li><p>var[“dtype”] : data type</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>files</strong><span class="classifier">list</span></dt><dd><p>List of files corresponding to the parameters in the selected time interval</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.load_ancillary">
+<span id="pyrfu-mms-load-ancillary-module"></span><h2>pyrfu.mms.load_ancillary module<a class="headerlink" href="#module-pyrfu.mms.load_ancillary" title="Permalink to this headline">¶</a></h2>
+<p>load_ancillary.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.load_ancillary.load_ancillary">
+<code class="sig-prename descclassname">pyrfu.mms.load_ancillary.</code><code class="sig-name descname">load_ancillary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">level_and_dtype</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">probe</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/load_ancillary.html#load_ancillary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.load_ancillary.load_ancillary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load ancillary data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>level_and_dtype</strong><span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>Ancillary type :</dt><dd><ul class="simple">
+<li><p>predatt</p></li>
+<li><p>predeph</p></li>
+<li><p>defatt</p></li>
+<li><p>defeph</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>Time interval</p>
+</dd>
+<dt><strong>probe</strong><span class="classifier">int</span></dt><dd><p>Spacecraft index</p>
+</dd>
+<dt><strong>verbose</strong><span class="classifier">bool</span></dt><dd><p>Set to True to follow the loading. Default is True</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Time series of the ancillary data</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.make_model_vdf">
+<span id="pyrfu-mms-make-model-vdf-module"></span><h2>pyrfu.mms.make_model_vdf module<a class="headerlink" href="#module-pyrfu.mms.make_model_vdf" title="Permalink to this headline">¶</a></h2>
+<p>make_model_vdf.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.make_model_vdf.make_model_vdf">
+<code class="sig-prename descclassname">pyrfu.mms.make_model_vdf.</code><code class="sig-name descname">make_model_vdf</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sc_pot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">v_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">t_xyz</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/make_model_vdf.html#make_model_vdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.make_model_vdf.make_model_vdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a general bi-Maxwellian distribution function based on particle moment data in the same format as PDist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Particle distribution (skymap).</p>
+</dd>
+<dt><strong>b_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the background magnetic field.</p>
+</dd>
+<dt><strong>sc_pot</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the spacecraft potential.</p>
+</dd>
+<dt><strong>n</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the number density.</p>
+</dd>
+<dt><strong>v_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the bulk velocity.</p>
+</dd>
+<dt><strong>t_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the temperature tensor.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>model_vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Distribution function in the same format as vdf.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#module-pyrfu.mms.calculate_epsilon" title="pyrfu.mms.calculate_epsilon"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyrfu.mms.calculate_epsilon</span></code></a></dt><dd><p>Calculates epsilon parameter using model distribution.</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model_vdf</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">make_model_vdf</span><span class="p">(</span><span class="n">vdf_e</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">,</span> <span class="n">n_e</span><span class="p">,</span> <span class="n">v_xyz_e</span><span class="p">,</span> <span class="n">t_xyz_e</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.mms_config">
+<span id="pyrfu-mms-mms-config-module"></span><h2>pyrfu.mms.mms_config module<a class="headerlink" href="#module-pyrfu.mms.mms_config" title="Permalink to this headline">¶</a></h2>
+<p>mms_config.py</p>
+<p>&#64;author : Louis RICHARD</p>
+</div>
+<div class="section" id="module-pyrfu.mms.probe_align_times">
+<span id="pyrfu-mms-probe-align-times-module"></span><h2>pyrfu.mms.probe_align_times module<a class="headerlink" href="#module-pyrfu.mms.probe_align_times" title="Permalink to this headline">¶</a></h2>
+<p>probe_align_times.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.probe_align_times.probe_align_times">
+<code class="sig-prename descclassname">pyrfu.mms.probe_align_times.</code><code class="sig-name descname">probe_align_times</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">e_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_xyz</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sc_pot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">z_phase</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plot_fig</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/probe_align_times.html#probe_align_times"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.probe_align_times.probe_align_times" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns times when field-aligned electrostatic waves can be characterized using interferometry techniques. The
+same alignment conditions as Graham et al., JGR, 2015 are used. Optional figure produced showing E_FAC, probe
+fields, and probe potentials to view  time delays between electric fields aligned with B. Currently p5-p6 are not
+used in this routine; the analysis is the same as the one used for Cluster.</p>
+<dl class="simple">
+<dt>For the figure the panels are :</dt><dd><ul class="simple">
+<li><ol class="loweralpha simple">
+<li><p>B in DMPA Coordinates</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple" start="2">
+<li><p>Magnitude of B in and out of the spin plane</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple" start="3">
+<li><p>Angles between B and probes 1 and 3 in the spin plane (angle between 0 and 90 degrees)</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple" start="4">
+<li><p>Spacecraft potential from probes perpendicular to B</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple" start="5">
+<li><p>E fields from p1-p4 and SC for probes closely aligned with B</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple" start="6">
+<li><p>E in field-aligned coordinates</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple" start="7">
+<li><p>E from probes p1-p2 and p3-p4.</p></li>
+</ol>
+</li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>e_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Electric field in DSL coordinates, brst mode.</p>
+</dd>
+<dt><strong>b_xyz</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Magnetic field in DMPA coordinates.</p>
+</dd>
+<dt><strong>sc_pot</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>L2 Spacecraft potential data. Timing corrections are applied in this</p>
+</dd>
+<dt><strong>z_phase</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Spacecraft phase (z_phase). Obtained from ancillary_defatt.</p>
+</dd>
+<dt><strong>plot_fig</strong><span class="classifier">bool, optional</span></dt><dd><p>Flag to plot fields and potentials which satisfy alignment conditions. Default is False</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>start_time1</strong><span class="classifier">to fill</span></dt><dd><p>Start times of intervals which satisfy the probe alignment conditions for probe combinates p1-p2.</p>
+</dd>
+<dt><strong>end_time1</strong><span class="classifier">to fill</span></dt><dd><p>End times of intervals which satisfy the probe alignment conditions for probe combinates p1-p2.</p>
+</dd>
+<dt><strong>start_time3</strong><span class="classifier">to fill</span></dt><dd><p>Start times of intervals which satisfy the probe alignment conditions for probe combinates p3-p4.</p>
+</dd>
+<dt><strong>end_time3</strong><span class="classifier">to fill</span></dt><dd><p>End times of intervals which satisfy the probe alignment conditions for probe combinates p3-p4.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.psd_moments">
+<span id="pyrfu-mms-psd-moments-module"></span><h2>pyrfu.mms.psd_moments module<a class="headerlink" href="#module-pyrfu.mms.psd_moments" title="Permalink to this headline">¶</a></h2>
+<p>psd_moments.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.psd_moments.calc_moms">
+<code class="sig-prename descclassname">pyrfu.mms.psd_moments.</code><code class="sig-name descname">calc_moms</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nt</span></em>, <em class="sig-param"><span class="n">arguments</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/psd_moments.html#calc_moms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.psd_moments.calc_moms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyrfu.mms.psd_moments.psd_moments">
+<code class="sig-prename descclassname">pyrfu.mms.psd_moments.</code><code class="sig-name descname">psd_moments</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sc_pot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/psd_moments.html#psd_moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.psd_moments.psd_moments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes moments from the FPI particle phase-space densities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>3D skymap velocity distribution.</p>
+</dd>
+<dt><strong>sc_pot</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the spacecraft potential.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier">dict</span></dt><dd><dl class="simple">
+<dt>Hash table of keyword arguments with :</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>energy_range<span class="classifier">list or numpy.ndarray</span></dt><dd><p>Set energy range in eV to integrate over [E_min E_max]. Energy range is applied to energy0 and the same
+elements are used for energy1 to ensure that the same number of points are integrated over.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>no_sc_pot<span class="classifier">bool</span></dt><dd><p>Set to 1 to set spacecraft potential to zero. Calculates moments
+without correcting for spacecraft potential.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>en_channels<span class="classifier">list or numpy.ndarray</span></dt><dd><p>Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>partial_moments<span class="classifier">numpy.ndarray or xarray.DataArray</span></dt><dd><p>Use a binary array (or DataArray) (pmomsarr) to select which psd points are used in the moments
+calculation. pmomsarr must be a binary array (1s and 0s, 1s correspond to points used).
+Array (or data of Dataarray) must be the same size as vdf.data.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>inner_electron<span class="classifier">{“on”, “off”}</span></dt><dd><p>inner_electrontron potential for electron moments.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>n_psd</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the number density (1rst moment).</p>
+</dd>
+<dt><strong>v_psd</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the bulk velocity (2nd moment).</p>
+</dd>
+<dt><strong>p_psd</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the pressure tensor (3rd moment).</p>
+</dd>
+<dt><strong>p2_psd</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the pressure tensor.</p>
+</dd>
+<dt><strong>t_psd</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the temperature tensor.</p>
+</dd>
+<dt><strong>h_psd</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>to fill.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2015-10-30T05:15:20.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2015-10-30T05:16:20.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">vdf_e</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;PDe_fpi_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sc_pot</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;V_edp_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">particle_moments</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">psd_moments</span><span class="p">(</span><span class="n">vdf_e</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">,</span> <span class="n">energy_range</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.psd_rebin">
+<span id="pyrfu-mms-psd-rebin-module"></span><h2>pyrfu.mms.psd_rebin module<a class="headerlink" href="#module-pyrfu.mms.psd_rebin" title="Permalink to this headline">¶</a></h2>
+<p>.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.psd_rebin.psd_rebin">
+<code class="sig-prename descclassname">pyrfu.mms.psd_rebin.</code><code class="sig-name descname">psd_rebin</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">phi</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">energy0</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">energy1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">step_table</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/psd_rebin.html#psd_rebin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.psd_rebin.psd_rebin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert burst mode distribution into 64 energy channel distribution.
+Functions takes the burst mode distribution sampled in two energy tables and converts to a single energy table
+with 64 energy channels. Time resolution is halved and phi angles are averaged over adjacent times.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Time series of the particle distribution.</p>
+</dd>
+<dt><strong>phi</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the phi angles.</p>
+</dd>
+<dt><strong>energy0</strong><span class="classifier">xarray.DataArray or numpy.ndarray</span></dt><dd><p>Energy table 0.</p>
+</dd>
+<dt><strong>energy1</strong><span class="classifier">xarray.DataArray or numpy.ndarray</span></dt><dd><p>Energy table 1.</p>
+</dd>
+<dt><strong>step_table</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the stepping table between energies (burst).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>vdf_r</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>Rebinned particle distribution.</p>
+</dd>
+<dt><strong>phi_r</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>Time series of the recalculated phi angle.</p>
+</dd>
+<dt><strong>energy_r</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>Revised energy table.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>I’m assuming no gaps in the burst data interval. If there is a gap use time_clip before running.
+To be updated later.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.read_feeps_sector_masks_csv">
+<span id="pyrfu-mms-read-feeps-sector-masks-csv-module"></span><h2>pyrfu.mms.read_feeps_sector_masks_csv module<a class="headerlink" href="#module-pyrfu.mms.read_feeps_sector_masks_csv" title="Permalink to this headline">¶</a></h2>
+<p>read_feeps_sector_mask_csv.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.read_feeps_sector_masks_csv.read_feeps_sector_masks_csv">
+<code class="sig-prename descclassname">pyrfu.mms.read_feeps_sector_masks_csv.</code><code class="sig-name descname">read_feeps_sector_masks_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tint</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/read_feeps_sector_masks_csv.html#read_feeps_sector_masks_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.read_feeps_sector_masks_csv.read_feeps_sector_masks_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the FEEPS sectors to mask due to sunlight contamination from csv files.x</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tint</strong><span class="classifier">list of str</span></dt><dd><p>time range of interest [starttime, endtime] with the format “YYYY-MM-DD”, “YYYY-MM-DD”] or to specify more or
+less than a day [‘YYYY-MM-DD/hh:mm:ss’,’YYYY-MM-DD/hh:mm:ss’]</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>mask</strong><span class="classifier">dict</span></dt><dd><p>Hash table containing the sectors to mask for each spacecraft and sensor ID</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.reduce">
+<span id="pyrfu-mms-reduce-module"></span><h2>pyrfu.mms.reduce module<a class="headerlink" href="#module-pyrfu.mms.reduce" title="Permalink to this headline">¶</a></h2>
+<p>reduce.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.reduce.reduce">
+<code class="sig-prename descclassname">pyrfu.mms.reduce.</code><code class="sig-name descname">reduce</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dist</span></em>, <em class="sig-param"><span class="n">dim</span></em>, <em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/reduce.html#reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.reduce.reduce" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.remove_idist_background">
+<span id="pyrfu-mms-remove-idist-background-module"></span><h2>pyrfu.mms.remove_idist_background module<a class="headerlink" href="#module-pyrfu.mms.remove_idist_background" title="Permalink to this headline">¶</a></h2>
+<p>remove_idist_background.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.remove_idist_background.remove_idist_background">
+<code class="sig-prename descclassname">pyrfu.mms.remove_idist_background.</code><code class="sig-name descname">remove_idist_background</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n_i</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">v_gse_i</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">p_gse_i</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">n_bg_i</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">p_bg_i</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/remove_idist_background.html#remove_idist_background"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.remove_idist_background.remove_idist_background" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes penetrating radiation background from ion moments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n_i</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the ion density.</p>
+</dd>
+<dt><strong>v_gse_i</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the ion bulk velocity.</p>
+</dd>
+<dt><strong>p_gse_i</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the ion pressure tensor.</p>
+</dd>
+<dt><strong>n_bg_i</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the background ion number density.</p>
+</dd>
+<dt><strong>p_bg_i</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the background ion pressure scalar.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>n_i_new</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the corrected ion number density.</p>
+</dd>
+<dt><strong>v_gse_i_new</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the corrected ion bulk velocity.</p>
+</dd>
+<dt><strong>p_gse_i</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the corrected ion pressure tensor.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>MMS DIS Penetrating radiation correction methods :
+<a class="reference external" href="https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data">https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data</a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.rotate_tensor">
+<span id="pyrfu-mms-rotate-tensor-module"></span><h2>pyrfu.mms.rotate_tensor module<a class="headerlink" href="#module-pyrfu.mms.rotate_tensor" title="Permalink to this headline">¶</a></h2>
+<p>rotate_tensor.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.rotate_tensor.rotate_tensor">
+<code class="sig-prename descclassname">pyrfu.mms.rotate_tensor.</code><code class="sig-name descname">rotate_tensor</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/rotate_tensor.html#rotate_tensor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.rotate_tensor.rotate_tensor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotates pressure or temperature tensor into another coordinate system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>PeIJ/Peall</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of either separated terms of the tensor or the complete tensor.
+If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)</p>
+</dd>
+<dt><strong>flag</strong><span class="classifier">str</span></dt><dd><dl class="simple">
+<dt>Flag of the target coordinates system :</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>“fac”<span class="classifier">Field-aligned coordinates, requires background magnetic field Bback, optional flag “pp”</span></dt><dd><p><span class="math notranslate nohighlight">\(\mathbf{P}_{\perp 1} = \mathbf{P}_{\perp 2}\)</span> or “qq” <span class="math notranslate nohighlight">\(\mathbf{P}_{\perp 1}\)</span>
+and <span class="math notranslate nohighlight">\(\mathbf{P}_{\perp 2}\)</span> are most unequal, sets P23 to zero.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“rot”<span class="classifier">Arbitrary coordinate system, requires new x-direction xnew, new y and z directions ynew, znew</span></dt><dd><p>(if not included y and z directions are orthogonal to xnew and closest to the original y and
+z directions)</p>
+</dd>
+</dl>
+</li>
+<li><p>“gse” : GSE coordinates, requires MMS spacecraft number 1–4 MMSnum</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>Pe</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the pressure or temperature tensor in field-aligned, user-defined, or GSE coordinates.
+For “fac” Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
+For “rot” and “gse” Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span><span class="p">,</span> <span class="n">pyrf</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Time interval</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2015-10-30T05:15:20.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2015-10-30T05:16:20.000&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Spacecraft index</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mms_id</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load magnetic field and ion temperature tensor</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_xyz</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_fgm_srvy_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="n">mms_id</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t_xyz_i</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;Ti_gse_fpi_fast_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="n">mms_id</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Compute ion temperature in field aligned coordinates</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t_xyzfac_i</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">rotate_tensor</span><span class="p">(</span><span class="n">t_xyz_i</span><span class="p">,</span> <span class="s2">&quot;fac&quot;</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="s2">&quot;pp&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>TODO : change input</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.spectr_to_dataset">
+<span id="pyrfu-mms-spectr-to-dataset-module"></span><h2>pyrfu.mms.spectr_to_dataset module<a class="headerlink" href="#module-pyrfu.mms.spectr_to_dataset" title="Permalink to this headline">¶</a></h2>
+<p>spectr_to_dataset.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.spectr_to_dataset.spectr_to_dataset">
+<code class="sig-prename descclassname">pyrfu.mms.spectr_to_dataset.</code><code class="sig-name descname">spectr_to_dataset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spectr</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/spectr_to_dataset.html#spectr_to_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.spectr_to_dataset.spectr_to_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert energy spectrum (DataArray) to Dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>spectr</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Spectrogram in DataArray format.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><p>Spectrogram in Dataset format.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.split_vs">
+<span id="pyrfu-mms-split-vs-module"></span><h2>pyrfu.mms.split_vs module<a class="headerlink" href="#module-pyrfu.mms.split_vs" title="Permalink to this headline">¶</a></h2>
+<p>split_vs.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.split_vs.split_vs">
+<code class="sig-prename descclassname">pyrfu.mms.split_vs.</code><code class="sig-name descname">split_vs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">var_str</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/split_vs.html#split_vs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.split_vs.split_vs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the variable keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>var_str</strong><span class="classifier">str</span></dt><dd><p>Input key of variable</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">dict</span></dt><dd><dl class="simple">
+<dt>Hash table containing :</dt><dd><ul class="simple">
+<li><p>param : Variable key.</p></li>
+<li><p>to : Tensor order.</p></li>
+<li><p>cs : Coordinate system.</p></li>
+<li><p>inst : Instrument.</p></li>
+<li><p>tmmode : Time mode.</p></li>
+<li><p>lev” : Level of data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.vdf_omni">
+<span id="pyrfu-mms-vdf-omni-module"></span><h2>pyrfu.mms.vdf_omni module<a class="headerlink" href="#module-pyrfu.mms.vdf_omni" title="Permalink to this headline">¶</a></h2>
+<p>vdf_omni.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.vdf_omni.vdf_omni">
+<code class="sig-prename descclassname">pyrfu.mms.vdf_omni.</code><code class="sig-name descname">vdf_omni</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/vdf_omni.html#vdf_omni"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.vdf_omni.vdf_omni" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes omnidirectional distribution, conserving unit.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><dl class="simple">
+<dt>Time series of the 3D velocity distribution with :</dt><dd><ul class="simple">
+<li><p>time : Time samples.</p></li>
+<li><p>data : 3D velocity distribution.</p></li>
+<li><p>energy : Energy levels.</p></li>
+<li><p>phi : Azimuthal angles.</p></li>
+<li><p>theta : Elevation angle.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><dl class="simple">
+<dt>Time series of the omnidirectional velocity distribution function with :</dt><dd><ul class="simple">
+<li><p>time : Time samples.</p></li>
+<li><p>data : 3D velocity distribution.</p></li>
+<li><p>energy : Energy levels.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.vdf_to_deflux">
+<span id="pyrfu-mms-vdf-to-deflux-module"></span><h2>pyrfu.mms.vdf_to_deflux module<a class="headerlink" href="#module-pyrfu.mms.vdf_to_deflux" title="Permalink to this headline">¶</a></h2>
+<p>vdf_to_deflux.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.vdf_to_deflux.vdf_to_deflux">
+<code class="sig-prename descclassname">pyrfu.mms.vdf_to_deflux.</code><code class="sig-name descname">vdf_to_deflux</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/vdf_to_deflux.html#vdf_to_deflux"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.vdf_to_deflux.vdf_to_deflux" title="Permalink to this definition">¶</a></dt>
+<dd><p>Changes units to differential energy flux.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><dl class="simple">
+<dt>Time series of the 3D velocity distribution with :</dt><dd><ul class="simple">
+<li><p>time : Time samples.</p></li>
+<li><p>data : 3D velocity distribution.</p></li>
+<li><p>energy : Energy levels.</p></li>
+<li><p>phi : Azimuthal angles.</p></li>
+<li><p>theta : Elevation angle.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>out</strong><span class="classifier">xarray.Dataset</span></dt><dd><dl class="simple">
+<dt>Time series of the 3D density energy flux with :</dt><dd><ul class="simple">
+<li><p>time : Time samples.</p></li>
+<li><p>data : 3D density energy flux.</p></li>
+<li><p>energy : Energy levels.</p></li>
+<li><p>phi : Azimuthal angles.</p></li>
+<li><p>theta : Elevation angle.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.vdf_to_dpflux">
+<span id="pyrfu-mms-vdf-to-dpflux-module"></span><h2>pyrfu.mms.vdf_to_dpflux module<a class="headerlink" href="#module-pyrfu.mms.vdf_to_dpflux" title="Permalink to this headline">¶</a></h2>
+<p>vdf_to_dpflux.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.vdf_to_dpflux.vdf_to_dpflux">
+<code class="sig-prename descclassname">pyrfu.mms.vdf_to_dpflux.</code><code class="sig-name descname">vdf_to_dpflux</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vdf</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/vdf_to_dpflux.html#vdf_to_dpflux"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.vdf_to_dpflux.vdf_to_dpflux" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute density particle flux from velocity distribution function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vdf</strong><span class="classifier">xarray.Dataset</span></dt><dd><dl class="simple">
+<dt>Time series of the velocity distribution function with :</dt><dd><ul class="simple">
+<li><p>time : Time samples.</p></li>
+<li><p>data : 3D velocity distribution.</p></li>
+<li><p>energy : Energy levels.</p></li>
+<li><p>phi : Azimuthal angles.</p></li>
+<li><p>theta : Elevation angle.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dpflux</strong><span class="classifier">xarray.Dataset</span></dt><dd><dl class="simple">
+<dt>Time series of the 3D density particle flux with :</dt><dd><ul class="simple">
+<li><p>time : Time samples.</p></li>
+<li><p>data : 3D density particle flux.</p></li>
+<li><p>energy : Energy levels.</p></li>
+<li><p>phi : Azimuthal angles.</p></li>
+<li><p>theta : Elevation angle.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms.whistler_b2e">
+<span id="pyrfu-mms-whistler-b2e-module"></span><h2>pyrfu.mms.whistler_b2e module<a class="headerlink" href="#module-pyrfu.mms.whistler_b2e" title="Permalink to this headline">¶</a></h2>
+<p>whistler_b2e.py</p>
+<p>&#64;author : Louis RICHARD</p>
+<dl class="py function">
+<dt id="pyrfu.mms.whistler_b2e.whistler_b2e">
+<code class="sig-prename descclassname">pyrfu.mms.whistler_b2e.</code><code class="sig-name descname">whistler_b2e</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">b2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">freq</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">theta_k</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b_mag</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">n_e</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyrfu/mms/whistler_b2e.html#whistler_b2e"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyrfu.mms.whistler_b2e.whistler_b2e" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes electric field power as a function of frequency for whistler waves using magnetic field power and cold
+plasma theory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>b2</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the power of whistler magnetic field in nT^2 Hz^{-1}.</p>
+</dd>
+<dt><strong>freq</strong><span class="classifier">numpy.ndarray</span></dt><dd><p>frequencies in Hz corresponding B2.</p>
+</dd>
+<dt><strong>theta_k</strong><span class="classifier">float</span></dt><dd><p>wave-normal angle of whistler waves in radians.</p>
+</dd>
+<dt><strong>b_mag</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the magnitude of the magnetic field in nT.</p>
+</dd>
+<dt><strong>n_e</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the electron number density in cm^{-3}.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>e2</strong><span class="classifier">xarray.DataArray</span></dt><dd><p>Time series of the electric field power.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">e_power</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">whistler_b2e</span><span class="p">(</span><span class="n">b_power</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">theta_k</span><span class="p">,</span> <span class="n">b_mag</span><span class="p">,</span> <span class="n">n_e</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyrfu.mms">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyrfu.mms" title="Permalink to this headline">¶</a></h2>
+<p>__init__.py</p>
+<p>&#64;author : Louis RICHARD</p>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">pyrfu.mms package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.calc_feeps_omni">pyrfu.mms.calc_feeps_omni module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.calc_feeps_pad">pyrfu.mms.calc_feeps_pad module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.calculate_epsilon">pyrfu.mms.calculate_epsilon module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.correct_edp_probe_timing">pyrfu.mms.correct_edp_probe_timing module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.db_get_ts">pyrfu.mms.db_get_ts module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.deflux_to_vdf">pyrfu.mms.deflux_to_vdf module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.dft_time_shift">pyrfu.mms.dft_time_shift module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.dpflux_to_vdf">pyrfu.mms.dpflux_to_vdf module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.estimate_phase_speed">pyrfu.mms.estimate_phase_speed module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.feeps_pitch_angles">pyrfu.mms.feeps_pitch_angles module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.feeps_remove_sun">pyrfu.mms.feeps_remove_sun module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.feeps_spin_avg">pyrfu.mms.feeps_spin_avg module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.feeps_split_integral_ch">pyrfu.mms.feeps_split_integral_ch module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.fft_bandpass">pyrfu.mms.fft_bandpass module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.fk_power_spectrum">pyrfu.mms.fk_power_spectrum module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.fk_power_spectrum_4sc">pyrfu.mms.fk_power_spectrum_4sc module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_data">pyrfu.mms.get_data module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_dist">pyrfu.mms.get_dist module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_eis_allt">pyrfu.mms.get_eis_allt module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_eis_omni">pyrfu.mms.get_eis_omni module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_feeps_active_eyes">pyrfu.mms.get_feeps_active_eyes module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_feeps_alleyes">pyrfu.mms.get_feeps_alleyes module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_feeps_energy_table">pyrfu.mms.get_feeps_energy_table module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_feeps_omni">pyrfu.mms.get_feeps_omni module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_feeps_oneeye">pyrfu.mms.get_feeps_oneeye module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_pitch_angle_dist">pyrfu.mms.get_pitch_angle_dist module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.get_ts">pyrfu.mms.get_ts module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.lh_wave_analysis">pyrfu.mms.lh_wave_analysis module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.list_files">pyrfu.mms.list_files module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.load_ancillary">pyrfu.mms.load_ancillary module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.make_model_vdf">pyrfu.mms.make_model_vdf module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.mms_config">pyrfu.mms.mms_config module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.probe_align_times">pyrfu.mms.probe_align_times module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.psd_moments">pyrfu.mms.psd_moments module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.psd_rebin">pyrfu.mms.psd_rebin module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.read_feeps_sector_masks_csv">pyrfu.mms.read_feeps_sector_masks_csv module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.reduce">pyrfu.mms.reduce module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.remove_idist_background">pyrfu.mms.remove_idist_background module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.rotate_tensor">pyrfu.mms.rotate_tensor module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.spectr_to_dataset">pyrfu.mms.spectr_to_dataset module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.split_vs">pyrfu.mms.split_vs module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.vdf_omni">pyrfu.mms.vdf_omni module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.vdf_to_deflux">pyrfu.mms.vdf_to_deflux module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.vdf_to_dpflux">pyrfu.mms.vdf_to_dpflux module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms.whistler_b2e">pyrfu.mms.whistler_b2e module</a></li>
+<li><a class="reference internal" href="#module-pyrfu.mms">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pyrfu.html"
+                        title="previous chapter">pyrfu package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pyrfu.plot.html"
+                        title="next chapter">pyrfu.plot package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pyrfu.mms.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.plot.html" title="pyrfu.plot package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pyrfu.html" title="pyrfu package"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="pyrfu.html" >pyrfu package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms package</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

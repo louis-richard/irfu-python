@@ -10,8 +10,7 @@ import warnings
 
 
 def split_vs(var_str=""):
-	"""
-	Parse the variable keys
+	"""Parse the variable keys.
 
 	Parameters
 	----------
@@ -22,12 +21,13 @@ def split_vs(var_str=""):
 	-------
 	out : dict
 		Hash table containing :
-			* param : Variable key
-			* to : Tensor order
-			* cs : Coordinate system
-			* inst : Instrument
-			* tmmode : Time mode
-			* lev" : Level of data
+			* param : Variable key.
+			* to : Tensor order.
+			* cs : Coordinate system.
+			* inst : Instrument.
+			* tmmode : Time mode.
+			* lev" : Level of data.
+
 	"""
 
 	if not var_str:

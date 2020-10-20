@@ -14,28 +14,27 @@ from astropy import constants
 
 
 def vdf_to_dpflux(vdf=None):
-    """
-    Compute density particle flux from velocity distribution function
+    """Compute density particle flux from velocity distribution function.
 
     Parameters
     ----------
     vdf : xarray.Dataset
         Time series of the velocity distribution function with :
-            * time : Time samples
-            * data : 3D velocity distribution
-            * energy : Energy levels
-            * phi : Azimuthal angles
-            * theta : Elevation angle
+            * time : Time samples.
+            * data : 3D velocity distribution.
+            * energy : Energy levels.
+            * phi : Azimuthal angles.
+            * theta : Elevation angle.
 
     Returns
     -------
     dpflux : xarray.Dataset
         Time series of the 3D density particle flux with :
-            * time : Time samples
-            * data : 3D density particle flux
-            * energy : Energy levels
-            * phi : Azimuthal angles
-            * theta : Elevation angle
+            * time : Time samples.
+            * data : 3D density particle flux.
+            * energy : Energy levels.
+            * phi : Azimuthal angles.
+            * theta : Elevation angle.
 
     """
 

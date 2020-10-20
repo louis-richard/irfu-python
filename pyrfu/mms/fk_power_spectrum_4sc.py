@@ -17,76 +17,67 @@ from ..pyrf.wavelet import wavelet
 
 
 def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f=200, df=None, w_width=1, f_range=None):
-	"""
-	Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of
+	"""Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a generalization of
 	mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to calculate the phase difference each
 	spacecraft pair and determine 3D wave vector. A generalization of the method used in mms.fk_powerspectrum
 	to four point measurements.
 
-
 	Parameters
 	----------
 	e : list of xarray.DataArray
-		Fields to apply 4SC cross-spectral analysis to. e.g., e or b fields
-		(if multiple components only the first is used).
+		Fields to apply 4SC cross-spectral analysis to. e.g., e or b fields (if multiple components only the first is
+		used).
 
 	r : list of xarray.DataArray
-		Positions of the four spacecraft
+		Positions of the four spacecraft.
 
 	b : list of xarray.DataArray
-		background magnetic field in the same coordinates as r. Used to determine the parallel and perpendicular
-		wave numbers using 4SC average.
+		background magnetic field in the same coordinates as r. Used to determine the parallel and perpendicular wave
+		numbers using 4SC average.
 
 	tints : list of str
-		Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time
-		interval for e and b.
+		Time interval over which the power spectrum is calculated. To avoid boundary effects use a longer time interval
+		for e and b.
 
-	cav : int
-		(Optional) Number of points in time series used to estimate phase. (default cav = 8)
+	cav : int, optional
+		Number of points in time series used to estimate phase. Default ``cav`` = 8.
 
-	num_k : int
-		(Optional) Number of wave numbers used in spectrogram. (default num_k = 500)
+	num_k : int, optional
+		Number of wave numbers used in spectrogram. Default ``num_k`` = 500.
 
-	df : float
-		(Optional) Linear spacing of frequencies (default log spacing).
+	df : float, optional
+		Linear spacing of frequencies. Default ``df`` = None (log spacing).
 
-	num_f : int
-		(Optional) Number of frequencies used in spectrogram. (default num_f = 200)
+	num_f : int, optional
+		Number of frequencies used in spectrogram. Default ``num_f`` = 200.
 
-	w_width : float
-		(Optional) Multiplier for Morlet wavelet width. (default w_width = 1)
+	w_width : float, optional
+		Multiplier for Morlet wavelet width. Default ``w_width`` = 1.
 
-	f_range : list of float
-		(Optional) Frequency range for k-k plots. [minf maxf]
-
+	f_range : list of float, optional
+		Frequency range for k-k plots. [minf maxf].
 
 	Returns
 	-------
 	out : xarray.Dataset
-		Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum
-		value.
-
+		Dataset of array of powers as a function of frequency and wavenumber. Power is normalized to the maximum value.
 
 	Notes
 	-----
 	Wavelength must be larger than twice the spacecraft separations, otherwise spatial aliasing will occur.
-
 
 	Examples
 	--------
 	>>> from pyrfu import mms
 	>>> power = mms.fk_power_spectrum_4sc(e_par, r_xyz, b_xyz, tints)
 	>>> power = mms.fk_power_spectrum_4sc(b_scmfac_x, r_xyz, b_xyz, tints, linear=10, num_k=500, cav=4, w_width=2)
-
-	Example to plot
-	---------------
+	>>> # Plot
 	>>> import matplotlib.pyplot as plt
 	>>> from pyrfu.plot import plot_spectr
 	>>> fig, ax = plt.subplots(1)
 	>>> ax, cax = plot_spectr(ax, power.kmagf, cscale="log", cmap="viridis")
 	>>> ax.set_xlabel("$|k|$ [m$^{-1}$]")
 	>>> ax.set_ylabel("$f$ [Hz]")
-
 
 	"""
 

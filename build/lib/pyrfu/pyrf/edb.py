@@ -14,36 +14,35 @@ from .ts_vec_xyz import ts_vec_xyz
 
 
 def edb(e=None, b0=None, angle_lim=20, flag_method="E.B=0"):
-	"""
-	Compute Ez under assumption :math:`\\mathbf{E}.\\mathbf{B}=0` or :math:`\\mathbf{E}.\\mathbf{B} \\approx 0`
+	"""Compute Ez under assumption :math:`\\mathbf{E}.\\mathbf{B}=0` or :math:`\\mathbf{E}.\\mathbf{B} \\approx 0`
 
 	Parameters
 	----------
 	e : xarray.DataArray
-		Time series of the electric field
+		Time series of the electric field.
 
 	b0 : xarray.DataArray
-		Time series of the background magnetic field
+		Time series of the background magnetic field.
 
 	flag_method : str
 		Assumption on the direction of the measured electric field :
-			"e.b=0" :  :math:`\\mathbf{E}.\\mathbf{B}=0`
-			"e_par" :  :math:`\\mathbf{E}` field along the B projection is coming from parallel electric field
-			"e_perp+nan" : to fill
+			"e.b=0" :  :math:`\\mathbf{E}.\\mathbf{B}=0`.
+			"e_par" :  :math:`\\mathbf{E}` field along the B projection is coming from parallel electric field.
+			"e_perp+nan" : to fill.
 
 	angle_lim : float
-		B angle with respect to the spin plane should be less than angle_lim degrees otherwise Ez is set to 0
+		B angle with respect to the spin plane should be less than angle_lim degrees otherwise Ez is set to 0.
 
 	Returns
 	-------
 	ed : xarray.DataArray
-		Time series of the electric field output
+		Time series of the electric field output.
 
 	d : xarray.DataArray
-		Time series of the B elevation angle above spin plane
+		Time series of the B elevation angle above spin plane.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]

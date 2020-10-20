@@ -11,24 +11,23 @@ import numpy as np
 
 
 def new_xyz(inp=None, trans_mat=None):
-	"""
-	Transform the input field to the new frame
+	"""Transform the input field to the new frame.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input field in the original coordinate system
+		Time series of the input field in the original coordinate system.
 
 	trans_mat : numpy.ndarray
-		Transformation matrix
+		Transformation matrix.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the input in the new frame
+		Time series of the input in the new frame.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

@@ -15,22 +15,25 @@ from .db_get_ts import db_get_ts
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 
 
-def feeps_remove_sun(inp_dset=None):
-	"""
-	Removes the sunlight contamination from FEEPS data
+def feeps_remove_sun(inp_dataset=None):
+	"""Removes the sunlight contamination from FEEPS data.
 
 	Parameters
 	----------
-	inp_dset : xarray.Dataset
-		Dataset of energy spectrum of all eyes (see mms.get_feeps_alleyes)
+	inp_dataset : xarray.Dataset
+		Dataset of energy spectrum of all eyes.
 
 	Returns
 	-------
 	out : xarray.Dataset
-		Dataset of cleaned energy spectrum of all eyes
+		Dataset of cleaned energy spectrum of all eyes.
 
-	Example
-	-------
+	See also
+	--------
+	pyrfu.mms.get_feeps_alleyes : Read energy spectrum for all FEEPS eyes.
+
+	Examples
+	--------
 	>>> from pyrfu import mms
 	>>> # Define time interval
 	>>> tint = ["2017-07-18T13:04:00.000", "2017-07-18T13:07:00.000"]
@@ -43,12 +46,12 @@ def feeps_remove_sun(inp_dset=None):
 
 	"""
 
-	if inp_dset is None:
+	if inp_dataset is None:
 		raise ValueError("feeps_remove_sun requires at least one argument")
 
-	var = inp_dset.attrs
+	var = inp_dataset.attrs
 
-	trange = list(Time(inp_dset.time.data[[0, -1]], format="datetime64").isot)
+	trange = list(Time(inp_dataset.time.data[[0, -1]], format="datetime64").isot)
 
 	dset_name = "mms{:d}_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"], var["dtype"])
 	dset_pref = "mms{:d}_epd_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"], var["dtype"])
@@ -58,8 +61,8 @@ def feeps_remove_sun(inp_dset=None):
 
 	outdict = {}
 
-	for k in inp_dset:
-		outdict[k] = inp_dset[k]
+	for k in inp_dataset:
+		outdict[k] = inp_dataset[k]
 		if mask_sectors.get("mms{:d}_imask_{}".format(var["mmsId"], k)) is not None:
 			bad_sectors = mask_sectors["mms{:d}_imask_{}".format(var["mmsId"], k)]
 

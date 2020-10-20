@@ -10,8 +10,7 @@ import xarray as xr
 
 
 def agyro_coeff(p=None):
-    """
-    Computes agyrotropy coefficient as in [1]_
+    """Computes agyrotropy coefficient as in [1]_
 
     .. math::
 
@@ -28,8 +27,13 @@ def agyro_coeff(p=None):
     q : xarray.DataArray
         Time series of the agyrotropy coefficient of the specie
 
-    Example
-    -------
+    References
+    ----------
+    .. [1]  Swisdak, M. (2016), Quantifying gyrotropy in magnetic reconnection, Geophys. Res. Lett., 43, 43–49,
+            doi: https://doi.org/10.1002/2015GL066980.
+
+    Examples
+    --------
     >>> from pyrfu import mms, pyrf
     >>> # Time interval
     >>> Tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
@@ -42,11 +46,6 @@ def agyro_coeff(p=None):
     >>> p_xyzfac_e = mms.rotate_tensor(p_xyz_e,"fac",b_xyz,"pp")
     >>> # Compute agyrotropy coefficient
     >>> q_e = pyrf.agyro_coeff(p_xyzfac_e)
-
-    References
-    ----------
-    .. [1]  Swisdak, M. (2016), Quantifying gyrotropy in magnetic reconnection, Geophys. Res. Lett., 43, 43–49,
-            doi: https://doi.org/10.1002/2015GL066980.
 
     """
 

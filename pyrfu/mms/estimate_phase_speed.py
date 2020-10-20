@@ -12,35 +12,36 @@ from scipy.optimize import curve_fit
 
 
 def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
-    """
-    Simple function to estimate the phase speed from the frequency wave number power spectrum.
-    Fits :math:`f = v k/ 2 \\pi` to the power spectrum.
-
-    N.B. Draft version but seems to work well. Does not yet handle multiple modes in the same power spectrum.
+    """Simple function to estimate the phase speed from the frequency wave number power spectrum. Fits
+    :math:`f = v k/ 2 \\pi` to the power spectrum.
 
     Parameters
     ----------
     f_k_power : numpy.ndarray
-        2D array of powers (from mms.fk_power_spectrum)
+        2D array of powers.
 
     f : numpy.ndarray
-        1D array of frequencies (from mms.fk_power_spectrum)
+        1D array of frequencies.
 
     k : numpy.ndarray
-        1D array of wavenumbers (from mms.fk_power_spectrum)
+        1D array of wave numbers.
 
-    f_min : float or int
-        (Optionnal) Set low frequency threshold of points used to estimate the speed. (default 100)
-
+    f_min : float or int, optional
+        Set low frequency threshold of points used to estimate the speed. Default ``f_min`` = 100
 
     Returns
     -------
     vph : float
         Estimated phase speed by fitting linear dispersion relation to data.
 
+    Notes
+    -----
+    Draft version but seems to work well. Does not yet handle multiple modes in the same power spectrum.
+
     See also
     --------
-    mms.fk_power_spectrum, mms.probe_align_times
+    pyrfu.mms.fk_power_spectrum : Calculates the frequency-wave number power spectrum
+    pyrfu.mms.probe_align_times : Returns times when field-aligned electrostatic waves can be characterized.
 
     """
 

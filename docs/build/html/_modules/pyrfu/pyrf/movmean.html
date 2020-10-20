@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.movmean &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.movmean</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.movmean</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">movmean.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="movmean"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.movmean.movmean">[docs]</a><span class="k">def</span> <span class="nf">movmean</span><span class="p">(</span><span class="n">inp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_pts</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Computes running average of the inp over npts points.</span>
+
+<span class="sd">	Parameters</span>
+<span class="sd">	----------</span>
+<span class="sd">	inp : xarray.DataArray</span>
+<span class="sd">		Time series of the input variable.</span>
+
+<span class="sd">	n_pts : int</span>
+<span class="sd">		Number of points to average over.</span>
+
+<span class="sd">	Returns</span>
+<span class="sd">	-------</span>
+<span class="sd">	out : xarray.DataArray</span>
+<span class="sd">		Time series of the input variable averaged over npts points.</span>
+
+<span class="sd">	Notes</span>
+<span class="sd">	-----</span>
+<span class="sd">	Works also with 3D skymap distribution.</span>
+
+<span class="sd">	Examples</span>
+<span class="sd">	--------</span>
+<span class="sd">	&gt;&gt;&gt; from pyrfu import mms, pyrf</span>
+<span class="sd">	&gt;&gt;&gt; # Time interval</span>
+<span class="sd">	&gt;&gt;&gt; tint = [&quot;2019-09-14T07:54:00.000&quot;,&quot;2019-09-14T08:11:00.000&quot;]</span>
+<span class="sd">	&gt;&gt;&gt; # Spacecraft index</span>
+<span class="sd">	&gt;&gt;&gt; mms_id = 1</span>
+<span class="sd">	&gt;&gt;&gt; # Load ion pressure tensor</span>
+<span class="sd">	&gt;&gt;&gt; p_xyz_i = mms.get_data(&quot;Pi_gse_fpi_brst_l2&quot;, tint, mms_id)</span>
+<span class="sd">	&gt;&gt;&gt; # Running average the pressure tensor over 10s</span>
+<span class="sd">	&gt;&gt;&gt; fs = pyrf.calc_fs(p_xyz_i)</span>
+<span class="sd">	&gt;&gt;&gt;&gt; p_xyz_i = pyrf.movmean(p_xyz_i, int(10 * fs))</span>
+
+<span class="sd">	&quot;&quot;&quot;</span>
+
+	<span class="k">if</span> <span class="n">inp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;movmean requires at least one argument&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;inp must be a DataArray&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+		<span class="n">n_pts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n_pts</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">n_pts</span> <span class="o">%</span> <span class="mi">2</span><span class="p">:</span>
+		<span class="n">n_pts</span> <span class="o">-=</span> <span class="mi">1</span>
+
+	<span class="c1"># Computes moving average</span>
+	<span class="n">cum_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+	<span class="n">out_dat</span> <span class="o">=</span> <span class="p">(</span><span class="n">cum_sum</span><span class="p">[</span><span class="n">n_pts</span><span class="p">:,</span> <span class="o">...</span><span class="p">]</span> <span class="o">-</span> <span class="n">cum_sum</span><span class="p">[:</span><span class="o">-</span><span class="n">n_pts</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">/</span> <span class="n">n_pts</span>
+
+	<span class="n">coords</span> <span class="o">=</span> <span class="p">[]</span>
+
+	<span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">inp</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="s2">&quot;time&quot;</span><span class="p">:</span> 
+			<span class="n">coords</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="nb">int</span><span class="p">(</span><span class="n">n_pts</span> <span class="o">/</span> <span class="mi">2</span><span class="p">):</span><span class="o">-</span><span class="nb">int</span><span class="p">(</span><span class="n">n_pts</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)])</span>
+		<span class="k">else</span><span class="p">:</span> 
+			<span class="n">coords</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+	<span class="c1"># Output in DataArray type</span>
+	<span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">out_dat</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="n">inp</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">inp</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
+
+	<span class="k">return</span> <span class="n">out</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.movmean</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

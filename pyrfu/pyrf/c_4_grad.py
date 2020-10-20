@@ -18,8 +18,7 @@ from .cross import cross
 
 
 def c_4_grad(r_list=None, b_list=None, method="grad"):
-	"""
-	Calculate gradient of physical field using 4 spacecraft technique in [2]_ [3]_.
+	"""Calculate gradient of physical field using 4 spacecraft technique in [2]_ [3]_.
 	
 	Parameters
 	----------
@@ -42,15 +41,9 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 	out : xarray.DataArray
 		Time series of the derivative of the input field corresponding to the method
 
-	Example
-	-------
-	>>> from pyrfu import mms, pyrf
-	>>> # Time interval
-	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-	>>> # Load magnetic field and spacecraft position
-	>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, ic) for ic in range(1, 5)]
-	>>> r_mms = [mms.get_data("R_gse", tint, ic) for ic in range(1, 5)]
-	>>> grad_b = pyrf.c_4_grad(r_mms, b_mms, "grad")
+	See also
+	--------
+	pyrfu.pyrf.c_4_k : Calculates reciprocal vectors in barycentric coordinates.
 
 	References
 	----------
@@ -62,10 +55,16 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
 			Data, edited by G. Paschmann and P. W. Daly, pp. 395–418, Int. Space Sci. Inst., Bern.
 			url : http://www.issibern.ch/forads/sr-001-16.pdf
 
-	See also
+	Examples
 	--------
-	c_4_k
-	
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Load magnetic field and spacecraft position
+	>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, ic) for ic in range(1, 5)]
+	>>> r_mms = [mms.get_data("R_gse", tint, ic) for ic in range(1, 5)]
+	>>> grad_b = pyrf.c_4_grad(r_mms, b_mms, "grad")
+
 	"""
 
 	if (r_list is None) or (b_list is None):

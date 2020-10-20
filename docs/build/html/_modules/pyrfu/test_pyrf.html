@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.test_pyrf &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.test_pyrf</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.test_pyrf</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">from</span> <span class="nn">pyrfu</span> <span class="kn">import</span> <span class="n">mms</span><span class="p">,</span> <span class="n">pyrf</span>
+
+<span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="TestPyrf"><a class="viewcode-back" href="../../pyrfu.html#pyrfu.test_pyrf.TestPyrf">[docs]</a><span class="k">class</span> <span class="nc">TestPyrf</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+<div class="viewcode-block" id="TestPyrf.setUp"><a class="viewcode-back" href="../../pyrfu.html#pyrfu.test_pyrf.TestPyrf.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">tint</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;2019-09-14T08:00:00.000&quot;</span><span class="p">,</span> <span class="s2">&quot;2019-09-14T08:00:30.000&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b_xyz</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;B_gse_fgm_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">e_xyz</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;E_gse_edp_brst_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestPyrf.test_calc_fs"><a class="viewcode-back" href="../../pyrfu.html#pyrfu.test_pyrf.TestPyrf.test_calc_fs">[docs]</a>    <span class="k">def</span> <span class="nf">test_calc_fs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">fs</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">calc_fs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b_xyz</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">fs</span><span class="p">),</span> <span class="mf">128.0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestPyrf.test_calc_dt"><a class="viewcode-back" href="../../pyrfu.html#pyrfu.test_pyrf.TestPyrf.test_calc_dt">[docs]</a>    <span class="k">def</span> <span class="nf">test_calc_dt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">calc_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b_xyz</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">dt</span> <span class="o">*</span> <span class="mf">1e9</span><span class="p">),</span> <span class="mi">7813000</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestPyrf.test_cross"><a class="viewcode-back" href="../../pyrfu.html#pyrfu.test_pyrf.TestPyrf.test_cross">[docs]</a>    <span class="k">def</span> <span class="nf">test_cross</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">exb</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">e_xyz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b_xyz</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">exb</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">e_xyz</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="n">res</span> <span class="o">&lt;</span> <span class="mf">1e-5</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestPyrf.test_resample"><a class="viewcode-back" href="../../pyrfu.html#pyrfu.test_pyrf.TestPyrf.test_resample">[docs]</a>    <span class="k">def</span> <span class="nf">test_resample</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">e_xyz</span> <span class="o">=</span> <span class="n">pyrf</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">e_xyz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b_xyz</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">all</span><span class="p">(</span><span class="n">pyrf</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">e_xyz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b_xyz</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">b_xyz</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">))</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.test_pyrf</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

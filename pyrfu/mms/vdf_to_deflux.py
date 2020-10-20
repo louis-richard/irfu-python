@@ -13,28 +13,27 @@ from astropy import constants
 
 
 def vdf_to_deflux(vdf=None):
-    """
-    Changes units to differential energy flux
+    """Changes units to differential energy flux.
 
     Parameters
     ----------
     vdf : xarray.Dataset
         Time series of the 3D velocity distribution with :
-            * time : Time samples
-            * data : 3D velocity distribution
-            * energy : Energy levels
-            * phi : Azimuthal angles
-            * theta : Elevation angle
+            * time : Time samples.
+            * data : 3D velocity distribution.
+            * energy : Energy levels.
+            * phi : Azimuthal angles.
+            * theta : Elevation angle.
 
     Returns
     -------
     out : xarray.Dataset
         Time series of the 3D density energy flux with :
-            * time : Time samples
-            * data : 3D density energy flux
-            * energy : Energy levels
-            * phi : Azimuthal angles
-            * theta : Elevation angle
+            * time : Time samples.
+            * data : 3D density energy flux.
+            * energy : Energy levels.
+            * phi : Azimuthal angles.
+            * theta : Elevation angle.
 
     """
 

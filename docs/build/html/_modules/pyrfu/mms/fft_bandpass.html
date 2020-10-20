@@ -1,0 +1,179 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.mms.fft_bandpass &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.fft_bandpass</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.fft_bandpass</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">fft_bandpass.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="kn">from</span> <span class="nn">..pyrf</span> <span class="kn">import</span> <span class="n">calc_fs</span><span class="p">,</span> <span class="n">ts_scalar</span><span class="p">,</span> <span class="n">ts_vec_xyz</span>
+
+
+<div class="viewcode-block" id="fft_bandpass"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.fft_bandpass.fft_bandpass">[docs]</a><span class="k">def</span> <span class="nf">fft_bandpass</span><span class="p">(</span><span class="n">inp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">f_min</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">f_max</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform simple bandpass using FFT - returns fields between with ``f_min`` &lt; f &lt; ``f_max``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    inp : xarray.DataArray</span>
+<span class="sd">        Time series to be bandpassed filtered.</span>
+
+<span class="sd">    f_min : float or int</span>
+<span class="sd">        Minimum frequency of filter, f &lt; ``f_min`` are removed.</span>
+
+<span class="sd">    f_max : float or int</span>
+<span class="sd">        Maximum frequency of filter, f &gt; ``f_max`` are removed.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    out : xarray.DataArray</span>
+<span class="sd">        Time series of the bandpassed filtered data.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Can be some spurius effects near boundary. Can take longer interval then use tlim to remove.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from pyrfu import mms</span>
+<span class="sd">    &gt;&gt;&gt; b_xyz_bp = mms.fft_bandpass(e_xyz, f_min, f_max)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="n">inp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">f_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f_min</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span>
+    <span class="k">assert</span> <span class="n">f_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f_max</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span>
+
+    <span class="n">inp_time</span><span class="p">,</span> <span class="n">inp_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">inp</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">inp</span><span class="o">.</span><span class="n">data</span><span class="p">]</span>
+
+    <span class="c1"># Make sure number of elements is an even number, if odd remove last element to make an even number</span>
+    <span class="n">n_els</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp_data</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n_els</span> <span class="o">%</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">inp_time</span> <span class="o">=</span> <span class="n">inp_time</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">inp_data</span> <span class="o">=</span> <span class="n">inp_data</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="n">n_els</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inp_data</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">num_fields</span> <span class="o">=</span> <span class="n">inp_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="n">num_fields</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">inp_data</span> <span class="o">=</span> <span class="n">inp_data</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="c1"># Set NaN values to zero so FFT works</span>
+    <span class="n">idx_nans</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inp_data</span><span class="p">)</span>
+    <span class="n">inp_data</span><span class="p">[</span><span class="n">idx_nans</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="c1"># Bandpass filter field data</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">calc_fs</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+    <span class="n">fn</span> <span class="o">=</span> <span class="n">fs</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">n_els</span><span class="p">)</span>
+
+    <span class="c1"># FFT and remove frequencies</span>
+    <span class="k">for</span> <span class="n">nn</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fields</span><span class="p">):</span>
+        <span class="n">inp_temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">inp_data</span><span class="p">[:,</span> <span class="n">nn</span><span class="p">])</span>
+        <span class="n">inp_temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">inp_temp</span><span class="p">)</span>
+
+        <span class="n">inp_temp</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">f_min</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">inp_temp</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">f_max</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">inp_temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">inp_temp</span><span class="p">)</span>
+        <span class="n">inp_data</span><span class="p">[:,</span> <span class="n">nn</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">inp_temp</span><span class="p">)</span>
+
+    <span class="c1"># Put back original NaNs</span>
+    <span class="n">inp_data</span><span class="p">[</span><span class="n">idx_nans</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="c1"># Return data in the same format as input</span>
+    <span class="k">if</span> <span class="n">num_fields</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">inp_time</span><span class="p">,</span> <span class="n">inp_data</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">inp</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">num_fields</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">ts_vec_xyz</span><span class="p">(</span><span class="n">inp_time</span><span class="p">,</span> <span class="n">inp_data</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">inp</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid shape&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">out</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.fft_bandpass</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

@@ -13,28 +13,27 @@ from . import resample, cross, norm, ts_vec_xyz
 
 
 def mean(inp=None, r=None, b=None, z=None):
-    """
-    Put inp into mean field coordinates defined by position vector r and magnetic field b
+    """Put inp into mean field coordinates defined by position vector r and magnetic field b
     if earth magnetic dipole axis z is given then uses another algorithm (good for auroral passages)
 
     Parameters
     ----------
     inp : xarray.DataArray
-        Input field to put into MF coordinates
+        Input field to put into MF coordinates.
 
     r : xarray.DataArray
         Time series of the spacecraft position.
 
     b : xarray.DataArray
-        Time series of the background magnetic field
+        Time series of the background magnetic field.
 
     z : xarray.DataArray
-        Earth magnetic dipole axis
+        Earth magnetic dipole axis.
 
     Returns
     -------
     out : xarray.DataArray
-        Input field in mean field coordinates
+        Input field in mean field coordinates.
 
     """
 

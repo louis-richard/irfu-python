@@ -11,7 +11,7 @@ def generic_minimum_residue_analysis_engine(eta=None, q=None, constraint_vector=
     Calculates L, V and U given the density of conserved quantity eta and transport tensor q using constraint that
     discontinuity normal is perpendicular to the constraint vector.
 
-    Implements general Generic Minimum Residue Analysis (GMRA) solution based on [1]_, [2]_
+    Implements general Generic Minimum Residue Analysis (GMRA) solution based on [8]_, [9]_
 
     Parameters
     ----------
@@ -37,8 +37,13 @@ def generic_minimum_residue_analysis_engine(eta=None, q=None, constraint_vector=
 
     References
     ----------
-    .. [1]  Sonnerup et al. 2006 JGR
-    .. [2]  Sonnerup et al. 2007 JGR (Correction to Sonnerup et al., 2006 JGR)
+    .. [8]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (2006), Orientation
+            and motion ofa plasma discontinuity from single-spacecraft measurements: Generic residue analysis of
+            Cluster data, J. Geophys. Res., 111, A05203,doi : https://doi.org/10.1029/2005JA011538 .
+
+    .. [9]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (2007), Correction to
+            ‘Orientationand motion of a plasma discontinuity from single-spacecraft measurements: Generic residue
+            analysis of Cluster data,’ J. Geophys.Res., 11 2 , A04201, doi : hhtps://doi.org/10.1029/2007JA012288 .
 
     """
 

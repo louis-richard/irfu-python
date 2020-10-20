@@ -13,26 +13,26 @@ from . import resample, dot, normalize, cross
 
 
 def eb_nrf(e=None, b=None, v=None, flag=0):
-    """
-    Find E and B in MP system given B and MP normal vector
+    """Find E and B in MP system given B and MP normal vector.
 
     Parameters
     ----------
     e : xarray.DataArray
-        Time series of the electric field
+        Time series of the electric field.
 
     b : xarray.DataArray
-        Time series of the magnetic field
+        Time series of the magnetic field.
 
     v : xarray.DataArray
-        Normal vector
+        Normal vector.
 
     flag : int or numpy.ndarray
-        to fill
+        to fill.
 
     Returns
     -------
     out : DataArray
+        to fill.
 
     """
 

@@ -13,27 +13,26 @@ from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
 def get_feeps_alleyes(tar_var="fluxe_brst_l2", tint=None, mms_id=1, verbose=True):
-	"""
-	Read energy spectrum of the selected specie in the selected energy range for all FEEPS eyes.
+	"""Read energy spectrum of the selected specie in the selected energy range for all FEEPS eyes.
 
 	Parameters
 	----------
 	tar_var : str
-		Key of the target variable like {data_unit}{specie}_{data_rate}_{data_lvl}
+		Key of the target variable like {data_unit}{specie}_{data_rate}_{data_lvl}.
 
 	tint : list of str
-		Time interval
+		Time interval.
 
 	mms_id : int or float or str
-		Index of the spacecraft
+		Index of the spacecraft.
 
 	verbose : bool
-		Set to True to follow the loading. Default is True
+		Set to True to follow the loading. Default is True.
 
 	Returns
 	-------
 	out : xarray.Dataset
-		Dataset containing the energy spectrum of the available eyes of the Fly's Eye Energetic Particle Spectrometer
+		Dataset containing the energy spectrum of the available eyes of the Fly's Eye Energetic Particle Spectrometer.
 
 	"""
 

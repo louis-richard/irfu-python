@@ -13,19 +13,18 @@ from . import ts_vec_xyz, ts_scalar
 
 
 def remove_repeated_points(inp=None):
-    """
-    Remove repeated elements in DataArray or structure data. Important when using defatt products.
+    """Remove repeated elements in DataArray or structure data. Important when using defatt products.
     Must have a time variable.
 
     Parameters
     ----------
     inp : xarray.DataArray or dict
-        Time series of the input variable
+        Time series of the input variable.
 
     Returns
     -------
     out: xarray.DataArray or dict
-        Time series of the cleaned input variable
+        Time series of the cleaned input variable.
 
     """
     threshold = 100  # Points separated in time by less than 100ns are treated as repeats

@@ -12,32 +12,31 @@ from scipy import optimize
 
 
 def calc_disprel_tm(v=None, v_err=None, tau=None, tau_err=None):
-	"""
-	Computes dispersion relation from velocities and period given by the timing method
+	"""Computes dispersion relation from velocities and period given by the timing method.
 
 	Parameters
 	----------
 	v : xarray.DataArray
-		Time series of the velocities
+		Time series of the velocities.
 
 	v_err : xarray.DataArray
-		Time series of the error on velocities
+		Time series of the error on velocities.
 
 	tau : xarray.DataArray
-		Time series of the periods
+		Time series of the periods.
 
 	tau_err : xarray.DataArray
-		Time series of the error on period
+		Time series of the error on period.
 
 	Returns
 	-------
 	out : xarray.Dataset
 		DataSet containing the frequency, the wavelength, the wavenumber. Also includes the errors and the fit
-		(e.g Vph phase velocity)
+		(e.g Vph phase velocity).
 
 	See also
 	--------
-	c_4_v_xcorr
+	pyrfu.pyrf.c_4_v : Calculates velocity or time shift of discontinuity.
 
 	"""
 

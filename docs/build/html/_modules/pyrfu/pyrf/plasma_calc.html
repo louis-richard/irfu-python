@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.plasma_calc &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.plasma_calc</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.plasma_calc</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">plasma_calc.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">astropy</span> <span class="kn">import</span> <span class="n">constants</span>
+
+<span class="kn">from</span> <span class="nn">.resample</span> <span class="kn">import</span> <span class="n">resample</span>
+
+
+<div class="viewcode-block" id="plasma_calc"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.plasma_calc.plasma_calc">[docs]</a><span class="k">def</span> <span class="nf">plasma_calc</span><span class="p">(</span><span class="n">b_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t_i</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t_e</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_i</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_e</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Computes plasma parameters including characteristic length and time scales.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    b_xyz : xarray.DataArray</span>
+<span class="sd">        Time series of the magnetic field [nT].</span>
+<span class="sd">    </span>
+<span class="sd">    t_i : xarray.DataArray</span>
+<span class="sd">        Time series of the ions scalar temperature [eV].</span>
+<span class="sd">    </span>
+<span class="sd">    t_e : xarray.DataArray</span>
+<span class="sd">        Time series of the electrons scalar temperature [eV].</span>
+<span class="sd">    </span>
+<span class="sd">    n_i : xarray.DataArray</span>
+<span class="sd">        Time series of the ions number density [cm^{-3}].</span>
+<span class="sd">    </span>
+<span class="sd">    n_e : xarray.DataArray</span>
+<span class="sd">        Time series of the electrons number density [cm^{-3}].</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    out : xarray.Dataset</span>
+<span class="sd">        Dataset of the plasma parameters :</span>
+<span class="sd">            * time : xarray.DataArray</span>
+<span class="sd">                Time.</span>
+
+<span class="sd">            * Wpe : xarray.DataArray</span>
+<span class="sd">                Time series of the electron plasma frequency [rad.s^{-1}].</span>
+
+<span class="sd">            * Fpe : xarray.DataArray</span>
+<span class="sd">                Time series of the electron plasma frequency [Hz].</span>
+
+<span class="sd">            * Wce : xarray.DataArray</span>
+<span class="sd">                Time series of the electron cyclotron frequency [rad.s^{-1}].</span>
+
+<span class="sd">            * Fce : xarray.DataArray</span>
+<span class="sd">                Time series of the electron cyclotron frequency [Hz].</span>
+
+<span class="sd">            * Wpp : xarray.DataArray</span>
+<span class="sd">                Time series of the ion plasma frequency [rad.s^{-1}].</span>
+
+<span class="sd">            * Fpp : xarray.DataArray</span>
+<span class="sd">                Time series of the ion plasma frequency [Hz].</span>
+
+<span class="sd">            * Fcp : xarray.DataArray</span>
+<span class="sd">                Time series of the ion cyclotron frequency [Hz].</span>
+
+<span class="sd">            * Fuh : xarray.DataArray</span>
+<span class="sd">                Time series of the upper hybrid frequency [Hz].</span>
+
+<span class="sd">            * Flh : xarray.DataArray</span>
+<span class="sd">                Time series of the lower hybrid frequency [Hz].</span>
+
+<span class="sd">            * Va : xarray.DataArray</span>
+<span class="sd">                Time series of the Alfvèn velocity (ions) [m.s^{-1}].</span>
+
+<span class="sd">            * Vae : xarray.DataArray</span>
+<span class="sd">                Time series of the Alfvèn velocity (electrons) [m.s^{-1}].</span>
+
+<span class="sd">            * Vte : xarray.DataArray</span>
+<span class="sd">                Time series of the electron thermal velocity [m.s^{-1}].</span>
+
+<span class="sd">            * Vtp : xarray.DataArray</span>
+<span class="sd">                Time series of the electron thermal velocity [m.s^{-1}].</span>
+
+<span class="sd">            * Vts : xarray.DataArray</span>
+<span class="sd">                Time series of the sound speed [m.s^{-1}].</span>
+
+<span class="sd">            * gamma_e : xarray.DataArray</span>
+<span class="sd">                Time series of the electron Lorentz factor.</span>
+
+<span class="sd">            * gamma_p : xarray.DataArray</span>
+<span class="sd">                Time series of the electron Lorentz factor.</span>
+
+<span class="sd">            * Le : xarray.DataArray</span>
+<span class="sd">                Time series of the electron inertial length [m].</span>
+
+<span class="sd">            * Li : xarray.DataArray</span>
+<span class="sd">                Time series of the electron inertial length [m].</span>
+
+<span class="sd">            * Ld : xarray.DataArray</span>
+<span class="sd">                Time series of the Debye length [m].</span>
+
+<span class="sd">            * Nd : xarray.DataArray</span>
+<span class="sd">                Time series of the number of electrons in the Debye sphere.</span>
+
+<span class="sd">            * Roe : xarray.DataArray</span>
+<span class="sd">                Time series of the electron Larmor radius [m].</span>
+
+<span class="sd">            * Rop : xarray.DataArray</span>
+<span class="sd">                Time series of the ion Larmor radius [m].</span>
+
+<span class="sd">            * Ros : xarray.DataArray</span>
+<span class="sd">                Time series of the length associated to the sound speed [m].</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from pyrfu import mms, pyrf</span>
+<span class="sd">    &gt;&gt;&gt; # Time interval</span>
+<span class="sd">    &gt;&gt;&gt; tint = [&quot;2015-10-30T05:15:20.000&quot;, &quot;2015-10-30T05:16:20.000&quot;]</span>
+<span class="sd">    &gt;&gt;&gt; # Spacecraft index</span>
+<span class="sd">    &gt;&gt;&gt; mms_id = 1</span>
+<span class="sd">    &gt;&gt;&gt; # Load magnetic field, ion/electron temperature and number density</span>
+<span class="sd">    &gt;&gt;&gt; b_xyz = mms.get_data(&quot;B_gse_fgm_srvy_l2&quot;, tint, mms_id)</span>
+<span class="sd">    &gt;&gt;&gt; t_xyz_i = mms.get_data(&quot;Ti_gse_fpi_fast_l2&quot;, tint, mms_id)</span>
+<span class="sd">    &gt;&gt;&gt; t_xyz_e = mms.get_data(&quot;Te_gse_fpi_fast_l2&quot;, tint, mms_id)</span>
+<span class="sd">    &gt;&gt;&gt; n_i = mms.get_data(&quot;Ni_fpi_fast_l2&quot;, tint, mms_id)</span>
+<span class="sd">    &gt;&gt;&gt; n_e = mms.get_data(&quot;Ne_fpi_fast_l2&quot;, tint, mms_id)</span>
+<span class="sd">    &gt;&gt;&gt; # Compute scalar temperature</span>
+<span class="sd">    &gt;&gt;&gt; t_xyzfac_i = mms.rotate_tensor(t_xyz_i, &quot;fac&quot;, b_xyz, &quot;pp&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; t_xyzfac_e = mms.rotate_tensor(t_xyz_e, &quot;fac&quot;, b_xyz, &quot;pp&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; t_i = pyrf.trace(t_xyzfac_i)</span>
+<span class="sd">    &gt;&gt;&gt; t_e = pyrf.trace(t_xyzfac_e)</span>
+<span class="sd">    &gt;&gt;&gt; # Compute plasma parameters</span>
+<span class="sd">    &gt;&gt;&gt; plasma_params = pyrf.plasma_calc(b_xyz, t_i, t_e, n_i, n_e)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">b_xyz</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">t_i</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">t_e</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">n_i</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">n_e</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;plasma_calc requires at least 5 arguments&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Inputs must be xarray.DataArrays&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t_i</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Inputs must be xarray.DataArrays&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t_e</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Inputs must be xarray.DataArrays&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_i</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Inputs must be xarray.DataArrays&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_e</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Inputs must be xarray.DataArrays&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Get constants</span>
+    <span class="n">e</span><span class="p">,</span> <span class="n">mu0</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">eps0</span> <span class="o">=</span> <span class="p">[</span><span class="n">constants</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">mu0</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">eps0</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+    <span class="n">m_p</span><span class="p">,</span> <span class="n">m_e</span><span class="p">,</span> <span class="n">mp_me</span> <span class="o">=</span> <span class="p">[</span><span class="n">constants</span><span class="o">.</span><span class="n">m_p</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_e</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_p</span><span class="o">.</span><span class="n">value</span> <span class="o">/</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_e</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+
+    <span class="c1"># Resample all variables with respect to the magnetic field</span>
+    <span class="n">n_t</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_i</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_t</span><span class="p">:</span>
+        <span class="n">t_i</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">t_i</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_e</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_t</span><span class="p">:</span>
+        <span class="n">t_e</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">t_e</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_i</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_t</span><span class="p">:</span>
+        <span class="n">n_i</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">n_i</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_e</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_t</span><span class="p">:</span>
+        <span class="n">n_e</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">n_e</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+
+    <span class="c1"># Transform number density and magnetic field to SI units</span>
+    <span class="n">n_i</span><span class="p">,</span> <span class="n">n_e</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1e6</span> <span class="o">*</span> <span class="n">n_i</span><span class="p">,</span> <span class="mf">1e6</span> <span class="o">*</span> <span class="n">n_e</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">b_xyz</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">b_si</span> <span class="o">=</span> <span class="mf">1e-9</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">b_si</span> <span class="o">=</span> <span class="mf">1e-9</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">w_pe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n_e</span> <span class="o">*</span> <span class="n">e</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_e</span> <span class="o">*</span> <span class="n">eps0</span><span class="p">))</span> 	<span class="c1"># rad/s</span>
+    <span class="n">w_ce</span> <span class="o">=</span> <span class="n">e</span> <span class="o">*</span> <span class="n">b_si</span> <span class="o">/</span> <span class="n">m_e</span>   						<span class="c1"># rad/s</span>
+    <span class="n">w_pp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n_i</span> <span class="o">*</span> <span class="n">e</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_p</span> <span class="o">*</span> <span class="n">eps0</span><span class="p">))</span>
+
+    <span class="n">v_a</span> <span class="o">=</span> <span class="n">b_si</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mu0</span> <span class="o">*</span> <span class="n">n_i</span> <span class="o">*</span> <span class="n">m_p</span><span class="p">)</span>
+
+    <span class="n">v_ae</span> <span class="o">=</span> <span class="n">b_si</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mu0</span> <span class="o">*</span> <span class="n">n_e</span> <span class="o">*</span> <span class="n">m_e</span><span class="p">)</span>
+    <span class="n">v_te</span> <span class="o">=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">t_e</span> <span class="o">*</span> <span class="n">e</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_e</span> <span class="o">*</span> <span class="n">c</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> 	<span class="c1"># m/s (relativ. correct)</span>
+    <span class="n">v_tp</span> <span class="o">=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">t_i</span> <span class="o">*</span> <span class="n">e</span> <span class="o">/</span> <span class="p">(</span><span class="n">m_p</span> <span class="o">*</span> <span class="n">c</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>     <span class="c1"># m/s</span>
+    <span class="n">v_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">t_e</span> <span class="o">*</span> <span class="n">e</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">t_i</span> <span class="o">*</span> <span class="n">e</span><span class="p">)</span> <span class="o">/</span> <span class="n">m_p</span><span class="p">)</span>              			<span class="c1"># Sound speed formula (F. Chen, Springer 1984).</span>
+
+    <span class="n">gamma_e</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">v_te</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">gamma_p</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">v_tp</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">l_e</span> <span class="o">=</span> <span class="n">c</span> <span class="o">/</span> <span class="n">w_pe</span>
+    <span class="n">l_i</span> <span class="o">=</span> <span class="n">c</span> <span class="o">/</span> <span class="n">w_pp</span>
+    <span class="n">l_d</span> <span class="o">=</span> <span class="n">v_te</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_pe</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> 				<span class="c1"># Debye length scale, sqrt(2) needed because of Vte definition</span>
+    <span class="n">n_d</span> <span class="o">=</span> <span class="n">l_d</span> <span class="o">*</span> <span class="n">eps0</span> <span class="o">*</span> <span class="n">m_e</span> <span class="o">*</span> <span class="n">v_te</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">e</span> <span class="o">**</span> <span class="mi">2</span> 	<span class="c1"># number of e- in Debye sphere</span>
+
+    <span class="n">f_pe</span> <span class="o">=</span> <span class="n">w_pe</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> 				<span class="c1"># Hz</span>
+    <span class="n">f_ce</span> <span class="o">=</span> <span class="n">w_ce</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    <span class="n">f_uh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_ce</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">f_pe</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">f_pp</span> <span class="o">=</span> <span class="n">w_pp</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    <span class="n">f_cp</span> <span class="o">=</span> <span class="n">f_ce</span> <span class="o">/</span> <span class="n">mp_me</span>
+    <span class="n">f_lh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_cp</span> <span class="o">*</span> <span class="n">f_ce</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">f_ce</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">f_pe</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">f_cp</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">rho_e</span> <span class="o">=</span> <span class="n">m_e</span> <span class="o">*</span> <span class="n">c</span> <span class="o">/</span> <span class="p">(</span><span class="n">e</span> <span class="o">*</span> <span class="n">b_si</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">gamma_e</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> 	<span class="c1"># m, relativistically correct</span>
+    <span class="n">rho_p</span> <span class="o">=</span> <span class="n">m_p</span> <span class="o">*</span> <span class="n">c</span> <span class="o">/</span> <span class="p">(</span><span class="n">e</span> <span class="o">*</span> <span class="n">b_si</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">gamma_p</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> 	<span class="c1"># m, relativistically correct</span>
+    <span class="n">rho_s</span> <span class="o">=</span> <span class="n">v_ts</span> <span class="o">/</span> <span class="p">(</span><span class="n">f_cp</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> 							<span class="c1"># m</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">b_xyz</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;w_pe&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">w_pe</span><span class="p">),</span> <span class="s2">&quot;w_ce&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">w_ce</span><span class="p">),</span> <span class="s2">&quot;w_pp&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">w_pp</span><span class="p">),</span>
+         <span class="s2">&quot;v_a&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">v_a</span><span class="p">),</span> <span class="s2">&quot;v_ae&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">v_ae</span><span class="p">),</span> <span class="s2">&quot;v_te&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">v_te</span><span class="p">),</span>
+         <span class="s2">&quot;v_tp&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">v_tp</span><span class="p">),</span> <span class="s2">&quot;v_ts&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">v_ts</span><span class="p">),</span> <span class="s2">&quot;gamma_e&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">gamma_e</span><span class="p">),</span>
+         <span class="s2">&quot;gamma_p&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">gamma_p</span><span class="p">),</span> <span class="s2">&quot;l_e&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">l_e</span><span class="p">),</span> <span class="s2">&quot;l_i&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">l_i</span><span class="p">),</span>
+         <span class="s2">&quot;l_d&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">l_d</span><span class="p">),</span> <span class="s2">&quot;n_d&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">n_d</span><span class="p">),</span> <span class="s2">&quot;f_pe&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">f_pe</span><span class="p">),</span>
+         <span class="s2">&quot;f_ce&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">f_ce</span><span class="p">),</span> <span class="s2">&quot;f_uh&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">f_uh</span><span class="p">),</span> <span class="s2">&quot;f_pp&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">f_pp</span><span class="p">),</span>
+         <span class="s2">&quot;f_cp&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">f_cp</span><span class="p">),</span> <span class="s2">&quot;f_lh&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">f_lh</span><span class="p">),</span> <span class="s2">&quot;rho_e&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">rho_e</span><span class="p">),</span>
+         <span class="s2">&quot;rho_p&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">rho_p</span><span class="p">),</span> <span class="s2">&quot;rho_s&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">rho_s</span><span class="p">)})</span>
+
+    <span class="k">return</span> <span class="n">out</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.plasma_calc</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

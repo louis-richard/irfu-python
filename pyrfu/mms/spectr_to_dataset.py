@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.py
+spectr_to_dataset.py
 
 @author : Louis RICHARD
 """
@@ -11,18 +11,17 @@ import xarray as xr
 
 
 def spectr_to_dataset(spectr=None):
-    """
-    Convert energy spectrum (DataArray) to Dataset.
+    """Convert energy spectrum (DataArray) to Dataset.
 
     Parameters
     ----------
     spectr : xarray.DataArray
-        Spectrogram in DataArray format
+        Spectrogram in DataArray format.
 
     Returns
     -------
     out : xarray.Dataset
-        Spectrogram in Dataset format
+        Spectrogram in Dataset format.
 
     """
 

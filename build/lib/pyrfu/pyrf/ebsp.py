@@ -60,27 +60,26 @@ def average_data(data=None, x=None, y=None, av_window=None):
 
 # noinspection PyUnboundLocalVariable
 def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwargs):
-	"""
-	Calculates wavelet spectra of E&B and Poynting flux using wavelets (Morlet wavelet). Also computes polarization 
-	parameters of B using SVD. SVD is performed on spectral matrices computed from the time series of B using wavelets
+	"""Calculates wavelet spectra of E&B and Poynting flux using wavelets (Morlet wavelet). Also computes polarization
+	parameters of B using SVD [7]_. SVD is performed on spectral matrices computed from the time series of B using wavelets
 	and then averaged over a number of wave periods.
 	
 	Parameters
 	----------
 	e : xarray.DataArray
-		Time series of the wave electric field
+		Time series of the wave electric field.
 
 	db : xarray.DataArray
-		Time series of the wave magnetic field
+		Time series of the wave magnetic field.
 
 	full_b : xarray.DataArray
-		Time series of the high resolution background magnetic field used for E.B=0
+		Time series of the high resolution background magnetic field used for E.B=0.
 
 	b0 : xarray.DataArray
-		Time series of the background magnetic field used for field aligned coordinates
+		Time series of the background magnetic field used for field aligned coordinates.
 
 	xyz : xarray.DataArray
-		Time series of the position time series of spacecraft used for field aligned coordinates
+		Time series of the position time series of spacecraft used for field aligned coordinates.
 
 	freq_int : str or list or numpy.ndarray
 		Frequency interval :
@@ -88,49 +87,49 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 			* "pc35" : [2e-3, 0.1]
 			* [fmin, fmax] : arbitrary interval [fmin,fmax]
 
-	Keyword Arguments
-	-----------------
-	polarization : bool
-		Computes polarization parameters. Default False.
+	**kwargs : dict
+		Hash table of keyword arguments with :
+			* polarization : bool
+				Computes polarization parameters. Default False.
 
-	noresamp : bool
-		No resampling, E and db are given at the same time line Default False.
+			* noresamp : bool
+				No resampling, E and db are given at the same time line Default False.
 
-	fac : bool
-		Uses FAC coordinate system (defined by b0 and optionally xyz), otherwise no coordinate system
-		transformation is performed. Default False.
+			* fac : bool
+				Uses FAC coordinate system (defined by b0 and optionally xyz), otherwise no coordinate system
+				transformation is performed. Default False.
 
-	de_dot_b0 : bool
-		Computes dEz from db dot B = 0, uses full_b. Default False.
+			* de_dot_b0 : bool
+				Computes dEz from db dot B = 0, uses full_b. Default False.
 
-	full_b_db : bool
-		db contains DC field. Default False.
+			* full_b_db : bool
+				db contains DC field. Default False.
 
-	nav : int
-		Number of wave periods to average Default 8.
+			* nav : int
+				Number of wave periods to average Default 8.
 
-	fac_matrix : numpy.ndarray
-		Specify rotation matrix to FAC system Default None.
+			* fac_matrix : numpy.ndarray
+				Specify rotation matrix to FAC system Default None.
 
-	m_width_coeff : int or float
-		Specify coefficient to multiple Morlet wavelet width by. Default 1.
+			* m_width_coeff : int or float
+				Specify coefficient to multiple Morlet wavelet width by. Default 1.
 
 	Returns
 	-------
 	res : xarray.Dataset
 		Dataset with :
 			* t : xarray.DataArray
-				Time
+				Time.
 
 			* f : xarray.DataArray
-				Frequencies
+				Frequencies.
 
 			* bb_xxyyzzss : xarray.DataArray
 				db power spectrum with :
-					[...,0] -> x
-					[...,1] -> y
-					[...,2] -> z
-					[...,3] -> sum
+					* [...,0] : x
+					* [...,1] : y
+					* [...,2] : z
+					* [...,3] : sum
 
 			* ee_xxyyzzss : xarray.DataArray
 				E power spectrum with :
@@ -140,30 +139,46 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 					* [...,3] : sum
 
 			* ee_ss : xarray.DataArray
-				E power spectrum (xx+yy spacecraft coordinates, e.g. ISR2)
+				E power spectrum (xx+yy spacecraft coordinates, e.g. ISR2).
 
 			* pf_xyz : xarray.DataArray
-				Poynting flux (xyz)
+				Poynting flux (xyz).
 
 			* pf_rtp : xarray.DataArray
-				Poynting flux (r, theta, phi) [angles in degrees]
+				Poynting flux (r, theta, phi) [angles in degrees].
 
 			* dop : xarray.DataArray
-				3D degree of polarization
+				3D degree of polarization.
 
 			* dop2d : xarray.DataArray
-				2D degree of polarization in the polarization plane
+				2D degree of polarization in the polarization plane.
 
 			* planarity : xarray.DataArray
-				Planarity of polarization
+				Planarity of polarization.
 
 			* ellipticity : xarray.DataArray
-				Ellipticity of polarization ellipse
+				Ellipticity of polarization ellipse.
 
 			* k : xarray.DataArray
-				k-vector (theta, phi FAC) [angles in degrees]
+				k-vector (theta, phi FAC) [angles in degrees].
 
-	
+
+	See also
+	--------
+	pyrfu.plot.pl_ebsp : to fill.
+	pyrfu.pyrf.convert_fac : Transforms to a field-aligned coordinate.
+
+	Notes
+	-----
+	This software was developed as part of the MAARBLE (Monitoring, Analyzing and Assessing Radiation Belt
+	Energization and Loss) collaborative research project which has received funding from the European
+	Community's Seventh Framework Programme (FP7-SPACE-2011-1) under grant agreement n. 284520.
+
+	References
+	----------
+	.. [7] 	Santolík, O., Parrot. M., and  Lefeuvre. F. (2003) Singular value decomposition methods for wave propagation
+			analysis,Radio Sci., 38(1), 1010, doi : https://doi.org/10.1029/2000RS002523 .
+
 	Examples
 	--------
 	>>> from pyrfu import mms, pyrf
@@ -180,16 +195,6 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
 	>>> b_scm = mms.get_data("B_gse_scm_brst_l2", tint_brst, mms_id)
 	>>> # Polarization analysis
 	>>> polarization = pyrf.ebsp(e_xyz, b_scm, b_xyz, b_xyz, r_xyz, freq_int=[10, 4000], polarization=True, fac=True)
-
-	See also
-	--------
-	PL_EBSP, CONVERT_FAC
-
-	Notes
-	-----
-	This software was developed as part of the MAARBLE (Monitoring, Analyzing and Assessing Radiation Belt
-	Energization and Loss) collaborative research project which has received funding from the European
-	Community's Seventh Framework Programme (FP7-SPACE-2011-1) under grant agreement n. 284520.
 
 	"""
 

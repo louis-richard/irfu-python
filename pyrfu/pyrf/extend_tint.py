@@ -11,24 +11,23 @@ from astropy.time import Time
 
 
 def extend_tint(tint=None, ext=None):
-	"""
-	Extends time interval
+	"""Extends time interval.
 
 	Parameters
 	----------
 	tint : list of str
-		Reference time interval to extend
+		Reference time interval to extend.
 
 	ext : list of float or int
-		Number of seconds to extend time interval [left extend, right extend]
+		Number of seconds to extend time interval [left extend, right extend].
 
 	Returns
 	-------
 	tint : list of str
-		Extended time interval
+		Extended time interval.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import pyrf
 	>>> # Time interval
 	>>> tint = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]

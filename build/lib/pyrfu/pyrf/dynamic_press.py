@@ -12,26 +12,26 @@ from astropy import constants
 
 
 def dynamic_press(n=None, v=None, s="i"):
-	"""
-	Computes dynamic pressure
+	"""Computes dynamic pressure.
 
 	Parameters
 	----------
 	n : xarray.DataArray
-		Time series of the number density of the specie
-	v : xarray.DataArray
-		Time series of the bulk velocity of the specie
+		Time series of the number density of the specie.
 
-	s : {"i", "e"}
-		(Optionnal) Specie. default "i"
+	v : xarray.DataArray
+		Time series of the bulk velocity of the specie.
+
+	s : {"i", "e"}, optional
+		Specie. default "i".
 
 	Returns
 	-------
 	p_dyn : xarray.DataArray
-		Time series of the dynamic pressure of the specie
+		Time series of the dynamic pressure of the specie.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

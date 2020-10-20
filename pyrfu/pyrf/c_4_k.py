@@ -14,22 +14,21 @@ from .dot import dot
 
 
 def c_4_k(r_list=None):
-	"""
-	Calculates reciprocal vectors in barycentric coordinates.
+	"""Calculates reciprocal vectors in barycentric coordinates.
 	
 	Parameters
 	----------
 	r_list : list of xarray.DataArray
-		Position of the spacecrafts
+		Position of the spacecrafts.
 
 	Returns
 	-------
 	k_list : list of xarray.DataArray
-		Reciprocal vectors in barycentric coordinates
+		Reciprocal vectors in barycentric coordinates.
 
-	Note
-	----
-	The units of reciprocal vectors are the same as [1/r]
+	Notes
+	-----
+	The units of reciprocal vectors are the same as [1/r].
 
 	"""
 

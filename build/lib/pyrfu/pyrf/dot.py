@@ -15,24 +15,23 @@ from .ts_scalar import ts_scalar
 
 
 def dot(x=None, y=None):
-	"""
-	Computes dot product of two fields
+	"""Computes dot product of two fields.
 
 	Parameters
 	----------
 	x : xarray.DataArray
-		Time series of the first field X
+		Time series of the first field X.
 
 	y : xarray.DataArray
-		Time series of the second field Y
+		Time series of the second field Y.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the dot product Z = X.Y
+		Time series of the dot product Z = X.Y.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> import numpy
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval

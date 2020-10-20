@@ -21,26 +21,30 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 		* R_perp_y defined by R_parallel cross the position vector of the spacecraft (nominally eastward at the equator)
 		* R_perp_x defined by R_perp_y cross R_par
 
-	If inp is one vector along r direction, out is inp[perp, para] projection
+	If inp is one vector along r direction, out is inp[perp, para] projection.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input field
+		Time series of the input field.
 
 	b_bgd : xarray.DataArray
-		Time series of the background magnetic field
+		Time series of the background magnetic field.
 
 	r : xarray.DataArray or numpy.ndarray or list
-		Position vector of spacecraft
+		Position vector of spacecraft.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the input field in field aligned coordinates system
+		Time series of the input field in field aligned coordinates system.
 
-	Example
-	-------
+	Notes
+	-----
+	All input parameters must be in the same coordinate system.
+
+	Examples
+	--------
 	>>> import numpy
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
@@ -53,10 +57,6 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
 	>>> # Convert to field aligned coordinates
 	>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, numpy.array([1, 0, 0]))
 
-	Note
-	----
-	All input parameters must be in the same coordinate system
-	
 	"""
 	
 	if (inp is None) or (b_bgd is None):

@@ -11,18 +11,17 @@ import xarray as xr
 
 
 def calc_fs(inp=None):
-	"""
-	Computes the sampling frequency of the input time series
+	"""Computes the sampling frequency of the input time series.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input variable
+		Time series of the input variable.
 
 	Returns
 	-------
 	out : float
-		Sampling frequency in Hz
+		Sampling frequency in Hz.
 
 	"""
 

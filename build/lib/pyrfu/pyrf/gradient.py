@@ -13,21 +13,20 @@ from .calc_dt import calc_dt
 
 
 def gradient(inp=None):
-	"""
-	Computes time derivative of the input variable
+	"""Computes time derivative of the input variable.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input variable
+		Time series of the input variable.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the time derivative of the input variable
+		Time series of the time derivative of the input variable.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2017-07-18T13:03:34.000", "2017-07-18T13:07:00.000"]

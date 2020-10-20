@@ -15,40 +15,39 @@ from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 
 def remove_idist_background(n_i=None, v_gse_i=None, p_gse_i=None, n_bg_i=None, p_bg_i=None):
-	"""
-	Removes penetrating radiation background from ion moments
+	"""Removes penetrating radiation background from ion moments.
 
 	Parameters
 	----------
 	n_i : xarray.DataArray
-		Time series of the ion density
+		Time series of the ion density.
 
 	v_gse_i : xarray.DataArray
-		Time series of the ion bulk velocity
+		Time series of the ion bulk velocity.
 
 	p_gse_i : xarray.DataArray
-		Time series of the ion pressure tensor
+		Time series of the ion pressure tensor.
 
 	n_bg_i : xarray.DataArray
-		Time series of the background ion number density
+		Time series of the background ion number density.
 
 	p_bg_i : xarray.DataArray
-		Time series of the background ion pressure scalar
+		Time series of the background ion pressure scalar.
 
 	Returns
 	-------
 	n_i_new : xarray.DataArray
-		Time series of the corrected ion number density
+		Time series of the corrected ion number density.
 
 	v_gse_i_new : xarray.DataArray
-		Time series of the corrected ion bulk velocity
+		Time series of the corrected ion bulk velocity.
 
 	p_gse_i : xarray.DataArray
-		Time series of the corrected ion pressure tensor
+		Time series of the corrected ion pressure tensor.
 
 	References
 	----------
-	MMS DIS Penetrating radiation correction methods:
+	MMS DIS Penetrating radiation correction methods :
 	https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data
 
 	"""

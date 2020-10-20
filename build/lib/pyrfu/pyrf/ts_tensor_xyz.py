@@ -11,24 +11,23 @@ import xarray as xr
 
 
 def ts_tensor_xyz(t=None, data=None, attrs=None):
-	"""
-	Create a time series containing a 2nd order tensor
+	"""Create a time series containing a 2nd order tensor.
 
 	Parameters
 	----------
 	t : numpy.ndarray
-		Array of times
+		Array of times.
 
 	data : numpy.ndarray
-		Data corresponding to the time list
+		Data corresponding to the time list.
 
 	attrs : dict
-		Attributes of the data list
+		Attributes of the data list.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		2nd order tensor time series
+		2nd order tensor time series.
 
 	"""
 

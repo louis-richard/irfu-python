@@ -23,6 +23,7 @@ pyrfu/mms/feeps_remove_sun.py
 pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
 pyrfu/mms/fft_bandpass.py
+pyrfu/mms/fk_power_spectrum.py
 pyrfu/mms/fk_power_spectrum_4sc.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py

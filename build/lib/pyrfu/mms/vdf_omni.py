@@ -11,26 +11,25 @@ import xarray as xr
 
 
 def vdf_omni(vdf):
-    """
-    Computes omnidirectional distribution, conserving unit.
+    """Computes omnidirectional distribution, conserving unit.
 
     Parameters
     ----------
     vdf : xarray.Dataset
         Time series of the 3D velocity distribution with :
-            * time : Time samples
-            * data : 3D velocity distribution
-            * energy : Energy levels
-            * phi : Azimuthal angles
-            * theta : Elevation angle
+            * time : Time samples.
+            * data : 3D velocity distribution.
+            * energy : Energy levels.
+            * phi : Azimuthal angles.
+            * theta : Elevation angle.
 
     Returns
     -------
     out : xarray.Dataset
         Time series of the omnidirectional velocity distribution function with :
-            * time : Time samples
-            * data : 3D velocity distribution
-            * energy : Energy levels
+            * time : Time samples.
+            * data : 3D velocity distribution.
+            * energy : Energy levels.
 
     """
 

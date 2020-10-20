@@ -42,14 +42,14 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     n_e : xarray.DataArray
         Time series of the number density
 
-    Keyword Arguments
-    -----------------
-    lhfilt : float or int or list of float or list of int
-        Filter for LH fluctuations. For one element it is the minimum frequency in the highpass filter.
-        For two elements the fields are bandpassed between the frequencies.
+    **kwargs : dict
+        Hash table of keyword arguments with :
+            * lhfilt : float or int or list of float or list of int
+                Filter for LH fluctuations. For one element it is the minimum frequency in the highpass filter.
+                For two elements the fields are bandpassed between the frequencies.
 
-    blpass : float or int
-        Set maximum frequency for low-pass filter of background magnetic field (FGM)
+            * blpass : float or int
+                Set maximum frequency for low-pass filter of background magnetic field (FGM)
 
     Returns
     -------
@@ -68,8 +68,8 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     corrs : numpy.ndarray
         to fill
 
-    Example
-    -------
+    Examples
+    --------
     >>> from pyrfu import mms
     >>> # Large time interval
     >>> tint_long = ["2015-12-14T01:17:39.000", "2015-12-14T01:17:43.000"]

@@ -11,21 +11,20 @@ import numpy as np
 
 
 def norm(inp=None):
-	"""
-	Computes the magnitude of the input field
+	"""Computes the magnitude of the input field.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input field
+		Time series of the input field.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the magnitude of the input field
+		Time series of the magnitude of the input field.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

@@ -14,121 +14,121 @@ from .resample import resample
 
 
 def plasma_calc(b_xyz=None, t_i=None, t_e=None, n_i=None, n_e=None):
-    """
-    Computes plasma parameters including characteristic length and time scales
+    """Computes plasma parameters including characteristic length and time scales.
     
     Parameters
     ----------
     b_xyz : xarray.DataArray
-        Time series of the magnetic field [nT]
+        Time series of the magnetic field [nT].
     
     t_i : xarray.DataArray
-        Time series of the ions scalar temperature [eV]
+        Time series of the ions scalar temperature [eV].
     
     t_e : xarray.DataArray
-        Time series of the electrons scalar temperature [eV]
+        Time series of the electrons scalar temperature [eV].
     
     n_i : xarray.DataArray
-        Time series of the ions number density [cm^{-3}]
+        Time series of the ions number density [cm^{-3}].
     
     n_e : xarray.DataArray
-        Time series of the electrons number density [cm^{-3}]
+        Time series of the electrons number density [cm^{-3}].
 
     Returns
     -------
     out : xarray.Dataset
         Dataset of the plasma parameters :
             * time : xarray.DataArray
-                Time
+                Time.
 
             * Wpe : xarray.DataArray
-                Time series of the electron plasma frequency [rad.s^{-1}]
+                Time series of the electron plasma frequency [rad.s^{-1}].
 
             * Fpe : xarray.DataArray
-                Time series of the electron plasma frequency [Hz]
+                Time series of the electron plasma frequency [Hz].
 
             * Wce : xarray.DataArray
-                Time series of the electron cyclotron frequency [rad.s^{-1}]
+                Time series of the electron cyclotron frequency [rad.s^{-1}].
 
             * Fce : xarray.DataArray
-                Time series of the electron cyclotron frequency [Hz]
+                Time series of the electron cyclotron frequency [Hz].
 
             * Wpp : xarray.DataArray
-                Time series of the ion plasma frequency [rad.s^{-1}]
+                Time series of the ion plasma frequency [rad.s^{-1}].
 
             * Fpp : xarray.DataArray
-                Time series of the ion plasma frequency [Hz]
+                Time series of the ion plasma frequency [Hz].
 
             * Fcp : xarray.DataArray
-                Time series of the ion cyclotron frequency [Hz]
+                Time series of the ion cyclotron frequency [Hz].
 
             * Fuh : xarray.DataArray
-                Time series of the upper hybrid frequency [Hz]
+                Time series of the upper hybrid frequency [Hz].
 
             * Flh : xarray.DataArray
-                Time series of the lower hybrid frequency [Hz]
+                Time series of the lower hybrid frequency [Hz].
 
             * Va : xarray.DataArray
-                Time series of the Alfvèn velocity (ions) [m.s^{-1}]
+                Time series of the Alfvèn velocity (ions) [m.s^{-1}].
 
             * Vae : xarray.DataArray
-                Time series of the Alfvèn velocity (electrons) [m.s^{-1}]
+                Time series of the Alfvèn velocity (electrons) [m.s^{-1}].
 
             * Vte : xarray.DataArray
-                Time series of the electron thermal velocity [m.s^{-1}]
+                Time series of the electron thermal velocity [m.s^{-1}].
 
             * Vtp : xarray.DataArray
-                Time series of the electron thermal velocity [m.s^{-1}]
+                Time series of the electron thermal velocity [m.s^{-1}].
 
             * Vts : xarray.DataArray
-                Time series of the sound speed [m.s^{-1}]
+                Time series of the sound speed [m.s^{-1}].
 
             * gamma_e : xarray.DataArray
-                Time series of the electron Lorentz factor
+                Time series of the electron Lorentz factor.
 
             * gamma_p : xarray.DataArray
-                Time series of the electron Lorentz factor
+                Time series of the electron Lorentz factor.
 
             * Le : xarray.DataArray
-                Time series of the electron inertial length [m]
+                Time series of the electron inertial length [m].
 
             * Li : xarray.DataArray
-                Time series of the electron inertial length [m]
+                Time series of the electron inertial length [m].
 
             * Ld : xarray.DataArray
-                Time series of the Debye length [m]
+                Time series of the Debye length [m].
 
             * Nd : xarray.DataArray
-                Time series of the number of electrons in the Debye sphere
+                Time series of the number of electrons in the Debye sphere.
 
             * Roe : xarray.DataArray
-                Time series of the electron Larmor radius [m]
+                Time series of the electron Larmor radius [m].
 
             * Rop : xarray.DataArray
-                Time series of the ion Larmor radius [m]
+                Time series of the ion Larmor radius [m].
 
             * Ros : xarray.DataArray
-                Time series of the length associated to the sound speed [m]
+                Time series of the length associated to the sound speed [m].
 
-    Example :
-        >>> from pyrfu import mms, pyrf
-        >>> # Time interval
-        >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-        >>> # Spacecraft index
-        >>> mms_id = 1
-        >>> # Load magnetic field, ion/electron temperature and number density
-        >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-        >>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
-        >>> t_xyz_e = mms.get_data("Te_gse_fpi_fast_l2", tint, mms_id)
-        >>> n_i = mms.get_data("Ni_fpi_fast_l2", tint, mms_id)
-        >>> n_e = mms.get_data("Ne_fpi_fast_l2", tint, mms_id)
-        >>> # Compute scalar temperature
-        >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
-        >>> t_xyzfac_e = mms.rotate_tensor(t_xyz_e, "fac", b_xyz, "pp")
-        >>> t_i = pyrf.trace(t_xyzfac_i)
-        >>> t_e = pyrf.trace(t_xyzfac_e)
-        >>> # Compute plasma parameters
-        >>> plasma_params = pyrf.plasma_calc(b_xyz, t_i, t_e, n_i, n_e)
+    Examples
+    --------
+    >>> from pyrfu import mms, pyrf
+    >>> # Time interval
+    >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+    >>> # Spacecraft index
+    >>> mms_id = 1
+    >>> # Load magnetic field, ion/electron temperature and number density
+    >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+    >>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
+    >>> t_xyz_e = mms.get_data("Te_gse_fpi_fast_l2", tint, mms_id)
+    >>> n_i = mms.get_data("Ni_fpi_fast_l2", tint, mms_id)
+    >>> n_e = mms.get_data("Ne_fpi_fast_l2", tint, mms_id)
+    >>> # Compute scalar temperature
+    >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
+    >>> t_xyzfac_e = mms.rotate_tensor(t_xyz_e, "fac", b_xyz, "pp")
+    >>> t_i = pyrf.trace(t_xyzfac_i)
+    >>> t_e = pyrf.trace(t_xyzfac_e)
+    >>> # Compute plasma parameters
+    >>> plasma_params = pyrf.plasma_calc(b_xyz, t_i, t_e, n_i, n_e)
 
     """
 

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 trace.py
+
 @author : Louis RICHARD
 """
 
@@ -11,8 +12,7 @@ from .ts_scalar import ts_scalar
 
 
 def trace(inp=None):
-	"""
-	Computes trace of the time series of 2nd order tensors
+	"""Computes trace of the time series of 2nd order tensors.
 
 	Parameters
 	----------
@@ -22,10 +22,10 @@ def trace(inp=None):
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the trace of the input tensor
+		Time series of the trace of the input tensor.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]

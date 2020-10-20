@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.py
+correct_edp_probe_timing.py
 
 @author : Louis RICHARD
 """
@@ -12,9 +12,8 @@ import xarray as xr
 from ..pyrf import ts_scalar, resample
 
 
-def correct_edp_probe_timing(v_org):
-    """
-    Corrects for the channel delays not accounted for in the MMS EDP processing. As described in the MMS EDP data
+def correct_edp_probe_timing(v_org=None):
+    """Corrects for the channel delays not accounted for in the MMS EDP processing. As described in the MMS EDP data
     products guide.
 
     Parameters

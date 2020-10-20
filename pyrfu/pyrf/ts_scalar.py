@@ -11,24 +11,24 @@ import xarray as xr
 
 
 def ts_scalar(t=None, data=None, attrs=None):
-	"""
-	Create a time series containing a 0th order tensor
+	"""Create a time series containing a 0th order tensor
 
 	Parameters
 	----------
 	t : numpy.ndarray
-		Array of times
+		Array of times.
 
 	data : numpy.ndarray
-		Data corresponding to the time list
+		Data corresponding to the time list.
 
 	attrs : dict
-		Attributes of the data list
+		Attributes of the data list.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		0th order tensor time series
+		0th order tensor time series.
+
 	"""
 
 	assert t is not None and isinstance(t, np.ndarray)

@@ -12,25 +12,24 @@ from .ts_skymap import ts_skymap
 
 
 def dist_append(inp0=None, inp1=None):
-	"""
-	Concatenate two distribution skymaps along the time axis
+	"""Concatenate two distribution skymaps along the time axis.
 
 	Parameters
 	----------
 	inp0 : xarray.DataArray
-		3D skymap distribution at early times
+		3D skymap distribution at early times.
 
 	inp1 : xarray.DataArray
-		3D skymap distribution at late times
+		3D skymap distribution at late times.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		3D skymap of the concatenated 3D skymaps
+		3D skymap of the concatenated 3D skymaps.
 
-	Note
-	----
-	The time series have to be in the correct time order
+	Notes
+	-----
+	The time series have to be in the correct time order.
 
 	"""
 

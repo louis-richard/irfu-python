@@ -15,21 +15,20 @@ import bisect
 
 
 def time_clip(inp=None, tint=None):
-	"""
-	Time clip the input (if time interval is TSeries clip between start and stop)
+	"""Time clip the input (if time interval is TSeries clip between start and stop).
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the quantity to clip
+		Time series of the quantity to clip.
 
 	tint : xarray.DataArray or numpy.ndarray or list
-		Time interval can be a time series, a array of datetime64 or a list
+		Time interval can be a time series, a array of datetime64 or a list.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the time clipped input
+		Time series of the time clipped input.
 
 	"""
 

@@ -11,28 +11,27 @@ import numpy as np
 
 
 def movmean(inp=None, n_pts=100):
-	"""
-	Computes running average of the inp over npts points.
+	"""Computes running average of the inp over npts points.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input variable
+		Time series of the input variable.
 
 	n_pts : int
-		Number of points to average over
+		Number of points to average over.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the input variable averaged over npts points
+		Time series of the input variable averaged over npts points.
 
 	Notes
 	-----
-	Works also with 3D skymap distribution
+	Works also with 3D skymap distribution.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]

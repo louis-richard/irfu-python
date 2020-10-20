@@ -13,9 +13,8 @@ from .cross import cross
 
 
 def c_4_j(r_list=None, b_list=None):
-	"""
-	Calculate current density :math:`\\mathbf{J}` from using 4 spacecraft technique [4]_, the divergence of the magnetic
-	field :math:`\\nabla . \\mathbf{B}`, magnetic field at the center of mass of the tetrahedron,
+	"""Calculate current density :math:`\\mathbf{J}` from using 4 spacecraft technique [4]_, the divergence of the
+	magnetic field :math:`\\nabla . \\mathbf{B}`, magnetic field at the center of mass of the tetrahedron,
 	:math:`\\mathbf{J}\\times\\mathbf{B}` force, part of the divergence of stress associated with curvature
 	:math:`\\nabla.\\mathbf{T}_{shear}` and gradient of the magnetic pressure :math:`\\nabla P_b`.
 	Where :
@@ -31,27 +30,27 @@ def c_4_j(r_list=None, b_list=None):
 		\\nabla P_b = \\nabla \\frac{B^2}{2\\mu_0}
 
 	The divergence of the magnetic field is current density units as it shows the error on the estimation of the
-	current density [5]_
+	current density [5]_ .
 	
 	Parameters
 	----------
 	r_list : list of xarray.DataArray
-		Time series of the spacecraft position [km]
+		Time series of the spacecraft position [km].
 
 	b_list : list of xarray.DataArray
-		Time series of the magnetic field [nT]
+		Time series of the magnetic field [nT].
 
 	Returns
 	-------
 	j : xarray.DataArray
-		Time series of the current density [A.m^{-2}]
+		Time series of the current density [A.m^{-2}].
 
 	div_b : xarray.DataArray
-		Time series of the divergence of the magnetic field [A.m^{-2}]
+		Time series of the divergence of the magnetic field [A.m^{-2}].
 
 	b_avg : xarray.DataArray
 		Time series of the magnetic field at the center of mass of the tetrahedron,
-		sampled at 1st SC time steps [nT]
+		sampled at 1st SC time steps [nT].
 
 	jxb : xarray.DataArray
 		Time series of the :math:`\\mathbf{J}\\times\\mathbf{B}` force [T.A].
@@ -62,18 +61,10 @@ def c_4_j(r_list=None, b_list=None):
 	div_pb : xarray.DataArray
 		Time series of the gradient of the magnetic pressure.
 
-	Example
-	-------
-	>>> import numpy as np
-	>>> from pyrfu import mms, pyrf
-	>>> # Time interval
-	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-	>>> # Spacecraft indices
-	>>> mms_list = np.arange(1,5)
-	>>> # Load magnetic field and spacecraft position
-	>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
-	>>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
-	>>> j, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(r_mms, b_mms)
+	See also
+	--------
+	pyrfu.pyrf.c_4_k : Calculates reciprocal vectors in barycentric coordinates.
+	pyrfu.pyrf.c_4_grad : Calculate gradient of physical field using 4 spacecraft technique.
 
 	References
 	----------
@@ -85,9 +76,18 @@ def c_4_j(r_list=None, b_list=None):
 			Data, edited by G. Paschmann and P. W. Daly, pp. 395–418, Int. Space Sci. Inst., Bern.
 			url : http://www.issibern.ch/forads/sr-001-16.pdf
 
-	See also
+	Examples
 	--------
-	c_4_k, c_4_grad
+	>>> import numpy as np
+	>>> from pyrfu import mms, pyrf
+	>>> # Time interval
+	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+	>>> # Spacecraft indices
+	>>> mms_list = np.arange(1,5)
+	>>> # Load magnetic field and spacecraft position
+	>>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
+	>>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
+	>>> j, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(r_mms, b_mms)
 
 	"""
 

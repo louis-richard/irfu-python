@@ -11,27 +11,27 @@ from .db_get_ts import db_get_ts
 
 
 def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
-	"""
-	Computes omni directional energy spectrum of the target data unit for the target specie over the target energy range
+	"""Computes omni directional energy spectrum of the target data unit for the target specie over the target energy
+	range.
 
 	Parameters
 	----------
 	inp_str : str
-		Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}
+		Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
 
 	tint : list of str
-		Time interval
+		Time interval.
 
 	mms_id : int or float or str
-		Index of the spacecraft
+		Index of the spacecraft.
 
 	verbose : bool
-		Set to True to follow the loading. Default is True
+		Set to True to follow the loading. Default is True.
 
 	Returns
 	--------
 	out : xarray.DataArray
-		Energy spectrum of the target data unit for the target specie in omni direction
+		Energy spectrum of the target data unit for the target specie in omni direction.
 
 	"""
 

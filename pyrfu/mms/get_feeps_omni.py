@@ -16,27 +16,27 @@ from .get_feeps_oneeye import get_feeps_oneeye
 
 # noinspection PyUnboundLocalVariable
 def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True):
-    """
-    Computes omni directional energy spectrum of the target data unit for the target specie over the target energy range
+    """Computes omni directional energy spectrum of the target data unit for the target specie over the target energy
+    range.
 
     Parameters
     ----------
     tar_var : str
-        Key of the target variable like {data_unit}_{specie}_{data_rate}_{data_lvl}
+        Key of the target variable like {data_unit}_{specie}_{data_rate}_{data_lvl}.
 
     tint : list of str
-        Time interval
+        Time interval.
 
     mms_id : int or float or str
-        Index of the spacecraft
+        Index of the spacecraft.
 
     verbose : bool
-        Set to True to follow the loading. Default is True
+        Set to True to follow the loading. Default is True.
 
     Returns
     --------
     out : xarray.DataArray
-        Energy spectrum of the target data unit for the target specie in omni direction
+        Energy spectrum of the target data unit for the target specie in omni direction.
 
     """
 

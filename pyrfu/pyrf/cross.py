@@ -15,24 +15,23 @@ from .ts_vec_xyz import ts_vec_xyz
 
 
 def cross(x=None, y=None):
-	"""
-	Computes cross product of two fields.
+	"""Computes cross product of two fields.
 
 	Parameters
 	----------
 	x : xarray.DataArray
-		Time series of the first field X
+		Time series of the first field X.
 
 	y : xarray.DataArray
-		Time series of the second field Y
+		Time series of the second field Y.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the cross product Z = XxY
+		Time series of the cross product Z = XxY.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Define time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

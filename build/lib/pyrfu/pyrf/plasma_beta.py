@@ -22,16 +22,16 @@ def plasma_beta(b_xyz=None, p_xyz=None):
 
     Parameters
     ----------
-    b_xyz = xarray.DataArray
-        Time series of the magnetic field
+    b_xyz : xarray.DataArray
+        Time series of the magnetic field.
 
     p_xyz : xarray.DataArray
-        Time series of the pressure tensor
+        Time series of the pressure tensor.
 
-    Return
-    ------
+    Returns
+    -------
     beta : xarray.DataArray
-        Time series of the plasma beta at magnetic field sampling
+        Time series of the plasma beta at magnetic field sampling.
 
     """
 

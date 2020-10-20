@@ -15,12 +15,11 @@ from .spectr_to_dataset import spectr_to_dataset
 
 
 def deflux_to_vdf(deflux=None):
-    """
-    Compute density energy flux from velocity distribution function
+    """Compute density energy flux from velocity distribution function.
 
     Parameters
     ----------
-    deflux : xarray.Dataset or xr.DataArray
+    deflux : xarray.Dataset or xarray.DataArray
         Time series of the density energy flux in 1/(cm^2 s sr keV).
 
     Returns

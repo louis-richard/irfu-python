@@ -16,12 +16,12 @@ def iso2unix(t=None):
 	Parameters
 	----------
 	t : list of str
-		Time
+		Time.
 
 	Returns
 	-------
 	out : list of float
-		Time in unix format
+		Time in unix format.
 
 	"""
 	

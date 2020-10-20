@@ -13,21 +13,20 @@ from astropy.time import Time
 
 
 def ts_time(t=None, fmt="unix"):
-	"""
-	Creates time line in DataArray
+	"""Creates time line in DataArray.
 
 	Parameters
 	----------
 	t : numpy.ndarray
-		Input time line
+		Input time line.
 
 	fmt : str
-		Format of the input time line
+		Format of the input time line.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the time line
+		Time series of the time line.
 
 	"""
 

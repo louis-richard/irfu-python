@@ -21,19 +21,19 @@ def wavepolarize_means(b_wave=None, b_bgd=None, **kwargs):
 	Parameters
 	-----------
 	b_wave : xarray.DataArray
-		Time series of the magnetic field from SCM
+		Time series of the magnetic field from Search Coil Magnetometer (SCM).
 
 	b_bgd : xarray.DataArray
-		Time series of the magnetic field from FGM.
+		Time series of the magnetic field from Flux Gate Magnetometer (FGM).
 
-	Keyword Arguments
-	-----------------
-	min_psd : float
-		Threshold for the analysis (e.g 1.0e-7). Below this value, the SVD analysis is meaningless if min_psd is
-		not given, SVD analysis will be done for all waves. (default 1e-25)
+	**kwargs : dict
+		Hash table of keyword arguments with :
+			* min_psd : float
+				Threshold for the analysis (e.g 1.0e-7). Below this value, the SVD analysis is meaningless if min_psd is
+				not given, SVD analysis will be done for all waves. (default 1e-25).
 
-	nop_fft : int
-		Number of points in FFT. (default 256)
+			* nop_fft : int
+				Number of points in FFT. (default 256).
 
 	Returns
 	-------
@@ -52,16 +52,9 @@ def wavepolarize_means(b_wave=None, b_bgd=None, **kwargs):
 	helict : xarray.DataArray
 		Spectrogram of the helicity (form -1 to 1)
 
-	Examples
-	--------
-	>>> from pyrfu import pyrf
-	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd)
-	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7)
-	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7, 256)
-
-	Note
+	Notes
 	------
-	`b_wave` and `b_bgd` should be from the same satellite and in the same coordinates
+	``b_wave`` and ``b_bgd`` should be from the same satellite and in the same coordinates
 
 	.. warning::
 		If one component is an order of magnitude or more  greater than the other two then the polarization
@@ -71,6 +64,13 @@ def wavepolarize_means(b_wave=None, b_bgd=None, **kwargs):
 		Care should be taken in evaluating degree of polarization results.
 		For meaningful results there should be significant wave power at the frequency where the polarization
 		approaches 100%. Remember comparing two straight lines yields 100% polarization.
+
+	Examples
+	--------
+	>>> from pyrfu import pyrf
+	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd)
+	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7)
+	>>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7, 256)
 
 	"""
 

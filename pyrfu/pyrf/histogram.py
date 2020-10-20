@@ -17,19 +17,18 @@ def histogram(inp=None, bins=100, normed=True):
     Parameters
     ----------
     inp : xarray.DataArray
-        Time series of the input scalar variable
+        Time series of the input scalar variable.
 
     bins : int
-        Number of bins
+        Number of bins.
 
     normed : bool
-        Normalize the PDF
+        Normalize the PDF.
 
     Returns
     -------
     out : xarray.DataArray
-        1D distribution of the input time series
-            
+        1D distribution of the input time series.
     
     """
     

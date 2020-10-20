@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.mms.split_vs &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.split_vs</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.split_vs</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">split_vs.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+
+<div class="viewcode-block" id="split_vs"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.split_vs.split_vs">[docs]</a><span class="k">def</span> <span class="nf">split_vs</span><span class="p">(</span><span class="n">var_str</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Parse the variable keys.</span>
+
+<span class="sd">	Parameters</span>
+<span class="sd">	----------</span>
+<span class="sd">	var_str : str</span>
+<span class="sd">		Input key of variable</span>
+
+<span class="sd">	Returns</span>
+<span class="sd">	-------</span>
+<span class="sd">	out : dict</span>
+<span class="sd">		Hash table containing :</span>
+<span class="sd">			* param : Variable key.</span>
+<span class="sd">			* to : Tensor order.</span>
+<span class="sd">			* cs : Coordinate system.</span>
+<span class="sd">			* inst : Instrument.</span>
+<span class="sd">			* tmmode : Time mode.</span>
+<span class="sd">			* lev&quot; : Level of data.</span>
+
+<span class="sd">	&quot;&quot;&quot;</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">var_str</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;splitVs requires at least one argument&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">var_str</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;var_str must be a string&quot;</span><span class="p">)</span>
+
+	<span class="n">tk</span> <span class="o">=</span> <span class="n">var_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+	<span class="n">n_tk</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tk</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">n_tk</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="ow">or</span> <span class="n">n_tk</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid STRING format&quot;</span><span class="p">)</span>
+
+	<span class="n">all_params_scalars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ni&quot;</span><span class="p">,</span> <span class="s2">&quot;nbgi&quot;</span><span class="p">,</span> <span class="s2">&quot;pbgi&quot;</span><span class="p">,</span> <span class="s2">&quot;partni&quot;</span><span class="p">,</span> <span class="s2">&quot;ne&quot;</span><span class="p">,</span> <span class="s2">&quot;pbge&quot;</span><span class="p">,</span> <span class="s2">&quot;nbge&quot;</span><span class="p">,</span> <span class="s2">&quot;partne&quot;</span><span class="p">,</span> <span class="s2">&quot;tsi&quot;</span><span class="p">,</span> <span class="s2">&quot;tperpi&quot;</span><span class="p">,</span>
+					   <span class="s2">&quot;tparai&quot;</span><span class="p">,</span> <span class="s2">&quot;parttperpi&quot;</span><span class="p">,</span> <span class="s2">&quot;parttparai&quot;</span><span class="p">,</span> <span class="s2">&quot;tse&quot;</span><span class="p">,</span> <span class="s2">&quot;tperpe&quot;</span><span class="p">,</span> <span class="s2">&quot;tparae&quot;</span><span class="p">,</span> <span class="s2">&quot;parttperpe&quot;</span><span class="p">,</span> <span class="s2">&quot;parttparae&quot;</span><span class="p">,</span>
+					   <span class="s2">&quot;pde&quot;</span><span class="p">,</span> <span class="s2">&quot;pdi&quot;</span><span class="p">,</span> <span class="s2">&quot;pderre&quot;</span><span class="p">,</span> <span class="s2">&quot;pderri&quot;</span><span class="p">,</span> <span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v6&quot;</span><span class="p">,</span> <span class="s2">&quot;defi&quot;</span><span class="p">,</span> <span class="s2">&quot;defbgi&quot;</span><span class="p">,</span> <span class="s2">&quot;defe&quot;</span><span class="p">,</span> <span class="s2">&quot;defbge&quot;</span><span class="p">,</span>
+					   <span class="s2">&quot;energyi&quot;</span><span class="p">,</span> <span class="s2">&quot;bnergye&quot;</span><span class="p">,</span> <span class="s2">&quot;epar&quot;</span><span class="p">,</span> <span class="s2">&quot;sdev12&quot;</span><span class="p">,</span> <span class="s2">&quot;sdev34&quot;</span><span class="p">,</span> <span class="s2">&quot;flux-amb-pm2&quot;</span><span class="p">,</span> <span class="s2">&quot;padlowene&quot;</span><span class="p">,</span> <span class="s2">&quot;padmidene&quot;</span><span class="p">,</span>
+					   <span class="s2">&quot;padhighene&quot;</span><span class="p">,</span> <span class="s2">&quot;bpsd&quot;</span><span class="p">,</span> <span class="s2">&quot;epsd&quot;</span><span class="p">]</span>
+
+	<span class="n">all_params_vectors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;sti&quot;</span><span class="p">,</span> <span class="s2">&quot;vi&quot;</span><span class="p">,</span> <span class="s2">&quot;errvi&quot;</span><span class="p">,</span> <span class="s2">&quot;partvi&quot;</span><span class="p">,</span> <span class="s2">&quot;ste&quot;</span><span class="p">,</span> <span class="s2">&quot;ve&quot;</span><span class="p">,</span> <span class="s2">&quot;errve&quot;</span><span class="p">,</span> <span class="s2">&quot;partve&quot;</span><span class="p">,</span> <span class="s2">&quot;qi&quot;</span><span class="p">,</span> <span class="s2">&quot;errqi&quot;</span><span class="p">,</span> <span class="s2">&quot;qe&quot;</span><span class="p">,</span>
+						  <span class="s2">&quot;errqe&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;e&quot;</span><span class="p">,</span> <span class="s2">&quot;e2d&quot;</span><span class="p">,</span> <span class="s2">&quot;es12&quot;</span><span class="p">,</span> <span class="s2">&quot;es34&quot;</span><span class="p">]</span>
+
+	<span class="n">all_params_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;pi&quot;</span><span class="p">,</span> <span class="s2">&quot;partpi&quot;</span><span class="p">,</span> <span class="s2">&quot;pe&quot;</span><span class="p">,</span> <span class="s2">&quot;partpe&quot;</span><span class="p">,</span> <span class="s2">&quot;ti&quot;</span><span class="p">,</span> <span class="s2">&quot;partti&quot;</span><span class="p">,</span> <span class="s2">&quot;te&quot;</span><span class="p">,</span> <span class="s2">&quot;partte&quot;</span><span class="p">]</span>
+
+	<span class="n">hpca_params_scalars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;nhplus&quot;</span><span class="p">,</span> <span class="s2">&quot;nheplus&quot;</span><span class="p">,</span> <span class="s2">&quot;nheplusplus&quot;</span><span class="p">,</span> <span class="s2">&quot;noplus&quot;</span><span class="p">,</span> <span class="s2">&quot;tshplus&quot;</span><span class="p">,</span> <span class="s2">&quot;tsheplus&quot;</span><span class="p">,</span> <span class="s2">&quot;tsheplusplus&quot;</span><span class="p">,</span> <span class="s2">&quot;tsoplus&quot;</span><span class="p">,</span>
+						<span class="s2">&quot;phase&quot;</span><span class="p">,</span> <span class="s2">&quot;adcoff&quot;</span><span class="p">]</span>
+
+	<span class="n">hpca_params_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;vhplus&quot;</span><span class="p">,</span> <span class="s2">&quot;vheplus&quot;</span><span class="p">,</span> <span class="s2">&quot;vheplusplus&quot;</span><span class="p">,</span> <span class="s2">&quot;voplus&quot;</span><span class="p">,</span> <span class="s2">&quot;phplus&quot;</span><span class="p">,</span> <span class="s2">&quot;pheplus&quot;</span><span class="p">,</span> <span class="s2">&quot;pheplusplus&quot;</span><span class="p">,</span> <span class="s2">&quot;poplus&quot;</span><span class="p">,</span>
+						<span class="s2">&quot;thplus&quot;</span><span class="p">,</span> <span class="s2">&quot;theplus&quot;</span><span class="p">,</span> <span class="s2">&quot;theplusplus&quot;</span><span class="p">,</span> <span class="s2">&quot;toplus&quot;</span><span class="p">]</span>
+
+	<span class="n">param</span> <span class="o">=</span> <span class="n">tk</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+	<span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">all_params_scalars</span><span class="p">:</span>
+		<span class="n">tensor_order</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">elif</span> <span class="n">param</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">all_params_vectors</span><span class="p">:</span>
+		<span class="n">tensor_order</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="k">elif</span> <span class="n">param</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">all_params_tensors</span><span class="p">:</span>
+		<span class="n">tensor_order</span> <span class="o">=</span> <span class="mi">2</span>
+	<span class="k">elif</span> <span class="n">param</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">hpca_params_scalars</span><span class="p">:</span>
+		<span class="n">tensor_order</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">elif</span> <span class="n">param</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">hpca_params_tensors</span><span class="p">:</span>
+		<span class="n">tensor_order</span> <span class="o">=</span> <span class="mi">1</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;invalid PARAM : </span><span class="si">{</span><span class="n">param</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+	<span class="n">coordinate_system</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+
+	<span class="k">if</span> <span class="n">tensor_order</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+		<span class="n">coordinate_system</span> <span class="o">=</span> <span class="n">tk</span><span class="p">[</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+
+		<span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+		<span class="k">if</span> <span class="n">coordinate_system</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gse&quot;</span><span class="p">,</span> <span class="s2">&quot;gsm&quot;</span><span class="p">,</span> <span class="s2">&quot;dsl&quot;</span><span class="p">,</span> <span class="s2">&quot;dbcs&quot;</span><span class="p">,</span> <span class="s2">&quot;dmpa&quot;</span><span class="p">,</span> <span class="s2">&quot;ssc&quot;</span><span class="p">,</span> <span class="s2">&quot;bcs&quot;</span><span class="p">,</span> <span class="s2">&quot;par&quot;</span><span class="p">]:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid COORDINATE_SYS&quot;</span><span class="p">)</span>
+
+	<span class="n">instrument</span> <span class="o">=</span> <span class="n">tk</span><span class="p">[</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+	<span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+	<span class="k">if</span> <span class="n">instrument</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;mec&quot;</span><span class="p">,</span> <span class="s2">&quot;fpi&quot;</span><span class="p">,</span> <span class="s2">&quot;edp&quot;</span><span class="p">,</span> <span class="s2">&quot;edi&quot;</span><span class="p">,</span> <span class="s2">&quot;hpca&quot;</span><span class="p">,</span> <span class="s2">&quot;fgm&quot;</span><span class="p">,</span> <span class="s2">&quot;dfg&quot;</span><span class="p">,</span> <span class="s2">&quot;afg&quot;</span><span class="p">,</span> <span class="s2">&quot;scm&quot;</span><span class="p">,</span> <span class="s2">&quot;fsm&quot;</span><span class="p">,</span> <span class="s2">&quot;dsp&quot;</span><span class="p">]:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid INSTRUMENT&quot;</span><span class="p">)</span>
+
+	<span class="n">tmmode</span> <span class="o">=</span> <span class="n">tk</span><span class="p">[</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+	<span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+	<span class="k">if</span> <span class="n">tmmode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;brst&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">,</span> <span class="s2">&quot;slow&quot;</span><span class="p">,</span> <span class="s2">&quot;srvy&quot;</span><span class="p">]:</span>
+		<span class="n">tmmode</span> <span class="o">=</span> <span class="s2">&quot;fast&quot;</span>
+		<span class="n">idx</span> <span class="o">-=</span> <span class="mi">1</span>
+		<span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;assuming TM_MODE = FAST&quot;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tk</span><span class="p">)</span> <span class="o">==</span> <span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">data_lvl</span> <span class="o">=</span> <span class="s2">&quot;l2&quot;</span>  <span class="c1"># default</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">data_lvl</span> <span class="o">=</span> <span class="n">tk</span><span class="p">[</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+
+		<span class="k">if</span> <span class="n">data_lvl</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ql&quot;</span><span class="p">,</span> <span class="s2">&quot;sitl&quot;</span><span class="p">,</span> <span class="s2">&quot;l1b&quot;</span><span class="p">,</span> <span class="s2">&quot;l2a&quot;</span><span class="p">,</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">,</span> <span class="s2">&quot;l2&quot;</span><span class="p">,</span> <span class="s2">&quot;l3&quot;</span><span class="p">]:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid DATA_LEVEL level&quot;</span><span class="p">)</span>
+
+	<span class="n">res</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;param&quot;</span><span class="p">:</span> <span class="n">param</span><span class="p">,</span> <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">tensor_order</span><span class="p">,</span> <span class="s2">&quot;cs&quot;</span><span class="p">:</span> <span class="n">coordinate_system</span><span class="p">,</span> <span class="s2">&quot;inst&quot;</span><span class="p">:</span> <span class="n">instrument</span><span class="p">,</span> <span class="s2">&quot;tmmode&quot;</span><span class="p">:</span> <span class="n">tmmode</span><span class="p">,</span>
+		   <span class="s2">&quot;lev&quot;</span><span class="p">:</span> <span class="n">data_lvl</span><span class="p">}</span>
+
+	<span class="k">return</span> <span class="n">res</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.split_vs</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

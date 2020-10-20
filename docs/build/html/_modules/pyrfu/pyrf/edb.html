@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.edb &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.edb</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.edb</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">edb.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">.resample</span> <span class="kn">import</span> <span class="n">resample</span>
+<span class="kn">from</span> <span class="nn">.ts_scalar</span> <span class="kn">import</span> <span class="n">ts_scalar</span>
+<span class="kn">from</span> <span class="nn">.ts_vec_xyz</span> <span class="kn">import</span> <span class="n">ts_vec_xyz</span>
+
+
+<div class="viewcode-block" id="edb"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.edb.edb">[docs]</a><span class="k">def</span> <span class="nf">edb</span><span class="p">(</span><span class="n">e</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">angle_lim</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">flag_method</span><span class="o">=</span><span class="s2">&quot;E.B=0&quot;</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Compute Ez under assumption :math:`\\mathbf{E}.\\mathbf{B}=0` or :math:`\\mathbf{E}.\\mathbf{B} \\approx 0`</span>
+
+<span class="sd">	Parameters</span>
+<span class="sd">	----------</span>
+<span class="sd">	e : xarray.DataArray</span>
+<span class="sd">		Time series of the electric field.</span>
+
+<span class="sd">	b0 : xarray.DataArray</span>
+<span class="sd">		Time series of the background magnetic field.</span>
+
+<span class="sd">	flag_method : str</span>
+<span class="sd">		Assumption on the direction of the measured electric field :</span>
+<span class="sd">			&quot;e.b=0&quot; :  :math:`\\mathbf{E}.\\mathbf{B}=0`.</span>
+<span class="sd">			&quot;e_par&quot; :  :math:`\\mathbf{E}` field along the B projection is coming from parallel electric field.</span>
+<span class="sd">			&quot;e_perp+nan&quot; : to fill.</span>
+
+<span class="sd">	angle_lim : float</span>
+<span class="sd">		B angle with respect to the spin plane should be less than angle_lim degrees otherwise Ez is set to 0.</span>
+
+<span class="sd">	Returns</span>
+<span class="sd">	-------</span>
+<span class="sd">	ed : xarray.DataArray</span>
+<span class="sd">		Time series of the electric field output.</span>
+
+<span class="sd">	d : xarray.DataArray</span>
+<span class="sd">		Time series of the B elevation angle above spin plane.</span>
+
+<span class="sd">	Examples</span>
+<span class="sd">	--------</span>
+<span class="sd">	&gt;&gt;&gt; from pyrfu import mms, pyrf</span>
+<span class="sd">	&gt;&gt;&gt; # Time interval</span>
+<span class="sd">	&gt;&gt;&gt; tint = [&quot;2019-09-14T07:54:00.000&quot;,&quot;2019-09-14T08:11:00.000&quot;]</span>
+<span class="sd">	&gt;&gt;&gt; # Spacecraft indices</span>
+<span class="sd">	&gt;&gt;&gt; mms_id = 1</span>
+<span class="sd">	&gt;&gt;&gt; # Load magnetic field, electric field and spacecraft position</span>
+<span class="sd">	&gt;&gt;&gt; b_xyz = mms.get_data(&quot;B_gse_fgm_srvy_l2&quot;, tint, mms_id)</span>
+<span class="sd">	&gt;&gt;&gt; e_xyz = mms.get_data(&quot;E_gse_edp_fast_l2&quot;, tint, mms_id)</span>
+<span class="sd">	&gt;&gt;&gt; # Compute Ez</span>
+<span class="sd">	&gt;&gt;&gt; e_z, alpha = pyrf.edb(e_xyz, b_xyz)</span>
+
+<span class="sd">	&quot;&quot;&quot;</span>
+
+	<span class="k">if</span> <span class="n">e</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;edb requires at least two inputs&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">b0</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;edb requires at least two inputs&quot;</span><span class="p">)</span>
+	
+	<span class="n">default_value</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="k">if</span> <span class="n">flag_method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e_perp+nan&quot;</span><span class="p">:</span>
+		<span class="n">default_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+		<span class="n">flag_method</span> <span class="o">=</span> <span class="s2">&quot;e.b=0&quot;</span>
+
+	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">b0</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+		<span class="n">b0</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">b0</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+	<span class="n">bd</span> <span class="o">=</span> <span class="n">b0</span><span class="o">.</span><span class="n">data</span>
+	<span class="n">ed</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
+	<span class="n">ed</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="n">default_value</span>
+
+	<span class="k">if</span> <span class="n">flag_method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e.b=0&quot;</span><span class="p">:</span>
+		<span class="c1"># Calculate using assumption E.B=0</span>
+		<span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">bd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">bd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">bd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+		<span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">angle_lim</span>
+
+		<span class="k">if</span> <span class="kc">True</span> <span class="ow">in</span> <span class="n">ind</span><span class="p">:</span>
+			<span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+
+	<span class="k">elif</span> <span class="n">flag_method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e_par&quot;</span><span class="p">:</span>
+		<span class="c1"># Calculate using assumption that E field along the B projection is coming from parallel electric field</span>
+		<span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">bd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">bd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">bd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+		<span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">angle_lim</span>
+
+		<span class="k">if</span> <span class="kc">True</span> <span class="ow">in</span> <span class="n">ind</span><span class="p">:</span>
+			<span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+			<span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">ed</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">bd</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+	<span class="k">else</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid flag&quot;</span><span class="p">)</span>
+
+	<span class="n">ed</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="p">[</span><span class="n">ts_vec_xyz</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">ed</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;UNITS&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;UNITS&quot;</span><span class="p">]}),</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;UNITS&quot;</span><span class="p">:</span> <span class="s2">&quot;degrees&quot;</span><span class="p">})]</span>
+
+	<span class="k">return</span> <span class="n">ed</span><span class="p">,</span> <span class="n">d</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.edb</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

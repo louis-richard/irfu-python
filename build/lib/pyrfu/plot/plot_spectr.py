@@ -22,39 +22,44 @@ sns.set_context("paper")
 
 
 def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cbar=True, **kwargs):
+	"""Plot a spectrogram using pcolormesh.
+
+	Parameters
+	----------
+	ax : axes
+		Target axis to plot. If None create a new figure.
+
+	inp : DataArray
+		Input 2D data to plot.
+
+	yscale : str
+		Y-axis flag. Default is "" (linear).
+
+	cscale : str
+		C-axis flag. Default is "" (linear).
+
+	clim : list
+		C-axis bounds. Default is None (autolim).
+
+	cmap : str
+		Colormap. Default is jet.
+
+	cbar : bool
+		Flag for colorbar. Set to False to hide.
+
+	Returns
+	-------
+	fig : figure
+		to fill.
+
+	axs : axes
+		to fill.
+
+	caxs : caxes
+		Only if cbar is True.
+
 	"""
-	Plot a spectrogram using pcolormesh. 
 
-	Parameters :
-		ax : axes
-			Target axis to plot. If None create a new figure
-
-		inp : DataArray
-			Input 2D data to plot
-
-		yscale : str
-			Y-axis flag. Default is "" (linear)
-
-		cscale : str
-			C-axis flag. Default is "" (linear)
-
-		clim : list
-			C-axis bounds. Default is None (autolim)
-		cmap : str
-			Colormap. Default is jet
-
-		cbar : bool
-			Flag for colorbar. Set to False to hide
-
-	Returns :
-		fig : figure
-
-		axs : axes
-
-		caxs : caxes
-			Only if cbar is True
-
-	"""
 	if ax is None:
 		fig, ax = plt.subplots(1)
 	else:

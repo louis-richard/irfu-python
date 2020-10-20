@@ -17,8 +17,7 @@ from ..pyrf import dist_append
 
 
 def get_data(var_str="", tint=None, mms_id="1", verbose=True):
-	"""
-	Load a variable. var_str must be in var (see below)
+	"""Load a variable. var_str must be in var (see below)
 
 	* EPHEMERIS :
 		"R_gse", "R_gsm"
@@ -98,24 +97,24 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 	Parameters
 	----------
 	var_str : str
-		Key of the target variable (see below)
+		Key of the target variable (see above).
 
 	tint : list of str
-		Time interval
+		Time interval.
 
 	mms_id : str or int
-		Index of the target spacecraft
+		Index of the target spacecraft.
 
 	verbose : bool
-    	Set to True to follow the loading. Default is True
+		Set to True to follow the loading. Default is True.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the target variable of measured by the target spacecraft over the selected time interval
+		Time series of the target variable of measured by the target spacecraft over the selected time interval.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms
 	>>> # Define time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

@@ -12,24 +12,23 @@ from scipy import signal
 
 
 def lowpass(inp=None, f_cut=None, fhz=None):
-    """
-    Filter the data through low or highpass filter with max frequency f_cut and subtract from the original
+    """Filter the data through low or highpass filter with max frequency f_cut and subtract from the original.
 
     Parameters
     ----------
     inp : xarray.DataArray
-        Time series of the input variable
+        Time series of the input variable.
 
     f_cut : float
-        Cutoff frequency
+        Cutoff frequency.
 
     fhz : float
-        Sampling frequency
+        Sampling frequency.
 
     Returns
     -------
     out : xarray.DataArray
-        Time series of the filter data
+        Time series of the filter data.
 
     """
 

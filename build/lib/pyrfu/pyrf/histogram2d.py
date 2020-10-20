@@ -13,27 +13,26 @@ from .resample import resample
 
 
 def histogram2d(inp1=None, inp2=None, bins=100):
-	"""
-	Computes 2d histogram of inp2 vs inp1 with nbins number of bins
+	"""Computes 2d histogram of inp2 vs inp1 with nbins number of bins.
 
 	Parameters
 	----------
 	inp1 : xarray.DataArray
-		Time series of the x values
+		Time series of the x values.
 
 	inp2 : xarray.DataArray
-		Time series of the y values
+		Time series of the y values.
 
 	bins : int
-		Number of bins
+		Number of bins.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		2D map of the density of inp2 vs inp1
+		2D map of the density of inp2 vs inp1.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

@@ -42,14 +42,14 @@ def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=
     model_vdf : xarray.Dataset
         Distribution function in the same format as vdf.
 
-    Example
-    -------
-    >>> from pyrfu import mms
-    >>> model_vdf = mms.make_model_vdf(vdf_e, b_xyz, sc_pot, n_e, v_xyz_e, t_xyz_e)
-
     See also
     --------
-    mms.calculate_epsilon
+    pyrfu.mms.calculate_epsilon : Calculates epsilon parameter using model distribution.
+
+    Examples
+    --------
+    >>> from pyrfu import mms
+    >>> model_vdf = mms.make_model_vdf(vdf_e, b_xyz, sc_pot, n_e, v_xyz_e, t_xyz_e)
 
     """
 

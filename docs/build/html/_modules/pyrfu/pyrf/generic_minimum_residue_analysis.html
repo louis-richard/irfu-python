@@ -1,0 +1,335 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyrfu.pyrf.generic_minimum_residue_analysis &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.generic_minimum_residue_analysis</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.pyrf.generic_minimum_residue_analysis</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="generic_minimum_residue_analysis_engine"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.generic_minimum_residue_analysis.generic_minimum_residue_analysis_engine">[docs]</a><span class="k">def</span> <span class="nf">generic_minimum_residue_analysis_engine</span><span class="p">(</span><span class="n">eta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">constraint_vector</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates L, V and U given the density of conserved quantity eta and transport tensor q using constraint that</span>
+<span class="sd">    discontinuity normal is perpendicular to the constraint vector.</span>
+
+<span class="sd">    Implements general Generic Minimum Residue Analysis (GMRA) solution based on [8]_, [9]_</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    eta : xarray.DataArray</span>
+<span class="sd">        Density of conserved quantity Mx3, M is number of points</span>
+
+<span class="sd">    q : xarray.DataArray</span>
+<span class="sd">        Transport tensor</span>
+
+<span class="sd">    constraint_vector : list or numpy.ndarray</span>
+<span class="sd">        Constraint vector</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    l :</span>
+<span class="sd">        Eigenvalues</span>
+
+<span class="sd">    v :</span>
+<span class="sd">        Eigenvectors corresponding to lmin, lmean, lmax</span>
+
+<span class="sd">    u :</span>
+<span class="sd">        Transport velocity, boundary velocity is Un = U * V(:, 1)</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [8]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (2006), Orientation</span>
+<span class="sd">            and motion ofa plasma discontinuity from single-spacecraft measurements: Generic residue analysis of</span>
+<span class="sd">            Cluster data, J. Geophys. Res., 111, A05203,doi : https://doi.org/10.1029/2005JA011538 .</span>
+
+<span class="sd">    .. [9]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (2007), Correction to</span>
+<span class="sd">            ‘Orientationand motion of a plasma discontinuity from single-spacecraft measurements: Generic residue</span>
+<span class="sd">            analysis of Cluster data,’ J. Geophys.Res., 11 2 , A04201, doi : hhtps://doi.org/10.1029/2007JA012288 .</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Defaults</span>
+    <span class="n">do_calculate_velocity</span><span class="p">,</span> <span class="n">do_calculate_q</span><span class="p">,</span> <span class="n">have_constraint</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+
+    <span class="c1"># Input check</span>
+
+    <span class="k">if</span> <span class="n">constraint_vector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">have_constraint</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># Check inputs</span>
+    <span class="k">if</span> <span class="n">eta</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">eta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">eta</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># U estimate. U = &lt; deta dq &gt; / &lt; | deta | ^ 2 &gt;</span>
+    <span class="n">d_eta</span> <span class="o">=</span> <span class="n">eta</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">namean</span><span class="p">(</span><span class="n">eta</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Eq. 10</span>
+    <span class="n">d_q</span> <span class="o">=</span> <span class="n">q</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">namean</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c1">#d_eta_d_q_average = np.nanmean(matrix_dot(deta, 1, dq, 1), 1)</span>
+    <span class="c1">#d_eta2_average = np.nanmean(np.dot(deta, deta, 2), 1)</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">d_eta_d_q_average</span> <span class="o">/</span> <span class="n">d_eta2_averag</span>  <span class="c1"># Eq. 12</span>
+
+    <span class="c1"># Q estimate</span>
+    <span class="c1"># dq_dq_average = shiftdim(np.nanmean(matrix_dot(dq, 1, dq, 1), 1), 1)</span>
+    <span class="c1"># d_eta_d_q_average2_mat = detadqAver.T * detadqAver</span>
+    <span class="k">if</span> <span class="n">eta</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">q_mat</span> <span class="o">=</span> <span class="n">dq_dq_average</span>  <span class="c1"># Eq.19</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">q_mat</span> <span class="o">=</span> <span class="n">dq_dq_average</span> <span class="o">-</span> <span class="n">d_eta_dq_aver2_mat</span> <span class="o">/</span> <span class="n">d_eta2_average</span>  <span class="c1"># Eq.15b (see correction in Sonnerup 2007)</span>
+
+    <span class="c1"># Correct Q by the number of dimensions so that eigenvalues coorespond to the variance of dq</span>
+    <span class="n">q_mat</span> <span class="o">=</span> <span class="n">q_mat</span> <span class="o">/</span> <span class="n">d_q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    if q is not None:</span>
+<span class="sd">        </span>
+<span class="sd">    </span>
+<span class="sd">    if nargin == 0 &amp; &amp; nargout == 0</span>
+<span class="sd">        help irf_generic_minimum_residue_analysis_engine</span>
+<span class="sd">        return;</span>
+<span class="sd">    elseif nargin == 1 &amp;&amp; isstruct(varargin{1})</span>
+<span class="sd">        InputParameters = varargin{1};</span>
+<span class="sd">        inputParameterFields = fieldnames(InputParameters);</span>
+<span class="sd">        for j in range(len(input_parameter_field)):</span>
+<span class="sd">            fieldname = input_parameter_fields{j};</span>
+<span class="sd">            eval([fieldname &#39; = InputParameters.&#39; fieldname &#39;;&#39;]);</span>
+<span class="sd">        end</span>
+<span class="sd">    elseif nargin &gt; 1</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">        args = varargin;</span>
+<span class="sd">        while numel(args) &gt;= 2</span>
+<span class="sd">            switch args{1}</span>
+<span class="sd">                case &#39;Q&#39;</span>
+<span class="sd">                    Q = args{2};</span>
+<span class="sd">                    doCalculateVelocity = false;</span>
+<span class="sd">                    doCalculateQ = false;</span>
+<span class="sd">                case &#39;eta&#39;</span>
+<span class="sd">                    eta = args{2};</span>
+<span class="sd">                case &#39;q&#39;</span>
+<span class="sd">                    q = args{2};</span>
+<span class="sd">                case &#39;constraint&#39;</span>
+<span class="sd">                    constraintVector = args{2};</span>
+<span class="sd">                    haveConstraint = true;</span>
+<span class="sd">                otherwise</span>
+<span class="sd">                    irf.log(&#39;critical&#39;, &#39;unrecognized input&#39;);</span>
+<span class="sd">                    return</span>
+<span class="sd">    </span>
+<span class="sd">            args(1: 2)=[];</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    # Check inputs</span>
+<span class="sd">    if numel(eta) == 1 % scalar</span>
+<span class="sd">        eta = repmat(eta, size(q, 1), 1);</span>
+<span class="sd">    end</span>
+<span class="sd">    </span>
+<span class="sd">    # Calculate Q from eta and q</span>
+<span class="sd">        if doCalculateQ</span>
+<span class="sd">            # U estimate. U = &lt; deta dq &gt; / &lt; | deta | ^ 2 &gt; deta = bsxfun( @ minus, eta, irf.nanmean(eta, 1)); % Eq. 10</span>
+<span class="sd">            dq = bsxfun( @ minus, q, irf.nanmean(q, 1))</span>
+<span class="sd">            deta_dq_aver = np.nanmean(matrix_dot(deta, 1, dq, 1), 1)</span>
+<span class="sd">            deta2_aver = np.nanmean(np.dot(deta, deta, 2), 1)</span>
+<span class="sd">            U = detadqAver / deta2Aver  # Eq. 12</span>
+<span class="sd">    </span>
+<span class="sd">            # Q estimate</span>
+<span class="sd">            dqdqAver = shiftdim(np.nanmean(matrix_dot(dq, 1, dq, 1), 1), 1)</span>
+<span class="sd">            detadqAver2Matrix = detadqAver.T * detadqAver</span>
+<span class="sd">            if eta == 0:</span>
+<span class="sd">                Q = dq_dq_aver # Eq.19</span>
+<span class="sd">            else:</span>
+<span class="sd">                Q = dq_dq_aver - deta_dq_aver2_matrix / deta2_aver # Eq.15b (see correction in Sonnerup 2007)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">            # Correct Q by the number of dimensions so that eigenvalues coorespond to the variance of dq</span>
+<span class="sd">            Q = Q / size(dq, 2)</span>
+<span class="sd">    </span>
+<span class="sd">        # Check for constraints</span>
+<span class="sd">            if haveConstraint</span>
+<span class="sd">                P = eye(numel(constraintVector)) - constraintVector(:) * constraintVector(:)&#39;; % Eq 41</span>
+<span class="sd">                Q = P * Q * P</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">        # Calculate eigenvalues and eigenvectors from Q</span>
+<span class="sd">        [V, lArray] = eig(Q)            # L is diagonal matrix of eigenvalues and V matrix with columns eigenvectors</span>
+<span class="sd">        [L, I] = sort(diag(lArray))</span>
+<span class="sd">        V = V(:, I)</span>
+<span class="sd">    </span>
+<span class="sd">        if ~doCalculateVelocity</span>
+<span class="sd">            U = NaN</span>
+<span class="sd">            return</span>
+<span class="sd">        end</span>
+<span class="sd">    </span>
+<span class="sd">        # Calculate normal velocity</span>
+<span class="sd">    </span>
+<span class="sd">        Un = dot(U, V(:, 1))</span>
+<span class="sd">    </span>
+<span class="sd">        # Print output</span>
+<span class="sd">        if nargout == 0</span>
+<span class="sd">            disp([&#39;Eigenvalues: &#39; sprintf(&#39;%7.5f &#39;, L)]);</span>
+<span class="sd">            disp(vector_disp(&#39;N&#39;, V(:, 1)));</span>
+<span class="sd">            disp(vector_disp(&#39;M&#39;, V(:, 2)));</span>
+<span class="sd">            disp(vector_disp(&#39;L&#39;, V(:, 3)));</span>
+<span class="sd">            disp(vector_disp(&#39;U&#39;, U, &#39;km/s&#39;));</span>
+<span class="sd">            disp([&#39;Un = &#39; num2str(Un, 3), &#39; km/s&#39;]);</span>
+<span class="sd">        end</span>
+<span class="sd">    </span>
+<span class="sd">        % % Define</span>
+<span class="sd">        output</span>
+<span class="sd">        if nargout == 0</span>
+<span class="sd">            clear</span>
+<span class="sd">            L</span>
+<span class="sd">            V</span>
+<span class="sd">            U;</span>
+<span class="sd">        end</span>
+<span class="sd">    </span>
+<span class="sd">        % % Functions</span>
+<span class="sd">        function out = vector_disp(vectSymbol, vect, vectUnit)</span>
+<span class="sd">        if nargin == 2, vectUnit =&#39;&#39;;end</span>
+<span class="sd">        out = sprintf([&#39;|&#39; vectSymbol &#39;| = %8.4f &#39; vectUnit...</span>
+<span class="sd">                       &#39;, &#39; vectSymbol &#39; = [ %8.4f %8.4f %8.4f ] &#39; vectUnit], ...</span>
+<span class="sd">        norm(vect), vect(1), vect(2), vect(3));</span>
+<span class="sd">    </span>
+<span class="sd">    function out = matrix_dot(inp1, ind1, inp2, ind2)</span>
+<span class="sd">    % MATRIX_DOT summation over one index multiplication</span>
+<span class="sd">    %</span>
+<span class="sd">    % MATRIX_DOT(inp1, ind1, inp2, ind2)</span>
+<span class="sd">    % inp1, inp2 are the matrixes and summation is over dimensions(ind1 + 1) and</span>
+<span class="sd">    % (ind2 + 1). + 1 because first dimension is always time.</span>
+<span class="sd">    szinp1 = size(inp1);</span>
+<span class="sd">    ndimsInp1 = ndims(inp1) - 1;</span>
+<span class="sd">    szinp2 = size(inp2);</span>
+<span class="sd">    ndimsInp2 = ndims(inp2) - 1;</span>
+<span class="sd">    szout1 = szinp1;</span>
+<span class="sd">    szout1(ind1 + 1) = [];</span>
+<span class="sd">    szout2 = szinp2;</span>
+<span class="sd">    szout2([1 ind2 + 1]) = [];</span>
+<span class="sd">    szout = [szout1 szout2];</span>
+<span class="sd">    out = zeros(szout);</span>
+<span class="sd">    </span>
+<span class="sd">    if ndimsInp1 == 1</span>
+<span class="sd">        if ndimsInp2 == 1</span>
+<span class="sd">            out = sum(inp1. * inp2, 2);</span>
+<span class="sd">        elseif</span>
+<span class="sd">            ndimsInp2 == 2 &amp; &amp; ind2 == 1</span>
+<span class="sd">            for jj = 1:szinp2(3)</span>
+<span class="sd">                for kk = 1:szinp1(2)</span>
+<span class="sd">                    out(:, jj) = out(:, jj) + inp1(:, kk).*inp2(:, kk, jj);</span>
+<span class="sd">                end</span>
+<span class="sd">            end</span>
+<span class="sd">        elseif</span>
+<span class="sd">            ndimsInp2 == 2 &amp; &amp; ind2 == 2</span>
+<span class="sd">            for jj = 1:szinp2(2)</span>
+<span class="sd">                for kk = 1:szinp1(2)</span>
+<span class="sd">                    out(:, jj) = out(:, jj) + inp1(:, kk).*inp2(:, jj, kk);</span>
+<span class="sd">                end</span>
+<span class="sd">            end</span>
+<span class="sd">        else</span>
+<span class="sd">            error(&#39;Not yet implemented&#39;); % not implemented</span>
+<span class="sd">        end</span>
+<span class="sd">    elseif</span>
+<span class="sd">        ndimsInp1 == 2 &amp; &amp; ndimsInp2 == 1 &amp; &amp; ind1 == 1</span>
+<span class="sd">        for jj = 1:szinp1(2)</span>
+<span class="sd">            for kk = 1:szinp2(2)</span>
+<span class="sd">                out(:, jj) = out(:, jj) + inp1(:, kk, jj).*inp2(:, kk);</span>
+<span class="sd">            end</span>
+<span class="sd">        end</span>
+<span class="sd">    elseif</span>
+<span class="sd">        ndimsInp1 == 2 &amp; &amp; ndimsInp2 == 1 &amp; &amp; ind1 == 2</span>
+<span class="sd">        for jj = 1:szinp1(2)</span>
+<span class="sd">            for kk = 1:szinp2(2)</span>
+<span class="sd">                out(:, jj) = out(:, jj) + inp1(:, jj, kk).*inp2(:, kk);</span>
+<span class="sd">            end</span>
+<span class="sd">        end</span>
+<span class="sd">    elseif</span>
+<span class="sd">        ndimsInp1 == 2 &amp; &amp; ndimsInp2 == 2 &amp; &amp; ind1 == 1 &amp; &amp; ind2 == 1</span>
+<span class="sd">        for jj = 1:szinp1(3)</span>
+<span class="sd">            for kk = 1:szinp2(3)</span>
+<span class="sd">                for ss = 1:szinp1(ind1 + 1)</span>
+<span class="sd">                    out(:, jj, kk) = out(:, jj, kk) + inp1(:, ss, jj).*inp2(:, ss, kk);</span>
+<span class="sd">                end</span>
+<span class="sd">            end</span>
+<span class="sd">        end</span>
+<span class="sd">    else</span>
+<span class="sd">        error(&#39;Not yet implemented&#39;); % not implemented</span>
+<span class="sd">    end</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.pyrf.generic_minimum_residue_analysis</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

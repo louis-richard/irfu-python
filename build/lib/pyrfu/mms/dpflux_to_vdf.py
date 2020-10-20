@@ -16,12 +16,11 @@ from .spectr_to_dataset import spectr_to_dataset
 
 
 def dpflux_to_vdf(dpflux=None):
-    """
-    Compute density particle flux from velocity distribution function
+    """Compute density particle flux from velocity distribution function.
 
     Parameters
     ----------
-    dpflux : xarray.Dataset or xr.DataArray
+    dpflux : xarray.Dataset or xarray.DataArray
         Time series of the density particle flux in 1/(cm^2 s sr keV).
 
     Returns

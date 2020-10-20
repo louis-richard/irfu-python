@@ -17,8 +17,7 @@ from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
 def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
-	"""
-	Compute pitch angle distribution using FEEPS data.
+	"""Compute pitch angle distribution using FEEPS data.
 
 	Parameters
 	----------
@@ -37,7 +36,7 @@ def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
 	Returns
 	-------
 	pad : xarray.DataArray
-		Time series of the pitch angle distribution
+		Time series of the pitch angle distribution.
 			
 	"""
 	if energy is None:

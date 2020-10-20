@@ -12,24 +12,23 @@ from scipy import signal
 
 
 def medfilt(inp=None, n_pts=11):
-	"""
-	Applies a median filter over npts points to inp
+	"""Applies a median filter over npts points to inp.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input variable
+		Time series of the input variable.
 
 	n_pts : float or int
-		Number of points of median filter
+		Number of points of median filter.
 
 	Returns
 	-------
 	out : xarray.DataArry
-		Time series of the median filtered input variable
+		Time series of the median filtered input variable.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> import numpy
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval

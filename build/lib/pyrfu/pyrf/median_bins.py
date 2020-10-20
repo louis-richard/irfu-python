@@ -11,35 +11,34 @@ import xarray as xr
 
 
 def median_bins(x=None, y=None, bins=10):
-	"""
-	Computes median of values of y corresponding to bins of x
+	"""Computes median of values of y corresponding to bins of x
 
 	Parameters
 	----------
 	x : xarray.DataArray
-		Time series of the quantity of bins
+		Time series of the quantity of bins.
 
 	y : xarray.DataArray
-		Time series of the quantity to the median
+		Time series of the quantity to the median.
 
 	bins : int
-		Number of bins
+		Number of bins.
 
 	Returns
 	-------
 	out : xarray.Dataset
 		Dataset with :
 			* bins : xarray.DataArray
-				bin values of the x variable
+				bin values of the x variable.
 
 			* data : xarray.DataArray
-				Median values of y corresponding to each bin of x
+				Median values of y corresponding to each bin of x.
 
 			* sigma : xarray.DataArray
-				Standard deviation
+				Standard deviation.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> import numpy
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval

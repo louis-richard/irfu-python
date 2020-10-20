@@ -13,42 +13,41 @@ from pyrfu.pyrf import c_4_grad, gradient, avg_4sc, ts_vec_xyz
 
 
 def st_diff(r_mms=None, b_mms=None, lmn=None):
-    """
-    Computes velocity of the structure using spatio-temporal derivative method [1]_ [2]_ as
+    """Computes velocity of the structure using spatio-temporal derivative method [13]_ [14]_ as
 
     .. math::
         \\mathbf{V}_{str}^{\\mathbf{LMN}} = -\\textrm{d}_t \\mathbf{B}^{\\mathbf{LMN}} \\left [\\nabla^{\\mathbf{LMN}}
         \\mathbf{B}^{\\mathbf{LMN}}\\right]^T \\left [\\mathbf{S}^{\\mathbf{LMN}}\\right ]^{-1}
 
     where :math:`\\mathbf{B}^{\\mathbf{LMN}}`, :math:`\\nabla^{\\mathbf{LMN}}\\mathbf{B}^{\\mathbf{LMN}}`,
-    :math:`\\mathbf{S}^{\\mathbf{LMN}}` and :math:`\\mathbf{V}_{str}^{\\mathbf{LMN}}` are namely the magnetic field, its
-     gradient, its rotation rate tensor and the velocity of the structure in the LMN coordinates system.
+    :math:`\\mathbf{S}^{\\mathbf{LMN}}` and :math:`\\mathbf{V}_{str}^{\\mathbf{LMN}}` are namely the magnetic field,
+    its gradient, its rotation rate tensor and the velocity of the structure in the LMN coordinates system.
 
-    Parameters :
-    ---------------
+    Parameters
+    ----------
     r_mms : list of xarray.DataArray
-        Spacecraft positions
+        Spacecraft positions.
 
     b_mms : list of xarray.DataArray
-        Background magnetic field
+        Background magnetic field.
 
-    lmn : np.ndarray
-        Structure coordinates system
+    lmn : numpy.ndarray
+        Structure coordinates system.
 
-    Returns :
-    -----------
+    Returns
+    -------
     v_str : xarray.DataArray
-        Velocity of the structure in its coordinates system
+        Velocity of the structure in its coordinates system.
 
     References
     ----------
-    .. [1]  Shi, Q. Q., Shen, C., Pu, Z. Y., Dunlop, M. W., Zong, Q. G., Zhang, H., et al. (2005), Dimensional analysis
-        of observed structures using multipoint magnetic field measurements: Application to Cluster. Geophysical
-        Research Letters, 32, L12105. doi : https://doi.org/10.1029/2005GL022454.
+    .. [13] Shi, Q. Q., Shen, C., Pu, Z. Y., Dunlop, M. W., Zong, Q. G., Zhang, H., et al. (2005), Dimensional analysis
+            of observed structures using multipoint magnetic field measurements: Application to Cluster. Geophysical
+            Research Letters, 32, L12105. doi : https://doi.org/10.1029/2005GL022454.
 
-    .. [2]  Shi, Q. Q., Shen, C., Dunlop, M. W., Pu, Z. Y., Zong, Q. G., Liu, Z. X., et al. (2006), Motion of observed
-        structures calculated from multi‐point magnetic field measurements: Application to Cluster. Geophysical
-        Research Letters, 33, L08109. doi : https://doi.org/10.1029/2005GL025073.
+    .. [14] Shi, Q. Q., Shen, C., Dunlop, M. W., Pu, Z. Y., Zong, Q. G., Liu, Z. X., et al. (2006), Motion of observed
+            structures calculated from multi‐point magnetic field measurements: Application to Cluster. Geophysical
+            Research Letters, 33, L08109. doi : https://doi.org/10.1029/2005GL025073.
     """
 
     assert r_mms is not None and isinstance(r_mms, list) and len(r_mms) == 4 and isinstance(r_mms[0], xr.DataArray)

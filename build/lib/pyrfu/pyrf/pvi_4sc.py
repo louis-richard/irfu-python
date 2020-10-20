@@ -13,8 +13,7 @@ from .norm import norm
 
 
 def pvi_4sc(b_mms):
-    """
-    Compute the Partial Variance of Increments (PVI) using the definition in [1]_ as
+    """Compute the Partial Variance of Increments (PVI) using the definition in [12]_ as
 
     .. math::
 
@@ -25,7 +24,7 @@ def pvi_4sc(b_mms):
     is the MMS spacecraft number.
 
     In addition, computes, the rotation of the magnetic field between two spacecraft, i.e., magnetic field shear angle,
-    as:
+    as :
 
     .. math::
 
@@ -35,20 +34,20 @@ def pvi_4sc(b_mms):
     Parameters
     ----------
     b_mms : list of xarray.DataArray
-        List of the time series of the background magnetic field for the 4 spacecraft
+        List of the time series of the background magnetic field for the 4 spacecraft.
 
     Returns
     -------
     pvi_ij : xarray.DataArray
-        Time series of the Partial Variance of Increments for the 6 pairs of spacecraft
+        Time series of the Partial Variance of Increments for the 6 pairs of spacecraft.
 
     alpha_ij : xarray.DataArray
-        Time series of the magnetic field shear angle for the 6 pairs of spacecraft
+        Time series of the magnetic field shear angle for the 6 pairs of spacecraft.
 
     References
     ----------
-    .. [1]  Chasapis, A., Retinó, A., Sahraoui, F., Vaivads, A., Khotyaintsev, Yu. V., Sundkvist, D., et al. (2015).   \
-            Thin current sheets and associated electron heating in turbulent space plasma. Astrophys. J. Lett. 804:L1. \
+    .. [12] Chasapis, A., Retinó, A., Sahraoui, F., Vaivads, A., Khotyaintsev, Yu. V., Sundkvist, D., et al. (2015)
+            Thin current sheets and associated electron heating in turbulent space plasma. Astrophys. J. Lett. 804:L1.
             doi: https://doi.org/10.1088/2041-8205/804/1/L1
 
 

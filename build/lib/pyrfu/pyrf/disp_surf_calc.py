@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.py
+dispersion_surface_calc.py
 
 @author : Louis RICHARD
 """
@@ -10,20 +10,20 @@ import numpy as np
 
 
 def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
-    """
-    Calculates the cold plasma dispersion surfaces according to equation 2.64 in Plasma Waves by Swanson (2nd ed.), and
-    puts them in the matrix W. Additional parameters that are needed in dispersion_surface is returned as extra_param.
+    """Calculates the cold plasma dispersion surfaces according to equation 2.64 in Plasma Waves by Swanson (2nd ed.),
+    and puts them in the matrix W. Additional parameters that are needed in dispersion_surface is returned as
+    extra_param.
 
     Parameters
     ----------
     kc_x_max : float or int
-        Max value of k_perpendicular*c/w_c
+        Max value of k_perpendicular*c/w_c.
 
     kc_z_max : float or int
-        Max value of k_parallel*c/w_c
+        Max value of k_parallel*c/w_c.
 
     m_i : float
-        Ion mass in terms of electron masses
+        Ion mass in terms of electron masses.
 
     w_pe : float
         Electron plasma frequency in terms of electron gyro frequency.
@@ -31,10 +31,10 @@ def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
     Returns
     -------
     w_final : numpy.ndarray
-        to fill
+        to fill.
 
     extra_param : numpy.ndarray
-        to fill
+        to fill.
 
     Notes
     -----

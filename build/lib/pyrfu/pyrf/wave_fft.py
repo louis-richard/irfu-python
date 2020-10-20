@@ -13,36 +13,35 @@ from scipy import signal
 
 
 def wave_fft(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=None):
-    """
-    Short-Time Fourier Transform
+    """Short-Time Fourier Transform.
 
     Parameters
     ----------
     x : xarray.DataArray
-        Time series of the one dimension data
+        Time series of the one dimension data.
 
     window : str
-        Window function such as rectwin, hamming (default)
+        Window function such as rectwin, hamming (default).
 
     frame_overlap : float
-        Length of each frame overlaps in second
+        Length of each frame overlaps in second.
 
     frame_length : float
         Length of each frame in second.
 
     fs : float
-        Sampling frequency
+        Sampling frequency.
 
     Returns
     -------
     s : numpy.ndarray
-        Spectrogram of x
+        Spectrogram of x.
 
     t : numpy.ndarray
-        Value corresponds to the center of each frame (x-axis) in sec
+        Value corresponds to the center of each frame (x-axis) in sec.
 
     f : numpy.ndarray
-        Vector of frequencies (y-axis) in Hz
+        Vector of frequencies (y-axis) in Hz.
 
     """
 

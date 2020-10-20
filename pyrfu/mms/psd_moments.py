@@ -109,60 +109,59 @@ def calc_moms(nt, arguments):
 
 # noinspection PyUnboundLocalVariable
 def psd_moments(vdf=None, sc_pot=None, **kwargs):
-	"""
-	Computes moments from the FPI particle phase-space densities
+	"""Computes moments from the FPI particle phase-space densities.
 
 	Parameters
 	----------
 	vdf : xarray.Dataset
-		3D skymap velocity distribution
+		3D skymap velocity distribution.
 
 	sc_pot : xarray.DataArray
-		Time series of the spacecraft potential
+		Time series of the spacecraft potential.
 
-	Keyword Arguments
-	-----------------
-	energy_range : list or numpy.ndarray
-		Set energy range in eV to integrate over [E_min E_max]. Energy range is applied to energy0 and the same
-		elements are used for energy1 to ensure that the same number of points are integrated over.
+	**kwargs : dict
+		Hash table of keyword arguments with :
+			* energy_range : list or numpy.ndarray
+				Set energy range in eV to integrate over [E_min E_max]. Energy range is applied to energy0 and the same
+				elements are used for energy1 to ensure that the same number of points are integrated over.
 
-	no_sc_pot : bool
-		Set to 1 to set spacecraft potential to zero. Calculates moments
-		without correcting for spacecraft potential.
+			* no_sc_pot : bool
+				Set to 1 to set spacecraft potential to zero. Calculates moments
+				without correcting for spacecraft potential.
 
-	en_channels : list or numpy.ndarray
-		Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
+			* en_channels : list or numpy.ndarray
+				Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
 
-	partial_moments : numpy.ndarray or xarray.DataArray
-		Use a binary array (or DataArray) (pmomsarr) to select which psd points are used in the moments
-		calculation. pmomsarr must be a binary array (1s and 0s, 1s correspond to points used).
-		Array (or data of Dataarray) must be the same size as vdf.data.
+			* partial_moments : numpy.ndarray or xarray.DataArray
+				Use a binary array (or DataArray) (pmomsarr) to select which psd points are used in the moments
+				calculation. pmomsarr must be a binary array (1s and 0s, 1s correspond to points used).
+				Array (or data of Dataarray) must be the same size as vdf.data.
 
-	inner_electron : {"on", "off"}
-		inner_electrontron potential for electron moments
+			* inner_electron : {"on", "off"}
+				inner_electrontron potential for electron moments.
 
 	Returns
 	--------
 	n_psd : xarray.DataArray
-		Time series of the number density (1rst moment)
+		Time series of the number density (1rst moment).
 
 	v_psd : xarray.DataArray
-		Time series of the bulk velocity (2nd moment)
+		Time series of the bulk velocity (2nd moment).
 
 	p_psd : xarray.DataArray
-		Time series of the pressure tensor (3rd moment)
+		Time series of the pressure tensor (3rd moment).
 
 	p2_psd : xarray.DataArray
-		Time series of the pressure tensor
+		Time series of the pressure tensor.
 
 	t_psd : xarray.DataArray
-		Time series of the temperature tensor
+		Time series of the temperature tensor.
 
 	h_psd : xarray.DataArray
-		to fill
+		to fill.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms
 	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
 	>>> vdf_e = mms.get_data("PDe_fpi_brst_l2", tint, 1)

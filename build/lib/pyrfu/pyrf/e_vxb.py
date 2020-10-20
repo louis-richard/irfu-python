@@ -14,30 +14,29 @@ from .ts_vec_xyz import ts_vec_xyz
 
 
 def e_vxb(v=None, b=None, flag="vxb"):
-	"""
-	Computes the convection electric field :math:`\\mathbf{V}\\times\\mathbf{B}` (default) or the
-	:math:`\\mathbf{E}\\times\\mathbf{B}/|\\mathbf{B}|^{2}` drift velocity (flag="exb")
+	"""Computes the convection electric field :math:`\\mathbf{V}\\times\\mathbf{B}` (default) or the
+	:math:`\\mathbf{E}\\times\\mathbf{B}/|\\mathbf{B}|^{2}` drift velocity (flag="exb").
 
 	Parameters
 	----------
 	v : xarray.DataArray
-		Time series of the velocity/electric field
+		Time series of the velocity/electric field.
 
 	b : xarray.DataArray
-		Time series of the magnetic field
+		Time series of the magnetic field.
 
 	flag : str
 		Method flag :
-			* "vxb" : computes convection electric field (default)
-			* "exb" : computes ExB drift velocity
+			* "vxb" : computes convection electric field (default).
+			* "exb" : computes ExB drift velocity.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the convection electric field/ExB drift velocity
+		Time series of the convection electric field/ExB drift velocity.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

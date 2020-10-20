@@ -10,21 +10,20 @@ import xarray as xr
 
 
 def feeps_split_integral_ch(inp_dataset=None):
-	"""
-	This function splits the last integral channel from the FEEPS spectra, creating 2 new DataArrays
+	"""This function splits the last integral channel from the FEEPS spectra, creating 2 new DataArrays
 
 	Parameters
 	----------
-	inp_dataset: xarray.DataArray
-		Energetic particles energy spectrum from FEEPS
+	inp_dataset : xarray.DataArray
+		Energetic particles energy spectrum from FEEPS.
 
 	Returns
 	-------
-	out: xarray.DataArray
-		Energetic particles energy spectra with the integral channel removed
-		
-	out_500kev: xarray.DataArray
-		Integral channel that was removed
+	out : xarray.DataArray
+		Energetic particles energy spectra with the integral channel removed.
+
+	out_500kev : xarray.DataArray
+		Integral channel that was removed.
 		
 	"""
 

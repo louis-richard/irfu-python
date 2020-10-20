@@ -13,24 +13,23 @@ from ..pyrf import ts_append
 
 # noinspection PyUnboundLocalVariable
 def db_get_ts(dataset_name="", cdf_name="", tint=None):
-	"""
-	Get variable time series in the cdf file
+	"""Get variable time series in the cdf file.
 
 	Parameters
 	----------
 	dataset_name : str
-		Name of the dataset
+		Name of the dataset.
 
 	cdf_name : str
-		Name of the target field in cdf file
+		Name of the target field in cdf file.
 
 	tint : list of str
-		Time interval
+		Time interval.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the target variable
+		Time series of the target variable.
 
 	"""
 

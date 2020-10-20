@@ -11,21 +11,20 @@ import numpy as np
 
 
 def normalize(inp=None):
-	"""
-	Normalizes the input field
+	"""Normalizes the input field.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input field
+		Time series of the input field.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the normalized input field
+		Time series of the normalized input field.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

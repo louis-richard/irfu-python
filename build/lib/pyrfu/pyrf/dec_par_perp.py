@@ -14,34 +14,33 @@ from .dot import dot
 
 
 def dec_par_perp(inp=None, b0=None, flag_spin_plane=False):
-	"""
-	Decomposes a vector into par/perp to B components. If flagspinplane decomposes components to the projection of B
+	"""Decomposes a vector into par/perp to B components. If flagspinplane decomposes components to the projection of B
 	into the XY plane. Alpha_XY gives the angle between B0 and the XY plane.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the field to decompose
+		Time series of the field to decompose.
 
 	b0 : xarray.DataArray
-		Time series of the background magnetic field
+		Time series of the background magnetic field.
 
-	flag_spin_plane : bool
-		(Option) Flag if True gives the projection in XY plane
+	flag_spin_plane : bool, optional
+		Flag if True gives the projection in XY plane.
 
 	Returns
 	-------
 	a_para : xarray.DataArray
-		Time series of the input field parallel to the background magnetic field
+		Time series of the input field parallel to the background magnetic field.
 
 	a_perp : xarray.DataArray
-		Time series of the input field perpendicular to the background magnetic field
+		Time series of the input field perpendicular to the background magnetic field.
 
 	alpha : xarray.DataArray
-		Time series of the angle between the background magnetic field and the XY plane
+		Time series of the angle between the background magnetic field and the XY plane.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]

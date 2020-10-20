@@ -25,22 +25,22 @@ def pres_anis(p_xyz=None, b_xyz=None):
 	Parameters
 	----------
 	p_xyz : xarray.DataArray
-		Time series of the pressure tensor
+		Time series of the pressure tensor.
 
 	b_xyz : xarray.DataArray
-		Time series of the background magnetic field
+		Time series of the background magnetic field.
 
 	Returns
 	-------
 	p_anis : xarray.DataArray
-		Time series of the pressure anisotropy
+		Time series of the pressure anisotropy.
 
 	See also
 	--------
-	rotate_tensor
+	pyrfu.mms.rotate_tensor : Rotates pressure or temperature tensor into another coordinate system.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]

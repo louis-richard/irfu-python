@@ -33,15 +33,16 @@ def connect_bbox(bbox1, bbox2, loc1a, loc2a, loc1b, loc2b, prop_lines, prop_patc
 
 
 def zoom(ax1, ax2, **kwargs):
-	"""
+	"""Similar to zoom_effect01.  The xmin & xmax will be taken from the ax1.viewLim.
+
+	Parameters
+	----------
 	ax1 : axs
-		The main axes
+		The main axes.
 
 	ax2 : axs
-		The zoomed axes
+		The zoomed axes.
 
-	Similar to zoom_effect01.  The xmin & xmax will be taken from the
-	ax1.viewLim.
 	"""
 
 	tt = ax1.transScale + (ax1.transLimits + ax2.transAxes)

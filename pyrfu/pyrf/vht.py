@@ -19,10 +19,10 @@ def vht(e=None, b=None, flag=1):
 	Parameters
 	----------
 	e : xarray.DataArray
-		Time series of the electric field
+		Time series of the electric field.
 
 	b : xarray.DataArray
-		Time series of the magnetic field
+		Time series of the magnetic field.
 
 	flag : int
 		If 2 assumed no Ez.
@@ -30,13 +30,13 @@ def vht(e=None, b=None, flag=1):
 	Returns
 	-------
 	vht : numpy.ndarray
-		De Hoffman Teller frame velocity [km/s]
+		De Hoffman Teller frame velocity [km/s].
 
 	vht : xarray.DataArray
-		Time series of the electric field in the De Hoffman frame
+		Time series of the electric field in the De Hoffman frame.
 
 	dv_ht : numpy.ndarray
-		Error of De Hoffman Teller frame
+		Error of De Hoffman Teller frame.
 
 	"""
 	

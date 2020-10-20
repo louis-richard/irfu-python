@@ -32,24 +32,24 @@ def get_vol_ten(r=None, t=None):
 
 
 def c_4_v(r=None, x=None):
-	"""
-	Calculate velocity or time shift of discontinuity as in [1]_.
+	"""Calculates velocity or time shift of discontinuity as in [6]_.
 
 	Parameters
 	----------
 	r : list of xarray.DataArray
-		Time series of the positions of the spacecraft
+		Time series of the positions of the spacecraft.
+
 	x : list
-		Crossing times or time and velocity
+		Crossing times or time and velocity.
 	
 	Returns
-	----------
+	-------
 	out : numpy.ndarray
-		Discontinuity velocity or time shift with respect to mms1
+		Discontinuity velocity or time shift with respect to mms1.
 
 	References
 	----------
-	.. [1]	Vogt, J., Haaland, S., and Paschmann, G. (2011) Accuracy of multi-point boundary crossing time analysis,   \
+	.. [6]	Vogt, J., Haaland, S., and Paschmann, G. (2011) Accuracy of multi-point boundary crossing time analysis,
 			Ann. Geophys., 29, 2239-2252, doi : https://doi.org/10.5194/angeo-29-2239-2011
 
 	"""

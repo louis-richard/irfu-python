@@ -10,13 +10,12 @@ from dateutil import parser
 
 
 def date_str(tint=None, fmt=1):
-	"""
-	Creates a string corresponding to time interval for output plot naming
+	"""Creates a string corresponding to time interval for output plot naming.
 
 	Parameters
 	----------
 	tint : list of str
-		Time interval
+		Time interval.
 
 	fmt : int
 		Format of the output :

@@ -10,24 +10,24 @@ import numpy as np
 
 
 def solid_angle(x=None, y=None, z=None):
-    """
-    Calculates the solid angle of three vectors making up a triangle in a unit sphere with the sign taken into account
+    """Calculates the solid angle of three vectors making up a triangle in a unit sphere with the sign taken into
+    account.
 
     Parameters
     ----------
     x : numpy.ndarray
-        First vector
+        First vector.
 
     y : numpy.ndarray
-        Second vector
+        Second vector.
 
     z : numpy.ndarray
-        Third vector
+        Third vector.
 
     Returns
     -------
     angle : float
-        Solid angle
+        Solid angle.
 
     """
 

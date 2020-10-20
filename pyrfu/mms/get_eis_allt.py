@@ -13,27 +13,26 @@ from .db_get_ts import db_get_ts
 
 
 def get_eis_allt(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
-	"""
-	Read energy spectrum of the selected specie in the selected energy range for all telescopes.
+	"""Read energy spectrum of the selected specie in the selected energy range for all telescopes.
 	
 	Parameters
 	----------
 	inp_str : str
-		Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}
+		Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
 
 	tint : list of str
-		Time interval
+		Time interval.
 
 	mms_id : int or float or str
-		Index of the spacecraft
+		Index of the spacecraft.
 
 	verbose : bool
-    	Set to True to follow the loading. Default is True
+    	Set to True to follow the loading. Default is True.
 	
 	Returns
 	-------
 	out : xarray.Dataset
-		Dataset containing the energy spectrum of the 6 telescopes of the Energy Ion Spectrometer
+		Dataset containing the energy spectrum of the 6 telescopes of the Energy Ion Spectrometer.
 
 	"""
 	

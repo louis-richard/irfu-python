@@ -11,18 +11,17 @@ import xarray as xr
 
 
 def calc_dt(inp=None):
-	"""
-	Computes time step of the input time series
+	"""Computes time step of the input time series.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input variable
+		Time series of the input variable.
 
 	Returns
 	-------
 	out : float
-		Time step in seconds
+		Time step in seconds.
 
 	"""
 

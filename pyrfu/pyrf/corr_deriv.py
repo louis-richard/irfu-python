@@ -15,28 +15,27 @@ from . import find_closest
 
 
 def corr_deriv(x1=None, x2=None, fla=False):
-    """
-    Correlate the derivatives of two time series
+    """Correlate the derivatives of two time series
 
     Parameters
     ----------
     x1 : xarray.DataArray
-        Time series of the first to variable to correlate with
+        Time series of the first to variable to correlate with.
 
     x2 : xarray.DataArray
-        Time series of the second to variable to correlate with
+        Time series of the second to variable to correlate with.
 
     fla : bool
         Flag if False (default) returns time instants of common highest first and second derivatives.
-        If True returns time instants of common highest first derivative and zeros crossings
+        If True returns time instants of common highest first derivative and zeros crossings.
 
     Returns
     -------
     t1_d, t2_d : numpy.ndarray
-        Time instants of common highest first derivatives
+        Time instants of common highest first derivatives.
 
     t1_dd, t2_dd : numpy.ndarray
-        Time instants of common highest second derivatives or zero crossings
+        Time instants of common highest second derivatives or zero crossings.
 
     """
 

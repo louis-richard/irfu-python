@@ -20,7 +20,7 @@ from .ts_scalar import ts_scalar
 
 def pid_4sc(r_mms=None, v_mms=None, p_mms=None, b_mms=None):
     """
-    Compute Pi-D term using definition of [1]_ as :
+    Compute Pi-D term using definition of [10]_ as :
 
     .. math::
 
@@ -62,11 +62,11 @@ def pid_4sc(r_mms=None, v_mms=None, p_mms=None, b_mms=None):
     Returns
     -------
     pid : xarray.DataArray
-        Time series of the Pi-D
+        Time series of the Pi-D.
 
     References
     ----------
-    .. [1]  Yang, Y., Matthaeus, W. H., Parashar, T. N., Wu, P., Wan, M., Shi, Y., et al. (2017). Energy transfer
+    .. [10]  Yang, Y., Matthaeus, W. H., Parashar, T. N., Wu, P., Wan, M., Shi, Y., et al. (2017). Energy transfer
             channels and turbulence cascade in Vlasov-Maxwell turbulence. Physical Review E, 95, 061201.
             doi : https://doi.org/10.1103/PhysRevE.95.061201
 

@@ -14,7 +14,7 @@ from ..pyrf import resample, ts_scalar
 
 
 def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
-    """Calculate epsilon parameter using model distribution.
+    """Calculates epsilon parameter using model distribution.
 
     Parameters
     ----------
@@ -30,10 +30,10 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
 
-    Keyword Arguments
-    -----------------
-    en_channels : list or numpy.ndarray
-        Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
+    **kwargs : dict
+        Hash table of keyword arguments with :
+             * en_channels : list or numpy.ndarray
+                Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
 
     Returns
     -------

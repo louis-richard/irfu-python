@@ -21,43 +21,43 @@ def resample(inp=None, ref=None, **kwargs):
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series to resample
+		Time series to resample.
 
 	ref : xarray.DataArray
-		Reference time line
+		Reference time line.
 
-	Keyword Arguments
-	-----------------
-	method : str
-		Method of interpolation "spline", "linear" etc. (default "linear") if method is given then interpolate
-		independent of sampling.
+	**kwargs : dict
+		Hash table of keyword arguments with :
+			* method : str
+				Method of interpolation "spline", "linear" etc. (default "linear") if method is given then interpolate
+				independent of sampling.
 
-	fs : float
-		Sampling frequency of the Y signal, 1/window
+			* fs : float
+				Sampling frequency of the Y signal, 1/window.
 
-	window : int or float or np.ndarray
-		Length of the averaging window, 1/fsample
+			* window : int or float or np.ndarray
+				Length of the averaging window, 1/fsample.
 
-	fs : str
-		Sampling frequency of the Y signal, 1/window
+			* fs : str
+				Sampling frequency of the Y signal, 1/window.
 
-	mean : bool
-		Use mean when averaging
+			* mean : bool
+				Use mean when averaging.
 
-	median : bool
-		Use median instead of mean when averaging
+			* median : bool
+				Use median instead of mean when averaging.
 
-	max : bool
-		Use max instead of mean when averaging
+			* max : bool
+				Use max instead of mean when averaging.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Resampled input to the reference time line using the selected method
+		Resampled input to the reference time line using the selected method.
 		
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]

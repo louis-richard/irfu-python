@@ -11,8 +11,7 @@ import xarray as xr
 
 
 def pvi(x=None, scale=None):
-    """
-    Returns the PVI of a time series
+    """Returns the PVI of a time series.
 
     .. math::
 
@@ -23,7 +22,7 @@ def pvi(x=None, scale=None):
     Parameters
     ----------
     x : xarray.DataArray
-        Input time series
+        Input time series.
 
     scale : int
         Scale at which to compute the PVI.

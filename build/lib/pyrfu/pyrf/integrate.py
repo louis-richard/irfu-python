@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 integrate.py
+
 @author : Louis RICHARD
 """
 
@@ -11,25 +12,24 @@ from astropy.time import Time
 
 
 def integrate(inp=None, time_step=None):
-	"""
-	Integrate time series
+	"""Integrate time series.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the variable to integrate
+		Time series of the variable to integrate.
 
 	time_step : float
 		Time steps threshold. All time_steps larger than 3*time_step are assumed data gaps, default is that
-		time_step is the smallest value of all time_steps of the time series
+		time_step is the smallest value of all time_steps of the time series.
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Time series of the time integrated input
+		Time series of the time integrated input.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2015-12-14T01:17:40.200", "2015-12-14T01:17:41.500"]
@@ -40,6 +40,7 @@ def integrate(inp=None, time_step=None):
 	>>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
 	>>> # Convert electric field to field aligned coordinates
 	>>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, [1, 0, 0])
+
 	"""
 
 	if inp is None:

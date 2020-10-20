@@ -13,15 +13,13 @@ from . import ts_vec_xyz
 
 
 def cart2sph(inp=None, direction_flag=1):
-    """
-    Computes magnitude, theta and phi angle from column vector xyz (first column is x ....) theta is 0 at equator.
-
+    """Computes magnitude, theta and phi angle from column vector xyz (first column is x ....) theta is 0 at equator.
     direction_flag = -1  -> to make transformation in opposite direction
 
     Parameters
     ----------
     inp : xarray.DataArray
-        Time series to convert
+        Time series to convert.
 
     direction_flag : {1, -1}
         Set to 1 (default) to transform from cartesian to spherical coordinates.
@@ -30,7 +28,7 @@ def cart2sph(inp=None, direction_flag=1):
     Returns
     -------
     out : xarray.DataArray
-        Input field in spherical/cartesian coordinate system
+        Input field in spherical/cartesian coordinate system.
 
     """
 

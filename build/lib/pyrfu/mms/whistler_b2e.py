@@ -13,34 +13,33 @@ from ..pyrf.plasma_calc import plasma_calc
 
 
 def whistler_b2e(b2=None, freq=None, theta_k=None, b_mag=None, n_e=None):
-	"""
-	Computes electric field power as a function of frequency for whistler waves using magnetic field power and cold
-	plasma theory
+	"""Computes electric field power as a function of frequency for whistler waves using magnetic field power and cold
+	plasma theory.
 
 	Parameters
 	----------
 	b2 : xarray.DataArray
-		Time series of the power of whistler magnetic field in nT^2 Hz^{-1}
+		Time series of the power of whistler magnetic field in nT^2 Hz^{-1}.
 
 	freq : numpy.ndarray
-		frequencies in Hz corresponding B2
+		frequencies in Hz corresponding B2.
 
 	theta_k : float
-		wave-normal angle of whistler waves in radians
+		wave-normal angle of whistler waves in radians.
 
 	b_mag : xarray.DataArray
-		Time series of the magnitude of the magnetic field in nT
+		Time series of the magnitude of the magnetic field in nT.
 
 	n_e : xarray.DataArray
-		Time series of the electron number density in cm^{-3}
+		Time series of the electron number density in cm^{-3}.
 
 	Returns
 	-------
 	e2 : xarray.DataArray
-		Time series of the electric field power
+		Time series of the electric field power.
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms
 	>>> e_power = mms.whistler_b2e(b_power, freq, theta_k, b_mag, n_e)
 

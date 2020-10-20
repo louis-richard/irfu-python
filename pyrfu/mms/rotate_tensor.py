@@ -13,8 +13,7 @@ from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 
 def rotate_tensor(*args):
-	"""
-	Rotates pressure or temperature tensor into another coordinate system
+	"""Rotates pressure or temperature tensor into another coordinate system.
 
 	Parameters
 	----------
@@ -24,11 +23,13 @@ def rotate_tensor(*args):
 
 	flag : str
 		Flag of the target coordinates system :
-			* "fac" : Field-aligned coordinates, requires background magnetic field Bback, optional flag "pp"
-			P_perp1 = P_perp2 or "qq" P_perp1 and P_perp2 are most unequal, sets P23 to zero.
+			* "fac" : 	Field-aligned coordinates, requires background magnetic field Bback, optional flag "pp"
+						:math:`\\mathbf{P}_{\\perp 1} = \\mathbf{P}_{\\perp 2}` or "qq" :math:`\\mathbf{P}_{\\perp 1}`
+						and :math:`\\mathbf{P}_{\\perp 2}` are most unequal, sets P23 to zero.
 
-			* "rot" : Arbitrary coordinate system, requires new x-direction xnew, new y and z directions ynew, znew
-			(if not included y and z directions are orthogonal to xnew and closest to the original y and z directions)
+			* "rot" :	Arbitrary coordinate system, requires new x-direction xnew, new y and z directions ynew, znew
+						(if not included y and z directions are orthogonal to xnew and closest to the original y and
+						z directions)
 
 			* "gse" : GSE coordinates, requires MMS spacecraft number 1--4 MMSnum
 
@@ -39,8 +40,8 @@ def rotate_tensor(*args):
 		For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
 		For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
 
-	Example
-	-------
+	Examples
+	--------
 	>>> from pyrfu import mms, pyrf
 	>>> # Time interval
 	>>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]

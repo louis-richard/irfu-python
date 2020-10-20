@@ -11,18 +11,18 @@ from astropy.time import Time
 
 
 def end(inp=None):
-	"""
-	Gives the last time of the time series in unix format
+	"""Gives the last time of the time series in unix format.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series of the input variable
+		Time series of the input variable.
 
 	Returns
 	-------
 	out : float or str
-		Value of the last time in the desired format
+		Value of the last time in the desired format.
+
 	"""
 
 	if inp is None:

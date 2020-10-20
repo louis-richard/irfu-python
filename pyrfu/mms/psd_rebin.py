@@ -13,8 +13,7 @@ from ..pyrf import calc_dt
 
 
 def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
-    """
-    Convert burst mode distribution into 64 energy channel distribution.
+    """Convert burst mode distribution into 64 energy channel distribution.
     Functions takes the burst mode distribution sampled in two energy tables and converts to a single energy table
     with 64 energy channels. Time resolution is halved and phi angles are averaged over adjacent times.
 
@@ -24,16 +23,16 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
         Time series of the particle distribution.
 
     phi : xarray.DataArray
-        Time series of the phi angles
+        Time series of the phi angles.
 
     energy0 : xarray.DataArray or numpy.ndarray
-        Energy table 0
+        Energy table 0.
 
     energy1 : xarray.DataArray or numpy.ndarray
-        Energy table 1
+        Energy table 1.
 
     step_table : xarray.DataArray
-        Time series of the stepping table between energies (burst)
+        Time series of the stepping table between energies (burst).
 
     Returns
     -------
@@ -48,7 +47,8 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
 
     Notes
     -----
-    I'm assuming no gaps in the burst data interval. If there is a gap use time_clip before running. To be updated later
+    I'm assuming no gaps in the burst data interval. If there is a gap use time_clip before running.
+    To be updated later.
     
     """
 

@@ -11,18 +11,17 @@ from astropy.time import Time
 
 
 def start(inp=None):
-	"""
-	Gives the first time of the time series
+	"""Gives the first time of the time series.
 
 	Parameters
 	----------
 	inp : xarray.DataArray
-		Time series
+		Time series.
 
 	Returns
 	-------
 	out : float or str
-		Value of the first time in the desired format
+		Value of the first time in the desired format.
 			
 	"""
 

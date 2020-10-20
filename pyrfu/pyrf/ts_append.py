@@ -11,25 +11,24 @@ import xarray as xr
 
 
 def ts_append(inp1=None, inp2=None):
-	"""
-	Concatenate two time series along the time axis
+	"""Concatenate two time series along the time axis.
 
 	Parameters
 	----------
 	inp1 : xarray.DataArray
-		Time series of the first input (early times)
+		Time series of the first input (early times).
 
 	inp2 : xarray.DataArray
-		Time series of the second input (late times)
+		Time series of the second input (late times).
 
 	Returns
 	-------
 	out : xarray.DataArray
-		Concatenated time series
+		Concatenated time series.
 
 	Notes
 	-----
-	The time series must be in the correct time order
+	The time series must be in the correct time order.
 
 	"""
 
