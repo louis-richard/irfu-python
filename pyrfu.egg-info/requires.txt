@@ -3,13 +3,12 @@ cycler
 python-dateutil
 matplotlib
 numpy
-pandas
+sphinxnumpydocpandas
 psychopy
 pvlib
 pyfftw
 scipy
 seaborn
 sfs
-spacepy
 tqdm
 xarray

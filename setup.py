@@ -4,7 +4,7 @@ from sphinx.setup_command import BuildDoc
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.6.8"
+VERSION = "1.7.2"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"

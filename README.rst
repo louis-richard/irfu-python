@@ -10,21 +10,26 @@
 .. _Maintenance: https://github.com/louis-richard/irfu-python/network/dependencies
 
 .. |DocSphinx| image:: https://img.shields.io/static/v1.svg?label=sphinx&message=documentation&color=blue
-.. _DocSphinx: https://github.com/louis-richard/irfu-python/blob/master/doc/build/html/pyrfu.html
+.. _DocSphinx: https://pyrfu.readthedocs.io
 
 .. |PyPi| image:: https://img.shields.io/badge/install_with-pypi-brightgreen.svg
 .. _PyPi: https://test.pypi.org/project/pyrfu/
+
+.. |PyLint| image:: https://img.shields.io/badge/pylint-8.62-brightgreen.svg
+.. _PyLint: https://test.pypi.org/project/pyrfu/
 
 
 pyRFU
 =====
 
-|LicenseMit|_ |LicenseCC|_ |PyPi|_  |DocSphinx|_ |Maintenance|_
+|LicenseMit|_ |LicenseCC|_ |PyPi|_  |DocSphinx|_ |Maintenance|_ |PyLint|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
 
 It is distributed under the open-source MIT license.
+
+Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
 
 .. end-marker-intro-do-not-remove
 

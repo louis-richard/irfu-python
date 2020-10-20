@@ -1,3 +1,4 @@
+CONTRIBUTING.md
 MANIFEST.in
 README.rst
 setup.cfg
