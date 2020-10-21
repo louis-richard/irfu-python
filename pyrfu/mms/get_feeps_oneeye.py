@@ -6,6 +6,8 @@ get_feeps_oneeye.py
 @author : Louis RICHARD
 """
 
+import numpy as np
+
 from .get_feeps_active_eyes import get_feeps_active_eyes
 from .db_get_ts import db_get_ts
 
@@ -58,11 +60,14 @@ def get_feeps_oneeye(tar_var="fluxe_brst_l2", e_id="bottom-4", tint=None, mms_id
 
     """
 
-    if tint is None:
-        raise ValueError("empty time interval")
-    
-    if isinstance(mms_id, str):
-        mms_id = int(mms_id)
+    assert isinstance(tar_var, str)
+    assert isinstance(e_id, str)
+    assert tint is not None and isinstance(tint, list)
+    assert isinstance(tint[0], str) and isinstance(tint[1], str)
+    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
+    assert isinstance(verbose, bool)
+
+    mms_id = int(mms_id)
 
     var = {"inst": "feeps"}
 

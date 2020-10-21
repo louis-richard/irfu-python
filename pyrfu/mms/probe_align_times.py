@@ -15,10 +15,11 @@ from ..pyrf import ts_scalar, resample, extend_tint, time_clip, convert_fac
 
 
 def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fig=False):
-    """Returns times when field-aligned electrostatic waves can be characterized using interferometry techniques. The
-    same alignment conditions as Graham et al., JGR, 2015 are used. Optional figure produced showing E_FAC, probe
-    fields, and probe potentials to view  time delays between electric fields aligned with B. Currently p5-p6 are not
-    used in this routine; the analysis is the same as the one used for Cluster.
+    """Returns times when field-aligned electrostatic waves can be characterized using
+    interferometry techniques. The same alignment conditions as Graham et al., JGR, 2015 are
+    used. Optional figure produced  showing E_FAC, probe fields, and probe potentials to view
+    time delays between electric fields aligned with B.  Currently p5-p6 are not used in this
+    routine; the analysis is the same as the one used for Cluster.
 
     For the figure the panels are :
         * (a) B in DMPA Coordinates
@@ -50,16 +51,20 @@ def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fi
     Returns
     -------
     start_time1 : to fill
-        Start times of intervals which satisfy the probe alignment conditions for probe combinates p1-p2.
+        Start times of intervals which satisfy the probe alignment conditions for probe combinates
+        p1-p2.
 
     end_time1 : to fill
-        End times of intervals which satisfy the probe alignment conditions for probe combinates p1-p2.
+        End times of intervals which satisfy the probe alignment conditions for probe combinates
+        p1-p2.
 
     start_time3 : to fill
-        Start times of intervals which satisfy the probe alignment conditions for probe combinates p3-p4.
+        Start times of intervals which satisfy the probe alignment conditions for probe combinates
+        p3-p4.
 
     end_time3 : to fill
-        End times of intervals which satisfy the probe alignment conditions for probe combinates p3-p4.
+        End times of intervals which satisfy the probe alignment conditions for probe combinates
+        p3-p4.
 
     """
 
@@ -118,7 +123,8 @@ def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fi
     e_fac = convert_fac(e_xyz, b_xyz, [1, 0, 0])
 
     # Probe angles in DSL or whatever
-    phase_p = [z_phase.data / 180 * np.pi + i * np.pi / j for i, j in zip([1, 7, 2, 5], [6, 6, 3, 3])]
+    idx_a, idx_b = [[1, 7, 2, 5], [6, 6, 3, 3]]
+    phase_p = [z_phase.data / 180 * np.pi + i * np.pi / j for i, j in zip(idx_a, idx_b)]
 
     rp = [np.array([60 * np.cos(phase), 60 * np.sin(phase)]) for phase in phase_p]
 
@@ -127,7 +133,8 @@ def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fi
 
     for i in [0, 2]:
         theta_pb[i] = rp[i][:, 0] * b_xyz.data[:, 0] + rp[i][:, 1] * b_xyz.data[:, 1]
-        theta_pb[i] /= np.sqrt(rp[i][:, 0] ** 2 + rp[i][:, 1] ** 2) * np.sqrt(b_xyz[:, 0] ** 2 + b_xyz[:, 1] ** 2)
+        theta_pb[i] /= np.sqrt(rp[i][:, 0] ** 2 + rp[i][:, 1] ** 2)
+        theta_pb[i] /= np.sqrt(b_xyz[:, 0] ** 2 + b_xyz[:, 1] ** 2)
         theta_pb[i] = np.arccos(abs(theta_pb[i])) * 180 / np.pi
 
     theta_pb[1] = theta_pb[0]
@@ -162,6 +169,5 @@ def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fi
         f.subplots_adjust(left=.08, right=.92, bottom=.05, top=.95, hspace=0)
 
         plt.show()
-
 
     return

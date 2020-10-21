@@ -74,8 +74,9 @@ def load_ancillary(level_and_dtype="", tint=None, probe=1, verbose=True):
     files = glob.glob(os.sep.join([dir_pattern, file_pattern]))
 
     # find the files within the time interval
-    file_regex = re.compile(
-        os.sep.join([dir_pattern, 'MMS' + probe + '_' + level_and_dtype.upper() + '_([0-9]{7})_([0-9]{7}).V[0-9]{2}']))
+    file_regex = re.compile(os.sep.join([dir_pattern,
+                                         'MMS' + probe + '_' + level_and_dtype.upper()
+                                         + '_([0-9]{7})_([0-9]{7}).V[0-9]{2}']))
     for file in files:
         time_match = file_regex.match(file)
         if time_match is not None:
@@ -106,7 +107,8 @@ def load_ancillary(level_and_dtype="", tint=None, probe=1, verbose=True):
     df_dict = {}
 
     for i, file in enumerate(files_names):
-        rows = pd.read_csv(file, delim_whitespace=True, header=None, skiprows=anc_dict[level_and_dtype]["header"])
+        rows = pd.read_csv(file, delim_whitespace=True, header=None,
+                           skiprows=anc_dict[level_and_dtype]["header"])
 
         # Remove footer
         rows = rows[:][:-1]
@@ -114,7 +116,8 @@ def load_ancillary(level_and_dtype="", tint=None, probe=1, verbose=True):
         # Convert time
         rows[0] = pd.to_datetime(rows[0], format=anc_dict[level_and_dtype]["time_format"])
 
-        start_idx, end_idx = [bisect.bisect_left(rows[0][:], date_parser.parse(tint[i])) for i in range(2)]
+        start_idx = bisect.bisect_left(rows[0][:], date_parser.parse(tint[0]))
+        end_idx = bisect.bisect_left(rows[0][:], date_parser.parse(tint[1]))
         rows.columns = anc_dict[level_and_dtype]["columns_names"]
 
         df_dict[i] = rows[:][start_idx:end_idx]

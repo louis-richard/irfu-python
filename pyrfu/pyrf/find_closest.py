@@ -38,18 +38,23 @@ def find_closest(t1=None, t2=None):
 
     """
 
+    assert t1 is not None
+    assert t2 is not None
+
     t1_orig = t1
     t2_orig = t2
     flag = True
 
+    nt1, nt2 = [len(t) for t in [t1, t2]]
+
     while flag:
         flag_t1 = np.zeros(t1.shape)
-        tckt1 = interpolate.interp1d(t1, np.arange(len(t1)), kind="nearest", fill_value="extrapolate")
+        tckt1 = interpolate.interp1d(t1, np.arange(nt1), kind="nearest", fill_value="extrapolate")
         ind = tckt1(t2)
         flag_t1[ind] = 1
 
         flag_t2 = np.zeros(t2.shape)
-        tckt2 = interpolate.interp1d(t2, np.arange(len(t2)), kind="nearest", fill_value="extrapolate")
+        tckt2 = interpolate.interp1d(t2, np.arange(nt2), kind="nearest", fill_value="extrapolate")
         ind = tckt2(t1)
         flag_t2[ind] = 1
 
@@ -65,10 +70,10 @@ def find_closest(t1=None, t2=None):
     t1new = t1
     t2new = t2
 
-    tckt1_orig = interpolate.interp1d(t1_orig, np.arange(len(t1_orig)), kind="nearest")
+    tckt1_orig = interpolate.interp1d(t1_orig, np.arange(nt1), kind="nearest")
     ind1new = tckt1_orig(t1new)
 
-    tckt2_orig = interpolate.interp1d(t2_orig, np.arange(len(t2_orig)), kind="nearest")
+    tckt2_orig = interpolate.interp1d(t2_orig, np.arange(nt2), kind="nearest")
     ind2new = tckt2_orig(t2new)
 
     return t1new, t2new, ind1new, ind2new

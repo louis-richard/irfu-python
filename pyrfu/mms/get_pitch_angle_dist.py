@@ -57,12 +57,15 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     >>> # Define closeup time interval
     >>> tint_zoom = ["2017-07-24T12:49:18.000", "2017-07-24T12:49:30.000"]
     >>> # Compute pitch angle distribution
-    >>> pad_i = mms.get_pitch_angle_dist(vdf, b_dmpa, tint_zoom, angles=24)
+    >>> options = dict(anggles=24)
+    >>> pad_i = mms.get_pitch_angle_dist(vdf, b_dmpa, tint_zoom, **options)
 
     """
 
     assert vdf is not None and isinstance(vdf, xr.Dataset)
     assert b_xyz is not None and isinstance(b_xyz, xr.Dataset)
+    assert tint is not None and isinstance(tint, list)
+    assert isinstance(tint[0], str) and isinstance(tint[1], str)
 
     # Default pitch angles. 15 degree angle widths
     angles_v = np.linspace(15, 180, int(180 / 15))
@@ -89,7 +92,7 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
             raise ValueError("angles parameter not understood.")
 
     if "meanorsum" in kwargs:
-        if isinstance(kwargs["meanorsum"], str) and kwargs["meanorsum"] in ["mean" "sum"]:
+        if isinstance(kwargs["meanorsum"], str) and kwargs["meanorsum"] in ["mean", "sum"]:
             mean_or_sum = kwargs["meanorsum"]
         else:
             raise ValueError("meanorsum parameter not understood.")
@@ -114,12 +117,13 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
         step_table = ts_scalar(time, np.zeros(len(time)))
 
     if "energy0" in vdf.attrs.keys() and "energy1" in vdf.attrs.keys():
-        energy0, energy1 = [vdf.attrs[f"energy{i}"] for i in range(2)]
+        energy0, _ = [vdf.attrs[f"energy{i}"] for i in range(2)]
     else:
-        energy0, energy1 = vdf.energy.data[:2, :]
+        energy0, _ = vdf.energy.data[:2, :]
 
     if tint is not None:
-        vdf0, b_xyz, phi, step_table = [time_clip(dat, tint) for dat in [vdf0, b_xyz, phi, step_table]]
+        b_xyz = time_clip(b_xyz, tint)
+        vdf0, phi, step_table = [time_clip(dat, tint) for dat in [vdf0, phi, step_table]]
 
     time = vdf0.time.data
 
@@ -129,8 +133,9 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     b_xyz = resample(b_xyz, vdf0)
     b_vec = normalize(b_xyz)
 
-    b_vec_x, b_vec_y, b_vec_z = [np.tile(b_vec.data[:, i], [n_en, n_phi, n_theta, 1]) for i in range(3)]
-    b_vec_x, b_vec_y, b_vec_z = [np.transpose(b_vec_i, [3, 0, 1, 2]) for b_vec_i in [b_vec_x, b_vec_y, b_vec_z]]
+    b_vec_x = np.transpose(np.tile(b_vec.data[:, 0], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2])
+    b_vec_y = np.transpose(np.tile(b_vec.data[:, 1], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2])
+    b_vec_z = np.transpose(np.tile(b_vec.data[:, 2], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2])
 
     x = np.zeros((len(time), n_phi, n_theta))
     y = np.zeros((len(time), n_phi, n_theta))
@@ -151,7 +156,8 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     xt, yt, zt = [np.tile(mat, [n_en, 1, 1, 1]) for mat in [x, y, z]]
     xt, yt, zt = [np.squeeze(np.transpose(mat, [1, 0, 2, 3])) for mat in [xt, yt, zt]]
 
-    theta_b = np.arccos(xt * np.squeeze(b_vec_x) + yt * np.squeeze(b_vec_y) + zt * np.squeeze(b_vec_z)) * 180 / np.pi
+    theta_b = np.arccos(xt * np.squeeze(b_vec_x) + yt * np.squeeze(b_vec_y) + zt * np.squeeze(
+        b_vec_z)) * 180 / np.pi
 
     dists = [vdf0.data for _ in range(len(angles_v))]
 
@@ -172,7 +178,8 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
 
     energy = np.mean(energy[:2, :], axis=0)
 
-    pad = xr.DataArray(pad_arr, coords=[time, pitch_angles, energy], dims=["time", "theta", "energy"])
+    pad = xr.DataArray(pad_arr, coords=[time, pitch_angles, energy],
+                       dims=["time", "theta", "energy"])
 
     pad.attrs = vdf.attrs
     pad.attrs["mean_or_sum"] = mean_or_sum

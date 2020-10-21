@@ -47,7 +47,8 @@ def vdf_omni(vdf):
     all_solid_angles = np.tile(solid_angles, (len(time), energy.shape[1], 1, 1))
 
     dist = vdf.data.data * all_solid_angles
-    omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2)) / (np.mean(np.mean(solid_angles)))
+    omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
+    omni /= np.mean(np.mean(solid_angles))
 
     energy = np.mean(energy[:2, :], axis=0)
 

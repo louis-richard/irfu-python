@@ -6,8 +6,10 @@ get_feeps_active_eyes.py
 @author : Louis RICHARD
 """
 
-from dateutil import parser
 import datetime
+import numpy as np
+
+from dateutil import parser
 
 
 def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
@@ -62,8 +64,12 @@ def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
 
     """
 
-    if isinstance(mms_id, str):
-        mms_id = int(mms_id)
+    assert var is not None and isinstance(var, dict)
+    assert tint is not None and isinstance(tint, list)
+    assert isinstance(tint[0], str) and isinstance(tint[1], str)
+    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
+
+    mms_id = int(mms_id)
 
     sensors = {}
 
@@ -90,8 +96,8 @@ def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
 
     # srvy mode, after 16 August 2017
     if start_time >= datetime.datetime(2017, 8, 16) and var["tmmode"].lower() == "srvy":
-        active_table = {"1-electron": {}, "1-ion": {}, "2-electron": {}, "2-ion": {}, "3-electron": {}, "3-ion": {},
-                        "4-electron": {}, "4-ion": {}}
+        active_table = {"1-electron": {}, "1-ion": {}, "2-electron": {}, "2-ion": {},
+                        "3-electron": {}, "3-ion": {}, "4-electron": {}, "4-ion": {}}
 
         active_table["1-electron"]["top"] = [3, 5, 9, 10, 12]
         active_table["1-electron"]["bottom"] = [2, 4, 5, 9, 10]

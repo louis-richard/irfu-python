@@ -137,14 +137,15 @@ def get_ts(file_path="", cdf_name="", trange=None):
                 for k in f[depend2_key].attrs.keys():
                     z["attrs"][k] = f[depend2_key].attrs[k]
 
-                    if isinstance(z["attrs"][k], str) and z["attrs"][k] in f.keys() and not k == "DEPEND_0":
+                    if isinstance(z["attrs"][k], str) and z["attrs"][k] in f.keys() and \
+                            not k == "DEPEND_0":
                         z["attrs"][k] = f[z["attrs"][k]][start_ind:stop_ind, ...]
 
                 if "LABLAXIS" not in z["attrs"].keys():
                     z["attrs"]["LABLAXIS"] = "comp"
 
-        if "DEPEND_3" in f[cdf_name].attrs or "REPRESENTATION_3" in f[cdf_name].attrs and f[cdf_name].attrs[
-            "REPRESENTATION_3"] != "x,y,z":
+        if "DEPEND_3" in f[cdf_name].attrs or "REPRESENTATION_3" in f[cdf_name].attrs and \
+                f[cdf_name].attrs["REPRESENTATION_3"] != "x,y,z":
 
             try:
                 depend3_key = f[cdf_name].attrs["DEPEND_3"]
@@ -163,7 +164,8 @@ def get_ts(file_path="", cdf_name="", trange=None):
             for k in f[depend3_key].attrs.keys():
                 w["attrs"][k] = f[depend3_key].attrs[k]
 
-                if isinstance(w["attrs"][k], str) and w["attrs"][k] in f.keys() and not k == "DEPEND_0":
+                if isinstance(w["attrs"][k], str) and w["attrs"][k] in f.keys() and \
+                        not k == "DEPEND_0":
                     w["attrs"][k] = f[w["attrs"][k]][start_ind:stop_ind, ...]
 
             if "LABLAXIS" not in w["attrs"].keys():
@@ -174,8 +176,12 @@ def get_ts(file_path="", cdf_name="", trange=None):
 
             y["attrs"] = {}
 
-            for k in f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs.keys():
-                y["attrs"][k] = f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs[k]
+            y_attrs_keys = f[
+                f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs.keys()
+
+            for k in y_attrs_keys:
+                y["attrs"][k] = \
+                f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs[k]
 
             y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ", "_")
 
@@ -213,7 +219,8 @@ def get_ts(file_path="", cdf_name="", trange=None):
             y["attrs"]["LABLAXIS"] = "rcomp"
             z["attrs"]["LABLAXIS"] = "ccomp"
 
-        dims, coords = [["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"]], [x["data"], y["data"], z["data"]]]
+        dims = ["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"]]
+        coords = [x["data"], y["data"], z["data"]]
 
         out = xr.DataArray(out_dict["data"], coords=coords, dims=dims, attrs=out_dict["attrs"])
         exec("out." + dims[0] + ".attrs = x['attrs']")
@@ -224,8 +231,8 @@ def get_ts(file_path="", cdf_name="", trange=None):
             z["attrs"]["LABLAXIS"] = "rcomp"
             w["attrs"]["LABLAXIS"] = "ccomp"
 
-        dims, coords = [["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"], w["attrs"]["LABLAXIS"]],
-                        [x["data"], y["data"], z["data"], w["data"]]]
+        dims = ["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"], w["attrs"]["LABLAXIS"]]
+        coords = [x["data"], y["data"], z["data"], w["data"]]
 
         out = xr.DataArray(out_dict["data"], coords=coords, dims=dims, attrs=out_dict["attrs"])
         exec("out." + dims[0] + ".attrs = x['attrs']")

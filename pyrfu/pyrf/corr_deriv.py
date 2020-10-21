@@ -8,7 +8,6 @@ corr_deriv.py
 
 import numpy as np
 
-
 from astropy.time import Time
 
 from . import find_closest
@@ -26,8 +25,9 @@ def corr_deriv(x1=None, x2=None, fla=False):
         Time series of the second to variable to correlate with.
 
     fla : bool
-        Flag if False (default) returns time instants of common highest first and second derivatives.
-        If True returns time instants of common highest first derivative and zeros crossings.
+        Flag if False (default) returns time instants of common highest first and second
+        derivatives. If True returns time instants of common highest first derivative and zeros
+        crossings.
 
     Returns
     -------

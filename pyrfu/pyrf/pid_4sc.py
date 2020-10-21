@@ -39,7 +39,8 @@ def pid_4sc(r_mms=None, v_mms=None, p_mms=None, b_mms=None):
 
     .. math::
 
-        \\mathbf{D}_{ij} = \\frac{1}{2}\\left ( \\partial_i \\mathbf{u}_j + \\partial_j \\mathbf{u}_i\\right )
+        \\mathbf{D}_{ij} =
+        \\frac{1}{2}\\left ( \\partial_i \\mathbf{u}_j + \\partial_j \\mathbf{u}_i\\right )
         - \\frac{1}{3}\\theta\\delta_{ij}
 
         \\theta = \\nabla . \\mathbf{u}
@@ -66,8 +67,9 @@ def pid_4sc(r_mms=None, v_mms=None, p_mms=None, b_mms=None):
 
     References
     ----------
-    .. [10]  Yang, Y., Matthaeus, W. H., Parashar, T. N., Wu, P., Wan, M., Shi, Y., et al. (2017). Energy transfer
-            channels and turbulence cascade in Vlasov-Maxwell turbulence. Physical Review E, 95, 061201.
+    .. [10]  Yang, Y., Matthaeus, W. H., Parashar, T. N., Wu, P., Wan, M., Shi, Y.,
+            et al. (2017). Energy transfer channels and turbulence cascade in Vlasov-Maxwell
+            turbulence. Physical Review E, 95, 061201.
             doi : https://doi.org/10.1103/PhysRevE.95.061201
 
     """
@@ -113,8 +115,9 @@ def pid_4sc(r_mms=None, v_mms=None, p_mms=None, b_mms=None):
     pid = ts_scalar(time, pid)
 
     # Flatten tensors
-    d_flat, pi_flat = [np.reshape(tensor.data, [len(tensor), 9])[:, [0, 4, -1, 1, 2, 5]] for tensor in [d_fac, pi_fac]]
-
+    idx_flat = [0, 4, -1, 1, 2, 5]
+    d_flat, pi_flat = [np.reshape(tensor.data, [len(tensor), 9]) for tensor in [d_fac, pi_fac]]
+    d_flat, pi_flat = [tensor[:, idx_flat] for tensor in [d_flat, pi_flat]]
     # Compute components of the double contraction sum
     d_coeff = d_flat * pi_flat
 

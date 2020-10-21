@@ -6,6 +6,8 @@ plasma_beta.py
 @author : Louis RICHARD
 """
 
+import xarray as xr
+
 from ..mms import rotate_tensor
 
 from . import norm, resample, ts_scalar
@@ -34,6 +36,9 @@ def plasma_beta(b_xyz=None, p_xyz=None):
         Time series of the plasma beta at magnetic field sampling.
 
     """
+
+    assert p_xyz is not None and isinstance(p_xyz, xr.DataArray)
+    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
 
     p_xyz = resample(p_xyz, b_xyz)
 

@@ -10,9 +10,9 @@ import numpy as np
 
 
 def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
-    """Calculates the cold plasma dispersion surfaces according to equation 2.64 in Plasma Waves by Swanson (2nd ed.),
-    and puts them in the matrix W. Additional parameters that are needed in dispersion_surface is returned as
-    extra_param.
+    """Calculates the cold plasma dispersion surfaces according to equation 2.64 in Plasma Waves by
+    Swanson (2nd ed.), and puts them in the matrix W. Additional parameters that are needed in
+    dispersion_surface is returned as extra_param.
 
     Parameters
     ----------
@@ -76,34 +76,40 @@ def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
     w_extra2 = w_extra ** 2
     cos_theta2 = np.cos(theta) ** 2
 
-    # For every k_perp and k_par, turn the dispersion relation into a polynomial equation and solve it.
+    # For every k_perp and k_par, turn the dispersion relation into a polynomial eq. and solve it.
     # The polynomial coefficients are calculated
     pol_k_coeff8 = -(2 * kc2 + 1 + w_ci2 + 3 * w_p2)
     pol_k_coeff6 = (kc4 + (2 * kc2 + w_p2) * (1 + w_ci2 + 2 * w_p2) + w_extra2)
-    pol_k_coeff4 = -(kc4 * (1 + w_ci2 + w_p2) + 2 * kc2 * w_extra2 + kc2 * w_p2 * (1 + w_ci2 - w_ci) * (
-                1 + cos_theta2) + w_p2 * w_extra2)
-    pol_k_coeff2 = (kc4 * (w_p2 * (1 + w_ci2 - w_ci) * cos_theta2 + w_ci * w_extra) + kc2 * w_p2 * w_ci * w_extra * (
-                1 + cos_theta2))
+    pol_k_coeff4 = -(
+                kc4 * (1 + w_ci2 + w_p2) + 2 * kc2 * w_extra2 + kc2 * w_p2 * (1 + w_ci2 - w_ci) * (
+                    1 + cos_theta2) + w_p2 * w_extra2)
+    pol_k_coeff2 = (kc4 * (w_p2 * (
+                1 + w_ci2 - w_ci) * cos_theta2 + w_ci * w_extra) + kc2 * w_p2 * w_ci * w_extra * (
+                                1 + cos_theta2))
     pol_k_coeff0 = -kc4 * w_ci2 * w_p2 * cos_theta2
 
     # For each k, solve the equation
     w_final = np.zeros((10, 35, 35))
     for k_z in range(len(kc_z)):
         for k_x in range(len(kc_x)):
-            dispersion_polynomial = [1, 0, pol_k_coeff8[k_z, k_x], 0, pol_k_coeff6[k_z, k_x], 0, pol_k_coeff4[k_z, k_x],
-                                     0, pol_k_coeff2[k_z, k_x], 0, pol_k_coeff0[k_z, k_x]]
+            dispersion_polynomial = [1, 0, pol_k_coeff8[k_z, k_x], 0, pol_k_coeff6[k_z, k_x], 0,
+                                     pol_k_coeff4[k_z, k_x], 0, pol_k_coeff2[k_z, k_x], 0,
+                                     pol_k_coeff0[k_z, k_x]]
             # theoretically should be real (A. Tjulin)
             w_temp = np.real(np.roots(dispersion_polynomial))
             # We need to sort the answers to get nice surfaces.
             w_final[:, k_z, k_x] = np.sort(w_temp)
 
-    # Now we have solved the dispersion relation. Let us find some other interesting parameters in this context.
+    # Now we have solved the dispersion relation. Let us find some other interesting parameters in
+    # this context.
     # The elements of the dielectric tensor, using Swanson's notation
     dielectric_s = 1 - w_pe ** 2 / (w_final ** 2 - 1) - w_pi ** 2 / (w_final ** 2 - w_ci2)
     dielectric_p = 1 - (w_pe ** 2 + w_pi ** 2) / (w_final ** 2)
-    dielectric_d = -w_pe ** 2 / (w_final * (w_final ** 2 - 1)) + w_ci * w_pi ** 2 / (w_final * (w_final ** 2 - w_ci2))
+    dielectric_d = -w_pe ** 2 / (w_final * (w_final ** 2 - 1)) + w_ci * w_pi ** 2 / (
+                w_final * (w_final ** 2 - w_ci2))
 
-    # The rest of this function is not cleaned yet. The calculations could probably be much shorter ! Use tile instead.
+    # The rest of this function is not cleaned yet. The calculations could probably be much
+    # shorter ! Use tile instead.
     kc2_mat, k_x_mat, k_z_mat, theta_mat = [np.zeros((10, 35, 35)) for _ in range(4)]
 
     for i in range(10):
@@ -117,7 +123,7 @@ def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
     va_to_c = 1 / (w_pe * np.sqrt(m_i))
     v_phase_to_va = v_phase_to_c / va_to_c
 
-    dielectric_xx = dielectric_s - n2 * np.cos(theta_mat) ** 2
+    # dielectric_xx = dielectric_s - n2 * np.cos(theta_mat) ** 2
     dielectric_xy = -1j * dielectric_d
     dielectric_xz = n2 * np.cos(theta_mat) * np.sin(theta_mat)
     dielectric_yy = dielectric_s - n2
@@ -208,26 +214,68 @@ def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
     # Degree of electromagnetism
     extra_param = np.zeros((20, 10, 35, 35))
     extra_param[1, ...] = np.log10(b_tot / e_tot)
-    extra_param[2, ...] = abs(e_par_k) / e_tot                      # Degree of longitudinally
-    extra_param[3, ...] = e_z / e_tot                               # Degree of parallelism
-    extra_param[4, ...] = np.sqrt(b_z * np.conj(b_z)) / b_tot       # Degree of parallelism
-    extra_param[5, ...] = np.sqrt(v_x ** 2 + v_z ** 2)              # Value of the group vel.
-    extra_param[6, ...] = e_polar                                   # Ellipticity
-    extra_param[7, ...] = np.log10(e_tot ** 2 / b_tot ** 2)         # Degree of electromagnetism
-    extra_param[8, ...] = np.log10(ee / e_i)                        # Ratio of electron to ion energy
-    extra_param[9, ...] = np.log10(np.sqrt(v_e2 / v_i2))            # Ratio of electron to ion velocity fluctuations
-    extra_param[10, ...] = np.log10(ratio_pf)                       # Ratio of particle to field energy densities
-    extra_param[11, ...] = b_polar                                  # Ellipticity based on B
-    extra_param[12, ...] = np.log10(v_phase_to_va)                  # Phase speed divided by Alfven speed
-    extra_param[13, ...] = np.log10(v_par_o_perp_e)                 # Ratio of parallel to perpendicular electron speed
-    extra_param[14, ...] = np.log10(v_par_o_perp_i)                 # Ratio of parallel to perpendicular ion speed
-    extra_param[15, ...] = np.log10(e_en / (ee + eb))               #
-    extra_param[16, ...] = np.log10(dn_e_dn_i)                      # Ratio of electron to ion density perturbations
-    extra_param[17, ...] = np.log10(dn_eon_o_db_o_b)                # (dn_e / n) / (dB / B)
-    extra_param[18, ...] = np.log10(dn_ion_o_db_o_b)                # (dn_i / n) / (dB / B)
-    extra_param[19, ...] = np.log10(dn_eon_o_db_par_o_b)            # (dn_e / n) / (dB_par / B)
-    extra_param[20, ...] = np.log10(dn_ion_o_db_par_o_b)            # (dn_i / n) / (dB_par / B)
-    extra_param[21, ...] = np.log10(dn_e / k_dot_e)                 # (dn_i / n) / (dB / B)
-    extra_param[22, ...] = s_par / s_tot                            # S_par / S_tot
+
+    # Degree of longitudinally
+    extra_param[2, ...] = abs(e_par_k) / e_tot
+
+    # Degree of parallelism
+    extra_param[3, ...] = e_z / e_tot
+
+    # Degree of parallelism
+    extra_param[4, ...] = np.sqrt(b_z * np.conj(b_z)) / b_tot
+
+    # Value of the group vel.
+    extra_param[5, ...] = np.sqrt(v_x ** 2 + v_z ** 2)
+
+    # Ellipticity
+    extra_param[6, ...] = e_polar
+
+    # Degree of electromagnetism
+    extra_param[7, ...] = np.log10(e_tot ** 2 / b_tot ** 2)
+
+    # Ratio of electron to ion energy
+    extra_param[8, ...] = np.log10(ee / e_i)
+
+    # Ratio of electron to ion velocity fluctuations
+    extra_param[9, ...] = np.log10(np.sqrt(v_e2 / v_i2))
+
+    # Ratio of particle to field energy densities
+    extra_param[10, ...] = np.log10(ratio_pf)
+
+    # Ellipticity based on B
+    extra_param[11, ...] = b_polar
+
+    # Phase speed divided by Alfven speed
+    extra_param[12, ...] = np.log10(v_phase_to_va)
+
+    # Ratio of parallel to perpendicular electron speed
+    extra_param[13, ...] = np.log10(v_par_o_perp_e)
+
+    # Ratio of parallel to perpendicular ion speed
+    extra_param[14, ...] = np.log10(v_par_o_perp_i)
+
+    #
+    extra_param[15, ...] = np.log10(e_en / (ee + eb))
+
+    # Ratio of electron to ion density perturbations
+    extra_param[16, ...] = np.log10(dn_e_dn_i)
+
+    # (dn_e / n) / (dB / B)
+    extra_param[17, ...] = np.log10(dn_eon_o_db_o_b)
+
+    # (dn_i / n) / (dB / B)
+    extra_param[18, ...] = np.log10(dn_ion_o_db_o_b)
+
+    # (dn_e / n) / (dB_par / B)
+    extra_param[19, ...] = np.log10(dn_eon_o_db_par_o_b)
+
+    # (dn_i / n) / (dB_par / B)
+    extra_param[20, ...] = np.log10(dn_ion_o_db_par_o_b)
+
+    # (dn_i / n) / (dB / B)
+    extra_param[21, ...] = np.log10(dn_e / k_dot_e)
+
+    # S_par / S_tot
+    extra_param[22, ...] = s_par / s_tot
 
     return w_final, extra_param

@@ -12,8 +12,8 @@ from scipy.optimize import curve_fit
 
 
 def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
-    """Simple function to estimate the phase speed from the frequency wave number power spectrum. Fits
-    :math:`f = v k/ 2 \\pi` to the power spectrum.
+    """Simple function to estimate the phase speed from the frequency wave number power spectrum.
+    Fits :math:`f = v k/ 2 \\pi` to the power spectrum.
 
     Parameters
     ----------
@@ -36,14 +36,20 @@ def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
 
     Notes
     -----
-    Draft version but seems to work well. Does not yet handle multiple modes in the same power spectrum.
+    Draft version but seems to work well. Does not yet handle multiple modes in the same power
+    spectrum.
 
     See also
     --------
     pyrfu.mms.fk_power_spectrum : Calculates the frequency-wave number power spectrum
-    pyrfu.mms.probe_align_times : Returns times when field-aligned electrostatic waves can be characterized.
+    pyrfu.mms.probe_align_times : Returns times when f-a electrostatic waves can be characterized.
 
     """
+
+    assert f_k_power is not None and isinstance(f_k_power, np.ndarray)
+    assert f is not None and isinstance(f, np.ndarray)
+    assert k is not None and isinstance(k, np.ndarray)
+    assert isinstance(f_min, float)
 
     # Remove spurious points; specifically at large k.
     k_max = 2.0 * np.max(k) / 3.0
@@ -80,9 +86,9 @@ def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
     f_power2 = []
     k_power2 = []
 
-    for ii in range(len(p_power)):
+    for ii, pp in enumerate(p_power):
         if np.abs(vph_range[0]) < np.abs(f_power[ii] / k_power[ii]) < np.abs(vph_range[1]):
-            p_power2.append(p_power[ii])
+            p_power2.append(pp)
             f_power2.append(f_power[ii])
             k_power2.append(k_power[ii])
 
@@ -93,7 +99,7 @@ def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
     def fun(x, a):
         return a * x
 
-    popt, pcov = curve_fit(fun, k_power2, f_power2, p0=vph_guess, sigma=weights)
+    popt, _ = curve_fit(fun, k_power2, f_power2, p0=vph_guess, sigma=weights)
     vph = popt[0] * 2 * np.pi
 
     return vph

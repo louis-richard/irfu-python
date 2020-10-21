@@ -7,6 +7,7 @@ calculate_epsilon.py
 """
 
 import numpy as np
+import xarray as xr
 
 from astropy import constants
 
@@ -33,7 +34,8 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
     **kwargs : dict
         Hash table of keyword arguments with :
              * en_channels : list or numpy.ndarray
-                Set energy channels to integrate over [min max]; min and max between must be between 1 and 32.
+                Set energy channels to integrate over [min max]; min and max between must be
+                between 1 and 32.
 
     Returns
     -------
@@ -47,13 +49,18 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
 
     """
 
+    assert vdf is not None and isinstance(vdf, xr.Dataset)
+    assert model_vdf is not None and isinstance(model_vdf, xr.Dataset)
+    assert n is not None and isinstance(n, xr.DataArray)
+    assert sc_pot is not None and isinstance(sc_pot, xr.DataArray)
+
     if np.abs(np.median(np.diff(vdf.time-n.time))).astype(float) > 0:
         raise RuntimeError("vdf and moments have different times.")
 
     # Default energy channels used to compute epsilon, lowest energy channel should not be used.
     int_energies = np.arange(2, 33)
 
-    if "en_channels" in kwargs and isinstance(kwargs["en_channels"], (list, np.ndarray)):
+    if kwargs.get("en_channels") and isinstance(kwargs["en_channels"], (list, np.ndarray)):
         int_energies = np.arange(kwargs["en_channels"][0], kwargs["en_channels"][1] + 1)
 
     # Resample sc_pot
@@ -75,7 +82,7 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
         mp = constants.m_e.value
         print("notice : Particles are electrons")
     elif vdf.attrs["specie"] == "i":
-        sc_pot.data = -sc_pot.data
+        sc_pot.data *= -1
         mp = constants.m_p.value
         print("notice : Particles are electrons")
     else:
@@ -122,8 +129,8 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
         for ii in int_energies:
             tmp = np.squeeze(vdf_diff[it, ii, ...])
 
-            epsilon[it] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * v[it, ii] ** 2 * delta_v[
-                it, ii] * delta_ang
+            epsilon[it] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * v[it, ii] ** 2 * \
+                           delta_v[it, ii] * delta_ang
 
     epsilon /= 1e6 * n.data * 2
     epsilon = ts_scalar(vdf.time.data, epsilon)

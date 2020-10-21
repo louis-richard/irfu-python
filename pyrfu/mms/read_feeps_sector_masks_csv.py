@@ -20,8 +20,8 @@ def read_feeps_sector_masks_csv(tint=None):
     Parameters
     ----------
     tint : list of str
-        time range of interest [starttime, endtime] with the format "YYYY-MM-DD", "YYYY-MM-DD"] or to specify more or
-        less than a day ['YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
+        time range of interest [starttime, endtime] with the format "YYYY-MM-DD", "YYYY-MM-DD"]
+        or to specify more or less than a day ['YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
 
     Returns
     -------
@@ -44,7 +44,8 @@ def read_feeps_sector_masks_csv(tint=None):
 
     for mms_sc in np.arange(1, 5):
         csv_file = os.sep.join([os.path.dirname(os.path.abspath(__file__)), "sun",
-                                "MMS{:d}_FEEPS_ContaminatedSectors_{}.csv".format(mms_sc, str_date)])
+                                "MMS{:d}_FEEPS_ContaminatedSectors_{}.csv".format(mms_sc,
+                                                                                  str_date)])
 
         csv_file = open(csv_file, 'r')
 

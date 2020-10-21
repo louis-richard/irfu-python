@@ -30,11 +30,9 @@ def dpflux_to_vdf(dpflux=None):
 
     """
 
-    assert dpflux is not None
+    assert dpflux is not None and isinstance(dpflux, (xr.Dataset, xr.DataArray))
 
-    if not isinstance(dpflux, (xr.Dataset, xr.DataArray)):
-        raise TypeError("dpflux must be a DataArray or Dataset")
-    elif isinstance(dpflux, xr.DataArray):
+    if isinstance(dpflux, xr.DataArray):
         dpflux = spectr_to_dataset(dpflux)
 
     if dpflux.attrs["species"] in ["ions", "i"]:
@@ -54,7 +52,8 @@ def dpflux_to_vdf(dpflux=None):
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
 
-    data_r = np.reshape(tmp_data, (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:])))
+    data_r = np.reshape(tmp_data,
+                        (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:])))
 
     if energy.ndim == 1:
         energy_mat = np.tile(energy, (len(dpflux.time), np.prod(tmp_data.shape[2:]), 1))

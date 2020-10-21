@@ -12,7 +12,7 @@ import xarray as xr
 from scipy.stats import kurtosis
 
 
-def increments(x=None, scale=None):
+def increments(x=None, scale=10):
     """Returns the increments of a time series.
 
     .. math:: y = |x_i - x_{i+s}|
@@ -39,6 +39,7 @@ def increments(x=None, scale=None):
 
     """
     assert x is not None and isinstance(x, xr.DataArray)
+    assert isinstance(scale, int)
 
     data = x.data
 
@@ -56,10 +57,7 @@ def increments(x=None, scale=None):
     time = x.coords[t].data
     cols = x.coords[c].data
 
-    result = xr.DataArray(result,
-                          coords=[time[0:len(f)], cols],
-                          dims=[t, c],
-                          attrs=x.attrs)
+    result = xr.DataArray(result, coords=[time[0:len(f)], cols], dims=[t, c], attrs=x.attrs)
 
     kurt = kurtosis(result, axis=0, fisher=False)
 

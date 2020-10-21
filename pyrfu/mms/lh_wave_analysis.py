@@ -45,8 +45,8 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     **kwargs : dict
         Hash table of keyword arguments with :
             * lhfilt : float or int or list of float or list of int
-                Filter for LH fluctuations. For one element it is the minimum frequency in the highpass filter.
-                For two elements the fields are bandpassed between the frequencies.
+                Filter for LH fluctuations. For one element it is the minimum frequency in the
+                highpass filter. For two elements the fields are bandpassed between the frequencies.
 
             * blpass : float or int
                 Set maximum frequency for low-pass filter of background magnetic field (FGM)
@@ -70,17 +70,18 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
 
     Examples
     --------
-    >>> from pyrfu import mms
+    >>> from pyrfu.mms import get_data, lh_wave_analysis
     >>> # Large time interval
     >>> tint_long = ["2015-12-14T01:17:39.000", "2015-12-14T01:17:43.000"]
     >>> # Load fields and density
-    >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_long, 2)
-    >>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint_long, 2)
-    >>> b_scm = mms.get_data("B_gse_scm_brst_l2", tint_long, 2)
-    >>> n_e = mms.get_data("Ne_fpi_brst_l2", tint_long, 2)
+    >>> b_xyz = get_data("B_gse_fgm_brst_l2", tint_long, 2)
+    >>> e_xyz = get_data("E_gse_edp_brst_l2", tint_long, 2)
+    >>> b_scm = get_data("B_gse_scm_brst_l2", tint_long, 2)
+    >>> n_e = get_data("Ne_fpi_brst_l2", tint_long, 2)
     >>> # Time interval of focus
     >>> tint = ["2015-12-14T01:17:40.200","2015-12-14T01:17:41.500"]
-    >>> phi_eb, v_best, dir_best, theta, _ = mms.lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, lhfilt=[5, 100])
+    >>> opt = dict(lhfilt=[5, 100])
+    >>> phi_eb, v_best, dir_best, theta, _ = lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, **opt)
 
     """
 
@@ -176,7 +177,7 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     phi_e_best = ts_scalar(phi_bs.time.data, phi_e_best)
     v_best = vph_vec[corr_vpos]
 
-    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T, coords=[phi_bs.time, ["Ebest", "Bs"]],
-                          dims=["time", "comp"])
+    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T,
+                          coords=[phi_bs.time, ["Ebest", "Bs"]], dims=["time", "comp"])
 
     return phi_eb, v_best, dir_best, thetas, corrs

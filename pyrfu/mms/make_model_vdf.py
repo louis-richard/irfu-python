@@ -7,6 +7,8 @@ make_model_vdf.py
 """
 
 import numpy as np
+import xarray as xr
+
 from astropy import constants
 
 from ..pyrf import resample, dec_par_perp, norm
@@ -15,7 +17,8 @@ from . import rotate_tensor
 
 def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=None):
     """
-    Make a general bi-Maxwellian distribution function based on particle moment data in the same format as PDist.
+    Make a general bi-Maxwellian distribution function based on particle moment data in the same
+    format as PDist.
 
     Parameters
     ----------
@@ -61,6 +64,14 @@ def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=
         return;
     end
     """
+
+    assert vdf is not None and isinstance(vdf, xr.Dataset)
+    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
+    assert sc_pot is not None and isinstance(sc_pot, xr.DataArray)
+    assert n is not None and isinstance(n, xr.DataArray)
+    assert v_xyz is not None and isinstance(v_xyz, xr.DataArray)
+    assert t_xyz is not None and isinstance(t_xyz, xr.DataArray)
+
     # Convert to SI units
     vdf /= 1e18
 
@@ -112,8 +123,10 @@ def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=
     r = np.zeros((n_ti, n_en))
 
     for ii in range(n_ti):
-        x[ii, ...] = np.outer(-np.cos(vdf.phi.data[ii, :] * np.pi / 180) * np.sin(vdf.theta.data * np.pi / 180))
-        y[ii, ...] = np.outer(-np.sin(vdf.phi.data[ii, :] * np.pi / 180) * np.sin(vdf.theta.data * np.pi / 180))
+        x[ii, ...] = np.outer(
+            -np.cos(vdf.phi.data[ii, :] * np.pi / 180) * np.sin(vdf.theta.data * np.pi / 180))
+        y[ii, ...] = np.outer(
+            -np.sin(vdf.phi.data[ii, :] * np.pi / 180) * np.sin(vdf.theta.data * np.pi / 180))
         z[ii, ...] = np.outer(-np.ones(n_ph) * np.cos(vdf.theta.data * np.pi / 180))
         r[ii, ...] = np.real(np.sqrt(2 * (energy[ii, :] - sc_pot.data[ii]) * qe / p_mass))
 
@@ -164,7 +177,8 @@ def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=
         coeff = n.data[ii] * t_ratio.data[ii] / (np.sqrt(np.pi ** 3) * vth_para.data[ii] ** 3)
 
         bi_max_temp = coeff * np.exp(
-            -(x_p[ii, ...] * r_mat[ii, ...] - v_perp_mag.data[ii]) ** 2 / (vth_para.data[ii] ** 2) * t_ratio.data[ii])
+            -(x_p[ii, ...] * r_mat[ii, ...] - v_perp_mag.data[ii]) ** 2 / (vth_para.data[ii] ** 2) *
+            t_ratio.data[ii])
         bi_max_temp = bi_max_temp * np.exp(
             -(y_p[ii, ...] * r_mat[ii, ...]) ** 2 / (vth_para.data[ii] ** 2) * t_ratio.data[ii])
         bi_max_temp = bi_max_temp * np.exp(

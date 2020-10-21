@@ -13,8 +13,9 @@ from ..pyrf import calc_fs, ts_scalar
 
 
 def dft_time_shift(inp=None, tau=None):
-    """Shifts the input signal ``inp`` by ``tau`` seconds using discrete fourier transform (DFT). Particularly useful
-    when calculating the frequency-wavenumber spectrum of the mms' spin-plane or axial probes.
+    """Shifts the input signal ``inp`` by ``tau`` seconds using discrete fourier transform (DFT).
+    Particularly useful when calculating the frequency-wavenumber spectrum of the mms' spin-plane
+    or axial probes.
 
     Parameters
     ----------

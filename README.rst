@@ -15,7 +15,7 @@
 .. |PyPi| image:: https://img.shields.io/badge/install_with-pypi-brightgreen.svg
 .. _PyPi: https://test.pypi.org/project/pyrfu/
 
-.. |PyLint| image:: https://img.shields.io/badge/pylint-8.62-brightgreen.svg
+.. |PyLint| image:: https://img.shields.io/badge/pylint-9.46-brightgreen.svg
 .. _PyLint: https://test.pypi.org/project/pyrfu/
 
 

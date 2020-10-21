@@ -15,8 +15,8 @@ from . import plot_spectr
 
 
 def pl_scatter_matrix(inp1=None, inp2=None, pdf=False, cmap="jet"):
-	"""Produces a scatter plot of each components of field inp1 with respect to every component of field inp2. If pdf is
-	set to True, the scatter plot becomes a 2d histogram.
+	"""Produces a scatter plot of each components of field inp1 with respect to every component
+	of field inp2. If pdf is set to True, the scatter plot becomes a 2d histogram.
 
 	Parameters
 	----------
@@ -30,7 +30,8 @@ def pl_scatter_matrix(inp1=None, inp2=None, pdf=False, cmap="jet"):
 		Marker type. Default is "+". Not used if pdf is True
 
 	pdf : bool
-		Flag to plot the 2d histogram. If False the figure is a scatter plot. If True the figure is a 2d histogram.
+		Flag to plot the 2d histogram. If False the figure is a scatter plot. If True the figure
+		is a 2d histogram.
 
 	cmap : str
 		Colormap. Default : "jet"
@@ -47,6 +48,7 @@ def pl_scatter_matrix(inp1=None, inp2=None, pdf=False, cmap="jet"):
 		Only if pdf is True
 
 	"""
+
 	if inp1 is None:
 		raise ValueError("pl_scatter_matrix requires at least one argument")
 	
