@@ -11,61 +11,54 @@ import xarray as xr
 
 
 def ts_tensor_xyz(t=None, data=None, attrs=None):
-	"""Create a time series containing a 2nd order tensor.
+    """Create a time series containing a 2nd order tensor.
 
-	Parameters
-	----------
-	t : numpy.ndarray
-		Array of times.
+    Parameters
+    ----------
+    t : numpy.ndarray
+        Array of times.
 
-	data : numpy.ndarray
-		Data corresponding to the time list.
+    data : numpy.ndarray
+        Data corresponding to the time list.
 
-	attrs : dict
-		Attributes of the data list.
+    attrs : dict
+        Attributes of the data list.
 
-	Returns
-	-------
-	out : xarray.DataArray
-		2nd order tensor time series.
+    Returns
+    -------
+    out : xarray.DataArray
+        2nd order tensor time series.
 
-	"""
+    """
 
-	# Check inputs are not empty
-	if t is None:
-		raise ValueError("ts_tensor_xyz requires at least two inputs")
+    assert t is not None and isinstance(t, np.ndarray)
+    assert data is not None and isinstance(data, np.ndarray)
+    assert data.ndim == 3 and data.shape[1:] == (3, 3)
 
-	if data is None:
-		raise ValueError("ts_tensor_xyz requires at least two inputs")
-		
-	# Check inputs are numpy arrays
-	if not isinstance(t, np.ndarray):
-		raise TypeError("Time must be a np.datetime64 array")
-	
-	if not isinstance(data, np.ndarray):
-		raise TypeError("Data must be a np array")
-	
-	if data.ndim != 3:
-		raise TypeError("Input must be a tensor time series")
-	
-	if data.shape[1] != 3 or data.shape[2] != 3:
-		raise TypeError("Input must be a xyz tensor")
-	
-	if len(t) != len(data):
-		raise IndexError("Time and data must have the same length")
-	
-	flag_attrs = True
+    # Check inputs are not empty
+    if t is None:
+        raise ValueError("ts_tensor_xyz requires at least two inputs")
 
-	if attrs is None:
-		flag_attrs = False
-	
-	out = xr.DataArray(data, coords=[t[:], ["x", "y", "z"], ["x", "y", "z"]], dims=["time", "comp_h", "comp_v"])
-	
-	if flag_attrs:
-		out.attrs = attrs
+    if data is None:
+        raise ValueError("ts_tensor_xyz requires at least two inputs")
 
-		out.attrs["TENSOR_ORDER"] = 2
-	else:
-		out.attrs["TENSOR_ORDER"] = 2
+    # Check inputs are numpy arrays
+    if len(t) != len(data):
+        raise IndexError("Time and data must have the same length")
 
-	return out
+    flag_attrs = True
+
+    if attrs is None:
+        flag_attrs = False
+
+    out = xr.DataArray(data, coords=[t[:], ["x", "y", "z"], ["x", "y", "z"]],
+                       dims=["time", "comp_h", "comp_v"])
+
+    if flag_attrs:
+        out.attrs = attrs
+
+        out.attrs["TENSOR_ORDER"] = 2
+    else:
+        out.attrs["TENSOR_ORDER"] = 2
+
+    return out

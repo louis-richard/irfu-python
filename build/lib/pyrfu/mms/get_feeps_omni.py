@@ -16,8 +16,8 @@ from .get_feeps_oneeye import get_feeps_oneeye
 
 # noinspection PyUnboundLocalVariable
 def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True):
-    """Computes omni directional energy spectrum of the target data unit for the target specie over the target energy
-    range.
+    """Computes omni directional energy spectrum of the target data unit for the target specie
+    over the target energy range.
 
     Parameters
     ----------
@@ -40,9 +40,18 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True
 
     """
 
+    assert isinstance(tar_var, str)
+    assert tint is not None and isinstance(tint, list)
+    assert isinstance(tint[0], str) and isinstance(tint[1], str)
+    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
+    assert isinstance(verbose, bool)
+
+    mms_id = int(mms_id)
+
     data_units = tar_var.split("_")[0]
 
-    var = {"dtype": tar_var.split("_")[1], "tmmode": tar_var.split("_")[2], "lev": tar_var.split("_")[3]}
+    var = {"dtype": tar_var.split("_")[1], "tmmode": tar_var.split("_")[2],
+           "lev": tar_var.split("_")[3]}
 
     specie = var["dtype"][0]
 
@@ -73,10 +82,11 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True
     top_it, bot_it = [{}, {}]
 
     for tsen in top_sensors:
-        top = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id, f"top-{tsen:d}",
-                               tint)
+        top = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
+                               mms_id, f"top-{tsen:d}", tint)
 
-        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id, f"top-{tsen:d}", tint)
+        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id,
+                                f"top-{tsen:d}", tint)
 
         mask.data = np.tile(mask.data[:, 0], (mask.shape[1], 1)).T
 
@@ -85,11 +95,11 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True
         top_it[tsen] = top
 
     for bsen in bot_sensors:
-        bot = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id,
-                               f"bottom-{bsen:d}", tint, verbose)
+        bot = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
+                               mms_id, f"bottom-{bsen:d}", tint, verbose)
 
-        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id, f"bottom-{bsen:d}", tint,
-                                verbose)
+        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id,
+                                f"bottom-{bsen:d}", tint, verbose)
 
         mask.data = np.tile(mask.data[:, 0], (mask.shape[1], 1)).T
 

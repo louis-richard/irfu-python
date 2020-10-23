@@ -30,18 +30,32 @@ sns.set_context("paper")
 
 
 def plot_line(ax=None, inp=None, c=""):
-	if ax is None:
-		fig, ax = plt.subplots(1)
-	if len(inp.shape) == 3:
-		data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
-	else:
-		data = inp.data
+    """Line plot of time series.
 
-	time = inp.time
-	ax.plot(time, data, c)
-	date_form = mdates.DateFormatter("%H:%M:%S")
-	ax.xaxis.set_major_formatter(date_form)
-	ax.grid(which="major", linestyle="-", linewidth="0.5", c="0.5")
-	# ax.grid(which="minor",linestyle="-",linewidth="0.25")
+    Parameters
+    ----------
+    ax : to fill
+        Axis
 
-	return
+    inp : xarray.DataArray
+        Time series to plot
+
+    c : str
+        Options
+
+    """
+    if ax is None:
+        fig, ax = plt.subplots(1)
+    if len(inp.shape) == 3:
+        data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
+    else:
+        data = inp.data
+
+    time = inp.time
+    ax.plot(time, data, c)
+    date_form = mdates.DateFormatter("%H:%M:%S")
+    ax.xaxis.set_major_formatter(date_form)
+    ax.grid(which="major", linestyle="-", linewidth="0.5", c="0.5")
+    # ax.grid(which="minor",linestyle="-",linewidth="0.25")
+
+    return

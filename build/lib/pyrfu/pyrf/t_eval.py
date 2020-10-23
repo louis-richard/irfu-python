@@ -6,42 +6,42 @@ t_eval.py
 @author : Louis RICHARD
 """
 
+import bisect
 import numpy as np
 import xarray as xr
-import bisect
 
 
 def t_eval(inp=None, t=None):
-	"""Evaluates the input time series at the target time.
+    """Evaluates the input time series at the target time.
 
-	Parameters
-	----------
-	inp : xarray.DataArray
-		Time series if the input to evaluate.
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Time series if the input to evaluate.
 
-	t : numpy.ndarray
-		Times at which the input will be evaluated.
+    t : numpy.ndarray
+        Times at which the input will be evaluated.
 
-	Returns
-	-------
-	out : DataArray
-		Time series of the input at times t.
+    Returns
+    -------
+    out : DataArray
+        Time series of the input at times t.
 
-	"""
+    """
 
-	if (inp is None) or (t is None):
-		raise ValueError("t_eval requires at least 2 arguments")
+    assert inp is not None and isinstance(inp, xr.DataArray)
+    assert t is not None and isinstance(t, np.ndarray)
 
-	idx = np.zeros(len(t))
+    idx = np.zeros(len(t))
 
-	for i in range(len(t)):
-		idx[i] = bisect.bisect_left(inp.time.data, t[i])
-		
-	idx = idx.astype(int)
+    for i, time in enumerate(t):
+        idx[i] = bisect.bisect_left(inp.time.data, time)
 
-	if inp.ndim == 2:
-		out = xr.DataArray(inp.data[idx, :], coords=[t, inp.comp], dims=["time", "comp"])
-	else:
-		out = xr.DataArray(inp.data[idx], coords=t, dims=["time"])
+    idx = idx.astype(int)
 
-	return out
+    if inp.ndim == 2:
+        out = xr.DataArray(inp.data[idx, :], coords=[t, inp.comp], dims=["time", "comp"])
+    else:
+        out = xr.DataArray(inp.data[idx], coords=[t], dims=["time"])
+
+    return out

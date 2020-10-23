@@ -29,18 +29,14 @@ def histogram(inp=None, bins=100, normed=True):
     -------
     out : xarray.DataArray
         1D distribution of the input time series.
-    
+
     """
-    
-    if inp is None:
-        raise ValueError("histogram requires at least one argument")
-    
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("inp must be DataArray")
-    
+
+    assert inp is not None and isinstance(inp, xr.DataArray)
+
     hist, bins = np.histogram(inp.data, bins=bins, normed=normed)
     bin_center = (bins[1:] + bins[:-1]) * 0.5
-    
+
     out = xr.DataArray(hist, coords=[bin_center], dims=["bins"])
-    
+
     return out

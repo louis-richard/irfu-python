@@ -1,4 +1,3 @@
-CONTRIBUTING.md
 MANIFEST.in
 README.rst
 setup.cfg
@@ -46,7 +45,6 @@ pyrfu/mms/probe_align_times.py
 pyrfu/mms/psd_moments.py
 pyrfu/mms/psd_rebin.py
 pyrfu/mms/read_feeps_sector_masks_csv.py
-pyrfu/mms/reduce.py
 pyrfu/mms/remove_idist_background.py
 pyrfu/mms/rotate_tensor.py
 pyrfu/mms/spectr_to_dataset.py
@@ -119,7 +117,6 @@ pyrfu/pyrf/gradient.py
 pyrfu/pyrf/histogram.py
 pyrfu/pyrf/histogram2d.py
 pyrfu/pyrf/increments.py
-pyrfu/pyrf/int_sph_dist.py
 pyrfu/pyrf/integrate.py
 pyrfu/pyrf/iso2unix.py
 pyrfu/pyrf/lowpass.py

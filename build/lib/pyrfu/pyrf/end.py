@@ -11,26 +11,22 @@ from astropy.time import Time
 
 
 def end(inp=None):
-	"""Gives the last time of the time series in unix format.
+    """Gives the last time of the time series in unix format.
 
-	Parameters
-	----------
-	inp : xarray.DataArray
-		Time series of the input variable.
+    Parameters
+    ----------
+    inp : xarray.DataArray
+        Time series of the input variable.
 
-	Returns
-	-------
-	out : float or str
-		Value of the last time in the desired format.
+    Returns
+    -------
+    out : float or str
+        Value of the last time in the desired format.
 
-	"""
+    """
 
-	if inp is None:
-		raise ValueError("end requires at least one argument")
+    assert inp is not None and isinstance(inp, xr.DataArray)
 
-	if not isinstance(inp, xr.DataArray):
-		raise TypeError("in must be a time series")
+    out = Time(inp.time.data[-1], format="datetime64").unix
 
-	out = Time(inp.time.data[-1], format="datetime64").unix
-
-	return out
+    return out

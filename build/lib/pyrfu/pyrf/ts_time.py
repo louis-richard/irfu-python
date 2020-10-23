@@ -13,31 +13,27 @@ from astropy.time import Time
 
 
 def ts_time(t=None, fmt="unix"):
-	"""Creates time line in DataArray.
+    """Creates time line in DataArray.
 
-	Parameters
-	----------
-	t : numpy.ndarray
-		Input time line.
+    Parameters
+    ----------
+    t : numpy.ndarray
+        Input time line.
 
-	fmt : str
-		Format of the input time line.
+    fmt : str
+        Format of the input time line.
 
-	Returns
-	-------
-	out : xarray.DataArray
-		Time series of the time line.
+    Returns
+    -------
+    out : xarray.DataArray
+        Time series of the time line.
 
-	"""
+    """
 
-	if t is None:
-		raise ValueError("ts_time requires at least one argument")
+    assert t is not None and isinstance(t, np.ndarray)
 
-	if not isinstance(t, np.ndarray):
-		raise TypeError("t must be an array")
+    t = Time(t, format=fmt).datetime64
 
-	t = Time(t, format=fmt).datetime64
-	
-	out = xr.DataArray(t, coords=[t], dims=["time"])
-	
-	return out
+    out = xr.DataArray(t, coords=[t], dims=["time"])
+
+    return out

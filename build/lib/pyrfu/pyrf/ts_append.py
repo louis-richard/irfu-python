@@ -11,93 +11,87 @@ import xarray as xr
 
 
 def ts_append(inp1=None, inp2=None):
-	"""Concatenate two time series along the time axis.
+    """Concatenate two time series along the time axis.
 
-	Parameters
-	----------
-	inp1 : xarray.DataArray
-		Time series of the first input (early times).
+    Parameters
+    ----------
+    inp1 : xarray.DataArray
+        Time series of the first input (early times).
 
-	inp2 : xarray.DataArray
-		Time series of the second input (late times).
+    inp2 : xarray.DataArray
+        Time series of the second input (late times).
 
-	Returns
-	-------
-	out : xarray.DataArray
-		Concatenated time series.
+    Returns
+    -------
+    out : xarray.DataArray
+        Concatenated time series.
 
-	Notes
-	-----
-	The time series must be in the correct time order.
+    Notes
+    -----
+    The time series must be in the correct time order.
 
-	"""
+    """
 
-	if inp1 is None:
-		return inp2
+    assert inp1 is None or isinstance(inp1, xr.DataArray)
+    assert inp2 is not None and isinstance(inp2, xr.DataArray)
 
-	if inp2 is None:
-		raise ValueError("ts_append requires at least two arguments")
+    if inp1 is None:
+        return inp2
 
-	if not isinstance(inp1, xr.DataArray):
-		raise TypeError("inp1 must be a DataArray")
+    out_data = {}
 
-	if not isinstance(inp2, xr.DataArray):
-		raise TypeError("inp1 must be a DataArray")
+    if inp1.data.ndim != 1:
+        out_data["data"] = np.vstack([inp1, inp2])
 
-	out_data = {}
+    else:
+        out_data["data"] = np.hstack([inp1, inp2])
 
-	if inp1.data.ndim != 1:
-		out_data["data"] = np.vstack([inp1, inp2])
+    out_data["attrs"] = {}
 
-	else:
-		out_data["data"] = np.hstack([inp1, inp2])
+    for k in inp1.attrs:
+        if isinstance(inp1.attrs[k], np.ndarray):
+            out_data["attrs"][k] = np.hstack([inp1.attrs[k], inp2.attrs[k]])
 
-	out_data["attrs"] = {}
+        else:
+            out_data["attrs"][k] = inp1.attrs[k]
 
-	for k in inp1.attrs:
-		if isinstance(inp1.attrs[k], np.ndarray):
-			out_data["attrs"][k] = np.hstack([inp1.attrs[k], inp2.attrs[k]])
+    depends = [{} for _ in range(len(inp1.dims))]
 
-		else:
-			out_data["attrs"][k] = inp1.attrs[k]
+    for i, dim in enumerate(inp1.dims):
+        if i == 0 or dim == "time":
+            depends[i]["data"] = np.hstack([inp1[dim].data, inp2[dim].data])
 
-	depends = [{} for _ in range(len(inp1.dims))]
+            # add attributes
+            depends[i]["attrs"] = {}
 
-	for i, dim in enumerate(inp1.dims):
-		if i == 0 or dim == "time":
-			depends[i]["data"] = np.hstack([inp1[dim].data, inp2[dim].data])
+            for k in inp1[dim].attrs:
+                # if attrs is array time append
+                if isinstance(inp1[dim].attrs[k], np.ndarray):
+                    depends[i]["attrs"][k] = np.hstack([inp1[dim].attrs[k], inp2[dim].attrs[k]])
 
-			# add attributes
-			depends[i]["attrs"] = {}
+                else:
+                    depends[i]["attrs"][k] = inp1[dim].attrs[k]
 
-			for k in inp1[dim].attrs:
-				# if attrs is array time append
-				if isinstance(inp1[dim].attrs[k], np.ndarray):
-					depends[i]["attrs"][k] = np.hstack([inp1[dim].attrs[k], inp2[dim].attrs[k]])
+        else:
+            # Use values of other coordinates of inp1 assuming equal to inp2
+            depends[i]["data"] = inp1[dim].data
 
-				else:
-					depends[i]["attrs"][k] = inp1[dim].attrs[k]
+            # add attributes
+            depends[i]["attrs"] = {}
 
-		else:
-			# Use values of other coordinates of inp1 assuming equal to inp2
-			depends[i]["data"] = inp1[dim].data
+            for k in inp1[dim].attrs:
+                depends[i]["attrs"][k] = inp1[dim].attrs[k]
 
-			# add attributes
-			depends[i]["attrs"] = {}
+    # Prepare coord and dims to build DataArray
+    dims, coord = [inp1.dims, [None] * len(inp1.dims)]
 
-			for k in inp1[dim].attrs:
-				depends[i]["attrs"][k] = inp1[dim].attrs[k]
+    for i, depend in enumerate(depends):
+        coord[i] = depend["data"]
 
-	# Prepare coord and dims to build DataArray
-	dims, coord = [inp1.dims, [None] * len(inp1.dims)]
+    # Create DataArray
+    out = xr.DataArray(out_data["data"], coords=coord, dims=dims, attrs=out_data["attrs"])
 
-	for i, depend in enumerate(depends):
-		coord[i] = depend["data"]
+    for i, dim in enumerate(dims):
+        out[dim].attrs = depends[i]["attrs"]
 
-	# Create DataArray
-	out = xr.DataArray(out_data["data"], coords=coord, dims=dims, attrs=out_data["attrs"])
-
-	for i, dim in enumerate(dims):
-		out[dim].attrs = depends[i]["attrs"]
-
-	return out
+    return out

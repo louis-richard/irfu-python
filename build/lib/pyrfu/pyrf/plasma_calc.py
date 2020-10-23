@@ -132,27 +132,17 @@ def plasma_calc(b_xyz=None, t_i=None, t_e=None, n_i=None, n_e=None):
 
     """
 
-    if b_xyz is None or t_i is None or t_e is None or n_i is None or n_e is None:
-        raise ValueError("plasma_calc requires at least 5 arguments")
-
-    if not isinstance(b_xyz, xr.DataArray):
-        raise TypeError("Inputs must be xarray.DataArrays")
-
-    if not isinstance(t_i, xr.DataArray):
-        raise TypeError("Inputs must be xarray.DataArrays")
-
-    if not isinstance(t_e, xr.DataArray):
-        raise TypeError("Inputs must be xarray.DataArrays")
-
-    if not isinstance(n_i, xr.DataArray):
-        raise TypeError("Inputs must be xarray.DataArrays")
-
-    if not isinstance(n_e, xr.DataArray):
-        raise TypeError("Inputs must be xarray.DataArrays")
+    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
+    assert t_i is not None and isinstance(t_i, xr.DataArray)
+    assert t_e is not None and isinstance(t_e, xr.DataArray)
+    assert n_i is not None and isinstance(n_i, xr.DataArray)
+    assert n_e is not None and isinstance(n_e, xr.DataArray)
 
     # Get constants
-    e, mu0, c, eps0 = [constants.e.value, constants.mu0.value, constants.c.value, constants.eps0.value]
-    m_p, m_e, mp_me = [constants.m_p.value, constants.m_e.value, constants.m_p.value / constants.m_e.value]
+    e, c = [constants.e.value, constants.c.value]
+    mu0, eps0 = [constants.mu0.value, constants.eps0.value]
+    m_p, m_e = [constants.m_p.value, constants.m_e.value]
+    mp_me = m_p / m_e
 
     # Resample all variables with respect to the magnetic field
     n_t = len(b_xyz)
@@ -186,15 +176,18 @@ def plasma_calc(b_xyz=None, t_i=None, t_e=None, n_i=None, n_e=None):
     v_ae = b_si / np.sqrt(mu0 * n_e * m_e)
     v_te = c * np.sqrt(1 - 1 / (t_e * e / (m_e * c ** 2) + 1) ** 2) 	# m/s (relativ. correct)
     v_tp = c * np.sqrt(1 - 1 / (t_i * e / (m_p * c ** 2) + 1) ** 2)     # m/s
-    v_ts = np.sqrt((t_e * e + 3 * t_i * e) / m_p)              			# Sound speed formula (F. Chen, Springer 1984).
+    # Sound speed formula (F. Chen, Springer 1984).
+    v_ts = np.sqrt((t_e * e + 3 * t_i * e) / m_p)
 
     gamma_e = 1 / np.sqrt(1 - (v_te / c) ** 2)
     gamma_p = 1 / np.sqrt(1 - (v_tp / c) ** 2)
 
     l_e = c / w_pe
     l_i = c / w_pp
-    l_d = v_te / (w_pe * np.sqrt(2)) 				# Debye length scale, sqrt(2) needed because of Vte definition
-    n_d = l_d * eps0 * m_e * v_te ** 2 / e ** 2 	# number of e- in Debye sphere
+    # Debye length scale, sqrt(2) needed because of Vte definition
+    l_d = v_te / (w_pe * np.sqrt(2))
+    # number of e- in Debye sphere
+    n_d = l_d * eps0 * m_e * v_te ** 2 / e ** 2
 
     f_pe = w_pe / (2 * np.pi) 				# Hz
     f_ce = w_ce / (2 * np.pi)
@@ -208,7 +201,8 @@ def plasma_calc(b_xyz=None, t_i=None, t_e=None, n_i=None, n_e=None):
     rho_s = v_ts / (f_cp * 2 * np.pi) 							# m
 
     out = xr.Dataset(
-        {"time": b_xyz.time.data, "w_pe": (["time"], w_pe), "w_ce": (["time"], w_ce), "w_pp": (["time"], w_pp),
+        {"time": b_xyz.time.data, "w_pe": (["time"], w_pe), "w_ce": (["time"], w_ce),
+         "w_pp": (["time"], w_pp),
          "v_a": (["time"], v_a), "v_ae": (["time"], v_ae), "v_te": (["time"], v_te),
          "v_tp": (["time"], v_tp), "v_ts": (["time"], v_ts), "gamma_e": (["time"], gamma_e),
          "gamma_p": (["time"], gamma_p), "l_e": (["time"], l_e), "l_i": (["time"], l_i),

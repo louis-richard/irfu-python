@@ -19,8 +19,8 @@ from .solo_config import CONFIG
 
 def list_files(tint=None, var=None):
     """
-    Find files in the data directories of the target instrument, data type, data rate, mms_id and level during the
-    target time interval
+    Find files in the data directories of the target instrument, data type, data rate, mms_id and
+    level during the target time interval
 
     Parameters :
         tint : list
@@ -86,11 +86,12 @@ def list_files(tint=None, var=None):
                 matches = regex.match(this_file)
                 if matches:
                     this_time = parser.parse(matches.groups()[1])
-                    if (parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d")) <= this_time <= parser.parse(
-                            tint[1]) - datetime.timedelta(seconds=1)):
+                    if (parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d")) <= this_time
+                            <= parser.parse(tint[1]) - datetime.timedelta(seconds=1)):
                         if this_file not in files_out:
                             files_out.append(
-                                {"file_name": file, "timetag": "", "full_name": this_file, "file_size": ""})
+                                {"file_name": file, "timetag": "", "full_name": this_file,
+                                 "file_size": ""})
 
     in_files = files_out
 
@@ -103,8 +104,8 @@ def list_files(tint=None, var=None):
     for file in in_files:
         matches = regex.match(file["file_name"])
         if matches:
-            file_times.append(
-                (file["file_name"], parser.parse(matches.groups()[0]).timestamp(), file["timetag"], file["file_size"]))
+            file_times.append((file["file_name"], parser.parse(matches.groups()[0]).timestamp(),
+                               file["timetag"], file["file_size"]))
 
     # sort in time
     sorted_files = sorted(file_times, key=lambda x: x[1])
@@ -113,12 +114,16 @@ def list_files(tint=None, var=None):
 
     idx_min = bisect.bisect_left(times, parser.parse(tint[0]).timestamp())
 
-    # note: purposefully liberal here; include one extra file so that we always get the burst mode data
+    # note: purposefully liberal here; include one extra file so that we always get the burst mode
+    # data
     if idx_min == 0:
-        files_in_interval = [{"file_name": f[0], "timetag": f[2], "file_size": f[3]} for f in sorted_files[idx_min:]]
+        files_in_interval = []
+        for f in sorted_files[idx_min:]:
+            files_in_interval.append({"file_name": f[0], "timetag": f[2], "file_size": f[3]})
     else:
-        files_in_interval = [{"file_name": f[0], "timetag": f[2], "file_size": f[3]} for f in
-                             sorted_files[idx_min - 1:]]
+        files_in_interval = []
+        for f in sorted_files[idx_min - 1:]:
+            files_in_interval.append({"file_name": f[0], "timetag": f[2], "file_size": f[3]})
 
     local_files = []
 

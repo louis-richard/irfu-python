@@ -13,8 +13,8 @@ from . import ts_vec_xyz
 
 
 def cart2sph(inp=None, direction_flag=1):
-    """Computes magnitude, theta and phi angle from column vector xyz (first column is x ....) theta is 0 at equator.
-    direction_flag = -1  -> to make transformation in opposite direction
+    """Computes magnitude, theta and phi angle from column vector xyz (first column is x ....)
+    theta is 0 at equator. direction_flag = -1  -> to make transformation in opposite direction
 
     Parameters
     ----------
@@ -32,11 +32,7 @@ def cart2sph(inp=None, direction_flag=1):
 
     """
 
-    if inp is None:
-        raise ValueError("car2sph requires a least one argument")
-
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("Input must be a DataArray")
+    assert inp is not None and isinstance(inp, xr.DataArray)
 
     if inp.attrs["TENSOR_ORDER"] != 1 or inp.data.ndim != 2:
         raise TypeError("Input must be vector field")

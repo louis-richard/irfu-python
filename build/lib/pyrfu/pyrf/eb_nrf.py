@@ -36,36 +36,25 @@ def eb_nrf(e=None, b=None, v=None, flag=0):
 
     """
 
-    if e is None:
-        raise ValueError("eb_nrf requires at least 3 arguments")
-    elif not isinstance(e, xr.DataArray):
-        raise TypeError("e must be a DataArray")
-
-    if b is None:
-        raise ValueError("eb_nrf requires at least 3 arguments")
-    elif not isinstance(b, xr.DataArray):
-        raise TypeError("b must be a DataArray")
-
-    if v is None:
-        raise ValueError("eb_nrf requires at least 3 arguments")
-    elif not isinstance(v, xr.DataArray):
-        raise TypeError("v must be a DataArray")
+    assert e is not None and isinstance(e, xr.DataArray)
+    assert b is not None and isinstance(b, xr.DataArray)
+    assert v is not None and isinstance(v, xr.DataArray)
 
     if isinstance(flag, int):
         if flag == 1:
-            flag_case = "B"
+            flag_case = "b"
         else:
-            flag_case = "A"
+            flag_case = "a"
         
         l_direction = None
 
     elif isinstance(flag, np.ndarray) and np.size(flag) == 3:
         l_direction = flag
-        flag_case = "C"
+        flag_case = "c"
     else:
         raise TypeError("Invalid flag type")
 
-    if flag_case == "A":
+    if flag_case == "a":
         be = resample(b, e).data
 
         nl = be / np.linalg.norm(be, axis=0)[:, None]  # along the B
@@ -79,7 +68,7 @@ def eb_nrf(e=None, b=None, v=None, flag=0):
         em = dot(e, nm)
         emp = np.hstack([el, em, en])
 
-    elif flag_case == "B":
+    elif flag_case == "b":
         nn = v / np.linalg.norm(v)
         nm = normalize(np.cross(nn, np.mean(b)))
         nl = cross(nm, nn)
@@ -90,7 +79,7 @@ def eb_nrf(e=None, b=None, v=None, flag=0):
         em = dot(e, nm)
         emp = np.hstack([el, em, en])
 
-    elif flag_case == "C":
+    elif flag_case == "c":
         nn = normalize(v)
         nm = normalize(np.cross(nn, l_direction))
         nl = cross(nm, nn)

@@ -8,8 +8,8 @@
 
 def generic_minimum_residue_analysis_engine(eta=None, q=None, constraint_vector=None):
     """
-    Calculates L, V and U given the density of conserved quantity eta and transport tensor q using constraint that
-    discontinuity normal is perpendicular to the constraint vector.
+    Calculates L, V and U given the density of conserved quantity eta and transport tensor q
+    using constraint that discontinuity normal is perpendicular to the constraint vector.
 
     Implements general Generic Minimum Residue Analysis (GMRA) solution based on [8]_, [9]_
 
@@ -37,13 +37,15 @@ def generic_minimum_residue_analysis_engine(eta=None, q=None, constraint_vector=
 
     References
     ----------
-    .. [8]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (2006), Orientation
-            and motion ofa plasma discontinuity from single-spacecraft measurements: Generic residue analysis of
-            Cluster data, J. Geophys. Res., 111, A05203,doi : https://doi.org/10.1029/2005JA011538 .
+    .. [8]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (
+            2006), Orientation and motion ofa plasma discontinuity from single-spacecraft
+            measurements : Generic residue analysis of Cluster data, J. Geophys. Res., 111,
+            A05203,doi : https://doi.org/10.1029/2005JA011538 .
 
-    .. [9]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (2007), Correction to
-            ‘Orientationand motion of a plasma discontinuity from single-spacecraft measurements: Generic residue
-            analysis of Cluster data,’ J. Geophys.Res., 11 2 , A04201, doi : hhtps://doi.org/10.1029/2007JA012288 .
+    .. [9]  Sonnerup, B. U. Ö., S. Haaland, G. Paschmann, M. W. Dunlop, H. Rème, and A. Balogh (
+            2007), Correction to ‘Orientationand motion of a plasma discontinuity from
+            single-spacecraft measurements : Generic residue analysis of Cluster data´,
+            J. Geophys.Res., 11 2 , A04201, doi : hhtps://doi.org/10.1029/2007JA012288 .
 
     """
 
@@ -70,9 +72,11 @@ def generic_minimum_residue_analysis_engine(eta=None, q=None, constraint_vector=
     # dq_dq_average = shiftdim(np.nanmean(matrix_dot(dq, 1, dq, 1), 1), 1)
     # d_eta_d_q_average2_mat = detadqAver.T * detadqAver
     if eta == 0:
-        q_mat = dq_dq_average  # Eq.19
+        # Eq.19
+        q_mat = dq_dq_average
     else:
-        q_mat = dq_dq_average - d_eta_dq_aver2_mat / d_eta2_average  # Eq.15b (see correction in Sonnerup 2007)
+        # Eq.15b (see correction in Sonnerup 2007)
+        q_mat = dq_dq_average - d_eta_dq_aver2_mat / d_eta2_average
 
     # Correct Q by the number of dimensions so that eigenvalues coorespond to the variance of dq
     q_mat = q_mat / d_q.shape[1]

@@ -13,45 +13,49 @@ from ..pyrf import ts_append
 
 # noinspection PyUnboundLocalVariable
 def db_get_ts(dataset_name="", cdf_name="", tint=None):
-	"""Get variable time series in the cdf file.
+    """Get variable time series in the cdf file.
 
-	Parameters
-	----------
-	dataset_name : str
-		Name of the dataset.
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset.
 
-	cdf_name : str
-		Name of the target field in cdf file.
+    cdf_name : str
+        Name of the target field in cdf file.
 
-	tint : list of str
-		Time interval.
+    tint : list of str
+        Time interval.
 
-	Returns
-	-------
-	out : xarray.DataArray
-		Time series of the target variable.
+    Returns
+    -------
+    out : xarray.DataArray
+        Time series of the target variable.
 
-	"""
+    """
 
-	dataset = dataset_name.split("_")
+    assert isinstance(dataset_name, str)
+    assert isinstance(cdf_name, str)
+    assert tint is not None and isinstance(tint, list)
 
-	# Index of the MMS spacecraft
-	probe = dataset[0][-1]
+    dataset = dataset_name.split("_")
 
-	var = {"inst": dataset[1], "tmmode": dataset[2], "lev": dataset[3]}
+    # Index of the MMS spacecraft
+    probe = dataset[0][-1]
 
-	try:
-		var["dtype"] = dataset[4]
-	except IndexError:
-		pass	
+    var = {"inst": dataset[1], "tmmode": dataset[2], "lev": dataset[3]}
 
-	files = list_files(tint, probe, var)
+    try:
+        var["dtype"] = dataset[4]
+    except IndexError:
+        pass
 
-	for i, file in enumerate(files):
-		temp = get_ts(file, cdf_name, tint)
-		if i == 0:
-			out = temp
-		else:
-			out = ts_append(out, temp)
-			
-	return out
+    files = list_files(tint, probe, var)
+
+    for i, file in enumerate(files):
+        temp = get_ts(file, cdf_name, tint)
+        if i == 0:
+            out = temp
+        else:
+            out = ts_append(out, temp)
+
+    return out

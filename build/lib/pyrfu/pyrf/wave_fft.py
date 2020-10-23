@@ -45,8 +45,7 @@ def wave_fft(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=Non
 
     """
 
-    if not isinstance(x, xr.DataArray):
-        raise TypeError("x must be a DataArray")
+    assert x is not None and isinstance(x, xr.DataArray)
 
     if fs is None:
         dt = np.median(np.diff(x.time.data).astype(float)) * 1e-9
@@ -55,6 +54,7 @@ def wave_fft(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=Non
     n_per_seg = np.round(frame_length * fs).astype(int)  # convert ms to points
     n_overlap = np.round(frame_overlap * fs).astype(int)  # convert ms to points
 
-    f, t, s = signal.spectrogram(x, fs=fs, window=window, nperseg=n_per_seg, noverlap=n_overlap, mode='complex')
+    f, t, s = signal.spectrogram(x, fs=fs, window=window, nperseg=n_per_seg, noverlap=n_overlap,
+                                 mode='complex')
 
     return f, t, s

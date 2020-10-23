@@ -38,8 +38,8 @@ def feeps_spin_avg(inp_dataset_omni=None):
     # v5.5+ = mms1_epd_feeps_srvy_l1b_electron_spinsectnum
     trange = list(Time(inp_dataset_omni.time.data[[0, -1]], format="datetime64").isot)
 
-    dset_name = "mms{:d}_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"], var["dtype"])
-    dset_pref = "mms{:d}_epd_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"], var["dtype"])
+    dset_name = f"mms{var['mmsId']}_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+    dset_pref = f"mms{var['mmsId']}_epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
 
     spin_sectors = db_get_ts(dset_name, "_".join([dset_pref, "spinsectnum"]), trange)
 
@@ -55,11 +55,12 @@ def feeps_spin_avg(inp_dataset_omni=None):
     for spin_idx in range(1, len(spin_starts) - 1):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            spin_avg_flux[spin_idx - 1, :] = np.nanmean(data[current_start:spin_starts[spin_idx] + 1, :], axis=0)
+            spin_avg_flux[spin_idx - 1, :] = np.nanmean(
+                data[current_start:spin_starts[spin_idx] + 1, :], axis=0)
         
         current_start = spin_starts[spin_idx] + 1
 
-    out = xr.DataArray(spin_avg_flux, coords=[inp_dataset_omni.coords["time"][spin_starts], energies],
-                       dims=inp_dataset_omni.dims)
+    time = inp_dataset_omni.coords["time"].data[spin_starts]
+    out = xr.DataArray(spin_avg_flux, coords=[time, energies], dims=inp_dataset_omni.dims)
 
     return out

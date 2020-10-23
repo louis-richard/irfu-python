@@ -7,6 +7,7 @@ poynting_flux.py
 """
 
 import numpy as np
+import xarray as xr
 
 from astropy.time import Time
 
@@ -48,11 +49,8 @@ def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
 
     """
 
-    if e_xyz is None:
-        raise ValueError("Pointing_flux requires at least two inputs")
-
-    if b_xyz is None:
-        raise ValueError("Pointing_flux requires at least two inputs")
+    assert e_xyz is not None and isinstance(e_xyz, xr.DataArray)
+    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
 
     # check which Poynting flux to calculate
     flag_s_z, flag_int_s_z, flag_int_s = [False, False, False]
@@ -83,6 +81,7 @@ def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
         e = ee
         b = bb
         print("assuming the same sampling. Interpolating B and E to 2x E sampling.")
+
     """
     else
       disp('assuming the same sampling. Interpolating B and E to 2x E sampling.');
@@ -107,7 +106,6 @@ def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
 
         ss_z[idx] = 0  # set to zero points where Sz=NaN
 
-        int_s_z = ss_z
         int_s_z = np.cumsum(ss_z) / fs
         return s, s_z, int_s_z
 
@@ -115,7 +113,6 @@ def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
         ss = s
         idx = np.isnan(s[:, 2].data)
         ss[idx] = 0  # set to zero points where Sz=NaN
-        int_s = ss
+
         int_s = np.cumsum(ss) / fs
-        s_z = int_s
         return s, int_s

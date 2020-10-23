@@ -12,7 +12,8 @@ from scipy import signal
 
 
 def lowpass(inp=None, f_cut=None, fhz=None):
-    """Filter the data through low or highpass filter with max frequency f_cut and subtract from the original.
+    """Filter the data through low or highpass filter with max frequency f_cut and subtract from
+    the original.
 
     Parameters
     ----------
@@ -32,17 +33,9 @@ def lowpass(inp=None, f_cut=None, fhz=None):
 
     """
 
-    if inp is None or f_cut is None or fhz is None:
-        raise ValueError("lowpass requires at least 3 arguments")
-
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("inp must be a DataArray")
-
-    if not isinstance(f_cut, float):
-        raise TypeError("f_cut must be a float")
-
-    if not isinstance(fhz, float):
-        raise TypeError("fhz must be a float")
+    assert inp is not None and isinstance(inp, xr.DataArray)
+    assert f_cut is not None and isinstance(f_cut, float)
+    assert fhz is not None and isinstance(fhz, float)
 
     data = inp.data
 

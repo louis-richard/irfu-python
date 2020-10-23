@@ -7,7 +7,7 @@
 .. _LicenseCC: https://creativecommons.org/licenses/by/4.0/
 
 .. |Maintenance| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
-.. _Maintenance: https://github.com/louis-richard/irfu-python/network/dependencies
+.. _Maintenance: https://github.com/louis-richard/irfu-python/graphs/commit-activity
 
 .. |DocSphinx| image:: https://img.shields.io/static/v1.svg?label=sphinx&message=documentation&color=blue
 .. _DocSphinx: https://pyrfu.readthedocs.io
@@ -16,7 +16,7 @@
 .. _PyPi: https://test.pypi.org/project/pyrfu/
 
 .. |PyLint| image:: https://img.shields.io/badge/pylint-9.46-brightgreen.svg
-.. _PyLint: https://test.pypi.org/project/pyrfu/
+.. _PyLint: http://pylint.pycqa.org/en/latest/intro.html
 
 
 pyRFU

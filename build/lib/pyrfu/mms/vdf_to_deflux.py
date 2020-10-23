@@ -60,7 +60,8 @@ def vdf_to_deflux(vdf=None):
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
 
-    data_r = np.reshape(tmp_data, (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:])))
+    data_r = np.reshape(tmp_data,
+                        (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:])))
 
     if energy.ndim == 1:
         energy_mat = np.tile(energy, (len(vdf.time), np.prod(tmp_data.shape[2:]), 1))

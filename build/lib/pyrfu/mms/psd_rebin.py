@@ -14,8 +14,9 @@ from ..pyrf import calc_dt
 
 def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
     """Convert burst mode distribution into 64 energy channel distribution.
-    Functions takes the burst mode distribution sampled in two energy tables and converts to a single energy table
-    with 64 energy channels. Time resolution is halved and phi angles are averaged over adjacent times.
+    Functions takes the burst mode distribution sampled in two energy tables and converts to a
+    single energy table with 64 energy channels. Time resolution is halved and phi angles are
+    averaged over adjacent times.
 
     Parameters
     ----------
@@ -54,23 +55,19 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
 
     assert vdf is not None
     assert phi is not None
-    assert energy0 is not None
-    assert energy1 is not None
+    assert energy0 is not None and isinstance(energy0, (xr.DataArray, np.ndarray))
+    assert energy1 is not None and isinstance(energy1, (xr.DataArray, np.ndarray))
     assert step_table is not None
 
     if isinstance(energy0, xr.DataArray):
         energy0 = energy0.data
-    elif isinstance(energy0, np.ndarray):
-        pass
     else:
-        raise TypeError("energy0 must be a DataArray or array")
+        pass
 
     if isinstance(energy1, xr.DataArray):
         energy1 = energy1.data
-    elif isinstance(energy1, np.ndarray):
-        pass
     else:
-        raise TypeError("energy1 must be a DataArray or array")
+        pass
 
     step_table = step_table.data
 

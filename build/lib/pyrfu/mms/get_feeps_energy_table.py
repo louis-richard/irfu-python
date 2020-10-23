@@ -10,8 +10,8 @@ import numpy as np
 
 
 def get_feeps_energy_table(mms_id="1", eye="top", sensor_id=1):
-    """This function returns the energy table based on each spacecraft and eye; based on the table from :
-    FlatFieldResults_V3.xlsx
+    """This function returns the energy table based on each spacecraft and eye; based on the
+    table from : FlatFieldResults_V3.xlsx
     
     Parameters
     ----------
@@ -32,28 +32,33 @@ def get_feeps_energy_table(mms_id="1", eye="top", sensor_id=1):
     Notes
     -----
     Bad eyes are replaced by NaNs.
-    Different original energy tables are used depending on if the sensor head is 6-8 (ions) or not (electrons) :
+    Different original energy tables are used depending on if the sensor head is 6-8 (ions) or not
+    (electrons) :
 
         * Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
         * Ion Eyes: 6, 7, 8
 
     """
 
-    table = {"mms1-top": [14.0, 7.0, 16.0, 14.0, 14.0, 0.0, 0.0, 0.0, 14.0, 14.0, 17.0, 15.0],
-             "mms1-bot": [np.nan, 14.0, 14.0, 13.0, 14.0, 0.0, 0.0, 0.0, 14.0, 14.0, -25.0, 14.0],
-             "mms2-top": [-1.0, 6.0, -2.0, -1.0, np.nan, 0.0, np.nan, 0.0, 4.0, -1.0, -1.0, 0.0],
-             "mms2-bot": [-2.0, -1.0, -2.0, 0.0, -2.0, 15.0, np.nan, 15.0, -1.0, -2.0, -1.0, -3.0],
-             "mms3-top": [-3.0, np.nan, 2.0, -1.0, -5.0, 0.0, 0.0, 0.0, -3.0, -1.0, -3.0, np.nan],
-             "mms3-bot": [-7.0, np.nan, -5.0, -6.0, np.nan, 0.0, 0.0, 12.0, 0.0, -2.0, -3.0, -3.0],
-             "mms4-top": [np.nan, np.nan, -2.0, -5.0, -5.0, 0.0, np.nan, 0.0, -1.0, -3.0, -6.0, -6.0],
-             "mms4-bot": [-8.0, np.nan, -2.0, np.nan, np.nan, -8.0, 0.0, 0.0, -2.0, np.nan, np.nan, -4.0]}
+    assert isinstance(mms_id, str) and mms_id in [str(i) for i in range(1, 5)]
+    assert isinstance(eye, str) and eye in ["bot", "top"]
+    assert isinstance(sensor_id, int) and sensor_id in np.arange(1, 13)
+
+    table = {"mms1-top": [14., 7., 16., 14., 14., 0., 0., 0., 14., 14., 17., 15.],
+             "mms1-bot": [np.nan, 14., 14., 13., 14., 0., 0., 0., 14., 14., -25., 14.],
+             "mms2-top": [-1., 6., -2., -1., np.nan, 0., np.nan, 0., 4., -1., -1., 0.],
+             "mms2-bot": [-2., -1., -2., 0., -2., 15., np.nan, 15., -1., -2., -1., -3.],
+             "mms3-top": [-3., np.nan, 2., -1., -5., 0., 0., 0., -3., -1., -3., np.nan],
+             "mms3-bot": [-7., np.nan, -5., -6., np.nan, 0., 0., 12., 0., -2., -3., -3.],
+             "mms4-top": [np.nan, np.nan, -2., -5., -5., 0., np.nan, 0., -1., -3., -6., -6.],
+             "mms4-bot": [-8., np.nan, -2., np.nan, np.nan, -8., 0., 0., -2., np.nan, np.nan, -4.]}
 
     if 6 <= sensor_id <= 8:
-        mms_energies = [57.900000, 76.800000, 95.400000, 114.10000, 133.00000, 153.70000, 177.60000, 
-            205.10000, 236.70000, 273.20000, 315.40000, 363.80000, 419.70000, 484.20000,  558.60000,  609.90000]
+        mms_energies = [57.90, 76.80, 95.40, 114.1, 133.0, 153.7, 177.6, 205.1, 236.7, 273.2, 315.4,
+                        363.8, 419.7, 484.2, 558.6, 609.9]
     else:
-        mms_energies = [33.200000, 51.900000, 70.600000, 89.400000, 107.10000, 125.20000, 146.50000, 171.30000, 
-            200.20000, 234.00000, 273.40000, 319.40000, 373.20000, 436.00000, 509.20000, 575.80000]
+        mms_energies = [33.20, 51.90, 70.60, 89.40, 107.1, 125.2, 146.5, 171.3, 200.2, 234.0, 273.4,
+                        319.4, 373.2, 436.0, 509.2, 575.8]
 
     out = [energy + table[f"mms{mms_id}-{eye}"][sensor_id - 1] for energy in mms_energies]
 

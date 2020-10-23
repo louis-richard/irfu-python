@@ -12,15 +12,15 @@ import xarray as xr
 from ..pyrf import ts_scalar, resample
 
 
-def correct_edp_probe_timing(v_org=None):
-    """Corrects for the channel delays not accounted for in the MMS EDP processing. As described in the MMS EDP data
-    products guide.
+def correct_edp_probe_timing(v0=None):
+    """Corrects for the channel delays not accounted for in the MMS EDP processing. As described
+    in the MMS EDP data products guide.
 
     Parameters
     ----------
-    v_org : xarray.DataArray
-        Time series created from L2 sc_pot files, from the variable "mms#_edp_dcv_brst_l2" containing individual probe
-        potentials.
+    v0 : xarray.DataArray
+        Time series created from L2 sc_pot files, from the variable "mms#_edp_dcv_brst_l2"
+        containing individual probe potentials.
 
     Returns
     -------
@@ -29,34 +29,34 @@ def correct_edp_probe_timing(v_org=None):
 
     Notes
     -----
-    This function is only useful for Burst mode data. For the other telemetry modes (i.e. slow and fast) the channel
-    delays are completely negligible and the interpolation and resampling applied here will have no effect other than
-    possibly introduce numerical noise.
+    This function is only useful for Burst mode data. For the other telemetry modes (i.e. slow
+    and fast) the channel delays are completely negligible and the interpolation and resampling
+    applied here will have no effect other than possibly introduce numerical noise.
 
     """
 
     # Verify input
-    assert v_org is not None and isinstance(v_org, xr.DataArray)
+    assert v0 is not None and isinstance(v0, xr.DataArray)
 
     e_fact = [.1200, .1200, .0292]
 
     # Reconstruct E12, E34, E56 as computed in MMS processing
-    time = v_org.time.data
-    es = [ts_scalar(time, (v_org.data[:, i] - v_org.data[:, i + 1]) / fact) for i, fact in zip([0, 2, 4], e_fact)]
+    t = v0.time.data
+    es = [ts_scalar(t, np.diff(v0.data[:, i:i + 2]) / fact) for i, fact in zip([0, 2, 4], e_fact)]
 
     # Correct the time tags to create individual time series
     tau_vs = [np.timedelta64(0, "ns"), np.timedelta64(7629, "ns"), np.timedelta64(15259, "ns")]
     tau_es = [np.timedelta64(26703, "ns"), np.timedelta64(30518, "ns"), np.timedelta64(34332, "ns")]
 
     # Odds probes potential 1, 3, 5
-    vo = [ts_scalar(time + tau, v_org.data[:, i]) for tau, i in zip(tau_vs, [0, 2, 4])]
+    vo = [ts_scalar(t + tau, v0.data[:, i]) for tau, i in zip(tau_vs, [0, 2, 4])]
 
     # Electric field
     es = [ts_scalar(e.time.data + tau, e.data) for e, tau in zip(es, tau_es)]
 
     # Resample all data to time tags of V1 (i.e. timeOrig).
-    vo = [resample(v, v_org) for v in vo]
-    es = [resample(e, v_org) for e in es]
+    vo = [resample(v, v0) for v in vo]
+    es = [resample(e, v0) for e in es]
 
     # Recompute individual even probe potentials 2, 4, 6
     ve = [v - e * fact for v, e, fact in zip(vo, es, e_fact)]
@@ -65,6 +65,6 @@ def correct_edp_probe_timing(v_org=None):
 
     # Create the new time series with the corrected values
     probe_index = np.arange(1, 7)
-    v_corrected = xr.DataArray(v, coords=[time, probe_index], dims=["time", "probe"])
+    v_corrected = xr.DataArray(v, coords=[t, probe_index], dims=["time", "probe"])
 
     return v_corrected

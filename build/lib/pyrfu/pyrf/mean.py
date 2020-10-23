@@ -37,32 +37,22 @@ def mean(inp=None, r=None, b=None, z=None):
 
     """
 
-    # Check if there are at least 3 arguments
-    if inp is None or r is None or b is None:
-        raise ValueError("mean requires at least 3 arguments")
-
-    # Check if inp is DataArray
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("inp must be a DataArray")
-
-    # Check if r is DataArray
-    if not isinstance(r, xr.DataArray):
-        raise TypeError("r must be a DataArray")
-
-    # Check if b is DataArray
-    if not isinstance(b, xr.DataArray):
-        raise TypeError("b must be a DataArray")
+    assert inp is not None and isinstance(inp, xr.DataArray)
+    assert r is not None and isinstance(r, xr.DataArray)
+    assert b is not None and isinstance(b, xr.DataArray)
 
     #
     if z is not None:
         flag_dipole = True
 
-        if not isinstance(z, xr.DataArray):
-            raise TypeError("z must be a DataArray")
-        elif len(z) != len(inp):
-            zz = resample(z, inp)
+        if isinstance(z, xr.DataArray):
+            if len(z) != len(inp):
+                zz = resample(z, inp)
+            else:
+                zz = z
         else:
-            zz = z
+            raise TypeError("z must be a DataArray")
+
     else:
         flag_dipole = False
         zz = None
@@ -93,7 +83,10 @@ def mean(inp=None, r=None, b=None, z=None):
     xv = np.cross(yv, zv)
 
     # in case rotation axis is used as reference uncomment next line
-    # rot_axis=rr;rot_axis(:,[2 3])=0;yv=irf_norm(irf_cross(irf_cross(bb,rot_axis),bb));xv=irf_cross(yv,zv);
+    # rot_axis=rr
+    # rot_axis(:,[2 3])=0
+    # yv=irf_norm(irf_cross(irf_cross(bb,rot_axis), bb));
+    # xv=irf_cross(yv,zv);
 
     out_data = np.zeros(inp.data.shape)
     out_data[:, 0] = np.sum(xv * inp, axis=1)

@@ -6,123 +6,129 @@ get_eis_omni.py
 @author : Louis RICHARD
 """
 
+import numpy as np
+
 from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_omni(inp_str="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
-	"""Computes omni directional energy spectrum of the target data unit for the target specie over the target energy
-	range.
+def get_eis_omni(tar_var="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
+    """Computes omni directional energy spectrum of the target data unit for the target specie
+    over the target energy range.
 
-	Parameters
-	----------
-	inp_str : str
-		Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
+    Parameters
+    ----------
+    tar_var : str
+        Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
 
-	tint : list of str
-		Time interval.
+    tint : list of str
+        Time interval.
 
-	mms_id : int or float or str
-		Index of the spacecraft.
+    mms_id : int or float or str
+        Index of the spacecraft.
 
-	verbose : bool
-		Set to True to follow the loading. Default is True.
+    verbose : bool
+        Set to True to follow the loading. Default is True.
 
-	Returns
-	--------
-	out : xarray.DataArray
-		Energy spectrum of the target data unit for the target specie in omni direction.
+    Returns
+    --------
+    out : xarray.DataArray
+        Energy spectrum of the target data unit for the target specie in omni direction.
 
-	"""
+    """
 
-	if not isinstance(mms_id, int):
-		mms_id = int(mms_id)
+    assert isinstance(tar_var, str)
+    assert tint is not None and isinstance(tint, list)
+    assert isinstance(tint[0], str) and isinstance(tint[1], str)
+    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
+    assert isinstance(verbose, bool)
 
-	data_unit, data_type, specie, data_rate, data_lvl = inp_str.split("_")
+    mms_id = int(mms_id)
 
-	var = {"mms_id": mms_id, "inst": "epd-eis"}
+    data_unit, data_type, specie, data_rate, data_lvl = tar_var.split("_")
 
-	pref = f"mms{mms_id:d}_epd_eis"
+    var = {"mms_id": mms_id, "inst": "epd-eis"}
 
-	if data_rate == "brst":
-		var["tmmode"] = data_rate
+    pref = f"mms{mms_id:d}_epd_eis"
 
-		pref = f"{pref}_{data_rate}"
-	elif data_rate == "srvy":
-		var["tmmode"] = data_rate
+    if data_rate == "brst":
+        var["tmmode"] = data_rate
+        pref = f"{pref}_{data_rate}"
 
-		pref = pref
-	else:
-		raise ValueError("Invalid data rate")
+    elif data_rate == "srvy":
+        var["tmmode"] = data_rate
 
-	var["lev"] = data_lvl
+    else:
+        raise ValueError("Invalid data rate")
 
-	if data_type == "electronenergy":
-		if specie == "electron":
-			var["dtype"], var["specie"] = [data_type, specie]
+    var["lev"] = data_lvl
 
-			pref = f"{pref}_{data_type}_{specie}"
-		else:
-			raise ValueError("invalid specie")
-	elif data_type == "extof":
-		if specie == "proton":
-			var["dtype"], var["specie"] = [data_type, specie]
+    if data_type == "electronenergy":
+        if specie == "electron":
+            var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = f"{pref}_{data_type}_{specie}"
-		elif specie == "oxygen":
-			var["dtype"], var["specie"] = [data_type, specie]
+            pref = f"{pref}_{data_type}_{specie}"
+        else:
+            raise ValueError("invalid specie")
+    elif data_type == "extof":
+        if specie == "proton":
+            var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = f"{pref}_{data_type}_{specie}"
-		elif specie == "alpha":
-			var["dtype"], var["specie"] = [data_type, specie]
+            pref = f"{pref}_{data_type}_{specie}"
+        elif specie == "oxygen":
+            var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = f"{pref}_{data_type}_{specie}"
-		else:
-			raise ValueError("invalid specie")
-	elif data_type == "phxtof":
-		if specie == "proton":
-			var["dtype"], var["specie"] = [data_type, specie]
+            pref = f"{pref}_{data_type}_{specie}"
+        elif specie == "alpha":
+            var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = f"{pref}_{data_type}_{specie}"
-		elif specie == "oxygen":
-			var["dtype"], var["specie"] = [data_type, specie]
+            pref = f"{pref}_{data_type}_{specie}"
+        else:
+            raise ValueError("invalid specie")
+    elif data_type == "phxtof":
+        if specie == "proton":
+            var["dtype"], var["specie"] = [data_type, specie]
 
-			pref = f"{pref}_{data_type}_{specie}"
-		else:
-			raise ValueError("Invalid specie")
-	else:
-		raise ValueError("Invalid data type")
+            pref = f"{pref}_{data_type}_{specie}"
+        elif specie == "oxygen":
+            var["dtype"], var["specie"] = [data_type, specie]
 
-	files = list_files(tint, mms_id, var)
-	
-	file_version = int(files[0].split("_")[-1][1])
+            pref = f"{pref}_{data_type}_{specie}"
+        else:
+            raise ValueError("Invalid specie")
+    else:
+        raise ValueError("Invalid data type")
 
-	var["version"] = file_version
+    files = list_files(tint, mms_id, var)
 
-	if data_unit.lower() in ["flux", "counts", "cps"]:
-		suf = f"P{file_version:d}_{data_unit.lower()}_t"
-	else:
-		raise ValueError("Invalid data unit")
+    file_version = int(files[0].split("_")[-1][1])
 
-	dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}_{var['lev']}_{var['dtype']}"
-	cdf_names = [f"{pref}_{suf}{t:d}" for t in range(6)]
+    var["version"] = file_version
 
-	out_dict = {}
+    if data_unit.lower() in ["flux", "counts", "cps"]:
+        suf = f"P{file_version:d}_{data_unit.lower()}_t"
+    else:
+        raise ValueError("Invalid data unit")
 
-	flux_omni = None
+    dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+    cdf_names = [f"{pref}_{suf}{t:d}" for t in range(6)]
 
-	for i, cdfname in enumerate(cdf_names):
-		scope_key = f"t{i:d}"
-		
-		if verbose:
-			print(f"Loading {cdfname}...")
+    out_dict = {}
 
-		out_dict[scope_key] = db_get_ts(dset_name, cdfname, tint)
-		try:
-			flux_omni += out_dict[scope_key]
-		except TypeError:
-			flux_omni = out_dict[scope_key]
+    flux_omni = None
 
-	flux_omni /= 6
+    for i, cdfname in enumerate(cdf_names):
+        scope_key = f"t{i:d}"
 
-	return flux_omni
+        if verbose:
+            print(f"Loading {cdfname}...")
+
+        out_dict[scope_key] = db_get_ts(dset_name, cdfname, tint)
+        try:
+            flux_omni += out_dict[scope_key]
+        except TypeError:
+            flux_omni = out_dict[scope_key]
+
+    flux_omni /= 6
+
+    return flux_omni

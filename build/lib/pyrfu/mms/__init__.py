@@ -55,3 +55,4 @@ from .dpflux_to_vdf import dpflux_to_vdf
 from .deflux_to_vdf import deflux_to_vdf
 
 from .fk_power_spectrum import fk_power_spectrum
+from .lh_wave_analysis import lh_wave_analysis

@@ -48,7 +48,8 @@ def fft_bandpass(inp=None, f_min=None, f_max=None):
 
     inp_time, inp_data = [inp.time.data, inp.data]
 
-    # Make sure number of elements is an even number, if odd remove last element to make an even number
+    # Make sure number of elements is an even number, if odd remove last element to make an even
+    # number
     n_els = len(inp_data)
 
     if n_els % 2:

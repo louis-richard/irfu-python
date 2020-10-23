@@ -13,27 +13,27 @@ register_matplotlib_converters()
 
 
 def colorbar(im, ax, pad=0.01):
-	"""Add colorbar to ax corresponding to im.
-	
-	Parameters
-	----------
-	im : to fill
-		to fill.
+    """Add colorbar to ax corresponding to im.
 
-	ax : matplotlib.pyplot.subplotsaxes
-		Axis of plot.
+    Parameters
+    ----------
+    im : to fill
+        to fill.
 
-	pad : float, optional
+    ax : matplotlib.pyplot.subplotsaxes
+        Axis of plot.
+
+    pad : float, optional
 
 
-	Returns
-	-------
-	cax : coloraxis
+    Returns
+    -------
+    cax : coloraxis
 
-	"""
-	pos = ax.get_position()
-	fig = plt.gcf()
-	cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])
-	fig.colorbar(im, cax)
+    """
+    pos = ax.get_position()
+    fig = plt.gcf()
+    cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])
+    fig.colorbar(im, cax)
 
-	return cax
+    return cax

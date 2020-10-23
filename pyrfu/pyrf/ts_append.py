@@ -32,8 +32,11 @@ def ts_append(inp1=None, inp2=None):
 
     """
 
-    assert inp1 is not None and isinstance(inp1, xr.DataArray)
+    assert inp1 is None or isinstance(inp1, xr.DataArray)
     assert inp2 is not None and isinstance(inp2, xr.DataArray)
+
+    if inp1 is None:
+        return inp2
 
     out_data = {}
 

@@ -33,8 +33,9 @@ def struct_func(x=None, scale=None, order=2):
     Returns
     -------
     values : xarray.DataArray
-        An xarray containing the structure functions, one per product in the original time series. The index coordinate
-        contains the scale value, and the attribute 'order' keeps a record on the order used for its calculation.
+        An xarray containing the structure functions, one per product in the original time
+        series. The index coordinate contains the scale value, and the attribute 'order' keeps a
+        record on the order used for its calculation.
 
     """
 
@@ -59,10 +60,7 @@ def struct_func(x=None, scale=None, order=2):
     c = x.dims[1]
     cols = x.coords[c].data
 
-    result = xr.DataArray(result,
-                          coords=[scale, cols],
-                          dims=["scale", c],
-                          attrs=x.attrs)
+    result = xr.DataArray(result, coords=[scale, cols], dims=["scale", c], attrs=x.attrs)
 
     result.attrs['order'] = order
 
