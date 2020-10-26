@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyrfu.mms.make_model_vdf &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.make_model_vdf</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.make_model_vdf</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">make_model_vdf.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="kn">from</span> <span class="nn">astropy</span> <span class="kn">import</span> <span class="n">constants</span>
+
+<span class="kn">from</span> <span class="nn">..pyrf</span> <span class="kn">import</span> <span class="n">resample</span><span class="p">,</span> <span class="n">dec_par_perp</span><span class="p">,</span> <span class="n">norm</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">rotate_tensor</span>
+
+
+<div class="viewcode-block" id="make_model_vdf"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.make_model_vdf.make_model_vdf">[docs]</a><span class="k">def</span> <span class="nf">make_model_vdf</span><span class="p">(</span><span class="n">vdf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sc_pot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">v_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Make a general bi-Maxwellian distribution function based on particle moment data in the same</span>
+<span class="sd">    format as PDist.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vdf : xarray.Dataset</span>
+<span class="sd">        Particle distribution (skymap).</span>
+
+<span class="sd">    b_xyz : xarray.DataArray</span>
+<span class="sd">        Time series of the background magnetic field.</span>
+
+<span class="sd">    sc_pot : xarray.DataArray</span>
+<span class="sd">        Time series of the spacecraft potential.</span>
+
+<span class="sd">    n : xarray.DataArray</span>
+<span class="sd">        Time series of the number density.</span>
+
+<span class="sd">    v_xyz : xarray.DataArray</span>
+<span class="sd">        Time series of the bulk velocity.</span>
+
+<span class="sd">    t_xyz : xarray.DataArray</span>
+<span class="sd">        Time series of the temperature tensor.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    model_vdf : xarray.Dataset</span>
+<span class="sd">        Distribution function in the same format as vdf.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    pyrfu.mms.calculate_epsilon : Calculates epsilon parameter using model distribution.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from pyrfu import mms</span>
+<span class="sd">    &gt;&gt;&gt; model_vdf = mms.make_model_vdf(vdf_e, b_xyz, sc_pot, n_e, v_xyz_e, t_xyz_e)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Check that PDist and moments have the same times</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    if abs(median(diff(PDist.time-n.time))) &gt; 0</span>
+<span class="sd">        modelPDist = NaN;</span>
+<span class="sd">        irf.log(&#39;critical&#39;,&#39;PDist and moments have different times.&#39;)</span>
+<span class="sd">        return;</span>
+<span class="sd">    end</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="n">vdf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vdf</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">b_xyz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">sc_pot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sc_pot</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">v_xyz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v_xyz</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">t_xyz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t_xyz</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+
+    <span class="c1"># Convert to SI units</span>
+    <span class="n">vdf</span> <span class="o">/=</span> <span class="mf">1e18</span>
+
+    <span class="c1"># Resample b_xyz and sc_pot to particle data resolution</span>
+    <span class="n">b_xyz</span><span class="p">,</span> <span class="n">sc_pot</span> <span class="o">=</span> <span class="p">[</span><span class="n">resample</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">resample</span><span class="p">(</span><span class="n">sc_pot</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+
+    <span class="c1"># Define directions based on b_xyz and v_xyz, calculate relevant temperatures</span>
+    <span class="n">t_xyzfac</span> <span class="o">=</span> <span class="n">rotate_tensor</span><span class="p">(</span><span class="n">t_xyz</span><span class="p">,</span> <span class="s2">&quot;fac&quot;</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="s2">&quot;pp&quot;</span><span class="p">)</span>  <span class="c1"># N.B makes final distribution gyrotropic</span>
+    <span class="n">t_para</span><span class="p">,</span> <span class="n">t_ratio</span> <span class="o">=</span> <span class="p">[</span><span class="n">t_xyzfac</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">t_xyzfac</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">t_xyzfac</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span>
+
+    <span class="n">v_para</span><span class="p">,</span> <span class="n">v_perp</span><span class="p">,</span> <span class="n">alpha</span> <span class="o">=</span> <span class="n">dec_par_perp</span><span class="p">(</span><span class="n">v_xyz</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">)</span>
+
+    <span class="n">v_perp_mag</span><span class="p">,</span> <span class="n">b_xyz_mag</span> <span class="o">=</span> <span class="p">[</span><span class="n">norm</span><span class="p">(</span><span class="n">v_perp</span><span class="p">),</span> <span class="n">norm</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">)]</span>
+    <span class="n">v_perp_dir</span><span class="p">,</span> <span class="n">b_xyz_dir</span> <span class="o">=</span> <span class="p">[</span><span class="n">v_perp</span> <span class="o">/</span> <span class="n">v_perp_mag</span><span class="p">,</span> <span class="n">b_xyz</span> <span class="o">/</span> <span class="n">b_xyz_mag</span><span class="p">]</span>
+
+    <span class="c1"># Define constants</span>
+    <span class="n">qe</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="c1"># Check whether particles are electrons or ions</span>
+    <span class="k">if</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+        <span class="n">p_mass</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_e</span><span class="o">.</span><span class="n">value</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Particles are electrons&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;i&quot;</span><span class="p">:</span>
+        <span class="n">p_mass</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_p</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="o">-</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Particles are ions&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid specie&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Convert moments to SI units</span>
+    <span class="n">vth_para</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">t_para</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+
+    <span class="n">v_perp_mag</span><span class="o">.</span><span class="n">data</span> <span class="o">*=</span> <span class="mf">1e3</span>
+    <span class="n">v_para</span><span class="o">.</span><span class="n">data</span> <span class="o">*=</span> <span class="mf">1e3</span>
+    <span class="n">n</span><span class="o">.</span><span class="n">data</span> <span class="o">*=</span> <span class="mf">1e6</span>
+
+    <span class="c1"># Defines dimensions of array below</span>
+    <span class="n">n_ti</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">n_ph</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">phi</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
+    <span class="n">n_th</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">theta</span><span class="p">)</span>
+    <span class="n">n_en</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;energy0&quot;</span><span class="p">])</span>
+
+    <span class="c1"># Get energy array</span>
+    <span class="n">energy</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">energy</span>
+
+    <span class="c1"># Define Cartesian coordinates</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_ti</span><span class="p">,</span> <span class="n">n_ph</span><span class="p">,</span> <span class="n">n_th</span><span class="p">))</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_ti</span><span class="p">,</span> <span class="n">n_en</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_ti</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span>
+            <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">theta</span><span class="o">.</span><span class="n">data</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
+        <span class="n">y</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span>
+            <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">theta</span><span class="o">.</span><span class="n">data</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
+        <span class="n">z</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_ph</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">theta</span><span class="o">.</span><span class="n">data</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
+        <span class="n">r</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">energy</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">))</span>
+
+    <span class="n">r</span><span class="p">[</span><span class="n">r</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="c1"># Define rotation vectors based on B and Ve directions</span>
+    <span class="n">r_x</span><span class="p">,</span> <span class="n">r_y</span><span class="p">,</span> <span class="n">r_z</span> <span class="o">=</span> <span class="n">v_perp_dir</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">b_xyz_dir</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v_perp_dir</span><span class="o">.</span><span class="n">data</span><span class="p">),</span> <span class="n">b_xyz_dir</span><span class="o">.</span><span class="n">data</span>
+
+    <span class="c1"># Rotated coordinate system for computing bi-Maxwellian distribution</span>
+    <span class="n">x_p</span><span class="p">,</span> <span class="n">y_p</span><span class="p">,</span> <span class="n">z_p</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_ti</span><span class="p">,</span> <span class="n">n_ph</span><span class="p">,</span> <span class="n">n_th</span><span class="p">))</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_ti</span><span class="p">):</span>
+        <span class="n">x_p</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_x</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_x</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">z</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_x</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">y_p</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_y</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_y</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">z</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_y</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">z_p</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_z</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_z</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">z</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_z</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+
+    <span class="c1"># Make 4D position matrix</span>
+    <span class="n">x_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x_p</span><span class="p">,</span> <span class="p">[</span><span class="n">n_en</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">x_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">x_p</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+
+    <span class="n">y_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x_p</span><span class="p">,</span> <span class="p">[</span><span class="n">n_en</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">y_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">y_p</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+
+    <span class="n">z_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x_p</span><span class="p">,</span> <span class="p">[</span><span class="n">n_en</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">z_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">z_p</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+
+    <span class="n">r_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">[</span><span class="n">n_ph</span><span class="p">,</span> <span class="n">n_th</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">r_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">r_mat</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># Can use 4D matrices. Too much memory is used for my computer; too slow for large files.</span>
+    <span class="c1"># Make 4D matrices required for distribution calculation</span>
+    <span class="c1"># nmat = repmat(n.data,1,lengthenergy,lengthphi,lengththeta);</span>
+    <span class="c1"># Tratmat = repmat(Trat.data,1,lengthenergy,lengthphi,lengththeta);</span>
+    <span class="c1"># Vpmagmat = repmat(Vpmag.data,1,lengthenergy,lengthphi,lengththeta);</span>
+    <span class="c1"># Vparmat = repmat(Vpar.data,1,lengthenergy,lengthphi,lengththeta);</span>
+    <span class="c1"># vthparmat = repmat(vthpar.data,1,lengthenergy,lengthphi,lengththeta);</span>
+
+    <span class="c1"># Calculate bi-Maxwellian distribution function</span>
+    <span class="c1"># bimaxdist = nmat * Tratmat./(sqrt(pi^3)*vthparmat.^3);</span>
+    <span class="c1"># bimaxdist = bimaxdist.*exp(-(xp.*rmat-Vpmagmat).^2./(vthparmat.^2).*Tratmat);</span>
+    <span class="c1"># bimaxdist = bimaxdist.*exp(-(yp.*rmat).^2./(vthparmat.^2).*Tratmat);</span>
+    <span class="c1"># bimaxdist = bimaxdist.*exp(-(zp.*rmat-Vparmat).^2./(vthparmat.^2));</span>
+
+    <span class="c1"># Construct bi-Maxwellian distribution function</span>
+    <span class="n">bi_max_dist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">r_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_ti</span><span class="p">):</span>
+        <span class="n">coeff</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">t_ratio</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">vth_para</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="n">bi_max_temp</span> <span class="o">=</span> <span class="n">coeff</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+            <span class="o">-</span><span class="p">(</span><span class="n">x_p</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_mat</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">-</span> <span class="n">v_perp_mag</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">vth_para</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span>
+            <span class="n">t_ratio</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
+        <span class="n">bi_max_temp</span> <span class="o">=</span> <span class="n">bi_max_temp</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+            <span class="o">-</span><span class="p">(</span><span class="n">y_p</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_mat</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">vth_para</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">t_ratio</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
+        <span class="n">bi_max_temp</span> <span class="o">=</span> <span class="n">bi_max_temp</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+            <span class="o">-</span><span class="p">(</span><span class="n">z_p</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">r_mat</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">-</span> <span class="n">v_para</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">vth_para</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="n">bi_max_dist</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">bi_max_temp</span>
+
+    <span class="c1"># Make modelPDist file for output</span>
+    <span class="n">model_vdf</span> <span class="o">=</span> <span class="n">vdf</span>
+    <span class="n">model_vdf</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">bi_max_dist</span>
+    <span class="n">model_vdf</span> <span class="o">*=</span> <span class="mf">1e18</span>
+
+    <span class="k">return</span> <span class="n">model_vdf</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.make_model_vdf</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
+    </div>
+  </body>
+</html>

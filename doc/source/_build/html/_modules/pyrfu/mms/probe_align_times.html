@@ -1,0 +1,257 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyrfu.mms.probe_align_times &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.probe_align_times</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.probe_align_times</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">probe_align_times.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">from</span> <span class="nn">astropy.time</span> <span class="kn">import</span> <span class="n">Time</span>
+
+<span class="kn">from</span> <span class="nn">..pyrf</span> <span class="kn">import</span> <span class="n">ts_scalar</span><span class="p">,</span> <span class="n">resample</span><span class="p">,</span> <span class="n">extend_tint</span><span class="p">,</span> <span class="n">time_clip</span><span class="p">,</span> <span class="n">convert_fac</span>
+
+
+<div class="viewcode-block" id="probe_align_times"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.probe_align_times.probe_align_times">[docs]</a><span class="k">def</span> <span class="nf">probe_align_times</span><span class="p">(</span><span class="n">e_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sc_pot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">z_phase</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plot_fig</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns times when field-aligned electrostatic waves can be characterized using</span>
+<span class="sd">    interferometry techniques. The same alignment conditions as Graham et al., JGR, 2015 are</span>
+<span class="sd">    used. Optional figure produced  showing E_FAC, probe fields, and probe potentials to view</span>
+<span class="sd">    time delays between electric fields aligned with B.  Currently p5-p6 are not used in this</span>
+<span class="sd">    routine; the analysis is the same as the one used for Cluster.</span>
+
+<span class="sd">    For the figure the panels are :</span>
+<span class="sd">        * (a) B in DMPA Coordinates</span>
+<span class="sd">        * (b) Magnitude of B in and out of the spin plane</span>
+<span class="sd">        * (c) Angles between B and probes 1 and 3 in the spin plane (angle between 0 and 90 degrees)</span>
+<span class="sd">        * (d) Spacecraft potential from probes perpendicular to B</span>
+<span class="sd">        * (e) E fields from p1-p4 and SC for probes closely aligned with B</span>
+<span class="sd">        * (f) E in field-aligned coordinates</span>
+<span class="sd">        * (g) E from probes p1-p2 and p3-p4.</span>
+
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    e_xyz : xarray.DataArray</span>
+<span class="sd">        Electric field in DSL coordinates, brst mode.</span>
+
+<span class="sd">    b_xyz : xarray.DataArray</span>
+<span class="sd">        Magnetic field in DMPA coordinates.</span>
+
+<span class="sd">    sc_pot : xarray.DataArray</span>
+<span class="sd">        L2 Spacecraft potential data. Timing corrections are applied in this</span>
+
+<span class="sd">    z_phase : xarray.DataArray</span>
+<span class="sd">        Spacecraft phase (z_phase). Obtained from ancillary_defatt.</span>
+
+<span class="sd">    plot_fig : bool, optional</span>
+<span class="sd">        Flag to plot fields and potentials which satisfy alignment conditions. Default is False</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    start_time1 : to fill</span>
+<span class="sd">        Start times of intervals which satisfy the probe alignment conditions for probe combinates</span>
+<span class="sd">        p1-p2.</span>
+
+<span class="sd">    end_time1 : to fill</span>
+<span class="sd">        End times of intervals which satisfy the probe alignment conditions for probe combinates</span>
+<span class="sd">        p1-p2.</span>
+
+<span class="sd">    start_time3 : to fill</span>
+<span class="sd">        Start times of intervals which satisfy the probe alignment conditions for probe combinates</span>
+<span class="sd">        p3-p4.</span>
+
+<span class="sd">    end_time3 : to fill</span>
+<span class="sd">        End times of intervals which satisfy the probe alignment conditions for probe combinates</span>
+<span class="sd">        p3-p4.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Correct for timing in spacecraft potential data.</span>
+    <span class="n">e12</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="o">.</span><span class="mi">120</span><span class="p">)</span>
+    <span class="n">e34</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="o">.</span><span class="mi">120</span><span class="p">)</span>
+    <span class="n">e56</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">])</span> <span class="o">/</span> <span class="o">.</span><span class="mi">0292</span><span class="p">)</span>
+
+    <span class="n">v1</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">v3</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">7629</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span>
+    <span class="n">v5</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">15259</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">])</span>
+
+    <span class="n">e12</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">26703</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">)</span>
+    <span class="n">e34</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">30518</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">)</span>
+    <span class="n">e56</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">34332</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">)</span>
+
+    <span class="n">v1</span><span class="p">,</span> <span class="n">v3</span><span class="p">,</span> <span class="n">v5</span> <span class="o">=</span> <span class="p">[</span><span class="n">resample</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">v1</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">[</span><span class="n">v1</span><span class="p">,</span> <span class="n">v3</span><span class="p">,</span> <span class="n">v5</span><span class="p">]]</span>
+    <span class="n">e12</span><span class="p">,</span> <span class="n">e34</span><span class="p">,</span> <span class="n">e56</span> <span class="o">=</span> <span class="p">[</span><span class="n">resample</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">v1</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="p">[</span><span class="n">e12</span><span class="p">,</span> <span class="n">e34</span><span class="p">,</span> <span class="n">e56</span><span class="p">]]</span>
+
+    <span class="n">v2</span> <span class="o">=</span> <span class="n">v1</span> <span class="o">-</span> <span class="n">e12</span> <span class="o">*</span> <span class="mf">0.120</span>
+    <span class="n">v4</span> <span class="o">=</span> <span class="n">v3</span> <span class="o">-</span> <span class="n">e34</span> <span class="o">*</span> <span class="mf">0.120</span>
+    <span class="n">v6</span> <span class="o">=</span> <span class="n">v5</span> <span class="o">-</span> <span class="n">e56</span> <span class="o">*</span> <span class="mf">0.0292</span>
+
+    <span class="n">sc_pot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">v1</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v2</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v3</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v4</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v5</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v6</span><span class="o">.</span><span class="n">data</span><span class="p">])</span>
+
+    <span class="n">sc_pot</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">sc_pot</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">v1</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">)],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;probe&quot;</span><span class="p">])</span>
+
+    <span class="n">t_limit</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">Time</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;datetime64&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">isot</span><span class="p">)</span>
+
+    <span class="n">t_limit_long</span> <span class="o">=</span> <span class="n">extend_tint</span><span class="p">(</span><span class="n">t_limit</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+
+    <span class="n">b_xyz</span> <span class="o">=</span> <span class="n">time_clip</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">t_limit_long</span><span class="p">)</span>
+    <span class="n">b_xyz</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">)</span>
+    <span class="n">e_xyz</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">e_xyz</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">)</span>
+
+    <span class="n">z_phase</span> <span class="o">=</span> <span class="n">time_clip</span><span class="p">(</span><span class="n">z_phase</span><span class="p">,</span> <span class="n">t_limit_long</span><span class="p">)</span>
+
+    <span class="c1"># Remove repeated z_phase elements</span>
+    <span class="n">n_ph</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">z_phase</span><span class="p">)</span>
+    <span class="n">no_repeat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_ph</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_ph</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">z_phase</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">z_phase</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">z_phase</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">z_phase</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]:</span>
+                <span class="n">z_phase</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span> <span class="o">+=</span> <span class="mf">360.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">no_repeat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">z_phase_time</span> <span class="o">=</span> <span class="n">z_phase</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="n">no_repeat</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">z_phase_data</span> <span class="o">=</span> <span class="n">z_phase</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">no_repeat</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">z_phase</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">z_phase_time</span><span class="p">,</span> <span class="n">z_phase_data</span><span class="p">)</span>
+    <span class="n">z_phase</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">z_phase</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">)</span>
+
+    <span class="c1"># Perform rotation on e_xyz into field - aligned coordinates</span>
+    <span class="n">e_fac</span> <span class="o">=</span> <span class="n">convert_fac</span><span class="p">(</span><span class="n">e_xyz</span><span class="p">,</span> <span class="n">b_xyz</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Probe angles in DSL or whatever</span>
+    <span class="n">idx_a</span><span class="p">,</span> <span class="n">idx_b</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
+    <span class="n">phase_p</span> <span class="o">=</span> <span class="p">[</span><span class="n">z_phase</span><span class="o">.</span><span class="n">data</span> <span class="o">/</span> <span class="mi">180</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">idx_a</span><span class="p">,</span> <span class="n">idx_b</span><span class="p">)]</span>
+
+    <span class="n">rp</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">60</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phase</span><span class="p">),</span> <span class="mi">60</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phase</span><span class="p">)])</span> <span class="k">for</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">phase_p</span><span class="p">]</span>
+
+    <span class="c1"># Calculate angles between probes and direction of B in the spin plane.</span>
+    <span class="n">theta_pb</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
+        <span class="n">theta_pb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">rp</span><span class="p">[</span><span class="n">i</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">b_xyz</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">rp</span><span class="p">[</span><span class="n">i</span><span class="p">][:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">b_xyz</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">theta_pb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rp</span><span class="p">[</span><span class="n">i</span><span class="p">][:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">rp</span><span class="p">[</span><span class="n">i</span><span class="p">][:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">theta_pb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">b_xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">theta_pb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">theta_pb</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+    <span class="n">theta_pb</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">theta_pb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">theta_pb</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">theta_pb</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="n">sc_v12</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">sc_v34</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="n">e1</span><span class="p">,</span> <span class="n">e3</span> <span class="o">=</span> <span class="p">[(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">sc_v</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e3</span> <span class="o">/</span> <span class="mi">60</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sc_v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">sc_v34</span><span class="p">,</span> <span class="n">sc_v12</span><span class="p">])]</span>
+    <span class="n">e2</span><span class="p">,</span> <span class="n">e4</span> <span class="o">=</span> <span class="p">[(</span><span class="n">sc_v</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e3</span> <span class="o">/</span> <span class="mi">60</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sc_v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">sc_v34</span><span class="p">,</span> <span class="n">sc_v12</span><span class="p">])]</span>
+
+    <span class="n">es</span> <span class="o">=</span> <span class="p">[</span><span class="n">e1</span><span class="p">,</span> <span class="n">e2</span><span class="p">,</span> <span class="n">e3</span><span class="p">,</span> <span class="n">e4</span><span class="p">]</span>
+
+    <span class="n">e12</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e3</span> <span class="o">/</span> <span class="mi">120</span>
+    <span class="n">e34</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e3</span> <span class="o">/</span> <span class="mi">120</span>
+
+    <span class="n">idx_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b_xyz</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">b_xyz</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">b_xyz</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span>
+    <span class="n">thresh_ang</span> <span class="o">=</span> <span class="mf">25.0</span>
+
+    <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">theta</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">es</span><span class="p">,</span> <span class="n">theta_pb</span><span class="p">):</span>
+        <span class="n">e</span><span class="p">[</span><span class="n">theta</span> <span class="o">&gt;</span> <span class="n">thresh_ang</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">e</span><span class="p">[</span><span class="n">idx_b</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">sc_v12</span><span class="p">[</span><span class="n">theta_pb</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">thresh_ang</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">sc_v34</span><span class="p">[</span><span class="n">theta_pb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">thresh_ang</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="n">sc_v12</span><span class="p">[</span><span class="n">idx_b</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">sc_v34</span><span class="p">[</span><span class="n">idx_b</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">if</span> <span class="n">plot_fig</span><span class="p">:</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">9</span><span class="p">))</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=.</span><span class="mi">08</span><span class="p">,</span> <span class="n">right</span><span class="o">=.</span><span class="mi">92</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=.</span><span class="mi">05</span><span class="p">,</span> <span class="n">top</span><span class="o">=.</span><span class="mi">95</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">return</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.probe_align_times</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
+    </div>
+  </body>
+</html>

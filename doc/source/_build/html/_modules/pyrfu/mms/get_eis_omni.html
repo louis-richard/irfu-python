@@ -1,0 +1,218 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyrfu.mms.get_eis_omni &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.get_eis_omni</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.get_eis_omni</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">get_eis_omni.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">.list_files</span> <span class="kn">import</span> <span class="n">list_files</span>
+<span class="kn">from</span> <span class="nn">.db_get_ts</span> <span class="kn">import</span> <span class="n">db_get_ts</span>
+
+
+<div class="viewcode-block" id="get_eis_omni"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.get_eis_omni.get_eis_omni">[docs]</a><span class="k">def</span> <span class="nf">get_eis_omni</span><span class="p">(</span><span class="n">tar_var</span><span class="o">=</span><span class="s2">&quot;Flux_extof_proton_srvy_l2&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mms_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Computes omni directional energy spectrum of the target data unit for the target specie</span>
+<span class="sd">    over the target energy range.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tar_var : str</span>
+<span class="sd">        Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.</span>
+
+<span class="sd">    tint : list of str</span>
+<span class="sd">        Time interval.</span>
+
+<span class="sd">    mms_id : int or float or str</span>
+<span class="sd">        Index of the spacecraft.</span>
+
+<span class="sd">    verbose : bool</span>
+<span class="sd">        Set to True to follow the loading. Default is True.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    --------</span>
+<span class="sd">    out : xarray.DataArray</span>
+<span class="sd">        Energy spectrum of the target data unit for the target specie in omni direction.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tar_var</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">tint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tint</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mms_id</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">mms_id</span><span class="p">)</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+
+    <span class="n">mms_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mms_id</span><span class="p">)</span>
+
+    <span class="n">data_unit</span><span class="p">,</span> <span class="n">data_type</span><span class="p">,</span> <span class="n">specie</span><span class="p">,</span> <span class="n">data_rate</span><span class="p">,</span> <span class="n">data_lvl</span> <span class="o">=</span> <span class="n">tar_var</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+
+    <span class="n">var</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mms_id&quot;</span><span class="p">:</span> <span class="n">mms_id</span><span class="p">,</span> <span class="s2">&quot;inst&quot;</span><span class="p">:</span> <span class="s2">&quot;epd-eis&quot;</span><span class="p">}</span>
+
+    <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;mms</span><span class="si">{</span><span class="n">mms_id</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">_epd_eis&quot;</span>
+
+    <span class="k">if</span> <span class="n">data_rate</span> <span class="o">==</span> <span class="s2">&quot;brst&quot;</span><span class="p">:</span>
+        <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_rate</span>
+        <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_rate</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">elif</span> <span class="n">data_rate</span> <span class="o">==</span> <span class="s2">&quot;srvy&quot;</span><span class="p">:</span>
+        <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_rate</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid data rate&quot;</span><span class="p">)</span>
+
+    <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_lvl</span>
+
+    <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;electronenergy&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">specie</span> <span class="o">==</span> <span class="s2">&quot;electron&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;specie&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_type</span><span class="p">,</span> <span class="n">specie</span><span class="p">]</span>
+
+            <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">specie</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid specie&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;extof&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">specie</span> <span class="o">==</span> <span class="s2">&quot;proton&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;specie&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_type</span><span class="p">,</span> <span class="n">specie</span><span class="p">]</span>
+
+            <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">specie</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">elif</span> <span class="n">specie</span> <span class="o">==</span> <span class="s2">&quot;oxygen&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;specie&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_type</span><span class="p">,</span> <span class="n">specie</span><span class="p">]</span>
+
+            <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">specie</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">elif</span> <span class="n">specie</span> <span class="o">==</span> <span class="s2">&quot;alpha&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;specie&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_type</span><span class="p">,</span> <span class="n">specie</span><span class="p">]</span>
+
+            <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">specie</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid specie&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;phxtof&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">specie</span> <span class="o">==</span> <span class="s2">&quot;proton&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;specie&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_type</span><span class="p">,</span> <span class="n">specie</span><span class="p">]</span>
+
+            <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">specie</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">elif</span> <span class="n">specie</span> <span class="o">==</span> <span class="s2">&quot;oxygen&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;specie&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_type</span><span class="p">,</span> <span class="n">specie</span><span class="p">]</span>
+
+            <span class="n">pref</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">specie</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid specie&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid data type&quot;</span><span class="p">)</span>
+
+    <span class="n">files</span> <span class="o">=</span> <span class="n">list_files</span><span class="p">(</span><span class="n">tint</span><span class="p">,</span> <span class="n">mms_id</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
+
+    <span class="n">file_version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">var</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_version</span>
+
+    <span class="k">if</span> <span class="n">data_unit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;flux&quot;</span><span class="p">,</span> <span class="s2">&quot;counts&quot;</span><span class="p">,</span> <span class="s2">&quot;cps&quot;</span><span class="p">]:</span>
+        <span class="n">suf</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;P</span><span class="si">{</span><span class="n">file_version</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">data_unit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">_t&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid data unit&quot;</span><span class="p">)</span>
+
+    <span class="n">dset_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;mms</span><span class="si">{</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;mms_id&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;inst&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;tmmode&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;lev&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">var</span><span class="p">[</span><span class="s1">&#39;dtype&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">cdf_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pref</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">suf</span><span class="si">}{</span><span class="n">t</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">)]</span>
+
+    <span class="n">out_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">flux_omni</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cdfname</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cdf_names</span><span class="p">):</span>
+        <span class="n">scope_key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;t</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading </span><span class="si">{</span><span class="n">cdfname</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+        <span class="n">out_dict</span><span class="p">[</span><span class="n">scope_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">db_get_ts</span><span class="p">(</span><span class="n">dset_name</span><span class="p">,</span> <span class="n">cdfname</span><span class="p">,</span> <span class="n">tint</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">flux_omni</span> <span class="o">+=</span> <span class="n">out_dict</span><span class="p">[</span><span class="n">scope_key</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">flux_omni</span> <span class="o">=</span> <span class="n">out_dict</span><span class="p">[</span><span class="n">scope_key</span><span class="p">]</span>
+
+    <span class="n">flux_omni</span> <span class="o">/=</span> <span class="mi">6</span>
+
+    <span class="k">return</span> <span class="n">flux_omni</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.get_eis_omni</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
+    </div>
+  </body>
+</html>

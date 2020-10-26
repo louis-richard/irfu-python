@@ -14,6 +14,10 @@
 # import sys
 # sys.path.insert(0, '/Users/louisr/Documents/PhD/irfu-python/pyrfu')
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath('./../..'))
+
 
 # -- Project information -----------------------------------------------------
 

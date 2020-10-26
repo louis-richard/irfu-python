@@ -172,7 +172,9 @@ def wavepolarize_means(b_wave=None, b_bgd=None, **kwargs):
         # Calculation of smoothed spectral matrix
         e_spec_mat = np.nan * np.ones(spec_mat.shape)
 
-        for k in range(off_idx := int((n_bin - 1) / 2), int(nop_fft / 2) - off_idx):
+        off_idx = int((n_bin - 1) / 2)
+
+        for k in range(off_idx, int(nop_fft / 2) - off_idx):
             for ir in range(3):
                 for ic in range(3):
                     e_spec_mat[k, ir, ic] = np.sum(

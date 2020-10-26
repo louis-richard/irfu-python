@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyrfu.solo.list_files &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.solo.list_files</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.solo.list_files</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">list_files.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">bisect</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="kn">from</span> <span class="nn">dateutil</span> <span class="kn">import</span> <span class="n">parser</span>
+<span class="kn">from</span> <span class="nn">dateutil.rrule</span> <span class="kn">import</span> <span class="n">rrule</span><span class="p">,</span> <span class="n">DAILY</span>
+
+<span class="kn">from</span> <span class="nn">.solo_config</span> <span class="kn">import</span> <span class="n">CONFIG</span>
+
+
+<div class="viewcode-block" id="list_files"><a class="viewcode-back" href="../../../pyrfu.solo.html#pyrfu.solo.list_files.list_files">[docs]</a><span class="k">def</span> <span class="nf">list_files</span><span class="p">(</span><span class="n">tint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find files in the data directories of the target instrument, data type, data rate, mms_id and</span>
+<span class="sd">    level during the target time interval</span>
+
+<span class="sd">    Parameters :</span>
+<span class="sd">        tint : list</span>
+<span class="sd">            Time interval</span>
+
+<span class="sd">        mms_id : str/int</span>
+<span class="sd">            Index of the spacecraft</span>
+
+<span class="sd">        var : dict</span>
+<span class="sd">            Dictionary containing 4 keys</span>
+<span class="sd">                * var[&quot;inst&quot;] : name of the instrument</span>
+<span class="sd">                * var[&quot;tmmode&quot;] : data rate</span>
+<span class="sd">                * var[&quot;lev&quot;] : data level</span>
+<span class="sd">                * var[&quot;dtype&quot;] : data type</span>
+
+<span class="sd">    Returns :</span>
+<span class="sd">        files : list</span>
+<span class="sd">            List of files corresponding to the parameters in the selected time interval</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data_path</span> <span class="o">=</span> <span class="n">CONFIG</span><span class="p">[</span><span class="s2">&quot;local_data_dir&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">var</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;var is empty&quot;</span><span class="p">)</span>
+
+    <span class="n">files_out</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># directory and file name search patterns</span>
+    <span class="c1">#   -assume directories are of the form:</span>
+    <span class="c1">#      (srvy, SITL): spacecraft/instrument/rate/level[/datatype]/year/month/</span>
+    <span class="c1">#      (brst): spacecraft/instrument/rate/level[/datatype]/year/month/day/</span>
+    <span class="c1">#   -assume file names are of the form:</span>
+    <span class="c1">#      solo_level_instrument[-datatype]-rate_YYYYMMDD_version.cdf</span>
+
+    <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;solo&quot;</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;(-)?.*&quot;</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">var</span><span class="p">[</span>
+        <span class="s2">&quot;tmmode&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_([0-9]</span><span class="si">{8}</span><span class="s2">)_V(\d+)(\d+).cdf&quot;</span>
+
+    <span class="n">days</span> <span class="o">=</span> <span class="n">rrule</span><span class="p">(</span><span class="n">DAILY</span><span class="p">,</span> <span class="n">dtstart</span><span class="o">=</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)),</span>
+                 <span class="n">until</span><span class="o">=</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="ow">or</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">level_and_dtype</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">level_and_dtype</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]])</span>
+
+    <span class="k">for</span> <span class="n">date</span> <span class="ow">in</span> <span class="n">days</span><span class="p">:</span>
+        <span class="n">local_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">data_path</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">level_and_dtype</span><span class="p">,</span> <span class="n">date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y&quot;</span><span class="p">),</span>
+             <span class="n">date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%m&quot;</span><span class="p">)])</span>
+
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;nt&quot;</span><span class="p">:</span>
+            <span class="n">full_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">local_dir</span><span class="p">)</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">file_name</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">full_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">local_dir</span><span class="p">),</span> <span class="n">file_name</span><span class="p">])</span>
+
+        <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">full_path</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">local_dir</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                <span class="n">this_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root</span><span class="p">,</span> <span class="n">file</span><span class="p">])</span>
+
+                <span class="n">matches</span> <span class="o">=</span> <span class="n">regex</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">this_file</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">matches</span><span class="p">:</span>
+                    <span class="n">this_time</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">matches</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="n">this_time</span>
+                            <span class="o">&lt;=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)):</span>
+                        <span class="k">if</span> <span class="n">this_file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">files_out</span><span class="p">:</span>
+                            <span class="n">files_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                <span class="p">{</span><span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file</span><span class="p">,</span> <span class="s2">&quot;timetag&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;full_name&quot;</span><span class="p">:</span> <span class="n">this_file</span><span class="p">,</span>
+                                 <span class="s2">&quot;file_size&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">})</span>
+
+    <span class="n">in_files</span> <span class="o">=</span> <span class="n">files_out</span>
+
+    <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;solo.*_([0-9]})_V(\d+)(\d+).cdf&quot;</span>
+
+    <span class="n">file_times</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">in_files</span><span class="p">:</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="n">regex</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">file</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">matches</span><span class="p">:</span>
+            <span class="n">file_times</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">file</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">],</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">matches</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">timestamp</span><span class="p">(),</span>
+                               <span class="n">file</span><span class="p">[</span><span class="s2">&quot;timetag&quot;</span><span class="p">],</span> <span class="n">file</span><span class="p">[</span><span class="s2">&quot;file_size&quot;</span><span class="p">]))</span>
+
+    <span class="c1"># sort in time</span>
+    <span class="n">sorted_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">file_times</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">times</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">sorted_files</span><span class="p">]</span>
+
+    <span class="n">idx_min</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">timestamp</span><span class="p">())</span>
+
+    <span class="c1"># note: purposefully liberal here; include one extra file so that we always get the burst mode</span>
+    <span class="c1"># data</span>
+    <span class="k">if</span> <span class="n">idx_min</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">files_in_interval</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">sorted_files</span><span class="p">[</span><span class="n">idx_min</span><span class="p">:]:</span>
+            <span class="n">files_in_interval</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;timetag&quot;</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="s2">&quot;file_size&quot;</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="mi">3</span><span class="p">]})</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">files_in_interval</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">sorted_files</span><span class="p">[</span><span class="n">idx_min</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">files_in_interval</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;timetag&quot;</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="s2">&quot;file_size&quot;</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="mi">3</span><span class="p">]})</span>
+
+    <span class="n">local_files</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">file_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files_in_interval</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files_out</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">file</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">file_names</span><span class="p">:</span>
+            <span class="n">local_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file</span><span class="p">[</span><span class="s2">&quot;full_name&quot;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">local_files</span><span class="p">)</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.solo.list_files</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
+    </div>
+  </body>
+</html>

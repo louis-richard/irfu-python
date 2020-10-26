@@ -29,7 +29,7 @@ def edb(e=None, b0=None, angle_lim=20, flag_method="E.B=0"):
         Assumption on the direction of the measured electric field :
             "e.b=0" :  :math:`\\mathbf{E}.\\mathbf{B}=0`.
             "e_par" :  :math:`\\mathbf{E}` field along the B projection is coming from parallel
-                        electric field.
+            electric field.
             "e_perp+nan" : to fill.
 
     angle_lim : float

@@ -1,0 +1,567 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyrfu.mms.psd_moments &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.psd_moments</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.psd_moments</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">psd_moments.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">bisect</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="kn">from</span> <span class="nn">astropy</span> <span class="kn">import</span> <span class="n">constants</span>
+
+<span class="kn">from</span> <span class="nn">..pyrf.resample</span> <span class="kn">import</span> <span class="n">resample</span>
+<span class="kn">from</span> <span class="nn">..pyrf.ts_scalar</span> <span class="kn">import</span> <span class="n">ts_scalar</span>
+<span class="kn">from</span> <span class="nn">..pyrf.ts_vec_xyz</span> <span class="kn">import</span> <span class="n">ts_vec_xyz</span>
+<span class="kn">from</span> <span class="nn">..pyrf.ts_tensor_xyz</span> <span class="kn">import</span> <span class="n">ts_tensor_xyz</span>
+
+
+<span class="c1"># noinspection PyUnboundLocalVariable</span>
+<div class="viewcode-block" id="calc_moms"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.psd_moments.calc_moms">[docs]</a><span class="k">def</span> <span class="nf">calc_moms</span><span class="p">(</span><span class="n">nt</span><span class="p">,</span> <span class="n">arguments</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">13</span><span class="p">:</span>
+        <span class="p">[</span><span class="n">is_brst_data</span><span class="p">,</span> <span class="n">flag_same_e</span><span class="p">,</span> <span class="n">flag_de</span><span class="p">,</span> <span class="n">step_table</span><span class="p">,</span> <span class="n">energy0</span><span class="p">,</span> <span class="n">delta_v0</span><span class="p">,</span> <span class="n">energy1</span><span class="p">,</span> <span class="n">delta_v1</span><span class="p">,</span>
+         <span class="n">qe</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">,</span> <span class="n">p_mass</span><span class="p">,</span> <span class="n">flag_inner_electron</span><span class="p">,</span> <span class="n">w_inner_electron</span><span class="p">,</span> <span class="n">phi_tr</span><span class="p">,</span> <span class="n">theta_k</span><span class="p">,</span> <span class="n">int_energies</span><span class="p">,</span>
+         <span class="n">vdf</span><span class="p">,</span> <span class="n">delta_ang</span><span class="p">]</span> <span class="o">=</span> <span class="n">arguments</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="p">[</span><span class="n">is_brst_data</span><span class="p">,</span> <span class="n">flag_same_e</span><span class="p">,</span> <span class="n">flag_de</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">delta_v</span><span class="p">,</span> <span class="n">qe</span><span class="p">,</span> <span class="n">sc_pot</span><span class="p">,</span> <span class="n">p_mass</span><span class="p">,</span>
+         <span class="n">flag_inner_electron</span><span class="p">,</span> <span class="n">w_inner_electron</span><span class="p">,</span> <span class="n">phi_tr</span><span class="p">,</span> <span class="n">theta_k</span><span class="p">,</span> <span class="n">int_energies</span><span class="p">,</span> <span class="n">vdf</span><span class="p">,</span>
+         <span class="n">delta_ang</span><span class="p">]</span> <span class="o">=</span> <span class="n">arguments</span>
+
+    <span class="k">if</span> <span class="n">is_brst_data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">flag_same_e</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">flag_de</span><span class="p">:</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="n">energy0</span>
+            <span class="n">delta_v</span> <span class="o">=</span> <span class="n">delta_v0</span>
+
+            <span class="k">if</span> <span class="n">step_table</span><span class="p">[</span><span class="n">nt</span><span class="p">]:</span>
+                <span class="n">energy</span> <span class="o">=</span> <span class="n">energy1</span>
+                <span class="n">delta_v</span> <span class="o">=</span> <span class="n">delta_v1</span>
+
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="p">(</span><span class="n">energy</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">nt</span><span class="p">])</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">))</span>
+    <span class="n">v</span><span class="p">[</span><span class="n">energy</span> <span class="o">-</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">nt</span><span class="p">]</span> <span class="o">-</span> <span class="n">flag_inner_electron</span> <span class="o">*</span> <span class="n">w_inner_electron</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="n">is_brst_data</span><span class="p">:</span>
+        <span class="n">phi_j</span> <span class="o">=</span> <span class="n">phi_tr</span><span class="p">[</span><span class="n">nt</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">phi_j</span> <span class="o">=</span> <span class="n">phi_tr</span>
+
+    <span class="n">phi_j</span> <span class="o">=</span> <span class="n">phi_j</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="n">n_psd</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">v_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">p_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">h_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="n">psd2_n_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">phi_j</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
+    <span class="n">psd2_v_x_mat</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">),</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
+    <span class="n">psd2_v_y_mat</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">),</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
+    <span class="n">psd2_v_z_mat</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">phi_j</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
+    <span class="n">psd_mf_xx_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">psd_mf_yy_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">psd_mf_zz_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">phi_j</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">psd_mf_xy_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">),</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">psd_mf_xz_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">),</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">psd_mf_yz_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">),</span>
+                           <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">int_energies</span><span class="p">:</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">vdf</span><span class="p">[</span><span class="n">nt</span><span class="p">,</span> <span class="n">ii</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+        <span class="c1"># n_psd_tmp1 = tmp .* psd2_n_mat * v(ii)^2 * delta_v(ii) * delta_ang;</span>
+        <span class="c1"># n_psd_e32_phi_theta(nt, ii, :, :) = n_psd_tmp1;</span>
+        <span class="c1"># n_psd_e32(nt, ii) = n_psd_tmp</span>
+
+        <span class="c1"># number density</span>
+        <span class="n">n_psd_tmp</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd2_n_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">n_psd</span> <span class="o">+=</span> <span class="n">n_psd_tmp</span>
+
+        <span class="c1"># Bulk velocity</span>
+        <span class="n">v_temp_x</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd2_v_x_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                       <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">3</span>
+        <span class="n">v_temp_y</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd2_v_y_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                       <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">3</span>
+        <span class="n">v_temp_z</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd2_v_z_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                       <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">3</span>
+
+        <span class="n">v_psd</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">v_temp_x</span>
+        <span class="n">v_psd</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">v_temp_y</span>
+        <span class="n">v_psd</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">v_temp_z</span>
+
+        <span class="c1"># Pressure tensor</span>
+        <span class="n">p_temp_xx</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd_mf_xx_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">4</span>
+        <span class="n">p_temp_xy</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd_mf_xy_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">4</span>
+        <span class="n">p_temp_xz</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd_mf_xz_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">4</span>
+        <span class="n">p_temp_yy</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd_mf_yy_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">4</span>
+        <span class="n">p_temp_yz</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd_mf_yz_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">4</span>
+        <span class="n">p_temp_zz</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">delta_ang</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">tmp</span> <span class="o">*</span> <span class="n">psd_mf_zz_mat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">4</span>
+
+        <span class="n">p_psd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">p_temp_xx</span>
+        <span class="n">p_psd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">p_temp_xy</span>
+        <span class="n">p_psd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">p_temp_xz</span>
+        <span class="n">p_psd</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">p_temp_yy</span>
+        <span class="n">p_psd</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">p_temp_yz</span>
+        <span class="n">p_psd</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">p_temp_zz</span>
+
+        <span class="n">h_psd</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_temp_x</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">h_psd</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_temp_y</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">h_psd</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_temp_z</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="k">return</span> <span class="n">n_psd</span><span class="p">,</span> <span class="n">v_psd</span><span class="p">,</span> <span class="n">p_psd</span><span class="p">,</span> <span class="n">h_psd</span></div>
+
+
+<span class="c1"># noinspection PyUnboundLocalVariable</span>
+<div class="viewcode-block" id="psd_moments"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.psd_moments.psd_moments">[docs]</a><span class="k">def</span> <span class="nf">psd_moments</span><span class="p">(</span><span class="n">vdf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sc_pot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Computes moments from the FPI particle phase-space densities.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vdf : xarray.Dataset</span>
+<span class="sd">        3D skymap velocity distribution.</span>
+
+<span class="sd">    sc_pot : xarray.DataArray</span>
+<span class="sd">        Time series of the spacecraft potential.</span>
+
+<span class="sd">    **kwargs : dict</span>
+<span class="sd">        Hash table of keyword arguments with :</span>
+<span class="sd">            * energy_range : list or numpy.ndarray</span>
+<span class="sd">                Set energy range in eV to integrate over [E_min E_max]. Energy range is applied</span>
+<span class="sd">                to energy0 and the same elements are used for energy1 to ensure that the same</span>
+<span class="sd">                number of points are integrated over.</span>
+
+<span class="sd">            * no_sc_pot : bool</span>
+<span class="sd">                Set to 1 to set spacecraft potential to zero. Calculates moments</span>
+<span class="sd">                without correcting for spacecraft potential.</span>
+
+<span class="sd">            * en_channels : list or numpy.ndarray</span>
+<span class="sd">                Set energy channels to integrate over [min max]; min and max between must be</span>
+<span class="sd">                between 1 and 32.</span>
+
+<span class="sd">            * partial_moments : numpy.ndarray or xarray.DataArray</span>
+<span class="sd">                Use a binary array (or DataArray) (pmomsarr) to select which psd points are used</span>
+<span class="sd">                in the moments calculation. pmomsarr must be a binary array (1s and 0s,</span>
+<span class="sd">                1s correspond to points used). Array (or data of Dataarray) must be the same size</span>
+<span class="sd">                as vdf.data.</span>
+
+<span class="sd">            * inner_electron : {&quot;on&quot;, &quot;off&quot;}</span>
+<span class="sd">                inner_electrontron potential for electron moments.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    --------</span>
+<span class="sd">    n_psd : xarray.DataArray</span>
+<span class="sd">        Time series of the number density (1rst moment).</span>
+
+<span class="sd">    v_psd : xarray.DataArray</span>
+<span class="sd">        Time series of the bulk velocity (2nd moment).</span>
+
+<span class="sd">    p_psd : xarray.DataArray</span>
+<span class="sd">        Time series of the pressure tensor (3rd moment).</span>
+
+<span class="sd">    p2_psd : xarray.DataArray</span>
+<span class="sd">        Time series of the pressure tensor.</span>
+
+<span class="sd">    t_psd : xarray.DataArray</span>
+<span class="sd">        Time series of the temperature tensor.</span>
+
+<span class="sd">    h_psd : xarray.DataArray</span>
+<span class="sd">        to fill.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from pyrfu import mms</span>
+<span class="sd">    &gt;&gt;&gt; tint = [&quot;2015-10-30T05:15:20.000&quot;, &quot;2015-10-30T05:16:20.000&quot;]</span>
+<span class="sd">    &gt;&gt;&gt; vdf_e = mms.get_data(&quot;PDe_fpi_brst_l2&quot;, tint, 1)</span>
+<span class="sd">    &gt;&gt;&gt; sc_pot = mms.get_data(&quot;V_edp_brst_l2&quot;, tint, 1)</span>
+<span class="sd">    &gt;&gt;&gt; particle_moments = mms.psd_moments(vdf_e, sc_pot, energy_range=[1, 1000])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">flag_de</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">flag_same_e</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">flag_inner_electron</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># [eV] sc_pot + w_inner_electron for electron moments calculation; 2018-01-26, wy;</span>
+    <span class="n">w_inner_electron</span> <span class="o">=</span> <span class="mf">3.5</span>
+
+    <span class="k">if</span> <span class="n">vdf</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">sc_pot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;psd_moments requires at least 2 arguments&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vdf</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;vdf must be a Dataset&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">vdf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span> <span class="o">*=</span> <span class="mf">1e12</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sc_pot</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Spacecraft potential must a DataArray&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check if data is fast or burst resolution</span>
+    <span class="n">field_name</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;FIELDNAM&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s2">&quot;brst&quot;</span> <span class="ow">in</span> <span class="n">field_name</span><span class="p">:</span>
+        <span class="n">is_brst_data</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Burst resolution data is used&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s2">&quot;brst&quot;</span> <span class="ow">in</span> <span class="n">field_name</span><span class="p">:</span>
+        <span class="n">is_brst_data</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Fast resolution data is used&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Could not identify if data is fast or burst.&quot;</span><span class="p">)</span>
+
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">data</span>
+    <span class="n">theta_k</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">theta</span>
+    <span class="n">particle_type</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">is_brst_data</span><span class="p">:</span>
+        <span class="n">step_table</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;estep_table&quot;</span><span class="p">]</span>
+        <span class="n">energy0</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;energy0&quot;</span><span class="p">]</span>
+        <span class="n">energy1</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;energy1&quot;</span><span class="p">]</span>
+        <span class="n">e_tmp</span> <span class="o">=</span> <span class="n">energy1</span> <span class="o">-</span> <span class="n">energy0</span>
+
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">e_tmp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">flag_same_e</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">energy</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">energy</span>
+        <span class="n">e_tmp</span> <span class="o">=</span> <span class="n">energy</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">energy</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">e_tmp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="n">energy</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Could not identify if data is fast or burst.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># resample sc_pot to same resolution as particle distributions</span>
+    <span class="n">sc_pot</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">sc_pot</span><span class="p">,</span> <span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+
+    <span class="n">int_energies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">32</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;energy_range&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;energy_range&quot;</span><span class="p">],</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span> <span class="ow">and</span> \
+                <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;energy_range&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_brst_data</span><span class="p">:</span>
+                <span class="n">energy0</span> <span class="o">=</span> <span class="n">energy</span>
+
+            <span class="n">e_min_max</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;energy_range&quot;</span><span class="p">]</span>
+            <span class="n">start_e</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="n">energy0</span><span class="p">,</span> <span class="n">e_min_max</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">stop_e</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="n">energy0</span><span class="p">,</span> <span class="n">e_min_max</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="n">int_energies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start_e</span><span class="p">,</span> <span class="n">stop_e</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Using partial energy range&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;no_sc_pot&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;no_sc_pot&quot;</span><span class="p">],</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;no_sc_pot&quot;</span><span class="p">]:</span>
+            <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Setting spacecraft potential to zero&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;en_channels&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;en_channels&quot;</span><span class="p">],</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+            <span class="n">int_energies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;en_channels&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;en_channels&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="s2">&quot;partial_moments&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">partial_moments</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;partial_moments&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">partial_moments</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+            <span class="n">partial_moments</span> <span class="o">=</span> <span class="n">partial_moments</span><span class="o">.</span><span class="n">data</span>
+
+        <span class="c1"># Check size of partial_moments</span>
+        <span class="k">if</span> <span class="n">partial_moments</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">vdf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+            <span class="n">sum_ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">partial_moments</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
+                              <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">sum_zeros</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="n">partial_moments</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">sum_ones</span> <span class="o">+</span> <span class="n">sum_zeros</span><span class="p">)</span> <span class="o">==</span> <span class="n">vdf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : partial_moments is correct. Partial moments will be calculated&quot;</span><span class="p">)</span>
+                <span class="n">vdf</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">data</span> <span class="o">*</span> <span class="n">partial_moments</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : All values are not ones and zeros in partial_moments. Full &quot;</span> <span class="o">+</span>
+                      <span class="s2">&quot;moments will be calculated&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Size of partial_moments is wrong. Full moments will be calculated&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;inner_electron&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">inner_electron_tmp</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;inner_electron&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">inner_electron_tmp</span> <span class="o">==</span> <span class="s2">&quot;on&quot;</span> <span class="ow">and</span> <span class="n">particle_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+            <span class="n">flag_inner_electron</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># Define constants</span>
+    <span class="n">qe</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">kb</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">k_B</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">if</span> <span class="n">particle_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+        <span class="n">p_mass</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_e</span><span class="o">.</span><span class="n">value</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Particles are electrons&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">particle_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;i&quot;</span><span class="p">:</span>
+        <span class="n">p_mass</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">m_p</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="o">-</span><span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;notice : Particles are ions&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Could not identify the particle type&quot;</span><span class="p">)</span>
+
+    <span class="n">p2_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="c1"># angle between theta and phi points is 360/32 = 11.25 degrees</span>
+    <span class="n">delta_ang</span> <span class="o">=</span> <span class="p">(</span><span class="mf">11.25</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="k">if</span> <span class="n">is_brst_data</span><span class="p">:</span>
+        <span class="n">phi_tr</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">phi</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">phi_tr</span> <span class="o">=</span> <span class="n">phi</span>
+        <span class="n">phi_size</span> <span class="o">=</span> <span class="n">phi_tr</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="k">if</span> <span class="n">phi_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">phi_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">phi_tr</span> <span class="o">=</span> <span class="n">phi_tr</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">if</span> <span class="s2">&quot;delta_energy_minus&quot;</span> <span class="ow">in</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span> <span class="ow">and</span> <span class="s2">&quot;delta_energy_plus&quot;</span> <span class="ow">in</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
+        <span class="n">energy_minus</span><span class="p">,</span> <span class="n">energy_plus</span> <span class="o">=</span> <span class="p">[</span><span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;delta_energy_plus&quot;</span><span class="p">],</span> <span class="n">vdf</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;delta_energy_plus&quot;</span><span class="p">]]</span>
+
+        <span class="n">flag_de</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">energy_minus</span><span class="p">,</span> <span class="n">energy_plus</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+
+    <span class="c1"># Calculate speed widths associated with each energy channel.</span>
+    <span class="k">if</span> <span class="n">is_brst_data</span><span class="p">:</span>  <span class="c1"># Burst mode energy/speed widths</span>
+        <span class="k">if</span> <span class="n">flag_same_e</span> <span class="ow">and</span> <span class="n">flag_de</span><span class="p">:</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="n">energy0</span>
+            <span class="n">energy_upper</span> <span class="o">=</span> <span class="n">energy</span> <span class="o">+</span> <span class="n">energy_plus</span>
+            <span class="n">energy_lower</span> <span class="o">=</span> <span class="n">energy</span> <span class="o">-</span> <span class="n">energy_minus</span>
+            <span class="n">v_upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy_upper</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+            <span class="n">v_lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy_lower</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+            <span class="n">delta_v</span> <span class="o">=</span> <span class="n">v_upper</span> <span class="o">-</span> <span class="n">v_lower</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">energy_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">energy0</span><span class="p">,</span> <span class="n">energy1</span><span class="p">])</span>
+            <span class="n">energy_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">energy_all</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">energy_all</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mf">1e-4</span><span class="p">:</span>
+                <span class="n">temp0</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">temp0</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">energy_all</span><span class="p">[</span><span class="mi">63</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">62</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mf">1e-4</span><span class="p">:</span>
+                <span class="n">temp65</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">63</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">62</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">temp65</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">63</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">61</span><span class="p">]</span>
+
+            <span class="n">energy_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">temp0</span><span class="p">,</span> <span class="n">energy_all</span><span class="p">,</span> <span class="n">temp65</span><span class="p">])</span>
+            <span class="n">diff_en_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">energy_all</span><span class="p">)</span>
+            <span class="n">energy0upper</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">energy0</span><span class="p">)</span> <span class="o">+</span> <span class="n">diff_en_all</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">64</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">energy0lower</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">energy0</span><span class="p">)</span> <span class="o">-</span> <span class="n">diff_en_all</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">63</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">energy1upper</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">energy1</span><span class="p">)</span> <span class="o">+</span> <span class="n">diff_en_all</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">65</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">energy1lower</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">energy1</span><span class="p">)</span> <span class="o">-</span> <span class="n">diff_en_all</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">64</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">v0upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy0upper</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+            <span class="n">v0lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy0lower</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+            <span class="n">v1upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy1upper</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+            <span class="n">v1lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy1lower</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+            <span class="n">delta_v0</span> <span class="o">=</span> <span class="p">(</span><span class="n">v0upper</span> <span class="o">-</span> <span class="n">v0lower</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.0</span>
+            <span class="n">delta_v1</span> <span class="o">=</span> <span class="p">(</span><span class="n">v1upper</span> <span class="o">-</span> <span class="n">v1lower</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.0</span>
+
+            <span class="c1"># delta_v0(1) = delta_v0(1)*2.7</span>
+            <span class="c1"># delta_v1(1) = delta_v1(1)*2.7</span>
+
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># Fast mode energy/speed widths</span>
+        <span class="n">energy_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span>
+        <span class="n">temp0</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">temp33</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">31</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy_all</span><span class="p">[</span><span class="mi">30</span><span class="p">]</span>
+        <span class="n">energy_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">temp0</span><span class="p">,</span> <span class="n">energy_all</span><span class="p">,</span> <span class="n">temp33</span><span class="p">])</span>
+        <span class="n">diff_en_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">energy_all</span><span class="p">)</span>
+        <span class="n">energy_upper</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span> <span class="o">+</span> <span class="n">diff_en_all</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">33</span><span class="p">]</span> <span class="o">/</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">energy_lower</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span> <span class="o">-</span> <span class="n">diff_en_all</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">32</span><span class="p">]</span> <span class="o">/</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">v_upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy_upper</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+        <span class="n">v_lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">qe</span> <span class="o">*</span> <span class="n">energy_lower</span> <span class="o">/</span> <span class="n">p_mass</span><span class="p">)</span>
+        <span class="n">delta_v</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_upper</span> <span class="o">-</span> <span class="n">v_lower</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.0</span>
+        <span class="n">delta_v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta_v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">2.7</span>
+
+    <span class="n">theta_k</span> <span class="o">=</span> <span class="n">theta_k</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="c1"># New version parallel</span>
+    <span class="c1"># args brst :</span>
+    <span class="c1"># (is_brst_data, flag_same_e, flag_de, step_table, energy0, delta_v0, energy1, delta_v1, qe,</span>
+    <span class="c1"># sc_pot.data, p_mass, flag_inner_electron, w_inner_electron, phi_tr.data, theta_k,</span>
+    <span class="c1"># int_energies, vdf.data.data, delta_ang)</span>
+    <span class="c1">#</span>
+    <span class="c1"># args fast :</span>
+    <span class="c1"># (is_brst_data, flag_same_e, flag_de, energy, delta_v, qe, sc_pot.data, p_mass,</span>
+    <span class="c1"># flag_inner_electron, w_inner_electron, phi_tr.data, theta_k, int_energies, vdf.data,</span>
+    <span class="c1"># delta_ang)</span>
+
+    <span class="k">if</span> <span class="n">is_brst_data</span><span class="p">:</span>
+        <span class="n">arguments</span> <span class="o">=</span> <span class="p">(</span><span class="n">is_brst_data</span><span class="p">,</span> <span class="n">flag_same_e</span><span class="p">,</span> <span class="n">flag_de</span><span class="p">,</span> <span class="n">step_table</span><span class="p">,</span> <span class="n">energy0</span><span class="p">,</span> <span class="n">delta_v0</span><span class="p">,</span> <span class="n">energy1</span><span class="p">,</span>
+                     <span class="n">delta_v1</span><span class="p">,</span> <span class="n">qe</span><span class="p">,</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">p_mass</span><span class="p">,</span> <span class="n">flag_inner_electron</span><span class="p">,</span> <span class="n">w_inner_electron</span><span class="p">,</span>
+                     <span class="n">phi_tr</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">theta_k</span><span class="p">,</span> <span class="n">int_energies</span><span class="p">,</span> <span class="n">vdf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">delta_ang</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">arguments</span> <span class="o">=</span> <span class="p">(</span><span class="n">is_brst_data</span><span class="p">,</span> <span class="n">flag_same_e</span><span class="p">,</span> <span class="n">flag_de</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">delta_v</span><span class="p">,</span> <span class="n">qe</span><span class="p">,</span> <span class="n">sc_pot</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                     <span class="n">p_mass</span><span class="p">,</span> <span class="n">flag_inner_electron</span><span class="p">,</span> <span class="n">w_inner_electron</span><span class="p">,</span> <span class="n">phi_tr</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">theta_k</span><span class="p">,</span>
+                     <span class="n">int_energies</span><span class="p">,</span> <span class="n">vdf</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">delta_ang</span><span class="p">)</span>
+
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">())</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span><span class="n">calc_moms</span><span class="p">,</span> <span class="p">[(</span><span class="n">nt</span><span class="p">,</span> <span class="n">arguments</span><span class="p">)</span> <span class="k">for</span> <span class="n">nt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="p">))])</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+    <span class="n">n_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">out</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float&quot;</span><span class="p">)</span>
+    <span class="n">v_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">out</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">][:])</span>
+    <span class="n">p_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">out</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">][:])</span>
+    <span class="n">p_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">p_psd</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">n_psd</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">h_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">out</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">][:])</span>
+
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># Compute moments in SI units</span>
+    <span class="n">p_psd</span> <span class="o">*=</span> <span class="n">p_mass</span>
+    <span class="n">v_psd</span> <span class="o">/=</span> <span class="n">n_psd</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">p2_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+
+    <span class="n">p_trace</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">p_psd</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">t_psd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">p_psd</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">t_psd</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_psd</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">kb</span> <span class="o">*</span> <span class="n">n_psd</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+    <span class="n">t_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">t_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">t_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">v_abs2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v_psd</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">h_psd</span> <span class="o">*=</span> <span class="n">p_mass</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">h_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v_psd</span><span class="p">[:,</span>
+                                                                                 <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">h_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_trace</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_abs2</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">h_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v_psd</span><span class="p">[:,</span>
+                                                                                 <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">h_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_trace</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_abs2</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">h_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">v_psd</span><span class="p">[:,</span>
+                                                                                 <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">h_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">p_trace</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">p_mass</span> <span class="o">*</span> <span class="n">n_psd</span> <span class="o">*</span> <span class="n">v_abs2</span> <span class="o">*</span> <span class="n">v_psd</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+
+    <span class="c1"># Convert to typical units (/cc, km/s, nP, eV, and ergs/s/cm^2).</span>
+    <span class="n">n_psd</span> <span class="o">/=</span> <span class="mf">1e6</span>
+    <span class="c1"># n_psd_e32              /= 1e6</span>
+    <span class="c1"># n_psd_e32_phi_theta    /= 1e6</span>
+    <span class="n">v_psd</span> <span class="o">/=</span> <span class="mf">1e3</span>
+    <span class="n">p_psd</span> <span class="o">*=</span> <span class="mf">1e9</span>
+    <span class="n">p2_psd</span> <span class="o">*=</span> <span class="mf">1e9</span>
+    <span class="n">t_psd</span> <span class="o">*=</span> <span class="n">kb</span> <span class="o">/</span> <span class="n">qe</span>
+    <span class="n">h_psd</span> <span class="o">*=</span> <span class="mf">1e3</span>
+
+    <span class="c1"># Construct TSeries</span>
+    <span class="n">n_psd</span> <span class="o">=</span> <span class="n">ts_scalar</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">n_psd</span><span class="p">)</span>
+    <span class="c1"># n_psd_e32 = ts_scalar(vdf.time, n_psd_e32);</span>
+    <span class="c1"># n_psd_skymap = ts_skymap(vdf.time.data, n_psd_e32_phi_theta,energy, phi.data, theta_k);</span>
+    <span class="n">v_psd</span> <span class="o">=</span> <span class="n">ts_vec_xyz</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">v_psd</span><span class="p">)</span>
+    <span class="n">p_psd</span> <span class="o">=</span> <span class="n">ts_tensor_xyz</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">p_psd</span><span class="p">)</span>
+    <span class="n">p2_psd</span> <span class="o">=</span> <span class="n">ts_tensor_xyz</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">p2_psd</span><span class="p">)</span>
+    <span class="n">t_psd</span> <span class="o">=</span> <span class="n">ts_tensor_xyz</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">t_psd</span><span class="p">)</span>
+    <span class="n">h_psd</span> <span class="o">=</span> <span class="n">ts_vec_xyz</span><span class="p">(</span><span class="n">vdf</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">h_psd</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">n_psd</span><span class="p">,</span> <span class="n">v_psd</span><span class="p">,</span> <span class="n">p_psd</span><span class="p">,</span> <span class="n">p2_psd</span><span class="p">,</span> <span class="n">t_psd</span><span class="p">,</span> <span class="n">h_psd</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.psd_moments</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
+    </div>
+  </body>
+</html>

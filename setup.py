@@ -4,7 +4,7 @@ from sphinx.setup_command import BuildDoc
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.7.6"
+VERSION = "1.7.7"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -36,7 +36,7 @@ INSTALL_REQUIRES = [
       "xarray"
 ]
 
-PYTHON_REQUIRES = ">=3.8"
+PYTHON_REQUIRES = ">=3.7"
 
 
 cmdclass = {'build_sphinx': BuildDoc}

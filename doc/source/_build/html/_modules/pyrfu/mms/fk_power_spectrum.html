@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyrfu.mms.fk_power_spectrum &#8212; pyrfu  documentation</title>
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.fk_power_spectrum</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyrfu.mms.fk_power_spectrum</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">fk_power_spectrum.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+
+
+<div class="viewcode-block" id="fk_power_spectrum"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.fk_power_spectrum.fk_power_spectrum">[docs]</a><span class="k">def</span> <span class="nf">fk_power_spectrum</span><span class="p">(</span><span class="n">pc</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">v6</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">z_phase</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cav</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                      <span class="n">num_k</span><span class="o">=</span><span class="mi">101</span><span class="p">,</span> <span class="n">num_f</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculates the frequency-wave number power spectrum using MMS&#39;s four spin plane probes.</span>
+<span class="sd">    Follows the same procedure as c_wk_powerspec. Function uses L2 scpot probe potential data to</span>
+<span class="sd">    construct electric fields aligned with B separated by 60 m. Wavelet based cross-spectral</span>
+<span class="sd">    analysis is used to calculate the phase difference between and the fields, and hence the wave</span>
+<span class="sd">    number. The power is then binned according to frequency and wave number</span>
+<span class="sd">    (Graham et al., JGR, 2016).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pc : int</span>
+<span class="sd">        Probe combination to use :</span>
+<span class="sd">        * 1 : ``b_xyz`` aligned with probes 1 and 2.</span>
+<span class="sd">        * 3 : ``b_xyz`` aligned with probes 3 and 4.</span>
+<span class="sd">        * 5 : ``b_xyz`` aligned with probes 5 and 6.</span>
+
+<span class="sd">    tint : list of str</span>
+<span class="sd">        Time interval over which the power spectrum is calculated. ``b_xyz`` should be closely</span>
+<span class="sd">        aligned with one probe pair over this time.</span>
+
+<span class="sd">    v6 : xarray.DataArray</span>
+<span class="sd">        L2 probe potentials.</span>
+
+<span class="sd">    b_xyz : xarray.DataArray</span>
+<span class="sd">        Time series of the magnetic field in DMPA coordinates.</span>
+
+<span class="sd">    z_phase : xarray.DataArray</span>
+<span class="sd">        Spacecraft phase (zphase). Obtained from ancillary_defatt. Needed only if ``pc`` = 1 or 3.</span>
+
+<span class="sd">    cav : int, optional</span>
+<span class="sd">        Number of points in time series used to estimate phase. Default is ``cav`` = 128.</span>
+
+<span class="sd">    field : bool, optional</span>
+<span class="sd">        Set to True to use electric fields calculated from opposing probes and sc_pot. Set to</span>
+<span class="sd">        False to use only opposing probe potentials. Default is True.</span>
+
+<span class="sd">    num_k : int, optional</span>
+<span class="sd">		Set number of wave numbers used in spectrogram. Default ``num_k`` = 101.</span>
+
+<span class="sd">	df : float, optional</span>
+<span class="sd">		Linearly spaced frequencies. Default is logarithmic spacing.</span>
+
+<span class="sd">	num_f : int, optional</span>
+<span class="sd">		Set number of frequencies used in spectrogram. Default ``num_f`` = 200.</span>
+
+<span class="sd">	Returns</span>
+<span class="sd">	-------</span>
+<span class="sd">	fk_power : xarray.DataArray</span>
+<span class="sd">	    Powers as a function of frequency and wavenumber. Power is normalized to the maximum value.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    pyrfu.mms.probe_align_times : Returns times when f-a electrostatic waves can be characterized.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Timing corrections are applied to ``v6`` in this function. Do not apply them before running</span>
+<span class="sd">    this function. Directions and speeds are consistent with expectations based on time delays.</span>
+<span class="sd">    Work still in progress. Time corrections for the probes need to be revised.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from pyrfu import mms</span>
+<span class="sd">    &gt;&gt;&gt; fk_power = mms.fk_power_spectrum(pc, tint, v6, b_xyz, z_phase, cav=256, field=False)</span>
+<span class="sd">    &gt;&gt;&gt; fk_power = mms.fk_power_spectrum(pc, tint, v6, b_xyz, z_phase, cav=256, df=50, num_k=500)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Check input</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pc</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tint</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tint</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">v6</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v6</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">b_xyz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b_xyz</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">z_phase</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">z_phase</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cav</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">num_k</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">num_f</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">return</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pyrfu  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pyrfu.mms.fk_power_spectrum</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Louis RICHARD.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
+    </div>
+  </body>
+</html>
