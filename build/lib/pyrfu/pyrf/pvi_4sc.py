@@ -11,6 +11,7 @@ import xarray as xr
 
 from .resample import resample
 from .norm import norm
+from .dot import dot
 
 
 def pvi_4sc(b_mms):
@@ -66,6 +67,16 @@ def pvi_4sc(b_mms):
 
     delta_b_ij = [b_mms[i] - b_mms[j] for i, j in zip(i_indices, j_indices)]
 
-    pvi_ij = [np.sqrt(norm(delta_b) ** 2 / np.mean(norm(delta_b) ** 2)) for delta_b in delta_b_ij]
+    # Compute normalized partial variance of increments
+    def pvi(b_i, b_j):
+        return np.sqrt(norm(b_i - b_j) ** 2 / np.mean(norm(b_i - b_j) ** 2))
 
-    return pvi_ij
+    pvi_ij = [pvi(b_mms[i], b_mms[j]) for i, j in zip(i_indices, j_indices)]
+
+    # Compute magnetic field shear angle
+    def shear_angle(b_i, b_j):
+        return np.arccos(dot(b_i, b_j) / (norm(b_i) * norm(b_j)))
+
+    theta_ij = [shear_angle(b_mms[i], b_mms[j]) for i, j in zip(i_indices, j_indices)]
+
+    return pvi_ij, theta_ij
