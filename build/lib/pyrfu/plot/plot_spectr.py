@@ -89,7 +89,7 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
 
     t, y = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
-    im = ax.pcolormesh(t, y, inp.data.T, norm=norm, cmap=cmap, vmin=vmin, vmax=vmax)
+    im = ax.pcolormesh(t, y, inp.data.T, norm=norm, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto")
 
     if yscale == "log":
         ax.set_yscale("log")
