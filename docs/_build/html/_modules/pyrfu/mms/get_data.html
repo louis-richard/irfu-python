@@ -1,0 +1,831 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyrfu.mms.get_data &mdash; pyrfu  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home" alt="Documentation Home"> pyrfu
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyrfu.html">pyrfu package</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pyrfu</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>pyrfu.mms.get_data</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pyrfu.mms.get_data</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">get_data.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">astropy.time</span> <span class="kn">import</span> <span class="n">Time</span>
+
+<span class="kn">from</span> <span class="nn">.split_vs</span> <span class="kn">import</span> <span class="n">split_vs</span>
+<span class="kn">from</span> <span class="nn">.list_files</span> <span class="kn">import</span> <span class="n">list_files</span>
+<span class="kn">from</span> <span class="nn">.get_dist</span> <span class="kn">import</span> <span class="n">get_dist</span>
+<span class="kn">from</span> <span class="nn">.get_ts</span> <span class="kn">import</span> <span class="n">get_ts</span>
+<span class="kn">from</span> <span class="nn">..pyrf</span> <span class="kn">import</span> <span class="n">ts_append</span>
+<span class="kn">from</span> <span class="nn">..pyrf</span> <span class="kn">import</span> <span class="n">dist_append</span>
+
+
+<div class="viewcode-block" id="get_data"><a class="viewcode-back" href="../../../pyrfu.mms.html#pyrfu.mms.get_data.get_data">[docs]</a><span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="n">var_str</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">tint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mms_id</span><span class="o">=</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Load a variable. var_str must be in var (see below)</span>
+
+<span class="sd">    * EPHEMERIS :</span>
+<span class="sd">        &quot;R_gse&quot;, &quot;R_gsm&quot;</span>
+
+<span class="sd">    * FGM :</span>
+<span class="sd">        &quot;B_gsm_fgm_srvy_l2&quot;, &quot;B_gsm_fgm_brst_l2&quot;, &quot;B_gse_fgm_srvy_l2&quot;,</span>
+<span class="sd">        &quot;B_gse_fgm_brst_l2&quot;, &quot;B_bcs_fgm_srvy_l2&quot;, &quot;B_bcs_fgm_brst_l2&quot;,</span>
+<span class="sd">        &quot;B_dmpa_fgm_srvy_l2&quot;, &quot;B_dmpa_fgm_brst_l2&quot;</span>
+
+<span class="sd">    * DFG &amp; AFG :</span>
+<span class="sd">        &quot;B_gsm_dfg_srvy_l2pre&quot;, &quot;B_gse_dfg_srvy_l2pre&quot;, &quot;B_dmpa_dfg_srvy_l2pre&quot;,</span>
+<span class="sd">        &quot;B_bcs_dfg_srvy_l2pre&quot;, &quot;B_gsm_afg_srvy_l2pre&quot;, &quot;B_gse_afg_srvy_l2pre&quot;,</span>
+<span class="sd">        &quot;B_dmpa_afg_srvy_l2pre&quot;, &quot;B_bcs_afg_srvy_l2pre&quot;</span>
+
+<span class="sd">    * SCM :</span>
+<span class="sd">        &quot;B_gse_scm_brst_l2&quot;</span>
+
+<span class="sd">    * EDP :</span>
+<span class="sd">        &quot;Phase_edp_fast_l2a&quot;, &quot;Phase_edp_slow_l2a&quot;, &quot;Sdev12_edp_slow_l2a&quot;,</span>
+<span class="sd">        &quot;Sdev34_edp_slow_l2a&quot;, &quot;Sdev12_edp_fast_l2a&quot;, &quot;Sdev34_edp_fast_l2a&quot;,</span>
+<span class="sd">        &quot;E_dsl_edp_brst_l2&quot;, &quot;E_dsl_edp_fast_l2&quot;, &quot;E_dsl_edp_brst_ql&quot;,</span>
+<span class="sd">        &quot;E_dsl_edp_fast_ql&quot;, &quot;E_dsl_edp_slow_l2&quot;, &quot;E_gse_edp_brst_l2&quot;,</span>
+<span class="sd">        &quot;E_gse_edp_fast_l2&quot;, &quot;E_gse_edp_slow_l2&quot;, &quot;E2d_dsl_edp_brst_l2pre&quot;,</span>
+<span class="sd">        &quot;E2d_dsl_edp_fast_l2pre&quot;, &quot;E2d_dsl_edp_brst_ql&quot;, &quot;E2d_dsl_edp_fast_ql&quot;,</span>
+<span class="sd">        &quot;E2d_dsl_edp_l2pre&quot;, &quot;E2d_dsl_edp_fast_l2pre&quot;, &quot;E2d_dsl_edp_brst_l2pre&quot;,</span>
+<span class="sd">        &quot;E_dsl_edp_l2pre&quot;, &quot;E_dsl_edp_fast_l2pre&quot;, &quot;E_dsl_edp_brst_l2pre&quot;,</span>
+<span class="sd">        &quot;E_dsl_edp_slow_l2pre&quot;, &quot;E_ssc_edp_brst_l2a&quot;, &quot;E_ssc_edp_fast_l2a&quot;,</span>
+<span class="sd">        &quot;E_ssc_edp_slow_l2a&quot;, &quot;V_edp_fast_sitl&quot;, &quot;V_edp_slow_sitl&quot;,</span>
+<span class="sd">        &quot;V_edp_slow_l2&quot;, &quot;V_edp_fast_l2&quot;, &quot;V_edp_brst_l2&quot;</span>
+
+<span class="sd">    * FPI Ions :</span>
+<span class="sd">        &quot;Vi_dbcs_fpi_brst_l2&quot;, &quot;Vi_dbcs_fpi_fast_l2&quot;, &quot;Vi_dbcs_fpi_l2&quot;,</span>
+<span class="sd">        &quot;Vi_gse_fpi_ql&quot;, &quot;Vi_gse_fpi_fast_ql&quot;, &quot;Vi_dbcs_fpi_fast_ql&quot;,</span>
+<span class="sd">        &quot;Vi_gse_fpi_fast_l2&quot;, &quot;Vi_gse_fpi_brst_l2&quot;, &quot;partVi_gse_fpi_brst_l2&quot;,</span>
+<span class="sd">        &quot;Ni_fpi_brst_l2&quot;, &quot;partNi_fpi_brst_l2&quot;, &quot;Ni_fpi_brst&quot;,</span>
+<span class="sd">        &quot;Ni_fpi_fast_l2&quot;, &quot;Ni_fpi_ql&quot;, &quot;DEFi_fpi_fast_ql&quot;,</span>
+<span class="sd">        &quot;DEFi_fpi_fast_l2&quot;, &quot;Tperpi_fpi_brst_l2&quot;, &quot;Tparai_fpi_brst_l2&quot;,</span>
+<span class="sd">        &quot;partTperpi_fpi_brst_l2&quot;, &quot;partTparai_fpi_brst_l2&quot;, &quot;Ti_dbcs_fpi_brst_l2&quot;,</span>
+<span class="sd">        &quot;Ti_dbcs_fpi_brst&quot;, &quot;Ti_dbcs_fpi_fast_l2&quot;, &quot;Ti_gse_fpi_ql&quot;,</span>
+<span class="sd">        &quot;Ti_dbcs_fpi_ql&quot;, &quot;Ti_gse_fpi_brst_l2&quot;, &quot;Pi_dbcs_fpi_brst_l2&quot;,</span>
+<span class="sd">        &quot;Pi_dbcs_fpi_brst&quot;, &quot;Pi_dbcs_fpi_fast_l2&quot;, &quot;Pi_gse_fpi_ql&quot;,</span>
+<span class="sd">        &quot;Pi_gse_fpi_brst_l2&quot;</span>
+
+<span class="sd">    * FPI Electrons :</span>
+<span class="sd">        &quot;Ve_dbcs_fpi_brst_l2&quot;, &quot;Ve_dbcs_fpi_brst&quot;, &quot;Ve_dbcs_fpi_ql&quot;,</span>
+<span class="sd">        &quot;Ve_dbcs_fpi_fast_l2&quot;, &quot;Ve_gse_fpi_ql&quot;, &quot;Ve_gse_fpi_fast_l2&quot;,</span>
+<span class="sd">        &quot;Ve_gse_fpi_brst_l2&quot;, &quot;partVe_gse_fpi_brst_l2&quot;, &quot;DEFe_fpi_fast_ql&quot;,</span>
+<span class="sd">        &quot;DEFe_fpi_fast_l2&quot;, &quot;Ne_fpi_brst_l2&quot;, &quot;partNe_fpi_brst_l2&quot;,</span>
+<span class="sd">        &quot;Ne_fpi_brst&quot;, &quot;Ne_fpi_fast_l2&quot;, &quot;Ne_fpi_ql&quot;,</span>
+<span class="sd">        &quot;Tperpe_fpi_brst_l2&quot;, &quot;Tparae_fpi_brst_l2&quot;, &quot;partTperpe_fpi_brst_l2&quot;,</span>
+<span class="sd">        &quot;partTparae_fpi_brst_l2&quot;, &quot;Te_dbcs_fpi_brst_l2&quot;, &quot;Te_dbcs_fpi_brst&quot;,</span>
+<span class="sd">        &quot;Te_dbcs_fpi_fast_l2&quot;, &quot;Te_gse_fpi_ql&quot;, &quot;Te_dbcs_fpi_ql&quot;,</span>
+<span class="sd">        &quot;Te_gse_fpi_brst_l2&quot;, &quot;Pe_dbcs_fpi_brst_l2&quot;, &quot;Pe_dbcs_fpi_brst&quot;,</span>
+<span class="sd">        &quot;Pe_dbcs_fpi_fast_l2&quot;, &quot;Pe_gse_fpi_ql&quot;, &quot;Pe_gse_fpi_brst_l2&quot;,</span>
+
+<span class="sd">    * HPCA :</span>
+<span class="sd">        &quot;Nhplus_hpca_srvy_l2&quot;, &quot;Nheplus_hpca_srvy_l2&quot;, &quot;Nheplusplus_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Noplus_hpca_srvy_l2&quot;, &quot;Tshplus_hpca_srvy_l2&quot;, &quot;Tsheplus_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Tsheplusplus_hpca_srvy_l2&quot;, &quot;Tsoplus_hpca_srvy_l2&quot;, &quot;Vhplus_dbcs_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Vheplus_dbcs_hpca_srvy_l2&quot;, &quot;Vheplusplus_dbcs_hpca_srvy_l2&quot;, &quot;Voplus_dbcs_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Phplus_dbcs_hpca_srvy_l2&quot;, &quot;Pheplus_dbcs_hpca_srvy_l2&quot;, &quot;Pheplusplus_dbcs_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Poplus_dbcs_hpca_srvy_l2&quot;, &quot;Thplus_dbcs_hpca_srvy_l2&quot;, &quot;Theplus_dbcs_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Theplusplus_dbcs_hpca_srvy_l2&quot;, &quot;Toplus_dbcs_hpca_srvy_l2&quot;, &quot;Vhplus_gsm_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Vheplus_gsm_hpca_srvy_l2&quot;, &quot;Vheplusplus_gsm_hpca_srvy_l2&quot;, &quot;Voplus_gsm_hpca_srvy_l2&quot;,</span>
+<span class="sd">        &quot;Nhplus_hpca_brst_l2&quot;, &quot;Nheplus_hpca_brst_l2&quot;, &quot;Nheplusplus_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Noplus_hpca_brst_l2&quot;, &quot;Tshplus_hpca_brst_l2&quot;, &quot;Tsheplus_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Tsheplusplus_hpca_brst_l2&quot;, &quot;Tsoplus_hpca_brst_l2&quot;, &quot;Vhplus_dbcs_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Vheplus_dbcs_hpca_brst_l2&quot;, &quot;Vheplusplus_dbcs_hpca_brst_l2&quot;, &quot;Voplus_dbcs_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Phplus_dbcs_hpca_brst_l2&quot;, &quot;Pheplus_dbcs_hpca_brst_l2&quot;, &quot;Pheplusplus_dbcs_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Poplus_dbcs_hpca_brst_l2&quot;, &quot;Thplus_dbcs_hpca_brst_l2&quot;, &quot;Theplus_dbcs_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Theplusplus_dbcs_hpca_brst_l2&quot;, &quot;Toplus_dbcs_hpca_brst_l2&quot;, &quot;Vhplus_gsm_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Vheplus_gsm_hpca_brst_l2&quot;, &quot;Vheplusplus_gsm_hpca_brst_l2&quot;, &quot;Voplus_gsm_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Phplus_gsm_hpca_brst_l2&quot;, &quot;Pheplus_gsm_hpca_brst_l2&quot;, &quot;Pheplusplus_gsm_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Poplus_gsm_hpca_brst_l2&quot;, &quot;Thplus_gsm_hpca_brst_l2&quot;, &quot;Theplus_gsm_hpca_brst_l2&quot;,</span>
+<span class="sd">        &quot;Theplusplus_gsm_hpca_brst_l2&quot;, &quot;Toplus_gsm_hpca_brst_l2&quot;</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    var_str : str</span>
+<span class="sd">        Key of the target variable (see above).</span>
+
+<span class="sd">    tint : list of str</span>
+<span class="sd">        Time interval.</span>
+
+<span class="sd">    mms_id : str or int</span>
+<span class="sd">        Index of the target spacecraft.</span>
+
+<span class="sd">    verbose : bool</span>
+<span class="sd">        Set to True to follow the loading. Default is True.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    out : xarray.DataArray</span>
+<span class="sd">        Time series of the target variable of measured by the target spacecraft over the selected</span>
+<span class="sd">        time interval.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from pyrfu import mms</span>
+<span class="sd">    &gt;&gt;&gt; # Define time interval</span>
+<span class="sd">    &gt;&gt;&gt; tint = [&quot;2019-09-14T07:54:00.000&quot;, &quot;2019-09-14T08:11:00.000&quot;]</span>
+<span class="sd">    &gt;&gt;&gt; # Index of mms spacecraft</span>
+<span class="sd">    &gt;&gt;&gt; mms_id = 1</span>
+<span class="sd">    &gt;&gt;&gt; # Load magnetic field from FGM</span>
+<span class="sd">    &gt;&gt;&gt; b_xyz = mms.get_data(&quot;B_gse_fgm_brst_l2&quot;, tint, mms_id)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">var_str</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;get_data requires at least 2 arguments&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">tint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;get_data requires at least 2 arguments&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mms_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">mms_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">mms_id</span><span class="p">)</span>
+
+    <span class="c1"># Translate short names to names readable for splitVs</span>
+    <span class="k">if</span> <span class="n">var_str</span> <span class="o">==</span> <span class="s2">&quot;dfg_ql_srvy&quot;</span><span class="p">:</span>
+        <span class="n">var_str</span> <span class="o">=</span> <span class="s2">&quot;B_dmpa_dfg_srvy_ql&quot;</span>
+
+    <span class="k">elif</span> <span class="n">var_str</span> <span class="o">==</span> <span class="s2">&quot;afg_ql_srvy&quot;</span><span class="p">:</span>
+        <span class="n">var_str</span> <span class="o">=</span> <span class="s2">&quot;B_dmpa_afg_srvy_ql&quot;</span>
+
+    <span class="k">elif</span> <span class="n">var_str</span> <span class="o">==</span> <span class="s2">&quot;Nhplus_hpca_sitl&quot;</span><span class="p">:</span>
+        <span class="n">var_str</span> <span class="o">=</span> <span class="s2">&quot;Nhplus_hpca_srvy_sitl&quot;</span>
+
+    <span class="k">elif</span> <span class="n">var_str</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;R_gse&quot;</span><span class="p">,</span> <span class="s2">&quot;R_gsm&quot;</span><span class="p">,</span> <span class="s2">&quot;V_gse&quot;</span><span class="p">,</span> <span class="s2">&quot;V_gsm&quot;</span><span class="p">]:</span>
+        <span class="n">var_str</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">var_str</span><span class="p">,</span> <span class="s2">&quot;mec&quot;</span><span class="p">,</span> <span class="s2">&quot;srvy&quot;</span><span class="p">,</span> <span class="s2">&quot;l2&quot;</span><span class="p">])</span>
+
+    <span class="n">var</span> <span class="o">=</span> <span class="n">split_vs</span><span class="p">(</span><span class="n">var_str</span><span class="p">)</span>
+
+    <span class="n">mms_id_str</span> <span class="o">=</span> <span class="s2">&quot;mms</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mms_id</span><span class="p">)</span>
+
+    <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">vdf_flag</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;mec&quot;</span><span class="p">:</span>
+        <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;mec&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]])</span>
+
+        <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;epht89d&quot;</span>
+
+    <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;fsm&quot;</span><span class="p">:</span>
+        <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">],</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+        <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;8khz&quot;</span>
+
+    <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;fgm&quot;</span><span class="p">,</span> <span class="s2">&quot;dfg&quot;</span><span class="p">,</span> <span class="s2">&quot;afg&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">],</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">:</span>
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">],</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;dmpa&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]])</span>
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;gsm&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="s2">&quot;dmpa&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid coordinates&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;fpi&quot;</span><span class="p">:</span>
+        <span class="c1"># get specie</span>
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;i&quot;</span><span class="p">:</span>
+            <span class="n">sensor</span> <span class="o">=</span> <span class="s2">&quot;dis&quot;</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+            <span class="n">sensor</span> <span class="o">=</span> <span class="s2">&quot;des&quot;</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid specie&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">,</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">,</span> <span class="s2">&quot;l1b&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][:</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;pd&quot;</span><span class="p">:</span>
+                <span class="n">vdf_flag</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">-dist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sensor</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;part&quot;</span><span class="p">:</span>
+                        <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">-partmoms&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sensor</span><span class="p">)</span>
+
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">-moms&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sensor</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">-moms&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sensor</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sensor</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pdi&quot;</span><span class="p">,</span> <span class="s2">&quot;pde&quot;</span><span class="p">,</span> <span class="s2">&quot;pderri&quot;</span><span class="p">,</span> <span class="s2">&quot;pderre&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;pd&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;dist&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;pderr&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;disterr&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Number density</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ne&quot;</span><span class="p">,</span> <span class="s2">&quot;ni&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">,</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">]:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;numberdensity&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l1b&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;numberdensity&quot;</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;numberdensity&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;sitl&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;fpi&quot;</span><span class="p">,</span> <span class="n">sensor</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="s2">&quot;numberDensity&quot;</span><span class="p">])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Number density</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;nbge&quot;</span><span class="p">,</span> <span class="s2">&quot;nbgi&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">,</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">]:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;numberdensity_bg&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l1b&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;numberdensity_bg&quot;</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;numberdensity_bg&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Partial number density</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;partni&quot;</span><span class="p">,</span> <span class="s2">&quot;partne&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="c1"># only for l2 data</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;numberdensity&quot;</span><span class="p">,</span> <span class="s2">&quot;part&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Energy flux omni</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;defi&quot;</span><span class="p">,</span> <span class="s2">&quot;defe&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;energyspectr&quot;</span><span class="p">,</span> <span class="s2">&quot;omni&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;energyspectr&quot;</span><span class="p">,</span> <span class="s2">&quot;omni&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Energy flux omni</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;defbgi&quot;</span><span class="p">,</span> <span class="s2">&quot;defbge&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;spectr_bg&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Energies</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;energyi&quot;</span><span class="p">,</span> <span class="s2">&quot;energye&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;energy&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;energy&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Parallel and perpendicular temperatures</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;tparai&quot;</span><span class="p">,</span> <span class="s2">&quot;tparae&quot;</span><span class="p">,</span> <span class="s2">&quot;tperpi&quot;</span><span class="p">,</span> <span class="s2">&quot;tperpe&quot;</span><span class="p">]:</span>
+            <span class="c1"># Field Aligned component (either para or perp)</span>
+            <span class="n">tmp_fac</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;temp</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tmp_fac</span><span class="p">),</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Partial moments parallel and perpandiculat temperatures</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;parttparai&quot;</span><span class="p">,</span> <span class="s2">&quot;parttparae&quot;</span><span class="p">,</span> <span class="s2">&quot;parttperpi&quot;</span><span class="p">,</span> <span class="s2">&quot;parttperpe&quot;</span><span class="p">]:</span>
+            <span class="c1"># Field Aligned component (either para or perp)</span>
+            <span class="n">tmp_fac</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">5</span><span class="p">:</span><span class="mi">9</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;temp</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tmp_fac</span><span class="p">),</span> <span class="s2">&quot;part&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Temperature and pressure tensors</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ti&quot;</span><span class="p">,</span> <span class="s2">&quot;te&quot;</span><span class="p">,</span> <span class="s2">&quot;pi&quot;</span><span class="p">,</span> <span class="s2">&quot;pe&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span>
+                <span class="n">mom_type</span> <span class="o">=</span> <span class="s2">&quot;temptensor&quot;</span>  <span class="c1"># temperature</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;p&quot;</span><span class="p">:</span>
+                <span class="n">mom_type</span> <span class="o">=</span> <span class="s2">&quot;prestensor&quot;</span>  <span class="c1"># pressure</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="n">mom_type</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pbgi&quot;</span><span class="p">,</span> <span class="s2">&quot;pbge&quot;</span><span class="p">]:</span>
+            <span class="n">mom_type</span> <span class="o">=</span> <span class="s2">&quot;pres_bg&quot;</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="n">mom_type</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+        <span class="c1"># Partial temperature and pressure tensors</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;partti&quot;</span><span class="p">,</span> <span class="s2">&quot;partte&quot;</span><span class="p">,</span> <span class="s2">&quot;partpi&quot;</span><span class="p">,</span> <span class="s2">&quot;partpe&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;T&quot;</span><span class="p">:</span>
+                <span class="n">mom_type</span> <span class="o">=</span> <span class="s2">&quot;temptensor&quot;</span>  <span class="c1"># temperature</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;P&quot;</span><span class="p">:</span>
+                <span class="n">mom_type</span> <span class="o">=</span> <span class="s2">&quot;prestensor&quot;</span>  <span class="c1"># pressure</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="n">mom_type</span><span class="p">,</span> <span class="s2">&quot;part&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+        <span class="c1"># spintone</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;sti&quot;</span><span class="p">,</span> <span class="s2">&quot;ste&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">,</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">]:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;bulkv_spintone&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;bulkv_spintone&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Bulk velocities</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;vi&quot;</span><span class="p">,</span> <span class="s2">&quot;ve&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">,</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">]:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;bulkv&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;bulkv&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Error bulk velocities</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;errvi&quot;</span><span class="p">,</span> <span class="s2">&quot;errve&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;bulkv&quot;</span><span class="p">,</span> <span class="s2">&quot;err&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Only l2 partmoms available now&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Partial bulk velocities</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;partvi&quot;</span><span class="p">,</span> <span class="s2">&quot;partve&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;bulkv&quot;</span><span class="p">,</span> <span class="s2">&quot;part&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Only l2 partmoms available now&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Heat flux</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;qi&quot;</span><span class="p">,</span> <span class="s2">&quot;qe&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">,</span> <span class="s2">&quot;l2pre&quot;</span><span class="p">]:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;heatq&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;heatq&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Heat flux error</span>
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;errqi&quot;</span><span class="p">,</span> <span class="s2">&quot;errqe&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l2&quot;</span><span class="p">]:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;heatq&quot;</span><span class="p">,</span> <span class="s2">&quot;err&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;padlowene&quot;</span><span class="p">,</span> <span class="s2">&quot;padmidene&quot;</span><span class="p">,</span> <span class="s2">&quot;padhighene&quot;</span><span class="p">]:</span>
+            <span class="c1"># Energy range</span>
+            <span class="n">en_range</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">3</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="s2">&quot;pitchangdist&quot;</span><span class="p">,</span> <span class="n">en_range</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Only l2 partmoms available now&quot;</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Hot Plasma Composition Analyser</span>
+    <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;hpca&quot;</span><span class="p">:</span>
+        <span class="n">param</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;moments&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Get specie name</span>
+        <span class="n">ion</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">ion</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;s&quot;</span><span class="p">:</span>
+            <span class="n">param</span><span class="p">,</span> <span class="n">ion</span> <span class="o">=</span> <span class="p">[</span><span class="n">param</span><span class="o">+</span><span class="n">ion</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ion</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+
+        <span class="k">assert</span> <span class="n">ion</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;hplus&quot;</span><span class="p">,</span> <span class="s2">&quot;heplus&quot;</span><span class="p">,</span> <span class="s2">&quot;heplusplus&quot;</span><span class="p">,</span> <span class="s2">&quot;oplus&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Number density</span>
+        <span class="k">if</span> <span class="s2">&quot;N&quot;</span> <span class="ow">in</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]:</span>
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;hpca&quot;</span><span class="p">,</span> <span class="n">ion</span><span class="p">,</span> <span class="s2">&quot;number_density&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Bulk velocity</span>
+        <span class="k">elif</span> <span class="s2">&quot;V&quot;</span> <span class="ow">in</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]:</span>
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;hpca&quot;</span><span class="p">,</span> <span class="n">ion</span><span class="p">,</span> <span class="s2">&quot;ion_bulk_velocity&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Scalar temperature</span>
+        <span class="k">elif</span> <span class="s2">&quot;Ts&quot;</span> <span class="ow">in</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]:</span>
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;hpca&quot;</span><span class="p">,</span> <span class="n">ion</span><span class="p">,</span> <span class="s2">&quot;scalar_temperature&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Pressure tensor</span>
+        <span class="k">elif</span> <span class="s2">&quot;P&quot;</span> <span class="ow">in</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]:</span>
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;hpca&quot;</span><span class="p">,</span> <span class="n">ion</span><span class="p">,</span> <span class="s2">&quot;ion_pressure&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Temperature tensor</span>
+        <span class="k">elif</span> <span class="s2">&quot;T&quot;</span> <span class="ow">in</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]:</span>
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;hpca&quot;</span><span class="p">,</span> <span class="n">ion</span><span class="p">,</span> <span class="s2">&quot;temperature_tensor&quot;</span><span class="p">])</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unrecognized param&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Tensor (vector or matrix) add coordinate system to cdf_name</span>
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;gsm&quot;</span><span class="p">:</span>
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">cdf_name</span><span class="p">,</span> <span class="s2">&quot;GSM&quot;</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;dbcs&quot;</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid CS&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Search Coil Magnetometer</span>
+    <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;scm&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">InterruptedError</span><span class="p">(</span><span class="s2">&quot;not implemented yet&quot;</span><span class="p">)</span>
+
+        <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;scb&quot;</span>
+
+        <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;scm&quot;</span><span class="p">,</span> <span class="s2">&quot;acb&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">],</span> <span class="s2">&quot;scb&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+    <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;dsp&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">psd&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;dsp&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="s2">&quot;omni&quot;</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span>
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">psd&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+
+                <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;dsp&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">],</span> <span class="s2">&quot;omni&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Should not be here&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Spin-plane Double mmsId instrument</span>
+    <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;inst&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;edp&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;sitl&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;dce_xyz&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]])</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e2d&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;dce_xyz&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]])</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce2d&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lowr</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;v&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;scpot&quot;</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;scpot&quot;</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid param&quot;</span><span class="p">)</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;edp&quot;</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ql&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;dce_xyz&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]])</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e2d&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;dce_xyz&quot;</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">]])</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce2d&quot;</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid param&quot;</span><span class="p">)</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;edp&quot;</span><span class="p">,</span> <span class="n">param</span><span class="p">])</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l1b&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;dce_sensor&quot;</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;v&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;dcv_sensor&quot;</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce&quot;</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid param&quot;</span><span class="p">)</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;edp&quot;</span><span class="p">,</span> <span class="n">param</span><span class="p">])</span>
+
+        <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;l2a&quot;</span><span class="p">:</span>
+            <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce2d&quot;</span>
+
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;phase&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;phase&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;es12&quot;</span><span class="p">,</span> <span class="s2">&quot;es34&quot;</span><span class="p">]:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;espin_p</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;adcoff&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;adc_offset&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;sdev12&quot;</span><span class="p">,</span> <span class="s2">&quot;sdev34&quot;</span><span class="p">]:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;sdevfit_p</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">][</span><span class="mi">4</span><span class="p">:</span><span class="mi">6</span><span class="p">])</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;dce&quot;</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid param&quot;</span><span class="p">)</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;edp&quot;</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;dce_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">])</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;epar&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;dce_par_epar&quot;</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;e2d&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;dce_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">])</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dce2d&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;v&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;scpot&quot;</span>
+
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;scpot&quot;</span>
+
+            <span class="k">elif</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;param&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;v6&quot;</span><span class="p">:</span>
+                <span class="n">var</span><span class="p">[</span><span class="s2">&quot;dtype&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;scpot&quot;</span>
+
+                <span class="n">param</span> <span class="o">=</span> <span class="s2">&quot;dcv&quot;</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid param&quot;</span><span class="p">)</span>
+
+            <span class="n">cdf_name</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">mms_id_str</span><span class="p">,</span> <span class="s2">&quot;edp&quot;</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;tmmode&quot;</span><span class="p">],</span> <span class="n">var</span><span class="p">[</span><span class="s2">&quot;lev&quot;</span><span class="p">]])</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;not implemented yet&quot;</span><span class="p">)</span>
+
+    <span class="n">files</span> <span class="o">=</span> <span class="n">list_files</span><span class="p">(</span><span class="n">tint</span><span class="p">,</span> <span class="n">mms_id</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No files found. Make sure that the data_path is correct&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading </span><span class="si">{</span><span class="n">cdf_name</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">vdf_flag</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">dist_append</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">get_dist</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">cdf_name</span><span class="p">,</span> <span class="n">tint</span><span class="p">))</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">ts_append</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">get_ts</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">cdf_name</span><span class="p">,</span> <span class="n">tint</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">out</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;float64&quot;</span><span class="p">:</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">Time</span><span class="p">(</span><span class="mf">1e-9</span> <span class="o">*</span> <span class="n">out</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;unix&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">datetime</span>
+
+    <span class="k">return</span> <span class="n">out</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Louis Richard
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

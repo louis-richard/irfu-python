@@ -1,0 +1,412 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyrfu package &mdash; pyrfu  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pyrfu.mms package" href="pyrfu.mms.html" />
+    <link rel="prev" title="Welcome to pyrfu’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pyrfu
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">pyrfu package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pyrfu.mms.html">pyrfu.mms package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyrfu.plot.html">pyrfu.plot package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyrfu.pyrf.html">pyrfu.pyrf package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyrfu.solo.html">pyrfu.solo package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyrfu.tests.html">pyrfu.tests package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pyrfu">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pyrfu</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>pyrfu package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/pyrfu.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="pyrfu-package">
+<h1>pyrfu package<a class="headerlink" href="#pyrfu-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.mms.html">pyrfu.mms package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-calc_feeps_omni">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.calc_feeps_omni">pyrfu.mms.calc_feeps_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.calc_feeps_pad">pyrfu.mms.calc_feeps_pad module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.calculate_epsilon">pyrfu.mms.calculate_epsilon module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.copy_files">pyrfu.mms.copy_files module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.correct_edp_probe_timing">pyrfu.mms.correct_edp_probe_timing module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.db_get_ts">pyrfu.mms.db_get_ts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.deflux_to_vdf">pyrfu.mms.deflux_to_vdf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.dft_time_shift">pyrfu.mms.dft_time_shift module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.dpflux_to_vdf">pyrfu.mms.dpflux_to_vdf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.estimate_phase_speed">pyrfu.mms.estimate_phase_speed module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_pitch_angles">pyrfu.mms.feeps_pitch_angles module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_remove_sun">pyrfu.mms.feeps_remove_sun module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_spin_avg">pyrfu.mms.feeps_spin_avg module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.feeps_split_integral_ch">pyrfu.mms.feeps_split_integral_ch module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.fft_bandpass">pyrfu.mms.fft_bandpass module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.fk_power_spectrum">pyrfu.mms.fk_power_spectrum module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.fk_power_spectrum_4sc">pyrfu.mms.fk_power_spectrum_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_data">pyrfu.mms.get_data module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_dist">pyrfu.mms.get_dist module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_eis_allt">pyrfu.mms.get_eis_allt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_eis_omni">pyrfu.mms.get_eis_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_active_eyes">pyrfu.mms.get_feeps_active_eyes module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_alleyes">pyrfu.mms.get_feeps_alleyes module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_energy_table">pyrfu.mms.get_feeps_energy_table module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_omni">pyrfu.mms.get_feeps_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_feeps_oneeye">pyrfu.mms.get_feeps_oneeye module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_pitch_angle_dist">pyrfu.mms.get_pitch_angle_dist module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.get_ts">pyrfu.mms.get_ts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.lh_wave_analysis">pyrfu.mms.lh_wave_analysis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.list_files">pyrfu.mms.list_files module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.load_ancillary">pyrfu.mms.load_ancillary module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.make_model_vdf">pyrfu.mms.make_model_vdf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.mms_config">pyrfu.mms.mms_config module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.probe_align_times">pyrfu.mms.probe_align_times module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.psd_moments">pyrfu.mms.psd_moments module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.psd_rebin">pyrfu.mms.psd_rebin module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.read_feeps_sector_masks_csv">pyrfu.mms.read_feeps_sector_masks_csv module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.remove_idist_background">pyrfu.mms.remove_idist_background module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.rotate_tensor">pyrfu.mms.rotate_tensor module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.spectr_to_dataset">pyrfu.mms.spectr_to_dataset module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.split_vs">pyrfu.mms.split_vs module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.vdf_omni">pyrfu.mms.vdf_omni module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.vdf_to_deflux">pyrfu.mms.vdf_to_deflux module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.vdf_to_dpflux">pyrfu.mms.vdf_to_dpflux module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms.whistler_b2e">pyrfu.mms.whistler_b2e module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.mms.html#module-pyrfu.mms">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.plot.html">pyrfu.plot package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.colorbar">pyrfu.plot.colorbar module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.mms_pl_config">pyrfu.plot.mms_pl_config module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.pl_scatter_matrix">pyrfu.plot.pl_scatter_matrix module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.plot_line">pyrfu.plot.plot_line module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.plot_spectr">pyrfu.plot.plot_spectr module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot.zoom">pyrfu.plot.zoom module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.plot.html#module-pyrfu.plot">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.pyrf.html">pyrfu.pyrf package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.agyro_coeff">pyrfu.pyrf.agyro_coeff module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.avg_4sc">pyrfu.pyrf.avg_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_grad">pyrfu.pyrf.c_4_grad module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_j">pyrfu.pyrf.c_4_j module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_k">pyrfu.pyrf.c_4_k module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.c_4_v">pyrfu.pyrf.c_4_v module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.calc_disprel_tm">pyrfu.pyrf.calc_disprel_tm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.calc_dt">pyrfu.pyrf.calc_dt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.calc_fs">pyrfu.pyrf.calc_fs module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.cart2sph">pyrfu.pyrf.cart2sph module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.convert_fac">pyrfu.pyrf.convert_fac module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.corr_deriv">pyrfu.pyrf.corr_deriv module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.cross">pyrfu.pyrf.cross module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.date_str">pyrfu.pyrf.date_str module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dec_par_perp">pyrfu.pyrf.dec_par_perp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.disp_surf_calc">pyrfu.pyrf.disp_surf_calc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dist_append">pyrfu.pyrf.dist_append module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dot">pyrfu.pyrf.dot module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.dynamic_press">pyrfu.pyrf.dynamic_press module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.e_vxb">pyrfu.pyrf.e_vxb module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.eb_nrf">pyrfu.pyrf.eb_nrf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ebsp">pyrfu.pyrf.ebsp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.edb">pyrfu.pyrf.edb module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.end">pyrfu.pyrf.end module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.extend_tint">pyrfu.pyrf.extend_tint module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.filt">pyrfu.pyrf.filt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.find_closest">pyrfu.pyrf.find_closest module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.generic_minimum_residue_analysis">pyrfu.pyrf.generic_minimum_residue_analysis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.gradient">pyrfu.pyrf.gradient module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.histogram">pyrfu.pyrf.histogram module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.histogram2d">pyrfu.pyrf.histogram2d module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.increments">pyrfu.pyrf.increments module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.integrate">pyrfu.pyrf.integrate module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.iso2unix">pyrfu.pyrf.iso2unix module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.lowpass">pyrfu.pyrf.lowpass module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.mean">pyrfu.pyrf.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.mean_bins">pyrfu.pyrf.mean_bins module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.medfilt">pyrfu.pyrf.medfilt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.median_bins">pyrfu.pyrf.median_bins module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.movmean">pyrfu.pyrf.movmean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.mva">pyrfu.pyrf.mva module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.new_xyz">pyrfu.pyrf.new_xyz module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.norm">pyrfu.pyrf.norm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.normalize">pyrfu.pyrf.normalize module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pid_4sc">pyrfu.pyrf.pid_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.plasma_beta">pyrfu.pyrf.plasma_beta module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.plasma_calc">pyrfu.pyrf.plasma_calc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.poynting_flux">pyrfu.pyrf.poynting_flux module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pres_anis">pyrfu.pyrf.pres_anis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.psd">pyrfu.pyrf.psd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pvi">pyrfu.pyrf.pvi module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.pvi_4sc">pyrfu.pyrf.pvi_4sc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.remove_repeated_points">pyrfu.pyrf.remove_repeated_points module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.resample">pyrfu.pyrf.resample module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.solid_angle">pyrfu.pyrf.solid_angle module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.st_diff">pyrfu.pyrf.st_diff module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.start">pyrfu.pyrf.start module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.struct_func">pyrfu.pyrf.struct_func module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.t_eval">pyrfu.pyrf.t_eval module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.time_clip">pyrfu.pyrf.time_clip module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.trace">pyrfu.pyrf.trace module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_append">pyrfu.pyrf.ts_append module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_scalar">pyrfu.pyrf.ts_scalar module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_skymap">pyrfu.pyrf.ts_skymap module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_tensor_xyz">pyrfu.pyrf.ts_tensor_xyz module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_time">pyrfu.pyrf.ts_time module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.ts_vec_xyz">pyrfu.pyrf.ts_vec_xyz module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.vht">pyrfu.pyrf.vht module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.wave_fft">pyrfu.pyrf.wave_fft module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.wavelet">pyrfu.pyrf.wavelet module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf.wavepolarize_means">pyrfu.pyrf.wavepolarize_means module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.pyrf.html#module-pyrfu.pyrf">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.solo.html">pyrfu.solo package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo.get_ts">pyrfu.solo.get_ts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo.list_files">pyrfu.solo.list_files module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo.solo_config">pyrfu.solo.solo_config module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.solo.html#module-pyrfu.solo">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyrfu.tests.html">pyrfu.tests package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.tests.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.tests.html#module-pyrfu.tests.test_pyrf">pyrfu.tests.test_pyrf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyrfu.tests.html#module-pyrfu.tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="module-pyrfu">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyrfu" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="pyrfu.mms.html" class="btn btn-neutral float-right" title="pyrfu.mms package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to pyrfu’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Louis Richard
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,521 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyrfu.pyrf.wavepolarize_means &mdash; pyrfu  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home" alt="Documentation Home"> pyrfu
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyrfu.html">pyrfu package</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pyrfu</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>pyrfu.pyrf.wavepolarize_means</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pyrfu.pyrf.wavepolarize_means</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">wavepolarize_means.py</span>
+
+<span class="sd">@author : Louis RICHARD</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">xarray</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">astropy.time</span> <span class="kn">import</span> <span class="n">Time</span>
+
+<span class="kn">from</span> <span class="nn">.resample</span> <span class="kn">import</span> <span class="n">resample</span>
+
+
+<div class="viewcode-block" id="wavepolarize_means"><a class="viewcode-back" href="../../../pyrfu.pyrf.html#pyrfu.pyrf.wavepolarize_means.wavepolarize_means">[docs]</a><span class="k">def</span> <span class="nf">wavepolarize_means</span><span class="p">(</span><span class="n">b_wave</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b_bgd</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analysis the polarization of magnetic wave using &quot;means&quot; method</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    -----------</span>
+<span class="sd">    b_wave : xarray.DataArray</span>
+<span class="sd">        Time series of the magnetic field from Search Coil Magnetometer (SCM).</span>
+
+<span class="sd">    b_bgd : xarray.DataArray</span>
+<span class="sd">        Time series of the magnetic field from Flux Gate Magnetometer (FGM).</span>
+
+<span class="sd">    **kwargs : dict</span>
+<span class="sd">        Hash table of keyword arguments with :</span>
+<span class="sd">            * min_psd : float</span>
+<span class="sd">                Threshold for the analysis (e.g 1.0e-7). Below this value, the SVD analysis is</span>
+<span class="sd">                meaningless if min_psd is not given, SVD analysis will be done for all waves.</span>
+<span class="sd">                Default ``min_psd`` = 1e-25.</span>
+
+<span class="sd">            * nop_fft : int</span>
+<span class="sd">                Number of points in FFT. (default 256).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    b_psd : xarray.DataArray</span>
+<span class="sd">        Power spectrum density of magnetic filed wave.</span>
+
+<span class="sd">    wave_angle : xarray.DataArray</span>
+<span class="sd">        (form 0 to 90)</span>
+
+<span class="sd">    deg_pol : xarray.DataArray</span>
+<span class="sd">        Spectrogram of the degree of polarization (form 0 to 1).</span>
+
+<span class="sd">    elliptict : xarray.DataArray</span>
+<span class="sd">        Spectrogram of the ellipticity (form -1 to 1)</span>
+
+<span class="sd">    helict : xarray.DataArray</span>
+<span class="sd">        Spectrogram of the helicity (form -1 to 1)</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    ------</span>
+<span class="sd">    ``b_wave`` and ``b_bgd`` should be from the same satellite and in the same coordinates</span>
+
+<span class="sd">    .. warning::</span>
+<span class="sd">        If one component is an order of magnitude or more  greater than the other two then the</span>
+<span class="sd">        polarization results saturate and erroneously indicate high degrees of polarization at</span>
+<span class="sd">        all times and frequencies. Time series should be eyeballed before running the program.</span>
+<span class="sd">        For time series containing very rapid changes or spikes the usual problems with Fourier</span>
+<span class="sd">        analysis arise. Care should be taken in evaluating degree of polarization results. For</span>
+<span class="sd">        meaningful results there should be significant wave power at the frequency where the</span>
+<span class="sd">        polarization approaches 100%. Remember comparing two straight lines yields 100%</span>
+<span class="sd">        polarization.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from pyrfu import pyrf</span>
+<span class="sd">    &gt;&gt;&gt; polarization = pyrf.wavepolarize_means(b_wave, b_bgd)</span>
+<span class="sd">    &gt;&gt;&gt; polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7)</span>
+<span class="sd">    &gt;&gt;&gt; polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7, 256)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">b_wave</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">b_bgd</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;wavepolarize_means requires at least two arguments&quot;</span><span class="p">)</span>
+
+    <span class="n">min_psd</span> <span class="o">=</span> <span class="mf">1e-25</span>
+    <span class="n">nop_fft</span> <span class="o">=</span> <span class="mi">256</span>
+
+    <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;min_psd&quot;</span><span class="p">):</span>
+        <span class="n">min_psd</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;min_psd&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nop_fft&quot;</span><span class="p">):</span>
+        <span class="n">nop_fft</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;nop_fft&quot;</span><span class="p">]</span>
+
+    <span class="n">step_length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">n_pts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">b_wave</span><span class="p">)</span>
+    <span class="n">n_stp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">n_pts</span> <span class="o">-</span> <span class="n">nop_fft</span><span class="p">)</span> <span class="o">/</span> <span class="n">step_length</span><span class="p">)</span>  				<span class="c1"># total number of FFTs</span>
+    <span class="n">n_bin</span> <span class="o">=</span> <span class="mi">7</span>  													<span class="c1"># No. of bins in frequency domain</span>
+    <span class="n">aa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">.</span><span class="mi">024</span><span class="p">,</span> <span class="o">.</span><span class="mi">093</span><span class="p">,</span> <span class="o">.</span><span class="mi">232</span><span class="p">,</span> <span class="o">.</span><span class="mi">301</span><span class="p">,</span> <span class="o">.</span><span class="mi">232</span><span class="p">,</span> <span class="o">.</span><span class="mi">093</span><span class="p">,</span> <span class="o">.</span><span class="mi">024</span><span class="p">])</span>  	<span class="c1"># Smoothing profile based on Hanning</span>
+
+    <span class="c1"># change wave to MFA coordinates</span>
+    <span class="n">b_bgd</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">b_bgd</span><span class="p">,</span> <span class="n">b_wave</span><span class="p">)</span>
+
+    <span class="n">b_x</span><span class="p">,</span> <span class="n">b_y</span><span class="p">,</span> <span class="n">b_z</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b_wave</span><span class="p">))</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b_wave</span><span class="p">)):</span>
+        <span class="n">nb</span> <span class="o">=</span> <span class="n">b_bgd</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">b_bgd</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">n_perp1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">nb</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">n_perp1</span> <span class="o">=</span> <span class="n">n_perp1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">n_perp1</span><span class="p">)</span>
+        <span class="n">n_perp2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">nb</span><span class="p">,</span> <span class="n">n_perp1</span><span class="p">)</span>
+
+        <span class="n">b_z</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b_wave</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">nb</span><span class="p">)</span>
+        <span class="n">b_x</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b_wave</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">n_perp1</span><span class="p">)</span>
+        <span class="n">b_y</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b_wave</span><span class="p">[</span><span class="n">ii</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">n_perp2</span><span class="p">)</span>
+
+    <span class="n">ct</span> <span class="o">=</span> <span class="n">Time</span><span class="p">(</span><span class="n">b_wave</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;datetime64&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unix</span>
+
+    <span class="c1"># DEFINE ARRAYS</span>
+    <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">zs</span> <span class="o">=</span> <span class="p">[</span><span class="n">b_x</span><span class="p">,</span> <span class="n">b_y</span><span class="p">,</span> <span class="n">b_z</span><span class="p">]</span>
+
+    <span class="n">sample_freq</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">ct</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">ct</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">end_sample_freq</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">ct</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">ct</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">sample_freq</span> <span class="o">!=</span> <span class="n">end_sample_freq</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;file sampling frequency changes </span><span class="si">{}</span><span class="s2"> Hz to </span><span class="si">{}</span><span class="s2"> Hz&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sample_freq</span><span class="p">,</span> <span class="n">end_sample_freq</span><span class="p">),</span>
+            <span class="ne">UserWarning</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ac file sampling frequency </span><span class="si">{}</span><span class="s2"> Hz&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sample_freq</span><span class="p">))</span>
+
+    <span class="c1"># FFT calculation</span>
+    <span class="c1"># Minimum variance direction and wave normal angle</span>
+    <span class="n">wave_angle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_stp</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)])</span>
+
+    <span class="c1"># Degree of Polarization</span>
+    <span class="n">sqrd_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_stp</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+    <span class="n">trace_sqrd_mat</span><span class="p">,</span> <span class="n">trace_spec_mat</span><span class="p">,</span> <span class="n">deg_pol</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_stp</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)])</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span>
+                                               <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+
+    <span class="c1"># HELICITY, ELLIPTICITY AND THE WAVE STATE VECTOR</span>
+    <span class="n">lambda_u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_stp</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+
+    <span class="n">helic</span><span class="p">,</span> <span class="n">ellip</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_stp</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">3</span><span class="p">])</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_stp</span><span class="p">):</span>
+        <span class="c1"># FFT CALCULATION</span>
+        <span class="n">smooth</span> <span class="o">=</span> <span class="mf">0.08</span> <span class="o">+</span> <span class="mf">0.46</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nop_fft</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">nop_fft</span><span class="p">))</span>
+        <span class="n">temp_x</span> <span class="o">=</span> <span class="n">smooth</span> <span class="o">*</span> <span class="n">xs</span><span class="p">[((</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):((</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_length</span> <span class="o">+</span> <span class="n">nop_fft</span><span class="p">)]</span>
+        <span class="n">temp_y</span> <span class="o">=</span> <span class="n">smooth</span> <span class="o">*</span> <span class="n">ys</span><span class="p">[((</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):((</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_length</span> <span class="o">+</span> <span class="n">nop_fft</span><span class="p">)]</span>
+        <span class="n">temp_z</span> <span class="o">=</span> <span class="n">smooth</span> <span class="o">*</span> <span class="n">zs</span><span class="p">[((</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):((</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_length</span> <span class="o">+</span> <span class="n">nop_fft</span><span class="p">)]</span>
+
+        <span class="n">spec_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">temp_x</span><span class="p">)</span>
+        <span class="n">spec_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">temp_y</span><span class="p">)</span>
+        <span class="n">spec_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">temp_z</span><span class="p">)</span>
+
+        <span class="n">half_spec_x</span> <span class="o">=</span> <span class="n">spec_x</span><span class="p">[:(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)]</span>
+        <span class="n">half_spec_y</span> <span class="o">=</span> <span class="n">spec_y</span><span class="p">[:(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)]</span>
+        <span class="n">half_spec_z</span> <span class="o">=</span> <span class="n">spec_z</span><span class="p">[:(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)]</span>
+
+        <span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="o">-</span><span class="n">step_length</span><span class="p">)</span>
+        <span class="n">ys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">ys</span><span class="p">,</span> <span class="o">-</span><span class="n">step_length</span><span class="p">)</span>
+        <span class="n">zs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="o">-</span><span class="n">step_length</span><span class="p">)</span>
+
+        <span class="c1"># CALCULATION OF THE SPECTRAL MATRIX</span>
+        <span class="n">spec_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_x</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_y</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_z</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_x</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_y</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_z</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_x</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_y</span><span class="p">)</span>
+        <span class="n">spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">half_spec_z</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">half_spec_z</span><span class="p">)</span>
+
+        <span class="c1"># Calculation of smoothed spectral matrix</span>
+        <span class="n">e_spec_mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">spec_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="n">off_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">n_bin</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">off_idx</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">ir</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">ic</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                    <span class="n">e_spec_mat</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">ir</span><span class="p">,</span> <span class="n">ic</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                        <span class="n">aa</span><span class="p">[:</span><span class="n">n_bin</span><span class="p">]</span> <span class="o">*</span> <span class="n">spec_mat</span><span class="p">[(</span><span class="n">k</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">):(</span><span class="n">k</span> <span class="o">+</span> <span class="n">off_idx</span><span class="p">),</span> <span class="n">ir</span><span class="p">,</span> <span class="n">ic</span><span class="p">])</span>
+
+        <span class="c1"># Calculation of the minimum variance direction and wave normal angle</span>
+        <span class="n">aaa2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">aaa2</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">aaa2</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">aaa2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">aaa2</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:])</span>
+
+        <span class="n">wn_x</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">aaa2</span><span class="p">)</span>
+        <span class="n">wn_y</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">aaa2</span><span class="p">)</span>
+        <span class="n">wn_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">aaa2</span>
+
+        <span class="n">wave_angle</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">wn_x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">wn_y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">wn_z</span><span class="p">))</span>
+
+        <span class="c1"># CALCULATION OF THE DEGREE OF POLARISATION</span>
+        <span class="c1"># calc of square of smoothed spec matrix</span>
+        <span class="k">for</span> <span class="n">ir</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">ic</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                <span class="n">sqrd_mat</span><span class="p">[:,</span> <span class="n">ir</span><span class="p">,</span> <span class="n">ic</span><span class="p">]</span> <span class="o">=</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="n">ir</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ic</span><span class="p">]</span>
+                <span class="n">sqrd_mat</span><span class="p">[:,</span> <span class="n">ir</span><span class="p">,</span> <span class="n">ic</span><span class="p">]</span> <span class="o">+=</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="n">ir</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ic</span><span class="p">]</span>
+                <span class="n">sqrd_mat</span><span class="p">[:,</span> <span class="n">ir</span><span class="p">,</span> <span class="n">ic</span><span class="p">]</span> <span class="o">+=</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="n">ir</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">ic</span><span class="p">]</span>
+
+        <span class="n">trace_sqrd_mat</span> <span class="o">=</span> <span class="n">sqrd_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">sqrd_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">sqrd_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">trace_spec_mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+
+        <span class="n">deg_pol</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">trace_spec_mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">deg_pol</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">off_idx</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">trace_sqrd_mat</span><span class="p">[</span>
+                                                             <span class="n">off_idx</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">]</span>
+        <span class="n">deg_pol</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">off_idx</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">]</span> <span class="o">-=</span> <span class="n">trace_spec_mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span>
+                                                          <span class="n">off_idx</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">deg_pol</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">off_idx</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">]</span> <span class="o">/=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trace_spec_mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">off_idx</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span>
+            <span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">off_idx</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+
+        <span class="c1"># Calculation of helicity, ellipticity and the wave state vector</span>
+        <span class="n">alpha_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">alpha_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">alpha_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+
+        <span class="n">alpha_cos1_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">alpha_sin1_x</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">alpha_cos2_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">alpha_sin2_x</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+        <span class="n">alpha_cos1_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">alpha_sin1_y</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">alpha_cos2_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">alpha_sin2_y</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">alpha_cos1_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="n">alpha_sin1_z</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="n">alpha_cos2_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="n">alpha_sin2_z</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha_x</span>
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha_y</span>
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha_z</span>
+
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">alpha_cos1_x</span><span class="p">,</span> <span class="n">alpha_sin1_x</span><span class="p">)</span>
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">alpha_cos2_x</span><span class="p">,</span> <span class="n">alpha_sin2_x</span><span class="p">)</span>
+
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">alpha_cos1_y</span><span class="p">,</span> <span class="n">alpha_sin1_y</span><span class="p">)</span>
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">alpha_cos2_y</span><span class="p">,</span> <span class="n">alpha_sin2_y</span><span class="p">)</span>
+
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">alpha_cos1_z</span><span class="p">,</span> <span class="n">alpha_sin1_z</span><span class="p">)</span>
+        <span class="n">lambda_u</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">alpha_cos2_z</span><span class="p">,</span> <span class="n">alpha_sin2_z</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">xyz</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                <span class="c1"># HELICITY CALCULATION</span>
+                <span class="n">upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])))</span>
+                <span class="n">lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">upper</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">gamma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">upper</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="n">lower</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">gamma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">upper</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="n">lower</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]))</span>
+
+                <span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">gamma</span><span class="p">))</span> <span class="o">*</span> <span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">helic</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">helic</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">helic</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">helic</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">])</span>
+
+                <span class="c1"># ELLIPTICITY CALCULATION</span>
+                <span class="n">upper_e</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]))</span>
+                <span class="n">lower_e</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">upper_e</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">gamma_rot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan</span><span class="p">(</span><span class="n">upper_e</span> <span class="o">/</span> <span class="n">lower_e</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">gamma_rot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">upper_e</span> <span class="o">/</span> <span class="n">lower_e</span><span class="p">)</span>
+
+                <span class="n">lam</span> <span class="o">=</span> <span class="n">lambda_u</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">lambda_u_rot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">gamma_rot</span><span class="p">))</span> <span class="o">*</span> <span class="n">lam</span>
+
+                <span class="n">ellip</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">lambda_u_rot</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">ellip</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">lambda_u_rot</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="n">ellip</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">wave_angle</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]))</span>
+                <span class="n">ellip</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">xyz</span><span class="p">]</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">e_spec_mat</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">wave_angle</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]))</span>
+
+    <span class="c1"># AVERAGING HELICITY AND ELLIPTICITY RESULTS</span>
+    <span class="n">ellipticity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">ellip</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">helicity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">helic</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># CREATING OUTPUT PARAMETER</span>
+    <span class="n">time_line</span> <span class="o">=</span> <span class="n">ct</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">sample_freq</span> \
+                <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_stp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">step_length</span> <span class="o">/</span> <span class="n">sample_freq</span>
+    <span class="n">bin_width</span> <span class="o">=</span> <span class="n">sample_freq</span> <span class="o">/</span> <span class="n">nop_fft</span>
+    <span class="n">freq_line</span> <span class="o">=</span> <span class="n">bin_width</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># scaling power results to units with meaning</span>
+    <span class="n">W</span> <span class="o">=</span> <span class="n">nop_fft</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">smooth</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">power_spec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_stp</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)])</span>
+    <span class="n">power_spec</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">W</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trace_spec_mat</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">bin_width</span>
+    <span class="n">power_spec</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">W</span> <span class="o">*</span> <span class="n">trace_spec_mat</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">bin_width</span>
+    <span class="n">power_spec</span><span class="p">[:,</span> <span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">W</span> <span class="o">*</span> <span class="n">trace_spec_mat</span><span class="p">[:,</span> <span class="n">nop_fft</span> <span class="o">/</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">bin_width</span>
+
+    <span class="c1"># KICK OUT THE ANALYSIS OF THE WEAK SIGNALS</span>
+    <span class="n">wave_angle</span><span class="p">[</span><span class="n">power_spec</span> <span class="o">&lt;</span> <span class="n">min_psd</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">deg_pol</span><span class="p">[</span><span class="n">power_spec</span> <span class="o">&lt;</span> <span class="n">min_psd</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">ellipticity</span><span class="p">[</span><span class="n">power_spec</span> <span class="o">&lt;</span> <span class="n">min_psd</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">helicity</span><span class="p">[</span><span class="n">power_spec</span> <span class="o">&lt;</span> <span class="n">min_psd</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="c1"># Save as DataArrays</span>
+    <span class="n">b_psd</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">power_spec</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">time_line</span><span class="p">,</span> <span class="n">freq_line</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">])</span>
+    <span class="n">wave_angle</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">wave_angle</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">time_line</span><span class="p">,</span> <span class="n">freq_line</span><span class="p">],</span>
+                              <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">])</span>
+    <span class="n">ellipticity</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">ellipticity</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">time_line</span><span class="p">,</span> <span class="n">freq_line</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">])</span>
+    <span class="n">deg_pol</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">deg_pol</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">time_line</span><span class="p">,</span> <span class="n">freq_line</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">])</span>
+    <span class="n">helicity</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">helicity</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[</span><span class="n">time_line</span><span class="p">,</span> <span class="n">freq_line</span><span class="p">],</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">])</span>
+
+    <span class="n">b_psd</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Hz&quot;</span>
+    <span class="n">wave_angle</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Hz&quot;</span>
+    <span class="n">deg_pol</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Hz&quot;</span>
+    <span class="n">ellipticity</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Hz&quot;</span>
+    <span class="n">helicity</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Hz&quot;</span>
+
+    <span class="k">return</span> <span class="n">b_psd</span><span class="p">,</span> <span class="n">wave_angle</span><span class="p">,</span> <span class="n">deg_pol</span><span class="p">,</span> <span class="n">ellipticity</span><span class="p">,</span> <span class="n">helicity</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Louis Richard
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
