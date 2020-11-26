@@ -43,6 +43,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
+    'sphinxcontrib.apidoc',
     'sphinx.ext.todo',
     'nbsphinx'
   #  'sphinx_gallery.gen_gallery'
@@ -216,3 +217,8 @@ epub_exclude_files = ['search.html']
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/3/', None),
                        'xarray': ('http://xarray.pydata.org/en/stable/', None)}
+
+apidoc_module_dir = '../../pyrfu'
+apidoc_output_dir = '_generated'
+apidoc_excluded_paths = ['tests', '*/tests/', '*/*/tests/', '*/*/*/tests']
+apidoc_separate_modules = True

@@ -14,8 +14,7 @@ Welcome to pyrfu's documentation!
    :maxdepth: 4
    :caption: Contents:
 
-   pyrfu
-
+   modules
 
 Indices and tables
 ==================
