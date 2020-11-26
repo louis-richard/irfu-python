@@ -35,7 +35,8 @@ INSTALL_REQUIRES = [
       "sphinx_rtd_theme", 
       "ipython", 
       "ipykernel", 
-      "nbsphinx", 
+      "nbsphinx",
+      "spacepy",
       "sphinxcontrib-apidoc"]
 
 PYTHON_REQUIRES = ">=3.7"

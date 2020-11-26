@@ -19,10 +19,8 @@ from dateutil import parser as date_parser
 from .mms_config import CONFIG
 
 
-# noinspection PyUnboundLocalVariable
 def load_ancillary(level_and_dtype="", tint=None, probe=1, verbose=True):
-    """
-    Load ancillary data
+    """Load ancillary data
 
     Parameters
     ----------
