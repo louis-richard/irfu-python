@@ -1,5 +1,6 @@
 Contributing to pyrfu
 =====================
+.. start-marker-style-do-not-remove
 
 The following is a set of guidelines for contributing to ``pyrfu`` and its packages, which are hosted on GitHub. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
 

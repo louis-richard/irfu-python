@@ -36,26 +36,125 @@ Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
 
 .. start-marker-install-do-not-remove
 
-
 Instalation
 -----------
-pyRFU supports Windows, macOS and Linux.
 
-Requirements
+The package pyrfu has been tested only for Mac OS.
+
+
+Using PyPi
+**********
+
+``pyrfu`` is available for pip.
+
+.. code-block:: bash
+
+        pip install --index-url https://test.pypi.org/project/ --no-deps pyrfu
+
+
+From sources
 ************
-pyRFU uses packages not included in python3. To get started, install the required packages using :
 
-.. code:: python
+The sources are located on **GitHub**:
 
-    pip install -r requirements.txt
+    https://github.com/louis-richard/irfu-python
 
-From TestPyPi
-*************
-pyRFU uses TestPyPI a separate instance of the Python Package index to not affect the real index. To get started, install the pyrfu package using TestPyPI:
+1) Clone the GitHub repo:
 
-.. code:: python
+Open a terminal and write the below command to clone in your PC the pyrfu repo:
 
-    pip install --index-url https://test.pypi.org/project/ --no-deps pyrfu
+.. code-block:: bash
+
+    git clone https://github.com/louis-richard/irfu-python.git
+    cd pyrfu
+
+
+2) Create a virtual env
+
+pyrfu needs a significant number of dependencies. The easiest
+way to get everything installed is to use a virtual environment.
+
+-  Anaconda
+
+You can create a virtual environment and install all the dependencies using conda_
+with the following commands:
+
+.. code-block:: bash
+
+    pip install conda
+    conda create -n pyrfu
+    source activate pyrfu
+
+.. _conda: http://conda.io/
+
+
+- Virtual Env
+
+Virtualenv_ can also be used:
+
+.. code-block:: bash
+
+    pip install virtualenv
+    virtualenv pyrfu
+    source pyrfu/bin/activate
+
+.. _virtualenv: https://virtualenv.pypa.io/en/latest/#
+
+
+3) Install the package via the commands:
+
+.. code-block:: bash
+
+        python setup.py install
+
+
+5) (Optional) Generate the docs: install the extra dependencies of doc and run
+the `setup.py` file:
+
+.. code-block:: bash
+
+        pip install pyrfu
+        python setup.py build_sphinx
+
+Once installed, the doc can be generated with:
+
+.. code-block:: bash
+
+        cd doc
+        make html
+
+
+Dependencies
+************
+
+The required dependencies are:
+
+- `Python <https://python.org>`_  >= 3.7
+- `python-dateutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.1
+- `numpy <https://www.numpy.org>`_ >= 1.18
+- `scipy <https://scipy.org>`_ >= 1.4.1
+- `matplotlib <https://matplotlib.org>`_ >= 3.2.1
+- `pandas <https://pandas.pydata.org/>`_ >= 1.0.3
+- `astropy <https://www.astropy.org/>`_ >=4.0.1
+- `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.15
+- `pyfftw <https://pyfftw.readthedocs.io/en/latest/>`_ >=0.12.0
+- `spacepy <https://spacepy.github.io/#>`_ >=0.2.1
+- `seaborn <https://seaborn.pydata.org>`_ >=0.10.1
+- `sfs <https://sfs-python.readthedocs.io>`_ >=0.5.0
+- `tqdm <https://pypi.org/project/tqdm/#documentation>`_ >=4.46.0
+
+
+Testing dependencies are:
+
+- `pytest <https://docs.pytest.org/en/latest/>`_ >= 2.8
+
+Extra testing dependencies:
+
+- `coverage <https://coverage.readthedocs.io>`_ >= 4.4
+- `pylint <https://www.pylint.org>`_ >= 1.6.0
+
+
+.. end-marker-install-do-not-remove
 
 Usage
 -----
