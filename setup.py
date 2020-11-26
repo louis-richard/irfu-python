@@ -23,7 +23,7 @@ INSTALL_REQUIRES = [
       "python-dateutil",
       "matplotlib",
       "numpy",
-      "sphinx"
+      "sphinx>=1.4",
       "pandas",
       "pvlib",
       "pyfftw",
@@ -31,8 +31,12 @@ INSTALL_REQUIRES = [
       "seaborn",
       "sfs",
       "tqdm",
-      "xarray"
-]
+      "xarray",
+      "sphinx_rtd_theme", 
+      "ipython", 
+      "ipykernel", 
+      "nbsphinx", 
+      "sphinxcontrib-apidoc"]
 
 PYTHON_REQUIRES = ">=3.7"
 
