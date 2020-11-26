@@ -26,7 +26,6 @@ INSTALL_REQUIRES = [
       "sphinx"
       "numpydoc"
       "pandas",
-      "psychopy",
       "pvlib",
       "pyfftw",
       "scipy",
