@@ -24,7 +24,6 @@ INSTALL_REQUIRES = [
       "matplotlib",
       "numpy",
       "sphinx"
-      "numpydoc"
       "pandas",
       "pvlib",
       "pyfftw",
