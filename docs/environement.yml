@@ -1,0 +1,13 @@
+name: pyrfu_ci
+channels:
+- conda-forge
+- defaults
+dependencies:
+- xarray
+- sphinxcontrib-apidoc
+- sphinx
+- ipython
+- ipykernel
+- sphinx
+- sphinx_rtd_theme
+- nbsphinx
