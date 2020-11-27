@@ -4,7 +4,7 @@ from sphinx.setup_command import BuildDoc
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "1.8.1"
+VERSION = "1.8.5"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -39,7 +39,7 @@ INSTALL_REQUIRES = [
       "spacepy",
       "sphinxcontrib-apidoc"]
 
-PYTHON_REQUIRES = ">=3.7"
+PYTHON_REQUIRES = '>=3.7'
 
 
 cmdclass = {'build_sphinx': BuildDoc}

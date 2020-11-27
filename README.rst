@@ -12,17 +12,21 @@
 .. |DocSphinx| image:: https://img.shields.io/static/v1.svg?label=sphinx&message=documentation&color=blue
 .. _DocSphinx: https://pyrfu.readthedocs.io
 
-.. |PyPi| image:: https://img.shields.io/badge/install_with-pypi-brightgreen.svg
-.. _PyPi: https://test.pypi.org/project/pyrfu/
+.. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg
+.. _PyPi: https://pypi.org/project/pyrfu/
 
-.. |PyLint| image:: https://img.shields.io/badge/pylint-9.46-brightgreen.svg
-.. _PyLint: http://pylint.pycqa.org/en/latest/intro.html
+.. |VPython| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg
+.. _VPython: https://pypi.org/project/pyrfu/
+
+.. |Lint| image:: https://img.shields.io/badge/pylint-9.46-brightgreen.svg
+.. _Lint: http://pylint.pycqa.org/en/latest/intro.html
 
 
 pyRFU
 =====
 
-|LicenseMit|_ |LicenseCC|_ |PyPi|_  |DocSphinx|_ |Maintenance|_ |PyLint|_
+|LicenseMit|_ |LicenseCC|_ |PyPi|_ |VPython|_ |DocSphinx|_ |Maintenance|_ |Lint|_
+
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
@@ -34,10 +38,9 @@ Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
 .. end-marker-intro-do-not-remove
 
 
-.. start-marker-install-do-not-remove
-
 Instalation
 -----------
+.. start-marker-install-do-not-remove
 
 The package pyrfu has been tested only for Mac OS.
 
@@ -49,7 +52,7 @@ Using PyPi
 
 .. code-block:: bash
 
-        pip install --index-url https://test.pypi.org/project/ --no-deps pyrfu
+        pip install pyrfu
 
 
 From sources
