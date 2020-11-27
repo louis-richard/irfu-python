@@ -15,9 +15,6 @@
 .. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg
 .. _PyPi: https://pypi.org/project/pyrfu/
 
-.. |VPython| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg
-.. _VPython: https://pypi.org/project/pyrfu/
-
 .. |Lint| image:: https://img.shields.io/badge/pylint-9.46-brightgreen.svg
 .. _Lint: http://pylint.pycqa.org/en/latest/intro.html
 
@@ -25,7 +22,7 @@
 pyRFU
 =====
 
-|LicenseMit|_ |LicenseCC|_ |PyPi|_ |VPython|_ |DocSphinx|_ |Maintenance|_ |Lint|_
+|LicenseMIT|_ |LicenseCC|_ |PyPi|_  |DocSphinx|_ |Maintenance|_ |Lint|_
 
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
