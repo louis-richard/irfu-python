@@ -20,8 +20,27 @@ import sphinx_rtd_theme
 # import sys
 # sys.path.insert(0, '/Users/louisr/Documents/PhD/irfu-python/pyrfu')
 
-sys.path.insert(0, os.path.abspath('./../..'))
 
+
+examples_source = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                               "..", "..", "examples"))
+examples_dest = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                             "examples"))
+
+if os.path.exists(examples_dest):
+    shutil.rmtree(examples_dest)
+os.mkdir(examples_dest)
+
+for root, dirs, files in os.walk(examples_source):
+    for dr in dirs:
+        os.mkdir(os.path.join(root.replace(examples_source, examples_dest), dr))
+    for fil in files:
+        if os.path.splitext(fil)[1] in [".ipynb", ".md", ".rst"]:
+            source_filename = os.path.join(root, fil)
+            dest_filename = source_filename.replace(examples_source, examples_dest)
+            shutil.copyfile(source_filename, dest_filename)
+
+sys.path.insert(0, os.path.abspath('./../..'))
 
 # -- Project information -----------------------------------------------------
 
@@ -76,7 +95,7 @@ language = 'en'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints', 'examples/**/README.md']
 
 autodoc_mock_imports = ['spacepy']
 
