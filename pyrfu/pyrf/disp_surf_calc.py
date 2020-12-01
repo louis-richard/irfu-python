@@ -42,7 +42,7 @@ def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
 
     References
     ----------
-    ..[15]	Swanson, D. G. (2003), Plasma waves, 2nd ed., Institute of Physics Pub,
+    .. [15] Swanson, D. G. (2003), Plasma waves, 2nd ed., Institute of Physics Pub,
             doi: https://www.taylorfrancis.com/books/9780367802721
 
     """
