@@ -14,10 +14,10 @@ from matplotlib import colors
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
-plt.style.use("seaborn-whitegrid")
+# plt.style.use("seaborn-whitegrid")
 locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
 formatter = mdates.ConciseDateFormatter(locator)
-sns.set_context("paper")
+# sns.set_context("paper")
 # plt.rc('lines', linewidth=1)
 
 
@@ -65,31 +65,23 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
     else:
         fig = plt.gcf()
 
-    if cscale == "log":
-        if clim is not None and isinstance(clim, list):
-            norm = colors.LogNorm(vmin=clim[0], vmax=clim[1])
-            vmin = clim[0]
-            vmax = clim[1]
-        else:
-            norm = colors.LogNorm()
-            vmin = None
-            vmax = None
-    else:
-        if clim is not None and isinstance(clim, list):
-            norm = None
-            vmin = clim[0]
-            vmax = clim[1]
-        else:
-            norm = None
-            vmin = None
-            vmax = None
-
     if not cmap:
         cmap = "jet"
 
+    if cscale == "log":
+        if clim is not None and isinstance(clim, list):
+            options = dict(norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]), cmap=cmap, shading='auto')
+        else:
+            options = dict(norm=colors.LogNorm(), cmap=cmap, shading='auto')
+    else:
+        if clim is not None and isinstance(clim, list):
+            options = dict(cmap=cmap, vmin=clim[0], vmax=clim[1], shading='auto')
+        else:
+            options = dict(cmap=cmap, vmin=None, vmax=None, shading='auto')
+
     t, y = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
-    im = ax.pcolormesh(t, y, inp.data.T, norm=norm, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto")
+    im = ax.pcolormesh(t, y, inp.data.T, rasterized=True, **options)
 
     if yscale == "log":
         ax.set_yscale("log")

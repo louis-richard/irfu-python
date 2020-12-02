@@ -10,9 +10,9 @@ import numpy as np
 
 
 def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
-    """Calculates the cold plasma dispersion surfaces according to equation 2.64 in Plasma Waves by
-    Swanson (2nd ed.), and puts them in the matrix W. Additional parameters that are needed in
-    dispersion_surface is returned as extra_param.
+    """Calculates the cold plasma dispersion surfaces according to equation 2.63 in [15]_, and puts
+    them in the matrix W. Additional parameters that are needed in dispersion_surface is returned
+    as extra_param.
 
     Parameters
     ----------
@@ -39,6 +39,11 @@ def dispersion_surface_calc(kc_x_max=None, kc_z_max=None, m_i=None, w_pe=None):
     Notes
     -----
     This function is essential for dispersion_surface to work.
+
+    References
+    ----------
+    .. [15] Swanson, D. G. (2003), Plasma waves, 2nd ed., Institute of Physics Pub,
+            doi: https://www.taylorfrancis.com/books/9780367802721
 
     """
 
