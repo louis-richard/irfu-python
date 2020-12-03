@@ -1,18 +1,38 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-wavelet.py
-
-@author : Louis RICHARD
-"""
+# MIT License
+#
+# Copyright (c) 2020 Louis Richard
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so.
 
 import multiprocessing as mp
 import numpy as np
 import xarray as xr
 import pyfftw
+import numba
 import matplotlib.pyplot as plt
 
-from astropy.time import Time
+
+@numba.jit(nopython=True, fastmath=True)
+def calc_w_w(s_ww, aa, sigma, ww, w0):
+    w_w = np.sqrt(1) * s_ww * np.exp(-sigma * sigma * ((aa * ww - w0) ** 2) / 2)
+    return w_w
+
+
+@numba.jit(nopython=True, parallel=True, fastmath=True)
+def calc_power_r(power, new_freq_mat):
+    power2 = np.absolute((2 * np.pi) * np.conj(power) * power / new_freq_mat)
+    return power2
+
+
+@numba.jit(nopython=True, parallel=True, fastmath=True)
+def calc_power_c(power, new_freq_mat):
+    power2 = np.sqrt(np.absolute((2 * np.pi) / new_freq_mat)) * power
+    return power2
 
 
 def wavelet(inp=None, **kwargs):
@@ -59,8 +79,8 @@ def wavelet(inp=None, **kwargs):
     assert inp is not None and isinstance(inp, xr.DataArray)
 
     # Time bounds
-    start_time = Time(inp.time.data[0], format="datetime64").unix
-    end_time = Time(inp.time.data[-1], format="datetime64").unix
+    start_time, end_time = inp.time.data[[0, -1]]
+    start_time, end_time = [time.view("i8") * 1e-9 for time in [start_time, end_time]]
 
     # Time interval
     tint = end_time - start_time
@@ -165,9 +185,9 @@ def wavelet(inp=None, **kwargs):
     else:
         raise TypeError("Invalid shape of the inp")
 
-    new_freq_mat, _ = np.meshgrid(new_freq, w)
+    new_freq_mat, _ = np.meshgrid(new_freq, w, sparse=True)
 
-    _, ww = np.meshgrid(a, w)  # Matrix form
+    _, ww = np.meshgrid(a, w, sparse=True)  # Matrix form
 
     # if scalar add virtual axis
     if len(inp.shape) == 1:
@@ -182,22 +202,19 @@ def wavelet(inp=None, **kwargs):
         # Forward FFT
         s_w = pyfftw.interfaces.numpy_fft.fft(data_col, threads=mp.cpu_count())
 
-        aa, s_ww = np.meshgrid(a, s_w)  # Matrix form
+        aa, s_ww = np.meshgrid(a, s_w, sparse=True)  # Matrix form
 
         # Calculate the FFT of the wavelet transform
-        w_w = np.sqrt(1) * s_ww * np.exp(-sigma * sigma * ((aa * ww - w0) ** 2) / 2)
+        w_w = calc_w_w(s_ww, aa, sigma, ww, w0)
 
         # Backward FFT
         power = pyfftw.interfaces.numpy_fft.ifft(w_w, axis=0, threads=mp.cpu_count())
 
         # Calculate the power spectrum
         if return_power:
-            power = np.absolute((2 * np.pi) * np.conj(power) * power / new_freq_mat)
+            power2 = calc_power_r(power, np.tile(new_freq_mat, (len(power), 1)))
         else:
-            power = np.sqrt(np.absolute((2 * np.pi) / new_freq_mat)) * power
-
-        # Remove data possibly influenced by edge effects
-        power2 = power
+            power2 = calc_power_c(power, np.tile(new_freq_mat, (len(power), 1)))
 
         if cut_edge:
             censure = np.floor(2 * a).astype(int)
@@ -215,11 +232,11 @@ def wavelet(inp=None, **kwargs):
             continue
 
     if len(inp.shape) == 1:
-        out = xr.DataArray(power2, coords=[Time(t, format="unix").datetime64, new_freq],
+        out = xr.DataArray(power2, coords=[inp.time.data, new_freq],
                            dims=["time", "frequency"])
     elif len(inp.shape) == 2:
         out = xr.Dataset(out_dict,
-                         coords={"time": Time(t, format="unix").datetime64, "frequency": new_freq})
+                         coords={"time": inp.time.data, "frequency": new_freq})
     else:
         raise TypeError("Invalid shape")
 
