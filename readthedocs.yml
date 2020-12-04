@@ -1,9 +1,7 @@
-build:
-  image: latest
+version: 2
 
 python:
   version: 3.8
-
-conda:
-  file: docs/environment.yml
-
+  install:
+    - method: pip
+      path: .
