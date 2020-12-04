@@ -17,4 +17,3 @@ spacepy>=0.2.1
 pyrf>=0.0.9
 pyrfu>=1.8.9
 PsychoPy>=2020.1.2
-numba>=0.52.0

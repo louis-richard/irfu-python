@@ -50,7 +50,6 @@ INSTALL_REQUIRES = [
       "ipython", 
       "ipykernel", 
       "nbsphinx",
-      "numba",
       "spacepy",
       "sphinxcontrib-apidoc"]
 
