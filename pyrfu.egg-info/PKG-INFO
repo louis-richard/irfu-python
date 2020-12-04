@@ -1,6 +1,6 @@
 Metadata-Version: 1.2
 Name: pyrfu
-Version: 1.9.1
+Version: 1.9.2
 Summary: Python Space Physics Environment Data Analysis
 Home-page: https://github.com/louis-richard/irfu-python
 Author: Louis RICHARD
@@ -11,7 +11,7 @@ Project-URL: Release notes, https://pypi.org/project/pyrfu/#history
 Project-URL: Source, https://github.com/louis-richard/irfu-python
 Description: 
         
-        .. |LicenseMIT| image:: https://img.shields.io/badge/License-MIT-yellow.svg
+        .. |LicenseMIT| image:: https://img.shields.io/badge/License-MIT-blue.svg
         .. _LicenseMIT: https://opensource.org/licenses/MIT
         
         .. |LicenseCC| image:: https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg
@@ -29,7 +29,7 @@ Description:
         .. |VPython| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg
         .. _VPython: https://pypi.org/project/pyrfu/
         
-        .. |Lint| image:: https://img.shields.io/badge/pylint-9.46-brightgreen.svg
+        .. |Lint| image:: https://img.shields.io/badge/pylint-9.55-brightgreen.svg
         .. _Lint: http://pylint.pycqa.org/en/latest/intro.html
         
         

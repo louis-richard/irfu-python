@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # MIT License
 #
 # Copyright (c) 2020 Louis Richard
@@ -9,7 +12,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-from matplotlib.transforms import Bbox, TransformedBbox, blended_transform_factory
+from matplotlib.transforms import TransformedBbox, blended_transform_factory
 from mpl_toolkits.axes_grid1.inset_locator import BboxPatch, BboxConnector, BboxConnectorPatch
 
 from pandas.plotting import register_matplotlib_converters
@@ -17,6 +20,8 @@ register_matplotlib_converters()
 
 
 def connect_bbox(bbox1, bbox2, loc1a, loc2a, loc1b, loc2b, prop_lines, prop_patches=None):
+    """to fill
+    """
     if prop_patches is None:
         prop_patches = {**prop_lines, "alpha": prop_lines.get("alpha", 1) * 0}
 
@@ -55,8 +60,6 @@ def zoom(ax1, ax2, **kwargs):
     mybbox1 = ax1.bbox
     mybbox2 = TransformedBbox(ax1.viewLim, trans)
 
-    prop_patches = {**kwargs, "ec": "none", "alpha": 0.2}
-
     c1, c2, bbox_patch1, bbox_patch2, p = connect_bbox(mybbox1, mybbox2, loc1a=2, loc2a=3,
                                                        loc1b=1, loc2b=4, prop_lines=kwargs)
 
@@ -66,4 +69,4 @@ def zoom(ax1, ax2, **kwargs):
     ax2.add_patch(c2)
     ax2.add_patch(p)
 
-    return
+    return ax1, ax2

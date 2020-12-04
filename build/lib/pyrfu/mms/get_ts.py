@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # MIT License
 #
 # Copyright (c) 2020 Louis Richard
@@ -210,17 +213,18 @@ def get_ts(file_path="", cdf_name="", tint=None):
         dims, coordinates = [["time"], [x["data"]]]
 
         out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-        exec("out."+dims[0]+".attrs = x['attrs']")
+        out[dims[0]].attrs = x['attrs']
 
     elif x and y and not z and not w:
-        dims, coordinates = [["time", y["attrs"]["LABLAXIS"]], [x["data"], y["data"]]]
+        dims = ["time", y["attrs"]["LABLAXIS"]]
+        coordinates = [x["data"], y["data"]]
 
         out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-        exec("out."+dims[0]+".attrs = x['attrs']")
-        exec("out."+dims[1]+".attrs = y['attrs']")
+
+        for dim, coord in zip(dims, [x, y]):
+            out[dim].attrs = coord["attrs"]
 
     elif x and y and z and not w:
-
         if y["attrs"]["LABLAXIS"] == z["attrs"]["LABLAXIS"]:
             y["attrs"]["LABLAXIS"] = "rcomp"
             z["attrs"]["LABLAXIS"] = "ccomp"
@@ -229,9 +233,10 @@ def get_ts(file_path="", cdf_name="", tint=None):
         coordinates = [x["data"], y["data"], z["data"]]
 
         out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-        exec("out."+dims[0]+".attrs = x['attrs']")
-        exec("out."+dims[1]+".attrs = y['attrs']")
-        exec("out."+dims[2]+".attrs = z['attrs']")
+
+        for dim, coord in zip(dims, [x, y, z]):
+            out[dim].attrs = coord["attrs"]
+
     elif x and y and z and w:
         if z["attrs"]["LABLAXIS"] == w["attrs"]["LABLAXIS"]:
             z["attrs"]["LABLAXIS"] = "rcomp"
@@ -241,10 +246,9 @@ def get_ts(file_path="", cdf_name="", tint=None):
         coordinates = [x["data"], y["data"], z["data"], w["data"]]
 
         out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-        exec("out."+dims[0]+".attrs = x['attrs']")
-        exec("out."+dims[1]+".attrs = y['attrs']")
-        exec("out."+dims[2]+".attrs = z['attrs']")
-        exec("out."+dims[3]+".attrs = w['attrs']")
+
+        for dim, coord in zip(dims, [x, y, z, w]):
+            out[dim].attrs = coord["attrs"]
 
     else:
         raise NotImplementedError

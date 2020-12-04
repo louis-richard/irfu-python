@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # MIT License
 #
 # Copyright (c) 2020 Louis Richard
@@ -8,7 +11,6 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
-
 import xarray as xr
 
 from ..mms import rotate_tensor

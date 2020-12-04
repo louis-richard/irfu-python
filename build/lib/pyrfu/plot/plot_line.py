@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # MIT License
 #
 # Copyright (c) 2020 Louis Richard
@@ -20,7 +23,8 @@ from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
 locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-date_form = mdates.ConciseDateFormatter(locator)
+# date_form = mdates.ConciseDateFormatter(locator)
+date_form = mdates.DateFormatter("%H:%M:%S")
 plt.style.use("seaborn-whitegrid")
 sns.set_context("paper")
 
@@ -46,8 +50,10 @@ def plot_line(ax=None, inp=None, c=""):
         Options
 
     """
+
     if ax is None:
-        fig, ax = plt.subplots(1)
+        _, ax = plt.subplots(1)
+
     if len(inp.shape) == 3:
         data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
     else:
@@ -55,9 +61,8 @@ def plot_line(ax=None, inp=None, c=""):
 
     time = inp.time
     ax.plot(time, data, c)
-    date_form = mdates.DateFormatter("%H:%M:%S")
     ax.xaxis.set_major_formatter(date_form)
     ax.grid(which="major", linestyle="-", linewidth="0.5", c="0.5")
     # ax.grid(which="minor",linestyle="-",linewidth="0.25")
 
-    return
+    return ax

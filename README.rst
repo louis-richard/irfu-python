@@ -1,6 +1,6 @@
 
 
-.. |LicenseMIT| image:: https://img.shields.io/badge/License-MIT-yellow.svg
+.. |LicenseMIT| image:: https://img.shields.io/badge/License-MIT-blue.svg
 .. _LicenseMIT: https://opensource.org/licenses/MIT
 
 .. |LicenseCC| image:: https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg
@@ -18,7 +18,7 @@
 .. |VPython| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg
 .. _VPython: https://pypi.org/project/pyrfu/
 
-.. |Lint| image:: https://img.shields.io/badge/pylint-9.46-brightgreen.svg
+.. |Lint| image:: https://img.shields.io/badge/pylint-9.55-brightgreen.svg
 .. _Lint: http://pylint.pycqa.org/en/latest/intro.html
 
 

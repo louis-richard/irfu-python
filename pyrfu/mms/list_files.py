@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # MIT License
 #
 # Copyright (c) 2020 Louis Richard
@@ -8,6 +11,7 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
 import os
 import re
 import bisect
@@ -19,7 +23,7 @@ from dateutil.rrule import rrule, DAILY
 from .mms_config import CONFIG
 
 
-def list_files(tint=None, mms_id="1", var=None):
+def list_files(tint=None, mms_id="1", var=None, data_path=None):
     """Find files in the data directories of the target instrument, data type, data rate, mms_id and
     level during the target time interval
 
@@ -38,6 +42,9 @@ def list_files(tint=None, mms_id="1", var=None):
             * var["lev"] : data level
             * var["dtype"] : data type
 
+    data_path : str
+        (Option) Path of MMS data. If None use `pyrfu.mms.mms_config.py`
+
     Returns
     -------
     files : list
@@ -45,10 +52,11 @@ def list_files(tint=None, mms_id="1", var=None):
 
     """
 
-    data_path = CONFIG["local_data_dir"]
-
     if var is None:
         raise ValueError("var is empty")
+
+    if data_path is None:
+        data_path = CONFIG["local_data_dir"]
 
     files_out = []
 

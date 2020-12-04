@@ -19,7 +19,7 @@ from ..pyrf import ts_append
 from ..pyrf import dist_append
 
 
-def get_data(var_str="", tint=None, mms_id="1", verbose=True):
+def get_data(var_str="", tint=None, mms_id="1", verbose=True, data_path=None):
     """Load a variable. var_str must be in var (see below)
 
     * EPHEMERIS :
@@ -110,6 +110,9 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
 
     verbose : bool
         Set to True to follow the loading. Default is True.
+
+    data_path : str
+        (Option) Path of MMS data. If None use `pyrfu.mms.mms_config.py`
 
     Returns
     -------
@@ -610,7 +613,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True):
     else:
         raise ValueError("not implemented yet")
 
-    files = list_files(tint, mms_id, var)
+    files = list_files(tint, mms_id, var, data_path)
 
     if not files:
         raise ValueError("No files found. Make sure that the data_path is correct")

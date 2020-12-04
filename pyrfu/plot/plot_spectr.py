@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # MIT License
 #
 # Copyright (c) 2020 Louis Richard
@@ -17,10 +20,10 @@ from matplotlib import colors
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
-# plt.style.use("seaborn-whitegrid")
+plt.style.use("seaborn-whitegrid")
 locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
 formatter = mdates.ConciseDateFormatter(locator)
-# sns.set_context("paper")
+sns.set_context("paper")
 # plt.rc('lines', linewidth=1)
 
 
@@ -73,7 +76,8 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
-            options = dict(norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]), cmap=cmap, shading='auto')
+            options = dict(norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]),
+                           cmap=cmap, shading='auto')
         else:
             options = dict(norm=colors.LogNorm(), cmap=cmap, shading='auto')
     else:
@@ -90,7 +94,7 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
         ax.set_yscale("log")
 
     if cbar:
-        if "pad" in kwargs:
+        if kwargs.get("pad"):
             pad = kwargs["pad"]
         else:
             pad = 0.01
@@ -99,6 +103,8 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
         cax = fig.add_axes([pos.x0+pos.width+pad, pos.y0, 0.01, pos.height])
         fig.colorbar(mappable=im, cax=cax, ax=ax)
 
-        return ax, cax
+        out = (ax, cax)
     else:
-        return ax
+        out = ax
+
+    return out
