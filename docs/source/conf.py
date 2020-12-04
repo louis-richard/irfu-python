@@ -97,7 +97,7 @@ language = 'en'
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints', 'examples/**/README.md']
 
-autodoc_mock_imports = ['spacepy']
+autodoc_mock_imports = ['spacepy', 'pyfftw']
 
 # -- Options for HTML output -------------------------------------------------
 
