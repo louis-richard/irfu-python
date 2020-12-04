@@ -6,7 +6,6 @@ dependencies:
 - astropy
 - scipy
 - pyfftw
-- spacepy
 - xarray
 - sphinxcontrib-apidoc
 - sphinx
