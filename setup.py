@@ -54,7 +54,7 @@ INSTALL_REQUIRES = [
       "spacepy",
       "sphinxcontrib-apidoc"]
 
-PYTHON_REQUIRES = '>=3.7'
+PYTHON_REQUIRES = '>=3.7, <3.9'
 
 
 cmdclass = {'build_sphinx': BuildDoc}
