@@ -16,5 +16,6 @@ sphinx_rtd_theme
 ipython
 ipykernel
 nbsphinx
+numba
 spacepy
 sphinxcontrib-apidoc
