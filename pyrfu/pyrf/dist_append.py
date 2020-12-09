@@ -39,8 +39,11 @@ def dist_append(inp0=None, inp1=None):
 
     """
 
-    assert inp0 is not None and isinstance(inp0, xr.Dataset)
+    assert inp0 is None or isinstance(inp0, xr.Dataset)
     assert inp1 is not None and isinstance(inp1, xr.Dataset)
+
+    if inp0 is None:
+        return inp1
 
     # time
     time = np.hstack([inp0.time.data, inp1.time.data])

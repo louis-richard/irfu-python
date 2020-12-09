@@ -18,7 +18,7 @@ import xarray as xr
 from ..pyrf import calc_dt
 
 
-def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
+def vdf_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
     """Convert burst mode distribution into 64 energy channel distribution.
     Functions takes the burst mode distribution sampled in two energy tables and converts to a
     single energy table with 64 energy channels. Time resolution is halved and phi angles are
@@ -43,14 +43,17 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
 
     Returns
     -------
+    time_r : numpy.ndarray
+        Revised time steps.
+
     vdf_r : numpy.ndarray
         Rebinned particle distribution.
 
-    phi_r : numpy.ndarray
-        Time series of the recalculated phi angle.
-
     energy_r : numpy.ndarray
         Revised energy table.
+
+    phi_r : numpy.ndarray
+        Time series of the recalculated phi angle.
 
     Notes
     -----
@@ -82,9 +85,9 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
 
     # Define new times
     dt = calc_dt(vdf.data)
-    new_time = vdf.time.data[:-1:2] + int(dt * 1e9 / 2)
+    time_r = vdf.time.data[:-1:2] + int(dt * 1e9 / 2)
 
-    vdf_r, phi_r = [np.zeros((len(new_time), 64, 32, 16)), np.zeros((len(new_time), 32))]
+    vdf_r, phi_r = [np.zeros((len(time_r), 64, 32, 16)), np.zeros((len(time_r), 32))]
 
     phi_s = np.roll(phi.data, 2, axis=1)
     phi_s[:, 0] = phi_s[:, 0] - 360
@@ -114,4 +117,4 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
                 vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[ii + 1, ...]
                 vdf_r[new_el_num, 0:63:2, ...] = vdf.data.data[ii, ...]
 
-    return vdf_r, phi_r, energy_r
+    return time_r, vdf_r, energy_r, phi_r

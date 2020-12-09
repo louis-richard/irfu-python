@@ -51,7 +51,7 @@ from .estimate_phase_speed import estimate_phase_speed
 from .fft_bandpass import fft_bandpass
 from .get_pitch_angle_dist import get_pitch_angle_dist
 from .make_model_vdf import make_model_vdf
-from .psd_rebin import psd_rebin
+from .vdf_rebin import vdf_rebin
 
 from .load_ancillary import load_ancillary
 from .vdf_omni import vdf_omni
@@ -63,3 +63,5 @@ from .deflux_to_vdf import deflux_to_vdf
 
 from .fk_power_spectrum import fk_power_spectrum
 from .copy_files import copy_files
+
+from .vdf_to_e64 import vdf_to_e64

@@ -56,7 +56,7 @@ def ts_skymap(t=None, data=None, energy=None, phi=None, theta=None, **kwargs):
     """
 
     assert t is not None and isinstance(t, np.ndarray)
-    assert data is not None and isinstance(data, xr.DataArray)
+    assert data is not None and isinstance(data, np.ndarray)
     assert phi is not None and isinstance(phi, np.ndarray)
     assert theta is not None and isinstance(theta, np.ndarray)
 
@@ -93,8 +93,8 @@ def ts_skymap(t=None, data=None, energy=None, phi=None, theta=None, **kwargs):
 
     out_dict = {"data": (["time", "idx0", "idx1", "idx2"], data), "phi": (["time", "idx1"], phi),
                 "theta": (["idx2"], theta), "energy": (["time", "idx0"], energy), "time": t,
-                "idx0": np.arange(32),
-                "idx1": np.arange(32), "idx2": np.arange(16)}
+                "idx0": np.arange(energy.shape[1]),
+                "idx1": np.arange(phi.shape[1]), "idx2": np.arange(len(theta))}
 
     out = xr.Dataset(out_dict)
 
