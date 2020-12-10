@@ -18,7 +18,7 @@ import xarray as xr
 from ..pyrf import calc_dt
 
 
-def vdf_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
+def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
     """Convert burst mode distribution into 64 energy channel distribution.
     Functions takes the burst mode distribution sampled in two energy tables and converts to a
     single energy table with 64 energy channels. Time resolution is halved and phi angles are
@@ -92,7 +92,7 @@ def vdf_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
     phi_s = np.roll(phi.data, 2, axis=1)
     phi_s[:, 0] = phi_s[:, 0] - 360
 
-    time_indices = np.arange(0, len(vdf.time), 2)
+    time_indices = np.arange(0, len(vdf.time) - 1, 2)
 
     for new_el_num, ii in enumerate(time_indices):
         if phi.data[ii, 0] > phi.data[ii + 1, 0]:

@@ -15,7 +15,7 @@
 import numpy as np
 import xarray as xr
 
-from pyrfu.mms import vdf_rebin
+from pyrfu.mms import psd_rebin
 from pyrfu.pyrf import ts_skymap
 
 
@@ -38,7 +38,7 @@ def vdf_to_e64(vdf_e32):
 
     assert vdf_e32 is not None and isinstance(vdf_e32, xr.Dataset)
 
-    time_r, vdf_r, energy_r, phi_r = vdf_rebin(vdf_e32, vdf_e32.phi,
+    time_r, vdf_r, energy_r, phi_r = psd_rebin(vdf_e32, vdf_e32.phi,
                                                vdf_e32.attrs.get("energy0"),
                                                vdf_e32.attrs.get("energy1"),
                                                vdf_e32.attrs.get("esteptable"))
@@ -48,6 +48,7 @@ def vdf_to_e64(vdf_e32):
     vdf_e64 = ts_skymap(time_r, vdf_r, energy_r, phi_r, vdf_e32.theta.data,
                         energy0=energy_r[0, :], energy1=energy_r[0, :],
                         esteptable=vdf_e32.attrs.get("esteptable"))
+
 
     # update delta_energy
     log_energy = np.log10(energy_r[0, :])
@@ -64,5 +65,7 @@ def vdf_to_e64(vdf_e32):
     vdf_e64.attrs["delta_energy_plus"] = delta_energy_plus
     vdf_e64.attrs["delta_energy_minus"] = delta_energy_minus
     vdf_e64.attrs["esteptable"] = np.zeros(len(time_r))
+    vdf_e64.attrs["species"] = vdf_e32.attrs["species"]
+    vdf_e64.attrs["UNITS"] = vdf_e32.attrs["UNITS"]
 
     return vdf_e64

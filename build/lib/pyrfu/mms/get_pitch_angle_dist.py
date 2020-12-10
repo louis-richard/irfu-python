@@ -12,8 +12,11 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+import tqdm
+import warnings
 import numpy as np
 import xarray as xr
+
 
 from pyrfu.pyrf import ts_scalar, time_clip, resample, normalize
 
@@ -69,7 +72,7 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     """
 
     assert vdf is not None and isinstance(vdf, xr.Dataset)
-    assert b_xyz is not None and isinstance(b_xyz, xr.Dataset)
+    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
     assert tint is not None and isinstance(tint, list)
     assert isinstance(tint[0], str) and isinstance(tint[1], str)
 
@@ -82,7 +85,7 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
 
     if "angles" in kwargs:
         if isinstance(kwargs["angles"], (int, float)):
-            n_angles = np.floor(kwargs["angles"])  # Make sure input is integer
+            n_angles = int(kwargs["angles"])  # Make sure input is integer
             d_angles = 180 / n_angles
             angles_v = np.linspace(d_angles, 180, n_angles)
             d_angles = d_angles * np.ones(n_angles)
@@ -104,10 +107,11 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
             raise ValueError("meanorsum parameter not understood.")
 
     pitch_angles = angles_v - d_angles / 2
+    n_angles = len(angles_v)
 
     time = vdf.time.data
 
-    vdf0 = vdf.data
+    vdf0 = vdf.data.copy()
 
     if vdf.phi.data.ndim == 1:
         phi = np.tile(vdf.phi.data, (len(time), 1))
@@ -115,7 +119,7 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     else:
         phi = vdf.phi
 
-    theta = vdf.theta.data
+    theta = vdf.theta
 
     if "esteptable" in vdf.attrs.keys():
         step_table = ts_scalar(time, vdf.attrs["esteptable"])
@@ -165,27 +169,33 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     theta_b = np.arccos(xt * np.squeeze(b_vec_x) + yt * np.squeeze(b_vec_y) + zt * np.squeeze(
         b_vec_z)) * 180 / np.pi
 
-    dists = [vdf0.data for _ in range(len(angles_v))]
+    dists = [vdf0.data.copy() for _ in range(n_angles)]
 
-    pad_arr = []
+    pad_arr = [None] * n_angles
 
-    for i, dist in enumerate(dists):
-        dist[theta_b < angles_v[i] - d_angles[i]] = np.nan
-        dist[theta_b > angles_v[i]] = np.nan
-        if mean_or_sum == "mean":
-            pad_arr.append(np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2)))
-        elif mean_or_sum == "sum":
-            pad_arr.append(np.squeeze(np.nansum(np.nansum(dist, axis=3), axis=2)))
-        else:
-            raise ValueError("Invalid method")
+    for i in tqdm.tqdm(np.arange(n_angles)):
+        dists[i][theta_b < angles_v[i] - d_angles[i]] = np.nan
+        dists[i][theta_b > angles_v[i]] = np.nan
 
-    pad_arr = np.stack(pad_arr)
-    pad_arr = np.transpose(pad_arr, [1, 0, 2])
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            if mean_or_sum == "mean":
+                pad_arr[i] = np.squeeze(np.nanmean(np.nanmean(dists[i], axis=3), axis=2))
+            elif mean_or_sum == "sum":
+                pad_arr[i] = np.squeeze(np.nansum(np.nansum(dists[i], axis=3), axis=2))
+            else:
+                raise ValueError("Invalid method")
+
+    pad_arr = np.transpose(np.stack(pad_arr), [1, 0, 2])
 
     energy = np.mean(energy[:2, :], axis=0)
 
-    pad = xr.DataArray(pad_arr, coords=[time, pitch_angles, energy],
-                       dims=["time", "theta", "energy"])
+    pad = xr.Dataset({"data": (["time", "idx0", "idx1"], np.transpose(pad_arr, [0, 2, 1])),
+                      "energy": (["time", "idx0"], np.tile(energy, (len(pad_arr), 1))),
+                      "theta": (["time", "idx1"], np.tile(pitch_angles, (len(pad_arr), 1))),
+                      "time": time,
+                      "idx0": np.arange(len(energy)),
+                      "idx1": np.arange(len(pitch_angles))})
 
     pad.attrs = vdf.attrs
     pad.attrs["mean_or_sum"] = mean_or_sum
