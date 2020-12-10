@@ -11,3 +11,5 @@ the different subpackages of the ``pyrfu`` package.
     examples/01_mms/example_mms_ohmslaw.ipynb
     examples/01_mms/example_mms_ebfields.ipynb
     examples/01_mms/example_mms_polarizationanalysis.ipynb
+    examples/01_mms/example_mms_particle_deflux.ipynb
+    examples/01_mms/example_mms_particle_pad.ipynb
