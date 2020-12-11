@@ -432,32 +432,34 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True, data_path=None):
 
     # Hot Plasma Composition Analyser
     elif var["inst"] == "hpca":
-        if var["param"][0].lower() == "f":
-            var["dtype"] = "ion"
-            ion = var["param"].lower().strip("flux")
-            cdf_name = "{}_{}_{}_flux".format(mms_id_str, var["inst"], ion)
-            # Number density
-        elif var["param"][0].lower() == "n":
-            var["dtype"] = "moments"
-            ion = var["param"][1:]
+        param, var["dtype"] = [var["param"][0], "moments"]
+
+        # Get specie name
+        ion = var["param"][1:]
+
+        if ion[0] == "s":
+            param, ion = [param+ion[0], ion[1:]]
+
+        assert ion in ["hplus", "heplus", "heplusplus", "oplus"]
+
+        # Number density
+        if "N" in var["param"]:
             cdf_name = "_".join([mms_id_str, "hpca", ion, "number_density"])
 
-            # Bulk velocity
-        elif var["param"][0].lower() == "v":
-            var["dtype"] = "moments"
-            ion = var["param"][1:]
+        # Bulk velocity
+        elif "V" in var["param"]:
             cdf_name = "_".join([mms_id_str, "hpca", ion, "ion_bulk_velocity"])
 
-            # Pressure tensor
-        elif var["param"][0].lower() == "p":
-            var["dtype"] = "moments"
-            ion = var["param"][1:]
+        # Scalar temperature
+        elif "Ts" in var["param"]:
+            cdf_name = "_".join([mms_id_str, "hpca", ion, "scalar_temperature"])
+
+        # Pressure tensor
+        elif "P" in var["param"]:
             cdf_name = "_".join([mms_id_str, "hpca", ion, "ion_pressure"])
 
-            # Temperature tensor
-        elif var["param"][0].lower() == "t":
-            var["dtype"] = "moments"
-            ion = var["param"][1:]
+        # Temperature tensor
+        elif "T" in var["param"]:
             cdf_name = "_".join([mms_id_str, "hpca", ion, "temperature_tensor"])
 
         else:

@@ -35,7 +35,7 @@ default_cycler = cycler(color=color)
 plt.rc('axes', prop_cycle=default_cycler)
 
 
-def plot_line(ax=None, inp=None, c=""):
+def plot_line(ax=None, inp=None, **kwargs):
     """Line plot of time series.
 
     Parameters
@@ -60,9 +60,9 @@ def plot_line(ax=None, inp=None, c=""):
         data = inp.data
 
     time = inp.time
-    ax.plot(time, data, c)
+    ax.plot(time, data, **kwargs)
     ax.xaxis.set_major_formatter(date_form)
-    ax.grid(which="major", linestyle="-", linewidth="0.5", c="0.5")
+    ax.grid(True, which="major", linestyle="-", linewidth="0.5", c="0.5")
     # ax.grid(which="minor",linestyle="-",linewidth="0.25")
 
     return ax
