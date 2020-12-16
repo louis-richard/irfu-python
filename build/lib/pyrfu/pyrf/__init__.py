@@ -50,7 +50,7 @@ from .e_vxb import e_vxb
 from .plasma_calc import plasma_calc
 from .dynamic_press import dynamic_press
 from .pres_anis import pres_anis
-from .agyro_coeff import agyro_coeff
+from .calc_sqrtq import calc_sqrtq
 from .median_bins import median_bins
 from .mean_bins import mean_bins
 from .histogram import histogram
@@ -82,3 +82,8 @@ from .wave_fft import wave_fft
 from .pvi import pvi
 from .pvi_4sc import pvi_4sc
 from .pid_4sc import pid_4sc
+
+from .calc_dng import calc_dng
+from .calc_ag import calc_ag
+from .calc_agyro import calc_agyro
+
