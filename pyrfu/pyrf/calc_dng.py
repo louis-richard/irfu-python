@@ -39,7 +39,7 @@ def calc_dng(p_xyz=None):
     ----------
     .. [15] Aunai, N., M. Hesse, and M. Kuznetsova (2013), Electron nongyrotropy in the context of
             collisionless magnetic reconnection, Phys. Plasmas, 20(6), 092903,
-            doi:10.1063/1.4820953.
+            doi: https://doi.org/10.1063/1.4820953.
 
     Examples
     --------
