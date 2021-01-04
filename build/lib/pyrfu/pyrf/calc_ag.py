@@ -40,7 +40,7 @@ def calc_ag(p_xyz=None):
     ----------
     .. [16] H. Che, C. Schiff, G. Le, J. C. Dorelli, B. L. Giles, and T. E. Moore (2018),
             Quantifying the effect of non-Larmor motion of electrons on the pres- sure tensor,
-            Phys. Plasmas 25(3), 032101, doi:10.1063/1.5016853.
+            Phys. Plasmas 25(3), 032101, doi: https://doi.org/10.1063/1.5016853.
 
     Examples
     --------

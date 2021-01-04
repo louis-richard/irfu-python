@@ -14,6 +14,7 @@ pyrfu/mms/calc_feeps_pad.py
 pyrfu/mms/calculate_epsilon.py
 pyrfu/mms/copy_files.py
 pyrfu/mms/correct_edp_probe_timing.py
+pyrfu/mms/current_location.py
 pyrfu/mms/db_get_ts.py
 pyrfu/mms/deflux_to_vdf.py
 pyrfu/mms/dft_time_shift.py
