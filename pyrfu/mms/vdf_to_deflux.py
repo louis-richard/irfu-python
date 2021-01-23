@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from astropy import constants
 
 
-def vdf_to_deflux(vdf=None):
+def vdf_to_deflux(vdf):
     """Changes units to differential energy flux.
 
     Parameters
@@ -42,8 +41,6 @@ def vdf_to_deflux(vdf=None):
             * theta : Elevation angle.
 
     """
-
-    assert vdf is not None and isinstance(vdf, xr.Dataset)
 
     if vdf.attrs["species"] in ["ions", "i"]:
         mm = 1

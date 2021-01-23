@@ -9,6 +9,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+
 from astropy.time import Time
 
 from .split_vs import split_vs
@@ -19,7 +20,7 @@ from ..pyrf import ts_append
 from ..pyrf import dist_append
 
 
-def get_data(var_str="", tint=None, mms_id="1", verbose=True, data_path=None):
+def get_data(var_str, tint, mms_id, verbose=True, data_path=""):
     """Load a variable. var_str must be in var (see below)
 
     * EPHEMERIS :
@@ -108,35 +109,40 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True, data_path=None):
     mms_id : str or int
         Index of the target spacecraft.
 
-    verbose : bool
+    verbose : bool, optional
         Set to True to follow the loading. Default is True.
 
-    data_path : str
-        (Option) Path of MMS data. If None use `pyrfu.mms.mms_config.py`
+    data_path : str, optional
+        Path of MMS data. If None use `pyrfu.mms.mms_config.py`
 
     Returns
     -------
-    out : xarray.DataArray
+    out : xarray.DataArray or xarray.Dataset
         Time series of the target variable of measured by the target spacecraft over the selected
         time interval.
+
+    See also
+    --------
+    pyrfu.mms.get_ts : Read time series.
+    pyrfu.mms.get_dist : Read velocity distribution function.
 
     Examples
     --------
     >>> from pyrfu import mms
-    >>> # Define time interval
-    >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Index of mms spacecraft
-    >>> mms_id = 1
-    >>> # Load magnetic field from FGM
-    >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
+
+    Define time interval
+
+    >>> tint_brst = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+
+    Index of MMS spacecraft
+
+    >>> ic = 1
+
+    Load magnetic field from FGM
+
+    >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_brst, ic)
 
     """
-
-    if not var_str:
-        raise ValueError("get_data requires at least 2 arguments")
-
-    if tint is None:
-        raise ValueError("get_data requires at least 2 arguments")
 
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)
@@ -151,7 +157,7 @@ def get_data(var_str="", tint=None, mms_id="1", verbose=True, data_path=None):
     elif var_str == "Nhplus_hpca_sitl":
         var_str = "Nhplus_hpca_srvy_sitl"
 
-    elif var_str in ["R_gse", "R_gsm", "V_gse", "V_gsm"]:
+    elif var_str.lower() in ["r_gse", "r_gsm", "v_gse", "v_gsm"]:
         var_str = "_".join([var_str, "mec", "srvy", "l2"])
 
     var = split_vs(var_str)

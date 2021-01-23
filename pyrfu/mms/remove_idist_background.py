@@ -13,14 +13,13 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from astropy import constants
 
 from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 
-def remove_idist_background(n_i=None, v_gse_i=None, p_gse_i=None, n_bg_i=None, p_bg_i=None):
+def remove_idist_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     """Removes penetrating radiation background from ion moments.
 
     Parameters
@@ -57,12 +56,6 @@ def remove_idist_background(n_i=None, v_gse_i=None, p_gse_i=None, n_bg_i=None, p
     https://lasp.colorado.edu/galaxy/display/MFDPG/Penetrating+Radiation+in+DIS+Data
 
     """
-
-    assert n_i is not None and isinstance(n_i, xr.DataArray)
-    assert v_gse_i is not None and isinstance(v_gse_i, xr.DataArray)
-    assert p_gse_i is not None and isinstance(p_gse_i, xr.DataArray)
-    assert n_bg_i is not None and isinstance(n_bg_i, xr.DataArray)
-    assert p_bg_i is not None and isinstance(p_bg_i, xr.DataArray)
 
     mp = constants.m_p.value
 

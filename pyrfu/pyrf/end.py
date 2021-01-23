@@ -12,11 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import xarray as xr
 from astropy.time import Time
 
 
-def end(inp=None):
+def end(inp):
     """Gives the last time of the time series in unix format.
 
     Parameters
@@ -30,8 +29,6 @@ def end(inp=None):
         Value of the last time in the desired format.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     out = Time(inp.time.data[-1], format="datetime64").unix
 

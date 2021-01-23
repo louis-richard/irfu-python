@@ -12,28 +12,24 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import numpy as np
-
 from astropy.time import Time
 
 
-def iso2unix(t=None):
+def iso2unix(t):
     """
     Converts time in iso format to unix
 
     Parameters
     ----------
-    t : list of str
+    t : str or list of str
         Time.
 
     Returns
     -------
-    out : list of float
+    out : float or list of float
         Time in unix format.
 
     """
-
-    assert t is not None and isinstance(t, (list, np.ndarray))
 
     # Convert iso time to unix
     out = Time(t, format="iso").unix

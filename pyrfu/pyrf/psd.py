@@ -19,7 +19,7 @@ import xarray as xr
 from scipy import signal
 
 
-def psd(inp=None, n_fft=256, n_overlap=128, window="hamming", d_flag="constant", scaling="density"):
+def psd(inp, n_fft=256, n_overlap=128, window="hamming", d_flag="constant", scaling="density"):
     """Estimate power spectral density using Welch's method.
 
     Welch's method [11]_ computes an estimate of the power spectral density by dividing the data
@@ -63,8 +63,6 @@ def psd(inp=None, n_fft=256, n_overlap=128, window="hamming", d_flag="constant",
             Electroacoust. vol. 15, pp. 70-73, 1967.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     if inp.ndim == 2 and inp.shape[-1] == 3:
         inp = np.abs(inp)

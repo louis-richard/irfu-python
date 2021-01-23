@@ -21,7 +21,7 @@ from astropy.time import Time
 from ..pyrf import ts_scalar, resample, extend_tint, time_clip, convert_fac
 
 
-def probe_align_times(e_xyz=None, b_xyz=None, sc_pot=None, z_phase=None, plot_fig=False):
+def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig=False):
     """Returns times when field-aligned electrostatic waves can be characterized using
     interferometry techniques. The same alignment conditions as Graham et al., JGR, 2015 are
     used. Optional figure produced  showing E_FAC, probe fields, and probe potentials to view

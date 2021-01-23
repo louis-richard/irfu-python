@@ -12,11 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import xarray as xr
 import numpy as np
 
 
-def normalize(inp=None):
+def normalize(inp):
     """Normalizes the input field.
 
     Parameters
@@ -32,18 +31,24 @@ def normalize(inp=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field
+
+    Load magnetic field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-    >>> # Compute the normalized magnetic field
+
+    Compute the normalized magnetic field
+
     >>> b = pyrf.normalize(b_xyz)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     out = inp / np.linalg.norm(inp, axis=1, keepdims=True)
 

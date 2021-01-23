@@ -14,12 +14,11 @@
 
 
 import numpy as np
-import xarray as xr
 
 from astropy import constants
 
 
-def vdf_to_dpflux(vdf=None):
+def vdf_to_dpflux(vdf):
     """Compute density particle flux from velocity distribution function.
 
     Parameters
@@ -43,8 +42,6 @@ def vdf_to_dpflux(vdf=None):
             * theta : Elevation angle.
 
     """
-
-    assert vdf is not None and isinstance(vdf, xr.Dataset)
 
     if vdf.attrs["species"] in ["ions", "i"]:
         mm = 1

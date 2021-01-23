@@ -16,7 +16,7 @@ import xarray as xr
 import numpy as np
 
 
-def mva(inp=None, flag="mvar"):
+def mva(inp, flag="mvar"):
     """Compute the minimum variance frame.
 
     Parameters
@@ -24,7 +24,7 @@ def mva(inp=None, flag="mvar"):
     inp : xarray.DataArray
         Time series of the quantity to find minimum variance frame.
 
-    flag : {"mvar", "<bn>=0", "td"}
+    flag : str {"mvar", "<bn>=0", "td"}
         Constrain.
 
     Returns
@@ -32,10 +32,10 @@ def mva(inp=None, flag="mvar"):
     out : xarray.DataArray
         Time series of the input quantity in LMN coordinates.
 
-    l : numpy.ndarray
+    l : ndarray
         Eigenvalues l[0]>l[1]>l[2].
 
-    lmn : numpy.ndarray
+    lmn : ndarray
         Eigenvectors LMN coordinates.
 
     See also
@@ -45,19 +45,24 @@ def mva(inp=None, flag="mvar"):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field
+
+    Load magnetic field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-    >>> # Compute MVA frame
+
+    Compute MVA frame
+
     >>> b_lmn, lamb, frame = pyrf.mva(b_xyz)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert isinstance(flag, str)
 
     inp_data = inp.data
 

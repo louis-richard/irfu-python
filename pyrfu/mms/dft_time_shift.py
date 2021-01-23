@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from ..pyrf import calc_fs, ts_scalar
 
 
-def dft_time_shift(inp=None, tau=None):
+def dft_time_shift(inp, tau):
     """Shifts the input signal ``inp`` by ``tau`` seconds using discrete fourier transform (DFT).
     Particularly useful when calculating the frequency-wavenumber spectrum of the mms' spin-plane
     or axial probes.
@@ -41,9 +40,6 @@ def dft_time_shift(inp=None, tau=None):
     pyrfu.mms.fk_power_spectrum : Calculates the frequency-wave number power spectrum.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert tau is not None and isinstance(tau, float)
 
     time, sig = [inp.time.data, inp.data]
 

@@ -18,7 +18,7 @@ import xarray as xr
 from ..pyrf import ts_scalar, resample
 
 
-def correct_edp_probe_timing(v0=None):
+def correct_edp_probe_timing(v0):
     """Corrects for the channel delays not accounted for in the MMS EDP processing. As described
     in the MMS EDP data products guide.
 
@@ -40,9 +40,6 @@ def correct_edp_probe_timing(v0=None):
     applied here will have no effect other than possibly introduce numerical noise.
 
     """
-
-    # Verify input
-    assert v0 is not None and isinstance(v0, xr.DataArray)
 
     e_fact = [.1200, .1200, .0292]
 

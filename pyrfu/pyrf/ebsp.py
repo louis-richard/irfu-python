@@ -20,22 +20,15 @@ import xarray as xr
 import pyfftw
 import sfs
 
-from astropy.time import Time
 from tqdm import tqdm
+from astropy.time import Time
 
-from .ts_time import ts_time
-from .ts_vec_xyz import ts_vec_xyz
-from .resample import resample
-from .iso2unix import iso2unix
-from .start import start
-from .end import end
-from .calc_fs import calc_fs
-from .convert_fac import convert_fac
+from . import ts_time, ts_vec_xyz, resample, iso2unix, start, end, calc_fs, convert_fac
 
 # TODO parallelized average_data
 
 
-def average_data(data=None, x=None, y=None, av_window=None):
+def average_data(data, x, y, av_window=None):
     # average data with time x to time y using window
 
     dtx, dty = [np.median(np.diff(x)), np.median(np.diff(y))]
@@ -66,7 +59,7 @@ def average_data(data=None, x=None, y=None, av_window=None):
 
 
 # noinspection PyUnboundLocalVariable
-def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwargs):
+def ebsp(e, db, full_b, b0, xyz, freq_int, **kwargs):
     """Calculates wavelet spectra of E&B and Poynting flux using wavelets (Morlet wavelet). Also
     computes polarization parameters of B using SVD [7]_. SVD is performed on spectral matrices
     computed from the time series of B using wavelets and then averaged over a number of wave
@@ -89,7 +82,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
     xyz : xarray.DataArray
         Time series of the position time series of spacecraft used for field aligned coordinates.
 
-    freq_int : str or list or numpy.ndarray
+    freq_int : str or list or ndarray
         Frequency interval :
             * "pc12" : [0.1, 5.0]
             * "pc35" : [2e-3, 0.1]
@@ -116,7 +109,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
             * nav : int
                 Number of wave periods to average Default 8.
 
-            * fac_matrix : numpy.ndarray
+            * fac_matrix : ndarray
                 Specify rotation matrix to FAC system Default None.
 
             * m_width_coeff : int or float
@@ -192,34 +185,32 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint_brst = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 3
-    >>> # Load spacecraft position
+
+    Load spacecraft position
+
     >>> tint_long = pyrf.extend_tint(tint_brst, [-100, 100])
     >>> r_xyz = mms.get_data("R_gse", tint_long, mms_id)
-    >>> # Load background magnetic field, electric field and magnetic field fluctuations
+
+    Load background magnetic field, electric field and magnetic field fluctuations
+
     >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_brst, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint_brst, mms_id)
     >>> b_scm = mms.get_data("B_gse_scm_brst_l2", tint_brst, mms_id)
-    >>> # Polarization analysis
+
+    Polarization analysis
+
     >>> options = dict(polarization=True, fac=True)
     >>> polarization = pyrf.ebsp(e_xyz, b_scm, b_xyz, b_xyz, r_xyz, freq_int=[10, 4000], **options)
 
     """
-
-    if not isinstance(db, xr.DataArray):
-        raise TypeError("db must be a DataArray")
-
-    if not isinstance(full_b, xr.DataArray):
-        raise TypeError("full_b must be a DataArray")
-
-    if not isinstance(b0, xr.DataArray):
-        raise TypeError("b0 must be a DataArray")
-
-    if not isinstance(xyz, xr.DataArray):
-        raise TypeError("xyz must be a DataArray")
 
     # Number of threads
     n_threads = mp.cpu_count()
@@ -280,8 +271,7 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
         n_wave_period_to_average = kwargs["nav"]
 
     if "fac_matrix" in kwargs:
-        if kwargs["fac_matrix"] is None or not isinstance(kwargs["fac_matrix"],
-                            xr.DataArray) or "time" not in kwargs["fac_matrix"].coords:
+        if isinstance(kwargs["fac_matrix"], xr.DataArray):
             raise ValueError("fac_matrix requires a second argument struct(t,rotMatrix)")
 
         fac_matrix = kwargs["fac_matrix"]
@@ -295,9 +285,10 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
             xyz = [1, 0, 0]
             xyz = ts_vec_xyz(db.time.data, np.tile(xyz, (len(db), 1)))
 
-        xyz = resample(xyz, db, fs=fsb)
+        resample_b_options = dict(fs=fsb)
+        xyz = resample(xyz, db, **resample_b_options)
 
-    b0 = resample(b0, db, fs=fsb)
+    b0 = resample(b0, db, **resample_b_options)
 
     if flag_full_b_db:
         full_b = db
@@ -365,9 +356,9 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
             in_sampling = fs_e
         else:
             if fs_b > 1.5 * fs_e:
-                e = resample(e, db, fs=fsb)
+                e = resample(e, db, **resample_b_options)
 
-                b0 = resample(b0, db, fs=fsb)
+                b0 = resample(b0, db, **resample_b_options)
 
                 in_sampling = fs_b
                 warnings.warn("Interpolating e to b", UserWarning)
@@ -752,9 +743,8 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
             s_mat_avg2dim = s_mat_avg2dim[:, :2, :2]
             s_mat_avg = s_mat_avg2dim
 
-            dop2dim = np.sqrt(2 * (
-                        np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2) / np.trace(
-                s_mat_avg, axis1=1, axis2=2) ** 2) - 1)
+            dop2dim = np.sqrt(2 * (np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2) /
+                                   np.trace(s_mat_avg, axis1=1, axis2=2) ** 2) - 1)
             dop2dim[censure_idx] = np.nan
             dop_2d[:, ind_a] = dop
 
@@ -975,4 +965,4 @@ def ebsp(e=None, db=None, full_b=None, b0=None, xyz=None, freq_int=None, **kwarg
         res["k_tp"] = xr.DataArray(k_th_ph_svd_fac, coords=[res["t"], res["f"], ["theta", "phi"]],
                                    dims=["time", "frequency", "comp"])
 
-    return res
+    return xr.Dataset(res)

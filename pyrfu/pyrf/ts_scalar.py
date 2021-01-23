@@ -12,19 +12,18 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import numpy as np
 import xarray as xr
 
 
-def ts_scalar(t=None, data=None, attrs=None):
+def ts_scalar(t, data, attrs=None):
     """Create a time series containing a 0th order tensor
 
     Parameters
     ----------
-    t : numpy.ndarray
+    t : ndarray
         Array of times.
 
-    data : numpy.ndarray
+    data : ndarray
         Data corresponding to the time list.
 
     attrs : dict
@@ -36,9 +35,6 @@ def ts_scalar(t=None, data=None, attrs=None):
         0th order tensor time series.
 
     """
-
-    assert t is not None and isinstance(t, np.ndarray)
-    assert data is not None and isinstance(data, np.ndarray)
 
     if data.ndim != 1:
         raise TypeError("Input must be a scalar")

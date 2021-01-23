@@ -12,82 +12,85 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import bisect
+
 import numpy as np
 import xarray as xr
 
-from spacepy import pycdf
-from dateutil import parser
+from cdflib import CDF, cdfepoch
+from dateutil import parser as date_parser
+
+from ..pyrf import datetime_to_tt2000
 
 
-def get_ts(file_path="", cdf_name="", tint=None):
+def get_ts(file_path, cdf_name, tint):
     """
-    Read field named cdf_name in file and convert to time series
+    Read field named cdf_name in file and convert to time series.
 
     Parameters
     ----------
     file_path : str
-        Path of the cdf file
+        Path of the cdf file.
 
     cdf_name : str
-        Name of the target variable in the cdf file
+        Name of the target variable in the cdf file.
 
-    tint : list
-        Time interval
+    tint : list of str
+        Time interval.
 
     Returns
     -------
     out : xarray.DataArray
-        Time series of the target variable in the selected time interval
-
-	TODO : remove th exec
+        Time series of the target variable in the selected time interval.
 
     """
 
-    assert isinstance(file_path, str) and file_path
-    assert isinstance(cdf_name, str) and cdf_name
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(tint[0], str) and isinstance(tint[1], str)
+    # Convert time interval to epochs
+    tint = list(map(date_parser.parse, tint))
+    tint = list(map(datetime_to_tt2000, tint))
+    tint = list(map(cdfepoch.parse, tint))
 
     x, y, z, w = [{}, {}, {}, {}]
-
     out_dict = {}
 
-    with pycdf.CDF(file_path) as f:
-        depend0_key = f[cdf_name].attrs["DEPEND_0"]
-        start_ind, stop_ind = [bisect.bisect_left(f[depend0_key], parser.parse(tint[0])),
-                               bisect.bisect_left(f[depend0_key], parser.parse(tint[1]))]
+    with CDF(file_path) as f:
+        depend0_key = f.varattsget(cdf_name)["DEPEND_0"]
 
-        x["data"], x["attrs"] = [f[depend0_key][start_ind:stop_ind], {}]
+        x["data"] = f.varget(depend0_key, starttime=tint[0], endtime=tint[1])
 
-        for k in f[depend0_key].attrs.keys():
-            x["attrs"][k] = f[depend0_key].attrs[k]
-            if isinstance(x["attrs"][k], str) and x["attrs"][k] in f.keys() and not k == "LABLAXIS":
+        if f.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
+            x["data"] = cdfepoch.to_datetime(x["data"], to_np=True)
+
+        x["atts"] = {}
+
+        for k in f.varattsget(depend0_key):
+            x["atts"][k] = f.varattsget(depend0_key)[k]
+            if isinstance(x["atts"][k], str) and x["atts"][k] in f.cdf_info()["zVariables"] and \
+                    not k == "LABLAXIS":
                 try:
                     # If array
-                    x["attrs"][k] = f[x["attrs"][k]][start_ind:stop_ind, ...]
+                    x["atts"][k] = f.varget(x["atts"][k], starttime=tint[0], endtime=tint[1])
                 except IndexError:
                     # If scalar
-                    x["attrs"][k] = f[x["attrs"][k]][...]
+                    x["atts"][k] = f.varget(x["atts"][k])
 
-        if "DEPEND_1" in f[cdf_name].attrs or "REPRESENTATION_1" in f[cdf_name].attrs:
+        if "DEPEND_1" in f.varattsget(cdf_name) or "REPRESENTATION_1" in f.varattsget(cdf_name):
             try:
-                depend1_key = f[cdf_name].attrs["DEPEND_1"]
+                depend1_key = f.varattsget(cdf_name)["DEPEND_1"]
             except KeyError:
-                depend1_key = f[cdf_name].attrs["REPRESENTATION_1"]
+                depend1_key = f.varattsget(cdf_name)["REPRESENTATION_1"]
 
             if depend1_key == "x,y,z":
-                y["data"], y["attrs"] = [np.array(depend1_key.split(",")), {"LABLAXIS": "comp"}]
+                y["data"], y["atts"] = [np.array(depend1_key.split(",")), {"LABLAXIS": "comp"}]
             else:
                 try:
-                    y["data"] = f[depend1_key][start_ind:stop_ind, :]
+                    y["data"] = f.varget(depend1_key, starttime=tint[0], endtime=tint[1])
                 except IndexError:
-                    y["data"] = f[depend1_key][...]
+                    y["data"] = f.varget(depend1_key)
 
                 # If vector components remove magnitude index
 
-                if len(y["data"]) == 4 and all(y["data"] == ["x", "y", "z", "r"]):
-                    y["data"] = y["data"][:-1]
+                if len(y["data"]) == 1 and all(y["data"][0] == ["x", "y", "z", "r"]):
+                    y["data"] = y["data"][0][:-1]
                 # if y is 2d get only first row assuming that the bins are the same
                 elif y["data"].ndim == 2:
                     try:
@@ -95,73 +98,75 @@ def get_ts(file_path="", cdf_name="", tint=None):
                     except IndexError:
                         pass
 
-                y["attrs"] = {}
+                y["atts"] = {}
 
                 # Get attributes
-                for k in f[depend1_key].attrs.keys():
-                    y["attrs"][k] = f[depend1_key].attrs[k]
+                for k in f.varattsget(depend1_key):
+                    y["atts"][k] = f.varattsget(depend1_key)[k]
 
-                    if isinstance(y["attrs"][k], str) and y["attrs"][k] in f.keys():
+                    if isinstance(y["atts"][k], str) and y["atts"][k] in f.cdf_info()["zVariables"]:
                         if k not in ["DEPEND_0", "LABLAXIS"]:
                             try:
-                                y["attrs"][k] = f[y["attrs"][k]][start_ind:stop_ind, ...]
-                            except:
-                                y["attrs"][k] = f[y["attrs"][k]][...]
-                            # If attrs is 2D get only first row
-                            if y["attrs"][k].ndim == 2:
+                                y["atts"][k] = f.varget(y["atts"][k],
+                                                        starttime=tint[0], endtime=tint[1])
+                            except IndexError:
+                                y["atts"][k] = f.varget(y["atts"][k])
+                            # If atts is 2D get only first row
+                            if y["atts"][k].ndim == 2:
                                 try:
-                                    y["attrs"][k] = y["attrs"][k][0, :]
+                                    y["atts"][k] = y["atts"][k][0, :]
                                 except IndexError:
                                     pass
 
                 # Remove spaces in label
                 try:
-                    y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ", "_")
+                    y["atts"]["LABLAXIS"] = y["atts"]["LABLAXIS"].replace(" ", "_")
 
-                    if y["attrs"]["LABLAXIS"] == "Diffential_energy_channels":
-                        y["attrs"]["LABLAXIS"] = "Differential_energy_channels"
+                    if y["atts"]["LABLAXIS"] == "Diffential_energy_channels":
+                        y["atts"]["LABLAXIS"] = "Differential_energy_channels"
 
                 except KeyError:
-                    y["attrs"]["LABLAXIS"] = "comp"
+                    y["atts"]["LABLAXIS"] = "comp"
 
         elif "afg" in cdf_name or "dfg" in cdf_name:
             y["data"] = ["x", "y", "z"]
-            y["attrs"] = {"LABLAXIS": "comp"}
+            y["atts"] = {"LABLAXIS": "comp"}
 
-        if "DEPEND_2" in f[cdf_name].attrs or "REPRESENTATION_2" in f[cdf_name].attrs:
+        if "DEPEND_2" in f.varattsget(cdf_name) or "REPRESENTATION_2" in f.varattsget(cdf_name):
             try:
-                depend2_key = f[cdf_name].attrs["DEPEND_2"]
+                depend2_key = f.varattsget(cdf_name)["DEPEND_2"]
             except KeyError:
-                depend2_key = f[cdf_name].attrs["REPRESENTATION_2"]
+                depend2_key = f.varattsget(cdf_name)["REPRESENTATION_2"]
 
             if depend2_key == "x,y,z":
                 z["data"] = np.array(depend2_key.split(","))
 
-                z["attrs"] = {"LABLAXIS": "comp"}
+                z["atts"] = {"LABLAXIS": "comp"}
             else:
-                z["data"] = f[depend2_key][...]
+                z["data"] = f.varget(depend2_key)[...]
 
-                z["attrs"] = {}
+                z["atts"] = {}
 
-                for k in f[depend2_key].attrs.keys():
-                    z["attrs"][k] = f[depend2_key].attrs[k]
+                for k in f[depend2_key].atts.keys():
+                    z["atts"][k] = f.varattsget(depend2_key)[k]
 
-                    if isinstance(z["attrs"][k], str) and z["attrs"][k] in f.keys() and \
+                    if isinstance(z["atts"][k], str) and z["atts"][k] in f.cdf_info()[
+                        "zVariables"] and \
                             not k == "DEPEND_0":
-                        z["attrs"][k] = f[z["attrs"][k]][start_ind:stop_ind, ...]
+                        z["atts"][k] = f.varget(z["atts"][k], starttime=tint[0], endtime=tint[1])
 
-                if "LABLAXIS" not in z["attrs"].keys():
-                    z["attrs"]["LABLAXIS"] = "comp"
+                if "LABLAXIS" not in z["atts"].keys():
+                    z["atts"]["LABLAXIS"] = "comp"
 
-        if "DEPEND_3" in f[cdf_name].attrs or "REPRESENTATION_3" in f[cdf_name].attrs and \
-                f[cdf_name].attrs["REPRESENTATION_3"] != "x,y,z":
+        if "DEPEND_3" in f.varattsget(cdf_name) or "REPRESENTATION_3" in f.varattsget(cdf_name) \
+                and f.varattsget(cdf_name)["REPRESENTATION_3"] != "x,y,z":
 
             try:
-                depend3_key = f[cdf_name].attrs["DEPEND_3"]
+                depend3_key = f.varattsget(cdf_name)["DEPEND_3"]
             except KeyError:
-                depend3_key = f[cdf_name].attrs["REPRESENTATION_3"]
+                depend3_key = f.varattsget(cdf_name)["REPRESENTATION_3"]
 
-            w["data"] = f[depend3_key][...]
+            w["data"] = f.varget(depend3_key)
 
             if w["data"].ndim == 2:
                 try:
@@ -169,88 +174,70 @@ def get_ts(file_path="", cdf_name="", tint=None):
                 except IndexError:
                     pass
 
-            w["attrs"] = {}
-            for k in f[depend3_key].attrs.keys():
-                w["attrs"][k] = f[depend3_key].attrs[k]
+            w["atts"] = {}
+            for k in f.varattsget(depend3_key):
+                w["atts"][k] = f.varattsget(depend3_key)[k]
 
-                if isinstance(w["attrs"][k], str) and w["attrs"][k] in f.keys() and \
-                        not k == "DEPEND_0":
-                    w["attrs"][k] = f[w["attrs"][k]][start_ind:stop_ind, ...]
+                if isinstance(w["atts"][k], str) and w["atts"][k] in f.cdf_info()["zVariables"] \
+                        and not k == "DEPEND_0":
+                    w["atts"][k] = f.varget(w["atts"][k], starttime=tint[0], endtime=tint[1])
 
-            if "LABLAXIS" not in w["attrs"].keys():
-                w["attrs"]["LABLAXIS"] = "comp"
+            if "LABLAXIS" not in w["atts"]:
+                w["atts"]["LABLAXIS"] = "comp"
 
         if "sector_mask" in cdf_name:
-            y["data"] = f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]][...]
+            depend1_key = f.varattsget(cdf_name.replace("sector_mask", "intensity"))["DEPEND_1"]
 
-            y["attrs"] = {}
+            y["data"] = f.varget(depend1_key)
+            y["atts"] = f.varattsget(depend1_key)
 
-            y_attrs_keys = f[
-                f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs.keys()
-
-            for k in y_attrs_keys:
-                y["attrs"][k] = \
-                f[f[cdf_name.replace("sector_mask", "intensity")].attrs["DEPEND_1"]].attrs[k]
-
-            y["attrs"]["LABLAXIS"] = y["attrs"]["LABLAXIS"].replace(" ", "_")
+            y["atts"]["LABLAXIS"] = y["atts"]["LABLAXIS"].replace(" ", "_")
 
         if "edp_dce_sensor" in cdf_name:
             y["data"] = ["x", "y", "z"]
+            y["atts"] = {"LABLAXIS": "comp"}
 
-            y["attrs"] = {"LABLAXIS": "comp"}
-
-        out_dict["data"] = f[cdf_name][start_ind:stop_ind, ...]
+        out_dict["data"] = f.varget(cdf_name, starttime=tint[0], endtime=tint[1])
 
         if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
             out_dict["data"] = out_dict["data"][:, :-1]
 
-        out_dict["attrs"] = {}
-
-        for k in f[cdf_name].attrs:
-            out_dict["attrs"][k] = f[cdf_name].attrs[k]
+        out_dict["atts"] = f.varattsget(cdf_name)
 
     if x and not y and not z and not w:
-        dims, coordinates = [["time"], [x["data"]]]
-
-        out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-        out[dims[0]].attrs = x['attrs']
+        dims = ["time"]
+        coords_data = [x["data"]]
+        coords_atts = [x["atts"]]
 
     elif x and y and not z and not w:
-        dims = ["time", y["attrs"]["LABLAXIS"]]
-        coordinates = [x["data"], y["data"]]
-
-        out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-
-        for dim, coord in zip(dims, [x, y]):
-            out[dim].attrs = coord["attrs"]
+        dims = ["time", y["atts"]["LABLAXIS"]]
+        coords_data = [x["data"], y["data"]]
+        coords_atts = [x["atts"], y["atts"]]
 
     elif x and y and z and not w:
-        if y["attrs"]["LABLAXIS"] == z["attrs"]["LABLAXIS"]:
-            y["attrs"]["LABLAXIS"] = "rcomp"
-            z["attrs"]["LABLAXIS"] = "ccomp"
+        if y["atts"]["LABLAXIS"] == z["atts"]["LABLAXIS"]:
+            y["atts"]["LABLAXIS"] = "rcomp"
+            z["atts"]["LABLAXIS"] = "ccomp"
 
-        dims = ["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"]]
-        coordinates = [x["data"], y["data"], z["data"]]
-
-        out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-
-        for dim, coord in zip(dims, [x, y, z]):
-            out[dim].attrs = coord["attrs"]
+        dims = ["time", y["atts"]["LABLAXIS"], z["atts"]["LABLAXIS"]]
+        coords_data = [x["data"], y["data"], z["data"]]
+        coords_atts = [x["atts"], y["atts"], z["atts"]]
 
     elif x and y and z and w:
-        if z["attrs"]["LABLAXIS"] == w["attrs"]["LABLAXIS"]:
-            z["attrs"]["LABLAXIS"] = "rcomp"
-            w["attrs"]["LABLAXIS"] = "ccomp"
+        if z["atts"]["LABLAXIS"] == w["atts"]["LABLAXIS"]:
+            z["atts"]["LABLAXIS"] = "rcomp"
+            w["atts"]["LABLAXIS"] = "ccomp"
 
-        dims = ["time", y["attrs"]["LABLAXIS"], z["attrs"]["LABLAXIS"], w["attrs"]["LABLAXIS"]]
-        coordinates = [x["data"], y["data"], z["data"], w["data"]]
-
-        out = xr.DataArray(out_dict["data"], coords=coordinates, dims=dims, attrs=out_dict["attrs"])
-
-        for dim, coord in zip(dims, [x, y, z, w]):
-            out[dim].attrs = coord["attrs"]
+        dims = ["time", y["atts"]["LABLAXIS"], z["atts"]["LABLAXIS"], w["atts"]["LABLAXIS"]]
+        coords_data = [x["data"], y["data"], z["data"], w["data"]]
+        coords_atts = [x["atts"], y["atts"], z["atts"], w["atts"]]
 
     else:
         raise NotImplementedError
+
+    out = xr.DataArray(out_dict["data"], coords=coords_data, dims=dims, attrs=out_dict["atts"])
+
+    for dim, coord_atts in zip(dims, coords_atts):
+        out[dim].attrs = coord_atts
 
     return out

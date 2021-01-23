@@ -18,7 +18,7 @@ import xarray as xr
 from . import resample, cross, norm, ts_vec_xyz
 
 
-def mean(inp=None, r=None, b=None, z=None):
+def mean(inp, r, b, z):
     """Put inp into mean field coordinates defined by position vector r and magnetic field b
     if earth magnetic dipole axis z is given then uses another algorithm (good for auroral passages)
 
@@ -43,11 +43,6 @@ def mean(inp=None, r=None, b=None, z=None):
 
     """
 
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert r is not None and isinstance(r, xr.DataArray)
-    assert b is not None and isinstance(b, xr.DataArray)
-
-    #
     if z is not None:
         flag_dipole = True
 

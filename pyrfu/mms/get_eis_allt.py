@@ -12,14 +12,13 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import numpy as np
 import xarray as xr
 
 from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_allt(tar_var="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
+def get_eis_allt(tar_var, tint, mms_id, verbose=True):
     """Read energy spectrum of the selected specie in the selected energy range for all telescopes.
 
     Parameters
@@ -41,13 +40,19 @@ def get_eis_allt(tar_var="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbo
     out : xarray.Dataset
         Dataset containing the energy spectrum of the 6 telescopes of the Energy Ion Spectrometer.
 
-    """
+    Examples
+    --------
+    >>> from pyrfu import mms
 
-    assert isinstance(tar_var, str)
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(tint[0], str) and isinstance(tint[1], str)
-    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
-    assert isinstance(verbose, bool)
+    Define time interval
+
+    >>> tint_brst = ["2017-07-23T16:54:24.000", "2017-07-23T17:00:00.000"]
+
+    Read proton energy spectrum for all EIS telescopes
+
+    >>> eis_allt = mms.get_eis_allt("Flux_extof_proton_srvy_l2", tint_brst, 2)
+
+    """
 
     # Convert mms_id to integer
     mms_id = int(mms_id)

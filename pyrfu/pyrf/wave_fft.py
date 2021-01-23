@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from scipy import signal
 
 
-def wave_fft(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=None):
+def wave_fft(x, window, frame_overlap=10., frame_length=20., fs=None):
     """Short-Time Fourier Transform.
 
     Parameters
@@ -40,18 +39,16 @@ def wave_fft(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=Non
 
     Returns
     -------
-    s : numpy.ndarray
+    s : ndarray
         Spectrogram of x.
 
-    t : numpy.ndarray
+    t : ndarray
         Value corresponds to the center of each frame (x-axis) in sec.
 
-    f : numpy.ndarray
+    f : ndarray
         Vector of frequencies (y-axis) in Hz.
 
     """
-
-    assert x is not None and isinstance(x, xr.DataArray)
 
     if fs is None:
         dt = np.median(np.diff(x.time.data).astype(float)) * 1e-9
@@ -60,7 +57,7 @@ def wave_fft(x=None, window="hamming", frame_overlap=10, frame_length=20, fs=Non
     n_per_seg = np.round(frame_length * fs).astype(int)  # convert ms to points
     n_overlap = np.round(frame_overlap * fs).astype(int)  # convert ms to points
 
-    f, t, s = signal.spectrogram(x, fs=fs, window=window, nperseg=n_per_seg, noverlap=n_overlap,
-                                 mode='complex')
+    options = dict(fs=fs, window=window, nperseg=n_per_seg, noverlap=n_overlap, mode='complex')
+    f, t, s = signal.spectrogram(x, **options)
 
     return f, t, s

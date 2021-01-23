@@ -19,7 +19,7 @@ import numpy as np
 from astropy.time import Time
 
 
-def read_feeps_sector_masks_csv(tint=None):
+def read_feeps_sector_masks_csv(tint):
     """
     Reads the FEEPS sectors to mask due to sunlight contamination from csv files.x
 
@@ -35,6 +35,7 @@ def read_feeps_sector_masks_csv(tint=None):
         Hash table containing the sectors to mask for each spacecraft and sensor ID
 
     """
+
     masks = {}
 
     dates = [1447200000.0000000,  # 11/11/2015

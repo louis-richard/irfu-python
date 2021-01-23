@@ -16,49 +16,44 @@ import numpy as np
 import xarray as xr
 
 
-def ts_skymap(t=None, data=None, energy=None, phi=None, theta=None, **kwargs):
+def ts_skymap(t, data, energy, phi, theta, **kwargs):
     """Creates a skymap of the distribution function.
 
     Parameters
     ----------
-    t : numpy.ndarray
+    t : ndarray
         List of times.
 
-    data : numpy.ndarray
+    data : ndarray
         Values of the distribution function.
 
-    energy : numpy.ndarray
+    energy : ndarray
         Energy levels.
 
-    phi : numpy.ndarray
+    phi : ndarray
         Azimuthal angles.
 
-    theta : numpy.ndarray
+    theta : ndarray
         Elevation angles.
 
     **kwargs : dict
         Hash table of keyword arguments with :
-            * energy0 : numpy.ndarray
+            * energy0 : ndarray
                 Energy table 0 (odd time indices).
 
-            * energy1 : numpy.ndarray
+            * energy1 : ndarray
                 Energy table 1 (even time indices).
 
-            * esteptable : numpy.ndarray
+            * esteptable : ndarray
                 Time series of the stepping table between energies (burst).
 
 
     Returns
     -------
-    out : xarray.DataArray
+    out : xarray.Dataset
         Skymap of the distribution function.
 
     """
-
-    assert t is not None and isinstance(t, np.ndarray)
-    assert data is not None and isinstance(data, np.ndarray)
-    assert phi is not None and isinstance(phi, np.ndarray)
-    assert theta is not None and isinstance(theta, np.ndarray)
 
     if energy is None:
         if "energy0" in kwargs:

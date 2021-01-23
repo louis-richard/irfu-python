@@ -13,15 +13,14 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from astropy import constants
 
-from ..pyrf import resample, dec_par_perp, norm
 from . import rotate_tensor
+from ..pyrf import resample, dec_par_perp, norm
 
 
-def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=None):
+def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     """
     Make a general bi-Maxwellian distribution function based on particle moment data in the same
     format as PDist.
@@ -58,25 +57,31 @@ def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=
     Examples
     --------
     >>> from pyrfu import mms
-    >>> model_vdf = mms.make_model_vdf(vdf_e, b_xyz, sc_pot, n_e, v_xyz_e, t_xyz_e)
+
+    Define time interval
+
+    >>> tint_brst = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+
+    Load magnetic field and spacecraft potential
+
+    >>> b_dmpa = mms.get_data("b_dmpa_fgm_brst_l2", tint_brst, 1)
+    >>> sc_pot = mms.get_data("V_edp_brst_l2", tint_brst, 1)
+
+    Load electron velocity distribution function
+
+    >>> vdf_e = mms.get_data("pde_fpi_brst_l2", tint_brst, 1)
+
+    Load moments of the electron velocity distribution function
+
+    >>> n_e = mms.get_data("ne_fpi_brst_l2", tint_brst, 1)
+    >>> v_xyz_e = mms.get_data("ve_dbcs_fpi_brst_l2", tint_brst, 1)
+    >>> t_xyz_e = mms.get_data("te_dbcs_fpi_brst_l2", tint_brst, 1)
+
+    Compute model electron velocity distribution function
+
+    >>> vdf_m_e = mms.make_model_vdf(vdf_e, b_xyz, sc_pot, n_e, v_xyz_e, t_xyz_e)
 
     """
-
-    # Check that PDist and moments have the same times
-    """
-    if abs(median(diff(PDist.time-n.time))) > 0
-        modelPDist = NaN;
-        irf.log('critical','PDist and moments have different times.')
-        return;
-    end
-    """
-
-    assert vdf is not None and isinstance(vdf, xr.Dataset)
-    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
-    assert sc_pot is not None and isinstance(sc_pot, xr.DataArray)
-    assert n is not None and isinstance(n, xr.DataArray)
-    assert v_xyz is not None and isinstance(v_xyz, xr.DataArray)
-    assert t_xyz is not None and isinstance(t_xyz, xr.DataArray)
 
     # Convert to SI units
     vdf /= 1e18
@@ -198,4 +203,3 @@ def make_model_vdf(vdf=None, b_xyz=None, sc_pot=None, n=None, v_xyz=None, t_xyz=
     model_vdf *= 1e18
 
     return model_vdf
-

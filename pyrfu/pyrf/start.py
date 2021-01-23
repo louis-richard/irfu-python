@@ -12,11 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import xarray as xr
 from astropy.time import Time
 
 
-def start(inp=None):
+def start(inp):
     """Gives the first time of the time series.
 
     Parameters
@@ -26,12 +25,11 @@ def start(inp=None):
 
     Returns
     -------
-    out : float or str
+    out : float
         Value of the first time in the desired format.
 
     """
 
-    assert inp is not None and isinstance(inp, xr.DataArray)
-
     out = Time(inp.time.data[0], format="datetime64").unix
+
     return out

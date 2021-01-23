@@ -15,7 +15,7 @@
 from dateutil import parser
 
 
-def date_str(tint=None, fmt=1):
+def date_str(tint, fmt=1):
     """Creates a string corresponding to time interval for output plot naming.
 
     Parameters
@@ -36,8 +36,6 @@ def date_str(tint=None, fmt=1):
         String corresponding to the time interval in the desired format.
 
     """
-
-    assert tint is not None and isinstance(tint, list) and len(tint) == 2
 
     t1 = parser.parse(tint[0])
     t2 = parser.parse(tint[1])

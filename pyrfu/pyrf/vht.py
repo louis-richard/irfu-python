@@ -13,13 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
-from .resample import resample
-from .e_vxb import e_vxb
+from . import resample, e_vxb
 
 
-def vht(e=None, b=None, flag=1):
+def vht(e, b, flag=1):
     """
     Estimate velocity of the De Hoffman-Teller frame from the velocity estimate the electric field
     eht=-vht x b
@@ -37,19 +35,16 @@ def vht(e=None, b=None, flag=1):
 
     Returns
     -------
-    vht : numpy.ndarray
+    vht : ndarray
         De Hoffman Teller frame velocity [km/s].
 
     vht : xarray.DataArray
         Time series of the electric field in the De Hoffman frame.
 
-    dv_ht : numpy.ndarray
+    dv_ht : ndarray
         Error of De Hoffman Teller frame.
 
     """
-
-    assert e is not None and isinstance(e, xr.DataArray)
-    assert b is not None and isinstance(b, xr.DataArray)
 
     n_samples = len(e)
 

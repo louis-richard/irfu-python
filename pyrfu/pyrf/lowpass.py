@@ -17,7 +17,7 @@ import xarray as xr
 from scipy import signal
 
 
-def lowpass(inp=None, f_cut=None, fhz=None):
+def lowpass(inp, f_cut, fhz):
     """Filter the data through low or highpass filter with max frequency f_cut and subtract from
     the original.
 
@@ -38,10 +38,6 @@ def lowpass(inp=None, f_cut=None, fhz=None):
         Time series of the filter data.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert f_cut is not None and isinstance(f_cut, float)
-    assert fhz is not None and isinstance(fhz, float)
 
     data = inp.data
 

@@ -21,7 +21,7 @@ from .db_get_ts import db_get_ts
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 
 
-def feeps_remove_sun(inp_dataset=None):
+def feeps_remove_sun(inp_dataset):
     """Removes the sunlight contamination from FEEPS data.
 
     Parameters
@@ -41,44 +41,48 @@ def feeps_remove_sun(inp_dataset=None):
     Examples
     --------
     >>> from pyrfu import mms
-    >>> # Define time interval
+
+    Define time interval
+
     >>> tint = ["2017-07-18T13:04:00.000", "2017-07-18T13:07:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 2
-    >>> # Load data from FEEPS
+
+    Load data from FEEPS
+
     >>> cps_i = mms.get_feeps_alleyes("CPSi_brst_l2", tint, mms_id)
-    >>> cps_i_clean = mms.feeps_split_integral_ch(cps_i)
+    >>> cps_i_clean, _ = mms.feeps_split_integral_ch(cps_i)
     >>> cps_i_clean_sun_removed = mms.feeps_remove_sun(cps_i_clean)
 
     """
-
-    assert inp_dataset is not None and isinstance(inp_dataset, xr.Dataset)
 
     var = inp_dataset.attrs
 
     trange = list(Time(inp_dataset.time.data[[0, -1]], format="datetime64").isot)
 
-    dset_name = "mms{:d}_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"],
-                                                var["dtype"])
-    dset_pref = "mms{:d}_epd_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"],
-                                                    var["dtype"])
+    dataset_name = "mms{:d}_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"],
+                                                   var["dtype"])
+    dataset_pref = "mms{:d}_epd_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"],
+                                                       var["dtype"])
 
-    spin_sectors = db_get_ts(dset_name, "_".join([dset_pref, "spinsectnum"]), trange)
+    spin_sectors = db_get_ts(dataset_name, "_".join([dataset_pref, "spinsectnum"]), trange)
     mask_sectors = read_feeps_sector_masks_csv(trange)
 
-    outdict = {}
+    out_dict = {}
 
     for k in inp_dataset:
-        outdict[k] = inp_dataset[k]
+        out_dict[k] = inp_dataset[k]
         if mask_sectors.get("mms{:d}_imask_{}".format(var["mmsId"], k)) is not None:
             bad_sectors = mask_sectors["mms{:d}_imask_{}".format(var["mmsId"], k)]
 
             for bad_sector in bad_sectors:
                 this_bad_sector = np.where(spin_sectors == bad_sector)[0]
                 if len(this_bad_sector) != 0:
-                    outdict[k].data[this_bad_sector] = np.nan
+                    out_dict[k].data[this_bad_sector] = np.nan
 
-    out = xr.Dataset(outdict, attrs=var)
+    out = xr.Dataset(out_dict, attrs=var)
 
     out.attrs = var
 

@@ -13,14 +13,13 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from astropy.time import Time
 
 from . import calc_fs, cross, dot, normalize, resample, time_clip
 
 
-def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
+def poynting_flux(e_xyz, b_xyz, b0):
     """
     Estimates Poynting flux at electric field sampling as
 
@@ -54,9 +53,6 @@ def poynting_flux(e_xyz=None, b_xyz=None, b0=None):
         Time series of the time integral of the Pointing flux (if b0 integral along b0).
 
     """
-
-    assert e_xyz is not None and isinstance(e_xyz, xr.DataArray)
-    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
 
     # check which Poynting flux to calculate
     flag_s_z, flag_int_s_z, flag_int_s = [False, False, False]

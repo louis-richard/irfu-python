@@ -14,11 +14,12 @@
 
 from .list_files import list_files
 from .get_ts import get_ts
+
 from ..pyrf import ts_append
 
 
 # noinspection PyUnboundLocalVariable
-def db_get_ts(dataset_name="", cdf_name="", tint=None):
+def db_get_ts(dataset_name, cdf_name, tint=None):
     """Get variable time series in the cdf file.
 
     Parameters
@@ -38,10 +39,6 @@ def db_get_ts(dataset_name="", cdf_name="", tint=None):
         Time series of the target variable.
 
     """
-
-    assert isinstance(dataset_name, str)
-    assert isinstance(cdf_name, str)
-    assert tint is not None and isinstance(tint, list)
 
     dataset = dataset_name.split("_")
 

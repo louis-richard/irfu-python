@@ -17,23 +17,23 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 
-def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
+def estimate_phase_speed(f_k_power, f, k, f_min=100.):
     """Simple function to estimate the phase speed from the frequency wave number power spectrum.
     Fits :math:`f = v k/ 2 \\pi` to the power spectrum.
 
     Parameters
     ----------
-    f_k_power : numpy.ndarray
+    f_k_power : ndarray
         2D array of powers.
 
-    f : numpy.ndarray
+    f : ndarray
         1D array of frequencies.
 
-    k : numpy.ndarray
+    k : ndarray
         1D array of wave numbers.
 
-    f_min : float or int, optional
-        Set low frequency threshold of points used to estimate the speed. Default ``f_min`` = 100
+    f_min : float, optional
+        Set low frequency threshold of points used to estimate the speed. Default ``f_min`` = 100.
 
     Returns
     -------
@@ -51,11 +51,6 @@ def estimate_phase_speed(f_k_power=None, f=None, k=None, f_min=100.):
     pyrfu.mms.probe_align_times : Returns times when f-a electrostatic waves can be characterized.
 
     """
-
-    assert f_k_power is not None and isinstance(f_k_power, np.ndarray)
-    assert f is not None and isinstance(f, np.ndarray)
-    assert k is not None and isinstance(k, np.ndarray)
-    assert isinstance(f_min, float)
 
     # Remove spurious points; specifically at large k.
     k_max = 2.0 * np.max(k) / 3.0

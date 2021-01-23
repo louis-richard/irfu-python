@@ -24,7 +24,7 @@ from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_scalar import ts_scalar
 
 
-def pid_4sc(r_mms=None, v_mms=None, p_mms=None, b_mms=None):
+def pid_4sc(r_mms, v_mms, p_mms, b_mms):
     """
     Compute Pi-D term using definition of [10]_ as :
 
@@ -79,12 +79,6 @@ def pid_4sc(r_mms=None, v_mms=None, p_mms=None, b_mms=None):
             doi : https://doi.org/10.1103/PhysRevE.95.061201
 
     """
-
-    # Check input
-    assert r_mms is not None and isinstance(r_mms, list) and isinstance(r_mms[0], xr.DataArray)
-    assert v_mms is not None and isinstance(v_mms, list) and isinstance(v_mms[0], xr.DataArray)
-    assert p_mms is not None and isinstance(p_mms, list) and isinstance(p_mms[0], xr.DataArray)
-    assert b_mms is not None and isinstance(b_mms, list) and isinstance(b_mms[0], xr.DataArray)
 
     time = v_mms[0].time.data
 

@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 
 
-def spectr_to_dataset(spectr=None):
+def spectr_to_dataset(spectr):
     """Convert energy spectrum (DataArray) to Dataset.
 
     Parameters
@@ -30,8 +30,6 @@ def spectr_to_dataset(spectr=None):
         Spectrogram in Dataset format.
 
     """
-
-    assert spectr is not None and isinstance(spectr, xr.DataArray)
 
     time = spectr.time.data
     energy = spectr.energy.data

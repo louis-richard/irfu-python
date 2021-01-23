@@ -12,13 +12,11 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import numpy as np
-
 from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_omni(tar_var="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbose=True):
+def get_eis_omni(tar_var, tint, mms_id, verbose=True):
     """Computes omni directional energy spectrum of the target data unit for the target specie
     over the target energy range.
 
@@ -41,13 +39,19 @@ def get_eis_omni(tar_var="Flux_extof_proton_srvy_l2", tint=None, mms_id=2, verbo
     out : xarray.DataArray
         Energy spectrum of the target data unit for the target specie in omni direction.
 
-    """
+    Examples
+    --------
+    >>> from pyrfu import mms
 
-    assert isinstance(tar_var, str)
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(tint[0], str) and isinstance(tint[1], str)
-    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
-    assert isinstance(verbose, bool)
+    Define time interval
+
+    >>> tint_brst = ["2017-07-23T16:54:24.000", "2017-07-23T17:00:00.000"]
+
+    Read EIS proton omnidirectional energy spectrum
+
+    >>> feeps_omni = mms.get_eis_omni("Flux_extof_proton_srvy_l2", tint_brst, 2)
+
+    """
 
     mms_id = int(mms_id)
 

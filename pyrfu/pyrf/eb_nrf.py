@@ -18,7 +18,7 @@ import xarray as xr
 from . import resample, dot, normalize, cross
 
 
-def eb_nrf(e=None, b=None, v=None, flag=0):
+def eb_nrf(e, b, v, flag=0):
     """Find E and B in MP system given B and MP normal vector.
 
     Parameters
@@ -32,19 +32,15 @@ def eb_nrf(e=None, b=None, v=None, flag=0):
     v : xarray.DataArray
         Normal vector.
 
-    flag : int or numpy.ndarray
+    flag : int or ndarray
         to fill.
 
     Returns
     -------
-    out : DataArray
+    out : xarray.DataArray
         to fill.
 
     """
-
-    assert e is not None and isinstance(e, xr.DataArray)
-    assert b is not None and isinstance(b, xr.DataArray)
-    assert v is not None and isinstance(v, xr.DataArray)
 
     if isinstance(flag, int):
         if flag == 1:
@@ -76,7 +72,7 @@ def eb_nrf(e=None, b=None, v=None, flag=0):
 
     elif flag_case == "b":
         nn = v / np.linalg.norm(v)
-        nm = normalize(np.cross(nn, np.mean(b)))
+        nm = normalize(cross(nn, b.mean(dim="time")))
         nl = cross(nm, nn)
 
         # estimate e in new coordinates

@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import datetime
-import numpy as np
 
 from dateutil import parser
 
 
-def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
+def get_feeps_active_eyes(var, tint, mms_id):
     """This function returns the FEEPS active eyes, based on date/mms_id/species/rate.
     
     Parameters
@@ -29,7 +28,7 @@ def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
     tint : list of str
         Time range.
 
-    mms_id : str
+    mms_id : int or str
         mms_id e.g., '4' for MMS4.
 
     Returns
@@ -70,12 +69,8 @@ def get_feeps_active_eyes(var=None, tint=None, mms_id=1):
 
     """
 
-    assert var is not None and isinstance(var, dict)
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(tint[0], str) and isinstance(tint[1], str)
-    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
-
-    mms_id = int(mms_id)
+    if isinstance(mms_id, str):
+        mms_id = int(mms_id)
 
     sensors = {}
 

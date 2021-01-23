@@ -14,10 +14,11 @@
 
 import numpy as np
 import xarray as xr
+
 from astropy.time import Time
 
 
-def integrate(inp=None, time_step=None):
+def integrate(inp, time_step):
     """Integrate time series.
 
     Parameters
@@ -37,23 +38,25 @@ def integrate(inp=None, time_step=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2015-12-14T01:17:40.200", "2015-12-14T01:17:41.500"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field and electric field
+
+    Load magnetic field and electric field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
-    >>> # Convert electric field to field aligned coordinates
+
+    Convert electric field to field aligned coordinates
+
     >>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, [1, 0, 0])
 
     """
-
-    if inp is None:
-        raise ValueError("integrate requires at least one argument")
-
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("inp must be a DataArray")
 
     time_tmp = Time(inp.time.data, format="datetime64").unix
     data_tmp = inp.data

@@ -16,8 +16,8 @@ import warnings
 import numpy as np
 import xarray as xr
 
-from .feeps_split_integral_ch import feeps_split_integral_ch
 from .feeps_remove_sun import feeps_remove_sun
+from .feeps_split_integral_ch import feeps_split_integral_ch
 
 
 def calc_feeps_omni(inp_dataset):

@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from . import ts_vec_xyz
 
 
-def cart2sph(inp=None, direction_flag=1):
+def cart2sph(inp, direction_flag=1):
     """Computes magnitude, theta and phi angle from column vector xyz (first column is x ....)
     theta is 0 at equator. direction_flag = -1  -> to make transformation in opposite direction
 
@@ -27,7 +26,7 @@ def cart2sph(inp=None, direction_flag=1):
     inp : xarray.DataArray
         Time series to convert.
 
-    direction_flag : {1, -1}
+    direction_flag : int {1, -1}
         Set to 1 (default) to transform from cartesian to spherical coordinates.
         Set to -1 to transform from spherical to cartesian coordinates.
 
@@ -37,8 +36,6 @@ def cart2sph(inp=None, direction_flag=1):
         Input field in spherical/cartesian coordinate system.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     if inp.attrs["TENSOR_ORDER"] != 1 or inp.data.ndim != 2:
         raise TypeError("Input must be vector field")

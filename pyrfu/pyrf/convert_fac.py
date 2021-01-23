@@ -15,12 +15,10 @@
 import numpy as np
 import xarray as xr
 
-from .resample import resample
-from .ts_vec_xyz import ts_vec_xyz
-from .calc_fs import calc_fs
+from . import resample, ts_vec_xyz, calc_fs
 
 
-def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
+def convert_fac(inp, b_bgd, r=None):
     """
     Transforms to a field-aligned coordinate (FAC) system defined as :
         * R_parallel_z aligned with the background magnetic field
@@ -38,7 +36,7 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
     b_bgd : xarray.DataArray
         Time series of the background magnetic field.
 
-    r : xarray.DataArray or numpy.ndarray or list
+    r : xarray.DataArray or ndarray or list
         Position vector of spacecraft.
 
     Returns
@@ -54,23 +52,32 @@ def convert_fac(inp=None, b_bgd=None, r=np.array([1, 0, 0])):
     --------
     >>> import numpy
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field (FGM) and electric field (EDP)
+
+    Load magnetic field (FGM) and electric field (EDP)
+
     >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
-    >>> # Convert to field aligned coordinates
+
+    Convert to field aligned coordinates
+
     >>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, numpy.array([1, 0, 0]))
 
     """
 
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert b_bgd is not None and isinstance(b_bgd, xr.DataArray)
+    if r is None:
+        r = np.array([1, 0, 0])
 
     if len(inp) != len(b_bgd):
-        b_bgd = resample(b_bgd, inp, fs=calc_fs(inp))
+        options = dict(fs=calc_fs(inp))
+        b_bgd = resample(b_bgd, inp, **options)
 
     t, inp_data = [inp.time.data, inp.data]
 

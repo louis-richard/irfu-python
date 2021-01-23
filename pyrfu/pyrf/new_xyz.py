@@ -16,7 +16,7 @@ import xarray as xr
 import numpy as np
 
 
-def new_xyz(inp=None, trans_mat=None):
+def new_xyz(inp, trans_mat):
     """Transform the input field to the new frame.
 
     Parameters
@@ -24,7 +24,7 @@ def new_xyz(inp=None, trans_mat=None):
     inp : xarray.DataArray
         Time series of the input field in the original coordinate system.
 
-    trans_mat : numpy.ndarray
+    trans_mat : ndarray
         Transformation matrix.
 
     Returns
@@ -35,22 +35,29 @@ def new_xyz(inp=None, trans_mat=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft indices
+
+    Spacecraft indices
+
     >>> mms_id = 1
-    >>> # Load magnetic field and electric field
+
+    Load magnetic field and electric field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
-    >>> # Compute MVA frame
+
+    Compute MVA frame
+
     >>> b_lmn, l, mva = pyrf.mva(b_xyz)
-    >>> # Move electric field to the MVA frame
+
+    Move electric field to the MVA frame
+
     >>> e_lmn = pyrf.new_xyz(e_xyz, mva)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert trans_mat is not None and isinstance(trans_mat, np.ndarray)
 
     if inp.data.ndim == 3:
         out_data = np.matmul(np.matmul(trans_mat.T, inp.data), trans_mat)

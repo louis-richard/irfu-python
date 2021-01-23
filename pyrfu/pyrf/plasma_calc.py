@@ -14,12 +14,13 @@
 
 import numpy as np
 import xarray as xr
+
 from astropy import constants
 
 from .resample import resample
 
 
-def plasma_calc(b_xyz=None, t_i=None, t_e=None, n_i=None, n_e=None):
+def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     """Computes plasma parameters including characteristic length and time scales.
     
     Parameters
@@ -118,31 +119,35 @@ def plasma_calc(b_xyz=None, t_i=None, t_e=None, n_i=None, n_e=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field, ion/electron temperature and number density
+
+    Load magnetic field, ion/electron temperature and number density
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
     >>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
     >>> t_xyz_e = mms.get_data("Te_gse_fpi_fast_l2", tint, mms_id)
     >>> n_i = mms.get_data("Ni_fpi_fast_l2", tint, mms_id)
     >>> n_e = mms.get_data("Ne_fpi_fast_l2", tint, mms_id)
-    >>> # Compute scalar temperature
+
+    Compute scalar temperature
+
     >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
     >>> t_xyzfac_e = mms.rotate_tensor(t_xyz_e, "fac", b_xyz, "pp")
     >>> t_i = pyrf.trace(t_xyzfac_i)
     >>> t_e = pyrf.trace(t_xyzfac_e)
-    >>> # Compute plasma parameters
+
+    Compute plasma parameters
+
     >>> plasma_params = pyrf.plasma_calc(b_xyz, t_i, t_e, n_i, n_e)
 
     """
-
-    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
-    assert t_i is not None and isinstance(t_i, xr.DataArray)
-    assert t_e is not None and isinstance(t_e, xr.DataArray)
-    assert n_i is not None and isinstance(n_i, xr.DataArray)
-    assert n_e is not None and isinstance(n_e, xr.DataArray)
 
     # Get constants
     e, c = [constants.e.value, constants.c.value]

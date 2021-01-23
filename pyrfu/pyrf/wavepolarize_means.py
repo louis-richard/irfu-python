@@ -15,12 +15,13 @@
 import warnings
 import numpy as np
 import xarray as xr
+
 from astropy.time import Time
 
-from .resample import resample
+from . import resample
 
 
-def wavepolarize_means(b_wave=None, b_bgd=None, **kwargs):
+def wavepolarize_means(b_wave, b_bgd, **kwargs):
     """
     Analysis the polarization of magnetic wave using "means" method
 
@@ -81,9 +82,6 @@ def wavepolarize_means(b_wave=None, b_bgd=None, **kwargs):
     >>> polarization = pyrf.wavepolarize_means(b_wave, b_bgd, 1.0e-7, 256)
 
     """
-
-    if (b_wave is None) or (b_bgd is None):
-        raise ValueError("wavepolarize_means requires at least two arguments")
 
     min_psd = 1e-25
     nop_fft = 256

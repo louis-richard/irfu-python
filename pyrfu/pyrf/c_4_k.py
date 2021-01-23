@@ -13,13 +13,12 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from .cross import cross
 from .dot import dot
 
 
-def c_4_k(r_list=None):
+def c_4_k(r_list):
     """Calculates reciprocal vectors in barycentric coordinates.
 
     Parameters
@@ -38,15 +37,9 @@ def c_4_k(r_list=None):
 
     """
 
-    assert r_list is not None and isinstance(r_list, list) and len(r_list) == 4
-
-    for i in range(4):
-        if not isinstance(r_list[i], xr.DataArray):
-            raise TypeError("Spacecraft position must be DataArray")
-
     mms_list = np.arange(4)
 
-    k_list = [None] * 4
+    k_list = [r_list[0].copy()] * 4
 
     for i, j, k, l in zip(mms_list, np.roll(mms_list, 1), np.roll(mms_list, 2),
                           np.roll(mms_list, 3)):

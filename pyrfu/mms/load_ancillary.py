@@ -25,7 +25,7 @@ from dateutil import parser as date_parser
 from .mms_config import CONFIG
 
 
-def load_ancillary(level_and_dtype="", tint=None, probe=1, verbose=True):
+def load_ancillary(level_and_dtype, tint, probe, verbose=True, data_path=""):
     """Load ancillary data
 
     Parameters
@@ -40,11 +40,14 @@ def load_ancillary(level_and_dtype="", tint=None, probe=1, verbose=True):
     tint : list of str
         Time interval
 
-    probe : int
+    probe : str or int
         Spacecraft index
 
-    verbose : bool
+    verbose : bool, optional
         Set to True to follow the loading. Default is True
+
+    data_path : str, optional
+        Path of MMS data. If None use `pyrfu.mms.mms_config.py`
 
     Returns
     -------
@@ -52,11 +55,11 @@ def load_ancillary(level_and_dtype="", tint=None, probe=1, verbose=True):
         Time series of the ancillary data
 
     """
-    assert tint is not None
 
-    data_path = CONFIG["local_data_dir"]
+    if not data_path:
+        data_path = CONFIG["local_data_dir"]
 
-    if isinstance(probe, (int, float)):
+    if isinstance(probe, int):
         probe = str(probe)
 
     # directory and file name search patterns

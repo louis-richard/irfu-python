@@ -14,10 +14,9 @@
 
 
 import numpy as np
-import xarray as xr
 
 
-def calc_sqrtq(p_xyz=None):
+def calc_sqrtq(p_xyz):
     """Computes agyrotropy coefficient as in [1]_
 
     .. math::
@@ -43,21 +42,29 @@ def calc_sqrtq(p_xyz=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> ic = 1
-    >>> # Load magnetic field and electron pressure tensor
+
+    Load magnetic field and electron pressure tensor
+
     >>> b_xyz = mms.get_data("b_gse_fgm_srvy_l2", tint, 1)
     >>> p_xyz_e = mms.get_data("pe_gse_fpi_fast_l2", tint, 1)
-    >>> # Rotate electron pressure tensor to field aligned coordinates
+
+    Rotate electron pressure tensor to field aligned coordinates
+
     >>> p_fac_e_pp = mms.rotate_tensor(p_xyz_e, "fac", b_xyz, "pp")
-    >>> # Compute agyrotropy coefficient
+
+    Compute agyrotropy coefficient
+
     >>> sqrt_q_e = pyrf.calc_sqrtq(p_fac_e_pp)
 
     """
-
-    assert p_xyz is not None and isinstance(p_xyz, xr.DataArray) and p_xyz.ndim == 3
 
     # Parallel and perpendicular components
     p_para, p_perp = [p_xyz[:, 0, 0], (p_xyz[:, 1, 1] + p_xyz[:, 2, 2]) / 2]

@@ -13,10 +13,9 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 
-def calc_dt(inp=None):
+def calc_dt(inp):
     """Computes time step of the input time series.
 
     Parameters
@@ -30,12 +29,6 @@ def calc_dt(inp=None):
         Time step in seconds.
 
     """
-
-    if inp is None:
-        raise ValueError("calc_dt requires at least one argument")
-
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("Input must be a DataArray")
 
     out = np.median(np.diff(inp.time.data)).astype(float) * 1e-9
 

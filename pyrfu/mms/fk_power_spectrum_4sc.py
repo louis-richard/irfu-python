@@ -22,8 +22,8 @@ from ..pyrf.time_clip import time_clip
 from ..pyrf.wavelet import wavelet
 
 
-def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, num_f=200, df=None,
-                          w_width=1, f_range=None):
+def fk_power_spectrum_4sc(e, r, b, tints, cav=8, num_k=500, num_f=200, df=None,  w_width=1,
+                          f_range=None):
     """Calculates the frequency-wave number power spectrum using the four MMS spacecraft. Uses a
     generalization of mms.fk_powerspectrum. Wavelet based cross-spectral analysis is used to
     calculate the phase difference each spacecraft pair and determine 3D wave vector. A
@@ -77,29 +77,31 @@ def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, 
 
     Examples
     --------
-    >>> from pyrfu import mms
-    >>> power = mms.fk_power_spectrum_4sc(e_par, r_xyz, b_xyz, tints)
-    >>> power = mms.fk_power_spectrum_4sc(b_scmfac_x, r_xyz, b_xyz, tints, 4, 500, 2, 10, 2)
-    >>> # Plot
-    >>> import matplotlib.pyplot as plt
-    >>> from pyrfu.plot import plot_spectr
-    >>> fig, ax = plt.subplots(1)
-    >>> ax, cax = plot_spectr(ax, power.kmagf, cscale="log", cmap="viridis")
-    >>> ax.set_xlabel("$|k|$ [m$^{-1}$]")
-    >>> ax.set_ylabel("$f$ [Hz]")
+    >>> from pyrfu.mms import get_data, fk_power_spectrum_4sc
+    >>> from pyrfu.pyrf import extend_tint, convert_fac
+
+    Load data
+
+    >>> tint_brst = ["2015-10-16T13:05:24.00", "2015-10-16T13:05:50.000"]
+    >>> b_fgm_mms = [get_data("b_gse_fgm_brst_l2", tint_brst, i) for i in range(1, 5)]
+    >>> b_scm_mms = [get_data("b_gse_scm_brst_l2", tint_brst, i) for i in range(1, 5)]
+
+    Load spacecraft position
+
+    >>> tint_long = extend_tint(tint, [-60, 60])
+    >>> r_gse_mms = [get_data("r_gse", tint_long, i) for i in range(1, 5)]
+
+    Convert magnetic field fluctuations to field aligned coordinates
+
+    >>> b_scm_fac = [convert_fac(b_scm, b_fgm) for b_scm, b_fgm in zip(b_scm_mms, b_fgm_mms)]
+    >>> b_scm_par = [b_scm[:, 0] for b_scm in b_scm_fac]
+
+    Compute dispersion relation
+
+    >>> tint = ["2015-10-16T13:05:26.500", "2015-10-16T13:05:27.000"]
+    >>> pwer = fk_power_spectrum_4sc(b_scm_par, r_gse_mms, b_fgm_mms, tint, 4, 500, 2, 10, 2)
 
     """
-
-    assert e is not None and isinstance(e, list) and len(e) == 4
-    assert r is not None and isinstance(r, list) and len(r) == 4
-    assert b is not None and isinstance(b, list) and len(b) == 4
-    assert tints is not None and isinstance(tints, list)
-    assert isinstance(tints[0], str) and isinstance(tints[1], str)
-
-    for i in range(4):
-        assert isinstance(e[i], xr.DataArray)
-        assert isinstance(r[i], xr.DataArray)
-        assert isinstance(b[i], xr.DataArray)
 
     ic = np.arange(1, 5)
 
@@ -110,7 +112,7 @@ def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, 
     b_avg = avg_4sc(b)
 
     times = e[0].time
-    use_linear = not df is None
+    use_linear = df is not None
 
     idx = time_clip(e[0].time, tints)
 
@@ -121,11 +123,13 @@ def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, 
     if use_linear:
         w = []
         for i in range(4):
-            w.append(wavelet(e[i], linear=df, returnpower=False, wavelet_width=5.36 * w_width))
+            cwt_options = dict(linear=df, returnpower=False, wavelet_width=5.36 * w_width)
+            w.append(wavelet(e[i], **cwt_options))
     else:
         w = []
         for i in range(4):
-            w.append(wavelet(e[i], nf=num_f, returnpower=False, wavelet_width=5.36 * w_width))
+            cwt_options = dict(nf=num_f, returnpower=False, wavelet_width=5.36 * w_width)
+            w.append(wavelet(e[i], **cwt_options))
 
     num_f = len(w[0].frequency)
 
@@ -259,8 +263,8 @@ def fk_power_spectrum_4sc(e=None, r=None, b=None, tints=None, cav=8, num_k=500, 
     idx_f = np.arange(num_f)
 
     if f_range is not None:
-        idx_min_freq = bisect.bisect_left(np.min(f_range))
-        idx_max_freq = bisect.bisect_left(np.max(f_range))
+        idx_min_freq = bisect.bisect_left(frequencies, np.min(f_range))
+        idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
         idx_f = idx_f[idx_min_freq:idx_max_freq]
 
     print("notice : Computing power versus kx,ky; kx,kz; ky,kz\n")

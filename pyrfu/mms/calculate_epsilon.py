@@ -13,14 +13,13 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from astropy import constants
 
 from ..pyrf import resample, ts_scalar
 
 
-def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
+def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
     """Calculates epsilon parameter using model distribution.
 
     Parameters
@@ -51,14 +50,10 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
     Examples
     --------
     >>> from pyrfu import mms
-    >>> eps = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, en_channel=[4, 32])
+    >>> options = {"en_channel": [4, 32]}
+    >>> eps = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, **options)
 
     """
-
-    assert vdf is not None and isinstance(vdf, xr.Dataset)
-    assert model_vdf is not None and isinstance(model_vdf, xr.Dataset)
-    assert n is not None and isinstance(n, xr.DataArray)
-    assert sc_pot is not None and isinstance(sc_pot, xr.DataArray)
 
     if np.abs(np.median(np.diff(vdf.time-n.time))).astype(float) > 0:
         raise RuntimeError("vdf and moments have different times.")
@@ -134,9 +129,9 @@ def calculate_epsilon(vdf=None, model_vdf=None, n=None, sc_pot=None, **kwargs):
     for it in range(len(vdf.time)):
         for ii in int_energies:
             tmp = np.squeeze(vdf_diff[it, ii, ...])
+            fct = v[it, ii] ** 2 * delta_v[it, ii] * delta_ang
 
-            epsilon[it] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * v[it, ii] ** 2 * \
-                           delta_v[it, ii] * delta_ang
+            epsilon[it] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * fct
 
     epsilon /= 1e6 * n.data * 2
     epsilon = ts_scalar(vdf.time.data, epsilon)

@@ -13,23 +13,22 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from astropy import constants
 
 from ..pyrf.plasma_calc import plasma_calc
 
 
-def whistler_b2e(b2=None, freq=None, theta_k=None, b_mag=None, n_e=None):
-    """Computes electric field power as a function of frequency for whistler waves using magnetic field power and cold
-    plasma theory.
+def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
+    """Computes electric field power as a function of frequency for whistler waves using magnetic
+    field power and cold plasma theory.
 
     Parameters
     ----------
     b2 : xarray.DataArray
         Time series of the power of whistler magnetic field in nT^2 Hz^{-1}.
 
-    freq : numpy.ndarray
+    freq : ndarray
         frequencies in Hz corresponding B2.
 
     theta_k : float
@@ -52,12 +51,6 @@ def whistler_b2e(b2=None, freq=None, theta_k=None, b_mag=None, n_e=None):
     >>> e_power = mms.whistler_b2e(b_power, freq, theta_k, b_mag, n_e)
 
     """
-
-    assert b2 is not None and isinstance(b2, xr.DataArray)
-    assert freq is not None and isinstance(freq, np.ndarray)
-    assert theta_k is not None and isinstance(theta_k, float)
-    assert b_mag is not None and isinstance(b_mag, xr.DataArray)
-    assert n_e is not None and isinstance(n_e, xr.DataArray)
 
     # Calculate plasma parameters
     pparam = plasma_calc(b_mag, n_e, n_e, n_e, n_e)
@@ -88,6 +81,6 @@ def whistler_b2e(b2=None, freq=None, theta_k=None, b_mag=None, n_e=None):
     e_temp2 = (d / (s - n2)) ** 2 * (p - n2 * np.sin(theta_k) ** 2) ** 2 + p ** 2 * np.cos(
         theta_k) ** 2
 
-    e2 = (c ** 2 / n2) * e_temp1 / e_temp2 * b2 * 1e-12
+    e2 = (c ** 2 / n2) * e_temp1 / e_temp2 * b2.data * 1e-12
 
     return e2

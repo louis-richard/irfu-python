@@ -27,7 +27,7 @@ from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 
-def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, **kwargs):
+def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     """
     Calculates lower-hybrid wave properties from MMS data
 
@@ -62,30 +62,36 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     phi_eb : xarray.DataArray
         to fill
 
-    v_best : numpy.ndarray
+    v_best : ndarray
         to fill
 
-    dir_best : numpy.ndarray
+    dir_best : ndarray
         to fill
 
-    thetas : numpy.ndarray
+    thetas : ndarray
         to fill
 
-    corrs : numpy.ndarray
+    corrs : ndarray
         to fill
 
     Examples
     --------
     >>> from pyrfu.mms import get_data, lh_wave_analysis
-    >>> # Large time interval
+
+    Define time intervals
+
     >>> tint_long = ["2015-12-14T01:17:39.000", "2015-12-14T01:17:43.000"]
-    >>> # Load fields and density
-    >>> b_xyz = get_data("B_gse_fgm_brst_l2", tint_long, 2)
-    >>> e_xyz = get_data("E_gse_edp_brst_l2", tint_long, 2)
-    >>> b_scm = get_data("B_gse_scm_brst_l2", tint_long, 2)
-    >>> n_e = get_data("Ne_fpi_brst_l2", tint_long, 2)
-    >>> # Time interval of focus
-    >>> tint = ["2015-12-14T01:17:40.200","2015-12-14T01:17:41.500"]
+    >>> tint_zoom = ["2015-12-14T01:17:40.200","2015-12-14T01:17:41.500"]
+
+    Load fields and density
+
+    >>> b_gse = get_data("b_gse_fgm_brst_l2", tint_long, 2)
+    >>> e_gse = get_data("e_gse_edp_brst_l2", tint_long, 2)
+    >>> b_scm = get_data("b_gse_scm_brst_l2", tint_long, 2)
+    >>> n_e = get_data("ne_fpi_brst_l2", tint_long, 2)
+
+    Lower Hybrid Waves Analysis
+
     >>> opt = dict(lhfilt=[5, 100])
     >>> phi_eb, v_best, dir_best, theta, _ = lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, **opt)
 
@@ -99,7 +105,7 @@ def lh_wave_analysis(tints=None, e_xyz=None, b_scm=None, b_xyz=None, n_e=None, *
     if "lhfilt" in kwargs:
         if isinstance(kwargs["lhfilt"], (float, int)):
             min_freq = kwargs["lhfilt"]
-        elif isinstance(kwargs["lhfilt"], (list, np.ndarray)) and len(kwargs["lhfilt"]):
+        elif isinstance(kwargs["lhfilt"], (list, np.ndarray)) and kwargs["lhfilt"]:
             min_freq = kwargs["lhfilt"][0]
             max_freq = kwargs["lhfilt"][1]
         else:

@@ -14,10 +14,11 @@
 
 import numpy as np
 import xarray as xr
+
 from scipy import optimize
 
 
-def calc_disprel_tm(v=None, v_err=None, tau=None, tau_err=None):
+def calc_disprel_tm(v, v_err, tau, tau_err):
     """Computes dispersion relation from velocities and period given by the timing method.
 
     Parameters
@@ -45,11 +46,6 @@ def calc_disprel_tm(v=None, v_err=None, tau=None, tau_err=None):
     pyrfu.pyrf.c_4_v : Calculates velocity or time shift of discontinuity.
 
     """
-
-    assert v is not None and isinstance(v, xr.DataArray)
-    assert v_err is not None and isinstance(v_err, xr.DataArray)
-    assert tau is not None and isinstance(tau, xr.DataArray)
-    assert tau_err is not None and isinstance(tau_err, xr.DataArray)
 
     # Frequency, wavelength, wave number
     omega, lamb, k = [2 * np.pi / tau.data, v * tau.data, 2 * np.pi/(v * tau.data)]

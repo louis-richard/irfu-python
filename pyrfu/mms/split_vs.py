@@ -15,7 +15,7 @@
 import warnings
 
 
-def split_vs(var_str=""):
+def split_vs(var_str):
     """Parse the variable keys.
 
     Parameters
@@ -35,8 +35,6 @@ def split_vs(var_str=""):
             * lev" : Level of data.
 
     """
-
-    assert var_str and isinstance(var_str, str)
 
     tk = var_str.split("_")
     n_tk = len(tk)

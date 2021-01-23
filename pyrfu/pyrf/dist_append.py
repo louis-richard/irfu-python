@@ -13,24 +13,24 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
+
 from .ts_skymap import ts_skymap
 
 
-def dist_append(inp0=None, inp1=None):
+def dist_append(inp0, inp1):
     """Concatenate two distribution skymaps along the time axis.
 
     Parameters
     ----------
-    inp0 : xarray.DataArray
+    inp0 : xarray.Dataset or None
         3D skymap distribution at early times.
 
-    inp1 : xarray.DataArray
+    inp1 : xarray.Dataset or None
         3D skymap distribution at late times.
 
     Returns
     -------
-    out : xarray.DataArray
+    out : xarray.Dataset
         3D skymap of the concatenated 3D skymaps.
 
     Notes
@@ -38,9 +38,6 @@ def dist_append(inp0=None, inp1=None):
     The time series have to be in the correct time order.
 
     """
-
-    assert inp0 is None or isinstance(inp0, xr.Dataset)
-    assert inp1 is not None and isinstance(inp1, xr.Dataset)
 
     if inp0 is None:
         return inp1
@@ -76,8 +73,8 @@ def dist_append(inp0=None, inp1=None):
     if inp0.attrs["tmmode"] == "brst":
         step_table = np.hstack([inp0.attrs["esteptable"], inp1.attrs["esteptable"]])
 
-        out = ts_skymap(time, data, None, phi, theta, energy0=inp0.energy0, energy1=inp0.energy1,
-                        esteptable=step_table)
+        options = dict(energy0=inp0.energy0, energy1=inp0.energy1, esteptable=step_table)
+        out = ts_skymap(time, data, None, phi, theta, **options)
     else:
         energy = np.vstack([inp0.energy.data, inp1.energy.data])
 

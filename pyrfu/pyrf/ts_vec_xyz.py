@@ -12,19 +12,18 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import numpy as np
 import xarray as xr
 
 
-def ts_vec_xyz(t=None, data=None, attrs=None):
+def ts_vec_xyz(t, data, attrs=None):
     """Create a time series containing a 1st order tensor.
 
     Parameters
     ----------
-    t : numpy.ndarray
+    t : ndarray
         Array of times.
 
-    data : numpy.ndarray
+    data : ndarray
         Data corresponding to the time list.
 
     attrs : dict
@@ -37,8 +36,6 @@ def ts_vec_xyz(t=None, data=None, attrs=None):
 
     """
 
-    assert t is not None and isinstance(t, np.ndarray)
-    assert data is not None and isinstance(data, np.ndarray)
     assert data.ndim == 2 and data.shape[1] == 3
 
     if len(t) != len(data):

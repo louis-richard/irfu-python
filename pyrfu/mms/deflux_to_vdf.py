@@ -20,7 +20,7 @@ from astropy import constants
 from .spectr_to_dataset import spectr_to_dataset
 
 
-def deflux_to_vdf(deflux=None):
+def deflux_to_vdf(deflux):
     """Compute density energy flux from velocity distribution function.
 
     Parameters
@@ -34,8 +34,6 @@ def deflux_to_vdf(deflux=None):
         Time series of the velocity distribution function. Units must be either s^3/m^6.
 
     """
-
-    assert deflux is not None and isinstance(deflux, (xr.Dataset, xr.DataArray))
 
     if isinstance(deflux, xr.DataArray):
         deflux = spectr_to_dataset(deflux)

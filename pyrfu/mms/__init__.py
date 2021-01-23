@@ -61,7 +61,6 @@ from .vdf_to_dpflux import vdf_to_dpflux
 from .dpflux_to_vdf import dpflux_to_vdf
 from .deflux_to_vdf import deflux_to_vdf
 
-from .fk_power_spectrum import fk_power_spectrum
 from .copy_files import copy_files
 
 from .vdf_to_e64 import vdf_to_e64

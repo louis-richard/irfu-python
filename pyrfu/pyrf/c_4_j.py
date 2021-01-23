@@ -12,8 +12,6 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import xarray as xr
-
 from astropy import constants
 
 from .avg_4sc import avg_4sc
@@ -21,7 +19,7 @@ from .c_4_grad import c_4_grad
 from .cross import cross
 
 
-def c_4_j(r_list=None, b_list=None):
+def c_4_j(r_list, b_list):
     """Calculate current density :math:`\\mathbf{J}` from using 4 spacecraft technique [4]_, the
     divergence of the magnetic field :math:`\\nabla . \\mathbf{B}`, magnetic field at the center
     of mass of the tetrahedron, :math:`\\mathbf{J}\\times\\mathbf{B}` force, part of the
@@ -90,25 +88,25 @@ def c_4_j(r_list=None, b_list=None):
     --------
     >>> import numpy as np
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft indices
+
+    Spacecraft indices
+
     >>> mms_list = np.arange(1,5)
-    >>> # Load magnetic field and spacecraft position
-    >>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id) for mms_id in mms_list]
-    >>> r_mms = [mms.get_data("R_gse", tint, mms_id) for mms_id in mms_list]
-    >>> j, divB, B, jxB, divTshear, divPb = pyrf.c_4_j(r_mms, b_mms)
+
+    Load magnetic field and spacecraft position
+
+    >>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, i) for i in mms_list]
+    >>> r_mms = [mms.get_data("R_gse", tint, i) for i in mms_list]
+
+    Compute current density, divergence of b, etc. using curlometer technique
+
+    >>> j_xyz, div_b, b_xyz, jxb_xyz, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
 
     """
-    assert r_list is not None and isinstance(r_list, list) and len(r_list) == 4
-    assert b_list is not None and isinstance(b_list, list) and len(b_list) == 4
-
-    for i in range(4):
-        if not isinstance(r_list[i], xr.DataArray):
-            raise TypeError("Spacecraft position must be DataArray")
-
-        if not isinstance(b_list[i], xr.DataArray):
-            raise TypeError("Magnetic field must be DataArray")
 
     mu0 = constants.mu0.value
 
@@ -121,21 +119,19 @@ def c_4_j(r_list=None, b_list=None):
     div_b *= 1.0e-3 * 1e-9 / mu0
 
     # estimate current j [A/m2]
-    curl_b = c_4_grad(r_list, b_list, "curl")
-
-    # to get right units [A.m^{-2}]
-    j = curl_b * 1.0e-3 * 1e-9 / mu0
+    j = c_4_grad(r_list, b_list, "curl")
+    j.data *= 1.0e-3 * 1e-9 / mu0
 
     # estimate jxB force [T A/m2]
-    jxb = 1e-9 * cross(j, b_avg)
+    jxb = cross(j, b_avg)
+    jxb.data *= 1e9
 
     # estimate divTshear = (1/muo) (B*div)B [T A/m2]
-    b_div_b = c_4_grad(r_list, b_list, "bdivb")
-
-    # to get right units [T.A.m^{-2}]
-    div_t_shear = b_div_b * 1.0e-3 * 1e-9 * 1e-9 / mu0
+    div_t_shear = c_4_grad(r_list, b_list, "bdivb")
+    div_t_shear.data *= 1.0e-3 * 1e-9 * 1e-9 / mu0
 
     # estimate divPb = (1/muo) grad (B^2/2) = divTshear-jxB
-    div_pb = div_t_shear - jxb
+    div_pb = div_t_shear.copy()
+    div_pb.data -= jxb.data
 
     return j, div_b, b_avg, jxb, div_t_shear, div_pb

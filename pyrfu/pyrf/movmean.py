@@ -16,7 +16,7 @@ import xarray as xr
 import numpy as np
 
 
-def movmean(inp=None, n_pts=100):
+def movmean(inp, n_pts=100):
     """Computes running average of the inp over npts points.
 
     Parameters
@@ -39,20 +39,25 @@ def movmean(inp=None, n_pts=100):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000","2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load ion pressure tensor
+
+    Load ion pressure tensor
+
     >>> p_xyz_i = mms.get_data("Pi_gse_fpi_brst_l2", tint, mms_id)
-    >>> # Running average the pressure tensor over 10s
+
+    Running average the pressure tensor over 10s
+
     >>> fs = pyrf.calc_fs(p_xyz_i)
     >>>> p_xyz_i = pyrf.movmean(p_xyz_i, int(10 * fs))
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert isinstance(n_pts, (float, int))
 
     if isinstance(n_pts, float):
         n_pts = np.floor(n_pts).astype(int)

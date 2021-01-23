@@ -15,7 +15,7 @@
 import xarray as xr
 
 
-def trace(inp=None):
+def trace(inp):
     """Computes trace of the time series of 2nd order tensors.
 
     Parameters
@@ -31,21 +31,29 @@ def trace(inp=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field and ion temperature
+
+    Load magnetic field and ion temperature
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
     >>> t_xyz_i = mms.get_data("Ti_gse_fpi_fast_l2", tint, mms_id)
-    >>> # Rotate to ion temperature tensor to field aligned coordinates
+
+    Rotate to ion temperature tensor to field aligned coordinates
+
     >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
-    >>> # Compute scalar temperature
+
+    Compute scalar temperature
+
     >>> t_i = pyrf.trace(t_xyzfac_i)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray) and inp.data.ndim == 3
 
     inp_data = inp.data
     out_data = inp_data[:, 0, 0] + inp_data[:, 1, 1] + inp_data[:, 2, 2]

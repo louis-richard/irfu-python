@@ -33,10 +33,7 @@ def vdf_to_e64(vdf_e32):
     vdf_e64 : xarray.Dataset
         Time series of the particle distribution with 32 energy channels.
 
-
     """
-
-    assert vdf_e32 is not None and isinstance(vdf_e32, xr.Dataset)
 
     time_r, vdf_r, energy_r, phi_r = psd_rebin(vdf_e32, vdf_e32.phi,
                                                vdf_e32.attrs.get("energy0"),
@@ -48,7 +45,6 @@ def vdf_to_e64(vdf_e32):
     vdf_e64 = ts_skymap(time_r, vdf_r, energy_r, phi_r, vdf_e32.theta.data,
                         energy0=energy_r[0, :], energy1=energy_r[0, :],
                         esteptable=vdf_e32.attrs.get("esteptable"))
-
 
     # update delta_energy
     log_energy = np.log10(energy_r[0, :])

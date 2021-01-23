@@ -23,7 +23,7 @@ from .dot import dot
 from .cross import cross
 
 
-def c_4_grad(r_list=None, b_list=None, method="grad"):
+def c_4_grad(r_list, b_list, method="grad"):
     """Calculate gradient of physical field using 4 spacecraft technique in [2]_ [3]_.
 
     Parameters
@@ -64,24 +64,18 @@ def c_4_grad(r_list=None, b_list=None, method="grad"):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Load magnetic field and spacecraft position
+
+    Load magnetic field and spacecraft position
+
     >>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, ic) for ic in range(1, 5)]
     >>> r_mms = [mms.get_data("R_gse", tint, ic) for ic in range(1, 5)]
     >>> grad_b = pyrf.c_4_grad(r_mms, b_mms, "grad")
 
     """
-
-    assert r_list is not None and isinstance(r_list, list) and len(r_list) == 4
-    assert b_list is not None and isinstance(b_list, list) and len(b_list) == 4
-
-    for i in range(4):
-        if not isinstance(r_list[i], xr.DataArray):
-            raise TypeError("Spacecraft position must be DataArray")
-
-        if not isinstance(b_list[i], xr.DataArray):
-            raise TypeError("Magnetic field must be DataArray")
 
     # Resample with respect to 1st spacecraft
     r_list = [resample(r, b_list[0]) for r in r_list]

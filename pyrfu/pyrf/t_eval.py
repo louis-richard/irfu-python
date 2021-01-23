@@ -17,7 +17,7 @@ import numpy as np
 import xarray as xr
 
 
-def t_eval(inp=None, t=None):
+def t_eval(inp, t):
     """Evaluates the input time series at the target time.
 
     Parameters
@@ -25,18 +25,15 @@ def t_eval(inp=None, t=None):
     inp : xarray.DataArray
         Time series if the input to evaluate.
 
-    t : numpy.ndarray
+    t : ndarray
         Times at which the input will be evaluated.
 
     Returns
     -------
-    out : DataArray
+    out : xarray.DataArray
         Time series of the input at times t.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert t is not None and isinstance(t, np.ndarray)
 
     idx = np.zeros(len(t))
 

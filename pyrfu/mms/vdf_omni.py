@@ -34,12 +34,10 @@ def vdf_omni(vdf):
     out : xarray.Dataset
         Time series of the omnidirectional velocity distribution function with :
             * time : Time samples.
-            * data : 3D velocity distribution.
+            * data : Omnidirectional velocity distribution.
             * energy : Energy levels.
 
     """
-
-    assert vdf is not None and isinstance(vdf, xr.Dataset)
 
     time = vdf.time.data
 

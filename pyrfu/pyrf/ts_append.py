@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 
 
-def ts_append(inp1=None, inp2=None):
+def ts_append(inp1, inp2):
     """Concatenate two time series along the time axis.
 
     Parameters
@@ -37,9 +37,6 @@ def ts_append(inp1=None, inp2=None):
     The time series must be in the correct time order.
 
     """
-
-    assert inp1 is None or isinstance(inp1, xr.DataArray)
-    assert inp2 is not None and isinstance(inp2, xr.DataArray)
 
     if inp1 is None:
         return inp2

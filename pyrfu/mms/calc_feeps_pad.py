@@ -22,7 +22,7 @@ from .feeps_pitch_angles import feeps_pitch_angles
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
+def calc_feeps_pad(inp_dataset, b_bcs, bin_size=16.3636, energy=None):
     """Compute pitch angle distribution using FEEPS data.
 
     Parameters
@@ -46,13 +46,8 @@ def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
 
     """
 
-    assert inp_dataset is not None and isinstance(inp_dataset, xr.Dataset)
-    assert b_bcs is not None and isinstance(b_bcs, xr.DataArray)
-    assert isinstance(bin_size, float)
-    assert energy is None or isinstance(energy, list)
-
     if energy is None:
-        energy = [70, 600]
+        energy = [70., 600.]
 
     var = inp_dataset.attrs
     mms_id = var["mmsId"]
@@ -100,6 +95,9 @@ def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
         # and ions:
         pa_data_map["top-ion"], pa_data_map["bottom-ion"] = [[0, 1, 2], [3, 4, 5]]
 
+    else:
+        raise ValueError("Invalid data rate")
+
     sensor_types = ["top", "bottom"]
 
     if var["dtype"] == "electron":
@@ -119,12 +117,13 @@ def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
     for s_type in sensor_types:
         pa_map = pa_data_map[s_type + "-" + var["dtype"]]
 
-        particle_idxs = [eye-1 for eye in eyes[s_type]]
+        particle_idxs = [eye - 1 for eye in eyes[s_type]]
 
         for isen, sensor_num in enumerate(particle_idxs):
             var_name = "{}-{:d}".format(s_type, sensor_num + 1)
 
-            t, data, = inp_dataset[var_name].time.data, inp_dataset[var_name].data
+            t = inp_dataset[var_name].time.data
+            data = inp_dataset[var_name].data
             energies = inp_dataset[var_name].Differential_energy_channels.data
 
             # remove any 0s before averaging
@@ -158,7 +157,7 @@ def calc_feeps_pad(inp_dataset=None, b_bcs=None, bin_size=16.3636, energy=None):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=RuntimeWarning)
                     ind = np.where((dpa[pa_idx, :] + dangresp >= pa_label[ipa]-delta_pa)
-                                & (dpa[pa_idx, :]-dangresp < pa_label[ipa]+delta_pa))
+                                   & (dpa[pa_idx, :]-dangresp < pa_label[ipa]+delta_pa))
 
                     if ind[0].size != 0:
                         if len(ind[0]) > 1:

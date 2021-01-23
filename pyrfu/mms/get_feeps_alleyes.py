@@ -12,14 +12,13 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import numpy as np
 import xarray as xr
 
 from .get_feeps_oneeye import get_feeps_oneeye
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def get_feeps_alleyes(tar_var="fluxe_brst_l2", tint=None, mms_id=1, verbose=True):
+def get_feeps_alleyes(tar_var, tint, mms_id, verbose=True):
     """Read energy spectrum of the selected specie in the selected energy range for all FEEPS eyes.
 
     Parameters
@@ -42,13 +41,19 @@ def get_feeps_alleyes(tar_var="fluxe_brst_l2", tint=None, mms_id=1, verbose=True
         Dataset containing the energy spectrum of the available eyes of the Fly's Eye Energetic
         Particle Spectrometer.
 
-    """
+    Examples
+    --------
+    >>> from pyrfu import mms
 
-    assert isinstance(tar_var, str)
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(tint[0], str) and isinstance(tint[1], str)
-    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
-    assert isinstance(verbose, bool)
+    Define time interval
+
+    >>> tint_brst = ["2017-07-23T16:54:24.000", "2017-07-23T17:00:00.000"]
+
+    Read electron energy spectrum for all FEEPS eyes
+
+    >>> feeps_all_eyes = mms.get_feeps_alleyes("fluxe_brst_l2", tint_brst, 2)
+
+    """
 
     mms_id = int(mms_id)
 

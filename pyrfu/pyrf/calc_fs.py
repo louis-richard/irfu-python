@@ -13,10 +13,9 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 
-def calc_fs(inp=None):
+def calc_fs(inp):
     """Computes the sampling frequency of the input time series.
 
     Parameters
@@ -30,12 +29,6 @@ def calc_fs(inp=None):
         Sampling frequency in Hz.
 
     """
-
-    if inp is None:
-        raise ValueError("calc_dt requires at least one argument")
-
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("Input must be a DataArray")
 
     out = 1 / (np.median(np.diff(inp.time.data)).astype(float) * 1e-9)
 

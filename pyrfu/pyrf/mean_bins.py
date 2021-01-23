@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 
 
-def mean_bins(x=None, y=None, bins=10):
+def mean_bins(x, y, bins=10):
     """Computes mean of values of y corresponding to bins of x.
 
     Parameters
@@ -47,28 +47,37 @@ def mean_bins(x=None, y=None, bins=10):
     --------
     >>> import numpy
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft indices
+
+    Spacecraft indices
+
     >>> mms_list = numpy.arange(1,5)
-    >>> # Load magnetic field and electric field
+
+    Load magnetic field and electric field
+
     >>> r_mms, b_mms = [[] * 4 for _ in range(2)]
     >>> for mms_id in range(1, 5):
     >>> 	r_mms.append(mms.get_data("R_gse", tint, mms_id))
     >>> 	b_mms.append(mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id))
     >>>
-    >>> # Compute current density, etc
+
+    Compute current density, etc
+
     >>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
-    >>> # Compute magnitude of B and J
+
+    Compute magnitude of B and J
+
     >>> b_mag = pyrf.norm(b_xyz)
     >>> j_mag = pyrf.norm(j_xyz)
-    >>> # Mean value of |J| for 10 bins of |B|
+
+    Mean value of |J| for 10 bins of |B|
+
     >>> m_b_j = pyrf.mean_bins(b_mag, j_mag)
 
     """
-
-    assert x is not None and isinstance(x, xr.DataArray)
-    assert y is None or isinstance(y, xr.DataArray)
 
     if y is None:
         y = x

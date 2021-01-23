@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from ..pyrf import calc_fs, ts_scalar, ts_vec_xyz
 
 
-def fft_bandpass(inp=None, f_min=None, f_max=None):
+def fft_bandpass(inp, f_min, f_max):
     """Perform simple bandpass using FFT - returns fields between with ``f_min`` < f < ``f_max``.
 
     Parameters
@@ -44,13 +43,24 @@ def fft_bandpass(inp=None, f_min=None, f_max=None):
     Examples
     --------
     >>> from pyrfu import mms
-    >>> b_xyz_bp = mms.fft_bandpass(e_xyz, f_min, f_max)
+
+    Define time interval
+
+    >>> tint = ["2017-07-23T16:54:24.000", "2017-07-23T17:00:00.000"]
+
+    Spacecraft index
+
+    >>> mms_id = 1
+
+    Load Electric Field
+
+    >>> e_xyz = mms.get_data("e_gse_edp_brst_l2", tint, mms_id)
+
+    Bandpass filter
+
+    >>> e_xyz_bp = mms.fft_bandpass(e_xyz, 1e1, 1e2)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert f_min is not None and isinstance(f_min, (float, int))
-    assert f_max is not None and isinstance(f_max, (float, int))
 
     inp_time, inp_data = [inp.time.data, inp.data]
 

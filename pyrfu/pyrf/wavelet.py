@@ -38,7 +38,7 @@ def calc_power_c(power, new_freq_mat):
     return power2
 
 
-def wavelet(inp=None, **kwargs):
+def wavelet(inp, **kwargs):
     """Computes wavelet spectrogram based on fast FFT algorithm.
 
     Parameters
@@ -51,7 +51,7 @@ def wavelet(inp=None, **kwargs):
             * fs : int or float
                 Sampling frequency of the input time series.
 
-            * f : list or numpy.ndarray
+            * f : list or ndarray
                 Vector [f_min f_max], calculate spectra between frequencies f_min and f_max.
 
             * nf : int or float
@@ -76,10 +76,6 @@ def wavelet(inp=None, **kwargs):
         Wavelet transform of the input.
 
     """
-
-    # Default values
-    # Fs
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     # Time bounds
     start_time, end_time = inp.time.data[[0, -1]]

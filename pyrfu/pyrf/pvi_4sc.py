@@ -13,7 +13,6 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from .resample import resample
 from .norm import norm
@@ -63,8 +62,6 @@ def pvi_4sc(b_mms):
 
 
     """
-
-    assert isinstance(b_mms, list) and isinstance(b_mms[0], xr.DataArray) and len(b_mms) == 4
 
     b_mms = [resample(b_xyz, b_mms[0]) for b_xyz in b_mms]
 

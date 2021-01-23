@@ -18,7 +18,7 @@ from scipy import interpolate
 from astropy.time import Time
 
 
-def get_vol_ten(r=None, t=None):
+def get_vol_ten(r, t):
     """to fill."""
 
     if len(t) == 1:
@@ -39,7 +39,7 @@ def get_vol_ten(r=None, t=None):
     return dr_mat
 
 
-def c_4_v(r=None, x=None):
+def c_4_v(r, x):
     """Calculates velocity or time shift of discontinuity as in [6]_.
 
     Parameters
@@ -52,7 +52,7 @@ def c_4_v(r=None, x=None):
 
     Returns
     -------
-    out : numpy.ndarray
+    out : ndarray
         Discontinuity velocity or time shift with respect to mms1.
 
     References
@@ -62,6 +62,7 @@ def c_4_v(r=None, x=None):
             doi : https://doi.org/10.5194/angeo-29-2239-2011
 
     """
+
     if isinstance(x, np.ndarray) and x.dtype == np.datetime64:
         flag = "v_from_t"
 

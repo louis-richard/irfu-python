@@ -21,7 +21,7 @@ from astropy import constants
 from .spectr_to_dataset import spectr_to_dataset
 
 
-def dpflux_to_vdf(dpflux=None):
+def dpflux_to_vdf(dpflux):
     """Compute density particle flux from velocity distribution function.
 
     Parameters
@@ -35,8 +35,6 @@ def dpflux_to_vdf(dpflux=None):
         Time series of the velocity distribution function. Units must be either s^3/m^6.
 
     """
-
-    assert dpflux is not None and isinstance(dpflux, (xr.Dataset, xr.DataArray))
 
     if isinstance(dpflux, xr.DataArray):
         dpflux = spectr_to_dataset(dpflux)

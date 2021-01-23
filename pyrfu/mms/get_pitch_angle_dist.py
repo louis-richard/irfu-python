@@ -12,16 +12,15 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import tqdm
 import warnings
+import tqdm
 import numpy as np
 import xarray as xr
 
+from ..pyrf import ts_scalar, time_clip, resample, normalize
 
-from pyrfu.pyrf import ts_scalar, time_clip, resample, normalize
 
-
-def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
+def get_pitch_angle_dist(vdf, b_xyz, tint, **kwargs):
     """
     Computes the pitch angle distributions from l1b brst particle data.
 
@@ -38,7 +37,7 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
 
     **kwargs : dict
         Hash table of keyword arguments with :
-            * angles : int or float or list of numpy.ndarray
+            * angles : int or float or list of ndarray
                 User defined angles
 
             * meanorsum : str
@@ -57,24 +56,26 @@ def get_pitch_angle_dist(vdf=None, b_xyz=None, tint=None, **kwargs):
     Examples
     --------
     >>> from pyrfu import mms
-    >>> # Define time interval
+
+    Define time intervals
+
     >>> tint_long = ["2017-07-24T12:48:34.000", "2017-07-24T12:58:20.000"]
-    >>> # Load ions velocity distribution for MMS1
-    >>> vdf_i = mms.get_data("pdi_fpi_brst_l2", tint_long, 1)
-    >>> # Load magnetic field in the spacecraft coordinates system.
-    >>> b_dmpa = mms.get_data("b_dmpa_fgm_brst_l2", tint_long, 1)
-    >>> # Define closeup time interval
     >>> tint_zoom = ["2017-07-24T12:49:18.000", "2017-07-24T12:49:30.000"]
-    >>> # Compute pitch angle distribution
-    >>> options = dict(anggles=24)
+
+    Load ions velocity distribution for MMS1
+
+    >>> vdf_i = mms.get_data("pdi_fpi_brst_l2", tint_long, 1)
+
+    Load magnetic field in the spacecraft coordinates system.
+
+    >>> b_dmpa = mms.get_data("b_dmpa_fgm_brst_l2", tint_long, 1)
+
+    Compute pitch angle distribution
+
+    >>> options = dict(angles=24)
     >>> pad_i = mms.get_pitch_angle_dist(vdf, b_dmpa, tint_zoom, **options)
 
     """
-
-    assert vdf is not None and isinstance(vdf, xr.Dataset)
-    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(tint[0], str) and isinstance(tint[1], str)
 
     # Default pitch angles. 15 degree angle widths
     angles_v = np.linspace(15, 180, int(180 / 15))

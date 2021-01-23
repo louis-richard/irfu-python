@@ -12,26 +12,30 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import xarray as xr
-from astropy.time import Time
+import pandas as pd
 
 
-def start(inp=None):
-    """Gives the first time of the time series.
+def datetime_to_tt2000(time):
+    """Transforms datetime to TT2000 string format.
 
     Parameters
     ----------
-    inp : xarray.DataArray
-        Time series.
+    time : datetime.datetime
+        Time to convert to tt2000 string.
 
     Returns
     -------
-    out : float or str
-        Value of the first time in the desired format.
+    tt2000 : str
+        Time in TT20000 iso_8601 format.
 
     """
 
-    assert inp is not None and isinstance(inp, xr.DataArray)
+    time_datetime = pd.Timestamp(time)
 
-    out = Time(inp.time.data[0], format="datetime64").unix
-    return out
+    # Get nanoseconds
+    nanoseconds = time_datetime.nanosecond
+
+    # Convert to string
+    tt2000 = f"{time_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f')}{nanoseconds:03}"
+
+    return tt2000

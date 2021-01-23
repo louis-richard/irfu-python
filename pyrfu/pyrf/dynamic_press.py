@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from astropy import constants
 
 
-def dynamic_press(n=None, v=None, s="i"):
+def dynamic_press(n, v, s="i"):
     """Computes dynamic pressure.
 
     Parameters
@@ -29,7 +28,7 @@ def dynamic_press(n=None, v=None, s="i"):
     v : xarray.DataArray
         Time series of the bulk velocity of the specie.
 
-    s : {"i", "e"}, optional
+    s : str {"i", "e"}, optional
         Specie. default "i".
 
     Returns
@@ -40,23 +39,30 @@ def dynamic_press(n=None, v=None, s="i"):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load ion bulk velocity and remove spintone
+
+    Load ion bulk velocity and remove spintone
+
     >>> v_xyz_i = mms.get_data("Vi_gse_fpi_fast_l2", tint, mms_id)
     >>> st_xyz_i = mms.get_data("STi_gse_fpi_fast_l2", tint, mms_id)
     >>> v_xyz_i = v_xyz_i - st_xyz_i
-    >>> # Ion number density
+
+    Ion number density
+
     >>> n_i = mms.get_data("Ni_fpi_fast_l2", tint, mms_id)
-    >>> # Compute dynamic pressure
+
+    Compute dynamic pressure
+
     >>> p = pyrf.dynamic_press(n_i, v_xyz_i, s="i")
 
     """
-
-    assert n is not None and isinstance(n, xr.DataArray)
-    assert v is not None and isinstance(v, xr.DataArray)
 
     if s == "i":
         m = constants.m_p.value

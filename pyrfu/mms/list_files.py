@@ -23,9 +23,9 @@ from dateutil.rrule import rrule, DAILY
 from .mms_config import CONFIG
 
 
-def list_files(tint=None, mms_id="1", var=None, data_path=None):
-    """Find files in the data directories of the target instrument, data type, data rate, mms_id and
-    level during the target time interval
+def list_files(tint, mms_id, var, data_path=""):
+    """Find files in the data directories of the target instrument, data type, data rate, mms_id
+    and level during the target time interval.
 
     Parameters
     ----------
@@ -42,8 +42,8 @@ def list_files(tint=None, mms_id="1", var=None, data_path=None):
             * var["lev"] : data level
             * var["dtype"] : data type
 
-    data_path : str
-        (Option) Path of MMS data. If None use `pyrfu.mms.mms_config.py`
+    data_path : str, optional
+        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
 
     Returns
     -------
@@ -52,10 +52,8 @@ def list_files(tint=None, mms_id="1", var=None, data_path=None):
 
     """
 
-    if var is None:
-        raise ValueError("var is empty")
-
-    if data_path is None:
+    # Check path
+    if not data_path:
         data_path = CONFIG["local_data_dir"]
 
     files_out = []
@@ -70,7 +68,7 @@ def list_files(tint=None, mms_id="1", var=None, data_path=None):
     #      spacecraft_instrument_rate_level[_datatype]_YYYYMMDD[hhmmss]_version.cdf
 
     file_name = "mms" + mms_id + "_" + var["inst"] + "_" + var["tmmode"] + "_" + var[
-        "lev"] + "(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+        "lev"] + r"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
 
     days = rrule(DAILY, dtstart=parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d")),
                  until=parser.parse(tint[1]) - datetime.timedelta(seconds=1))
@@ -113,7 +111,7 @@ def list_files(tint=None, mms_id="1", var=None, data_path=None):
 
     in_files = files_out
 
-    file_name = "mms.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+    file_name = r"mms.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
 
     file_times = []
 

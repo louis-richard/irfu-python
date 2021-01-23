@@ -17,7 +17,7 @@ from PIL import Image
 from dateutil import parser as date_parser
 
 
-def current_location(time=None, view="xy", path=".", show=False):
+def current_location(time, view="xy", path=".", show=False):
     """Download MMS location plots from MMS SDC.
 
     Parameters
@@ -36,11 +36,6 @@ def current_location(time=None, view="xy", path=".", show=False):
 
     """
 
-    assert time is not None and isinstance(time, str)
-    assert view is not None and view in ["xy", "xz"]
-    assert path is not None and isinstance(path, str) and os.path.exists(path)
-    assert show is not None and isinstance(show, bool)
-
     # URL of the MMS Science Data Center (SDC)
     sdc_url = "https://lasp.colorado.edu/mms/sdc/public/data/sdc"
 
@@ -48,12 +43,14 @@ def current_location(time=None, view="xy", path=".", show=False):
     str_time = date_parser.parse(time).strftime("%Y%m%d%H0000")
 
     # Name of the directory and the image corresponding to the view mode
-    if view == "xy":
+    if view.lower() == "xy":
         dir_path = "mms_orbit_plots"
         img_name = "mms_orbit_plot_{}.png".format(str_time)
-    else:
+    elif view.lower() == "xz":
         dir_path = "mms_orbit_plots"
         img_name = "mms_orbit_plot_{}_{}.png".format(view, str_time)
+    else:
+        raise ValueError("Invalid view mode")
 
     # Create directory in the target path
     os.makedirs(os.path.join(path, dir_path), exist_ok=True)
@@ -73,5 +70,3 @@ def current_location(time=None, view="xy", path=".", show=False):
     if show:
         img = Image.open(img_path)
         img.show()
-
-    return

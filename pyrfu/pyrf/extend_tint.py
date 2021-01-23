@@ -12,11 +12,11 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-from dateutil.parser import parse as date_parse
 from astropy.time import Time
+from dateutil.parser import parse as date_parse
 
 
-def extend_tint(tint=None, ext=None):
+def extend_tint(tint, ext=None):
     """Extends time interval.
 
     Parameters
@@ -24,7 +24,7 @@ def extend_tint(tint=None, ext=None):
     tint : list of str
         Reference time interval to extend.
 
-    ext : list of float or int
+    ext : list of float or list of int
         Number of seconds to extend time interval [left extend, right extend].
 
     Returns
@@ -35,12 +35,14 @@ def extend_tint(tint=None, ext=None):
     Examples
     --------
     >>> from pyrfu import pyrf
-    >>> # Time interval
-    >>> tint = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
-    >>> # Spacecraft index
-    >>> ic = 3
-    >>> # Load spacecraft position
-    >>> tint_long = pyrf.extend_tint(tint, [-100, 100])
+
+    Time interval
+
+    >>> tints = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
+
+    Load spacecraft position
+
+    >>> tints_long = pyrf.extend_tint(tint, [-100, 100])
 
     """
 

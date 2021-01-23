@@ -15,12 +15,13 @@
 import warnings
 import numpy as np
 import xarray as xr
+
 from astropy.time import Time
 
 from .db_get_ts import db_get_ts
 
 
-def feeps_spin_avg(inp_dataset_omni=None):
+def feeps_spin_avg(inp_dataset_omni):
     """This function will spin-average the omni-directional FEEPS energy spectra.
     
     Parameters
@@ -35,19 +36,16 @@ def feeps_spin_avg(inp_dataset_omni=None):
 
     """
 
-    if inp_dataset_omni is None:
-        raise ValueError("feeps_spin_avg requires at least one argument")
-
     var = inp_dataset_omni.attrs
 
     # get the spin sectors
     # v5.5+ = mms1_epd_feeps_srvy_l1b_electron_spinsectnum
     trange = list(Time(inp_dataset_omni.time.data[[0, -1]], format="datetime64").isot)
 
-    dset_name = f"mms{var['mmsId']}_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
-    dset_pref = f"mms{var['mmsId']}_epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+    dataset_name = f"mms{var['mmsId']}_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+    dataset_pref = f"mms{var['mmsId']}_epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
 
-    spin_sectors = db_get_ts(dset_name, "_".join([dset_pref, "spinsectnum"]), trange)
+    spin_sectors = db_get_ts(dataset_name, "_".join([dataset_pref, "spinsectnum"]), trange)
 
     spin_starts = [spin_end + 1 for spin_end in np.where(spin_sectors[:-1] >= spin_sectors[1:])[0]]
 

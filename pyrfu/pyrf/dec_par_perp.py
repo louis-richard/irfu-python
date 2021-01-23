@@ -13,13 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
-from .resample import resample
-from .dot import dot
+from . import resample, dot
 
 
-def dec_par_perp(inp=None, b0=None, flag_spin_plane=False):
+def dec_par_perp(inp, b0, flag_spin_plane=False):
     """Decomposes a vector into par/perp to B components. If flagspinplane decomposes components to
     the projection of ``b0`` into the XY plane. ``alpha`` gives the angle between ``b0`` and the XY.
     plane.
@@ -49,20 +47,25 @@ def dec_par_perp(inp=None, b0=None, flag_spin_plane=False):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field (FGM) and electric field (EDP)
+
+    Load magnetic field (FGM) and electric field (EDP)
+
     >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
-    >>> # Decompose e_xyz into parallel and perpendicular to b_xyz components
+
+    Decompose e_xyz into parallel and perpendicular to b_xyz components
+
     >>> e_para, e_perp, _ = pyrf.dec_par_perp(e_xyz, b_xyz)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert b0 is not None and isinstance(b0, xr.DataArray)
 
     if not flag_spin_plane:
         b_mag = np.linalg.norm(b0, axis=1, keepdims=True)

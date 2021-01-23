@@ -15,7 +15,7 @@
 import numpy as np
 
 
-def get_feeps_energy_table(mms_id="1", eye="top", sensor_id=1):
+def get_feeps_energy_table(mms_id, eye, sensor_id):
     """This function returns the energy table based on each spacecraft and eye; based on the
     table from : FlatFieldResults_V3.xlsx
     
@@ -45,10 +45,6 @@ def get_feeps_energy_table(mms_id="1", eye="top", sensor_id=1):
         * Ion Eyes: 6, 7, 8
 
     """
-
-    assert isinstance(mms_id, str) and mms_id in [str(i) for i in range(1, 5)]
-    assert isinstance(eye, str) and eye in ["bot", "top"]
-    assert isinstance(sensor_id, int) and sensor_id in np.arange(1, 13)
 
     table = {"mms1-top": [14., 7., 16., 14., 14., 0., 0., 0., 14., 14., 17., 15.],
              "mms1-bot": [np.nan, 14., 14., 13., 14., 0., 0., 0., 14., 14., -25., 14.],

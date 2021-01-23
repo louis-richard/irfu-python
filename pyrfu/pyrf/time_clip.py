@@ -21,7 +21,7 @@ from dateutil import parser
 from astropy.time import Time
 
 
-def time_clip(inp=None, tint=None):
+def time_clip(inp, tint):
     """Time clip the input (if time interval is TSeries clip between start and stop).
 
     Parameters
@@ -29,7 +29,7 @@ def time_clip(inp=None, tint=None):
     inp : xarray.DataArray
         Time series of the quantity to clip.
 
-    tint : xarray.DataArray or numpy.ndarray or list
+    tint : xarray.DataArray or ndarray or list
         Time interval can be a time series, a array of datetime64 or a list.
 
     Returns
@@ -38,9 +38,6 @@ def time_clip(inp=None, tint=None):
         Time series of the time clipped input.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert tint is not None and isinstance(tint, (list, xr.DataArray, np.ndarray))
 
     if isinstance(tint, xr.DataArray):
         t_start, t_stop = [tint.time.data[0], tint.time.data[-1]]
@@ -52,8 +49,11 @@ def time_clip(inp=None, tint=None):
         else:
             raise TypeError('Values must be in Datetime64')
 
-    else:
+    elif isinstance(tint, list):
         t_start, t_stop = [parser.parse(tint[0]), parser.parse(tint[-1])]
+
+    else:
+        raise TypeError("invalid tint")
 
     idx_min = bisect.bisect_left(inp.time.data, Time(t_start, format="datetime").datetime64)
     idx_max = bisect.bisect_right(inp.time.data, Time(t_stop, format="datetime").datetime64)

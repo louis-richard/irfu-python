@@ -20,7 +20,7 @@ from astropy.time import Time
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def feeps_pitch_angles(inp_dataset=None, b_bcs=None):
+def feeps_pitch_angles(inp_dataset, b_bcs):
     """Computes the FEEPS pitch angles for each telescope from magnetic field data.
 
     Parameters
@@ -40,9 +40,6 @@ def feeps_pitch_angles(inp_dataset=None, b_bcs=None):
         to fill.
 
     """
-
-    assert inp_dataset is not None and isinstance(inp_dataset, xr.Dataset)
-    assert b_bcs is not None and isinstance(b_bcs, xr.DataArray)
 
     var = inp_dataset.attrs
     # mms_id = var["mmsId"]

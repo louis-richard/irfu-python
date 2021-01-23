@@ -62,7 +62,6 @@ from .c_4_k import c_4_k
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
 from .c_4_v import c_4_v
-from .avg_4sc import avg_4sc
 from .ebsp import ebsp
 from .date_str import date_str
 
@@ -71,7 +70,6 @@ from .find_closest import find_closest
 from .cart2sph import cart2sph
 from .corr_deriv import corr_deriv
 from .eb_nrf import eb_nrf
-from .find_closest import find_closest
 from .lowpass import lowpass
 from .mean import mean
 from .poynting_flux import poynting_flux
@@ -86,4 +84,6 @@ from .pid_4sc import pid_4sc
 from .calc_dng import calc_dng
 from .calc_ag import calc_ag
 from .calc_agyro import calc_agyro
+
+from .datetime_to_tt2000 import datetime_to_tt2000
 

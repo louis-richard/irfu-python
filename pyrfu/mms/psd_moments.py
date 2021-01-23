@@ -19,10 +19,7 @@ import xarray as xr
 
 from astropy import constants
 
-from ..pyrf.resample import resample
-from ..pyrf.ts_scalar import ts_scalar
-from ..pyrf.ts_vec_xyz import ts_vec_xyz
-from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
+from ..pyrf import resample, ts_scalar, ts_vec_xyz, ts_tensor_xyz
 
 
 # noinspection PyUnboundLocalVariable
@@ -191,30 +188,32 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
     Examples
     --------
     >>> from pyrfu import mms
-    >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-    >>> vdf_e = mms.get_data("PDe_fpi_brst_l2", tint, 1)
-    >>> sc_pot = mms.get_data("V_edp_brst_l2", tint, 1)
-    >>> particle_moments = mms.psd_moments(vdf_e, sc_pot, energy_range=[1, 1000])
+
+    Define time interval
+
+    >>> tint_brst = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+
+    Load magnetic field and spacecraft potential
+
+    >>> scpot = mms.get_data("V_edp_brst_l2", tint_brst, 1)
+
+    Load electron velocity distribution function
+
+    >>> vdf_e = mms.get_data("pde_fpi_brst_l2", tint_brst, 1)
+
+    Compute moments
+
+    >>> options = dict(energy_range=[1, 1000])
+    >>> moments_e = mms.psd_moments(vdf_e, scpot, **options)
 
     """
 
-    flag_de = False
-    flag_same_e = False
-    flag_inner_electron = False
+    flag_de, flag_same_e, flag_inner_electron = [False] * 3
 
     # [eV] sc_pot + w_inner_electron for electron moments calculation; 2018-01-26, wy;
     w_inner_electron = 3.5
 
-    if vdf is None or sc_pot is None:
-        raise ValueError("psd_moments requires at least 2 arguments")
-
-    if not isinstance(vdf, xr.Dataset):
-        raise TypeError("vdf must be a Dataset")
-    else:
-        vdf.data.data *= 1e12
-
-    if not isinstance(sc_pot, xr.DataArray):
-        raise TypeError("Spacecraft potential must a DataArray")
+    vdf.data.data *= 1e12
 
     # Check if data is fast or burst resolution
     field_name = vdf.attrs["FIELDNAM"]
@@ -233,7 +232,7 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
     particle_type = vdf.attrs["species"]
 
     if is_brst_data:
-        step_table = vdf.attrs["estep_table"]
+        step_table = vdf.attrs["esteptable"]
         energy0 = vdf.attrs["energy0"]
         energy1 = vdf.attrs["energy1"]
         e_tmp = energy1 - energy0
@@ -456,14 +455,17 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
 
     v_abs2 = np.linalg.norm(v_psd, axis=1) ** 2
     h_psd *= p_mass / 2
-    h_psd[:, 0] -= v_psd[:, 0] * p_psd[:, 0, 0] + v_psd[:, 1] * p_psd[:, 0, 1] + v_psd[:,
-                                                                                 2] * p_psd[:, 0, 2]
+    h_psd[:, 0] -= v_psd[:, 0] * p_psd[:, 0, 0]
+    h_psd[:, 0] -= v_psd[:, 1] * p_psd[:, 0, 1]
+    h_psd[:, 0] -= v_psd[:, 2] * p_psd[:, 0, 2]
     h_psd[:, 0] -= 0.5 * v_psd[:, 0] * p_trace + 0.5 * p_mass * n_psd * v_abs2 * v_psd[:, 0]
-    h_psd[:, 1] -= v_psd[:, 0] * p_psd[:, 0, 1] + v_psd[:, 1] * p_psd[:, 1, 1] + v_psd[:,
-                                                                                 2] * p_psd[:, 1, 2]
+    h_psd[:, 1] -= v_psd[:, 0] * p_psd[:, 1, 0]
+    h_psd[:, 1] -= v_psd[:, 1] * p_psd[:, 1, 1]
+    h_psd[:, 1] -= v_psd[:, 2] * p_psd[:, 1, 2]
     h_psd[:, 1] -= 0.5 * v_psd[:, 1] * p_trace + 0.5 * p_mass * n_psd * v_abs2 * v_psd[:, 1]
-    h_psd[:, 2] -= v_psd[:, 0] * p_psd[:, 0, 2] + v_psd[:, 1] * p_psd[:, 1, 2] + v_psd[:,
-                                                                                 2] * p_psd[:, 2, 2]
+    h_psd[:, 2] -= v_psd[:, 0] * p_psd[:, 2, 0]
+    h_psd[:, 2] -= v_psd[:, 1] * p_psd[:, 2, 1]
+    h_psd[:, 2] -= v_psd[:, 2] * p_psd[:, 2, 2]
     h_psd[:, 2] -= 0.5 * v_psd[:, 2] * p_trace + 0.5 * p_mass * n_psd * v_abs2 * v_psd[:, 2]
 
     # Convert to typical units (/cc, km/s, nP, eV, and ergs/s/cm^2).

@@ -13,13 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
-from .resample import resample
-from .ts_vec_xyz import ts_vec_xyz
+from . import resample, ts_vec_xyz
 
 
-def e_vxb(v=None, b=None, flag="vxb"):
+def e_vxb(v, b, flag="vxb"):
     """Computes the convection electric field :math:`\\mathbf{V}\\times\\mathbf{B}` (default) or the
     :math:`\\mathbf{E}\\times\\mathbf{B}/|\\mathbf{B}|^{2}` drift velocity (flag="exb").
 
@@ -44,20 +42,25 @@ def e_vxb(v=None, b=None, flag="vxb"):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field and electric field
+
+    Load magnetic field and electric field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
-    >>> # Compute ExB drift velocity
+
+    Compute ExB drift velocity
+
     >>> v_xyz_exb = pyrf.e_vxb(e_xyz, b_xyz,"ExB")
 
     """
-
-    assert v is not None and isinstance(v, xr.DataArray)
-    assert b is not None and isinstance(b, xr.DataArray)
 
     if flag.lower() == "exb":
         estimate_exb = True
@@ -66,7 +69,7 @@ def e_vxb(v=None, b=None, flag="vxb"):
         estimate_exb = False
         estimate_vxb = True
 
-    if v.ndim == 1 and len(v) == 3:
+    if v.size == 3:
         input_v_cons = True
     else:
         input_v_cons = False

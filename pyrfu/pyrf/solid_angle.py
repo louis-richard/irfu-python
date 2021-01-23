@@ -15,19 +15,19 @@
 import numpy as np
 
 
-def solid_angle(x=None, y=None, z=None):
+def solid_angle(x, y, z):
     """Calculates the solid angle of three vectors making up a triangle in a unit sphere with the
     sign taken into account.
 
     Parameters
     ----------
-    x : numpy.ndarray
+    x : ndarray
         First vector.
 
-    y : numpy.ndarray
+    y : ndarray
         Second vector.
 
-    z : numpy.ndarray
+    z : ndarray
         Third vector.
 
     Returns
@@ -36,10 +36,6 @@ def solid_angle(x=None, y=None, z=None):
         Solid angle.
 
     """
-
-    assert x is not None and isinstance(x, np.ndarray) and x.ndim == 1 and len(x) == 3
-    assert y is not None and isinstance(y, np.ndarray) and y.ndim == 1 and len(y) == 3
-    assert z is not None and isinstance(z, np.ndarray) and z.ndim == 1 and len(z) == 3
 
     # Calculate the smaller angles between the vectors around origin
     a = np.arccos(np.sum(z * y))

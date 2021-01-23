@@ -18,7 +18,7 @@ import xarray as xr
 from .calc_dt import calc_dt
 
 
-def gradient(inp=None):
+def gradient(inp):
     """Computes time derivative of the input variable.
 
     Parameters
@@ -34,18 +34,24 @@ def gradient(inp=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2017-07-18T13:03:34.000", "2017-07-18T13:07:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field
+
+    Load magnetic field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
-    >>> # Time derivative of the magnetic field
+
+    Time derivative of the magnetic field
+
     >>> db_dt = pyrf.gradient(b_xyz)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     # guess time step
     dt = calc_dt(inp)

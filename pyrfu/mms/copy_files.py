@@ -14,11 +14,11 @@
 
 import os
 
-from .list_files import list_files
 from .mms_config import CONFIG
+from .list_files import list_files
 
 
-def copy_files(var=None, tint=None, mms_id=1, target_dir="./data/"):
+def copy_files(var, tint, mms_id, target_dir="./data/"):
     """Copy files from NAS24 to the target path
 
     Parameters
@@ -36,14 +36,10 @@ def copy_files(var=None, tint=None, mms_id=1, target_dir="./data/"):
     mms_id : str or int
         Index of the spacecraft
 
-    target_dir : str
-        Target path
+    target_dir : str, optional
+        Target path. Default is './data/'
 
     """
-    assert var is not None and isinstance(var, dict)
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(mms_id, int)
-    assert isinstance(target_dir, str)
 
     mms_path = CONFIG["local_data_dir"] + "/"
 
@@ -58,5 +54,3 @@ def copy_files(var=None, tint=None, mms_id=1, target_dir="./data/"):
             os.popen('cp {} {}'.format(file, os.path.join(path, os.path.split(file)[1])))
         else:
             os.popen('cp {} {}'.format(file, os.path.join(path, os.path.split(file)[1])))
-
-    return

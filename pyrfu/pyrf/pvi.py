@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 
 
-def pvi(x=None, scale=10):
+def pvi(x, scale=10):
     """Returns the PVI of a time series.
 
     .. math::
@@ -39,9 +39,6 @@ def pvi(x=None, scale=10):
         An xarray containing the pvi of the original time series.
 
     """
-
-    assert x is not None and isinstance(x, xr.DataArray)
-    assert isinstance(scale, int)
 
     data = x.data
 

@@ -21,7 +21,7 @@ from .get_feeps_oneeye import get_feeps_oneeye
 
 
 # noinspection PyUnboundLocalVariable
-def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True):
+def get_feeps_omni(tar_var, tint, mms_id, verbose=True):
     """Computes omni directional energy spectrum of the target data unit for the target specie
     over the target energy range.
 
@@ -33,7 +33,7 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True
     tint : list of str
         Time interval.
 
-    mms_id : int or float or str
+    mms_id : int or str
         Index of the spacecraft.
 
     verbose : bool
@@ -44,15 +44,22 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True
     out : xarray.DataArray
         Energy spectrum of the target data unit for the target specie in omni direction.
 
+    Examples
+    --------
+    >>> from pyrfu import mms
+
+    Define time interval
+
+    >>> tint_brst = ["2017-07-23T16:54:24.000", "2017-07-23T17:00:00.000"]
+
+    Read electron FEEPS omnidirectional energy spectrum
+
+    >>> feeps_omni = mms.get_feeps_omni("flux_ion_brst_l2", tint_brst, 2)
+
     """
 
-    assert isinstance(tar_var, str)
-    assert tint is not None and isinstance(tint, list)
-    assert isinstance(tint[0], str) and isinstance(tint[1], str)
-    assert isinstance(mms_id, (int, str)) and int(mms_id) in np.arange(1, 5)
-    assert isinstance(verbose, bool)
-
-    mms_id = int(mms_id)
+    if isinstance(mms_id, str):
+        mms_id = int(mms_id)
 
     data_units = tar_var.split("_")[0]
 
@@ -62,11 +69,11 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True
     specie = var["dtype"][0]
 
     if var["dtype"] == "electron":
-        energies = np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3,
-                    200.2, 234.0, 273.4, 319.4, 373.2, 436.0, 509.2, 575.8])
+        energies = np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3, 200.2, 234.0,
+                             273.4, 319.4, 373.2, 436.0, 509.2, 575.8])
     else:
-        energies = np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6,
-                    205.1, 236.7, 273.2, 315.4, 363.8, 419.7, 484.2,  558.6, 609.9])
+        energies = np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6, 205.1, 236.7, 273.2,
+                             315.4, 363.8, 419.7, 484.2,  558.6, 609.9])
 
     # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
     e_corr = {"e": [14.0, -1.0, -3.0, -3.0], "i": [0.0, 0.0, 0.0, 0.0]}
@@ -89,27 +96,27 @@ def get_feeps_omni(tar_var="flux_ion_brst_l2", mms_id=1, tint=None, verbose=True
 
     for tsen in top_sensors:
         top = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
-                               mms_id, f"top-{tsen:d}", tint)
+                               f"top-{tsen:d}", tint, mms_id, verbose)
 
-        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id,
-                                f"top-{tsen:d}", tint)
+        msk = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
+                               f"top-{tsen:d}", tint, mms_id, verbose)
 
-        mask.data = np.tile(mask.data[:, 0], (mask.shape[1], 1)).T
+        msk.data = np.tile(msk.data[:, 0], (msk.shape[1], 1)).T
 
-        top.data[mask.data == 1] = np.nan
+        top.data[msk.data == 1] = np.nan
 
         top_it[tsen] = top
 
     for bsen in bot_sensors:
         bot = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
-                               mms_id, f"bottom-{bsen:d}", tint, verbose)
+                               f"bottom-{bsen:d}", tint, mms_id, verbose)
 
-        mask = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}", mms_id,
-                                f"bottom-{bsen:d}", tint, verbose)
+        msk = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
+                               f"bottom-{bsen:d}", tint, mms_id, verbose)
 
-        mask.data = np.tile(mask.data[:, 0], (mask.shape[1], 1)).T
+        msk.data = np.tile(msk.data[:, 0], (msk.shape[1], 1)).T
 
-        bot.data[mask.data == 1] = np.nan
+        bot.data[msk.data == 1] = np.nan
 
         bot_it[bsen] = bot
 

@@ -18,7 +18,7 @@ import xarray as xr
 from ..pyrf import calc_dt
 
 
-def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
+def psd_rebin(vdf, phi, energy0, energy1, step_table):
     """Convert burst mode distribution into 64 energy channel distribution.
     Functions takes the burst mode distribution sampled in two energy tables and converts to a
     single energy table with 64 energy channels. Time resolution is halved and phi angles are
@@ -43,16 +43,16 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
 
     Returns
     -------
-    time_r : numpy.ndarray
+    time_r : ndarray
         Revised time steps.
 
-    vdf_r : numpy.ndarray
+    vdf_r : ndarray
         Rebinned particle distribution.
 
-    energy_r : numpy.ndarray
+    energy_r : ndarray
         Revised energy table.
 
-    phi_r : numpy.ndarray
+    phi_r : ndarray
         Time series of the recalculated phi angle.
 
     Notes
@@ -61,12 +61,6 @@ def psd_rebin(vdf=None, phi=None, energy0=None, energy1=None, step_table=None):
     To be updated later.
     
     """
-
-    assert vdf is not None
-    assert phi is not None
-    assert energy0 is not None and isinstance(energy0, (xr.DataArray, np.ndarray))
-    assert energy1 is not None and isinstance(energy1, (xr.DataArray, np.ndarray))
-    assert step_table is not None
 
     if isinstance(energy0, xr.DataArray):
         energy0 = energy0.data

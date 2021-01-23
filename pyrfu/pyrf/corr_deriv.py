@@ -19,7 +19,7 @@ from astropy.time import Time
 from . import find_closest
 
 
-def corr_deriv(x1=None, x2=None, fla=False):
+def corr_deriv(x1, x2, fla=False):
     """Correlate the derivatives of two time series
 
     Parameters
@@ -37,10 +37,10 @@ def corr_deriv(x1=None, x2=None, fla=False):
 
     Returns
     -------
-    t1_d, t2_d : numpy.ndarray
+    t1_d, t2_d : ndarray
         Time instants of common highest first derivatives.
 
-    t1_dd, t2_dd : numpy.ndarray
+    t1_dd, t2_dd : ndarray
         Time instants of common highest second derivatives or zero crossings.
 
     """

@@ -15,12 +15,12 @@
 import bisect
 import warnings
 import numpy as np
-
-from scipy import interpolate
 import xarray as xr
 
+from scipy import interpolate
 
-def resample(inp=None, ref=None, **kwargs):
+
+def resample(inp, ref, **kwargs):
     """
     Resample inp to the time line of ref. If sampling of X is more than two times higher than Y,
     we average X, otherwise we interpolate X.
@@ -66,20 +66,25 @@ def resample(inp=None, ref=None, **kwargs):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field and electric field
+
+    Load magnetic field and electric field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
-    >>> # Resample magnetic field to electric field sampling
+
+    Resample magnetic field to electric field sampling
+
     >>> b_xyz = pyrf.resample(b_xyz, e_xyz)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
-    assert ref is not None and isinstance(ref, xr.DataArray)
 
     sfy, thresh, method = [[], 0, ""]
 

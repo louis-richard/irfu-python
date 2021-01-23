@@ -18,7 +18,7 @@ import xarray as xr
 from scipy.stats import kurtosis
 
 
-def increments(x=None, scale=10):
+def increments(x, scale=10):
     """Returns the increments of a time series.
 
     .. math:: y = |x_i - x_{i+s}|
@@ -35,7 +35,7 @@ def increments(x=None, scale=10):
 
     Returns
     -------
-    kurt : numpy.ndarray
+    kurt : ndarray
         kurtosis of the increments, one per product, using the Fisher's
         definition (0 value for a normal distribution).
 
@@ -44,8 +44,6 @@ def increments(x=None, scale=10):
         product in the original time series.
 
     """
-    assert x is not None and isinstance(x, xr.DataArray)
-    assert isinstance(scale, int)
 
     data = x.data
 

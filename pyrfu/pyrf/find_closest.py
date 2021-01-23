@@ -17,35 +17,32 @@ import numpy as np
 from scipy import interpolate
 
 
-def find_closest(t1=None, t2=None):
+def find_closest(t1, t2):
     """Finds pairs that are closest to each other in two time series.
 
     Parameters
     ----------
-    t1 : numpy.ndarray
+    t1 : ndarray
         Vector with time instants.
 
-    t2 : numpy.ndarray
+    t2 : ndarray
         Vector with time instants.
 
     Returns
     -------
-    t1new : numpy.ndarray
+    t1new : ndarray
         Identified time instants that are closest each other.
 
-    t2new : numpy.ndarray
+    t2new : ndarray
         Identified time instants that are closest each other.
 
-    ind1new : numpy.ndarray
+    ind1new : ndarray
         Identified time instants that are closest each other.
 
-    ind2new : numpy.ndarray
+    ind2new : ndarray
         Identified time instants that are closest each other.
 
     """
-
-    assert t1 is not None
-    assert t2 is not None
 
     t1_orig = t1
     t2_orig = t2

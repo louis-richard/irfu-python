@@ -13,12 +13,11 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
-from pyrfu.pyrf import c_4_grad, gradient, avg_4sc, ts_vec_xyz
+from . import c_4_grad, gradient, avg_4sc, ts_vec_xyz
 
 
-def st_diff(r_mms=None, b_mms=None, lmn=None):
+def st_diff(r_mms, b_mms, lmn):
     """Computes velocity of the structure using spatio-temporal derivative method [13]_ [14]_ as
 
     .. math::
@@ -40,7 +39,7 @@ def st_diff(r_mms=None, b_mms=None, lmn=None):
     b_mms : list of xarray.DataArray
         Background magnetic field.
 
-    lmn : numpy.ndarray
+    lmn : ndarray
         Structure coordinates system.
 
     Returns
@@ -60,12 +59,6 @@ def st_diff(r_mms=None, b_mms=None, lmn=None):
             field measurements: Application to Cluster. Geophysical Research Letters, 33, L08109.
             doi : https://doi.org/10.1029/2005GL025073.
     """
-
-    assert r_mms is not None and isinstance(r_mms, list)
-    assert len(r_mms) == 4 and isinstance(r_mms[0], xr.DataArray)
-    assert b_mms is not None and isinstance(b_mms, list)
-    assert len(b_mms) == 4 and isinstance(b_mms[0], xr.DataArray)
-    assert lmn is not None and isinstance(lmn, np.ndarray) and lmn.shape == (3, 3)
 
     # Compute magnetic field at the center of mass of the tetrahedron
     b_xyz = avg_4sc(b_mms)

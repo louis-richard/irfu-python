@@ -34,24 +34,25 @@ with open("README.rst", "r") as fh:
 INSTALL_REQUIRES = [
       "astropy",
       "cycler",
-      "python-dateutil",
+      "cdflib",
+      "cython"
+      "ipykernel",
+      "ipython",
       "matplotlib",
+      "nbsphinx",
       "numpy",
-      "sphinx>=1.4",
       "pandas",
       "pvlib",
       "pyfftw",
+      "python-dateutil",
       "scipy",
       "seaborn",
       "sfs",
+      "sphinx>=1.4",
+      "sphinxcontrib-apidoc",
+      "sphinx_rtd_theme",
       "tqdm",
-      "xarray",
-      "sphinx_rtd_theme", 
-      "ipython", 
-      "ipykernel", 
-      "nbsphinx",
-      "spacepy",
-      "sphinxcontrib-apidoc"]
+      "xarray"]
 
 PYTHON_REQUIRES = '>=3.7, <3.9'
 

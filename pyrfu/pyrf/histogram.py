@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 
 
-def histogram(inp=None, bins=100, normed=True):
+def histogram(inp, bins=100, normed=True):
     """
     Computes 1D histogram of the inp with bins bins
 
@@ -37,8 +37,6 @@ def histogram(inp=None, bins=100, normed=True):
         1D distribution of the input time series.
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     hist, bins = np.histogram(inp.data, bins=bins, normed=normed)
     bin_center = (bins[1:] + bins[:-1]) * 0.5

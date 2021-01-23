@@ -14,11 +14,12 @@
 
 import xarray as xr
 import numpy as np
+
 from scipy import signal
 
 
 # noinspection PyTupleAssignmentBalance
-def filt(inp=None, f_min=0, f_max=1, n=-1):
+def filt(inp, f_min=0., f_max=1., n=-1):
     """Filters input quantity.
 
     Parameters
@@ -43,22 +44,30 @@ def filt(inp=None, f_min=0, f_max=1, n=-1):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2017-07-18T13:03:34.000", "2017-07-18T13:07:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic and electric fields
+
+    Load magnetic and electric fields
+
     >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("E_gse_edp_brst_l2", tint, mms_id)
-    >>> # Convert E to field aligned coordinates
+
+    Convert E to field aligned coordinates
+
     >>> e_xyzfac = pyrf.convert_fac(e_xyz, b_xyz, [1,0,0])
-    >>> # Bandpass filter E waveform
+
+    Bandpass filter E waveform
+
     >>> e_xyzfac_hf = pyrf.filt(e_xyzfac, 4, 0, 3)
     >>> e_xyzfac_lf = pyrf.filt(e_xyzfac, 0, 4, 3)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     fs = 1 / (np.median(np.diff(inp.time)).astype(int) * 1e-9)
 

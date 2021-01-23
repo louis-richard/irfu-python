@@ -12,11 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import xarray as xr
 import numpy as np
 
 
-def norm(inp=None):
+def norm(inp):
     """Computes the magnitude of the input field.
 
     Parameters
@@ -32,18 +31,24 @@ def norm(inp=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field
+
+    Load magnetic field
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-    >>> # Compute magnitude of the magnetic field
+
+    Compute magnitude of the magnetic field
+
     >>> b_mag = pyrf.norm(b_xyz)
 
     """
-
-    assert inp is not None and isinstance(inp, xr.DataArray)
 
     out = np.sqrt(np.sum(inp ** 2, axis=1))
 

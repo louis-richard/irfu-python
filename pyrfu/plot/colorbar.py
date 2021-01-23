@@ -37,6 +37,7 @@ def colorbar(im, ax, pad=0.01):
     cax : coloraxis
 
     """
+
     pos = ax.get_position()
     fig = plt.gcf()
     cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])

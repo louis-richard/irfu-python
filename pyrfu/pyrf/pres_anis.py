@@ -13,14 +13,14 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
+
 from astropy import constants
 
 from .resample import resample
 from ..mms import rotate_tensor
 
 
-def pres_anis(p_xyz=None, b_xyz=None):
+def pres_anis(p_xyz, b_xyz):
     """
     Compute pressure anisotropy factor:
 
@@ -48,20 +48,25 @@ def pres_anis(p_xyz=None, b_xyz=None):
     Examples
     --------
     >>> from pyrfu import mms, pyrf
-    >>> # Time interval
+
+    Time interval
+
     >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-    >>> # Spacecraft index
+
+    Spacecraft index
+
     >>> mms_id = 1
-    >>> # Load magnetic field, ion/electron temperature and number density
+
+    Load magnetic field, ion/electron temperature and number density
+
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
     >>> p_xyz_i = mms.get_data("Pi_gse_fpi_fast_l2", tint, mms_id)
-    >>> # Compute pressure anistropy
+
+    Compute pressure anistropy
+
     >>> p_anis = pyrf.pres_anis(p_xyz_i, b_xyz)
 
     """
-
-    assert p_xyz is not None and isinstance(p_xyz, xr.DataArray)
-    assert b_xyz is not None and isinstance(b_xyz, xr.DataArray)
 
     b_xyz = resample(b_xyz, p_xyz)
 
