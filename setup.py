@@ -35,7 +35,7 @@ INSTALL_REQUIRES = [
       "astropy",
       "cycler",
       "cdflib",
-      "cython"
+      "cython",
       "ipykernel",
       "ipython",
       "matplotlib",
