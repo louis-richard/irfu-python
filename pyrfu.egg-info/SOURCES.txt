@@ -25,7 +25,6 @@ pyrfu/mms/feeps_remove_sun.py
 pyrfu/mms/feeps_spin_avg.py
 pyrfu/mms/feeps_split_integral_ch.py
 pyrfu/mms/fft_bandpass.py
-pyrfu/mms/fk_power_spectrum.py
 pyrfu/mms/fk_power_spectrum_4sc.py
 pyrfu/mms/get_data.py
 pyrfu/mms/get_dist.py
@@ -107,6 +106,7 @@ pyrfu/pyrf/convert_fac.py
 pyrfu/pyrf/corr_deriv.py
 pyrfu/pyrf/cross.py
 pyrfu/pyrf/date_str.py
+pyrfu/pyrf/datetime_to_tt2000.py
 pyrfu/pyrf/dec_par_perp.py
 pyrfu/pyrf/disp_surf_calc.py
 pyrfu/pyrf/dist_append.py
@@ -120,7 +120,6 @@ pyrfu/pyrf/end.py
 pyrfu/pyrf/extend_tint.py
 pyrfu/pyrf/filt.py
 pyrfu/pyrf/find_closest.py
-pyrfu/pyrf/generic_minimum_residue_analysis.py
 pyrfu/pyrf/gradient.py
 pyrfu/pyrf/histogram.py
 pyrfu/pyrf/histogram2d.py
@@ -164,9 +163,5 @@ pyrfu/pyrf/vht.py
 pyrfu/pyrf/wave_fft.py
 pyrfu/pyrf/wavelet.py
 pyrfu/pyrf/wavepolarize_means.py
-pyrfu/solo/__init__.py
-pyrfu/solo/get_ts.py
-pyrfu/solo/list_files.py
-pyrfu/solo/solo_config.py
 pyrfu/tests/__init__.py
 pyrfu/tests/test_pyrf.py

@@ -1,6 +1,6 @@
 Metadata-Version: 1.2
 Name: pyrfu
-Version: 2.0.6
+Version: 2.0.7
 Summary: Python Space Physics Environment Data Analysis
 Home-page: https://github.com/louis-richard/irfu-python
 Author: Louis RICHARD
@@ -20,23 +20,29 @@ Description:
         .. |Maintenance| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
         .. _Maintenance: https://github.com/louis-richard/irfu-python/graphs/commit-activity
         
+        .. |Doc| image:: https://readthedocs.org/projects/pyspaceweather/badge/?version=latest
+        .. _Doc: https://pyrfu.readthedocs.io/en/latest/?badge=latest
+        
         .. |DocSphinx| image:: https://img.shields.io/static/v1.svg?label=sphinx&message=documentation&color=blue
         .. _DocSphinx: https://pyrfu.readthedocs.io
         
-        .. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg
+        .. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=python&logoColor=blue
         .. _PyPi: https://pypi.org/project/pyrfu/
         
-        .. |VPython| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg
+        .. |VPython| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python&logoColor=blue
         .. _VPython: https://pypi.org/project/pyrfu/
         
-        .. |Lint| image:: https://img.shields.io/badge/pylint-9.55-brightgreen.svg
+        .. |Lint| image:: https://img.shields.io/badge/pylint-9.55-blue.svg?logo=python&logoColor=blue
         .. _Lint: http://pylint.pycqa.org/en/latest/intro.html
+        
+        .. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu
+        .. _Downloads: https://pypi.org/project/pyrfu/
         
         
         pyRFU
         =====
         
-        |LicenseMit|_ |LicenseCC|_ |PyPi|_ |VPython|_ |DocSphinx|_ |Maintenance|_ |Lint|_
+        |LicenseMit|_ |LicenseCC|_ |VPython|_ |Lint|_ |PyPi|_ |Downloads|_ |Doc|_
         
         The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
         Magnetospheric MultiScale (MMS) mission.
@@ -52,8 +58,16 @@ Description:
         -----------
         .. start-marker-install-do-not-remove
         
-        The package pyrfu has been tested only for Mac OS.
+        The package `pyrfu` has been tested only for Mac OS. `pyrfu` requires `FFTW3 <http://fftw.org>`_. Install FFTW3
+        using `homebrew <https://brew.sh>`_ and set temporary environmental variables, such that `pyrfu`
+        finds fftw:
         
+        .. code-block:: bash
+        
+            brew install fftw
+            export DYLD_LIBRARY_PATH=/usr/local/lib
+            export LDFLAGS="-L/usr/local/lib"
+            export CFLAGS="-I/usr/local/include"
         
         Using PyPi
         **********
@@ -156,7 +170,6 @@ Description:
         - `sfs <https://sfs-python.readthedocs.io>`_ >=0.5.0
         - `tqdm <https://pypi.org/project/tqdm/#documentation>`_ >=4.46.0
         
-        
         Testing dependencies are:
         
         - `pytest <https://docs.pytest.org/en/latest/>`_ >= 2.8
@@ -165,7 +178,6 @@ Description:
         
         - `coverage <https://coverage.readthedocs.io>`_ >= 4.4
         - `pylint <https://www.pylint.org>`_ >= 1.6.0
-        
         
         .. end-marker-install-do-not-remove
         

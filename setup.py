@@ -18,7 +18,7 @@ from sphinx.setup_command import BuildDoc
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "2.0.6"
+VERSION = "2.0.7"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"

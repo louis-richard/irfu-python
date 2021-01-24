@@ -168,11 +168,6 @@ Extra testing dependencies:
 - `coverage <https://coverage.readthedocs.io>`_ >= 4.4
 - `pylint <https://www.pylint.org>`_ >= 1.6.0
 
-
-Note
-****
-`pyrfu` requires FFTW3, the speedy FFT library. To install FFTW3 see `pyfftw <https://github.com/pyFFTW/pyFFTW>`_
-
 .. end-marker-install-do-not-remove
 
 Usage
