@@ -64,8 +64,8 @@ def get_ts(file_path, cdf_name, tint):
 
         for k in f.varattsget(depend0_key):
             x["atts"][k] = f.varattsget(depend0_key)[k]
-            if isinstance(x["atts"][k], str) and x["atts"][k] in f.cdf_info()["zVariables"] and \
-                    not k == "LABLAXIS":
+            if isinstance(x["atts"][k], str) and x["atts"][k] in f.cdf_info()["zVariables"] \
+                    and not k == "LABLAXIS":
                 try:
                     # If array
                     x["atts"][k] = f.varget(x["atts"][k], starttime=tint[0], endtime=tint[1])
@@ -87,10 +87,13 @@ def get_ts(file_path, cdf_name, tint):
                 except IndexError:
                     y["data"] = f.varget(depend1_key)
 
+                if len(y["data"]) == 1:
+                    y["data"] = y["data"][0]
+
                 # If vector components remove magnitude index
 
-                if len(y["data"]) == 1 and all(y["data"][0] == ["x", "y", "z", "r"]):
-                    y["data"] = y["data"][0][:-1]
+                if len(y["data"]) == 4 and all(y["data"] == ["x", "y", "z", "r"]):
+                    y["data"] = y["data"][:-1]
                 # if y is 2d get only first row assuming that the bins are the same
                 elif y["data"].ndim == 2:
                     try:
@@ -107,8 +110,8 @@ def get_ts(file_path, cdf_name, tint):
                     if isinstance(y["atts"][k], str) and y["atts"][k] in f.cdf_info()["zVariables"]:
                         if k not in ["DEPEND_0", "LABLAXIS"]:
                             try:
-                                y["atts"][k] = f.varget(y["atts"][k],
-                                                        starttime=tint[0], endtime=tint[1])
+                                y["atts"][k] = f.varget(y["atts"][k], starttime=tint[0],
+                                                        endtime=tint[1])
                             except IndexError:
                                 y["atts"][k] = f.varget(y["atts"][k])
                             # If atts is 2D get only first row
@@ -143,11 +146,14 @@ def get_ts(file_path, cdf_name, tint):
 
                 z["atts"] = {"LABLAXIS": "comp"}
             else:
-                z["data"] = f.varget(depend2_key)[...]
+                z["data"] = f.varget(depend2_key)
+
+                if len(z["data"]) == 1:
+                    z["data"] = z["data"][0]
 
                 z["atts"] = {}
 
-                for k in f[depend2_key].atts.keys():
+                for k in f.varattsget(depend2_key):
                     z["atts"][k] = f.varattsget(depend2_key)[k]
 
                     if isinstance(z["atts"][k], str) and z["atts"][k] in f.cdf_info()[
@@ -167,6 +173,9 @@ def get_ts(file_path, cdf_name, tint):
                 depend3_key = f.varattsget(cdf_name)["REPRESENTATION_3"]
 
             w["data"] = f.varget(depend3_key)
+
+            if len(w["data"]) == 1:
+                w["data"] = w["data"][0]
 
             if w["data"].ndim == 2:
                 try:

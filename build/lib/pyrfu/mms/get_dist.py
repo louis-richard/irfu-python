@@ -58,7 +58,7 @@ def get_dist(file_path, cdf_name, tint):
             t = f.varget(depend0_key, starttime=tint[0], endtime=tint[1])
             t = cdfepoch.to_datetime(t, to_np=True)
 
-            if not t:
+            if not t.size:
                 return None
 
             dist = f.varget(cdf_name, starttime=tint[0], endtime=tint[1])
