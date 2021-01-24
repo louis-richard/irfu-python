@@ -4,7 +4,7 @@
 .. _License: https://opensource.org/licenses/MIT
 
 .. |Python| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python
-.. _VPython: https://pypi.org/project/pyrfu/
+.. _Python: https://pypi.org/project/pyrfu/
 
 .. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=pypi
 .. _PyPi: https://pypi.org/project/pyrfu/
@@ -60,8 +60,9 @@ Instalation
 -----------
 .. start-marker-install-do-not-remove
 
-The package `pyrfu` has been tested only for Mac OS. `pyrfu` requires `FFTW3 <http://fftw.org>`_. Install FFTW3
-using `homebrew <https://brew.sh>`_ and set temporary environmental variables, such that `pyrfu`
+The package ``pyrfu`` has been tested only for Mac OS. ``pyrfu`` requires `FFTW3 <http://fftw.org>`_
+. Install FFTW3
+using `homebrew <https://brew.sh>`_ and set temporary environmental variables, such that ``pyrfu``
 finds fftw:
 
 .. code-block:: bash
@@ -90,7 +91,7 @@ The sources are located on **GitHub**:
 
 1) Clone the GitHub repo:
 
-Open a terminal and write the below command to clone in your PC the pyrfu repo:
+Open a terminal and write the below command to clone in your PC the ``pyrfu`` repo:
 
 .. code-block:: bash
 
@@ -158,19 +159,27 @@ Dependencies
 
 The required dependencies are:
 
-- `Python <https://python.org>`_  >= 3.7
-- `python-dateutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.1
-- `numpy <https://www.numpy.org>`_ >= 1.18
-- `scipy <https://scipy.org>`_ >= 1.4.1
-- `matplotlib <https://matplotlib.org>`_ >= 3.2.1
-- `pandas <https://pandas.pydata.org/>`_ >= 1.0.3
-- `astropy <https://www.astropy.org/>`_ >=4.0.1
-- `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.15
+- `astropy <https://www.astropy.org/>`_ >=4.0.0
+- `cycler <https://matplotlib.org/cycler/>`_ >=0.10.0
+- `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=0.3.20
+- `cython <https://cython.org>`_ >=0.29.21
+- `matplotlib <https://matplotlib.org>`_ >=3.2.1
+- `numba <http://numba.pydata.org>`_ >=0.52.0
+- `numpy <https://www.numpy.org>`_ >=1.18.1
+- `Pillow <https://python-pillow.org>`_ >=7.1.0
+- `pandas <https://pandas.pydata.org/>`_ >=1.0.3
 - `pyfftw <https://pyfftw.readthedocs.io/en/latest/>`_ >=0.12.0
-- `spacepy <https://spacepy.github.io/#>`_ >=0.2.1
+- `python-dateutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.1
+- `requests <https://requests.readthedocs.io/en/latest/>`_ >=2.23.0
+- `Sphinx <https://www.sphinx-doc.org/en/master/>`_ >=3.0.3
+- `scipy <https://scipy.org>`_ >=1.4.1
 - `seaborn <https://seaborn.pydata.org>`_ >=0.10.1
+- `setuptools <https://packaging.python.org/tutorials/installing-packages/>`_ >=47.3.1
 - `sfs <https://sfs-python.readthedocs.io>`_ >=0.5.0
 - `tqdm <https://pypi.org/project/tqdm/#documentation>`_ >=4.46.0
+- `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.15.0
+
+
 
 Testing dependencies are:
 
