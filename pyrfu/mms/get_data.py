@@ -504,6 +504,8 @@ def get_data(var_str, tint, mms_id, verbose=True, data_path=""):
 
             else:
                 raise ValueError("Should not be here")
+        else:
+            raise ValueError("Should not be here")
 
     # Spin-plane Double mmsId instrument
     elif var["inst"] == "edp":

@@ -25,8 +25,6 @@ from astropy.time import Time
 
 from . import ts_time, ts_vec_xyz, resample, iso2unix, start, end, calc_fs, convert_fac
 
-# TODO parallelized average_data
-
 
 def average_data(data, x, y, av_window=None):
     # average data with time x to time y using window
@@ -217,6 +215,7 @@ def ebsp(e, db, full_b, b0, xyz, freq_int, **kwargs):
 
     # Compute magnetic field fluctuations sampling frequency
     fsb = calc_fs(db)
+    resample_b_options = dict(fs=fsb)
 
     # Check the input
     # Number of wave periods to average
@@ -285,7 +284,6 @@ def ebsp(e, db, full_b, b0, xyz, freq_int, **kwargs):
             xyz = [1, 0, 0]
             xyz = ts_vec_xyz(db.time.data, np.tile(xyz, (len(db), 1)))
 
-        resample_b_options = dict(fs=fsb)
         xyz = resample(xyz, db, **resample_b_options)
 
     b0 = resample(b0, db, **resample_b_options)
@@ -541,17 +539,6 @@ def ebsp(e, db, full_b, b0, xyz, freq_int, **kwargs):
     frequency_vec = w0/a
 
     censure = np.floor(2 * a * out_sampling / in_sampling * n_wave_period_to_average)
-
-    """
-    pdb.set_trace()
-    mpi_args = (frequency_vec,n_wave_period_to_average,out_sampling,sigma,a,w,w0,Swb,Swe,
-    flag_want_fac,flag_de_dot_b0, Bx,By,Bz,b0,xyz,fac_matrix,in_time,out_time,idxNanB,idxNanE,
-    idx_nan_eisr2,idx_b_par_spinplane,wantEE,wantPolarization,sw_eisr2)
-    pool = mp.Pool(mp.cpu_count())
-    pool.starmap(my_func, [(*mpi_args,ind_a) for ind_a in range(2)])
-    """
-    # begin for
-    # inputs (frequency_vec,n_wave_period_to_average,out_sampling,sigma,w,w0,Swb,)
 
     for ind_a in tqdm(range(len(a))):
         # resample to 1 second sampling for Pc1-2 or 1 minute sampling for Pc3-5
