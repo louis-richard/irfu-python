@@ -1,37 +1,50 @@
 
 
-.. |LicenseMIT| image:: https://img.shields.io/badge/License-MIT-blue.svg
-.. _LicenseMIT: https://opensource.org/licenses/MIT
+.. |License| image:: https://img.shields.io/pypi/l/pyrfu
+.. _License: https://opensource.org/licenses/MIT
 
-.. |LicenseCC| image:: https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg
-.. _LicenseCC: https://creativecommons.org/licenses/by/4.0/
-
-.. |Maintenance| image:: https://img.shields.io/badge/Maintained%3F-yes-green.svg
-.. _Maintenance: https://github.com/louis-richard/irfu-python/graphs/commit-activity
-
-.. |Doc| image:: https://readthedocs.org/projects/pyspaceweather/badge/?version=latest
-.. _Doc: https://pyrfu.readthedocs.io/en/latest/?badge=latest
-
-.. |DocSphinx| image:: https://img.shields.io/static/v1.svg?label=sphinx&message=documentation&color=blue
-.. _DocSphinx: https://pyrfu.readthedocs.io
-
-.. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=python&logoColor=blue
-.. _PyPi: https://pypi.org/project/pyrfu/
-
-.. |VPython| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python&logoColor=blue
+.. |Python| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python
 .. _VPython: https://pypi.org/project/pyrfu/
 
-.. |Lint| image:: https://img.shields.io/badge/pylint-9.55-blue.svg?logo=python&logoColor=blue
-.. _Lint: http://pylint.pycqa.org/en/latest/intro.html
+.. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=pypi
+.. _PyPi: https://pypi.org/project/pyrfu/
 
-.. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu
+.. |Format| image:: https://img.shields.io/pypi/format/pyrfu?color=blue&logo=pypi
+.. _Format: https://pypi.org/project/pyrfu/
+
+.. |Wheel| image:: https://img.shields.io/pypi/wheel/pyrfu?logo=pypi&color=blue
+.. _Wheel: https://pypi.org/project/pyrfu/
+
+.. |Status| image:: https://img.shields.io/pypi/status/pyrfu?logo=pypi&color=blue
+.. _Status: https://pypi.org/project/pyrfu/
+
+.. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu?logo=pypi&color=blue
 .. _Downloads: https://pypi.org/project/pyrfu/
+
+.. |ScrutinizerBuild| image:: https://img.shields.io/scrutinizer/build/g/louis-richard/irfu-python?logo=scrutinizer-ci
+.. _ScrutinizerBuild: https://scrutinizer-ci.com/g/louis-richard/irfu-python/
+
+.. |ScrutinizerQuality| image:: https://img.shields.io/scrutinizer/quality/g/louis-richard/irfu-python?logo=scrutinizer-ci
+.. _ScrutinizerQuality: https://scrutinizer-ci.com/g/louis-richard/irfu-python/
+
+.. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
+.. _Issues: https://github.com/louis-richard/irfu-python/issues
+
+.. |Commits| image:: https://img.shields.io/github/last-commit/louis-richard/irfu-python?logo=github&color=9cf
+.. _Commits: https://github.com/louis-richard/irfu-python/commits/master
+
+.. |Readthedocs| image:: https://img.shields.io/readthedocs/pyrfu?logo=read-the-docs&color=blueviolet
+.. _Readthedocs: https://pyrfu.readthedocs.io/en/latest/
+
+.. |Gitter| image:: https://img.shields.io/gitter/room/louis-richard/pyrfu?logo=gitter&color=orange
+.. _Gitter: https://gitter.im/pyrfu
 
 
 pyRFU
 =====
 
-|LicenseMit|_ |LicenseCC|_ |VPython|_ |Lint|_ |PyPi|_ |Downloads|_ |Doc|_
+|License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |ScrutinizerBuild|_
+|ScrutinizerQuality|_ |Commits|_ |Issues|_ |Readthedocs|_ |Gitter|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
