@@ -16,8 +16,7 @@ from .split_vs import split_vs
 from .list_files import list_files
 from .get_dist import get_dist
 from .get_ts import get_ts
-from ..pyrf import ts_append
-from ..pyrf import dist_append
+from ..pyrf import ts_append, dist_append
 
 
 def get_data(var_str, tint, mms_id, verbose=True, data_path=""):

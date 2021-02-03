@@ -15,7 +15,10 @@
 import numpy as np
 import xarray as xr
 
-from . import resample, dot, normalize, cross
+from .resample import resample
+from .dot import dot
+from .normalize import normalize
+from .cross import cross
 
 
 def eb_nrf(e, b, v, flag=0):

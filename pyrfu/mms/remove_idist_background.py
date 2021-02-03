@@ -16,7 +16,7 @@ import numpy as np
 
 from astropy import constants
 
-from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
+from ..pyrf import ts_tensor_xyz
 
 
 def remove_idist_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):

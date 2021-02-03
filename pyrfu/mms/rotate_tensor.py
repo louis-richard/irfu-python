@@ -14,8 +14,7 @@
 
 import numpy as np
 
-from pyrfu.pyrf.resample import resample
-from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
+from ..pyrf import resample, ts_tensor_xyz
 
 
 def rotate_tensor(*args):

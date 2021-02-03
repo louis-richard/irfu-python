@@ -14,7 +14,10 @@
 
 import numpy as np
 
-from . import c_4_grad, gradient, avg_4sc, ts_vec_xyz
+from .c_4_grad import c_4_grad
+from .gradient import gradient
+from .avg_4sc import avg_4sc
+from .ts_vec_xyz import ts_vec_xyz
 
 
 def st_diff(r_mms, b_mms, lmn):

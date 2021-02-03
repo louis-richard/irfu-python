@@ -14,7 +14,9 @@
 
 import numpy as np
 
-from . import resample, ts_scalar, ts_vec_xyz
+from .resample import resample
+from .ts_scalar import ts_scalar
+from .ts_vec_xyz import ts_vec_xyz
 
 
 def edb(e, b0, angle_lim=20, flag_method="E.B=0"):

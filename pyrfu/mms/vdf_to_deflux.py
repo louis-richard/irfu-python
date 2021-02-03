@@ -33,7 +33,7 @@ def vdf_to_deflux(vdf):
     Returns
     -------
     out : xarray.Dataset
-        Time series of the 3D density energy flux with :
+        Time series of the 3D differential energy flux with :
             * time : Time samples.
             * data : 3D density energy flux.
             * energy : Energy levels.

@@ -14,7 +14,8 @@
 
 import numpy as np
 
-from . import resample, ts_scalar
+from .resample import resample
+from .ts_scalar import ts_scalar
 
 
 def dot(x, y):

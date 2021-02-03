@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from . import ts_vec_xyz
+from .ts_vec_xyz import ts_vec_xyz
 
 
 def cart2sph(inp, direction_flag=1):

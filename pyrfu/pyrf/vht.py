@@ -14,7 +14,8 @@
 
 import numpy as np
 
-from . import resample, e_vxb
+from .resample import resample
+from .e_vxb import e_vxb
 
 
 def vht(e, b, flag=1):

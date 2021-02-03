@@ -13,7 +13,6 @@
 # furnished to do so.
 
 import numpy as np
-import xarray as xr
 
 from pyrfu.mms import psd_rebin
 from pyrfu.pyrf import ts_skymap

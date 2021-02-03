@@ -16,7 +16,7 @@ import numpy as np
 
 from astropy import constants
 
-from ..pyrf.plasma_calc import plasma_calc
+from ..pyrf import plasma_calc
 
 
 def whistler_b2e(b2, freq, theta_k, b_mag, n_e):

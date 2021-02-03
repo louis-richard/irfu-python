@@ -18,7 +18,7 @@ import xarray as xr
 
 from astropy.time import Time
 
-from . import resample
+from .resample import resample
 
 
 def wavepolarize_means(b_wave, b_bgd, **kwargs):

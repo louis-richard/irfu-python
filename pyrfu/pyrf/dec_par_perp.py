@@ -14,7 +14,8 @@
 
 import numpy as np
 
-from . import resample, dot
+from .resample import resample
+from .dot import dot
 
 
 def dec_par_perp(inp, b0, flag_spin_plane=False):

@@ -17,14 +17,8 @@ import xarray as xr
 
 from astropy import constants
 
-from ..pyrf.filt import filt
-from ..pyrf.calc_dt import calc_dt
-from ..pyrf.resample import resample
-from ..pyrf.convert_fac import convert_fac
-from ..pyrf.ts_scalar import ts_scalar
-from ..pyrf.extend_tint import extend_tint
-from ..pyrf.time_clip import time_clip
-from ..pyrf.ts_vec_xyz import ts_vec_xyz
+from ..pyrf import (filt, calc_dt, resample, convert_fac, ts_scalar, extend_tint, time_clip,
+                    ts_vec_xyz)
 
 
 def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):

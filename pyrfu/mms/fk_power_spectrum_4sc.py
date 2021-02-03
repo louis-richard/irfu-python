@@ -16,10 +16,7 @@ import bisect
 import numpy as np
 import xarray as xr
 
-from ..pyrf.resample import resample
-from ..pyrf.avg_4sc import avg_4sc
-from ..pyrf.time_clip import time_clip
-from ..pyrf.wavelet import wavelet
+from ..pyrf import resample, avg_4sc, time_clip, wavelet
 
 
 def fk_power_spectrum_4sc(e, r, b, tints, cav=8, num_k=500, num_f=200, df=None,  w_width=1,

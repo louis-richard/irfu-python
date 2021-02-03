@@ -14,7 +14,8 @@
 
 import numpy as np
 
-from . import resample, ts_vec_xyz
+from .resample import resample
+from .ts_vec_xyz import ts_vec_xyz
 
 
 def e_vxb(v, b, flag="vxb"):

@@ -15,7 +15,9 @@
 import numpy as np
 import xarray as xr
 
-from . import resample, ts_vec_xyz, calc_fs
+from .resample import resample
+from .ts_vec_xyz import ts_vec_xyz
+from .calc_fs import calc_fs
 
 
 def convert_fac(inp, b_bgd, r=None):

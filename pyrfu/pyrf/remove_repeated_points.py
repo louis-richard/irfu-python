@@ -15,7 +15,8 @@
 import numpy as np
 import xarray as xr
 
-from . import ts_vec_xyz, ts_scalar
+from .ts_vec_xyz import ts_vec_xyz
+from .ts_scalar import ts_scalar
 
 
 def remove_repeated_points(inp):

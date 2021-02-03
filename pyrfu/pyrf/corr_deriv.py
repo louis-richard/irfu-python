@@ -16,7 +16,7 @@ import numpy as np
 
 from astropy.time import Time
 
-from . import find_closest
+from .find_closest import find_closest
 
 
 def corr_deriv(x1, x2, fla=False):

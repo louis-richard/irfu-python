@@ -14,7 +14,9 @@
 
 from ..mms import rotate_tensor
 
-from . import norm, resample, ts_scalar
+from .norm import norm
+from .resample import resample
+from .ts_scalar import ts_scalar
 
 
 def plasma_beta(b_xyz, p_xyz):

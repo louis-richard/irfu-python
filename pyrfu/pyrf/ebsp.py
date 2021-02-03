@@ -23,7 +23,14 @@ import sfs
 from tqdm import tqdm
 from astropy.time import Time
 
-from . import ts_time, ts_vec_xyz, resample, iso2unix, start, end, calc_fs, convert_fac
+from .ts_time import ts_time
+from .ts_vec_xyz import ts_vec_xyz
+from .resample import resample
+from .iso2unix import iso2unix
+from .start import start
+from .end import end
+from .calc_fs import calc_fs
+from .convert_fac import convert_fac
 
 
 def average_data(data, x, y, av_window=None):

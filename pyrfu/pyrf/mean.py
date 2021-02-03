@@ -15,7 +15,10 @@
 import numpy as np
 import xarray as xr
 
-from . import resample, cross, norm, ts_vec_xyz
+from .resample import resample
+from .cross import cross
+from .norm import norm
+from .ts_vec_xyz import ts_vec_xyz
 
 
 def mean(inp, r, b, z):

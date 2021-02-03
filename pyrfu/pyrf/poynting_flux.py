@@ -16,7 +16,12 @@ import numpy as np
 
 from astropy.time import Time
 
-from . import calc_fs, cross, dot, normalize, resample, time_clip
+from .calc_fs import calc_fs
+from .cross import cross
+from .dot import dot
+from .normalize import normalize
+from .resample import resample
+from .time_clip import time_clip
 
 
 def poynting_flux(e_xyz, b_xyz, b0):

@@ -22,12 +22,12 @@ from .spectr_to_dataset import spectr_to_dataset
 
 
 def dpflux_to_vdf(dpflux):
-    """Compute density particle flux from velocity distribution function.
+    """Compute differential particle flux from velocity distribution function.
 
     Parameters
     ----------
     dpflux : xarray.Dataset or xarray.DataArray
-        Time series of the density particle flux in 1/(cm^2 s sr keV).
+        Time series of the differential particle flux in 1/(cm^2 s sr keV).
 
     Returns
     -------
@@ -71,8 +71,8 @@ def dpflux_to_vdf(dpflux):
     data_r /= energy_mat
     tmp_data = np.reshape(data_r, tmp_data.shape)
 
-    dpflux = dpflux.copy()
-    dpflux.data.data = np.squeeze(tmp_data)
-    dpflux.attrs["UNITS"] = "s^3/m^6"
+    vdf = dpflux.copy()
+    vdf.data.data = np.squeeze(tmp_data)
+    vdf.attrs["UNITS"] = "s^3/m^6"
 
-    return dpflux
+    return vdf

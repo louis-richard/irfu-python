@@ -16,8 +16,9 @@ import numpy as np
 
 from astropy import constants
 
-from . import rotate_tensor
 from ..pyrf import resample, dec_par_perp, norm
+
+from . import rotate_tensor
 
 
 def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):

@@ -19,7 +19,7 @@ from astropy import constants
 
 
 def vdf_to_dpflux(vdf):
-    """Compute density particle flux from velocity distribution function.
+    """Compute differential particle flux from velocity distribution function.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def vdf_to_dpflux(vdf):
     Returns
     -------
     dpflux : xarray.Dataset
-        Time series of the 3D density particle flux with :
+        Time series of the 3D differential particle flux with :
             * time : Time samples.
             * data : 3D density particle flux.
             * energy : Energy levels.
@@ -81,6 +81,6 @@ def vdf_to_dpflux(vdf):
 
     dpflux = vdf.copy()
     dpflux.data.data = np.squeeze(tmp_data)
-    dpflux.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+    dpflux.attrs["UNITS"] = "1/(cm^2 s sr eV)"
 
     return dpflux
