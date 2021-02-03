@@ -21,7 +21,7 @@ from ..pyrf import resample, dec_par_perp, norm
 from . import rotate_tensor
 
 
-def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
+def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
     """
     Make a general bi-Maxwellian distribution function based on particle moment data in the same
     format as PDist.
@@ -37,8 +37,8 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
 
-    n : xarray.DataArray
-        Time series of the number density.
+    n_s : xarray.DataArray
+        Time series of the number density of specie s.
 
     v_xyz : xarray.DataArray
         Time series of the bulk velocity.
@@ -88,7 +88,7 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     vdf /= 1e18
 
     # Resample b_xyz and sc_pot to particle data resolution
-    b_xyz, sc_pot = [resample(b_xyz, n), resample(sc_pot, n)]
+    b_xyz, sc_pot = [resample(b_xyz, n_s), resample(sc_pot, n_s)]
 
     # Define directions based on b_xyz and v_xyz, calculate relevant temperatures
     t_xyzfac = rotate_tensor(t_xyz, "fac", b_xyz, "pp")  # N.B makes final distribution gyrotropic
@@ -100,7 +100,7 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     v_perp_dir, b_xyz_dir = [v_perp / v_perp_mag, b_xyz / b_xyz_mag]
 
     # Define constants
-    qe = constants.e.value
+    q_e = constants.e.value
 
     # Check whether particles are electrons or ions
     if vdf.attrs["species"].lower() == "e":
@@ -114,11 +114,11 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
         raise ValueError("Invalid specie")
 
     # Convert moments to SI units
-    vth_para = np.sqrt(2 * t_para * qe / p_mass)
+    vth_para = np.sqrt(2 * t_para * q_e / p_mass)
 
     v_perp_mag.data *= 1e3
     v_para.data *= 1e3
-    n.data *= 1e6
+    n_s.data *= 1e6
 
     # Defines dimensions of array below
     n_ti = len(vdf.time)
@@ -130,19 +130,19 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     energy = vdf.energy
 
     # Define Cartesian coordinates
-    x, y, z = [np.zeros((n_ti, n_ph, n_th)) for _ in range(3)]
+    time, phi, theta = [np.zeros((n_ti, n_ph, n_th)) for _ in range(3)]
 
-    r = np.zeros((n_ti, n_en))
+    r_mat = np.zeros((n_ti, n_en))
 
-    for ii in range(n_ti):
-        x[ii, ...] = np.outer(
-            -np.cos(vdf.phi.data[ii, :] * np.pi / 180) * np.sin(vdf.theta.data * np.pi / 180))
-        y[ii, ...] = np.outer(
-            -np.sin(vdf.phi.data[ii, :] * np.pi / 180) * np.sin(vdf.theta.data * np.pi / 180))
-        z[ii, ...] = np.outer(-np.ones(n_ph) * np.cos(vdf.theta.data * np.pi / 180))
-        r[ii, ...] = np.real(np.sqrt(2 * (energy[ii, :] - sc_pot.data[ii]) * qe / p_mass))
+    for i in range(n_ti):
+        time[i, ...] = np.outer(-np.cos(vdf.phi.data[i, :] * np.pi / 180)
+                                * np.sin(vdf.theta.data * np.pi / 180))
+        phi[i, ...] = np.outer(-np.sin(vdf.phi.data[i, :] * np.pi / 180)
+                               * np.sin(vdf.theta.data * np.pi / 180))
+        theta[i, ...] = np.outer(-np.ones(n_ph) * np.cos(vdf.theta.data * np.pi / 180))
+        r_mat[i, ...] = np.real(np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass))
 
-    r[r == 0] = 0.0
+    r_mat[r_mat == 0] = 0.0
 
     # Define rotation vectors based on B and Ve directions
     r_x, r_y, r_z = v_perp_dir.data, np.cross(b_xyz_dir.data, v_perp_dir.data), b_xyz_dir.data
@@ -150,10 +150,10 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     # Rotated coordinate system for computing bi-Maxwellian distribution
     x_p, y_p, z_p = [np.zeros((n_ti, n_ph, n_th)) for _ in range(3)]
 
-    for ii in range(n_ti):
-        x_p[ii, ...] = x[ii, ...] * r_x[ii, 0] + y[ii, ...] * r_x[ii, 1] + z[ii, ...] * r_x[ii, 2]
-        y_p[ii, ...] = x[ii, ...] * r_y[ii, 0] + y[ii, ...] * r_y[ii, 1] + z[ii, ...] * r_y[ii, 2]
-        z_p[ii, ...] = x[ii, ...] * r_z[ii, 0] + y[ii, ...] * r_z[ii, 1] + z[ii, ...] * r_z[ii, 2]
+    for i in range(n_ti):
+        x_p[i, ...] = time[i, ...] * r_x[i, 0] + phi[i, ...] * r_x[i, 1] + theta[i, ...] * r_x[i, 2]
+        y_p[i, ...] = time[i, ...] * r_y[i, 0] + phi[i, ...] * r_y[i, 1] + theta[i, ...] * r_y[i, 2]
+        z_p[i, ...] = time[i, ...] * r_z[i, 0] + phi[i, ...] * r_z[i, 1] + theta[i, ...] * r_z[i, 2]
 
     # Make 4D position matrix
     x_p = np.tile(x_p, [n_en, 1, 1, 1])
@@ -165,7 +165,7 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     z_p = np.tile(x_p, [n_en, 1, 1, 1])
     z_p = np.transpose(z_p, [1, 0, 2, 3])
 
-    r_mat = np.tile(r, [n_ph, n_th, 1, 1])
+    r_mat = np.tile(r_mat, [n_ph, n_th, 1, 1])
     r_mat = np.transpose(r_mat, [2, 3, 0, 1])
 
     # Can use 4D matrices. Too much memory is used for my computer; too slow for large files.
@@ -185,18 +185,18 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n, v_xyz, t_xyz):
     # Construct bi-Maxwellian distribution function
     bi_max_dist = np.zeros(r_mat.shape)
 
-    for ii in range(n_ti):
-        coeff = n.data[ii] * t_ratio.data[ii] / (np.sqrt(np.pi ** 3) * vth_para.data[ii] ** 3)
+    for i in range(n_ti):
+        coeff = n_s.data[i] * t_ratio.data[i] / (np.sqrt(np.pi ** 3) * vth_para.data[i] ** 3)
 
         bi_max_temp = coeff * np.exp(
-            -(x_p[ii, ...] * r_mat[ii, ...] - v_perp_mag.data[ii]) ** 2 / (vth_para.data[ii] ** 2) *
-            t_ratio.data[ii])
+            -(x_p[i, ...] * r_mat[i, ...] - v_perp_mag.data[i]) ** 2 / (vth_para.data[i] ** 2) *
+            t_ratio.data[i])
         bi_max_temp = bi_max_temp * np.exp(
-            -(y_p[ii, ...] * r_mat[ii, ...]) ** 2 / (vth_para.data[ii] ** 2) * t_ratio.data[ii])
+            -(y_p[i, ...] * r_mat[i, ...]) ** 2 / (vth_para.data[i] ** 2) * t_ratio.data[i])
         bi_max_temp = bi_max_temp * np.exp(
-            -(z_p[ii, ...] * r_mat[ii, ...] - v_para.data[ii]) ** 2 / (vth_para.data[ii] ** 2))
+            -(z_p[i, ...] * r_mat[i, ...] - v_para.data[i]) ** 2 / (vth_para.data[i] ** 2))
 
-        bi_max_dist[ii, ...] = bi_max_temp
+        bi_max_dist[i, ...] = bi_max_temp
 
     # Make modelPDist file for output
     model_vdf = vdf

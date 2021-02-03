@@ -17,7 +17,7 @@ import numpy as np
 import xarray as xr
 
 
-def t_eval(inp, t):
+def t_eval(inp, time):
     """Evaluates the input time series at the target time.
 
     Parameters
@@ -25,7 +25,7 @@ def t_eval(inp, t):
     inp : xarray.DataArray
         Time series if the input to evaluate.
 
-    t : ndarray
+    time : ndarray
         Times at which the input will be evaluated.
 
     Returns
@@ -35,16 +35,16 @@ def t_eval(inp, t):
 
     """
 
-    idx = np.zeros(len(t))
+    idx = np.zeros(len(time))
 
-    for i, time in enumerate(t):
+    for i, time in enumerate(time):
         idx[i] = bisect.bisect_left(inp.time.data, time)
 
     idx = idx.astype(int)
 
     if inp.ndim == 2:
-        out = xr.DataArray(inp.data[idx, :], coords=[t, inp.comp], dims=["time", "comp"])
+        out = xr.DataArray(inp.data[idx, :], coords=[time, inp.comp], dims=["time", "comp"])
     else:
-        out = xr.DataArray(inp.data[idx], coords=[t], dims=["time"])
+        out = xr.DataArray(inp.data[idx], coords=[time], dims=["time"])
 
     return out

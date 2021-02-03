@@ -42,12 +42,10 @@ def get_epochs(file, cdf_name, tint):
         Hash table with the data of the time and its meta-data.
 
     """
-    
-    out = {}
 
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
-    out["data"] = file.varget(depend0_key, starttime=tint[0], endtime=tint[1])
+    out = {"data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])}
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         out["data"] = cdfepoch.to_datetime(out["data"], to_np=True)

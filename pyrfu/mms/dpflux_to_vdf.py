@@ -16,7 +16,7 @@
 import numpy as np
 import xarray as xr
 
-from astropy import constants
+from scipy import constants
 
 from .spectr_to_dataset import spectr_to_dataset
 
@@ -40,14 +40,14 @@ def dpflux_to_vdf(dpflux):
         dpflux = spectr_to_dataset(dpflux)
 
     if dpflux.attrs["species"] in ["ions", "i"]:
-        mm = 1
+        mass_ratio = 1
     elif dpflux.attrs["species"] in ["electrons", "e"]:
-        mm = constants.m_e.value / constants.m_p.value
+        mass_ratio = constants.electron_mass / constants.proton_mass
     else:
         raise ValueError("Invalid specie")
 
     if dpflux.attrs["UNITS"] == "1/(cm^2 s sr keV)":
-        tmp_data = dpflux.data.data / 1e12 * 0.53707 * mm ** 2
+        tmp_data = dpflux.data.data / 1e12 * 0.53707 * mass_ratio ** 2
     else:
         raise ValueError("Invalid unit")
 

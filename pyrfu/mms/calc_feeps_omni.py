@@ -78,10 +78,10 @@ def calc_feeps_omni(inp_dataset):
         try:
             diff_en_ch = inp_dataset_clean_sun_removed[k].coords[
                 "Differential_energy_channels"].data
-            ie = np.where(np.abs(energies - diff_en_ch) > en_chk * energies)
+            energy_indices = np.where(np.abs(energies - diff_en_ch) > en_chk * energies)
 
-            if ie[0].size != 0:
-                d_all_eyes[:, ie[0], i] = np.nan
+            if energy_indices[0].size != 0:
+                d_all_eyes[:, energy_indices[0], i] = np.nan
 
         except Warning:
             print('NaN in energy table encountered; sensor T{}'.format(k))
@@ -92,9 +92,9 @@ def calc_feeps_omni(inp_dataset):
 
     flux_omni *= g_fact[var["dtype"][0]][var["mmsId"]-1]
 
-    t, attrs = inp_dataset_clean_sun_removed.time.data
+    time, attrs = inp_dataset_clean_sun_removed.time.data
     attrs = inp_dataset_clean_sun_removed[eye_list[0]].attrs
 
-    out = xr.DataArray(flux_omni, coords=[t, energies], dims=["time", "energy"], attrs=attrs)
+    out = xr.DataArray(flux_omni, coords=[time, energies], dims=["time", "energy"], attrs=attrs)
 
     return out

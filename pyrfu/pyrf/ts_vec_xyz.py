@@ -15,12 +15,12 @@
 import xarray as xr
 
 
-def ts_vec_xyz(t, data, attrs=None):
+def ts_vec_xyz(time, data, attrs=None):
     """Create a time series containing a 1st order tensor.
 
     Parameters
     ----------
-    t : ndarray
+    time : ndarray
         Array of times.
 
     data : ndarray
@@ -38,7 +38,7 @@ def ts_vec_xyz(t, data, attrs=None):
 
     assert data.ndim == 2 and data.shape[1] == 3
 
-    if len(t) != len(data):
+    if len(time) != len(data):
         raise IndexError("Time and data must have the same length")
 
     flag_attrs = True
@@ -46,7 +46,7 @@ def ts_vec_xyz(t, data, attrs=None):
     if attrs is None:
         flag_attrs = False
 
-    out = xr.DataArray(data, coords=[t[:], ["x", "y", "z"]], dims=["time", "comp"])
+    out = xr.DataArray(data, coords=[time[:], ["x", "y", "z"]], dims=["time", "comp"])
 
     if flag_attrs:
         out.attrs = attrs

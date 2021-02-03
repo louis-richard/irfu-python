@@ -14,21 +14,21 @@
 
 import numpy as np
 
-from astropy import constants
+from scipy import constants
 
 
-def dynamic_press(n, v, s="i"):
+def dynamic_press(n_s, v_xyz, specie="i"):
     """Computes dynamic pressure.
 
     Parameters
     ----------
-    n : xarray.DataArray
+    n_s : xarray.DataArray
         Time series of the number density of the specie.
 
-    v : xarray.DataArray
+    v_xyz : xarray.DataArray
         Time series of the bulk velocity of the specie.
 
-    s : str {"i", "e"}, optional
+    specie : str {"i", "e"}, optional
         Specie. default "i".
 
     Returns
@@ -60,17 +60,17 @@ def dynamic_press(n, v, s="i"):
 
     Compute dynamic pressure
 
-    >>> p = pyrf.dynamic_press(n_i, v_xyz_i, s="i")
+    >>> p = pyrf.dynamic_press(n_i, v_xyz_i, specie="i")
 
     """
 
-    if s == "i":
-        m = constants.m_p.value
-    elif s == "e":
-        m = constants.m_e.value
+    if specie == "i":
+        mass = constants.proton_mass
+    elif specie == "e":
+        mass = constants.electron_mass
     else:
         raise ValueError("Unknown specie")
 
-    p_dyn = n * m * np.linalg.norm(v, axis=0) ** 2
+    p_dyn = n_s * mass * np.linalg.norm(v_xyz, axis=0) ** 2
 
     return p_dyn

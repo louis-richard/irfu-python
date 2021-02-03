@@ -15,7 +15,7 @@
 
 import numpy as np
 
-from astropy import constants
+from scipy import constants
 
 
 def vdf_to_dpflux(vdf):
@@ -44,18 +44,18 @@ def vdf_to_dpflux(vdf):
     """
 
     if vdf.attrs["species"] in ["ions", "i"]:
-        mm = 1
+        mass_ratio = 1
     elif vdf.attrs["species"] in ["electrons", "e"]:
-        mm = constants.m_e.value / constants.m_p.value
+        mass_ratio = constants.electron_mass / constants.proton_mass
     else:
         raise ValueError("Invalid specie")
 
     if vdf.attrs["UNITS"].lower() == "s^3/cm^6":
-        tmp_data = vdf.data.data * 1e30 / (1e6 * 0.53707 * mm ** 2)
+        tmp_data = vdf.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio ** 2)
     elif vdf.attrs["UNITS"].lower() == "s^3/m^6":
-        tmp_data = vdf.data.data * 1e18 / (1e6 * 0.53707 * mm ** 2)
+        tmp_data = vdf.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio ** 2)
     elif vdf.attrs["UNITS"].lower() == "s^3/km^6":
-        tmp_data = vdf.data.data / (1e6 * 0.53707 * mm ** 2)
+        tmp_data = vdf.data.data / (1e6 * 0.53707 * mass_ratio ** 2)
     else:
         raise ValueError("Invalid unit")
 

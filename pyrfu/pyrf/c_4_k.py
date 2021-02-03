@@ -41,12 +41,12 @@ def c_4_k(r_list):
 
     k_list = [r_list[0].copy()] * 4
 
-    for i, j, k, l in zip(mms_list, np.roll(mms_list, 1), np.roll(mms_list, 2),
+    for i, j, k, m in zip(mms_list, np.roll(mms_list, 1), np.roll(mms_list, 2),
                           np.roll(mms_list, 3)):
-        cc = cross(r_list[k]-r_list[j], r_list[l]-r_list[j])
+        dr_jk_x_dr_jm = cross(r_list[k]-r_list[j], r_list[m]-r_list[j])
 
         dr12 = r_list[i]-r_list[j]
 
-        k_list[i] = cc/dot(cc, dr12)
+        k_list[i] = dr_jk_x_dr_jm / dot(dr_jk_x_dr_jm, dr12)
 
     return k_list

@@ -17,7 +17,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 
-def estimate_phase_speed(f_k_power, f, k, f_min=100.):
+def estimate_phase_speed(f_k_power, freq, k, f_min=100.):
     """Simple function to estimate the phase speed from the frequency wave number power spectrum.
     Fits :math:`f = v k/ 2 \\pi` to the power spectrum.
 
@@ -26,7 +26,7 @@ def estimate_phase_speed(f_k_power, f, k, f_min=100.):
     f_k_power : ndarray
         2D array of powers.
 
-    f : ndarray
+    freq : ndarray
         1D array of frequencies.
 
     k : ndarray
@@ -56,14 +56,14 @@ def estimate_phase_speed(f_k_power, f, k, f_min=100.):
     k_max = 2.0 * np.max(k) / 3.0
     power_temp = f_k_power
     rm_k = np.where(abs(k) > k_max)
-    rm_f = np.where(f < f_min)
+    rm_f = np.where(freq < f_min)
 
     power_temp[:, rm_k] = 0.0
     power_temp[rm_f, :] = 0.0
     power_temp[np.isnan(power_temp)] = 0.0
 
     # Find position of maximum power to guess vph
-    [k_mat, f_mat] = np.meshgrid(k, f)
+    [k_mat, f_mat] = np.meshgrid(k, freq)
     max_pos = np.unravel_index(np.argmax(power_temp), power_temp.shape)
 
     max_f, max_k = [f_mat[max_pos], k_mat[max_pos]]
@@ -87,11 +87,11 @@ def estimate_phase_speed(f_k_power, f, k, f_min=100.):
     f_power2 = []
     k_power2 = []
 
-    for ii, pp in enumerate(p_power):
-        if np.abs(vph_range[0]) < np.abs(f_power[ii] / k_power[ii]) < np.abs(vph_range[1]):
-            p_power2.append(pp)
-            f_power2.append(f_power[ii])
-            k_power2.append(k_power[ii])
+    for i, p in enumerate(p_power):
+        if np.abs(vph_range[0]) < np.abs(f_power[i] / k_power[i]) < np.abs(vph_range[1]):
+            p_power2.append(p)
+            f_power2.append(f_power[i])
+            k_power2.append(k_power[i])
 
     p_power2, f_power2, k_power2 = [np.array(p_power2), np.array(f_power2), np.array(k_power2)]
 

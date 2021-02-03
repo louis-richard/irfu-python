@@ -15,19 +15,19 @@
 import numpy as np
 
 
-def solid_angle(x, y, z):
+def solid_angle(inp0, inp1, inp2):
     """Calculates the solid angle of three vectors making up a triangle in a unit sphere with the
     sign taken into account.
 
     Parameters
     ----------
-    x : ndarray
+    inp0 : ndarray
         First vector.
 
-    y : ndarray
+    inp1 : ndarray
         Second vector.
 
-    z : ndarray
+    inp2 : ndarray
         Third vector.
 
     Returns
@@ -38,9 +38,9 @@ def solid_angle(x, y, z):
     """
 
     # Calculate the smaller angles between the vectors around origin
-    a = np.arccos(np.sum(z * y))
-    b = np.arccos(np.sum(x * z))
-    c = np.arccos(np.sum(y * x))
+    a = np.arccos(np.sum(inp2 * inp1))
+    b = np.arccos(np.sum(inp0 * inp2))
+    c = np.arccos(np.sum(inp1 * inp0))
 
     # Calculate the angles in the spherical triangle (Law of Cosines)
     u = np.arccos((np.cos(a) - np.cos(b) * np.cos(c)) / (np.sin(b) * np.sin(c)))
@@ -50,8 +50,8 @@ def solid_angle(x, y, z):
     # Calculates the Surface area on the unit sphere (solid angle)
     angle = (u + v + w - np.pi)
     # Calculate the sign of the area
-    var = np.cross(z, y)
-    div = np.sum(var * x)
+    var = np.cross(inp2, inp1)
+    div = np.sum(var * inp0)
     sgn = np.sign(div)
 
     # Solid angle with sign taken into account

@@ -15,12 +15,12 @@
 import xarray as xr
 
 
-def ts_scalar(t, data, attrs=None):
+def ts_scalar(time, data, attrs=None):
     """Create a time series containing a 0th order tensor
 
     Parameters
     ----------
-    t : ndarray
+    time : ndarray
         Array of times.
 
     data : ndarray
@@ -39,7 +39,7 @@ def ts_scalar(t, data, attrs=None):
     if data.ndim != 1:
         raise TypeError("Input must be a scalar")
 
-    if len(t) != len(data):
+    if len(time) != len(data):
         raise IndexError("Time and data must have the same length")
 
     flag_attrs = True
@@ -47,7 +47,7 @@ def ts_scalar(t, data, attrs=None):
     if attrs is None:
         flag_attrs = False
 
-    out = xr.DataArray(data, coords=[t[:]], dims="time")
+    out = xr.DataArray(data, coords=[time[:]], dims="time")
 
     if flag_attrs:
         out.attrs = attrs

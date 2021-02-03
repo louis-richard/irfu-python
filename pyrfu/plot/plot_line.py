@@ -35,24 +35,24 @@ default_cycler = cycler(color=color)
 plt.rc('axes', prop_cycle=default_cycler)
 
 
-def plot_line(ax=None, inp=None, **kwargs):
+def plot_line(axis=None, inp=None, **kwargs):
     """Line plot of time series.
 
     Parameters
     ----------
-    ax : to fill
+    axis : to fill
         Axis
 
     inp : xarray.DataArray
         Time series to plot
 
-    c : str
-        Options
+    kwargs : dict
+        See plot docs
 
     """
 
-    if ax is None:
-        _, ax = plt.subplots(1)
+    if axis is None:
+        _, axis = plt.subplots(1)
 
     if len(inp.shape) == 3:
         data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
@@ -60,9 +60,9 @@ def plot_line(ax=None, inp=None, **kwargs):
         data = inp.data
 
     time = inp.time
-    ax.plot(time, data, **kwargs)
-    ax.xaxis.set_major_formatter(date_form)
-    ax.grid(True, which="major", linestyle="-", linewidth="0.5", c="0.5")
+    axis.plot(time, data, **kwargs)
+    axis.xaxis.set_major_formatter(date_form)
+    axis.grid(True, which="major", linestyle="-", linewidth="0.5", c="0.5")
     # ax.grid(which="minor",linestyle="-",linewidth="0.25")
 
-    return ax
+    return axis

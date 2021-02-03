@@ -18,15 +18,15 @@ from .resample import resample
 from .ts_scalar import ts_scalar
 
 
-def dot(x, y):
+def dot(inp1, inp2):
     """Computes dot product of two fields.
 
     Parameters
     ----------
-    x : xarray.DataArray
+    inp1 : xarray.DataArray
         Time series of the first field X.
 
-    y : xarray.DataArray
+    inp2 : xarray.DataArray
         Time series of the second field Y.
 
     Returns
@@ -65,12 +65,12 @@ def dot(x, y):
     """
 
     # Resample to first input sampling
-    y = resample(y, x)
+    inp2 = resample(inp2, inp1)
 
     # Compute scalar product
-    out_data = np.sum(x.data * y.data, axis=1)
+    out_data = np.sum(inp1.data * inp2.data, axis=1)
 
     # Output to xarray
-    out = ts_scalar(x.time.data, out_data)
+    out = ts_scalar(inp1.time.data, out_data)
 
     return out

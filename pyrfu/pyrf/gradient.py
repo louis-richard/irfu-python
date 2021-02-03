@@ -54,9 +54,9 @@ def gradient(inp):
     """
 
     # guess time step
-    dt = calc_dt(inp)
+    delta_t = calc_dt(inp)
 
-    d_inp_dt = np.gradient(inp.data, axis=0) / dt
+    d_inp_dt = np.gradient(inp.data, axis=0) / delta_t
 
     out = xr.DataArray(d_inp_dt, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
 

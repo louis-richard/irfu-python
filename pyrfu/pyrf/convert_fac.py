@@ -20,7 +20,7 @@ from .ts_vec_xyz import ts_vec_xyz
 from .calc_fs import calc_fs
 
 
-def convert_fac(inp, b_bgd, r=None):
+def convert_fac(inp, b_bgd, r_xyz=None):
     """
     Transforms to a field-aligned coordinate (FAC) system defined as :
         * R_parallel_z aligned with the background magnetic field
@@ -38,7 +38,7 @@ def convert_fac(inp, b_bgd, r=None):
     b_bgd : xarray.DataArray
         Time series of the background magnetic field.
 
-    r : xarray.DataArray or ndarray or list
+    r_xyz : xarray.DataArray or ndarray or list
         Position vector of spacecraft.
 
     Returns
@@ -74,30 +74,30 @@ def convert_fac(inp, b_bgd, r=None):
 
     """
 
-    if r is None:
-        r = np.array([1, 0, 0])
+    if r_xyz is None:
+        r_xyz = np.array([1, 0, 0])
 
     if len(inp) != len(b_bgd):
         options = dict(fs=calc_fs(inp))
         b_bgd = resample(b_bgd, inp, **options)
 
-    t, inp_data = [inp.time.data, inp.data]
+    time, inp_data = [inp.time.data, inp.data]
 
     # Normalize background magnetic field
-    bn = b_bgd / np.linalg.norm(b_bgd, axis=1, keepdims=True)
+    b_hat = b_bgd / np.linalg.norm(b_bgd, axis=1, keepdims=True)
 
-    if isinstance(r, (list, np.ndarray)) and len(r) == 3:
-        r = np.tile(r, (len(b_bgd), 1))
-    elif isinstance(r, xr.DataArray):
-        r = resample(r, b_bgd)
+    if isinstance(r_xyz, (list, np.ndarray)) and len(r_xyz) == 3:
+        r_xyz = np.tile(r_xyz, (len(b_bgd), 1))
+    elif isinstance(r_xyz, xr.DataArray):
+        r_xyz = resample(r_xyz, b_bgd)
     else:
         raise TypeError("Invalid type of spacecraft position")
 
     # Parallel
-    r_par = bn
+    r_par = b_hat
 
     # Perpendicular
-    r_perp_y = np.cross(r_par, r, axis=1)
+    r_perp_y = np.cross(r_par, r_xyz, axis=1)
     r_perp_y /= np.linalg.norm(r_perp_y, axis=1, keepdims=True)
     r_perp_x = np.cross(r_perp_y, b_bgd, axis=1)
     r_perp_x /= np.linalg.norm(r_perp_x, axis=1, keepdims=True)
@@ -112,17 +112,15 @@ def convert_fac(inp, b_bgd, r=None):
         out_data[:, 2] = np.sum(r_par * inp_data, axis=1)
 
         # xarray
-        out = xr.DataArray(out_data, coords=[t, inp.comp], dims=["time", "comp"])
+        out = xr.DataArray(out_data, coords=[time, inp.comp], dims=["time", "comp"])
 
     elif n_dim == 1:
         out_data = np.zeros([3, n_data])
 
-        out_data[:, 0] = inp[:, 0] * (
-                    r_perp_x[:, 0] * r[:, 0] + r_perp_x[:, 1] * r[:, 1] + r_perp_x[:, 2] * r[:, 2])
-        out_data[:, 1] = inp[:, 0] * (
-                    r_par[:, 0] * r[:, 0] + r_par[:, 1] * r[:, 1] + r_par[:, 2] * r[:, 2])
+        out_data[:, 0] = inp[:, 0] * np.sum(r_perp_x * r_xyz, axis=1)
+        out_data[:, 1] = inp[:, 0] * np.sum(r_par * r_xyz, axis=1)
 
-        out = ts_vec_xyz(t, out_data, attrs=inp.attrs)
+        out = ts_vec_xyz(time, out_data, attrs=inp.attrs)
     else:
         raise TypeError("Invalid dimension of inp")
 

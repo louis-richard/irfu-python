@@ -16,12 +16,12 @@ import numpy as np
 import xarray as xr
 
 
-def ts_skymap(t, data, energy, phi, theta, **kwargs):
+def ts_skymap(time, data, energy, phi, theta, **kwargs):
     """Creates a skymap of the distribution function.
 
     Parameters
     ----------
-    t : ndarray
+    time : ndarray
         List of times.
 
     data : ndarray
@@ -84,10 +84,10 @@ def ts_skymap(t, data, energy, phi, theta, **kwargs):
         energy0_ok, energy1_ok, esteptable_ok = [False] * 3
 
     if phi.ndim == 1:
-        phi = np.tile(phi, (len(t), 1))
+        phi = np.tile(phi, (len(time), 1))
 
     out_dict = {"data": (["time", "idx0", "idx1", "idx2"], data), "phi": (["time", "idx1"], phi),
-                "theta": (["idx2"], theta), "energy": (["time", "idx0"], energy), "time": t,
+                "theta": (["idx2"], theta), "energy": (["time", "idx0"], energy), "time": time,
                 "idx0": np.arange(energy.shape[1]),
                 "idx1": np.arange(phi.shape[1]), "idx2": np.arange(len(theta))}
 

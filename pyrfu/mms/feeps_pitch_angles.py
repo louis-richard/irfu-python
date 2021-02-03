@@ -79,27 +79,27 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     # Top:
     vt_bcs, vb_bcs = [{}, {}]
 
-    for s in telescope_map["top-{}".format(var["dtype"])]:
-        s = str(s)
+    for i in telescope_map["top-{}".format(var["dtype"])]:
+        i = str(i)
 
-        vt_bcs[s] = [
-                     -1. * (t_top[0][0] * v_fcs[s][0] + t_top[0][1] * v_fcs[s][1] + t_top[0][2] *
-                            v_fcs[s][2]),
-                     -1. * (t_top[1][0] * v_fcs[s][0] + t_top[1][1] * v_fcs[s][1] + t_top[1][2] *
-                            v_fcs[s][2]),
-                     -1. * (t_top[2][0] * v_fcs[s][0] + t_top[2][1] * v_fcs[s][1] + t_top[2][2] *
-                            v_fcs[s][2])]
+        vt_bcs[i] = [
+                     -1. * (t_top[0][0] * v_fcs[i][0] + t_top[0][1] * v_fcs[i][1] + t_top[0][2] *
+                            v_fcs[i][2]),
+                     -1. * (t_top[1][0] * v_fcs[i][0] + t_top[1][1] * v_fcs[i][1] + t_top[1][2] *
+                            v_fcs[i][2]),
+                     -1. * (t_top[2][0] * v_fcs[i][0] + t_top[2][1] * v_fcs[i][1] + t_top[2][2] *
+                            v_fcs[i][2])]
 
-    for s in telescope_map["bottom-{}".format(var["dtype"])]:
-        s = str(s)
+    for i in telescope_map["bottom-{}".format(var["dtype"])]:
+        i = str(i)
 
-        vb_bcs[s] = [
-                     -1. * (t_bot[0][0] * v_fcs[s][0] + t_bot[0][1] * v_fcs[s][1] + t_bot[0][2] *
-                            v_fcs[s][2]),
-                     -1. * (t_bot[1][0] * v_fcs[s][0] + t_bot[1][1] * v_fcs[s][1] + t_bot[1][2] *
-                            v_fcs[s][2]),
-                     -1. * (t_bot[2][0] * v_fcs[s][0] + t_bot[2][1] * v_fcs[s][1] + t_bot[2][2] *
-                            v_fcs[s][2])]
+        vb_bcs[i] = [
+                     -1. * (t_bot[0][0] * v_fcs[i][0] + t_bot[0][1] * v_fcs[i][1] + t_bot[0][2] *
+                            v_fcs[i][2]),
+                     -1. * (t_bot[1][0] * v_fcs[i][0] + t_bot[1][1] * v_fcs[i][1] + t_bot[1][2] *
+                            v_fcs[i][2]),
+                     -1. * (t_bot[2][0] * v_fcs[i][0] + t_bot[2][1] * v_fcs[i][1] + t_bot[2][2] *
+                            v_fcs[i][2])]
 
     telescopes = np.hstack([telescope_map["bottom-{}".format(var["dtype"])],
                             telescope_map["top-{}".format(var["dtype"])]])

@@ -18,15 +18,15 @@ import xarray as xr
 from scipy import optimize
 
 
-def calc_disprel_tm(v, v_err, tau, tau_err):
+def calc_disprel_tm(vel, vel_err, tau, tau_err):
     """Computes dispersion relation from velocities and period given by the timing method.
 
     Parameters
     ----------
-    v : xarray.DataArray
+    vel : xarray.DataArray
         Time series of the velocities.
 
-    v_err : xarray.DataArray
+    vel_err : xarray.DataArray
         Time series of the error on velocities.
 
     tau : xarray.DataArray
@@ -48,23 +48,23 @@ def calc_disprel_tm(v, v_err, tau, tau_err):
     """
 
     # Frequency, wavelength, wave number
-    omega, lamb, k = [2 * np.pi / tau.data, v * tau.data, 2 * np.pi/(v * tau.data)]
+    omega, lamb, k = [2 * np.pi / tau.data, vel * tau.data, 2 * np.pi / (vel * tau.data)]
 
     # Estimate propagation of the errors
     # Error on frequency
     omega_err = omega*((tau_err / tau) / (1 + tau_err / tau))
 
     # Error on wavelength
-    lamb_err = v_err * tau
+    lamb_err = vel_err * tau
 
     # Error on wave number
     k_err = k*((lamb_err/lamb)/(1+lamb_err/lamb))
 
-    def model_tau_v(x, a):
-        return a / x
+    def model_tau_v(period, numerator):
+        return numerator / period
 
-    fit_tau_v, cov_tau_v = optimize.curve_fit(model_tau_v, tau, v, 1,
-                                              sigma=np.sqrt(v_err ** 2 + tau_err ** 2))
+    fit_tau_v, cov_tau_v = optimize.curve_fit(model_tau_v, tau, vel, 1,
+                                              sigma=np.sqrt(vel_err ** 2 + tau_err ** 2))
     sigma_tau_v = np.sqrt(np.diagonal(cov_tau_v))
 
     # High resolution prediction
@@ -75,8 +75,8 @@ def calc_disprel_tm(v, v_err, tau, tau_err):
     bound_upper_v = model_tau_v(hires_tau, *(fit_tau_v + 1.96*sigma_tau_v))
     bound_lower_v = model_tau_v(hires_tau, *(fit_tau_v - 1.96*sigma_tau_v))
 
-    def model_k_w(x, a):
-        return a * x
+    def model_k_w(wavenumber, factor):
+        return factor * wavenumber
 
     fit, cov = optimize.curve_fit(model_k_w, k, omega, 1,
                                   sigma=np.sqrt(omega_err ** 2 + k_err ** 2))
@@ -90,8 +90,8 @@ def calc_disprel_tm(v, v_err, tau, tau_err):
     bound_upper_w = model_k_w(hires_k, *(fit + 1.96 * sigma_k_w))
     bound_lower_w = model_k_w(hires_k, *(fit - 1.96 * sigma_k_w))
 
-    out_dict = {'tau': tau, 'tau_err': (["tau"], tau_err), 'v': (["tau"], v),
-                'v_err': (["tau"], v_err),
+    out_dict = {'tau': tau, 'tau_err': (["tau"], tau_err), 'v': (["tau"], vel),
+                'v_err': (["tau"], vel_err),
                 'lamb': (["tau"], lamb),
                 'lamb_err': (["tau"], lamb_err), 'k': k, 'k_err': (["k"], k_err),
                 'omega': (["k"], omega),

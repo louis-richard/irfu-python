@@ -61,8 +61,8 @@ def current_location(time, view="xy", path=".", show=False):
     # Download image
     response = requests.get(img_url, stream=True)
 
-    with open(img_path, "wb") as f:
-        shutil.copyfileobj(response.raw, f)
+    with open(img_path, "wb") as file:
+        shutil.copyfileobj(response.raw, file)
 
     del response
 

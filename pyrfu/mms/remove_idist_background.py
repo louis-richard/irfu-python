@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from astropy import constants
+from scipy import constants
 
 from ..pyrf import ts_tensor_xyz
 
@@ -57,7 +57,7 @@ def remove_idist_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
 
     """
 
-    mp = constants.m_p.value
+    m_p = constants.proton_mass
 
     # Number density
     n_i_new = n_i - n_bg_i.data
@@ -72,37 +72,37 @@ def remove_idist_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     # P_xx_i
     p_gse_i_new_data[:, 0, 0] += p_gse_i.data[:, 0, 0]
     p_gse_i_new_data[:, 0, 0] -= p_bg_i.data
-    p_gse_i_new_data[:, 0, 0] += mp * n_i.data * v_gse_i.data[:, 0] * v_gse_i.data[:, 0]
-    p_gse_i_new_data[:, 0, 0] -= mp * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 0]
+    p_gse_i_new_data[:, 0, 0] += m_p * n_i.data * v_gse_i.data[:, 0] * v_gse_i.data[:, 0]
+    p_gse_i_new_data[:, 0, 0] -= m_p * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 0]
 
     # P_yy_i
     p_gse_i_new_data[:, 1, 1] += p_gse_i.data[:, 1, 1]
     p_gse_i_new_data[:, 1, 1] -= p_bg_i.data
-    p_gse_i_new_data[:, 1, 1] += mp * n_i.data * v_gse_i.data[:, 1] * v_gse_i.data[:, 1]
-    p_gse_i_new_data[:, 1, 1] -= mp * n_i_new.data * v_gse_i_new.data[:, 1] * v_gse_i_new.data[:, 1]
+    p_gse_i_new_data[:, 1, 1] += m_p * n_i.data * v_gse_i.data[:, 1] * v_gse_i.data[:, 1]
+    p_gse_i_new_data[:, 1, 1] -= m_p * n_i_new.data * v_gse_i_new.data[:, 1] * v_gse_i_new.data[:, 1]
 
     # P_zz_i
     p_gse_i_new_data[:, 2, 2] += p_gse_i.data[:, 2, 2]
     p_gse_i_new_data[:, 2, 2] -= p_bg_i.data
-    p_gse_i_new_data[:, 2, 2] += mp * n_i.data * v_gse_i.data[:, 2] * v_gse_i.data[:, 2]
-    p_gse_i_new_data[:, 2, 2] -= mp * n_i_new.data * v_gse_i_new.data[:, 2] * v_gse_i_new.data[:, 2]
+    p_gse_i_new_data[:, 2, 2] += m_p * n_i.data * v_gse_i.data[:, 2] * v_gse_i.data[:, 2]
+    p_gse_i_new_data[:, 2, 2] -= m_p * n_i_new.data * v_gse_i_new.data[:, 2] * v_gse_i_new.data[:, 2]
 
     # P_xy_i & P_yx_i
     p_gse_i_new_data[:, 0, 1] += p_gse_i.data[:, 0, 1]
-    p_gse_i_new_data[:, 0, 1] += mp * n_i.data * v_gse_i.data[:, 0] * v_gse_i.data[:, 1]
-    p_gse_i_new_data[:, 0, 1] -= mp * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 1]
+    p_gse_i_new_data[:, 0, 1] += m_p * n_i.data * v_gse_i.data[:, 0] * v_gse_i.data[:, 1]
+    p_gse_i_new_data[:, 0, 1] -= m_p * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 1]
     p_gse_i_new_data[:, 1, 0] = p_gse_i_new_data[:, 0, 1]
 
     # P_xz_i & P_zx_i
     p_gse_i_new_data[:, 0, 2] += p_gse_i.data[:, 0, 2]
-    p_gse_i_new_data[:, 0, 2] += mp * n_i.data*v_gse_i.data[:, 0] * v_gse_i.data[:, 2]
-    p_gse_i_new_data[:, 0, 2] -= mp * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 2]
+    p_gse_i_new_data[:, 0, 2] += m_p * n_i.data*v_gse_i.data[:, 0] * v_gse_i.data[:, 2]
+    p_gse_i_new_data[:, 0, 2] -= m_p * n_i_new.data * v_gse_i_new.data[:, 0] * v_gse_i_new.data[:, 2]
     p_gse_i_new_data[:, 2, 0] = p_gse_i_new_data[:, 0, 2]
 
     # P_yz_i & P_zy_i
     p_gse_i_new_data[:, 1, 2] += p_gse_i.data[:, 1, 2]
-    p_gse_i_new_data[:, 1, 2] += mp * n_i.data * v_gse_i.data[:, 1] * v_gse_i.data[:, 2]
-    p_gse_i_new_data[:, 1, 2] -= mp * n_i_new.data * v_gse_i_new.data[:, 1] * v_gse_i_new.data[:, 2]
+    p_gse_i_new_data[:, 1, 2] += m_p * n_i.data * v_gse_i.data[:, 1] * v_gse_i.data[:, 2]
+    p_gse_i_new_data[:, 1, 2] -= m_p * n_i_new.data * v_gse_i_new.data[:, 1] * v_gse_i_new.data[:, 2]
     p_gse_i_new_data[:, 2, 1] = p_gse_i_new_data[:, 1, 2]
 
     p_gse_i_new = ts_tensor_xyz(p_gse_i.time.data, p_gse_i_new_data)

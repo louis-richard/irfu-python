@@ -62,12 +62,12 @@ def integrate(inp, time_step):
     data_tmp = inp.data
     unit_tmp = inp.attrs["UNITS"]
 
-    x = np.hstack([time_tmp, data_tmp])
+    data = np.hstack([time_tmp, data_tmp])
 
-    dt = np.hstack([0, np.diff(x[:, 0])])
+    delta_t = np.hstack([0, np.diff(data[:, 0])])
 
     if time_step is None:
-        time_steps = np.diff(x[:, 0])
+        time_steps = np.diff(data[:, 0])
 
         ind_min = np.argmin(time_steps)
 
@@ -76,15 +76,15 @@ def integrate(inp, time_step):
 
         time_step = np.min(time_steps)
 
-    dt[dt > 3 * time_step] = 0
+    delta_t[delta_t > 3 * time_step] = 0
 
-    x_int = x
+    x_int = data
     for j in range(1, x_int.shape[1]):
         j_ok = ~np.isnan(x_int[:, j])
 
-        x_int[j_ok, j] = np.cumsum(x[j_ok, j] * dt[j_ok])
+        x_int[j_ok, j] = np.cumsum(data[j_ok, j] * delta_t[j_ok])
 
-    out = xr.DataArray(x[:, 1:], coords=inp.coords, dims=inp.dims)
+    out = xr.DataArray(data[:, 1:], coords=inp.coords, dims=inp.dims)
     out.attrs["UNITS"] = unit_tmp + "*s"
 
     return out

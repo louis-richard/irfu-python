@@ -17,12 +17,12 @@ import numpy as np
 from scipy import signal
 
 
-def wave_fft(x, window, frame_overlap=10., frame_length=20., fs=None):
+def wave_fft(inp, window, frame_overlap=10., frame_length=20., f_sampling=None):
     """Short-Time Fourier Transform.
 
     Parameters
     ----------
-    x : xarray.DataArray
+    inp : xarray.DataArray
         Time series of the one dimension data.
 
     window : str
@@ -34,30 +34,31 @@ def wave_fft(x, window, frame_overlap=10., frame_length=20., fs=None):
     frame_length : float
         Length of each frame in second.
 
-    fs : float
+    f_sampling : float
         Sampling frequency.
 
     Returns
     -------
-    s : ndarray
+    spectrogram : ndarray
         Spectrogram of x.
 
-    t : ndarray
+    time : ndarray
         Value corresponds to the center of each frame (x-axis) in sec.
 
-    f : ndarray
+    frequencies : ndarray
         Vector of frequencies (y-axis) in Hz.
 
     """
 
-    if fs is None:
-        dt = np.median(np.diff(x.time.data).astype(float)) * 1e-9
-        fs = 1 / dt
+    if f_sampling is None:
+        delta_t = np.median(np.diff(inp.time.data).astype(float)) * 1e-9
+        f_sampling = 1 / delta_t
 
-    n_per_seg = np.round(frame_length * fs).astype(int)  # convert ms to points
-    n_overlap = np.round(frame_overlap * fs).astype(int)  # convert ms to points
+    n_per_seg = np.round(frame_length * f_sampling).astype(int)  # convert ms to points
+    n_overlap = np.round(frame_overlap * f_sampling).astype(int)  # convert ms to points
 
-    options = dict(fs=fs, window=window, nperseg=n_per_seg, noverlap=n_overlap, mode='complex')
-    f, t, s = signal.spectrogram(x, **options)
+    options = dict(fs=f_sampling, window=window, nperseg=n_per_seg, noverlap=n_overlap,
+                   mode='complex')
+    frequencies, time, spectrogram = signal.spectrogram(inp, **options)
 
-    return f, t, s
+    return frequencies, time, spectrogram

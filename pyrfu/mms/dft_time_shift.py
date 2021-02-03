@@ -44,23 +44,23 @@ def dft_time_shift(inp, tau):
     time, sig = [inp.time.data, inp.data]
 
     # Sampling frequency
-    fs = calc_fs(inp)
+    f_sampling = calc_fs(inp)
 
     # Applied delay in samples.
-    ds = np.floor(tau * fs)
+    delay = np.floor(tau * f_sampling)
 
     # Forward FFT
-    u = np.fft.fft(sig)
+    sig_fft = np.fft.fft(sig)
     n_p = len(sig)
 
     # Disregard Nyquist frequency for even-sized dft
     if not n_p % 2:
-        u[int(n_p / 2 + 1)] = 0
+        sig_fft[int(n_p / 2 + 1)] = 0
 
-    f = ((np.arange(n_p) + np.floor(n_p / 2)) % n_p - np.floor(n_p / 2)) / n_p
+    freq = ((np.arange(n_p) + np.floor(n_p / 2)) % n_p - np.floor(n_p / 2)) / n_p
 
     # Backward FFT
-    out_data = np.fft.ifft(u * np.exp(-2j * np.pi * ds * f))
+    out_data = np.fft.ifft(sig_fft * np.exp(-2j * np.pi * delay * freq))
 
     out_time = time + int(tau * 1e9)
 

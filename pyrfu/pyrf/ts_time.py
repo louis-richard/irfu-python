@@ -18,12 +18,12 @@ import xarray as xr
 from astropy.time import Time
 
 
-def ts_time(t, fmt="unix"):
+def ts_time(time, fmt="unix"):
     """Creates time line in DataArray.
 
     Parameters
     ----------
-    t : ndarray
+    time : ndarray
         Input time line.
 
     fmt : str
@@ -36,10 +36,10 @@ def ts_time(t, fmt="unix"):
 
     """
 
-    assert isinstance(t, np.ndarray)
+    assert isinstance(time, np.ndarray)
 
-    t = Time(t, format=fmt).datetime64
+    time = Time(time, format=fmt).datetime64
 
-    out = xr.DataArray(t, coords=[t], dims=["time"])
+    out = xr.DataArray(time, coords=[time], dims=["time"])
 
     return out

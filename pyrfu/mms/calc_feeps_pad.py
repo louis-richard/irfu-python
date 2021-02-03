@@ -122,7 +122,7 @@ def calc_feeps_pad(inp_dataset, b_bcs, bin_size=16.3636, energy=None):
         for isen, sensor_num in enumerate(particle_idxs):
             var_name = "{}-{:d}".format(s_type, sensor_num + 1)
 
-            t = inp_dataset[var_name].time.data
+            time = inp_dataset[var_name].time.data
             data = inp_dataset[var_name].data
             energies = inp_dataset[var_name].Differential_energy_channels.data
 
@@ -167,6 +167,6 @@ def calc_feeps_pad(inp_dataset, b_bcs, bin_size=16.3636, energy=None):
 
     pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
 
-    pad = xr.DataArray(pa_flux, coords=[t, pa_label], dims=["time", "pa"], attrs=var)
+    pad = xr.DataArray(pa_flux, coords=[time, pa_label], dims=["time", "pa"], attrs=var)
 
     return pad

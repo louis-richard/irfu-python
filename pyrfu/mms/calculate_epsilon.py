@@ -14,12 +14,12 @@
 
 import numpy as np
 
-from astropy import constants
+from scipy import constants
 
 from ..pyrf import resample, ts_scalar
 
 
-def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
+def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     """Calculates epsilon parameter using model distribution.
 
     Parameters
@@ -30,7 +30,7 @@ def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
     model_vdf : xarray.Dataset
         Model particle distribution (skymap).
 
-    n : xarray.DataArray
+    n_s : xarray.DataArray
         Time series of the number density.
 
     sc_pot : xarray.DataArray
@@ -51,11 +51,11 @@ def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
     --------
     >>> from pyrfu import mms
     >>> options = {"en_channel": [4, 32]}
-    >>> eps = mms.calculate_epsilon(vdf, model_vdf, n, sc_pot, **options)
+    >>> eps = mms.calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **options)
 
     """
 
-    if np.abs(np.median(np.diff(vdf.time-n.time))).astype(float) > 0:
+    if np.abs(np.median(np.diff(vdf.time - n_s.time))).astype(float) > 0:
         raise RuntimeError("vdf and moments have different times.")
 
     # Default energy channels used to compute epsilon, lowest energy channel should not be used.
@@ -65,7 +65,7 @@ def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
         int_energies = np.arange(kwargs["en_channels"][0], kwargs["en_channels"][1] + 1)
 
     # Resample sc_pot
-    sc_pot = resample(sc_pot, n)
+    sc_pot = resample(sc_pot, n_s)
 
     # Remove zero count points from final calculation
     # model_vdf.data.data[vdf.data.data <= 0] = 0
@@ -76,15 +76,15 @@ def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
     vdf_diff = np.abs(vdf.data.data - model_vdf.data.data)
 
     # Define constants
-    qe = constants.e.value
+    q_e = constants.elementary_charge
 
     # Check whether particles are electrons or ions
     if vdf.attrs["specie"] == "e":
-        mp = constants.m_e.value
+        m_s = constants.electron_mass
         print("notice : Particles are electrons")
     elif vdf.attrs["specie"] == "i":
         sc_pot.data *= -1
-        mp = constants.m_p.value
+        m_s = constants.proton_mass
         print("notice : Particles are electrons")
     else:
         raise ValueError("Invalid specie")
@@ -94,12 +94,12 @@ def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
 
     # Define corrected energy levels using spacecraft potential
     energy_arr = vdf.energy.data
-    v, delta_v = [np.zeros(energy_arr.shape) for _ in range(2)]
+    v_s, delta_v = [np.zeros(energy_arr.shape) for _ in range(2)]
 
-    for it in range(len(vdf.time)):
-        energy_vec, energy_log = [energy_arr[it, :], np.log10(energy_arr[it, :])]
+    for i in range(len(vdf.time)):
+        energy_vec, energy_log = [energy_arr[i, :], np.log10(energy_arr[i, :])]
 
-        v[it, :] = np.real(np.sqrt(2 * (energy_vec - sc_pot.data[it]) * qe / mp))
+        v_s[i, :] = np.real(np.sqrt(2 * (energy_vec - sc_pot.data[i]) * q_e / m_s))
 
         temp0, temp33 = [2 * energy_log[0] - energy_log[1], 2 * energy_log[-1] - energy_log[-2]]
 
@@ -110,15 +110,15 @@ def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
         energy_upper = 10 ** (energy_log + diff_en_all[1:34] / 2)
         energy_lower = 10 ** (energy_log - diff_en_all[0:33] / 2)
 
-        v_upper = np.sqrt(2 * qe * energy_upper / mp)
-        v_lower = np.sqrt(2 * qe * energy_lower / mp)
+        v_upper = np.sqrt(2 * q_e * energy_upper / m_s)
+        v_lower = np.sqrt(2 * q_e * energy_lower / m_s)
 
         v_lower[np.isnan(v_lower)] = 0
         v_upper[np.isnan(v_upper)] = 0
 
-        delta_v[it, :] = (v_upper - v_lower)
+        delta_v[i, :] = (v_upper - v_lower)
 
-    v[v < 0] = 0
+    v_s[v_s < 0] = 0
 
     # Calculate density of vdf_diff
     delta_ang = (11.25 * np.pi / 180) ** 2
@@ -126,14 +126,14 @@ def calculate_epsilon(vdf, model_vdf, n, sc_pot, **kwargs):
 
     epsilon, m_psd2_n = [np.zeros(len(vdf.time)), np.ones(n_ph) * np.sin(theta_k * np.pi / 180)]
 
-    for it in range(len(vdf.time)):
-        for ii in int_energies:
-            tmp = np.squeeze(vdf_diff[it, ii, ...])
-            fct = v[it, ii] ** 2 * delta_v[it, ii] * delta_ang
+    for i in range(len(vdf.time)):
+        for j in int_energies:
+            tmp = np.squeeze(vdf_diff[i, j, ...])
+            fct = v_s[i, j] ** 2 * delta_v[i, j] * delta_ang
 
-            epsilon[it] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * fct
+            epsilon[i] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * fct
 
-    epsilon /= 1e6 * n.data * 2
+    epsilon /= 1e6 * n_s.data * 2
     epsilon = ts_scalar(vdf.time.data, epsilon)
 
     return epsilon

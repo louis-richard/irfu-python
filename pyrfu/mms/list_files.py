@@ -134,12 +134,14 @@ def list_files(tint, mms_id, var, data_path=""):
     # data
     if idx_min == 0:
         files_in_interval = []
-        for f in sorted_files[idx_min:]:
-            files_in_interval.append({"file_name": f[0], "timetag": f[2], "file_size": f[3]})
+        for file in sorted_files[idx_min:]:
+            file_dict = {"file_name": file[0], "timetag": file[2], "file_size": file[3]}
+            files_in_interval.append(file_dict)
     else:
         files_in_interval = []
-        for f in sorted_files[idx_min - 1:]:
-            files_in_interval.append({"file_name": f[0], "timetag": f[2], "file_size": f[3]})
+        for file in sorted_files[idx_min - 1:]:
+            file_dict = {"file_name": file[0], "timetag": file[2], "file_size": file[3]}
+            files_in_interval.append(file_dict)
 
     local_files = []
 

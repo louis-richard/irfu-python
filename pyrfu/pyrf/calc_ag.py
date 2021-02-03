@@ -32,7 +32,7 @@ def calc_ag(p_xyz):
 
     Returns
     -------
-    d_ng : xarray.DataArray
+    agyrotropy : xarray.DataArray
         Time series of the agyrotropy coefficient of the specie.
 
     References
@@ -78,6 +78,6 @@ def calc_ag(p_xyz):
 
     det_g = p_11 * p_22 ** 2
 
-    ag = np.abs(det_p - det_g) / (det_p + det_g)
+    agyrotropy = np.abs(det_p - det_g) / (det_p + det_g)
 
-    return ag
+    return agyrotropy

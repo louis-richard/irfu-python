@@ -18,15 +18,15 @@ from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
 
-def colorbar(im, ax, pad=0.01):
+def colorbar(image, axis, pad=0.01):
     """Add colorbar to ax corresponding to im.
 
     Parameters
     ----------
-    im : to fill
+    image : to fill
         to fill.
 
-    ax : matplotlib.pyplot.subplotsaxes
+    axis : matplotlib.pyplot.subplotsaxes
         Axis of plot.
 
     pad : float, optional
@@ -38,9 +38,9 @@ def colorbar(im, ax, pad=0.01):
 
     """
 
-    pos = ax.get_position()
+    pos = axis.get_position()
     fig = plt.gcf()
     cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])
-    fig.colorbar(im, cax)
+    fig.colorbar(image, cax)
 
     return cax

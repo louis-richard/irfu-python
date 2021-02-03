@@ -36,8 +36,8 @@ def split_vs(var_str):
 
     """
 
-    tk = var_str.split("_")
-    n_tk = len(tk)
+    splitted_key = var_str.split("_")
+    n_tk = len(splitted_key)
 
     if n_tk < 3 or n_tk > 5:
         raise ValueError("invalid STRING format")
@@ -73,7 +73,7 @@ def split_vs(var_str):
 
     data_lvls = ["ql", "sitl", "l1b", "l2a", "l2pre", "l2", "l3"]
 
-    param = tk[0]
+    param = splitted_key[0]
 
     if param.lower() in all_params_scalars:
         tensor_order = 0
@@ -92,20 +92,20 @@ def split_vs(var_str):
     idx = 0
 
     if tensor_order > 0:
-        coordinate_system = tk[idx+1]
+        coordinate_system = splitted_key[idx+1]
 
         idx += 1
 
         if coordinate_system not in coordinate_systems:
             raise ValueError("invalid COORDINATE_SYS")
 
-    instrument = tk[idx+1]
+    instrument = splitted_key[idx+1]
     idx += 1
 
     if instrument not in instruments:
         raise ValueError("invalid INSTRUMENT")
 
-    tmmode = tk[idx+1]
+    tmmode = splitted_key[idx+1]
     idx += 1
 
     if tmmode not in ["brst", "fast", "slow", "srvy"]:
@@ -113,10 +113,10 @@ def split_vs(var_str):
         idx -= 1
         warnings.warn("assuming TM_MODE = FAST", UserWarning)
 
-    if len(tk) == idx + 1:
+    if len(splitted_key) == idx + 1:
         data_lvl = "l2"  # default
     else:
-        data_lvl = tk[idx+1]
+        data_lvl = splitted_key[idx+1]
 
         if data_lvl not in data_lvls:
             raise ValueError("invalid DATA_LEVEL level")

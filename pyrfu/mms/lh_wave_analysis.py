@@ -15,7 +15,7 @@
 import numpy as np
 import xarray as xr
 
-from astropy import constants
+from scipy import constants
 
 from ..pyrf import (filt, calc_dt, resample, convert_fac, ts_scalar, extend_tint, time_clip,
                     ts_vec_xyz)
@@ -120,10 +120,11 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     b_scm_fac = filt(b_scm_fac, min_freq, max_freq, 5)
     e_xyz = filt(e_xyz, min_freq, max_freq, 5)
 
-    qe, mu0 = [constants.e.value, constants.mu0.value]
+    q_e = constants.elementary_charge
+    mu0 = constants.mu_0
 
     b_mag = np.linalg.norm(b_xyz, axis=1)
-    phi_b = (b_scm_fac.data[:, 2]) * b_mag * 1e-18 / (n_e.data * qe * mu0 * 1e6)
+    phi_b = (b_scm_fac.data[:, 2]) * b_mag * 1e-18 / (n_e.data * q_e * mu0 * 1e6)
     phi_b = ts_scalar(b_scm_fac.time.data, phi_b)
 
     # short buffer so phi_E does not begin at zero.
@@ -137,11 +138,11 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     b_mean = np.mean(b_xyz_tc.data, axis=0)
     b_vec = b_mean / np.linalg.norm(b_mean)
     r_temp = [1, 0, 0]
-    r2 = np.cross(b_vec, r_temp)
-    r2 /= np.linalg.norm(r2)
-    r1 = np.cross(r2, b_vec)
-    er1 = e_xyz.data[:, 0] * r1[0] + e_xyz.data[:, 1] * r1[1] + e_xyz.data[:, 2] * r1[2]
-    er2 = e_xyz.data[:, 0] * r2[0] + e_xyz.data[:, 1] * r2[1] + e_xyz.data[:, 2] * r2[2]
+    bxr = np.cross(b_vec, r_temp)
+    bxr /= np.linalg.norm(bxr)
+    bxrxb = np.cross(bxr, b_vec)
+    er1 = e_xyz.data[:, 0] * bxrxb[0] + e_xyz.data[:, 1] * bxrxb[1] + e_xyz.data[:, 2] * bxrxb[2]
+    er2 = e_xyz.data[:, 0] * bxr[0] + e_xyz.data[:, 1] * bxr[1] + e_xyz.data[:, 2] * bxr[2]
     er3 = e_xyz.data[:, 0] * b_vec[0] + e_xyz.data[:, 1] * b_vec[1] + e_xyz.data[:, 2] * b_vec[2]
 
     e_fac = ts_vec_xyz(e_xyz.time.data, np.vstack([er1, er2, er3]).T)
@@ -151,14 +152,14 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     thetas = np.linspace(0, 2 * np.pi, 361)
     corrs = np.zeros(len(thetas))
 
-    for ii, theta in enumerate(thetas):
+    for i, theta in enumerate(thetas):
         e_temp = np.cos(theta) * e_fac.data[:, 0] + np.sin(theta) * e_fac.data[:, 1]
 
         phi_temp = ts_scalar(e_xyz.time.data, np.cumsum(e_temp) * dt_e_fac)
         phi_temp = time_clip(phi_temp, tints)
         phi_temp -= np.mean(phi_temp)
 
-        corrs[ii] = np.corrcoef(phi_bs.data, phi_temp.data)
+        corrs[i] = np.corrcoef(phi_bs.data, phi_temp.data)
 
     corrpos = np.argmax(corrs)
     e_best = np.cos(thetas[corrpos]) * e_fac.data[:, 0] + np.sin(thetas[corrpos]) * e_fac.data[:, 1]
@@ -167,23 +168,23 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     phi_best = time_clip(phi_best, tints)
     phi_best -= np.mean(phi_best)
     theta_best = thetas[corrpos]
-    dir_best = r1 * np.cos(theta_best) + r2 * np.sin(theta_best)
+    dir_best = bxrxb * np.cos(theta_best) + bxr * np.sin(theta_best)
 
     # Find best speed
     # Maximum velocity may need to be increased in rare cases
     vph_vec = np.linspace(1e1, 5e2, 491)
     corr_v = np.zeros(len(vph_vec))
 
-    for ii, vph in enumerate(vph_vec):
+    for i, vph in enumerate(vph_vec):
         phi_e_temp = phi_best.data * vph
-        corr_v[ii] = np.sum(np.abs(phi_e_temp - phi_bs.data) ** 2)
+        corr_v[i] = np.sum(np.abs(phi_e_temp - phi_bs.data) ** 2)
 
     corr_vpos = np.argmin(corr_v)
     phi_e_best = phi_best.data * vph_vec[corr_vpos]
     phi_e_best = ts_scalar(phi_bs.time.data, phi_e_best)
     v_best = vph_vec[corr_vpos]
 
-    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T,
-                          coords=[phi_bs.time, ["Ebest", "Bs"]], dims=["time", "comp"])
+    options = dict(coords=[phi_bs.time, ["Ebest", "Bs"]], dims=["time", "comp"])
+    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T, **options)
 
     return phi_eb, v_best, dir_best, thetas, corrs

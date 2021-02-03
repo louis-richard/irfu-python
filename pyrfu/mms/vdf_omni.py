@@ -46,8 +46,8 @@ def vdf_omni(vdf):
     dangle = np.pi / 16
     np_phi = 32
 
-    z2 = np.ones((np_phi, 1)) * np.sin(thetas * np.pi / 180)
-    solid_angles = dangle * dangle * z2
+    sine_theta = np.ones((np_phi, 1)) * np.sin(thetas * np.pi / 180)
+    solid_angles = dangle * dangle * sine_theta
     all_solid_angles = np.tile(solid_angles, (len(time), energy.shape[1], 1, 1))
 
     dist = vdf.data.data * all_solid_angles

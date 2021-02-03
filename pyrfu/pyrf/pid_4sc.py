@@ -104,10 +104,10 @@ def pid_4sc(r_mms, v_mms, p_mms, b_mms):
     d_fac, p_fac = [rotate_tensor(tensor, "fac", b_xyz, "pp") for tensor in [d_xyz, p_xyz]]
 
     # Isotropic scalar pressure
-    p = trace(p_fac) / 3
+    press = trace(p_fac) / 3
 
     # Deviatoric part of the pressure tensor
-    pi_fac = p_fac.data - p.data[:, np.newaxis, np.newaxis] * identity_3d
+    pi_fac = p_fac.data - press.data[:, np.newaxis, np.newaxis] * identity_3d
     pi_fac = ts_tensor_xyz(time, pi_fac)
 
     # Compute Pi-D

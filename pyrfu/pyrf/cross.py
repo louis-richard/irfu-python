@@ -18,15 +18,15 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def cross(x, y):
+def cross(inp1, inp2):
     """Computes cross product of two fields.
 
     Parameters
     ----------
-    x : xarray.DataArray
+    inp1 : xarray.DataArray
         Time series of the first field X.
 
-    y : xarray.DataArray
+    inp2 : xarray.DataArray
         Time series of the second field Y.
 
     Returns
@@ -61,11 +61,11 @@ def cross(x, y):
 
     """
 
-    if len(x) != len(y):
-        y = resample(y, x)
+    if len(inp1) != len(inp2):
+        inp2 = resample(inp2, inp1)
 
-    out_data = np.cross(x.data, y.data, axis=1)
+    out_data = np.cross(inp1.data, inp2.data, axis=1)
 
-    out = ts_vec_xyz(x.time.data, out_data)
+    out = ts_vec_xyz(inp1.time.data, out_data)
 
     return out

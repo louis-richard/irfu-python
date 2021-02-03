@@ -59,7 +59,7 @@ def rotate_tensor(*args):
     >>> # Compute ion temperature in field aligned coordinates
     >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 
-    TODO : change input
+    TODO : change input, add check that vectors are orthogonal L145
     """
 
     nargin = len(args)
@@ -142,7 +142,7 @@ def rotate_tensor(*args):
 
         elif len(vectors) == 3:
             r_x, r_y, r_z = [r / np.linalg.norm(r, keepdims=True) for r in vectors]
-            # TODO : add check that vectors are orthogonal
+
         else:
             raise TypeError("Vector format not recognized.")
 
@@ -155,10 +155,10 @@ def rotate_tensor(*args):
 
     p_tensor_p = np.zeros((len(p_times), 3, 3))
 
-    for ii in range(len(p_times)):
-        rot_temp = np.squeeze(rot_mat[ii, :, :])
+    for i in range(len(p_times)):
+        rot_temp = np.squeeze(rot_mat[i, :, :])
 
-        p_tensor_p[ii, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor.data[ii, :, :])),
+        p_tensor_p[i, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor.data[i, :, :])),
                                          np.transpose(rot_temp))
 
     if ppeq:
@@ -166,27 +166,27 @@ def rotate_tensor(*args):
         thetas = 0.5 * np.arctan(
             (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]))
 
-        for ii, theta in enumerate(thetas):
+        for i, theta in enumerate(thetas):
             if np.isnan(theta):
                 theta = 0
 
             rot_temp = np.array(
                 [[1, 0, 0], [0, np.cos(theta), np.sin(theta)], [0, -np.sin(theta), np.cos(theta)]])
 
-            p_tensor_p[ii, :, :] = np.matmul(
-                np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])), np.transpose(rot_temp))
+            p_tensor_p[i, :, :] = np.matmul(
+                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])), np.transpose(rot_temp))
 
     if qqeq:
         print("notice : Rotating tensor so perpendicular diagonal components are most unequal.")
         thetas = 0.5 * np.arctan(
             (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]))
 
-        for ii, theta in enumerate(thetas):
+        for i, theta in enumerate(thetas):
             rot_temp = np.array(
                 [[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
 
-            p_tensor_p[ii, :, :] = np.matmul(
-                np.matmul(rot_temp, np.squeeze(p_tensor_p[ii, :, :])), np.transpose(rot_temp))
+            p_tensor_p[i, :, :] = np.matmul(
+                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])), np.transpose(rot_temp))
 
     # Construct output
     p = ts_tensor_xyz(p_times, p_tensor_p)

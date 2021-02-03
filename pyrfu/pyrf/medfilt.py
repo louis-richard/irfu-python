@@ -75,10 +75,10 @@ def medfilt(inp, n_pts=11):
     if n_pts % 2 == 0:
         n_pts += 1
 
-    nt = len(inp)
+    n_times = len(inp)
 
     if inp.ndim == 3:
-        inp_data = np.reshape(inp.data, [nt, 9])
+        inp_data = np.reshape(inp.data, [n_times, 9])
     else:
         inp_data = inp.data
 
@@ -98,7 +98,7 @@ def medfilt(inp, n_pts=11):
         out_data[:, i] = signal.medfilt(inp_data[:, i], n_pts)
 
     if n_comp == 9:
-        out_data = np.reshape(out_data, [nt, 3, 3])
+        out_data = np.reshape(out_data, [n_times, 3, 3])
 
     if out_data.shape[1] == 1:
         out_data = out_data[:, 0]

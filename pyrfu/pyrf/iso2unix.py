@@ -15,13 +15,13 @@
 from astropy.time import Time
 
 
-def iso2unix(t):
+def iso2unix(time):
     """
     Converts time in iso format to unix
 
     Parameters
     ----------
-    t : str or list of str
+    time : str or list of str
         Time.
 
     Returns
@@ -32,6 +32,6 @@ def iso2unix(t):
     """
 
     # Convert iso time to unix
-    out = Time(t, format="iso").unix
+    out = Time(time, format="iso").unix
 
     return out

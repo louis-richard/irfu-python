@@ -37,17 +37,17 @@ def date_str(tint, fmt=1):
 
     """
 
-    t1 = parser.parse(tint[0])
-    t2 = parser.parse(tint[1])
+    start_time = parser.parse(tint[0])
+    end_time = parser.parse(tint[1])
 
     if fmt == 1:
-        out = t1.strftime("%Y%m%d_%H%M")
+        out = start_time.strftime("%Y%m%d_%H%M")
     elif fmt == 2:
-        out = t1.strftime("%y%m%d%H%M%S")
+        out = start_time.strftime("%y%m%d%H%M%S")
     elif fmt == 3:
-        out = "_".join([t1.strftime("%Y%m%d_%H%M%S"), t2.strftime("%H%M%S")])
+        out = "_".join([start_time.strftime("%Y%m%d_%H%M%S"), end_time.strftime("%H%M%S")])
     elif fmt == 4:
-        out = "_".join([t1.strftime("%Y%m%d_%H%M%S"), t2.strftime("%Y%m%d_%H%M%S")])
+        out = "_".join([start_time.strftime("%Y%m%d_%H%M%S"), end_time.strftime("%Y%m%d_%H%M%S")])
     else:
         raise ValueError("Unknown format")
 

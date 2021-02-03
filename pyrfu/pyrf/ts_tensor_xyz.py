@@ -15,12 +15,12 @@
 import xarray as xr
 
 
-def ts_tensor_xyz(t, data, attrs=None):
+def ts_tensor_xyz(time, data, attrs=None):
     """Create a time series containing a 2nd order tensor.
 
     Parameters
     ----------
-    t : ndarray
+    time : ndarray
         Array of times.
 
     data : ndarray
@@ -39,7 +39,7 @@ def ts_tensor_xyz(t, data, attrs=None):
     assert data.ndim == 3 and data.shape[1:] == (3, 3)
 
     # Check inputs are numpy arrays
-    if len(t) != len(data):
+    if len(time) != len(data):
         raise IndexError("Time and data must have the same length")
 
     flag_attrs = True
@@ -47,7 +47,7 @@ def ts_tensor_xyz(t, data, attrs=None):
     if attrs is None:
         flag_attrs = False
 
-    out = xr.DataArray(data, coords=[t[:], ["x", "y", "z"], ["x", "y", "z"]],
+    out = xr.DataArray(data, coords=[time[:], ["x", "y", "z"], ["x", "y", "z"]],
                        dims=["time", "comp_h", "comp_v"])
 
     if flag_attrs:

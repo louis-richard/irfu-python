@@ -15,7 +15,7 @@
 import numpy as np
 import xarray as xr
 
-from astropy import constants
+from scipy import constants
 
 from .resample import resample
 
@@ -150,9 +150,12 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     """
 
     # Get constants
-    e, c = [constants.e.value, constants.c.value]
-    mu0, eps0 = [constants.mu0.value, constants.eps0.value]
-    m_p, m_e = [constants.m_p.value, constants.m_e.value]
+    q_e = constants.elementary_charge
+    cel = constants.speed_of_light
+    mu0 = constants.mu_0
+    ep0 = constants.epsilon_0
+    m_p = constants.proton_mass
+    m_e = constants.electron_mass
     mp_me = m_p / m_e
 
     # Resample all variables with respect to the magnetic field
@@ -178,27 +181,27 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     else:
         b_si = 1e-9 * np.linalg.norm(b_xyz, axis=1)
 
-    w_pe = np.sqrt(n_e * e ** 2 / (m_e * eps0)) 	# rad/s
-    w_ce = e * b_si / m_e   						# rad/s
-    w_pp = np.sqrt(n_i * e ** 2 / (m_p * eps0))
+    w_pe = np.sqrt(n_e * q_e ** 2 / (m_e * ep0)) 	# rad/s
+    w_ce = q_e * b_si / m_e   						# rad/s
+    w_pp = np.sqrt(n_i * q_e ** 2 / (m_p * ep0))
 
     v_a = b_si / np.sqrt(mu0 * n_i * m_p)
 
     v_ae = b_si / np.sqrt(mu0 * n_e * m_e)
-    v_te = c * np.sqrt(1 - 1 / (t_e * e / (m_e * c ** 2) + 1) ** 2) 	# m/s (relativ. correct)
-    v_tp = c * np.sqrt(1 - 1 / (t_i * e / (m_p * c ** 2) + 1) ** 2)     # m/s
+    v_te = cel * np.sqrt(1 - 1 / (t_e * q_e / (m_e * cel ** 2) + 1) ** 2) 	# m/s (relativ. correct)
+    v_tp = cel * np.sqrt(1 - 1 / (t_i * q_e / (m_p * cel ** 2) + 1) ** 2)     # m/s
     # Sound speed formula (F. Chen, Springer 1984).
-    v_ts = np.sqrt((t_e * e + 3 * t_i * e) / m_p)
+    v_ts = np.sqrt((t_e * q_e + 3 * t_i * q_e) / m_p)
 
-    gamma_e = 1 / np.sqrt(1 - (v_te / c) ** 2)
-    gamma_p = 1 / np.sqrt(1 - (v_tp / c) ** 2)
+    gamma_e = 1 / np.sqrt(1 - (v_te / cel) ** 2)
+    gamma_p = 1 / np.sqrt(1 - (v_tp / cel) ** 2)
 
-    l_e = c / w_pe
-    l_i = c / w_pp
+    l_e = cel / w_pe
+    l_i = cel / w_pp
     # Debye length scale, sqrt(2) needed because of Vte definition
     l_d = v_te / (w_pe * np.sqrt(2))
     # number of e- in Debye sphere
-    n_d = l_d * eps0 * m_e * v_te ** 2 / e ** 2
+    n_d = l_d * ep0 * m_e * v_te ** 2 / q_e ** 2
 
     f_pe = w_pe / (2 * np.pi) 				# Hz
     f_ce = w_ce / (2 * np.pi)
@@ -207,8 +210,8 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     f_cp = f_ce / mp_me
     f_lh = np.sqrt(f_cp * f_ce / (1 + f_ce ** 2 / f_pe ** 2) + f_cp ** 2)
 
-    rho_e = m_e * c / (e * b_si) * np.sqrt(gamma_e ** 2 - 1) 	# m, relativistically correct
-    rho_p = m_p * c / (e * b_si) * np.sqrt(gamma_p ** 2 - 1) 	# m, relativistically correct
+    rho_e = m_e * cel / (q_e * b_si) * np.sqrt(gamma_e ** 2 - 1) 	# m, relativistically correct
+    rho_p = m_p * cel / (q_e * b_si) * np.sqrt(gamma_p ** 2 - 1) 	# m, relativistically correct
     rho_s = v_ts / (f_cp * 2 * np.pi) 							# m
 
     out = xr.Dataset(

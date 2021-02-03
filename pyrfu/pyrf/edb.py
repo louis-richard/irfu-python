@@ -19,16 +19,16 @@ from .ts_scalar import ts_scalar
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def edb(e, b0, angle_lim=20, flag_method="E.B=0"):
+def edb(e_xyz, b_bgd, angle_lim=20, flag_method="E.B=0"):
     """Compute Ez under assumption :math:`\\mathbf{E}.\\mathbf{B}=0` or
     :math:`\\mathbf{E}.\\mathbf{B} \\approx 0`
 
     Parameters
     ----------
-    e : xarray.DataArray
+    e_xyz : xarray.DataArray
         Time series of the electric field.
 
-    b0 : xarray.DataArray
+    b_bgd : xarray.DataArray
         Time series of the background magnetic field.
 
     angle_lim : float
@@ -80,37 +80,38 @@ def edb(e, b0, angle_lim=20, flag_method="E.B=0"):
 
         flag_method = "e.b=0"
 
-    if len(b0) != len(e):
-        b0 = resample(b0, e)
+    if len(b_bgd) != len(e_xyz):
+        b_bgd = resample(b_bgd, e_xyz)
 
-    bd = b0.data
-    ed = e.data
-    ed[:, -1] *= default_value
+    b_data = b_bgd.data
+    e_data = e_xyz.data
+    e_data[:, -1] *= default_value
 
     if flag_method.lower() == "e.b=0":
         # Calculate using assumption E.B=0
-        d = np.arctan2(bd[:, 2], np.sqrt(bd[:, 0] ** 2 + bd[:, 1] ** 2)) * 180 / np.pi
-
-        ind = np.abs(d) > angle_lim
+        b_angle = np.arctan2(b_data[:, 2], np.sqrt(b_data[:, 0] ** 2 + b_data[:, 1] ** 2))
+        b_angle = np.rad2deg(b_angle)
+        ind = np.abs(b_angle) > angle_lim
 
         if True in ind:
-            ed[ind, 2] = -(ed[ind, 0] * bd[ind, 0] + ed[ind, 1] * bd[ind, 1]) / bd[ind, 2]
+            e_data[ind, 2] = -(e_data[ind, 0] * b_data[ind, 0] + e_data[ind, 1] * b_data[ind, 1])
+            e_data[ind, 2] /= b_data[ind, 2]
 
     elif flag_method.lower() == "e_par":
         # Calculate using assumption that E field along the B projection is coming from parallel
         # electric field
-        d = np.arctan2(bd[:, 2], np.sqrt(bd[:, 0] ** 2 + bd[:, 1] ** 2)) * 180 / np.pi
-
-        ind = np.abs(d) < angle_lim
+        b_angle = np.arctan2(b_data[:, 2], np.sqrt(b_data[:, 0] ** 2 + b_data[:, 1] ** 2))
+        b_angle = np.rad2deg(b_angle)
+        ind = np.abs(b_angle) < angle_lim
 
         if True in ind:
-            ed[ind, 2] = (ed[ind, 0] * bd[ind, 0] + ed[ind, 1] * bd[ind, 1])
-            ed[ind, 2] = ed[ind, 2] * bd[ind, 2] / (bd[ind, 0] ** 2 + bd[ind, 1] ** 2)
+            e_data[ind, 2] = (e_data[ind, 0] * b_data[ind, 0] + e_data[ind, 1] * b_data[ind, 1])
+            e_data[ind, 2] *= b_data[ind, 2] / (b_data[ind, 0] ** 2 + b_data[ind, 1] ** 2)
 
     else:
         raise ValueError("Invalid flag")
 
-    ed = ts_vec_xyz(e.time.data, ed, {"UNITS": e.attrs["UNITS"]})
-    d = ts_scalar(e.time.data, d, {"UNITS": "degrees"})
+    e_data = ts_vec_xyz(e_xyz.time.data, e_data, {"UNITS": e_xyz.attrs["UNITS"]})
+    b_angle = ts_scalar(e_xyz.time.data, b_angle, {"UNITS": "degrees"})
 
-    return ed, d
+    return e_data, b_angle
