@@ -88,11 +88,11 @@ def wavelet(inp, **kwargs):
     fs = len(inp) / tint
 
     # Unpack time and data
-    t, data = [inp.time.data.view("i8") * 1e-9, inp.data]
+    time, data = [inp.time.data.view("i8") * 1e-9, inp.data]
 
     # f
-    a_min, a_max = [0.01, 2]
-    f_min, f_max = [.5 * fs / 10 ** a_max, .5 * fs / 10 ** a_min]
+    scale_min, scale_max = [0.01, 2]
+    f_min, f_max = [.5 * fs / 10 ** scale_max, .5 * fs / 10 ** scale_min]
 
     # nf
     nf = 200
@@ -109,16 +109,12 @@ def wavelet(inp, **kwargs):
         cut_edge = kwargs["cut_edge"]
 
     if kwargs.get("fs"):
-        if isinstance(kwargs["fs"], (int, float)):
-            fs = kwargs["fs"]
-        else:
-            raise TypeError("fs must be numeric")
+        assert isinstance(kwargs["fs"], (int, float)), "fs must be numeric"
+        fs = kwargs["fs"]
 
     if kwargs.get("nf"):
-        if isinstance(kwargs["nf"], (int, float)):
-            nf = kwargs["nf"]
-        else:
-            raise TypeError("nf must be numeric")
+        assert isinstance(kwargs["nf"], (int, float)), "nf must be numeric"
+        nf = kwargs["nf"]
 
     if kwargs.get("linear"):
         linear_df = True
@@ -128,43 +124,33 @@ def wavelet(inp, **kwargs):
             raise Warning("Unknown input for linear delta_f set to 100")
 
     if kwargs.get("wavelet_width"):
-        if isinstance(kwargs["wavelet_width"], (int, float)):
-            wavelet_width = kwargs["wavelet_width"]
-        else:
-            raise TypeError("wavelet_width must be numeric")
+        assert isinstance(kwargs["wavelet_width"], (int, float)), "wavelet_width must be numeric"
+        wavelet_width = kwargs["wavelet_width"]
 
     if kwargs.get("f"):
-        if isinstance(kwargs["f"], (np.ndarray, list)):
-            if len(kwargs["f"]) == 2:
-                f_min = kwargs["f"][0]
-                f_max = kwargs["f"][1]
-            else:
-                raise IndexError("f should have vector with 2 elements as parameter value")
-        else:
-            raise TypeError("f must be a list or array")
+        assert isinstance(kwargs["f"], (np.ndarray, list)), "f must be a list or array"
+        assert len(kwargs["f"]) == 2, "f should have vector with 2 elements as parameter value"
+        f_min, f_max = kwargs["f"]
 
-    if kwargs.get("plot"):
-        plot_flag = kwargs["plot"]
-
-    w0, a_number, sigma = [fs / 2, nf, wavelet_width / (fs / 2)]
+    w0, scale_number, sigma = [fs / 2, nf, wavelet_width / (fs / 2)]
 
     if linear_df:
-        a_number = np.floor(w0 / delta_f).astype(int)
+        scale_number = np.floor(w0 / delta_f).astype(int)
 
-        f_min, f_max = [delta_f, a_number * delta_f]
+        f_min, f_max = [delta_f, scale_number * delta_f]
 
-        a = w0 / (np.linspace(f_max, f_min, a_number))
+        scales = w0 / (np.linspace(f_max, f_min, scale_number))
     else:
-        a_min, a_max = [np.log10(.5 * fs / f_max), np.log10(.5 * fs / f_min)]
+        scale_min, scale_max = [np.log10(.5 * fs / f_max), np.log10(.5 * fs / f_min)]
 
-        a = np.logspace(a_min, a_max, a_number)
+        scales = np.logspace(scale_min, scale_max, scale_number)
 
     # Remove the last sample if the total number of samples is odd
     if len(data) / 2 != np.floor(len(data) / 2):
-        t, data = [t[:-1], data[:-1, ...]]
+        time, data = [time[:-1], data[:-1, ...]]
 
     # Check for NaNs
-    a[np.isnan(a)] = 0
+    scales[np.isnan(scales)] = 0
 
     # Find the frequencies for an FFT of all data
     nd2, nyq = [len(data) / 2, 1 / 2]
@@ -172,10 +158,10 @@ def wavelet(inp, **kwargs):
     freq = fs * np.arange(1, nd2 + 1) / nd2 * nyq
 
     # The frequencies corresponding to FFT
-    w = np.hstack([0, freq, -np.flip(freq[:-1])])
+    frequencies = np.hstack([0, freq, -np.flip(freq[:-1])])
 
     # Get the correct frequencies for the wavelet transform
-    new_freq = w0 / a
+    new_freq = w0 / scales
 
     if len(inp.shape) == 1:
         out_dict, power2 = [None, np.zeros((len(inp.data), nf))]
@@ -184,9 +170,9 @@ def wavelet(inp, **kwargs):
     else:
         raise TypeError("Invalid shape of the inp")
 
-    new_freq_mat, _ = np.meshgrid(new_freq, w, sparse=True)
+    new_freq_mat, _ = np.meshgrid(new_freq, frequencies, sparse=True)
 
-    _, ww = np.meshgrid(a, w, sparse=True)  # Matrix form
+    _, frequencies_mat = np.meshgrid(scales, frequencies, sparse=True)  # Matrix form
 
     # if scalar add virtual axis
     if len(inp.shape) == 1:
@@ -201,10 +187,10 @@ def wavelet(inp, **kwargs):
         # Forward FFT
         s_w = pyfftw.interfaces.numpy_fft.fft(data_col, threads=mp.cpu_count())
 
-        aa, s_ww = np.meshgrid(a, s_w, sparse=True)  # Matrix form
+        scales_mat, s_w_mat = np.meshgrid(scales, s_w, sparse=True)  # Matrix form
 
         # Calculate the FFT of the wavelet transform
-        w_w = calc_w_w(s_ww, aa, sigma, ww, w0)
+        w_w = calc_w_w(s_w_mat, scales_mat, sigma, frequencies_mat, w0)
 
         # Backward FFT
         power = pyfftw.interfaces.numpy_fft.ifft(w_w, axis=0, threads=mp.cpu_count())
@@ -216,9 +202,9 @@ def wavelet(inp, **kwargs):
             power2 = calc_power_c(power, np.tile(new_freq_mat, (len(power), 1)))
 
         if cut_edge:
-            censure = np.floor(2 * a).astype(int)
+            censure = np.floor(2 * scales).astype(int)
 
-            for j in range(a_number):
+            for j in range(scale_number):
                 power2[1:censure[j], j] = np.nan
 
                 power2[len(data_col) - censure[j]:len(data_col), j] = np.nan
@@ -231,32 +217,10 @@ def wavelet(inp, **kwargs):
             continue
 
     if len(inp.shape) == 1:
-        out = xr.DataArray(power2, coords=[inp.time.data, new_freq],
-                           dims=["time", "frequency"])
+        out = xr.DataArray(power2, coords=[inp.time.data, new_freq], dims=["time", "frequency"])
     elif len(inp.shape) == 2:
-        out = xr.Dataset(out_dict,
-                         coords={"time": inp.time.data, "frequency": new_freq})
+        out = xr.Dataset(out_dict, coords={"time": inp.time.data, "frequency": new_freq})
     else:
         raise TypeError("Invalid shape")
-
-    if plot_flag:
-        if isinstance(out, xr.Dataset):
-            fig, axs = plt.subplots(3, sharex="all")
-            fig.subplots_adjust(hspace=0)
-            axs[0].pcolormesh(out.time, out.frequency, out.x.data, cmap="jet")
-            axs[0].set_yscale('log')
-            axs[0].set_ylabel("f [Hz]")
-            axs[1].pcolormesh(out.time, out.frequency, out.y.data, cmap="jet")
-            axs[1].set_yscale('log')
-            axs[1].set_ylabel("f [Hz]")
-            axs[2].pcolormesh(out.time, out.frequency, out.z.data, cmap="jet")
-            axs[2].set_yscale('log')
-            axs[2].set_ylabel("f [Hz]")
-        else:
-            fig, axs = plt.subplots(1)
-            fig.subplots_adjust(hspace=0)
-            axs.pcolormesh(out.time, out.frequency, out.data.T, cmap="jet")
-            axs.set_yscale('log')
-            axs.set_ylabel("f [Hz]")
 
     return out

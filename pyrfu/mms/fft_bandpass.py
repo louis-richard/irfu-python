@@ -85,20 +85,20 @@ def fft_bandpass(inp, f_min, f_max):
     inp_data[idx_nans] = 0.0
 
     # Bandpass filter field data
-    fs = calc_fs(inp)
-    fn = fs / 2
-    f = np.linspace(-fn, fn, n_els)
+    f_sam = calc_fs(inp)
+    f_nyq = f_sam / 2
+    freqs = np.linspace(-f_nyq, f_nyq, n_els)
 
     # FFT and remove frequencies
-    for nn in range(num_fields):
-        inp_temp = np.fft.fft(inp_data[:, nn])
+    for i in range(num_fields):
+        inp_temp = np.fft.fft(inp_data[:, i])
         inp_temp = np.fft.fftshift(inp_temp)
 
-        inp_temp[np.abs(f) < f_min] = 0
-        inp_temp[np.abs(f) > f_max] = 0
+        inp_temp[np.abs(freqs) < f_min] = 0
+        inp_temp[np.abs(freqs) > f_max] = 0
 
         inp_temp = np.fft.ifftshift(inp_temp)
-        inp_data[:, nn] = np.fft.ifft(inp_temp)
+        inp_data[:, i] = np.fft.ifft(inp_temp)
 
     # Put back original NaNs
     inp_data[idx_nans] = np.nan

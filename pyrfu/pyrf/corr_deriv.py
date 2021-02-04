@@ -167,8 +167,8 @@ def corr_deriv(x1, x2, fla=False):
                     1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m]))
 
     # Define identical pairs of two time axis
-    [t1_dd_p, t2_dd_p] = find_closest(t_zeros1_p, t_zeros2_p)
-    [t1_dd_m, t2_dd_m] = find_closest(t_zeros1_m, t_zeros2_m)
+    t1_dd_p, t2_dd_p = find_closest(t_zeros1_p, t_zeros2_p)
+    t1_dd_m, t2_dd_m = find_closest(t_zeros1_m, t_zeros2_m)
 
     t1_dd = np.vstack([t1_dd_p, t1_dd_m])
     t1_dd = t1_dd[t1_dd[:, 0].argsort(), 0]

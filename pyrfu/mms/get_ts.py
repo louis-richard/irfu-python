@@ -68,6 +68,58 @@ def get_epochs(file, cdf_name, tint):
     return out
 
 
+def get_depend_attributes(file, depend_key, tint):
+    """Get dependy attributes
+
+    Parameters
+    ----------
+    file : cdflib.cdfread.CDF
+        cdf file
+
+    depend_key : str
+        Name of the variable depency in the cdf file
+
+    tint : list of str
+        Time interval
+
+    Returns
+    -------
+    attributes : dict
+        Hash table with the attributes of the dependency.
+
+    """
+
+    attributes = {}
+
+    for k in file.varattsget(depend_key):
+        attributes[k] = file.varattsget(depend_key)[k]
+
+        if isinstance(attributes[k], str) and attributes[k] in file.cdf_info()["zVariables"] \
+                and not k == "DEPEND_0":
+            try:
+                attributes[k] = file.varget(attributes[k], starttime=tint[0], endtime=tint[1])
+            except IndexError:
+                attributes[k] = file.varget(attributes[k])
+            # If atts is 2D get only first row
+            if attributes[k].ndim == 2:
+                try:
+                    attributes[k] = attributes[k][0, :]
+                except IndexError:
+                    pass
+
+    # Remove spaces in label
+    try:
+        attributes["LABLAXIS"] = attributes["LABLAXIS"].replace(" ", "_")
+
+        if attributes["LABLAXIS"] == "Diffential_energy_channels":
+            attributes["LABLAXIS"] = "Differential_energy_channels"
+
+    except (KeyError, AttributeError):
+        attributes["LABLAXIS"] = "comp"
+
+    return attributes
+
+
 def get_depend(file, cdf_name, tint, depend_num=1):
     """
     Read the `depend_num`th dependency data and its attributes associated to the variable named
@@ -128,32 +180,7 @@ def get_depend(file, cdf_name, tint, depend_num=1):
                 except IndexError:
                     pass
 
-        out["atts"] = {}
-        for k in file.varattsget(depend_key):
-            out["atts"][k] = file.varattsget(depend_key)[k]
-
-            if isinstance(out["atts"][k], str) \
-                    and out["atts"][k] in file.cdf_info()["zVariables"] and not k == "DEPEND_0":
-                try:
-                    out["atts"][k] = file.varget(out["atts"][k], starttime=tint[0], endtime=tint[1])
-                except IndexError:
-                    out["atts"][k] = file.varget(out["atts"][k])
-                # If atts is 2D get only first row
-                if out["atts"][k].ndim == 2:
-                    try:
-                        out["atts"][k] = out["atts"][k][0, :]
-                    except IndexError:
-                        pass
-
-        # Remove spaces in label
-        try:
-            out["atts"]["LABLAXIS"] = out["atts"]["LABLAXIS"].replace(" ", "_")
-
-            if out["atts"]["LABLAXIS"] == "Diffential_energy_channels":
-                out["atts"]["LABLAXIS"] = "Differential_energy_channels"
-
-        except (KeyError, AttributeError):
-            out["atts"]["LABLAXIS"] = "comp"
+        out["atts"] = get_depend_attributes(file, depend_key, tint)
 
     return out
 
@@ -186,13 +213,14 @@ def get_ts(file_path, cdf_name, tint):
     tint = list(map(cdfepoch.parse, tint))
 
     out_dict = {}
+    time, depend_1, depend_2, depend_3 = [{}, {}, {}, {}]
 
     with CDF(file_path) as file:
         out_dict["atts"] = file.varattsget(cdf_name)
-        if "DEPEND_0" in out_dict["atts"] and "epoch" in out_dict["atts"]["DEPEND_0"].lower():
-            time = get_epochs(file, cdf_name, tint)
-        else:
-            raise TypeError("Not a time series")
+
+        assert "DEPEND_0" in out_dict["atts"] and "epoch" in out_dict["atts"]["DEPEND_0"].lower()
+
+        time = get_epochs(file, cdf_name, tint)
 
         if "DEPEND_1" in out_dict["atts"] or "REPRESENTATION_1" in out_dict["atts"]:
             depend_1 = get_depend(file, cdf_name, tint, 1)
@@ -200,21 +228,21 @@ def get_ts(file_path, cdf_name, tint):
         elif "afg" in cdf_name or "dfg" in cdf_name:
             depend_1 = {"data": ["x", "y", "z"], "atts": {"LABLAXIS": "comp"}}
 
-        else:
-            depend_1 = {}
-
         if "DEPEND_2" in out_dict["atts"] or "REPRESENTATION_2" in out_dict["atts"]:
             depend_2 = get_depend(file, cdf_name, tint, 2)
-        else:
-            depend_2 = {}
+
+            if depend_2["atts"]["LABLAXIS"] == depend_1["atts"]["LABLAXIS"]:
+                depend_1["atts"]["LABLAXIS"] = "rcomp"
+                depend_2["atts"]["LABLAXIS"] = "ccomp"
 
         if "DEPEND_3" in out_dict["atts"] or "REPRESENTATION_3" in out_dict["atts"]:
-            if out_dict["atts"]["REPRESENTATION_3"] != "x,y,z":
-                depend_3 = get_depend(file, cdf_name, tint, 3)
-            else:
-                raise RuntimeError
-        else:
-            depend_3 = {}
+            assert out_dict["atts"]["REPRESENTATION_3"] != "x,y,z"
+
+            depend_3 = get_depend(file, cdf_name, tint, 3)
+
+            if depend_3["atts"]["LABLAXIS"] == depend_2["atts"]["LABLAXIS"]:
+                depend_2["atts"]["LABLAXIS"] = "rcomp"
+                depend_3["atts"]["LABLAXIS"] = "ccomp"
 
         if "sector_mask" in cdf_name:
             depend_1_key = file.varattsget(cdf_name.replace("sector_mask", "intensity"))["DEPEND_1"]

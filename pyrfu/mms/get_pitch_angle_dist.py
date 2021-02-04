@@ -148,27 +148,29 @@ def get_pitch_angle_dist(vdf, b_xyz, tint, **kwargs):
     b_vec_y = np.transpose(np.tile(b_vec.data[:, 1], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2])
     b_vec_z = np.transpose(np.tile(b_vec.data[:, 2], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2])
 
-    x = np.zeros((len(time), n_phi, n_theta))
-    y = np.zeros((len(time), n_phi, n_theta))
-    z = np.zeros((len(time), n_phi, n_theta))
+    x_vec = np.zeros((len(time), n_phi, n_theta))
+    y_vec = np.zeros((len(time), n_phi, n_theta))
+    z_vec = np.zeros((len(time), n_phi, n_theta))
 
-    for ii in range(len(time)):
-        x[ii, ...] = np.dot(-np.cos(phi.data[ii, None] * np.pi / 180).T,
-                            np.sin(theta.data[:, None] * np.pi / 180).T)
-        y[ii, ...] = np.dot(-np.sin(phi.data[ii, None] * np.pi / 180).T,
-                            np.sin(theta.data[:, None] * np.pi / 180).T)
-        z[ii, ...] = np.dot(-np.ones((n_phi, 1)), np.cos(theta.data[:, None] * np.pi / 180).T)
+    for i in range(len(time)):
+        x_vec[i, ...] = np.dot(-np.cos(np.deg2rad(phi.data[i, None])).T,
+                               np.sin(np.deg2rad(theta.data[:, None])).T)
+        y_vec[i, ...] = np.dot(-np.sin(np.deg2rad(phi.data[i, None])).T,
+                               np.sin(np.deg2rad(theta.data[:, None])).T)
+        z_vec[i, ...] = np.dot(-np.ones((n_phi, 1)), 
+                               np.cos(np.deg2rad(theta.data[:, None])).T)
 
     if tint is not None:
         energy = time_clip(vdf.energy, tint).data
     else:
         energy = vdf.energy.data
 
-    xt, yt, zt = [np.tile(mat, [n_en, 1, 1, 1]) for mat in [x, y, z]]
-    xt, yt, zt = [np.squeeze(np.transpose(mat, [1, 0, 2, 3])) for mat in [xt, yt, zt]]
+    temp = [np.tile(mat, [n_en, 1, 1, 1]) for mat in [x_vec, y_vec, z_vec]]
+    x_mat, y_mat, z_mat = [np.squeeze(np.transpose(mat, [1, 0, 2, 3])) for mat in temp]
 
-    theta_b = np.arccos(xt * np.squeeze(b_vec_x) + yt * np.squeeze(b_vec_y) + zt * np.squeeze(
-        b_vec_z)) * 180 / np.pi
+    theta_b = np.arccos(x_mat * np.squeeze(b_vec_x) + y_mat * np.squeeze(b_vec_y)
+                        + z_mat * np.squeeze(b_vec_z))
+    theta_b = np.rad2deg(theta_b)
 
     dists = [vdf0.data.copy() for _ in range(n_angles)]
 

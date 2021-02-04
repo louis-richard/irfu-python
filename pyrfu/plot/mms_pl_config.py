@@ -17,7 +17,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from astropy import constants
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
@@ -48,7 +47,7 @@ def mms_pl_config(r_mms):
 
     """
 
-    r_earth = constants.r_earth.value / 1000
+    r_earth = 6378.136
     r1, r2, r3, r4 = [np.mean(r_xyz, 0) for r_xyz in r_mms]
 
     r = np.vstack([r1, r2, r3, r4])

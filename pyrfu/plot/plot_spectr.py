@@ -27,12 +27,12 @@ sns.set_context("paper")
 # plt.rc('lines', linewidth=1)
 
 
-def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cbar=True, **kwargs):
+def plot_spectr(axis=None, inp=None, yscale="", cscale="", clim=None, cmap="", cbar=True, **kwargs):
     """Plot a spectrogram using pcolormesh.
 
     Parameters
     ----------
-    ax : axes
+    axis : axes
         Target axis to plot. If None create a new figure.
 
     inp : DataArray
@@ -66,8 +66,8 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
 
     """
 
-    if ax is None:
-        fig, ax = plt.subplots(1)
+    if axis is None:
+        fig, axis = plt.subplots(1)
     else:
         fig = plt.gcf()
 
@@ -86,12 +86,12 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
         else:
             options = dict(cmap=cmap, vmin=None, vmax=None, shading='auto')
 
-    t, y = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
+    x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
-    im = ax.pcolormesh(t, y, inp.data.T, rasterized=True, **options)
+    image = axis.pcolormesh(x_data, y_data, inp.data.T, rasterized=True, **options)
 
     if yscale == "log":
-        ax.set_yscale("log")
+        axis.set_yscale("log")
 
     if cbar:
         if kwargs.get("pad"):
@@ -99,12 +99,12 @@ def plot_spectr(ax=None, inp=None, yscale="", cscale="", clim=None, cmap="", cba
         else:
             pad = 0.01
 
-        pos = ax.get_position()
+        pos = axis.get_position()
         cax = fig.add_axes([pos.x0+pos.width+pad, pos.y0, 0.01, pos.height])
-        fig.colorbar(mappable=im, cax=cax, ax=ax)
+        fig.colorbar(mappable=image, cax=cax, ax=axis)
 
-        out = (ax, cax)
+        out = (axis, cax)
     else:
-        out = ax
+        out = axis
 
     return out

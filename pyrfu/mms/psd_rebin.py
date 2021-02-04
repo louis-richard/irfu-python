@@ -78,8 +78,8 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
     energy_r = np.sort(np.hstack([energy0, energy1]))
 
     # Define new times
-    dt = calc_dt(vdf.data)
-    time_r = vdf.time.data[:-1:2] + int(dt * 1e9 / 2)
+    delta_t = calc_dt(vdf.data)
+    time_r = vdf.time.data[:-1:2] + int(delta_t * 1e9 / 2)
 
     vdf_r, phi_r = [np.zeros((len(time_r), 64, 32, 16)), np.zeros((len(time_r), 32))]
 
@@ -88,27 +88,27 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
 
     time_indices = np.arange(0, len(vdf.time) - 1, 2)
 
-    for new_el_num, ii in enumerate(time_indices):
-        if phi.data[ii, 0] > phi.data[ii + 1, 0]:
-            phi_r[new_el_num, :] = (phi.data[ii, :] + phi_s[ii + 1, :]) / 2
+    for new_el_num, idx in enumerate(time_indices):
+        if phi.data[idx, 0] > phi.data[idx + 1, 0]:
+            phi_r[new_el_num, :] = (phi.data[idx, :] + phi_s[idx + 1, :]) / 2
 
-            vdf_temp = np.roll(np.squeeze(vdf.data.data[ii + 1, ...]), 2, axis=1)
+            vdf_temp = np.roll(np.squeeze(vdf.data.data[idx + 1, ...]), 2, axis=1)
 
-            if step_table[ii]:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[ii, ...]
+            if step_table[idx]:
+                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[idx, ...]
                 vdf_r[new_el_num, 0:63:2, ...] = vdf_temp
             else:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[ii, ...]
+                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[idx, ...]
                 vdf_r[new_el_num, 0:63:2, ...] = vdf_temp
 
         else:
-            phi_r[new_el_num, :] = (phi.data[ii, :] + phi.data[ii + 1, :]) / 2
+            phi_r[new_el_num, :] = (phi.data[idx, :] + phi.data[idx + 1, :]) / 2
 
-            if step_table[ii]:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[ii, ...]
-                vdf_r[new_el_num, 0:63:2, ...] = vdf.data.data[ii + 1, ...]
+            if step_table[idx]:
+                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[idx, ...]
+                vdf_r[new_el_num, 0:63:2, ...] = vdf.data.data[idx + 1, ...]
             else:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[ii + 1, ...]
-                vdf_r[new_el_num, 0:63:2, ...] = vdf.data.data[ii, ...]
+                vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[idx + 1, ...]
+                vdf_r[new_el_num, 0:63:2, ...] = vdf.data.data[idx, ...]
 
     return time_r, vdf_r, energy_r, phi_r

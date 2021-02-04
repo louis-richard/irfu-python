@@ -63,9 +63,9 @@ def estimate_phase_speed(f_k_power, freq, k, f_min=100.):
     power_temp[np.isnan(power_temp)] = 0.0
 
     # Find position of maximum power to guess vph
-    [k_mat, f_mat] = np.meshgrid(k, freq)
     max_pos = np.unravel_index(np.argmax(power_temp), power_temp.shape)
 
+    k_mat, f_mat = np.meshgrid(k, freq)
     max_f, max_k = [f_mat[max_pos], k_mat[max_pos]]
 
     # Initial guess
@@ -87,9 +87,9 @@ def estimate_phase_speed(f_k_power, freq, k, f_min=100.):
     f_power2 = []
     k_power2 = []
 
-    for i, p in enumerate(p_power):
+    for i, p_pow in enumerate(p_power):
         if np.abs(vph_range[0]) < np.abs(f_power[i] / k_power[i]) < np.abs(vph_range[1]):
-            p_power2.append(p)
+            p_power2.append(p_pow)
             f_power2.append(f_power[i])
             k_power2.append(k_power[i])
 
@@ -97,10 +97,10 @@ def estimate_phase_speed(f_k_power, freq, k, f_min=100.):
 
     weights = 1 + np.log10(p_power2 / np.max(p_power2))
 
-    def fun(x, a):
-        return a * x
+    def fun(k_pow, f_pow):
+        return f_pow * k_pow
 
-    popt, _ = curve_fit(fun, k_power2, f_power2, p0=vph_guess, sigma=weights)
-    vph = popt[0] * 2 * np.pi
+    res = curve_fit(fun, k_power2, f_power2, p0=vph_guess, sigma=weights)
+    vph = res[0][0] * 2 * np.pi
 
     return vph

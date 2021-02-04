@@ -44,7 +44,7 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     var = inp_dataset.attrs
     # mms_id = var["mmsId"]
     times = inp_dataset.time
-    b_times = b_bcs.time
+    b_times = b_bcs.time.data
 
     tint = Time(np.hstack([times.data.min(), times.data.max()]), format="datetime64").isot
 

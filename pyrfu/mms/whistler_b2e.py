@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from astropy import constants
+from scipy import constants
 
 from ..pyrf import plasma_calc
 
@@ -56,7 +56,7 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
     pparam = plasma_calc(b_mag, n_e, n_e, n_e, n_e)
     fpe, fce = [pparam.Fpe, pparam.Fce]
 
-    c = constants.c.value
+    speed_of_light = constants.speed_of_light
 
     # Check input
     if len(b2) != len(freq):
@@ -81,6 +81,6 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
     e_temp2 = (d / (s - n2)) ** 2 * (p - n2 * np.sin(theta_k) ** 2) ** 2 + p ** 2 * np.cos(
         theta_k) ** 2
 
-    e2 = (c ** 2 / n2) * e_temp1 / e_temp2 * b2.data * 1e-12
+    e2 = (speed_of_light ** 2 / n2) * e_temp1 / e_temp2 * b2.data * 1e-12
 
     return e2

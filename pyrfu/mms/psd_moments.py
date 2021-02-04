@@ -29,10 +29,10 @@ def calc_moms(time_idx, arguments):
     """
     if len(arguments) > 13:
         [is_brst_data, flag_same_e, flag_de, step_table, energy0, delta_v0, energy1, delta_v1,
-         qe, sc_pot, p_mass, flag_inner_electron, w_inner_electron, phi_tr, theta_k, int_energies,
+         q_e, sc_pot, p_mass, flag_inner_electron, w_inner_electron, phi_tr, theta_k, int_energies,
          vdf, delta_ang] = arguments
     else:
-        [is_brst_data, flag_same_e, flag_de, energy, delta_v, qe, sc_pot, p_mass,
+        [is_brst_data, flag_same_e, flag_de, energy, delta_v, q_e, sc_pot, p_mass,
          flag_inner_electron, w_inner_electron, phi_tr, theta_k, int_energies, vdf,
          delta_ang] = arguments
 
@@ -45,7 +45,7 @@ def calc_moms(time_idx, arguments):
                 energy = energy1
                 delta_v = delta_v1
 
-    velocity = np.real(np.sqrt(2 * qe * (energy - sc_pot.data[time_idx]) / p_mass))
+    velocity = np.real(np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass))
     velocity[energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron < 0] = 0
 
     if is_brst_data:
@@ -317,7 +317,7 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
         print("notice : Particles are electrons")
     elif particle_type[0] == "i":
         p_mass = constants.proton_mass
-        sc_pot.data = -sc_pot.data
+        sc_pot.data = -1. * sc_pot.data
         print("notice : Particles are ions")
     else:
         raise ValueError("Could not identify the particle type")

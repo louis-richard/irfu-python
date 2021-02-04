@@ -12,7 +12,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-from astropy import constants
+from scipy import constants
 
 from .avg_4sc import avg_4sc
 from .c_4_grad import c_4_grad
@@ -108,7 +108,7 @@ def c_4_j(r_list, b_list):
 
     """
 
-    mu0 = constants.mu0.value
+    mu0 = constants.mu_0
 
     b_avg = avg_4sc(b_list)
 

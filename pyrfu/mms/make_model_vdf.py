@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from astropy import constants
+from scipy import constants
 
 from ..pyrf import resample, dec_par_perp, norm
 
@@ -100,15 +100,15 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
     v_perp_dir, b_xyz_dir = [v_perp / v_perp_mag, b_xyz / b_xyz_mag]
 
     # Define constants
-    q_e = constants.e.value
+    q_e = constants.elementary_charge
 
     # Check whether particles are electrons or ions
     if vdf.attrs["species"].lower() == "e":
-        p_mass = constants.m_e.value
+        p_mass = constants.electron_mass
         print("notice : Particles are electrons")
     elif vdf.attrs["species"].lower() == "i":
-        p_mass = constants.m_p.value
-        sc_pot.data = -sc_pot.data
+        p_mass = constants.proton_mass
+        sc_pot.data = -1. * sc_pot.data
         print("notice : Particles are ions")
     else:
         raise ValueError("Invalid specie")
@@ -135,11 +135,11 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
     r_mat = np.zeros((n_ti, n_en))
 
     for i in range(n_ti):
-        time[i, ...] = np.outer(-np.cos(vdf.phi.data[i, :] * np.pi / 180)
-                                * np.sin(vdf.theta.data * np.pi / 180))
-        phi[i, ...] = np.outer(-np.sin(vdf.phi.data[i, :] * np.pi / 180)
-                               * np.sin(vdf.theta.data * np.pi / 180))
-        theta[i, ...] = np.outer(-np.ones(n_ph) * np.cos(vdf.theta.data * np.pi / 180))
+        time[i, ...] = np.outer(-np.cos(vdf.phi.data[i, :] * np.pi / 180),
+                                np.sin(vdf.theta.data * np.pi / 180))
+        phi[i, ...] = np.outer(-np.sin(vdf.phi.data[i, :] * np.pi / 180),
+                               np.sin(vdf.theta.data * np.pi / 180))
+        theta[i, ...] = np.outer(-np.ones(n_ph), np.cos(vdf.theta.data * np.pi / 180))
         r_mat[i, ...] = np.real(np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass))
 
     r_mat[r_mat == 0] = 0.0

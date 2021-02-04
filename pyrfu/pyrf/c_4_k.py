@@ -41,11 +41,13 @@ def c_4_k(r_list):
 
     k_list = [r_list[0].copy()] * 4
 
-    for i, j, k, m in zip(mms_list, np.roll(mms_list, 1), np.roll(mms_list, 2),
-                          np.roll(mms_list, 3)):
-        dr_jk_x_dr_jm = cross(r_list[k]-r_list[j], r_list[m]-r_list[j])
+    # Roll tetrahedron indices
+    mms_list_r0, mms_list_r1, mms_list_r2, mms_list_r3 = [np.roll(mms_list, i) for i in range(4)]
 
-        dr12 = r_list[i]-r_list[j]
+    for i, alpha, beta, gamma in zip(mms_list_r0, mms_list_r1, mms_list_r2, mms_list_r3):
+        dr_jk_x_dr_jm = cross(r_list[beta]-r_list[alpha], r_list[gamma]-r_list[alpha])
+
+        dr12 = r_list[i]-r_list[alpha]
 
         k_list[i] = dr_jk_x_dr_jm / dot(dr_jk_x_dr_jm, dr12)
 

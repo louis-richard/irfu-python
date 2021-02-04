@@ -105,13 +105,13 @@ def load_ancillary(level_and_dtype, tint, probe, verbose=True, data_path=""):
     files_names.sort()
 
     # Read length of header and columns names from .json file
-    with open("./ancillary.json") as f:
-        anc_dict = json.load(f)
+    with open("./ancillary.json") as file:
+        anc_dict = json.load(file)
 
     if verbose:
         print("Loading ancillary {} files...".format(level_and_dtype))
 
-    df_dict = {}
+    data_frame_dict = {}
 
     for i, file in enumerate(files_names):
         rows = pd.read_csv(file, delim_whitespace=True, header=None,
@@ -127,13 +127,13 @@ def load_ancillary(level_and_dtype, tint, probe, verbose=True, data_path=""):
         end_idx = bisect.bisect_left(rows[0][:], date_parser.parse(tint[1]))
         rows.columns = anc_dict[level_and_dtype]["columns_names"]
 
-        df_dict[i] = rows[:][start_idx:end_idx]
+        data_frame_dict[i] = rows[:][start_idx:end_idx]
 
-    df = df_dict[0]
+    data_frame = data_frame_dict[0]
 
-    for k in list(df_dict.keys())[1:]:
-        df = df.append(df_dict[k])
+    for k in list(data_frame_dict.keys())[1:]:
+        data_frame = data_frame.append(data_frame_dict[k])
 
-    df = df.sort_values(by="time").set_index(["time"])
+    data_frame = data_frame.sort_values(by="time").set_index(["time"])
 
-    return df.to_xarray()
+    return data_frame.to_xarray()

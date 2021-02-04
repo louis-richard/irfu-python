@@ -189,11 +189,11 @@ def rotate_tensor(*args):
                 np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])), np.transpose(rot_temp))
 
     # Construct output
-    p = ts_tensor_xyz(p_times, p_tensor_p)
+    p_new = ts_tensor_xyz(p_times, p_tensor_p)
 
     try:
-        p.attrs["units"] = args[0].attrs["units"]
+        p_new.attrs["units"] = args[0].attrs["units"]
     except KeyError:
         pass
 
-    return p
+    return p_new

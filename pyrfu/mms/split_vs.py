@@ -37,10 +37,6 @@ def split_vs(var_str):
     """
 
     splitted_key = var_str.split("_")
-    n_tk = len(splitted_key)
-
-    if n_tk < 3 or n_tk > 5:
-        raise ValueError("invalid STRING format")
 
     all_params_scalars = ["ni", "nbgi", "pbgi", "partni", "ne", "pbge", "nbge", "partne", "tsi",
                           "tperpi",
@@ -75,16 +71,12 @@ def split_vs(var_str):
 
     param = splitted_key[0]
 
-    if param.lower() in all_params_scalars:
+    if param.lower() in all_params_scalars or param.lower() in hpca_params_scalars:
         tensor_order = 0
-    elif param.lower() in all_params_vectors:
+    elif param.lower() in all_params_vectors or param.lower() in hpca_params_tensors:
         tensor_order = 1
     elif param.lower() in all_params_tensors:
         tensor_order = 2
-    elif param.lower() in hpca_params_scalars:
-        tensor_order = 0
-    elif param.lower() in hpca_params_tensors:
-        tensor_order = 1
     else:
         raise ValueError(f"invalid PARAM : {param}")
 
@@ -92,20 +84,16 @@ def split_vs(var_str):
     idx = 0
 
     if tensor_order > 0:
-        coordinate_system = splitted_key[idx+1]
-
+        coordinate_system = splitted_key[idx + 1]
+        assert coordinate_system in coordinate_systems, "invalid COORDINATE_SYS"
         idx += 1
 
-        if coordinate_system not in coordinate_systems:
-            raise ValueError("invalid COORDINATE_SYS")
+    instrument = splitted_key[idx + 1]
+    assert instrument in instruments, "invalid INSTRUMENT"
 
-    instrument = splitted_key[idx+1]
     idx += 1
 
-    if instrument not in instruments:
-        raise ValueError("invalid INSTRUMENT")
-
-    tmmode = splitted_key[idx+1]
+    tmmode = splitted_key[idx + 1]
     idx += 1
 
     if tmmode not in ["brst", "fast", "slow", "srvy"]:
@@ -116,10 +104,8 @@ def split_vs(var_str):
     if len(splitted_key) == idx + 1:
         data_lvl = "l2"  # default
     else:
-        data_lvl = splitted_key[idx+1]
-
-        if data_lvl not in data_lvls:
-            raise ValueError("invalid DATA_LEVEL level")
+        data_lvl = splitted_key[idx + 1]
+        assert data_lvl in data_lvls, "invalid DATA_LEVEL level"
 
     res = {"param": param, "to": tensor_order, "cs": coordinate_system, "inst": instrument,
            "tmmode": tmmode, "lev": data_lvl}

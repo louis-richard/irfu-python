@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from astropy import constants
+from scipy import constants
 
 from .resample import resample
 from ..mms import rotate_tensor
@@ -78,7 +78,7 @@ def pres_anis(p_xyz, b_xyz):
     p_perp = (p_xyzfac[:, 1, 1] + p_xyzfac[:, 2, 2]) / 2
 
     # Load permittivity
-    mu0 = constants.mu0.value
+    mu0 = constants.mu_0
 
     # Compute pressure anistropy
     p_anis = 1e9 * mu0 * (p_para - p_perp) / np.linalg.norm(b_xyz) ** 2
