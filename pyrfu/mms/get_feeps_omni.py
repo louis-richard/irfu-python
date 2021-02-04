@@ -120,13 +120,14 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True):
 
         bot_it[bsen] = bot
 
-    dalleyes = np.empty((top.shape[0], top.shape[1], len(top_sensors) + len(bot_sensors)))
+    dalleyes = np.empty((top_it[top_sensors[0]].shape[0], top_it[top_sensors[0]].shape[1],
+                         len(top_sensors) + len(bot_sensors)))
 
     for i, tsen in enumerate(top_sensors):
         dalleyes[..., i] = top_it[tsen]
 
     for i, bsen in enumerate(bot_sensors):
-        dalleyes[..., len(top_sensors) + i] = bot_it[tsen]
+        dalleyes[..., len(top_sensors) + i] = bot_it[bsen]
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)

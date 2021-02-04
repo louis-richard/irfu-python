@@ -87,6 +87,7 @@ def poynting_flux(e_xyz, b_xyz, b0):
     else:
         e = ee
         b = bb
+        fs = fs_e
         print("assuming the same sampling. Interpolating B and E to 2x E sampling.")
 
     """
@@ -104,6 +105,8 @@ def poynting_flux(e_xyz, b_xyz, b0):
     if flag_s_z:
         b_m = resample(b0, e)
         s_z = dot(normalize(b_m), s)
+    else:
+        s_z = None
 
     # time integral of Poynting flux along ambient magnetic field
     if flag_int_s_z:

@@ -104,6 +104,8 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     telescopes = np.hstack([telescope_map["bottom-{}".format(var["dtype"])],
                             telescope_map["top-{}".format(var["dtype"])]])
 
+    new_pas = np.empty([len(b_times), len(eyes["top"]) + len(eyes["bottom"])])
+
     for i, k in zip(np.arange(18), telescopes):
         if i < 8:
             v_bcs = vt_bcs[str(k)]
@@ -125,15 +127,14 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
 
             # PAs for only active eyes
             # pitch angles for each eye at each time
-            new_pas = np.empty([len(b_times), len(eyes["top"]) + len(eyes["bottom"])])
 
-            for top_idx, top_eye in enumerate(eyes["top"]):
-                new_pas[:, top_idx] = pas[:, top_tele_idx_map[top_eye]]
-                top_idx.append(top_idx)
+            for top_id, top_eye in enumerate(eyes["top"]):
+                new_pas[:, top_id] = pas[:, top_tele_idx_map[top_eye]]
+                top_idx.append(top_id)
 
-            for bot_idx, bot_eye in enumerate(eyes["bottom"]):
-                new_pas[:, bot_idx + len(eyes["top"])] = pas[:, bot_tele_idx_map[bot_eye]]
-                bot_idx.append(bot_idx + len(eyes["top"]))
+            for bot_id, bot_eye in enumerate(eyes["bottom"]):
+                new_pas[:, bot_id + len(eyes["top"])] = pas[:, bot_tele_idx_map[bot_eye]]
+                bot_idx.append(bot_id + len(eyes["top"]))
 
             idx_maps = {"electron-top": top_idx, "electron-bottom": bot_idx}
 

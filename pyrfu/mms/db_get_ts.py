@@ -18,7 +18,6 @@ from .get_ts import get_ts
 from ..pyrf import ts_append
 
 
-# noinspection PyUnboundLocalVariable
 def db_get_ts(dataset_name, cdf_name, tint=None):
     """Get variable time series in the cdf file.
 
@@ -54,11 +53,8 @@ def db_get_ts(dataset_name, cdf_name, tint=None):
 
     files = list_files(tint, probe, var)
 
+    out = None
     for i, file in enumerate(files):
-        temp = get_ts(file, cdf_name, tint)
-        if i == 0:
-            out = temp
-        else:
-            out = ts_append(out, temp)
+        out = ts_append(out, get_ts(file, cdf_name, tint))
 
     return out

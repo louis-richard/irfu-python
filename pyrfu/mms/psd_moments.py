@@ -136,7 +136,6 @@ def calc_moms(time_idx, arguments):
     return n_psd, v_psd, p_psd, h_psd
 
 
-# noinspection PyUnboundLocalVariable
 def psd_moments(vdf=None, sc_pot=None, **kwargs):
     """Computes moments from the FPI particle phase-space densities.
 
@@ -240,6 +239,7 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
 
     if is_brst_data:
         step_table = vdf.attrs["esteptable"]
+        energy = None
         energy0 = vdf.attrs["energy0"]
         energy1 = vdf.attrs["energy1"]
         e_tmp = energy1 - energy0
@@ -247,7 +247,10 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
         if all(e_tmp) == 0:
             flag_same_e = 1
     else:
+        step_table = None
         energy = vdf.energy
+        energy0 = None
+        energy1 = None
         e_tmp = energy[0, :] - energy[-1, :]
 
         if all(e_tmp) == 0:
@@ -352,6 +355,7 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
             v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
             v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
             delta_v = v_upper - v_lower
+            delta_v0, delta_v1 = [None, None]
         else:
             energy_all = np.hstack([energy0, energy1])
             energy_all = np.log10(np.sort(energy_all))
@@ -380,6 +384,8 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
             delta_v0 = (v0upper - v0lower) * 2.0
             delta_v1 = (v1upper - v1lower) * 2.0
 
+            delta_v = None
+
             # delta_v0(1) = delta_v0(1)*2.7
             # delta_v1(1) = delta_v1(1)*2.7
 
@@ -395,6 +401,7 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
         v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
         delta_v = (v_upper - v_lower) * 2.0
         delta_v[0] = delta_v[0] * 2.7
+        delta_v0, delta_v1 = [None, None]
 
     theta_k = theta_k.data[np.newaxis, :]
 

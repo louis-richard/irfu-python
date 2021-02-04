@@ -142,6 +142,8 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
 
     helic, ellip = [np.zeros([n_stp, int(nop_fft / 2), 3]) for _ in range(2)]
 
+    smooth = np.zeros(nop_fft)
+
     for j in range(n_stp):
         # FFT CALCULATION
         smooth = 0.08 + 0.46 * (1 - np.cos(2 * np.pi * np.arange(1, nop_fft + 1) / nop_fft))
