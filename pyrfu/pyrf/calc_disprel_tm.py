@@ -63,8 +63,9 @@ def calc_disprel_tm(vel, vel_err, tau, tau_err):
     def model_tau_v(period, numerator):
         return numerator / period
 
-    fit_tau_v, cov_tau_v = optimize.curve_fit(model_tau_v, tau, vel, 1,
-                                              sigma=np.sqrt(vel_err ** 2 + tau_err ** 2))
+    curve_fit_options = dict(sigma=np.sqrt(vel_err ** 2 + tau_err ** 2))
+    res_tau = optimize.curve_fit(model_tau_v, tau, vel, 1, **curve_fit_options)
+    fit_tau_v, cov_tau_v = res_tau[:2]
     sigma_tau_v = np.sqrt(np.diagonal(cov_tau_v))
 
     # High resolution prediction
@@ -78,8 +79,9 @@ def calc_disprel_tm(vel, vel_err, tau, tau_err):
     def model_k_w(wavenumber, factor):
         return factor * wavenumber
 
-    fit, cov = optimize.curve_fit(model_k_w, k, omega, 1,
-                                  sigma=np.sqrt(omega_err ** 2 + k_err ** 2))
+    curve_fit_options = dict(sigma=np.sqrt(omega_err ** 2 + k_err ** 2))
+    res = optimize.curve_fit(model_k_w, k, omega, 1, **curve_fit_options)
+    fit, cov = res[:2]
     sigma_k_w = np.sqrt(np.diagonal(cov))
 
     # High resolution prediction
