@@ -16,7 +16,7 @@ from .get_feeps_active_eyes import get_feeps_active_eyes
 from .db_get_ts import db_get_ts
 
 
-def get_feeps_oneeye(tar_var, e_id, tint, mms_id, verbose=True):
+def get_feeps_oneeye(tar_var, e_id, tint, mms_id, verbose=True, data_path=""):
     """
     Load energy spectrum all the target eye
 
@@ -56,6 +56,9 @@ def get_feeps_oneeye(tar_var, e_id, tint, mms_id, verbose=True):
 
     verbose : bool, optional
         Set to True to follow the loading. Default is True.
+
+    data_path : str, optional
+        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
 
     Returns
     -------
@@ -122,7 +125,7 @@ def get_feeps_oneeye(tar_var, e_id, tint, mms_id, verbose=True):
     if verbose:
         print("Loading {}...".format("_".join([dset_pref, suf])))
 
-    out = db_get_ts(dset_name, "_".join([dset_pref, suf]), tint)
+    out = db_get_ts(dset_name, "_".join([dset_pref, suf]), tint, data_path)
 
     out.attrs["tmmode"] = var["tmmode"]
     out.attrs["lev"] = var["lev"]

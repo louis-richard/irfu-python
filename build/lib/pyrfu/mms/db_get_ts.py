@@ -18,7 +18,7 @@ from .get_ts import get_ts
 from ..pyrf import ts_append
 
 
-def db_get_ts(dataset_name, cdf_name, tint=None):
+def db_get_ts(dataset_name, cdf_name, tint=None, data_path=""):
     """Get variable time series in the cdf file.
 
     Parameters
@@ -31,6 +31,9 @@ def db_get_ts(dataset_name, cdf_name, tint=None):
 
     tint : list of str
         Time interval.
+
+    data_path : str, optional
+        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
 
     Returns
     -------
@@ -51,7 +54,7 @@ def db_get_ts(dataset_name, cdf_name, tint=None):
     except IndexError:
         pass
 
-    files = list_files(tint, probe, var)
+    files = list_files(tint, probe, var, data_path=data_path)
 
     out = None
     for i, file in enumerate(files):

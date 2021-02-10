@@ -21,7 +21,7 @@ from .get_feeps_oneeye import get_feeps_oneeye
 
 
 # noinspection PyUnboundLocalVariable
-def get_feeps_omni(tar_var, tint, mms_id, verbose=True):
+def get_feeps_omni(tar_var, tint, mms_id, verbose=True, data_path=""):
     """Computes omni directional energy spectrum of the target data unit for the target specie
     over the target energy range.
 
@@ -38,6 +38,9 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True):
 
     verbose : bool
         Set to True to follow the loading. Default is True.
+
+    data_path : str, optional
+        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
 
     Returns
     --------
@@ -96,10 +99,10 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True):
 
     for tsen in top_sensors:
         top = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
-                               f"top-{tsen:d}", tint, mms_id, verbose)
+                               f"top-{tsen:d}", tint, mms_id, verbose, data_path)
 
         msk = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
-                               f"top-{tsen:d}", tint, mms_id, verbose)
+                               f"top-{tsen:d}", tint, mms_id, verbose, data_path)
 
         msk.data = np.tile(msk.data[:, 0], (msk.shape[1], 1)).T
 
@@ -109,10 +112,10 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True):
 
     for bsen in bot_sensors:
         bot = get_feeps_oneeye(f"{data_units}{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
-                               f"bottom-{bsen:d}", tint, mms_id, verbose)
+                               f"bottom-{bsen:d}", tint, mms_id, verbose, data_path)
 
         msk = get_feeps_oneeye(f"mask{var['dtype'][0]}_{var['tmmode']}_{var['lev']}",
-                               f"bottom-{bsen:d}", tint, mms_id, verbose)
+                               f"bottom-{bsen:d}", tint, mms_id, verbose, data_path)
 
         msk.data = np.tile(msk.data[:, 0], (msk.shape[1], 1)).T
 
@@ -135,7 +138,7 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True):
 
     flux_omni *= g_fact[specie][mms_id - 1]
 
-    time = top_it[top_sensors[0]]
+    time = top_it[top_sensors[0]].time.data
 
     out = xr.DataArray(flux_omni[:], coords=[time, energies], dims=["time", "energy"])
 

@@ -138,7 +138,7 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True, data_path=""):
 
     flux_omni *= g_fact[specie][mms_id - 1]
 
-    time = top_it[top_sensors[0]].time.data
+    time = top_it[top_sensors[0]]
 
     out = xr.DataArray(flux_omni[:], coords=[time, energies], dims=["time", "energy"])
 
