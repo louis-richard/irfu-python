@@ -14,7 +14,7 @@
 
 import os
 import re
-import json
+import yaml
 import glob
 import bisect
 import fnmatch
@@ -105,8 +105,11 @@ def load_ancillary(level_and_dtype, tint, probe, verbose=True, data_path=""):
     files_names.sort()
 
     # Read length of header and columns names from .json file
-    with open("./ancillary.json") as file:
-        anc_dict = json.load(file)
+    # Root path
+    root_path = os.path.dirname(os.path.abspath(__file__))
+
+    with open(os.sep.join([root_path, "ancillary.yml"])) as file:
+        anc_dict = yaml.load(file, Loader=yaml.FullLoader)
 
     if verbose:
         print("Loading ancillary {} files...".format(level_and_dtype))

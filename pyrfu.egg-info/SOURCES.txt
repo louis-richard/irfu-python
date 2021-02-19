@@ -9,6 +9,7 @@ pyrfu.egg-info/dependency_links.txt
 pyrfu.egg-info/requires.txt
 pyrfu.egg-info/top_level.txt
 pyrfu/mms/__init__.py
+pyrfu/mms/ancillary.yml
 pyrfu/mms/calc_feeps_omni.py
 pyrfu/mms/calc_feeps_pad.py
 pyrfu/mms/calculate_epsilon.py
@@ -19,7 +20,9 @@ pyrfu/mms/db_get_ts.py
 pyrfu/mms/deflux_to_vdf.py
 pyrfu/mms/dft_time_shift.py
 pyrfu/mms/dpflux_to_vdf.py
+pyrfu/mms/dsl2gse.py
 pyrfu/mms/estimate_phase_speed.py
+pyrfu/mms/feeps_calibration.yml
 pyrfu/mms/feeps_pitch_angles.py
 pyrfu/mms/feeps_remove_sun.py
 pyrfu/mms/feeps_spin_avg.py
@@ -79,6 +82,9 @@ pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20161028.csv
 pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20170531.csv
 pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20171003.csv
 pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20181005.csv
+pyrfu/models/__init__.py
+pyrfu/models/igrf.py
+pyrfu/models/igrf13coeffs.csv
 pyrfu/plot/__init__.py
 pyrfu/plot/colorbar.py
 pyrfu/plot/make_labels.py
@@ -120,6 +126,7 @@ pyrfu/pyrf/end.py
 pyrfu/pyrf/extend_tint.py
 pyrfu/pyrf/filt.py
 pyrfu/pyrf/find_closest.py
+pyrfu/pyrf/geocentric_coordinate_transformation.py
 pyrfu/pyrf/gradient.py
 pyrfu/pyrf/histogram.py
 pyrfu/pyrf/histogram2d.py
@@ -147,12 +154,14 @@ pyrfu/pyrf/pvi_4sc.py
 pyrfu/pyrf/remove_repeated_points.py
 pyrfu/pyrf/resample.py
 pyrfu/pyrf/solid_angle.py
+pyrfu/pyrf/sph2cart.py
 pyrfu/pyrf/st_diff.py
 pyrfu/pyrf/start.py
 pyrfu/pyrf/struct_func.py
 pyrfu/pyrf/t_eval.py
 pyrfu/pyrf/time_clip.py
 pyrfu/pyrf/trace.py
+pyrfu/pyrf/transformation_indices.yml
 pyrfu/pyrf/ts_append.py
 pyrfu/pyrf/ts_scalar.py
 pyrfu/pyrf/ts_skymap.py

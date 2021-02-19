@@ -1,0 +1,89 @@
+# Geocentric Solar Ecliptic to Geocentric Solar Magnetospheric
+gse>gsm: [3]
+
+# Geocentric Solar Magnetospheric to Geocentric Solar Ecliptic
+gsm>gse: [-3]
+
+# Geocentric Solar Ecliptic to Geocentric Equatorial Inertial
+gse>gei: [-2]
+
+# Geocentric Solar Ecliptic to Geographic
+gse>geo: [1, -2]
+
+# Geocentric Solar Ecliptic to Solar Magnetic
+gse>sm: [4, 3]
+
+# Geocentric Solar Ecliptic to Geomagnetic
+gse>mag: [5, 1, -2]
+
+# Geocentric Solar Magnetospheric to Geocentric Equatorial Inertial
+gsm>gei: [-2, -3]
+
+# Geocentric Solar Magnetospheric to Geographic
+gsm>geo: [1, -2, -3]
+
+# Geocentric Solar Magnetospheric to Solar Magnetic
+gsm>sm: [4]
+
+# Geocentric Solar Magnetospheric to Geomagnetic
+gsm>mag: [5, 1, -2, -3]
+
+# Solar Magnetic to Geocentric Equatorial Inertial
+sm>gei: [-2, -3, -4]
+
+# Solar Magnetic to Geographic
+sm>geo: [1, -2, -3, -4]
+
+# Solar Magnetic to Geocentric Solar Ecliptic
+sm>gse: [-3, -4]
+
+# Solar Magnetic to Geocentric Solar Magnetospheric
+sm>gsm: [-4]
+
+# Solar Magnetic to Geomagnetic
+sm>mag: [5, 1, -2, -3, -4]
+
+# Geomagnetic to Geocentric Equatorial Inertial
+mag>gei: [-1, -5]
+
+# Geomagnetic to Geographic
+mag>geo: [-5]
+
+# Geomagnetic to Geocentric Solar Ecliptic
+mag>gse: [2, -1, -5]
+
+# Geomagnetic to Geocentric Solar Magnetospheric
+mag>gsm: [3, 2, -1, -5]
+
+# Geomagnetic to Solar Magnetic
+mag>sm: [4, 3, 2, -1, -5]
+
+# Geographic to Geocentric Equatorial Inertial
+geo>gei: [-1]
+
+# Geographic to Geocentric Solar Ecliptic
+geo>gse: [2, -1]
+
+# Geographic to Geocentric Solar Magnetospheric
+geo>gsm: [3, 2, -1]
+
+# Geographic to Solar Magnetic
+geo>sm: [4, 3, 2, -1]
+
+# Geographic to Geomagnetic
+geo>mag: [5]
+
+# Geocentric Equatorial Inertial to Geographic
+gei>geo: [1]
+
+# Geocentric Equatorial Inertial to Geocentric Solar Ecliptic
+gei>gse: [2]
+
+# Geocentric Equatorial Inertial to Geocentric Solar Magnetospheric
+gei>gsm: [3, 2]
+
+# Geocentric Equatorial Inertial to Solar Magnetic
+gei>sm: [4, 3, 2]
+
+# Geocentric Equatorial Inertial to Geomagnetic
+gei>mag: [5, 1]

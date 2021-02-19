@@ -87,3 +87,7 @@ from .calc_agyro import calc_agyro
 
 from .datetime_to_tt2000 import datetime_to_tt2000
 
+
+from .geocentric_coordinate_transformation import geocentric_coordinate_transformation
+
+from .sph2cart import sph2cart

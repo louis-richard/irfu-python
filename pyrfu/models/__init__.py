@@ -12,13 +12,4 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import unittest
-import numpy as np
-
-
-from pyrfu import mms, pyrf, models
-
-
-
-
-
+from .igrf import igrf
