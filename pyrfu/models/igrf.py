@@ -12,6 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""igrf.py
+@author: Louis Richard
+"""
+
 import os
 import warnings
 import numpy as np

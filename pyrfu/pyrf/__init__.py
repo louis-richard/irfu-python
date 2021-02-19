@@ -12,6 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""__init__.py
+@author: Louis Richard"""
+
+# @Louis Richard
 from .ts_time import ts_time
 from .ts_scalar import ts_scalar
 from .ts_vec_xyz import ts_vec_xyz
@@ -64,8 +68,6 @@ from .c_4_j import c_4_j
 from .c_4_v import c_4_v
 from .ebsp import ebsp
 from .date_str import date_str
-
-# 2020/09/04
 from .find_closest import find_closest
 from .cart2sph import cart2sph
 from .corr_deriv import corr_deriv
@@ -76,18 +78,15 @@ from .poynting_flux import poynting_flux
 from .remove_repeated_points import remove_repeated_points
 from .solid_angle import solid_angle
 from .wave_fft import wave_fft
-
 from .pvi import pvi
 from .pvi_4sc import pvi_4sc
 from .pid_4sc import pid_4sc
-
 from .calc_dng import calc_dng
 from .calc_ag import calc_ag
 from .calc_agyro import calc_agyro
-
 from .datetime_to_tt2000 import datetime_to_tt2000
-
-
 from .geocentric_coordinate_transformation import geocentric_coordinate_transformation
-
 from .sph2cart import sph2cart
+from .gse2gsm import gse2gsm
+from .mf import mf
+from .waverage import waverage

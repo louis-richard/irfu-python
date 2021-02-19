@@ -12,4 +12,9 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""__init__.py
+@author: Louis Richard
+"""
+
+# @Louis Richard
 from .igrf import igrf
