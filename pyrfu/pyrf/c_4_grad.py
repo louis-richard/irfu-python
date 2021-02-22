@@ -68,7 +68,7 @@ def c_4_grad(r_list, b_list, method="grad"):
     .. [3]	Robert, P., et al. (1998), Accuracy of current determination, in
             Analysis Methods for Multi-Spacecraft Data, edited by G.
             Paschmann and P. W. Daly, pp. 395–418, Int. Space Sci. Inst.,
-            Bern. url : http://www.issibern.ch/forads/sr-001-16.pdf
+            Bern. doi : http://www.issibern.ch/forads/sr-001-16.pdf
 
     Examples
     --------
