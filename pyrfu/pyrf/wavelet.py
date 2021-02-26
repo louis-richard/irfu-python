@@ -19,8 +19,11 @@
 import multiprocessing as mp
 import numpy as np
 import xarray as xr
+import warnings
 import pyfftw
 import numba
+
+from .calc_fs import calc_fs
 
 
 @numba.jit(nopython=True, fastmath=True)
@@ -87,60 +90,31 @@ def wavelet(inp, **kwargs):
 
     """
 
-    # Time bounds
-    start_time = inp.time.data[0].view("i8") * 1e-9
-    end_time = inp.time.data[1].view("i8") * 1e-9
-
-    # Time interval
-    tint = end_time - start_time
-
-    # Sampling frequency
-    f_s = len(inp) / tint
-
     # Unpack time and data
-    time, data = [inp.time.data.view("i8") * 1e-9, inp.data]
+    data = inp.data
 
-    # f
-    scale_min, scale_max = [0.01, 2]
-    f_min, f_max = [.5 * f_s / 10 ** scale_max, .5 * f_s / 10 ** scale_min]
-
-    # nf
-    n_freqs = 200
-
-    # wavelet_width
-    wavelet_width, delta_f = [5.36, 100]
-
-    return_power, cut_edge, linear_df = [True, True, False]
-
-    if kwargs.get("return_power"):
-        return_power = kwargs["return_power"]
-
-    if kwargs.get("cut_edge"):
-        cut_edge = kwargs["cut_edge"]
-
-    if kwargs.get("fs"):
-        assert isinstance(kwargs["fs"], (int, float)), "fs must be numeric"
-        f_s = kwargs["fs"]
-
-    if kwargs.get("nf"):
-        assert isinstance(kwargs["nf"], (int, float)), "nf must be numeric"
-        n_freqs = kwargs["nf"]
+    f_s = kwargs.get("fs", calc_fs(inp))
+    n_freqs = kwargs.get("nf", 200)
+    wavelet_width = kwargs.get("wavelet_width", 5.36)
+    cut_edge = kwargs.get("cut_edge", True)
+    return_power = kwargs.get("return_power", True)
 
     if kwargs.get("linear"):
         linear_df = True
         if isinstance(kwargs["linear"], (int, float)):
             delta_f = kwargs["linear"]
         else:
-            raise Warning("Unknown input for linear delta_f set to 100")
+            delta_f = 100
+            warnings.warn("Unknown input for linear delta_f set to 100",
+                          UserWarning)
+    else:
+        delta_f = 100
+        linear_df = False
 
-    if kwargs.get("wavelet_width"):
-        assert isinstance(kwargs["wavelet_width"], (int, float))
-        wavelet_width = kwargs["wavelet_width"]
+    scale_min, scale_max = [0.01, 2]
 
-    if kwargs.get("f"):
-        assert isinstance(kwargs["f"], (np.ndarray, list))
-        assert len(kwargs["f"]) == 2
-        f_min, f_max = kwargs["f"]
+    f_min, f_max = kwargs.get("f", [.5 * f_s / 10 ** scale_max,
+                                    .5 * f_s / 10 ** scale_min])
 
     f_nyq, scale_number, sigma = [f_s / 2, n_freqs, wavelet_width / (f_s / 2)]
 
@@ -157,7 +131,10 @@ def wavelet(inp, **kwargs):
 
     # Remove the last sample if the total number of samples is odd
     if len(data) / 2 != np.floor(len(data) / 2):
-        time, data = [time[:-1], data[:-1, ...]]
+        time = inp.time.data[:-1]
+        data = data[:-1, ...]
+    else:
+        time = inp.time.data
 
     # Check for NaNs
     scales[np.isnan(scales)] = 0
@@ -178,7 +155,7 @@ def wavelet(inp, **kwargs):
     else:
         raise TypeError("Invalid shape of the inp")
 
-    new_freq_mat, _ = np.meshgrid(new_freq, frequencies, sparse=True)
+    new_freq_mat, temp_freq = np.meshgrid(new_freq, frequencies, sparse=True)
 
     _, frequencies_mat = np.meshgrid(scales, frequencies, sparse=True)
 
@@ -216,23 +193,19 @@ def wavelet(inp, **kwargs):
             censure = np.floor(2 * scales).astype(int)
 
             for j in range(scale_number):
-                power2[1:censure[j], j] = np.nan
+                power2[:censure[j], j] = np.nan
 
                 power2[len(data_col) - censure[j]:len(data_col), j] = np.nan
-        else:
-            continue
 
         if len(inp.shape) == 2:
             out_dict[inp.comp.data[i]] = (["time", "frequency"], power2)
-        else:
-            continue
 
     if len(inp.shape) == 1:
-        out = xr.DataArray(power2, coords=[inp.time.data, new_freq],
+        out = xr.DataArray(power2, coords=[time, new_freq],
                            dims=["time", "frequency"])
     elif len(inp.shape) == 2:
         out = xr.Dataset(out_dict,
-                         coords={"time": inp.time.data, "frequency": new_freq})
+                         coords={"time": time, "frequency": new_freq})
     else:
         raise TypeError("Invalid shape")
 

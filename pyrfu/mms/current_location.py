@@ -17,7 +17,8 @@ from PIL import Image
 from dateutil import parser as date_parser
 
 
-def current_location(time, view="xy", path=".", show=False):
+def current_location(time, view: str = "xy", path: str = ".",
+                     show: bool = False):
     """Download MMS location plots from MMS SDC.
 
     Parameters
@@ -56,7 +57,8 @@ def current_location(time, view="xy", path=".", show=False):
     os.makedirs(os.path.join(path, dir_path), exist_ok=True)
 
     # Full url and path of the orbit plot
-    img_url, img_path = [os.path.join(root, dir_path, img_name) for root in [sdc_url, path]]
+    img_url, img_path = [os.path.join(root, dir_path, img_name)
+                         for root in [sdc_url, path]]
 
     # Download image
     response = requests.get(img_url, stream=True)

@@ -109,5 +109,6 @@ def dsl2gse(inp, defatt, direction=1):
 
     out = inp.copy()
     out.data = out_data
+    out.attrs["COORDINATE_SYSTEM"] = "GSE"
 
     return out

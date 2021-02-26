@@ -15,10 +15,13 @@
 from .list_files import list_files
 from .get_ts import get_ts
 
+from typing import List
+
 from ..pyrf import ts_append
 
 
-def db_get_ts(dataset_name, cdf_name, tint=None, data_path=""):
+def db_get_ts(dataset_name, cdf_name, tint: List[str] = None,
+              data_path: str = ""):
     """Get variable time series in the cdf file.
 
     Parameters

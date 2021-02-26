@@ -17,12 +17,14 @@ import numpy as np
 import xarray as xr
 
 from astropy.time import Time
+from typing import List
 
 from .feeps_pitch_angles import feeps_pitch_angles
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def calc_feeps_pad(inp_dataset, b_bcs, bin_size=16.3636, energy=None):
+def calc_feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
+                   energy: List[float] = None):
     """Compute pitch angle distribution using FEEPS data.
 
     Parameters

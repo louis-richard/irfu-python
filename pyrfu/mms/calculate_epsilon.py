@@ -60,12 +60,8 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     # Default energy channels used to compute epsilon, lowest energy channel
     # should not be used.
-    int_energies = np.arange(2, 33)
-
-    if kwargs.get("en_channels"):
-        assert isinstance(kwargs["en_channels"], (list, np.ndarray))
-        int_energies = np.arange(kwargs["en_channels"][0],
-                                 kwargs["en_channels"][1] + 1)
+    energy_range = kwargs.get("en_channels", [2, 32])
+    int_energy = np.arange(energy_range[0], energy_range[1] + 1)
 
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
