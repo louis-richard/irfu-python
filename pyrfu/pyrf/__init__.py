@@ -90,3 +90,4 @@ from .sph2cart import sph2cart
 from .gse2gsm import gse2gsm
 from .mf import mf
 from .waverage import waverage
+from .l_shell import l_shell

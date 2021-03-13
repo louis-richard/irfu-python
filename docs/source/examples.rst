@@ -15,4 +15,6 @@ the different subpackages of the ``pyrfu`` package.
     examples/01_mms/example_mms_particle_deflux.ipynb
     examples/01_mms/example_mms_particle_pad.ipynb
     examples/01_mms/example_mms_polarizationanalysis.ipynb
+    examples/01_mms/example_mms_electron_psd.ipynb
+    examples/02_dispersion/example_dispersion_one_fluid.ipynb
 

@@ -12,13 +12,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import unittest
-import numpy as np
+"""__init__.py
+@author: Louis Richard
+"""
 
-
-from pyrfu import mms, pyrf, models, dispersion
-
-
-
-
-
+from .one_fluid_dispersion import one_fluid_dispersion
