@@ -24,8 +24,8 @@ import xarray as xr
 from scipy import interpolate
 
 
-def guess_sampling_frequency(ref_time):
-    """Compute sampling frequency of the time line.
+def _guess_sampling_frequency(ref_time):
+    r"""Compute sampling frequency of the time line.
 
     Parameters
     ----------
@@ -71,7 +71,7 @@ def guess_sampling_frequency(ref_time):
     return sfy
 
 
-def average(inp_time, inp_data, ref_time, thresh, dt2):
+def _average(inp_time, inp_data, ref_time, thresh, dt2):
     """Resample inp_data to timeline of ref_time, using half-window of dt2.
     Points above std*tresh are excluded. thresh=0 turns off this option.
 
@@ -216,7 +216,7 @@ def resample(inp, ref, method="", f_s=None, window=None, thresh=0):
     if flag_do == "check":
         if len(ref_time) > 1:
             if not sfy:
-                sfy = guess_sampling_frequency(ref_time)
+                sfy = _guess_sampling_frequency(ref_time)
 
             if len(inp_time) / (inp_time[-1] - inp_time[0]) > 2 * sfy:
                 flag_do = "average"
@@ -232,9 +232,9 @@ def resample(inp, ref, method="", f_s=None, window=None, thresh=0):
         assert not method, "cannot mix interpolation and averaging flags"
 
         if not sfy:
-            sfy = guess_sampling_frequency(ref_time)
+            sfy = _guess_sampling_frequency(ref_time)
 
-        out_data = average(inp_time, inp.data, ref_time, thresh, .5 / sfy)
+        out_data = _average(inp_time, inp.data, ref_time, thresh, .5 / sfy)
 
     else:
         if not method:

@@ -62,3 +62,7 @@ from .vdf_to_e64 import vdf_to_e64
 from .current_location import current_location
 from .dsl2gse import dsl2gse
 from .dsl2gsm import dsl2gsm
+from .get_hpca_dist import get_hpca_dist
+from .get_hpca_pad import get_hpca_pad
+from .calc_hpca_anodes import calc_hpca_anodes
+from .spin_hpca_avg import spin_hpca_avg

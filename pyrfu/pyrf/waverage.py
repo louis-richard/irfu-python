@@ -73,7 +73,7 @@ def waverage(inp, f_sampl: float = None, n_pts: int = 7):
             raise ValueError("n_pts must be 5 or 7")
 
         for j in range(n_data + 1):
-            out[j, col] = w_ave(new_data[j:j + n_pts - 1], n_pts)
+            out[j, col] = _wave(new_data[j:j + n_pts - 1], n_pts)
 
     # Make sure we do return matrix of the same size
     out = out[indices, :]
@@ -81,7 +81,7 @@ def waverage(inp, f_sampl: float = None, n_pts: int = 7):
     return out
 
 
-def w_ave(inp_window, n_pts):
+def _wave(inp_window, n_pts):
     """computes weighted average"""
 
     if n_pts == 5:

@@ -27,8 +27,7 @@ from .calc_fs import calc_fs
 
 
 @numba.jit(nopython=True, fastmath=True)
-def calc_w_w(s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
-    """faster product using numba"""
+def _ww(s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
     w_w = s_ww * np.exp(-sigma * sigma
                         * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2)
     w_w = w_w * np.sqrt(1)
@@ -36,15 +35,13 @@ def calc_w_w(s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
 
 
 @numba.jit(nopython=True, parallel=True, fastmath=True)
-def calc_power_r(power, new_freq_mat):
-    """faster product using numba"""
+def _power_r(power, new_freq_mat):
     power2 = np.absolute((2 * np.pi) * np.conj(power) * power / new_freq_mat)
     return power2
 
 
 @numba.jit(nopython=True, parallel=True, fastmath=True)
-def calc_power_c(power, new_freq_mat):
-    """faster product using numba"""
+def _power_c(power, new_freq_mat):
     power2 = np.sqrt(np.absolute((2 * np.pi) / new_freq_mat)) * power
     return power2
 
@@ -175,7 +172,7 @@ def wavelet(inp, **kwargs):
         scales_mat, s_w_mat = np.meshgrid(scales, s_w, sparse=True)
 
         # Calculate the FFT of the wavelet transform
-        w_w = calc_w_w(s_w_mat, scales_mat, sigma, frequencies_mat, f_nyq)
+        w_w = _ww(s_w_mat, scales_mat, sigma, frequencies_mat, f_nyq)
 
         # Backward FFT
         power = pyfftw.interfaces.numpy_fft.ifft(w_w, axis=0,
@@ -183,11 +180,9 @@ def wavelet(inp, **kwargs):
 
         # Calculate the power spectrum
         if return_power:
-            power2 = calc_power_r(power,
-                                  np.tile(new_freq_mat, (len(power), 1)))
+            power2 = _power_r(power, np.tile(new_freq_mat, (len(power), 1)))
         else:
-            power2 = calc_power_c(power,
-                                  np.tile(new_freq_mat, (len(power), 1)))
+            power2 = _power_c(power, np.tile(new_freq_mat, (len(power), 1)))
 
         if cut_edge:
             censure = np.floor(2 * scales).astype(int)
