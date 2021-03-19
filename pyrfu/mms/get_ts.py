@@ -51,22 +51,7 @@ def get_epochs(file, cdf_name, tint):
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         out["data"] = cdfepoch.to_datetime(out["data"], to_np=True)
 
-    out["atts"] = {}
-
-    for k in file.varattsget(depend0_key):
-        out["atts"][k] = file.varattsget(depend0_key)[k]
-        if isinstance(out["atts"][k], str) and out["atts"][k] in \
-                file.cdf_info()["zVariables"] and not k == "LABLAXIS":
-            if "Epoch_MINUS" not in out["atts"][k] and "Epoch_PLUS" not in \
-                    out["atts"][k]:
-                try:
-                    # If array
-                    out["atts"][k] = file.varget(out["atts"][k],
-                                                 starttime=tint[0],
-                                                 endtime=tint[1])
-                except IndexError:
-                    # If scalar
-                    out["atts"][k] = file.varget(out["atts"][k])
+    out["atts"] = file.varattsget(depend0_key)
 
     return out
 
@@ -92,24 +77,7 @@ def get_depend_attributes(file, depend_key, tint):
 
     """
 
-    attributes = {}
-
-    for k in file.varattsget(depend_key):
-        attributes[k] = file.varattsget(depend_key)[k]
-
-        if isinstance(attributes[k], str) and attributes[k] in file.cdf_info()["zVariables"] \
-                and not k == "DEPEND_0":
-            try:
-                attributes[k] = file.varget(attributes[k],
-                                            starttime=tint[0], endtime=tint[1])
-            except IndexError:
-                attributes[k] = file.varget(attributes[k])
-            # If atts is 2D get only first row
-            if attributes[k].ndim == 2:
-                try:
-                    attributes[k] = attributes[k][0, :]
-                except IndexError:
-                    pass
+    attributes = file.varattsget(depend_key)
 
     # Remove spaces in label
     try:
