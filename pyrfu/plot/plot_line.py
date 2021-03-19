@@ -28,7 +28,7 @@ date_form = mdates.DateFormatter("%H:%M:%S")
 plt.style.use("seaborn-whitegrid")
 sns.set_context("paper")
 
-color = ["k", "tab:blue", "tab:red", "tab:green"]
+color = ["tab:blue", "tab:green", "tab:red", "k"]
 # color = np.array([[0, 0, 0], [213, 94, 0], [0, 158, 115], [86, 180, 233]]) / 255
 
 default_cycler = cycler(color=color)
