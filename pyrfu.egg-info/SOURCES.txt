@@ -8,10 +8,13 @@ pyrfu.egg-info/SOURCES.txt
 pyrfu.egg-info/dependency_links.txt
 pyrfu.egg-info/requires.txt
 pyrfu.egg-info/top_level.txt
+pyrfu/dispersion/__init__.py
+pyrfu/dispersion/one_fluid_dispersion.py
 pyrfu/mms/__init__.py
 pyrfu/mms/ancillary.yml
 pyrfu/mms/calc_feeps_omni.py
 pyrfu/mms/calc_feeps_pad.py
+pyrfu/mms/calc_hpca_anodes.py
 pyrfu/mms/calculate_epsilon.py
 pyrfu/mms/copy_files.py
 pyrfu/mms/correct_edp_probe_timing.py
@@ -39,6 +42,8 @@ pyrfu/mms/get_feeps_alleyes.py
 pyrfu/mms/get_feeps_energy_table.py
 pyrfu/mms/get_feeps_omni.py
 pyrfu/mms/get_feeps_oneeye.py
+pyrfu/mms/get_hpca_dist.py
+pyrfu/mms/get_hpca_pad.py
 pyrfu/mms/get_pitch_angle_dist.py
 pyrfu/mms/get_ts.py
 pyrfu/mms/lh_wave_analysis.py
@@ -53,6 +58,7 @@ pyrfu/mms/read_feeps_sector_masks_csv.py
 pyrfu/mms/remove_idist_background.py
 pyrfu/mms/rotate_tensor.py
 pyrfu/mms/spectr_to_dataset.py
+pyrfu/mms/spin_hpca_avg.py
 pyrfu/mms/split_vs.py
 pyrfu/mms/vdf_omni.py
 pyrfu/mms/vdf_to_deflux.py
@@ -136,6 +142,7 @@ pyrfu/pyrf/histogram2d.py
 pyrfu/pyrf/increments.py
 pyrfu/pyrf/integrate.py
 pyrfu/pyrf/iso2unix.py
+pyrfu/pyrf/l_shell.py
 pyrfu/pyrf/lowpass.py
 pyrfu/pyrf/mean.py
 pyrfu/pyrf/mean_bins.py
