@@ -45,7 +45,8 @@ def get_epochs(file, cdf_name, tint):
 
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
-    out = {"data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])}
+    out = {"data": file.varget(depend0_key,
+                               starttime=tint[0], endtime=tint[1])}
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         out["data"] = cdfepoch.to_datetime(out["data"], to_np=True)
@@ -54,13 +55,15 @@ def get_epochs(file, cdf_name, tint):
 
     for k in file.varattsget(depend0_key):
         out["atts"][k] = file.varattsget(depend0_key)[k]
-        if isinstance(out["atts"][k], str) and out["atts"][k] in file.cdf_info()["zVariables"] \
-                and not k == "LABLAXIS":
-            if out["atts"][k] not in ["Epoch_MINUS", "Epoch_PLUS"]:
-
+        if isinstance(out["atts"][k], str) and out["atts"][k] in \
+                file.cdf_info()["zVariables"] and not k == "LABLAXIS":
+            if "Epoch_MINUS" not in out["atts"][k] and "Epoch_PLUS" not in \
+                    out["atts"][k]:
                 try:
                     # If array
-                    out["atts"][k] = file.varget(out["atts"][k], starttime=tint[0], endtime=tint[1])
+                    out["atts"][k] = file.varget(out["atts"][k],
+                                                 starttime=tint[0],
+                                                 endtime=tint[1])
                 except IndexError:
                     # If scalar
                     out["atts"][k] = file.varget(out["atts"][k])
@@ -97,7 +100,8 @@ def get_depend_attributes(file, depend_key, tint):
         if isinstance(attributes[k], str) and attributes[k] in file.cdf_info()["zVariables"] \
                 and not k == "DEPEND_0":
             try:
-                attributes[k] = file.varget(attributes[k], starttime=tint[0], endtime=tint[1])
+                attributes[k] = file.varget(attributes[k],
+                                            starttime=tint[0], endtime=tint[1])
             except IndexError:
                 attributes[k] = file.varget(attributes[k])
             # If atts is 2D get only first row
@@ -122,8 +126,8 @@ def get_depend_attributes(file, depend_key, tint):
 
 def get_depend(file, cdf_name, tint, depend_num=1):
     """
-    Read the `depend_num`th dependency data and its attributes associated to the variable named
-    `cdf_name` in `file`.
+    Read the `depend_num`th dependency data and its attributes associated to
+    the variable named `cdf_name` in `file`.
 
     Parameters
     ----------
@@ -236,7 +240,8 @@ def get_ts(file_path, cdf_name, tint):
                 depend_2["atts"]["LABLAXIS"] = "ccomp"
 
         if "DEPEND_3" in out_dict["atts"] or "REPRESENTATION_3" in out_dict["atts"]:
-            assert out_dict["atts"]["REPRESENTATION_3"] != "x,y,z"
+            if "REPRESENTATION_3" in out_dict["atts"]:
+                assert out_dict["atts"]["REPRESENTATION_3"] != "x,y,z"
 
             depend_3 = get_depend(file, cdf_name, tint, 3)
 
