@@ -18,6 +18,7 @@ dependencies:
 - sphinx
 - sphinxcontrib-apidoc
 - sphinx_rtd_theme
+- pydata-sphinx-theme
 - tqdm
 - xarray
 - cdflib
