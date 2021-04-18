@@ -51,7 +51,7 @@ INSTALL_REQUIRES = [
       "sfs",
       "sphinx>=1.4",
       "sphinxcontrib-apidoc",
-      "pydata_sphinx_theme",
+      "pydata-sphinx-theme",
       "tqdm",
       "xarray"]
 
