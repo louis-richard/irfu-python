@@ -437,10 +437,13 @@ def get_data(var_str, tint, mms_id, verbose=True, data_path=""):
 
     # Hot Plasma Composition Analyser
     elif var["inst"] == "hpca":
-        if var["param"][0].lower() == "f":
+        if var["param"][:3].lower() == "dpf":
             var["dtype"] = "ion"
-            ion = var["param"].lower().strip("flux")
+            ion = var["param"].lower().strip("dpf")
             cdf_name = "{}_{}_{}_flux".format(mms_id_str, var["inst"], ion)
+        elif var["param"].lower() == "saz":
+            var["dtype"] = "ion"
+            cdf_name = "{}_{}_start_azimuth".format(mms_id_str, var["inst"])
             # Number density
         elif var["param"][0].lower() == "n":
             var["dtype"] = "moments"
