@@ -43,9 +43,16 @@ def span_tint(axs, tint, ymin=0, ymax=1, **kwargs):
         Upper y-coordinate of the span, in y-axis units (0-1). Default ymax=1.
 
 
+    Other Parameters
+    ----------------
+    **kwargs
+        Keyword arguments control the Polygon properties.
+
+
     Returns
     -------
-
+    axs : list
+        List of matplotlib.axes._subplots.AxesSubplot spanned..
 
     """
     for axis in axs:

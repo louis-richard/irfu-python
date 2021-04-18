@@ -51,10 +51,12 @@ def plot_spectr(axis, inp, yscale: str = "", cscale: str = "",
     cbar : bool
         Flag for colorbar. Set to False to hide.
 
+
     Other Parameters
     ----------------
-    kwargs : dict
+    **kwargs
         Keyword arguments.
+
 
     Returns
     -------

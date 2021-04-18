@@ -37,10 +37,11 @@ def plot_line(axis, inp, **kwargs):
     inp : xarray.DataArray
         Time series to plot
 
-    kwargs : dict
-        Line2D keyword arguments.
-        See https://matplotlib.org/stable/api/_as_gen/matplotlib.lines.Line2D.
-        html#matplotlib.lines.Line2D
+    Other Parameters
+    ----------------
+    **kwargs
+        Keyword arguments control the Line2D properties.
+        See: https://matplotlib.org/stable/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
 
     """
 

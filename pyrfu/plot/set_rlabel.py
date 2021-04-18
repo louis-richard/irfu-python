@@ -29,12 +29,16 @@ def set_rlabel(ax, r_xyz, spine: float = 20, position: str = "top",
     ----------
     ax : matplotlib.axes._subplots.AxesSubplot
         Reference axis.
+
     r_xyz : xarray.DataArray
         Time series of the spacecraft position.
+
     spine : float, optional
         Relative position of the axes. Default is spines=20.
+
     position : str, optional
         Axis position wtr to the reference axis. Default is position="top".
+
     fontsize : float, optional
         xticks label font size. Default is 10.
 
