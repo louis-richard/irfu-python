@@ -20,8 +20,6 @@ import sphinx_rtd_theme
 # import sys
 # sys.path.insert(0, '/Users/louisr/Documents/PhD/irfu-python/pyrfu')
 
-
-
 examples_source = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                "..", "..", "examples"))
 examples_dest = os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -45,7 +43,7 @@ sys.path.insert(0, os.path.abspath('./../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'pyrfu'
-copyright = '2020, Louis Richard'
+copyright = '2020-2021, Louis Richard'
 author = 'Louis Richard'
 
 
@@ -95,16 +93,17 @@ language = 'en'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints', 'examples/**/README.md']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints',
+                    'examples/**/README.md']
 
-autodoc_mock_imports = ["numba", "sfs"]
+autodoc_mock_imports = ["sfs"]
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-#html_theme = 'alabaster'
+# html_theme = 'alabaster'
 html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -143,8 +142,8 @@ html_static_path = ['_static']
 # html_logo = 'fig/IRF_logo.png'
 
 # The name of an image file (relative to this directory) to use as a favicon of
-# the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
-# pixels large.
+# the docs.  This file should be a Windows icon file (.ico) being 16x16 or
+# 32x32 pixels large.
 
 
 # -- Options for HTMLHelp output ---------------------------------------------

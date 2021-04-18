@@ -55,7 +55,7 @@ INSTALL_REQUIRES = [
       "tqdm",
       "xarray"]
 
-PYTHON_REQUIRES = '>=3.7, <3.9'
+PYTHON_REQUIRES = '>=3.7, <=3.9'
 
 
 cmdclass = {'build_sphinx': BuildDoc}
