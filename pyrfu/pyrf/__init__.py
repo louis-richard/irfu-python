@@ -59,7 +59,6 @@ from .median_bins import median_bins
 from .mean_bins import mean_bins
 from .histogram import histogram
 from .histogram2d import histogram2d
-from .calc_disprel_tm import calc_disprel_tm
 from .wavepolarize_means import wavepolarize_means
 from .psd import *
 from .c_4_k import c_4_k
@@ -85,9 +84,11 @@ from .calc_dng import calc_dng
 from .calc_ag import calc_ag
 from .calc_agyro import calc_agyro
 from .datetime_to_tt2000 import datetime_to_tt2000
-from .geocentric_coordinate_transformation import geocentric_coordinate_transformation
+from .cotrans import cotrans
 from .sph2cart import sph2cart
 from .gse2gsm import gse2gsm
 from .mf import mf
 from .waverage import waverage
 from .l_shell import l_shell
+from .optimize_nbins_1d import optimize_nbins_1d
+from .optimize_nbins_2d import optimize_nbins_2d

@@ -16,8 +16,8 @@
 @author: Louis Richard
 """
 
-from .geocentric_coordinate_transformation import \
-    geocentric_coordinate_transformation
+from .cotrans import \
+    cotrans
 
 
 def gse2gsm(inp, flag="gse>gsm"):
@@ -47,6 +47,6 @@ def gse2gsm(inp, flag="gse>gsm"):
 
     assert flag in ["gse>gsm", "gsm>gse"], "invalid flag"
 
-    out = geocentric_coordinate_transformation(inp, flag);
+    out = cotrans(inp, flag);
 
     return out

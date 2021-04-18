@@ -12,7 +12,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-"""geocentric_coordinate_transformation.py
+"""cotrans.py
 @author: Louis Richard
 """
 
@@ -85,7 +85,7 @@ def dipole_direction_gse(time, flag: str = "dipole"):
                                       cos_phi * np.sin(np.deg2rad(lambda_)),
                                       np.sin(np.deg2rad(phi))]).T
 
-    dipole_direction_gse_ = geocentric_coordinate_transformation(np.hstack([
+    dipole_direction_gse_ = cotrans(np.hstack([
         time[:, None], dipole_direction_geo_]), "geo>gse")
 
     return dipole_direction_gse_
@@ -205,7 +205,7 @@ def transformation_matrix(t, tind, hapgood, *args):
     return transf_mat_out
 
 
-def geocentric_coordinate_transformation(inp, flag, hapgood: bool = True):
+def cotrans(inp, flag, hapgood: bool = True):
     """IRF.GEOCENTRIC_COORDINATE_TRANSFORMATION coordinate transformation
     GE0/GEI/GSE/GSM/SM/MAG
 
@@ -227,7 +227,7 @@ def geocentric_coordinate_transformation(inp, flag, hapgood: bool = True):
     Examples
     --------
     >>> from pyrfu.mms import get_data
-    >>> from pyrfu.pyrf import geocentric_coordinate_transformation
+    >>> from pyrfu.pyrf import cotrans
 
     Time interval
 
@@ -244,15 +244,15 @@ def geocentric_coordinate_transformation(inp, flag, hapgood: bool = True):
     Transform to GSM assuming that the original coordinates system is part
     of the inp metadata
 
-    >>> b_gsm = geocentric_coordinate_transformation(b_gse, 'GSM')
+    >>> b_gsm = cotrans(b_gse, 'GSM')
 
     If the original coordinates is not in the meta
 
-    >>> b_gsm = geocentric_coordinate_transformation(b_gse, 'GSE>GSM')
+    >>> b_gsm = cotrans(b_gse, 'GSE>GSM')
 
     Compute the dipole direction in GSE
 
-    >>> dipole = geocentric_coordinate_transformation(b_gse.time,
+    >>> dipole = cotrans(b_gse.time,
     'dipoledirectiongse')
 
 

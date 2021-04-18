@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from .geocentric_coordinate_transformation import geocentric_coordinate_transformation
+from .cotrans import cotrans
 
 
 def l_shell(r_xyz):
@@ -35,7 +35,7 @@ def l_shell(r_xyz):
     """
 
     # Transform spacecraft coordinates to solar magnetic system
-    r_sm = geocentric_coordinate_transformation(r_xyz, "sm")
+    r_sm = cotrans(r_xyz, "sm")
 
     # Compute Geomagnetic latitude
     lambda_ = np.arctan(r_sm[:, 2] / np.linalg.norm(r_sm[:, :2], axis=1))

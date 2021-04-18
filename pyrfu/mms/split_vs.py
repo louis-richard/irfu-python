@@ -54,10 +54,10 @@ def split_vs(var_str):
 
     all_params_tensors = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te", "partte"]
 
-    hpca_params_scalars = ["nhplus", "nheplus", "nheplusplus", "noplus", "tshplus", "tsheplus",
-                           "tsheplusplus", "tsoplus",
-                           "phase", "adcoff", "fluxhplus", "fluxheplus", "fluxheplusplus",
-                           "fluxoplus"]
+    hpca_params_scalars = ["nhplus", "nheplus", "nheplusplus", "noplus",
+                           "tshplus", "tsheplus", "tsheplusplus", "tsoplus",
+                           "dpfhplus", "dpfheplus", "dpfheplusplus",
+                           "dpfoplus", "phase", "adcoff", "saz"]
 
     hpca_params_tensors = ["vhplus", "vheplus", "vheplusplus", "voplus", "phplus", "pheplus",
                            "pheplusplus", "poplus",

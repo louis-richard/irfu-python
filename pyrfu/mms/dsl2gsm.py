@@ -22,7 +22,7 @@ import xarray as xr
 
 from astropy.time import Time
 
-from ..pyrf import (geocentric_coordinate_transformation, resample,
+from ..pyrf import (cotrans, resample,
                     sph2cart, ts_vec_xyz)
 
 
@@ -77,7 +77,7 @@ def dsl2gsm(inp, defatt, direction=1):
                            np.deg2rad(defatt.z_dec), 1)
         sax_gei = np.transpose(np.vstack([defatt.time.data.view("i8") * 1e-9,
                                           x, y, z]))
-        sax_gse = geocentric_coordinate_transformation(sax_gei, "gei>gsm")
+        sax_gse = cotrans(sax_gei, "gei>gsm")
         sax_gse = ts_vec_xyz(Time(sax_gse[:, 0], format="unix").datetime64,
                              sax_gse[:, 1:])
 
