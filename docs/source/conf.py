@@ -8,6 +8,7 @@
 import os
 import sys
 import shutil
+import sphinx_rtd_theme
 
 # -- Path setup --------------------------------------------------------------
 
@@ -61,8 +62,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinxcontrib.apidoc',
     'sphinx.ext.todo',
-    'nbsphinx',
-    'pydata_sphinx_theme'
+    'nbsphinx'
   #  'sphinx_gallery.gen_gallery'
 ]
 
@@ -104,11 +104,16 @@ autodoc_mock_imports = ["sfs"]
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-html_theme = 'pydata_sphinx_theme'
+html_theme = 'sphinx_rtd_theme'
 
-html_theme_options = {
-  "github_url": "https://github.com/louis-richard/irfu-python"
-}
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+
+
+# Add any paths that contain custom themes here, relative to this directory.
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
