@@ -12,10 +12,11 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import matplotlib.pyplot as plt
+"""colorbar.py
+@author: Louis Richard
+"""
 
-from pandas.plotting import register_matplotlib_converters
-register_matplotlib_converters()
+import matplotlib.pyplot as plt
 
 
 def colorbar(image, axis, pad=0.01):

@@ -12,11 +12,15 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""make_labels.py
+@author: Louis Richard
+"""
+
 import string
 
 
 def make_labels(axs, pos, pad=0):
-    """Add subplots labels to axes
+    r"""Add subplots labels to axes
 
     Parameters
     ----------
@@ -39,6 +43,7 @@ def make_labels(axs, pos, pad=0):
     lbl = string.ascii_lowercase[pad:len(axs) + pad]
 
     for label, axis in zip(lbl, axs):
-        axis.text(pos[0], pos[1], "({})".format(label), transform=axis.transAxes)
+        axis.text(pos[0], pos[1], "({})".format(label),
+                  transform=axis.transAxes)
 
     return axs

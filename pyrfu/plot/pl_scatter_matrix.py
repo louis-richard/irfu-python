@@ -11,6 +11,12 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
+"""pl_scatter_matrix.py
+@author: Louis Richard
+"""
+
+
 import warnings
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -19,9 +25,10 @@ from ..pyrf import histogram2d
 from . import plot_spectr
 
 
-def pl_scatter_matrix(inp1=None, inp2=None, pdf=False, cmap="jet"):
-    """Produces a scatter plot of each components of field inp1 with respect to every component
-    of field inp2. If pdf is set to True, the scatter plot becomes a 2d histogram.
+def pl_scatter_matrix(inp1, inp2, pdf: bool = False, cmap: str = "jet"):
+    """Produces a scatter plot of each components of field inp1 with respect
+    to every component of field inp2. If pdf is set to True, the scatter
+    plot becomes a 2d histogram.
 
     Parameters
     ----------
@@ -31,12 +38,9 @@ def pl_scatter_matrix(inp1=None, inp2=None, pdf=False, cmap="jet"):
     inp2 : xarray.DataArray
         Second time series (y-axis).
 
-    m : str, optional
-        Marker type. Default is "+". Not used if pdf is True
-
     pdf : bool
-        Flag to plot the 2d histogram. If False the figure is a scatter plot. If True the figure
-        is a 2d histogram.
+        Flag to plot the 2d histogram. If False the figure is a scatter plot.
+        If True the figure is a 2d histogram.
 
     cmap : str
         Colormap. Default : "jet"
@@ -61,12 +65,13 @@ def pl_scatter_matrix(inp1=None, inp2=None, pdf=False, cmap="jet"):
         inp2 = inp1
         warnings.warn("inp2 is empty assuming that inp2=inp1", UserWarning)
 
-    if not isinstance(inp1, xr.DataArray) or not isinstance(inp2, xr.DataArray):
-        raise TypeError("Inputs must be DataArrays")
+    assert isinstance(inp1, xr.DataArray) and isinstance(inp2, xr.DataArray)
 
     if not pdf:
-        fig, axs = plt.subplots(3, 3, sharex="all", sharey="all", figsize=(16, 9))
-        fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, hspace=0.05, wspace=0.05)
+        fig, axs = plt.subplots(3, 3, sharex="all", sharey="all",
+                                figsize=(16, 9))
+        fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9,
+                            hspace=0.05, wspace=0.05)
 
         for i in range(3):
             for j in range(3):
@@ -74,17 +79,18 @@ def pl_scatter_matrix(inp1=None, inp2=None, pdf=False, cmap="jet"):
 
         out = (fig, axs)
     else:
-        fig, axs = plt.subplots(3, 3, sharex="all", sharey="all", figsize=(16, 9))
-        fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, hspace=0.05, wspace=0.3)
-
-        hist = [[None]*3]*3
+        fig, axs = plt.subplots(3, 3, sharex="all", sharey="all",
+                                figsize=(16, 9))
+        fig.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9,
+                            hspace=0.05, wspace=0.3)
 
         caxs = [[None]*3]*3
 
         for i in range(3):
             for j in range(3):
-                hist[j][i] = histogram2d(inp1[:, i], inp2[:, j])
-                axs[j, i], caxs[j][i] = plot_spectr(axs[j, i], hist[j][i], cmap=cmap, cscale="log")
+                hist_ = histogram2d(inp1[:, i], inp2[:, j])
+                axs[j, i], caxs[j][i] = plot_spectr(axs[j, i], hist_,
+                                                    cmap=cmap, cscale="log")
                 axs[j, i].grid()
 
         out = (fig, axs, caxs)

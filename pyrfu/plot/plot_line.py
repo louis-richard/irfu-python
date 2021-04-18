@@ -12,31 +12,22 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""plot_line.py
+@author: Louis Richard
+"""
+
+import cycler
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from cycler import cycler
-from pandas.plotting import register_matplotlib_converters
-
-register_matplotlib_converters()
-
-locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-# date_form = mdates.ConciseDateFormatter(locator)
-date_form = mdates.DateFormatter("%H:%M:%S")
-plt.style.use("seaborn-whitegrid")
-sns.set_context("paper")
-
+plt.style.use("seaborn-ticks")
 color = ["tab:blue", "tab:green", "tab:red", "k"]
-# color = np.array([[0, 0, 0], [213, 94, 0], [0, 158, 115], [86, 180, 233]]) / 255
-
-default_cycler = cycler(color=color)
-plt.rc('axes', prop_cycle=default_cycler)
+plt.rc('axes', prop_cycle=cycler.cycler(color=color))
 
 
-def plot_line(axis=None, inp=None, **kwargs):
-    """Line plot of time series.
+def plot_line(axis, inp, **kwargs):
+    r"""Line plot of time series.
 
     Parameters
     ----------
@@ -47,7 +38,9 @@ def plot_line(axis=None, inp=None, **kwargs):
         Time series to plot
 
     kwargs : dict
-        See plot docs
+        Line2D keyword arguments.
+        See https://matplotlib.org/stable/api/_as_gen/matplotlib.lines.Line2D.
+        html#matplotlib.lines.Line2D
 
     """
 
@@ -55,14 +48,20 @@ def plot_line(axis=None, inp=None, **kwargs):
         _, axis = plt.subplots(1)
 
     if len(inp.shape) == 3:
-        data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
+        data = np.reshape(inp.data,
+                          (inp.shape[0], inp.shape[1] * inp.shape[2]))
     else:
         data = inp.data
 
     time = inp.time
     axis.plot(time, data, **kwargs)
-    axis.xaxis.set_major_formatter(date_form)
+
+    if time.dtype == '<M8[ns]':
+        locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+        formatter = mdates.ConciseDateFormatter(locator)
+        axis.xaxis.set_major_locator(locator)
+        axis.xaxis.set_major_formatter(formatter)
+
     axis.grid(True, which="major", linestyle="-", linewidth="0.5", c="0.5")
-    # ax.grid(which="minor",linestyle="-",linewidth="0.25")
 
     return axis

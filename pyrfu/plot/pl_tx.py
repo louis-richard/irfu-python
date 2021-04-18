@@ -12,30 +12,18 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+import cycler
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from cycler import cycler
-from pandas.plotting import register_matplotlib_converters
-
-register_matplotlib_converters()
-
-locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-# date_form = mdates.ConciseDateFormatter(locator)
-date_form = mdates.DateFormatter("%H:%M:%S")
-plt.style.use("seaborn-whitegrid")
-sns.set_context("paper")
-
-color = ["tab:blue", "tab:green", "tab:red", "k"]
-
-default_cycler = cycler(color=color)
-plt.rc('axes', prop_cycle=default_cycler)
+plt.style.use("seaborn-ticks")
+colors_ = ["tab:blue", "tab:green", "tab:red", "k"]
+plt.rc('axes', prop_cycle=cycler.cycler(color=colors_))
 
 
 def pl_tx(axis, inp_list, comp, **kwargs):
-    """Line plot of 4 spacecraft time series.
+    r"""Line plot of 4 spacecraft time series.
 
     Parameters
     ----------
@@ -48,6 +36,8 @@ def pl_tx(axis, inp_list, comp, **kwargs):
     comp: int
         Index of the column to plot.
 
+    Other Parameters
+    ----------------
     kwargs : dict
         Hash table of plot options.
 
@@ -58,7 +48,8 @@ def pl_tx(axis, inp_list, comp, **kwargs):
 
     for inp in inp_list:
         if len(inp.shape) == 3:
-            data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
+            data = np.reshape(inp.data,
+                              (inp.shape[0], inp.shape[1] * inp.shape[2]))
         elif len(inp.shape) == 1:
             data = inp.data[:, np.newaxis]
         else:
@@ -67,7 +58,10 @@ def pl_tx(axis, inp_list, comp, **kwargs):
         time = inp.time
         axis.plot(time, data[:, comp], **kwargs)
 
-    axis.xaxis.set_major_formatter(date_form)
+    locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+    formatter = mdates.ConciseDateFormatter(locator)
+    axis.xaxis.set_major_locator(locator)
+    axis.xaxis.set_major_formatter(formatter)
     axis.grid(True, which="major", linestyle="-", linewidth="0.5", c="0.5")
 
     return axis

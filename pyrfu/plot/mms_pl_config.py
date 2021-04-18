@@ -12,26 +12,21 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""mms_pl_config.py
+author: Louis Richard
+"""
+
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 
-from pandas.plotting import register_matplotlib_converters
-register_matplotlib_converters()
-
-plt.style.use("seaborn-whitegrid")
-date_form = mdates.DateFormatter("%H:%M:%S")
-sns.set_context("paper")
-
-plt.rc("lines", linewidth=1)
-colors = np.array([[0, 0, 0], [213, 94, 0], [0, 158, 115], [86, 180, 233]]) / 255
+plt.style.use("seaborn-ticks")
+colors = ["tab:blue", "tab:green", "tab:red", "k"]
 markers = ["s", "d", "o", "^"]
 
 
 def mms_pl_config(r_mms):
-    """Plot spacecraft configuaration with three 2d plots of the position in re and one 3d plot of
-    the relative position of the spacecraft:
+    r"""Plot spacecraft configuaration with three 2d plots of the position in
+    Re and one 3d plot of the relative position of the spacecraft:
 
     Parameters
     ----------
@@ -54,7 +49,8 @@ def mms_pl_config(r_mms):
     delta_r = r_xyz - np.tile(r_xyz, (4, 1))
 
     fig = plt.figure(figsize=(9, 9))
-    gs0 = fig.add_gridspec(3, 3, hspace=0.3, left=0.1, right=0.9, bottom=0.1, top=0.9)
+    gs0 = fig.add_gridspec(3, 3, hspace=0.3, left=0.1, right=0.9,
+                           bottom=0.1, top=0.9)
 
     gs00 = gs0[0, :].subgridspec(1, 3, wspace=0.35)
     gs10 = gs0[1:, :].subgridspec(1, 1, wspace=0.35)
@@ -66,20 +62,23 @@ def mms_pl_config(r_mms):
 
     earth = plt.Circle((0, 0), 1, color='k', clip_on=False)
 
-    x_axis_labels = ["$X$ [$r_earth$]", "$Y$ [$r_earth$]", "$X$ [$r_earth$]"]
-    y_axis_labels = ["$Z$ [$r_earth$]", "$Z$ [$r_earth$]", "$Y$ [$r_earth$]"]
+    x_lbs = ["$X$ [$r_earth$]", "$Y$ [$r_earth$]", "$X$ [$r_earth$]"]
+    y_lbs = ["$Z$ [$r_earth$]", "$Z$ [$r_earth$]", "$Y$ [$r_earth$]"]
 
-    for axis, x_idx, y_idx, x_label, y_label in zip([axs0, axs1, axs2], [0, 1, 0], [2, 1, 1],
-                                                    x_axis_labels, y_axis_labels):
+    axs_ = [axs0, axs1, axs2]
+    idxs_, idys_ = [[0, 1, 0], [2, 1, 1]]
+
+    for ax, idx_, idy_, x_lb, y_lb in zip(axs_, idxs_, idxs_, x_lbs, y_lbs):
         for i, marker in enumerate(markers):
-            axis.scatter(r_xyz[i, x_idx] / r_earth, r_xyz[i, y_idx] / r_earth, marker=marker)
+            ax.scatter(r_xyz[i, idx_] / r_earth, r_xyz[i, idy_] / r_earth,
+                         marker=marker)
 
-        axis.add_artist(earth)
-        axis.set_xlim([20, -20])
-        axis.set_ylim([-20, 20])
-        axis.set_aspect("equal")
-        axis.set_xlabel(x_label)
-        axis.set_ylabel(y_label)
+        ax.add_artist(earth)
+        ax.set_xlim([20, -20])
+        ax.set_ylim([-20, 20])
+        ax.set_aspect("equal")
+        ax.set_xlabel(x_lb)
+        ax.set_ylabel(y_lb)
 
     axs3.view_init(elev=13, azim=-20)
 
@@ -93,9 +92,12 @@ def mms_pl_config(r_mms):
         axs3.plot([delta_r[i, 1]] * 2, [delta_r[i, 2]] * 2, **options)
 
         options = dict(color="k", linestyle="--", linewidth=.5)
-        axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 1]] * 2, [-30, delta_r[i, 2]], **options)
-        axs3.plot([delta_r[i, 0]] * 2, [-30, delta_r[i, 1]], [delta_r[i, 2]] * 2, **options)
-        axs3.plot([-30, delta_r[i, 0]], [delta_r[i, 1]] * 2, [delta_r[i, 2]] * 2, **options)
+        axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 1]] * 2,
+                  [-30, delta_r[i, 2]], **options)
+        axs3.plot([delta_r[i, 0]] * 2, [-30, delta_r[i, 1]],
+                  [delta_r[i, 2]] * 2, **options)
+        axs3.plot([-30, delta_r[i, 0]], [delta_r[i, 1]] * 2,
+                  [delta_r[i, 2]] * 2, **options)
 
     for idx_0, idx_1 in zip([0, 1, 2, 0, 1, 2], [1, 2, 0, 3, 3, 3]):
         axs3.plot(delta_r[[idx_0, idx_1], 0], delta_r[[idx_0, idx_1], 1],

@@ -12,31 +12,28 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import seaborn as sns
+"""plot_spectr.py
+@author: Louis Richard
+"""
+
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.colors as mcolors
 
-from matplotlib import colors
-from pandas.plotting import register_matplotlib_converters
-register_matplotlib_converters()
-
-plt.style.use("seaborn-whitegrid")
-locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-formatter = mdates.ConciseDateFormatter(locator)
-sns.set_context("paper")
-# plt.rc('lines', linewidth=1)
+plt.style.use("seaborn-ticks")
 
 
-def plot_spectr(axis=None, inp=None, yscale="", cscale="", clim=None, cmap="",
-                cbar=True, **kwargs):
-    """Plot a spectrogram using pcolormesh.
+def plot_spectr(axis, inp, yscale: str = "", cscale: str = "",
+                clim: list = None, cmap: str = "", cbar: bool = True,
+                **kwargs):
+    r"""Plot a spectrogram using pcolormesh.
 
     Parameters
     ----------
     axis : axes
         Target axis to plot. If None create a new figure.
 
-    inp : DataArray
+    inp : xarray.DataArray
         Input 2D data to plot.
 
     yscale : str
@@ -53,6 +50,11 @@ def plot_spectr(axis=None, inp=None, yscale="", cscale="", clim=None, cmap="",
 
     cbar : bool
         Flag for colorbar. Set to False to hide.
+
+    Other Parameters
+    ----------------
+    kwargs : dict
+        Keyword arguments.
 
     Returns
     -------
@@ -77,10 +79,10 @@ def plot_spectr(axis=None, inp=None, yscale="", cscale="", clim=None, cmap="",
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
-            options = dict(norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]),
+            options = dict(norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]),
                            cmap=cmap)
         else:
-            options = dict(norm=colors.LogNorm(), cmap=cmap)
+            options = dict(norm=mcolors.LogNorm(), cmap=cmap)
     else:
         if clim is not None and isinstance(clim, list):
             options = dict(cmap=cmap, vmin=clim[0], vmax=clim[1])
@@ -91,6 +93,12 @@ def plot_spectr(axis=None, inp=None, yscale="", cscale="", clim=None, cmap="",
 
     image = axis.pcolormesh(x_data, y_data, inp.data.T, rasterized=True,
                             **options)
+
+    if x_data.dtype == '<M8[ns]':
+        locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+        formatter = mdates.ConciseDateFormatter(locator)
+        axis.xaxis.set_major_locator(locator)
+        axis.xaxis.set_major_formatter(formatter)
 
     if yscale == "log":
         axis.set_yscale("log")
