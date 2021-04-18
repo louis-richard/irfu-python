@@ -61,7 +61,8 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinxcontrib.apidoc',
     'sphinx.ext.todo',
-    'nbsphinx'
+    'nbsphinx',
+    'pydata_sphinx_theme'
   #  'sphinx_gallery.gen_gallery'
 ]
 
