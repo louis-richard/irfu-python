@@ -1,0 +1,13 @@
+# Energy correction offsets
+e_corr:
+  # Electrons
+  e: [14.0, -1.0, -3.0, -3.0]
+  # Ions
+  i: [0.0, 0.0, 0.0, 0.0]
+
+# Energy correction factor
+g_fact:
+  # Electron
+  e: [1.0, 1.0, 1.0, 1.0]
+  # Ions
+  i: [0.84, 1.0, 1.0, 1.0]

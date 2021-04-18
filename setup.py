@@ -18,7 +18,7 @@ from sphinx.setup_command import BuildDoc
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "2.3.3"
+VERSION = "2.3.5"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -51,7 +51,7 @@ INSTALL_REQUIRES = [
       "sfs",
       "sphinx>=1.4",
       "sphinxcontrib-apidoc",
-      "sphinx_rtd_theme",
+      "pydata_sphinx_theme",
       "tqdm",
       "xarray"]
 
