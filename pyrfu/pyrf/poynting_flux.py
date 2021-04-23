@@ -74,10 +74,9 @@ def poynting_flux(e_xyz, b_xyz, b_hat):
         flag_s_z, flag_int_s_z = [True, True]
 
     # interval where both E & B exist
-    tint = [Time(max([min(e_xyz.time.data), min(b_xyz.time.data)]),
-                 format="datetime64").iso,
-            Time(min([max(e_xyz.time.data), max(b_xyz.time.data)]),
-                 format="datetime64").iso]
+    tint = [np.max([np.min(e_xyz.time.data), np.min(b_xyz.time.data)]),
+            np.min([np.max(e_xyz.time.data), np.max(b_xyz.time.data)])]
+    tint = [np.datetime_as_string(time, "ns") for time in tint]
 
     e_xyz, b_xyz = [time_clip(e_xyz, tint), time_clip(b_xyz, tint)]
 

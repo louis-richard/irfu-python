@@ -14,12 +14,13 @@
 
 import numpy as np
 
-from pyrfu.mms import psd_rebin
-from pyrfu.pyrf import ts_skymap
+from ..pyrf import ts_skymap
+
+from .psd_rebin import psd_rebin
 
 
 def vdf_to_e64(vdf_e32):
-    """Recompile data into 64 energy channels. Time resolution is halved.
+    r"""Recompile data into 64 energy channels. Time resolution is halved.
     Only applies to skymap.
 
     Parameters
@@ -48,15 +49,17 @@ def vdf_to_e64(vdf_e32):
     # update delta_energy
     log_energy = np.log10(energy_r[0, :])
     log10_energy = np.diff(log_energy)
-    log10_energy_plus = log_energy + 0.5 * np.hstack([log10_energy, log10_energy[-1]])
-    log10_energy_minus = log_energy - 0.5 * np.hstack([log10_energy[0], log10_energy])
+    log10_energy_plus = log_energy + 0.5 * np.hstack([log10_energy,
+                                                      log10_energy[-1]])
+    log10_energy_minus = log_energy - 0.5 * np.hstack([log10_energy[0],
+                                                       log10_energy])
 
     energy_plus = 10 ** log10_energy_plus
     energy_minus = 10 ** log10_energy_minus
     delta_energy_plus = energy_plus - energy_r
     delta_energy_minus = abs(energy_minus - energy_r)
-    delta_energy_plus[-1] = np.max(vdf_e32.attrs.get("delta_energy_minus")[:, -1])
-    delta_energy_minus[0] = np.min(vdf_e32.attrs.get("delta_energy_minus")[:, 0])
+    delta_energy_plus[-1] = np.max(vdf_e32.attrs["delta_energy_minus"][:, -1])
+    delta_energy_minus[0] = np.min(vdf_e32.attrs["delta_energy_minus"][:, 0])
     vdf_e64.attrs["delta_energy_plus"] = delta_energy_plus
     vdf_e64.attrs["delta_energy_minus"] = delta_energy_minus
     vdf_e64.attrs["esteptable"] = np.zeros(len(time_r))

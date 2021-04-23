@@ -19,11 +19,9 @@
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
-
 
 def integrate(inp, time_step):
-    """Integrate time series.
+    r"""Integrate time series.
 
     Parameters
     ----------
@@ -63,7 +61,7 @@ def integrate(inp, time_step):
 
     """
 
-    time_tmp = Time(inp.time.data, format="datetime64").unix
+    time_tmp = inp.time.data.astype(int) * 1e-9
     data_tmp = inp.data
     unit_tmp = inp.attrs["UNITS"]
 

@@ -22,11 +22,10 @@ import numpy as np
 import xarray as xr
 
 from dateutil import parser
-from astropy.time import Time
 
 
 def time_clip(inp, tint):
-    """Time clip the input (if time interval is TSeries clip between start
+    r"""Time clip the input (if time interval is TSeries clip between start
     and stop).
 
     Parameters
@@ -61,10 +60,8 @@ def time_clip(inp, tint):
     else:
         raise TypeError("invalid tint")
 
-    idx_min = bisect.bisect_left(inp.time.data,
-                                 Time(t_start, format="datetime").datetime64)
-    idx_max = bisect.bisect_right(inp.time.data,
-                                  Time(t_stop, format="datetime").datetime64)
+    idx_min = bisect.bisect_left(inp.time.data, np.datetime64(t_start))
+    idx_max = bisect.bisect_right(inp.time.data, np.datetime64(t_stop))
 
     coord = [inp.time.data[idx_min:idx_max]]
 

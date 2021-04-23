@@ -17,8 +17,8 @@ import xarray as xr
 
 from scipy import constants
 
-from ..pyrf import (filt, calc_dt, resample, convert_fac, ts_scalar, extend_tint, time_clip,
-                    ts_vec_xyz)
+from ..pyrf import (filt, calc_dt, resample, convert_fac, ts_scalar,
+                    extend_tint, time_clip, ts_vec_xyz)
 
 
 def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):

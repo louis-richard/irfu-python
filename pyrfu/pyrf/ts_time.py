@@ -22,7 +22,7 @@ import xarray as xr
 from astropy.time import Time
 
 
-def ts_time(time, fmt="unix"):
+def ts_time(time):
     """Creates time line in DataArray.
 
     Parameters
@@ -42,7 +42,7 @@ def ts_time(time, fmt="unix"):
 
     assert isinstance(time, np.ndarray)
 
-    time = Time(time, format=fmt).datetime64
+    time = (time * 1e9).astype("datetime64[ns]")
 
     out = xr.DataArray(time, coords=[time], dims=["time"])
 

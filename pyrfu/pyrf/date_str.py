@@ -16,7 +16,7 @@
 @author: Louis Richard
 """
 
-from dateutil import parser
+from datetime import datetime
 
 
 def date_str(tint, fmt=1):
@@ -42,8 +42,8 @@ def date_str(tint, fmt=1):
 
     """
 
-    start_time = parser.parse(tint[0])
-    end_time = parser.parse(tint[1])
+    start_time = datetime.strptime(tint[0], '%Y-%m-%dT%H:%M:%S.%f')
+    end_time = datetime.strptime(tint[1], '%Y-%m-%dT%H:%M:%S.%f')
 
     if fmt == 1:
         out = start_time.strftime("%Y%m%d_%H%M")

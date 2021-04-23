@@ -21,7 +21,6 @@ import yaml
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
 from ..models import igrf
 
 from .ts_vec_xyz import ts_vec_xyz
@@ -306,7 +305,7 @@ def cotrans(inp, flag, hapgood: bool = True):
         inp = inp.data
 
     elif isinstance(inp, np.ndarray):
-        time = Time(inp[:, 0], format="unix").datetime64
+        time = (inp[:, 0] * 1e9).astype("datetime64[ns]")
         t = inp[:, 0]
         #  Terrestial Time (seconds since J2000)
         tts = t - j2000
@@ -316,9 +315,11 @@ def cotrans(inp, flag, hapgood: bool = True):
         raise TypeError("invalid inpu")
 
     if hapgood:
-        day_start_epoch = Time(time.astype("datetime64[D]"),
-                               format="datetime64").unix
-        mjd_ref_epoch = Time("2000-01-01T12:00:00", format="isot").unix
+        day_start_epoch = time.astype("datetime64[D]")
+        day_start_epoch = day_start_epoch.astype("datetime64[ns]")
+        day_start_epoch = day_start_epoch.astype(int) / 1e9
+        mjd_ref_epoch = np.datetime64("2000-01-01T12:00:00", "ns")
+        mjd_ref_epoch = mjd_ref_epoch.astype(int) / 1e9
 
         # t_zero is time measured in Julian centuries from 2000-01-0112:00 UT
         # to the previous midnight

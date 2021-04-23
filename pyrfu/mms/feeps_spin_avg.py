@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020-2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -16,13 +16,12 @@ import warnings
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
-
 from .db_get_ts import db_get_ts
 
 
 def feeps_spin_avg(inp_dataset_omni):
-    """This function will spin-average the omni-directional FEEPS energy spectra.
+    r"""This function will spin-average the omni-directional FEEPS energy
+    spectra.
     
     Parameters
     ----------
@@ -40,14 +39,20 @@ def feeps_spin_avg(inp_dataset_omni):
 
     # get the spin sectors
     # v5.5+ = mms1_epd_feeps_srvy_l1b_electron_spinsectnum
-    trange = list(Time(inp_dataset_omni.time.data[[0, -1]], format="datetime64").isot)
+    tint = list(np.datetime_as_string(inp_dataset_omni.time.data[[0, -1]],
+                                      "ns"))
 
-    dataset_name = f"mms{var['mmsId']}_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
-    dataset_pref = f"mms{var['mmsId']}_epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+    dataset_name = f"mms{var['mmsId']}_feeps_{var['tmmode']}" \
+                   f"_{var['lev']}_{var['dtype']}"
+    dataset_pref = f"mms{var['mmsId']}_epd_feeps_{var['tmmode']}" \
+                   f"_{var['lev']}_{var['dtype']}"
 
-    spin_sectors = db_get_ts(dataset_name, "_".join([dataset_pref, "spinsectnum"]), trange)
+    spin_sectors = db_get_ts(dataset_name, f"{dataset_pref}_spinsectnum",
+                             tint)
 
-    spin_starts = [spin_end + 1 for spin_end in np.where(spin_sectors[:-1] >= spin_sectors[1:])[0]]
+    spin_starts = []
+    for spin_end in np.where(spin_sectors[:-1] >= spin_sectors[1:])[0]:
+        spin_starts.append(spin_end + 1)
 
     energies = inp_dataset_omni.coords["energy"]
     data = inp_dataset_omni.data
@@ -65,6 +70,7 @@ def feeps_spin_avg(inp_dataset_omni):
         current_start = spin_starts[spin_idx] + 1
 
     time = inp_dataset_omni.coords["time"].data[spin_starts]
-    out = xr.DataArray(spin_avg_flux, coords=[time, energies], dims=inp_dataset_omni.dims)
+    out = xr.DataArray(spin_avg_flux, coords=[time, energies],
+                       dims=inp_dataset_omni.dims)
 
     return out

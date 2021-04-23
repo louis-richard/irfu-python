@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020-2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -15,14 +15,12 @@
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
-
 from .db_get_ts import db_get_ts
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 
 
 def feeps_remove_sun(inp_dataset):
-    """Removes the sunlight contamination from FEEPS data.
+    r"""Removes the sunlight contamination from FEEPS data.
 
     Parameters
     ----------
@@ -60,22 +58,22 @@ def feeps_remove_sun(inp_dataset):
 
     var = inp_dataset.attrs
 
-    trange = list(Time(inp_dataset.time.data[[0, -1]], format="datetime64").isot)
+    tint = list(np.datetime_as_string(inp_dataset.time.data[[0, -1]], "ns"))
 
-    dataset_name = "mms{:d}_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"],
-                                                   var["dtype"])
-    dataset_pref = "mms{:d}_epd_feeps_{}_{}_{}".format(var["mmsId"], var["tmmode"], var["lev"],
-                                                       var["dtype"])
+    dataset_name = f"mms{var['mmsId']:d}_feeps_{var['tmmode']}_" \
+                   f"{var['lev']}_{var['dtype']}"
+    dataset_pref = f"mms{var['mmsId']:d}_epd_feeps_{var['tmmode']}_" \
+                   f"{var['lev']}_{var['dtype']}"
 
-    spin_sectors = db_get_ts(dataset_name, "_".join([dataset_pref, "spinsectnum"]), trange)
-    mask_sectors = read_feeps_sector_masks_csv(trange)
+    spin_sectors = db_get_ts(dataset_name, f"{dataset_pref}_spinsectnum", tint)
+    mask_sectors = read_feeps_sector_masks_csv(tint)
 
     out_dict = {}
 
     for k in inp_dataset:
         out_dict[k] = inp_dataset[k]
-        if mask_sectors.get("mms{:d}_imask_{}".format(var["mmsId"], k)) is not None:
-            bad_sectors = mask_sectors["mms{:d}_imask_{}".format(var["mmsId"], k)]
+        if mask_sectors.get(f"mms{var['mmsId']:d}_imask_{k}") is not None:
+            bad_sectors = mask_sectors[f"mms{var['mmsId']:d}_imask_{k}"]
 
             for bad_sector in bad_sectors:
                 this_bad_sector = np.where(spin_sectors == bad_sector)[0]

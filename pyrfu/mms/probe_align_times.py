@@ -16,8 +16,6 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from astropy.time import Time
-
 from ..pyrf import ts_scalar, resample, extend_tint, time_clip, convert_fac
 
 
@@ -99,7 +97,8 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig=False):
 
     sc_pot = xr.DataArray(sc_pot, coords=[v1.time.data, np.arange(1, 7)], dims=["time", "probe"])
 
-    t_limit = list(Time(sc_pot.time.data[[0, -1]], format="datetime64").isot)
+    t_limit = [sc_pot.time.data[0], sc_pot.time.data[-1]]
+    t_limit = [np.datetime_as_string(time, "ns") for time in t_limit]
 
     t_limit_long = extend_tint(t_limit, [-10, 10])
 

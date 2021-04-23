@@ -20,8 +20,8 @@ from .ts_scalar import ts_scalar
 
 
 def remove_repeated_points(inp):
-    """Remove repeated elements in DataArray or structure data. Important when using defatt
-    products. Must have a time variable.
+    """Remove repeated elements in DataArray or structure data. Important
+    when using defatt products. Must have a time variable.
 
     Parameters
     ----------
@@ -35,15 +35,17 @@ def remove_repeated_points(inp):
 
     """
 
-    threshold = 100  # Points separated in time by less than 100ns are treated as repeats
+    # Points separated in time by less than 100ns are treated as repeats
+    threshold = 100
 
     if isinstance(inp, xr.DataArray):
-        diffs = np.diff(inp.time.data.view("i8") * 1e-9)
+        diffs = np.diff(inp.time.data.astype(int) * 1e-9)
 
         no_repeat = np.ones(len(inp))
         no_repeat[diffs < threshold] = 0
 
-        new_time, new_inp = [inp.time.data[no_repeat == 1], inp.data[no_repeat == 1, :]]
+        new_time = inp.time.data[no_repeat == 1]
+        new_inp = inp.data[no_repeat == 1, :]
 
         if new_inp.ndim == 1:
             new_data = ts_scalar(new_time, new_inp)
@@ -70,6 +72,7 @@ def remove_repeated_points(inp):
 
         new_data = inp
     else:
-        new_data = inp  # no change to input if it's not a DataArray or structure
+        # no change to input if it's not a DataArray or structure
+        new_data = inp
 
     return new_data

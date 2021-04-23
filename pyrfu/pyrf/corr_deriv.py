@@ -18,8 +18,6 @@
 
 import numpy as np
 
-from astropy.time import Time
-
 from .find_closest import find_closest
 
 
@@ -50,12 +48,12 @@ def corr_deriv(inp0, inp1, fla=False):
     """
 
     # 1st derivative
-    tx1 = Time(inp0.time.data, format="datetime64").unix
+    tx1 = inp0.time.data.astype(int) * 1e-9
     inp0 = inp0.data
     dtx1 = tx1[:-1] + 0.5 * np.diff(tx1)
     dx1 = np.diff(inp0)
 
-    tx2 = Time(inp1.time.data, format="datetime64").unix
+    tx2 = inp1.time.data.astype(int) * 1e-9
     inp1 = inp1.data
     dtx2 = tx2[:-1] + 0.5 * np.diff(tx2)
     dx2 = np.diff(inp1)
@@ -157,18 +155,18 @@ def corr_deriv(inp0, inp1, fla=False):
         ind1_p = ind_zeros1[ind_zeros1_p]
         ind1_m = ind_zeros1[ind_zeros1_m]
 
-        t_zeros1_p = dd_tx1[ind1_p] + (dd_tx1[ind1_p + 1] - dd_tx1[ind1_p]) \
-                     / (1 + np.abs(ddx1[ind1_p + 1]) / np.abs(ddx1[ind1_p]))
-        t_zeros1_m = dd_tx1[ind1_m] + (dd_tx1[ind1_m + 1] - dd_tx1[ind1_m]) \
-                     / (1 + np.abs(ddx1[ind1_m + 1]) / np.abs(ddx1[ind1_m]))
+        t_zeros1_p = dd_tx1[ind1_p] + (dd_tx1[ind1_p + 1] - dd_tx1[ind1_p]) / (
+                    1 + np.abs(ddx1[ind1_p + 1]) / np.abs(ddx1[ind1_p]))
+        t_zeros1_m = dd_tx1[ind1_m] + (dd_tx1[ind1_m + 1] - dd_tx1[ind1_m]) / (
+                    1 + np.abs(ddx1[ind1_m + 1]) / np.abs(ddx1[ind1_m]))
 
         ind2_p = ind_zeros2[ind_zeros2_p]
         ind2_m = ind_zeros2[ind_zeros2_m]
 
-        t_zeros2_p = dd_tx2[ind2_p] + (dd_tx2[ind2_p + 1] - dd_tx2[ind2_p]) \
-                     / (1 + np.abs(ddx2[ind2_p + 1]) / np.abs(ddx2[ind2_p]))
-        t_zeros2_m = dd_tx2[ind2_m] + (dd_tx2[ind2_m + 1] - dd_tx2[ind2_m]) \
-                     / (1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m]))
+        t_zeros2_p = dd_tx2[ind2_p] + (dd_tx2[ind2_p + 1] - dd_tx2[ind2_p]) / (
+                    1 + np.abs(ddx2[ind2_p + 1]) / np.abs(ddx2[ind2_p]))
+        t_zeros2_m = dd_tx2[ind2_m] + (dd_tx2[ind2_m + 1] - dd_tx2[ind2_m]) / (
+                    1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m]))
 
     # Define identical pairs of two time axis
     t1_dd_p, t2_dd_p, _, _ = find_closest(t_zeros1_p, t_zeros2_p)

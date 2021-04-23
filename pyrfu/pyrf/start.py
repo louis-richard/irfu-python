@@ -16,8 +16,6 @@
 @author: Louis Richard
 """
 
-from astropy.time import Time
-
 
 def start(inp):
     """Gives the first time of the time series.
@@ -34,6 +32,6 @@ def start(inp):
 
     """
 
-    out = Time(inp.time.data[0], format="datetime64").unix
+    out = inp.time.data[0].astype(int) * 1e-9
 
     return out

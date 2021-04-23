@@ -20,7 +20,6 @@ import warnings
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
 from scipy import interpolate
 from ..pyrf import time_clip, resample, normalize, ts_scalar
 
@@ -96,7 +95,8 @@ def get_hpca_pad(vdf, saz, aze, b_xyz, elim=None):
         raise ValueError("stop times of aze and vdf don't match!")
 
     tint_ = [saz.time.data[n_start_az - 1], saz.time.data[n_stop_az]]
-    tint_ = [Time(time, format="datetime64").isot for time in tint_]
+    tint_ = [np.datetime_as_string(time, "ns") for time in tint_]
+
     vdf = time_clip(vdf, tint_)
 
     # 3. compute PAD
@@ -124,13 +124,13 @@ def get_hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     yy_ = np.sin(np.deg2rad(elev_mat)) * np.sin(np.deg2rad(aze_mat))
     zz_ = np.cos(np.deg2rad(elev_mat))
 
-    t0_ = Time(vdf.time.data, format="datetime64").unix
+    t0_ = vdf.time.data.astype(int)
     t0_start = t0_[0]
     t0_ -= t0_start
     tck_ = interpolate.interp1d(np.arange(0, n_en * len(t0_), n_en), t0_,
                                 fill_value="extrapolate")
-    t1_tt = Time(tck_(np.arange(0, n_en * len(t0_))) + t0_start,
-                 format="unix").datetime64
+    t1_tt = tck_(np.arange(0, n_en * len(t0_))) + t0_start
+    t1_tt = t1_tt.astype("datetime64[ns]")
     b_xyz_r = resample(b_xyz, ts_scalar(t1_tt, np.zeros(len(t1_tt))))
     b_xyz_r = normalize(b_xyz_r)
 

@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020-2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -9,8 +9,6 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-
-from astropy.time import Time
 
 from .split_vs import split_vs
 from .list_files import list_files
@@ -639,6 +637,6 @@ def get_data(var_str, tint, mms_id, verbose=True, data_path=""):
             out = ts_append(out, get_ts(file, cdf_name, tint))
 
     if out.time.data.dtype == "float64":
-        out.time.data = Time(1e-9 * out.time.data, format="unix").datetime
+        out.time.data = out.time.data.astype("datetime64[ns]")
 
     return out

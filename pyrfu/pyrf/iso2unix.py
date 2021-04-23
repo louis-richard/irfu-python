@@ -16,7 +16,7 @@
 @author: Louis Richard
 """
 
-from astropy.time import Time
+import numpy as np
 
 
 def iso2unix(time):
@@ -36,6 +36,6 @@ def iso2unix(time):
     """
 
     # Convert iso time to unix
-    out = Time(time, format="iso").unix
+    out = np.array(time).astype("datetime64[ns]")
 
     return out
