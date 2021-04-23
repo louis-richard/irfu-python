@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020-2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,12 +19,9 @@
 import numpy as np
 
 from scipy import interpolate
-from astropy.time import Time
 
 
-def get_vol_ten(r_xyz, time):
-    """to fill."""
-
+def _get_vol_ten(r_xyz, time):
     if len(time) == 1:
         time = np.array([time, time, time, time])
 
@@ -48,12 +45,12 @@ def get_vol_ten(r_xyz, time):
 
 
 def c_4_v(r_xyz, time):
-    """Calculates velocity or time shift of discontinuity as in [6]_.
+    r"""Calculates velocity or time shift of discontinuity as in [6]_.
 
     Parameters
     ----------
-    r_xyz : list of xarray.DataArray
-        Time series of the positions of the spacecraft.
+    r_xyz : list
+        Time series of the positions of the 4 spacecraft.
 
     time : list
         Crossing times or time and velocity.
@@ -75,7 +72,7 @@ def c_4_v(r_xyz, time):
     if isinstance(time, np.ndarray) and time.dtype == np.datetime64:
         flag = "v_from_t"
 
-        time = Time(time, format="datetime64").unix
+        time = time.view("i8") * 1e-9
     elif time[1] > 299792.458:
         flag = "v_from_t"
     else:
@@ -83,7 +80,7 @@ def c_4_v(r_xyz, time):
 
     if flag.lower() == "v_from_t":
         # Time input, velocity output
-        dr_mat = get_vol_ten(r_xyz, time)
+        dr_mat = _get_vol_ten(r_xyz, time)
         tau = np.array(time[1:]) - time[0]
         slowness = np.linalg.solve(dr_mat, tau)
 
@@ -96,7 +93,7 @@ def c_4_v(r_xyz, time):
         velocity = np.array(time[1:])  # Input velocity
         slowness = velocity / np.linalg.norm(velocity) ** 2
 
-        dr_mat = get_vol_ten(r_xyz, time_center)
+        dr_mat = _get_vol_ten(r_xyz, time_center)
 
         delta_t = np.matmul(dr_mat, slowness)
         out = np.hstack([0, delta_t])

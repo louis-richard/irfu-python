@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020-2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,6 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""correct_edp_probe_timing.py
+@author: Louis Richard
+"""
+
 import numpy as np
 import xarray as xr
 
@@ -19,7 +23,7 @@ from ..pyrf import ts_scalar, resample
 
 
 def correct_edp_probe_timing(sc_pot):
-    """Corrects for the channel delays not accounted for in the MMS EDP
+    r"""Corrects for the channel delays not accounted for in the MMS EDP
     processing. As described in the MMS EDP data products guide.
 
     Parameters

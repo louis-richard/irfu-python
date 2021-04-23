@@ -20,10 +20,7 @@ import warnings
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
-
-from ..pyrf import (cotrans, resample,
-                    sph2cart, ts_vec_xyz)
+from ..pyrf import cotrans, resample, sph2cart, ts_vec_xyz
 
 
 def dsl2gse(inp, defatt, direction=1):
@@ -75,10 +72,10 @@ def dsl2gse(inp, defatt, direction=1):
     if isinstance(defatt, xr.Dataset):
         x, y, z = sph2cart(np.deg2rad(defatt.z_ra.data),
                            np.deg2rad(defatt.z_dec), 1)
-        sax_gei = np.transpose(np.vstack([defatt.time.data.view("i8") * 1e-9,
+        sax_gei = np.transpose(np.vstack([defatt.time.data.astype("int") / 1e9,
                                           x, y, z]))
         sax_gse = cotrans(sax_gei, "gei>gse")
-        sax_gse = ts_vec_xyz(Time(sax_gse[:, 0], format="unix").datetime64,
+        sax_gse = ts_vec_xyz((sax_gse[:, 0] * 1e9).astype("datetime64[ns]"),
                              sax_gse[:, 1:])
 
         spin_ax_gse = resample(sax_gse, inp)

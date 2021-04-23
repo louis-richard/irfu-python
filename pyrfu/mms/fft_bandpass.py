@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020-2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,13 +12,18 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""fft_bandpass.py
+@author: Louis Richard
+"""
+
 import numpy as np
 
 from ..pyrf import calc_fs, ts_scalar, ts_vec_xyz
 
 
 def fft_bandpass(inp, f_min, f_max):
-    """Perform simple bandpass using FFT - returns fields between with ``f_min`` < f < ``f_max``.
+    r"""Perform simple bandpass using FFT - returns fields between with
+    ``f_min`` < f < ``f_max``.
 
     Parameters
     ----------
@@ -38,7 +43,8 @@ def fft_bandpass(inp, f_min, f_max):
 
     Notes
     -----
-    Can be some spurius effects near boundary. Can take longer interval then use tlim to remove.
+    Can be some spurius effects near boundary. Can take longer interval then
+    use tlim to remove.
 
     Examples
     --------
@@ -64,7 +70,8 @@ def fft_bandpass(inp, f_min, f_max):
 
     inp_time, inp_data = [inp.time.data, inp.data]
 
-    # Make sure number of elements is an even number, if odd remove last element to make an even
+    # Make sure number of elements is an even number, if odd remove last
+    # element to make an even
     # number
     n_els = len(inp_data)
 

@@ -17,6 +17,6 @@ seaborn
 sfs
 sphinx>=1.4
 sphinxcontrib-apidoc
-sphinx_rtd_theme
+pydata-sphinx-theme
 tqdm
 xarray

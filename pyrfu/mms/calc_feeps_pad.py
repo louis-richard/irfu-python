@@ -12,11 +12,14 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""calc_feeps_pad.py
+@author: Louis Richard
+"""
+
 import warnings
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
 from typing import List
 
 from .feeps_pitch_angles import feeps_pitch_angles
@@ -77,8 +80,8 @@ def calc_feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
     pa_times = pitch_angles.time
     pa_data = pitch_angles.data
 
-    trange = Time(np.hstack([pa_times.data.min(), pa_times.data.max()]),
-                  format="datetime64").isot
+    trange = np.datetime_as_string(np.hstack([np.min(pa_times.data),
+                                              np.max(pa_times.data)]), "ns")
 
     eyes = get_feeps_active_eyes(var, trange, mms_id)
 
