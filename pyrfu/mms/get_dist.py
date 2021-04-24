@@ -21,7 +21,8 @@ from ..pyrf import ts_skymap, datetime_to_tt2000
 
 
 def get_dist(file_path, cdf_name, tint):
-    """Read field named cdf_name in file and convert to velocity distribution function.
+    """Read field named cdf_name in file and convert to velocity distribution
+    function.
 
     Parameters
     ----------
@@ -37,8 +38,8 @@ def get_dist(file_path, cdf_name, tint):
     Returns
     -------
     out : xarray.Dataset
-        Time series of the velocity distribution function if the target specie in the selected time
-        interval.
+        Time series of the velocity distribution function if the target
+        specie in the selected time interval.
 
     """
 
@@ -58,7 +59,7 @@ def get_dist(file_path, cdf_name, tint):
             t = f.varget(depend0_key, starttime=tint[0], endtime=tint[1])
             t = cdfepoch.to_datetime(t, to_np=True)
 
-            if not t.size:
+            if not t:
                 return None
 
             dist = f.varget(cdf_name, starttime=tint[0], endtime=tint[1])
@@ -67,19 +68,27 @@ def get_dist(file_path, cdf_name, tint):
             th = f.varget(depend2_key)
             en = f.varget(depend3_key, starttime=tint[0], endtime=tint[1])
 
-            en0_name = "_".join([cdf_name.split("_")[0], cdf_name.split("_")[1], "energy0",
+            en0_name = "_".join([cdf_name.split("_")[0],
+                                 cdf_name.split("_")[1], "energy0",
                                  cdf_name.split("_")[-1]])
-            en1_name = "_".join([cdf_name.split("_")[0], cdf_name.split("_")[1], "energy1",
+            en1_name = "_".join([cdf_name.split("_")[0],
+                                 cdf_name.split("_")[1], "energy1",
                                  cdf_name.split("_")[-1]])
-            d_en_name = "_".join([cdf_name.split("_")[0], cdf_name.split("_")[1], "energy_delta",
+            d_en_name = "_".join([cdf_name.split("_")[0],
+                                  cdf_name.split("_")[1], "energy_delta",
                                   cdf_name.split("_")[-1]])
-            e_step_table_name = "_".join([cdf_name.split("_")[0], cdf_name.split("_")[1],
-                                          "steptable_parity", cdf_name.split("_")[-1]])
+            e_step_table_name = "_".join([cdf_name.split("_")[0],
+                                          cdf_name.split("_")[1],
+                                          "steptable_parity",
+                                          cdf_name.split("_")[-1]])
 
-            step_table = f.varget(e_step_table_name, starttime=tint[0], endtime=tint[1])
+            step_table = f.varget(e_step_table_name,
+                                  starttime=tint[0], endtime=tint[1])
             if d_en_name in f.cdf_info()["zVariables"]:
-                delta_plus_var = f.varget(d_en_name, starttime=tint[0], endtime=tint[1])
-                delta_minus_var = f.varget(d_en_name, starttime=tint[0], endtime=tint[1])
+                delta_plus_var = f.varget(d_en_name,
+                                          starttime=tint[0], endtime=tint[1])
+                delta_minus_var = f.varget(d_en_name,
+                                           starttime=tint[0], endtime=tint[1])
 
             if en0_name not in f.cdf_info()["zVariables"]:
                 energy0 = en[1, :]
@@ -88,8 +97,8 @@ def get_dist(file_path, cdf_name, tint):
                 energy0 = f.varget(en0_name)
                 energy1 = f.varget(en1_name)
 
-            res = ts_skymap(t, dist, None, ph, th, energy0=energy0, energy1=energy1,
-                            esteptable=step_table)
+            res = ts_skymap(t, dist, None, ph, th, energy0=energy0,
+                            energy1=energy1, esteptable=step_table)
 
             if "delta_plus_var" in locals() and "delta_minus_var" in locals():
                 res.attrs["delta_energy_minus"] = delta_minus_var

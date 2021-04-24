@@ -16,11 +16,28 @@
 ©author: Louis Richard
 """
 
-import warnings
 import numpy as np
 import xarray as xr
 
 from ..pyrf import cotrans, resample, sph2cart, ts_vec_xyz
+
+
+def _transformation_matrix(spin_axis, direction):
+    r_x, r_y, r_z = [spin_axis[:, i] for i in range(3)]
+
+    a = 1. / np.sqrt(r_y ** 2 + r_z ** 2)
+    out = np.zeros((len(a), 3, 3))
+    out[:, 0, :] = np.transpose(np.stack([a * (r_y ** 2 + r_z ** 2),
+                                          -a * r_x * r_y, -a * r_x * r_z]))
+
+    out[:, 1, :] = np.transpose(np.stack([0. * a, a * r_z, -a * r_y]))
+
+    out[:, 2, :] = np.transpose(np.stack([r_x, r_y, r_z]))
+
+    if direction == 1:
+        out = np.transpose(out, [0, 2, 1])
+
+    return out
 
 
 def dsl2gsm(inp, defatt, direction: int = 1):
@@ -66,9 +83,6 @@ def dsl2gsm(inp, defatt, direction: int = 1):
 
     """
 
-    if direction not in [-1, 1]:
-        warnings.warn("using GSE->DSL", UserWarning)
-
     if isinstance(defatt, xr.Dataset):
         x, y, z = sph2cart(np.deg2rad(defatt.z_ra.data),
                            np.deg2rad(defatt.z_dec), 1)
@@ -87,20 +101,8 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     else:
         raise ValueError("unrecognized DEFATT/SAX input")
 
-    r_x, r_y, r_z = [spin_axis[:, i] for i in range(3)]
-
-    a = 1. / np.sqrt(r_y ** 2 + r_z ** 2)
-    transf_mat = np.zeros((len(a), 3, 3))
-    transf_mat[:, 0, :] = np.transpose(np.stack([a * (r_y ** 2 + r_z ** 2),
-                                                 -a * r_x * r_y,
-                                                 -a * r_x * r_z]))
-
-    transf_mat[:, 1, :] = np.transpose(np.stack([0. * a, a * r_z, -a * r_y]))
-
-    transf_mat[:, 2, :] = np.transpose(np.stack([r_x, r_y, r_z]))
-
-    if direction == 1:
-        transf_mat = np.transpose(transf_mat, [0, 2, 1])
+    # Compute transformation natrix
+    transf_mat = _transformation_matrix(spin_axis, direction)
 
     out_data = np.einsum('kji,ki->kj', transf_mat, inp.data)
 

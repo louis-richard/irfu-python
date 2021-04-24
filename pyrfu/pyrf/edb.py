@@ -23,6 +23,16 @@ from .ts_scalar import ts_scalar
 from .ts_vec_xyz import ts_vec_xyz
 
 
+def _check_method(flag_method):
+    default_value = 0
+    if flag_method.lower() == "e_perp+nan":
+        default_value = np.nan
+
+        flag_method = "e.b=0"
+
+    return flag_method, default_value
+
+
 def edb(e_xyz, b_bgd, angle_lim=20, flag_method="E.B=0"):
     """Compute Ez under assumption :math:`\\mathbf{E}.\\mathbf{B}=0` or
     :math:`\\mathbf{E}.\\mathbf{B} \\approx 0`
@@ -78,14 +88,11 @@ def edb(e_xyz, b_bgd, angle_lim=20, flag_method="E.B=0"):
 
     """
 
-    default_value = 0
-    if flag_method.lower() == "e_perp+nan":
-        default_value = np.nan
+    flag_method, default_value = _check_method(flag_method)
 
-        flag_method = "e.b=0"
-
-    if len(b_bgd) != len(e_xyz):
-        b_bgd = resample(b_bgd, e_xyz)
+    # Make sure that background magnetic field sampling matches the
+    # electric field sampling
+    b_bgd = resample(b_bgd, e_xyz)
 
     b_data = b_bgd.data
     e_data = e_xyz.data
@@ -112,10 +119,11 @@ def edb(e_xyz, b_bgd, angle_lim=20, flag_method="E.B=0"):
         ind = np.abs(b_angle) < angle_lim
 
         if True in ind:
-            e_data[ind, 2] = (e_data[ind, 0] * b_data[ind, 0]
-                              + e_data[ind, 1] * b_data[ind, 1])
-            e_data[ind, 2] *= b_data[ind, 2] \
-                              / (b_data[ind, 0] ** 2 + b_data[ind, 1] ** 2)
+            e_data[ind, 2] = (
+                        e_data[ind, 0] * b_data[ind, 0] + e_data[ind, 1] *
+                        b_data[ind, 1])
+            e_data[ind, 2] *= b_data[ind, 2] / (
+                        b_data[ind, 0] ** 2 + b_data[ind, 1] ** 2)
 
     else:
         raise ValueError("Invalid flag")

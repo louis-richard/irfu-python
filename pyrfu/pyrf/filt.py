@@ -16,13 +16,46 @@
 @author: Louis Richard
 """
 
-import xarray as xr
 import numpy as np
+import xarray as xr
 
 from scipy import signal
 
 
 # noinspection PyTupleAssignmentBalance
+def _ellip_coefficients(f_min, f_max, order):
+    num1, den1, num2, den2 = [None] * 4
+
+    if f_min == 0:
+        if order == -1:
+            order, f_max = signal.ellipord(f_max,
+                                           np.min([f_max * 1.1, 0.9999]),
+                                           .5, 60)
+
+        num1, den1 = signal.ellip(order, .5, 60, f_max, btype="lowpass")
+    elif f_max == 0:
+        if order == -1:
+            order, f_min = signal.ellipord(f_min,
+                                           np.min([f_min * 1.1, 0.9999]),
+                                           .5, 60)
+
+        num1, den1 = signal.ellip(order, .5, 60, f_min, btype="highpass")
+    else:
+        if order == -1:
+            order, f_max = signal.ellipord(f_max,
+                                           np.min([f_max * 1.3, 0.9999]),
+                                           .5, 60)
+
+        num1, den1 = signal.ellip(order, .5, 60, f_max)
+
+        if order == -1:
+            order, f_min = signal.ellipord(f_min, f_min * .75, .5, 60)
+
+        num2, den2 = signal.ellip(order, .5, 60, f_min)
+
+    return num1, den1, num2, den2
+
+
 def filt(inp, f_min=0., f_max=1., order=-1):
     """Filters input quantity.
 
@@ -86,38 +119,7 @@ def filt(inp, f_min=0., f_max=1., order=-1):
     # stopband and passband
     # r_pass, r_stop, fact = [0.5, 60, 1.1]
 
-    if f_min == 0:
-        num1, den1, num2, den2 = [None] * 4
-
-        if order == -1:
-            order, f_max = signal.ellipord(f_max,
-                                           np.min([f_max * 1.1, 0.9999]),
-                                           .5, 60)
-
-        num, den = signal.ellip(order, .5, 60, f_max, btype="lowpass")
-    elif f_max == 0:
-        num1, den1, num2, den2 = [None] * 4
-
-        if order == -1:
-            order, f_min = signal.ellipord(f_min,
-                                           np.min([f_min * 1.1, 0.9999]),
-                                           .5, 60)
-
-        num, den = signal.ellip(order, .5, 60, f_min, btype="highpass")
-    else:
-        num, den = [None] * 2
-
-        if order == -1:
-            order, f_max = signal.ellipord(f_max,
-                                           np.min([f_max * 1.3, 0.9999]),
-                                           .5, 60)
-
-        num1, den1 = signal.ellip(order, .5, 60, f_max)
-
-        if order == -1:
-            order, f_min = signal.ellipord(f_min, f_min * .75, .5, 60)
-
-        num2, den2 = signal.ellip(order, .5, 60, f_min)
+    num1, den1, num2, den2 = _ellip_coefficients(f_min, f_max, order)
 
     if len(inp_data.shape) == 1:
         inp_data = inp_data[:, np.newaxis]
@@ -125,14 +127,11 @@ def filt(inp, f_min=0., f_max=1., order=-1):
     out_data = np.zeros(inp_data.shape)
 
     for i_col in range(inp_data.shape[1]):
-        if f_min != 0 and f_max != 0:
-            out_data[:, i_col] = signal.filtfilt(num1, den1,
-                                                 inp_data[:, i_col])
+        out_data[:, i_col] = signal.filtfilt(num1, den1, inp_data[:, i_col])
+
+        if num2 is not None and den2 is not None:
             out_data[:, i_col] = signal.filtfilt(num2, den2,
                                                  out_data[:, i_col])
-        else:
-            out_data[:, i_col] = signal.filtfilt(num, den, inp_data[:, i_col])
-
     if inp_data.shape[1] == 1:
         out_data = out_data[:, 0]
 

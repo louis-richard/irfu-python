@@ -23,7 +23,7 @@ from .ts_vec_xyz import ts_vec_xyz
 
 
 def e_vxb(v_xyz, b_xyz, flag="vxb"):
-    """Computes the convection electric field :math:`\\mathbf{V}\\times
+    r"""Computes the convection electric field :math:`\\mathbf{V}\\times
     \\mathbf{B}` (default) or the :math:`\\mathbf{E}\\times\\mathbf{
     B}/|\\mathbf{B}|^{2}` drift velocity (flag="exb").
 
@@ -68,18 +68,11 @@ def e_vxb(v_xyz, b_xyz, flag="vxb"):
 
     """
 
-    estimate_exb = False
-    input_v_cons = False
-
-    if flag.lower() == "exb":
-        estimate_exb = True
-
-    if v_xyz.size == 3:
-        input_v_cons = True
+    input_v_cons = v_xyz.size == 3
+    estimate_exb = flag.lower() == "exb"
 
     if estimate_exb:
-        if len(v_xyz) != len(b_xyz):
-            b_xyz = resample(b_xyz, v_xyz)
+        b_xyz = resample(b_xyz, v_xyz)
 
         res = 1e3 * np.cross(v_xyz.data, b_xyz.data, axis=1)
         res /= np.linalg.norm(b_xyz.data, axis=1)[:, None] ** 2
@@ -89,13 +82,14 @@ def e_vxb(v_xyz, b_xyz, flag="vxb"):
 
     else:
         if input_v_cons:
-            res = np.cross(np.tile(v_xyz, (len(b_xyz), 1)), b_xyz.data) * (-1) * 1e-3
+            res = np.cross(np.tile(v_xyz, (len(b_xyz), 1)), b_xyz.data)
+            res *= (-1) * 1e-3
 
         else:
-            if len(v_xyz) != len(b_xyz):
-                b_xyz = resample(b_xyz, v_xyz)
+            b_xyz = resample(b_xyz, v_xyz)
 
-            res = np.cross(v_xyz.data, b_xyz.data) * (-1) * 1e-3
+            res = np.cross(v_xyz.data, b_xyz.data)
+            res *= (-1) * 1e-3
 
         attrs = {"UNITS": "mV/s", "FIELDNAM": "Electric field",
                  "LABLAXIS": "E"}

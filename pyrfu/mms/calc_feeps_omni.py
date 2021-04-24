@@ -65,17 +65,17 @@ def calc_feeps_omni(inp_dataset):
 
     inp_dataset_clean, _ = feeps_split_integral_ch(inp_dataset)
 
-    inp_dset_csr = feeps_remove_sun(inp_dataset_clean)
+    inp_dataset_sun = feeps_remove_sun(inp_dataset_clean)
 
-    eye_list = list(inp_dset_csr.keys())
+    eye_list = list(inp_dataset_sun.keys())
 
-    d_alleyes = np.empty((inp_dset_csr[eye_list[0]].shape[0],
-                          inp_dset_csr[eye_list[0]].shape[1],
-                          len(inp_dset_csr)))
-    d_alleyes[:] = np.nan
+    d_all_eyes = np.empty((inp_dataset_sun[eye_list[0]].shape[0],
+                          inp_dataset_sun[eye_list[0]].shape[1],
+                          len(inp_dataset_sun)))
+    d_all_eyes[:] = np.nan
 
     for i, k in enumerate(eye_list):
-        d_alleyes[..., i] = inp_dset_csr[k].data
+        d_all_eyes[..., i] = inp_dataset_sun[k].data
 
         try:
             # percent error around energy bin center to accept data for
@@ -83,23 +83,23 @@ def calc_feeps_omni(inp_dataset):
             # energies[i] will be changed to NAN and not averaged
 
             energy_indices = np.where(
-                np.abs(energies - inp_dset_csr[k].coords[
+                np.abs(energies - inp_dataset_sun[k].coords[
                     "Differential_energy_channels"].data) > .1 * energies)
 
             if energy_indices[0].size != 0:
-                d_alleyes[:, energy_indices[0], i] = np.nan
+                d_all_eyes[:, energy_indices[0], i] = np.nan
 
         except Warning:
             print('NaN in energy table encountered; sensor T{}'.format(k))
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        flux_omni = np.nanmean(d_alleyes, axis=2)
+        flux_omni = np.nanmean(d_all_eyes, axis=2)
 
     flux_omni *= calibration["g_fact"][var["dtype"][0]][var["mmsId"]-1]
 
-    out = xr.DataArray(flux_omni, coords=[inp_dset_csr.time.data, energies],
+    out = xr.DataArray(flux_omni, coords=[inp_dataset_sun.time.data, energies],
                        dims=["time", "energy"],
-                       attrs=inp_dset_csr[eye_list[0]].attrs)
+                       attrs=inp_dataset_sun[eye_list[0]].attrs)
 
     return out

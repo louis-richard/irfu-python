@@ -19,7 +19,7 @@
 import numpy as np
 
 
-def optimize_nbins_2d(x, y, n_min:list = None, n_max: list = None):
+def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
     r"""Estimates the number of bins for 2d histogram that minimizes
     the risk function in [1]_ , obtained by direct decomposition of the
     MISE following the method described in [2]_ .
@@ -73,7 +73,7 @@ def optimize_nbins_2d(x, y, n_min:list = None, n_max: list = None):
     d_xy = [[(i, j) for j in d_y] for i in d_x]
 
     # matrix of bin size vector
-    d_xy = np.array(d_xy, dtype=[('x', float) ,('y', float)])
+    d_xy = np.array(d_xy, dtype=[('x', float), ('y', float)])
 
     # Computation of the cost function to x and y
     c_xy = np.zeros(d_xy.shape)
@@ -84,16 +84,13 @@ def optimize_nbins_2d(x, y, n_min:list = None, n_max: list = None):
             # The mean and the variance are simply computed from the event
             # counts in all the bins of the 2-dimensional histogram.
             k_i = k_i[0]
-            k_ = np.mean(k_i)  # Mean of event count
-            v_ = np.var(k_i)   # Variance of event count
             # The cost Function
-            c_xy[i ,j] = (2 * k_ - v_) / ((d_xy[i, j][0] * d_xy[i, j][1]) ** 2)
+            c_xy[i, j] = (2 * np.mean(k_i) - np.var(k_i)) / (
+                        (d_xy[i, j][0] * d_xy[i, j][1]) ** 2)
 
     # Optimal Bin Size Selection
-    # combination of i and j that produces the minimum cost function
-    idx_min = np.where(c_xy == np.min(c_xy))  # get the index of the min Cxy
-
     # get the index in x and y that produces the minimum cost function
-    idx_nx, idx_ny = [idx_min[i][0] for i in range(2)]
+    n_x = n_x[np.where(c_xy == np.min(c_xy))[0][0]]
+    n_y = n_y[np.where(c_xy == np.min(c_xy))[1][0]]
 
-    return n_x[idx_nx], n_y[idx_ny]
+    return n_x, n_y

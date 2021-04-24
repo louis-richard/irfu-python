@@ -19,12 +19,14 @@ from .db_get_ts import db_get_ts
 
 
 def get_eis_allt(tar_var, tint, mms_id, verbose=True):
-    """Read energy spectrum of the selected specie in the selected energy range for all telescopes.
+    """Read energy spectrum of the selected specie in the selected energy
+    range for all telescopes.
 
     Parameters
     ----------
     tar_var : str
-        Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
+        Key of the target variable like
+        {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
 
     tint : list of str
         Time interval.
@@ -38,7 +40,8 @@ def get_eis_allt(tar_var, tint, mms_id, verbose=True):
     Returns
     -------
     out : xarray.Dataset
-        Dataset containing the energy spectrum of the 6 telescopes of the Energy Ion Spectrometer.
+        Dataset containing the energy spectrum of the 6 telescopes of the
+        Energy Ion Spectrometer.
 
     Examples
     --------
@@ -59,7 +62,8 @@ def get_eis_allt(tar_var, tint, mms_id, verbose=True):
 
     data_unit, data_type, specie, data_rate, data_lvl = tar_var.split("_")
 
-    var = {"mms_id": mms_id, "inst": "epd-eis", "tmmode": data_rate, "lev": data_lvl}
+    var = {"mms_id": mms_id, "inst": "epd-eis",
+           "tmmode": data_rate, "lev": data_lvl}
 
     if data_type == "electronenergy":
         if specie == "electron":
@@ -99,7 +103,8 @@ def get_eis_allt(tar_var, tint, mms_id, verbose=True):
     else:
         raise ValueError("Invalid data type")
 
-    # EIS includes the version of the files in the cdfname need to read it before.
+    # EIS includes the version of the files in the cdfname need to read it
+    # before.
     files = list_files(tint, mms_id, var)
 
     file_version = int(files[0].split("_")[-1][1])
@@ -110,9 +115,10 @@ def get_eis_allt(tar_var, tint, mms_id, verbose=True):
     else:
         raise ValueError("Invalid data unit")
 
-    # Name of the data containing index of the probe, instrument, data rate, data level and data
-    # type if needed
-    dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+    # Name of the data containing index of the probe, instrument, data rate,
+    # data level and data type if needed
+    dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}" \
+                f"_{var['lev']}_{var['dtype']}"
 
     # Names of the energy spectra in the CDF (one for each telescope)
     cdfnames = ["{}_{}{:d}".format(pref, suf, t) for t in range(6)]

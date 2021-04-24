@@ -94,15 +94,15 @@ def fft_bandpass(inp, f_min, f_max):
     # Bandpass filter field data
     f_sam = calc_fs(inp)
     f_nyq = f_sam / 2
-    freqs = np.linspace(-f_nyq, f_nyq, n_els)
+    frequencies = np.linspace(-f_nyq, f_nyq, n_els)
 
     # FFT and remove frequencies
     for i in range(num_fields):
         inp_temp = np.fft.fft(inp_data[:, i])
         inp_temp = np.fft.fftshift(inp_temp)
 
-        inp_temp[np.abs(freqs) < f_min] = 0
-        inp_temp[np.abs(freqs) > f_max] = 0
+        inp_temp[np.abs(frequencies) < f_min] = 0
+        inp_temp[np.abs(frequencies) > f_max] = 0
 
         inp_temp = np.fft.ifftshift(inp_temp)
         inp_data[:, i] = np.fft.ifft(inp_temp)

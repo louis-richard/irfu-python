@@ -22,11 +22,10 @@ import numpy as np
 import pandas as pd
 
 from scipy import interpolate
-from astropy.time import Time
 
 
 def igrf(time, flag):
-    """Returns magnetic dipole latitude and longitude of the IGRF model
+    r"""Returns magnetic dipole latitude and longitude of the IGRF model
 
     Parameters
     ----------
@@ -49,17 +48,12 @@ def igrf(time, flag):
 
     # Root path
     # root_path = os.getcwd()
-    root_path = os.path.dirname(os.path.abspath(__file__))
-
-    # File path
-    file_name = "igrf13coeffs.csv"
-
-    # file reading
-    df = pd.read_csv(os.sep.join([root_path, file_name]))
+    path = os.sep.join([os.path.dirname(os.path.abspath(__file__)),
+                             "igrf13coeffs.csv"])
+    df = pd.read_csv(path)
 
     # construct IGRF coefficient matrices
-    a = df.loc[0]
-    years_igrf = a[3:].to_list()
+    years_igrf = df.loc[0][3:].to_list()
     years_igrf[-1] = float(years_igrf[-1].split("-")[0]) + 5.
 
     # read in all IGRF coefficients from file
@@ -70,17 +64,16 @@ def igrf(time, flag):
 
     # timeVec = irf_time(t,'vector');
     # yearRef = timeVec(:,1);
-    year_ref = Time(time, format="unix").datetime64.astype("datetime64[Y]")
+    year_ref = (time * 1e9).astype("datetime64[ns]")
+    year_ref = year_ref.astype("datetime64[Y]")
     year_ref = year_ref.astype(int) + 1970
-    year_ref_isot = list(map(lambda x: f"{x}-01-01T00:00:00", year_ref))
-    year_ref_unix = Time(year_ref_isot, format="isot").unix
+    year_ref_unix = (year_ref - 1970).astype("datetime64[Y]")
+    year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(int) / 1e9
 
     if np.min(year_ref) < np.min(years_igrf):
         message = "requested time is earlier than the first available IGRF " \
                   "model from extrapolating in past.. "
         warnings.warn(message, category=UserWarning)
-
-    year = year_ref + (time - year_ref_unix) / (365.25 * 86400)
 
     assert flag == "dipole", "input flag is not recognized"
 
@@ -91,12 +84,11 @@ def igrf(time, flag):
     tck_h0_igrf = interpolate.interp1d(years_igrf, h_igrf[0, 2:],
                                        kind="linear", fill_value="extrapolate")
 
-    g01 = tck_g0_igrf(year)
-    g11 = tck_g1_igrf(year)
-    h11 = tck_h0_igrf(year)
+    g01 = tck_g0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
+    g11 = tck_g1_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
+    h11 = tck_h0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
     lambda_ = np.arctan(h11 / g11)
     phi = np.pi / 2
     phi -= np.arcsin((g11 * np.cos(lambda_) + h11 * np.sin(lambda_)) / g01)
 
     return np.rad2deg(lambda_), np.rad2deg(phi)
-

@@ -62,11 +62,10 @@ def mean(inp, r_xyz, b_xyz, dipole_axis):
         flag_dipole = False
         dipole_axis = None
 
-    if len(r_xyz) != len(inp):
-        r_xyz = resample(r_xyz, inp)
-
-    if len(b_xyz) != len(inp):
-        b_xyz = resample(b_xyz, inp)
+    # Make sure that spacecraft position and magnetic field sampling matches
+    # input sampling
+    r_xyz = resample(r_xyz, inp)
+    b_xyz = resample(b_xyz, inp)
 
     b_hat = normalize(b_xyz)
 

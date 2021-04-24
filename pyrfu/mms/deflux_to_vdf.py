@@ -56,7 +56,7 @@ def deflux_to_vdf(deflux):
     else:
         raise ValueError("Invalid unit")
 
-    energy = deflux.energy.data
+    energy = deflux.energy.data.copy()
 
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
@@ -65,8 +65,8 @@ def deflux_to_vdf(deflux):
                                    np.prod(tmp_data.shape[2:])))
 
     if energy.ndim == 1:
-        energy_mat = np.tile(energy,
-                             (len(deflux.time), np.prod(tmp_data.shape[2:]),1))
+        energy_mat = np.tile(energy, (len(deflux.time),
+                                      np.prod(tmp_data.shape[2:]), 1))
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:
         energy_mat = np.tile(energy, (np.prod(tmp_data.shape[2:]), 1, 1))

@@ -16,8 +16,8 @@ import xarray as xr
 
 
 def feeps_split_integral_ch(inp_dataset):
-    """This function splits the last integral channel from the FEEPS spectra, creating 2 new
-    DataArrays
+    """This function splits the last integral channel from the FEEPS spectra,
+    creating 2 new DataArrays
 
     Parameters
     ----------

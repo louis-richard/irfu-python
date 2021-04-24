@@ -103,7 +103,6 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
         t_e = trace(ts_tensor_xyz(t_e.time.data, t_e.data)) / 3
     elif t_e.ndim == 1:
         t_e = ts_scalar(t_e.time.data, t_e.data)
-
     else:
         raise IndexError("Te format not recognized")
 
@@ -123,19 +122,17 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     # First a simple fit of Iph to Ie using 1 photoelectron population
     opt_p1 = optimize.fmin(_f_one_pop, x0=[500., 3.],
                            args=(i_e, i_aspoc, sc_pot_r), maxfun=5000)
-    g_1, g_2 = opt_p1
 
     # Fit of Iph to Ie for two photoelectron populations
-    opt_p2 = optimize.fmin(_f_two_pop, x0=[g_1, g_2, 10., 10.],
+    opt_p2 = optimize.fmin(_f_two_pop, x0=[opt_p1[0], opt_p1[1], 10., 10.],
                            args=(i_e, i_aspoc, sc_pot_r), maxfun=5000)
     i_ph0, t_ph0, i_ph1, t_ph1 = opt_p2
 
-    t_er = resample(t_e, sc_pot)
-
-    v_eth = np.sqrt(2 * q_e * t_er.data / m_e)
+    v_eth = np.sqrt(2 * q_e * resample(t_e, sc_pot).data / m_e)
     n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(
         -sc_pot.data / t_ph1)
-    n_esc /= s_surf * q_e * v_eth * (1 + sc_pot.data / t_er.data)
+    n_esc /= s_surf * q_e * v_eth * (
+                1 + sc_pot.data / resample(t_e, sc_pot).data)
     n_esc *= 2 * np.sqrt(np.pi) * 1e-12
     n_esc = ts_scalar(sc_pot.time.data, n_esc)
 
