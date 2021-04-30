@@ -12,13 +12,12 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import datetime
-
-from dateutil import parser
+import numpy as np
 
 
 def get_feeps_active_eyes(var, tint, mms_id):
-    """This function returns the FEEPS active eyes, based on date/mms_id/species/rate.
+    """This function returns the FEEPS active eyes,
+    based on date/mms_id/species/rate.
     
     Parameters
     ----------
@@ -91,14 +90,17 @@ def get_feeps_active_eyes(var, tint, mms_id):
         sensors["bottom"] = [6, 7, 8]
 
     if isinstance(tint[0], str): 
-        start_time = parser.parse(tint[0])
+        start_day = np.array(tint[0]).astype("<M8[D]")
     else:
-        start_time = tint[0]
+        start_day = tint[0].astype("<M8[D]")
 
     # srvy mode, after 16 August 2017
-    if start_time >= datetime.datetime(2017, 8, 16) and var["tmmode"].lower() == "srvy":
-        active_table = {"1-electron": {}, "1-ion": {}, "2-electron": {}, "2-ion": {},
-                        "3-electron": {}, "3-ion": {}, "4-electron": {}, "4-ion": {}}
+    if start_day >= np.datetime64("2017-08-16") and var[
+            "tmmode"].lower() == "srvy":
+        active_table = {"1-electron": {}, "1-ion": {},
+                        "2-electron": {}, "2-ion": {},
+                        "3-electron": {}, "3-ion": {},
+                        "4-electron": {}, "4-ion": {}}
 
         active_table["1-electron"]["top"] = [3, 5, 9, 10, 12]
         active_table["1-electron"]["bottom"] = [2, 4, 5, 9, 10]
@@ -129,7 +131,8 @@ def get_feeps_active_eyes(var, tint, mms_id):
         if var["lev"].lower() == "sitl":
             sensors["top"] = list(set(sensors["top"]) & {5, 11, 12})
             sensors["bottom"] = []
-            return {"top": list(set(sensors["top"]) & {5, 11, 12}), "bottom": []}
+            return {"top": list(set(sensors["top"]) & {5, 11, 12}),
+                    "bottom": []}
 
     if var["lev"].lower() == "sitl":
         sensors["top"] = [5, 11, 12]

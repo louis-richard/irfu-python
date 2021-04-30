@@ -16,8 +16,8 @@
 @author: Louis Richard
 """
 
-import xarray as xr
 import numpy as np
+import xarray as xr
 
 
 def movmean(inp, n_pts=100):

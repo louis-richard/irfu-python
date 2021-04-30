@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,36 +12,37 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-"""ts_time.py
+"""datetime642ttns.py
 @author: Louis Richard
 """
 
 import numpy as np
-import xarray as xr
+
+from cdflib import cdfepoch
+
+from .datetime642iso8601 import datetime642iso8601
 
 
-def ts_time(time):
-    """Creates time line in DataArray.
+def datetime642ttns(time):
+    r"""Converts datetime64 in ns units to epoch_tt2000
+    (nanoseconds since J2000).
 
     Parameters
     ----------
     time : ndarray
-        Input time line.
-
-    fmt : str
-        Format of the input time line.
+        Times in datetime64 format.
 
     Returns
     -------
-    out : xarray.DataArray
-        Time series of the time line.
+    time_ttns : ndarray
+        Times in epoch_tt2000 format (nanoseconds since J2000).
 
     """
 
-    assert isinstance(time, np.ndarray)
+    # Convert to datetime64 in ns units
+    time_iso8601 = datetime642iso8601(time)
 
-    time = (time * 1e9).astype("datetime64[ns]")
+    # Convert to ttns
+    time_ttns = np.array([cdfepoch.parse(t_) for t_ in time_iso8601])
 
-    out = xr.DataArray(time, coords=[time], dims=["time"])
-
-    return out
+    return time_ttns

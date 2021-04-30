@@ -20,8 +20,8 @@ from ..pyrf import plasma_calc
 
 
 def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
-    """Computes electric field power as a function of frequency for whistler waves using magnetic
-    field power and cold plasma theory.
+    """Computes electric field power as a function of frequency for whistler
+    waves using magnetic field power and cold plasma theory.
 
     Parameters
     ----------
@@ -56,8 +56,6 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
     pparam = plasma_calc(b_mag, n_e, n_e, n_e, n_e)
     fpe, fce = [pparam.Fpe, pparam.Fce]
 
-    speed_of_light = constants.speed_of_light
-
     # Check input
     if len(b2) != len(freq):
         raise IndexError("B2 and freq lengths do not agree!")
@@ -71,16 +69,19 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
 
     n2 = r * l * np.sin(theta_k) ** 2
     n2 += p * s * (1 + np.cos(theta_k) ** 2)
-    n2 -= np.sqrt((r * l - p * s) ** 2 * np.sin(theta_k) ** 4 + 4 * (p ** 2) * (d ** 2) * np.cos(
-        theta_k) ** 2)
+    n2 -= np.sqrt(
+        (r * l - p * s) ** 2 * np.sin(theta_k) ** 4 + 4 * (p ** 2) * (
+                    d ** 2) * np.cos(theta_k) ** 2)
     n2 /= (2 * (s * np.sin(theta_k) ** 2 + p * np.cos(theta_k) ** 2))
 
-    e_temp1 = (p - n2 * np.sin(theta_k) ** 2) ** 2. * ((d / (s - n2)) ** 2 + 1) + (
-            n2 * np.cos(theta_k) * np.sin(theta_k)) ** 2
-
-    e_temp2 = (d / (s - n2)) ** 2 * (p - n2 * np.sin(theta_k) ** 2) ** 2 + p ** 2 * np.cos(
+    e_temp1 = (p - n2 * np.sin(theta_k) ** 2) ** 2. * (
+                (d / (s - n2)) ** 2 + 1) + (
+                          n2 * np.cos(theta_k) * np.sin(theta_k)) ** 2
+    e_temp2 = (d / (s - n2)) ** 2 * (
+                p - n2 * np.sin(theta_k) ** 2) ** 2 + p ** 2 * np.cos(
         theta_k) ** 2
 
-    e2 = (speed_of_light ** 2 / n2) * e_temp1 / e_temp2 * b2.data * 1e-12
+    e2 = (constants.speed_of_light ** 2 / n2) * e_temp1 / e_temp2 * b2.data
+    e2 *= 1e-12
 
     return e2

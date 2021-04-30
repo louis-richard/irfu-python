@@ -15,9 +15,9 @@
 import numpy as np
 
 from cdflib import CDF, cdfepoch
-from dateutil import parser as date_parser
 
-from ..pyrf import ts_skymap, datetime_to_tt2000
+
+from ..pyrf import ts_skymap, iso86012datetime64, datetime642ttns
 
 
 def get_dist(file_path, cdf_name, tint):
@@ -45,9 +45,7 @@ def get_dist(file_path, cdf_name, tint):
 
     tmmode = cdf_name.split("_")[-1]
 
-    tint = list(map(date_parser.parse, tint))
-    tint = list(map(datetime_to_tt2000, tint))
-    tint = list(map(cdfepoch.parse, tint))
+    tint = list(datetime642ttns(iso86012datetime64(np.array(tint))))
 
     with CDF(file_path) as f:
         if tmmode == "brst":
@@ -59,7 +57,7 @@ def get_dist(file_path, cdf_name, tint):
             t = f.varget(depend0_key, starttime=tint[0], endtime=tint[1])
             t = cdfepoch.to_datetime(t, to_np=True)
 
-            if not t:
+            if not t.size:
                 return None
 
             dist = f.varget(cdf_name, starttime=tint[0], endtime=tint[1])

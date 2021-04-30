@@ -16,9 +16,25 @@ import warnings
 import numpy as np
 import xarray as xr
 
-from astropy.time import Time
-
 from .resample import resample
+from .datetime642unix import datetime642unix
+
+
+def _spec_mat(half_spec_x, half_spec_y, half_spec_z):
+    r"""CALCULATION OF THE SPECTRAL MATRIX"""
+
+    spec_mat = np.zeros([len(half_spec_x), 3, 3])
+    spec_mat[:, 0, 0] = half_spec_x * np.conj(half_spec_x)
+    spec_mat[:, 1, 0] = half_spec_x * np.conj(half_spec_y)
+    spec_mat[:, 2, 0] = half_spec_x * np.conj(half_spec_z)
+    spec_mat[:, 0, 1] = half_spec_y * np.conj(half_spec_x)
+    spec_mat[:, 1, 1] = half_spec_y * np.conj(half_spec_y)
+    spec_mat[:, 2, 1] = half_spec_y * np.conj(half_spec_z)
+    spec_mat[:, 0, 2] = half_spec_z * np.conj(half_spec_x)
+    spec_mat[:, 1, 2] = half_spec_z * np.conj(half_spec_y)
+    spec_mat[:, 2, 2] = half_spec_z * np.conj(half_spec_z)
+
+    return spec_mat
 
 
 def wavepolarize_means(b_wave, b_bgd, **kwargs):
@@ -36,8 +52,9 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
     **kwargs : dict
         Hash table of keyword arguments with :
             * min_psd : float
-                Threshold for the analysis (e.g 1.0e-7). Below this value, the SVD analysis is
-                meaningless if min_psd is not given, SVD analysis will be done for all waves.
+                Threshold for the analysis (e.g 1.0e-7). Below this value, the
+                SVD analysis is meaningless if min_psd is not given, SVD
+                analysis will be done for all waves.
                 Default ``min_psd`` = 1e-25.
 
             * nop_fft : int
@@ -62,16 +79,19 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
 
     Notes
     ------
-    ``b_wave`` and ``b_bgd`` should be from the same satellite and in the same coordinates
+    ``b_wave`` and ``b_bgd`` should be from the same satellite and in the same
+    coordinates
 
     .. warning::
-        If one component is an order of magnitude or more  greater than the other two then the
-        polarization results saturate and erroneously indicate high degrees of polarization at
-        all times and frequencies. Time series should be eyeballed before running the program.
-        For time series containing very rapid changes or spikes the usual problems with Fourier
-        analysis arise. Care should be taken in evaluating degree of polarization results. For
-        meaningful results there should be significant wave power at the frequency where the
-        polarization approaches 100%. Remember comparing two straight lines yields 100%
+        If one component is an order of magnitude or more  greater than the
+        other two then the polarization results saturate and erroneously
+        indicate high degrees of polarization at all times and frequencies.
+        Time series should be eyeballed before running the program. For time
+        series containing very rapid changes or spikes the usual problems
+        with Fourier analysis arise. Care should be taken in evaluating
+        degree of polarization results. For meaningful results there should
+        be significant wave power at the frequency where the polarization
+        approaches 100%. Remember comparing two straight lines yields 100%
         polarization.
 
     Examples
@@ -94,9 +114,12 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
 
     step_length = int(nop_fft / 2)
     n_pts = len(b_wave)
-    n_stp = int((n_pts - nop_fft) / step_length)  				# total number of FFTs
-    n_bin = 7  													# No. of bins in frequency domain
-    aa = np.array([.024, .093, .232, .301, .232, .093, .024])  	# Smoothing profile based on Hanning
+    # total number of FFTs
+    n_stp = int((n_pts - nop_fft) / step_length)
+    # No. of bins in frequency domain
+    n_bin = 7
+    # Smoothing profile based on Hanning
+    aa = np.array([.024, .093, .232, .301, .232, .093, .024])
 
     # change wave to MFA coordinates
     b_bgd = resample(b_bgd, b_wave)
@@ -113,7 +136,7 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
         b_x[ii] = np.sum(b_wave[ii, :] * n_perp1)
         b_y[ii] = np.sum(b_wave[ii, :] * n_perp2)
 
-    ct = Time(b_wave.time.data, format="datetime64").unix
+    ct = datetime642unix(b_wave.time.data)
 
     # DEFINE ARRAYS
     xs, ys, zs = [b_x, b_y, b_z]
@@ -122,9 +145,8 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
     end_sample_freq = 1/(ct[-1]-ct[-2])
 
     if sample_freq != end_sample_freq:
-        warnings.warn(
-            "file sampling frequency changes {} Hz to {} Hz".format(sample_freq, end_sample_freq),
-            UserWarning)
+        warnings.warn(f"file sampling frequency changes {sample_freq} Hz to "
+                      f"{end_sample_freq} Hz", UserWarning)
     else:
         print("ac file sampling frequency {} Hz".format(sample_freq))
 
@@ -134,8 +156,9 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
 
     # Degree of Polarization
     sqrd_mat = np.zeros([n_stp, int(nop_fft / 2), 3, 3])
-    trace_sqrd_mat, trace_spec_mat, deg_pol = [np.zeros([n_stp, int(nop_fft / 2)]) for _ in
-                                               range(3)]
+    deg_pol = np.zeros([n_stp, int(nop_fft / 2)])
+    trace_spec_mat = np.zeros([n_stp, int(nop_fft / 2)])
+    trace_sqrd_mat = np.zeros([n_stp, int(nop_fft / 2)])
 
     # HELICITY, ELLIPTICITY AND THE WAVE STATE VECTOR
     lambda_u = np.zeros([n_stp, int(nop_fft / 2), 3, 3])
@@ -146,10 +169,14 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
 
     for j in range(n_stp):
         # FFT CALCULATION
-        smooth = 0.08 + 0.46 * (1 - np.cos(2 * np.pi * np.arange(1, nop_fft + 1) / nop_fft))
-        temp_x = smooth * xs[((j - 1) * step_length + 1):((j - 1) * step_length + nop_fft)]
-        temp_y = smooth * ys[((j - 1) * step_length + 1):((j - 1) * step_length + nop_fft)]
-        temp_z = smooth * zs[((j - 1) * step_length + 1):((j - 1) * step_length + nop_fft)]
+        smooth = 0.08 + 0.46 * (1 - np.cos(
+            2 * np.pi * np.arange(1, nop_fft + 1) / nop_fft))
+        temp_x = smooth * xs[((j - 1) * step_length + 1):(
+                    (j - 1) * step_length + nop_fft)]
+        temp_y = smooth * ys[((j - 1) * step_length + 1):(
+                    (j - 1) * step_length + nop_fft)]
+        temp_z = smooth * zs[((j - 1) * step_length + 1):(
+                    (j - 1) * step_length + nop_fft)]
 
         spec_x = np.fft.fft(temp_x)
         spec_y = np.fft.fft(temp_y)
@@ -164,16 +191,7 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
         zs = np.roll(zs, -step_length)
 
         # CALCULATION OF THE SPECTRAL MATRIX
-        spec_mat = np.zeros([int(nop_fft / 2), 3, 3])
-        spec_mat[:, 0, 0] = half_spec_x * np.conj(half_spec_x)
-        spec_mat[:, 1, 0] = half_spec_x * np.conj(half_spec_y)
-        spec_mat[:, 2, 0] = half_spec_x * np.conj(half_spec_z)
-        spec_mat[:, 0, 1] = half_spec_y * np.conj(half_spec_x)
-        spec_mat[:, 1, 1] = half_spec_y * np.conj(half_spec_y)
-        spec_mat[:, 2, 1] = half_spec_y * np.conj(half_spec_z)
-        spec_mat[:, 0, 2] = half_spec_z * np.conj(half_spec_x)
-        spec_mat[:, 1, 2] = half_spec_z * np.conj(half_spec_y)
-        spec_mat[:, 2, 2] = half_spec_z * np.conj(half_spec_z)
+        spec_mat = _spec_mat(half_spec_x, half_spec_y, half_spec_z)
 
         # Calculation of smoothed spectral matrix
         e_spec_mat = np.nan * np.ones(spec_mat.shape)
@@ -202,9 +220,12 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
         # calc of square of smoothed spec matrix
         for ir in range(3):
             for ic in range(3):
-                sqrd_mat[:, ir, ic] = e_spec_mat[:, ir, 0] * e_spec_mat[:, 0, ic]
-                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 1] * e_spec_mat[:, 1, ic]
-                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 2] * e_spec_mat[:, 2, ic]
+                sqrd_mat[:, ir, ic] = e_spec_mat[:, ir, 0] * e_spec_mat[:, 0,
+                                                             ic]
+                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 1] * e_spec_mat[:, 1,
+                                                              ic]
+                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 2] * e_spec_mat[:, 2,
+                                                              ic]
 
         trace_sqrd_mat = sqrd_mat[:, 0, 0] + sqrd_mat[:, 1, 1] + sqrd_mat[:, 2, 2]
         trace_spec_mat[j, :] = e_spec_mat[:, 0, 0] + e_spec_mat[:, 1, 1] + e_spec_mat[:, 2, 2]
@@ -241,14 +262,14 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
         lambda_u[:, 1, 0] = alpha_y
         lambda_u[:, 2, 0] = alpha_z
 
-        lambda_u[:, 0, 1] = np.complex(alpha_cos1_x, alpha_sin1_x)
-        lambda_u[:, 0, 2] = np.complex(alpha_cos2_x, alpha_sin2_x)
+        lambda_u[:, 0, 1] = alpha_cos1_x + alpha_sin1_x * 1j
+        lambda_u[:, 0, 2] = alpha_cos2_x + alpha_sin2_x * 1j
 
-        lambda_u[:, 1, 1] = np.complex(alpha_cos1_y, alpha_sin1_y)
-        lambda_u[:, 1, 2] = np.complex(alpha_cos2_y, alpha_sin2_y)
+        lambda_u[:, 1, 1] = alpha_cos1_y + alpha_sin1_y * 1j
+        lambda_u[:, 1, 2] = alpha_cos2_y + alpha_sin2_y * 1j
 
-        lambda_u[:, 2, 1] = np.complex(alpha_cos1_z, alpha_sin1_z)
-        lambda_u[:, 2, 2] = np.complex(alpha_cos2_z, alpha_sin2_z)
+        lambda_u[:, 2, 1] = alpha_cos1_z + alpha_sin1_z * 1j
+        lambda_u[:, 2, 2] = alpha_cos2_z + alpha_sin2_z * 1j
 
         for k in range(int(nop_fft / 2)):
             for xyz in range(3):
@@ -258,11 +279,12 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
                     (np.real(lambda_u[k, xyz, :3])) ** 2 - (np.imag(lambda_u[k, xyz, :3])) ** 2)
 
                 if upper[j, k] > 0:
-                    gamma = np.atan(upper[j, k] / lower[j, k])
+                    gamma = np.arctan(upper[j, k] / lower[j, k])
                 else:
-                    gamma = np.pi + (np.pi + np.atan(upper[j, k] / lower[j, k]))
+                    gamma = np.pi + (np.pi + np.arctan(upper[j, k] / lower[j,
+                                                                          k]))
 
-                lambda_u[k, xyz, :] = np.exp(np.complex(0, -0.5 * gamma)) * lambda_u[k, xyz, :]
+                lambda_u[k, xyz, :] = np.exp(-0.5 * gamma * 1j) * lambda_u[k, xyz, :]
                 helic[j, k, xyz] = np.sqrt(np.sum(np.real(lambda_u[k, xyz, :3]) ** 2))
                 helic[j, k, xyz] /= np.sqrt(np.sum(np.imag(lambda_u[k, xyz, :3]) ** 2))
                 helic[j, k, xyz] = np.divide(1, helic[j, k, xyz])
@@ -275,10 +297,10 @@ def wavepolarize_means(b_wave, b_bgd, **kwargs):
                 if upper_e > 0:
                     gamma_rot = np.arctan(upper_e / lower_e)
                 else:
-                    gamma_rot = np.pi + np.pi + np.atan(upper_e / lower_e)
+                    gamma_rot = np.pi + np.pi + np.arctan(upper_e / lower_e)
 
                 lam = lambda_u[k, xyz, :2]
-                lambda_u_rot = np.exp(np.complex(0, -0.5 * gamma_rot)) * lam
+                lambda_u_rot = np.exp(-0.5 * gamma_rot * 1j) * lam
 
                 ellip[j, k, xyz] = np.sqrt(np.sum(np.imag(lambda_u_rot) ** 2))
                 ellip[j, k, xyz] /= np.sqrt(np.sum(np.real(lambda_u_rot) ** 2))

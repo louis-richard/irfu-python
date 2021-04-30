@@ -25,7 +25,6 @@ import pyfftw
 import sfs
 
 from tqdm import tqdm
-from astropy.time import Time
 
 from .ts_time import ts_time
 from .ts_vec_xyz import ts_vec_xyz
@@ -35,6 +34,8 @@ from .start import start
 from .end import end
 from .calc_fs import calc_fs
 from .convert_fac import convert_fac
+from .unix2datetime64 import unix2datetime64
+from .datetime642iso8601 import datetime642iso8601
 
 
 def _checksampling(e_xyz, delta_b, b_bgd, full_b, flag_no_resamp):
@@ -109,8 +110,8 @@ def _freq_int(freq_int, delta_b):
 
             delta_t = 1  # local
 
-            tint = list(Time(np.round([start(delta_b), end(delta_b)]),
-                             format="unix").iso)  # local
+            tint = np.round([start(delta_b), end(delta_b)])
+            tint = list(datetime642iso8601(unix2datetime64(tint)))
 
         elif freq_int.lower() == "pc35":
             pc35_range = True
@@ -119,9 +120,10 @@ def _freq_int(freq_int, delta_b):
 
             delta_t = 60  # local
 
-            tint = list(Time([np.round(start(delta_b) / 60),
-                              np.round(end(delta_b) / 60)] * 60,
-                             format="unix").iso)  # local
+            tint = 60 * np.array([np.round(start(delta_b) / 60),
+                                  np.round(end(delta_b) / 60)])
+            tint = datetime642iso8601(unix2datetime64(tint))
+
         else:
             raise ValueError("Invalid format of interval")
 
@@ -947,7 +949,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                                power_2b_plot)
 
     # Output
-    res["t"] = Time(out_time, format="unix").datetime64
+    res["t"] = unix2datetime64(out_time)
     res["f"] = frequency_vec
     res["bb_xxyyzzss"] = xr.DataArray(bb_xxyyzzss,
                                       coords=[res["t"], res["f"],

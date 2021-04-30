@@ -16,8 +16,10 @@
 @author: Louis Richard
 """
 
-from astropy.time import Time
-from dateutil.parser import parse as date_parse
+import numpy as np
+
+from .iso86012datetime64 import iso86012datetime64
+from .datetime642iso8601 import datetime642iso8601
 
 
 def extend_tint(tint, ext=None):
@@ -34,7 +36,7 @@ def extend_tint(tint, ext=None):
 
     Returns
     -------
-    tint : list of str
+    tint_new : list of str
         Extended time interval.
 
     Examples
@@ -54,17 +56,13 @@ def extend_tint(tint, ext=None):
     if ext is None:
         ext = [-60, 60]
 
-    # Convert to unix format
-    start_time = Time(date_parse(tint[0]), format="datetime").unix
-    end_time = Time(date_parse(tint[1]), format="datetime").unix
+    # Convert extension to timedelta64 in s units
+    ext = np.array(ext).astype("timedelta64[s]")
 
-    # extend interval
-    start_time, end_time = [start_time + ext[0], end_time + ext[1]]
+    # Original time interval to datetime64 format in ns units
+    tint_ori = iso86012datetime64(np.array(tint))
 
-    # back to iso format
-    start_time = Time(start_time, format="unix").iso
-    end_time = Time(end_time, format="unix").iso
+    # New time interval in iso 8601 format
+    tint_new = list(datetime642iso8601(tint_ori + ext))
 
-    tint_long = [start_time, end_time]
-
-    return tint_long
+    return tint_new

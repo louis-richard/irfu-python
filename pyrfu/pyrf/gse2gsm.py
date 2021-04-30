@@ -16,8 +16,7 @@
 @author: Louis Richard
 """
 
-from .cotrans import \
-    cotrans
+from .cotrans import cotrans
 
 
 def gse2gsm(inp, flag="gse>gsm"):

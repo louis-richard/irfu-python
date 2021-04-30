@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,26 +12,36 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-"""end.py
+"""unix2datetime64.py
 @author: Louis Richard
 """
 
 
-def end(inp):
-    """Gives the last time of the time series in unix format.
+def unix2datetime64(time):
+    r"""Converts unix time to datetime64 in ns units.
 
     Parameters
     ----------
-    inp : xarray.DataArray
-        Time series of the input variable.
+    time : ndarray
+        Time in unix format.
+
 
     Returns
     -------
-    out : float
-        Value of the last time in unix format.
+    time_datetime64 : ndarray
+        Time in datetime64 format.
+
+
+    See Also
+    --------
+    pyrfu.pyrf.datetime642unix
 
     """
 
-    out = inp.time.data[-1].astype(int) / 1e9
+    # Make sure that time is in ns format
+    time_unix = (time * 1e9).astype("int64")
 
-    return out
+    # Convert to unix
+    time_datetime64 = time_unix.astype("<M8[ns]")
+
+    return time_datetime64

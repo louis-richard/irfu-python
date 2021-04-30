@@ -92,3 +92,5 @@ from .waverage import waverage
 from .l_shell import l_shell
 from .optimize_nbins_1d import optimize_nbins_1d
 from .optimize_nbins_2d import optimize_nbins_2d
+
+from .magnetosphere import magnetosphere

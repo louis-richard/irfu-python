@@ -16,7 +16,8 @@
 @author: Louis Richard
 """
 
-from astropy.time import Time
+import numpy as np
+
 from matplotlib.dates import num2date
 from ..pyrf import t_eval
 
@@ -51,7 +52,8 @@ def set_rlabel(ax, r_xyz, spine: float = 20, position: str = "top",
 
     x_lim = ax.get_xlim()
 
-    t_ticks = Time(num2date(ax.get_xticks()), format="datetime").datetime64
+    t_ticks = [t_.replace(tzinfo=None) for t_ in num2date(ax.get_xticks())]
+    t_ticks = np.array(t_ticks).astype("<M8[ns]")
     r_ticks = t_eval(r_xyz, t_ticks).data
 
     ticks_labels = []

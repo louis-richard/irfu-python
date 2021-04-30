@@ -16,7 +16,7 @@
 @author: Louis Richard
 """
 
-import multiprocessing as mp
+import os
 import numpy as np
 import xarray as xr
 import warnings
@@ -167,7 +167,7 @@ def wavelet(inp, **kwargs):
 
         # Wavelet transform of the data
         # Forward FFT
-        s_w = pyfftw.interfaces.numpy_fft.fft(data_col, threads=mp.cpu_count())
+        s_w = pyfftw.interfaces.numpy_fft.fft(data_col, threads=os.cpu_count())
 
         scales_mat, s_w_mat = np.meshgrid(scales, s_w, sparse=True)
 
@@ -176,7 +176,7 @@ def wavelet(inp, **kwargs):
 
         # Backward FFT
         power = pyfftw.interfaces.numpy_fft.ifft(w_w, axis=0,
-                                                 threads=mp.cpu_count())
+                                                 threads=os.cpu_count())
 
         # Calculate the power spectrum
         if return_power:

@@ -12,8 +12,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import xarray as xr
 import numpy as np
+import xarray as xr
 
 
 def mva(inp, flag="mvar"):

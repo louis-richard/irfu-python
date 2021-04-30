@@ -21,7 +21,7 @@ import datetime
 import numpy as np
 import xarray as xr
 
-from dateutil import parser
+from .iso86012datetime64 import iso86012datetime64
 
 
 def time_clip(inp, tint):
@@ -44,7 +44,7 @@ def time_clip(inp, tint):
     """
 
     if isinstance(tint, xr.DataArray):
-        t_start, t_stop = [tint.time.data[0], tint.time.data[-1]]
+        t_start, t_stop = tint.time.data[[0, -1]]
 
     elif isinstance(tint, np.ndarray):
         if isinstance(tint[0], datetime.datetime) \
@@ -55,7 +55,7 @@ def time_clip(inp, tint):
             raise TypeError('Values must be in Datetime64')
 
     elif isinstance(tint, list):
-        t_start, t_stop = [parser.parse(tint[0]), parser.parse(tint[-1])]
+        t_start, t_stop = iso86012datetime64(np.array(tint))
 
     else:
         raise TypeError("invalid tint")

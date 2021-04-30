@@ -1,7 +1,5 @@
-# cat requirements.txt 
-astropy>=4.2.1
+# cat requirements.txt
 cycler>=0.10.0
-cython>=0.29.23
 cdflib>=0.3.20
 matplotlib>=3.4.1
 numba>=0.53.1

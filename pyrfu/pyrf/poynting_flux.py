@@ -18,8 +18,6 @@
 
 import numpy as np
 
-from astropy.time import Time
-
 from .calc_fs import calc_fs
 from .cross import cross
 from .dot import dot

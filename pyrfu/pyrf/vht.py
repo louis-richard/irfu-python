@@ -12,6 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""vht.py
+@author: Louis Richard
+"""
+
 import numpy as np
 
 from .resample import resample

@@ -16,7 +16,7 @@ import os
 import csv
 import numpy as np
 
-from astropy.time import Time
+from ..pyrf import datetime642unix, unix2datetime64, iso86012datetime64
 
 
 def read_feeps_sector_masks_csv(tint):
@@ -46,8 +46,10 @@ def read_feeps_sector_masks_csv(tint):
              1538697600.0000000]  # 10/5/2018
 
     # find the file closest to the start time
-    nearest_date = dates[(np.abs(np.array(dates)-Time(tint[0], format="isot").unix)).argmin()]
-    str_date = Time(nearest_date, format="unix").datetime.strftime("%Y%m%d")
+    date = datetime642unix(iso86012datetime64(np.array(tint)[0]))
+    nearest_date = dates[np.argmin((np.abs(np.array(dates) - date)))]
+    nearest_date = unix2datetime64(np.array(nearest_date))
+    str_date = nearest_date.astype("<M8[D]").astype(str).replace("-", "")
 
     for mms_sc in np.arange(1, 5):
         csv_file = os.sep.join([os.path.dirname(os.path.abspath(__file__)), "sun",
