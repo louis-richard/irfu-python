@@ -39,6 +39,7 @@ INSTALL_REQUIRES = [
       "numba",
       "pandas",
       "python-dateutil",
+      "sphinx",
       "scipy",
       "tqdm",
       "xarray"]
