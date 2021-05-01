@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,32 +12,35 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""get_eis_omni.py
+@author: Louis Richard
+"""
+
 from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_omni(tar_var, tint, mms_id, verbose=True):
-    """Computes omni directional energy spectrum of the target data unit for the target specie
-    over the target energy range.
+def get_eis_omni(tar_var, tint, mms_id, verbose: bool = True):
+    r"""Computes omni directional energy spectrum of the target data unit for
+    the target specie over the target energy range.
 
     Parameters
     ----------
     tar_var : str
-        Key of the target variable like {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
-
+        Key of the target variable like
+        {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
     tint : list of str
         Time interval.
-
     mms_id : int or float or str
         Index of the spacecraft.
-
-    verbose : bool
+    verbose : bool, optional
         Set to True to follow the loading. Default is True.
 
     Returns
     --------
     out : xarray.DataArray
-        Energy spectrum of the target data unit for the target specie in omni direction.
+        Energy spectrum of the target data unit for the target specie in omni
+        direction.
 
     Examples
     --------
@@ -49,7 +52,7 @@ def get_eis_omni(tar_var, tint, mms_id, verbose=True):
 
     Read EIS proton omnidirectional energy spectrum
 
-    >>> feeps_omni = mms.get_eis_omni("Flux_extof_proton_srvy_l2", tint_brst, 2)
+    >>> eis_omni = mms.get_eis_omni("Flux_extof_proton_srvy_l2", tint_brst, 2)
 
     """
 
@@ -120,7 +123,8 @@ def get_eis_omni(tar_var, tint, mms_id, verbose=True):
     else:
         raise ValueError("Invalid data unit")
 
-    dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}_{var['lev']}_{var['dtype']}"
+    dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}" \
+                f"_{var['lev']}_{var['dtype']}"
     cdf_names = [f"{pref}_{suf}{t:d}" for t in range(6)]
 
     out_dict = {}

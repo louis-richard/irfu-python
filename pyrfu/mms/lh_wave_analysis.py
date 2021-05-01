@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -11,6 +11,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
+"""lh_waves_analysis.py
+@author: Louis Richard
+"""
 
 import numpy as np
 import xarray as xr
@@ -22,51 +26,46 @@ from ..pyrf import (filt, calc_dt, resample, convert_fac, ts_scalar,
 
 
 def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
-    """
-    Calculates lower-hybrid wave properties from MMS data
+    r"""Calculates lower-hybrid wave properties from MMS data
 
     Parameters
     ----------
     tints : list of str
         Time interval
-
     e_xyz : xarray.DataArray
         Time series pf the electric field
-
     b_scm : xarray.DataArray
         Time series of the fluctuations of the magnetic field
-
     b_xyz : xarray.DataArray
         Time series of the background magnetic field
-
     n_e : xarray.DataArray
         Time series of the number density
-
     **kwargs : dict
-        Hash table of keyword arguments with :
-            * lhfilt : float or int or list of float or list of int
-                Filter for LH fluctuations. For one element it is the minimum frequency in the
-                highpass filter. For two elements the fields are bandpassed between the frequencies.
-
-            * blpass : float or int
-                Set maximum frequency for low-pass filter of background magnetic field (FGM)
+        Keyword arguments.
 
     Returns
     -------
     phi_eb : xarray.DataArray
         to fill
-
     v_best : ndarray
         to fill
-
     dir_best : ndarray
         to fill
-
     thetas : ndarray
         to fill
-
     corrs : ndarray
         to fill
+
+    Other Parameters
+    ----------------
+    lhfilt : float or int or list of float or list of int
+        Filter for LH fluctuations. For one element it is the minimum
+        frequency in the highpass filter. For two elements the fields are
+        bandpassed between the frequencies.
+
+    blpass : float or int
+        Set maximum frequency for low-pass filter of background magnetic
+        field (FGM)
 
     Examples
     --------
@@ -87,7 +86,7 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     Lower Hybrid Waves Analysis
 
     >>> opt = dict(lhfilt=[5, 100])
-    >>> phi_eb, v_best, dir_best, theta, _ = lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, **opt)
+    >>> res = lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, **opt)
 
     """
 
@@ -99,7 +98,8 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     if "lhfilt" in kwargs:
         if isinstance(kwargs["lhfilt"], (float, int)):
             min_freq = kwargs["lhfilt"]
-        elif isinstance(kwargs["lhfilt"], (list, np.ndarray)) and kwargs["lhfilt"]:
+        elif isinstance(kwargs["lhfilt"], (list, np.ndarray)) \
+                and kwargs["lhfilt"]:
             min_freq = kwargs["lhfilt"][0]
             max_freq = kwargs["lhfilt"][1]
         else:
@@ -124,7 +124,7 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     mu0 = constants.mu_0
 
     b_mag = np.linalg.norm(b_xyz, axis=1)
-    phi_b = (b_scm_fac.data[:, 2]) * b_mag * 1e-18 / (n_e.data * q_e * mu0 * 1e6)
+    phi_b = b_scm_fac.data[:, 2] * b_mag * 1e-18 / (n_e.data * q_e * mu0 * 1e6)
     phi_b = ts_scalar(b_scm_fac.time.data, phi_b)
 
     # short buffer so phi_E does not begin at zero.
@@ -141,9 +141,18 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     bxr = np.cross(b_vec, r_temp)
     bxr /= np.linalg.norm(bxr)
     bxrxb = np.cross(bxr, b_vec)
-    er1 = e_xyz.data[:, 0] * bxrxb[0] + e_xyz.data[:, 1] * bxrxb[1] + e_xyz.data[:, 2] * bxrxb[2]
-    er2 = e_xyz.data[:, 0] * bxr[0] + e_xyz.data[:, 1] * bxr[1] + e_xyz.data[:, 2] * bxr[2]
-    er3 = e_xyz.data[:, 0] * b_vec[0] + e_xyz.data[:, 1] * b_vec[1] + e_xyz.data[:, 2] * b_vec[2]
+
+    er1 = e_xyz.data[:, 0] * bxrxb[0]
+    er1 += e_xyz.data[:, 1] * bxrxb[1]
+    er1 += e_xyz.data[:, 2] * bxrxb[2]
+
+    er2 = e_xyz.data[:, 0] * bxr[0]
+    er2 += e_xyz.data[:, 1] * bxr[1]
+    er2 += e_xyz.data[:, 2] * bxr[2]
+
+    er3 = e_xyz.data[:, 0] * b_vec[0]
+    er3 += e_xyz.data[:, 1] * b_vec[1]
+    er3 += e_xyz.data[:, 2] * b_vec[2]
 
     e_fac = ts_vec_xyz(e_xyz.time.data, np.vstack([er1, er2, er3]).T)
 
@@ -153,7 +162,8 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     corrs = np.zeros(len(thetas))
 
     for i, theta in enumerate(thetas):
-        e_temp = np.cos(theta) * e_fac.data[:, 0] + np.sin(theta) * e_fac.data[:, 1]
+        e_temp = np.cos(theta) * e_fac.data[:, 0]
+        e_temp += np.sin(theta) * e_fac.data[:, 1]
 
         phi_temp = ts_scalar(e_xyz.time.data, np.cumsum(e_temp) * dt_e_fac)
         phi_temp = time_clip(phi_temp, tints)
@@ -162,7 +172,8 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
         corrs[i] = np.corrcoef(phi_bs.data, phi_temp.data)
 
     corrpos = np.argmax(corrs)
-    e_best = np.cos(thetas[corrpos]) * e_fac.data[:, 0] + np.sin(thetas[corrpos]) * e_fac.data[:, 1]
+    e_best = np.cos(thetas[corrpos]) * e_fac.data[:, 0]
+    e_best += np.sin(thetas[corrpos]) * e_fac.data[:, 1]
     e_best = ts_scalar(e_xyz.time.data, e_best)
     phi_best = ts_scalar(e_xyz.time.data, np.cumsum(e_best) * dt_e_fac)
     phi_best = time_clip(phi_best, tints)
@@ -184,7 +195,9 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     phi_e_best = ts_scalar(phi_bs.time.data, phi_e_best)
     v_best = vph_vec[corr_vpos]
 
-    options = dict(coords=[phi_bs.time, ["Ebest", "Bs"]], dims=["time", "comp"])
-    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T, **options)
+    options = dict(coords=[phi_bs.time, ["Ebest", "Bs"]],
+                   dims=["time", "comp"])
+    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T,
+                          **options)
 
     return phi_eb, v_best, dir_best, thetas, corrs

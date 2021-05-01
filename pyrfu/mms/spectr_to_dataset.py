@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,12 +12,16 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""spectr_to_dataset.py
+@author: Louis Richard
+"""
+
 import numpy as np
 import xarray as xr
 
 
 def spectr_to_dataset(spectr):
-    """Convert energy spectrum (DataArray) to Dataset.
+    r"""Convert energy spectrum (DataArray) to Dataset.
 
     Parameters
     ----------
@@ -37,7 +41,8 @@ def spectr_to_dataset(spectr):
 
     data = spectr.data
 
-    out_dict = {"data": (["time", "idx0"], data), "energy": (["time", "idx0"], energy),
+    out_dict = {"data": (["time", "idx0"], data),
+                "energy": (["time", "idx0"], energy),
                 "time": time, "idx0": np.arange(energy.shape[1])}
 
     out = xr.Dataset(out_dict)

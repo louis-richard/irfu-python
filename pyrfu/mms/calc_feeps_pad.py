@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -16,6 +16,7 @@
 @author: Louis Richard
 """
 
+import itertools
 import warnings
 import numpy as np
 import xarray as xr
@@ -26,21 +27,18 @@ from .get_feeps_active_eyes import get_feeps_active_eyes
 
 def calc_feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
                    energy: list = None):
-    """Compute pitch angle distribution using FEEPS data.
+    r"""Compute pitch angle distribution using FEEPS data.
 
     Parameters
     ----------
     inp_dataset : xarray.Dataset
         Energy spectrum of all eyes.
-
     b_bcs : xarray.DataArray
         Time series of the magnetic field in spacecraft coordinates.
-
-    bin_size : float
-        Width of the pitch angles bins.
-
-    energy : list
-        Energy range of particles.
+    bin_size : float, optional
+        Width of the pitch angles bins. Default is 16.3636.
+    energy : array_like, optional
+        Energy range of particles. Default is [70., 600.]
 
     Returns
     -------
@@ -52,6 +50,7 @@ def calc_feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
     if energy is None:
         energy = [70., 600.]
 
+    time = None
     var = inp_dataset.attrs
     mms_id = var["mmsId"]
 
@@ -62,8 +61,7 @@ def calc_feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
     else:
         raise ValueError("Invalid specie")
 
-    if energy[0] < 32.0:
-        raise ValueError("Please select a starting energy of 32 keV or above")
+    assert energy[0] > 32., "Please use a starting energy of 32 keV or above"
 
     n_pabins = 180 / bin_size
     pa_bins = []
@@ -81,7 +79,7 @@ def calc_feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
     trange = np.datetime_as_string(np.hstack([np.min(pa_times.data),
                                               np.max(pa_times.data)]), "ns")
 
-    eyes = get_feeps_active_eyes(var, trange, mms_id)
+    eyes = get_feeps_active_eyes(var, list(trange), mms_id)
 
     pa_data_map = {}
 
@@ -163,21 +161,21 @@ def calc_feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
     # Now loop through PA bins and time, find the telescopes where there is
     # data in those bins and average it up!
 
-    for pa_idx in range(len(pa_times)):
-        for ipa in range(0, int(n_pabins)):
-            if not np.isnan(dpa[pa_idx, :][0]):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=RuntimeWarning)
-                    ind = np.where(
-                        (dpa[pa_idx, :] + dangresp >= pa_label[ipa]-delta_pa)
-                        & (dpa[pa_idx, :]-dangresp < pa_label[ipa]+delta_pa))
+    for pa_idx, ipa in itertools.product(range(len(pa_times)),
+                                         range(0, int(n_pabins))):
+        if not np.isnan(dpa[pa_idx, :][0]):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                ind = np.where(
+                    (dpa[pa_idx, :] + dangresp >= pa_label[ipa]-delta_pa)
+                    & (dpa[pa_idx, :]-dangresp < pa_label[ipa]+delta_pa))
 
-                    if ind[0].size != 0:
-                        if len(ind[0]) > 1:
-                            pa_flux[pa_idx, ipa] = np.nanmean(
-                                dflux[pa_idx, ind[0]], axis=0)
-                        else:
-                            pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0]]
+                if ind[0].size != 0:
+                    if len(ind[0]) > 1:
+                        pa_flux[pa_idx, ipa] = np.nanmean(
+                            dflux[pa_idx, ind[0]], axis=0)
+                    else:
+                        pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0]]
 
     pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
 

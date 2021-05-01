@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,9 +21,8 @@ import xarray as xr
 
 
 def spin_hpca_avg(vdf, saz, method: str = "mean"):
-    r"""
-    Sum or average teh Hot Plasma Composition Analyser (HPCA) data over each
-    spin.
+    r"""Sum or average teh Hot Plasma Composition Analyser (HPCA) data over
+    each spin.
 
     Parameters
     ----------

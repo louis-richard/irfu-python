@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ from .spectr_to_dataset import spectr_to_dataset
 
 
 def dpflux_to_vdf(dpflux):
-    """Compute differential particle flux from velocity distribution
+    r"""Computes differential particle flux from velocity distribution
     function.
 
     Parameters

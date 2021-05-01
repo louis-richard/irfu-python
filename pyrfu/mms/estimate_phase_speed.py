@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,12 +12,16 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""estimate_phase_speed.py
+@author: Louis Richard
+"""
+
 import numpy as np
 
 from scipy.optimize import curve_fit
 
 
-def estimate_phase_speed(f_k_power, freq, k, f_min=100.):
+def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.):
     """Simple function to estimate the phase speed from the frequency
     wave number power spectrum. Fits :math:`f = v k/ 2 \\pi` to the
     power spectrum.
@@ -26,13 +30,10 @@ def estimate_phase_speed(f_k_power, freq, k, f_min=100.):
     ----------
     f_k_power : ndarray
         2D array of powers.
-
     freq : ndarray
         1D array of frequencies.
-
     k : ndarray
         1D array of wave numbers.
-
     f_min : float, optional
         Set low frequency threshold of points used to estimate the
         speed. Default ``f_min`` = 100.

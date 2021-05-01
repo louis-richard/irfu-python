@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,6 +12,9 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""vdf_to_dpflux.py
+@author: Louis Richard
+"""
 
 import numpy as np
 
@@ -19,7 +22,7 @@ from scipy import constants
 
 
 def vdf_to_dpflux(vdf):
-    """Compute differential particle flux from velocity distribution function.
+    r"""Compute differential particle flux from velocity distribution function.
 
     Parameters
     ----------
@@ -64,11 +67,12 @@ def vdf_to_dpflux(vdf):
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
 
-    data_r = np.reshape(tmp_data,
-                        (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:])))
+    data_r = np.reshape(tmp_data, (tmp_data.shape[0], tmp_data.shape[1],
+                                   np.prod(tmp_data.shape[2:])))
 
     if energy.ndim == 1:
-        energy_mat = np.tile(energy, (len(vdf.time), np.prod(tmp_data.shape[2:]), 1))
+        energy_mat = np.tile(energy,
+                             (len(vdf.time), np.prod(tmp_data.shape[2:]), 1))
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:
         energy_mat = np.tile(energy, (np.prod(tmp_data.shape[2:]), 1, 1))

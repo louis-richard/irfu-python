@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -42,16 +42,12 @@ def get_hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     ----------
     vdf : xarray.DataArray
         Ion PSD or flux; [nt, npo16, ner63], looking direction
-
     saz : xarray.DataArray
         Start index of azimuthal angle; [nt, 1], (0 - 15)
-
     aze : xarray.DataArray
         Azimuthal angle per energy; [nT, naz16, npo16, ner63]
-
     b_xyz : xarray.DataArray
         B in dmpa coordinate
-
     elim : list, optional
         [emin, emax], energy range for PAD
 
@@ -59,7 +55,6 @@ def get_hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     -------
     pad_spec : xarray.DataArray
         PAD spectrum
-
 
     Examples
     --------

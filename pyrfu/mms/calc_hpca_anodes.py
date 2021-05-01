@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,21 +37,18 @@ def _hpca_anodes(fov=None):
 
 
 def calc_hpca_anodes(vdf, method: str = "mean", fov: list = None):
-    r"""
-    Sum or average the Hot Plasma Composition Analyses (HPCA) data over the
+    r"""Sum or average the Hot Plasma Composition Analyses (HPCA) data over the
     requested field-of-view (fov).
 
     Parameters
     ----------
     vdf : xarray.DataArray
         Ion PSD or flux; [nt, npo16, ner63], looking direction.
-
-    method : str, optional
-        Method "sum" or "mean". Use "sum" for Phase Space Density and "mean"
-        for Differential Particle Flux. Default is "mean"
-
-    fov : list
-        Field of view, in angles, from 0-360
+    method : {'mean', 'sum'}, optional
+        Method. Use "sum" for Phase Space Density and "mean" for
+        Differential Particle Flux. Default is "mean"
+    fov : list, optional
+        Field of view, in angles, from 0-360.
 
     Returns
     -------

@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -11,6 +11,11 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
+"""get_pitch_angle_dist.py
+@author: Louis Richard
+"""
+
 
 import warnings
 import numpy as np
@@ -27,29 +32,24 @@ def get_pitch_angle_dist(vdf, b_xyz, tint, **kwargs):
     ----------
     vdf : xarray.Dataset
         to fill
-
     b_xyz : xarray.DataArray
         to fill
-
     tint : list of str, optional
         Time interval for closeup.
-
     **kwargs : dict
-        Hash table of keyword arguments with :
-            * angles : int or float or list of ndarray
-                User defined angles
-
-            * meanorsum : str
-                Method :
-                    * mean : to fill
-                    * sum : to fill
-                    * sum_weighted : to fill
-
+        keyword arguments.
 
     Returns
     -------
     pad : xarray.DataArray
         Particle pitch angle distribution
+
+    Other Paramters
+    ---------------
+    angles : int or float or list of ndarray
+        User defined angles.
+    meanorsum : {'mean', 'sum', 'sum_weighted'}
+        Method.
 
 
     Examples

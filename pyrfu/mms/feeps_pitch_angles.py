@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020-2021 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -11,6 +11,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
+"""feeps_pitch_angles.py
+@author: Louis Richard
+"""
 
 import numpy as np
 import xarray as xr
@@ -27,7 +31,6 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     inp_dataset : xarray.Dataset
         Dataset of the time series of the energy spectrum for each eye of
         FEEPS telescopes.
-
     b_bcs : xarray.DataArray
         Time series of the magnetic in spacecraft coordinates system.
 
@@ -35,7 +38,6 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     -------
     out : xarray.DataArray
         Time series of the pitch angles.
-
     idx_maps : dict
         to fill.
 
@@ -49,7 +51,7 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     tint = np.datetime_as_string(np.hstack([np.min(times.data),
                                             np.max(times.data)]), "ns")
 
-    eyes = get_feeps_active_eyes(var, tint, var["mmsId"])
+    eyes = get_feeps_active_eyes(var, list(tint), var["mmsId"])
 
     idx_maps = None
     bins = 13  # number of pitch angle bins; 10 deg = 17 bins, 15 deg = 13 bins

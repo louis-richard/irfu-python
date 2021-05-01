@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,9 +25,16 @@ import xarray as xr
 from .feeps_remove_sun import feeps_remove_sun
 from .feeps_split_integral_ch import feeps_split_integral_ch
 
+energies_ = {"electrons": np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2,
+                                    146.5, 171.3, 200.2, 234.0, 273.4, 319.4,
+                                    373.2, 436.0, 509.2]),
+             "ions": np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6,
+                               205.1, 236.7, 273.2, 315.4, 363.8, 419.7,
+                               484.2, 558.6])}
+
 
 def calc_feeps_omni(inp_dataset):
-    """Computes the omni-directional FEEPS spectrogram from a Dataset that
+    r"""Computes the omni-directional FEEPS spectrogram from a Dataset that
     contains the spectrogram of all eyes.
 
     Parameters
@@ -44,14 +51,7 @@ def calc_feeps_omni(inp_dataset):
 
     var = inp_dataset.attrs
 
-    if var["dtype"] == "electron":
-        energies = np.array(
-            [33.2, 51.90, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3, 200.2,
-             234.0, 273.4, 319.4, 373.2, 436.0, 509.2])
-    else:
-        energies = np.array(
-            [57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6, 205.1, 236.7,
-             273.2, 315.4, 363.8, 419.7, 484.2, 558.6])
+    energies = energies_[var["dtype"]]
 
     # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),

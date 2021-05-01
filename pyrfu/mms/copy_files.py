@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,26 +18,23 @@ from .mms_config import CONFIG
 from .list_files import list_files
 
 
-def copy_files(var, tint, mms_id, target_dir="./data/"):
-    """Copy files from NAS24 to the target path
+def copy_files(var, tint, mms_id, target_dir: str = "./data/"):
+    r"""Copy files from NAS24 to the target path
 
     Parameters
     ----------
     var : dict
         Dictionary containing 4 keys
-            * var["inst"] : name of the instrument
-            * var["tmmode"] : data rate
-            * var["lev"] : data level
-            * var["dtype"] : data type
-
+            * var["inst"] : name of the instrument.
+            * var["tmmode"] : data rate.
+            * var["lev"] : data level.
+            * var["dtype"] : data type.
     tint : list of str
-        Time interval
-
+        Time interval.
     mms_id : str or int
-        Index of the spacecraft
-
+        Index of the spacecraft.
     target_dir : str, optional
-        Target path. Default is './data/'
+        Target path. Default is './data/'.
 
     """
 

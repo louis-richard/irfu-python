@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -11,6 +11,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
+"""vdf_to_deflux.py
+@author: Louis Richard
+"""
 
 import numpy as np
 
@@ -42,7 +46,7 @@ def _convert(vdf, mass_ratio):
 
 
 def vdf_to_deflux(vdf):
-    """Changes units to differential energy flux.
+    r"""Changes units to differential energy flux.
 
     Parameters
     ----------

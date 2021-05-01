@@ -12,6 +12,9 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""get_ts.py
+@author: Louis Richard
+"""
 
 import numpy as np
 import xarray as xr
@@ -22,28 +25,7 @@ from dateutil import parser as date_parser
 from ..pyrf import datetime_to_tt2000
 
 
-def get_epochs(file, cdf_name, tint):
-    """Read time data and its attributes associated to the variable named
-    `cdf_name` in `file`.
-
-    Parameters
-    ----------
-    file : cdflib.cdfread.CDF
-        cdf file
-
-    cdf_name : str
-        Name of the target variable in the cdf file
-
-    tint : list of str
-        Time interval
-
-    Returns
-    -------
-    out : dict
-        Hash table with the data of the time and its meta-data.
-
-    """
-
+def _get_epochs(file, cdf_name, tint):
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
     out = {"data": file.varget(depend0_key,
@@ -57,24 +39,7 @@ def get_epochs(file, cdf_name, tint):
     return out
 
 
-def get_depend_attributes(file, depend_key):
-    """Get dependy attributes
-
-    Parameters
-    ----------
-    file : cdflib.cdfread.CDF
-        cdf file
-
-    depend_key : str
-        Name of the variable depency in the cdf file
-
-    Returns
-    -------
-    attributes : dict
-        Hash table with the attributes of the dependency.
-
-    """
-
+def _get_depend_attributes(file, depend_key):
     attributes = file.varattsget(depend_key)
 
     # Remove spaces in label
@@ -90,38 +55,14 @@ def get_depend_attributes(file, depend_key):
     return attributes
 
 
-def get_depend(file, cdf_name, tint, depend_num=1):
-    """
-    Read the `depend_num`th dependency data and its attributes associated to
-    the variable named `cdf_name` in `file`.
-
-    Parameters
-    ----------
-    file : cdflib.cdfread.CDF
-        cdf file
-
-    cdf_name : str
-        Name of the target variable in the cdf file
-
-    tint : list of str
-        Time interval
-
-    depend_num : int
-        Index of the dependency
-
-    Returns
-    -------
-    out : dict
-        Hash table with the data of the dependency and its meta-data.
-
-    """
-
+def _get_depend(file, cdf_name, tint, depend_num=1):
     out = {}
 
     try:
         depend_key = file.varattsget(cdf_name)[f"DEPEND_{depend_num:d}"]
     except KeyError:
-        depend_key = file.varattsget(cdf_name)[f"REPRESENTATION_{depend_num:d}"]
+        depend_key = file.varattsget(cdf_name)[
+            f"REPRESENTATION_{depend_num:d}"]
 
     if depend_key == "x,y,z":
         out["data"] = np.array(depend_key.split(","))
@@ -151,7 +92,7 @@ def get_depend(file, cdf_name, tint, depend_num=1):
                 except IndexError:
                     pass
 
-        out["atts"] = get_depend_attributes(file, depend_key)
+        out["atts"] = _get_depend_attributes(file, depend_key)
 
     return out
 
@@ -192,16 +133,16 @@ def get_ts(file_path, cdf_name, tint):
 
         assert "DEPEND_0" in attrs_ and "epoch" in attrs_["DEPEND_0"].lower()
 
-        time = get_epochs(file, cdf_name, tint)
+        time = _get_epochs(file, cdf_name, tint)
 
         if "DEPEND_1" in attrs_ or "REPRESENTATION_1" in attrs_:
-            depend_1 = get_depend(file, cdf_name, tint, 1)
+            depend_1 = _get_depend(file, cdf_name, tint, 1)
 
         elif "afg" in cdf_name or "dfg" in cdf_name:
             depend_1 = {"data": ["x", "y", "z"], "atts": {"LABLAXIS": "comp"}}
 
         if "DEPEND_2" in attrs_ or "REPRESENTATION_2" in attrs_:
-            depend_2 = get_depend(file, cdf_name, tint, 2)
+            depend_2 = _get_depend(file, cdf_name, tint, 2)
 
             if depend_2["atts"]["LABLAXIS"] == depend_1["atts"]["LABLAXIS"]:
                 depend_1["atts"]["LABLAXIS"] = "rcomp"
@@ -211,7 +152,7 @@ def get_ts(file_path, cdf_name, tint):
             if "REPRESENTATION_3" in attrs_:
                 assert out_dict["atts"]["REPRESENTATION_3"] != "x,y,z"
 
-            depend_3 = get_depend(file, cdf_name, tint, 3)
+            depend_3 = _get_depend(file, cdf_name, tint, 3)
 
             if depend_3["atts"]["LABLAXIS"] == depend_2["atts"]["LABLAXIS"]:
                 depend_2["atts"]["LABLAXIS"] = "rcomp"

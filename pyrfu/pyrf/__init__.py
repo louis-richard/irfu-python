@@ -68,7 +68,7 @@ from .c_4_v import c_4_v
 from .ebsp import ebsp
 from .date_str import date_str
 from .find_closest import find_closest
-from .cart2sph import cart2sph
+from .cart2sph_ts import cart2sph_ts
 from .corr_deriv import corr_deriv
 from .eb_nrf import eb_nrf
 from .lowpass import lowpass
@@ -92,5 +92,14 @@ from .waverage import waverage
 from .l_shell import l_shell
 from .optimize_nbins_1d import optimize_nbins_1d
 from .optimize_nbins_2d import optimize_nbins_2d
-
 from .magnetosphere import magnetosphere
+from .iso86012timevec import iso86012timevec
+from .timevec2iso8601 import timevec2iso8601
+from .iso86012datetime64 import iso86012datetime64
+from .datetime642iso8601 import datetime642iso8601
+from .unix2datetime64 import unix2datetime64
+from .datetime642unix import datetime642unix
+from .ttns2datetime64 import ttns2datetime64
+from .datetime642ttns import datetime642ttns
+from .iso86012datetime import iso86012datetime
+from .cart2sph import cart2sph

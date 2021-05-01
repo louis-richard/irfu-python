@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -41,25 +41,21 @@ def _transformation_matrix(spin_axis, direction):
 
 
 def dsl2gse(inp, defatt, direction: int = 1):
-    """Transform time series from DSL to GSE.
+    r"""Transform time series from DSL to GSE.
 
     Parameters
     ----------
     inp : xarray.DataArray
         Input time series to convert.
-
-    defatt : xarray.Dataset or ndarray or list
+    defatt : xarray.Dataset or array_like
         Spacecraft attitude.
-
-    direction : int
-        Direction of tranformation. +1 DSL -> GSE, -1 GSE -> DSL.
-        Default is 1.
+    direction : {1, -1}, optional
+        Direction of tranformation. +1 DSL -> GSE, -1 GSE -> DSL. Default is 1.
 
     Returns
     -------
     out : xarray.DataArray
         Time series of the input field in the new coordinates systems.
-
 
     Examples
     --------

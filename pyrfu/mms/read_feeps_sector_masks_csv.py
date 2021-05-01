@@ -20,19 +20,21 @@ from ..pyrf import datetime642unix, unix2datetime64, iso86012datetime64
 
 
 def read_feeps_sector_masks_csv(tint):
-    """
-    Reads the FEEPS sectors to mask due to sunlight contamination from csv files.x
+    r"""Reads the FEEPS sectors to mask due to sunlight contamination from
+    csv files.x
 
     Parameters
     ----------
     tint : list of str
-        time range of interest [starttime, endtime] with the format "YYYY-MM-DD", "YYYY-MM-DD"]
-        or to specify more or less than a day ['YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
+        time range of interest [starttime, endtime] with the format
+        "YYYY-MM-DD", "YYYY-MM-DD" or to specify more or less than a day [
+        'YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
 
     Returns
     -------
     mask : dict
-        Hash table containing the sectors to mask for each spacecraft and sensor ID
+        Hash table containing the sectors to mask for each spacecraft and
+        sensor ID
 
     """
 
@@ -52,9 +54,9 @@ def read_feeps_sector_masks_csv(tint):
     str_date = nearest_date.astype("<M8[D]").astype(str).replace("-", "")
 
     for mms_sc in np.arange(1, 5):
-        csv_file = os.sep.join([os.path.dirname(os.path.abspath(__file__)), "sun",
-                                "MMS{:d}_FEEPS_ContaminatedSectors_{}.csv".format(mms_sc,
-                                                                                  str_date)])
+        file_name = f"MMS{mms_sc:d}_FEEPS_ContaminatedSectors_{str_date}.csv"
+        csv_file = os.sep.join([os.path.dirname(os.path.abspath(__file__)),
+                                "sun", file_name])
 
         csv_file = open(csv_file, 'r')
 
@@ -75,7 +77,7 @@ def read_feeps_sector_masks_csv(tint):
                 if csv_data[val_idx, i] == 1:
                     mask_vals.append(val_idx)
 
-            masks["mms{:d}_imask_top-{:d}".format(mms_sc, i + 1)] = mask_vals
+            masks[f"mms{mms_sc:d}_imask_top-{i + 1:d}"] = mask_vals
 
         for i in range(0, 12):
             mask_vals = []
@@ -84,6 +86,6 @@ def read_feeps_sector_masks_csv(tint):
                 if csv_data[val_idx, i+12] == 1:
                     mask_vals.append(val_idx)
 
-            masks["mms{:d}_imask_bottom-{:d}".format(mms_sc, i + 1)] = mask_vals
+            masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = mask_vals
 
     return masks

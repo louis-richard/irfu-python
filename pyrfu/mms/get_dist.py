@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,17 +21,15 @@ from ..pyrf import ts_skymap, iso86012datetime64, datetime642ttns
 
 
 def get_dist(file_path, cdf_name, tint):
-    """Read field named cdf_name in file and convert to velocity distribution
+    r"""Read field named cdf_name in file and convert to velocity distribution
     function.
 
     Parameters
     ----------
     file_path : str
         Path of the cdf file.
-
     cdf_name : str
         Name of the target variable in the cdf file.
-
     tint : list of str
         Time interval.
 
@@ -104,15 +102,6 @@ def get_dist(file_path, cdf_name, tint):
 
             res.attrs = {**res.attrs, **f.varattsget(cdf_name)}
 
-            for k in f.cdf_info():
-                res.attrs[k] = f.cdf_info()[k]
-
-            res.attrs["tmmode"] = tmmode
-            if "_dis_" in cdf_name:
-                res.attrs["species"] = "ions"
-            else:
-                res.attrs["species"] = "electrons"
-
         elif tmmode == "fast":
             depend0_key = f.varattsget(cdf_name)["DEPEND_0"]
             depend1_key = f.varattsget(cdf_name)["DEPEND_1"]
@@ -131,12 +120,12 @@ def get_dist(file_path, cdf_name, tint):
             for k in f.varattsget(cdf_name):
                 res.attrs[k] = f.varattsget(cdf_name)[k]
 
-            for k in f.cdf_info():
-                res.attrs[k] = f.cdf_info()[k]
+        for k in f.cdf_info():
+            res.attrs[k] = f.cdf_info()[k]
 
-            res.attrs["tmmode"] = tmmode
-            if "_dis_" in cdf_name:
-                res.attrs["species"] = "ions"
-            else:
-                res.attrs["species"] = "electrons"
+        res.attrs["tmmode"] = tmmode
+        if "_dis_" in cdf_name:
+            res.attrs["species"] = "ions"
+        else:
+            res.attrs["species"] = "electrons"
     return res

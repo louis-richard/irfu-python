@@ -12,7 +12,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-"""def2psd.py
+"""deflux_to_vdf.py
 @author: Louis Richard
 """
 
@@ -24,7 +24,7 @@ from scipy import constants
 from .spectr_to_dataset import spectr_to_dataset
 
 
-def def2psd(deflux):
+def deflux_to_vdf(deflux):
     r"""Compute differential energy flux from velocity distribution function.
 
     Parameters

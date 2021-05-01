@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020-2021 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,14 @@ from ..pyrf import calc_fs, ts_scalar
 
 
 def dft_time_shift(inp, tau):
-    r"""Shifts the input signal ``inp`` by ``tau`` seconds using
-    discrete fourier transform (DFT). Particularly useful when
-    calculating the frequency-wavenumber spectrum of the mms'
-    spin-plane or axial probes.
+    r"""Shifts the input signal ``inp`` by ``tau`` seconds using discrete
+    fourier transform (DFT). Particularly useful when calculating the
+    frequency-wavenumber spectrum of the mms' spin-plane or axial probes.
 
     Parameters
     ----------
     inp : xarray.DataArray
         Time series to be shifted (Note : Only tensor order 1).
-
     tau : float
         Applied shift in seconds.
 

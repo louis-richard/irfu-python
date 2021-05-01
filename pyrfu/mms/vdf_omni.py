@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,12 +12,16 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""vdf_omni.py
+@author: Louis Richard
+"""
+
 import numpy as np
 import xarray as xr
 
 
 def vdf_omni(vdf):
-    """Computes omnidirectional distribution, conserving unit.
+    r"""Computes omnidirectional distribution, conserving unit.
 
     Parameters
     ----------
@@ -32,7 +36,8 @@ def vdf_omni(vdf):
     Returns
     -------
     out : xarray.Dataset
-        Time series of the omnidirectional velocity distribution function with :
+        Time series of the omnidirectional velocity distribution function
+        with :
             * time : Time samples.
             * data : Omnidirectional velocity distribution.
             * energy : Energy levels.
@@ -48,7 +53,8 @@ def vdf_omni(vdf):
 
     sine_theta = np.ones((np_phi, 1)) * np.sin(thetas * np.pi / 180)
     solid_angles = dangle * dangle * sine_theta
-    all_solid_angles = np.tile(solid_angles, (len(time), energy.shape[1], 1, 1))
+    all_solid_angles = np.tile(solid_angles,
+                               (len(time), energy.shape[1], 1, 1))
 
     dist = vdf.data.data * all_solid_angles
     omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
@@ -56,6 +62,7 @@ def vdf_omni(vdf):
 
     energy = np.mean(energy[:2, :], axis=0)
 
-    out = xr.DataArray(omni, coords=[time, energy], dims=["time", "energy"], attrs=vdf.attrs)
+    out = xr.DataArray(omni, coords=[time, energy], dims=["time", "energy"],
+                       attrs=vdf.attrs)
 
     return out

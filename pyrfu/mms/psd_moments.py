@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020-2021 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -11,6 +11,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
+"""psd_moments.py
+@author: Louis Richard
+"""
 
 import bisect
 import multiprocessing as mp
@@ -138,54 +142,46 @@ def psd_moments(vdf=None, sc_pot=None, **kwargs):
     ----------
     vdf : xarray.Dataset
         3D skymap velocity distribution.
-
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
-
     **kwargs : dict
-        Hash table of keyword arguments with :
-            * energy_range : list or numpy.ndarray
-                Set energy range in eV to integrate over [E_min E_max].
-                Energy range is applied to energy0 and the same elements are
-                used for energy1 to ensure that the same number of points are
-                integrated over.
-
-            * no_sc_pot : bool
-                Set to 1 to set spacecraft potential to zero. Calculates
-                moments without correcting for spacecraft potential.
-
-            * en_channels : list or numpy.ndarray
-                Set energy channels to integrate over [min max]; min and max
-                between must be between 1 and 32.
-
-            * partial_moments : numpy.ndarray or xarray.DataArray
-                Use a binary array (or DataArray) (pmomsarr) to select which
-                psd points are used in the moments calculation. pmomsarr must
-                be a binary array (1s and 0s, 1s correspond to points used).
-                Array (or data of Dataarray) must be the same size as vdf.data.
-
-            * inner_electron : {"on", "off"}
-                inner_electrontron potential for electron moments.
+        Keyword arguments.
 
     Returns
     --------
     n_psd : xarray.DataArray
         Time series of the number density (1rst moment).
-
     v_psd : xarray.DataArray
         Time series of the bulk velocity (2nd moment).
-
     p_psd : xarray.DataArray
         Time series of the pressure tensor (3rd moment).
-
     p2_psd : xarray.DataArray
         Time series of the pressure tensor.
-
     t_psd : xarray.DataArray
         Time series of the temperature tensor.
-
     h_psd : xarray.DataArray
         to fill.
+
+
+    Other Parameters
+    ----------------
+    energy_range : array_like
+        Set energy range in eV to integrate over [E_min E_max]. Energy range
+        is applied to energy0 and the same elements are used for energy1 to
+        ensure that the same number of points are integrated over.
+    no_sc_pot : bool
+        Set to 1 to set spacecraft potential to zero. Calculates moments
+        without correcting for spacecraft potential.
+    en_channels : array_like
+        Set energy channels to integrate over [min max]; min and max between
+        must be between 1 and 32.
+    partial_moments : ndarray or xarray.DataArray
+        Use a binary array (or DataArray) (pmomsarr) to select which psd
+        points are used in the moments calculation. pmomsarr must be a
+        binary array (1s and 0s, 1s correspond to points used). Array (or
+        data of Dataarray) must be the same size as vdf.data.
+    inner_electron : {"on", "off"}
+        inner_electrontron potential for electron moments.
 
     Examples
     --------

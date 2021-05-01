@@ -20,6 +20,13 @@ from .get_feeps_active_eyes import get_feeps_active_eyes
 from .get_feeps_oneeye import get_feeps_oneeye
 
 
+energies_ = {"electrons": np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2,
+                                    146.5, 171.3, 200.2, 234.0, 273.4, 319.4,
+                                    373.2, 436.0, 509.2]),
+             "ions": np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6,
+                               205.1, 236.7, 273.2, 315.4, 363.8, 419.7,
+                               484.2, 558.6])}
+
 # noinspection PyUnboundLocalVariable
 def get_feeps_omni(tar_var, tint, mms_id, verbose=True, data_path=""):
     """Computes omni directional energy spectrum of the target data unit for the target specie
@@ -61,8 +68,7 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True, data_path=""):
 
     """
 
-    if isinstance(mms_id, str):
-        mms_id = int(mms_id)
+    mms_id = int(mms_id)
 
     data_units = tar_var.split("_")[0]
 
@@ -71,12 +77,7 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose=True, data_path=""):
 
     specie = var["dtype"][0]
 
-    if var["dtype"] == "electron":
-        energies = np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3, 200.2, 234.0,
-                             273.4, 319.4, 373.2, 436.0, 509.2, 575.8])
-    else:
-        energies = np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6, 205.1, 236.7, 273.2,
-                             315.4, 363.8, 419.7, 484.2,  558.6, 609.9])
+    energies = energies_[var["dtype"]]
 
     # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
     e_corr = {"e": [14.0, -1.0, -3.0, -3.0], "i": [0.0, 0.0, 0.0, 0.0]}

@@ -12,7 +12,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-"""cart2sph.py
+"""cart2sph_ts.py
 @author: Louis Richard
 """
 
@@ -21,7 +21,7 @@ import numpy as np
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def cart2sph(inp, direction_flag=1):
+def cart2sph_ts(inp, direction_flag=1):
     """Computes magnitude, theta and phi angle from column vector xyz
     (first column is x ....) theta is 0 at equator.
     direction_flag = -1  -> to make transformation in opposite direction

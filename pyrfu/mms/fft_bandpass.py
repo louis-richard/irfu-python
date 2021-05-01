@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020-2021 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,10 +29,8 @@ def fft_bandpass(inp, f_min, f_max):
     ----------
     inp : xarray.DataArray
         Time series to be bandpassed filtered.
-
     f_min : float or int
         Minimum frequency of filter, f < ``f_min`` are removed.
-
     f_max : float or int
         Maximum frequency of filter, f > ``f_max`` are removed.
 

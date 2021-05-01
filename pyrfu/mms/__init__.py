@@ -59,7 +59,6 @@ from .dpflux_to_vdf import dpflux_to_vdf
 from .deflux_to_vdf import deflux_to_vdf
 from .copy_files import copy_files
 from .vdf_to_e64 import vdf_to_e64
-from .current_location import current_location
 from .dsl2gse import dsl2gse
 from .dsl2gsm import dsl2gsm
 from .get_hpca_dist import get_hpca_dist

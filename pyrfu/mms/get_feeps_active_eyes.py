@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,21 +12,23 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""get_feeps_active_eyes.py
+@author: Louis Richard
+"""
+
 import numpy as np
 
 
 def get_feeps_active_eyes(var, tint, mms_id):
-    """This function returns the FEEPS active eyes,
+    r"""This function returns the FEEPS active eyes,
     based on date/mms_id/species/rate.
     
     Parameters
     ----------
     var : dict
         Hash table containing parameters.
-
     tint : list of str
         Time range.
-
     mms_id : int or str
         mms_id e.g., '4' for MMS4.
 

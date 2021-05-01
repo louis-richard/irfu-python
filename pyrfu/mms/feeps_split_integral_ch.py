@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -16,7 +16,7 @@ import xarray as xr
 
 
 def feeps_split_integral_ch(inp_dataset):
-    """This function splits the last integral channel from the FEEPS spectra,
+    r"""This function splits the last integral channel from the FEEPS spectra,
     creating 2 new DataArrays
 
     Parameters
@@ -28,7 +28,6 @@ def feeps_split_integral_ch(inp_dataset):
     -------
     out : xarray.Dataset
         Energetic particles energy spectra with the integral channel removed.
-
     out_500kev : xarray.Dataset
         Integral channel that was removed.
 

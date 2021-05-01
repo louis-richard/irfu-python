@@ -24,8 +24,8 @@ from .mms_config import CONFIG
 
 
 def list_files(tint, mms_id, var, data_path=""):
-    """Find files in the data directories of the target instrument, data type, data rate, mms_id
-    and level during the target time interval.
+    """Find files in the data directories of the target instrument, data type,
+    data rate, mms_id and level during the target time interval.
 
     Parameters
     ----------

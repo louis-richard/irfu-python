@@ -12,34 +12,37 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""get_feeps_alleyes.py
+@author: Louis Richard
+"""
+
 import xarray as xr
 
 from .get_feeps_oneeye import get_feeps_oneeye
 from .get_feeps_active_eyes import get_feeps_active_eyes
 
 
-def get_feeps_alleyes(tar_var, tint, mms_id, verbose=True):
-    """Read energy spectrum of the selected specie in the selected energy range for all FEEPS eyes.
+def get_feeps_alleyes(tar_var, tint, mms_id, verbose: bool = True):
+    r"""Read energy spectrum of the selected specie in the selected energy
+    range for all FEEPS eyes.
 
     Parameters
     ----------
     tar_var : str
-        Key of the target variable like {data_unit}{specie}_{data_rate}_{data_lvl}.
-
+        Key of the target variable like
+        {data_unit}{specie}_{data_rate}_{data_lvl}.
     tint : list of str
         Time interval.
-
     mms_id : int or float or str
         Index of the spacecraft.
-
-    verbose : bool
+    verbose : bool, optional
         Set to True to follow the loading. Default is True.
 
     Returns
     -------
     out : xarray.Dataset
-        Dataset containing the energy spectrum of the available eyes of the Fly's Eye Energetic
-        Particle Spectrometer.
+        Dataset containing the energy spectrum of the available eyes of the
+        Fly's Eye Energetic Particle Spectrometer (FEEPS).
 
     Examples
     --------
@@ -59,7 +62,8 @@ def get_feeps_alleyes(tar_var, tint, mms_id, verbose=True):
 
     specie = tar_var.split("_")[0][-1]
 
-    var = {"tmmode": tar_var.split("_")[1], "lev": tar_var.split("_")[2], "mmsId": mms_id}
+    var = {"tmmode": tar_var.split("_")[1], "lev": tar_var.split("_")[2],
+           "mmsId": mms_id}
 
     if specie == "e":
         var["dtype"] = "electron"

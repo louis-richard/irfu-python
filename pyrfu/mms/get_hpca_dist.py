@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,25 +29,19 @@ def get_hpca_dist(var_key, tint, mms_id, data_path: str = ""):
     ----------
     var_key : str
         key like "{flux type}_{specie}_{time mode}_{level}".
-
     tint : list
         Time interval.
-
     mms_id : int
         Spacecraft index.
-
     data_path : str, optional
         Path to data
-
 
     Returns
     -------
     vdf_ : xarray.DataArray
         Distribution PSD or DPF.
-
     saz_ : xarray.DataArray
         Start azimuthal angle.
-
     aze_ : xarray.DataArray
         Azimuthal angles.
 

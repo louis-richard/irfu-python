@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020-2021 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -50,11 +50,9 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
 
     n_e : xarray.DataArray
         Time series of the electron number density.
-
     t_e : xarray.DataArray
         Time series of the electron temperature. Function accepts scalar
         temperature or tensor (scalar temperature is used in either case).
-
     i_aspoc : xarray.DataArray, optional
         Time series of the ASPOC current in :math:`\\mu` A.
 
@@ -64,31 +62,24 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     n_esc : xarray.DataArray
         Time series of the number density estimated from SCpot, at the same
         resolution as ``sc_pot``.
-
     i_ph0 : float
         Value of the photoelectron currents ( :math:`\\mu` A) of the first
         population.
-
     t_ph0 : float
         Value of the temperature (eV) of the first population.
-
     i_ph1 : float
         Value of the photoelectron currents ( :math:`\\mu` A) of the second
         population.
-
     t_ph1 : float
         Value of the temperature (eV) of the second population.
-
 
     Notes
     -----
     Usual assumptions are made for thermal and photoelectron current, vis.,
     planar geometry for photoelectrons and spherical geometry for thermal
     electrons.
-
     Currently the calculation neglects the ion thermal current, secondary
     electrons, and other sources of current.
-
     ASPOC on does not work very well.
 
     """

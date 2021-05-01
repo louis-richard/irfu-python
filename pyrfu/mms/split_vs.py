@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -11,6 +11,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
+
+"""split_vs.py
+@author: Louis Richard
+"""
 
 import warnings
 
@@ -48,7 +52,7 @@ data_lvls = ["ql", "sitl", "l1b", "l2a", "l2pre", "l2", "l3"]
 
 
 def split_vs(var_str):
-    """Parse the variable keys.
+    r"""Parse the variable keys.
 
     Parameters
     ----------

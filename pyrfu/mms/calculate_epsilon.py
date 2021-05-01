@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -13,6 +13,7 @@
 # furnished to do so.
 
 import numpy as np
+import itertools
 
 from scipy import constants
 
@@ -20,32 +21,31 @@ from ..pyrf import resample, ts_scalar
 
 
 def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
-    """Calculates epsilon parameter using model distribution.
+    r"""Calculates epsilon parameter using model distribution.
 
     Parameters
     ----------
     vdf : xarray.Dataset
         Observed particle distribution (skymap).
-
     model_vdf : xarray.Dataset
         Model particle distribution (skymap).
-
     n_s : xarray.DataArray
         Time series of the number density.
-
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
-
     **kwargs : dict
-        Hash table of keyword arguments with :
-             * en_channels : list or numpy.ndarray
-                Set energy channels to integrate over [min max]; min and max
-                between must be between 1 and 32.
+        Keyword arguments.
 
     Returns
     -------
     epsilon : xarray.DataArray
         Time series of the epsilon parameter.
+
+    Other Parameters
+    ----------------
+    en_channels : array_like
+        Set energy channels to integrate over [min max]; min and max between
+        must be between 1 and 32.
 
     Examples
     --------
@@ -54,9 +54,6 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     >>> eps = mms.calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **options)
 
     """
-
-    if np.abs(np.median(np.diff(vdf.time - n_s.time))).astype(float) > 0:
-        raise RuntimeError("vdf and moments have different times.")
 
     # Default energy channels used to compute epsilon, lowest energy channel
     # should not be used.
@@ -129,13 +126,12 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     epsilon = np.zeros(len(vdf.time))
     m_psd2_n = np.ones(n_ph) * np.sin(theta_k * np.pi / 180)
 
-    for i in range(len(vdf.time)):
-        for j in int_energies:
-            tmp = np.squeeze(vdf_diff[i, j, ...])
-            fct = v_s[i, j] ** 2 * delta_v[i, j] * delta_ang
+    for i, j in itertools.product(range(len(vdf.time)), int_energies):
+        tmp = np.squeeze(vdf_diff[i, j, ...])
+        fct = v_s[i, j] ** 2 * delta_v[i, j] * delta_ang
 
-            epsilon[i] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0),
-                                    axis=0) * fct
+        epsilon[i] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0),
+                                axis=0) * fct
 
     epsilon /= 1e6 * n_s.data * 2
     epsilon = ts_scalar(vdf.time.data, epsilon)

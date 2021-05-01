@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,14 +12,18 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""get_eis_allt.py
+@author: Louis Richard
+"""
+
 import xarray as xr
 
 from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_allt(tar_var, tint, mms_id, verbose=True):
-    """Read energy spectrum of the selected specie in the selected energy
+def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True):
+    r"""Read energy spectrum of the selected specie in the selected energy
     range for all telescopes.
 
     Parameters
@@ -27,14 +31,11 @@ def get_eis_allt(tar_var, tint, mms_id, verbose=True):
     tar_var : str
         Key of the target variable like
         {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
-
     tint : list of str
         Time interval.
-
     mms_id : int or float or str
         Index of the spacecraft.
-
-    verbose : bool
+    verbose : bool, optional
         Set to True to follow the loading. Default is True.
 
     Returns
