@@ -20,8 +20,9 @@ import os
 import numpy as np
 import xarray as xr
 import warnings
-import pyfftw
 import numba
+
+from scipy import fft
 
 from .calc_fs import calc_fs
 
@@ -167,7 +168,9 @@ def wavelet(inp, **kwargs):
 
         # Wavelet transform of the data
         # Forward FFT
-        s_w = pyfftw.interfaces.numpy_fft.fft(data_col, threads=os.cpu_count())
+        s_w = fft.fft(data_col, workers=os.cpu_count())
+        #s_w = pyfftw.interfaces.numpy_fft.fft(data_col,
+        # threads=os.cpu_count())
 
         scales_mat, s_w_mat = np.meshgrid(scales, s_w, sparse=True)
 
@@ -175,9 +178,11 @@ def wavelet(inp, **kwargs):
         w_w = _ww(s_w_mat, scales_mat, sigma, frequencies_mat, f_nyq)
 
         # Backward FFT
+        power = fft.ifft(w_w, axis=0, workers=os.cpu_count())
+        """
         power = pyfftw.interfaces.numpy_fft.ifft(w_w, axis=0,
                                                  threads=os.cpu_count())
-
+        """
         # Calculate the power spectrum
         if return_power:
             power2 = _power_r(power, np.tile(new_freq_mat, (len(power), 1)))

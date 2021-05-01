@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -12,7 +12,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-"""deflux_to_vdf.py
+"""def2psd.py
 @author: Louis Richard
 """
 
@@ -24,9 +24,8 @@ from scipy import constants
 from .spectr_to_dataset import spectr_to_dataset
 
 
-def deflux_to_vdf(deflux):
-    """Compute differential energy flux from velocity distribution
-    function.
+def def2psd(deflux):
+    r"""Compute differential energy flux from velocity distribution function.
 
     Parameters
     ----------

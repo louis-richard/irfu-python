@@ -16,15 +16,13 @@
 @author: Louis Richard
 """
 
+import os
 import bisect
 import warnings
-import multiprocessing as mp
 import numpy as np
 import xarray as xr
-import pyfftw
-import sfs
 
-from tqdm import tqdm
+from scipy import fft
 
 from .ts_time import ts_time
 from .ts_vec_xyz import ts_vec_xyz
@@ -32,6 +30,7 @@ from .resample import resample
 from .iso2unix import iso2unix
 from .start import start
 from .end import end
+from .cart2sph import cart2sph
 from .calc_fs import calc_fs
 from .convert_fac import convert_fac
 from .unix2datetime64 import unix2datetime64
@@ -358,20 +357,13 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
     """
 
-    if not isinstance(delta_b, xr.DataArray):
-        raise TypeError("delta_b must be a DataArray")
-
-    if not isinstance(full_b, xr.DataArray):
-        raise TypeError("full_b must be a DataArray")
-
-    if not isinstance(b_bgd, xr.DataArray):
-        raise TypeError("b0 must be a DataArray")
-
-    if not isinstance(xyz, xr.DataArray):
-        raise TypeError("xyz must be a DataArray")
+    assert isinstance(delta_b, xr.DataArray), "delta_b must be a DataArray"
+    assert isinstance(full_b, xr.DataArray), "full_b must be a DataArray"
+    assert isinstance(b_bgd, xr.DataArray), "b0 must be a DataArray"
+    assert isinstance(xyz, xr.DataArray), "xyz must be a DataArray"
 
     # Number of threads
-    n_threads = mp.cpu_count()
+    n_threads = os.cpu_count()
 
     # Compute magnetic field fluctuations sampling frequency
     fsb = calc_fs(delta_b)
@@ -379,10 +371,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     # Below which we cannot apply E*B=0
     angle_b_elevation_max = 15
 
-    if e_xyz is None:
-        want_ee = 0
-    else:
-        want_ee = 1
+    want_ee = e_xyz is not None
 
     res = dict(t=None, f=None, flagFac=0, bb_xxyyzzss=None, ee_xxyyzzss=None,
                ee_ss=None, pf_xyz=None, pf_rtp=None, dop=None, dop2d=None,
@@ -535,7 +524,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
     delta_b.data[idx_nan_b] = 0
 
-    swb = pyfftw.interfaces.numpy_fft.fft(delta_b, axis=0, threads=n_threads)
+    swb = fft.fft(delta_b.data, axis=0, workers=os.cpu_count())
+    # swb = pyfftw.interfaces.numpy_fft.fft(delta_b, axis=0, threads=n_threads)
 
     idx_nan_e, idx_nan_eisr2 = [None, None]
 
@@ -548,16 +538,18 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
         e_xyz.data[idx_nan_e] = 0
 
-        sw_e = pyfftw.interfaces.numpy_fft.fft(e_xyz, axis=0,
-                                               threads=n_threads)
+        sw_e = fft.fft(e_xyz.data, axis=0, workers=os.cpu_count())
+        # sw_e = pyfftw.interfaces.numpy_fft.fft(e_xyz, axis=0,
+        # threads=n_threads)
 
         if flag_want_fac and not flag_de_dot_b0:
             idx_nan_eisr2 = np.isnan(eisr2.data)
 
             eisr2.data[idx_nan_eisr2] = 0
 
-            sw_eisr2 = pyfftw.interfaces.numpy_fft.fft(eisr2, axis=0,
-                                                       threads=n_threads)
+            sw_eisr2 = fft.fft(eisr2.data, axis=0, workers=os.cpu_count())
+            # sw_eisr2 = pyfftw.interfaces.numpy_fft.fft(eisr2, axis=0,
+            # threads=n_threads)
     else:
         print("ebsp ... calculate B wavelet transform ....")
 
@@ -593,7 +585,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     censure = np.floor(
         2 * a_ * out_sampling / in_sampling * n_wave_period_to_average)
 
-    for ind_a in tqdm(range(len(a_))):
+    for ind_a in range(len(a_)):
         # resample to 1 second sampling for Pc1-2 or 1 minute sampling for
         # Pc3-5 average top frequencies to 1 second/1 minute below will be
         # an average over 8 wave periods. first find where one sample is less
@@ -609,28 +601,29 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         w_exp_mat2 = np.tile(w_exp_mat, (2, 1)).T
         w_exp_mat = np.tile(w_exp_mat, (3, 1)).T
 
-        wb = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * swb * w_exp_mat,
-                                              axis=0, threads=n_threads)
+        wb = fft.ifft(np.sqrt(1) * swb * w_exp_mat, axis=0,
+                      workers=os.cpu_count())
+        # wb = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * swb * w_exp_mat,
+        #                                      axis=0, threads=n_threads)
         wb[idx_nan_b] = np.nan
 
         we, w_eisr2 = [None, None]
 
         if want_ee:
-            if sw_e.shape[1] == 2:
-                arg_ = np.sqrt(1) * sw_e * w_exp_mat
-                we = pyfftw.interfaces.numpy_fft.ifft(arg_, axis=0,
-                                                      threads=n_threads)
-            else:
-                arg_ = np.sqrt(1) * sw_e * w_exp_mat
-                we = pyfftw.interfaces.numpy_fft.ifft(arg_, axis=0,
-                                                      threads=n_threads)
+            we = fft.ifft(np.sqrt(1) * sw_e * w_exp_mat, axis=0,
+                          workers=os.cpu_count())
+            # arg_ = np.sqrt(1) * sw_e * w_exp_mat
+            # we = pyfftw.interfaces.numpy_fft.ifft(arg_, axis=0,
+            #                                      threads=n_threads)
 
             we[idx_nan_e] = np.nan
 
             if flag_want_fac and not flag_de_dot_b0:
-                arg_ = np.sqrt(1) * sw_eisr2 * w_exp_mat2
-                w_eisr2 = pyfftw.interfaces.numpy_fft.ifft(arg_, axis=0,
-                                                           threads=n_threads)
+                w_eisr2 = fft.ifft(np.sqrt(1) * sw_eisr2 * w_exp_mat2,
+                                   axis=0, workers=os.cpu_count())
+                # arg_ = np.sqrt(1) * sw_eisr2 * w_exp_mat2
+                # w_eisr2 = pyfftw.interfaces.numpy_fft.ifft(arg_, axis=0,
+                #                                            threads=n_threads)
                 w_eisr2[idx_nan_eisr2] = np.nan
 
         new_freq_mat = w_0 / a_[ind_a]
@@ -969,8 +962,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         s_plot_x = np.real(_average_data(s_plot_x, in_time, out_time))
         s_plot_y = np.real(_average_data(s_plot_y, in_time, out_time))
         s_plot_z = np.real(_average_data(s_plot_z, in_time, out_time))
-        s_azimuth, s_elevation, s_r = sfs.util.cart2sph(s_plot_x, s_plot_y,
-                                                        s_plot_z)
+        s_azimuth, s_elevation, s_r = cart2sph(s_plot_x, s_plot_y, s_plot_z)
 
         ee_xxyyzzss = _ee_xxyyzzss(power_ex_plot, power_ey_plot,
                                    power_ez_plot, power_2e_plot)
