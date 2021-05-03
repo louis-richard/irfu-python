@@ -103,3 +103,4 @@ from .ttns2datetime64 import ttns2datetime64
 from .datetime642ttns import datetime642ttns
 from .iso86012datetime import iso86012datetime
 from .cart2sph import cart2sph
+from .iplasma_calc import iplasma_calc
