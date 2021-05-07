@@ -74,7 +74,7 @@ def magnetosphere(model: str = "mp_shue1998", d_p: float = 1.7389104,
         x_ = x_[abs(x_) < 100]
 
     elif model == "bs":
-        x_mp, _ = magnetopause("mp_shue1998", d_p, b_z)
+        x_mp, _ = magnetosphere("mp_shue1998", d_p, b_z)
         gamma_ = 5 / 3
         m_ = 4
 
