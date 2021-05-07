@@ -44,6 +44,8 @@ def make_labels(axs, pos, pad=0):
 
     for label, axis in zip(lbl, axs):
         axis.text(pos[0], pos[1], "({})".format(label),
-                  transform=axis.transAxes)
+                  transform=axis.transAxes,
+                  bbox=dict(boxstyle="square", ec=(1., 1., 1.),
+                            fc=(1., 1., 1.)))
 
     return axs
