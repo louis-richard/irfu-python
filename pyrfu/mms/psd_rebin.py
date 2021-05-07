@@ -86,7 +86,7 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
 
     time_indices = np.arange(0, len(vdf.time) - 1, 2)
 
-    for new_el_num, idx in enumerate(time_indices):
+    for new_el_num, idx in enumerate(time_indices[:-1]):
         if phi.data[idx, 0] > phi.data[idx + 1, 0]:
             phi_r[new_el_num, :] = (phi.data[idx, :] + phi_s[idx + 1, :]) / 2
 

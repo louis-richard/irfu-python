@@ -65,3 +65,5 @@ from .get_hpca_dist import get_hpca_dist
 from .get_hpca_pad import get_hpca_pad
 from .calc_hpca_anodes import calc_hpca_anodes
 from .spin_hpca_avg import spin_hpca_avg
+from .vdf_projection import vdf_projection
+from .vdf_elim import vdf_elim
