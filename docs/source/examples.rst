@@ -9,6 +9,7 @@ the different subpackages of the ``pyrfu`` package.
 
     examples/01_mms/example_mms_b_e_j.ipynb
     examples/01_mms/example_mms_ebfields.ipynb
+    examples/01_mms/example_mms_walen_test.ipynb
     examples/01_mms/example_mms_edr_signatures.ipynb
     examples/01_mms/example_mms_hpca.ipynb
     examples/01_mms/example_mms_ohmslaw.ipynb
