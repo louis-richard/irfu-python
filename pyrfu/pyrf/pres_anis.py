@@ -21,10 +21,9 @@ import numpy as np
 from scipy import constants
 
 from .resample import resample
-from ..mms import rotate_tensor
 
 
-def pres_anis(p_xyz, b_xyz):
+def pres_anis(p_fac, b_xyz):
     """
     Compute pressure anisotropy factor:
 
@@ -34,8 +33,8 @@ def pres_anis(p_xyz, b_xyz):
 
     Parameters
     ----------
-    p_xyz : xarray.DataArray
-        Time series of the pressure tensor.
+    p_fac : xarray.DataArray
+        Time series of the pressure tensor in field aligne coordinates.
 
     b_xyz : xarray.DataArray
         Time series of the background magnetic field.
@@ -67,20 +66,20 @@ def pres_anis(p_xyz, b_xyz):
     >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
     >>> p_xyz_i = mms.get_data("Pi_gse_fpi_fast_l2", tint, mms_id)
 
+    Transform pressure tensor to field aligned coordinates
+    >>> p_fac_i = mms.rotate_tensor(p_xyz_i, "fac", b_xyz)
+
     Compute pressure anistropy
 
     >>> p_anis = pyrf.pres_anis(p_xyz_i, b_xyz)
 
     """
 
-    b_xyz = resample(b_xyz, p_xyz)
-
-    # rotate pressure tensor to field aligned coordinates
-    p_xyzfac = rotate_tensor(p_xyz, "fac", b_xyz, "pp")
+    b_xyz = resample(b_xyz, p_fac)
 
     # Get parallel and perpendicular pressure
-    p_para = p_xyzfac[:, 0, 0]
-    p_perp = (p_xyzfac[:, 1, 1] + p_xyzfac[:, 2, 2]) / 2
+    p_para = p_fac[:, 0, 0]
+    p_perp = (p_fac[:, 1, 1] + p_fac[:, 2, 2]) / 2
 
     # Load permittivity
     mu0 = constants.mu_0
