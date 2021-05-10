@@ -104,3 +104,5 @@ from .datetime642ttns import datetime642ttns
 from .iso86012datetime import iso86012datetime
 from .cart2sph import cart2sph
 from .iplasma_calc import iplasma_calc
+from .match_phibe_dir import match_phibe_dir
+from .match_phibe_v import match_phibe_v

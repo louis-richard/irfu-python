@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2020 Louis Richard
+# Copyright (c) 2020 - 2021 Louis Richard
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@ import numpy as np
 import xarray as xr
 
 
-def integrate(inp, time_step):
+def integrate(inp, time_step: float = None):
     r"""Integrate time series.
 
     Parameters
@@ -28,7 +28,7 @@ def integrate(inp, time_step):
     inp : xarray.DataArray
         Time series of the variable to integrate.
 
-    time_step : float
+    time_step : float, Optional
         Time steps threshold. All time_steps larger than 3*time_step
         are assumed data gaps, default is that time_step is the
         smallest value of all time_steps of the time series.
