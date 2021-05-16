@@ -32,17 +32,15 @@ def _add_earth(ax=None, **kwargs):
     return [nightside_, dayside_]
 
 
-def plot_magnetosphere(ax, b_z, d_p, colors=None):
+def plot_magnetosphere(ax, tint, colors: list = None):
     r"""Plot magnetopause, bow shock and earth.
 
     Parameters
     ----------
     ax : axis
         Axis to plot.
-    b_z : float
-        IMF B_Z in GSM.
-    d_p : float
-        Solar wind dynamic pressure.
+    tint : list
+        Time interval.
     colors : list, optional
         Colors of the magnetopause and the bow show.
 
@@ -57,10 +55,10 @@ def plot_magnetosphere(ax, b_z, d_p, colors=None):
     if colors is None:
         colors = ["tab:blue", "tab:red"]
 
-    x_mp, y_mp = magnetosphere("mp_shue1998", d_p, b_z)
+    x_mp, y_mp = magnetosphere("mp_shue1998", tint)
 
     # Compute bow show
-    x_bs, y_bs = magnetosphere("bs", d_p, b_z)
+    x_bs, y_bs = magnetosphere("bs", tint)
 
     # Plot
     ax.plot(np.hstack([x_mp, np.flip(x_mp)]),

@@ -106,3 +106,4 @@ from .cart2sph import cart2sph
 from .iplasma_calc import iplasma_calc
 from .match_phibe_dir import match_phibe_dir
 from .match_phibe_v import match_phibe_v
+from .get_omni_data import get_omni_data
