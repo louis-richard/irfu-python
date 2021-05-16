@@ -12,6 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""copy_files.py
+@author: Louis Richard
+"""
+
 import os
 
 from .mms_config import CONFIG
@@ -51,3 +55,5 @@ def copy_files(var, tint, mms_id, target_dir: str = "./data/"):
             os.makedirs(path)
 
         os.popen('cp {} {}'.format(file, target_file))
+
+    return

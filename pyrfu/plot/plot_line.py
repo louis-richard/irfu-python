@@ -16,14 +16,14 @@
 @author: Louis Richard
 """
 
-import cycler
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 plt.style.use("seaborn-ticks")
 color = ["tab:blue", "tab:green", "tab:red", "k"]
-plt.rc('axes', prop_cycle=cycler.cycler(color=color))
+plt.rc('axes', prop_cycle=mpl.cycler(color=color))
 
 
 def plot_line(axis, inp, **kwargs):

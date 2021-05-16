@@ -12,8 +12,12 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import numpy as np
+"""calculate_epsilon.py
+@author: Louis Richard
+"""
+
 import itertools
+import numpy as np
 
 from scipy import constants
 

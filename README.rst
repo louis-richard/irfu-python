@@ -60,17 +60,7 @@ Instalation
 -----------
 .. start-marker-install-do-not-remove
 
-The package ``pyrfu`` has been tested only for Mac OS. ``pyrfu`` requires `FFTW3 <http://fftw.org>`_
-. Install FFTW3
-using `homebrew <https://brew.sh>`_ and set temporary environmental variables, such that ``pyrfu``
-finds fftw:
-
-.. code-block:: bash
-
-    brew install fftw
-    export DYLD_LIBRARY_PATH=/usr/local/lib
-    export LDFLAGS="-L/usr/local/lib"
-    export CFLAGS="-I/usr/local/include"
+The package ``pyrfu`` has been tested only for Mac OS.
 
 Using PyPi
 **********

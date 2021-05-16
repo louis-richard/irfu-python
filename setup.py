@@ -32,16 +32,13 @@ with open("README.rst", "r") as fh:
 
 
 INSTALL_REQUIRES = [
-      "cycler",
       "cdflib",
       "matplotlib",
       "numpy",
       "numba",
       "pandas",
-      "python-dateutil",
       "sphinx",
       "scipy",
-      "tqdm",
       "xarray"]
 
 PYTHON_REQUIRES = '>=3.7, <=3.9'

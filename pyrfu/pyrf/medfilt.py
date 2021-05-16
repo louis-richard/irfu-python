@@ -12,6 +12,10 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
+"""medfilt.py
+@author: Louis Richard
+"""
+
 import xarray as xr
 import numpy as np
 
@@ -19,7 +23,7 @@ from scipy import signal
 
 
 def medfilt(inp, n_pts=11):
-    """Applies a median filter over npts points to inp.
+    r"""Applies a median filter over npts points to inp.
 
     Parameters
     ----------
@@ -57,7 +61,7 @@ def medfilt(inp, n_pts=11):
 
     Compute current density, etc
 
-    >>> j_xyz, div_b, b_xyz, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
+    >>> j_xyz, _, b_xyz, _, _, _ = pyrf.c_4_j(r_mms, b_mms)
 
     Get J sampling frequency
 

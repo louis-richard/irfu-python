@@ -20,9 +20,8 @@ import numpy as np
 import xarray as xr
 
 from cdflib import CDF, cdfepoch
-from dateutil import parser as date_parser
 
-from ..pyrf import datetime_to_tt2000
+from ..pyrf import datetime642iso8601, iso86012datetime64
 
 
 def _get_epochs(file, cdf_name, tint):
@@ -120,8 +119,7 @@ def get_ts(file_path, cdf_name, tint):
     """
 
     # Convert time interval to epochs
-    tint = list(map(date_parser.parse, tint))
-    tint = list(map(datetime_to_tt2000, tint))
+    tint = list(datetime642iso8601(iso86012datetime64(np.array(tint))))
     tint = list(map(cdfepoch.parse, tint))
 
     out_dict = {}

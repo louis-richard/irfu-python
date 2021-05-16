@@ -12,14 +12,15 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so.
 
-import cycler
+
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 plt.style.use("seaborn-ticks")
 colors_ = ["tab:blue", "tab:green", "tab:red", "k"]
-plt.rc('axes', prop_cycle=cycler.cycler(color=colors_))
+plt.rc('axes', prop_cycle=mpl.cycler(color=colors_))
 
 
 def pl_tx(axis, inp_list, comp, **kwargs):

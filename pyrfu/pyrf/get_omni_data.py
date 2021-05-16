@@ -17,7 +17,7 @@
 @author: Louis Richard
 """
 
-import requests
+import urllib
 import datetime
 import numpy as np
 import pandas as pd
@@ -96,8 +96,9 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     for variable in variables:
         vars_ = f"{vars_}&vars={var_omni_2[variable]:d}"
 
-    res = requests.get(f"{url_}{vars_}")
-    out = str(res.content)
+    with urllib.request.urlopen(f"{url_}{vars_}") as file:
+        out = str(file.read())
+
     idx_start, idx_end = [out.find("YEAR"), out.find("</pre>")]
 
     lines = out[idx_start:idx_end].split("\\n")[:-1]

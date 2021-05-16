@@ -17,7 +17,7 @@
 """
 
 import os
-import yaml
+import json
 import numpy as np
 import xarray as xr
 
@@ -353,10 +353,10 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     if ">" in flag:
         root_path = os.path.dirname(os.path.abspath(__file__))
-        file_name = "transformation_indices.yml"
+        file_name = "transformation_indices.json"
 
         with open(os.sep.join([root_path, file_name])) as file:
-            transformation_dict = yaml.load(file, Loader=yaml.FullLoader)
+            transformation_dict = json.load(file)
 
         tind = transformation_dict[flag]
 

@@ -16,21 +16,28 @@
 @author: Louis Richard
 """
 
-import os
 import warnings
-import yaml
 import numpy as np
 import xarray as xr
 
 from .feeps_remove_sun import feeps_remove_sun
 from .feeps_split_integral_ch import feeps_split_integral_ch
 
-energies_ = {"electrons": np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2,
-                                    146.5, 171.3, 200.2, 234.0, 273.4, 319.4,
-                                    373.2, 436.0, 509.2]),
-             "ions": np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6,
-                               205.1, 236.7, 273.2, 315.4, 363.8, 419.7,
-                               484.2, 558.6])}
+
+# Energy correction offsets
+e_corr = {"e": np.array([14.0, -1.0, -3.0, -3.0]),
+          "i": np.array([0.0, 0.0, 0.0, 0.0])}
+
+# Energy correction factor
+g_fact = {"e": np.array([1.0, 1.0, 1.0, 1.0]),
+          "i": np.array([0.84, 1.0, 1.0, 1.0])}
+
+energies_ = {"e": np.array([33.2, 51.90, 70.6, 89.4, 107.1, 125.2, 146.5,
+                            171.3, 200.2, 234.0, 273.4, 319.4, 373.2, 436.0,
+                            509.2]),
+             "i": np.array([57.9, 76.8, 95.4, 114.1, 133.0, 153.7, 177.6,
+                            205.1, 236.7, 273.2, 315.4, 363.8, 419.7, 484.2,
+                            558.6])}
 
 
 def calc_feeps_omni(inp_dataset):
@@ -51,14 +58,9 @@ def calc_feeps_omni(inp_dataset):
 
     var = inp_dataset.attrs
 
-    energies = energies_[var["dtype"]]
+    energies = energies_[var["dtype"][0].lower()]
 
-    # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "feeps_calibration.yml")) as file:
-        calibration = yaml.load(file, Loader=yaml.FullLoader)
-
-    energies += calibration["e_corr"][var["dtype"][0]][var["mmsId"]-1]
+    energies += e_corr[var["dtype"][0]][var["mmsId"]-1]
 
     # top_sensors = eyes['top']
     # bot_sensors = eyes['bottom']
@@ -96,7 +98,7 @@ def calc_feeps_omni(inp_dataset):
         warnings.simplefilter("ignore", category=RuntimeWarning)
         flux_omni = np.nanmean(d_all_eyes, axis=2)
 
-    flux_omni *= calibration["g_fact"][var["dtype"][0]][var["mmsId"]-1]
+    flux_omni *= g_fact[var["dtype"][0]][var["mmsId"]-1]
 
     out = xr.DataArray(flux_omni, coords=[inp_dataset_sun.time.data, energies],
                        dims=["time", "energy"],

@@ -16,7 +16,7 @@
 @author: Louis Richard
 """
 
-from dateutil import parser as date_parser
+from matplotlib import dates
 
 
 def span_tint(axs, tint, ymin=0, ymax=1, **kwargs):
@@ -56,8 +56,8 @@ def span_tint(axs, tint, ymin=0, ymax=1, **kwargs):
 
     """
     for axis in axs:
-        t_start, t_stop = [date_parser.parse(tint[0]),
-                           date_parser.parse(tint[1])]
+        t_start, t_stop = [dates.datestr2num(tint[0]),
+                           dates.datestr2num(tint[1])]
         axis.axvspan(t_start, t_stop, ymin, ymax, **kwargs)
 
     return axs
