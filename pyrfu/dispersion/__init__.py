@@ -17,3 +17,4 @@
 """
 
 from .one_fluid_dispersion import one_fluid_dispersion
+from .disp_surf_calc import disp_surf_calc
