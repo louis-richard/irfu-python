@@ -51,9 +51,9 @@ Magnetospheric MultiScale (MMS) mission.
 
 It is distributed under the open-source MIT license.
 
-Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
-
 .. end-marker-intro-do-not-remove
+
+Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
 
 
 Instalation
@@ -149,26 +149,15 @@ Dependencies
 
 The required dependencies are:
 
-- `astropy <https://www.astropy.org/>`_ >=4.0.0
-- `cycler <https://matplotlib.org/cycler/>`_ >=0.10.0
 - `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=0.3.20
-- `cython <https://cython.org>`_ >=0.29.21
 - `matplotlib <https://matplotlib.org>`_ >=3.2.1
 - `numba <http://numba.pydata.org>`_ >=0.52.0
 - `numpy <https://www.numpy.org>`_ >=1.18.1
-- `Pillow <https://python-pillow.org>`_ >=7.1.0
 - `pandas <https://pandas.pydata.org/>`_ >=1.0.3
-- `pyfftw <https://pyfftw.readthedocs.io/en/latest/>`_ >=0.12.0
-- `python-dateutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.1
-- `requests <https://requests.readthedocs.io/en/latest/>`_ >=2.23.0
 - `Sphinx <https://www.sphinx-doc.org/en/master/>`_ >=3.0.3
 - `scipy <https://scipy.org>`_ >=1.4.1
-- `seaborn <https://seaborn.pydata.org>`_ >=0.10.1
 - `setuptools <https://packaging.python.org/tutorials/installing-packages/>`_ >=47.3.1
-- `sfs <https://sfs-python.readthedocs.io>`_ >=0.5.0
-- `tqdm <https://pypi.org/project/tqdm/#documentation>`_ >=4.46.0
 - `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.15.0
-
 
 
 Testing dependencies are:
