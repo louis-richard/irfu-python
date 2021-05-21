@@ -84,7 +84,7 @@ def vdf_to_dpflux(vdf):
     tmp_data = np.reshape(data_r, tmp_data.shape)
 
     dpflux = vdf.copy()
-    dpflux.data.data = np.squeeze(tmp_data)
-    dpflux.attrs["UNITS"] = "1/(cm^2 s sr eV)"
+    dpflux.data.data = np.squeeze(tmp_data) * 1e3
+    dpflux.attrs["UNITS"] = "1/(cm^2 s sr keV)"
 
     return dpflux
