@@ -21,7 +21,6 @@ from .split_vs import split_vs
 from .list_files import list_files
 from .get_ts import get_ts
 from .get_dist import get_dist
-from .get_data import get_data
 from .db_get_ts import db_get_ts
 from .fk_power_spectrum_4sc import fk_power_spectrum_4sc
 from .lh_wave_analysis import lh_wave_analysis
@@ -39,7 +38,6 @@ from .feeps_spin_avg import feeps_spin_avg
 from .feeps_pitch_angles import feeps_pitch_angles
 from .calc_feeps_pad import calc_feeps_pad
 from .get_eis_allt import get_eis_allt
-from .get_eis_omni import get_eis_omni
 from .remove_idist_background import remove_idist_background
 from .psd_moments import psd_moments
 from .rotate_tensor import rotate_tensor
@@ -67,3 +65,9 @@ from .calc_hpca_anodes import calc_hpca_anodes
 from .spin_hpca_avg import spin_hpca_avg
 from .vdf_projection import vdf_projection
 from .vdf_elim import vdf_elim
+from .get_data import get_data
+from .eis_omni import eis_omni
+from .eis_spin_avg import eis_spin_avg
+from .eis_spec_combine_sc import eis_spec_combine_sc
+from .eis_combine_proton_spec import eis_combine_proton_spec
+

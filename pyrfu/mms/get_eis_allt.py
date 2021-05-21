@@ -22,7 +22,8 @@ from .list_files import list_files
 from .db_get_ts import db_get_ts
 
 
-def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True):
+def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True,
+                 data_path: str = ""):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all telescopes.
 
@@ -37,6 +38,8 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True):
         Index of the spacecraft.
     verbose : bool, optional
         Set to True to follow the loading. Default is True.
+    data_path : str
+        Path of MMS data.
 
     Returns
     -------
@@ -63,56 +66,26 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True):
 
     data_unit, data_type, specie, data_rate, data_lvl = tar_var.split("_")
 
-    var = {"mms_id": mms_id, "inst": "epd-eis",
-           "tmmode": data_rate, "lev": data_lvl}
+    pref = f"mms{mms_id:d}_epd_eis"
 
-    if data_type == "electronenergy":
-        if specie == "electron":
-            var["dtype"], var["specie"] = [data_type, specie]
+    var = {"mms_id": mms_id, "inst": "epd-eis", "dtype": data_type,
+           "tmmode": data_rate, "lev": data_lvl, "specie": specie,
+           "data_path": data_path}
 
-            pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_type}_{specie}"
-        else:
-            raise ValueError("invalid specie")
+    if data_rate == "brst":
+        pref = f"{pref}_{data_rate}"
 
-    elif data_type == "extof":
-        if specie == "proton":
-            var["dtype"], var["specie"] = [data_type, specie]
-
-            pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_type}_{specie}"
-        elif specie == "oxygen":
-            var["dtype"], var["specie"] = [data_type, specie]
-
-            pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_type}_{specie}"
-        elif specie == "alpha":
-            var["dtype"], var["specie"] = [data_type, specie]
-
-            pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_type}_{specie}"
-        else:
-            raise ValueError("invalid specie")
-
-    elif data_type == "phxtof":
-        if specie == "proton":
-            var["dtype"], var["specie"] = [data_type, specie]
-
-            pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_type}_{specie}"
-        elif specie == "oxygen":
-            var["dtype"], var["specie"] = [data_type, specie]
-
-            pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_type}_{specie}"
-        else:
-            raise ValueError("Invalid specie")
-    else:
-        raise ValueError("Invalid data type")
+    pref = f"{pref}_{data_type}"
 
     # EIS includes the version of the files in the cdfname need to read it
     # before.
-    files = list_files(tint, mms_id, var)
+    files = list_files(tint, mms_id, var, data_path=data_path)
 
     file_version = int(files[0].split("_")[-1][1])
     var["version"] = file_version
 
     if data_unit.lower() in ["flux", "counts", "cps"]:
-        suf = "P{:d}_{}_t".format(file_version, data_unit.lower())
+        suf = f"{specie}_P{file_version:d}_{data_unit.lower()}_t"
     else:
         raise ValueError("Invalid data unit")
 
@@ -124,14 +97,16 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True):
     # Names of the energy spectra in the CDF (one for each telescope)
     cdfnames = ["{}_{}{:d}".format(pref, suf, t) for t in range(6)]
 
-    outdict = {}
+    spin_nums = db_get_ts(dset_name, f"{pref}_spin", tint, data_path=data_path)
+
+    outdict = {"spin": spin_nums}
     for i, cdfname in enumerate(cdfnames):
         scope_key = f"t{i:d}"
 
-        if verbose:
-            print(f"Loading {cdfname}...")
-
-        outdict[scope_key] = db_get_ts(dset_name, cdfname, tint)
+        outdict[scope_key] = db_get_ts(dset_name, cdfname, tint,
+                                       data_path=data_path)
+        outdict[scope_key] = outdict[scope_key].rename({"time": "time",
+                                                        "Energy": "energy"})
 
     # Build Dataset
     out = xr.Dataset(outdict, attrs=var)
