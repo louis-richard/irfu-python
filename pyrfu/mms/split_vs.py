@@ -51,6 +51,21 @@ coordinate_systems = ["gse", "gsm", "dsl", "dbcs", "dmpa", "ssc", "bcs", "par"]
 data_lvls = ["ql", "sitl", "l1b", "l2a", "l2pre", "l2", "l3"]
 
 
+def _tensor_order(splitted_key):
+    param_low = splitted_key[0].lower()
+
+    if param_low in all_params_scalars or param_low in hpca_params_scalars:
+        tensor_order = 0
+    elif param_low in all_params_vectors or param_low in hpca_params_tensors:
+        tensor_order = 1
+    elif param_low in all_params_tensors:
+        tensor_order = 2
+    else:
+        raise ValueError(f"invalid PARAM : {param_low}")
+
+    return tensor_order
+
+
 def split_vs(var_str):
     r"""Parse the variable keys.
 
@@ -74,16 +89,7 @@ def split_vs(var_str):
 
     splitted_key = var_str.split("_")
 
-    param_low = splitted_key[0].lower()
-
-    if param_low in all_params_scalars or param_low in hpca_params_scalars:
-        tensor_order = 0
-    elif param_low in all_params_vectors or param_low in hpca_params_tensors:
-        tensor_order = 1
-    elif param_low in all_params_tensors:
-        tensor_order = 2
-    else:
-        raise ValueError(f"invalid PARAM : {splitted_key[0]}")
+    tensor_order = _tensor_order(splitted_key)
 
     coordinate_system = []
     idx = 0
