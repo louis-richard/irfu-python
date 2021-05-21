@@ -16,13 +16,20 @@
 @author: Louis Richard
 """
 
+import logging
+
 from ..pyrf import ts_append
 
 from .list_files import list_files
 from .get_ts import get_ts
 
+logging.captureWarnings(True)
+logging.basicConfig(format='%(asctime)s: %(message)s',
+                    datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
 
-def db_get_ts(dataset_name, cdf_name, tint, data_path: str = ""):
+
+def db_get_ts(dataset_name, cdf_name, tint, verbose: bool = True,
+              data_path: str = ""):
     r"""Get variable time series in the cdf file.
 
     Parameters
@@ -33,7 +40,9 @@ def db_get_ts(dataset_name, cdf_name, tint, data_path: str = ""):
         Name of the target field in cdf file.
     tint : array_like
         Time interval.
-    data_path : str, optional
+    verbose : bool, Optional
+        Status monitoring. Default is verbose = True
+    data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
 
     Returns
@@ -56,6 +65,9 @@ def db_get_ts(dataset_name, cdf_name, tint, data_path: str = ""):
         pass
 
     files = list_files(tint, probe, var, data_path=data_path)
+
+    if verbose:
+        logging.info(f"Loading {cdf_name}...")
 
     out = None
     for i, file in enumerate(files):
