@@ -41,6 +41,16 @@ def _print_frequencies(f_pe, f_ce, f_uh, f_lh, f_pp, f_cp, f_col):
     print(f"{'F_col':>5} = {f_col:>6.2E} Hz")
 
 
+def _print_lengths(l_d, l_e, l_i, rho_e, rho_p):
+    print("\nLengths: ")
+    print("*" * 11)
+    print(f"{'l_d':>5} = {l_d:>6.2E} m/s")
+    print(f"{'d_e':>5} = {l_e:>6.2E} m/s")
+    print(f"{'d_i':>5} = {l_i:>6.2E} m/s")
+    print(f"{'r_e':>5} = {rho_e:>6.2E} m/s")
+    print(f"{'r_p':>5} = {rho_p:>6.2E} m/s")
+
+
 def _print_velocities(v_a, v_ae, v_te, v_tp, v_ts):
     print("\nVelocities: ")
     print("*" * 11)
@@ -156,6 +166,7 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
     if verbose:
         _print_header()
         _print_frequencies(f_pe, f_ce, f_uh, f_lh, f_pp, f_cp, f_col)
+        _print_lengths(l_d, l_e, l_i, rho_e, rho_p)
         _print_velocities(v_a, v_ae, v_te, v_tp, v_ts)
         _print_other(n_d, eta, p_mag)
         _print_dimensionless(beta, gamma_e)
