@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import pdb
+
 # 3rd party imports
 import numpy as np
 
@@ -55,7 +57,7 @@ def remove_idist_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
 
     # Bulk velocity
     v_gse_i_new = v_gse_i.copy()
-    v_gse_i_new.data *= n_i / n_i_new
+    v_gse_i_new.data *= n_i.data[:, None] / n_i_new.data[:, None]
 
     # Pressure tensor
     p_gse_i_new = np.zeros(p_gse_i.shape)
