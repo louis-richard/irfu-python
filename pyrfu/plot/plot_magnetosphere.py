@@ -31,16 +31,17 @@ def plot_magnetosphere(ax, tint, colors: list = None):
 
     Parameters
     ----------
-    ax : axis
+    ax : matplotlib.pyplot.subplotsaxes
         Axis to plot.
-    tint : list
+    tint : list of str
         Time interval.
-    colors : list, optional
+    colors : list, Optional
         Colors of the magnetopause and the bow show.
+        Default use ["tab:blue", "tab:red"]
 
     Returns
     -------
-    ax : axis
+    ax : matplotlib.pyplot.subplotsaxes
         Axis.
 
     """

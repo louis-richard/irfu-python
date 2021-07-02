@@ -20,7 +20,7 @@ def plot_projection(axis, v_x, v_y, f_mat, vlim: float = 1e3,
 
     Parameters
     ----------
-    axis : axes
+    axis : matplotlib.pyplot.subplotsaxes
         Axis to plot.
     v_x : ndarray
         X axis velocity grid.

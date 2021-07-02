@@ -19,7 +19,8 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
+def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, min_freq: float = 10.,
+                     max_freq: float = 0., lowpass_b_xyz: float = 2.):
     r"""Calculates lower-hybrid wave properties from MMS data
 
     Parameters
@@ -34,6 +35,15 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
         Time series of the background magnetic field
     n_e : xarray.DataArray
         Time series of the number density
+    min_freq : float, Optional
+        Minimum frequency in the highpass filter for LH fluctuations.
+        Default is 10.
+    max_freq : float, Optional
+        Maximum frequency in the bandpass filter for LH fluctuations.
+        Default is 0 (highpass filter).
+    lowpass_b_xyz : float, Optional
+         Maximum frequency for low-pass filter of background magnetic
+         field (FGM)
 
     Returns
     -------
@@ -47,17 +57,6 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
         to fill
     corrs : ndarray
         to fill
-
-    Other Parameters
-    ----------------
-    lhfilt : float or int or list of float or list of int
-        Filter for LH fluctuations. For one element it is the minimum
-        frequency in the highpass filter. For two elements the fields are
-        bandpassed between the frequencies.
-
-    blpass : float or int
-        Set maximum frequency for low-pass filter of background magnetic
-        field (FGM)
 
     Examples
     --------
@@ -81,27 +80,6 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, **kwargs):
     >>> res = lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, **opt)
 
     """
-
-    # Default band passes
-    min_freq = 10
-    max_freq = 0
-    lowpass_b_xyz = 2
-
-    if "lhfilt" in kwargs:
-        if isinstance(kwargs["lhfilt"], (float, int)):
-            min_freq = kwargs["lhfilt"]
-        elif isinstance(kwargs["lhfilt"], (list, np.ndarray)) \
-                and kwargs["lhfilt"]:
-            min_freq = kwargs["lhfilt"][0]
-            max_freq = kwargs["lhfilt"][1]
-        else:
-            raise ValueError("lhfilt option not recognized")
-
-    if "blpass" in kwargs:
-        if isinstance(kwargs["blpass"], (float, int)):
-            lowpass_b_xyz = kwargs["blpass"]
-        else:
-            raise ValueError("blpass option not recognized")
 
     # Bandpass filter data
     b_xyz = filt(b_xyz, 0, lowpass_b_xyz, 5)

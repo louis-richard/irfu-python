@@ -39,7 +39,7 @@ from .psd_rebin import psd_rebin
 from .load_ancillary import load_ancillary
 from .vdf_omni import vdf_omni
 from .spectr_to_dataset import spectr_to_dataset
-from .psd2def import vdf_to_deflux
+from .psd2def import psd2def
 from .psd2dpf import psd2dpf
 from .dpf2psd import dpf2psd
 from .def2psd import def2psd
@@ -86,6 +86,7 @@ from .eis_pad_combine_sc import eis_pad_combine_sc
 from .eis_pad_spinavg import eis_pad_spinavg
 from .eis_proton_correction import eis_proton_correction
 from .eis_ang_ang import eis_ang_ang
+from .eis_skymap import eis_skymap
 from .eis_spec_combine_sc import eis_spec_combine_sc
 from .eis_spin_avg import eis_spin_avg
 from .get_eis_allt import get_eis_allt

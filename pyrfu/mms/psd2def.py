@@ -38,7 +38,7 @@ def _convert(vdf, mass_ratio):
     return out
 
 
-def vdf_to_deflux(vdf):
+def psd2def(vdf):
     r"""Changes units to differential energy flux.
 
     Parameters

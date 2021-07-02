@@ -45,63 +45,21 @@ def _pa_data_map(idx_maps, d_type, d_rate):
     return pa_data_map
 
 
-def feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
-              energy: list = None):
-    r"""Compute pitch angle distribution using FEEPS data.
-
-    Parameters
-    ----------
-    inp_dataset : xarray.Dataset
-        Energy spectrum of all eyes.
-    b_bcs : xarray.DataArray
-        Time series of the magnetic field in spacecraft coordinates.
-    bin_size : float, Optional
-        Width of the pitch angles bins. Default is 16.3636.
-    energy : array_like, Optional
-        Energy range of particles. Default is [70., 600.]
-
-    Returns
-    -------
-    pad : xarray.DataArray
-        Time series of the pitch angle distribution.
-
-    """
-
-    if energy is None:
-        energy = [70., 600.]
-
-    assert energy[0] > 32., "Please use a starting energy of 32 keV or above"
-
-    time = inp_dataset.time.data
-    attrs = inp_dataset.attrs
-    mms_id, d_type, d_rate = list(map(attrs.get, ["mmsId", "dtype", "tmmode"]))
-
-    assert d_rate in ["srvy", "brst"]
-    assert d_type in ["electron", "ion"]
-
-    # Account for angular response
-    dangresp = angular_repsonse[d_type]
-
-    n_pabins = int(180 / bin_size)
-    pa_bins = [180. * pa_bin / n_pabins for pa_bin in range(n_pabins + 1)]
-    pa_labels = [pa_bin  + bin_size / 2. for pa_bin in pa_bins[:-1]]
-
-    pitch_angles, idx_maps = feeps_pitch_angles(inp_dataset, b_bcs)
+def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
     pa_times = pitch_angles.time
     pa_data = pitch_angles.data
 
     trange = np.datetime_as_string(np.hstack([np.min(pa_times.data),
                                               np.max(pa_times.data)]), "ns")
 
-    eyes = feeps_active_eyes(attrs, list(trange), mms_id)
-
-    pa_data_map = _pa_data_map(idx_maps, d_type, d_rate)
+    eyes = feeps_active_eyes(inp_dataset.attrs, list(trange), mms_id)
 
     sensor_types = ["top", "bottom"]
 
     n_times = len(pa_times)
     n_top = len(pa_data_map[f"top-{d_type}"])
     n_bottom = len(pa_data_map[f"bottom-{d_type}"])
+
     dflux, dpa = [np.zeros([n_times, n_top + n_bottom]) for _ in range(2)]
 
     for s_type in sensor_types:
@@ -137,6 +95,14 @@ def feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
     # sensors loaded for this datatype/d_ratee
     dpa[dpa == 0] = "nan"
 
+    return dpa, dflux
+
+
+def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
+    n_pabins = len(pa_bins) - 1
+    # Account for angular response
+    dangresp = angular_repsonse[d_type]
+
     pa_flux = np.zeros([len(pa_times), int(n_pabins)])
     delta_pa = (pa_bins[1] - pa_bins[0]) / 2.0
 
@@ -148,8 +114,8 @@ def feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 ind = np.where(
-                    (dpa[pa_idx, :] + dangresp >= pa_labels[ipa]-delta_pa)
-                    & (dpa[pa_idx, :]-dangresp < pa_labels[ipa]+delta_pa))
+                    (dpa[pa_idx, :] + dangresp >= pa_labels[ipa] - delta_pa)
+                    & (dpa[pa_idx, :] - dangresp < pa_labels[ipa] + delta_pa))
 
                 if ind[0].size != 0:
                     if len(ind[0]) > 1:
@@ -159,6 +125,57 @@ def feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
                         pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0]]
 
     pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
+
+    return pa_flux
+
+
+def feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636,
+              energy: list = None):
+    r"""Compute pitch angle distribution using FEEPS data.
+
+    Parameters
+    ----------
+    inp_dataset : xarray.Dataset
+        Energy spectrum of all eyes.
+    b_bcs : xarray.DataArray
+        Time series of the magnetic field in spacecraft coordinates.
+    bin_size : float, Optional
+        Width of the pitch angles bins. Default is 16.3636.
+    energy : array_like, Optional
+        Energy range of particles. Default is [70., 600.]
+
+    Returns
+    -------
+    pad : xarray.DataArray
+        Time series of the pitch angle distribution.
+
+    """
+
+    if energy is None:
+        energy = [70., 600.]
+
+    assert energy[0] > 32., "Please use a starting energy of 32 keV or above"
+
+    time = inp_dataset.time.data
+    attrs = inp_dataset.attrs
+    mms_id, d_type, d_rate = list(map(attrs.get, ["mmsId", "dtype", "tmmode"]))
+
+    assert d_rate in ["srvy", "brst"]
+    assert d_type in ["electron", "ion"]
+
+    n_pabins = int(180 / bin_size)
+    pa_bins = [180. * pa_bin / n_pabins for pa_bin in range(n_pabins + 1)]
+    pa_labels = [pa_bin  + bin_size / 2. for pa_bin in pa_bins[:-1]]
+
+    pitch_angles, idx_maps = feeps_pitch_angles(inp_dataset, b_bcs)
+
+    pa_data_map = _pa_data_map(idx_maps, d_type, d_rate)
+
+    dpa, dflux = _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy,
+                            d_type, mms_id)
+
+    pa_flux = _pa_flux(pitch_angles.time, pa_bins, pa_labels, dpa, dflux,
+                       d_type)
 
     pad = xr.DataArray(pa_flux, coords=[time, pa_labels],
                        dims=["time", "theta"], attrs=attrs)

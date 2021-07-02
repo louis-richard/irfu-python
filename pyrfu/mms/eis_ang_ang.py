@@ -36,7 +36,7 @@ def _check_spin(spin):
 
 
 def eis_ang_ang(inp_allt, en_chan: list = None):
-    r"""Generates EIS skymap distribution.
+    r"""Generates EIS angle-angle distribution.
 
     Parameters
     ----------
@@ -108,12 +108,4 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
                                min_pol_edges + 90. / n_pol],
                        dims=["time", "energy", "phi", "theta"])
 
-    """
-    # to skymap
-    enr_ = np.tile(inp_allt.energy.data[en_chan], (len(time_data), 1))
-    phi_ = np.tile(min_azi_edges + 180. / n_azi, (len(time_data), 1))
-    the_ = min_pol_edges + 90. / n_pol
-
-    out = ts_skymap(time_data, out_data, enr_, phi_, the_)
-    """
     return out

@@ -26,7 +26,7 @@ def time_clip(inp, tint):
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : xarray.DataArray or xarray.Dataset
         Time series of the quantity to clip.
     tint : xarray.DataArray or ndarray or list
         Time interval can be a time series, a array of datetime64 or a list.
@@ -37,6 +37,22 @@ def time_clip(inp, tint):
         Time series of the time clipped input.
 
     """
+
+    if isinstance(inp, xr.Dataset):
+        coords_data = [inp[k] for k in filter(lambda x: x != "time", inp.dims)]
+        coords_data = [time_clip(inp.time, tint), *coords_data]
+        out_dict = {dim: coords_data[i] for i, dim in enumerate(inp.coords)}
+
+        for k in inp:
+            if "time" in list(inp[k].coords):
+                data = time_clip(inp[k], tint)
+                out_dict[k] = (list(inp[k].dims), data)
+            else:
+                out_dict[k] = (list(inp[k].dims), inp[k])
+
+        out = xr.Dataset(out_dict)
+        out.attrs = inp.attrs
+        return out
 
     if isinstance(tint, xr.DataArray):
         t_start, t_stop = tint.time.data[[0, -1]]

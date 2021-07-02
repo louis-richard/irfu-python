@@ -24,7 +24,7 @@ def plot_line(axis, inp, **kwargs):
 
     Parameters
     ----------
-    axis : to fill
+    axis : matplotlib.pyplot.subplotsaxes
         Axis
     inp : xarray.DataArray
         Time series to plot

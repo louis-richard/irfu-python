@@ -28,12 +28,8 @@ def vdf_omni(vdf):
 
     Returns
     -------
-    out : xarray.Dataset
-        Time series of the omnidirectional velocity distribution function
-        with :
-            * time : Time samples.
-            * data : Omnidirectional velocity distribution.
-            * energy : Energy levels.
+    out : xarray.DataArray
+        Time series of the omnidirectional velocity distribution function.
 
     """
 
