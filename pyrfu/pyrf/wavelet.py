@@ -31,7 +31,7 @@ def _scales(f_range, f_nyq, f_s, n_freqs, linear_df, delta_f):
         scales = f_nyq / (np.linspace(f_range[0], f_range[1], scale_number))
     else:
         scale_min = np.log10(.5 * f_s / f_range[1])
-        scale_max = np.log10(.5 * f_s / f_range[1])
+        scale_max = np.log10(.5 * f_s / f_range[0])
         scales = np.logspace(scale_min, scale_max, n_freqs)
 
     return scales
@@ -169,7 +169,6 @@ def wavelet(inp, f_range: list = None, n_freqs: int = 200,
                 power2[:censure[j], j] = np.nan
 
                 power2[len(data_col) - censure[j]:len(data_col), j] = np.nan
-
         if len(inp.shape) == 2:
             out_dict[inp.comp.data[i]] = (["time", "frequency"], power2)
 

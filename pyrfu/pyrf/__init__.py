@@ -44,6 +44,7 @@ from .filt import filt
 from .medfilt import medfilt
 from .movmean import movmean
 from .wavelet import wavelet
+from .compress_cwt import compress_cwt
 from .mva import mva
 from .vht import vht
 from .new_xyz import new_xyz
