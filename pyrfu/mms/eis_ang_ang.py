@@ -8,9 +8,6 @@ import itertools
 import numpy as np
 import xarray as xr
 
-# Local imports
-from ..pyrf import ts_skymap
-
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
@@ -67,7 +64,7 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
     for i, scope in enumerate(scopes):
         d_ = inp_allt[f"look_{scope}"]
         # Domain [-180,180], 0 = sunward (GSE)
-        azi_[i, :] = np.rad2deg(np.arctan(d_.data[:, 0] / d_.data[:, 1]))
+        azi_[i, :] = np.rad2deg(np.arctan2(d_.data[:, 1], d_.data[:, 0]))
         # Domain [-90,90], Positive is look direction northward
         pol_[i, :] = 90. - np.rad2deg(np.arccos(d_[:, 2]))
 

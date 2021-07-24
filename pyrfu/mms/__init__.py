@@ -78,14 +78,15 @@ from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 from .get_feeps_alleyes import get_feeps_alleyes
 
 # Energetic Ion Spectrometer (EIS)
+from .eis_ang_ang import eis_ang_ang
 from .eis_combine_proton_pad import eis_combine_proton_pad
 from .eis_combine_proton_spec import eis_combine_proton_spec
+from .eis_moments import eis_moments
 from .eis_omni import eis_omni
 from .eis_pad import eis_pad
 from .eis_pad_combine_sc import eis_pad_combine_sc
 from .eis_pad_spinavg import eis_pad_spinavg
 from .eis_proton_correction import eis_proton_correction
-from .eis_ang_ang import eis_ang_ang
 from .eis_skymap import eis_skymap
 from .eis_spec_combine_sc import eis_spec_combine_sc
 from .eis_spin_avg import eis_spin_avg

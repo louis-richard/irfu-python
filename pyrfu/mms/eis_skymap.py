@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # 3rd party imports
 import numpy as np
@@ -6,6 +8,13 @@ import numpy as np
 from ..pyrf import ts_skymap
 
 from .dpf2psd import dpf2psd
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2021"
+__license__ = "MIT"
+__version__ = "2.3.7"
+__status__ = "Prototype"
 
 
 def eis_skymap(inp_ang_ang, to_psd: bool = True):
@@ -34,7 +43,7 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     phi_ = np.tile(inp_ang_ang.phi.data, (len(time_data), 1))
     the_ = inp_ang_ang.theta.data
 
-    out = ts_skymap(time_data, inp_ang_ang.data, enr_, phi_, the_)
+    out = ts_skymap(time_data, inp_ang_ang.data / 6, enr_, phi_, the_)
     out.attrs["species"] = "ions"
     out.attrs["UNITS"] = "1/(cm^2 s sr keV)"
 
@@ -42,6 +51,5 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
 
     if to_psd:
         out = dpf2psd(out)
-
 
     return out

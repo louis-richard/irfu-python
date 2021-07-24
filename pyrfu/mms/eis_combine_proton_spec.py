@@ -163,7 +163,8 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     dp_phxtof, dm_phxtof = _get_energy_dplus_dminus(phxtof_allt, data_path)
     dp_extof, dm_extof = _get_energy_dplus_dminus(extof_allt, data_path)
 
-    out_dict = {}
+    out_keys = list(filter(lambda x: x not in scopes_extof, extof_allt))
+    out_dict = {k: extof_allt[k] for k in out_keys}
 
     for scope in scopes_phxtof:
         proton_phxtof = phxtof_allt[scope]
@@ -191,10 +192,10 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         comb_en, comb_en_low, comb_en_hig = [np.zeros(n_en) for _ in range(3)]
 
         comb_array = np.zeros((len(time_data), n_en))
-        comb_array[:, 0:n_phxtof] = phxtof_data[:, idx_phxtof]
-        comb_en[0:n_phxtof] = en_phxtof[idx_phxtof]
-        comb_en_low[0:n_phxtof] = comb_en[0:n_phxtof] - dm_phxtof[idx_phxtof]
-        comb_en_hig[0:n_phxtof] = comb_en[0:n_phxtof] + dp_phxtof[idx_phxtof]
+        comb_array[:, :n_phxtof] = phxtof_data[:, idx_phxtof]
+        comb_en[:n_phxtof] = en_phxtof[idx_phxtof]
+        comb_en_low[:n_phxtof] = comb_en[:n_phxtof] - dm_phxtof[idx_phxtof]
+        comb_en_hig[:n_phxtof] = comb_en[:n_phxtof] + dp_phxtof[idx_phxtof]
 
         for (i, i_phx), i_ex in zip(enumerate(idx_phxtof_cross),
                                     idx_extof_cross):

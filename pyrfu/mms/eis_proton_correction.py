@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -56,8 +57,21 @@ def eis_proton_correction(flux_eis):
 
     eis_corr = np.hstack([phxtof_corr, extof_corr])
 
-    # Apply correction to omni-directional energy spectrum
-    flux_eis_corr = flux_eis.copy()
-    flux_eis_corr.data *= eis_corr
+    if isinstance(flux_eis, xr.Dataset):
+        scopes_eis = list(filter(lambda x: x[0] == "t", flux_eis))
+        out_keys = list(filter(lambda x: x not in scopes_eis, flux_eis))
+        out_dict = {k: flux_eis[k] for k in out_keys}
+
+        for scope in scopes_eis:
+            out_dict[scope] = flux_eis[scope].copy()
+            out_dict[scope].data *= eis_corr
+
+        flux_eis_corr = xr.Dataset(out_dict)
+    elif isinstance(flux_eis, xr.DataArray):
+        # Apply correction to omni-directional energy spectrum
+        flux_eis_corr = flux_eis.copy()
+        flux_eis_corr.data *= eis_corr
+    else:
+        raise TypeError("flux_eis must be a Dataset or a DataArray")
 
     return flux_eis_corr

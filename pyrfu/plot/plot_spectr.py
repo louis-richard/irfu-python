@@ -17,7 +17,7 @@ plt.style.use("seaborn-ticks")
 
 
 def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
-                clim: list = None, cmap: str = "", cbar: bool = True,
+                clim: list = None, cmap: str = "", colorbar: bool = True,
                 **kwargs):
     r"""Plot a spectrogram using pcolormesh.
 
@@ -35,7 +35,7 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
         C-axis bounds. Default is None (autolim).
     cmap : str, Optional
         Colormap. Default is "jet".
-    cbar : bool, Optional
+    colorbar : bool, Optional
         Flag for colorbar. Set to False to hide.
 
     Other Parameters
@@ -50,7 +50,7 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
     axs : matplotlib.pyplot.subplotsaxes
         Axis with spectrum.
     caxs : matplotlib.pyplot.subplotsaxes
-        Only if cbar is True.
+        Only if colorbar is True.
 
     """
 
@@ -88,7 +88,7 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
     if yscale == "log":
         axis.set_yscale("log")
 
-    if cbar:
+    if colorbar:
         if kwargs.get("pad"):
             pad = kwargs["pad"]
         else:

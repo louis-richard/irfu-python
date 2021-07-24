@@ -10,6 +10,13 @@ from scipy import constants
 # Local imports
 from .spectr_to_dataset import spectr_to_dataset
 
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2021"
+__license__ = "MIT"
+__version__ = "2.3.7"
+__status__ = "Prototype"
+
 
 def _mass_ratio(inp):
     if inp.attrs["species"] in ["ions", "i"]:
@@ -24,7 +31,7 @@ def _mass_ratio(inp):
 
 def _convert(inp, mass_ratio):
     if inp.attrs["UNITS"] == "1/(cm^2 s sr keV)":
-        tmp_data = inp.data.data / 1e12 * 0.53707 * mass_ratio ** 2
+        tmp_data = inp.data.data * 1e-3 / 1e12 * 0.53707 * mass_ratio ** 2
     else:
         raise ValueError("Invalid unit")
 
