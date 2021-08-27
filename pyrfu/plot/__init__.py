@@ -17,7 +17,7 @@ from .zoom import zoom
 from .colorbar import colorbar
 from .make_labels import make_labels
 from .pl_tx import pl_tx
-from .set_rlabel import set_rlabel
+from .add_position import add_position
 from .plot_magnetosphere import plot_magnetosphere
 from .plot_projection import plot_projection
 from .plot_surf import plot_surf

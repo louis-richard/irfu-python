@@ -17,8 +17,8 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def set_rlabel(ax, r_xyz, spine: float = 20, position: str = "top",
-               fontsize: float = 10):
+def add_position(ax, r_xyz, spine: float = 20, position: str = "top",
+                 fontsize: float = 10):
     r"""Add extra axes to plot spacecraft position.
 
     Parameters
