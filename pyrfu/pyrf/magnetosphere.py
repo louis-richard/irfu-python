@@ -65,7 +65,9 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
         r_zero = _rzero(d_p, b_z)
         alpha_ = _alpha(d_p, b_z)
 
-        r_ = r_zero * (2. / (1 + np.cos(theta_))) ** alpha_
+        with np.errstate(divide='ignore'):
+            r_ = r_zero * (2. / (1 + np.cos(theta_))) ** alpha_
+
         x_ = r_ * np.cos(theta_)
         y_ = r_ * np.sin(theta_)
         y_ = y_[abs(x_) < 100]
