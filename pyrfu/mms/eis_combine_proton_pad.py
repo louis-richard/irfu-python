@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import warnings
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -18,8 +21,31 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
+def _despin(inp, spin_nums):
+    spin_starts = np.where(spin_nums[1:] > spin_nums[:-1])[0]
+    time_rec = inp.time.data[spin_starts]
+
+    pad_ds = np.zeros([len(spin_starts), len(inp.theta), len(inp.energy)])
+
+    c_strt = 0
+
+    for i, spin_strt in enumerate(spin_starts):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            pad_ds[i, :, :] = np.nanmean(inp.data[c_strt:spin_strt + 1, :, :],
+                                         axis=0)
+        c_strt = spin_strt + 1
+
+    out = xr.DataArray(pad_ds,
+                       coords=[time_rec, inp.theta.data, inp.energy.data],
+                       dims=["time", "theta", "energy"])
+
+    return out
+
+
 def eis_combine_proton_pad(phxtof_allt, extof_allt, vec: xr.DataArray = None,
-                           energy: list = None, pa_width: int = 15):
+                           energy: list = None, pa_width: int = 15,
+                           despin: bool = False):
     r"""Combines EPD-EIS Energy by Time Of Flight (ExTOF) and Pulse Height by
     Time Of Flight (PHxTOF) proton Pitch-Angle Distributions (PADs).
 
@@ -38,6 +64,8 @@ def eis_combine_proton_pad(phxtof_allt, extof_allt, vec: xr.DataArray = None,
         Energy range to include in the calculation. Default is [55, 800].
     pa_width : int, Optional
         Size of the pitch angle bins, in degrees. Default is 15.
+    despin : bool, Optional
+        Remove spintone. Default is False.
 
     Returns
     -------
@@ -120,12 +148,19 @@ def eis_combine_proton_pad(phxtof_allt, extof_allt, vec: xr.DataArray = None,
     l_ = len(phxtof_pad.energy.data) + len(extof_taren)
     proton_pad[..., r_:l_] = extof_pad_data[..., extof_taren]
 
+    """
     energy = np.hstack([phxtof_pad.energy.data[phxtof_taren],
                         (phxtof_pad.energy.data[phxtof_taren_cross]
                          + extof_pad.energy.data[extof_taren_cross]) / 2,
                         extof_pad.energy.data[extof_taren]])
+    """
+
+    energy = proton_combined_spec.energy.data[cond_]
 
     out = xr.DataArray(proton_pad, coords=[time_data, pa_label, energy],
                        dims=["time", "theta", "energy"])
+
+    if despin:
+        out = _despin(out, phxtof_allt.spin.data)
 
     return out
