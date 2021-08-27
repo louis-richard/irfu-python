@@ -255,6 +255,7 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
                    "Degree of parallelity E": e_z / e_tot,
                    "Degree of parallelity B": np.sqrt(
                        b_z * np.conj(b_z)) / b_tot,
+                   "W_E/W_B": np.log10(e_tot ** 2 / b_tot ** 2),
                    "Ellipticity E": e_pol, "Ellipticity B": b_pol,
                    "E_part/E_field": np.log10(ratio_part_field),
                    "v_g": np.sqrt(v_x ** 2 + v_z ** 2),
