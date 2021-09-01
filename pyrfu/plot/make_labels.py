@@ -34,9 +34,15 @@ def make_labels(axs, pos, pad: float = 0):
     lbl = string.ascii_lowercase[pad:len(axs) + pad]
 
     for label, axis in zip(lbl, axs):
-        axis.text(pos[0], pos[1], "({})".format(label),
-                  transform=axis.transAxes,
-                  bbox=dict(boxstyle="square", ec=(1., 1., 1.),
-                            fc=(1., 1., 1.)))
+        if "proj" in axis.properties():
+            axis.text2D(pos[0], pos[1], "({})".format(label),
+                        transform=axis.transAxes,
+                        bbox=dict(boxstyle="square", ec=(1., 1., 1.),
+                                  fc=(1., 1., 1.)))
+        else:
+            axis.text(pos[0], pos[1], "({})".format(label),
+                      transform=axis.transAxes,
+                      bbox=dict(boxstyle="square", ec=(1., 1., 1.),
+                                fc=(1., 1., 1.)))
 
     return axs
