@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import logging
+
 # 3rd party imports
 import numpy as np
 
@@ -13,6 +16,12 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+
+logging.captureWarnings(True)
+logging.basicConfig(format='%(asctime)s: %(message)s',
+                    datefmt='%d-%b-%y %H:%M:%S',
+                    level=logging.INFO)
 
 
 def vdf_elim(vdf, e_int):
