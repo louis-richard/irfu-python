@@ -67,17 +67,22 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True,
            "tmmode": data_rate, "lev": data_lvl, "specie": specie,
            "data_path": data_path}
 
-    if data_rate == "brst":
-        pref = f"{pref}_{data_rate}"
-
-    pref = f"{pref}_{data_type}"
-
     # EIS includes the version of the files in the cdfname need to read it
     # before.
     files = list_files(tint, mms_id, var, data_path=data_path)
 
     file_version = int(files[0].split("_")[-1][1])
     var["version"] = file_version
+
+    if int(files[0].split("_")[-1][3]) >= 1:
+        pref = f"{pref}_{data_rate}_{data_lvl}_{data_type}"
+        if specie == "alpha":
+            specie = "helium"
+    else:
+        if data_rate == "brst":
+            pref = f"{pref}_{data_rate}_{data_type}"
+        else:
+            pref = f"{pref}_{data_type}"
 
     if data_unit.lower() in ["flux", "counts", "cps"]:
         suf = f"{specie}_P{file_version:d}_{data_unit.lower()}_t"
