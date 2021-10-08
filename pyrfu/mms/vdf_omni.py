@@ -40,7 +40,7 @@ def vdf_omni(vdf):
     dangle = np.pi / vdf.theta.shape[0]
     np_phi = vdf.phi.shape[1]
 
-    sine_theta = np.ones((np_phi, 1)) * np.sin(thetas * np.pi / 180)
+    sine_theta = np.ones((np_phi, 1)) * np.sin(np.deg2rad(thetas))
     solid_angles = dangle * dangle * sine_theta
     all_solid_angles = np.tile(solid_angles,
                                (len(time), energy.shape[1], 1, 1))
