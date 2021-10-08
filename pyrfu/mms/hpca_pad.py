@@ -71,8 +71,8 @@ def hpca_pad(vdf, saz, aze, b_xyz, elim=None):
 
     # 2. set tint and TLIM(dist & startaz)
     n_start_az = np.where(saz.data == 0)[0][0]
-    start_time_match = aze.time.data[0].view("i8") - vdf.time.data[
-        n_start_az].view("i8")
+    start_time_match = aze.time.data[0].view("i8")
+    start_time_match -= vdf.time.data[n_start_az].view("i8")
 
     if start_time_match < 1e6:
         warnings.warn("start times of aze and vdf match.", UserWarning)
@@ -86,7 +86,7 @@ def hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     else:
         raise ValueError("stop times of aze and vdf don't match!")
 
-    tint_ = [saz.time.data[n_start_az - 1], saz.time.data[n_stop_az]]
+    tint_ = [saz.time.data[n_start_az], saz.time.data[n_stop_az]]
     tint_ = [np.datetime_as_string(time, "ns") for time in tint_]
 
     vdf = time_clip(vdf, tint_)
