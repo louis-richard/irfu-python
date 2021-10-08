@@ -3,10 +3,18 @@
 
 # Built-in imports
 import os
+import subprocess
 
 # Local imports
 from .mms_config import CONFIG
 from .list_files import list_files
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2021"
+__license__ = "MIT"
+__version__ = "2.3.7"
+__status__ = "Prototype"
 
 
 def copy_files(var, tint, mms_id, target_dir: str = "./data/"):
@@ -41,6 +49,12 @@ def copy_files(var, tint, mms_id, target_dir: str = "./data/"):
         if not os.path.exists(path):
             os.makedirs(path)
 
-        os.popen('cp {} {}'.format(file, target_file))
+        p = subprocess.Popen(f"cp {file} {target_file}",
+                             stdout=subprocess.PIPE,
+                             shell=True)
+        (_, _) = p.communicate()
+
+        # This makes the wait possible
+        _ = p.wait()
 
     return
