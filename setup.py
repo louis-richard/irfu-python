@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import pathlib
 
 from setuptools import setup, find_packages
@@ -38,7 +39,7 @@ INSTALL_REQUIRES = [
       "scipy",
       "xarray"]
 
-PYTHON_REQUIRES = '>=3.7, <=3.9'
+PYTHON_REQUIRES = '>=3.7'
 
 
 cmdclass = {'build_sphinx': BuildDoc}
