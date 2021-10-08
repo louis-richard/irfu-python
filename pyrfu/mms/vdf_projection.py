@@ -65,7 +65,7 @@ def _init(vdf, tint):
     theta = vdf.theta
     polar = np.deg2rad(theta)
     azimuthal = np.deg2rad(phi)
-    step_table = vdf.attrs.get("esteptable", None)
+    step_table = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
 
     energy0 = vdf.attrs.get("energy0", vdf.energy.data[0, :])
     energy1 = vdf.attrs.get("energy1", vdf.energy.data[1, :])
@@ -97,7 +97,7 @@ def _init(vdf, tint):
         step_table = time_clip(step_table, tint)
         azimuthal = time_clip(azimuthal, tint)
 
-        if len(dist.time) > 1 and all(energy0 != energy1):
+        if len(dist.time) > 1 and list(energy0) != list(energy1):
             print("notice: Rebinning distribution.")
             temp = ts_skymap(dist.time.data, dist, time_clip(vdf.energy, tint),
                              np.rad2deg(azimuthal), theta)
