@@ -16,7 +16,7 @@ __status__ = "Prototype"
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "2.3.7"
+VERSION = "2.3.8"
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
