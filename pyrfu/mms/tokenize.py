@@ -30,7 +30,7 @@ all_params_tensors = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te",
 hpca_params_scalars = ["nhplus", "nheplus", "nheplusplus", "noplus",
                        "tshplus", "tsheplus", "tsheplusplus", "tsoplus",
                        "dpfhplus", "dpfheplus", "dpfheplusplus",
-                       "dpfoplus", "phase", "adcoff", "saz"]
+                       "dpfoplus", "phase", "adcoff", "saz", "azimuth"]
 
 hpca_params_tensors = ["vhplus", "vheplus", "vheplusplus", "voplus",
                        "phplus", "pheplus", "pheplusplus", "poplus",
