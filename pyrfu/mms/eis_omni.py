@@ -57,5 +57,7 @@ def eis_omni(eis_allt):
 
     flux_omni.data /= len(scopes)
     flux_omni.name = "flux_omni"
+    flux_omni.attrs["energy_dplus"] = eis_allt.energy_dplus.data
+    flux_omni.attrs["energy_dminus"] = eis_allt.energy_dminus.data
 
     return flux_omni
