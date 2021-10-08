@@ -16,6 +16,10 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
+def _idx_closest(lst0, lst1):
+    return [(np.abs(np.asarray(lst0) - k)).argmin() for k in lst1]
+
+
 def eis_spec_combine_sc(omni_vars):
     r"""Combines omni-directional energy spectrogram variable from EIS on
     multiple MMS spacecraft.
@@ -76,16 +80,14 @@ def eis_spec_combine_sc(omni_vars):
     omni_spec = np.empty([nt_ref, ne_ref])
     omni_spec[:] = np.nan
 
-    energy_data = np.zeros([ne_ref, len(omni_vars)])
-    common_energy = np.zeros(ne_ref)
+    # energy_data = np.zeros([ne_ref, len(omni_vars)])
 
     # Average omni flux over all spacecraft and define common energy grid
     for pp, flux_ in enumerate(omni_vars):
-        energy_data[:, pp] = flux_.energy.data[0:ne_ref]
-        omni_spec_data[0:nt_ref, :, pp] = flux_.data[0:nt_ref, 0:ne_ref]
-
-    for ee in range(len(common_energy)):
-        common_energy[ee] = np.nanmean(energy_data[ee, :], axis=0)
+        idx_closest = _idx_closest(flux_.energy.data,
+                                   ener_refprobe.energy.data)
+        # energy_data[:, pp] = flux_.energy.data[0:ne_ref]
+        omni_spec_data[0:nt_ref, :, pp] = flux_.data[0:nt_ref, idx_closest]
 
     # Average omni flux over all spacecraft
     for tt, ee in itertools.product(range(nt_ref), range(ne_ref)):
@@ -95,5 +97,7 @@ def eis_spec_combine_sc(omni_vars):
                              coords=[time_refprobe.time.data,
                                      ener_refprobe.energy.data],
                              dims=["time", "energy"])
+    omni_spec.attrs["energy_dplus"] = ener_refprobe.attrs["energy_dplus"]
+    omni_spec.attrs["energy_dminus"] = ener_refprobe.attrs["energy_dminus"]
 
     return omni_spec
