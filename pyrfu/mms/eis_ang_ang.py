@@ -105,4 +105,7 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
                                min_pol_edges + 90. / n_pol],
                        dims=["time", "energy", "phi", "theta"])
 
+    out.attrs["energy_dminus"] = inp_allt.energy_dminus.data
+    out.attrs["energy_dplus"] = inp_allt.energy_dplus.data
+
     return out
