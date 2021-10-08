@@ -61,7 +61,7 @@ def cart2sph_ts(inp, direction_flag: int = 1):
         theta = np.rad2deg(np.arctan2(inp.data[:, 2], np.sqrt(xy2)))
         phi = np.rad2deg(np.arctan2(inp.data[:, 1], inp.data[:, 0]))
 
-        out_data = np.hstack([r_data, theta, phi])
+        out_data = np.transpose(np.vstack([r_data, theta, phi]))
 
     out = ts_vec_xyz(inp.time.data, out_data, inp.attrs)
 
