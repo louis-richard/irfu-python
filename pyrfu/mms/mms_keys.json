@@ -626,11 +626,23 @@
       "dtype": "moments",
       "cdf_name": "hpca_oplus_ion_bulk_velocity"
     },
+    "voplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_ion_bulk_velocity"
+    },
     "vheplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplus_ion_bulk_velocity"
     },
+    "vheplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_ion_bulk_velocity"
+    },
     "vheplusplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_ion_bulk_velocity"
+    },
+    "vheplusplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplusplus_ion_bulk_velocity"
     },
@@ -646,11 +658,23 @@
       "dtype": "moments",
       "cdf_name": "hpca_oplus_temperature_tensor"
     },
+    "toplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_temperature_tensor"
+    },
     "theplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplus_temperature_tensor"
     },
+    "theplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_temperature_tensor"
+    },
     "theplusplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_temperature_tensor"
+    },
+    "theplusplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplusplus_temperature_tensor"
     },
