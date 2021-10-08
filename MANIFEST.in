@@ -15,3 +15,6 @@ include pyrfu/models/*.csv
 
 # include the PYRF configuration files JSON
 include pyrfu/pyrf/*.json
+
+# include IRF logo
+include pyrfu/plot/logo/*.jpg
