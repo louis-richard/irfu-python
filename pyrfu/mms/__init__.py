@@ -1,20 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# MIT License
-#
-# Copyright (c) 2020 Louis Richard
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so.
-
-"""__init__.py
-@author: Louis Richard
-"""
 
 # @Louis Richard
 from .tokenize import tokenize
@@ -52,6 +37,7 @@ from .vdf_elim import vdf_elim
 from .get_data import get_data
 from .get_variable import get_variable
 from .db_get_variable import db_get_variable
+from .make_model_kappa import make_model_kappa
 
 # Hot Plasma Composition Analyser (HPCA)
 from .get_hpca_dist import get_hpca_dist
@@ -81,6 +67,7 @@ from .get_feeps_alleyes import get_feeps_alleyes
 from .eis_ang_ang import eis_ang_ang
 from .eis_combine_proton_pad import eis_combine_proton_pad
 from .eis_combine_proton_spec import eis_combine_proton_spec
+# from .eis_correlation import eis_correlation
 from .eis_moments import eis_moments
 from .eis_omni import eis_omni
 from .eis_pad import eis_pad
@@ -88,7 +75,15 @@ from .eis_pad_combine_sc import eis_pad_combine_sc
 from .eis_pad_spinavg import eis_pad_spinavg
 from .eis_proton_correction import eis_proton_correction
 from .eis_skymap import eis_skymap
+from .eis_skymap_combine_sc import eis_skymap_combine_sc
 from .eis_spec_combine_sc import eis_spec_combine_sc
 from .eis_spin_avg import eis_spin_avg
 from .get_eis_allt import get_eis_allt
+from .eis_combine_proton_skymap import eis_combine_proton_skymap
 
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2021"
+__license__ = "MIT"
+__version__ = "2.3.7"
+__status__ = "Prototype"

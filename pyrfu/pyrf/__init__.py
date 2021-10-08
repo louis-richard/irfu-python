@@ -1,19 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# MIT License
-#
-# Copyright (c) 2020 Louis Richard
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so.
-
-"""__init__.py
-@author: Louis Richard"""
 
 # @Louis Richard
 from .ts_time import ts_time
@@ -108,3 +94,11 @@ from .iplasma_calc import iplasma_calc
 from .match_phibe_dir import match_phibe_dir
 from .match_phibe_v import match_phibe_v
 from .get_omni_data import get_omni_data
+from .estimate import estimate
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2021"
+__license__ = "MIT"
+__version__ = "2.3.7"
+__status__ = "Prototype"
