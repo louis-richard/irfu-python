@@ -78,9 +78,9 @@ def make_model_kappa(vdf, n, v_xyz, t, kappa: float = 7.):
 
         # Construct velocities matrix
         en_mat, theta_mat, phi_mat = np.meshgrid(energies, theta, phi)
-        v_x_hat = np.cos(np.deg2rad(theta_mat)) * np.cos(np.deg2rad(phi_mat))
-        v_y_hat = np.cos(np.deg2rad(theta_mat)) * np.sin(np.deg2rad(phi_mat))
-        v_z_hat = np.sin(np.deg2rad(theta_mat))
+        v_x_hat = np.sin(np.deg2rad(theta_mat)) * np.cos(np.deg2rad(phi_mat))
+        v_y_hat = np.sin(np.deg2rad(theta_mat)) * np.sin(np.deg2rad(phi_mat))
+        v_z_hat = np.cos(np.deg2rad(theta_mat))
         v_mag = _thermal_velocity(en_mat, vdf.attrs["species"])
         v_mat = np.stack([v_mag * v_x_hat, v_mag * v_y_hat, v_mag * v_z_hat])
 
