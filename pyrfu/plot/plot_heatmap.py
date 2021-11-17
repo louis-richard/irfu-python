@@ -4,6 +4,8 @@
 # 3rd party imports
 import numpy as np
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
@@ -48,8 +50,12 @@ def plot_heatmap(ax, data, row_labels, col_labels, cbar_kw: dict = None,
 
     im = ax.imshow(data, **kwargs)
 
+    divider = make_axes_locatable(ax)
+
+    colorbar_axes = divider.append_axes("right", size="2%", pad=.1)
+
     # Create colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    cbar = ax.figure.colorbar(im, ax=ax, cax=colorbar_axes, **cbar_kw)
     cbar.ax.set_ylabel(cbarlabel)
 
     # We want to show all ticks...

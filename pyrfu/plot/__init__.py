@@ -19,6 +19,7 @@ from .plot_sitl_overview import plot_sitl_overview
 from .plot_ang_ang import plot_ang_ang
 from .plot_heatmap import plot_heatmap
 from .annotate_heatmap import annotate_heatmap
+from .plot_reduced_2d import plot_reduced_2d
 
 
 __author__ = "Louis Richard"
