@@ -38,7 +38,7 @@ from .get_data import get_data
 from .get_variable import get_variable
 from .db_get_variable import db_get_variable
 from .make_model_kappa import make_model_kappa
-
+from .vdf_reduce import *
 # Hot Plasma Composition Analyser (HPCA)
 from .get_hpca_dist import get_hpca_dist
 from .hpca_calc_anodes import hpca_calc_anodes
