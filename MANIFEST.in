@@ -1,8 +1,11 @@
 # Include the README
-include *.md
+include README.rst
 
 # Include the license file
-include LICENSE.txt
+include LICENCE.txt
+
+# include IRF logo
+include pyrfu/plot/logo/IRF_logo_blue_on_white.jpg
 
 # include the MMS configuration files JSON
 include pyrfu/mms/*.json
@@ -15,6 +18,3 @@ include pyrfu/models/*.csv
 
 # include the PYRF configuration files JSON
 include pyrfu/pyrf/*.json
-
-# include IRF logo
-include pyrfu/plot/logo/*.jpg
