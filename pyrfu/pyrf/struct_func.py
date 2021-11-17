@@ -18,7 +18,7 @@ def struct_func(inp, scales, order):
 
     .. math::
 
-       y= \\frac{1}{N-s}\\sum_{i=1}^{N-s}(x_i - x_{i+s})^o
+       y= \frac{1}{N-s}\sum_{i=1}^{N-s}(x_i - x_{i+s})^o
 
     where :math:`s` is the scale, and :math:`o` is the order.
 

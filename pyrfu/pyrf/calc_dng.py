@@ -17,8 +17,8 @@ def calc_dng(p_xyz):
 
     .. math::
 
-        D_{ng} = \\frac{\\sqrt{8 (P_{12}^2 + P_{13}^2 + P_{23}^2)}}
-        {P_\\parallel + 2 P_\\perp}
+        D_{ng} = \frac{\sqrt{8 (P_{12}^2 + P_{13}^2 + P_{23}^2)}}
+        {P_\parallel + 2 P_\perp}
 
 
     Parameters

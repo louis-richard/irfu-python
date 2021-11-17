@@ -23,12 +23,12 @@ def pvi_4sc(b_mms):
 
     .. math::
 
-            PVI_{ij}(t) = \\sqrt{\\frac{|\\Delta \\mathbf{B}_{ij}(t)|^2}
-            {\\langle|\\Delta\\mathbf{B}_{ij}|^2\\rangle}}
+            PVI_{ij}(t) = \sqrt{\frac{|\Delta \mathbf{B}_{ij}(t)|^2}
+            {\langle|\Delta\mathbf{B}_{ij}|^2\rangle}}
 
-    where :math:`\\Delta \\mathbf{B}_{ij}(t) = \\mathbf{B}_i(t)
-    - \\mathbf{B}_i(t)` is the magnetic field increments, the average
-    :math:`\\langle . \\rangle` is taken over the whole interval,
+    where :math:`\Delta \mathbf{B}_{ij}(t) = \mathbf{B}_i(t)
+    - \mathbf{B}_i(t)` is the magnetic field increments, the average
+    :math:`\langle . \rangle` is taken over the whole interval,
     and :math:`i`, :math:`j` = 1,2,3,4 is the MMS spacecraft number.
 
     In addition, computes, the rotation of the magnetic field between
@@ -36,8 +36,8 @@ def pvi_4sc(b_mms):
 
     .. math::
 
-        \\alpha_{ij}(t) = cos^{-1} \\frac{\\mathbf{B}_i(t).
-        \\mathbf{B}_j(t)}{|\\mathbf{B}_i(t)| |\\mathbf{B}_j(t)|}
+        \alpha_{ij}(t) = cos^{-1} \frac{\mathbf{B}_i(t).
+        \mathbf{B}_j(t)}{|\mathbf{B}_i(t)| |\mathbf{B}_j(t)|}
 
 
     Parameters

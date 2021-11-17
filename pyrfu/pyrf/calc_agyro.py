@@ -17,8 +17,8 @@ def calc_agyro(p_xyz):
 
     .. math::
 
-        A\\Phi = \\frac{|P_{\\perp 1} - P_{\\perp 2}|}{P_{\\perp 1}
-        + P_{\\perp 2}}
+        A\Phi = \frac{|P_{\perp 1} - P_{\perp 2}|}{P_{\perp 1}
+        + P_{\perp 2}}
 
 
     Parameters

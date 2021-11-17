@@ -30,8 +30,8 @@ def _check_method(flag_method):
 
 
 def edb(e_xyz, b_bgd, angle_lim: float = 20., flag_method: str = "E.B=0"):
-    r"""Compute Ez under assumption :math:`\\mathbf{E}.\\mathbf{B}=0` or
-    :math:`\\mathbf{E}.\\mathbf{B} \\approx 0`
+    r"""Compute Ez under assumption :math:`\mathbf{E}.\mathbf{B}=0` or
+    :math:`\mathbf{E}.\mathbf{B} \approx 0`
 
     Parameters
     ----------
@@ -44,8 +44,8 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20., flag_method: str = "E.B=0"):
         degrees otherwise Ez is set to 0. Default is 20.
     flag_method : str, Optional
         Assumption on the direction of the measured electric field :
-            "e.b=0" :  :math:`\\mathbf{E}.\\mathbf{B}=0`. (Default)
-            "e_par" :  :math:`\\mathbf{E}` field along the B projection is
+            "e.b=0" :  :math:`\mathbf{E}.\mathbf{B}=0`. (Default)
+            "e_par" :  :math:`\mathbf{E}` field along the B projection is
             coming from parallelelectric field.
             "e_perp+nan" : to fill.
 

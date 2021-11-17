@@ -17,9 +17,9 @@ __status__ = "Prototype"
 
 
 def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
-    r"""Computes the convection electric field :math:`\\mathbf{V}\\times
-    \\mathbf{B}` (default) or the :math:`\\mathbf{E}\\times\\mathbf{
-    B}/|\\mathbf{B}|^{2}` drift velocity (flag="exb").
+    r"""Computes the convection electric field :math:`\mathbf{V}\times
+    \mathbf{B}` (default) or the :math:`\mathbf{E}\times\mathbf{
+    B}/|\mathbf{B}|^{2}` drift velocity (flag="exb").
 
     Parameters
     ----------

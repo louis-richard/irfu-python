@@ -21,9 +21,9 @@ def plasma_beta(b_xyz, p_xyz):
 
     .. math::
 
-        \\beta = \\frac{P_{th}}{P_b}
+        \beta = \frac{P_{th}}{P_b}
 
-    where : :math:`P_b = B^2 / 2 \\mu_0`
+    where : :math:`P_b = B^2 / 2 \mu_0`
 
     Parameters
     ----------

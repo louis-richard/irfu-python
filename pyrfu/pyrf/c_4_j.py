@@ -18,25 +18,25 @@ __status__ = "Prototype"
 
 
 def c_4_j(r_list, b_list):
-    r"""Calculate current density :math:`\\mathbf{J}` from using 4
+    r"""Calculate current density :math:`\mathbf{J}` from using 4
     spacecraft technique [4]_, the divergence of the magnetic field
-    :math:`\\nabla . \\mathbf{B}`, magnetic field at the center of
-    mass of the tetrahedron, :math:`\\mathbf{J}\\times\\mathbf{B}`
+    :math:`\nabla . \mathbf{B}`, magnetic field at the center of
+    mass of the tetrahedron, :math:`\mathbf{J}\times\mathbf{B}`
     force, part of the divergence of stress associated with
-    curvature :math:`\\nabla.\\mathbf{T}_{shear}` and gradient of
-    the magnetic pressure :math:`\\nabla P_b`. Where :
+    curvature :math:`\nabla.\mathbf{T}_{shear}` and gradient of
+    the magnetic pressure :math:`\nabla P_b`. Where :
 
     .. math::
 
-        \\mathbf{J} = \\frac{\\nabla \\times \\mathbf{B}}{\\mu_0}
+        \mathbf{J} = \frac{\nabla \times \mathbf{B}}{\mu_0}
 
-        \\mathbf{J}\\times\\mathbf{B} = \\nabla.\\mathbf{T}_{shear}
-        + \\nabla P_b
+        \mathbf{J}\times\mathbf{B} = \nabla.\mathbf{T}_{shear}
+        + \nabla P_b
 
-        \\nabla.\\mathbf{T}_{shear} = \\frac{(\\mathbf{B}.\\nabla)
-        \\mathbf{B}}{\\mu_0}
+        \nabla.\mathbf{T}_{shear} = \frac{(\mathbf{B}.\nabla)
+        \mathbf{B}}{\mu_0}
 
-        \\nabla P_b = \\nabla \\frac{B^2}{2\\mu_0}
+        \nabla P_b = \nabla \frac{B^2}{2\mu_0}
 
     The divergence of the magnetic field is current density units as
     it shows the error on the estimation of the current density [5]_ .
@@ -58,7 +58,7 @@ def c_4_j(r_list, b_list):
         Time series of the magnetic field at the center of mass of the
         tetrahedron, sampled at 1st SC time steps [nT].
     jxb : xarray.DataArray
-        Time series of the :math:`\\mathbf{J}\\times\\mathbf{B}` force
+        Time series of the :math:`\mathbf{J}\times\mathbf{B}` force
         [T.A].
     div_t_shear : xarray.DataArray
         Time series of the part of the divergence of stress associated

@@ -22,7 +22,7 @@ def pres_anis(p_fac, b_xyz):
 
     .. math::
 
-        \\mu_0 \\frac{P_\\parallel - P_\\perp}{|\\mathbf{B}|^2}
+        \mu_0 \frac{P_\parallel - P_\perp}{|\mathbf{B}|^2}
 
     Parameters
     ----------

@@ -18,7 +18,7 @@ def pvi(inp, scale: int = 10):
 
     .. math::
 
-        y = \\frac{|x_i - x_{i+s}|^2}{<|x_i - x_{i+s}|^2>}
+        y = \frac{|x_i - x_{i+s}|^2}{<|x_i - x_{i+s}|^2>}
 
     where :math:`s` is the scale.
 

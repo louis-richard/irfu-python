@@ -27,27 +27,27 @@ def pid_4sc(r_mms, v_mms, p_mms, b_mms):
 
     .. math::
 
-        \\textrm{Pi}-\\textrm{D} = - \\mathbf{\\Pi}_{ij}\\mathbf{D}_{ij}
+        \textrm{Pi}-\textrm{D} = - \mathbf{\Pi}_{ij}\mathbf{D}_{ij}
 
-    with :math:`\\mathbf{\\Pi}_{ij}` the deviatoric part of the pressure
+    with :math:`\mathbf{\Pi}_{ij}` the deviatoric part of the pressure
     tensor :
 
     .. math::
 
-        \\mathbf{\\Pi}_{ij} = \\mathbf{P}_{ij} - p\\delta_{ij}
+        \mathbf{\Pi}_{ij} = \mathbf{P}_{ij} - p\delta_{ij}
 
-        p = \\frac{1}{3}\\mathbf{P}_{ii}
+        p = \frac{1}{3}\mathbf{P}_{ii}
 
 
-    and :math:`\\mathbf{D}_{ij}` the deviatoric part of the strain tensor :
+    and :math:`\mathbf{D}_{ij}` the deviatoric part of the strain tensor :
 
     .. math::
 
-        \\mathbf{D}_{ij} =
-        \\frac{1}{2}\\left ( \\partial_i \\mathbf{u}_j + \\partial_j
-        \\mathbf{u}_i\\right ) - \\frac{1}{3}\\theta\\delta_{ij}
+        \mathbf{D}_{ij} =
+        \frac{1}{2}\left ( \partial_i \mathbf{u}_j + \partial_j
+        \mathbf{u}_i\right ) - \frac{1}{3}\theta\delta_{ij}
 
-        \\theta = \\nabla . \\mathbf{u}
+        \theta = \nabla . \mathbf{u}
 
 
     Parameters

@@ -30,7 +30,7 @@ def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
 
     .. math::
 
-            \\int E \\textrm{d}t = \\frac{B_0}{ne \\mu_0} B_{wave}
+            \int E \textrm{d}t = \frac{B_0}{ne \mu_0} B_{wave}
 
 
     Parameters

@@ -17,8 +17,8 @@ def calc_sqrtq(p_xyz):
 
     .. math::
 
-        Q = \\frac{P_{12}^2 + P_{13}^2 + P_{23}^2}
-        {P_\\perp^2 + 2 P_\\perp P_\\parallel}
+        Q = \frac{P_{12}^2 + P_{13}^2 + P_{23}^2}
+        {P_\perp^2 + 2 P_\perp P_\parallel}
 
 
     Parameters

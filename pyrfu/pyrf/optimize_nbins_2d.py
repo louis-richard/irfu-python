@@ -39,11 +39,12 @@ def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
 
     References
     ----------
-    _[1]    Rudemo, M. (1982) Empirical Choice of Histograms and Kernel Density
-            Estimators. Scandinavian Journal of Statistics, 9, 65-78.
+    .. [1]  Rudemo, M. (1982) Empirical Choice of Histograms and Kernel
+            Density Estimators. Scandinavian Journal of Statistics, 9, 65-78.
 
-    _[2]    Shimazaki H. and Shinomoto S., A method for selecting the bin size
-            of a time histogram Neural Computation (2007) Vol. 19(6), 1503-1527
+    .. [2]  Shimazaki H. and Shinomoto S., A method for selecting the bin
+            size of a time histogram Neural Computation (2007) Vol. 19(6),
+            1503-1527
 
     """
 

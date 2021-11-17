@@ -17,10 +17,10 @@ def calc_ag(p_xyz):
 
     .. math::
 
-        AG^{1/3} = \\frac{|\\operatorname[det]{\\mathbf{P}}
-        - \\operatorname[det]{\\mathbf{P}}|}
-        {\\operatorname[det]{\\mathbf{P}}
-        + \\operatorname[det]{\\mathbf{P}}}
+        AG^{1/3} = \frac{|\operatorname[det]{\mathbf{P}}
+        - \operatorname[det]{\mathbf{P}}|}
+        {\operatorname[det]{\mathbf{P}}
+        + \operatorname[det]{\mathbf{P}}}
 
 
     Parameters
