@@ -35,8 +35,8 @@ def sph2cart(azimuth, elevation, r):
 
     """
 
-    x = r * np.cos(elevation) * np.cos(azimuth)
-    y = r * np.cos(elevation) * np.sin(azimuth)
-    z = r * np.sin(elevation)
+    x = r * np.sin(elevation) * np.cos(azimuth)
+    y = r * np.sin(elevation) * np.sin(azimuth)
+    z = r * np.cos(elevation)
 
     return x, y, z
