@@ -19,17 +19,19 @@ __status__ = "Prototype"
 def _check_spin(spin):
     _, spin_inds = np.unique(spin, return_index=True)
 
+    len_spin = np.max(np.diff(spin_inds))
+
     # Check to see if we have a complete first spin,
     # if not then go to the second spin
-    if np.where(spin == spin[spin_inds[0]])[0].size != 8:
+    if np.where(spin == spin[spin_inds[0]])[0].size != len_spin:
         spin_inds = spin_inds[1:]
 
     # Check to see if the last one is complete,
     # if not then go to the second spin
-    if np.where(spin == spin[spin_inds[-1]])[0].size != 8:
+    if np.where(spin == spin[spin_inds[-1]])[0].size != len_spin:
         spin_inds = spin_inds[:-1]
 
-    return spin_inds
+    return spin_inds, len_spin
 
 
 def eis_ang_ang(inp_allt, en_chan: list = None):
@@ -71,7 +73,7 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
     spin_ = inp_allt.spin.data
     sect_ = inp_allt.sector.data
 
-    spin_inds = _check_spin(spin_)
+    spin_inds, len_spin = _check_spin(spin_)
 
     n_spins, n_pol, n_azi = [len(spin_inds), 6, len(np.unique(sect_))]
 
@@ -84,7 +86,7 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
 
     out_data = np.zeros((n_spins, n_en, n_azi, n_pol))
 
-    time_data = time_[spin_inds]
+    time_data = time_[spin_inds + len_spin // 2]
 
     for i, spin_ind in enumerate(spin_inds):
         t_inds = np.where(spin_ == spin_[spin_ind])[0]
