@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pdb
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -13,6 +11,7 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
 
 def _idx_closest(lst0, lst1):
     return [(np.abs(np.asarray(lst0) - k)).argmin() for k in lst1]
@@ -49,8 +48,6 @@ def eis_skymap_combine_sc(skymaps):
     n_en_chans = [probe.energy.shape[1] for probe in skymaps]
     size_en, loc_ref_en = [np.min(n_en_chans), np.argmin(n_en_chans)]
     ref_energy = skymaps[loc_ref_en].energy.data[0, :]
-
-    pdb.set_trace()
 
     energy_data, e_plus, e_minu = [[], [], []]
     for probe in skymaps:
