@@ -618,65 +618,129 @@
       "dtype": "moments",
       "cdf_name": "hpca_hplus_ion_bulk_velocity"
     },
+    "vhplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_ion_bulk_velocity_GSM"
+    },
     "vhplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_hplus_ion_bulk_velocity"
+    },
+    "vhplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_ion_bulk_velocity_GSM"
     },
     "voplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_oplus_ion_bulk_velocity"
     },
+    "voplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_ion_bulk_velocity_GSM"
+    },
     "voplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_oplus_ion_bulk_velocity"
+    },
+    "voplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_ion_bulk_velocity_GSM"
     },
     "vheplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplus_ion_bulk_velocity"
     },
+    "vheplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_ion_bulk_velocity_GSM"
+    },
     "vheplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplus_ion_bulk_velocity"
+    },
+    "vheplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_ion_bulk_velocity_GSM"
     },
     "vheplusplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplusplus_ion_bulk_velocity"
     },
+    "vheplusplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_ion_bulk_velocity_GSM"
+    },
     "vheplusplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplusplus_ion_bulk_velocity"
+    },
+    "vheplusplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_ion_bulk_velocity_GSM"
     },
     "thplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_hplus_temperature_tensor"
     },
+    "tshplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_scalar_temperature"
+    },
     "thplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_hplus_temperature_tensor"
+    },
+    "tshplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_scalar_temperature"
     },
     "toplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_oplus_temperature_tensor"
     },
+    "tsoplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_scalar_temperature"
+    },
     "toplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_oplus_temperature_tensor"
+    },
+    "tsoplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_scalar_temperature"
     },
     "theplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplus_temperature_tensor"
     },
+    "tsheplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_scalar_temperature"
+    },
     "theplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplus_temperature_tensor"
+    },
+    "tsheplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_scalar_temperature"
     },
     "theplusplus_dbcs_hpca_brst_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplusplus_temperature_tensor"
     },
+    "tsheplusplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_scalar_temperature"
+    },
     "theplusplus_dbcs_hpca_srvy_l2": {
       "dtype": "moments",
       "cdf_name": "hpca_heplusplus_temperature_tensor"
+    },
+    "tsheplusplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_scalar_temperature"
     },
     "dpfhplus_hpca_srvy_l2": {
       "dtype": "ion",
