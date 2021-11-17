@@ -27,9 +27,9 @@ def mva(inp, flag: str = "mvar"):
     -------
     out : xarray.DataArray
         Time series of the input quantity in LMN coordinates.
-    l : ndarray
+    l : numpy.ndarray
         Eigenvalues l[0] > l[1] > l[2].
-    lmn : ndarray
+    lmn : numpy.ndarray
         Eigenvectors LMN coordinates.
 
     See also

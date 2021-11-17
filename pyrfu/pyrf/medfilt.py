@@ -22,7 +22,7 @@ def medfilt(inp, n_pts: int = 11):
     ----------
     inp : xarray.DataArray
         Time series of the input variable.
-    n_pts : int
+    n_pts : int, Optional
         Number of points of median filter.
 
     Returns

@@ -13,8 +13,7 @@ __status__ = "Prototype"
 
 
 def iso2unix(time):
-    """
-    Converts time in iso format to unix
+    r"""Converts time in iso format to unix
 
     Parameters
     ----------

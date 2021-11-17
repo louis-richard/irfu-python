@@ -20,7 +20,7 @@ def new_xyz(inp, trans_mat):
     ----------
     inp : xarray.DataArray
         Time series of the input field in the original coordinate system.
-    trans_mat : ndarray
+    trans_mat : array_like
         Transformation matrix.
 
     Returns

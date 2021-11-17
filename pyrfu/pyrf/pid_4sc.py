@@ -23,31 +23,30 @@ __status__ = "Prototype"
 
 
 def pid_4sc(r_mms, v_mms, p_mms, b_mms):
-    r"""Compute Pi-D term using definition of [10]_ as :
+    r"""Compute Pi-D term using definition of [1]_ as :
 
     .. math::
 
-        \textrm{Pi}-\textrm{D} = - \mathbf{\Pi}_{ij}\mathbf{D}_{ij}
+        Pi-D = - \Pi_{ij}D_{ij}
 
-    with :math:`\mathbf{\Pi}_{ij}` the deviatoric part of the pressure
+    with :math:`\Pi_{ij}` the deviatoric part of the pressure
     tensor :
 
     .. math::
 
-        \mathbf{\Pi}_{ij} = \mathbf{P}_{ij} - p\delta_{ij}
+        \Pi_{ij} = P_{ij} - p\delta_{ij}
 
-        p = \frac{1}{3}\mathbf{P}_{ii}
+        p = \frac{1}{3}P_{ii}
 
 
-    and :math:`\mathbf{D}_{ij}` the deviatoric part of the strain tensor :
+    and :math:`D_{ij}` the deviatoric part of the strain tensor :
 
     .. math::
 
-        \mathbf{D}_{ij} =
-        \frac{1}{2}\left ( \partial_i \mathbf{u}_j + \partial_j
-        \mathbf{u}_i\right ) - \frac{1}{3}\theta\delta_{ij}
+        D_{ij} = \frac{1}{2}\left ( \partial_i u_j + \partial_j u_i \right )
+        - \frac{1}{3}\theta\delta_{ij}
 
-        \theta = \nabla . \mathbf{u}
+        \theta = \nabla . u
 
 
     Parameters
@@ -68,7 +67,7 @@ def pid_4sc(r_mms, v_mms, p_mms, b_mms):
 
     References
     ----------
-    .. [10]  Yang, Y., Matthaeus, W. H., Parashar, T. N., Wu, P., Wan, M.,
+    .. [1]  Yang, Y., Matthaeus, W. H., Parashar, T. N., Wu, P., Wan, M.,
             Shi, Y., et al. (2017). Energy transfer channels and turbulence
             cascade in Vlasov-Maxwell turbulence. Physical Review E, 95,
             061201. doi : https://doi.org/10.1103/PhysRevE.95.061201

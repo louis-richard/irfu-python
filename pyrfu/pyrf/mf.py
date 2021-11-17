@@ -26,9 +26,9 @@ def mf(inp, deg):
 
     Returns
     -------
-    inp_mean : ndarray
+    inp_mean : numpy.ndarray
         Mean field.
-    inp_wave : ndarray
+    inp_wave : numpy.ndarray
         Wave field
 
     """

@@ -25,7 +25,7 @@ def poynting_flux(e_xyz, b_xyz, b_hat):
 
     .. math::
 
-        \mathbf{S} = \frac{\mathbf{E}\times\mathbf{B}}{\mu_0}
+        S = \frac{E \times B}{\mu_0}
 
     if `b0` is given project the Poynting flux along `b0`
 

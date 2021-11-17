@@ -19,25 +19,24 @@ __status__ = "Prototype"
 
 def pvi_4sc(b_mms):
     r"""Compute the Partial Variance of Increments (PVI) using the
-    definition in [12]_ as
+    definition in [1]_ as
 
     .. math::
 
-            PVI_{ij}(t) = \sqrt{\frac{|\Delta \mathbf{B}_{ij}(t)|^2}
-            {\langle|\Delta\mathbf{B}_{ij}|^2\rangle}}
+            PVI_{ij}(t) = \sqrt{\frac{|\Delta B_{ij}(t)|^2}
+            {\langle|\Delta B_{ij}|^2\rangle}}
 
-    where :math:`\Delta \mathbf{B}_{ij}(t) = \mathbf{B}_i(t)
-    - \mathbf{B}_i(t)` is the magnetic field increments, the average
-    :math:`\langle . \rangle` is taken over the whole interval,
-    and :math:`i`, :math:`j` = 1,2,3,4 is the MMS spacecraft number.
+    where :math:`\Delta B_{ij}(t) = B_i(t) - B_i(t)` is the magnetic field
+    increments, the average :math:`\langle . \rangle` is taken over the
+    whole interval, and :math:`i`, :math:`j` = 1,2,3,4 is the MMS spacecraft
+    number.
 
     In addition, computes, the rotation of the magnetic field between
     two spacecraft, i.e., magnetic field shear angle, as :
 
     .. math::
 
-        \alpha_{ij}(t) = cos^{-1} \frac{\mathbf{B}_i(t).
-        \mathbf{B}_j(t)}{|\mathbf{B}_i(t)| |\mathbf{B}_j(t)|}
+        \alpha_{ij}(t) = cos^{-1} \frac{B_i(t) . B_j(t)}{|B_i(t)| |B_j(t)|}
 
 
     Parameters
@@ -57,7 +56,7 @@ def pvi_4sc(b_mms):
 
     References
     ----------
-    .. [12] Chasapis, A., Retinó, A., Sahraoui, F., Vaivads, A.,
+    .. [1] Chasapis, A., Retinó, A., Sahraoui, F., Vaivads, A.,
             Khotyaintsev, Yu. V., Sundkvist, D., et al. (2015)
             Thin current sheets and associated electron heating in
             turbulent space plasma. Astrophys. J. Lett. 804:L1.

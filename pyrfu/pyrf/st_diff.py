@@ -23,14 +23,12 @@ def st_diff(r_mms, b_mms, lmn):
     derivative method [13]_ [14]_ as
 
     .. math::
-        \mathbf{V}_{str}^{\mathbf{LMN}} = -\textrm{d}_t
-        \mathbf{B}^{\mathbf{LMN}}\left [\nabla^{\mathbf{LMN}}
-        \mathbf{B}^{\mathbf{LMN}}\right]^T \left [
-        \mathbf{S}^{\mathbf{LMN}}\right ]^{-1}
 
-    where :math:`\mathbf{B}^{\mathbf{LMN}}`, :math:`\nabla^{\mathbf{
-    LMN}}\mathbf{B}^{\mathbf{LMN}}`, :math:`\mathbf{S}^{\mathbf{LMN}}`
-    and :math:`\mathbf{V}_{str}^{\mathbf{LMN}}` are namely the magnetic
+        V_{str}^{LMN} = -d_t B^{LMN}\left [\nabla^{LMN} B^{LMN}\right]^T
+        \left [ S^{LMN} \right ]^{-1}
+
+    where :math:`B^{LMN}`, :math:`\nabla^{LMN}B^{LMN}`, :math:`S^{LMN}`
+    and :math:`V_{str}^{LMN}` are namely the magnetic
     field, its gradient, its rotation rate tensor and the velocity of the
     structure in the LMN coordinates system.
 

@@ -25,9 +25,9 @@ def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
         Input time series of the first variable.
     y : xarray.DataArray
         Input time series of the second variable.
-    n_min : list, Optional
+    n_min : array_like, Optional
         Minimum number of bins for each time series. Default is [1, 1]
-    n_max : list, Optional
+    n_max : array_like, Optional
         Maximum number of bins for each time series. Default is [100, 100]
 
     Returns

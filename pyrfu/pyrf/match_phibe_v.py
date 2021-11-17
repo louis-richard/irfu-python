@@ -26,24 +26,24 @@ def match_phibe_v(b_0, b_z, int_e_dt, n, v):
 
     Parameters
     ----------
-    b_0 : ndarray
+    b_0 : array_like
         Average background magnetic field.
-    b_z : ndarray
+    b_z : array_like
         Parallel wave magnetic field.
-    int_e_dt : ndarray
+    int_e_dt : array_like
         Potential.
-    n : ndarray
+    n : array_like
         Vector of densities
-    v : ndarray
+    v : array_like
         Vector of velocities.
 
     Returns
     -------
-    corr_mat : ndarray
+    corr_mat : numpy.ndarray
         Correlation matrix(nn x nv).
-    phi_b : ndarray
+    phi_b : numpy.ndarray
         B0 * dB_par / n_e * e * mu0
-    phi_e : ndarray
+    phi_e : numpy.ndarray
         int(E) dt * v(dl=-vdt = > -dl = vdt)
 
     """
