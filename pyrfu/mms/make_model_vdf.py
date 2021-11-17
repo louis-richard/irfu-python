@@ -117,7 +117,7 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
 
     # Defines dimensions of array below
     n_ti = len(vdf.time)
-    n_en = len(vdf.attrs["energy0"])
+    n_en = len(vdf.energy.data[0, :])
     n_ph, n_th = [len(angle) for angle in [vdf.phi[0, :], vdf.theta]]
 
     # Get energy array
