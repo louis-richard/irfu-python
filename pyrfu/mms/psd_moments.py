@@ -212,7 +212,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     if "brst" in field_name:
         is_brst_data = True
         print("notice : Burst resolution data is used")
-    elif "brst" in field_name:
+    elif "fast" in field_name:
         is_brst_data = False
         print("notice : Fast resolution data is used")
     else:
