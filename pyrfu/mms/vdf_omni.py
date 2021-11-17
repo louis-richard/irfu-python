@@ -13,7 +13,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def vdf_omni(vdf):
+def vdf_omni(vdf, method: str = "mean"):
     r"""Computes omni-directional distribution, without changing the units.
 
     Parameters
@@ -25,6 +25,10 @@ def vdf_omni(vdf):
             * energy : Energy levels.
             * phi : Azimuthal angles.
             * theta : Elevation angle.
+
+    method : {"mean", "sum"}, Optional
+        Method of computation. Use "sum" for counts and "mean" for
+        everything else. Default is "mean".
 
     Returns
     -------
@@ -46,8 +50,15 @@ def vdf_omni(vdf):
                                (len(time), energy.shape[1], 1, 1))
 
     dist = vdf.data.data * all_solid_angles
-    omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
-    omni /= np.mean(np.mean(solid_angles))
+
+    if method.lower() == "mean":
+        omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
+        omni /= np.mean(np.mean(solid_angles))
+    elif method.lower() == "sum":
+        omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
+        omni /= np.mean(np.mean(solid_angles))
+    else:
+        raise ValueError("invalid method!!")
 
     energy = np.mean(energy[:2, :], axis=0)
 
