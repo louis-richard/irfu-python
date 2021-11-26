@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="f775cddd-7dac-443b-be0b-6bf69d463d58" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/conf.py" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/conf.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/__init__.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -261,7 +261,8 @@
       <workItem from="1637772135904" duration="4653000" />
       <workItem from="1637860054567" duration="912000" />
       <workItem from="1637919561710" duration="843000" />
-      <workItem from="1637924301198" duration="2484000" />
+      <workItem from="1637924301198" duration="3790000" />
+      <workItem from="1637948395159" duration="390000" />
     </task>
     <servers />
   </component>

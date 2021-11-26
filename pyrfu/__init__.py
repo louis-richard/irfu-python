@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 
-from pyrfu import mms, pyrf, models, dispersion
+from pyrfu import mms, pyrf, models, dispersion, pydrk
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
