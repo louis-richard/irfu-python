@@ -1,5 +1,5 @@
 
-.. |Logo| image:: pyrfu/plot/logo/logo-pyrfu.png
+.. |Logo| image:: docs/source/_static/logo-pyrfu.png
 .. _Logo: https://pypi.org/project/pyrfu/
 
 .. |License| image:: https://img.shields.io/pypi/l/pyrfu
@@ -46,6 +46,7 @@
 
 pyRFU
 =====
+.. start-marker-intro-do-not-remove
 
 |License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |ScrutinizerBuild|_
 |ScrutinizerQuality|_ |Commits|_ |Issues|_ |Readthedocs|_ |Gitter|_
