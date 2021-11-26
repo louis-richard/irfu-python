@@ -1,4 +1,6 @@
 
+.. |Logo| image:: pyrfu/plot/logo/logo-pyrfu.png
+.. _Logo: https://pypi.org/project/pyrfu/
 
 .. |License| image:: https://img.shields.io/pypi/l/pyrfu
 .. _License: https://opensource.org/licenses/MIT
@@ -39,6 +41,8 @@
 .. |Gitter| image:: https://img.shields.io/gitter/room/louis-richard/pyrfu?logo=gitter&color=orange
 .. _Gitter: https://gitter.im/pyrfu
 
+
+|Logo|_
 
 pyRFU
 =====

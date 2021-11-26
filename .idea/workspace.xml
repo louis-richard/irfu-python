@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f775cddd-7dac-443b-be0b-6bf69d463d58" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/README.rst" beforeDir="false" afterPath="$PROJECT_DIR$/README.rst" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="package.json" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
+  </component>
+  <component name="JupyterTrust" id="8feaa3fc-888b-4780-81c4-ccc738e18646" />
+  <component name="ProjectId" id="1gx0hDwYHTN4puOhR4SMtNpymsy" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/pyrfu/pyrf" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="run.code.analysis.last.selected.profile" value="aDefault" />
+    <property name="settings.editor.selected.configurable" value="preferences.sourceCode" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/pyrfu/pyrf" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/pyrfu/models" />
+      <recent name="$PROJECT_DIR$/pyrfu/models/data" />
+      <recent name="$PROJECT_DIR$/pyrfu/tests" />
+      <recent name="$PROJECT_DIR$/pyrfu/mms" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python tests.Doctest e_vxb">
+    <configuration name="Doctest e_vxb" type="tests" factoryName="Doctests" singleton="false" nameIsGenerated="true">
+      <module name="irfu-python" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pyrfu/pyrf" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pyrfu/pyrf/e_vxb.py" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="e_vxb" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_FUNCTION" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Doctest ebsp" type="tests" factoryName="Doctests" temporary="true" nameIsGenerated="true">
+      <module name="irfu-python" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pyrfu/pyrf" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pyrfu/pyrf/ebsp.py" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="ebsp" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_FUNCTION" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in __init__.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="irfu-python" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pyrfu" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/pyrfu/__init__.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in test_pyrf.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="irfu-python" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pyrfu" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/pyrfu/tests/test_pyrf.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.pytest in test_pyrf.py" />
+        <item itemvalue="Python tests.pytest in __init__.py" />
+        <item itemvalue="Python tests.Doctest ebsp" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f775cddd-7dac-443b-be0b-6bf69d463d58" name="Default Changelist" comment="" />
+      <created>1599041052140</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1599041052140</updated>
+      <workItem from="1605718993263" duration="467000" />
+      <workItem from="1605818924172" duration="1912000" />
+      <workItem from="1606390480692" duration="306000" />
+      <workItem from="1606411098873" duration="6222000" />
+      <workItem from="1606469477321" duration="4455000" />
+      <workItem from="1606724869614" duration="5030000" />
+      <workItem from="1606832471631" duration="1069000" />
+      <workItem from="1606838350244" duration="263000" />
+      <workItem from="1606915812684" duration="1860000" />
+      <workItem from="1606996403623" duration="4506000" />
+      <workItem from="1607070120446" duration="12514000" />
+      <workItem from="1607525273366" duration="5762000" />
+      <workItem from="1607549916831" duration="6502000" />
+      <workItem from="1607689731452" duration="3288000" />
+      <workItem from="1608107902199" duration="8678000" />
+      <workItem from="1608315267128" duration="272000" />
+      <workItem from="1609525331215" duration="2381000" />
+      <workItem from="1609587121620" duration="1179000" />
+      <workItem from="1610369591174" duration="1205000" />
+      <workItem from="1610532116622" duration="607000" />
+      <workItem from="1610577391760" duration="1525000" />
+      <workItem from="1610638184074" duration="858000" />
+      <workItem from="1610957761164" duration="1607000" />
+      <workItem from="1611324920036" duration="63353000" />
+      <workItem from="1611916347242" duration="285000" />
+      <workItem from="1611916701078" duration="67380000" />
+      <workItem from="1612943394493" duration="618000" />
+      <workItem from="1613403943883" duration="298000" />
+      <workItem from="1613510228148" duration="6085000" />
+      <workItem from="1613674493954" duration="17011000" />
+      <workItem from="1614002581862" duration="13660000" />
+      <workItem from="1614596533861" duration="1704000" />
+      <workItem from="1614959476176" duration="773000" />
+      <workItem from="1615206204137" duration="3000" />
+      <workItem from="1615214961953" duration="533000" />
+      <workItem from="1615540826175" duration="7283000" />
+      <workItem from="1616081795717" duration="13333000" />
+      <workItem from="1616419500139" duration="35000" />
+      <workItem from="1616423312459" duration="1048000" />
+      <workItem from="1616748320890" duration="5764000" />
+      <workItem from="1617026483316" duration="2494000" />
+      <workItem from="1617095511988" duration="2611000" />
+      <workItem from="1617136479725" duration="117000" />
+      <workItem from="1617179326027" duration="7281000" />
+      <workItem from="1617623718559" duration="1187000" />
+      <workItem from="1617954782646" duration="4405000" />
+      <workItem from="1618406717827" duration="42000" />
+      <workItem from="1618734778156" duration="17088000" />
+      <workItem from="1619018897527" duration="17616000" />
+      <workItem from="1619255121105" duration="9470000" />
+      <workItem from="1619537625966" duration="16128000" />
+      <workItem from="1619790016226" duration="3141000" />
+      <workItem from="1619882631164" duration="29099000" />
+      <workItem from="1620632032971" duration="57437000" />
+      <workItem from="1621935122043" duration="89336000" />
+      <workItem from="1623926946030" duration="336000" />
+      <workItem from="1623927398663" duration="15161000" />
+      <workItem from="1624008099468" duration="36873000" />
+      <workItem from="1624549418484" duration="46124000" />
+      <workItem from="1625728077473" duration="13705000" />
+      <workItem from="1627115094475" duration="1335000" />
+      <workItem from="1629464339595" duration="7240000" />
+      <workItem from="1630077837758" duration="12465000" />
+      <workItem from="1630933623232" duration="3370000" />
+      <workItem from="1631003762972" duration="229000" />
+      <workItem from="1631008895988" duration="12098000" />
+      <workItem from="1631718349755" duration="13537000" />
+      <workItem from="1632123014806" duration="297000" />
+      <workItem from="1632147518401" duration="4656000" />
+      <workItem from="1632238114047" duration="72000" />
+      <workItem from="1632467058307" duration="14722000" />
+      <workItem from="1632750271770" duration="51499000" />
+      <workItem from="1633591615241" duration="24373000" />
+      <workItem from="1633938275096" duration="1527000" />
+      <workItem from="1634136416443" duration="154000" />
+      <workItem from="1634211057195" duration="467000" />
+      <workItem from="1634287842805" duration="6004000" />
+      <workItem from="1634634312743" duration="752000" />
+      <workItem from="1634713226139" duration="642000" />
+      <workItem from="1635147834248" duration="7123000" />
+      <workItem from="1635342253213" duration="8505000" />
+      <workItem from="1635514297927" duration="4845000" />
+      <workItem from="1635540117350" duration="7302000" />
+      <workItem from="1635772327037" duration="1029000" />
+      <workItem from="1635927652680" duration="2929000" />
+      <workItem from="1636103265987" duration="5513000" />
+      <workItem from="1636358722204" duration="79000" />
+      <workItem from="1637056138402" duration="6340000" />
+      <workItem from="1637145266602" duration="1381000" />
+      <workItem from="1637162344365" duration="3484000" />
+      <workItem from="1637256390738" duration="495000" />
+      <workItem from="1637772135904" duration="4653000" />
+      <workItem from="1637860054567" duration="912000" />
+      <workItem from="1637919561710" duration="843000" />
+      <workItem from="1637924301198" duration="372000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
