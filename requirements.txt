@@ -8,7 +8,5 @@ Sphinx>=3.5.4
 scipy>=1.6.2
 setuptools>=56.0.0
 xarray>=0.17.0
-pyrf>=0.0.9
 python-dateutil>=2.8.1
-pyrfu>=2.3.5
 geopack>=1.0.8

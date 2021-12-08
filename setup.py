@@ -29,20 +29,13 @@ with open("README.rst", "r") as fh:
     LONG_DESCRIPTION = fh.read()
 
 
-INSTALL_REQUIRES = [
-      "cdflib",
-      "matplotlib",
-      "numpy",
-      "numba",
-      "pandas",
-      "sphinx",
-      "scipy",
-      "xarray"]
+INSTALL_REQUIRES = [ "cdflib", "matplotlib", "numpy", "numba", "pandas",
+                     "sphinx", "scipy", "xarray", "geopack"]
 
-PYTHON_REQUIRES = '>=3.7'
+PYTHON_REQUIRES = ">=3.7"
 
 
-cmdclass = {'build_sphinx': BuildDoc}
+cmdclass = {"build_sphinx": BuildDoc}
 
 setup(
       name=PACKAGE_NAME,
@@ -60,9 +53,9 @@ setup(
       cmdclass=cmdclass,
       # these are optional and override conf.py settings
       command_options={
-        'build_sphinx': {
-            'project': ('setup.py', PACKAGE_NAME),
-            'version': ('setup.py', VERSION),
-            'release': ('setup.py', VERSION),
-            'source_dir': ('setup.py', 'docs')}},
+        "build_sphinx": {
+            "project": ("setup.py", PACKAGE_NAME),
+            "version": ("setup.py", VERSION),
+            "release": ("setup.py", VERSION),
+            "source_dir": ("setup.py", "docs")}},
       )
