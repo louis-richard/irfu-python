@@ -62,6 +62,7 @@ from .feeps_spin_avg import feeps_spin_avg
 from .feeps_split_integral_ch import feeps_split_integral_ch
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 from .get_feeps_alleyes import get_feeps_alleyes
+from .db_init import db_init
 
 # Energetic Ion Spectrometer (EIS)
 from .eis_ang_ang import eis_ang_ang

@@ -4,15 +4,13 @@
 # Built-in imports
 import os
 import re
+import json
 import bisect
 import datetime
 
 # 3rd party imports
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
-
-# Local imports
-from .mms_config import CONFIG
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -51,7 +49,13 @@ def list_files(tint, mms_id, var, data_path=""):
 
     # Check path
     if not data_path:
-        data_path = CONFIG["local_data_dir"]
+        root_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Read the current version of the MMS configuration file
+        with open(os.path.join(root_path, "config.json"), "r") as f:
+            config = json.load(f)
+
+        data_path = config["local_data_dir"]
 
     files_out = []
 
