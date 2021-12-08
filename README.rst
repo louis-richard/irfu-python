@@ -200,7 +200,7 @@ To import plotting functions
 
 Configuration
 -------------
-Configuration settings are set in the CONFIG hash table in the mms_config.py file.
+Default configuration settings for MMS data (i.e data path) are stored in pyrfu/mms/config.json and can be changed at anytime using mms.db_init(local_path_dir).
 
 Credits
 -------
