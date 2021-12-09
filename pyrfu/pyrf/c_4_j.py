@@ -13,7 +13,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.10"
 __status__ = "Prototype"
 
 
@@ -110,7 +110,7 @@ def c_4_j(r_list, b_list):
 
     mu0 = constants.mu_0
 
-    b_avg = avg_4sc(b_list)
+    b_avg = 1e-9 * avg_4sc(b_list)
 
     # Estimate divB/mu0. unit is A/m2
     div_b = c_4_grad(r_list, b_list, "div")
@@ -124,7 +124,6 @@ def c_4_j(r_list, b_list):
 
     # estimate jxB force [T A/m2]
     jxb = cross(j, b_avg)
-    jxb.data *= 1e9
 
     # estimate divTshear = (1/muo) (B*div)B [T A/m2]
     div_t_shear = c_4_grad(r_list, b_list, "bdivb")

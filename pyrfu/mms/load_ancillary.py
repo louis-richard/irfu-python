@@ -16,13 +16,11 @@ import pandas as pd
 # Local imports
 from ..pyrf import iso86012datetime
 
-from .mms_config import CONFIG
-
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.10"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
@@ -55,8 +53,15 @@ def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
 
     """
 
+    # Check path
     if not data_path:
-        data_path = CONFIG["local_data_dir"]
+        root_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Read the current version of the MMS configuration file
+        with open(os.path.join(root_path, "config.json"), "r") as f:
+            config = json.load(f)
+
+        data_path = config["local_data_dir"]
 
     if isinstance(mms_id, int):
         mms_id = str(mms_id)

@@ -6,14 +6,13 @@ import os
 import subprocess
 
 # Local imports
-from .mms_config import CONFIG
 from .list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.10"
 __status__ = "Prototype"
 
 
@@ -37,7 +36,13 @@ def copy_files(var, tint, mms_id, target_dir: str = "./data/"):
 
     """
 
-    mms_path = CONFIG["local_data_dir"] + "/"
+    root_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Read the current version of the MMS configuration file
+    with open(os.path.join(root_path, "config.json"), "r") as f:
+        config = json.load(f)
+
+    mms_path = config["local_data_dir"] + "/"
 
     files = list_files(tint, mms_id, var)
 

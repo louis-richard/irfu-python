@@ -20,7 +20,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.10"
 __status__ = "Prototype"
 
 
@@ -170,7 +170,7 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim,
         else:
             geo_factor_bin_size = np.ones(pol_mat.shape)
 
-        f_mat[i, ...] = _cotrans_jit(dist.data[i, ...], elevation_angle, e_lim,
+        f_mat[i, ...] = _cotrans_jit(dist[i, ...], elevation_angle, e_lim,
                                      plane_az, edges_az, geo_factor_elev,
                                      geo_factor_bin_size)
 

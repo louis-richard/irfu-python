@@ -14,7 +14,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.10"
 __status__ = "Prototype"
 
 
@@ -78,9 +78,9 @@ def vdf_elim(vdf, e_int):
               f"{energy.data[0, e_levels]:5.2f} and "
               f"{energy.data[1, e_levels]:5.2f}")
 
-    vdf_e_clipped = ts_skymap(vdf.time.data, vdf.data[:, e_levels, ...],
-                              energy=energy[:, e_levels], phi=vdf.phi,
-                              theta=vdf.theta)
+    vdf_e_clipped = ts_skymap(vdf.time.data, vdf.data.data[:, e_levels, ...],
+                              energy=energy.data[:, e_levels],
+                              phi=vdf.phi.data, theta=vdf.theta.data)
 
     energy_0 = vdf.attrs.get("energy0", unique_etables[0, :])[e_levels]
     energy_1 = vdf.attrs.get("energy1", unique_etables[0, :])[e_levels]
