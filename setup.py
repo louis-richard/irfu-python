@@ -11,12 +11,12 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.8"
+__version__ = "2.3.9"
 __status__ = "Prototype"
 
 HERE = pathlib.Path(__file__).parent
 
-VERSION = "2.3.8"
+VERSION = __version__
 PACKAGE_NAME = "pyrfu"
 AUTHOR = "Louis RICHARD"
 AUTHOR_EMAIL = "louir@irfu.se"
@@ -29,8 +29,8 @@ with open("README.rst", "r") as fh:
     LONG_DESCRIPTION = fh.read()
 
 
-INSTALL_REQUIRES = [ "cdflib", "matplotlib", "numpy", "numba", "pandas",
-                     "sphinx", "scipy", "xarray", "geopack"]
+INSTALL_REQUIRES = ["cdflib", "matplotlib", "numpy", "numba", "pandas",
+                    "sphinx", "scipy", "xarray", "geopack"]
 
 PYTHON_REQUIRES = ">=3.7"
 
