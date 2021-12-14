@@ -16,7 +16,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.11"
 __status__ = "Prototype"
 
 
@@ -49,13 +49,18 @@ def list_files(tint, mms_id, var, data_path=""):
 
     # Check path
     if not data_path:
-        root_path = os.path.dirname(os.path.abspath(__file__))
+        pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(root_path, "config.json"), "r") as f:
+        with open(os.path.join(pkg_path, "config.json"), "r") as f:
             config = json.load(f)
 
-        data_path = config["local_data_dir"]
+        data_path = os.path.normpath(config["local_data_dir"])
+    else:
+        data_path = os.path.normpath(data_path)
+
+    # Make sure that the data path exists
+    assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
 
     files_out = []
 

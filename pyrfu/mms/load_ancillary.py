@@ -20,7 +20,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.10"
+__version__ = "2.3.11"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
@@ -55,13 +55,18 @@ def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
 
     # Check path
     if not data_path:
-        root_path = os.path.dirname(os.path.abspath(__file__))
+        pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(root_path, "config.json"), "r") as f:
+        with open(os.path.join(pkg_path, "config.json"), "r") as f:
             config = json.load(f)
 
-        data_path = config["local_data_dir"]
+        data_path = os.path.normpath(config["local_data_dir"])
+    else:
+        data_path = os.path.normpath(data_path)
+
+    # Make sure that the data path exists
+    assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
 
     if isinstance(mms_id, int):
         mms_id = str(mms_id)
@@ -115,9 +120,9 @@ def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
 
     # Read length of header and columns names from .json file
     # Root path
-    root_path = os.path.dirname(os.path.abspath(__file__))
+    pkg_path = os.path.dirname(os.path.abspath(__file__))
 
-    with open(os.sep.join([root_path, "ancillary.json"])) as file:
+    with open(os.sep.join([pkg_path, "ancillary.json"])) as file:
         anc_dict = json.load(file)
 
     if verbose:
