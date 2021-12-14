@@ -27,6 +27,9 @@ def datetime_to_tt2000(time):
 
     """
 
+    if isinstance(time, list):
+        return lst(map(datetime_to_tt2000, time))
+
     time_datetime = pd.Timestamp(time)
 
     # Convert to string
