@@ -12,7 +12,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def datetime_to_tt2000(time):
+def datetime2iso8601(time):
     r"""Transforms datetime to TT2000 string format.
 
     Parameters

@@ -70,7 +70,7 @@ from .pid_4sc import pid_4sc
 from .calc_dng import calc_dng
 from .calc_ag import calc_ag
 from .calc_agyro import calc_agyro
-from .datetime_to_tt2000 import datetime_to_tt2000
+from .datetime2iso8601 import datetime2iso8601
 from .cotrans import cotrans
 from .sph2cart import sph2cart
 from .gse2gsm import gse2gsm
