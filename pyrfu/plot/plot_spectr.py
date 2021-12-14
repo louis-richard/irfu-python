@@ -10,7 +10,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.11"
 __status__ = "Prototype"
 
 plt.style.use("seaborn-ticks")
@@ -76,8 +76,8 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
 
     x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
-    image = axis.pcolormesh(x_data, y_data, inp.data.T, rasterized=True,
-                            shading="auto", **options)
+    image = axis.pcolormesh(x_data.data, y_data.data, inp.data.T,
+                            rasterized=True, shading="auto", **options)
 
     if x_data.dtype == '<M8[ns]':
         locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
