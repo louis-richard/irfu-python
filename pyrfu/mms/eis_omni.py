@@ -9,7 +9,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def eis_omni(eis_allt):
+def eis_omni(eis_allt, method: str = "mean"):
     r"""Calculates the omni-directional flux for all 6 telescopes.
 
     Parameters
@@ -45,6 +45,8 @@ def eis_omni(eis_allt):
 
     """
 
+    assert method.lower() in ["mean", "sum"]
+
     scopes = list(filter(lambda x: x[0] == "t", eis_allt))
 
     flux_omni = None
@@ -55,7 +57,9 @@ def eis_omni(eis_allt):
         except TypeError:
             flux_omni = eis_allt[scope].copy()
 
-    flux_omni.data /= len(scopes)
+    if method.lower() == "mean":
+        flux_omni.data /= len(scopes)
+
     flux_omni.name = "flux_omni"
     flux_omni.attrs["energy_dplus"] = eis_allt.energy_dplus.data
     flux_omni.attrs["energy_dminus"] = eis_allt.energy_dminus.data
