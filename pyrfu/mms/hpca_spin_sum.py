@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import pdb
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -9,7 +11,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.12"
 __status__ = "Prototype"
 
 
@@ -46,7 +48,7 @@ def hpca_spin_sum(inp, saz, method: str = "mean"):
         else:
             raise ValueError("Invalid method")
 
-    out_time = np.stack([t[0] for t in az_times[spin_starts[:-1]]])
+    out_time = np.stack([t for t in az_times[spin_starts[:-1]]])
     out_data = np.stack(out_data)
     coords = [inp.coords[k].data for k in inp.dims[1:]]
     coords = [out_time, *coords]
