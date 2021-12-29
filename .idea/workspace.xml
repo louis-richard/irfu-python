@@ -6,36 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="f775cddd-7dac-443b-be0b-6bf69d463d58" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/00_overview/.ipynb_checkpoints/quick-overview-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/00_overview/.ipynb_checkpoints/quick-overview-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/00_overview/quick-overview.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/00_overview/quick-overview.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_b_e_j-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_b_e_j-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_ebfields-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_ebfields-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_edr_signatures-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_edr_signatures-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_electron_psd-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_electron_psd-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_hpca-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_hpca-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_ohmslaw-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_ohmslaw-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_particle_deflux-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_particle_deflux-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_particle_distributions-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_particle_distributions-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_particle_pad-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_particle_pad-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_polarizationanalysis-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/.ipynb_checkpoints/example_mms_polarizationanalysis-checkpoint.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_b_e_j.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_b_e_j.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_ebfields.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_ebfields.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_edr_signatures.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_edr_signatures.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_eis.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_eis.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_electron_psd.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_electron_psd.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_feeps.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_feeps.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_hpca.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_hpca.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_ohmslaw.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_ohmslaw.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_particle_deflux.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_particle_deflux.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_particle_distributions.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_particle_distributions.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_particle_pad.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_particle_pad.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_polarizationanalysis.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_polarizationanalysis.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/01_mms/example_mms_walen_test.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/01_mms/example_mms_walen_test.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/copy_files.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/copy_files.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/load_ancillary.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/load_ancillary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_elim.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_elim.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_projection.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_projection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/c_4_j.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/c_4_j.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -72,6 +43,18 @@
       <filtered-out-file-type name="TAG" />
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_skymap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/db_get_ts.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime64.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/mms_keys.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/datetime642iso8601.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_eis_allt.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_ts.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/fk_power_spectrum_4sc.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/tokenize.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="JupyterTrust" id="8feaa3fc-888b-4780-81c4-ccc738e18646" />
   <component name="ProjectId" id="1gx0hDwYHTN4puOhR4SMtNpymsy" />
@@ -298,7 +281,14 @@
       <workItem from="1638434764508" duration="42000" />
       <workItem from="1638434821029" duration="1911000" />
       <workItem from="1638637651358" duration="249000" />
-      <workItem from="1638974109232" duration="10166000" />
+      <workItem from="1638974109232" duration="12444000" />
+      <workItem from="1639068067294" duration="13885000" />
+      <workItem from="1639416627350" duration="3834000" />
+      <workItem from="1639737098258" duration="3126000" />
+      <workItem from="1640088700172" duration="503000" />
+      <workItem from="1640344702747" duration="8000" />
+      <workItem from="1640348990337" duration="1944000" />
+      <workItem from="1640780025834" duration="1126000" />
     </task>
     <servers />
   </component>
