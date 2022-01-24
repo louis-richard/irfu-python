@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pdb
-
 # 3rd party imports
 import numpy as np
 import xarray as xr

@@ -296,7 +296,7 @@ def plot_sitl_overview(tint_brst, title, mms_id: int = 2,
         spectr_brst = _get_spectr("brst", tint_brst, mms_id, data_path)
 
         fig, axs10, axs11, axs20 = _init_fig()
-        axs10 = _plot_scps(axs10, r_xyz)
+        _ = _plot_scps(axs10, r_xyz)
         axs11 = _plot_fast(axs11, fields_fast, momnts_fast, spectr_fast)
         axs20 = _plot_brst(axs20, fields_brst, momnts_brst, spectr_brst)
 

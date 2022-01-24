@@ -37,7 +37,7 @@ def _add_earth(ax=None, **kwargs):
 def _add_field_lines(ax, tint):
     # Get dipole axis at begin of the time interval
     ut = datetime642unix(iso86012datetime64(np.array(tint)))[0]
-    ps = geopack.recalc(ut)
+    _ = geopack.recalc(ut)
 
     x_lines_m, y_lines_m, z_lines_m = [[], [], []]
     x_lines_p, y_lines_p, z_lines_p = [[], [], []]

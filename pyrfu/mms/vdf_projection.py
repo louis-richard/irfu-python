@@ -35,13 +35,13 @@ def _coord_sys(coord_sys):
 
     for i, vec, c in zip([0, 1, 2], [x_vec, y_vec, z_vec], ["x", "y", "z"]):
         if abs(np.rad2deg(np.arccos(np.dot(vec, coord_sys[:, i])))) > 1.:
-            msg = " ".join(["In making 'xyz' a right handed orthogonal"
-                            "coordinate system, {}".format(c, i),
-                            "(in-plane {:d}) was changed from",
+            msg = " ".join([f"In making 'xyz' a right handed orthogonal",
+                            f"coordinate system, {c} (in-plane {i:d}) was",
+                            "changed from",
                             np.array2string(coord_sys[:, i]),
                             "to",
                             np.array2string(x_vec),
-                            "Please verify that this is according to your"
+                            "Please verify that this is according to your",
                             "intentions."])
             warnings.warn(msg, UserWarning)
             changed_xyz[i] = True

@@ -47,7 +47,7 @@ from .mean_bins import mean_bins
 from .histogram import histogram
 from .histogram2d import histogram2d
 from .wavepolarize_means import wavepolarize_means
-from .psd import *
+from .psd import psd
 from .c_4_k import c_4_k
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j

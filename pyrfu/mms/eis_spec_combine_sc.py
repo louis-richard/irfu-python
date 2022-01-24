@@ -20,7 +20,7 @@ def _idx_closest(lst0, lst1):
     return [(np.abs(np.asarray(lst0) - k)).argmin() for k in lst1]
 
 
-def eis_spec_combine_sc(omni_vars):
+def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     r"""Combines omni-directional energy spectrogram variable from EIS on
     multiple MMS spacecraft.
 
@@ -28,6 +28,8 @@ def eis_spec_combine_sc(omni_vars):
     ----------
     omni_vars : list of xarray.DataArray
         Omni-directional energy spectrograms of all spacecraft.
+    method : str, Optional
+        Method to combine spectra, "mean" or "sum"
 
     Returns
     -------
@@ -64,6 +66,8 @@ def eis_spec_combine_sc(omni_vars):
     >>> extof_omni_mmsx = eis_spec_combine_sc(extof_omni_mms)
 
     """
+    
+    assert method.lower() in ["mean", "sum"]
 
     reftime_sc_loc = np.argmin([len(x_.time.data) for x_ in omni_vars])
     refener_sc_loc = np.argmin([len(x_.energy.data) for x_ in omni_vars])
@@ -91,7 +95,10 @@ def eis_spec_combine_sc(omni_vars):
 
     # Average omni flux over all spacecraft
     for tt, ee in itertools.product(range(nt_ref), range(ne_ref)):
-        omni_spec[tt, ee] = np.nanmean(omni_spec_data[tt, ee, :], axis=0)
+        if method.lower() == "mean":
+            omni_spec[tt, ee] = np.nanmean(omni_spec_data[tt, ee, :], axis=0)
+        else:
+            omni_spec[tt, ee] = np.nansum(omni_spec_data[tt, ee, :], axis=0)
 
     omni_spec = xr.DataArray(omni_spec,
                              coords=[time_refprobe.time.data,

@@ -139,7 +139,6 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
     sqrd_mat = np.zeros([n_stp, int(nop_fft / 2), 3, 3])
     deg_pol = np.zeros([n_stp, int(nop_fft / 2)])
     trace_spec_mat = np.zeros([n_stp, int(nop_fft / 2)])
-    trace_sqrd_mat = np.zeros([n_stp, int(nop_fft / 2)])
 
     # HELICITY, ELLIPTICITY AND THE WAVE STATE VECTOR
     lambda_u = np.zeros([n_stp, int(nop_fft / 2), 3, 3])

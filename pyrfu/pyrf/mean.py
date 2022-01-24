@@ -13,9 +13,9 @@ from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2022"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.13"
 __status__ = "Prototype"
 
 
@@ -51,7 +51,6 @@ def mean(inp, r_xyz, b_xyz, dipole_axis):
 
     else:
         flag_dipole = False
-        dipole_axis = None
 
     # Make sure that spacecraft position and magnetic field sampling matches
     # input sampling
