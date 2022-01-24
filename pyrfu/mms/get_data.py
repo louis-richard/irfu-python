@@ -64,7 +64,7 @@ def get_data(var_str, tint, mms_id, verbose: bool = True,
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu.mms.mms_config.py`
+        Path of MMS data. If None use `pyrfu/mms/config.json`
 
     Returns
     -------
