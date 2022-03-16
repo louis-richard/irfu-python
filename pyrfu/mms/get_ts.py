@@ -25,7 +25,10 @@ def _get_epochs(file, cdf_name, tint):
                                starttime=tint[0], endtime=tint[1])}
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
-        out["data"] = cdfepoch.to_datetime(out["data"], to_np=True)
+        try:
+            out["data"] = cdfepoch.to_datetime(out["data"], to_np=True)
+        except TypeError:
+            pass
 
     out["atts"] = file.varattsget(depend0_key)
 
@@ -122,6 +125,9 @@ def get_ts(file_path, cdf_name, tint):
         assert "DEPEND_0" in attrs_ and "epoch" in attrs_["DEPEND_0"].lower()
 
         time = _get_epochs(file, cdf_name, tint)
+
+        if time["data"] is None:
+            return None
 
         if "DEPEND_1" in attrs_ or "REPRESENTATION_1" in attrs_:
             depend_1 = _get_depend(file, cdf_name, tint, 1)
