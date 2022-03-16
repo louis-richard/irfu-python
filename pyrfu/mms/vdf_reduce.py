@@ -8,13 +8,13 @@ import xarray as xr
 from scipy import interpolate, constants
 
 # Local imports
-from ..pyrf import cart2sph, sph2cart, resample, time_clip
+from pyrfu.pyrf import cart2sph, sph2cart, resample, time_clip
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2022"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.12"
 __status__ = "Prototype"
 
 __all__ = ["vdf_frame_transformation", "vdf_reduce"]
@@ -64,7 +64,7 @@ def _interp_skymap_sphe(vdf, energy, phi, theta, grid_sphe):
     vdf_period[:, 1:-1, 0] = vdf[:, :, -1]
     vdf_period[:, 1:-1, -1] = vdf[:, :, 0]
     vdf_period[:, 0] = vdf_period[:, 1]
-    vdf_period[:, 17] = vdf_period[:, 16]
+    vdf_period[:, -1] = vdf_period[:, -2]
 
     vdf_interp = interpolate.RegularGridInterpolator((energy, phi_period,
                                                       theta_period),
@@ -252,12 +252,12 @@ def vdf_reduce(vdf, tint, dim, x_vec, z_vec: list = None, v_int: list = None,
 
     if dim.lower() == "2d":
         dv_ = np.abs(np.diff(v_z)[0])
-        red_vdf = np.sum(interp_vdf, axis=-1) * dv_
+        red_vdf = np.nansum(interp_vdf, axis=-1) * dv_
         out = xr.DataArray(red_vdf, coords=[v_x / 1e6, v_y / 1e6],
                            dims=["vx", "vy"])
     elif dim.lower() == "1d":
         dv_ = np.abs(np.diff(v_y)[0] * np.diff(v_z)[0])
-        red_vdf = np.sum(np.sum(interp_vdf, axis=-1), axis=-1) * dv_
+        red_vdf = np.nansum(np.sum(interp_vdf, axis=-1), axis=-1) * dv_
         out = xr.DataArray(red_vdf, coords=[v_x / 1e6], dims=["vx"])
 
     else:
