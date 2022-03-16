@@ -32,7 +32,15 @@ def _convert(inp, mass_ratio):
 
 
 def def2psd(inp):
-    r"""Computes phase space density from differential energy flux.
+    r"""Computes phase space density from differential energy flux as:
+
+    .. math:
+
+        f(E) = m^2 \frac{DEF}{E^2} * 0.53707,
+
+    where :math:`m` is the particle mass in atomic mass unit, :math:`DEF` is
+    the differential energy flux in 1/(cm sr s) and :math:`E` is the energy
+    in eV.
 
     Parameters
     ----------

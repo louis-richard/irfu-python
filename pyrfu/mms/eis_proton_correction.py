@@ -26,7 +26,29 @@ def _extof_calibration(energy, alpha, beta, gamma):
 
 def eis_proton_correction(flux_eis):
     r"""Corrects proton flux values based on FPI/HPCA/EPD-EIS cross
-    calibration.
+    calibration. Correction to the EIS PHxTOF data are made by applying an
+    energy-dependent numerical correction of the form:
+
+    .. math:
+
+        E_{PHxTOF} = \frac{1}{0.5*\left [1 + \alpha_{PH} \left (
+        \operatorname{tanh}\left ( \frac{E - \beta_{PH}}{\gamma_{PH}} + 1
+        \right ) \right ) \right ]}
+
+
+    where E is energy and  :math:`\alpha_{PH} = -0.3` , :math:`\beta_{PH} =
+    0.049` , :math:`\gamma_{PH} = 0.001` are coefficients. Minor adjustments
+    were also made to the lowest energy EIS ExTOF data to correct for foil
+    efficiencies. This correction is of the form:
+
+    .. math:
+
+        E_{ExTOF} = \frac{1}{0.5*\left [1 + \alpha_{E} \left (1 -
+        \operatorname{tanh}\left ( \frac{E - \beta_{E}}{\gamma_{E}} + 1
+        \right ) \right ) \right ]}
+
+    where E is energy and :math:`\alpha_{E} = -0.3` , :math:`\beta_{E} =
+    0.049` , :math:`\gamma_{E} = 0.001` are coefficients.
 
     Parameters
     ----------
