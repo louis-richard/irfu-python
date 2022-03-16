@@ -12,26 +12,41 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.14"
 __status__ = "Prototype"
 
 
-def histogram2d(inp1, inp2, bins: int = 100):
+def histogram2d(inp1, inp2, bins: int = 100, range: tuple = None,
+                weights: array_like = None, density: bool = True):
     r"""Computes 2d histogram of inp2 vs inp1 with nbins number of bins.
 
     Parameters
     ----------
     inp1 : xarray.DataArray
-        Time series of the x values.
+        Time series of the x coordinates of the points to be histogrammed.
     inp2 : xarray.DataArray
-        Time series of the y values.
+        Time series of the y coordinates of the points to be histogrammed.
     bins : int, Optional
-        Number of bins. Default is 100.
+        Number of bins. Default is ``bins=100``.
+    range : array_like, shape(2,2), Optional
+        The leftmost and rightmost edges of the bins along each dimension
+        (if not specified explicitly in the `bins` parameters):
+        ``[[xmin, xmax], [ymin, ymax]]``. All values outside of this range
+        will be considered outliers and not tallied in the histogram.
+    weights : array_like, shape(N,), Optional
+        An array of values ``w_i`` weighing each sample ``(x_i, y_i)``.
+        Weights are normalized to 1 if `normed` is True. If `normed` is
+        False, the values of the returned histogram are equal to the sum of
+        the weights belonging to the samples falling into each bin.
+    density : bool, Optional
+        If False, the default, returns the number of samples in each bin.
+        If True, returns the probability *density* function at the bin,
+        ``bin_count / sample_count / bin_area``.
 
     Returns
     -------
     out : xarray.DataArray
-        2D map of the density of inp2 vs inp1.
+        2D map of the density of ``inp2`` vs ``inp1``.
 
     Examples
     --------
@@ -70,7 +85,9 @@ def histogram2d(inp1, inp2, bins: int = 100):
     if len(inp2) != len(inp1):
         inp2 = resample(inp2, inp1)
 
-    h2d, x_edges, y_edges = np.histogram2d(inp1.data, inp2.data, bins=bins)
+    h2d, x_edges, y_edges = np.histogram2d(inp1.data, inp2.data, bins=bins,
+                                           range=range, weights=weights,
+                                           density=density)
 
     x_bins = x_edges[:-1] + np.median(np.diff(x_edges)) / 2
     y_bins = y_edges[:-1] + np.median(np.diff(y_edges)) / 2
