@@ -16,7 +16,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.14"
 __status__ = "Prototype"
 
 
@@ -46,9 +46,9 @@ def time_clip(inp, tint):
         for k in inp:
             if "time" in list(inp[k].coords):
                 data = time_clip(inp[k], tint)
-                out_dict[k] = (list(inp[k].dims), data)
+                out_dict[k] = (list(inp[k].dims), data.data)
             else:
-                out_dict[k] = (list(inp[k].dims), inp[k])
+                out_dict[k] = (list(inp[k].dims), inp[k].data)
 
         out = xr.Dataset(out_dict)
         out.attrs = inp.attrs
