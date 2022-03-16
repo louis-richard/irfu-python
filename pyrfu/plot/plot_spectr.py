@@ -88,6 +88,8 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
     if yscale == "log":
         axis.set_yscale("log")
 
+    axis.set_axisbelow(False)
+
     if colorbar:
         if kwargs.get("pad"):
             pad = kwargs["pad"]
@@ -97,6 +99,7 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
         pos = axis.get_position()
         cax = fig.add_axes([pos.x0+pos.width+pad, pos.y0, 0.01, pos.height])
         fig.colorbar(mappable=image, cax=cax, ax=axis)
+        cax.set_axisbelow(False)
 
         out = (axis, cax)
     else:

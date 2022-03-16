@@ -66,7 +66,7 @@ def plot_heatmap(ax, data, row_labels, col_labels, cbar_kw: dict = None,
     ax.set_yticklabels(row_labels)
 
     # Let the horizontal axes labeling appear on top.
-    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+    ax.tick_params(top=True, bottom=True, labeltop=True, labelbottom=False)
 
     # Turn spines off and create white grid.
     # ax.spines[:].set_visible(False)
@@ -75,5 +75,7 @@ def plot_heatmap(ax, data, row_labels, col_labels, cbar_kw: dict = None,
     ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
     ax.grid(which="minor", color="k", linestyle='-', linewidth=.5)
     ax.tick_params(which="minor", bottom=False, left=False)
+    ax.set_axisbelow(False)
+    cbar.ax.set_axisbelow(False)
 
     return im, cbar

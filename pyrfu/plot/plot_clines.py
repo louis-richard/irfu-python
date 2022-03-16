@@ -71,4 +71,6 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     if yscale == "log":
         axis.set_yscale("log")
 
+    cax.set_axisbelow(False)
+
     return axis, cax
