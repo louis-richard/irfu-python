@@ -49,14 +49,13 @@ def vdf_omni(vdf, method: str = "mean"):
     all_solid_angles = np.tile(solid_angles,
                                (len(time), energy.shape[1], 1, 1))
 
-    dist = vdf.data.data * all_solid_angles
-
     if method.lower() == "mean":
+        dist = vdf.data.data * all_solid_angles
         omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
         omni /= np.mean(np.mean(solid_angles))
     elif method.lower() == "sum":
-        omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
-        omni /= np.mean(np.mean(solid_angles))
+        dist = vdf.data.data
+        omni = np.squeeze(np.nansum(np.nansum(dist, axis=3), axis=2))
     else:
         raise ValueError("invalid method!!")
 

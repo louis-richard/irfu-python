@@ -17,7 +17,7 @@ def _idx_closest(lst0, lst1):
     return [(np.abs(np.asarray(lst0) - k)).argmin() for k in lst1]
 
 
-def eis_skymap_combine_sc(skymaps):
+def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     r"""Generate composite skymap from the EIS sensors across the MMS
     spacecraft.
 
@@ -25,6 +25,8 @@ def eis_skymap_combine_sc(skymaps):
     ----------
     skymaps : list of xarray.DataArray
         Skymap distribution for all spacecraft.
+    method : str, Optional
+        Method to combine spectra, "mean" or "sum"
 
     Returns
     -------
@@ -37,6 +39,7 @@ def eis_skymap_combine_sc(skymaps):
     pyrfu.mms.eis_spec_combine_sc, pyrfu.mms.eis_spec_combine_sc
 
     """
+    assert method.lower() in ["mean", "sum"]
 
     # Determine spacecraft with smallest number of time steps to use as
     # reference spacecraft
@@ -78,8 +81,12 @@ def eis_skymap_combine_sc(skymaps):
         idx_en = _idx_closest(skymap.energy.data[0, :], common_energy[0, :])
         allmms_skymap[..., p] = skymap.data[:ref_sc_time_size, idx_en, ...]
 
-    # Average the four spacecraft
-    allmms_skymap_avg = np.nanmean(allmms_skymap, axis=-1)
+    if method.lower() == "mean":
+        # Average the four spacecraft
+        allmms_skymap_avg = np.nanmean(allmms_skymap, axis=-1)
+    else:
+        # Sum the four spacecraft
+        allmms_skymap_avg = np.nansum(allmms_skymap, axis=-1)
 
     # Create combined skymap
     out_dict = {"time": ref_probe.time.data,
