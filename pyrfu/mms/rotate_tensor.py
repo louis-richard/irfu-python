@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from ..pyrf import resample, ts_tensor_xyz
+from ..pyrf import resample, ts_tensor_xyz, calc_fs
 
 
 def rotate_tensor(*args):
@@ -84,13 +84,12 @@ def rotate_tensor(*args):
     rot_mat = np.zeros((len(p_times), 3, 3))
 
     if rot_flag[0] == "f":
-        print("notice : Transforming tensor into field-aligned coordinates.")
 
         if nargin == rot_flag_pos:
             raise ValueError("B TSeries is missing.")
 
         b_back = args[rot_flag_pos + 1]
-        b_back = resample(b_back, p_tensor)
+        b_back = resample(b_back, p_tensor, f_s=calc_fs(p_tensor))
 
         if nargin == 4:
             if isinstance(args[3], str) and args[3][0] == "p":
@@ -120,7 +119,6 @@ def rotate_tensor(*args):
         rot_mat[:, 0, :], rot_mat[:, 1, :], rot_mat[:, 2, :] = [r_x, r_y, r_z]
 
     elif rot_flag[0] == "r":
-        print("notice : Transforming tensor into user defined coordinate system.")
 
         if nargin == rot_flag_pos:
             raise ValueError("Vector(s) is(are) missing.")
@@ -162,7 +160,6 @@ def rotate_tensor(*args):
                                         np.transpose(rot_temp))
 
     if ppeq:
-        print("notice : Rotating tensor so perpendicular diagonal components are equal.")
         thetas = 0.5 * np.arctan(
             (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]))
 
@@ -177,7 +174,6 @@ def rotate_tensor(*args):
                 np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])), np.transpose(rot_temp))
 
     if qqeq:
-        print("notice : Rotating tensor so perpendicular diagonal components are most unequal.")
         thetas = 0.5 * np.arctan(
             (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]))
 
