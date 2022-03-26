@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Union
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -13,15 +16,15 @@ __version__ = "2.3.14"
 __status__ = "Prototype"
 
 
-def histogram(inp, bins: int = 100, range: tuple = None,
-              weights: array_like = None, density: bool = True):
+def histogram(inp, bins: Union[str, int, np.ndarray, list] = 100,
+              range: tuple = None, weights = None, density: bool = True):
     r"""Computes 1D histogram of the inp with bins bins
 
     Parameters
     ----------
     inp : xarray.DataArray
         Time series of the input scalar variable.
-    bins : int, Optional
+    bins : str or int or array_like, Optional
         Number of bins. Default is ``bins=100``.
     range : (float, float), Optional
         The lower and upper range of the bins.  If not provided, range

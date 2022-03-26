@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Union
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -16,8 +19,8 @@ __version__ = "2.3.14"
 __status__ = "Prototype"
 
 
-def histogram2d(inp1, inp2, bins: int = 100, range: tuple = None,
-                weights: array_like = None, density: bool = True):
+def histogram2d(inp1, inp2, bins: Union[str, int, tuple] = 100,
+                range: tuple = None, weights = None, density: bool = True):
     r"""Computes 2d histogram of inp2 vs inp1 with nbins number of bins.
 
     Parameters
@@ -26,7 +29,7 @@ def histogram2d(inp1, inp2, bins: int = 100, range: tuple = None,
         Time series of the x coordinates of the points to be histogrammed.
     inp2 : xarray.DataArray
         Time series of the y coordinates of the points to be histogrammed.
-    bins : int, Optional
+    bins : str or int or tuple, Optional
         Number of bins. Default is ``bins=100``.
     range : array_like, shape(2,2), Optional
         The leftmost and rightmost edges of the bins along each dimension
