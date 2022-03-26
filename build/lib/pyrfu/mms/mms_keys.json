@@ -1,0 +1,794 @@
+{
+  "mec": {
+    "r_gse_mec_srvy_l2": {
+      "dtype": "epht89d",
+      "cdf_name": "mec_r_gse"
+    },
+    "r_gsm_mec_srvy_l2": {
+      "dtype": "epht89d",
+      "cdf_name": "mec_r_gsm"
+    }
+  },
+  "edp": {
+    "phase_edp_fast_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_phase_fast_l2a"
+    },
+    "phase_edp_slow_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_phase_slow_l2a"},
+    "sdev12_edp_slow_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_sdevfit_p12_slow_l2a"
+    },
+    "sdev34_edp_slow_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_sdevfit_p34_slow_l2a"
+    },
+    "sdev12_edp_fast_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_sdevfit_p12_fast_l2a"
+    },
+    "sdev34_edp_fast_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_sdevfit_p34_fast_l2a"
+    },
+    "e_dsl_edp_brst_l2": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_dsl_brst_l2"
+    },
+    "e_dsl_edp_fast_l2": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_dsl_fast_l2"
+    },
+    "e_dsl_edp_brst_ql": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_xyz_dsl"
+    },
+    "e_dsl_edp_fast_ql": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_xyz_dsl"
+    },
+    "e_dsl_edp_slow_l2": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_dsl_slow_l2"
+    },
+    "e_gse_edp_brst_l2": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_gse_brst_l2"
+    },
+    "e_gse_edp_fast_l2": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_gse_fast_l2"
+    },
+    "e_gse_edp_slow_l2": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_gse_slow_l2"
+    },
+    "e2d_dsl_edp_brst_l2pre": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_dsl_brst_l2pre"
+    },
+    "e2d_dsl_edp_fast_l2pre": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_dsl_fast_l2pre"
+    },
+    "e2d_dsl_edp_brst_ql": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_xyz_dsl"
+    },
+    "e2d_dsl_edp_fast_ql": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_xyz_dsl"},
+    "e2d_dsl_edp_l2pre": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_dsl_fast_l2pre"
+    },
+    "e_dsl_edp_l2pre": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_dsl_fast_l2pre"
+    },
+    "e_dsl_edp_fast_l2pre": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_dsl_fast_l2pre"
+    },
+    "e_dsl_edp_brst_l2pre": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_dsl_brst_l2pre"
+    },
+    "e_dsl_edp_slow_l2pre": {
+      "dtype": "dce",
+      "cdf_name": "edp_dce_dsl_slow_l2pre"
+    },
+    "e_ssc_edp_brst_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_brst_l2a"
+    },
+    "e_ssc_edp_fast_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_fast_l2a"
+    },
+    "e_ssc_edp_slow_l2a": {
+      "dtype": "dce2d",
+      "cdf_name": "edp_dce_slow_l2a"
+    },
+    "v_edp_fast_sitl": {
+      "dtype": "scpot",
+      "cdf_name": "edp_scpot_fast_sitl"
+    },
+    "v_edp_slow_sitl": {
+      "dtype": "scpot",
+      "cdf_name": "edp_scpot_slow_sitl"
+    },
+    "v_edp_slow_l2": {
+      "dtype": "scpot",
+      "cdf_name": "edp_scpot_slow_l2"
+    },
+    "v_edp_fast_l2": {
+      "dtype": "scpot",
+      "cdf_name": "edp_scpot_fast_l2"
+    },
+    "v_edp_brst_l2": {
+      "dtype": "scpot",
+      "cdf_name": "edp_scpot_brst_l2"
+    }
+  },
+  "fgm": {
+    "b_gsm_fgm_srvy_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_gsm_srvy_l2"
+    },
+    "b_gsm_fgm_brst_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_gsm_brst_l2"
+    },
+    "b_gse_fgm_srvy_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_gse_srvy_l2"
+    },
+    "b_gse_fgm_brst_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_gse_brst_l2"
+    },
+    "b_bcs_fgm_srvy_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_bcs_srvy_l2"
+    },
+    "b_bcs_fgm_brst_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_bcs_brst_l2"
+    },
+    "b_dmpa_fgm_srvy_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_dmpa_srvy_l2"
+    },
+    "b_dmpa_fgm_brst_l2": {
+      "dtype": "",
+      "cdf_name": "fgm_b_dmpa_brst_l2"
+    }
+  },
+  "dfg": {
+    "b_gsm_dfg_srvy_l2pre": {
+      "dtype": "",
+      "cdf_name": "dfg_b_gsm_srvy_l2pre"
+    },
+    "b_gse_dfg_srvy_l2pre": {
+      "dtype": "",
+      "cdf_name": "dfg_b_gse_srvy_l2pre"
+    },
+    "b_dmpa_dfg_srvy_l2pre": {
+      "dtype": "", "cdf_name": "dfg_b_dmpa_srvy_l2pre"
+    },
+    "b_bcs_dfg_srvy_l2pre": {
+      "dtype": "", "cdf_name": "dfg_b_bcs_srvy_l2pre"
+    }
+  },
+  "afg": {
+    "b_gsm_afg_srvy_l2pre": {
+      "dtype": "",
+      "cdf_name": "afg_b_gsm_srvy_l2pre"
+    },
+    "b_gse_afg_srvy_l2pre": {
+      "dtype": "",
+      "cdf_name": "afg_b_gse_srvy_l2pre"
+    },
+    "b_dmpa_afg_srvy_l2pre": {
+      "dtype": "",
+      "cdf_name": "afg_b_dmpa_srvy_l2pre"
+    },
+    "b_bcs_afg_srvy_l2pre": {
+      "dtype": "",
+      "cdf_name": "afg_b_bcs_srvy_l2pre"
+    }
+  },
+  "scm": {
+    "b_gse_scm_brst_l2": {
+      "dtype": "scb",
+      "cdf_name": "scm_acb_gse_scb_brst_l2"
+    }
+  },
+  "fpi": {
+    "ni_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_numberdensity_brst"
+    },
+    "ne_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_numberdensity_brst"
+    },
+    "ni_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_numberdensity_fast"
+    },
+    "ne_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_numberdensity_fast"
+    },
+    "ni_fpi_ql": {
+      "dtype": "dis",
+      "cdf_name": "dis_numberdensity_fast"
+    },
+    "ne_fpi_ql": {
+      "dtype": "des",
+      "cdf_name": "des_numberdensity_fast"
+    },
+    "nbgi_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_numberdensity_bg_brst"
+    },
+    "nbgi_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_numberdensity_bg_fast"
+    },
+    "vi_dbcs_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_dbcs_fast"
+    },
+    "sti_dbcs_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_spin_dbcs_fast"
+    },
+    "ve_dbcs_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_dbcs_fast"
+    },
+    "ste_dbcs_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_spintone_dbcs_fast"
+    },
+    "vi_dbcs_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_dbcs_brst"
+    },
+    "sti_dbcs_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_spintone_dbcs_brst"
+    },
+    "ve_dbcs_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_dbcs_brst"
+    },
+    "ste_dbcs_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_spintone_dbcs_brst"
+    },
+    "vi_gse_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_gse_fast"
+    },
+    "sti_gse_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_spintone_gse_fast"
+    },
+    "ve_gse_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_gse_fast"
+    },
+    "ste_gse_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_spintone_gse_fast"
+    },
+    "vi_gse_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_gse_brst"
+    },
+    "sti_gse_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_bulkv_spintone_gse_brst"
+    },
+    "ve_gse_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_gse_brst"
+    },
+    "ste_gse_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_bulkv_spintone_gse_brst"
+    },
+    "vi_dbcs_fpi_ql": {
+      "dtype": "dis",
+      "cdf_name": "dis_bulkv_dbcs_fast"
+    },
+    "ve_dbcs_fpi_ql": {
+      "dtype": "des",
+      "cdf_name": "des_bulkv_dbcs_fast"
+    },
+    "vi_gse_fpi_ql": {
+      "dtype": "dis",
+      "cdf_name": "dis_bulkv_gse_fast"
+    },
+    "ve_gse_fpi_ql": {
+      "dtype": "des",
+      "cdf_name": "des_bulkv_gse_fast"
+    },
+    "partvi_dbcs_fpi_fast_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_bulkv_part_dbcs_fast"
+    },
+    "partvi_gse_fpi_fast_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_bulkv_part_gse_fast"
+    },
+    "partvi_dbcs_fpi_brst_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_bulkv_part_dbcs_brst"
+    },
+    "partvi_gse_fpi_brst_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_bulkv_part_gse_brst"
+    },
+    "partve_dbcs_fpi_fast_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_bulkv_part_dbcs_fast"
+    },
+    "partve_gse_fpi_fast_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_bulkv_part_gse_fast"
+    },
+    "partve_dbcs_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_bulkv_part_dbcs_brst"
+    },
+    "partve_gse_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_bulkv_part_gse_brst"
+    },
+    "partni_fpi_fast_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_numberdensity_part_fast"
+    },
+    "partne_fpi_fast_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_numberdensity_part_fast"
+    },
+    "partni_fpi_brst_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_numberdensity_part_brst"
+    },
+    "partne_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_numberdensity_part_brst"
+    },
+    "tperpe_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_tempperp_brst"
+    },
+    "tparae_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_temppara_brst"
+    },
+    "parttperpe_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_tempperp_part_brst"
+    },
+    "parttparae_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_temppara_part_brst"
+    },
+    "ti_dbcs_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_temptensor_dbcs_brst"
+    },
+    "te_dbcs_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_temptensor_dbcs_brst"
+    },
+    "ti_dbcs_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_temptensor_dbcs_fast"
+    },
+    "te_dbcs_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_temptensor_dbcs_fast"
+    },
+    "ti_gse_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_temptensor_gse_brst"
+    },
+    "te_gse_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_temptensor_gse_brst"
+    },
+    "ti_gse_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_temptensor_gse_fast"
+    },
+    "te_gse_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_temptensor_gse_fast"
+    },
+    "te_gse_fpi_ql": {
+      "dtype": "des",
+      "cdf_name": "des_temptensor_gse_fast"
+    },
+    "te_dbcs_fpi_ql": {
+      "dtype": "des",
+      "cdf_name": "des_temptensor_dbcs_fast"
+    },
+    "partti_dbcs_fpi_brst_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_temptensor_part_dbcs_brst"
+    },
+    "partte_dbcs_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_temptensor_part_dbcs_brst"
+    },
+    "partti_dbcs_fpi_fast_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_temptensor_part_dbcs_fast"
+    },
+    "partte_dbcs_fpi_fast_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_temptensor_part_dbcs_fast"
+    },
+    "partti_gse_fpi_brst_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_temptensor_part_gse_brst"
+    },
+    "partte_gse_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_temptensor_part_gse_brst"
+    },
+    "partti_gse_fpi_fast_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_temptensor_part_gse_fast"
+    },
+    "partte_gse_fpi_fast_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_temptensor_part_gse_fast"
+    },
+    "pi_dbcs_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_prestensor_dbcs_fast"
+    },
+    "pe_dbcs_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_prestensor_dbcs_fast"
+    },
+    "pi_dbcs_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_prestensor_dbcs_brst"
+    },
+    "pe_dbcs_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_prestensor_dbcs_brst"
+    },
+    "pi_gse_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_prestensor_gse_fast"
+    },
+    "partpi_gse_fpi_fast_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_prestensor_part_gse_fast"
+    },
+    "pe_gse_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_prestensor_gse_fast"
+    },
+    "partpe_gse_fpi_fast_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_prestensor_part_gse_fast"
+    },
+    "pi_gse_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_prestensor_gse_brst"
+    },
+    "partpi_gse_fpi_brst_l2": {
+      "dtype": "dis-partmoms",
+      "cdf_name": "dis_prestensor_part_gse_brst"
+    },
+    "pe_gse_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_prestensor_gse_brst"
+    },
+    "partpe_gse_fpi_brst_l2": {
+      "dtype": "des-partmoms",
+      "cdf_name": "des_prestensor_part_gse_brst"
+    },
+    "pi_dbcs_fpi_ql": {
+      "dtype": "dis",
+      "cdf_name": "dis_prestensor_dbcs_fast"
+    },
+    "pe_dbcs_fpi_ql": {
+      "dtype": "des",
+      "cdf_name": "des_prestensor_dbcs_fast"
+    },
+    "pi_gse_fpi_ql": {
+      "dtype": "dis",
+      "cdf_name": "dis_prestensor_gse_fast"
+    },
+    "pe_gse_fpi_ql": {
+      "dtype": "des",
+      "cdf_name": "des_prestensor_gse_fast"
+    },
+    "pbgi_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_pres_bg_fast"
+    },
+    "pbgi_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_pres_bg_brst"
+    },
+    "defi_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_energyspectr_omni_fast"
+    },
+    "defe_fpi_fast_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_energyspectr_omni_fast"
+    },
+    "defi_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_energyspectr_omni_brst"
+    },
+    "defe_fpi_brst_l2": {
+      "dtype": "des-moms",
+      "cdf_name": "des_energyspectr_omni_brst"
+    },
+    "defe_fpi_fast_ql": {
+      "dtype": "des",
+      "cdf_name": "des_energyspectr_omni_fast"
+    },
+    "pdi_fpi_fast_l2": {
+      "dtype": "dis-dist",
+      "cdf_name": "dis_dist_fast"
+    },
+    "pde_fpi_fast_l2": {
+      "dtype": "des-dist",
+      "cdf_name": "des_dist_fast"
+    },
+    "pdi_fpi_brst_l2": {
+      "dtype": "dis-dist",
+      "cdf_name": "dis_dist_brst"
+    },
+    "pde_fpi_brst_l2": {
+      "dtype": "des-dist",
+      "cdf_name": "des_dist_brst"
+    },
+    "pderri_fpi_fast_l2": {
+      "dtype": "dis-dist",
+      "cdf_name": "dis_disterr_fast"
+    },
+    "pderre_fpi_fast_l2": {
+      "dtype": "des-dist",
+      "cdf_name": "des_disterr_fast"
+    },
+    "pderri_fpi_brst_l2": {
+      "dtype": "dis-dist",
+      "cdf_name": "dis_disterr_brst"
+    },
+    "pderre_fpi_brst_l2": {
+      "dtype": "des-dist",
+      "cdf_name": "des_disterr_brst"
+    }
+  },
+  "hpca": {
+    "nhplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_number_density"
+    },
+    "nhplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_number_density"
+    },
+    "noplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_number_density"
+    },
+    "noplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_number_density"
+    },
+    "nheplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_number_density"
+    },
+    "nheplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_number_density"
+    },
+    "nheplusplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_number_density"
+    },
+    "nheplusplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_number_density"
+    },
+    "vhplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_ion_bulk_velocity"
+    },
+    "vhplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_ion_bulk_velocity_GSM"
+    },
+    "vhplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_ion_bulk_velocity"
+    },
+    "vhplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_ion_bulk_velocity_GSM"
+    },
+    "voplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_ion_bulk_velocity"
+    },
+    "voplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_ion_bulk_velocity_GSM"
+    },
+    "voplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_ion_bulk_velocity"
+    },
+    "voplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_ion_bulk_velocity_GSM"
+    },
+    "vheplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_ion_bulk_velocity"
+    },
+    "vheplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_ion_bulk_velocity_GSM"
+    },
+    "vheplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_ion_bulk_velocity"
+    },
+    "vheplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_ion_bulk_velocity_GSM"
+    },
+    "vheplusplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_ion_bulk_velocity"
+    },
+    "vheplusplus_gsm_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_ion_bulk_velocity_GSM"
+    },
+    "vheplusplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_ion_bulk_velocity"
+    },
+    "vheplusplus_gsm_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_ion_bulk_velocity_GSM"
+    },
+    "thplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_temperature_tensor"
+    },
+    "tshplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_scalar_temperature"
+    },
+    "thplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_temperature_tensor"
+    },
+    "tshplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_hplus_scalar_temperature"
+    },
+    "toplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_temperature_tensor"
+    },
+    "tsoplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_scalar_temperature"
+    },
+    "toplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_temperature_tensor"
+    },
+    "tsoplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_oplus_scalar_temperature"
+    },
+    "theplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_temperature_tensor"
+    },
+    "tsheplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_scalar_temperature"
+    },
+    "theplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_temperature_tensor"
+    },
+    "tsheplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplus_scalar_temperature"
+    },
+    "theplusplus_dbcs_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_temperature_tensor"
+    },
+    "tsheplusplus_hpca_brst_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_scalar_temperature"
+    },
+    "theplusplus_dbcs_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_temperature_tensor"
+    },
+    "tsheplusplus_hpca_srvy_l2": {
+      "dtype": "moments",
+      "cdf_name": "hpca_heplusplus_scalar_temperature"
+    },
+    "dpfhplus_hpca_srvy_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_hplus_flux"
+    },
+    "dpfhplus_hpca_brst_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_hplus_flux"
+    },
+    "dpfoplus_hpca_srvy_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_oplus_flux"
+    },
+    "dpfoplus_hpca_brst_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_oplus_flux"
+    },
+    "dpfheplus_hpca_srvy_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_heplus_flux"
+    },
+    "dpfheplus_hpca_brst_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_heplus_flux"
+    },
+    "dpfheplusplus_hpca_srvy_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_heplusplus_flux"
+    },
+    "dpfheplusplus_hpca_brst_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_heplusplus_flux"
+    },
+    "saz_hpca_srvy_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_start_azimuth"
+    },
+    "saz_hpca_brst_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_start_azimuth"
+    },
+    "azimuth_hpca_srvy_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_azimuth_angles_per_ev_degrees"
+    },
+    "azimuth_hpca_brst_l2": {
+      "dtype": "ion",
+      "cdf_name": "hpca_azimuth_angles_per_ev_degrees"
+    }
+  }
+}

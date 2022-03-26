@@ -1,0 +1,9 @@
+cdflib
+matplotlib
+numpy
+numba
+pandas
+sphinx
+scipy
+xarray
+geopack

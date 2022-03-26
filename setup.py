@@ -9,9 +9,9 @@ from sphinx.setup_command import BuildDoc
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2022"
 __license__ = "MIT"
-__version__ = "2.3.14"
+__version__ = "2.3.16"
 __status__ = "Prototype"
 
 HERE = pathlib.Path(__file__).parent
@@ -23,14 +23,14 @@ AUTHOR_EMAIL = "louir@irfu.se"
 URL = "https://github.com/louis-richard/irfu-python"
 
 LICENSE = "MIT License"
-DESCRIPTION = "Python Space Physics Environment Data Analysis"
+DESCRIPTION = "Python Space Physics (RymdFysik) Utilities"
 
 with open("README.rst", "r") as fh:
     LONG_DESCRIPTION = fh.read()
 
 
 INSTALL_REQUIRES = ["cdflib", "matplotlib", "numpy", "numba", "pandas",
-                    "sphinx", "scipy", "xarray", "geopack"]
+                    "sphinx", "scipy", "tqdm", "xarray", "geopack"]
 
 PYTHON_REQUIRES = ">=3.7"
 
