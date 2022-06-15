@@ -35,7 +35,11 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
 
     """
 
-    x = np.atleast_2d(inp.data.copy())
+    if inp.ndim == 1:
+        x = inp.data[:, None]
+    else:
+        x = inp.data
+
     n = len(inp)
 
     if maxlags is None:
@@ -58,10 +62,10 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
         correls = correls[n - 1 - maxlags:n + maxlags]
         out_data[:, i] = correls[lags >= 0]
 
-    if len(inp.shape) == 1:
+    if inp.ndim == 1:
         out = xr.DataArray(np.squeeze(out_data), coords=[lags[lags >= 0]],
                            dims=["lag"])
-    elif len(inp.shape) == 2:
+    elif inp.ndim == 2:
         out = xr.DataArray(out_data,
                            coords=[lags[lags >= 0], inp[inp.dims[1]].data],
                            dims=["lag", inp.dims[1]])
