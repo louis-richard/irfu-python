@@ -9,6 +9,12 @@
       "cdf_name": "mec_r_gsm"
     }
   },
+  "fsm": {
+    "b_gse_fsm_brst_l3": {
+      "dtype": "8khz",
+      "cdf_name": "fsm_b_gse_brst_l3"
+    }
+  },
   "edp": {
     "phase_edp_fast_l2a": {
       "dtype": "dce2d",

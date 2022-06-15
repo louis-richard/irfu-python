@@ -23,7 +23,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
 
     Parameters
     ----------
-    skymaps : list of xarray.DataArray
+    skymaps : list of xarray.Dataset
         Skymap distribution for all spacecraft.
     method : str, Optional
         Method to combine spectra, "mean" or "sum"

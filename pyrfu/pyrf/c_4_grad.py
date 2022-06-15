@@ -122,14 +122,15 @@ def c_4_grad(r_list, b_list, method: str = "grad"):
     if len(b_dict["1"].shape) == 1:
         grad_b = np.zeros((len(b_dict["1"]), 3))
 
-        for ic in mms_list:
-            grad_b += k_dict[ic].data * np.tile(b_dict[ic].data, (3, 1)).T
+        for i_sc in mms_list:
+            grad_b += k_dict[i_sc].data * np.tile(b_dict[i_sc].data, (3, 1)).T
 
     else:
         grad_b = np.zeros((len(b_dict["1"]), 3, 3))
 
-        for i, j, ic in itertools.product(range(3), range(3), mms_list):
-            grad_b[:, j, i] += k_dict[ic][:, i].data * b_dict[ic][:, j].data
+        for i, j, i_sc in itertools.product(range(3), range(3), mms_list):
+            grad_b[:, j, i] += k_dict[i_sc][:, i].data \
+                               * b_dict[i_sc][:, j].data
 
     # Gradient
     if method.lower() == "grad":

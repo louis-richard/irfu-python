@@ -19,7 +19,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def get_pitch_angle_dist(vdf, b_xyz, tint, **kwargs):
+def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
     r"""Computes the pitch angle distributions from l1b brst particle data.
 
     Parameters

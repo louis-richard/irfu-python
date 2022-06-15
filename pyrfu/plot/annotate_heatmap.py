@@ -18,7 +18,7 @@ __status__ = "Prototype"
 
 
 def annotate_heatmap(im, data: np.ndarray = None, valfmt: str = "{x:.2f}",
-                     textcolors: dict = ("black", "white"),
+                     textcolors: tuple = ("black", "white"),
                      threshold: float = None, **textkw):
     r"""Annotate a heatmap.
 

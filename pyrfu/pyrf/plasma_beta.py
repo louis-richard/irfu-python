@@ -23,7 +23,7 @@ def plasma_beta(b_xyz, p_xyz):
 
         \beta = \frac{P_{th}}{P_b}
 
-    where : :math:`P_b = B^2 / 2 \mu_0`
+    where : :math:`P_b = B^2 / 2 \\mu_0`
 
     Parameters
     ----------

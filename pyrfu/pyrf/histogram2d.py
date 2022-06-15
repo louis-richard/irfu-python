@@ -20,7 +20,7 @@ __status__ = "Prototype"
 
 
 def histogram2d(inp1, inp2, bins: Union[str, int, tuple] = 100,
-                range: tuple = None, weights = None, density: bool = True):
+                y_range: tuple = None, weights=None, density: bool = True):
     r"""Computes 2d histogram of inp2 vs inp1 with nbins number of bins.
 
     Parameters
@@ -31,7 +31,7 @@ def histogram2d(inp1, inp2, bins: Union[str, int, tuple] = 100,
         Time series of the y coordinates of the points to be histogrammed.
     bins : str or int or tuple, Optional
         Number of bins. Default is ``bins=100``.
-    range : array_like, shape(2,2), Optional
+    y_range : array_like, shape(2,2), Optional
         The leftmost and rightmost edges of the bins along each dimension
         (if not specified explicitly in the `bins` parameters):
         ``[[xmin, xmax], [ymin, ymax]]``. All values outside of this range
@@ -89,7 +89,7 @@ def histogram2d(inp1, inp2, bins: Union[str, int, tuple] = 100,
         inp2 = resample(inp2, inp1)
 
     h2d, x_edges, y_edges = np.histogram2d(inp1.data, inp2.data, bins=bins,
-                                           range=range, weights=weights,
+                                           range=y_range, weights=weights,
                                            density=density)
 
     x_bins = x_edges[:-1] + np.median(np.diff(x_edges)) / 2

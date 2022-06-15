@@ -74,7 +74,7 @@ from .datetime2iso8601 import datetime2iso8601
 from .cotrans import cotrans
 from .sph2cart import sph2cart
 from .gse2gsm import gse2gsm
-from .mf import mf
+from .mean_field import mean_field
 from .waverage import waverage
 from .l_shell import l_shell
 from .optimize_nbins_1d import optimize_nbins_1d

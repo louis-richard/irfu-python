@@ -19,6 +19,7 @@ from .dft_time_shift import dft_time_shift
 from .estimate_phase_speed import estimate_phase_speed
 from .fft_bandpass import fft_bandpass
 from .get_pitch_angle_dist import get_pitch_angle_dist
+from .load_brst_segments import load_brst_segments
 from .make_model_vdf import make_model_vdf
 from .psd_rebin import psd_rebin
 from .load_ancillary import load_ancillary
@@ -39,6 +40,7 @@ from .get_variable import get_variable
 from .db_get_variable import db_get_variable
 from .make_model_kappa import make_model_kappa
 from .vdf_reduce import *
+
 # Hot Plasma Composition Analyser (HPCA)
 from .get_hpca_dist import get_hpca_dist
 from .hpca_calc_anodes import hpca_calc_anodes

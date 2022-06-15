@@ -12,7 +12,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def mf(inp, deg):
+def mean_field(inp, deg):
     r"""Estimates mean field xm and wave field xw using polynomial fit of order
     `deg` for the number of columns larger than 3 assume that first column
     is time.

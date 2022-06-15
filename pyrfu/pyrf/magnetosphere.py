@@ -66,12 +66,12 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
         alpha_ = _alpha(d_p, b_z)
 
         with np.errstate(divide='ignore'):
-            r_ = r_zero * (2. / (1 + np.cos(theta_))) ** alpha_
+            r_s = r_zero * (2. / (1 + np.cos(theta_))) ** alpha_
 
-        x_ = r_ * np.cos(theta_)
-        y_ = r_ * np.sin(theta_)
-        y_ = y_[abs(x_) < 100]
-        x_ = x_[abs(x_) < 100]
+        x_s = r_s * np.cos(theta_)
+        y_s = r_s * np.sin(theta_)
+        y_s = y_s[abs(x_s) < 100]
+        x_s = x_s[abs(x_s) < 100]
 
     elif model == "bs":
         x_mp, _ = magnetosphere("mp_shue1998", tint)
@@ -80,12 +80,12 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
         rstandoff = x_mp[0] * (1 + 1.1 * ((gamma_ - 1) * m_a ** 2 + 2) / (
                     (gamma_ + 1) * (m_a ** 2 - 1)))
         # Smaller increments at the subsolar point
-        x_ = rstandoff - np.logspace(np.log10(0.1), np.log10(100 + rstandoff),
-                                     300) + 0.1
+        x_s = rstandoff - np.logspace(np.log10(0.1), 
+                                      np.log10(100 + rstandoff), 300) + 0.1
         # original F/G model adds rstandoff^2=645
-        y_ = np.sqrt(0.04 * (x_ - rstandoff) ** 2 - 45.3 * (x_ - rstandoff))
+        y_s = np.sqrt(0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff))
 
     else:
         raise NotImplementedError("This model is not implemented yet!!")
 
-    return x_, y_
+    return x_s, y_s
