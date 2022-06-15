@@ -63,12 +63,17 @@ def remove_idist_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     n_new, v_new = [n_i_new.data, v_gse_i_new.data]
 
     for i, j in zip([0, 1, 2, 0, 0, 1], [0, 1, 2, 1, 2, 2]):
-        p_gse_i_new[:, i, j] += p_gse_i.data[:, 0, 0]
-        p_gse_i_new[:, i, j] -= p_bg_i.data
+        p_gse_i_new[:, i, j] += p_gse_i.data[:, i, j]
+
         p_gse_i_new[:, i, j] += m_p * n_old * np.multiply(v_old[:, i],
                                                           v_old[:, j])
         p_gse_i_new[:, i, j] -= m_p * n_new * np.multiply(v_new[:, i],
                                                           v_new[:, j])
+
+    # Remove isotropic background pressure
+    p_bkg_mat = np.tile(np.eye(3, 3), (len(p_bg_i.data), 1, 1))
+    p_bkg_mat *= p_bg_i.data[:, None, None]
+    p_gse_i_new -= p_bkg_mat
 
     # Pressure tensor is symmetric
     p_gse_i_new[:, 1, 0] = p_gse_i_new[:, 0, 1]
