@@ -43,27 +43,27 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
     x_min, x_max = [np.min(x.data), np.max(x.data)]
 
     # #of Bins
-    n_x = np.arange(n_min, n_max)
+    ns_x = np.arange(n_min, n_max)
 
     # Bin size vector
-    d_x = (x_max - x_min) / n_x
+    ds_x = (x_max - x_min) / ns_x
 
-    c_x = np.zeros(d_x.shape)
+    cs_x = np.zeros(d_x.shape)
     # Computation of the cost function to x and y
-    for i in range(len(n_x)):
-        k_i = np.histogram(x, bins=n_x[i])
+    for i, n_x in enumumerate(ns_x):
+        k_i = np.histogram(x, bins=n_x)
         # The mean and the variance are simply computed from the
         # event counts in all the bins of the 1-dimensional histogram.
         k_i = k_i[0]
         k_ = np.mean(k_i)  # Mean of event count
-        v_ = np.var(k_i)   # Variance of event count
+        v_ = np.var(k_i)  # Variance of event count
         # The cost Function
-        c_x[i] = (2 * k_ - v_) / d_x[i] ** 2
+        cs_x[i] = (2 * k_ - v_) / ds_x[i] ** 2
 
     # Optimal Bin Size Selection
     # combination of i and j that produces the minimum cost function
-    idx_min = np.argmin(c_x)  # get the index of the min Cxy
+    idx_min = np.argmin(cs_x)  # get the index of the min Cxy
 
-    opt_n_x = n_x[idx_min]
+    opt_n_x = ns_x[idx_min]
 
     return opt_n_x

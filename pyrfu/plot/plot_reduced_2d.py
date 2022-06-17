@@ -42,14 +42,24 @@ def plot_reduced_2d(ax, f2d, clim: list = None):
     clim_log = np.log10(clim)
     n_levs = int(np.round(clim_log[1]) - np.round(clim_log[0])) + 1
 
-    im = ax.pcolormesh(f2d.vx.data, f2d.vy.data, np.transpose(f2d.data),
-                       norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]),
-                       cmap="Spectral_r", rasterized=True, shading="auto")
+    im = ax.pcolormesh(
+        f2d.vx.data,
+        f2d.vy.data,
+        np.transpose(f2d.data),
+        norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]),
+        cmap="Spectral_r",
+        rasterized=True,
+        shading="auto",
+    )
 
-    c_lines = ax.contour(f2d.vx.data, f2d.vy.data, np.transpose(f2d.data),
-                         levels=np.logspace(clim_log[0], clim_log[1], n_levs),
-                         norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]),
-                         cmap="viridis")
+    c_lines = ax.contour(
+        f2d.vx.data,
+        f2d.vy.data,
+        np.transpose(f2d.data),
+        levels=np.logspace(clim_log[0], clim_log[1], n_levs),
+        norm=colors.LogNorm(vmin=clim[0], vmax=clim[1]),
+        cmap="viridis",
+    )
 
     vx_lim = np.max(abs(f2d.vx.data))
     vy_lim = np.max(abs(f2d.vy.data))
@@ -60,7 +70,7 @@ def plot_reduced_2d(ax, f2d, clim: list = None):
 
     f = plt.gcf()
     pos = ax.get_position()
-    cax = f.add_axes([pos.x0, pos.y0 + pos.height + .01, pos.width, .01])
+    cax = f.add_axes([pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01])
     cbar = f.colorbar(mappable=im, cax=cax, ax=ax, orientation="horizontal")
     cbar.add_lines(c_lines)
     cax.xaxis.tick_top()

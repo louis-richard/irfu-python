@@ -54,9 +54,16 @@ def _cylindrical_body(z, u, x_, i_p):
     return j_thermal
 
 
-def thermal_current(n: float, t: float, m: float, v: float, z: float,
-                    u: Union[float, np.ndarray], a: float,
-                    p_type: str) -> Union[float, np.ndarray]:
+def thermal_current(
+    n: float,
+    t: float,
+    m: float,
+    v: float,
+    z: float,
+    u: Union[float, np.ndarray],
+    a: float,
+    p_type: str,
+) -> Union[float, np.ndarray]:
     r"""Calculates the thermal probe current to/from a cylindrical or
     spherical body, e.g. a Langmuir probe or the a spherical (cylindrical) S/C.
 
@@ -104,8 +111,8 @@ def thermal_current(n: float, t: float, m: float, v: float, z: float,
         i_p *= a * n * elementary_charge
 
     else:
-        x_ = (elementary_charge / (m * v ** 2 / 2 + Boltzmann * t)) * u
-        i_p = np.sqrt(v ** 2 / 16 + t * Boltzmann / (2.0 * np.pi * m))
+        x_ = (elementary_charge / (m * v**2 / 2 + Boltzmann * t)) * u
+        i_p = np.sqrt(v**2 / 16 + t * Boltzmann / (2.0 * np.pi * m))
         i_p *= a * n * elementary_charge
 
     if p_type == "sphere":

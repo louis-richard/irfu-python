@@ -49,7 +49,9 @@ class TestPyrf(unittest.TestCase):
         """integration test on time resampling"""
         e_xyz = pyrf.resample(self.e_xyz, self.b_xyz)
 
-        self.assertTrue((pyrf.resample(e_xyz, self.b_xyz).time.data == self.b_xyz.time.data).all())
+        self.assertTrue(
+            (pyrf.resample(e_xyz, self.b_xyz).time.data == self.b_xyz.time.data).all()
+        )
 
 
 if __name__ == "__main__":

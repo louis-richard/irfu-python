@@ -61,7 +61,6 @@ def trace(inp):
     # Change tensor order from 2 (matrix) to 0 (scalar)
     attrs["TENSOR_ORDER"] = 0
 
-    out = xr.DataArray(out_data, coords=[inp.time.data], dims=["time"],
-                       attrs=attrs)
+    out = xr.DataArray(out_data, coords=[inp.time.data], dims=["time"], attrs=attrs)
 
     return out

@@ -16,7 +16,7 @@ __status__ = "Prototype"
 
 plt.style.use("seaborn-ticks")
 color = ["tab:blue", "tab:green", "tab:red", "k"]
-plt.rc('axes', prop_cycle=mpl.cycler(color=color))
+plt.rc("axes", prop_cycle=mpl.cycler(color=color))
 
 
 def plot_line(axis, inp, **kwargs):
@@ -45,15 +45,14 @@ def plot_line(axis, inp, **kwargs):
         _, axis = plt.subplots(1)
 
     if len(inp.shape) == 3:
-        data = np.reshape(inp.data,
-                          (inp.shape[0], inp.shape[1] * inp.shape[2]))
+        data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
     else:
         data = inp.data
 
     time = inp.time
     axis.plot(time, data, **kwargs)
 
-    if time.dtype == '<M8[ns]':
+    if time.dtype == "<M8[ns]":
         locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = mdates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)

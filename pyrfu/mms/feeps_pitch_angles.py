@@ -19,30 +19,76 @@ __status__ = "Prototype"
 
 # Rotation matrices for FEEPS coord system (FCS) into body coordinate system
 # (BCS):
-t_top = np.array([[1. / np.sqrt(2.), -1. / np.sqrt(2.), 0],
-                  [1. / np.sqrt(2.), 1. / np.sqrt(2.), 0], [0, 0, 1]])
-t_bot = np.array([[-1. / np.sqrt(2.), -1. / np.sqrt(2.), 0],
-                  [-1. / np.sqrt(2.), 1. / np.sqrt(2.), 0], [0, 0, -1]])
+t_top = np.array(
+    [
+        [1.0 / np.sqrt(2.0), -1.0 / np.sqrt(2.0), 0],
+        [1.0 / np.sqrt(2.0), 1.0 / np.sqrt(2.0), 0],
+        [0, 0, 1],
+    ]
+)
+t_bot = np.array(
+    [
+        [-1.0 / np.sqrt(2.0), -1.0 / np.sqrt(2.0), 0],
+        [-1.0 / np.sqrt(2.0), 1.0 / np.sqrt(2.0), 0],
+        [0, 0, -1],
+    ]
+)
 
 # the following 2 hash tables map TOP/BOTTOM telescope #s to index of the
 # PA array created above
-top_tele_idx_map = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 0, 7: 1, 8: 2, 9: 5,
-                    10: 6, 11: 7, 12: 8}
+top_tele_idx_map = {
+    1: 0,
+    2: 1,
+    3: 2,
+    4: 3,
+    5: 4,
+    6: 0,
+    7: 1,
+    8: 2,
+    9: 5,
+    10: 6,
+    11: 7,
+    12: 8,
+}
 
-bot_tele_idx_map = {1: 9, 2: 10, 3: 11, 4: 12, 5: 13, 6: 3, 7: 4, 8: 5,
-                    9: 14, 10: 15, 11: 16, 12: 17}
+bot_tele_idx_map = {
+    1: 9,
+    2: 10,
+    3: 11,
+    4: 12,
+    5: 13,
+    6: 3,
+    7: 4,
+    8: 5,
+    9: 14,
+    10: 15,
+    11: 16,
+    12: 17,
+}
 
 # Telescope vectors in FCS:
-v_fcs = {1: [0.347, -0.837, 0.423], 2: [0.347, -0.837, -0.423],
-         3: [0.837, -0.347, 0.423], 4: [0.837, -0.347, -0.423],
-         5: [-0.087, 0.000, 0.996], 6: [0.104, 0.180, 0.978],
-         7: [0.654, -0.377, 0.656], 8: [0.654, -0.377, -0.656],
-         9: [0.837, 0.347, 0.423], 10: [0.837, 0.347, -0.423],
-         11: [0.347, 0.837, 0.423], 12: [0.347, 0.837, -0.423]}
+v_fcs = {
+    1: [0.347, -0.837, 0.423],
+    2: [0.347, -0.837, -0.423],
+    3: [0.837, -0.347, 0.423],
+    4: [0.837, -0.347, -0.423],
+    5: [-0.087, 0.000, 0.996],
+    6: [0.104, 0.180, 0.978],
+    7: [0.654, -0.377, 0.656],
+    8: [0.654, -0.377, -0.656],
+    9: [0.837, 0.347, 0.423],
+    10: [0.837, 0.347, -0.423],
+    11: [0.347, 0.837, 0.423],
+    12: [0.347, 0.837, -0.423],
+}
 
-sensor_ids = {"electron": {"top": [1, 2, 3, 4, 5, 9, 10, 11, 12],
-                           "bot": [1, 2, 3, 4, 5, 9, 10, 11, 12]},
-              "ion": {"top": [6, 7, 8], "bot": [6, 7, 8]}}
+sensor_ids = {
+    "electron": {
+        "top": [1, 2, 3, 4, 5, 9, 10, 11, 12],
+        "bot": [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    },
+    "ion": {"top": [6, 7, 8], "bot": [6, 7, 8]},
+}
 
 
 def _calc_pas(d_type, b_bcs):
@@ -114,8 +160,7 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     d_rate = inp_dataset.attrs["tmmode"]
     mms_id = inp_dataset.attrs["mmsId"]
 
-    tint = np.datetime_as_string(np.hstack([np.min(times),
-                                            np.max(times)]), "ns")
+    tint = np.datetime_as_string(np.hstack([np.min(times), np.max(times)]), "ns")
 
     eyes = feeps_active_eyes(inp_dataset.attrs, list(tint), mms_id)
 
@@ -132,10 +177,11 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         new_pas, top_idxs, bot_idxs = _calc_new_pas(pas, b_bcs, eyes)
         idx_maps = {f"{d_type}-top": top_idxs, f"{d_type}-bottom": bot_idxs}
 
-    out = xr.DataArray(new_pas,
-                       coords=[b_bcs.time.data, np.arange(new_pas.shape[1])],
-                       dims=["time", "idx"])
+    out = xr.DataArray(
+        new_pas,
+        coords=[b_bcs.time.data, np.arange(new_pas.shape[1])],
+        dims=["time", "idx"],
+    )
     out = resample(out, inp_dataset.time)
 
     return out, idx_maps
-

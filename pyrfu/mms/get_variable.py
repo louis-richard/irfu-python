@@ -36,7 +36,8 @@ def get_variable(file_path, cdf_name):
         var_data = file.varget(cdf_name)
         var_atts = file.varattsget(cdf_name)
 
-    out = xr.DataArray(var_data, coords=[np.arange(len(var_data))], dims=["x"],
-                       attrs=var_atts)
+    out = xr.DataArray(
+        var_data, coords=[np.arange(len(var_data))], dims=["x"], attrs=var_atts
+    )
 
     return out

@@ -14,7 +14,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.):
+def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.0):
     r"""Simple function to estimate the phase speed from the frequency
     wave number power spectrum. Fits :math:`f = v k/ 2 \\pi` to the
     power spectrum.
@@ -87,8 +87,11 @@ def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.):
     p_power2, f_power2, k_power2 = [[], [], []]
 
     for i, p_pow in enumerate(p_power):
-        if np.abs(vph_range[0]) < np.abs(f_power[i] / k_power[i]) \
-                < np.abs(vph_range[1]):
+        if (
+            np.abs(vph_range[0])
+            < np.abs(f_power[i] / k_power[i])
+            < np.abs(vph_range[1])
+        ):
             p_power2.append(p_pow)
             f_power2.append(f_power[i])
             k_power2.append(k_power[i])

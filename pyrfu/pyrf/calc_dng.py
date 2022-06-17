@@ -71,7 +71,7 @@ def calc_dng(p_xyz):
     # Off-diagonal terms
     p_12, p_13, p_23 = [p_xyz[:, 0, 1], p_xyz[:, 0, 2], p_xyz[:, 1, 2]]
 
-    d_ng = np.sqrt(8 * (p_12 ** 2 + p_13 ** 2 + p_23 ** 2))
-    d_ng /= (p_para + 2 * p_perp)
+    d_ng = np.sqrt(8 * (p_12**2 + p_13**2 + p_23**2))
+    d_ng /= p_para + 2 * p_perp
 
     return d_ng

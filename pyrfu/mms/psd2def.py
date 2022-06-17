@@ -27,11 +27,11 @@ def _mass_ratio(specie):
 
 def _convert(vdf, mass_ratio):
     if vdf.attrs["UNITS"].lower() == "s^3/cm^6":
-        out = vdf.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio ** 2)
+        out = vdf.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio**2)
     elif vdf.attrs["UNITS"].lower() == "s^3/m^6":
-        out = vdf.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio ** 2)
+        out = vdf.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio**2)
     elif vdf.attrs["UNITS"].lower() == "s^3/km^6":
-        out = vdf.data.data / (1e6 * 0.53707 * mass_ratio ** 2)
+        out = vdf.data.data / (1e6 * 0.53707 * mass_ratio**2)
     else:
         raise ValueError("Invalid unit")
 
@@ -72,12 +72,12 @@ def psd2def(vdf):
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
 
-    data_r = np.reshape(tmp_data, (tmp_data.shape[0], tmp_data.shape[1],
-                                   np.prod(tmp_data.shape[2:])))
+    data_r = np.reshape(
+        tmp_data, (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:]))
+    )
 
     if energy.ndim == 1:
-        energy_mat = np.tile(energy,
-                             (len(vdf.time), np.prod(tmp_data.shape[2:]), 1))
+        energy_mat = np.tile(energy, (len(vdf.time), np.prod(tmp_data.shape[2:]), 1))
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:
         energy_mat = np.tile(energy, (np.prod(tmp_data.shape[2:]), 1, 1))
@@ -85,7 +85,7 @@ def psd2def(vdf):
     else:
         raise ValueError("Invalid energy shape")
 
-    data_r *= energy_mat ** 2
+    data_r *= energy_mat**2
     tmp_data = np.reshape(data_r, tmp_data.shape)
 
     out = vdf.copy()

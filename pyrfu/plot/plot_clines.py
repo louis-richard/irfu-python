@@ -51,7 +51,7 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
 
     """
 
-    pad = .01
+    pad = 0.01
     c_map = get_cmap(name=cmap)
 
     for i, c in enumerate(c_map(np.linspace(0, 1, len(inp.energy.data)))):

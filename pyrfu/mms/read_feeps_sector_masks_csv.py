@@ -40,12 +40,14 @@ def read_feeps_sector_masks_csv(tint):
 
     masks = {}
 
-    dates = [1447200000.0000000,  # 11/11/2015
-             1468022400.0000000,  # 7/9/2016
-             1477612800.0000000,  # 10/28/2016
-             1496188800.0000000,  # 5/31/2017
-             1506988800.0000000,  # 10/3/2017
-             1538697600.0000000]  # 10/5/2018
+    dates = [
+        1447200000.0000000,  # 11/11/2015
+        1468022400.0000000,  # 7/9/2016
+        1477612800.0000000,  # 10/28/2016
+        1496188800.0000000,  # 5/31/2017
+        1506988800.0000000,  # 10/3/2017
+        1538697600.0000000,
+    ]  # 10/5/2018
 
     # find the file closest to the start time
     date = datetime642unix(iso86012datetime64(np.array(tint)[0]))
@@ -55,10 +57,11 @@ def read_feeps_sector_masks_csv(tint):
 
     for mms_sc in np.arange(1, 5):
         file_name = f"MMS{mms_sc:d}_FEEPS_ContaminatedSectors_{str_date}.csv"
-        csv_file = os.sep.join([os.path.dirname(os.path.abspath(__file__)),
-                                "sun", file_name])
+        csv_file = os.sep.join(
+            [os.path.dirname(os.path.abspath(__file__)), "sun", file_name]
+        )
 
-        csv_file = open(csv_file, 'r')
+        csv_file = open(csv_file, "r")
 
         csv_reader = csv.reader(csv_file)
 
@@ -82,8 +85,8 @@ def read_feeps_sector_masks_csv(tint):
         for i in range(0, 12):
             mask_vals = []
 
-            for val_idx in range(len(csv_data[:, i+12])):
-                if csv_data[val_idx, i+12] == 1:
+            for val_idx in range(len(csv_data[:, i + 12])):
+                if csv_data[val_idx, i + 12] == 1:
                     mask_vals.append(val_idx)
 
             masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = mask_vals

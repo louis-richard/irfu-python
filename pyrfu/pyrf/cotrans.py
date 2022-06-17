@@ -42,12 +42,17 @@ def _dipole_direction_gse(time, flag: str = "dipole"):
     lambda_, phi = igrf(time, flag)
 
     cos_phi = np.cos(np.deg2rad(phi))
-    dipole_direction_geo_ = np.stack([cos_phi * np.cos(np.deg2rad(lambda_)),
-                                      cos_phi * np.sin(np.deg2rad(lambda_)),
-                                      np.sin(np.deg2rad(phi))]).T
+    dipole_direction_geo_ = np.stack(
+        [
+            cos_phi * np.cos(np.deg2rad(lambda_)),
+            cos_phi * np.sin(np.deg2rad(lambda_)),
+            np.sin(np.deg2rad(phi)),
+        ]
+    ).T
 
-    dipole_direction_gse_ = cotrans(np.hstack([
-        time[:, None], dipole_direction_geo_]), "geo>gse")
+    dipole_direction_gse_ = cotrans(
+        np.hstack([time[:, None], dipole_direction_geo_]), "geo>gse"
+    )
 
     return dipole_direction_gse_
 
@@ -61,7 +66,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
     transf_mat_out[:, 2, 2] = np.ones(len(t))
 
     for j, t_num in enumerate(tind[::-1]):
-        if t_num == 1 or t_num == -1:
+        if t_num in [-1, 1]:
             if hapgood:
                 theta = 100.461 + 36000.770 * t_zero + 15.04107 * ut
 
@@ -72,7 +77,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
                 gmst = 6.697374558
                 gmst += 0.06570982441908 * d0_j2000
                 gmst += 1.00273790935 * h_j2000
-                gmst += 0.000026 * t_j2000 ** 2
+                gmst += 0.000026 * t_j2000**2
 
                 gmst = gmst % 24  # Interval 0->24 hours
                 theta = (360 / 24) * gmst  # Convert to degree.
@@ -80,7 +85,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
             # invert if tInd = -1
             transf_mat = _triang(theta * np.sign(t_num), 2)
 
-        elif t_num == 2 or t_num == -2:
+        elif t_num in [-2, 2]:
             if hapgood:
                 eps = 23.439 - 0.013 * t_zero
                 # Suns mean anomaly
@@ -106,7 +111,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
             if t_num == -2:
                 transf_mat = np.transpose(transf_mat, [0, 2, 1])
 
-        elif t_num == 3 or t_num == -3:
+        elif t_num in [-3, 3]:
             dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
             y_e = dipole_direction_gse_[:, 2]  # 1st col is time
             z_e = dipole_direction_gse_[:, 3]
@@ -114,17 +119,18 @@ def _transformation_matrix(t, tind, hapgood, *args):
 
             transf_mat = _triang(-psi * np.sign(t_num), 0)  # inverse if -3
 
-        elif t_num == 4 or t_num == -4:
+        elif t_num in [-4, 4]:
             dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
 
-            mu = np.arctan(dipole_direction_gse_[:, 1]
-                           / np.sqrt(np.sum(dipole_direction_gse_[:, 2:] ** 2,
-                                            axis=1)))
+            mu = np.arctan(
+                dipole_direction_gse_[:, 1]
+                / np.sqrt(np.sum(dipole_direction_gse_[:, 2:] ** 2, axis=1))
+            )
             mu = np.rad2deg(mu)
 
             transf_mat = _triang(-mu * np.sign(t_num), 1)
 
-        elif t_num == 5 or t_num == -5:
+        elif t_num in [-5, 5]:
             lambda_, phi = igrf(t, "dipole")
 
             transf_mat = np.matmul(_triang(phi - 90, 1), _triang(lambda_, 2))
@@ -256,15 +262,18 @@ def cotrans(inp, flag, hapgood: bool = True):
 
         # t_zero is time measured in Julian centuries from 2000-01-0112:00 UT
         # to the previous midnight
-        t_zero = (day_start_epoch - mjd_ref_epoch)
-        t_zero /= (3600 * 24 * 36525.0)
+        t_zero = day_start_epoch - mjd_ref_epoch
+        t_zero /= 3600 * 24 * 36525.0
 
-        hours = (time.astype('datetime64[h]')
-                 - time.astype('datetime64[D]')).astype(float)
-        minutes = (time.astype('datetime64[m]')
-                   - time.astype('datetime64[h]')).astype(float)
-        seconds = 1e-9 * (time.astype('datetime64[ns]')
-                          - time.astype('datetime64[m]')).astype(float)
+        hours = (time.astype("datetime64[h]") - time.astype("datetime64[D]")).astype(
+            float
+        )
+        minutes = (time.astype("datetime64[m]") - time.astype("datetime64[h]")).astype(
+            float
+        )
+        seconds = 1e-9 * (
+            time.astype("datetime64[ns]") - time.astype("datetime64[m]")
+        ).astype(float)
         ut = hours + minutes / 60 + seconds / 3600
 
         args_trans_mat = (t_zero, ut, None, None, None, None)
@@ -303,7 +312,7 @@ def cotrans(inp, flag, hapgood: bool = True):
     transf_mat = _transformation_matrix(t, tind, hapgood, *args_trans_mat)
 
     if inp.ndim == 2:
-        out = np.einsum('kji,ki->kj', transf_mat, inp)
+        out = np.einsum("kji,ki->kj", transf_mat, inp)
     elif inp.ndim == 1:
         out = transf_mat
     else:

@@ -28,12 +28,12 @@ def datetime2iso8601(time):
     """
 
     if isinstance(time, list):
-        return lst(map(datetime_to_tt2000, time))
+        return list(map(datetime2iso8601, time))
 
     time_datetime = pd.Timestamp(time)
 
     # Convert to string
-    datetime_str = time_datetime.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    datetime_str = time_datetime.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
     tt2000 = f"{datetime_str}{time_datetime.nanosecond:03d}"
 

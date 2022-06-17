@@ -66,7 +66,7 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     >>> extof_omni_mmsx = eis_spec_combine_sc(extof_omni_mms)
 
     """
-    
+
     assert method.lower() in ["mean", "sum"]
 
     reftime_sc_loc = np.argmin([len(x_.time.data) for x_ in omni_vars])
@@ -87,23 +87,23 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     # energy_data = np.zeros([ne_ref, len(omni_vars)])
 
     # Average omni flux over all spacecraft and define common energy grid
-    for pp, flux_ in enumerate(omni_vars):
-        idx_closest = _idx_closest(flux_.energy.data,
-                                   ener_refprobe.energy.data)
+    for i_p, flux_ in enumerate(omni_vars):
+        idx_closest = _idx_closest(flux_.energy.data, ener_refprobe.energy.data)
         # energy_data[:, pp] = flux_.energy.data[0:ne_ref]
-        omni_spec_data[0:nt_ref, :, pp] = flux_.data[0:nt_ref, idx_closest]
+        omni_spec_data[0:nt_ref, :, i_p] = flux_.data[0:nt_ref, idx_closest]
 
     # Average omni flux over all spacecraft
-    for tt, ee in itertools.product(range(nt_ref), range(ne_ref)):
+    for i_t, i_e in itertools.product(range(nt_ref), range(ne_ref)):
         if method.lower() == "mean":
-            omni_spec[tt, ee] = np.nanmean(omni_spec_data[tt, ee, :], axis=0)
+            omni_spec[i_t, i_e] = np.nanmean(omni_spec_data[i_t, i_e, :], axis=0)
         else:
-            omni_spec[tt, ee] = np.nansum(omni_spec_data[tt, ee, :], axis=0)
+            omni_spec[i_t, i_e] = np.nansum(omni_spec_data[i_t, i_e, :], axis=0)
 
-    omni_spec = xr.DataArray(omni_spec,
-                             coords=[time_refprobe.time.data,
-                                     ener_refprobe.energy.data],
-                             dims=["time", "energy"])
+    omni_spec = xr.DataArray(
+        omni_spec,
+        coords=[time_refprobe.time.data, ener_refprobe.energy.data],
+        dims=["time", "energy"],
+    )
     omni_spec.attrs["energy_dplus"] = ener_refprobe.attrs["energy_dplus"]
     omni_spec.attrs["energy_dminus"] = ener_refprobe.attrs["energy_dminus"]
 

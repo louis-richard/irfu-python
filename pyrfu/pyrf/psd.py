@@ -18,8 +18,14 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def psd(inp, n_fft: int = 256, n_overlap: int = 128, window: str = "hamming",
-        d_flag: str = "constant", scaling: str = "density"):
+def psd(
+    inp,
+    n_fft: int = 256,
+    n_overlap: int = 128,
+    window: str = "hamming",
+    d_flag: str = "constant",
+    scaling: str = "density",
+):
     r"""Estimate power spectral density using Welch's method.
 
     Welch's method [11]_ computes an estimate of the power spectral
@@ -79,10 +85,18 @@ def psd(inp, n_fft: int = 256, n_overlap: int = 128, window: str = "hamming",
 
     f_samp = 1e9 / np.median(np.diff(inp.time.data)).astype(float)
 
-    freqs, p_xx = signal.welch(inp.data, nfft=n_fft, fs=f_samp,
-                               window=window, noverlap=n_overlap,
-                               detrend=d_flag, nperseg=n_persegs,
-                               scaling=scaling, return_onesided=True, axis=-1)
+    freqs, p_xx = signal.welch(
+        inp.data,
+        nfft=n_fft,
+        fs=f_samp,
+        window=window,
+        noverlap=n_overlap,
+        detrend=d_flag,
+        nperseg=n_persegs,
+        scaling=scaling,
+        return_onesided=True,
+        axis=-1,
+    )
 
     out = xr.DataArray(p_xx, coords=[freqs], dims=["f"])
 

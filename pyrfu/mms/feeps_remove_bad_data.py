@@ -22,11 +22,12 @@ __status__ = "Prototype"
 
 def _bad_vars(bad_data):
     bad_vars_top = list(filter(lambda x: x not in [6, 7, 8], bad_data["top"]))
-    bad_vars_bot = list(
-        filter(lambda x: x not in [6, 7, 8], bad_data["bottom"]))
+    bad_vars_bot = list(filter(lambda x: x not in [6, 7, 8], bad_data["bottom"]))
 
-    bad_vars = [*[f"top-{x}" for x in bad_vars_top],
-                *[f"bottom-{x}" for x in bad_vars_bot]]
+    bad_vars = [
+        *[f"top-{x}" for x in bad_vars_top],
+        *[f"bottom-{x}" for x in bad_vars_bot],
+    ]
 
     return bad_vars
 
@@ -128,8 +129,10 @@ def feeps_remove_bad_data(inp_dataset):
     # these data are not usable (i.e., make all of the counts/rate/flux data
     # from these eyes NAN). These are for all modes, burst and survey:
 
-    dates = [datetime.datetime.strptime(t_, "%Y-%m-%d").timestamp() for t_ in
-             bad_data_table.keys()]
+    dates = [
+        datetime.datetime.strptime(t_, "%Y-%m-%d").timestamp()
+        for t_ in bad_data_table.keys()
+    ]
 
     t_data = iso86012datetime(datetime642iso8601(inp_dataset.time.data[0]))[0]
     closest_table_tm = np.argmin([t_ - t_data.timestamp() for t_ in dates])
@@ -170,6 +173,3 @@ def feeps_remove_bad_data(inp_dataset):
     inp_dataset_clean_all = _bad_ch2(inp_dataset_clean_ch1, bad_vars_ch2)
 
     return inp_dataset_clean_all
-
-
-

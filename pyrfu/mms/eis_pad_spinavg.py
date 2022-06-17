@@ -37,8 +37,9 @@ def eis_pad_spinavg(inp, spin_nums):
     _, spin_starts = np.unique(spin_nums.data, return_index=True)
 
     spin_times = np.zeros(len(spin_starts), dtype="<M8[ns]")
-    spin_sum_flux = np.zeros((len(spin_starts), len(inp.theta.data),
-                              len(inp.energy.data)))
+    spin_sum_flux = np.zeros(
+        (len(spin_starts), len(inp.theta.data), len(inp.energy.data))
+    )
 
     current_start = 0
     # loop through the spins
@@ -48,8 +49,10 @@ def eis_pad_spinavg(inp, spin_nums):
         spin_times[i] = inp.time.data[current_start]
         current_start = spin_start + 1
 
-    out = xr.DataArray(spin_sum_flux,
-                       coords=[spin_times, inp.theta.data, inp.energy.data],
-                       dims=["time", "theta", "energy"])
+    out = xr.DataArray(
+        spin_sum_flux,
+        coords=[spin_times, inp.theta.data, inp.energy.data],
+        dims=["time", "theta", "energy"],
+    )
 
     return out

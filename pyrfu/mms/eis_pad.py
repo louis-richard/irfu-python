@@ -21,13 +21,13 @@ __status__ = "Prototype"
 
 def _calc_angle(look_, vec):
     vec_hat = normalize(vec)
-    theta_ = np.rad2deg(np.pi - np.arccos(np.sum(vec_hat.data * look_.data,
-                                                 axis=1)))
+    theta_ = np.rad2deg(np.pi - np.arccos(np.sum(vec_hat.data * look_.data, axis=1)))
     return theta_
 
 
-def eis_pad(inp_allt, vec: xr.DataArray = None, energy: list = None,
-            pa_width: int = 15):
+def eis_pad(
+    inp_allt, vec: xr.DataArray = None, energy: list = None, pa_width: int = 15
+):
     r"""Calculates Pitch Angle Distributions (PADs) using data from the MMS
     Energetic Ion Spectrometer (EIS)
 
@@ -68,12 +68,12 @@ def eis_pad(inp_allt, vec: xr.DataArray = None, energy: list = None,
         energy = [55, 800]
 
     # set up the number of pa bins to create
-    n_pabins = int(180. / pa_width)
-    pa_label = list(180. * np.arange(0, n_pabins) / n_pabins + pa_width / 2.)
+    n_pabins = int(180.0 / pa_width)
+    pa_label = list(180.0 * np.arange(0, n_pabins) / n_pabins + pa_width / 2.0)
 
     # Account for angular response (finite field of view) of instruments
     pa_hangw = 10.0  # deg
-    delta_pa = pa_width / 2.
+    delta_pa = pa_width / 2.0
 
     scopes = list(filter(lambda x: x.startswith("t"), inp_allt))
 
@@ -91,30 +91,32 @@ def eis_pad(inp_allt, vec: xr.DataArray = None, energy: list = None,
 
     flux_file = np.zeros([len(time_), len(scopes), len(ener_idx)])
     shape_ = [len(time_), n_pabins, len(ener_idx)]
-    pa_flux, pa_num_in_bin = [np.zeros(shape_) for _ in range(2)]
+    pa_flux = np.zeros(shape_)
 
     pa_flux[...] = np.nan
 
-    for t, scope in enumerate(scopes):
+    for i_s, scope in enumerate(scopes):
         # get pa from each detector
-        pa_file[:, t] = _calc_angle(inp_allt[f"look_{scope}"], vec)
+        pa_file[:, i_s] = _calc_angle(inp_allt[f"look_{scope}"], vec)
 
         # get energy range of interest
-        flux_file[:, t, :] = inp_allt[scope][:, ener_idx]
+        flux_file[:, i_s, :] = inp_allt[scope][:, ener_idx]
 
     flux_file[flux_file == 0] = np.nan
 
-    for (i, t_), (j, pa_lbl) in itertools.product(enumerate(time_),
-                                                  enumerate(pa_label)):
-        cond_ = np.logical_and(pa_file[i, :] + pa_hangw >= pa_lbl - delta_pa,
-                               pa_file[i, :] - pa_hangw < pa_lbl + delta_pa)
+    for (i), (j, pa_lbl) in itertools.product(range(len(time_)), enumerate(pa_label)):
+        cond_ = np.logical_and(
+            pa_file[i, :] + pa_hangw >= pa_lbl - delta_pa,
+            pa_file[i, :] - pa_hangw < pa_lbl + delta_pa,
+        )
         ind = np.where(cond_)[0]
         if ind.size != 0:
             pa_flux[i, j, :] = np.nanmean(flux_file[i, ind, :], axis=0)
 
-    pa_flux = xr.DataArray(pa_flux,
-                           coords=[time_, pa_label,
-                                   inp_allt.energy.data[ener_idx]],
-                           dims=["time", "theta", "energy"])
+    pa_flux = xr.DataArray(
+        pa_flux,
+        coords=[time_, pa_label, inp_allt.energy.data[ener_idx]],
+        dims=["time", "theta", "energy"],
+    )
 
     return pa_flux

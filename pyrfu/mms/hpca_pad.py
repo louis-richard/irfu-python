@@ -22,12 +22,26 @@ __status__ = "Prototype"
 
 
 def _hpca_elevations():
-    anode_theta = [123.75000, 101.25000, 78.750000, 56.250000, 33.750000,
-                   11.250000, 11.250000, 33.750000, 56.250000, 78.750000,
-                   101.25000, 123.75000, 146.25000, 168.75000, 168.75000,
-                   146.25000]
+    anode_theta = [
+        123.75000,
+        101.25000,
+        78.750000,
+        56.250000,
+        33.750000,
+        11.250000,
+        11.250000,
+        33.750000,
+        56.250000,
+        78.750000,
+        101.25000,
+        123.75000,
+        146.25000,
+        168.75000,
+        168.75000,
+        146.25000,
+    ]
 
-    anode_theta[6:14] = [anode_val + 180. for anode_val in anode_theta[6:14]]
+    anode_theta[6:14] = [anode_val + 180.0 for anode_val in anode_theta[6:14]]
 
     return anode_theta
 
@@ -119,8 +133,9 @@ def hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     t0_ = vdf.time.data.astype(int)
     t0_start = t0_[0]
     t0_ -= t0_start
-    tck_ = interpolate.interp1d(np.arange(0, n_en * len(t0_), n_en), t0_,
-                                fill_value="extrapolate")
+    tck_ = interpolate.interp1d(
+        np.arange(0, n_en * len(t0_), n_en), t0_, fill_value="extrapolate"
+    )
     t1_tt = tck_(np.arange(0, n_en * len(t0_))) + t0_start
     t1_tt = t1_tt.astype("datetime64[ns]")
     b_xyz_r = resample(b_xyz, ts_scalar(t1_tt, np.zeros(len(t1_tt))))
@@ -161,8 +176,8 @@ def hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     warnings.warn(messsage, UserWarning)
 
     vdfs_ = [np.nanmean(vdf_[:, i_elim:j_elim], axis=1) for vdf_ in vdfs_]
-    vdfs_ = [np.squeeze(vdf_) for vdf_ in vdfs_]  	# [n_ti, n_en] --> [n_ti]
-    padd_ = np.transpose(np.stack(vdfs_))  			# [nt, ner, npitcha12]
+    vdfs_ = [np.squeeze(vdf_) for vdf_ in vdfs_]  # [n_ti, n_en] --> [n_ti]
+    padd_ = np.transpose(np.stack(vdfs_))  # [nt, ner, npitcha12]
 
     # 3.6.make spectrum
     coords = [tt_, pitch_a]

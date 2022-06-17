@@ -70,7 +70,7 @@ def calc_sqrtq(p_xyz):
     # Off-diagonal terms
     p_12, p_13, p_23 = [p_xyz[:, 0, 1], p_xyz[:, 0, 2], p_xyz[:, 1, 2]]
 
-    sqrt_q = np.sqrt(p_12 ** 2 + p_13 ** 2 + p_23 ** 2)
-    sqrt_q /= np.sqrt(p_perp ** 2 + 2 * p_perp * p_para)
+    sqrt_q = np.sqrt(p_12**2 + p_13**2 + p_23**2)
+    sqrt_q /= np.sqrt(p_perp**2 + 2 * p_perp * p_para)
 
     return sqrt_q

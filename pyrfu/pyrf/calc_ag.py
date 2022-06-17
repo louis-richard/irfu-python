@@ -71,11 +71,11 @@ def calc_ag(p_xyz):
     p_11, p_22, _ = [p_xyz[:, 0, 0], p_xyz[:, 1, 1], p_xyz[:, 2, 2]]
     p_12, p_13, p_23 = [p_xyz[:, 0, 1], p_xyz[:, 0, 2], p_xyz[:, 1, 2]]
 
-    det_p = p_11 * (p_22 ** 2 - p_23 ** 2)
+    det_p = p_11 * (p_22**2 - p_23**2)
     det_p -= p_12 * (p_12 * p_22 - p_23 * p_13)
     det_p += p_13 * (p_12 * p_23 - p_22 * p_13)
 
-    det_g = p_11 * p_22 ** 2
+    det_g = p_11 * p_22**2
 
     agyrotropy = np.abs(det_p - det_g) / (det_p + det_g)
 

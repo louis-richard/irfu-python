@@ -14,8 +14,13 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def wave_fft(inp, window, frame_overlap: float = 10.,
-             frame_length: float = 20., f_sampling: float = None):
+def wave_fft(
+    inp,
+    window,
+    frame_overlap: float = 10.0,
+    frame_length: float = 20.0,
+    f_sampling: float = None,
+):
     r"""Short-Time Fourier Transform.
 
     Parameters
@@ -50,8 +55,13 @@ def wave_fft(inp, window, frame_overlap: float = 10.,
     n_per_seg = np.round(frame_length * f_sampling).astype(int)
     n_overlap = np.round(frame_overlap * f_sampling).astype(int)
 
-    options = dict(fs=f_sampling, window=window, nperseg=n_per_seg,
-                   noverlap=n_overlap, mode='complex')
+    options = dict(
+        fs=f_sampling,
+        window=window,
+        nperseg=n_per_seg,
+        noverlap=n_overlap,
+        mode="complex",
+    )
     frequencies, time, spectrogram = signal.spectrogram(inp, **options)
 
     return frequencies, time, spectrogram

@@ -41,8 +41,9 @@ def t_eval(inp, times):
     idx = idx.astype(int)
 
     if inp.ndim == 2:
-        out = xr.DataArray(inp.data[idx, :], coords=[times, inp.comp],
-                           dims=["time", "comp"])
+        out = xr.DataArray(
+            inp.data[idx, :], coords=[times, inp.comp], dims=["time", "comp"]
+        )
     else:
         out = xr.DataArray(inp.data[idx], coords=[times], dims=["time"])
 

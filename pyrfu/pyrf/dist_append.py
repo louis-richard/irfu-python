@@ -58,22 +58,34 @@ def dist_append(inp0, inp1):
     data = np.vstack([inp0.data, inp1.data])
 
     if "delta_energy_plus" in attrs:
-        delta_energy_plus = np.vstack([inp0.attrs["delta_energy_plus"].data,
-                                       inp1.attrs["delta_energy_plus"].data])
+        delta_energy_plus = np.vstack(
+            [inp0.attrs["delta_energy_plus"].data, inp1.attrs["delta_energy_plus"].data]
+        )
         attrs["delta_energy_plus"] = delta_energy_plus
 
     if "delta_energy_minus" in inp0.attrs:
-        delta_energy_minus = np.vstack([inp0.attrs["delta_energy_minus"].data,
-                                        inp1.attrs["delta_energy_minus"].data])
+        delta_energy_minus = np.vstack(
+            [
+                inp0.attrs["delta_energy_minus"].data,
+                inp1.attrs["delta_energy_minus"].data,
+            ]
+        )
         attrs["delta_energy_minus"] = delta_energy_minus
 
     # Energy
     if inp0.attrs["tmmode"] == "brst":
-        step_table = np.hstack([inp0.attrs["esteptable"],
-                                inp1.attrs["esteptable"]])
+        step_table = np.hstack([inp0.attrs["esteptable"], inp1.attrs["esteptable"]])
 
-        out = ts_skymap(time, data, None, phi, theta, energy0=inp0.energy0,
-                        energy1=inp0.energy1, esteptable=step_table)
+        out = ts_skymap(
+            time,
+            data,
+            None,
+            phi,
+            theta,
+            energy0=inp0.energy0,
+            energy1=inp0.energy1,
+            esteptable=step_table,
+        )
 
         attrs.pop("esteptable")
     else:

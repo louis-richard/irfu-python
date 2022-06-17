@@ -37,9 +37,12 @@ def ts_tensor_xyz(time, data, attrs: dict = None):
     if attrs is None:
         attrs = {}
 
-    out = xr.DataArray(data,
-                       coords=[time[:], ["x", "y", "z"], ["x", "y", "z"]],
-                       dims=["time", "comp_h", "comp_v"], attrs=attrs)
+    out = xr.DataArray(
+        data,
+        coords=[time[:], ["x", "y", "z"], ["x", "y", "z"]],
+        dims=["time", "comp_h", "comp_v"],
+        attrs=attrs,
+    )
 
     out.attrs["TENSOR_ORDER"] = 2
 

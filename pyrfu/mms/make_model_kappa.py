@@ -8,7 +8,7 @@ import xarray as xr
 from scipy import special, constants
 
 # Local imports
-from..pyrf import resample
+from ..pyrf import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -18,7 +18,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def _thermal_velocity(en, specie):
+def _thermal_velocity(energy, specie):
     if specie.lower() == "ions":
         mass = constants.proton_mass
     elif specie.lower() == "electrons":
@@ -26,10 +26,10 @@ def _thermal_velocity(en, specie):
     else:
         raise ValueError("Invalid specie")
 
-    return np.sqrt(2 * en * constants.electron_volt / mass)
+    return np.sqrt(2 * energy * constants.electron_volt / mass)
 
 
-def make_model_kappa(vdf, n, v_xyz, t, kappa: float = 7.):
+def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
     r"""Make a general isottropic kappa distribution function based on
     particle moment data in the same format as vdf.
 
@@ -37,11 +37,11 @@ def make_model_kappa(vdf, n, v_xyz, t, kappa: float = 7.):
     ----------
     vdf : xarray.Dataset
         Particle distribution (skymap).
-    n : xarray.DataArray
+    n_s : xarray.DataArray
         Time series of the number density.
-    v_xyz : xarray.DataArray
+    v_xyz_s : xarray.DataArray
         Time series of the bulk velocity.
-    t : xarray.DataArray
+    t_s : xarray.DataArray
         Time series of the scalar temperature.
     kappa : float. Optional
         Kappa index, Default is 7.
@@ -62,16 +62,17 @@ def make_model_kappa(vdf, n, v_xyz, t, kappa: float = 7.):
     theta = vdf.theta.data
 
     # Resample number density, bulk velocity and temperature to skymap sampling
-    n = resample(n, vdf.time)
-    v_xyz = resample(v_xyz, vdf.time)
-    t = resample(t, vdf.time)
+    n_s = resample(n_s, vdf.time)
+    v_xyz_s = resample(v_xyz_s, vdf.time)
+    t_s = resample(t_s, vdf.time)
 
     # Compute thermal velocity
-    v_th = _thermal_velocity(t.data, vdf.attrs["species"])
+    v_th = _thermal_velocity(t_s.data, vdf.attrs["species"])
 
     # Initialize output to zeros
-    out_data = np.zeros([vdf.data.shape[0], vdf.data.shape[3],
-                         vdf.data.shape[1], vdf.data.shape[2]])
+    out_data = np.zeros(
+        [vdf.data.shape[0], vdf.data.shape[3], vdf.data.shape[1], vdf.data.shape[2]]
+    )
 
     for i in range(len(vdf.time.data)):
         energies = vdf.energy.data[i, :]
@@ -86,7 +87,7 @@ def make_model_kappa(vdf, n, v_xyz, t, kappa: float = 7.):
 
         # Unpack thermal and bulk velocities
         v_thk = (kappa - 3 / 2) * v_th[i] ** 2
-        v_bulk = v_xyz.data[i, ...]
+        v_bulk = v_xyz_s.data[i, ...]
 
         # Shift velocities with lbulk velocity
         v_squ = np.sum((v_mat - v_bulk[:, None, None, None]) ** 2, axis=0)
@@ -98,7 +99,7 @@ def make_model_kappa(vdf, n, v_xyz, t, kappa: float = 7.):
         out_data[i, ...] *= coef1 * coef2
 
     # Scale with number density
-    out_data *= n.data[:, None, None, None]
+    out_data *= n_s.data[:, None, None, None]
 
     # Convert to differential particule flux
     # out_data *= np.tile(en_mat, (n_t, 1, 1, 1)) * 1e15 / 0.53707

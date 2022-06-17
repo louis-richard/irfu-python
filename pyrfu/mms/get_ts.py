@@ -21,8 +21,7 @@ __status__ = "Prototype"
 def _get_epochs(file, cdf_name, tint):
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
-    out = {"data": file.varget(depend0_key,
-                               starttime=tint[0], endtime=tint[1])}
+    out = {"data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])}
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         try:
@@ -65,8 +64,7 @@ def _get_depend(file, cdf_name, tint, dep_num=1):
         out["atts"] = {"LABLAXIS": "comp"}
     else:
         try:
-            out["data"] = file.varget(depend_key, starttime=tint[0],
-                                      endtime=tint[1])
+            out["data"] = file.varget(depend_key, starttime=tint[0], endtime=tint[1])
         except IndexError:
             out["data"] = file.varget(depend_key)
 
@@ -159,15 +157,15 @@ def get_ts(file_path, cdf_name, tint):
             depend_1["data"] = file.varget(depend_1_key)
             depend_1["atts"] = file.varattsget(depend_1_key)
 
-            depend_1["atts"]["LABLAXIS"] = depend_1["atts"][
-                "LABLAXIS"].replace(" ", "_")
+            depend_1["atts"]["LABLAXIS"] = depend_1["atts"]["LABLAXIS"].replace(
+                " ", "_"
+            )
 
         if "edp_dce_sensor" in cdf_name:
             depend_1["data"] = ["x", "y", "z"]
             depend_1["atts"] = {"LABLAXIS": "comp"}
 
-        out_dict["data"] = file.varget(cdf_name, starttime=tint[0],
-                                       endtime=tint[1])
+        out_dict["data"] = file.varget(cdf_name, starttime=tint[0], endtime=tint[1])
 
         if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
             out_dict["data"] = out_dict["data"][:, :-1]
@@ -191,8 +189,7 @@ def get_ts(file_path, cdf_name, tint):
             depend_1["atts"]["LABLAXIS"] = "rcomp"
             depend_2["atts"]["LABLAXIS"] = "ccomp"
 
-        dims = ["time", depend_1["atts"]["LABLAXIS"],
-                depend_2["atts"]["LABLAXIS"]]
+        dims = ["time", depend_1["atts"]["LABLAXIS"], depend_2["atts"]["LABLAXIS"]]
         coords_data = [time["data"], depend_1["data"], depend_2["data"]]
         coords_atts = [time["atts"], depend_1["atts"], depend_2["atts"]]
 
@@ -201,18 +198,31 @@ def get_ts(file_path, cdf_name, tint):
             depend_2["atts"]["LABLAXIS"] = "rcomp"
             depend_3["atts"]["LABLAXIS"] = "ccomp"
 
-        dims = ["time", depend_1["atts"]["LABLAXIS"],
-                depend_2["atts"]["LABLAXIS"], depend_3["atts"]["LABLAXIS"]]
-        coords_data = [time["data"], depend_1["data"], depend_2["data"],
-                       depend_3["data"]]
-        coords_atts = [time["atts"], depend_1["atts"], depend_2["atts"],
-                       depend_3["atts"]]
+        dims = [
+            "time",
+            depend_1["atts"]["LABLAXIS"],
+            depend_2["atts"]["LABLAXIS"],
+            depend_3["atts"]["LABLAXIS"],
+        ]
+        coords_data = [
+            time["data"],
+            depend_1["data"],
+            depend_2["data"],
+            depend_3["data"],
+        ]
+        coords_atts = [
+            time["atts"],
+            depend_1["atts"],
+            depend_2["atts"],
+            depend_3["atts"],
+        ]
 
     else:
         raise NotImplementedError
 
-    out = xr.DataArray(out_dict["data"], coords=coords_data, dims=dims,
-                       attrs=out_dict["atts"])
+    out = xr.DataArray(
+        out_dict["data"], coords=coords_data, dims=dims, attrs=out_dict["atts"]
+    )
 
     for dim, coord_atts in zip(dims, coords_atts):
         out[dim].attrs = coord_atts

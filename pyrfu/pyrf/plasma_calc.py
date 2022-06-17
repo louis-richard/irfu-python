@@ -153,15 +153,15 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     else:
         b_si = 1e-9 * np.linalg.norm(b_xyz, axis=1)
 
-    w_pe = np.sqrt(n_e * q_e ** 2 / (m_e * ep0)) 	# rad/s
-    w_ce = q_e * b_si / m_e   						# rad/s
-    w_pp = np.sqrt(n_i * q_e ** 2 / (m_p * ep0))
+    w_pe = np.sqrt(n_e * q_e**2 / (m_e * ep0))  # rad/s
+    w_ce = q_e * b_si / m_e  # rad/s
+    w_pp = np.sqrt(n_i * q_e**2 / (m_p * ep0))
 
     v_a = b_si / np.sqrt(mu0 * n_i * m_p)
 
     v_ae = b_si / np.sqrt(mu0 * n_e * m_e)
-    v_te = cel * np.sqrt(1 - 1 / (t_e * q_e / (m_e * cel ** 2) + 1) ** 2)
-    v_tp = cel * np.sqrt(1 - 1 / (t_i * q_e / (m_p * cel ** 2) + 1) ** 2)
+    v_te = cel * np.sqrt(1 - 1 / (t_e * q_e / (m_e * cel**2) + 1) ** 2)
+    v_tp = cel * np.sqrt(1 - 1 / (t_i * q_e / (m_p * cel**2) + 1) ** 2)
     # Sound speed formula (F. Chen, Springer 1984).
     v_ts = np.sqrt((t_e * q_e + 3 * t_i * q_e) / m_p)
 
@@ -173,31 +173,46 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     # Debye length scale, sqrt(2) needed because of Vte definition
     l_d = v_te / (w_pe * np.sqrt(2))
     # number of e- in Debye sphere
-    n_d = l_d * ep0 * m_e * v_te ** 2 / q_e ** 2
+    n_d = l_d * ep0 * m_e * v_te**2 / q_e**2
 
-    f_pe = w_pe / (2 * np.pi) 				# Hz
+    f_pe = w_pe / (2 * np.pi)  # Hz
     f_ce = w_ce / (2 * np.pi)
-    f_uh = np.sqrt(f_ce ** 2 + f_pe ** 2)
+    f_uh = np.sqrt(f_ce**2 + f_pe**2)
     f_pp = w_pp / (2 * np.pi)
     f_cp = f_ce / mp_me
-    f_lh = np.sqrt(f_cp * f_ce / (1 + f_ce ** 2 / f_pe ** 2) + f_cp ** 2)
+    f_lh = np.sqrt(f_cp * f_ce / (1 + f_ce**2 / f_pe**2) + f_cp**2)
 
-    rho_e = m_e * cel / (q_e * b_si) * np.sqrt(gamma_e ** 2 - 1)
-    rho_p = m_p * cel / (q_e * b_si) * np.sqrt(gamma_p ** 2 - 1)
+    rho_e = m_e * cel / (q_e * b_si) * np.sqrt(gamma_e**2 - 1)
+    rho_p = m_p * cel / (q_e * b_si) * np.sqrt(gamma_p**2 - 1)
     rho_s = v_ts / (f_cp * 2 * np.pi)
 
     out = xr.Dataset(
-        {"time": b_xyz.time.data, "w_pe": (["time"], w_pe),
-         "w_ce": (["time"], w_ce), "w_pp": (["time"], w_pp),
-         "v_a": (["time"], v_a), "v_ae": (["time"], v_ae),
-         "v_te": (["time"], v_te), "v_tp": (["time"], v_tp),
-         "v_ts": (["time"], v_ts), "gamma_e": (["time"], gamma_e),
-         "gamma_p": (["time"], gamma_p), "l_e": (["time"], l_e),
-         "l_i": (["time"], l_i), "l_d": (["time"], l_d),
-         "n_d": (["time"], n_d), "f_pe": (["time"], f_pe),
-         "f_ce": (["time"], f_ce), "f_uh": (["time"], f_uh),
-         "f_pp": (["time"], f_pp), "f_cp": (["time"], f_cp),
-         "f_lh": (["time"], f_lh), "rho_e": (["time"], rho_e),
-         "rho_p": (["time"], rho_p), "rho_s": (["time"], rho_s)})
+        {
+            "time": b_xyz.time.data,
+            "w_pe": (["time"], w_pe),
+            "w_ce": (["time"], w_ce),
+            "w_pp": (["time"], w_pp),
+            "v_a": (["time"], v_a),
+            "v_ae": (["time"], v_ae),
+            "v_te": (["time"], v_te),
+            "v_tp": (["time"], v_tp),
+            "v_ts": (["time"], v_ts),
+            "gamma_e": (["time"], gamma_e),
+            "gamma_p": (["time"], gamma_p),
+            "l_e": (["time"], l_e),
+            "l_i": (["time"], l_i),
+            "l_d": (["time"], l_d),
+            "n_d": (["time"], n_d),
+            "f_pe": (["time"], f_pe),
+            "f_ce": (["time"], f_ce),
+            "f_uh": (["time"], f_uh),
+            "f_pp": (["time"], f_pp),
+            "f_cp": (["time"], f_cp),
+            "f_lh": (["time"], f_lh),
+            "rho_e": (["time"], rho_e),
+            "rho_p": (["time"], rho_p),
+            "rho_s": (["time"], rho_s),
+        }
+    )
 
     return out

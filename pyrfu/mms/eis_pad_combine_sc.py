@@ -35,13 +35,13 @@ def eis_pad_combine_sc(pads):
     # Determine spacecraft with smallest number of time steps to use as
     # reference spacecraft
     time_size = [len(probe.time.data) for probe in pads]
-    ref_sc_time_size, ref_sc_loc = [np.min(time_size), np.argmin(time_size)]
+    ref_sc_loc = np.argmin(time_size)
     ref_probe = pads[ref_sc_loc]
 
     # Define common energy grid across EIS instruments
     n_en_chans = [len(probe.energy.data) for probe in pads]
 
-    size_en, loc_ref_en = [np.min(n_en_chans), np.argmin(n_en_chans)]
+    size_en = np.min(n_en_chans)
     energy_data = [probe.energy.data[:size_en] for probe in pads]
     energy_data = np.stack(energy_data)
     common_energy = np.nanmean(energy_data, axis=0)
@@ -49,19 +49,21 @@ def eis_pad_combine_sc(pads):
     # create PA labels
     n_pabins = len(ref_probe.theta.data)
     size_pabin = 180 / n_pabins
-    pa_label = 180. * np.arange(n_pabins) / n_pabins + size_pabin / 2.
+    pa_label = 180.0 * np.arange(n_pabins) / n_pabins + size_pabin / 2.0
 
-    allmms_pad = np.zeros((ref_probe.shape[0], ref_probe.shape[1],
-                           ref_probe.shape[2], len(pads)))
+    allmms_pad = np.zeros(
+        (ref_probe.shape[0], ref_probe.shape[1], ref_probe.shape[2], len(pads))
+    )
 
-    for p, pad_ in enumerate(pads):
-        allmms_pad[..., p] = pad_.data[:len(ref_probe.time), ...]
+    for i_pad, pad_ in enumerate(pads):
+        allmms_pad[..., i_pad] = pad_.data[: len(ref_probe.time), ...]
 
     allmms_pad_avg = np.nanmean(allmms_pad, axis=3)
 
-    allmms_pad_avg = xr.DataArray(allmms_pad_avg,
-                                  coords=[ref_probe.time.data, pa_label,
-                                          common_energy],
-                                  dims=["time", "theta", "energy"])
+    allmms_pad_avg = xr.DataArray(
+        allmms_pad_avg,
+        coords=[ref_probe.time.data, pa_label, common_energy],
+        dims=["time", "theta", "energy"],
+    )
 
     return allmms_pad_avg

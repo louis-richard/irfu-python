@@ -21,35 +21,35 @@ def _ellip_coefficients(f_min, f_max, order):
 
     if f_min == 0:
         if order == -1:
-            order, f_max = signal.ellipord(f_max,
-                                           np.min([f_max * 1.1, 0.9999]),
-                                           .5, 60)
+            order, f_max = signal.ellipord(
+                f_max, np.min([f_max * 1.1, 0.9999]), 0.5, 60
+            )
 
-        num1, den1 = signal.ellip(order, .5, 60, f_max, btype="lowpass")
+        num1, den1 = signal.ellip(order, 0.5, 60, f_max, btype="lowpass")
     elif f_max == 0:
         if order == -1:
-            order, f_min = signal.ellipord(f_min,
-                                           np.min([f_min * 1.1, 0.9999]),
-                                           .5, 60)
+            order, f_min = signal.ellipord(
+                f_min, np.min([f_min * 1.1, 0.9999]), 0.5, 60
+            )
 
-        num1, den1 = signal.ellip(order, .5, 60, f_min, btype="highpass")
+        num1, den1 = signal.ellip(order, 0.5, 60, f_min, btype="highpass")
     else:
         if order == -1:
-            order, f_max = signal.ellipord(f_max,
-                                           np.min([f_max * 1.3, 0.9999]),
-                                           .5, 60)
+            order, f_max = signal.ellipord(
+                f_max, np.min([f_max * 1.3, 0.9999]), 0.5, 60
+            )
 
-        num1, den1 = signal.ellip(order, .5, 60, f_max)
+        num1, den1 = signal.ellip(order, 0.5, 60, f_max)
 
         if order == -1:
-            order, f_min = signal.ellipord(f_min, f_min * .75, .5, 60)
+            order, f_min = signal.ellipord(f_min, f_min * 0.75, 0.5, 60)
 
-        num2, den2 = signal.ellip(order, .5, 60, f_min)
+        num2, den2 = signal.ellip(order, 0.5, 60, f_min)
 
     return num1, den1, num2, den2
 
 
-def filt(inp, f_min: float = 0., f_max: float = 1., order: int = -1):
+def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
     r"""Filters input quantity.
 
     Parameters
@@ -103,7 +103,7 @@ def filt(inp, f_min: float = 0., f_max: float = 1., order: int = -1):
 
     f_min, f_max = [f_min / (f_samp / 2), f_max / (f_samp / 2)]
 
-    f_max = np.min([f_max, 1.])
+    f_max = np.min([f_max, 1.0])
 
     # Parameters of the elliptic filter. fact defines the width between
     # stopband and passband
@@ -120,12 +120,10 @@ def filt(inp, f_min: float = 0., f_max: float = 1., order: int = -1):
         out_data[:, i_col] = signal.filtfilt(num1, den1, inp_data[:, i_col])
 
         if num2 is not None and den2 is not None:
-            out_data[:, i_col] = signal.filtfilt(num2, den2,
-                                                 out_data[:, i_col])
+            out_data[:, i_col] = signal.filtfilt(num2, den2, out_data[:, i_col])
     if inp_data.shape[1] == 1:
         out_data = out_data[:, 0]
 
-    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims,
-                       attrs=inp.attrs)
+    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
 
     return out

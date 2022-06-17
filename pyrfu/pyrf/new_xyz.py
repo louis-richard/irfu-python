@@ -60,7 +60,6 @@ def new_xyz(inp, trans_mat):
     else:
         out_data = (trans_mat.T @ inp.data.T).T
 
-    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims,
-                       attrs=inp.attrs)
+    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
 
     return out

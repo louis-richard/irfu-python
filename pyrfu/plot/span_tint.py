@@ -12,7 +12,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def span_tint(axs, tint, ymin: float = 0, ymax:float = 1, **kwargs):
+def span_tint(axs, tint, ymin: float = 0, ymax: float = 1, **kwargs):
     r"""Add a vertical span (rectangle) across the time Axes.
 
     The rectangle spans from tint[0] to tint[1] horizontally, and, by default,
@@ -45,8 +45,7 @@ def span_tint(axs, tint, ymin: float = 0, ymax:float = 1, **kwargs):
     """
 
     for axis in axs:
-        t_start, t_stop = [dates.datestr2num(tint[0]),
-                           dates.datestr2num(tint[1])]
+        t_start, t_stop = [dates.datestr2num(tint[0]), dates.datestr2num(tint[1])]
         axis.axvspan(t_start, t_stop, ymin, ymax, **kwargs)
 
     return axs

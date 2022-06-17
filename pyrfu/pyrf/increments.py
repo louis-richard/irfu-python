@@ -52,13 +52,19 @@ def increments(inp, scale: int = 10):
     cols = [inp.coords[dim].data for dim in inp.dims]
 
     if inp.data.ndim == 1:
-        result = xr.DataArray(np.squeeze(result),
-                              coords=[cols[0][0:len(delta_inp)]],
-                              dims=inp.dims, attrs=inp.attrs)
+        result = xr.DataArray(
+            np.squeeze(result),
+            coords=[cols[0][0 : len(delta_inp)]],
+            dims=inp.dims,
+            attrs=inp.attrs,
+        )
     else:
-        result = xr.DataArray(np.squeeze(result),
-                              coords=[cols[0][0:len(delta_inp)], *cols[1:]],
-                              dims=inp.dims, attrs=inp.attrs)
+        result = xr.DataArray(
+            np.squeeze(result),
+            coords=[cols[0][0 : len(delta_inp)], *cols[1:]],
+            dims=inp.dims,
+            attrs=inp.attrs,
+        )
 
     kurt = kurtosis(result, axis=0, fisher=False)
 

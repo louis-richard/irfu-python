@@ -49,13 +49,12 @@ def struct_func(inp, scales, order):
     result = []
     for scale in scales:
         result.append(
-            np.mean(np.abs(data[scale:, :] - data[:-scale, :]) ** order,
-                    axis=0))
+            np.mean(np.abs(data[scale:, :] - data[:-scale, :]) ** order, axis=0)
+        )
 
     result = np.squeeze(result)
-    result = xr.DataArray(result, coords=[scales],
-                          dims=["scale"], attrs=inp.attrs)
+    result = xr.DataArray(result, coords=[scales], dims=["scale"], attrs=inp.attrs)
 
-    result.attrs['order'] = order
+    result.attrs["order"] = order
 
     return result

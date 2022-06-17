@@ -19,8 +19,14 @@ __version__ = "2.3.14"
 __status__ = "Prototype"
 
 
-def histogram2d(inp1, inp2, bins: Union[str, int, tuple] = 100,
-                y_range: tuple = None, weights=None, density: bool = True):
+def histogram2d(
+    inp1,
+    inp2,
+    bins: Union[str, int, tuple] = 100,
+    y_range: tuple = None,
+    weights=None,
+    density: bool = True,
+):
     r"""Computes 2d histogram of inp2 vs inp1 with nbins number of bins.
 
     Parameters
@@ -88,9 +94,9 @@ def histogram2d(inp1, inp2, bins: Union[str, int, tuple] = 100,
     if len(inp2) != len(inp1):
         inp2 = resample(inp2, inp1)
 
-    h2d, x_edges, y_edges = np.histogram2d(inp1.data, inp2.data, bins=bins,
-                                           range=y_range, weights=weights,
-                                           density=density)
+    h2d, x_edges, y_edges = np.histogram2d(
+        inp1.data, inp2.data, bins=bins, range=y_range, weights=weights, density=density
+    )
 
     x_bins = x_edges[:-1] + np.median(np.diff(x_edges)) / 2
     y_bins = y_edges[:-1] + np.median(np.diff(y_edges)) / 2

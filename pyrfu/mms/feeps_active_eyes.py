@@ -15,7 +15,7 @@ __status__ = "Prototype"
 def feeps_active_eyes(var, tint, mms_id):
     r"""This function returns the FEEPS active eyes,
     based on date/mms_id/species/rate.
-    
+
     Parameters
     ----------
     var : dict
@@ -84,18 +84,23 @@ def feeps_active_eyes(var, tint, mms_id):
         sensors["top"] = [6, 7, 8]
         sensors["bottom"] = [6, 7, 8]
 
-    if isinstance(tint[0], str): 
+    if isinstance(tint[0], str):
         start_day = np.array(tint[0]).astype("<M8[D]")
     else:
         start_day = tint[0].astype("<M8[D]")
 
     # srvy mode, after 16 August 2017
-    if start_day >= np.datetime64("2017-08-16") and var[
-            "tmmode"].lower() == "srvy":
-        active_table = {"1-electron": {}, "1-ion": {},
-                        "2-electron": {}, "2-ion": {},
-                        "3-electron": {}, "3-ion": {},
-                        "4-electron": {}, "4-ion": {}}
+    if start_day >= np.datetime64("2017-08-16") and var["tmmode"].lower() == "srvy":
+        active_table = {
+            "1-electron": {},
+            "1-ion": {},
+            "2-electron": {},
+            "2-ion": {},
+            "3-electron": {},
+            "3-ion": {},
+            "4-electron": {},
+            "4-ion": {},
+        }
 
         active_table["1-electron"]["top"] = [3, 5, 9, 10, 12]
         active_table["1-electron"]["bottom"] = [2, 4, 5, 9, 10]
@@ -120,17 +125,16 @@ def feeps_active_eyes(var, tint, mms_id):
 
         active_table["4-ion"]["top"] = [6, 8]
         active_table["4-ion"]["bottom"] = [6, 7, 8]
-       
+
         sensors = active_table["{:d}-{}".format(mms_id, var["dtype"].lower())]
-        
+
         if var["lev"].lower() == "sitl":
             sensors["top"] = list(set(sensors["top"]) & {5, 11, 12})
             sensors["bottom"] = []
-            return {"top": list(set(sensors["top"]) & {5, 11, 12}),
-                    "bottom": []}
+            return {"top": list(set(sensors["top"]) & {5, 11, 12}), "bottom": []}
 
     if var["lev"].lower() == "sitl":
         sensors["top"] = [5, 11, 12]
         sensors["bottom"] = []
-        
+
     return sensors

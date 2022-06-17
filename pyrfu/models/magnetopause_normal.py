@@ -24,9 +24,15 @@ from scipy.optimize import fminbound
 
 def _magnetopause(theta, *args):
     r0, alpha, x0, y0 = args
-    out = r0 ** 2 * (2. / (1 + np.cos(theta))) ** (2 * alpha) \
-          - 2 * r0 * (2. / (1 + np.cos(theta))) ** alpha \
-          * (x0 * np.cos(theta) + y0 * np.sin(theta)) + x0 ** 2 + y0 ** 2
+    out = (
+        r0**2 * (2.0 / (1 + np.cos(theta))) ** (2 * alpha)
+        - 2
+        * r0
+        * (2.0 / (1 + np.cos(theta))) ** alpha
+        * (x0 * np.cos(theta) + y0 * np.sin(theta))
+        + x0**2
+        + y0**2
+    )
 
     return out
 
@@ -38,8 +44,9 @@ def _bow_shock(r_xy, *args):
     return out
 
 
-def magnetopause_normal(r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997",
-                        m_alfven: float = 4.):
+def magnetopause_normal(
+    r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997", m_alfven: float = 4.0
+):
     """Computes the distance and normal vector to the magnetopause for
     Shue et al., 1997 or Shue et al., 1998 model. Or bow shock for
     Farris & Russell 1994 model.
@@ -93,9 +100,8 @@ def magnetopause_normal(r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997",
 
     if model in ["mp_shue1998", "bs98"]:
         alpha = (0.58 - 0.007 * b_z_imf) * (1.0 + 0.024 * np.log(p_sw))
-        r0 = (10.22
-              + 1.29 * np.tanh(.184 * (b_z_imf + 8.14))) * p_sw ** (-1. / 6.6)
-        warnings.warn('Shue et al., 1998 model used.', UserWarning)
+        r0 = (10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))) * p_sw ** (-1.0 / 6.6)
+        warnings.warn("Shue et al., 1998 model used.", UserWarning)
     else:
         alpha = (0.58 - 0.01 * b_z_imf) * (1.0 + 0.01 * p_sw)
 
@@ -104,53 +110,60 @@ def magnetopause_normal(r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997",
         else:
             r0 = (11.4 + 0.140 * b_z_imf) * p_sw ** (-1.0 / 6.6)
 
-        warnings.warn('Shue et al., 1997 model used.', UserWarning)
+        warnings.warn("Shue et al., 1997 model used.", UserWarning)
 
     # Spacecraft position
     r1_x, r1_y, r1_z = r_gsm
-    r0_x, r0_y = [r1_x, np.sqrt(r1_y ** 2 + r1_z ** 2)]
+    r0_x, r0_y = [r1_x, np.sqrt(r1_y**2 + r1_z**2)]
 
     if model[:2].lower() == "mp":
         # Magnetopause
 
-        theta_min, min_val, ierr, numfunc = fminbound(_magnetopause,
-                                                      x1=-np.pi / 2,
-                                                      x2=np.pi / 2, args=(
-            r0, alpha, r0_x, r1_y), full_output=True)
+        theta_min, min_val, ierr, numfunc = fminbound(
+            _magnetopause,
+            x1=-np.pi / 2,
+            x2=np.pi / 2,
+            args=(r0, alpha, r0_x, r1_y),
+            full_output=True,
+        )
 
         min_dist = np.sqrt(min_val)
 
         # calculate the direction to the spacecraft normal to the magnetopause
-        x_n = r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.cos(theta_min) \
-              - r1_x
+        x_n = r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.cos(theta_min) - r1_x
         phi = np.arctan2(r1_z, r1_y)
-        y_n = np.cos(phi) * (r0 * (2 / (1 + np.cos(theta_min))) ** alpha *
-                             np.sin(theta_min)) - r1_y
-        z_n = np.sin(phi) * (r0 * (2 / (1 + np.cos(theta_min))) ** alpha
-                             * np.sin(theta_min)) - r1_z
+        y_n = (
+            np.cos(phi)
+            * (r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.sin(theta_min))
+            - r1_y
+        )
+        z_n = (
+            np.sin(phi)
+            * (r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.sin(theta_min))
+            - r1_z
+        )
 
         n_vec = np.stack([x_n, y_n, z_n]) / min_dist
 
         # if statement to ensure normal is pointing away from Earth
-        if (np.sqrt(r0_x ** 2 + r0_y ** 2)
-                > r0 * (2 / (1 + np.cos(theta_min))) ** alpha):
+        if np.sqrt(r0_x**2 + r0_y**2) > r0 * (2 / (1 + np.cos(theta_min))) ** alpha:
             n_vec *= -1
             min_dist *= -1
 
     else:
         # Bow shock
-        warnings.warn('Farris & Russell 1994 bow shock model used.',
-                      UserWarning)
+        warnings.warn("Farris & Russell 1994 bow shock model used.", UserWarning)
 
         gamma = 5 / 3
         mach = m_alfven
 
         # Bow shock standoff distance
-        rbs = r0 * (1 + 1.1 * ((gamma - 1) * mach ** 2 + 2)
-                    / ((gamma + 1) * (mach ** 2 - 1)))
+        rbs = r0 * (
+            1 + 1.1 * ((gamma - 1) * mach**2 + 2) / ((gamma + 1) * (mach**2 - 1))
+        )
 
         # y ^ 2 = 0 - Ax + Bx ^ 2
-        coeffs = [0, 45.3, .04]
+        coeffs = [0, 45.3, 0.04]
         x = np.linspace(rbs, -100, int((rbs + 100) * 1e3) + 1)
         y = np.sqrt(-coeffs[1] * (x - rbs) + coeffs[2] * (x - rbs) ** 2)
         x = np.hstack([np.flip(x), x])
@@ -169,8 +182,7 @@ def magnetopause_normal(r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997",
         min_dist = np.sqrt(min_val)
 
         qyz = r1_y / r1_z
-        z_n = np.sign(r1_z) * np.sign(x_n) \
-              * np.sqrt((1 - x_n ** 2) / (1 + qyz ** 2))
+        z_n = np.sign(r1_z) * np.sign(x_n) * np.sqrt((1 - x_n**2) / (1 + qyz**2))
         y_n = z_n * qyz
 
         n_vec = np.stack([x_n, y_n, z_n])

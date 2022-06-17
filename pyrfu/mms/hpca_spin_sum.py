@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pdb
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -42,9 +40,9 @@ def hpca_spin_sum(inp, saz, method: str = "mean"):
     out_data = []
     for i, spin in enumerate(spin_starts[:-1]):
         if method == "mean":
-            out_data.append(inp[spin:spin_starts[i + 1]].mean(dim='time').data)
+            out_data.append(inp[spin : spin_starts[i + 1]].mean(dim="time").data)
         elif method == "sum":
-            out_data.append(inp[spin:spin_starts[i + 1]].sum(dim='time').data)
+            out_data.append(inp[spin : spin_starts[i + 1]].sum(dim="time").data)
         else:
             raise ValueError("Invalid method")
 

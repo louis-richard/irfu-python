@@ -29,15 +29,16 @@ def _to_ts(out_data, b_dict):
         out = xr.DataArray(out_data, coords=[b_dict["1"].time], dims=["time"])
 
     elif len(out_data.shape) == 2:
-        out = xr.DataArray(out_data,
-                           coords=[b_dict["1"].time, ["x", "y", "z"]],
-                           dims=["time", "comp"])
+        out = xr.DataArray(
+            out_data, coords=[b_dict["1"].time, ["x", "y", "z"]], dims=["time", "comp"]
+        )
 
     elif len(out_data.shape) == 3:
-        out = xr.DataArray(out_data,
-                           coords=[b_dict["1"].time, ["x", "y", "z"],
-                                   ["x", "y", "z"]],
-                           dims=["time", "vcomp", "hcomp"])
+        out = xr.DataArray(
+            out_data,
+            coords=[b_dict["1"].time, ["x", "y", "z"], ["x", "y", "z"]],
+            dims=["time", "vcomp", "hcomp"],
+        )
 
     else:
         raise TypeError("Invalid type")
@@ -129,8 +130,7 @@ def c_4_grad(r_list, b_list, method: str = "grad"):
         grad_b = np.zeros((len(b_dict["1"]), 3, 3))
 
         for i, j, i_sc in itertools.product(range(3), range(3), mms_list):
-            grad_b[:, j, i] += k_dict[i_sc][:, i].data \
-                               * b_dict[i_sc][:, j].data
+            grad_b[:, j, i] += k_dict[i_sc][:, i].data * b_dict[i_sc][:, j].data
 
     # Gradient
     if method.lower() == "grad":

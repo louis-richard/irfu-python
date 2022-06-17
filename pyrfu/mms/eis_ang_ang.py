@@ -60,15 +60,14 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
 
     scopes = list(filter(lambda x: x.startswith("t"), inp_allt.keys()))
 
-    azi_ = np.zeros((len(scopes), len(inp_allt.time)))
-    pol_ = np.zeros((len(scopes), len(inp_allt.time)))
+    phi, theta = [np.zeros((len(scopes), len(inp_allt.time))) for _ in range(2)]
 
     for i, scope in enumerate(scopes):
-        d_ = inp_allt[f"look_{scope}"]
+        d_xyz = inp_allt[f"look_{scope}"]
         # Domain [-180,180], 0 = sunward (GSE)
-        azi_[i, :] = np.rad2deg(np.arctan2(d_.data[:, 1], d_.data[:, 0]))
+        phi[i, :] = np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0]))
         # Domain [-90,90], Positive is look direction northward
-        pol_[i, :] = 90. - np.rad2deg(np.arccos(d_[:, 2]))
+        theta[i, :] = 90.0 - np.rad2deg(np.arccos(d_xyz[:, 2]))
 
     spin_ = inp_allt.spin.data
     sect_ = inp_allt.sector.data
@@ -78,11 +77,11 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
     n_spins, n_pol, n_azi = [len(spin_inds), 6, len(np.unique(sect_))]
 
     # Minus 80 plus
-    min_pol_edges = -80. + 160. * np.arange(n_pol) / n_pol
-    max_pol_edges = -80. + 160. * (np.arange(n_pol) + 1) / n_pol
+    min_pol_edges = -80.0 + 160.0 * np.arange(n_pol) / n_pol
+    max_pol_edges = -80.0 + 160.0 * (np.arange(n_pol) + 1) / n_pol
 
-    min_azi_edges = -180. + 360. * np.arange(n_azi) / n_azi
-    max_azi_edges = -180. + 360. * (np.arange(n_azi) + 1) / n_azi
+    min_azi_edges = -180.0 + 360.0 * np.arange(n_azi) / n_azi
+    max_azi_edges = -180.0 + 360.0 * (np.arange(n_azi) + 1) / n_azi
 
     out_data = np.zeros((n_spins, n_en, n_azi, n_pol))
 
@@ -90,22 +89,29 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
 
     for i, spin_ind in enumerate(spin_inds):
         t_inds = np.where(spin_ == spin_[spin_ind])[0]
-        for t_ind, (t, scope) in itertools.product(t_inds, enumerate(scopes)):
-            cond_azi = np.logical_and(azi_[t, t_ind] > min_azi_edges,
-                                      azi_[t, t_ind] < max_azi_edges)
+        for t_ind, (i_s, scope) in itertools.product(t_inds, enumerate(scopes)):
+            cond_azi = np.logical_and(
+                phi[i_s, t_ind] > min_azi_edges, phi[i_s, t_ind] < max_azi_edges
+            )
             a_idx = np.where(cond_azi)[0]
 
-            cond_pol = np.logical_and(pol_[t, t_ind] > min_pol_edges,
-                                      pol_[t, t_ind] < max_pol_edges)
+            cond_pol = np.logical_and(
+                theta[i_s, t_ind] > min_pol_edges, theta[i_s, t_ind] < max_pol_edges
+            )
             p_idx = np.where(cond_pol)[0]
 
             out_data[i, :, a_idx, p_idx] = inp_allt[scope].data[t_ind, en_chan]
 
-    out = xr.DataArray(out_data,
-                       coords=[time_data, inp_allt.energy.data[en_chan],
-                               min_azi_edges + 180. / n_azi,
-                               min_pol_edges + 90. / n_pol],
-                       dims=["time", "energy", "phi", "theta"])
+    out = xr.DataArray(
+        out_data,
+        coords=[
+            time_data,
+            inp_allt.energy.data[en_chan],
+            min_azi_edges + 180.0 / n_azi,
+            min_pol_edges + 90.0 / n_pol,
+        ],
+        dims=["time", "energy", "phi", "theta"],
+    )
 
     out.attrs["energy_dminus"] = inp_allt.energy_dminus.data
     out.attrs["energy_dplus"] = inp_allt.energy_dplus.data

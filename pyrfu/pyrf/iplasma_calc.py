@@ -58,8 +58,9 @@ def _print_velocities(v_a, v_ae, v_te, v_tp, v_ts):
 def _print_other(n_d, eta, p_mag):
     print("\nOther parameters: ")
     print("*" * 17)
-    print(f"{'N_deb':>5} = {n_d:>6.2E} {'':<6} "
-          f"# number of particle in Debye sphere")
+    print(
+        f"{'N_deb':>5} = {n_d:>6.2E} {'':<6} " f"# number of particle in Debye sphere"
+    )
     print(f"{'eta':>5} = {eta:>6.2E} {'Ohm m':<6} # Spitzer resistivity")
     print(f"{'P_B':>5} = {p_mag:>6.2E} {'Pa':<6} # Magnetic pressure")
 
@@ -110,17 +111,17 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
     m_e = constants.electron_mass
     mp_me = m_p / m_e
 
-    w_pe = np.sqrt(n_e * q_e ** 2 / (m_e * ep0)) 	# rad/s
-    w_ce = q_e * b_0 / m_e   						# rad/s
-    w_pp = np.sqrt(n_i * q_e ** 2 / (m_p * ep0))
+    w_pe = np.sqrt(n_e * q_e**2 / (m_e * ep0))  # rad/s
+    w_ce = q_e * b_0 / m_e  # rad/s
+    w_pp = np.sqrt(n_i * q_e**2 / (m_p * ep0))
 
-    p_mag = b_0 ** 2 / (2 * mu0)
+    p_mag = b_0**2 / (2 * mu0)
 
     v_a = b_0 / np.sqrt(mu0 * n_i * m_p)
 
     v_ae = b_0 / np.sqrt(mu0 * n_e * m_e)
-    v_te = cel * np.sqrt(1 - 1 / (t_e * q_e / (m_e * cel ** 2) + 1) ** 2)
-    v_tp = cel * np.sqrt(1 - 1 / (t_i * q_e / (m_p * cel ** 2) + 1) ** 2)
+    v_te = cel * np.sqrt(1 - 1 / (t_e * q_e / (m_e * cel**2) + 1) ** 2)
+    v_tp = cel * np.sqrt(1 - 1 / (t_i * q_e / (m_p * cel**2) + 1) ** 2)
     # Sound speed formula (F. Chen, Springer 1984).
     v_ts = np.sqrt((t_e * q_e + 3 * t_i * q_e) / m_p)
 
@@ -132,30 +133,30 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
     # Debye length scale, sqrt(2) needed because of Vte definition
     l_d = v_te / (w_pe * np.sqrt(2))
     # number of e- in Debye sphere
-    n_d = l_d * ep0 * m_e * v_te ** 2 / q_e ** 2
+    n_d = l_d * ep0 * m_e * v_te**2 / q_e**2
 
-    f_pe = w_pe / (2 * np.pi) 				# Hz
+    f_pe = w_pe / (2 * np.pi)  # Hz
     f_ce = w_ce / (2 * np.pi)
-    f_uh = np.sqrt(f_ce ** 2 + f_pe ** 2)
+    f_uh = np.sqrt(f_ce**2 + f_pe**2)
     f_pp = w_pp / (2 * np.pi)
     f_cp = f_ce / mp_me
-    f_lh = np.sqrt(f_cp * f_ce / (1 + f_ce ** 2 / f_pe ** 2) + f_cp ** 2)
+    f_lh = np.sqrt(f_cp * f_ce / (1 + f_ce**2 / f_pe**2) + f_cp**2)
 
-    rho_e = m_e * cel / (q_e * b_0) * np.sqrt(gamma_e ** 2 - 1)
-    rho_p = m_p * cel / (q_e * b_0) * np.sqrt(gamma_p ** 2 - 1)
+    rho_e = m_e * cel / (q_e * b_0) * np.sqrt(gamma_e**2 - 1)
+    rho_p = m_p * cel / (q_e * b_0) * np.sqrt(gamma_p**2 - 1)
     rho_s = v_ts / (f_cp * 2 * np.pi)
 
     # Collision stuff
     # collision frequency e-/ions
-    f_col = (n_e * q_e ** 4) / 16 * np.pi * ep0 ** 2 * m_e ** 2 * v_te ** 3
+    f_col = (n_e * q_e**4) / 16 * np.pi * ep0**2 * m_e**2 * v_te**3
     # Spitzer resistivity
-    eta = (np.pi * q_e ** 2 * np.sqrt(m_e))
-    eta /= ((4 * np.pi * ep0) ** 2 * (q_e * t_e) ** (3 / 2))
+    eta = np.pi * q_e**2 * np.sqrt(m_e)
+    eta /= (4 * np.pi * ep0) ** 2 * (q_e * t_e) ** (3 / 2)
     eta *= np.log(4 * np.pi * n_d)
     # resistive scale
     r_col = eta / (mu0 * v_a)
 
-    beta = v_tp ** 2 / v_a ** 2
+    beta = v_tp**2 / v_a**2
 
     if verbose:
         _print_header()
@@ -166,12 +167,31 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
         _print_dimensionless(beta, gamma_e)
 
     if output:
-        out = {"w_pe": w_pe, "w_ce": w_ce, "w_pp": w_pp, "v_a": v_a,
-               "v_ae": v_ae, "v_te": v_te, "v_tp": v_tp, "v_ts": v_ts,
-               "gamma_e": gamma_e, "gamma_p": gamma_p, "l_e": l_e, "l_i": l_i,
-               "l_d": l_d, "n_d": n_d, "f_pe": f_pe, "f_ce": f_ce,
-               "f_uh": f_uh, "f_pp": f_pp, "f_cp": f_cp, "f_lh": f_lh,
-               "rho_e": rho_e, "rho_p": rho_p, "rho_s": rho_s}
+        out = {
+            "w_pe": w_pe,
+            "w_ce": w_ce,
+            "w_pp": w_pp,
+            "v_a": v_a,
+            "v_ae": v_ae,
+            "v_te": v_te,
+            "v_tp": v_tp,
+            "v_ts": v_ts,
+            "gamma_e": gamma_e,
+            "gamma_p": gamma_p,
+            "l_e": l_e,
+            "l_i": l_i,
+            "l_d": l_d,
+            "n_d": n_d,
+            "f_pe": f_pe,
+            "f_ce": f_ce,
+            "f_uh": f_uh,
+            "f_pp": f_pp,
+            "f_cp": f_cp,
+            "f_lh": f_lh,
+            "rho_e": rho_e,
+            "rho_p": rho_p,
+            "rho_s": rho_s,
+        }
     else:
         out = None
 

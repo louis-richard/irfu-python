@@ -74,12 +74,13 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     phi = ref_probe.phi.data
     theta = ref_probe.theta.data
 
-    allmms_skymap = np.zeros([ref_sc_time_size, size_en, phi.shape[1],
-                              len(theta), len(skymaps)])
+    allmms_skymap = np.zeros(
+        [ref_sc_time_size, size_en, phi.shape[1], len(theta), len(skymaps)]
+    )
 
-    for p, skymap in enumerate(skymaps):
+    for i_s, skymap in enumerate(skymaps):
         idx_en = _idx_closest(skymap.energy.data[0, :], common_energy[0, :])
-        allmms_skymap[..., p] = skymap.data[:ref_sc_time_size, idx_en, ...]
+        allmms_skymap[..., i_s] = skymap.data[:ref_sc_time_size, idx_en, ...]
 
     if method.lower() == "mean":
         # Average the four spacecraft
@@ -89,12 +90,16 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
         allmms_skymap_avg = np.nansum(allmms_skymap, axis=-1)
 
     # Create combined skymap
-    out_dict = {"time": ref_probe.time.data,
-                "idx0": range(common_energy.shape[1]),
-                "idx1": range(phi.shape[1]), "idx2": range(len(theta)),
-                "data": (["time", "idx0", "idx1", "idx2"], allmms_skymap_avg),
-                "energy": (["time", "idx0"], common_energy),
-                "phi": (["time", "idx1"], phi), "theta": (["idx2"], theta)}
+    out_dict = {
+        "time": ref_probe.time.data,
+        "idx0": range(common_energy.shape[1]),
+        "idx1": range(phi.shape[1]),
+        "idx2": range(len(theta)),
+        "data": (["time", "idx0", "idx1", "idx2"], allmms_skymap_avg),
+        "energy": (["time", "idx0"], common_energy),
+        "phi": (["time", "idx1"], phi),
+        "theta": (["idx2"], theta),
+    }
 
     out = xr.Dataset(out_dict)
 

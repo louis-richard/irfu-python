@@ -4,7 +4,6 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
 
 # Local imports
 from ..pyrf import ts_scalar, resample, extend_tint, time_clip
@@ -68,35 +67,30 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
     """
 
     # Correct for timing in spacecraft potential data.
-    e12 = ts_scalar(sc_pot.time.data,
-                    (sc_pot.data[:, 0] - sc_pot.data[:, 1]) / .120)
-    e34 = ts_scalar(sc_pot.time.data,
-                    (sc_pot.data[:, 2] - sc_pot.data[:, 3]) / .120)
-    e56 = ts_scalar(sc_pot.time.data,
-                    (sc_pot.data[:, 4] - sc_pot.data[:, 4]) / .0292)
+    e12 = ts_scalar(sc_pot.time.data, (sc_pot.data[:, 0] - sc_pot.data[:, 1]) / 0.120)
+    e34 = ts_scalar(sc_pot.time.data, (sc_pot.data[:, 2] - sc_pot.data[:, 3]) / 0.120)
+    e56 = ts_scalar(sc_pot.time.data, (sc_pot.data[:, 4] - sc_pot.data[:, 4]) / 0.0292)
 
-    v1 = ts_scalar(sc_pot.time.data, sc_pot.data[:, 0])
-    v3 = ts_scalar(sc_pot.time.data + np.timedelta64(7629, "ns"),
-                   sc_pot.data[:, 2])
-    v5 = ts_scalar(sc_pot.time.data + np.timedelta64(15259, "ns"),
-                   sc_pot.data[:, 4])
+    v_1 = ts_scalar(sc_pot.time.data, sc_pot.data[:, 0])
+    v_3 = ts_scalar(sc_pot.time.data + np.timedelta64(7629, "ns"), sc_pot.data[:, 2])
+    v_5 = ts_scalar(sc_pot.time.data + np.timedelta64(15259, "ns"), sc_pot.data[:, 4])
 
     e12.time.data += np.timedelta64(26703, "ns")
     e34.time.data += np.timedelta64(30518, "ns")
     e56.time.data += np.timedelta64(34332, "ns")
 
-    v1, v3, v5 = [resample(v, v1) for v in [v1, v3, v5]]
-    e12, e34, e56 = [resample(e, v1) for e in [e12, e34, e56]]
+    v_1, v_3, v_5 = [resample(v, v_1) for v in [v_1, v_3, v_5]]
+    e12, e34, e56 = [resample(e, v_1) for e in [e12, e34, e56]]
 
-    v2 = v1 - e12 * 0.120
-    v4 = v3 - e34 * 0.120
-    v6 = v5 - e56 * 0.0292
+    v_2 = v_1 - e12 * 0.120
+    v_4 = v_3 - e34 * 0.120
+    v_6 = v_5 - e56 * 0.0292
 
-    sc_pot = np.hstack([v1.data, v2.data, v3.data, v4.data, v5.data, v6.data])
+    sc_pot = np.hstack([v_1.data, v_2.data, v_3.data, v_4.data, v_5.data, v_6.data])
 
-    sc_pot = xr.DataArray(sc_pot,
-                          coords=[v1.time.data, np.arange(1, 7)],
-                          dims=["time", "probe"])
+    sc_pot = xr.DataArray(
+        sc_pot, coords=[v_1.time.data, np.arange(1, 7)], dims=["time", "probe"]
+    )
 
     t_limit = [sc_pot.time.data[0], sc_pot.time.data[-1]]
     t_limit = [np.datetime_as_string(time, "ns") for time in t_limit]
@@ -116,7 +110,7 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
     for i in range(1, n_ph):
         if z_phase.time.data[i] > z_phase.time.data[i - 1]:
             if z_phase.data[i] < z_phase.data[i - 1]:
-                z_phase.data[i:] += 360.
+                z_phase.data[i:] += 360.0
         else:
             no_repeat[i] = 0
 
@@ -131,15 +125,14 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
     for i, j in zip([1, 7, 2, 5], [6, 6, 3, 3]):
         phase_p.append(np.deg2rad(z_phase.data) + i * np.pi / j)
 
-    rp = [60 * np.array([np.cos(phase), np.sin(phase)]) for phase in phase_p]
+    r_p = [60 * np.array([np.cos(phase), np.sin(phase)]) for phase in phase_p]
 
     # Calculate angles between probes and direction of B in the spin plane.
     theta_pb = [None] * 4
 
     for i in [0, 2]:
-        theta_pb[i] = rp[i][:, 0] * b_xyz.data[:, 0] \
-                      + rp[i][:, 1] * b_xyz.data[:, 1]
-        theta_pb[i] /= np.sqrt(rp[i][:, 0] ** 2 + rp[i][:, 1] ** 2)
+        theta_pb[i] = r_p[i][:, 0] * b_xyz.data[:, 0] + r_p[i][:, 1] * b_xyz.data[:, 1]
+        theta_pb[i] /= np.sqrt(r_p[i][:, 0] ** 2 + r_p[i][:, 1] ** 2)
         theta_pb[i] /= np.sqrt(b_xyz[:, 0] ** 2 + b_xyz[:, 1] ** 2)
         theta_pb[i] = np.arccos(abs(theta_pb[i])) * 180 / np.pi
 
@@ -149,34 +142,29 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
     sc_v12 = (sc_pot.data[:, 0] + sc_pot.data[:, 1]) / 2
     sc_v34 = (sc_pot.data[:, 2] + sc_pot.data[:, 3]) / 2
 
-    es = [None] * 4
+    e_s = [None] * 4
 
-    es[0] = (sc_pot.data[:, 0] - sc_v34) * 1e3 / 60
-    es[1] = (sc_v34 - sc_pot.data[:, 0]) * 1e3 / 60
-    es[2] = (sc_pot.data[:, 2] - sc_v12) * 1e3 / 60
-    es[3] = (sc_v12 - sc_pot.data[:, 2]) * 1e3 / 60
+    e_s[0] = (sc_pot.data[:, 0] - sc_v34) * 1e3 / 60
+    e_s[1] = (sc_v34 - sc_pot.data[:, 0]) * 1e3 / 60
+    e_s[2] = (sc_pot.data[:, 2] - sc_v12) * 1e3 / 60
+    e_s[3] = (sc_v12 - sc_pot.data[:, 2]) * 1e3 / 60
 
     e12 = (sc_pot.data[:, 0] - sc_pot.data[:, 1]) * 1e3 / 120
     e34 = (sc_pot.data[:, 2] - sc_pot.data[:, 3]) * 1e3 / 120
 
-    idx_b = np.sqrt(b_xyz.data[:, 0] ** 2
-                    + b_xyz.data[:, 1] ** 2) < abs(b_xyz.data[:, 2])
+    idx_b = np.sqrt(b_xyz.data[:, 0] ** 2 + b_xyz.data[:, 1] ** 2) < abs(
+        b_xyz.data[:, 2]
+    )
     thresh_ang = 25.0
 
-    for e, theta in zip(es, theta_pb):
-        e[theta > thresh_ang] = np.nan
-        e[idx_b] = np.nan
+    for e_, theta in zip(e_s, theta_pb):
+        e_[theta > thresh_ang] = np.nan
+        e_[idx_b] = np.nan
 
     sc_v12[theta_pb[2] > thresh_ang] = np.nan
     sc_v34[theta_pb[0] > thresh_ang] = np.nan
 
     sc_v12[idx_b] = np.nan
     sc_v34[idx_b] = np.nan
-
-    if plot_fig:
-        f, ax = plt.subplots(7, sharex="all", figsize=(16, 9))
-        f.subplots_adjust(left=.08, right=.92, bottom=.05, top=.95, hspace=0)
-
-        plt.show()
 
     return

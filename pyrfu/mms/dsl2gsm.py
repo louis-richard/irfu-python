@@ -19,12 +19,13 @@ __status__ = "Prototype"
 def _transformation_matrix(spin_axis, direction):
     r_x, r_y, r_z = [spin_axis[:, i] for i in range(3)]
 
-    a = 1. / np.sqrt(r_y ** 2 + r_z ** 2)
+    a = 1.0 / np.sqrt(r_y**2 + r_z**2)
     out = np.zeros((len(a), 3, 3))
-    out[:, 0, :] = np.transpose(np.stack([a * (r_y ** 2 + r_z ** 2),
-                                          -a * r_x * r_y, -a * r_x * r_z]))
+    out[:, 0, :] = np.transpose(
+        np.stack([a * (r_y**2 + r_z**2), -a * r_x * r_y, -a * r_x * r_z])
+    )
 
-    out[:, 1, :] = np.transpose(np.stack([0. * a, a * r_z, -a * r_y]))
+    out[:, 1, :] = np.transpose(np.stack([0.0 * a, a * r_z, -a * r_y]))
 
     out[:, 2, :] = np.transpose(np.stack([r_x, r_y, r_z]))
 
@@ -74,13 +75,14 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     """
 
     if isinstance(defatt, xr.Dataset):
-        x, y, z = sph2cart(np.deg2rad(defatt.z_ra.data),
-                           np.deg2rad(defatt.z_dec), 1)
-        sax_gei = np.transpose(np.vstack([defatt.time.data.astype("int") / 1e9,
-                                          x, y, z]))
+        x, y, z = sph2cart(np.deg2rad(defatt.z_ra.data), np.deg2rad(defatt.z_dec), 1)
+        sax_gei = np.transpose(
+            np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z])
+        )
         sax_gsm = cotrans(sax_gei, "gei>gsm")
-        sax_gsm = ts_vec_xyz((sax_gsm[:, 0] * 1e9).astype("datetime64[ns]"),
-                             sax_gsm[:, 1:])
+        sax_gsm = ts_vec_xyz(
+            (sax_gsm[:, 0] * 1e9).astype("datetime64[ns]"), sax_gsm[:, 1:]
+        )
 
         spin_ax_gsm = resample(sax_gsm, inp)
         spin_axis = spin_ax_gsm.data
@@ -94,7 +96,7 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     # Compute transformation natrix
     transf_mat = _transformation_matrix(spin_axis, direction)
 
-    out_data = np.einsum('kji,ki->kj', transf_mat, inp.data)
+    out_data = np.einsum("kji,ki->kj", transf_mat, inp.data)
 
     out = inp.copy()
     out.data = out_data

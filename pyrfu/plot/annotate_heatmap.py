@@ -17,9 +17,14 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def annotate_heatmap(im, data: np.ndarray = None, valfmt: str = "{x:.2f}",
-                     textcolors: tuple = ("black", "white"),
-                     threshold: float = None, **textkw):
+def annotate_heatmap(
+    im,
+    data: np.ndarray = None,
+    valfmt: str = "{x:.2f}",
+    textcolors: tuple = ("black", "white"),
+    threshold: float = None,
+    **textkw
+):
     r"""Annotate a heatmap.
 
     Parameters
@@ -55,12 +60,11 @@ def annotate_heatmap(im, data: np.ndarray = None, valfmt: str = "{x:.2f}",
     if threshold is not None:
         threshold = im.norm(threshold)
     else:
-        threshold = im.norm(data.max())/2.
+        threshold = im.norm(data.max()) / 2.0
 
     # Set default alignment to center, but allow it to be
     # overwritten by textkw.
-    kw = dict(horizontalalignment="center",
-              verticalalignment="center")
+    kw = dict(horizontalalignment="center", verticalalignment="center")
     kw.update(textkw)
 
     # Get the formatter in case a string is supplied

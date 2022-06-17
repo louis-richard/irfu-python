@@ -26,7 +26,7 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
     maxlags : int, Optional
         Maximum lag in number of points. Default is None (i.e., len(inp) - 1).
     normed : bool, Optional
-        Flag to normalize the corelation.
+        Flag to normalize the correlation.
 
     Returns
     -------
@@ -59,16 +59,17 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
         if normed:
             correls /= np.sqrt(np.dot(x[:, i], x[:, i]) ** 2)
 
-        correls = correls[n - 1 - maxlags:n + maxlags]
+        correls = correls[n - 1 - maxlags : n + maxlags]
         out_data[:, i] = correls[lags >= 0]
 
     if inp.ndim == 1:
-        out = xr.DataArray(np.squeeze(out_data), coords=[lags[lags >= 0]],
-                           dims=["lag"])
+        out = xr.DataArray(np.squeeze(out_data), coords=[lags[lags >= 0]], dims=["lag"])
     elif inp.ndim == 2:
-        out = xr.DataArray(out_data,
-                           coords=[lags[lags >= 0], inp[inp.dims[1]].data],
-                           dims=["lag", inp.dims[1]])
+        out = xr.DataArray(
+            out_data,
+            coords=[lags[lags >= 0], inp[inp.dims[1]].data],
+            dims=["lag", inp.dims[1]],
+        )
     else:
         raise ValueError("invalid shape!!")
 

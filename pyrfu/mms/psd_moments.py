@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import bisect
 import multiprocessing as mp
 
 # 3rd party imports
@@ -25,14 +24,44 @@ __status__ = "Prototype"
 # noinspection PyUnboundLocalVariable
 def _moms(time_idx, arguments):
     if len(arguments) > 13:
-        [is_brst_data, flag_same_e, flag_de, step_table, energy0, delta_v0,
-         energy1, delta_v1, q_e, sc_pot, p_mass, flag_inner_electron,
-         w_inner_electron, phi_tr, theta_k, int_energies, vdf, delta_ang] = \
-            arguments
+        [
+            is_brst_data,
+            flag_same_e,
+            flag_de,
+            step_table,
+            energy0,
+            delta_v0,
+            energy1,
+            delta_v1,
+            q_e,
+            sc_pot,
+            p_mass,
+            flag_inner_electron,
+            w_inner_electron,
+            phi_tr,
+            theta_k,
+            int_energies,
+            vdf,
+            delta_ang,
+        ] = arguments
     else:
-        [is_brst_data, flag_same_e, flag_de, energy, delta_v, q_e, sc_pot,
-         p_mass, flag_inner_electron, w_inner_electron, phi_tr, theta_k,
-         int_energies, vdf, delta_ang] = arguments
+        [
+            is_brst_data,
+            flag_same_e,
+            flag_de,
+            energy,
+            delta_v,
+            q_e,
+            sc_pot,
+            p_mass,
+            flag_inner_electron,
+            w_inner_electron,
+            phi_tr,
+            theta_k,
+            int_energies,
+            vdf,
+            delta_ang,
+        ] = arguments
 
     if is_brst_data:
         if not flag_same_e or not flag_de:
@@ -43,10 +72,10 @@ def _moms(time_idx, arguments):
                 energy = energy1
                 delta_v = delta_v1
 
-    velocity = np.real(np.sqrt(2 * q_e * (energy
-                                          - sc_pot.data[time_idx]) / p_mass))
-    velocity[energy - sc_pot.data[time_idx]
-             - flag_inner_electron * w_inner_electron < 0] = 0
+    velocity = np.real(np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass))
+    velocity[
+        energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron < 0
+    ] = 0
 
     if is_brst_data:
         phi_j = phi_tr[time_idx, :]
@@ -247,14 +276,16 @@ def psd_moments(vdf, sc_pot, **kwargs):
     sc_pot = resample(sc_pot, vdf.time)
 
     if "energy_range" in kwargs:
-        if isinstance(kwargs["energy_range"], (list, np.ndarray)) and \
-                len(kwargs["energy_range"]) == 2:
+        if (
+            isinstance(kwargs["energy_range"], (list, np.ndarray))
+            and len(kwargs["energy_range"]) == 2
+        ):
             if not is_brst_data:
                 energy0 = energy
 
-            e_min_max = kwargs["energy_range"]
-            start_e = bisect.bisect_left(energy0, e_min_max[0])
-            stop_e = bisect.bisect_left(energy0, e_min_max[1])
+            # e_min_max = kwargs["energy_range"]
+            # start_e = bisect.bisect_left(energy0, e_min_max[0])
+            # stop_e = bisect.bisect_left(energy0, e_min_max[1])
 
             print("notice : Using partial energy range")
 
@@ -263,8 +294,9 @@ def psd_moments(vdf, sc_pot, **kwargs):
             sc_pot.data = np.zeros(sc_pot.shape)
             print("notice : Setting spacecraft potential to zero")
 
-    int_energies = np.arange(kwargs.get("en_channels", [0, 32])[0],
-                             kwargs.get("en_channels", [0, 32])[1])
+    int_energies = np.arange(
+        kwargs.get("en_channels", [0, 32])[0], kwargs.get("en_channels", [0, 32])[1]
+    )
 
     if "partial_moments" in kwargs:
         partial_moments = kwargs["partial_moments"]
@@ -273,26 +305,34 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
         # Check size of partial_moments
         if partial_moments.shape == vdf.data.shape:
-            sum_ones = np.sum(np.sum(np.sum(np.sum(partial_moments, axis=-1),
-                                            axis=-1), axis=-1), axis=-1)
+            sum_ones = np.sum(
+                np.sum(np.sum(np.sum(partial_moments, axis=-1), axis=-1), axis=-1),
+                axis=-1,
+            )
             sum_zeros = np.sum(
-                np.sum(np.sum(np.sum(-partial_moments + 1, axis=-1), axis=-1),
-                       axis=-1), axis=-1)
+                np.sum(np.sum(np.sum(-partial_moments + 1, axis=-1), axis=-1), axis=-1),
+                axis=-1,
+            )
 
             if (sum_ones + sum_zeros) == vdf.data.size:
-                print("notice : partial_moments is correct. Partial moments "
-                      "will be calculated")
+                print(
+                    "notice : partial_moments is correct. Partial moments "
+                    "will be calculated"
+                )
                 vdf.data = vdf.data * partial_moments
             else:
-                print("notice : All values are not ones and zeros in "
-                      "partial_moments. Full " +
-                      "moments will be calculated")
+                print(
+                    "notice : All values are not ones and zeros in "
+                    "partial_moments. Full " + "moments will be calculated"
+                )
         else:
-            print("notice : Size of partial_moments is wrong. Full moments "
-                  "will be calculated")
+            print(
+                "notice : Size of partial_moments is wrong. Full moments "
+                "will be calculated"
+            )
 
     tmp_ = kwargs.get("inner_electron", "")
-    flag_inner_electron = (tmp_ == "on" and particle_type[0] == "e")
+    flag_inner_electron = tmp_ == "on" and particle_type[0] == "e"
 
     # Define constants
     q_e = constants.elementary_charge
@@ -303,7 +343,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         print("notice : Particles are electrons")
     elif particle_type[0] == "i":
         p_mass = constants.proton_mass
-        sc_pot.data = -1. * sc_pot.data
+        sc_pot.data = -1.0 * sc_pot.data
         print("notice : Particles are ions")
     else:
         raise ValueError("Could not identify the particle type")
@@ -385,14 +425,44 @@ def psd_moments(vdf, sc_pot, **kwargs):
     theta_k = theta_k.data[np.newaxis, :]
 
     if is_brst_data:
-        args_ = (is_brst_data, flag_same_e, flag_de, step_table, energy0,
-                 delta_v0, energy1, delta_v1, q_e, sc_pot.data, p_mass,
-                 flag_inner_electron, w_inner_electron, phi_tr.data,
-                 theta_k, int_energies, vdf.data.data, delta_ang)
+        args_ = (
+            is_brst_data,
+            flag_same_e,
+            flag_de,
+            step_table,
+            energy0,
+            delta_v0,
+            energy1,
+            delta_v1,
+            q_e,
+            sc_pot.data,
+            p_mass,
+            flag_inner_electron,
+            w_inner_electron,
+            phi_tr.data,
+            theta_k,
+            int_energies,
+            vdf.data.data,
+            delta_ang,
+        )
     else:
-        args_ = (is_brst_data, flag_same_e, flag_de, energy, delta_v, q_e,
-                 sc_pot.data, p_mass, flag_inner_electron, w_inner_electron,
-                 phi_tr.data, theta_k, int_energies, vdf.data, delta_ang)
+        args_ = (
+            is_brst_data,
+            flag_same_e,
+            flag_de,
+            energy,
+            delta_v,
+            q_e,
+            sc_pot.data,
+            p_mass,
+            flag_inner_electron,
+            w_inner_electron,
+            phi_tr.data,
+            theta_k,
+            int_energies,
+            vdf.data,
+            delta_ang,
+        )
 
     pool = mp.Pool(mp.cpu_count())
     res = pool.starmap(_moms, [(nt, args_) for nt in range(len(vdf.time))])

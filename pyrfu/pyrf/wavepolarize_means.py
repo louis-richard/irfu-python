@@ -37,8 +37,7 @@ def _spec_mat(half_spec_x, half_spec_y, half_spec_z):
     return spec_mat
 
 
-def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
-                       nop_fft: int = 256):
+def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256):
     r"""Analysis the polarization of magnetic wave using "means" method
 
     Parameters
@@ -100,7 +99,7 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
     # No. of bins in frequency domain
     n_bin = 7
     # Smoothing profile based on Hanning
-    aa = np.array([.024, .093, .232, .301, .232, .093, .024])
+    aa = np.array([0.024, 0.093, 0.232, 0.301, 0.232, 0.093, 0.024])
 
     # change wave to MFA coordinates
     b_bgd = resample(b_bgd, b_wave)
@@ -122,12 +121,15 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
     # DEFINE ARRAYS
     xs, ys, zs = [b_x, b_y, b_z]
 
-    sample_freq = 1/(ct[1]-ct[0])
-    end_sample_freq = 1/(ct[-1]-ct[-2])
+    sample_freq = 1 / (ct[1] - ct[0])
+    end_sample_freq = 1 / (ct[-1] - ct[-2])
 
     if sample_freq != end_sample_freq:
-        warnings.warn(f"file sampling frequency changes {sample_freq} Hz to "
-                      f"{end_sample_freq} Hz", UserWarning)
+        warnings.warn(
+            f"file sampling frequency changes {sample_freq} Hz to "
+            f"{end_sample_freq} Hz",
+            UserWarning,
+        )
     else:
         print("ac file sampling frequency {} Hz".format(sample_freq))
 
@@ -149,22 +151,26 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
 
     for j in range(n_stp):
         # FFT CALCULATION
-        smooth = 0.08 + 0.46 * (1 - np.cos(
-            2 * np.pi * np.arange(1, nop_fft + 1) / nop_fft))
-        temp_x = smooth * xs[((j - 1) * step_length + 1):(
-                    (j - 1) * step_length + nop_fft)]
-        temp_y = smooth * ys[((j - 1) * step_length + 1):(
-                    (j - 1) * step_length + nop_fft)]
-        temp_z = smooth * zs[((j - 1) * step_length + 1):(
-                    (j - 1) * step_length + nop_fft)]
+        smooth = 0.08 + 0.46 * (
+            1 - np.cos(2 * np.pi * np.arange(1, nop_fft + 1) / nop_fft)
+        )
+        temp_x = (
+            smooth * xs[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
+        )
+        temp_y = (
+            smooth * ys[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
+        )
+        temp_z = (
+            smooth * zs[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
+        )
 
         spec_x = np.fft.fft(temp_x)
         spec_y = np.fft.fft(temp_y)
         spec_z = np.fft.fft(temp_z)
 
-        half_spec_x = spec_x[:(nop_fft / 2)]
-        half_spec_y = spec_y[:(nop_fft / 2)]
-        half_spec_z = spec_z[:(nop_fft / 2)]
+        half_spec_x = spec_x[: (nop_fft / 2)]
+        half_spec_y = spec_y[: (nop_fft / 2)]
+        half_spec_z = spec_z[: (nop_fft / 2)]
 
         xs = np.roll(xs, -step_length)
         ys = np.roll(ys, -step_length)
@@ -182,7 +188,8 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
             for ir in range(3):
                 for ic in range(3):
                     e_spec_mat[k, ir, ic] = np.sum(
-                        aa[:n_bin] * spec_mat[(k - off_idx):(k + off_idx), ir, ic])
+                        aa[:n_bin] * spec_mat[(k - off_idx) : (k + off_idx), ir, ic]
+                    )
 
         # Calculation of the minimum variance direction and wave normal angle
         aaa2 = np.imag(e_spec_mat[:, 0, 1]) ** 2
@@ -194,29 +201,31 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
         wn_y = -np.abs(np.imag(e_spec_mat[:, 0, 2]) / aaa2)
         wn_z = np.imag(e_spec_mat[:, 0, 1]) / aaa2
 
-        wave_angle[j, :] = np.arctan(np.sqrt(wn_x ** 2 + wn_y ** 2) / np.abs(wn_z))
+        wave_angle[j, :] = np.arctan(np.sqrt(wn_x**2 + wn_y**2) / np.abs(wn_z))
 
         # CALCULATION OF THE DEGREE OF POLARISATION
         # calc of square of smoothed spec matrix
         for ir in range(3):
             for ic in range(3):
-                sqrd_mat[:, ir, ic] = e_spec_mat[:, ir, 0] * e_spec_mat[:, 0,
-                                                             ic]
-                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 1] * e_spec_mat[:, 1,
-                                                              ic]
-                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 2] * e_spec_mat[:, 2,
-                                                              ic]
+                sqrd_mat[:, ir, ic] = e_spec_mat[:, ir, 0] * e_spec_mat[:, 0, ic]
+                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 1] * e_spec_mat[:, 1, ic]
+                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 2] * e_spec_mat[:, 2, ic]
 
         trace_sqrd_mat = sqrd_mat[:, 0, 0] + sqrd_mat[:, 1, 1] + sqrd_mat[:, 2, 2]
-        trace_spec_mat[j, :] = e_spec_mat[:, 0, 0] + e_spec_mat[:, 1, 1] + e_spec_mat[:, 2, 2]
+        trace_spec_mat[j, :] = (
+            e_spec_mat[:, 0, 0] + e_spec_mat[:, 1, 1] + e_spec_mat[:, 2, 2]
+        )
 
         deg_pol[j, :] = trace_spec_mat[j, :] * np.nan
-        deg_pol[j, off_idx:int(nop_fft / 2) - off_idx] = 3 * trace_sqrd_mat[
-                                                             off_idx:int(nop_fft / 2) - off_idx]
-        deg_pol[j, off_idx:int(nop_fft / 2) - off_idx] -= trace_spec_mat[j,
-                                                          off_idx:int(nop_fft / 2) - off_idx] ** 2
-        deg_pol[j, off_idx:int(nop_fft / 2) - off_idx] /= 2 * trace_spec_mat[j, off_idx:int(
-            nop_fft / 2) - off_idx] ** 2
+        deg_pol[j, off_idx : int(nop_fft / 2) - off_idx] = (
+            3 * trace_sqrd_mat[off_idx : int(nop_fft / 2) - off_idx]
+        )
+        deg_pol[j, off_idx : int(nop_fft / 2) - off_idx] -= (
+            trace_spec_mat[j, off_idx : int(nop_fft / 2) - off_idx] ** 2
+        )
+        deg_pol[j, off_idx : int(nop_fft / 2) - off_idx] /= (
+            2 * trace_spec_mat[j, off_idx : int(nop_fft / 2) - off_idx] ** 2
+        )
 
         # Calculation of helicity, ellipticity and the wave state vector
         alpha_x = np.sqrt(e_spec_mat[:, 0, 0])
@@ -254,15 +263,18 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
         for k in range(int(nop_fft / 2)):
             for xyz in range(3):
                 # HELICITY CALCULATION
-                upper = np.sum(2 * np.real(lambda_u[k, xyz, :3]) * (np.imag(lambda_u[k, xyz, :3])))
+                upper = np.sum(
+                    2 * np.real(lambda_u[k, xyz, :3]) * (np.imag(lambda_u[k, xyz, :3]))
+                )
                 lower = np.sum(
-                    (np.real(lambda_u[k, xyz, :3])) ** 2 - (np.imag(lambda_u[k, xyz, :3])) ** 2)
+                    (np.real(lambda_u[k, xyz, :3])) ** 2
+                    - (np.imag(lambda_u[k, xyz, :3])) ** 2
+                )
 
                 if upper[j, k] > 0:
                     gamma = np.arctan(upper[j, k] / lower[j, k])
                 else:
-                    gamma = np.pi + (np.pi + np.arctan(upper[j, k] / lower[j,
-                                                                          k]))
+                    gamma = np.pi + (np.pi + np.arctan(upper[j, k] / lower[j, k]))
 
                 lambda_u[k, xyz, :] = np.exp(-0.5 * gamma * 1j) * lambda_u[k, xyz, :]
                 helic[j, k, xyz] = np.sqrt(np.sum(np.real(lambda_u[k, xyz, :3]) ** 2))
@@ -270,9 +282,12 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
                 helic[j, k, xyz] = np.divide(1, helic[j, k, xyz])
 
                 # ELLIPTICITY CALCULATION
-                upper_e = np.sum(np.imag(lambda_u[k, xyz, :3]) * np.real(lambda_u[k, xyz, :3]))
+                upper_e = np.sum(
+                    np.imag(lambda_u[k, xyz, :3]) * np.real(lambda_u[k, xyz, :3])
+                )
                 lower_e = np.sum(np.real(lambda_u[k, xyz, :2]) ** 2) - np.sum(
-                    np.imag(lambda_u[k, xyz, :2]) ** 2)
+                    np.imag(lambda_u[k, xyz, :2]) ** 2
+                )
 
                 if upper_e > 0:
                     gamma_rot = np.arctan(upper_e / lower_e)
@@ -284,24 +299,33 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
 
                 ellip[j, k, xyz] = np.sqrt(np.sum(np.imag(lambda_u_rot) ** 2))
                 ellip[j, k, xyz] /= np.sqrt(np.sum(np.real(lambda_u_rot) ** 2))
-                ellip[j, k, xyz] *= -(np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k]))
-                ellip[j, k, xyz] /= np.abs(np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k]))
+                ellip[j, k, xyz] *= -(
+                    np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k])
+                )
+                ellip[j, k, xyz] /= np.abs(
+                    np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k])
+                )
 
     # AVERAGING HELICITY AND ELLIPTICITY RESULTS
     ellipticity = np.mean(ellip, axis=-1)
     helicity = np.mean(helic, axis=-1)
 
     # CREATING OUTPUT PARAMETER
-    time_line = ct[0] + np.abs(nop_fft / 2) / sample_freq \
-                + np.arange(1, n_stp + 1) * step_length / sample_freq
+    time_line = (
+        ct[0]
+        + np.abs(nop_fft / 2) / sample_freq
+        + np.arange(1, n_stp + 1) * step_length / sample_freq
+    )
     bin_width = sample_freq / nop_fft
     freq_line = bin_width * np.arange(1, nop_fft / 2 + 1)
 
     # scaling power results to units with meaning
-    W = nop_fft * np.sum(smooth ** 2)
+    W = nop_fft * np.sum(smooth**2)
 
     power_spec = np.zeros([n_stp, int(nop_fft / 2)])
-    power_spec[:, 1:nop_fft / 2 - 1] = 1 / W * 2 * trace_spec_mat[:, 1:nop_fft / 2 - 1] / bin_width
+    power_spec[:, 1 : nop_fft / 2 - 1] = (
+        1 / W * 2 * trace_spec_mat[:, 1 : nop_fft / 2 - 1] / bin_width
+    )
     power_spec[:, 1] = 1 / W * trace_spec_mat[:, 0] / bin_width
     power_spec[:, nop_fft / 2] = 1 / W * trace_spec_mat[:, nop_fft / 2] / bin_width
 
@@ -313,9 +337,12 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25,
 
     # Save as DataArrays
     b_psd = xr.DataArray(power_spec, coords=[time_line, freq_line], dims=["t", "f"])
-    wave_angle = xr.DataArray(wave_angle * 180 / np.pi, coords=[time_line, freq_line],
-                              dims=["t", "f"])
-    ellipticity = xr.DataArray(ellipticity, coords=[time_line, freq_line], dims=["t", "f"])
+    wave_angle = xr.DataArray(
+        wave_angle * 180 / np.pi, coords=[time_line, freq_line], dims=["t", "f"]
+    )
+    ellipticity = xr.DataArray(
+        ellipticity, coords=[time_line, freq_line], dims=["t", "f"]
+    )
     deg_pol = xr.DataArray(deg_pol, coords=[time_line, freq_line], dims=["t", "f"])
     helicity = xr.DataArray(helicity, coords=[time_line, freq_line], dims=["t", "f"])
 

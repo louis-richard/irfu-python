@@ -22,9 +22,9 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
-logging.basicConfig(format='%(asctime)s: %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S',
-                    level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+)
 
 
 def _var_and_cdf_name(var_str, mms_id):
@@ -49,8 +49,7 @@ def _check_times(inp):
     return out
 
 
-def get_data(var_str, tint, mms_id, verbose: bool = True,
-             data_path: str = ""):
+def get_data(var_str, tint, mms_id, verbose: bool = True, data_path: str = ""):
     r"""Load a variable. var_str must be in var (see below)
 
     Parameters
@@ -104,7 +103,7 @@ def get_data(var_str, tint, mms_id, verbose: bool = True,
     assert files, "No files found. Make sure that the data_path is correct"
 
     if verbose:
-        logging.info(f"Loading {cdf_name}...")
+        logging.info("Loading %s...", cdf_name)
 
     out = None
 

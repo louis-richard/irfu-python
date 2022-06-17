@@ -41,14 +41,15 @@ def feeps_correct_energies(feeps_alle):
 
     out_dict = {k: feeps_alle[k] for k in feeps_alle if k not in sensors_eyes}
 
-    for se in sensors_eyes:
-        sensor, eye = se.split("-")
+    for sensors_eye in sensors_eyes:
+        sensor, eye = sensors_eye.split("-")
 
         new_energy = feeps_energy_table(mms_id, sensor, int(eye))
 
-        out_dict[se] = feeps_alle[se].assign_coords(energy=new_energy)
-        out_dict[se] = out_dict[se].rename({"time": "time",
-                                            "energy": f"energy-{se}"})
+        out_dict[sensors_eye] = feeps_alle[sensors_eye].assign_coords(energy=new_energy)
+        out_dict[sensors_eye] = out_dict[sensors_eye].rename(
+            {"time": "time", "energy": f"energy-{sensors_eye}"}
+        )
 
     out = xr.Dataset(out_dict)
     out.attrs = feeps_alle.attrs

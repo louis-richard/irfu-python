@@ -12,32 +12,118 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-all_params_scalars = ["ni", "nbgi", "pbgi", "partni", "ne", "pbge", "nbge",
-                      "partne", "tsi", "tperpi", "tparai", "parttperpi",
-                      "parttparai", "tse", "tperpe", "tparae", "parttperpe",
-                      "parttparae", "pde", "pdi", "pderre", "pderri", "v",
-                      "v6", "defi", "defbgi", "defe", "defbge", "energyi",
-                      "bnergye", "epar", "sdev12", "sdev34", "flux-amb-pm2",
-                      "padlowene", "padmidene", "padhighene", "bpsd", "epsd"]
+all_params_scalars = [
+    "ni",
+    "nbgi",
+    "pbgi",
+    "partni",
+    "ne",
+    "pbge",
+    "nbge",
+    "partne",
+    "tsi",
+    "tperpi",
+    "tparai",
+    "parttperpi",
+    "parttparai",
+    "tse",
+    "tperpe",
+    "tparae",
+    "parttperpe",
+    "parttparae",
+    "pde",
+    "pdi",
+    "pderre",
+    "pderri",
+    "v",
+    "v6",
+    "defi",
+    "defbgi",
+    "defe",
+    "defbge",
+    "energyi",
+    "bnergye",
+    "epar",
+    "sdev12",
+    "sdev34",
+    "flux-amb-pm2",
+    "padlowene",
+    "padmidene",
+    "padhighene",
+    "bpsd",
+    "epsd",
+]
 
-all_params_vectors = ["r", "sti", "vi", "errvi", "partvi", "ste", "ve",
-                      "errve", "partve", "qi", "errqi", "qe", "errqe", "b",
-                      "e", "e2d", "es12", "es34"]
+all_params_vectors = [
+    "r",
+    "sti",
+    "vi",
+    "errvi",
+    "partvi",
+    "ste",
+    "ve",
+    "errve",
+    "partve",
+    "qi",
+    "errqi",
+    "qe",
+    "errqe",
+    "b",
+    "e",
+    "e2d",
+    "es12",
+    "es34",
+]
 
-all_params_tensors = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te",
-                      "partte"]
+all_params_tensors = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te", "partte"]
 
-hpca_params_scalars = ["nhplus", "nheplus", "nheplusplus", "noplus",
-                       "tshplus", "tsheplus", "tsheplusplus", "tsoplus",
-                       "dpfhplus", "dpfheplus", "dpfheplusplus",
-                       "dpfoplus", "phase", "adcoff", "saz", "azimuth"]
+hpca_params_scalars = [
+    "nhplus",
+    "nheplus",
+    "nheplusplus",
+    "noplus",
+    "tshplus",
+    "tsheplus",
+    "tsheplusplus",
+    "tsoplus",
+    "dpfhplus",
+    "dpfheplus",
+    "dpfheplusplus",
+    "dpfoplus",
+    "phase",
+    "adcoff",
+    "saz",
+    "azimuth",
+]
 
-hpca_params_tensors = ["vhplus", "vheplus", "vheplusplus", "voplus",
-                       "phplus", "pheplus", "pheplusplus", "poplus",
-                       "thplus", "theplus", "theplusplus", "toplus"]
+hpca_params_tensors = [
+    "vhplus",
+    "vheplus",
+    "vheplusplus",
+    "voplus",
+    "phplus",
+    "pheplus",
+    "pheplusplus",
+    "poplus",
+    "thplus",
+    "theplus",
+    "theplusplus",
+    "toplus",
+]
 
-instruments = ["mec", "fpi", "edp", "edi", "hpca", "fgm",
-               "dfg", "afg", "scm", "fsm", "dsp"]
+instruments = [
+    "mec",
+    "fpi",
+    "edp",
+    "edi",
+    "hpca",
+    "fgm",
+    "dfg",
+    "afg",
+    "scm",
+    "fsm",
+    "dsp",
+]
 
 coordinate_systems = ["gse", "gsm", "dsl", "dbcs", "dmpa", "ssc", "bcs", "par"]
 
@@ -111,8 +197,13 @@ def tokenize(var_str):
         data_lvl = splitted_key[idx + 1]
         assert data_lvl in data_lvls, "invalid DATA_LEVEL level"
 
-    res = {"param": splitted_key[0], "to": tensor_order,
-           "cs": coordinate_system, "inst": instrument,
-           "tmmode": tmmode, "lev": data_lvl}
+    res = {
+        "param": splitted_key[0],
+        "to": tensor_order,
+        "cs": coordinate_system,
+        "inst": instrument,
+        "tmmode": tmmode,
+        "lev": data_lvl,
+    }
 
     return res

@@ -35,21 +35,26 @@ def correct_edp_probe_timing(sc_pot):
 
     """
 
-    e_fact = [.1200, .1200, .0292]
+    e_fact = [0.1200, 0.1200, 0.0292]
 
     # Reconstruct E12, E34, E56 as computed in MMS processing
     time = sc_pot.time.data
 
     diff_sc_pot = []
     for i, fact in zip([0, 2, 4], e_fact):
-        diff_sc_pot.append(ts_scalar(time, np.diff(sc_pot.data[:, i:i + 2])
-                                     / fact))
+        diff_sc_pot.append(ts_scalar(time, np.diff(sc_pot.data[:, i : i + 2]) / fact))
 
     # Correct the time tags to create individual time series
-    tau_vs = [np.timedelta64(0, "ns"), np.timedelta64(7629, "ns"),
-              np.timedelta64(15259, "ns")]
-    tau_es = [np.timedelta64(26703, "ns"), np.timedelta64(30518, "ns"),
-              np.timedelta64(34332, "ns")]
+    tau_vs = [
+        np.timedelta64(0, "ns"),
+        np.timedelta64(7629, "ns"),
+        np.timedelta64(15259, "ns"),
+    ]
+    tau_es = [
+        np.timedelta64(26703, "ns"),
+        np.timedelta64(30518, "ns"),
+        np.timedelta64(34332, "ns"),
+    ]
 
     # Odds probes potential 1, 3, 5
     sc_pot_odds = []
@@ -58,8 +63,8 @@ def correct_edp_probe_timing(sc_pot):
 
     # Electric field
     diff_sc_pot = []
-    for e, tau in zip(diff_sc_pot, tau_es):
-        diff_sc_pot.append(ts_scalar(e.time.data + tau, e.data))
+    for e_, tau in zip(diff_sc_pot, tau_es):
+        diff_sc_pot.append(ts_scalar(e_.time.data + tau, e_.data))
 
     # Resample all data to time tags of V1 (i.e. timeOrig).
     sc_pot_odds = [resample(v, sc_pot) for v in sc_pot_odds]
@@ -67,8 +72,8 @@ def correct_edp_probe_timing(sc_pot):
 
     # Recompute individual even probe potentials 2, 4, 6
     sc_pot_even = []
-    for v, e, fact in zip(sc_pot_odds, diff_sc_pot, e_fact):
-        sc_pot_even.append(v - e * fact)
+    for v_, e_, fact in zip(sc_pot_odds, diff_sc_pot, e_fact):
+        sc_pot_even.append(v_ - e_ * fact)
 
     sc_pot_corrected = []
     for tup in zip(sc_pot_even, sc_pot_odds):

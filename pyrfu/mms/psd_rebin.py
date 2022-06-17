@@ -84,8 +84,7 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
         if phi.data[idx, 0] > phi.data[idx + 1, 0]:
             phi_r[new_el_num, :] = (phi.data[idx, :] + phi_s[idx + 1, :]) / 2
 
-            vdf_temp = np.roll(np.squeeze(vdf.data.data[idx + 1, ...]), 2,
-                               axis=1)
+            vdf_temp = np.roll(np.squeeze(vdf.data.data[idx + 1, ...]), 2, axis=1)
 
             if step_table[idx]:
                 vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[idx, ...]
@@ -95,7 +94,7 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
                 vdf_r[new_el_num, 0:63:2, ...] = vdf_temp
 
         else:
-            phi_r[new_el_num, :] = (phi.data[idx, :] + phi.data[idx + 1, :])
+            phi_r[new_el_num, :] = phi.data[idx, :] + phi.data[idx + 1, :]
             phi_r[new_el_num, :] /= 2
 
             if step_table[idx]:

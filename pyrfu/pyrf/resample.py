@@ -37,7 +37,7 @@ def _guess_sampling_frequency(ref_time):
     while not_found and cur <= n_data and cur - 3 < max_try:
         sfy = 1 / (ref_time[cur] - ref_time[cur - 1])
 
-        if np.absolute(sfy - sfy1) < sfy * .001:
+        if np.absolute(sfy - sfy1) < sfy * 0.001:
             not_found = False
 
             sfy = (sfy + sfy1) / 2
@@ -48,8 +48,8 @@ def _guess_sampling_frequency(ref_time):
 
     if not_found:
         raise RuntimeError(
-            "Cannot guess sampling frequency. Tried {:d} times".format(
-                max_try))
+            "Cannot guess sampling frequency. Tried {:d} times".format(max_try)
+        )
 
     return sfy
 
@@ -83,10 +83,12 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
                 for j, stdd in enumerate(std_):
                     if not np.isnan(stdd):
                         idx_r = bisect.bisect_right(
-                            inp_data[idx, j + 1] - mean_[j], thresh * stdd)
+                            inp_data[idx, j + 1] - mean_[j], thresh * stdd
+                        )
                         if idx_r:
                             out_data[i, j + 1] = np.mean(
-                                inp_data[idx[idx_r], j + 1], axis=0)
+                                inp_data[idx[idx_r], j + 1], axis=0
+                            )
                         else:
                             out_data[i, j + 1] = np.nan
                     else:
@@ -101,8 +103,9 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     return out_data
 
 
-def resample(inp, ref, method: str = "", f_s: float = None,
-             window: int = None, thresh: float = 0):
+def resample(
+    inp, ref, method: str = "", f_s: float = None, window: int = None, thresh: float = 0
+):
     r"""Resample inp to the time line of ref. If sampling of X is more than two
     times higher than Y, we average X, otherwise we interpolate X.
 
@@ -188,7 +191,7 @@ def resample(inp, ref, method: str = "", f_s: float = None,
         if not sfy:
             sfy = _guess_sampling_frequency(ref_time)
 
-        out_data = _average(inp_time, inp.data, ref_time, thresh, .5 / sfy)
+        out_data = _average(inp_time, inp.data, ref_time, thresh, 0.5 / sfy)
 
     else:
         if not method:
@@ -203,13 +206,13 @@ def resample(inp, ref, method: str = "", f_s: float = None,
                 for k in inp.dims[1:]:
                     coord.append(inp.coords[k].data)
 
-            out = xr.DataArray(out_data, coords=coord, dims=inp.dims,
-                               attrs=inp.attrs)
+            out = xr.DataArray(out_data, coords=coord, dims=inp.dims, attrs=inp.attrs)
 
             return out
 
-        tck = interpolate.interp1d(inp_time, inp.data, kind=method, axis=0,
-                                   fill_value="extrapolate")
+        tck = interpolate.interp1d(
+            inp_time, inp.data, kind=method, axis=0, fill_value="extrapolate"
+        )
         out_data = tck(ref_time)
 
     coord = [ref.coords["time"]]

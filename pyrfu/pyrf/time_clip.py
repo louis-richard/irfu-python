@@ -58,12 +58,13 @@ def time_clip(inp, tint):
         t_start, t_stop = tint.time.data[[0, -1]]
 
     elif isinstance(tint, np.ndarray):
-        if isinstance(tint[0], datetime.datetime) \
-                and isinstance(tint[-1], datetime.datetime):
+        if isinstance(tint[0], datetime.datetime) and isinstance(
+            tint[-1], datetime.datetime
+        ):
             t_start, t_stop = [tint.time[0], tint.time[-1]]
 
         else:
-            raise TypeError('Values must be in Datetime64')
+            raise TypeError("Values must be in Datetime64")
 
     elif isinstance(tint, list):
         t_start, t_stop = iso86012datetime64(np.array(tint))
@@ -80,8 +81,9 @@ def time_clip(inp, tint):
         for k in inp.dims[1:]:
             coord.append(inp.coords[k].data)
 
-    out = xr.DataArray(inp.data[idx_min:idx_max, ...], coords=coord,
-                       dims=inp.dims, attrs=inp.attrs)
+    out = xr.DataArray(
+        inp.data[idx_min:idx_max, ...], coords=coord, dims=inp.dims, attrs=inp.attrs
+    )
 
     out.time.attrs = inp.time.attrs
 

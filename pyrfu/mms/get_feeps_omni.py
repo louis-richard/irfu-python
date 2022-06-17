@@ -17,8 +17,14 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def get_feeps_omni(tar_var, tint, mms_id, verbose: bool = True,
-                   data_path: str = "", spin_avg: bool = False):
+def get_feeps_omni(
+    tar_var,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
+    spin_avg: bool = False,
+):
     r"""Computes the omni-directional energy spectrum of the target data unit
     for the target specie over the target energy range. The data are washed,
     splitted and sunlight contamination free.
@@ -54,15 +60,13 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose: bool = True,
     """
 
     # Get all telescopes
-    dataset_feeps = get_feeps_alleyes(tar_var, tint, mms_id, verbose,
-                                      data_path)
+    dataset_feeps = get_feeps_alleyes(tar_var, tint, mms_id, verbose, data_path)
 
     # Remove bad eyes and bad energy channels (lowest)
     dataset_feeps_washed = feeps_remove_bad_data(dataset_feeps)
 
     # Separate last channel
-    dataset_feeps_clean, feeps_500kev = feeps_split_integral_ch(
-        dataset_feeps_washed)
+    dataset_feeps_clean, _ = feeps_split_integral_ch(dataset_feeps_washed)
 
     # Remove sunlight contamination
     dataset_feeps_clean_sun_removed = feeps_remove_sun(dataset_feeps_clean)
@@ -71,7 +75,6 @@ def get_feeps_omni(tar_var, tint, mms_id, verbose: bool = True,
     spec_feeps_omni = feeps_omni(dataset_feeps_clean_sun_removed)
 
     if spin_avg:
-        spec_feeps_omni = feeps_spin_avg(spec_feeps_omni,
-                                         dataset_feeps.spinsectnum)
+        spec_feeps_omni = feeps_spin_avg(spec_feeps_omni, dataset_feeps.spinsectnum)
 
     return spec_feeps_omni

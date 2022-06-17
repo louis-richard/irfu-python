@@ -11,9 +11,13 @@ __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
 
-mass_and_charge = {"hydrogen+": [1.04535e-2, 1], "helium+": [4.18138e-2, 1],
-                   "helium++": [4.18138e-2, 2], "oxygen+": [0.167255, 1],
-                   "oxygen++": [0.167255, 2]}
+mass_and_charge = {
+    "hydrogen+": [1.04535e-2, 1],
+    "helium+": [4.18138e-2, 1],
+    "helium++": [4.18138e-2, 2],
+    "oxygen+": [0.167255, 1],
+    "oxygen++": [0.167255, 2],
+}
 
 
 def _get_energy(inp, dim):
@@ -32,7 +36,7 @@ def _get_theta(inp, azimuth_dim):
     # elevations are constant across time
     # convert colat -> lat
     theta_len = len(inp.rcomp.data)
-    theta_reform = 90. - np.reshape(inp.rcomp.data, [1, 1, theta_len])
+    theta_reform = 90.0 - np.reshape(inp.rcomp.data, [1, 1, theta_len])
 
     # in the IDL code, we use reform to repeat the vector above
     # here, we'll do the same thing with np.repeat
@@ -70,8 +74,7 @@ def _get_dphi(azimuth, full, out_phi, inp):
     if out_phi.ndim == 4:
         out_dphi = np.median(np.diff(azimuth.data[full, ...], axis=1), axis=1)
         out_dphi = np.transpose(out_dphi, [0, 2, 1])
-        dphi_reform = np.reshape(out_dphi,
-                                 [full.size, energy_len, theta_len, 1])
+        dphi_reform = np.reshape(out_dphi, [full.size, energy_len, theta_len, 1])
         out_dphi = np.repeat(dphi_reform, phi_len, axis=3)
     elif out_phi.ndim == 3:
         out_dphi = np.median(np.diff(azimuth.data[full, ...], axis=1), axis=0)
@@ -161,26 +164,36 @@ def get_hpca_dist(inp, azimuth):
     # copy particle data
     for i in range(full.size):
         # need to extract the data from the center of the half-spin
-        if data_idx[i] - n_times / 2.0 < 0:
-            # start_idx = 0
-            continue
+        if data_idx[i] - n_times / 2.0 >= 0:
+            start_idx = int(data_idx[i] - n_times / 2.0)
         else:
-            start_idx = int(data_idx[i] - n_times / 2.)
-
-        if data_idx[i] + n_times / 2. - 1 >= len(inp.time):
-            # end_idx = len(inp.time)
             continue
+
+        if data_idx[i] + n_times / 2.0 - 1 < len(inp.time):
+            end_idx = int(data_idx[i] + n_times / 2.0)
         else:
-            end_idx = int(data_idx[i] + n_times / 2.)
+            continue
 
-        out_data[i, ...] = np.transpose(inp.data[start_idx:end_idx, :, :],
-                                        [2, 0, 1])
+        out_data[i, ...] = np.transpose(inp.data[start_idx:end_idx, :, :], [2, 0, 1])
 
-    out = {'data': out_data, 'bins': out_bins, 'theta': out_theta,
-           'phi': out_phi, 'energy': out_energy, 'dtheta': out_dtheta,
-           'dphi': out_dphi, 'denergy': out_denergy, 'n_energy': energy_len,
-           'n_theta': theta_len, 'n_phi': phi_len, 'n_times': full.size,
-           'project_name': 'MMS', 'species': specie, 'charge': charge,
-           'units_name': 'df_cm', 'mass': mass}
+    out = {
+        "data": out_data,
+        "bins": out_bins,
+        "theta": out_theta,
+        "phi": out_phi,
+        "energy": out_energy,
+        "dtheta": out_dtheta,
+        "dphi": out_dphi,
+        "denergy": out_denergy,
+        "n_energy": energy_len,
+        "n_theta": theta_len,
+        "n_phi": phi_len,
+        "n_times": full.size,
+        "project_name": "MMS",
+        "species": specie,
+        "charge": charge,
+        "units_name": "df_cm",
+        "mass": mass,
+    }
 
     return out

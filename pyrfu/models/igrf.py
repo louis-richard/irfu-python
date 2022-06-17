@@ -35,17 +35,18 @@ def igrf(time, flag):
 
     # Root path
     # root_path = os.getcwd()
-    path = os.sep.join([os.path.dirname(os.path.abspath(__file__)),
-                             "igrf13coeffs.csv"])
+    path = os.sep.join([os.path.dirname(os.path.abspath(__file__)), "igrf13coeffs.csv"])
     df = pd.read_csv(path)
 
     # construct IGRF coefficient matrices
     years_igrf = df.loc[0][3:].to_list()
-    years_igrf[-1] = float(years_igrf[-1].split("-")[0]) + 5.
+    years_igrf[-1] = float(years_igrf[-1].split("-")[0]) + 5.0
 
     # read in all IGRF coefficients from file
-    i_igrf = df.loc[1:, ].values
-    i_igrf[:, -1] = i_igrf[:, -2] + 5. * i_igrf[:, -1].astype(float)
+    i_igrf = df.loc[
+        1:,
+    ].values
+    i_igrf[:, -1] = i_igrf[:, -2] + 5.0 * i_igrf[:, -1].astype(float)
     h_igrf = i_igrf[i_igrf[:, 0] == "h", 1:].astype(float)
     g_igrf = i_igrf[i_igrf[:, 0] == "g", 1:].astype(float)
 
@@ -58,18 +59,23 @@ def igrf(time, flag):
     year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(int) / 1e9
 
     if np.min(year_ref) < np.min(years_igrf):
-        message = "requested time is earlier than the first available IGRF " \
-                  "model from extrapolating in past.. "
+        message = (
+            "requested time is earlier than the first available IGRF "
+            "model from extrapolating in past.. "
+        )
         warnings.warn(message, category=UserWarning)
 
     assert flag == "dipole", "input flag is not recognized"
 
-    tck_g0_igrf = interpolate.interp1d(years_igrf, g_igrf[0, 2:],
-                                       kind="linear", fill_value="extrapolate")
-    tck_g1_igrf = interpolate.interp1d(years_igrf, g_igrf[1, 2:],
-                                       kind="linear", fill_value="extrapolate")
-    tck_h0_igrf = interpolate.interp1d(years_igrf, h_igrf[0, 2:],
-                                       kind="linear", fill_value="extrapolate")
+    tck_g0_igrf = interpolate.interp1d(
+        years_igrf, g_igrf[0, 2:], kind="linear", fill_value="extrapolate"
+    )
+    tck_g1_igrf = interpolate.interp1d(
+        years_igrf, g_igrf[1, 2:], kind="linear", fill_value="extrapolate"
+    )
+    tck_h0_igrf = interpolate.interp1d(
+        years_igrf, h_igrf[0, 2:], kind="linear", fill_value="extrapolate"
+    )
 
     g01 = tck_g0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
     g11 = tck_g1_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))

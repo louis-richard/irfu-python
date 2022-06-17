@@ -63,7 +63,7 @@ def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
     d_xy = [[(i, j) for j in d_y] for i in d_x]
 
     # matrix of bin size vector
-    d_xy = np.array(d_xy, dtype=[('x', float), ('y', float)])
+    d_xy = np.array(d_xy, dtype=[("x", float), ("y", float)])
 
     # Computation of the cost function to x and y
     c_xy = np.zeros(d_xy.shape)
@@ -75,7 +75,8 @@ def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
         k_i = k_i[0]
         # The cost Function
         c_xy[i, j] = (2 * np.mean(k_i) - np.var(k_i)) / (
-                    (d_xy[i, j][0] * d_xy[i, j][1]) ** 2)
+            (d_xy[i, j][0] * d_xy[i, j][1]) ** 2
+        )
 
     # Optimal Bin Size Selection
     # get the index in x and y that produces the minimum cost function

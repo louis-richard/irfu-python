@@ -66,8 +66,9 @@ def ts_append(inp1, inp2):
             for k in inp1[dim].attrs:
                 # if attrs is array time append
                 if isinstance(inp1[dim].attrs[k], np.ndarray):
-                    depends[i]["attrs"][k] = np.hstack([inp1[dim].attrs[k],
-                                                        inp2[dim].attrs[k]])
+                    depends[i]["attrs"][k] = np.hstack(
+                        [inp1[dim].attrs[k], inp2[dim].attrs[k]]
+                    )
 
                 else:
                     depends[i]["attrs"][k] = inp1[dim].attrs[k]
@@ -83,9 +84,12 @@ def ts_append(inp1, inp2):
                 depends[i]["attrs"][k] = inp1[dim].attrs[k]
 
     # Create DataArray
-    out = xr.DataArray(out_data["data"],
-                       coords=[depend["data"] for depend in depends],
-                       dims=inp1.dims, attrs=out_data["attrs"])
+    out = xr.DataArray(
+        out_data["data"],
+        coords=[depend["data"] for depend in depends],
+        dims=inp1.dims,
+        attrs=out_data["attrs"],
+    )
 
     for i, dim in enumerate(out.dims):
         out[dim].attrs = depends[i]["attrs"]

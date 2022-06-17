@@ -29,7 +29,7 @@ def _check_method(flag_method):
     return flag_method, default_value
 
 
-def edb(e_xyz, b_bgd, angle_lim: float = 20., flag_method: str = "E.B=0"):
+def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
     r"""Compute Ez under assumption :math:`\mathbf{E}.\mathbf{B}=0` or
     :math:`\mathbf{E}.\mathbf{B} \approx 0`
 
@@ -91,8 +91,7 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20., flag_method: str = "E.B=0"):
 
     if flag_method.lower() == "e.b=0":
         # Calculate using assumption E.B=0
-        b_angle = np.arctan2(b_data[:, 2],
-                             np.linalg.norm(b_data[:, :2], axis=1))
+        b_angle = np.arctan2(b_data[:, 2], np.linalg.norm(b_data[:, :2], axis=1))
         b_angle = np.rad2deg(b_angle)
         ind = np.abs(b_angle) > angle_lim
 
@@ -103,8 +102,7 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20., flag_method: str = "E.B=0"):
     else:
         # Calculate using assumption that E field along the B projection is
         # coming from parallel electric field
-        b_angle = np.arctan2(b_data[:, 2],
-                             np.linalg.norm(b_data[:, :2], axis=1))
+        b_angle = np.arctan2(b_data[:, 2], np.linalg.norm(b_data[:, :2], axis=1))
         b_angle = np.rad2deg(b_angle)
         ind = np.abs(b_angle) < angle_lim
 
@@ -114,7 +112,6 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20., flag_method: str = "E.B=0"):
             e_data[ind, 2] /= np.linalg.norm(b_data[:, :2], axis=1) ** 2
 
     b_angle = ts_scalar(e_xyz.time.data, b_angle, {"UNITS": "degrees"})
-    e_data = ts_vec_xyz(e_xyz.time.data, e_data,
-                        {"UNITS": e_xyz.attrs["UNITS"]})
+    e_data = ts_vec_xyz(e_xyz.time.data, e_data, {"UNITS": e_xyz.attrs["UNITS"]})
 
     return e_data, b_angle

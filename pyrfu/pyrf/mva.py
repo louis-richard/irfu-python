@@ -73,9 +73,9 @@ def mva(inp, flag: str = "mvar"):
     else:
         raise ValueError("invalid flag")
 
-    m_mu_nu = np.array([m_mu_nu_m[[0, 3, 4]],
-                        m_mu_nu_m[[3, 1, 5]],
-                        m_mu_nu_m[[4, 5, 2]]])
+    m_mu_nu = np.array(
+        [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+    )
 
     # Compute eigenvalues and eigenvectors
     [lamb, lmn] = np.linalg.eig(m_mu_nu)
@@ -87,12 +87,17 @@ def mva(inp, flag: str = "mvar"):
     lmn[:, 2] = np.cross(lmn[:, 0], lmn[:, 1])
 
     if flag.lower() == "<bn>=0":
-        inp_mvar_mean = np.mean(np.sum(
-            np.tile(inp_data, (3, 1, 1)) * np.transpose(
-                np.tile(lmn, (n_t, 1, 1)), (2, 0, 1)), 1), 1)
+        inp_mvar_mean = np.mean(
+            np.sum(
+                np.tile(inp_data, (3, 1, 1))
+                * np.transpose(np.tile(lmn, (n_t, 1, 1)), (2, 0, 1)),
+                1,
+            ),
+            1,
+        )
 
         coeffs = np.zeros(3)
-        coeffs[0] = np.sum(inp_mvar_mean ** 2)
+        coeffs[0] = np.sum(inp_mvar_mean**2)
 
         coeffs[1] = -(lamb[1] + lamb[2]) * inp_mvar_mean[0] ** 2
         coeffs[1] -= (lamb[0] + lamb[2]) * inp_mvar_mean[1] ** 2
@@ -120,9 +125,9 @@ def mva(inp, flag: str = "mvar"):
         m_mu_nu_m = np.mean(inp_data_2[:, idx_1] * inp_data_2[:, idx_2], 0)
         m_mu_nu_m -= inp_data_2_m[idx_1] * inp_data_2_m[idx_2]
 
-        m_mu_nu = np.array([m_mu_nu_m[[0, 3, 4]],
-                            m_mu_nu_m[[3, 1, 5]],
-                            m_mu_nu_m[[4, 5, 2]]])
+        m_mu_nu = np.array(
+            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+        )
 
         lamb, lmn = np.linalg.eig(m_mu_nu)
 
@@ -142,9 +147,9 @@ def mva(inp, flag: str = "mvar"):
         m_mu_nu_m = np.mean(inp_data_2[:, idx_1] * inp_data_2[:, idx_2], 0)
         m_mu_nu_m -= inp_data_2_m[idx_1] * inp_data_2_m[idx_2]
 
-        m_mu_nu = np.array([m_mu_nu_m[[0, 3, 4]],
-                            m_mu_nu_m[[3, 1, 5]],
-                            m_mu_nu_m[[4, 5, 2]]])
+        m_mu_nu = np.array(
+            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+        )
 
         lamb, lmn = np.linalg.eig(m_mu_nu)
 

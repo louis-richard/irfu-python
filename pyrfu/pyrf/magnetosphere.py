@@ -16,7 +16,7 @@ __status__ = "Prototype"
 
 
 def _rzero(d_p, b_z):
-    return (10.22 + 1.29 * np.tanh(0.184 * (b_z + 8.14))) * d_p ** (- 1 / 6.6)
+    return (10.22 + 1.29 * np.tanh(0.184 * (b_z + 8.14))) * d_p ** (-1 / 6.6)
 
 
 def _alpha(d_p, b_z):
@@ -61,12 +61,12 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
         m_a = float(omni_data.ma.mean("time").data)
 
     if model == "mp_shue1998":
-        theta_ = np.linspace(0, np.pi, int(np.pi / .1))
+        theta_ = np.linspace(0, np.pi, int(np.pi / 0.1))
         r_zero = _rzero(d_p, b_z)
         alpha_ = _alpha(d_p, b_z)
 
-        with np.errstate(divide='ignore'):
-            r_s = r_zero * (2. / (1 + np.cos(theta_))) ** alpha_
+        with np.errstate(divide="ignore"):
+            r_s = r_zero * (2.0 / (1 + np.cos(theta_))) ** alpha_
 
         x_s = r_s * np.cos(theta_)
         y_s = r_s * np.sin(theta_)
@@ -77,11 +77,13 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
         x_mp, _ = magnetosphere("mp_shue1998", tint)
         gamma_ = 5 / 3
 
-        rstandoff = x_mp[0] * (1 + 1.1 * ((gamma_ - 1) * m_a ** 2 + 2) / (
-                    (gamma_ + 1) * (m_a ** 2 - 1)))
+        rstandoff = x_mp[0] * (
+            1 + 1.1 * ((gamma_ - 1) * m_a**2 + 2) / ((gamma_ + 1) * (m_a**2 - 1))
+        )
         # Smaller increments at the subsolar point
-        x_s = rstandoff - np.logspace(np.log10(0.1), 
-                                      np.log10(100 + rstandoff), 300) + 0.1
+        x_s = (
+            rstandoff - np.logspace(np.log10(0.1), np.log10(100 + rstandoff), 300) + 0.1
+        )
         # original F/G model adds rstandoff^2=645
         y_s = np.sqrt(0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff))
 

@@ -29,8 +29,18 @@ with open("README.rst", "r") as fh:
     LONG_DESCRIPTION = fh.read()
 
 
-INSTALL_REQUIRES = ["cdflib", "matplotlib", "numpy", "numba", "pandas",
-                    "sphinx", "scipy", "tqdm", "xarray", "geopack"]
+INSTALL_REQUIRES = [
+    "cdflib",
+    "matplotlib",
+    "numpy",
+    "numba",
+    "pandas",
+    "sphinx",
+    "scipy",
+    "tqdm",
+    "xarray",
+    "geopack",
+]
 
 PYTHON_REQUIRES = ">=3.7"
 
@@ -38,24 +48,26 @@ PYTHON_REQUIRES = ">=3.7"
 cmdclass = {"build_sphinx": BuildDoc}
 
 setup(
-      name=PACKAGE_NAME,
-      version=VERSION,
-      description=DESCRIPTION,
-      long_description=LONG_DESCRIPTION,
-      author=AUTHOR,
-      license=LICENSE,
-      author_email=AUTHOR_EMAIL,
-      url=URL,
-      install_requires=INSTALL_REQUIRES,
-      python_requires=PYTHON_REQUIRES,
-      packages=find_packages(),
-      include_package_data=True,
-      cmdclass=cmdclass,
-      # these are optional and override conf.py settings
-      command_options={
+    name=PACKAGE_NAME,
+    version=VERSION,
+    description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
+    author=AUTHOR,
+    license=LICENSE,
+    author_email=AUTHOR_EMAIL,
+    url=URL,
+    install_requires=INSTALL_REQUIRES,
+    python_requires=PYTHON_REQUIRES,
+    packages=find_packages(),
+    include_package_data=True,
+    cmdclass=cmdclass,
+    # these are optional and override conf.py settings
+    command_options={
         "build_sphinx": {
             "project": ("setup.py", PACKAGE_NAME),
             "version": ("setup.py", VERSION),
             "release": ("setup.py", VERSION),
-            "source_dir": ("setup.py", "docs")}},
-      )
+            "source_dir": ("setup.py", "docs"),
+        }
+    },
+)

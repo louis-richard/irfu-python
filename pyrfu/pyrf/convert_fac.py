@@ -106,8 +106,7 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
         out_data[:, 2] = np.sum(b_hat * inp_data, axis=1)
 
         # xarray
-        out = xr.DataArray(out_data, coords=[time, inp.comp],
-                           dims=["time", "comp"])
+        out = xr.DataArray(out_data, coords=[time, inp.comp], dims=["time", "comp"])
 
     else:
         out_data = np.zeros([3, inp_data.shape[0]])

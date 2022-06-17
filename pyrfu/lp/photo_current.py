@@ -16,21 +16,40 @@ __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
 
-surface_materials = ['cluster', 'themis', 'cassini', 'aluminium', 'aquadag',
-                     'gold', 'graphite', 'solar cells', '1eV', 'TiN',
-                     'elgiloy']
+surface_materials = [
+    "cluster",
+    "themis",
+    "cassini",
+    "aluminium",
+    "aquadag",
+    "gold",
+    "graphite",
+    "solar cells",
+    "1eV",
+    "TiN",
+    "elgiloy",
+]
 
-j_zeros = {"cassini": 25e-6, "tin": 25e-6, "cluster": 25e-6,
-           "aluminium": 30e-6, "aquadag": 18e-6, "gold": 29e-6,
-           "graphite": 7.2e-6, "solar cells": 20e-6, "solar cell": 20e-6,
-           "elgiloy": 30e-6}
+j_zeros = {
+    "cassini": 25e-6,
+    "tin": 25e-6,
+    "cluster": 25e-6,
+    "aluminium": 30e-6,
+    "aquadag": 18e-6,
+    "gold": 29e-6,
+    "graphite": 7.2e-6,
+    "solar cells": 20e-6,
+    "solar cell": 20e-6,
+    "elgiloy": 30e-6,
+}
 
 
-def photo_current(iluminated_area: float = None,
-                  u: Union[float, np.ndarray] = None,
-                  distance_sun: float = None,
-                  flag: Union[str, float] = "cluster") -> Union[float,
-                                                                np.ndarray]:
+def photo_current(
+    iluminated_area: float = None,
+    u: Union[float, np.ndarray] = None,
+    distance_sun: float = None,
+    flag: Union[str, float] = "cluster",
+) -> Union[float, np.ndarray]:
     r"""Calculates the photo-current emitted by an arbitrary body.
 
     Parameters
@@ -75,10 +94,10 @@ def photo_current(iluminated_area: float = None,
         j_photo = np.ones(u.shape)
 
         # initialize to current valid for negative potentials
-        j_photo *= photoemisson * iluminated_area / distance_sun ** 2
+        j_photo *= photoemisson * iluminated_area / distance_sun**2
 
-        a_ = 5.0e-5 / 5.6e-5 * np.exp(- u[u >= 0.] / 2.74)
-        b_ = 1.2e-5 / 5.6e-5 * np.exp(- (u[u >= 0] + 10.0) / 14.427)
+        a_ = 5.0e-5 / 5.6e-5 * np.exp(-u[u >= 0.0] / 2.74)
+        b_ = 1.2e-5 / 5.6e-5 * np.exp(-(u[u >= 0] + 10.0) / 14.427)
         j_photo[u >= 0] *= a_ + b_
 
     elif flag.lower() == "1ev":
@@ -86,13 +105,13 @@ def photo_current(iluminated_area: float = None,
         j_photo = np.ones(u.shape)
 
         # initialize to current valid for negative potentials
-        j_photo *= 5.0e-5 * iluminated_area / distance_sun ** 2
+        j_photo *= 5.0e-5 * iluminated_area / distance_sun**2
 
-        j_photo[u >= 0] *= np.exp(- u[u >= 0])
+        j_photo[u >= 0] *= np.exp(-u[u >= 0])
 
     elif flag.lower() == "themis":
-        ref_u = np.array([.1, 1, 5, 10, 50])
-        ref_j_photo = np.array([50, 27, 10, 5, .5]) * 1e-6
+        ref_u = np.array([0.1, 1, 5, 10, 50])
+        ref_j_photo = np.array([50, 27, 10, 5, 0.5]) * 1e-6
         log_u = np.log(ref_u)
         log_j = np.log(ref_j_photo)
 
@@ -100,7 +119,7 @@ def photo_current(iluminated_area: float = None,
         j_photo = np.ones(u.shape)
 
         # initialize to current valid for negative potentials
-        j_photo *= iluminated_area / distance_sun ** 2
+        j_photo *= iluminated_area / distance_sun**2
 
         f_ = interpolate.PchipInterpolator(log_u, log_j, extrapolate=None)
         j_photo[u >= ref_u[0]] *= np.exp(f_(np.log(u[u >= ref_u[0]])))
@@ -108,7 +127,7 @@ def photo_current(iluminated_area: float = None,
 
     elif flag.lower() in j_zeros:
         j_photo = photo_current(iluminated_area, u, distance_sun, "themis")
-        j_photo *= j_zeros[flag] / photo_current(1., 0., 1., "themis")
+        j_photo *= j_zeros[flag] / photo_current(1.0, 0.0, 1.0, "themis")
 
     else:
         raise ValueError("Unknown surface material.")

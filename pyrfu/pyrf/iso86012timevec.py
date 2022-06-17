@@ -34,10 +34,12 @@ def iso86012timevec(time):
 
     """
 
-    iso_8601 = r"(?P<years>[0-9]{4})-(?P<months>[0-9]{2})-(?P<days>[0-9]{2})" \
-               r"T(?P<hours>[0-9]{2}):(?P<minutes>[0-9]{2})" \
-               r":(?P<seconds>[0-9]{2}).(?P<miliseconds>[0-9]{3})" \
-               r"(?P<microseconds>[0-9]{3})(?P<nanoseconds>[0-9]{3})"
+    iso_8601 = (
+        r"(?P<years>[0-9]{4})-(?P<months>[0-9]{2})-(?P<days>[0-9]{2})"
+        r"T(?P<hours>[0-9]{2}):(?P<minutes>[0-9]{2})"
+        r":(?P<seconds>[0-9]{2}).(?P<miliseconds>[0-9]{3})"
+        r"(?P<microseconds>[0-9]{3})(?P<nanoseconds>[0-9]{3})"
+    )
 
     # Define parser
     fmt = re.compile(iso_8601)

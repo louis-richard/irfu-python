@@ -12,10 +12,26 @@ __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
 
-anodes_theta = np.array([123.75000, 101.25000, 78.750000, 56.250000,
-                         33.750000, 11.250000, 191.25000, 213.75000,
-                         236.25000, 258.75000, 281.25000, 303.75000,
-                         326.25000, 348.75000, 168.75000, 146.25000])
+anodes_theta = np.array(
+    [
+        123.75000,
+        101.25000,
+        78.750000,
+        56.250000,
+        33.750000,
+        11.250000,
+        191.25000,
+        213.75000,
+        236.25000,
+        258.75000,
+        281.25000,
+        303.75000,
+        326.25000,
+        348.75000,
+        168.75000,
+        146.25000,
+    ]
+)
 
 
 def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
@@ -39,7 +55,7 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
     """
 
     if fov is None:
-        fov = [0., 360.]
+        fov = [0.0, 360.0]
 
     assert method in ["mean", "sum"]
 
@@ -54,7 +70,8 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
     else:
         updated_spectra = inp.data[:, anodes_in_fov, :].sum(axis=1)
 
-    out = xr.DataArray(updated_spectra, coords=[times, energies],
-                       dims=["time", "energy"])
+    out = xr.DataArray(
+        updated_spectra, coords=[times, energies], dims=["time", "energy"]
+    )
 
     return out

@@ -97,12 +97,12 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
                 flux_av[i, :] = np.nanmean(flux_data[t_inds, :], axis=0)
                 flux_su[i, :] = np.nansum(flux_data[t_inds, :], axis=0)
 
-        spin_avg_flux[scope] = xr.DataArray(flux_av,
-                                            coords=[time_recs, energies_],
-                                            dims=["time", "energy"])
-        spin_sum_flux[scope] = xr.DataArray(flux_su,
-                                            coords=[time_recs, energies_],
-                                            dims=["time", "energy"])
+        spin_avg_flux[scope] = xr.DataArray(
+            flux_av, coords=[time_recs, energies_], dims=["time", "energy"]
+        )
+        spin_sum_flux[scope] = xr.DataArray(
+            flux_su, coords=[time_recs, energies_], dims=["time", "energy"]
+        )
 
     spin_avg_flux["spin"] = eis_allt["spin"][spin_starts + len_spin // 2]
     spin_avg_flux["energy_dplus"] = eis_allt.energy_dplus.data

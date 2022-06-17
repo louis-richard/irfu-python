@@ -27,11 +27,11 @@ def _mass_ratio(psd):
 
 def _convert(psd, mass_ratio):
     if psd.attrs["UNITS"].lower() == "s^3/cm^6":
-        tmp_data = psd.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio ** 2)
+        tmp_data = psd.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio**2)
     elif psd.attrs["UNITS"].lower() == "s^3/m^6":
-        tmp_data = psd.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio ** 2)
+        tmp_data = psd.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio**2)
     elif psd.attrs["UNITS"].lower() == "s^3/km^6":
-        tmp_data = psd.data.data / (1e6 * 0.53707 * mass_ratio ** 2)
+        tmp_data = psd.data.data / (1e6 * 0.53707 * mass_ratio**2)
     else:
         raise ValueError("Invalid unit")
 
@@ -70,12 +70,12 @@ def psd2dpf(psd):
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
 
-    data_r = np.reshape(tmp_data, (tmp_data.shape[0], tmp_data.shape[1],
-                                   np.prod(tmp_data.shape[2:])))
+    data_r = np.reshape(
+        tmp_data, (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:]))
+    )
 
     if energy.ndim == 1:
-        energy_mat = np.tile(energy,
-                             (len(psd.time), np.prod(tmp_data.shape[2:]), 1))
+        energy_mat = np.tile(energy, (len(psd.time), np.prod(tmp_data.shape[2:]), 1))
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:
         energy_mat = np.tile(energy, (np.prod(tmp_data.shape[2:]), 1, 1))

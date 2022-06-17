@@ -22,17 +22,17 @@ def _disprel(w, *args):
 
     theta = np.deg2rad(theta)
     l_00 = 1
-    l_01 = - w ** 2 / (k ** 2 * v_a ** 2)
-    l_02 = - w ** 2 / (wc_e * wc_p)
-    l_03 = k ** 2 * np.sin(theta) ** 2 / ((w / c_s) ** 2 - k ** 2)
-    l_0_ = (l_00 + l_01 + l_02 + l_03)
+    l_01 = -(w**2) / (k**2 * v_a**2)
+    l_02 = -(w**2) / (wc_e * wc_p)
+    l_03 = k**2 * np.sin(theta) ** 2 / ((w / c_s) ** 2 - k**2)
+    l_0_ = l_00 + l_01 + l_02 + l_03
 
     l_10 = np.cos(theta) ** 2
-    l_11 = - w ** 2 / (k ** 2 * v_a ** 2)
-    l_12 = - w ** 2 / (wc_e * wc_p)
+    l_11 = -(w**2) / (k**2 * v_a**2)
+    l_12 = -(w**2) / (wc_e * wc_p)
     l_1_ = l_10 + l_11 + l_12
 
-    r_0_ = w ** 2 * np.cos(theta) ** 2 / wc_p ** 2
+    r_0_ = w**2 * np.cos(theta) ** 2 / wc_p**2
 
     disprel = l_0_ * l_1_ - r_0_
 
@@ -88,8 +88,8 @@ def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100):
     wc_e = q_e * b_0 / m_e
     wc_p = q_e * b_0 / m_p
 
-    wp_e = np.sqrt(q_e ** 2 * n_e / (ep_0 * m_e))
-    wp_p = np.sqrt(q_e ** 2 * n_p / (ep_0 * m_p))
+    wp_e = np.sqrt(q_e**2 * n_e / (ep_0 * m_e))
+    wp_p = np.sqrt(q_e**2 * n_p / (ep_0 * m_p))
 
     v_p = np.sqrt(q_e * t_p / m_p)
     v_e = np.sqrt(q_e * t_e / m_e)
@@ -116,8 +116,16 @@ def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100):
         wc_2[i] = optimize.fsolve(_disprel, guess_w2, args=arguments)[0]
         wc_3[i] = optimize.fsolve(_disprel, guess_w3, args=arguments)[0]
 
-    attrs = {"wc_e": wc_e, "wc_p": wc_p, "wp_e": wp_e, "wp_p": wp_p,
-             "v_p": v_p, "v_e": v_e, "v_a": v_a, "c_s": c_s}
+    attrs = {
+        "wc_e": wc_e,
+        "wc_p": wc_p,
+        "wp_e": wp_e,
+        "wp_p": wp_p,
+        "v_p": v_p,
+        "v_e": v_e,
+        "v_a": v_a,
+        "c_s": c_s,
+    }
 
     wc_1 = xr.DataArray(wc_1, coords=[k_vec], dims=["k"], attrs=attrs)
     wc_2 = xr.DataArray(wc_2, coords=[k_vec], dims=["k"], attrs=attrs)

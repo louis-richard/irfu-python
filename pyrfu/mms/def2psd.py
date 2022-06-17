@@ -24,7 +24,7 @@ def _mass_ratio(inp):
 
 def _convert(inp, mass_ratio):
     if inp.attrs["UNITS"] == "keV/(cm^2 s sr keV)":
-        tmp_data = inp.data.data / 1e12 * 0.53707 * mass_ratio ** 2
+        tmp_data = inp.data.data / 1e12 * 0.53707 * mass_ratio**2
     else:
         raise ValueError("Invalid unit")
 
@@ -64,12 +64,12 @@ def def2psd(inp):
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
 
-    data_r = np.reshape(tmp_data, (tmp_data.shape[0], tmp_data.shape[1],
-                                   np.prod(tmp_data.shape[2:])))
+    data_r = np.reshape(
+        tmp_data, (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:]))
+    )
 
     if energy.ndim == 1:
-        energy_mat = np.tile(energy, (len(inp.time),
-                                      np.prod(tmp_data.shape[2:]), 1))
+        energy_mat = np.tile(energy, (len(inp.time), np.prod(tmp_data.shape[2:]), 1))
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:
         energy_mat = np.tile(energy, (np.prod(tmp_data.shape[2:]), 1, 1))
@@ -77,7 +77,7 @@ def def2psd(inp):
     else:
         raise ValueError("Invalid energy shape")
 
-    data_r /= energy_mat ** 2
+    data_r /= energy_mat**2
     tmp_data = np.reshape(data_r, tmp_data.shape)
 
     psd = inp.copy()

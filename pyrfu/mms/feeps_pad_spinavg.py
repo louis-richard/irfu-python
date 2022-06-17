@@ -37,8 +37,8 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
 
     """
 
-    n_pabins = int(180. / bin_size)
-    new_bins = 180. * np.arange(int(n_pabins + 1)) / n_pabins
+    n_pabins = int(180.0 / bin_size)
+    new_bins = 180.0 * np.arange(int(n_pabins + 1)) / n_pabins
 
     # get the spin sectors
     # v5.5+ = mms1_epd_feeps_srvy_l1b_electron_spinsectnum
@@ -64,13 +64,13 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
     for i, spin in enumerate(spin_starts):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            spin_avg_flux[i, :] = np.nanmean(data[c_start:spin + 1, :], axis=0)
+            spin_avg_flux[i, :] = np.nanmean(data[c_start : spin + 1, :], axis=0)
             spin_times[i] = times[c_start]
 
             # rebin and interpolate to new_bins
-            spin_avg_interp = interpolate.interp1d(np.arange(n_angs),
-                                                   spin_avg_flux[i, :],
-                                                   fill_value='extrapolate')
+            spin_avg_interp = interpolate.interp1d(
+                np.arange(n_angs), spin_avg_flux[i, :], fill_value="extrapolate"
+            )
             rebinned_data[i, :] = spin_avg_interp(srx)
 
             # we want to take the end values instead of extrapolating
@@ -79,8 +79,8 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
 
         c_start = spin + 1
 
-    out = xr.DataArray(rebinned_data,
-                       coords=[spin_times, new_bins],
-                       dims=["time", "theta"])
+    out = xr.DataArray(
+        rebinned_data, coords=[spin_times, new_bins], dims=["time", "theta"]
+    )
 
     return out

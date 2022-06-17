@@ -96,8 +96,7 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
         energy_vec = energy_arr[i, :]
         energy_log = np.log10(energy_arr[i, :])
 
-        v_s[i, :] = np.real(
-            np.sqrt(2 * (energy_vec - sc_pot.data[i]) * q_e / m_s))
+        v_s[i, :] = np.real(np.sqrt(2 * (energy_vec - sc_pot.data[i]) * q_e / m_s))
 
         temp0 = 2 * energy_log[0] - energy_log[1]
         temp33 = 2 * energy_log[-1] - energy_log[-2]
@@ -115,7 +114,7 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
         v_lower[np.isnan(v_lower)] = 0
         v_upper[np.isnan(v_upper)] = 0
 
-        delta_v[i, :] = (v_upper - v_lower)
+        delta_v[i, :] = v_upper - v_lower
 
     v_s[v_s < 0] = 0
 
@@ -130,8 +129,7 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
         tmp = np.squeeze(vdf_diff[i, j, ...])
         fct = v_s[i, j] ** 2 * delta_v[i, j] * delta_ang
 
-        epsilon[i] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0),
-                                axis=0) * fct
+        epsilon[i] += np.nansum(np.nansum(tmp * m_psd2_n, axis=0), axis=0) * fct
 
     epsilon /= 1e6 * n_s.data * 2
     epsilon = ts_scalar(vdf.time.data, epsilon)

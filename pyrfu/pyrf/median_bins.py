@@ -81,14 +81,13 @@ def median_bins(inp0, inp1, bins: int = 10):
         idx_left = inp0.data > x_edge[i]
         idx_right = inp0.data < x_edge[i + 1]
 
-        y_bins = np.abs(inp1.data[idx_left * idx_right])
+        y_bins = inp1.data[idx_left * idx_right]
 
         y_med[i], y_std[i] = [np.median(y_bins), np.std(y_bins)]
 
     bins = x_edge[:-1] + np.median(np.diff(x_edge)) / 2
 
-    out_dict = {"data": (["bins"], y_med), "sigma": (["bins"], y_std),
-                "bins": bins}
+    out_dict = {"data": (["bins"], y_med), "sigma": (["bins"], y_std), "bins": bins}
 
     out = xr.Dataset(out_dict)
 

@@ -14,8 +14,15 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def plot_heatmap(ax, data, row_labels, col_labels, cbar_kw: dict = None,
-                 cbarlabel: str = "", **kwargs):
+def plot_heatmap(
+    ax,
+    data,
+    row_labels,
+    col_labels,
+    cbar_kw: dict = None,
+    cbarlabel: str = "",
+    **kwargs
+):
     r"""Creates a heatmap from a numpy array and two lists of labels.
 
     Parameters
@@ -52,7 +59,7 @@ def plot_heatmap(ax, data, row_labels, col_labels, cbar_kw: dict = None,
 
     divider = make_axes_locatable(ax)
 
-    colorbar_axes = divider.append_axes("right", size="2%", pad=.1)
+    colorbar_axes = divider.append_axes("right", size="2%", pad=0.1)
 
     # Create colorbar
     cbar = ax.figure.colorbar(im, ax=ax, cax=colorbar_axes, **cbar_kw)
@@ -71,9 +78,9 @@ def plot_heatmap(ax, data, row_labels, col_labels, cbar_kw: dict = None,
     # Turn spines off and create white grid.
     # ax.spines[:].set_visible(False)
 
-    ax.set_xticks(np.arange(data.shape[1] + 1) - .5, minor=True)
-    ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
-    ax.grid(which="minor", color="k", linestyle='-', linewidth=.5)
+    ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5, minor=True)
+    ax.grid(which="minor", color="k", linestyle="-", linewidth=0.5)
     ax.tick_params(which="minor", bottom=False, left=False)
     ax.set_axisbelow(False)
     cbar.ax.set_axisbelow(False)

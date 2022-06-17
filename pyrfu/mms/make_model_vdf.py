@@ -91,7 +91,7 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
     t_para = t_xyzfac[:, 0, 0]
     t_ratio = t_xyzfac[:, 0, 0] / t_xyzfac[:, 1, 1]
 
-    v_para, v_perp, alpha = dec_par_perp(v_xyz, b_xyz)
+    v_para, v_perp, _ = dec_par_perp(v_xyz, b_xyz)
 
     v_perp_mag, b_xyz_mag = [norm(v_perp), norm(b_xyz)]
     v_perp_dir, b_xyz_dir = [v_perp / v_perp_mag, b_xyz / b_xyz_mag]
@@ -105,7 +105,7 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
         print("notice : Particles are electrons")
     else:
         p_mass = constants.proton_mass
-        sc_pot.data = -1. * sc_pot.data
+        sc_pot.data = -1.0 * sc_pot.data
         print("notice : Particles are ions")
 
     # Convert moments to SI units
@@ -129,14 +129,18 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
     r_mat = np.zeros((n_ti, n_en))
 
     for i in range(n_ti):
-        time[i, ...] = np.outer(-np.cos(vdf.phi.data[i, :] * np.pi / 180),
-                                np.sin(vdf.theta.data * np.pi / 180))
-        phi[i, ...] = np.outer(-np.sin(vdf.phi.data[i, :] * np.pi / 180),
-                               np.sin(vdf.theta.data * np.pi / 180))
-        theta[i, ...] = np.outer(-np.ones(n_ph),
-                                 np.cos(vdf.theta.data * np.pi / 180))
+        time[i, ...] = np.outer(
+            -np.cos(vdf.phi.data[i, :] * np.pi / 180),
+            np.sin(vdf.theta.data * np.pi / 180),
+        )
+        phi[i, ...] = np.outer(
+            -np.sin(vdf.phi.data[i, :] * np.pi / 180),
+            np.sin(vdf.theta.data * np.pi / 180),
+        )
+        theta[i, ...] = np.outer(-np.ones(n_ph), np.cos(vdf.theta.data * np.pi / 180))
         r_mat[i, ...] = np.real(
-            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass))
+            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass)
+        )
 
     r_mat[r_mat == 0] = 0.0
 
@@ -171,18 +175,26 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz):
     bi_max_dist = np.zeros(r_mat.shape)
 
     for i in range(n_ti):
-        coeff = n_s.data[i] * t_ratio.data[i] / (
-                    np.sqrt(np.pi ** 3) * vth_para.data[i] ** 3)
+        coeff = (
+            n_s.data[i]
+            * t_ratio.data[i]
+            / (np.sqrt(np.pi**3) * vth_para.data[i] ** 3)
+        )
 
         bi_max_temp = coeff * np.exp(
-            -(x_p[i, ...] * r_mat[i, ...] - v_perp_mag.data[i]) ** 2 / (
-                        vth_para.data[i] ** 2) * t_ratio.data[i])
+            -((x_p[i, ...] * r_mat[i, ...] - v_perp_mag.data[i]) ** 2)
+            / (vth_para.data[i] ** 2)
+            * t_ratio.data[i]
+        )
         bi_max_temp = bi_max_temp * np.exp(
-            -(y_p[i, ...] * r_mat[i, ...]) ** 2 / (vth_para.data[i] ** 2) *
-            t_ratio.data[i])
+            -((y_p[i, ...] * r_mat[i, ...]) ** 2)
+            / (vth_para.data[i] ** 2)
+            * t_ratio.data[i]
+        )
         bi_max_temp = bi_max_temp * np.exp(
-            -(z_p[i, ...] * r_mat[i, ...] - v_para.data[i]) ** 2 / (
-                        vth_para.data[i] ** 2))
+            -((z_p[i, ...] * r_mat[i, ...] - v_para.data[i]) ** 2)
+            / (vth_para.data[i] ** 2)
+        )
 
         bi_max_dist[i, ...] = bi_max_temp
 

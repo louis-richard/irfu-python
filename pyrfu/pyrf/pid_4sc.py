@@ -117,8 +117,10 @@ def pid_4sc(r_mms, v_mms, p_mms, b_mms):
     pi_flat = pi_flat[:, [0, 4, -1, 1, 2, 5]]
 
     # Compute components of the double contraction sum
-    d_coeff = xr.DataArray(d_flat * pi_flat,
-                           coords=[p_xyz.time.data, np.arange(1, 7)],
-                           dims=["time", "index"])
+    d_coeff = xr.DataArray(
+        d_flat * pi_flat,
+        coords=[p_xyz.time.data, np.arange(1, 7)],
+        dims=["time", "index"],
+    )
 
     return pid, d_coeff

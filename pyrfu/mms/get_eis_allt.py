@@ -17,8 +17,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True,
-                 data_path: str = ""):
+def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = ""):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all telescopes.
 
@@ -63,9 +62,15 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True,
 
     pref = f"mms{mms_id:d}_epd_eis"
 
-    var = {"mms_id": mms_id, "inst": "epd-eis", "dtype": data_type,
-           "tmmode": data_rate, "lev": data_lvl, "specie": specie,
-           "data_path": data_path}
+    var = {
+        "mms_id": mms_id,
+        "inst": "epd-eis",
+        "dtype": data_type,
+        "tmmode": data_rate,
+        "lev": data_lvl,
+        "specie": specie,
+        "data_path": data_path,
+    }
 
     # EIS includes the version of the files in the cdfname need to read it
     # before.
@@ -91,8 +96,10 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True,
 
     # Name of the data containing index of the probe, instrument, data rate,
     # data level and data type if needed
-    dset_name = f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}" \
-                f"_{var['lev']}_{var['dtype']}"
+    dset_name = (
+        f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}"
+        f"_{var['lev']}_{var['dtype']}"
+    )
 
     # Names of the energy spectra in the CDF (one for each telescope)
     cdfnames = ["{}_{}{:d}".format(pref, suf, t) for t in range(6)]
@@ -100,26 +107,41 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True,
     spin_nums = db_get_ts(dset_name, f"{pref}_spin", tint, data_path=data_path)
     sectors = db_get_ts(dset_name, f"{pref}_sector", tint, data_path=data_path)
 
-    e_minu = db_get_variable(dset_name, f"{pref}_{specie}_t0_energy_dminus",
-                             tint, verbose=verbose, data_path=data_path)
+    e_minu = db_get_variable(
+        dset_name,
+        f"{pref}_{specie}_t0_energy_dminus",
+        tint,
+        verbose=verbose,
+        data_path=data_path,
+    )
 
-    e_plus = db_get_variable(dset_name, f"{pref}_{specie}_t0_energy_dplus",
-                             tint, verbose=verbose, data_path=data_path)
+    e_plus = db_get_variable(
+        dset_name,
+        f"{pref}_{specie}_t0_energy_dplus",
+        tint,
+        verbose=verbose,
+        data_path=data_path,
+    )
 
     outdict = {"spin": spin_nums, "sector": sectors}
 
     for i, cdfname in enumerate(cdfnames):
         scope_key = f"t{i:d}"
 
-        outdict[scope_key] = db_get_ts(dset_name, cdfname, tint,
-                                       verbose=verbose, data_path=data_path)
-        outdict[scope_key] = outdict[scope_key].rename({"time": "time",
-                                                        "Energy": "energy"})
+        outdict[scope_key] = db_get_ts(
+            dset_name, cdfname, tint, verbose=verbose, data_path=data_path
+        )
+        outdict[scope_key] = outdict[scope_key].rename(
+            {"time": "time", "Energy": "energy"}
+        )
 
-        outdict[f"look_{scope_key}"] = db_get_ts(dset_name,
-                                                 f"{pref}_look_{scope_key}",
-                                                 tint, verbose=verbose,
-                                                 data_path=data_path)
+        outdict[f"look_{scope_key}"] = db_get_ts(
+            dset_name,
+            f"{pref}_look_{scope_key}",
+            tint,
+            verbose=verbose,
+            data_path=data_path,
+        )
 
     e_plus = e_plus.assign_coords(x=outdict["t0"].energy.data)
     e_minu = e_minu.assign_coords(x=outdict["t0"].energy.data)

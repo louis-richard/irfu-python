@@ -19,9 +19,9 @@ __status__ = "Prototype"
 
 
 logging.captureWarnings(True)
-logging.basicConfig(format='%(asctime)s: %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S',
-                    level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+)
 
 
 def vdf_elim(vdf, e_int):
@@ -74,13 +74,19 @@ def vdf_elim(vdf, e_int):
             e_diff = e_diff1
 
         e_levels = int(np.where(e_diff == np.min(e_diff))[0][0])
-        print(f"Effective energies alternate in time between "
-              f"{energy.data[0, e_levels]:5.2f} and "
-              f"{energy.data[1, e_levels]:5.2f}")
+        print(
+            f"Effective energies alternate in time between "
+            f"{energy.data[0, e_levels]:5.2f} and "
+            f"{energy.data[1, e_levels]:5.2f}"
+        )
 
-    vdf_e_clipped = ts_skymap(vdf.time.data, vdf.data.data[:, e_levels, ...],
-                              energy=energy.data[:, e_levels],
-                              phi=vdf.phi.data, theta=vdf.theta.data)
+    vdf_e_clipped = ts_skymap(
+        vdf.time.data,
+        vdf.data.data[:, e_levels, ...],
+        energy=energy.data[:, e_levels],
+        phi=vdf.phi.data,
+        theta=vdf.theta.data,
+    )
 
     energy_0 = vdf.attrs.get("energy0", unique_etables[0, :])[e_levels]
     energy_1 = vdf.attrs.get("energy1", unique_etables[0, :])[e_levels]

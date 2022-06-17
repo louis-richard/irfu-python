@@ -21,10 +21,10 @@ import sphinx_rtd_theme
 # import sys
 # sys.path.insert(0, "/Users/louisr/Documents/PhD/irfu-python/pyrfu")
 
-examples_source = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                               "..", "..", "examples"))
-examples_dest = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                             "examples"))
+examples_source = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "examples")
+)
+examples_dest = os.path.abspath(os.path.join(os.path.dirname(__file__), "examples"))
 
 if os.path.exists(examples_dest):
     shutil.rmtree(examples_dest)
@@ -64,13 +64,13 @@ extensions = [
     "sphinxcontrib.apidoc",
     "sphinx.ext.todo",
     "nbsphinx"
-  #  "sphinx_gallery.gen_gallery"
+    #  "sphinx_gallery.gen_gallery"
 ]
 
-#sphinx_gallery_conf = {
+# sphinx_gallery_conf = {
 #     "examples_dirs": "../examples/gallery/",   # path to your example scripts
 #     "gallery_dirs": "auto_examples",  # path where to save gallery generated examples
-#}
+# }
 
 
 # Add any paths that contain templates here, relative to this directory.
@@ -94,8 +94,13 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints",
-                    "examples/**/README.md"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
+    "examples/**/README.md",
+]
 
 autodoc_mock_imports = ["numba", "sfs"]
 
@@ -106,7 +111,7 @@ autodoc_mock_imports = ["numba", "sfs"]
 #
 # html_theme = "alabaster"
 html_theme = "pydata_sphinx_theme"
-#html_theme = "sphinx_rtd_theme"
+# html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -114,7 +119,7 @@ html_theme = "pydata_sphinx_theme"
 
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+# html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -160,15 +165,12 @@ latex_elements = {
     # The paper size ("letterpaper" or "a4paper").
     #
     # "papersize": "letterpaper",
-
     # The font size ("10pt", "11pt" or "12pt").
     #
     # "pointsize": "10pt",
-
     # Additional stuff for the LaTeX preamble.
     #
     # "preamble": "",
-
     # Latex figure (float) alignment
     #
     # "figure_align": "htbp",
@@ -178,8 +180,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "pyrfu.tex", "pyrfu Documentation",
-     "Louis Richard", "manual"),
+    (master_doc, "pyrfu.tex", "pyrfu Documentation", "Louis Richard", "manual"),
 ]
 
 
@@ -187,10 +188,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, "pyrfu", "pyrfu Documentation",
-     [author], 1)
-]
+man_pages = [(master_doc, "pyrfu", "pyrfu Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -199,9 +197,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, "pyrfu", "pyrfu Documentation",
-     author, "pyrfu", "One line description of project.",
-     "Miscellaneous"),
+    (
+        master_doc,
+        "pyrfu",
+        "pyrfu Documentation",
+        author,
+        "pyrfu",
+        "One line description of project.",
+        "Miscellaneous",
+    ),
 ]
 
 
@@ -236,8 +240,10 @@ epub_exclude_files = ["search.html"]
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"python": ("https://docs.python.org/3/", None),
-                       "xarray": ("http://xarray.pydata.org/en/stable/", None)}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "xarray": ("http://xarray.pydata.org/en/stable/", None),
+}
 
 apidoc_module_dir = "../../pyrfu"
 apidoc_output_dir = "_generated"

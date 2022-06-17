@@ -47,8 +47,8 @@ def load_brst_segments(tint, data_path: str = None, download: bool = True):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as f:
-            config = json.load(f)
+        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+            config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
     else:
@@ -62,8 +62,8 @@ def load_brst_segments(tint, data_path: str = None, download: bool = True):
         response = requests.get(URL)
 
         # Write content of the brst segment file to the local file
-        with open(file_path, "wb") as f:
-            f.write(response.content)
+        with open(file_path, "wb") as fs:
+            fs.write(response.content)
 
     # Read brst segment content
     intervals = readsav(file_path)
@@ -90,6 +90,3 @@ def load_brst_segments(tint, data_path: str = None, download: bool = True):
             brst_segments.append(segment)
 
     return brst_segments
-
-
-

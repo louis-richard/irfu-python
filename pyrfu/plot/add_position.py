@@ -17,8 +17,9 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def add_position(ax, r_xyz, spine: float = 20, position: str = "top",
-                 fontsize: float = 10):
+def add_position(
+    ax, r_xyz, spine: float = 20, position: str = "top", fontsize: float = 10
+):
     r"""Add extra axes to plot spacecraft position.
 
     Parameters
@@ -49,8 +50,7 @@ def add_position(ax, r_xyz, spine: float = 20, position: str = "top",
 
     ticks_labels = []
     for ticks_ in r_ticks:
-        ticks_labels.append(
-            f"{ticks_[0]:3.2f}\n{ticks_[1]:3.2f}\n{ticks_[2]:3.2f}")
+        ticks_labels.append(f"{ticks_[0]:3.2f}\n{ticks_[1]:3.2f}\n{ticks_[2]:3.2f}")
 
     axr = ax.twiny()
     axr.spines[position].set_position(("outward", spine))

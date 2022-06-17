@@ -18,7 +18,7 @@ __status__ = "Prototype"
 
 
 def copy_files(var, tint, mms_id, tar_path: str = "./data/"):
-    r"""Copy files from local_data_dir as defined in config.json to the target 
+    r"""Copy files from local_data_dir as defined in config.json to the target
     path.
 
     Parameters
@@ -46,8 +46,8 @@ def copy_files(var, tint, mms_id, tar_path: str = "./data/"):
     pkg_path = os.path.dirname(os.path.abspath(__file__))
 
     # Read the current version of the MMS configuration file
-    with open(os.path.join(pkg_path, "config.json"), "r") as f:
-        config = json.load(f)
+    with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        config = json.load(fs)
 
     # Normalize the local_data_dir path and make sure it exists.
     mms_path = os.path.normpath(config["local_data_dir"]) + "/"
@@ -65,12 +65,10 @@ def copy_files(var, tint, mms_id, tar_path: str = "./data/"):
         if not os.path.exists(path):
             os.makedirs(path)
 
-        p = subprocess.Popen(f"cp {file} {target_file}",
-                             stdout=subprocess.PIPE,
-                             shell=True)
-        (_, _) = p.communicate()
+        s_proc = subprocess.Popen(
+            f"cp {file} {target_file}", stdout=subprocess.PIPE, shell=True
+        )
+        (_, _) = s_proc.communicate()
 
         # This makes the wait possible
-        _ = p.wait()
-
-    return
+        _ = s_proc.wait()

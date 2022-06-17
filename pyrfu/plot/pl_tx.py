@@ -16,7 +16,7 @@ __status__ = "Prototype"
 
 plt.style.use("seaborn-ticks")
 colors_ = ["tab:blue", "tab:green", "tab:red", "k"]
-plt.rc('axes', prop_cycle=mpl.cycler(color=colors_))
+plt.rc("axes", prop_cycle=mpl.cycler(color=colors_))
 
 
 def pl_tx(axis, inp_list, comp, **kwargs):
@@ -43,8 +43,7 @@ def pl_tx(axis, inp_list, comp, **kwargs):
 
     for inp in inp_list:
         if len(inp.shape) == 3:
-            data = np.reshape(inp.data,
-                              (inp.shape[0], inp.shape[1] * inp.shape[2]))
+            data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
         elif len(inp.shape) == 1:
             data = inp.data[:, np.newaxis]
         else:

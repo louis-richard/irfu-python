@@ -69,7 +69,7 @@ def movmean(inp, n_pts: int = 100):
 
     for k in inp.dims:
         if k == "time":
-            coords.append(inp.coords[k][int(n_pts / 2):-int(n_pts / 2)])
+            coords.append(inp.coords[k][int(n_pts / 2) : -int(n_pts / 2)])
         else:
             coords.append(inp.coords[k].data)
 

@@ -20,15 +20,21 @@ __status__ = "Prototype"
 
 def _f_one_pop(x, *args):
     i_e, i_aspoc, sc_pot_r = args
-    return np.nansum(np.abs(i_e.data + i_aspoc.data
-                            - (x[0] * np.exp(-sc_pot_r.data / x[1]))))
+    return np.nansum(
+        np.abs(i_e.data + i_aspoc.data - (x[0] * np.exp(-sc_pot_r.data / x[1])))
+    )
 
 
 def _f_two_pop(x, *args):
     i_e, i_aspoc, sc_pot_r = args
-    return np.nansum(np.abs(i_e.data + i_aspoc.data
-                            - (x[0] * np.exp(-sc_pot_r.data / x[1]))
-                            + (x[2] * np.exp(-sc_pot_r.data / x[3]))))
+    return np.nansum(
+        np.abs(
+            i_e.data
+            + i_aspoc.data
+            - (x[0] * np.exp(-sc_pot_r.data / x[1]))
+            + (x[2] * np.exp(-sc_pot_r.data / x[3]))
+        )
+    )
 
 
 def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
@@ -103,19 +109,22 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     i_e *= 1e12 * q_e * s_surf / (2 * np.sqrt(np.pi))
 
     # First a simple fit of Iph to Ie using 1 photoelectron population
-    opt_p1 = optimize.fmin(_f_one_pop, x0=[500., 3.],
-                           args=(i_e, i_aspoc, sc_pot_r), maxfun=5000)
+    opt_p1 = optimize.fmin(
+        _f_one_pop, x0=[500.0, 3.0], args=(i_e, i_aspoc, sc_pot_r), maxfun=5000
+    )
 
     # Fit of Iph to Ie for two photoelectron populations
-    opt_p2 = optimize.fmin(_f_two_pop, x0=[opt_p1[0], opt_p1[1], 10., 10.],
-                           args=(i_e, i_aspoc, sc_pot_r), maxfun=5000)
+    opt_p2 = optimize.fmin(
+        _f_two_pop,
+        x0=[opt_p1[0], opt_p1[1], 10.0, 10.0],
+        args=(i_e, i_aspoc, sc_pot_r),
+        maxfun=5000,
+    )
     i_ph0, t_ph0, i_ph1, t_ph1 = opt_p2
 
     v_eth = np.sqrt(2 * q_e * resample(t_e, sc_pot).data / m_e)
-    n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(
-        -sc_pot.data / t_ph1)
-    n_esc /= s_surf * q_e * v_eth * (
-                1 + sc_pot.data / resample(t_e, sc_pot).data)
+    n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(-sc_pot.data / t_ph1)
+    n_esc /= s_surf * q_e * v_eth * (1 + sc_pot.data / resample(t_e, sc_pot).data)
     n_esc *= 2 * np.sqrt(np.pi) * 1e-12
     n_esc = ts_scalar(sc_pot.time.data, n_esc)
 

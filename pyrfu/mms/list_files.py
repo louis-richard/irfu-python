@@ -52,8 +52,8 @@ def list_files(tint, mms_id, var, data_path=""):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as f:
-            config = json.load(f)
+        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+            config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
     else:
@@ -73,8 +73,10 @@ def list_files(tint, mms_id, var, data_path=""):
     # - assume file names are of the form:
     # spacecraft_instrument_rate_level[_datatype]_YYYYMMDD[hhmmss]_version.cdf
 
-    file_name = f"mms{mms_id}_{var['inst']}_{var['tmmode']}_{var['lev']}" \
-                + r"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+    file_name = (
+        f"mms{mms_id}_{var['inst']}_{var['tmmode']}_{var['lev']}"
+        + r"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+    )
 
     d_start = parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d"))
     until_ = parser.parse(tint[1]) - datetime.timedelta(seconds=1)
@@ -87,23 +89,39 @@ def list_files(tint, mms_id, var, data_path=""):
 
     for date in days:
         if var["tmmode"] == "brst":
-            local_dir = os.sep.join([data_path, f"mms{mms_id}", var["inst"],
-                                     var["tmmode"], level_and_dtype,
-                                     date.strftime("%Y"), date.strftime("%m"),
-                                     date.strftime("%d")])
+            local_dir = os.sep.join(
+                [
+                    data_path,
+                    f"mms{mms_id}",
+                    var["inst"],
+                    var["tmmode"],
+                    level_and_dtype,
+                    date.strftime("%Y"),
+                    date.strftime("%m"),
+                    date.strftime("%d"),
+                ]
+            )
         else:
-            local_dir = os.sep.join([data_path, f"mms{mms_id}", var["inst"],
-                                     var["tmmode"], level_and_dtype,
-                                     date.strftime("%Y"), date.strftime("%m")])
+            local_dir = os.sep.join(
+                [
+                    data_path,
+                    f"mms{mms_id}",
+                    var["inst"],
+                    var["tmmode"],
+                    level_and_dtype,
+                    date.strftime("%Y"),
+                    date.strftime("%m"),
+                ]
+            )
 
         if os.name == "nt":
-            full_path = os.sep.join([re.escape(local_dir)+os.sep, file_name])
+            full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
         else:
             full_path = os.sep.join([re.escape(local_dir), file_name])
 
         regex = re.compile(full_path)
 
-        for root, dirs, files in os.walk(local_dir):
+        for root, _, files in os.walk(local_dir):
             for file in files:
                 this_file = os.sep.join([root, file])
 
@@ -112,10 +130,14 @@ def list_files(tint, mms_id, var, data_path=""):
                     this_time = parser.parse(matches.groups()[1])
                     if d_start <= this_time <= until_:
                         if this_file not in files_out:
-                            files_out.append({"file_name": file,
-                                              "timetag": "",
-                                              "full_name": this_file,
-                                              "file_size": ""})
+                            files_out.append(
+                                {
+                                    "file_name": file,
+                                    "timetag": "",
+                                    "full_name": this_file,
+                                    "file_size": "",
+                                }
+                            )
 
     in_files = files_out
 
@@ -128,9 +150,14 @@ def list_files(tint, mms_id, var, data_path=""):
     for file in in_files:
         matches = regex.match(file["file_name"])
         if matches:
-            file_times.append((file["file_name"],
-                               parser.parse(matches.groups()[0]).timestamp(),
-                               file["timetag"], file["file_size"]))
+            file_times.append(
+                (
+                    file["file_name"],
+                    parser.parse(matches.groups()[0]).timestamp(),
+                    file["timetag"],
+                    file["file_size"],
+                )
+            )
 
     # sort in time
     sorted_files = sorted(file_times, key=lambda x: x[1])
@@ -145,15 +172,15 @@ def list_files(tint, mms_id, var, data_path=""):
     if idx_min == 0:
         files_in_interval = []
         for file in sorted_files[idx_min:]:
-            files_in_interval.append({"file_name": file[0],
-                                      "timetag": file[2],
-                                      "file_size": file[3]})
+            files_in_interval.append(
+                {"file_name": file[0], "timetag": file[2], "file_size": file[3]}
+            )
     else:
         files_in_interval = []
-        for file in sorted_files[idx_min - 1:]:
-            files_in_interval.append({"file_name": file[0],
-                                      "timetag": file[2],
-                                      "file_size": file[3]})
+        for file in sorted_files[idx_min - 1 :]:
+            files_in_interval.append(
+                {"file_name": file[0], "timetag": file[2], "file_size": file[3]}
+            )
 
     local_files = []
 

@@ -43,8 +43,9 @@ def _time_avg(vdf, tint):
     else:
         raise TypeError("Invalid time interval format")
 
-    vdf_new = xr.DataArray(vdf_data, coords=[vdf_ener, vdf_azim, vdf_thet],
-                           dims=["energy", "phi", "theta"])
+    vdf_new = xr.DataArray(
+        vdf_data, coords=[vdf_ener, vdf_azim, vdf_thet], dims=["energy", "phi", "theta"]
+    )
 
     return vdf_new
 
@@ -57,14 +58,16 @@ def _energy_avg(vdf, en_range):
         en_range[0] = np.max(vdf.energy.data[0], en_range[0])
         en_range[1] = np.max(vdf.energy.data[-1], en_range[-1])
 
-    idx = np.where(np.logical_and(vdf.energy.data > en_range[0],
-                                  vdf.energy.data < en_range[1]))[0]
+    idx = np.where(
+        np.logical_and(vdf.energy.data > en_range[0], vdf.energy.data < en_range[1])
+    )[0]
     assert idx, "Energy range is not covered by the instrument"
 
     out_data = np.nanmean(vdf.data[idx, ...], axis=0)
 
-    out = xr.DataArray(out_data, coords=[vdf.phi.data, vdf.theta.data],
-                       dims=["phi", "theta"])
+    out = xr.DataArray(
+        out_data, coords=[vdf.phi.data, vdf.theta.data], dims=["phi", "theta"]
+    )
     return out
 
 
@@ -113,7 +116,7 @@ def plot_ang_ang(vdf, tint: list = None, en_range: list = None):
     vdf_avg = _energy_avg(vdf_c, en_range)
 
     f, ax = plt.subplots(1, figsize=(9, 9))
-    f.subplots_adjust(left=.1, right=.85, bottom=.1, top=.9)
+    f.subplots_adjust(left=0.1, right=0.85, bottom=0.1, top=0.9)
     ax, cax = plot_spectr(ax, vdf_avg, cscale="log")
     ax.set_xlabel("$\\phi$ [deg.]")
     ax.set_ylabel("$\\theta$ [deg.]")

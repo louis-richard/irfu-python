@@ -29,82 +29,88 @@ def _check_time(proton_phxtof, proton_extof):
         bad_inds = np.where(cond)[0]
 
         if bad_inds.size:
-            e_inds = []
-            ph_inds = []
-            for t in range(data_size[1]):
+            extof_inds = []
+            phxtof_inds = []
+            for i_t in range(data_size[1]):
                 dt_dummy = np.min(
-                    np.abs(proton_extof.time.data[t] - proton_extof.time.data))
-                t_ind = np.argmin(np.abs(proton_extof.time.data[t]
-                                         - proton_extof.time.data))
+                    np.abs(proton_extof.time.data[i_t] - proton_extof.time.data)
+                )
+                t_ind = np.argmin(
+                    np.abs(proton_extof.time.data[i_t] - proton_extof.time.data)
+                )
                 if dt_dummy == 0:
-                    e_inds.append(t)
-                    if not ph_inds:
-                        ph_inds.append(t)
+                    extof_inds.append(i_t)
+                    if not phxtof_inds:
+                        phxtof_inds.append(i_t)
                     else:
-                        ph_inds.append(t_ind)
+                        phxtof_inds.append(t_ind)
 
-            time_data = proton_extof.time.data[e_inds]
-            phxtof_data = proton_phxtof.data[ph_inds, ...]
-            extof_data = proton_extof.data[e_inds, ...]
+            time_data = proton_extof.time.data[extof_inds]
+            phxtof_data = proton_phxtof.data[phxtof_inds, ...]
+            extof_data = proton_extof.data[extof_inds, ...]
         else:
             time_data = proton_extof.time.data
             phxtof_data = proton_phxtof.data
             extof_data = proton_extof.data
 
     elif data_size[0] > data_size[1]:
-        cond = proton_phxtof.time.data[:data_size[1]] != proton_extof.time.data
+        cond = proton_phxtof.time.data[: data_size[1]] != proton_extof.time.data
         bad_inds = np.where(cond)[0]
 
         if bad_inds.size:
-            e_inds = []
-            ph_inds = []
-            for t in range(data_size[1]):
-                dt_dummy = np.min(np.abs(proton_extof.time.data[t]
-                                         - proton_phxtof.time.data))
-                t_ind = np.argmin(np.abs(proton_extof.time.data[t]
-                                         - proton_phxtof.time.data))
+            extof_inds = []
+            phxtof_inds = []
+            for i_t in range(data_size[1]):
+                dt_dummy = np.min(
+                    np.abs(proton_extof.time.data[i_t] - proton_phxtof.time.data)
+                )
+                t_ind = np.argmin(
+                    np.abs(proton_extof.time.data[i_t] - proton_phxtof.time.data)
+                )
                 if dt_dummy == 0:
-                    e_inds.append(t)
-                    if not ph_inds:
-                        ph_inds.append(t)
+                    extof_inds.append(i_t)
+                    if not phxtof_inds:
+                        phxtof_inds.append(i_t)
                     else:
-                        ph_inds.append(t_ind)
+                        phxtof_inds.append(t_ind)
 
-            time_data = proton_extof.time.data[e_inds]
-            phxtof_data = proton_phxtof.data[ph_inds, ...]
-            extof_data = proton_extof.data[e_inds, ...]
+            time_data = proton_extof.time.data[extof_inds]
+            phxtof_data = proton_phxtof.data[phxtof_inds, ...]
+            extof_data = proton_extof.data[extof_inds, ...]
         else:
             time_data = proton_extof.time.data
-            phxtof_data = proton_phxtof.data[:data_size[1], ...]
+            phxtof_data = proton_phxtof.data[: data_size[1], ...]
             extof_data = proton_extof.data
 
     elif data_size[0] < data_size[1]:
-        cond = proton_phxtof.time.data != proton_extof.time.data[:data_size[0]]
+        cond = proton_phxtof.time.data != proton_extof.time.data[: data_size[0]]
         bad_inds = np.where(cond)[0]
 
         if bad_inds.size:
-            e_inds = []
-            ph_inds = []
-            for t in range(data_size[0]):
-                dt_dummy = np.min(np.abs(proton_phxtof.time.data[t]
-                                         - proton_phxtof.time.data))
-                t_ind = np.argmin(np.abs(
-                    proton_phxtof.time.data[t] - proton_phxtof.time.data))
+            extof_inds = []
+            phxtof_inds = []
+            for i_t in range(data_size[0]):
+                dt_dummy = np.min(
+                    np.abs(proton_phxtof.time.data[i_t] - proton_phxtof.time.data)
+                )
+                t_ind = np.argmin(
+                    np.abs(proton_phxtof.time.data[i_t] - proton_phxtof.time.data)
+                )
                 if dt_dummy == 0:
-                    ph_inds.append(t)
-                    if not ph_inds:
-                        e_inds.append(t)
+                    phxtof_inds.append(i_t)
+                    if not phxtof_inds:
+                        extof_inds.append(i_t)
                     else:
-                        e_inds.append(t_ind)
+                        extof_inds.append(t_ind)
 
-            time_data = proton_phxtof.time.data[ph_inds]
-            phxtof_data = proton_phxtof.data[ph_inds, ...]
-            extof_data = proton_extof.data[e_inds, ...]
+            time_data = proton_phxtof.time.data[phxtof_inds]
+            phxtof_data = proton_phxtof.data[phxtof_inds, ...]
+            extof_data = proton_extof.data[extof_inds, ...]
 
         else:
             time_data = proton_phxtof.time.data
             phxtof_data = proton_phxtof.data
-            extof_data = proton_extof.data[:data_size[0], ...]
+            extof_data = proton_extof.data[: data_size[0], ...]
 
     else:
         raise ValueError
@@ -169,12 +175,10 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
 
     comb_en_low, comb_en_hig = [None] * 2
 
-    time_sect, phxtof_sect, extof_sect = _check_time(phxtof_allt["sector"],
-                                                     extof_allt["sector"])
+    time_sect, _, extof_sect = _check_time(phxtof_allt["sector"], extof_allt["sector"])
     sect = xr.DataArray(extof_sect, coords=[time_sect], dims=["time"])
 
-    time_spin, phxtof_spin, extof_spin = _check_time(phxtof_allt["spin"],
-                                                     extof_allt["spin"])
+    _, _, extof_spin = _check_time(phxtof_allt["spin"], extof_allt["spin"])
 
     spin = xr.DataArray(extof_spin, coords=[time_sect], dims=["time"])
 
@@ -182,14 +186,11 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         proton_phxtof = phxtof_allt[scope]
         proton_extof = extof_allt[scope]
 
-        time_data, phxtof_data, extof_data = _check_time(proton_phxtof,
-                                                         proton_extof)
+        time_data, phxtof_data, extof_data = _check_time(proton_phxtof, proton_extof)
 
-        en_phxtof, en_extof = [proton_phxtof.energy.data,
-                               proton_extof.energy.data]
+        en_phxtof, en_extof = [proton_phxtof.energy.data, proton_extof.energy.data]
         idx_phxtof = np.where(en_phxtof < en_extof[0])[0]
-        cond_ = np.logical_and(en_phxtof > en_extof[0],
-                               en_phxtof < en_phxtof[-1])
+        cond_ = np.logical_and(en_phxtof > en_extof[0], en_phxtof < en_phxtof[-1])
         idx_phxtof_cross = np.where(cond_)[0]
 
         idx_extof_cross = np.where(en_extof < en_phxtof[-2])[0]
@@ -209,16 +210,17 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         comb_en_low[:n_phxtof] = comb_en[:n_phxtof] - dm_phxtof[idx_phxtof]
         comb_en_hig[:n_phxtof] = comb_en[:n_phxtof] + dp_phxtof[idx_phxtof]
 
-        for (i, i_phx), i_ex in zip(enumerate(idx_phxtof_cross),
-                                    idx_extof_cross):
+        for (i, i_phx), i_ex in zip(enumerate(idx_phxtof_cross), idx_extof_cross):
             idx_ = n_phxtof + i
-            comb_array[:, idx_] = np.nanmean(np.vstack([phxtof_data[:, i_phx],
-                                                        extof_data[:, i_ex]]),
-                                             axis=0)
-            comb_en_low[idx_] = np.nanmin([en_phxtof[idx_] - dm_phxtof[idx_],
-                                           en_extof[i] - dm_extof[i]])
-            comb_en_hig[idx_] = np.nanmax([en_phxtof[idx_] + dp_phxtof[idx_],
-                                           en_extof[i] + dp_extof[i]])
+            comb_array[:, idx_] = np.nanmean(
+                np.vstack([phxtof_data[:, i_phx], extof_data[:, i_ex]]), axis=0
+            )
+            comb_en_low[idx_] = np.nanmin(
+                [en_phxtof[idx_] - dm_phxtof[idx_], en_extof[i] - dm_extof[i]]
+            )
+            comb_en_hig[idx_] = np.nanmax(
+                [en_phxtof[idx_] + dp_phxtof[idx_], en_extof[i] + dp_extof[i]]
+            )
             comb_en[idx_] = np.sqrt(comb_en_low[idx_] * comb_en_hig[idx_])
 
         comb_array[:, -n_extof:] = extof_data[:, idx_extof]
@@ -226,9 +228,9 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         comb_en_low[-n_extof:] = en_extof[idx_extof] - dm_extof[idx_extof]
         comb_en_hig[-n_extof:] = en_extof[idx_extof] + dp_extof[idx_extof]
 
-        out_dict[scope] = xr.DataArray(comb_array,
-                                       coords=[time_data, comb_en],
-                                       dims=["time", "energy"])
+        out_dict[scope] = xr.DataArray(
+            comb_array, coords=[time_data, comb_en], dims=["time", "energy"]
+        )
 
     out_dict["sector"] = sect
     out_dict["spin"] = spin

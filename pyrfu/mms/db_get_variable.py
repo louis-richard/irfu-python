@@ -17,12 +17,14 @@ __status__ = "Prototype"
 
 
 logging.captureWarnings(True)
-logging.basicConfig(format='%(asctime)s: %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+)
 
 
-def db_get_variable(dataset_name, cdf_name, tint, verbose: bool = True,
-                    data_path: str = ""):
+def db_get_variable(
+    dataset_name, cdf_name, tint, verbose: bool = True, data_path: str = ""
+):
     r"""Get variable in the cdf file.
 
     Parameters
@@ -60,7 +62,7 @@ def db_get_variable(dataset_name, cdf_name, tint, verbose: bool = True,
     files = list_files(tint, probe, var, data_path=data_path)
 
     if verbose:
-        logging.info(f"Loading {cdf_name}...")
+        logging.info("Loading %s...", cdf_name)
 
     out = get_variable(files[0], cdf_name)
 

@@ -58,15 +58,19 @@ def vht(e, b, flag: int = 1):
 
     # assume only Ex and Ey
     if flag == 2:
-        e[:, 2] *= 0     # put z component to 0 when using only Ex and Ey
+        e[:, 2] *= 0  # put z component to 0 when using only Ex and Ey
 
-        k_mat = np.array([[p[5], 0, -p[2]],
-                          [0, p[5], -p[4]],
-                          [-p[2], -p[4], p[0] + p[3]]])
+        k_mat = np.array(
+            [[p[5], 0, -p[2]], [0, p[5], -p[4]], [-p[2], -p[4], p[0] + p[3]]]
+        )
     else:
-        k_mat = np.array([[p[3] + p[5], -p[1], -p[2]],
-                          [-p[1], p[0] + p[5], -p[4]],
-                          [-p[2], -p[4], p[0] + p[3]]])
+        k_mat = np.array(
+            [
+                [p[3] + p[5], -p[1], -p[2]],
+                [-p[1], p[0] + p[5], -p[4]],
+                [-p[2], -p[4], p[0] + p[3]],
+            ]
+        )
 
     exb = np.cross(e, b)
 
@@ -79,11 +83,13 @@ def vht(e, b, flag: int = 1):
     # end revise.
     v_ht = np.linalg.solve(k_mat, exb_avg.T) * 1e3  # 9.12 in ISSI book
 
-    v_ht_hat = v_ht/np.linalg.norm(v_ht, keepdims=True)
+    v_ht_hat = v_ht / np.linalg.norm(v_ht, keepdims=True)
 
-    print("v_ht ={:7.4f} * {} = {} km/s".format(np.linalg.norm(v_ht),
-                                                np.array_str(v_ht_hat),
-                                                np.array_str(v_ht)))
+    print(
+        "v_ht ={:7.4f} * {} = {} km/s".format(
+            np.linalg.norm(v_ht), np.array_str(v_ht_hat), np.array_str(v_ht)
+        )
+    )
 
     # Calculate the goodness of the Hoffman Teller frame
     e_ht = e_vxb(v_ht, b)
@@ -96,22 +102,26 @@ def vht(e, b, flag: int = 1):
 
     delta_e = e_p.data - e_ht_p.data
 
-    poly_fit = np.polyfit(e_ht_p.data.reshape([len(e_ht_p) * 3]),
-                          e_p.data.reshape([len(e_p) * 3]), 1)
-    corr_coeff = np.corrcoef(e_ht_p.data.reshape([len(e_ht_p) * 3]),
-                             e_p.data.reshape([len(e_p) * 3]))
+    poly_fit = np.polyfit(
+        e_ht_p.data.reshape([len(e_ht_p) * 3]), e_p.data.reshape([len(e_p) * 3]), 1
+    )
+    corr_coeff = np.corrcoef(
+        e_ht_p.data.reshape([len(e_ht_p) * 3]), e_p.data.reshape([len(e_p) * 3])
+    )
 
     print("slope = {p[0]:6.4f}, offs = {p[1]:6.4f}".format(p=poly_fit))
     print("cc = {:6.4f}".format(corr_coeff[0, 1]))
 
-    dv_ht = np.sum(np.sum(delta_e ** 2)) / len(ind_data)
+    dv_ht = np.sum(np.sum(delta_e**2)) / len(ind_data)
     s_mat = (dv_ht / (2 * len(ind_data) - 3)) / k_mat
     dv_ht = np.sqrt(np.diag(s_mat)) * 1e3
 
     dv_ht_hat = dv_ht / np.linalg.norm(dv_ht)
 
-    print("dv_ht ={:7.4f} * {} = {} km/s".format(np.linalg.norm(dv_ht),
-                                                 np.array_str(dv_ht_hat),
-                                                 np.array_str(dv_ht)))
+    print(
+        "dv_ht ={:7.4f} * {} = {} km/s".format(
+            np.linalg.norm(dv_ht), np.array_str(dv_ht_hat), np.array_str(dv_ht)
+        )
+    )
 
     return v_ht, e_ht, dv_ht

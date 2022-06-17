@@ -61,7 +61,7 @@ def dft_time_shift(inp, tau):
     if not n_p % 2:
         sig_fft[int(n_p / 2 + 1)] = 0
 
-    freq = ((np.arange(n_p) + np.floor(n_p / 2)) % n_p - np.floor(n_p / 2))
+    freq = (np.arange(n_p) + np.floor(n_p / 2)) % n_p - np.floor(n_p / 2)
     freq /= n_p
 
     # Backward FFT

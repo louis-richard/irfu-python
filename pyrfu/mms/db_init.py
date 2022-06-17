@@ -31,12 +31,10 @@ def db_init(local_data_dir):
     pkg_path = os.path.dirname(os.path.abspath(__file__))
 
     # Read the current version of the configuration
-    with open(os.path.join(pkg_path, "config.json"), "r") as f:
-        config = json.load(f)
+    with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        config = json.load(fs)
 
     # Overwrite the configuration file with the new path
-    with open(os.path.join(pkg_path, "config.json"), "w") as f:
+    with open(os.path.join(pkg_path, "config.json"), "w") as fs:
         config["local_data_dir"] = local_data_dir
-        json.dump(config, f)
-
-    return
+        json.dump(config, fs)

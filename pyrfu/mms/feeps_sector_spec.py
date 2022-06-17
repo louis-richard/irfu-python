@@ -38,8 +38,8 @@ def feeps_sector_spec(inp_alle):
 
     out_dict = {k: inp_alle[k] for k in inp_alle if k not in sensors_eyes}
 
-    for se in sensors_eyes:
-        sensor_data = inp_alle[se].data
+    for sensors_eye in sensors_eyes:
+        sensor_data = inp_alle[sensors_eye].data
 
         spin_starts = np.where(sector_data[:-1] > sector_data[1:])[0] + 1
 
@@ -49,17 +49,17 @@ def feeps_sector_spec(inp_alle):
 
         for i, spin in enumerate(spin_starts):
             # find the sectors for this spin
-            s_ = sector_data[c_start:spin]
+            spin_sect = sector_data[c_start:spin]
 
-            sector_spec[i, s_] = np.nanmean(sensor_data[c_start:spin, :],
-                                            axis=1)
+            sector_spec[i, spin_sect] = np.nanmean(sensor_data[c_start:spin, :], axis=1)
 
             c_start = spin
 
-        out_dict[se] = xr.DataArray(sector_spec,
-                                    coords=[sector_time[spin_starts],
-                                            np.arange(64)],
-                                    dims=["time", "sectornum"])
+        out_dict[sensors_eye] = xr.DataArray(
+            sector_spec,
+            coords=[sector_time[spin_starts], np.arange(64)],
+            dims=["time", "sectornum"],
+        )
 
     out = xr.Dataset(out_dict)
 

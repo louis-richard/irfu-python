@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+import numpy as np
 from scipy import constants
 
 __author__ = "Louis Richard"
@@ -17,30 +18,32 @@ def _estimate_capa_disk(radius):
 
 
 def _estimate_capa_sphe(radius):
-    return 4 * pi * constants.epsilon_0 * radius
+    return 4 * np.pi * constants.epsilon_0 * radius
 
 
 def _estimate_capa_wire(radius, length):
-    if not radius or radius == 0 or not lenght:
-        return None
+    if not radius or radius == 0 or not length:
+        out = None
     elif length and radius and length >= 10 * radius:
         l_ = np.log(length / radius)
         out = length / l_ * (1 + 1 / l_ * (1 - np.log(2)))
-        return 2 * pi * constants.epsilon_0 * out
+        out *= 2 * np.pi * constants.epsilon_0
     else:
-        raise ValueError("capacitance_wire requires length at least 10 times "
-                         "the radius!")
+        raise ValueError(
+            "capacitance_wire requires length at least 10 times " "the radius!"
+        )
+    return out
 
 
 def _estimate_capa_cyli(a, h):
-    coef = 4 * np.pi ** 2 * a * constants.epsilon_0
+    coef = 4 * np.pi**2 * a * constants.epsilon_0
 
-    if .5 < h / a < 4:
-        c_1 = h / (2. * a * (np.log(16 * h / a) ** 2 + np.pi ** 2 / 12))
+    if 0.5 < h / a < 4:
+        c_1 = h / (2.0 * a * (np.log(16 * h / a) ** 2 + np.pi**2 / 12))
         out = coef * np.pi * c_1
     elif h / a >= 4:
         o_m = 2 * (np.log(4 * h / a) - 1)
-        c_1 = 2 * h / (np.pi * a) * (1. / o_m + (4 - np.pi ** 2) / o_m ** 3)
+        c_1 = 2 * h / (np.pi * a) * (1.0 / o_m + (4 - np.pi**2) / o_m**3)
         out = coef * c_1
     else:
         raise ValueError("length less than diameter, do not have formula yet")

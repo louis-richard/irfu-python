@@ -8,8 +8,16 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from ..pyrf import (filt, calc_dt, resample, convert_fac, ts_scalar,
-                    extend_tint, time_clip, ts_vec_xyz)
+from ..pyrf import (
+    filt,
+    calc_dt,
+    resample,
+    convert_fac,
+    ts_scalar,
+    extend_tint,
+    time_clip,
+    ts_vec_xyz,
+)
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -19,8 +27,16 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, min_freq: float = 10.,
-                     max_freq: float = 0., lowpass_b_xyz: float = 2.):
+def lh_wave_analysis(
+    tints,
+    e_xyz,
+    b_scm,
+    b_xyz,
+    n_e,
+    min_freq: float = 10.0,
+    max_freq: float = 0.0,
+    lowpass_b_xyz: float = 2.0,
+):
     r"""Calculates lower-hybrid wave properties from MMS data
 
     Parameters
@@ -98,7 +114,7 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, min_freq: float = 10.,
     phi_b = ts_scalar(b_scm_fac.time.data, phi_b)
 
     # short buffer so phi_E does not begin at zero.
-    tint = extend_tint(tints, [-.2, .2])
+    tint = extend_tint(tints, [-0.2, 0.2])
 
     e_xyz = time_clip(e_xyz, tint)
     phi_bs = time_clip(phi_b, tints)
@@ -165,9 +181,7 @@ def lh_wave_analysis(tints, e_xyz, b_scm, b_xyz, n_e, min_freq: float = 10.,
     phi_e_best = ts_scalar(phi_bs.time.data, phi_e_best)
     v_best = vph_vec[corr_vpos]
 
-    options = dict(coords=[phi_bs.time, ["Ebest", "Bs"]],
-                   dims=["time", "comp"])
-    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T,
-                          **options)
+    options = dict(coords=[phi_bs.time, ["Ebest", "Bs"]], dims=["time", "comp"])
+    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T, **options)
 
     return phi_eb, v_best, dir_best, thetas, corrs

@@ -67,16 +67,20 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
         energy = np.tile(energy0, (len(esteptable), 1))
 
-        energy[esteptable == 1] = np.tile(energy1,
-                                          (int(np.sum(esteptable)), 1))
+        energy[esteptable == 1] = np.tile(energy1, (int(np.sum(esteptable)), 1))
     if phi.ndim == 1:
         phi = np.tile(phi, (len(time), 1))
 
-    out_dict = {"data": (["time", "idx0", "idx1", "idx2"], data),
-                "phi": (["time", "idx1"], phi), "theta": (["idx2"], theta),
-                "energy": (["time", "idx0"], energy), "time": time,
-                "idx0": np.arange(energy.shape[1]),
-                "idx1": np.arange(phi.shape[1]), "idx2": np.arange(len(theta))}
+    out_dict = {
+        "data": (["time", "idx0", "idx1", "idx2"], data),
+        "phi": (["time", "idx1"], phi),
+        "theta": (["idx2"], theta),
+        "energy": (["time", "idx0"], energy),
+        "time": time,
+        "idx0": np.arange(energy.shape[1]),
+        "idx1": np.arange(phi.shape[1]),
+        "idx2": np.arange(len(theta)),
+    }
 
     out = xr.Dataset(out_dict)
 

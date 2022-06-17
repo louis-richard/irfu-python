@@ -34,9 +34,12 @@ def spectr_to_dataset(spectr):
 
     data = spectr.data
 
-    out_dict = {"data": (["time", "idx0"], data),
-                "energy": (["time", "idx0"], energy),
-                "time": time, "idx0": np.arange(energy.shape[1])}
+    out_dict = {
+        "data": (["time", "idx0"], data),
+        "energy": (["time", "idx0"], energy),
+        "time": time,
+        "idx0": np.arange(energy.shape[1]),
+    }
 
     out = xr.Dataset(out_dict)
 

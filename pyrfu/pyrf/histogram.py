@@ -16,8 +16,13 @@ __version__ = "2.3.14"
 __status__ = "Prototype"
 
 
-def histogram(inp, bins: Union[str, int, np.ndarray, list] = 100,
-              range: tuple = None, weights = None, density: bool = True):
+def histogram(
+    inp,
+    bins: Union[str, int, np.ndarray, list] = 100,
+    y_range: tuple = None,
+    weights=None,
+    density: bool = True,
+):
     r"""Computes 1D histogram of the inp with bins bins
 
     Parameters
@@ -26,7 +31,7 @@ def histogram(inp, bins: Union[str, int, np.ndarray, list] = 100,
         Time series of the input scalar variable.
     bins : str or int or array_like, Optional
         Number of bins. Default is ``bins=100``.
-    range : (float, float), Optional
+    y_range : (float, float), Optional
         The lower and upper range of the bins.  If not provided, range
         is simply ``(a.min(), a.max())``.  Values outside the range are
         ignored. The first element of the range must be less than or
@@ -55,8 +60,9 @@ def histogram(inp, bins: Union[str, int, np.ndarray, list] = 100,
 
     """
 
-    hist, bins = np.histogram(inp.data, bins=bins, range=range,
-                              weights=weights, density=density)
+    hist, bins = np.histogram(
+        inp.data, bins=bins, range=y_range, weights=weights, density=density
+    )
     bin_center = (bins[1:] + bins[:-1]) * 0.5
 
     out = xr.DataArray(hist, coords=[bin_center], dims=["bins"])

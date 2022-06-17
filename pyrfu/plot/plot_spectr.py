@@ -16,9 +16,16 @@ __status__ = "Prototype"
 plt.style.use("seaborn-ticks")
 
 
-def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
-                clim: list = None, cmap: str = "", colorbar: bool = True,
-                **kwargs):
+def plot_spectr(
+    axis,
+    inp,
+    yscale: str = "linear",
+    cscale: str = "linear",
+    clim: list = None,
+    cmap: str = "",
+    colorbar: bool = True,
+    **kwargs
+):
     r"""Plot a spectrogram using pcolormesh.
 
     Parameters
@@ -64,8 +71,7 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
-            options = dict(norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]),
-                           cmap=cmap)
+            options = dict(norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]), cmap=cmap)
         else:
             options = dict(norm=mcolors.LogNorm(), cmap=cmap)
     else:
@@ -76,10 +82,11 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
 
     x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
-    image = axis.pcolormesh(x_data.data, y_data.data, inp.data.T,
-                            rasterized=True, shading="auto", **options)
+    image = axis.pcolormesh(
+        x_data.data, y_data.data, inp.data.T, rasterized=True, shading="auto", **options
+    )
 
-    if x_data.dtype == '<M8[ns]':
+    if x_data.dtype == "<M8[ns]":
         locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = mdates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)
@@ -97,7 +104,7 @@ def plot_spectr(axis, inp, yscale: str = "linear", cscale: str = "linear",
             pad = 0.01
 
         pos = axis.get_position()
-        cax = fig.add_axes([pos.x0+pos.width+pad, pos.y0, 0.01, pos.height])
+        cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height])
         fig.colorbar(mappable=image, cax=cax, ax=axis)
         cax.set_axisbelow(False)
 

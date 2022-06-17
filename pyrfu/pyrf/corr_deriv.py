@@ -67,17 +67,21 @@ def corr_deriv(inp0, inp1, flag: bool = False):
     ind1_m = ind_zeros1[ind_zeros1_m]
 
     t_zeros1_p = dtx1[ind1_p] + (dtx1[ind1_p + 1] - dtx1[ind1_p]) / (
-            1 + np.abs(dx1[ind1_p + 1]) / np.abs(dx1[ind1_p]))
+        1 + np.abs(dx1[ind1_p + 1]) / np.abs(dx1[ind1_p])
+    )
     t_zeros1_m = dtx1[ind1_m] + (dtx1[ind1_m + 1] - dtx1[ind1_m]) / (
-            1 + np.abs(dx1[ind1_m + 1]) / np.abs(dx1[ind1_m]))
+        1 + np.abs(dx1[ind1_m + 1]) / np.abs(dx1[ind1_m])
+    )
 
     ind2_p = ind_zeros2[ind_zeros2_p]
     ind2_m = ind_zeros2[ind_zeros2_m]
 
     t_zeros2_p = dtx2[ind2_p] + (dtx2[ind2_p + 1] - dtx2[ind2_p]) / (
-            1 + np.abs(dx2[ind2_p + 1]) / np.abs(dx2[ind2_p]))
+        1 + np.abs(dx2[ind2_p + 1]) / np.abs(dx2[ind2_p])
+    )
     t_zeros2_m = dtx2[ind2_m] + (dtx2[ind2_m + 1] - dtx2[ind2_m]) / (
-            1 + np.abs(dx2[ind2_m + 1]) / np.abs(dx2[ind2_m]))
+        1 + np.abs(dx2[ind2_m + 1]) / np.abs(dx2[ind2_m])
+    )
 
     # Remove repeating points
     t_zeros1_p = np.delete(t_zeros1_p, np.where(np.diff(t_zeros1_p) == 0)[0])
@@ -111,17 +115,21 @@ def corr_deriv(inp0, inp1, flag: bool = False):
         ind1_m = ind_zeros1[ind_zeros1_m]
 
         t_zeros1_p = tx1[ind1_p] + (tx1[ind1_p + 1] - tx1[ind1_p]) / (
-                1 + np.abs(inp0[ind1_p + 1]) / np.abs(inp0[ind1_p]))
+            1 + np.abs(inp0[ind1_p + 1]) / np.abs(inp0[ind1_p])
+        )
         t_zeros1_m = tx1[ind1_m] + (tx1[ind1_m + 1] - tx1[ind1_m]) / (
-                1 + np.abs(inp0[ind1_m + 1]) / np.abs(inp0[ind1_m]))
+            1 + np.abs(inp0[ind1_m + 1]) / np.abs(inp0[ind1_m])
+        )
 
         ind2_p = ind_zeros2[ind_zeros2_p]
         ind2_m = ind_zeros2[ind_zeros2_m]
 
         t_zeros2_p = tx2[ind2_p] + (tx2[ind2_p + 1] - tx2[ind2_p]) / (
-                1 + np.abs(inp1[ind2_p + 1]) / np.abs(inp1[ind2_p]))
+            1 + np.abs(inp1[ind2_p + 1]) / np.abs(inp1[ind2_p])
+        )
         t_zeros2_m = tx2[ind2_m] + (tx2[ind2_m + 1] - tx2[ind2_m]) / (
-                1 + np.abs(inp1[ind2_m + 1]) / np.abs(inp1[ind2_m]))
+            1 + np.abs(inp1[ind2_m + 1]) / np.abs(inp1[ind2_m])
+        )
 
     else:
         # 2nd derivative
@@ -147,17 +155,21 @@ def corr_deriv(inp0, inp1, flag: bool = False):
         ind1_m = ind_zeros1[ind_zeros1_m]
 
         t_zeros1_p = dd_tx1[ind1_p] + (dd_tx1[ind1_p + 1] - dd_tx1[ind1_p]) / (
-                    1 + np.abs(ddx1[ind1_p + 1]) / np.abs(ddx1[ind1_p]))
+            1 + np.abs(ddx1[ind1_p + 1]) / np.abs(ddx1[ind1_p])
+        )
         t_zeros1_m = dd_tx1[ind1_m] + (dd_tx1[ind1_m + 1] - dd_tx1[ind1_m]) / (
-                    1 + np.abs(ddx1[ind1_m + 1]) / np.abs(ddx1[ind1_m]))
+            1 + np.abs(ddx1[ind1_m + 1]) / np.abs(ddx1[ind1_m])
+        )
 
         ind2_p = ind_zeros2[ind_zeros2_p]
         ind2_m = ind_zeros2[ind_zeros2_m]
 
         t_zeros2_p = dd_tx2[ind2_p] + (dd_tx2[ind2_p + 1] - dd_tx2[ind2_p]) / (
-                    1 + np.abs(ddx2[ind2_p + 1]) / np.abs(ddx2[ind2_p]))
+            1 + np.abs(ddx2[ind2_p + 1]) / np.abs(ddx2[ind2_p])
+        )
         t_zeros2_m = dd_tx2[ind2_m] + (dd_tx2[ind2_m + 1] - dd_tx2[ind2_m]) / (
-                    1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m]))
+            1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m])
+        )
 
     # Define identical pairs of two time axis
     t1_dd_p, t2_dd_p, _, _ = find_closest(t_zeros1_p, t_zeros2_p)

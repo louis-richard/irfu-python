@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pdb
+
 # 3rd party imports
 import xarray as xr
 
@@ -15,8 +15,12 @@ __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
 
-data_units_keys = {"flux": "intensity", "counts": "counts",
-                   "cps": "count_rate", "mask": "sector_mask"}
+data_units_keys = {
+    "flux": "intensity",
+    "counts": "counts",
+    "cps": "count_rate",
+    "mask": "sector_mask",
+}
 
 
 def _tokenize(tar_var):
@@ -39,8 +43,7 @@ def _tokenize(tar_var):
     return var, data_units
 
 
-def _get_oneeye(tar_var, e_id, tint, mms_id, verbose: bool = True,
-                data_path: str = ""):
+def _get_oneeye(tar_var, e_id, tint, mms_id, verbose: bool = True, data_path: str = ""):
     mms_id = int(mms_id)
 
     var, data_units = _tokenize(tar_var)
@@ -61,8 +64,9 @@ def _get_oneeye(tar_var, e_id, tint, mms_id, verbose: bool = True,
     else:
         raise ValueError("Invalid format of eye id")
 
-    out = db_get_ts(dset_name, f"mms{mms_id:d}_{pref}_{suf}", tint, verbose,
-                    data_path=data_path)
+    out = db_get_ts(
+        dset_name, f"mms{mms_id:d}_{pref}_{suf}", tint, verbose, data_path=data_path
+    )
 
     out.attrs["tmmode"] = var["tmmode"]
     out.attrs["lev"] = var["lev"]
@@ -72,8 +76,7 @@ def _get_oneeye(tar_var, e_id, tint, mms_id, verbose: bool = True,
     return out
 
 
-def get_feeps_alleyes(tar_var, tint, mms_id, verbose: bool = True,
-                      data_path: str = ""):
+def get_feeps_alleyes(tar_var, tint, mms_id, verbose: bool = True, data_path: str = ""):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all FEEPS eyes.
 
@@ -115,8 +118,11 @@ def get_feeps_alleyes(tar_var, tint, mms_id, verbose: bool = True,
 
     specie = tar_var.split("_")[0][-1]
 
-    var = {"tmmode": tar_var.split("_")[1], "lev": tar_var.split("_")[2],
-           "mmsId": mms_id}
+    var = {
+        "tmmode": tar_var.split("_")[1],
+        "lev": tar_var.split("_")[2],
+        "mmsId": mms_id,
+    }
 
     if specie == "e":
         var["dtype"] = "electron"
@@ -132,16 +138,19 @@ def get_feeps_alleyes(tar_var, tint, mms_id, verbose: bool = True,
 
     e_ids = [f"{k}-{s:d}" for k in active_eyes for s in active_eyes[k]]
 
-    out_dict = {"spinsectnum": db_get_ts(dset_name,
-                                         f"mms{mms_id:d}_{pref}_spinsectnum",
-                                         tint, data_path=data_path),
-                "pitch_angle": db_get_ts(dset_name,
-                                         f"mms{mms_id:d}_{pref}_pitch_angle",
-                                         tint, data_path=data_path)}
+    out_dict = {
+        "spinsectnum": db_get_ts(
+            dset_name, f"mms{mms_id:d}_{pref}_spinsectnum", tint, data_path=data_path
+        ),
+        "pitch_angle": db_get_ts(
+            dset_name, f"mms{mms_id:d}_{pref}_pitch_angle", tint, data_path=data_path
+        ),
+    }
 
     for e_id in e_ids:
-        out_dict[e_id] = _get_oneeye(tar_var, e_id, tint, mms_id, verbose,
-                                     data_path=data_path)
+        out_dict[e_id] = _get_oneeye(
+            tar_var, e_id, tint, mms_id, verbose, data_path=data_path
+        )
         dims = {o: n for o, n in zip(out_dict[e_id].dims, ["time", "energy"])}
         out_dict[e_id] = out_dict[e_id].rename(dims)
 

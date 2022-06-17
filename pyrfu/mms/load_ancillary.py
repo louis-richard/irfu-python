@@ -24,13 +24,14 @@ __version__ = "2.3.11"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
-logging.basicConfig(format='%(asctime)s: %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S',
-                    level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+)
 
 
-def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
-                   data_path: str = ""):
+def load_ancillary(
+    level_and_dtype, tint, mms_id, verbose: bool = True, data_path: str = ""
+):
     r"""Loads ancillary data.
 
     Parameters
@@ -58,8 +59,8 @@ def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as f:
-            config = json.load(f)
+        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+            config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
     else:
@@ -83,10 +84,10 @@ def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
     #   and FILETYPE is either DEFATT, PREDATT, DEFEPH, PREDEPH in uppercase
     #   and start/endDate is YYYYDOY
     #   and version is Vnn (.V00, .V01, etc..)
-    dir_pattern = os.sep.join([data_path, "ancillary", f"mms{mms_id}",
-                               level_and_dtype])
-    file_pattern = "_".join(["MMS{}".format(mms_id), level_and_dtype.upper(),
-                             "???????_???????.V??"])
+    dir_pattern = os.sep.join([data_path, "ancillary", f"mms{mms_id}", level_and_dtype])
+    file_pattern = "_".join(
+        ["MMS{}".format(mms_id), level_and_dtype.upper(), "???????_???????.V??"]
+    )
 
     files_in_tint = []
     out_files = []
@@ -94,8 +95,10 @@ def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
     files = glob.glob(os.sep.join([dir_pattern, file_pattern]))
 
     # find the files within the time interval
-    fname_fmt = f"MMS{mms_id}_{level_and_dtype.upper()}" \
-                f"_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
+    fname_fmt = (
+        f"MMS{mms_id}_{level_and_dtype.upper()}"
+        f"_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
+    )
     file_regex = re.compile(os.sep.join([dir_pattern, fname_fmt]))
     for file in files:
         time_match = file_regex.match(file)
@@ -126,13 +129,17 @@ def load_ancillary(level_and_dtype, tint, mms_id, verbose: bool = True,
         anc_dict = json.load(file)
 
     if verbose:
-        logging.info(f"Loading ancillary {level_and_dtype} files...")
+        logging.info("Loading ancillary %s files...", level_and_dtype)
 
     data_frame_dict = {}
 
     for i, file in enumerate(files_names):
-        rows = pd.read_csv(file, delim_whitespace=True, header=None,
-                           skiprows=anc_dict[level_and_dtype]["header"])
+        rows = pd.read_csv(
+            file,
+            delim_whitespace=True,
+            header=None,
+            skiprows=anc_dict[level_and_dtype]["header"],
+        )
 
         # Remove footer
         rows = rows[:][:-1]

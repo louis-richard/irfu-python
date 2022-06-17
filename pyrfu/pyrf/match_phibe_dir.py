@@ -99,9 +99,9 @@ def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
     y_ /= np.linalg.norm(y_)
     x_ = np.cross(y_, b_hat)
     x_ /= np.linalg.norm(x_)
-    x_ = np.tile(x_, (na_, 1))      # perp1
-    y_ = np.tile(y_, (na_, 1))      # perp2
-    z_ = np.tile(b_hat, (na_, 1))   # B / z direction, tries * 3
+    x_ = np.tile(x_, (na_, 1))  # perp1
+    y_ = np.tile(y_, (na_, 1))  # perp2
+    z_ = np.tile(b_hat, (na_, 1))  # B / z direction, tries * 3
 
     theta = np.linspace(0, 2 * np.pi - np.pi / na_, na_)  # angles
 
@@ -118,9 +118,9 @@ def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
     corr_vec = np.zeros(na_)
 
     # Allocate vectors, 4 first used for illustration
-    int_e_dt = np.zeros((len(e_xyz), na_))                          # potential
-    e_k, e_n = [np.zeros((len(e_xyz), na_)) for _ in range(2)]      #
-    de_k, de_n = [np.zeros((len(e_xyz), na_)) for _ in range(2)]    #
+    int_e_dt = np.zeros((len(e_xyz), na_))  # potential
+    e_k, e_n = [np.zeros((len(e_xyz), na_)) for _ in range(2)]  #
+    de_k, de_n = [np.zeros((len(e_xyz), na_)) for _ in range(2)]  #
 
     # Integrate E in all x - directions
     for k in range(na_):
@@ -132,14 +132,14 @@ def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
 
         # Get Phi_E = int(Ek), there's no minus since the field is integrated
         # in the opposite direction of the wave propagation direction.
-        prel_ = integrate(ts_scalar(e_xyz.time.data, de_k[:, k]),
-                          calc_dt(e_xyz))
+        prel_ = integrate(ts_scalar(e_xyz.time.data, de_k[:, k]), calc_dt(e_xyz))
         int_e_dt[:, k] = prel_.data - np.mean(prel_.data)
 
         # Get correlation
         corr_ = signal.correlate(int_e_dt[:, k], b_z[:, 1], mode="valid")
-        scale = np.sqrt(np.dot(int_e_dt[:, k], int_e_dt[:, k])
-                        * np.dot(b_z[:, 1], b_z[:, 1]))
+        scale = np.sqrt(
+            np.dot(int_e_dt[:, k], int_e_dt[:, k]) * np.dot(b_z[:, 1], b_z[:, 1])
+        )
         corr_vec[k] = corr_ / scale
 
     return x_, y_, z_, corr_vec, int_e_dt, b_z, b_0, de_k, de_n, e_k, e_n

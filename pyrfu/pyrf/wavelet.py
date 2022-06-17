@@ -30,8 +30,8 @@ def _scales(f_range, f_nyq, f_s, n_freqs, linear_df, delta_f):
 
         scales = f_nyq / (np.linspace(f_range[0], f_range[1], scale_number))
     else:
-        scale_min = np.log10(.5 * f_s / f_range[1])
-        scale_max = np.log10(.5 * f_s / f_range[0])
+        scale_min = np.log10(0.5 * f_s / f_range[1])
+        scale_max = np.log10(0.5 * f_s / f_range[0])
         scales = np.logspace(scale_min, scale_max, n_freqs)
 
     return scales
@@ -39,8 +39,9 @@ def _scales(f_range, f_nyq, f_s, n_freqs, linear_df, delta_f):
 
 @numba.jit(nopython=True, fastmath=True)
 def _ww(s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
-    w_w = s_ww * np.exp(-sigma * sigma
-                        * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2)
+    w_w = s_ww * np.exp(
+        -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2
+    )
     w_w = w_w * np.sqrt(1)
     return w_w
 
@@ -57,10 +58,16 @@ def _power_c(power, new_freq_mat):
     return power2
 
 
-def wavelet(inp, f_range: list = None, n_freqs: int = 200,
-            w_width: float = 5.36, delta_f: float = 100.,
-            linear_df: bool = False, cut_edge: bool = True,
-            return_power: bool = True):
+def wavelet(
+    inp,
+    f_range: list = None,
+    n_freqs: int = 200,
+    w_width: float = 5.36,
+    delta_f: float = 100.0,
+    linear_df: bool = False,
+    cut_edge: bool = True,
+    return_power: bool = True,
+):
     r"""Computes wavelet spectrogram based on fast FFT algorithm.
 
     Parameters
@@ -102,7 +109,7 @@ def wavelet(inp, f_range: list = None, n_freqs: int = 200,
     scale_min, scale_max = [0.01, 2]
 
     if f_range is None:
-        f_range = [.5 * f_s / 10 ** scale_max, .5 * f_s / 10 ** scale_min]
+        f_range = [0.5 * f_s / 10**scale_max, 0.5 * f_s / 10**scale_min]
 
     f_nyq, scale_number, sigma = [f_s / 2, n_freqs, w_width / (f_s / 2)]
 
@@ -119,7 +126,7 @@ def wavelet(inp, f_range: list = None, n_freqs: int = 200,
     scales[np.isnan(scales)] = 0
 
     # Find the frequencies for an FFT of all data
-    freq = f_s * .5 * np.arange(1, 1 + len(data) / 2) / (len(data) / 2)
+    freq = f_s * 0.5 * np.arange(1, 1 + len(data) / 2) / (len(data) / 2)
 
     # The frequencies corresponding to FFT
     frequencies = np.hstack([0, freq, -np.flip(freq[:-1])])
@@ -127,7 +134,7 @@ def wavelet(inp, f_range: list = None, n_freqs: int = 200,
     # Get the correct frequencies for the wavelet transform
     new_freq = f_nyq / scales
 
-    new_freq_mat, temp_freq = np.meshgrid(new_freq, frequencies, sparse=True)
+    new_freq_mat, _ = np.meshgrid(new_freq, frequencies, sparse=True)
 
     _, frequencies_mat = np.meshgrid(scales, frequencies, sparse=True)
 
@@ -166,18 +173,16 @@ def wavelet(inp, f_range: list = None, n_freqs: int = 200,
             censure = np.floor(2 * scales).astype(int)
 
             for j in range(scale_number):
-                power2[:censure[j], j] = np.nan
+                power2[: censure[j], j] = np.nan
 
-                power2[len(data_col) - censure[j]:len(data_col), j] = np.nan
+                power2[len(data_col) - censure[j] : len(data_col), j] = np.nan
         if len(inp.shape) == 2:
             out_dict[inp.comp.data[i]] = (["time", "frequency"], power2)
 
     if len(inp.shape) == 1:
-        out = xr.DataArray(power2, coords=[time, new_freq],
-                           dims=["time", "frequency"])
+        out = xr.DataArray(power2, coords=[time, new_freq], dims=["time", "frequency"])
     elif len(inp.shape) == 2:
-        out = xr.Dataset(out_dict,
-                         coords={"time": time, "frequency": new_freq})
+        out = xr.Dataset(out_dict, coords={"time": time, "frequency": new_freq})
     else:
         raise TypeError("Invalid shape")
 

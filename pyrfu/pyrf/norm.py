@@ -47,6 +47,6 @@ def norm(inp):
 
     """
 
-    out = np.sqrt(np.sum(inp ** 2, axis=1))
+    out = np.sqrt(np.sum(inp**2, axis=1))
 
     return out

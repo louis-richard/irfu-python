@@ -18,8 +18,9 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def eis_moments(inp, specie: str = "proton", n_bg: xr.DataArray = None,
-                p_bg: xr.DataArray = None):
+def eis_moments(
+    inp, specie: str = "proton", n_bg: xr.DataArray = None, p_bg: xr.DataArray = None
+):
     r"""Computes the partial moments given the omni-directional differential
     particle flux and the ion specie under the assumption of angular isotropy
     and non-relativistic ions using the formula from [1]_
@@ -88,43 +89,44 @@ def eis_moments(inp, specie: str = "proton", n_bg: xr.DataArray = None,
     energy = 1e3 * constants.electron_volt * inp.energy.data.copy()
     intensity = 1e4 * inp.data.copy() / (1e3 * constants.electron_volt)
 
-    a_ = 4 * np.pi * np.sqrt(mass / 2)
+    fact = 4 * np.pi * np.sqrt(mass / 2)
 
     # Define the integrand as a function of the differential particle flux,
     # the energy and the moment order
-    def _int(i_, e_, n_):
-        return np.sqrt(e_) ** n_ * (i_ / e_) * np.sqrt(e_)
+    def _int(flux_c, energy_c, order):
+        return np.sqrt(energy_c) ** order * (flux_c / energy_c) * np.sqrt(energy_c)
 
     # Zeroth order moment number density m^-3
-    n = a_ * integrate.simps(_int(intensity, energy, 0), energy, axis=1)
+    n_i = fact * integrate.simps(_int(intensity, energy, 0), energy, axis=1)
 
     # First order moment bulk velocity m s^-1
-    v = a_ * integrate.simps(_int(intensity, energy, 1), energy, axis=1)
-    v /= n * np.sqrt(mass / 2)
+    v_i = fact * integrate.simps(_int(intensity, energy, 1), energy, axis=1)
+    v_i /= n_i * np.sqrt(mass / 2)
     # Second order moment pressure in N m^-2 (Pa)
-    p = a_ * integrate.simps(_int(intensity, energy, 2), energy, axis=1)
-    t = p / (n * constants.Boltzmann)  # K
+    p_i = fact * integrate.simps(_int(intensity, energy, 2), energy, axis=1)
+    t_i = p_i / (n_i * constants.Boltzmann)  # K
 
     # Convert to usual units
-    n = ts_scalar(inp.time.data, n * 1e-6)  # cm^-3
-    v = ts_scalar(inp.time.data, v * 1e-3)  # km s^-1
-    p = ts_scalar(inp.time.data, p * 1e9)  # nPa
-    t = ts_scalar(inp.time.data,
-                  t * constants.Boltzmann / constants.elementary_charge)  # eV
+    n_i = ts_scalar(inp.time.data, n_i * 1e-6)  # cm^-3
+    v_i = ts_scalar(inp.time.data, v_i * 1e-3)  # km s^-1
+    p_i = ts_scalar(inp.time.data, p_i * 1e9)  # nPa
+    t_i = ts_scalar(
+        inp.time.data, t_i * constants.Boltzmann / constants.elementary_charge
+    )  # eV
 
     if n_bg is not None and p_bg is not None:
         # Resample background to differential particle flux sampling
-        n_bg = resample(n_bg, n)
-        p_bg = resample(p_bg, p)
+        n_bg = resample(n_bg, n_i)
+        p_bg = resample(p_bg, p_i)
 
         # Remove background density
-        n.data -= n_bg.data
+        n_i.data -= n_bg.data
 
         # Remove background pressure
-        p.data -= 3. * p_bg
-        p.data += constants.proton_mass * n * v ** 2 * (n_bg / (n - n_bg))
+        p_i.data -= 3.0 * p_bg
+        p_i.data += constants.proton_mass * n_i * v_i**2 * (n_bg / (n_i - n_bg))
 
         # Update temperature
-        t.data = 1e-9 * p.data / (1e6 * n.data * constants.electron_volt)
+        t_i.data = 1e-9 * p_i.data / (1e6 * n_i.data * constants.electron_volt)
 
-    return n, v, p, t
+    return n_i, v_i, p_i, t_i

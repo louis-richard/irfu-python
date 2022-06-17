@@ -16,12 +16,12 @@ __status__ = "Prototype"
 def _phxtof_calibration(energy, alpha, beta, gamma):
     r"""Pulse Height x Time Of Flight correction model from EPD Data Product
     Guide"""
-    return 1 / (.5 * (1 + alpha * (np.tanh((energy - beta) / gamma) + 1)))
+    return 1 / (0.5 * (1 + alpha * (np.tanh((energy - beta) / gamma) + 1)))
 
 
 def _extof_calibration(energy, alpha, beta, gamma):
     r"""Energy x Time Of Flight correction model from EPD Data Product Guide"""
-    return 1 / (.5 * (1 + alpha * (1 - np.tanh((energy - beta) / gamma) + 1)))
+    return 1 / (0.5 * (1 + alpha * (1 - np.tanh((energy - beta) / gamma) + 1)))
 
 
 def eis_proton_correction(flux_eis):
@@ -67,7 +67,7 @@ def eis_proton_correction(flux_eis):
     """
 
     #  Coefficients from EPD Data Product Guide
-    alpha_, beta_, gamma_ = [-.3, 49e-3, 1e-3]
+    alpha_, beta_, gamma_ = [-0.3, 49e-3, 1e-3]
 
     # Pulse Height x Time Of Flight (PHxTOF) energy correction factor
     energy_phxtof = flux_eis.energy.data[:7]

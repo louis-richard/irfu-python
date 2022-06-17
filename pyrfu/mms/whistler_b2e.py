@@ -55,27 +55,28 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
         raise IndexError("B2 and freq lengths do not agree!")
 
     # Calculate cold plasma parameters
-    r = 1 - fpe ** 2 / (freq * (freq - fce))
-    l = 1 - fpe ** 2 / (freq * (freq + fce))
-    p = 1 - fpe ** 2 / freq ** 2
+    r = 1 - fpe**2 / (freq * (freq - fce))
+    l = 1 - fpe**2 / (freq * (freq + fce))
+    p = 1 - fpe**2 / freq**2
     d = 0.5 * (r - l)
     s = 0.5 * (r + l)
 
     n2 = r * l * np.sin(theta_k) ** 2
     n2 += p * s * (1 + np.cos(theta_k) ** 2)
     n2 -= np.sqrt(
-        (r * l - p * s) ** 2 * np.sin(theta_k) ** 4 + 4 * (p ** 2) * (
-                    d ** 2) * np.cos(theta_k) ** 2)
-    n2 /= (2 * (s * np.sin(theta_k) ** 2 + p * np.cos(theta_k) ** 2))
+        (r * l - p * s) ** 2 * np.sin(theta_k) ** 4
+        + 4 * (p**2) * (d**2) * np.cos(theta_k) ** 2
+    )
+    n2 /= 2 * (s * np.sin(theta_k) ** 2 + p * np.cos(theta_k) ** 2)
 
-    e_temp1 = (p - n2 * np.sin(theta_k) ** 2) ** 2. * (
-                (d / (s - n2)) ** 2 + 1) + (
-                          n2 * np.cos(theta_k) * np.sin(theta_k)) ** 2
+    e_temp1 = (p - n2 * np.sin(theta_k) ** 2) ** 2.0 * ((d / (s - n2)) ** 2 + 1) + (
+        n2 * np.cos(theta_k) * np.sin(theta_k)
+    ) ** 2
     e_temp2 = (d / (s - n2)) ** 2 * (
-                p - n2 * np.sin(theta_k) ** 2) ** 2 + p ** 2 * np.cos(
-        theta_k) ** 2
+        p - n2 * np.sin(theta_k) ** 2
+    ) ** 2 + p**2 * np.cos(theta_k) ** 2
 
-    e2 = (constants.speed_of_light ** 2 / n2) * e_temp1 / e_temp2 * b2.data
+    e2 = (constants.speed_of_light**2 / n2) * e_temp1 / e_temp2 * b2.data
     e2 *= 1e-12
 
     return e2

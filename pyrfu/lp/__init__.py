@@ -27,9 +27,14 @@ class Plasma(object):
     each component is characterized by charge size and sign, density, mass of
     particles, temperature and drift velocity."""
 
-    def __init__(self, name: str = "", n: Union[float, list] = None,
-                 mp: Union[float, list] = None, qe: Union[int, list] = None,
-                 t: Union[float, list] = None):
+    def __init__(
+        self,
+        name: str = "",
+        n: Union[float, list] = None,
+        mp: Union[float, list] = None,
+        qe: Union[int, list] = None,
+        t: Union[float, list] = None,
+    ):
         r"""Setup plasma properties. They can be a single number applicable to
         all plasma components or a vector of the length equal to the number of
         plasma components.
@@ -72,11 +77,15 @@ class LangmuirProbe(object):
     cylindrical/conical probes. Probe belonging to LangmuirProbe is defined
     with properties."""
 
-    def __init__(self, name: str, surface: str = "cluster",
-                 r_sphere: Union[list, float, int] = None,
-                 r_wire: Union[list, float, int] = None,
-                 l_wire: Union[list, float, int] = None,
-                 s_photoemission: float = None):
+    def __init__(
+        self,
+        name: str,
+        surface: str = "cluster",
+        r_sphere: Union[list, float, int] = None,
+        r_wire: Union[list, float, int] = None,
+        l_wire: Union[list, float, int] = None,
+        s_photoemission: float = None,
+    ):
         r"""Setup probe properties.
 
         Parameters
@@ -103,8 +112,10 @@ class LangmuirProbe(object):
 
         """
 
-        message = "The wire radius should be a numeric vector of " \
-                  "length 1 (wire) or 2 (stazer)."
+        message = (
+            "The wire radius should be a numeric vector of "
+            "length 1 (wire) or 2 (stazer)."
+        )
         assert not r_wire or np.atleast_1d(r_wire) <= 2, message
 
         self.name = name
@@ -141,17 +152,24 @@ class LangmuirProbe(object):
         a_wire_sunlit, a_wire_total = [0, 0]
 
         if isinstance(self.r_sphere, (float, int)):
-            a_sphere_sunlit = np.pi * self.r_sphere ** 2
+            a_sphere_sunlit = np.pi * self.r_sphere**2
             a_sphere_total = 4 * a_sphere_sunlit
 
-        if self.r_wire and isinstance(self.r_wire, (float, int, list)) \
-                and self.l_wire and isinstance(self.l_wire, (float, int)):
+        if (
+            self.r_wire
+            and isinstance(self.r_wire, (float, int, list))
+            and self.l_wire
+            and isinstance(self.l_wire, (float, int))
+        ):
             a_wire_sunlit = 2 * np.mean(self.r_wire) * self.l_wire
             a_wire_total = np.pi * a_wire_sunlit
 
-        self.area = {"sphere": a_sphere_total, "wire": a_wire_total,
-                     "total": a_sphere_total + a_wire_total,
-                     "sunlit": a_sphere_sunlit + a_wire_sunlit}
+        self.area = {
+            "sphere": a_sphere_total,
+            "wire": a_wire_total,
+            "total": a_sphere_total + a_wire_total,
+            "sunlit": a_sphere_sunlit + a_wire_sunlit,
+        }
         self.area["total_sunlit"] = self.area["total"] / self.area["sunlit"]
         self.area["sunlit_total"] = 1 / self.area["total_sunlit"]
 
@@ -171,17 +189,22 @@ class LangmuirProbe(object):
         c_wire = 0
         c_sphere = estimate("capacitance_sphere", self.r_sphere)
 
-        if self.r_wire and isinstance(self.r_wire, (float, int, list)) \
-                and self.l_wire and isinstance(self.l_wire, (float, int)):
+        if (
+            self.r_wire
+            and isinstance(self.r_wire, (float, int, list))
+            and self.l_wire
+            and isinstance(self.l_wire, (float, int))
+        ):
             if self.l_wire > 10 * list([self.r_wire]):
-                c_wire = estimate("capacitance_wire", np.mean(self.r_wire),
-                                  self.l_wire)
+                c_wire = estimate("capacitance_wire", np.mean(self.r_wire), self.l_wire)
             elif self.l_wire > list(self.r_wire):
-                c_wire = estimate("capacitance_cylinder", np.mean(self.r_wire),
-                                  self.l_wire)
+                c_wire = estimate(
+                    "capacitance_cylinder", np.mean(self.r_wire), self.l_wire
+                )
             else:
-                raise ValueError("estimate of capacitance for cylinder "
-                                 "requires length > radius")
+                raise ValueError(
+                    "estimate of capacitance for cylinder " "requires length > radius"
+                )
 
         self.capacitance = np.sum([c_sphere, c_wire])
 
@@ -190,4 +213,4 @@ class LangmuirProbe(object):
         if self.surface:
             self.s_photoemission = self.s_photoemission
         else:
-            self.s_photoemission = photo_current(1., 0., 1., self.surface)
+            self.s_photoemission = photo_current(1.0, 0.0, 1.0, self.surface)

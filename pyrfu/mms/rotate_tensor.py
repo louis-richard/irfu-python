@@ -123,7 +123,7 @@ def rotate_tensor(*args):
         if nargin == rot_flag_pos:
             raise ValueError("Vector(s) is(are) missing.")
 
-        vectors = list(args[rot_flag_pos + 1:])
+        vectors = list(args[rot_flag_pos + 1 :])
 
         if len(vectors) == 1:
             r_x = vectors[0]
@@ -156,33 +156,51 @@ def rotate_tensor(*args):
     for i in range(len(p_times)):
         rot_temp = np.squeeze(rot_mat[i, :, :])
 
-        p_tensor_p[i, :, :] = np.matmul(np.matmul(rot_temp, np.squeeze(p_tensor.data[i, :, :])),
-                                        np.transpose(rot_temp))
+        p_tensor_p[i, :, :] = np.matmul(
+            np.matmul(rot_temp, np.squeeze(p_tensor.data[i, :, :])),
+            np.transpose(rot_temp),
+        )
 
     if ppeq:
         thetas = 0.5 * np.arctan(
-            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]))
+            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2])
+        )
 
         for i, theta in enumerate(thetas):
             if np.isnan(theta):
                 theta = 0
 
             rot_temp = np.array(
-                [[1, 0, 0], [0, np.cos(theta), np.sin(theta)], [0, -np.sin(theta), np.cos(theta)]])
+                [
+                    [1, 0, 0],
+                    [0, np.cos(theta), np.sin(theta)],
+                    [0, -np.sin(theta), np.cos(theta)],
+                ]
+            )
 
             p_tensor_p[i, :, :] = np.matmul(
-                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])), np.transpose(rot_temp))
+                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])),
+                np.transpose(rot_temp),
+            )
 
     if qqeq:
         thetas = 0.5 * np.arctan(
-            (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]))
+            (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1])
+        )
 
         for i, theta in enumerate(thetas):
             rot_temp = np.array(
-                [[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
+                [
+                    [1, 0, 0],
+                    [0, np.cos(theta), -np.sin(theta)],
+                    [0, np.sin(theta), np.cos(theta)],
+                ]
+            )
 
             p_tensor_p[i, :, :] = np.matmul(
-                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])), np.transpose(rot_temp))
+                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])),
+                np.transpose(rot_temp),
+            )
 
     # Construct output
     p_new = ts_tensor_xyz(p_times, p_tensor_p)
