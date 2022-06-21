@@ -49,10 +49,10 @@ def get_dist(file_path, cdf_name, tint):
             depend2_key = file.varattsget(cdf_name)["DEPEND_2"]
             depend3_key = file.varattsget(cdf_name)["DEPEND_3"]
 
-            times = file.varget(depend0_key, starttime=tint[0], endtime=tint[1])
-            times = cdfepoch.to_datetime(times, to_np=True)
-
-            if not times.size:
+            try:
+                times = file.varget(depend0_key, starttime=tint[0], endtime=tint[1])
+                times = cdfepoch.to_datetime(times, to_np=True)
+            except:
                 return None
 
             dist = file.varget(cdf_name, starttime=tint[0], endtime=tint[1])
