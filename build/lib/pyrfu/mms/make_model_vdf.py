@@ -137,16 +137,12 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
     r_mat = np.zeros((n_ti, n_en))
 
     for i in range(n_ti):
-        x_mat[i, ...] = np.outer(
-            -np.cos(np.deg2rad(vdf.phi.data[i, :])), np.sin(np.deg2rad(vdf.theta.data))
-        )
-        y_mat[i, ...] = np.outer(
-            -np.sin(np.deg2rad(vdf.phi.data[i, :])), np.sin(np.deg2rad(vdf.theta.data))
-        )
+        x_mat[i, ...] = np.outer(-np.cos(np.deg2rad(vdf.phi.data[i, :])),
+                                 np.sin(np.deg2rad(vdf.theta.data)))
+        y_mat[i, ...] = np.outer(-np.sin(np.deg2rad(vdf.phi.data[i, :])),
+                                 np.sin(np.deg2rad(vdf.theta.data)))
         z_mat[i, ...] = np.outer(-np.ones(n_ph), np.cos(np.deg2rad(vdf.theta.data)))
-        r_mat[i, ...] = np.real(
-            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass)
-        )
+        r_mat[i, ...] = np.real(np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass))
 
     r_mat[r_mat == 0] = 0.0
 
@@ -159,23 +155,14 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
     x_p, y_p, z_p = [np.zeros((n_ti, n_ph, n_th)) for _ in range(3)]
 
     for i in range(n_ti):
-        x_p[i, ...] = (
-            x_mat[i, ...] * r_x[i, 0]
-            + y_mat[i, ...] * r_x[i, 1]
-            + z_mat[i, ...] * r_x[i, 2]
-        )
+        x_p[i, ...] = x_mat[i, ...] * r_x[i, 0] + y_mat[i, ...] * r_x[i, 1] \
+                      + z_mat[i, ...] * r_x[i, 2]
 
-        y_p[i, ...] = (
-            x_mat[i, ...] * r_y[i, 0]
-            + y_mat[i, ...] * r_y[i, 1]
-            + z_mat[i, ...] * r_y[i, 2]
-        )
+        y_p[i, ...] = x_mat[i, ...] * r_y[i, 0] + y_mat[i, ...] * r_y[i, 1] \
+                      + z_mat[i, ...] * r_y[i, 2]
 
-        z_p[i, ...] = (
-            x_mat[i, ...] * r_z[i, 0]
-            + y_mat[i, ...] * r_z[i, 1]
-            + z_mat[i, ...] * r_z[i, 2]
-        )
+        z_p[i, ...] = x_mat[i, ...] * r_z[i, 0] + y_mat[i, ...] * r_z[i, 1] \
+                      + z_mat[i, ...] * r_z[i, 2]
 
     # Make 4D position matrix
     x_p = np.transpose(np.tile(x_p, [n_en, 1, 1, 1]), [1, 0, 2, 3])

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import pdb
+
 # Built-in imports
 import itertools
 
@@ -152,16 +154,9 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     m_mat = np.sin(np.deg2rad(theta_mat)) * delta_ang
 
-    epsilon = np.nansum(
-        np.nansum(
-            np.nansum(
-                m_mat * vdf_diff[:, int_energies, ...] * v_mat**2 * delta_v_mat,
-                axis=-1,
-            ),
-            axis=-1,
-        ),
-        axis=-1,
-    )
+    epsilon = np.nansum(np.nansum(np.nansum(m_mat * vdf_diff[:, int_energies, ...]
+                                            * v_mat ** 2 * delta_v_mat, axis=-1),
+                                  axis=-1), axis=-1)
 
     epsilon /= 1e6 * (n_s.data * 2)
 

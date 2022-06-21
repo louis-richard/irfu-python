@@ -1,0 +1,15 @@
+{
+  "defatt": {
+    "header": 49,
+    "time_format": "%Y-%jT%H:%M:%S.%f",
+    "columns_names": ["time", "elapsed_sec", "q1", "q2", "q3", "qc", "wx",
+      "wy", "wz", "w_phase", "z_ra", "z_dec", "z_phase", "l_ra", "l_dec",
+      "l_phase", "p_ra", "p_dec", "p_phase", "nut", "qf"]
+
+  },
+  "defeph": {
+    "header": 14,
+    "time_format": "%Y-%j/%H:%M:%S.%f",
+    "columns_names": ["time", "epoch_mms_tai", "x", "y", "z", "vx", "vy", "vz"]
+  }
+}
