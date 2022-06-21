@@ -164,5 +164,6 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     )
 
     epsilon /= 1e6 * (n_s.data * 2)
+    epsilon = ts_scalar(vdf.time.data, epsilon)
 
     return epsilon
