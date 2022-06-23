@@ -214,5 +214,6 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
     model_vdf = vdf.copy()
     model_vdf.data.data = bi_max_dist
     model_vdf.data.data *= 1e18
+    model_vdf.attrs["UNITS"] = "s^3/km^6"
 
     return model_vdf
