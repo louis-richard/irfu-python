@@ -538,6 +538,10 @@
       "dtype": "dis-moms",
       "cdf_name": "dis_energyspectr_omni_fast"
     },
+    "defbgi_fpi_fast_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_spectr_bg_fast"
+    },
     "defe_fpi_fast_l2": {
       "dtype": "des-moms",
       "cdf_name": "des_energyspectr_omni_fast"
@@ -545,6 +549,10 @@
     "defi_fpi_brst_l2": {
       "dtype": "dis-moms",
       "cdf_name": "dis_energyspectr_omni_brst"
+    },
+    "defbgi_fpi_brst_l2": {
+      "dtype": "dis-moms",
+      "cdf_name": "dis_spectr_bg_brst"
     },
     "defe_fpi_brst_l2": {
       "dtype": "des-moms",
