@@ -203,7 +203,7 @@ def resample(
             coord = [ref.coords["time"].data]
 
             if len(inp.coords) > 1:
-                for k in inp.dims[1:]:
+                for k in list(inp.dims)[1:]:
                     coord.append(inp.coords[k].data)
 
             out = xr.DataArray(out_data, coords=coord, dims=inp.dims, attrs=inp.attrs)
@@ -218,7 +218,7 @@ def resample(
     coord = [ref.coords["time"]]
 
     if len(inp.coords) > 1:
-        for k in inp.dims[1:]:
+        for k in list(inp.dims)[1:]:
             coord.append(inp.coords[k].data)
 
     out = xr.DataArray(out_data, coords=coord, dims=inp.dims, attrs=inp.attrs)
