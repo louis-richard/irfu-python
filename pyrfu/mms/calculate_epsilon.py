@@ -75,11 +75,9 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     if vdf.attrs["species"][0].lower() == "e":
         m_s = constants.electron_mass
-        print("notice : Particles are electrons")
     elif vdf.attrs["species"][0].lower() == "i":
         sc_pot.data *= -1
         m_s = constants.proton_mass
-        print("notice : Particles are protons")
     else:
         raise ValueError("Invalid specie")
 

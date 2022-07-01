@@ -110,11 +110,9 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
     # Check whether particles are electrons or ions
     if vdf.attrs["species"][0].lower() == "e":
         p_mass = constants.electron_mass
-        print("notice : Particles are electrons")
     else:
         p_mass = constants.proton_mass
         sc_pot.data = -1.0 * sc_pot.data
-        print("notice : Particles are ions")
 
     # Convert moments to SI units
     vth_para = np.sqrt(2 * t_para.data * q_e / p_mass)
