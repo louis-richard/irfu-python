@@ -106,8 +106,15 @@ def get_dist(file_path, cdf_name, tint):
                 )
 
             if en0_name not in file.cdf_info()["zVariables"]:
-                energy0 = energy[1, :]
-                energy1 = energy[0, :]
+                if energy.ndim == 1:
+                    energy0 = energy
+                    energy1 = energy
+                elif energy.shape[0] == 1:
+                    energy0 = energy[0, :]
+                    energy1 = energy[0, :]
+                else:
+                    energy0 = energy[1, :]
+                    energy1 = energy[0, :]
             else:
                 energy0 = file.varget(en0_name)
                 energy1 = file.varget(en1_name)
