@@ -2,6 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="88475c3d-889d-493a-b18f-fb929feaa33b" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/dsl2gse.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/dsl2gse.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/dsl2gsm.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/dsl2gsm.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_projection.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_projection.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/avg_4sc.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/avg_4sc.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/convert_fac.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/convert_fac.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/ebsp.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/ebsp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/resample.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/resample.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -15,6 +23,7 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_pitch_angle_dist.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/convert_fac.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/calculate_epsilon.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/ts_append.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/list_files.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/filt.py" root0="FORCE_HIGHLIGHTING" />
@@ -23,6 +32,7 @@
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap_combine_sc.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/c_4_j.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_pad.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/make_model_vdf.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/mean_field.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/ts_time.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_feeps_alleyes.py" root0="FORCE_HIGHLIGHTING" />
@@ -38,8 +48,11 @@
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/autocorr.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/__init__.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_magnetosphere.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/dispersion/disp_surf_calc.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_heatmap.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_clines.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/annotate_heatmap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/make_labels.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_spectr.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_ts.py" root0="FORCE_HIGHLIGHTING" />
@@ -52,6 +65,7 @@
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/setup.cfg" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime64.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/optimize_nbins_2d.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/histogram.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/datetime642iso8601.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/correct_edp_probe_timing.py" root0="FORCE_HIGHLIGHTING" />
@@ -96,7 +110,34 @@
       <workItem from="1656433656411" duration="478000" />
       <workItem from="1656504714200" duration="370000" />
       <workItem from="1656570191236" duration="150000" />
-      <workItem from="1656570376019" duration="403000" />
+      <workItem from="1656570376019" duration="1148000" />
+      <workItem from="1656664005606" duration="5833000" />
+      <workItem from="1656683701205" duration="22000" />
+      <workItem from="1656685571956" duration="396000" />
+      <workItem from="1656917604938" duration="347000" />
+      <workItem from="1656938740271" duration="471000" />
+      <workItem from="1657114201503" duration="3111000" />
+      <workItem from="1657176401667" duration="751000" />
+      <workItem from="1657177415502" duration="1203000" />
+      <workItem from="1657188554574" duration="474000" />
+      <workItem from="1657559313633" duration="5327000" />
+      <workItem from="1657644596249" duration="122000" />
+      <workItem from="1657696185028" duration="293000" />
+      <workItem from="1657697840687" duration="629000" />
+      <workItem from="1657781108056" duration="419000" />
+      <workItem from="1657801831774" duration="598000" />
+      <workItem from="1657881100987" duration="508000" />
+      <workItem from="1657894413988" duration="3006000" />
+      <workItem from="1658327145110" duration="1807000" />
+      <workItem from="1658391457693" duration="8000" />
+      <workItem from="1658392498691" duration="7000" />
+      <workItem from="1658420281923" duration="1646000" />
+      <workItem from="1658478739438" duration="46000" />
+      <workItem from="1658480349683" duration="1715000" />
+      <workItem from="1658752818661" duration="2200000" />
+      <workItem from="1658929096738" duration="1254000" />
+      <workItem from="1658990449920" duration="2031000" />
+      <workItem from="1659094889484" duration="2314000" />
     </task>
     <servers />
   </component>
@@ -113,5 +154,6 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
 </project>
