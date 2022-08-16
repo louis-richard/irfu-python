@@ -14,13 +14,13 @@ from dateutil.rrule import rrule, DAILY
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2022"
 __license__ = "MIT"
 __version__ = "2.3.11"
 __status__ = "Prototype"
 
 
-def list_files(tint, mms_id, var, data_path=""):
+def list_files(tint, mms_id, var, data_path: str = ""):
     """Find files in the data directories of the target instrument, data type,
     data rate, mms_id and level during the target time interval.
 
