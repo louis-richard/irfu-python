@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # @Louis Richard
+from .read_cdf import read_cdf
 from .ts_time import ts_time
 from .ts_scalar import ts_scalar
 from .ts_vec_xyz import ts_vec_xyz
