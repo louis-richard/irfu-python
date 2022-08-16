@@ -22,6 +22,7 @@ from .get_pitch_angle_dist import get_pitch_angle_dist
 from .load_brst_segments import load_brst_segments
 from .make_model_vdf import make_model_vdf
 from .psd_rebin import psd_rebin
+from .list_files_ancillary import list_files_ancillary
 from .load_ancillary import load_ancillary
 from .vdf_omni import vdf_omni
 from .spectr_to_dataset import spectr_to_dataset
@@ -30,6 +31,7 @@ from .psd2dpf import psd2dpf
 from .dpf2psd import dpf2psd
 from .def2psd import def2psd
 from .copy_files import copy_files
+from .copy_files_ancillary import copy_files_ancillary
 from .vdf_to_e64 import vdf_to_e64
 from .dsl2gse import dsl2gse
 from .dsl2gsm import dsl2gsm
@@ -66,6 +68,7 @@ from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 from .get_feeps_alleyes import get_feeps_alleyes
 from .db_init import db_init
 from .download_data import download_data
+from .download_ancillary import download_ancillary
 
 # Energetic Ion Spectrometer (EIS)
 from .eis_ang_ang import eis_ang_ang
@@ -90,5 +93,5 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.22"
 __status__ = "Prototype"
