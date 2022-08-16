@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.ticker as ticker
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -14,7 +15,7 @@ __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
 
-plt.style.use("seaborn-ticks")
+# plt.style.use("seaborn-ticks")
 color = ["tab:blue", "tab:green", "tab:red", "k"]
 plt.rc("axes", prop_cycle=mpl.cycler(color=color))
 
@@ -58,6 +59,7 @@ def plot_line(axis, inp, **kwargs):
         axis.xaxis.set_major_locator(locator)
         axis.xaxis.set_major_formatter(formatter)
 
-    axis.grid(True, which="major", linestyle="-", linewidth="0.5", c="0.5")
+    axis.grid(True, which="major", linestyle="-", linewidth="0.2", c="0.5")
+    axis.yaxis.set_major_locator(ticker.MaxNLocator(4))
 
     return axis
