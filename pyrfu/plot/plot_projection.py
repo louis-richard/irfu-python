@@ -54,7 +54,7 @@ def plot_projection(
     """
 
     if clim is None:
-        clim = [-18, -13]
+        clim = [None, None]
 
     image = axis.pcolormesh(
         v_x / 1e3, v_y / 1e3, np.log10(f_mat.T), cmap=cmap, vmin=clim[0], vmax=clim[1]
