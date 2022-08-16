@@ -5,6 +5,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.colors as mcolors
+import matplotlib.ticker as ticker
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -94,8 +95,10 @@ def plot_spectr(
 
     if yscale == "log":
         axis.set_yscale("log")
+        axis.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
 
     axis.set_axisbelow(False)
+    axis.set_ylim(inp[inp.dims[1]].data[[0, -1]])
 
     if colorbar:
         if kwargs.get("pad"):
@@ -105,8 +108,12 @@ def plot_spectr(
 
         pos = axis.get_position()
         cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height])
-        fig.colorbar(mappable=image, cax=cax, ax=axis)
+        plt.colorbar(mappable=image, cax=cax, ax=axis)
         cax.set_axisbelow(False)
+        if cscale == "log":
+            cax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
+        else:
+            cax.yaxis.set_major_locator(ticker.MaxNLocator(4))
 
         out = (axis, cax)
     else:
