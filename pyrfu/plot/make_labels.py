@@ -12,7 +12,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def make_labels(axs, pos, pad: float = 0):
+def make_labels(axs, pos, pad: float = 0, zorder: float = 3):
     r"""Add subplots labels to axes
 
     Parameters
@@ -41,6 +41,7 @@ def make_labels(axs, pos, pad: float = 0):
                 "({})".format(label),
                 transform=axis.transAxes,
                 bbox=dict(boxstyle="square", ec=(1.0, 1.0, 1.0), fc=(1.0, 1.0, 1.0)),
+                zorder=zorder,
             )
         else:
             axis.text(
@@ -49,6 +50,7 @@ def make_labels(axs, pos, pad: float = 0):
                 "({})".format(label),
                 transform=axis.transAxes,
                 bbox=dict(boxstyle="square", ec=(1.0, 1.0, 1.0), fc=(1.0, 1.0, 1.0)),
+                zorder=zorder,
             )
 
     return axs
