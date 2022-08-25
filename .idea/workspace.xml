@@ -1,7 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="88475c3d-889d-493a-b18f-fb929feaa33b" name="Changes" comment="" />
+    <list default="true" id="88475c3d-889d-493a-b18f-fb929feaa33b" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.readthedocs.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.readthedocs.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/conf.py" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/conf.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/struct_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/struct_func.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -18,61 +48,61 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/setup.cfg" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/histogram2d.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/requirements.txt" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/probe_align_times.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/c_4_grad.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/get_omni_data.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_variable.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_skymap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/mms_keys.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/psd.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/vdf_omni.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_pitch_angle_dist.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/convert_fac.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/calculate_epsilon.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/ts_append.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/list_files.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/filt.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/list_files.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/magnetosphere.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/dsl2gsm.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap_combine_sc.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/c_4_j.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_pad.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap_combine_sc.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/make_model_vdf.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/ts_time.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_pad.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_feeps_alleyes.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/db_get_ts.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/mean.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/fk_power_spectrum_4sc.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/struct_func.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/mean.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/movmean.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/struct_func.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_spec_combine_sc.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/increments.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/plasma_beta.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/increments.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/__init__.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_heatmap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/make_labels.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_magnetosphere.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/dispersion/disp_surf_calc.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_heatmap.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_clines.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/annotate_heatmap.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/plot/make_labels.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_spectr.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_ts.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_ang_ang.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/mva.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/tokenize.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/setup.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/copy_files.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/requirements.txt" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/setup.cfg" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime64.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/optimize_nbins_2d.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/copy_files.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/histogram.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/optimize_nbins_2d.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/datetime642iso8601.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/correct_edp_probe_timing.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_eis_allt.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/histogram2d.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/c_4_grad.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/get_omni_data.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/probe_align_times.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_skymap.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/mms_keys.json" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_variable.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/psd.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/pyrfu/mms/vdf_omni.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/setup.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectId" id="2AqEKWdh8144Ak0bcTiDD1hT17l" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
@@ -143,6 +173,10 @@
       <workItem from="1660828050318" duration="1015000" />
       <workItem from="1660927303442" duration="952000" />
       <workItem from="1661173639530" duration="3366000" />
+      <workItem from="1661260486434" duration="3025000" />
+      <workItem from="1661410920430" duration="1000" />
+      <workItem from="1661417842752" duration="3552000" />
+      <workItem from="1661457046275" duration="503000" />
     </task>
     <servers />
   </component>

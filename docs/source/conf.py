@@ -26,6 +26,19 @@ examples_source = os.path.abspath(
 )
 examples_dest = os.path.abspath(os.path.join(os.path.dirname(__file__), "examples"))
 
+import sphinx.apidoc
+def setup(app):
+    sphinx.apidoc.main(['-f', #Overwrite existing files
+                        '-T', #Create table of contents
+                        '-e', #Give modules their own pages
+                        #'-E', #user docstring headers
+                        #'-M', #Modules first
+                        '-o', #Output the files to:
+                        './_autogen/', #Output Directory
+                        './../../pyrfu', #Main Module directory
+                        ]
+    )
+
 if os.path.exists(examples_dest):
     shutil.rmtree(examples_dest)
 os.mkdir(examples_dest)
@@ -39,7 +52,7 @@ for root, dirs, files in os.walk(examples_source):
             dest_filename = source_filename.replace(examples_source, examples_dest)
             shutil.copyfile(source_filename, dest_filename)
 
-sys.path.insert(0, os.path.abspath("./../.."))
+sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
 
