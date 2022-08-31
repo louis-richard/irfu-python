@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2022"
 __license__ = "MIT"
-__version__ = "2.3.14"
+__version__ = "2.3.23"
 __status__ = "Prototype"
 
 
