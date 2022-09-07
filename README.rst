@@ -64,7 +64,7 @@ It is distributed under the open-source MIT license.
 Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
 
 
-Instalation
+Installation
 -----------
 .. start-marker-install-do-not-remove
 
@@ -157,15 +157,18 @@ Dependencies
 
 The required dependencies are:
 
-- `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=0.3.20
-- `matplotlib <https://matplotlib.org>`_ >=3.2.1
-- `numba <http://numba.pydata.org>`_ >=0.52.0
-- `numpy <https://www.numpy.org>`_ >=1.18.1
-- `pandas <https://pandas.pydata.org/>`_ >=1.0.3
-- `Sphinx <https://www.sphinx-doc.org/en/master/>`_ >=3.0.3
-- `scipy <https://scipy.org>`_ >=1.4.1
-- `setuptools <https://packaging.python.org/tutorials/installing-packages/>`_ >=47.3.1
-- `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.15.0
+- `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=0.4.7
+- `geopack <https://github.com/tsssss/geopack>`_ >=1.0.9
+- `matplotlib <https://matplotlib.org>`_ >=3.5.2
+- `numba <http://numba.pydata.org>`_ >=0.54.1
+- `numpy <https://www.numpy.org>`_ >=1.20.3
+- `pandas <https://pandas.pydata.org/>`_ >=1.3.4
+- `python-datetutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.2
+- `requests <https://requests.readthedocs.io/en/latest/>`_ >=2.26.0
+- `scipy <https://scipy.org>`_ >=1.7.3
+- `Sphinx <https://www.sphinx-doc.org/en/master/>`_ >=4.3.0
+- `tqdm <https://tqdm.github.io/>`_ >=4.62.3
+- `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.20.1
 
 
 Testing dependencies are:
@@ -188,18 +191,22 @@ To import generic space plasma physics functions
     from pyrfu import pyrf
 
 
-To import functions specific to MMS mission
+To import functions specific to Magnetospheric Multi-Scale (MMS)
 
 .. code:: python
 
-    from pyrfu import mms
+To import functions specific to Solar Orbiter (SolO)
+
+.. code:: python
+
+    from pyrfu import solo
 
 
 To import plotting functions
 
 .. code:: python
 
-    from pyrfu import plot as pltrf
+    from pyrfu import plot
 
 Configuration
 -------------
@@ -207,7 +214,7 @@ Default configuration settings for MMS data (i.e data path) are stored in pyrfu/
 
 Credits
 -------
-This software was developped by Louis RICHARD (louisr@irfu.se) based on the IRFU-MATLAB library.
+This software was developed by Louis RICHARD (louisr@irfu.se) based on the IRFU-MATLAB library.
 
 Acknowledgement
 ---------------
