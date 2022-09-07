@@ -65,7 +65,7 @@ Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
 
 
 Installation
------------
+------------
 .. start-marker-install-do-not-remove
 
 The package ``pyrfu`` has been tested only for Mac OS.
@@ -195,6 +195,9 @@ To import functions specific to Magnetospheric Multi-Scale (MMS)
 
 .. code:: python
 
+    from pyrfu import mms
+
+
 To import functions specific to Solar Orbiter (SolO)
 
 .. code:: python
@@ -207,6 +210,7 @@ To import plotting functions
 .. code:: python
 
     from pyrfu import plot
+
 
 Configuration
 -------------
