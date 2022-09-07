@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import datetime
+import json
+import logging
 import os
 import re
-import json
-import datetime
 
 # 3rd party imports
 import numpy as np
@@ -16,17 +17,22 @@ from dateutil import parser
 from dateutil.rrule import rrule, DAILY
 from scipy import integrate
 
-from ..pyrf import read_cdf, datetime2iso8601, ts_append
+from ..pyrf import read_cdf, ts_append
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2022"
+__copyright__ = "Copyright 2022"
 __license__ = "MIT"
 __version__ = "2.3.22"
 __status__ = "Prototype"
 
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+)
 
-def _list_files_tnr_l2(tint, data_path: str = ""):
+
+def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
     """Find files in the L2 data repo corresponding to the target time interval.
 
     Parameters
@@ -35,6 +41,8 @@ def _list_files_tnr_l2(tint, data_path: str = ""):
         Time interval
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.solo.config.json`
+    tree : bool, Optional
+        Flag for tree structured data repos. Default is False.
 
     Returns
     -------
@@ -72,9 +80,12 @@ def _list_files_tnr_l2(tint, data_path: str = ""):
     days = rrule(DAILY, dtstart=d_start, until=until_)
 
     for date in days:
-        local_dir = os.sep.join(
-            [data_path, "L2", "thr", date.strftime("%Y"), date.strftime("%m")]
-        )
+        if tree:
+            local_dir = os.sep.join(
+                [data_path, "L2", "thr", date.strftime("%Y"), date.strftime("%m")]
+            )
+        else:
+            local_dir = data_path
 
         if os.name == "nt":
             full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
@@ -101,7 +112,7 @@ def _list_files_tnr_l2(tint, data_path: str = ""):
         return files_out
 
 
-def read_tnr(tint, sensor: int = 4, data_path: str = ""):
+def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
     r"""Read L2 data from TNR
 
     Parameters
@@ -119,6 +130,8 @@ def read_tnr(tint, sensor: int = 4, data_path: str = ""):
             * 7: B
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.solo.config.json`
+    tree : bool, Optional
+        Flag for tree structured data repos. Default is False.
 
     Returns
     -------
@@ -132,17 +145,18 @@ def read_tnr(tint, sensor: int = 4, data_path: str = ""):
 
     """
 
-    tint_ = list(map(parser.parse, tint))
-    tint_ = list(map(datetime2iso8601, tint_))
-    tint_ = list(map(cdfepoch.parse, tint_))
+    files = _list_files_tnr_l2(tint, data_path, tree)
 
-    files = _list_files_tnr_l2(tint, data_path)
+    assert files, "No files found. Make sure that the data_path is correct"
 
     # Initialize spectrum output to None
     out = None
 
     for file in files:
-        data_l2 = read_cdf(file, tint_)
+        # Notify user
+        logging.info("Loading %s...", os.path.split(file)[-1])
+
+        data_l2 = read_cdf(file, tint)
 
         n_freqs = 4 * data_l2["tnr_band_freq"].shape[1]
         freq_tnr = np.reshape(data_l2["tnr_band_freq"].data, n_freqs) / 1000

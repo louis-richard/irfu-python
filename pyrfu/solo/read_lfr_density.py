@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import datetime
+import json
+import logging
 import os
 import re
-import json
-import datetime
 
 # 3rd party imports
 from cdflib import cdfepoch
@@ -16,13 +17,18 @@ from ..pyrf import datetime2iso8601, read_cdf, ts_append, ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2022"
+__copyright__ = "Copyright 2022"
 __license__ = "MIT"
 __version__ = "2.3.22"
 __status__ = "Prototype"
 
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+)
 
-def _list_files_lfr_density_l3(tint, data_path: str = ""):
+
+def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
     """Find files in the L2 data repo corresponding to the target time interval.
 
     Parameters
@@ -31,6 +37,8 @@ def _list_files_lfr_density_l3(tint, data_path: str = ""):
         Time interval
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.solo.config.json`
+    tree : bool, Optional
+        Flag for tree structured data repos. Default is False.
 
     Returns
     -------
@@ -43,7 +51,7 @@ def _list_files_lfr_density_l3(tint, data_path: str = ""):
     # Check path
     if not data_path:
         # pkg_path = os.path.dirname(os.path.abspath(__file__))
-        pkg_path = "/Users/louisr/Dropbox/Documents/PhD/irfu-python/pyrfu/solo"
+        pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
         with open(os.path.join(pkg_path, "config.json"), "r") as fs:
@@ -69,9 +77,12 @@ def _list_files_lfr_density_l3(tint, data_path: str = ""):
     days = rrule(DAILY, dtstart=d_start, until=until_)
 
     for date in days:
-        local_dir = os.sep.join(
-            [data_path, "L3", "lfr_density", date.strftime("%Y"), date.strftime("%m")]
-        )
+        if tree:
+            local_dir = os.sep.join(
+                [data_path, "L3", "lfr_density", date.strftime("%Y"), date.strftime("%m")]
+            )
+        else:
+            local_dir = data_path
 
         if os.name == "nt":
             full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
@@ -98,7 +109,7 @@ def _list_files_lfr_density_l3(tint, data_path: str = ""):
         return files_out
 
 
-def read_lfr_density(tint):
+def read_lfr_density(tint, data_path: str = "", tree: bool = False):
     r"""Read L3 density data from LFR
 
     Parameters
@@ -107,6 +118,8 @@ def read_lfr_density(tint):
         Time interval
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.solo.config.json`
+    tree : bool, Optional
+        Flag for tree structured data repos. Default is False.
 
     Returns
     -------
@@ -114,20 +127,25 @@ def read_lfr_density(tint):
         Time series of the density.
 
     """
-
-    tint_ = list(map(parser.parse, tint))
-    tint_ = list(map(datetime2iso8601, tint_))
-    tint_ = list(map(cdfepoch.parse, tint_))
-
-    files = _list_files_lfr_density_l3(tint)
+    
+    # List LFR density files in the data path.
+    files = _list_files_lfr_density_l3(tint, data_path, tree)
 
     # Initialize spectrum output to None
     out = None
 
     for file in files:
-        data_l3 = read_cdf(file, tint_)
+        # Notify user
+        logging.info("Loading %s...", os.path.split(file)[-1])
+
+        # Read file content
+        data_l3 = read_cdf(file, tint)
+
+        # Get time from Epoch
         epoch = data_l3["epoch"].data
         time = cdfepoch.to_datetime(epoch, to_np=True)
+
+        # Get density data and contruct time series.
         density = data_l3["density"].data
         out = ts_append(out, ts_scalar(time, density))
 
