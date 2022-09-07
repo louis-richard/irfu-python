@@ -9,6 +9,8 @@ import os
 import re
 
 # 3rd party imports
+import numpy as np
+
 from cdflib import cdfepoch
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
@@ -147,6 +149,7 @@ def read_lfr_density(tint, data_path: str = "", tree: bool = False):
 
         # Get density data and contruct time series.
         density = data_l3["density"].data
+        density[density == -1e31] = np.nan
         out = ts_append(out, ts_scalar(time, density))
 
     return out
