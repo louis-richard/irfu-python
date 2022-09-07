@@ -58,7 +58,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 project = "pyrfu"
 author = "Louis Richard"
-copyright = f"2015–{datetime.utcnow().year}, {author}"
+copyright = f"2019–{datetime.utcnow().year}, {author}"
 
 
 # -- General configuration ---------------------------------------------------
