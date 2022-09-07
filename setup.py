@@ -5,6 +5,8 @@
 import pathlib
 
 from setuptools import setup, find_packages
+
+# 3rd party imports
 from sphinx.setup_command import BuildDoc
 
 __author__ = "Louis Richard"
@@ -31,15 +33,17 @@ with open("README.rst", "r") as fh:
 
 INSTALL_REQUIRES = [
     "cdflib",
+    "geopack",
     "matplotlib",
-    "numpy",
     "numba",
+    "numpy",
     "pandas",
-    "sphinx",
+    "python-dateutil",
+    "requests",
     "scipy",
+    "Sphinx",
     "tqdm",
     "xarray",
-    "geopack",
 ]
 
 PYTHON_REQUIRES = ">=3.7"
