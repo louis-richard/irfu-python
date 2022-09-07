@@ -1,22 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# MIT License
-#
-# Copyright (c) 2020 Louis Richard
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so.
 
+# Built-in imports
 import bisect
+
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
+# Local imports
 from ..pyrf import resample, avg_4sc, time_clip, wavelet
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2022"
+__license__ = "MIT"
+__version__ = "2.3.22"
+__status__ = "Prototype"
 
 
 def fk_power_spectrum_4sc(
@@ -31,7 +31,7 @@ def fk_power_spectrum_4sc(
     w_width: int = 1,
     f_range: list = None,
 ):
-    """Calculates the frequency-wave number power spectrum using the four
+    r"""Calculates the frequency-wave number power spectrum using the four
     MMS spacecraft. Uses a generalization of mms.fk_powerspectrum. Wavelet
     based cross-spectral analysis is used to calculate the phase difference
     each spacecraft pair and determine 3D wave vector. A generalization of

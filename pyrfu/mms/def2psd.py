@@ -10,6 +10,13 @@ from scipy import constants
 # Local imports
 from .spectr_to_dataset import spectr_to_dataset
 
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2021"
+__license__ = "MIT"
+__version__ = "2.3.22"
+__status__ = "Prototype"
+
 
 def _mass_ratio(inp):
     if inp.attrs["species"] in ["ions", "i"]:

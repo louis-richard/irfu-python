@@ -5,9 +5,9 @@
 import os
 
 # 3rd party imports
+import numba
 import numpy as np
 import xarray as xr
-import numba
 
 from scipy import fft
 

@@ -6,6 +6,7 @@ import logging
 
 # 3rd party imports
 import numpy as np
+
 from geopack import geopack
 from matplotlib.patches import Wedge
 

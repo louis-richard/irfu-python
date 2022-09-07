@@ -1,25 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# MIT License
-#
-# Copyright (c) 2021 Louis Richard
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so.
 
-"""magnetopause_normal.py
-@author: Louis Richard
-"""
-
+# Built-in imports
 import warnings
+
+# 3rd party imports
 import numpy as np
 
 from scipy.optimize import fminbound
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2022"
+__license__ = "MIT"
+__version__ = "2.3.22"
+__status__ = "Prototype"
 
 
 def _magnetopause(theta, *args):
@@ -47,7 +42,7 @@ def _bow_shock(r_xy, *args):
 def magnetopause_normal(
     r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997", m_alfven: float = 4.0
 ):
-    """Computes the distance and normal vector to the magnetopause for
+    r"""Computes the distance and normal vector to the magnetopause for
     Shue et al., 1997 or Shue et al., 1998 model. Or bow shock for
     Farris & Russell 1994 model.
 

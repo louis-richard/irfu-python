@@ -15,10 +15,9 @@ from shutil import copyfileobj, copy
 from tempfile import NamedTemporaryFile
 
 # 3rd party imports
-import requests
 import numpy as np
-
-from tqdm import tqdm
+import requests
+import tqdm
 
 # Local imports
 from .tokenize import tokenize
@@ -209,7 +208,7 @@ def download_data(var_str, tint, mms_id, login, password, data_path: str = ""):
 
         ftmp = NamedTemporaryFile(delete=False)
 
-        with tqdm.wrapattr(fsrc.raw, "read", total=file["size"]) as fsrc_raw:
+        with tqdm.tqdm.wrapattr(fsrc.raw, "read", total=file["size"]) as fsrc_raw:
             with open(ftmp.name, "wb") as fs:
                 copyfileobj(fsrc_raw, fs)
 
