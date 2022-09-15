@@ -72,7 +72,7 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
     # - assume directories are of the form: [data_path]/L3/lfr_density/year/month/
     # - assume file names are of the form: solo_L3_rpw-bia-density-cdag_YYYYMMDD_version.cdf
 
-    file_name = r"solo_L3_rpw-bia-density-cdag_([0-9]{8})_V[0-9]{2}.cdf"
+    file_name = r"solo_L3_rpw-bia-density.*_([0-9]{8})_V[0-9]{2}.cdf"
 
     d_start = parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d"))
     until_ = parser.parse(tint[1]) - datetime.timedelta(seconds=1)
