@@ -117,31 +117,32 @@ def get_ts(file_path, cdf_name, tint):
     time, depend_1, depend_2, depend_3 = [{}, {}, {}, {}]
 
     with CDF(file_path) as file:
-        attrs_ = file.varattsget(cdf_name)
-        out_dict["atts"] = attrs_
+        var_attrs = file.varattsget(cdf_name)
+        glb_attrs = file.globalattsget()
+        out_dict["atts"] = {**var_attrs, **glb_attrs}
 
-        assert "DEPEND_0" in attrs_ and "epoch" in attrs_["DEPEND_0"].lower()
+        assert "DEPEND_0" in var_attrs and "epoch" in var_attrs["DEPEND_0"].lower()
 
         time = _get_epochs(file, cdf_name, tint)
 
         if time["data"] is None:
             return None
 
-        if "DEPEND_1" in attrs_ or "REPRESENTATION_1" in attrs_:
+        if "DEPEND_1" in var_attrs or "REPRESENTATION_1" in var_attrs:
             depend_1 = _get_depend(file, cdf_name, tint, 1)
 
         elif "afg" in cdf_name or "dfg" in cdf_name:
             depend_1 = {"data": ["x", "y", "z"], "atts": {"LABLAXIS": "comp"}}
 
-        if "DEPEND_2" in attrs_ or "REPRESENTATION_2" in attrs_:
+        if "DEPEND_2" in var_attrs or "REPRESENTATION_2" in var_attrs:
             depend_2 = _get_depend(file, cdf_name, tint, 2)
 
             if depend_2["atts"]["LABLAXIS"] == depend_1["atts"]["LABLAXIS"]:
                 depend_1["atts"]["LABLAXIS"] = "rcomp"
                 depend_2["atts"]["LABLAXIS"] = "ccomp"
 
-        if "DEPEND_3" in attrs_ or "REPRESENTATION_3" in attrs_:
-            if "REPRESENTATION_3" in attrs_:
+        if "DEPEND_3" in var_attrs or "REPRESENTATION_3" in var_attrs:
+            if "REPRESENTATION_3" in var_attrs:
                 assert out_dict["atts"]["REPRESENTATION_3"] != "x,y,z"
 
             depend_3 = _get_depend(file, cdf_name, tint, 3)
@@ -223,6 +224,7 @@ def get_ts(file_path, cdf_name, tint):
     out = xr.DataArray(
         out_dict["data"], coords=coords_data, dims=dims, attrs=out_dict["atts"]
     )
+
 
     for dim, coord_atts in zip(dims, coords_atts):
         out[dim].attrs = coord_atts
