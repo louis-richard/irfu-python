@@ -12,7 +12,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def make_labels(axs, pos, pad: float = 0, zorder: float = 3):
+def make_labels(axs, pos, pad: float = 0, **kwargs):
     r"""Add subplots labels to axes
 
     Parameters
@@ -21,8 +21,6 @@ def make_labels(axs, pos, pad: float = 0, zorder: float = 3):
         Array of subplots axes.
     pos : array_like
         Position of the text in the axis.
-    pad : int, Optional
-        Offset in axis counter.
 
     Returns
     -------
@@ -40,8 +38,7 @@ def make_labels(axs, pos, pad: float = 0, zorder: float = 3):
                 pos[1],
                 "({})".format(label),
                 transform=axis.transAxes,
-                bbox=dict(boxstyle="square", ec=(1.0, 1.0, 1.0), fc=(1.0, 1.0, 1.0)),
-                zorder=zorder,
+                **kwargs,
             )
         else:
             axis.text(
@@ -49,8 +46,7 @@ def make_labels(axs, pos, pad: float = 0, zorder: float = 3):
                 pos[1],
                 "({})".format(label),
                 transform=axis.transAxes,
-                bbox=dict(boxstyle="square", ec=(1.0, 1.0, 1.0), fc=(1.0, 1.0, 1.0)),
-                zorder=zorder,
+                **kwargs,
             )
 
     return axs
