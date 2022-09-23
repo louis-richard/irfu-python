@@ -89,7 +89,14 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     fname_fmt = (
         f"MMS{mms_id}_{product.upper()}" + f"_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
     )
-    file_regex = re.compile(os.sep.join([dir_pattern, fname_fmt]))
+
+    if os.name == "nt":
+        full_path = os.sep.join([re.escape(dir_pattern) + os.sep, fname_fmt])
+    else:
+        full_path = os.sep.join([re.escape(dir_pattern), fname_fmt])
+
+    file_regex = re.compile(full_path)
+    
     for file in files:
         time_match = file_regex.match(file)
         if time_match is not None:
