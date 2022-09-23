@@ -130,7 +130,7 @@ def _freq_int(freq_int, delta_b):
         fs_out = 1 / delta_t
 
         nt = np.round((iso2unix(tint[1]) - iso2unix(tint[0])) / delta_t)
-        nt = nt.astype(int)  # local
+        nt = nt.astype(np.int64)  # local
 
         out_time = np.linspace(iso2unix(tint[0]), iso2unix(tint[1]), nt)
         out_time += delta_t / 2
@@ -144,7 +144,7 @@ def _freq_int(freq_int, delta_b):
             delta_t = 1 / fs_out  # local
 
             nt = np.round((end(delta_b) - start(delta_b)) / delta_t)
-            nt = nt.astype(int)  # local
+            nt = nt.astype(np.int64)  # local
 
             out_time = np.linspace(start(delta_b), end(delta_b), nt)
             out_time += delta_t / 2
@@ -739,7 +739,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                         np.max([0, len(out_time) - censure[ind_a] - 1]), len(out_time)
                     ),
                 ]
-            ).astype(int)
+            ).astype(np.int64)
 
             s_mat_avg[censure_idx, ...] = np.nan
 
@@ -846,7 +846,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
             ]
         )
 
-        censure_idx = censure_idx.astype(int)
+        censure_idx = censure_idx.astype(np.int64)
 
         power_bx_plot[censure_idx, ind_a] = np.nan
         power_by_plot[censure_idx, ind_a] = np.nan
@@ -996,17 +996,17 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         poynting_xyz = np.transpose(poynting_xyz, [1, 2, 0])
         poynting_xyz[:, :, 1] = s_plot_y
         poynting_xyz[:, :, 2] = s_plot_z
-        poynting_xyz = poynting_xyz.astype(float)
+        poynting_xyz = poynting_xyz.astype(np.float64)
 
         poynting_r_th_ph = np.tile(s_r, (3, 1, 1))
         poynting_r_th_ph = np.transpose(poynting_r_th_ph, [1, 2, 0])
         poynting_r_th_ph[..., 1] = np.pi / 2 - s_elevation
         poynting_r_th_ph[..., 2] = s_azimuth
         poynting_r_th_ph[..., 1:] = poynting_r_th_ph[..., 1:] * 180 / np.pi
-        poynting_r_th_ph = poynting_r_th_ph.astype(float)
+        poynting_r_th_ph = poynting_r_th_ph.astype(np.float64)
 
         # Output
-        res["ee_ss"] = power_2e_isr2_plot.astype(float)
+        res["ee_ss"] = power_2e_isr2_plot.astype(np.float64)
 
         res["ee_xxyyzzss"] = xr.DataArray(
             ee_xxyyzzss,

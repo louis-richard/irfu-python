@@ -174,7 +174,7 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     data = pd.DataFrame(lines, columns=["time", *variables])
     data["time"] = pd.to_datetime(data["time"], format="%Y-%j/%H")
 
-    data = data.set_index("time").astype(float)
+    data = data.set_index("time").astype(np.float64 )
     fmt_ = f"<M8[{database[5].lower()}]"
     data = data.loc[data.index.isin(tint.astype(fmt_).astype("<M8[ns]"))]
     data = data.to_xarray()

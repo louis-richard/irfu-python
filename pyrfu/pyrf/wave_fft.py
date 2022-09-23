@@ -48,12 +48,12 @@ def wave_fft(
     """
 
     if f_sampling is None:
-        delta_t = np.median(np.diff(inp.time.data).astype(float)) * 1e-9
+        delta_t = np.median(np.diff(inp.time.data).astype(np.float64)) * 1e-9
         f_sampling = 1 / delta_t
 
     # convert ms to points
-    n_per_seg = np.round(frame_length * f_sampling).astype(int)
-    n_overlap = np.round(frame_overlap * f_sampling).astype(int)
+    n_per_seg = np.round(frame_length * f_sampling).astype(np.int64)
+    n_overlap = np.round(frame_overlap * f_sampling).astype(np.int64)
 
     options = dict(
         fs=f_sampling,

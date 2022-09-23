@@ -142,7 +142,7 @@ def fk_power_spectrum_4sc(
 
     n = int(np.floor(nt / cav) - 1)
     pos_av = cav / 2 + np.arange(n) * cav
-    av_times = times[pos_av.astype(int)]
+    av_times = times[pos_av.astype(np.int64)]
 
     b_avg = resample(b_avg, av_times)
 
@@ -262,10 +262,10 @@ def fk_power_spectrum_4sc(
     power_k_mag_f = np.zeros((num_f, num_k))
 
     for nn in range(num_f):
-        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(int)
-        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(int)
-        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(int)
-        k_number = np.floor((k_mag[:, nn]) / dk_mag).astype(int)
+        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(np.int64)
+        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(np.int64)
+        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(np.int64)
+        k_number = np.floor((k_mag[:, nn]) / dk_mag).astype(np.int64)
 
         power_k_x_f[nn, k_x_number] += np.real(power_avg[:, nn])
         power_k_y_f[nn, k_y_number] += np.real(power_avg[:, nn])
@@ -303,12 +303,12 @@ def fk_power_spectrum_4sc(
     power_k_perp_k_par = np.zeros((num_k, num_k))
 
     for nn in idx_f:
-        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(int)
-        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(int)
-        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(int)
+        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(np.int64)
+        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(np.int64)
+        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(np.int64)
 
-        k_par_number = np.floor((k_par[:, nn] - k_min) / dk).astype(int)
-        k_perp_number = np.floor((k_perp[:, nn]) / dk_mag).astype(int)
+        k_par_number = np.floor((k_par[:, nn] - k_min) / dk).astype(np.int64)
+        k_perp_number = np.floor((k_perp[:, nn]) / dk_mag).astype(np.int64)
 
         power_k_x_k_y[k_y_number, k_x_number] += np.real(power_avg[:, nn])
         power_k_x_k_z[k_z_number, k_x_number] += np.real(power_avg[:, nn])

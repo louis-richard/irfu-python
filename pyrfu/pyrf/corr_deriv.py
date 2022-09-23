@@ -39,12 +39,12 @@ def corr_deriv(inp0, inp1, flag: bool = False):
     """
 
     # 1st derivative
-    tx1 = inp0.time.data.astype(int) * 1e-9
+    tx1 = inp0.time.data.astype(np.int64) * 1e-9
     inp0 = inp0.data
     dtx1 = tx1[:-1] + 0.5 * np.diff(tx1)
     dx1 = np.diff(inp0)
 
-    tx2 = inp1.time.data.astype(int) * 1e-9
+    tx2 = inp1.time.data.astype(np.int64) * 1e-9
     inp1 = inp1.data
     dtx2 = tx2[:-1] + 0.5 * np.diff(tx2)
     dx2 = np.diff(inp1)

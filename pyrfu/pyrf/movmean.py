@@ -56,7 +56,7 @@ def movmean(inp, n_pts: int = 100):
     """
 
     if isinstance(n_pts, float):
-        n_pts = np.floor(n_pts).astype(int)
+        n_pts = np.floor(n_pts).astype(np.int64)
 
     if n_pts % 2:
         n_pts -= 1

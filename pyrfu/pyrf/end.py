@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 3rd party import
+import numpy as np
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
@@ -24,6 +27,6 @@ def end(inp):
 
     """
 
-    out = inp.time.data[-1].astype(int) / 1e9
+    out = inp.time.data[-1].astype(np.int64) / 1e9
 
     return out

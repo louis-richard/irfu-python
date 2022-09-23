@@ -27,6 +27,6 @@ def calc_fs(inp):
 
     """
 
-    out = 1 / (np.median(np.diff(inp.time.data)).astype(float) * 1e-9)
+    out = 1 / (np.median(np.diff(inp.time.data)).astype(np.float64) * 1e-9)
 
     return out

@@ -96,7 +96,7 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
 
     """
 
-    f_samp = 1 / (np.median(np.diff(inp.time)).astype(int) * 1e-9)
+    f_samp = 1 / (np.median(np.diff(inp.time)).astype(np.int64) * 1e-9)
 
     # Data of the input
     inp_data = inp.data

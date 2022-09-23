@@ -256,9 +256,9 @@ def cotrans(inp, flag, hapgood: bool = True):
     if hapgood:
         day_start_epoch = time.astype("datetime64[D]")
         day_start_epoch = day_start_epoch.astype("datetime64[ns]")
-        day_start_epoch = day_start_epoch.astype(int) / 1e9
+        day_start_epoch = day_start_epoch.astype(np.int64) / 1e9
         mjd_ref_epoch = np.datetime64("2000-01-01T12:00:00", "ns")
-        mjd_ref_epoch = mjd_ref_epoch.astype(int) / 1e9
+        mjd_ref_epoch = mjd_ref_epoch.astype(np.int64) / 1e9
 
         # t_zero is time measured in Julian centuries from 2000-01-0112:00 UT
         # to the previous midnight
@@ -273,7 +273,7 @@ def cotrans(inp, flag, hapgood: bool = True):
         )
         seconds = 1e-9 * (
             time.astype("datetime64[ns]") - time.astype("datetime64[m]")
-        ).astype(float)
+        ).astype(np.float64)
         ut = hours + minutes / 60 + seconds / 3600
 
         args_trans_mat = (t_zero, ut, None, None, None, None)

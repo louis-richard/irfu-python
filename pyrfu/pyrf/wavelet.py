@@ -24,7 +24,7 @@ __status__ = "Prototype"
 
 def _scales(f_range, f_nyq, f_s, n_freqs, linear_df, delta_f):
     if linear_df:
-        scale_number = np.floor(f_nyq / delta_f).astype(int)
+        scale_number = np.floor(f_nyq / delta_f).astype(np.int64)
 
         f_range = [delta_f, scale_number * delta_f]
 
@@ -170,7 +170,7 @@ def wavelet(
             power2 = _power_c(power, np.tile(new_freq_mat, (len(power), 1)))
 
         if cut_edge:
-            censure = np.floor(2 * scales).astype(int)
+            censure = np.floor(2 * scales).astype(np.int64)
 
             for j in range(scale_number):
                 power2[: censure[j], j] = np.nan

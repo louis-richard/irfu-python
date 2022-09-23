@@ -37,7 +37,7 @@ def remove_repeated_points(inp):
     threshold = 100
 
     if isinstance(inp, xr.DataArray):
-        diffs = np.diff(inp.time.data.astype(int) * 1e-9)
+        diffs = np.diff(inp.time.data.astype(np.int64) * 1e-9)
 
         no_repeat = np.ones(len(inp))
         no_repeat[diffs < threshold] = 0

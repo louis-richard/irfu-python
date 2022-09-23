@@ -59,7 +59,7 @@ def vdf_elim(vdf, e_int):
             tmp_elevels = np.where(np.logical_and(lower_, upper_))[0]
             e_levels = np.unique(np.hstack([e_levels, tmp_elevels]))
 
-        e_levels = list(e_levels.astype(int))
+        e_levels = list(e_levels.astype(np.int64))
         e_min = np.min(energy.data[:, e_levels])
         e_max = np.max(energy.data[:, e_levels])
         print(f"Effective eint = [{e_min:5.2f}, {e_max:5.2f}]")
