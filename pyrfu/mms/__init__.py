@@ -12,6 +12,7 @@ from .lh_wave_analysis import lh_wave_analysis
 from .whistler_b2e import whistler_b2e
 from .get_feeps_omni import get_feeps_omni
 from .remove_idist_background import remove_idist_background
+from .remove_edist_background import remove_edist_background
 from .psd_moments import psd_moments
 from .rotate_tensor import rotate_tensor
 from .calculate_epsilon import calculate_epsilon
