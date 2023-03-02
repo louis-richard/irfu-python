@@ -75,7 +75,24 @@ def remove_edist_background(vdf, n_sec: float = 0., n_art: float = -1.):
 
     # Load the model internal photoelectrons
     bkg_fname = n_e.attrs["Photoelectron_model_filenames"]
-    bkg_fname = os.path.join("/Volumes/mms", "models", "fpi", bkg_fname)
+
+    # Check path
+    # Guess data path from CDF attributes
+    data_path = str(vdf.attrs["CDF"]).split(f"mms{mms_id}/fpi")[0]
+
+    # Check if path exists if not use the default
+    if not os.path.exists(data_path):
+        pkg_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Read the current version of the MMS configuration file
+        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+            config = json.load(fs)
+
+        data_path = os.path.normpath(config["local_data_dir"])
+    else:
+        data_path = os.path.normpath(data_path)
+
+    bkg_fname = os.path.join(data_path, "models", "fpi", bkg_fname)
 
     vdf_bkg01 = [None, None]
     with cdfread.CDF(bkg_fname) as f:
