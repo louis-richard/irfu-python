@@ -60,7 +60,10 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
 
     data_unit, data_type, specie, data_rate, data_lvl = tar_var.split("_")
 
-    pref = f"mms{mms_id:d}_epd_eis"
+    if tint[0] < "2020-01-01":
+        pref = f"mms{mms_id:d}_epd_eis"
+    else:
+        pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_lvl}"
 
     var = {
         "mms_id": mms_id,
@@ -79,8 +82,8 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
     file_version = int(files[0].split("_")[-1][1])
     var["version"] = file_version
 
+    pref = f"{pref}_{data_rate}_{data_lvl}_{data_type}"
     if int(files[0].split("_")[-1][3]) >= 1:
-        pref = f"{pref}_{data_rate}_{data_lvl}_{data_type}"
         if specie == "alpha":
             specie = "helium"
     else:
