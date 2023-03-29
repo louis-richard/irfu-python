@@ -116,8 +116,6 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
             out_files.append(versions[0])
 
     files_names = list(set(out_files))
-
-    if len(files_names) > 1:
-        return files_names.sort()
-    else:
-        return files_names
+    files_names.sort()
+    
+    return files_names
