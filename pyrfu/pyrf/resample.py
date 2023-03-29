@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import pdb
+
 
 # Built-in imports
 import bisect
@@ -60,7 +62,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     """
 
     try:
-        out_data = np.zeros((len(ref_time), inp_data.shape[1]))
+        out_data = np.zeros([len(ref_time), *inp_data.shape[1:]])
     except IndexError:
         inp_data = inp_data[:, None]
         out_data = np.zeros((len(ref_time), inp_data.shape[1]))
