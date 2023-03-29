@@ -75,9 +75,13 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     """
 
     if isinstance(defatt, xr.Dataset):
-        x, y, z = sph2cart(np.deg2rad(defatt.z_ra.data), np.deg2rad(defatt.z_dec), 1)
+        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(np.deg2rad(defatt.z_ra.data))
+        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(np.deg2rad(defatt.z_ra.data))
+        z = np.sin(np.deg2rad(defatt.z_dec))
         sax_gei = np.transpose(
-            np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z])
+            np.vstack(
+                [defatt.time.data.astype("int") / 1e9, x, y, z]
+            )
         )
         sax_gsm = cotrans(sax_gei, "gei>gsm")
         sax_gsm = ts_vec_xyz(

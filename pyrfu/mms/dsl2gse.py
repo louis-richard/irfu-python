@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import pdb
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -75,10 +77,12 @@ def dsl2gse(inp, defatt, direction: int = 1):
     """
 
     if isinstance(defatt, xr.Dataset):
-        r_cart = sph2cart(np.deg2rad(defatt.z_ra.data), np.deg2rad(defatt.z_dec), 1)
+        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(np.deg2rad(defatt.z_ra.data))
+        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(np.deg2rad(defatt.z_ra.data))
+        z = np.sin(np.deg2rad(defatt.z_dec))
         sax_gei = np.transpose(
             np.vstack(
-                [defatt.time.data.astype("int") / 1e9, r_cart[0], r_cart[1], r_cart[2]]
+                [defatt.time.data.astype("int") / 1e9, x, y, z]
             )
         )
         sax_gse = cotrans(sax_gei, "gei>gse")
