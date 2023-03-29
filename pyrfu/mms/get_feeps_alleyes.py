@@ -151,7 +151,7 @@ def get_feeps_alleyes(tar_var, tint, mms_id, verbose: bool = True, data_path: st
         out_dict[e_id] = _get_oneeye(
             tar_var, e_id, tint, mms_id, verbose, data_path=data_path
         )
-        dims = {o: n for o, n in zip(out_dict[e_id].dims, ["time", "energy"])}
+        dims = {o: n for o, n in zip(out_dict[e_id].dims, ["time", f"energy_{e_id}"])}
         out_dict[e_id] = out_dict[e_id].rename(dims)
 
     out = xr.Dataset(out_dict)
