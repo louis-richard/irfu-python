@@ -45,13 +45,37 @@ def time_clip(inp, tint):
 
         for k in inp:
             if "time" in list(inp[k].coords):
-                data = time_clip(inp[k], tint)
-                out_dict[k] = (list(inp[k].dims), data.data)
+                out_dict[k] = time_clip(inp[k], tint)
             else:
-                out_dict[k] = (list(inp[k].dims), inp[k].data)
+                out_dict[k] = inp[k]
 
-        out = xr.Dataset(out_dict)
-        out.attrs = inp.attrs
+        # Find array_like attributes
+        arr_attrs = filter(lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs)
+        arr_attrs = list(arr_attrs)
+
+        # Initialize attributes dictionary with non array_like attributes
+        gen_attrs = filter(lambda x: x not in arr_attrs, inp.attrs)
+        out_attrs = {k: inp.attrs[k] for k in list(gen_attrs)}
+
+        for a in arr_attrs:
+            attr = inp.attrs[a]
+
+            # If array_like attributes have one dimension equal to time length assume
+            # time dependent. One option would be move the time dependent array_like
+            # attributes to time series to zVaraibles to avoid confusion
+            if attr.shape[0] == len(inp.time.data):
+                coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
+                dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
+                attr_ts = xr.DataArray(attr, coords=[inp.time.data, *coords],
+                                       dims=["time", *dims])
+                out_attrs[a] = time_clip(attr_ts, tint).data
+            else:
+                out_attrs[a] = attr
+
+        out_attrs = {k: out_attrs[k] for k in sorted(out_attrs)}
+
+        out = xr.Dataset(out_dict, attrs=out_attrs)
+
         return out
 
     if isinstance(tint, xr.DataArray):
