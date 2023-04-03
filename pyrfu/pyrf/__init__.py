@@ -90,6 +90,7 @@ from .datetime642unix import datetime642unix
 from .ttns2datetime64 import ttns2datetime64
 from .datetime642ttns import datetime642ttns
 from .iso86012datetime import iso86012datetime
+from .cdfepoch2datetime64 import cdfepoch2datetime64
 from .cart2sph import cart2sph
 from .iplasma_calc import iplasma_calc
 from .match_phibe_dir import match_phibe_dir
