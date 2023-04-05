@@ -56,12 +56,16 @@ def struct_func(inp, scales, order):
         )
 
     if inp.data.ndim == 1:
-        result = xr.DataArray(np.squeeze(result), coords=[scales], dims=["scale"],
-                              attrs=inp.attrs)
+        result = xr.DataArray(
+            np.squeeze(result), coords=[scales], dims=["scale"], attrs=inp.attrs
+        )
     else:
-        result = xr.DataArray(np.squeeze(result),
-                              coords=[scales, inp.coords[inp.dims[1]]],
-                              dims=["scale", inp.dims[1]], attrs=inp.attrs)
+        result = xr.DataArray(
+            np.squeeze(result),
+            coords=[scales, inp.coords[inp.dims[1]]],
+            dims=["scale", inp.dims[1]],
+            attrs=inp.attrs,
+        )
 
     result.attrs["order"] = order
 

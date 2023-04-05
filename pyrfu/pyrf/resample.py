@@ -106,8 +106,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
 
 
 def _resample_dataarray(inp, ref, method, f_s, window, thresh):
-    r"""Resample for time series (xarray.DataArray)
-    """
+    r"""Resample for time series (xarray.DataArray)"""
 
     flag_do = "check"
 
@@ -181,8 +180,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
 
 
 def _resample_dataset(inp, ref, **kwargs):
-    r"""Resample for VDFs (xarray.Dataset)
-    """
+    r"""Resample for VDFs (xarray.Dataset)"""
     # Find time dependent zVariables and resample
     tdepnd_zvars = list(filter(lambda x: "time" in inp[x].dims, inp))
     out_dict = {k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars}
@@ -208,8 +206,9 @@ def _resample_dataset(inp, ref, **kwargs):
         if attr.shape[0] == len(inp.time.data):
             coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
             dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
-            attr_ts = xr.DataArray(attr, coords=[inp.time.data, *coords],
-                                   dims=["time", *dims])
+            attr_ts = xr.DataArray(
+                attr, coords=[inp.time.data, *coords], dims=["time", *dims]
+            )
             out_attrs[k] = _resample_dataarray(attr_ts, ref, **kwargs).data
         else:
             out_attrs[k] = attr

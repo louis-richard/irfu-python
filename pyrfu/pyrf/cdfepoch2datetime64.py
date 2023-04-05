@@ -14,15 +14,42 @@ __version__ = "2.3.26"
 __status__ = "Prototype"
 
 
-def _compose_date(years, months, days, hours=None, minutes=None, seconds=None,
-                  milliseconds=None, microseconds=None, nanoseconds=None):
+def _compose_date(
+    years,
+    months,
+    days,
+    hours=None,
+    minutes=None,
+    seconds=None,
+    milliseconds=None,
+    microseconds=None,
+    nanoseconds=None,
+):
     years = np.asarray(years) - 1970
     months = np.asarray(months) - 1
     days = np.asarray(days) - 1
-    types = ["<M8[Y]", "<m8[M]", "<m8[D]", "<m8[h]", "<m8[m]", "<m8[s]", "<m8[ms]",
-             "<m8[us]", "<m8[ns]"]
-    vals = [years, months, days, hours, minutes, seconds, milliseconds, microseconds,
-            nanoseconds]
+    types = [
+        "<M8[Y]",
+        "<m8[M]",
+        "<m8[D]",
+        "<m8[h]",
+        "<m8[m]",
+        "<m8[s]",
+        "<m8[ms]",
+        "<m8[us]",
+        "<m8[ns]",
+    ]
+    vals = [
+        years,
+        months,
+        days,
+        hours,
+        minutes,
+        seconds,
+        milliseconds,
+        microseconds,
+        nanoseconds,
+    ]
 
     dates = sum([np.asarray(v, dtype=t) for t, v in zip(types, vals) if v is not None])
 

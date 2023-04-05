@@ -83,7 +83,7 @@ def psd(
         n_fft = n_persegs
         warnings.warn("nfft < n_persegs. set to n_persegs", UserWarning)
 
-    f_samp = 1e9 / np.median(np.diff(inp.time.data)).astype(np.float64 )
+    f_samp = 1e9 / np.median(np.diff(inp.time.data)).astype(np.float64)
 
     freqs, p_xx = signal.welch(
         inp.data,

@@ -66,8 +66,9 @@ def time_clip(inp, tint):
             if attr.shape[0] == len(inp.time.data):
                 coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
                 dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
-                attr_ts = xr.DataArray(attr, coords=[inp.time.data, *coords],
-                                       dims=["time", *dims])
+                attr_ts = xr.DataArray(
+                    attr, coords=[inp.time.data, *coords], dims=["time", *dims]
+                )
                 out_attrs[a] = time_clip(attr_ts, tint).data
             else:
                 out_attrs[a] = attr
