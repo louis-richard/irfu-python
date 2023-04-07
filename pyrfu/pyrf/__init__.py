@@ -100,6 +100,7 @@ from .estimate import estimate
 from .struct_func import struct_func
 from .autocorr import autocorr
 from .increments import increments
+from .int_sph_dist import int_sph_dist
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -115,12 +115,16 @@ def _interp_skymap_cart(vdf, energy, phi, theta, grid_cart):
     v_x, v_y, v_z = grid_cart
 
     # Transform cartesian velocity grid to spherical velocity grid
-    phi, theta, speed = cart2sph(v_x, v_y, v_z)
-    energy = 0.5 * constants.proton_mass * speed**2 / constants.elementary_charge
-    phi = np.rad2deg(phi) + 180.0
-    theta = np.rad2deg(theta)
+    phi_grid, theta_grid, speed_grid = cart2sph(v_x, v_y, v_z)
+    energy_grid = (
+        0.5 * constants.proton_mass * speed_grid**2 / constants.elementary_charge
+    )
+    phi_grid = np.rad2deg(phi_grid) + 180.0
+    theta_grid = np.rad2deg(theta_grid)
 
-    grid_sphe = np.transpose(np.stack([energy, phi, theta]), [1, 2, 3, 0])
+    grid_sphe = np.transpose(
+        np.stack([energy_grid, phi_grid, theta_grid]), [1, 2, 3, 0]
+    )
 
     # Interpolate the skymap distribution onto the spherical grid
     out_data = _interp_skymap_sphe(vdf, energy, phi, theta, grid_sphe)

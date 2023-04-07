@@ -11,6 +11,7 @@ from .fk_power_spectrum_4sc import fk_power_spectrum_4sc
 from .lh_wave_analysis import lh_wave_analysis
 from .whistler_b2e import whistler_b2e
 from .get_feeps_omni import get_feeps_omni
+from .remove_imoms_background import remove_imoms_background
 from .remove_idist_background import remove_idist_background
 from .remove_edist_background import remove_edist_background
 from .psd_moments import psd_moments
