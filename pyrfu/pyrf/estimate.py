@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+
 from scipy import constants
 
 __author__ = "Louis Richard"

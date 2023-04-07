@@ -16,7 +16,7 @@ __status__ = "Prototype"
 
 
 def cart2sph_ts(inp, direction_flag: int = 1):
-    """Computes magnitude, theta and phi angle from column vector xyz
+    r"""Computes magnitude, theta and phi angle from column vector xyz
     (first column is x ....) theta is 0 at equator.
     direction_flag = -1  -> to make transformation in opposite direction
 

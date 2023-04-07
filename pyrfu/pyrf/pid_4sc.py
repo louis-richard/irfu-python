@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..mms import rotate_tensor
+from ..mms.rotate_tensor import rotate_tensor
 
 from .c_4_grad import c_4_grad
 from .avg_4sc import avg_4sc
@@ -16,9 +16,9 @@ from .ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 

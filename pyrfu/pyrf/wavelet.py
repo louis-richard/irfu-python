@@ -3,11 +3,12 @@
 
 # Built-in imports
 import os
+import warnings
 
 # 3rd party imports
+import numba
 import numpy as np
 import xarray as xr
-import numba
 
 from scipy import fft
 
@@ -20,21 +21,6 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
-
-
-def _scales(f_range, f_nyq, f_s, n_freqs, linear_df, delta_f):
-    if linear_df:
-        scale_number = np.floor(f_nyq / delta_f).astype(int)
-
-        f_range = [delta_f, scale_number * delta_f]
-
-        scales = f_nyq / (np.linspace(f_range[0], f_range[1], scale_number))
-    else:
-        scale_min = np.log10(0.5 * f_s / f_range[1])
-        scale_max = np.log10(0.5 * f_s / f_range[0])
-        scales = np.logspace(scale_min, scale_max, n_freqs)
-
-    return scales
 
 
 @numba.jit(nopython=True, fastmath=True)
@@ -58,62 +44,75 @@ def _power_c(power, new_freq_mat):
     return power2
 
 
-def wavelet(
-    inp,
-    f_range: list = None,
-    n_freqs: int = 200,
-    w_width: float = 5.36,
-    delta_f: float = 100.0,
-    linear_df: bool = False,
-    cut_edge: bool = True,
-    return_power: bool = True,
-):
-    r"""Computes wavelet spectrogram based on fast FFT algorithm.
-
+def wavelet(inp, **kwargs):
+    """Computes wavelet spectrogram based on fast FFT algorithm.
     Parameters
     ----------
     inp : xarray.DataArray
         Input quantity.
-    f_range : list, Optional
-        Vector [f_min f_max], calculate spectra between frequencies f_min
-        and f_max.
-    n_freqs : int, Optional
-        Number of frequency bins. Default is 200.
-    w_width : float, Optional
-        Width of the Morlet wavelet. Default 5.36.
-    delta_f : float, Optional
-        Spacing between frequencies. Default is 100.
-    linear_df : bool, Optional
-        Linear spacing between frequencies of df. Default is False (use
-        log spacing)
-    return_power : bool, Optional
-        Set to True to return the power, False for complex wavelet
-        transform. Default True.
-    cut_edge : bool, Optional
-        Set to True to set points affected by edge effects to NaN, False to
-        keep edge affect points. Default True.
-
+    **kwargs : dict
+        Hash table of keyword arguments with :
+            * fs : int or float
+                Sampling frequency of the input time series.
+            * f : list or ndarray
+                Vector [f_min f_max], calculate spectra between frequencies
+                f_min and f_max.
+            * nf : int or float
+                Number of frequency bins.
+            * wavelet_width : int or float
+                Width of the Morlet wavelet. Default 5.36.
+            * linear : float
+                Linear spacing between frequencies of df.
+            * return_power : bool
+                Set to True to return the power, False for complex wavelet
+                transform. Default True.
+            * cut_edge : bool
+                Set to True to set points affected by edge effects to NaN,
+                False to keep edge affect points. Default True
     Returns
     -------
     out : xarray.DataArray or xarray.Dataset
         Wavelet transform of the input.
-
     """
 
     # Unpack time and data
     data = inp.data
 
-    # Compute sampling frequency
-    f_s = calc_fs(inp)
+    f_s = kwargs.get("fs", calc_fs(inp))
+    n_freqs = kwargs.get("nf", 200)
+    wavelet_width = kwargs.get("wavelet_width", 5.36)
+    cut_edge = kwargs.get("cut_edge", True)
+    return_power = kwargs.get("return_power", True)
+
+    if kwargs.get("linear"):
+        linear_df = True
+        if isinstance(kwargs["linear"], (int, float)):
+            delta_f = kwargs["linear"]
+        else:
+            delta_f = 100
+            warnings.warn("Unknown input for linear delta_f set to 100", UserWarning)
+    else:
+        delta_f = 100
+        linear_df = False
 
     scale_min, scale_max = [0.01, 2]
 
-    if f_range is None:
-        f_range = [0.5 * f_s / 10**scale_max, 0.5 * f_s / 10**scale_min]
+    f_min, f_max = kwargs.get(
+        "f", [0.5 * f_s / 10**scale_max, 0.5 * f_s / 10**scale_min]
+    )
 
-    f_nyq, scale_number, sigma = [f_s / 2, n_freqs, w_width / (f_s / 2)]
+    f_nyq, scale_number, sigma = [f_s / 2, n_freqs, wavelet_width / (f_s / 2)]
 
-    scales = _scales(f_range, f_nyq, f_s, n_freqs, linear_df, delta_f)
+    if linear_df:
+        scale_number = np.floor(f_nyq / delta_f).astype(np.int64)
+
+        f_min, f_max = [delta_f, scale_number * delta_f]
+
+        scales = f_nyq / (np.linspace(f_max, f_min, scale_number))
+    else:
+        scale_min = np.log10(0.5 * f_s / f_max)
+        scale_max = np.log10(0.5 * f_s / f_min)
+        scales = np.logspace(scale_min, scale_max, scale_number)
 
     # Remove the last sample if the total number of samples is odd
     if len(data) / 2 != np.floor(len(data) / 2):
@@ -134,17 +133,20 @@ def wavelet(
     # Get the correct frequencies for the wavelet transform
     new_freq = f_nyq / scales
 
-    new_freq_mat, _ = np.meshgrid(new_freq, frequencies, sparse=True)
-
-    _, frequencies_mat = np.meshgrid(scales, frequencies, sparse=True)
-
     if len(inp.shape) == 1:
-        data = data[:, np.newaxis]  # if scalar add virtual axis
         out_dict, power2 = [None, np.zeros((len(inp.data), n_freqs))]
     elif len(inp.shape) == 2:
         out_dict, power2 = [{}, None]
     else:
         raise TypeError("Invalid shape of the inp")
+
+    new_freq_mat, temp_freq = np.meshgrid(new_freq, frequencies, sparse=True)
+
+    _, frequencies_mat = np.meshgrid(scales, frequencies, sparse=True)
+
+    # if scalar add virtual axis
+    if len(inp.shape) == 1:
+        data = data[:, np.newaxis]
 
     # go through all the data columns
     for i in range(data.shape[1]):
@@ -176,13 +178,20 @@ def wavelet(
                 power2[: censure[j], j] = np.nan
 
                 power2[len(data_col) - censure[j] : len(data_col), j] = np.nan
+
         if len(inp.shape) == 2:
-            out_dict[inp.comp.data[i]] = (["time", "frequency"], power2)
+            out_dict[inp.comp.data[i]] = (["time", "frequency"], np.fliplr(power2))
 
     if len(inp.shape) == 1:
-        out = xr.DataArray(power2, coords=[time, new_freq], dims=["time", "frequency"])
+        out = xr.DataArray(
+            np.fliplr(power2),
+            coords=[time, np.flip(new_freq)],
+            dims=["time", "frequency"],
+        )
     elif len(inp.shape) == 2:
-        out = xr.Dataset(out_dict, coords={"time": time, "frequency": new_freq})
+        out = xr.Dataset(
+            out_dict, coords={"time": time, "frequency": np.flip(new_freq)}
+        )
     else:
         raise TypeError("Invalid shape")
 

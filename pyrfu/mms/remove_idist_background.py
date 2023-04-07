@@ -6,78 +6,58 @@ import numpy as np
 
 from scipy import constants
 
-# Local imports
-from ..pyrf import ts_tensor_xyz
-
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
-def remove_idist_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
-    r"""Removes penetrating radiation background from ion moments.
+def remove_idist_background(vdf, def_bg):
+    r"""Remove the mode background population due to penetrating radiation `def_bg`
+    from the ion velocity distribution function `vdf` using the method from [1]_.
 
     Parameters
     ----------
-    n_i : xarray.DataArray
-        Time series of the ion density.
-    v_gse_i : xarray.DataArray
-        Time series of the ion bulk velocity.
-    p_gse_i : xarray.DataArray
-        Time series of the ion pressure tensor.
-    n_bg_i : xarray.DataArray
-        Time series of the background ion number density.
-    p_bg_i : xarray.DataArray
-        Time series of the background ion pressure scalar.
+    vdf : xarray.Dataset
+        Ion velocity distribution function.
+    def_bg : xarray.DataArray
+        Omni-directional ion differential energy flux.
 
     Returns
     -------
-    n_i_new : xarray.DataArray
-        Time series of the corrected ion number density.
-    v_gse_i_new : xarray.DataArray
-        Time series of the corrected ion bulk velocity.
-    p_gse_i : xarray.DataArray
-        Time series of the corrected ion pressure tensor.
+    vdf_new : xarray.Dataset
+        Ion velocity distribution function cleaned.
 
     References
     ----------
-    MMS DIS Penetrating radiation correction methods.
+    .. [1]  Gershman, D. J., Dorelli, J. C., Avanov,L. A., Gliese, U., Barrie, A.,
+            Schiff, C.,et al. (2019). Systematic uncertainties in plasma parameters
+            reported by the fast plasma investigation on NASA's magnetospheric
+            multiscale mission. Journal of Geophysical Research: Space Physics, 124,
+            https://doi.org/10.1029/2019JA026980
 
     """
 
-    m_p = constants.proton_mass
+    # Tile background flux to number of energy channels of the FPI-DIS instrument
+    def_bg_tmp = np.tile(def_bg[:, np.newaxis], (1, vdf.energy.shape[1]))
 
-    # Number density
-    n_i_new = n_i - n_bg_i.data
+    # Convert differential energy flux (cm^2 s sr)^{-1} of the background population
+    # (penetrating radiations) to phase-space density (s^3 m^{-6})
+    coeff = constants.proton_mass / (constants.elementary_charge * vdf.energy.data)
+    vdf_bg = def_bg_tmp.copy() * 1e4 / 2
+    vdf_bg *= coeff**2
+    vdf_bg /= 1e12
 
-    # Bulk velocity
-    v_gse_i_new = v_gse_i.copy()
-    v_gse_i_new.data *= n_i.data[:, None] / n_i_new.data[:, None]
+    # Tile the background phase-space density to number of azimuthal and elevation
+    # angles channels of the FPI-DIS instrument
+    vdf_bg = np.tile(
+        vdf_bg[:, :, np.newaxis, np.newaxis],
+        (1, 1, vdf.phi.shape[1], vdf.theta.shape[0]),
+    )
 
-    # Pressure tensor
-    p_gse_i_new = np.zeros(p_gse_i.shape)
-    n_old, v_old = [n_i.data, v_gse_i.data]
-    n_new, v_new = [n_i_new.data, v_gse_i_new.data]
+    vdf_new = vdf.copy()
+    vdf_new.data.data -= vdf_bg.data
 
-    for i, j in zip([0, 1, 2, 0, 0, 1], [0, 1, 2, 1, 2, 2]):
-        p_gse_i_new[:, i, j] += p_gse_i.data[:, i, j]
-
-        p_gse_i_new[:, i, j] += m_p * n_old * np.multiply(v_old[:, i], v_old[:, j])
-        p_gse_i_new[:, i, j] -= m_p * n_new * np.multiply(v_new[:, i], v_new[:, j])
-
-    # Remove isotropic background pressure
-    p_bkg_mat = np.tile(np.eye(3, 3), (len(p_bg_i.data), 1, 1))
-    p_bkg_mat *= p_bg_i.data[:, None, None]
-    p_gse_i_new -= p_bkg_mat
-
-    # Pressure tensor is symmetric
-    p_gse_i_new[:, 1, 0] = p_gse_i_new[:, 0, 1]
-    p_gse_i_new[:, 2, 0] = p_gse_i_new[:, 0, 2]
-    p_gse_i_new[:, 2, 1] = p_gse_i_new[:, 1, 2]
-
-    p_gse_i_new = ts_tensor_xyz(p_gse_i.time.data, p_gse_i_new)
-
-    return n_i_new, v_gse_i_new, p_gse_i_new
+    return vdf_new

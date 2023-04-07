@@ -130,7 +130,7 @@ def _freq_int(freq_int, delta_b):
         fs_out = 1 / delta_t
 
         nt = np.round((iso2unix(tint[1]) - iso2unix(tint[0])) / delta_t)
-        nt = nt.astype(int)  # local
+        nt = nt.astype(np.int64)  # local
 
         out_time = np.linspace(iso2unix(tint[0]), iso2unix(tint[1]), nt)
         out_time += delta_t / 2
@@ -144,7 +144,7 @@ def _freq_int(freq_int, delta_b):
             delta_t = 1 / fs_out  # local
 
             nt = np.round((end(delta_b) - start(delta_b)) / delta_t)
-            nt = nt.astype(int)  # local
+            nt = nt.astype(np.int64)  # local
 
             out_time = np.linspace(start(delta_b), end(delta_b), nt)
             out_time += delta_t / 2
@@ -435,7 +435,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         if want_ee:
             e_xyz = e_xyz[:-1, :]
 
-    in_time = delta_b.time.data.view("i8") * 1e-9
+    in_time = delta_b.time.data.astype(np.int64) * 1e-9
 
     b_x, b_y, b_z = [None, None, None]
 
@@ -457,7 +457,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     if flag_want_fac:
         res["flagFac"] = True
 
-        time_b0 = b_bgd.time.data.view("i8") * 1e-9
+        time_b0 = b_bgd.time.data.astype(np.int64) * 1e-9
 
         if want_ee:
             if not flag_de_dot_b0:
@@ -498,6 +498,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
     a_number = freq_number
     a_ = np.logspace(a_min, a_max, int(a_number))
+    a_ = np.flip(a_)
 
     # Maximum frequency
     w_0 = in_sampling / 2
@@ -510,8 +511,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
     delta_b.data[idx_nan_b] = 0
 
-    swb = fft.fft(delta_b.data, axis=0, workers=os.cpu_count())
-    # swb = pyfftw.interfaces.numpy_fft.fft(delta_b, axis=0, threads=n_threads)
+    sw_b = fft.fft(delta_b.data, axis=0, workers=os.cpu_count())
+    # sw_b = pyfftw.interfaces.numpy_fft.fft(delta_b, axis=0, threads=n_threads)
 
     idx_nan_e, idx_nan_eisr2 = [None, None]
 
@@ -586,8 +587,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         w_exp_mat2 = np.tile(w_exp_mat, (2, 1)).T
         w_exp_mat = np.tile(w_exp_mat, (3, 1)).T
 
-        wb = fft.ifft(np.sqrt(1) * swb * w_exp_mat, axis=0, workers=os.cpu_count())
-        # wb = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * swb * w_exp_mat,
+        wb = fft.ifft(np.sqrt(1) * sw_b * w_exp_mat, axis=0, workers=os.cpu_count())
+        # wb = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * sw_b * w_exp_mat,
         #                                      axis=0, threads=n_threads)
         wb[idx_nan_b] = np.nan
 
@@ -611,6 +612,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                 w_eisr2[idx_nan_eisr2] = np.nan
 
         new_freq_mat = w_0 / a_[ind_a]
+        new_freq_mat = np.flip(new_freq_mat)
         # Power spectrum of E and Poynting flux
 
         if want_ee:
@@ -739,7 +741,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                         np.max([0, len(out_time) - censure[ind_a] - 1]), len(out_time)
                     ),
                 ]
-            ).astype(int)
+            )
+            censure_idx = censure_idx.astype(np.int64)
 
             s_mat_avg[censure_idx, ...] = np.nan
 
@@ -846,7 +849,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
             ]
         )
 
-        censure_idx = censure_idx.astype(int)
+        censure_idx = censure_idx.astype(np.int64)
 
         power_bx_plot[censure_idx, ind_a] = np.nan
         power_by_plot[censure_idx, ind_a] = np.nan
@@ -996,17 +999,17 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         poynting_xyz = np.transpose(poynting_xyz, [1, 2, 0])
         poynting_xyz[:, :, 1] = s_plot_y
         poynting_xyz[:, :, 2] = s_plot_z
-        poynting_xyz = poynting_xyz.astype(float)
+        poynting_xyz = poynting_xyz.astype(np.float64)
 
         poynting_r_th_ph = np.tile(s_r, (3, 1, 1))
         poynting_r_th_ph = np.transpose(poynting_r_th_ph, [1, 2, 0])
         poynting_r_th_ph[..., 1] = np.pi / 2 - s_elevation
         poynting_r_th_ph[..., 2] = s_azimuth
         poynting_r_th_ph[..., 1:] = poynting_r_th_ph[..., 1:] * 180 / np.pi
-        poynting_r_th_ph = poynting_r_th_ph.astype(float)
+        poynting_r_th_ph = poynting_r_th_ph.astype(np.float64)
 
         # Output
-        res["ee_ss"] = power_2e_isr2_plot.astype(float)
+        res["ee_ss"] = power_2e_isr2_plot.astype(np.float64)
 
         res["ee_xxyyzzss"] = xr.DataArray(
             ee_xxyyzzss,

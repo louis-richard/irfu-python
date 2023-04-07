@@ -3,16 +3,16 @@ channels:
 - conda-forge
 - defaults
 dependencies:
+- cdflib
 - ipykernel
 - ipython
 - matplotlib
 - nbsphinx
 - numpy
 - pandas
+- pydata-sphinx-theme
 - scipy
 - sphinx
 - sphinxcontrib-apidoc
 - sphinx_rtd_theme
-- pydata-sphinx-theme
 - xarray
-- cdflib

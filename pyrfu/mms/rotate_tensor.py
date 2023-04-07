@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# MIT License
-#
-# Copyright (c) 2020 Louis Richard
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so.
 
+# 3rd party imports
 import numpy as np
 
+# Local imports
 from ..pyrf import resample, ts_tensor_xyz, calc_fs
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2023"
+__license__ = "MIT"
+__version__ = "2.3.26"
+__status__ = "Prototype"
 
 
 def rotate_tensor(*args):
@@ -28,22 +26,26 @@ def rotate_tensor(*args):
 
     flag : str
         Flag of the target coordinates system :
-            * "fac" : 	Field-aligned coordinates, requires background magnetic field Bback,
-                        optional flag "pp" :math:`\\mathbf{P}_{\\perp 1} = \\mathbf{P}_{\\perp
-                        2}` or "qq" :math:`\\mathbf{P}_{\\perp 1}` and
-                        :math:`\\mathbf{P}_{\\perp 2}` are most unequal, sets P23 to zero.
+            * "fac" : 	Field-aligned coordinates, requires background magnetic field
+                        Bback, optional flag "pp"
+                        :math:`\\mathbf{P}_{\\perp 1} = \\mathbf{P}_{\\perp2}` or "qq"
+                        :math:`\\mathbf{P}_{\\perp 1}` and
+                        :math:`\\mathbf{P}_{\\perp 2}` are most unequal, sets P_{23} to
+                        zero.
 
-            * "rot" :	Arbitrary coordinate system, requires new x-direction xnew, new y and z
-                        directions ynew, znew (if not included y and z directions are orthogonal
-                        to xnew and closest to the original y and z directions)
+            * "rot" :	Arbitrary coordinate system, requires new x-direction xnew, new
+                        y and z directions ynew, znew (if not included y and z
+                        directions are orthogonal to xnew and closest to the original
+                        y and z directions)
 
             * "gse" : GSE coordinates, requires MMS spacecraft number 1--4 MMSnum
 
     Returns
     -------
     Pe : xarray.DataArray
-        Time series of the pressure or temperature tensor in field-aligned, user-defined,
-        or GSE coordinates. For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
+        Time series of the pressure or temperature tensor in field-aligned,
+        user-defined, or GSE coordinates.
+        For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
         For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
 
     Examples
@@ -84,7 +86,6 @@ def rotate_tensor(*args):
     rot_mat = np.zeros((len(p_times), 3, 3))
 
     if rot_flag[0] == "f":
-
         if nargin == rot_flag_pos:
             raise ValueError("B TSeries is missing.")
 
@@ -119,7 +120,6 @@ def rotate_tensor(*args):
         rot_mat[:, 0, :], rot_mat[:, 1, :], rot_mat[:, 2, :] = [r_x, r_y, r_z]
 
     elif rot_flag[0] == "r":
-
         if nargin == rot_flag_pos:
             raise ValueError("Vector(s) is(are) missing.")
 

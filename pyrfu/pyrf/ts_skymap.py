@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
@@ -18,28 +18,27 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
     Parameters
     ----------
-    time : ndarray
+    time : array_like
         List of times.
-    data : ndarray
+    data : array_like
         Values of the distribution function.
-    energy : ndarray
+    energy : array_like
         Energy levels.
-    phi : ndarray
+    phi : array_like
         Azimuthal angles.
-    theta : ndarray
+    theta : array_like
         Elevation angles.
 
     Other Parameters
     ---------------
     **kwargs
         Hash table of keyword arguments with :
-            * energy0 : ndarray
+            * energy0 : array_like
                 Energy table 0 (odd time indices).
-            * energy1 : ndarray
+            * energy1 : array_like
                 Energy table 1 (even time indices).
-            * esteptable : ndarray
+            * esteptable : array_like
                 Time series of the stepping table between energies (burst).
-
 
     Returns
     -------
@@ -48,26 +47,22 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
     """
 
-    energy0, energy1, esteptable = [None] * 3
-    energy0_ok, energy1_ok, esteptable_ok = [False] * 3
+    # Check if even (odd) time step energy channels energy1 (energy0), and energy
+    # step table are provided.
+    energy0 = kwargs.get("energy0", None)
+    energy1 = kwargs.get("energy1", None)
+    esteptable = kwargs.get("esteptable", None)
+    attrs = kwargs.get("attrs", {})
+    coords_attrs = kwargs.get("coords_attrs", {})
+    glob_attrs = kwargs.get("glob_attrs", {})
 
     if energy is None:
-
-        if "energy0" in kwargs:
-            energy0, energy0_ok = [kwargs["energy0"], True]
-
-        if "energy1" in kwargs:
-            energy1, energy1_ok = [kwargs["energy1"], True]
-
-        if "esteptable" in kwargs:
-            esteptable, esteptable_ok = [kwargs["esteptable"], True]
-
-        if not energy0_ok and not energy1_ok and not esteptable_ok:
-            raise ValueError("Energy input required")
+        assert energy0 is not None and energy1 is not None and esteptable is not None
 
         energy = np.tile(energy0, (len(esteptable), 1))
 
         energy[esteptable == 1] = np.tile(energy1, (int(np.sum(esteptable)), 1))
+
     if phi.ndim == 1:
         phi = np.tile(phi, (len(time), 1))
 
@@ -82,15 +77,18 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
         "idx2": np.arange(len(theta)),
     }
 
-    out = xr.Dataset(out_dict)
+    glob_attrs = {
+        **glob_attrs,
+        **{"energy0": energy0, "energy1": energy1, "esteptable": esteptable},
+    }
 
-    if energy0_ok:
-        out.attrs["energy0"] = energy0
+    out = xr.Dataset(out_dict, attrs=glob_attrs)
 
-    if energy1_ok:
-        out.attrs["energy1"] = energy1
+    # Set coordinates attributes
+    for k in coords_attrs:
+        out[k].attrs = coords_attrs[k]
 
-    if energy0_ok:
-        out.attrs["esteptable"] = esteptable
+    # Set data attributes
+    out.data.attrs = attrs
 
     return out

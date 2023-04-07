@@ -8,10 +8,12 @@ import json
 import bisect
 import logging
 
+import pdb
+
 # 3rd party imports
 import pandas as pd
 
-from ..pyrf import iso86012datetime
+from ..pyrf import iso86012datetime, extend_tint
 
 # Local imports
 from .list_files_ancillary import list_files_ancillary
@@ -53,7 +55,8 @@ def load_ancillary(product, tint, mms_id, verbose: bool = True, data_path: str =
     """
 
     # Get path of files in interval
-    files_names = list_files_ancillary(tint, mms_id, product, data_path)
+    tint_long = extend_tint(tint, [-86400, 86400])
+    files_names = list_files_ancillary(tint_long, mms_id, product, data_path)
 
     # Convert time interval to datetime
     tint = iso86012datetime(tint)

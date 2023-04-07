@@ -5,13 +5,17 @@
 import numpy as np
 import xarray as xr
 
-from cdflib import cdfread
+from cdflib import cdfread, cdfepoch
+from dateutil import parser
+
+# Local imports
+from .datetime2iso8601 import datetime2iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.22"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
@@ -31,6 +35,11 @@ def read_cdf(path, tint):
         Hash table with fields contained in the .cdf file.
 
     """
+
+    tint = list(map(parser.parse, tint))
+    tint = list(map(datetime2iso8601, tint))
+    tint = list(map(cdfepoch.parse, tint))
+
     out_dict = {}
 
     with cdfread.CDF(path) as file:

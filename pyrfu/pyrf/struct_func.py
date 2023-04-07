@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2022"
 __license__ = "MIT"
-__version__ = "2.3.14"
+__version__ = "2.3.23"
 __status__ = "Prototype"
 
 
@@ -46,14 +46,26 @@ def struct_func(inp, scales, order):
 
     data = inp.data
 
+    if data.ndim == 1:
+        data = np.transpose(np.atleast_2d(data))
+
     result = []
     for scale in scales:
         result.append(
-            np.mean(np.abs(data[scale:, :] - data[:-scale, :]) ** order, axis=0)
+            np.nanmean(np.abs(data[scale:, :] - data[:-scale, :]) ** order, axis=0)
         )
 
-    result = np.squeeze(result)
-    result = xr.DataArray(result, coords=[scales], dims=["scale"], attrs=inp.attrs)
+    if inp.data.ndim == 1:
+        result = xr.DataArray(
+            np.squeeze(result), coords=[scales], dims=["scale"], attrs=inp.attrs
+        )
+    else:
+        result = xr.DataArray(
+            np.squeeze(result),
+            coords=[scales, inp.coords[inp.dims[1]]],
+            dims=["scale", inp.dims[1]],
+            attrs=inp.attrs,
+        )
 
     result.attrs["order"] = order
 

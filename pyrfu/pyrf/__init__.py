@@ -90,6 +90,7 @@ from .datetime642unix import datetime642unix
 from .ttns2datetime64 import ttns2datetime64
 from .datetime642ttns import datetime642ttns
 from .iso86012datetime import iso86012datetime
+from .cdfepoch2datetime64 import cdfepoch2datetime64
 from .cart2sph import cart2sph
 from .iplasma_calc import iplasma_calc
 from .match_phibe_dir import match_phibe_dir
@@ -99,6 +100,7 @@ from .estimate import estimate
 from .struct_func import struct_func
 from .autocorr import autocorr
 from .increments import increments
+from .int_sph_dist import int_sph_dist
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

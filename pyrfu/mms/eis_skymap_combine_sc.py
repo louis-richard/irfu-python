@@ -103,7 +103,10 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
 
     out = xr.Dataset(out_dict)
 
-    out.attrs["energy_dminus"] = common_minu
-    out.attrs["energy_dplus"] = common_plus
+    out.attrs["delta_energy_minus"] = np.tile(common_minu, (len(ref_probe.time), 1))
+    out.attrs["delta_energy_plus"] = np.tile(common_plus, (len(ref_probe.time), 1))
+    out.attrs["energy0"] = common_energy[0, :]
+    out.attrs["energy1"] = common_energy[1, :]
+    out.attrs["species"] = "ions"
 
     return out

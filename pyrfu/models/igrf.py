@@ -46,17 +46,17 @@ def igrf(time, flag):
     i_igrf = df.loc[
         1:,
     ].values
-    i_igrf[:, -1] = i_igrf[:, -2] + 5.0 * i_igrf[:, -1].astype(float)
-    h_igrf = i_igrf[i_igrf[:, 0] == "h", 1:].astype(float)
-    g_igrf = i_igrf[i_igrf[:, 0] == "g", 1:].astype(float)
+    i_igrf[:, -1] = i_igrf[:, -2] + 5.0 * i_igrf[:, -1].astype(np.float64)
+    h_igrf = i_igrf[i_igrf[:, 0] == "h", 1:].astype(np.float64)
+    g_igrf = i_igrf[i_igrf[:, 0] == "g", 1:].astype(np.float64)
 
     # timeVec = irf_time(t,'vector');
     # yearRef = timeVec(:,1);
     year_ref = (time * 1e9).astype("datetime64[ns]")
     year_ref = year_ref.astype("datetime64[Y]")
-    year_ref = year_ref.astype(int) + 1970
+    year_ref = year_ref.astype(np.int64) + 1970
     year_ref_unix = (year_ref - 1970).astype("datetime64[Y]")
-    year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(int) / 1e9
+    year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(np.int64) / 1e9
 
     if np.min(year_ref) < np.min(years_igrf):
         message = (

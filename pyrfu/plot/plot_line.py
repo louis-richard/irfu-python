@@ -15,10 +15,6 @@ __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
 
-# plt.style.use("seaborn-ticks")
-color = ["tab:blue", "tab:green", "tab:red", "k"]
-plt.rc("axes", prop_cycle=mpl.cycler(color=color))
-
 
 def plot_line(axis, inp, **kwargs):
     r"""Line plot of time series.

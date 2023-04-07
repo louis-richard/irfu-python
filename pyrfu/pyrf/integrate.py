@@ -54,7 +54,7 @@ def integrate(inp, time_step: float = None):
 
     """
 
-    time_tmp = inp.time.data.astype(int) * 1e-9
+    time_tmp = inp.time.data.astype(np.int64) * 1e-9
     data_tmp = inp.data
     unit_tmp = inp.attrs["UNITS"]
 

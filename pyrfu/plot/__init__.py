@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 3rd party imports
+import matplotlib.pyplot as plt
+
+# Local imports
 from .plot_line import plot_line
 from .plot_spectr import plot_spectr
 from .mms_pl_config import mms_pl_config
@@ -21,10 +25,17 @@ from .plot_heatmap import plot_heatmap
 from .annotate_heatmap import annotate_heatmap
 from .plot_reduced_2d import plot_reduced_2d
 
-
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+
+# Setup plotting style
+plt.style.use("classic")
+plt.rcParams["figure.facecolor"] = "1"
+plt.rcParams["mathtext.sf"] = "sans"
+plt.rcParams["mathtext.fontset"] = "dejavusans"
+

@@ -38,7 +38,7 @@ def t_eval(inp, times):
     for i, time in enumerate(times):
         idx[i] = bisect.bisect_left(inp.time.data, time)
 
-    idx = idx.astype(int)
+    idx = idx.astype(np.int64)
 
     if inp.ndim == 2:
         out = xr.DataArray(

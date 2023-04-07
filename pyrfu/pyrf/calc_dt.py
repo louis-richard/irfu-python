@@ -27,6 +27,6 @@ def calc_dt(inp):
 
     """
 
-    out = np.median(np.diff(inp.time.data)).astype(float) * 1e-9
+    out = np.median(np.diff(inp.time.data)).astype(np.float64) * 1e-9
 
     return out

@@ -130,7 +130,7 @@ def hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     yy_ = np.sin(np.deg2rad(elev_mat)) * np.sin(np.deg2rad(aze_mat))
     zz_ = np.cos(np.deg2rad(elev_mat))
 
-    t0_ = vdf.time.data.astype(int)
+    t0_ = vdf.time.data.astype(np.int64)
     t0_start = t0_[0]
     t0_ -= t0_start
     tck_ = interpolate.interp1d(

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import pdb
+
 
 # Built-in imports
 import bisect
@@ -60,7 +62,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     """
 
     try:
-        out_data = np.zeros((len(ref_time), inp_data.shape[1]))
+        out_data = np.zeros([len(ref_time), *inp_data.shape[1:]])
     except IndexError:
         inp_data = inp_data[:, None]
         out_data = np.zeros((len(ref_time), inp_data.shape[1]))
@@ -97,63 +99,14 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
             else:
                 out_data[i, ...] = np.mean(inp_data[idx, ...], axis=0)
 
-    if out_data.shape[1] == 1:
+    if out_data.ndim > 1 and out_data.shape[1] == 1:
         out_data = out_data[:, 0]
 
     return out_data
 
 
-def resample(
-    inp, ref, method: str = "", f_s: float = None, window: int = None, thresh: float = 0
-):
-    r"""Resample inp to the time line of ref. If sampling of X is more than two
-    times higher than Y, we average X, otherwise we interpolate X.
-
-    Parameters
-    ----------
-    inp : xarray.DataArray
-        Time series to resample.
-    ref : xarray.DataArray
-        Reference time line.
-    method : str, Optional
-        Method of interpolation "spline", "linear" etc.
-        (default "linear") if method is given then interpolate
-        independent of sampling.
-    f_s : float, Optional
-        Sampling frequency of the Y signal, 1/window.
-    window : int or float or ndarray, Optional
-        Length of the averaging window, 1/fsample.
-    thresh : float, Optional
-        Points above STD*THRESH are disregarded for averaging
-
-    Returns
-    -------
-    out : xarray.DataArray
-        Resampled input to the reference time line using the selected method.
-
-
-    Examples
-    --------
-    >>> from pyrfu import mms, pyrf
-
-    Time interval
-
-    >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
-
-    Spacecraft index
-
-    >>> mms_id = 1
-
-    Load magnetic field and electric field
-
-    >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-    >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
-
-    Resample magnetic field to electric field sampling
-
-    >>> b_xyz = pyrf.resample(b_xyz, e_xyz)
-
-    """
+def _resample_dataarray(inp, ref, method, f_s, window, thresh):
+    r"""Resample for time series (xarray.DataArray)"""
 
     flag_do = "check"
 
@@ -222,5 +175,115 @@ def resample(
             coord.append(inp.coords[k].data)
 
     out = xr.DataArray(out_data, coords=coord, dims=inp.dims, attrs=inp.attrs)
+
+    return out
+
+
+def _resample_dataset(inp, ref, **kwargs):
+    r"""Resample for VDFs (xarray.Dataset)"""
+    # Find time dependent zVariables and resample
+    tdepnd_zvars = list(filter(lambda x: "time" in inp[x].dims, inp))
+    out_dict = {k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars}
+
+    # Complete the dictionary with non-time dependent zVaraiables
+    ndepnd_zvars = list(filter(lambda x: x not in tdepnd_zvars, inp))
+    out_dict = {**out_dict, **{k: inp[k] for k in ndepnd_zvars}}
+
+    # Find array_like attributes
+    arr_attrs = filter(lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs)
+    arr_attrs = list(arr_attrs)
+
+    # Initialize attributes dictionary with non array_like attributes
+    gen_attrs = filter(lambda x: x not in arr_attrs, inp.attrs)
+    out_attrs = {k: inp.attrs[k] for k in list(gen_attrs)}
+
+    for k in arr_attrs:
+        attr = inp.attrs[k]
+
+        # If array_like attributes have one dimension equal to time length assume
+        # time dependent. One option would be move the time dependent array_like
+        # attributes to time series to zVaraibles to avoid confusion
+        if attr.shape[0] == len(inp.time.data):
+            coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
+            dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
+            attr_ts = xr.DataArray(
+                attr, coords=[inp.time.data, *coords], dims=["time", *dims]
+            )
+            out_attrs[k] = _resample_dataarray(attr_ts, ref, **kwargs).data
+        else:
+            out_attrs[k] = attr
+
+    out_attrs = {k: out_attrs[k] for k in sorted(out_attrs)}
+
+    # Make output Dataset
+    out = xr.Dataset(out_dict, attrs=out_attrs)
+
+    return out
+
+
+def resample(
+    inp, ref, method: str = "", f_s: float = None, window: int = None, thresh: float = 0
+):
+    r"""Resample inp to the time line of ref. If sampling of X is more than two
+    times higher than Y, we average X, otherwise we interpolate X.
+
+    Parameters
+    ----------
+    inp : xarray.DataArray or xarray.Dataset
+        Time series to resample.
+    ref : xarray.DataArray
+        Reference time line.
+    method : str, Optional
+        Method of interpolation "spline", "linear" etc.
+        (default "linear") if method is given then interpolate
+        independent of sampling.
+    f_s : float, Optional
+        Sampling frequency of the Y signal, 1/window.
+    window : int or float or ndarray, Optional
+        Length of the averaging window, 1/fsample.
+    thresh : float, Optional
+        Points above STD*THRESH are disregarded for averaging
+
+    Returns
+    -------
+    out : xarray.DataArray
+        Resampled input to the reference time line using the selected method.
+
+    TODO
+    ----
+    Make the resampling VDF (xarray.Dataset) compliant.
+
+
+    Examples
+    --------
+    >>> from pyrfu import mms, pyrf
+
+    Time interval
+
+    >>> tint = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+
+    Spacecraft index
+
+    >>> mms_id = 1
+
+    Load magnetic field and electric field
+
+    >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
+    >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
+
+    Resample magnetic field to electric field sampling
+
+    >>> b_xyz = pyrf.resample(b_xyz, e_xyz)
+
+    """
+
+    options = dict(method=method, f_s=f_s, window=window, thresh=thresh)
+
+    if isinstance(inp, xr.DataArray):
+        out = _resample_dataarray(inp, ref, **options)
+    elif isinstance(inp, xr.Dataset):
+        out = _resample_dataset(inp, ref, **options)
+    else:
+        raise TypeError("Invalid input type. Input must be a xarray!!")
 
     return out
