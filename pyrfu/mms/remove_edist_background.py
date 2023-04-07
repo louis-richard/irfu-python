@@ -20,15 +20,15 @@ from .get_data import get_data
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
-def remove_edist_background(vdf, n_sec: float = 0., n_art: float = -1.):
-    r"""Rremove secondary photoelectrons from electron distribution function according 
-    to MMS FPI user guide.
+def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
+    r"""Remove secondary photoelectrons from electron distribution function according
+    to [1]_.
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ def remove_edist_background(vdf, n_sec: float = 0., n_art: float = -1.):
     n_sec : float, Optional
         Artificial secondary electron density (isotropic). Default is 0.
     n_art : float, Optional
-        Artificial photo electron density (sun-angle dependant), Default is ephoto_scale 
+        Artificial photoelectron density (sun-angle dependant), Default is ephoto_scale
         from des-emoms GlobalAttributes.
 
     Returns
@@ -48,6 +48,14 @@ def remove_edist_background(vdf, n_sec: float = 0., n_art: float = -1.):
         Photoelectron VDF.
     photoe_scle : float
         Artificial photoelectron and secondary electron density
+
+    References
+    ----------
+    .. [1]  Gershman, D. J., Avanov, L. A., Boardsen,S. A., Dorelli, J. C., Gliese, U.,
+            Barrie, A. C.,... Pollock, C. J. (2017). Spacecraft and instrument
+            photoelectrons measured by the dual electron spectrometers on MMS. Journal
+            of Geophysical Research:Space Physics,122, 11,548–11,558.
+            https://doi.org/10.1002/2017JA024518
 
     """
 
@@ -63,9 +71,9 @@ def remove_edist_background(vdf, n_sec: float = 0., n_art: float = -1.):
     vdf_bkg = np.zeros_like(vdf_tmp.data.data)
 
     dataset_name = f"mms{mms_id}_fpi_brst_l2_des-dist"
-    startdelphi_count = db_get_ts(dataset_name,
-                                  f"mms{mms_id}_des_startdelphi_count_brst",
-                                  tint, verbose=False)
+    startdelphi_count = db_get_ts(
+        dataset_name, f"mms{mms_id}_des_startdelphi_count_brst", tint, verbose=False
+    )
 
     # Load the elctron number density to get the name of the photoelectron model file,
     # and the photoelectron scaling factor
@@ -124,17 +132,37 @@ def remove_edist_background(vdf, n_sec: float = 0., n_art: float = -1.):
             vdf_bkg_tmp += n_sec * vdf_bkg_av
 
         vdf_new_tmp = vdf.data.data[i, ...] - vdf_bkg_tmp
-        vdf_new_tmp[vdf_new_tmp < 0] = 0.
-        vdf_bkg_tmp[vdf_bkg_tmp < 0] = 0.
+        vdf_new_tmp[vdf_new_tmp < 0] = 0.0
+        vdf_bkg_tmp[vdf_bkg_tmp < 0] = 0.0
         vdf_new[i, ...] = vdf_new_tmp
         vdf_bkg[i, ...] = vdf_bkg_tmp
 
-    # Construct the new VDFs    
-    vdf_new = ts_skymap(vdf.time.data, vdf_new, vdf.energy.data, vdf.phi.data,
-                        vdf.theta.data)
+    # Construct the new VDFs
+    glob_attrs = vdf.attrs
+    vdf_attrs = vdf.data.attrs
+    coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
+
+    vdf_new = ts_skymap(
+        vdf.time.data,
+        vdf_new,
+        vdf.energy.data,
+        vdf.phi.data,
+        vdf.theta.data,
+        attrs=vdf_attrs,
+        coords_attrs=coords_attrs,
+        glob_attrs=glob_attrs,
+    )
     vdf_new.attrs = vdf.attrs
-    vdf_bkg = ts_skymap(vdf.time.data, vdf_bkg, vdf.energy.data, vdf.phi.data,
-                        vdf.theta.data)
+    vdf_bkg = ts_skymap(
+        vdf.time.data,
+        vdf_bkg,
+        vdf.energy.data,
+        vdf.phi.data,
+        vdf.theta.data,
+        attrs=vdf_attrs,
+        coords_attrs=coords_attrs,
+        glob_attrs=glob_attrs,
+    )
     vdf_bkg.attrs = vdf.attrs
 
     return vdf_new, vdf_bkg, photoe_scle
