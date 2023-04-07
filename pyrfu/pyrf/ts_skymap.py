@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
@@ -18,28 +18,27 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
     Parameters
     ----------
-    time : ndarray
+    time : array_like
         List of times.
-    data : ndarray
+    data : array_like
         Values of the distribution function.
-    energy : ndarray
+    energy : array_like
         Energy levels.
-    phi : ndarray
+    phi : array_like
         Azimuthal angles.
-    theta : ndarray
+    theta : array_like
         Elevation angles.
 
     Other Parameters
     ---------------
     **kwargs
         Hash table of keyword arguments with :
-            * energy0 : ndarray
+            * energy0 : array_like
                 Energy table 0 (odd time indices).
-            * energy1 : ndarray
+            * energy1 : array_like
                 Energy table 1 (even time indices).
-            * esteptable : ndarray
+            * esteptable : array_like
                 Time series of the stepping table between energies (burst).
-
 
     Returns
     -------
@@ -56,8 +55,8 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
     attrs = kwargs.get("attrs", {})
     coords_attrs = kwargs.get("coords_attrs", {})
     glob_attrs = kwargs.get("glob_attrs", {})
-    
-    if not energy:
+
+    if energy is None:
         assert energy0 is not None and energy1 is not None and esteptable is not None
 
         energy = np.tile(energy0, (len(esteptable), 1))
@@ -78,15 +77,17 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
         "idx2": np.arange(len(theta)),
     }
 
-    glob_attrs = {**glob_attrs,
-                  **{"energy0": energy0, "energy1": energy1, "esteptable": esteptable}}
+    glob_attrs = {
+        **glob_attrs,
+        **{"energy0": energy0, "energy1": energy1, "esteptable": esteptable},
+    }
 
     out = xr.Dataset(out_dict, attrs=glob_attrs)
-    
+
     # Set coordinates attributes
     for k in coords_attrs:
         out[k].attrs = coords_attrs[k]
-    
+
     # Set data attributes
     out.data.attrs = attrs
 
