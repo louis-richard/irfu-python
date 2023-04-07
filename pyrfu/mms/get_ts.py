@@ -12,28 +12,36 @@ import xarray as xr
 from cdflib import CDF, cdfepoch
 
 # Local imports
-from ..pyrf import (datetime642iso8601, iso86012datetime64, cdfepoch2datetime64,
-                    extend_tint, time_clip)
+from ..pyrf import (
+    datetime642iso8601,
+    iso86012datetime64,
+    cdfepoch2datetime64,
+    extend_tint,
+    time_clip,
+)
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
 def _shift_epochs(file, epoch):
-    r"""Shift times for particles.
-    """
+    r"""Shift times for particles."""
 
     epoch_shifted = epoch["data"].copy()
 
     try:
-        delta_minus_var = {"data": file.varget(epoch["attrs"]["DELTA_MINUS_VAR"]),
-                           "attrs": file.varget(epoch["attrs"]["DELTA_MINUS_VAR"])}
-        delta_plus_var = {"data": file.varget(epoch["attrs"]["DELTA_PLUS_VAR"]),
-                          "attrs": file.varget(epoch["attrs"]["DELTA_PLUS_VAR"])}
+        delta_minus_var = {
+            "data": file.varget(epoch["attrs"]["DELTA_MINUS_VAR"]),
+            "attrs": file.varget(epoch["attrs"]["DELTA_MINUS_VAR"]),
+        }
+        delta_plus_var = {
+            "data": file.varget(epoch["attrs"]["DELTA_PLUS_VAR"]),
+            "attrs": file.varget(epoch["attrs"]["DELTA_PLUS_VAR"]),
+        }
 
         delta_vars = [delta_minus_var, delta_plus_var]
         flags_vars = [1e3, 1e3]  # Time scaling conversion flags
@@ -52,11 +60,13 @@ def _shift_epochs(file, epoch):
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars
-        t_offset = delta_plus_var["data"] * flag_plus - delta_minus_var[
-            "data"] * flag_minus
+        t_offset = (
+            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
+        )
         t_offset = np.timedelta64(int(np.round(t_offset, 1) * 1e6 / 2), "ns")
-        t_diff = delta_plus_var["data"] * flag_plus - delta_minus_var[
-            "data"] * flag_minus
+        t_diff = (
+            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
+        )
         t_diff = np.timedelta64(int(np.round(t_diff, 1) * 1e6 / 2), "ns")
         t_diff_data = np.median(np.diff(epoch["data"])) / 2
 
@@ -72,8 +82,7 @@ def _shift_epochs(file, epoch):
 
 
 def _get_epochs(file, cdf_name, tint):
-    r"""Get epochs form cdf and shift if needed.
-    """
+    r"""Get epochs form cdf and shift if needed."""
 
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
@@ -89,8 +98,8 @@ def _get_epochs(file, cdf_name, tint):
     out["attrs"] = file.varattsget(depend0_key)
 
     # Shift times if particle data
-    is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)              # Is it FPI data?
-    is_part = is_part or re.search("^mms[1-4]_hpca_", cdf_name)     # Is it HPCA data?
+    is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
+    is_part = is_part or re.search("^mms[1-4]_hpca_", cdf_name)  # Is it HPCA data?
 
     if is_part:
         out = _shift_epochs(file, out)
@@ -175,7 +184,7 @@ def get_ts(file_path, cdf_name, tint):
 
     # Extend time interval by 1s and convert time interval to epochs
     tint_org = tint.copy()
-    tint = extend_tint(tint, [-1., 1.])
+    tint = extend_tint(tint, [-1.0, 1.0])
     tint = list(datetime642iso8601(iso86012datetime64(np.array(tint))))
     tint = list(map(cdfepoch.parse, tint))
 
