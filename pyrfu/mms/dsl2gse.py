@@ -12,9 +12,9 @@ from ..pyrf import cotrans, resample, sph2cart, ts_vec_xyz, calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
@@ -38,7 +38,7 @@ def _transformation_matrix(spin_axis, direction):
 
 
 def dsl2gse(inp, defatt, direction: int = 1):
-    r"""Transform time series from DSL to GSE.
+    r"""Transform time series from MMS's DSL to GSE.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ def dsl2gse(inp, defatt, direction: int = 1):
     defatt : xarray.Dataset or array_like
         Spacecraft attitude.
     direction : {1, -1}, Optional
-        Direction of tranformation. +1 DSL -> GSE, -1 GSE -> DSL. Default is 1.
+        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL. Default is 1.
 
     Returns
     -------
@@ -62,7 +62,7 @@ def dsl2gse(inp, defatt, direction: int = 1):
 
     >>> tint = ["2015-05-09T14:00:000", "2015-05-09T17:59:590"]
 
-    Load magentic field in spacecraft coordinates
+    Load magnetic field in spacecraft coordinates
 
     >>> b_xyz = get_data("b_dmpa_fgm_brst_l2", tint, 1)
 
@@ -81,9 +81,7 @@ def dsl2gse(inp, defatt, direction: int = 1):
         y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(np.deg2rad(defatt.z_ra.data))
         z = np.sin(np.deg2rad(defatt.z_dec))
         sax_gei = np.transpose(
-            np.vstack(
-                [defatt.time.data.astype("int") / 1e9, x, y, z]
-            )
+            np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z])
         )
         sax_gse = cotrans(sax_gei, "gei>gse")
         sax_gse = ts_vec_xyz(
