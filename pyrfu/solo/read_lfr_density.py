@@ -70,7 +70,8 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
 
     # directory and file name search patterns:
     # - assume directories are of the form: [data_path]/L3/lfr_density/year/month/
-    # - assume file names are of the form: solo_L3_rpw-bia-density-cdag_YYYYMMDD_version.cdf
+    # - assume file names are of the form:
+    #   solo_L3_rpw-bia-density-cdag_YYYYMMDD_version.cdf
 
     file_name = r"solo_L3_rpw-bia-density.*_([0-9]{8})_V[0-9]{2}.cdf"
 
@@ -81,7 +82,13 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
     for date in days:
         if tree:
             local_dir = os.sep.join(
-                [data_path, "L3", "lfr_density", date.strftime("%Y"), date.strftime("%m")]
+                [
+                    data_path,
+                    "L3",
+                    "lfr_density",
+                    date.strftime("%Y"),
+                    date.strftime("%m"),
+                ]
             )
         else:
             local_dir = data_path
@@ -129,7 +136,7 @@ def read_lfr_density(tint, data_path: str = "", tree: bool = False):
         Time series of the density.
 
     """
-    
+
     # List LFR density files in the data path.
     files = _list_files_lfr_density_l3(tint, data_path, tree)
 
