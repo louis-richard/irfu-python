@@ -19,9 +19,9 @@ from ..pyrf import iso86012datetime
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.22"
+__version__ = "2.3.26"
 __status__ = "Prototype"
 
 
@@ -96,7 +96,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
         full_path = os.sep.join([re.escape(dir_pattern), fname_fmt])
 
     file_regex = re.compile(full_path)
-    
+
     for file in files:
         time_match = file_regex.match(file)
         if time_match is not None:
@@ -117,5 +117,5 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
 
     files_names = list(set(out_files))
     files_names.sort()
-    
+
     return files_names
