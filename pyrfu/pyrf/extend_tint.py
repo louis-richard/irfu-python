@@ -50,7 +50,8 @@ def extend_tint(tint, ext: list = None):
         ext = [-60, 60]
 
     # Convert extension to timedelta64 in s units
-    ext = np.array(ext).astype("timedelta64[s]")
+    ext = np.array(ext) * 1e9
+    ext = ext.astype("timedelta64[ns]")
 
     # Original time interval to datetime64 format in ns units
     tint_ori = iso86012datetime64(np.array(tint))
