@@ -3,12 +3,20 @@
 
 # Built-in imports
 import random
+import pdb
 
 from math import cos, sin, asin, sqrt
 
 # Third party imports
 import numba
 import numpy as np
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2023"
+__license__ = "MIT"
+__version__ = "2.3.26"
+__status__ = "Prototype"
 
 
 def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
@@ -60,7 +68,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
     d_theta = kwargs.get("d_theta", d_theta)
 
     # azimuthal angle of projection plane
-    n_az_g = 32
+    n_az_g = len(phi)
     d_phi_g = 2 * np.pi / n_az_g
     phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, n_az_g) + d_phi_g / 2
     phi_grid = kwargs.get("phi_grid", phi_grid)
@@ -74,7 +82,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
         d_phi_grid = np.median(np.diff(phi_grid))
     else:
         raise RuntimeError("1d projection with phi_grid provided doesn't make sense!!")
-
+    
     # Make sure the transformation matrix is orthonormal.
     x_phat = xyz[:, 0] / np.linalg.norm(xyz[:, 0])  # re-normalize
     y_phat = xyz[:, 1] / np.linalg.norm(xyz[:, 1])  # re-normalize
@@ -188,7 +196,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
         raise ValueError("Invalid base!!")
 
     if projection_dim == "1d":
-        pst = {"f": f_g, "v": speed_grid, "v_edges": speed_grid_edges}
+        pst = {"f": f_g, "vx": speed_grid, "vx_edges": speed_grid_edges}
     elif projection_dim == "2d" and projection_base == "cart":
         pst = {
             "f": f_g,
@@ -213,7 +221,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
     return pst
 
 
-@numba.jit(fastmath=True)
+@numba.jit(nopython=True, parallel=True, fastmath=True)
 def mc_pol_1d(
     vdf,
     v,
