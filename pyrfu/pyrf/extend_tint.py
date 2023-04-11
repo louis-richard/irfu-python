@@ -23,7 +23,7 @@ def extend_tint(tint, ext: list = None):
     ----------
     tint : list of str
         Reference time interval to extend.
-    ext : list of float or list of int
+    ext : list of float or list of float
         Number of seconds to extend time interval
         [left extend, right extend].
 
