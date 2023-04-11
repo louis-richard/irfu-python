@@ -95,18 +95,20 @@ def _get_epochs(file, cdf_name, tint):
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         try:
             out["data"] = cdfepoch2datetime64(out["data"])
+
+            # Get epoch attributes
+            out["attrs"] = file.varattsget(depend0_key)
+
+            # Shift times if particle data
+            is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
+            is_part = is_part or re.search("^mms[1-4]_hpca_",
+                                           cdf_name)  # Is it HPCA data?
+
+            if is_part:
+                out = _shift_epochs(file, out)
+
         except TypeError:
             pass
-
-    # Get epoch attributes
-    out["attrs"] = file.varattsget(depend0_key)
-
-    # Shift times if particle data
-    is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
-    is_part = is_part or re.search("^mms[1-4]_hpca_", cdf_name)  # Is it HPCA data?
-
-    if is_part:
-        out = _shift_epochs(file, out)
 
     return out
 
@@ -166,7 +168,13 @@ def get_dist(file_path, cdf_name, tint):
         coords_attrs = {k: attrs for k, attrs in zip(coords_names, coords_attrs)}
 
         times = _get_epochs(file, cdf_name, tint)
-        times = times["data"]
+
+        # If something time is None means that there is nothing interesting in this
+        # file so leave!!
+        if times["data"] is not None:
+            times = times["data"]
+        else:
+            return None
 
         dist = file.varget(cdf_name, starttime=tint[0], endtime=tint[1])
         dist = np.transpose(dist, [0, 3, 1, 2])

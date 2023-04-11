@@ -91,18 +91,20 @@ def _get_epochs(file, cdf_name, tint):
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         try:
             out["data"] = cdfepoch2datetime64(out["data"])
+
+            # Get epoch attributes
+            out["attrs"] = file.varattsget(depend0_key)
+
+            # Shift times if particle data
+            is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
+            is_part = is_part or re.search("^mms[1-4]_hpca_",
+                                           cdf_name)  # Is it HPCA data?
+
+            if is_part:
+                out = _shift_epochs(file, out)
+
         except TypeError:
             pass
-
-    # Get epoch attributes
-    out["attrs"] = file.varattsget(depend0_key)
-
-    # Shift times if particle data
-    is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
-    is_part = is_part or re.search("^mms[1-4]_hpca_", cdf_name)  # Is it HPCA data?
-
-    if is_part:
-        out = _shift_epochs(file, out)
 
     return out
 
