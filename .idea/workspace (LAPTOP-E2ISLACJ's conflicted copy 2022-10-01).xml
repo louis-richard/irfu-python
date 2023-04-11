@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="88475c3d-889d-493a-b18f-fb929feaa33b" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.readthedocs.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.readthedocs.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS1_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS2_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS3_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20151111.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20151111.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20160709.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20160709.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20161028.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20161028.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20170531.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20170531.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20171003.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20171003.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20181005.csv" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/sun/MMS4_FEEPS_ContaminatedSectors_20181005.csv" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/setup.cfg" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/histogram2d.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/requirements.txt" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/probe_align_times.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/c_4_grad.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/get_omni_data.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_variable.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_skymap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/mms_keys.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/psd.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/vdf_omni.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_pitch_angle_dist.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/convert_fac.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/calculate_epsilon.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/ts_append.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/filt.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/list_files.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/magnetosphere.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/dsl2gsm.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/c_4_j.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap_combine_sc.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/make_model_vdf.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/ts_time.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_pad.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_feeps_alleyes.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/db_get_ts.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/fk_power_spectrum_4sc.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/mean.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/movmean.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/struct_func.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_spec_combine_sc.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/plasma_beta.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/increments.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/__init__.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_heatmap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/make_labels.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_magnetosphere.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/dispersion/disp_surf_calc.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_clines.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/annotate_heatmap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/plot/plot_spectr.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_ts.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_ang_ang.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/mva.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/tokenize.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/iso86012datetime64.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/eis_skymap.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/copy_files.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/histogram.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/optimize_nbins_2d.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/pyrf/datetime642iso8601.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/correct_edp_probe_timing.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pyrfu/mms/get_eis_allt.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/setup.py" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="ProjectId" id="2AqEKWdh8144Ak0bcTiDD1hT17l" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="88475c3d-889d-493a-b18f-fb929feaa33b" name="Changes" comment="" />
+      <created>1655728652445</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1655728652445</updated>
+      <workItem from="1655728656754" duration="14407000" />
+      <workItem from="1655821185691" duration="4237000" />
+      <workItem from="1655828227447" duration="1217000" />
+      <workItem from="1655829868116" duration="673000" />
+      <workItem from="1655915497958" duration="9647000" />
+      <workItem from="1656359850681" duration="2976000" />
+      <workItem from="1656408749859" duration="765000" />
+      <workItem from="1656433656411" duration="478000" />
+      <workItem from="1656504714200" duration="370000" />
+      <workItem from="1656570191236" duration="150000" />
+      <workItem from="1656570376019" duration="1148000" />
+      <workItem from="1656664005606" duration="5833000" />
+      <workItem from="1656683701205" duration="22000" />
+      <workItem from="1656685571956" duration="396000" />
+      <workItem from="1656917604938" duration="347000" />
+      <workItem from="1656938740271" duration="471000" />
+      <workItem from="1657114201503" duration="3111000" />
+      <workItem from="1657176401667" duration="751000" />
+      <workItem from="1657177415502" duration="1203000" />
+      <workItem from="1657188554574" duration="474000" />
+      <workItem from="1657559313633" duration="5327000" />
+      <workItem from="1657644596249" duration="122000" />
+      <workItem from="1657696185028" duration="293000" />
+      <workItem from="1657697840687" duration="629000" />
+      <workItem from="1657781108056" duration="419000" />
+      <workItem from="1657801831774" duration="598000" />
+      <workItem from="1657881100987" duration="508000" />
+      <workItem from="1657894413988" duration="3006000" />
+      <workItem from="1658327145110" duration="1807000" />
+      <workItem from="1658391457693" duration="8000" />
+      <workItem from="1658392498691" duration="7000" />
+      <workItem from="1658420281923" duration="1646000" />
+      <workItem from="1658478739438" duration="46000" />
+      <workItem from="1658480349683" duration="1715000" />
+      <workItem from="1658752818661" duration="2200000" />
+      <workItem from="1658929096738" duration="1254000" />
+      <workItem from="1658990449920" duration="2031000" />
+      <workItem from="1659094889484" duration="2544000" />
+      <workItem from="1659127781062" duration="720000" />
+      <workItem from="1659163982861" duration="513000" />
+      <workItem from="1659164721285" duration="4898000" />
+      <workItem from="1659185054771" duration="41000" />
+      <workItem from="1659198038718" duration="1679000" />
+      <workItem from="1660548426686" duration="6804000" />
+      <workItem from="1660571833035" duration="8784000" />
+      <workItem from="1660643206662" duration="3503000" />
+      <workItem from="1660828050318" duration="1015000" />
+      <workItem from="1660927303442" duration="952000" />
+      <workItem from="1661173639530" duration="3366000" />
+      <workItem from="1661260486434" duration="3025000" />
+      <workItem from="1661410920430" duration="1000" />
+      <workItem from="1661417842752" duration="3552000" />
+      <workItem from="1661457046275" duration="503000" />
+      <workItem from="1661757539586" duration="139000" />
+      <workItem from="1661758149244" duration="3141000" />
+      <workItem from="1661866576606" duration="944000" />
+      <workItem from="1661954670446" duration="2131000" />
+      <workItem from="1662015617492" duration="467000" />
+      <workItem from="1662025286061" duration="777000" />
+      <workItem from="1662042575830" duration="1376000" />
+      <workItem from="1662478839443" duration="19495000" />
+      <workItem from="1662972345709" duration="252000" />
+      <workItem from="1663251631929" duration="2031000" />
+      <workItem from="1663259951161" duration="2621000" />
+      <workItem from="1663351590667" duration="667000" />
+      <workItem from="1663409228892" duration="3550000" />
+      <workItem from="1663758603275" duration="12000" />
+      <workItem from="1663837486587" duration="52000" />
+      <workItem from="1663873678400" duration="1486000" />
+      <workItem from="1663932479034" duration="3073000" />
+      <workItem from="1664137848118" duration="1894000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+</project>

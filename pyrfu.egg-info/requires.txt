@@ -1,0 +1,12 @@
+cdflib
+geopack
+matplotlib
+numba
+numpy
+pandas
+python-dateutil
+requests
+scipy
+Sphinx
+tqdm
+xarray
