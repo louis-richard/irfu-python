@@ -24,7 +24,7 @@ def plot_spectr(
     cscale: str = "linear",
     clim: list = None,
     cmap: str = "",
-    colorbar: bool = True,
+    colorbar: str = "right",
     **kwargs
 ):
     r"""Plot a spectrogram using pcolormesh.
@@ -43,8 +43,8 @@ def plot_spectr(
         C-axis bounds. Default is None (autolim).
     cmap : str, Optional
         Colormap. Default is "jet".
-    colorbar : bool, Optional
-        Flag for colorbar. Set to False to hide.
+    colorbar : str, Optional
+        Location of the colorbar with respect to the axis. Set to "none" to hide.
 
     Other Parameters
     ----------------
@@ -100,7 +100,7 @@ def plot_spectr(
     axis.set_axisbelow(False)
     axis.set_ylim(inp[inp.dims[1]].data[[0, -1]])
 
-    if colorbar:
+    if colorbar.lower() == "right":
         if kwargs.get("pad"):
             pad = kwargs["pad"]
         else:
@@ -108,15 +108,43 @@ def plot_spectr(
 
         pos = axis.get_position()
         cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height])
-        plt.colorbar(mappable=image, cax=cax, ax=axis)
+        plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="vertical")
+
+        cax.yaxis.set_ticks_position(colorbar.lower())
+        cax.yaxis.set_label_position(colorbar.lower())
+
         cax.set_axisbelow(False)
+
         if cscale == "log":
             cax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
         else:
             cax.yaxis.set_major_locator(ticker.MaxNLocator(4))
 
         out = (axis, cax)
-    else:
+    elif colorbar.lower() == "top":
+        if kwargs.get("pad"):
+            pad = kwargs["pad"]
+        else:
+            pad = 0.01
+
+        pos = axis.get_position()
+        cax = fig.add_axes([pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01])
+        plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="horizontal")
+
+        cax.xaxis.set_ticks_position(colorbar.lower())
+        cax.xaxis.set_label_position(colorbar.lower())
+
+        cax.set_axisbelow(False)
+
+        if cscale == "log":
+            cax.xaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
+        else:
+            cax.xaxis.set_major_locator(ticker.MaxNLocator(4))
+
+        out = (axis, cax)
+    elif colorbar.lower() == "none":
         out = axis
+    else:
+        raise NotImplementedError("colorbar must be 'right', 'top', or 'none'")
 
     return out
