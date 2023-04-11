@@ -26,11 +26,11 @@ def _mass_ratio(psd):
 
 
 def _convert(psd, mass_ratio):
-    if psd.attrs["UNITS"].lower() == "s^3/cm^6":
+    if psd.data.attrs["UNITS"].lower() == "s^3/cm^6":
         tmp_data = psd.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio**2)
-    elif psd.attrs["UNITS"].lower() == "s^3/m^6":
+    elif psd.data.attrs["UNITS"].lower() == "s^3/m^6":
         tmp_data = psd.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio**2)
-    elif psd.attrs["UNITS"].lower() == "s^3/km^6":
+    elif psd.data.attrs["UNITS"].lower() == "s^3/km^6":
         tmp_data = psd.data.data / (1e6 * 0.53707 * mass_ratio**2)
     else:
         raise ValueError("Invalid unit")
@@ -88,6 +88,6 @@ def psd2dpf(psd):
 
     dpf = psd.copy()
     dpf.data.data = np.squeeze(tmp_data) * 1e3
-    dpf.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+    dpf.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
 
     return dpf

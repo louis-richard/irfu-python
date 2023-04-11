@@ -26,11 +26,11 @@ def _mass_ratio(specie):
 
 
 def _convert(vdf, mass_ratio):
-    if vdf.attrs["UNITS"].lower() == "s^3/cm^6":
+    if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
         out = vdf.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio**2)
-    elif vdf.attrs["UNITS"].lower() == "s^3/m^6":
+    elif vdf.data.attrs["UNITS"].lower() == "s^3/m^6":
         out = vdf.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio**2)
-    elif vdf.attrs["UNITS"].lower() == "s^3/km^6":
+    elif vdf.data.attrs["UNITS"].lower() == "s^3/km^6":
         out = vdf.data.data / (1e6 * 0.53707 * mass_ratio**2)
     else:
         raise ValueError("Invalid unit")
@@ -90,6 +90,6 @@ def psd2def(vdf):
 
     out = vdf.copy()
     out.data.data = np.squeeze(tmp_data)
-    out.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
+    out.data.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
 
     return out
