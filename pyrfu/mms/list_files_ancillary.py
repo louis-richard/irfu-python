@@ -11,11 +11,12 @@ import fnmatch
 import datetime
 
 # 3rd party imports
+import numpy as np
 import pandas as pd
 
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
-from ..pyrf import iso86012datetime
+from ..pyrf import iso86012datetime64, datetime642iso8601, iso86012datetime
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -63,7 +64,21 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     if isinstance(mms_id, int):
         mms_id = str(mms_id)
 
-    tint = iso86012datetime(tint)
+    # Check time interval type
+    if isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], datetime.datetime):
+            tint = tint
+        elif isinstance(tint[0], np.datetime64):
+            tint = datetime642iso86012(tint)
+            tint = iso86012datetime(tint)
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(np.array(tint))  # to make sure it is ISO8601 ok!
+            tint = datetime642iso8601(tint)
+            tint = iso86012datetime(tint)
+        else:
+            raise TypeError("Values must be in datetime, datetime64, or str!!")
+    else:
+        raise TypeError("tint must be a DataArray or array_like!!")
 
     # directory and file name search patterns
     # For now

@@ -9,8 +9,13 @@ import bisect
 import datetime
 
 # 3rd party imports
+import numpy as np
+
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
+
+# Local imports
+from ..pyrf import iso86012datetime64, datetime642iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -26,7 +31,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
 
     Parameters
     ----------
-    tint : list
+    tint : array_like
         Time interval
     mms_id : str or int
         Index of the spacecraft
@@ -61,6 +66,18 @@ def list_files(tint, mms_id, var, data_path: str = ""):
 
     # Make sure that the data path exists
     assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
+    
+    # Check time interval
+    if isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], np.datetime64):
+            tint = datetime642iso8601(np.array(tint))
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(np.array(tint))  # to make sure it is ISO8601 ok!!
+            tint = datetime642iso8601(np.array(tint))
+        else:
+            raise TypeError("Values must be in datetime64, or str!!")
+    else:
+        raise TypeError("tint must be array_like!!")
 
     files_out = []
 

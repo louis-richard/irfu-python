@@ -3,7 +3,6 @@
 
 # Built-in imports
 import bisect
-import datetime
 
 # 3rd party imports
 import numpy as np
@@ -81,24 +80,18 @@ def time_clip(inp, tint):
 
     if isinstance(tint, xr.DataArray):
         t_start, t_stop = tint.time.data[[0, -1]]
-
-    elif isinstance(tint, np.ndarray):
-        if isinstance(tint[0], datetime.datetime) and isinstance(
-            tint[-1], datetime.datetime
-        ):
-            t_start, t_stop = [tint.time[0], tint.time[-1]]
-
+    elif isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], np.datetime64):
+            t_start, t_stop = tint
+        elif isinstance(tint[0], str):
+            t_start, t_stop = iso86012datetime64(np.array(tint))
         else:
-            raise TypeError("Values must be in Datetime64")
-
-    elif isinstance(tint, list):
-        t_start, t_stop = iso86012datetime64(np.array(tint))
-
+            raise TypeError("Values must be in datetime64, or str!!")
     else:
-        raise TypeError("invalid tint")
+        raise TypeError("tint must be a DataArray or array_like!!")
 
-    idx_min = bisect.bisect_left(inp.time.data, np.datetime64(t_start))
-    idx_max = bisect.bisect_right(inp.time.data, np.datetime64(t_stop))
+    idx_min = bisect.bisect_left(inp.time.data, t_start)
+    idx_max = bisect.bisect_right(inp.time.data, t_stop)
 
     coord = [inp.time.data[idx_min:idx_max]]
 

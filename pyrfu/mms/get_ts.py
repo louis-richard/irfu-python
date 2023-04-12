@@ -4,6 +4,7 @@
 # Built-in import
 import re
 import warnings
+import datetime
 
 # 3rd party imports
 import numpy as np
@@ -183,6 +184,19 @@ def get_ts(file_path, cdf_name, tint):
         Time series of the target variable in the selected time interval.
 
     """
+
+    # Check time interval type
+    # Check time interval
+    if isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], np.datetime64):
+            tint = datetime642iso8601(np.array(tint))
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(np.array(tint))  # to make sure it is ISO8601 ok!!
+            tint = datetime642iso8601(np.array(tint))
+        else:
+            raise TypeError("Values must be in datetime64, or str!!")
+    else:
+        raise TypeError("tint must be array_like!!")
 
     # Extend time interval by 1s and convert time interval to epochs
     tint_org = tint.copy()

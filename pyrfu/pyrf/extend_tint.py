@@ -16,7 +16,7 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def extend_tint(tint, ext: list = None):
+def extend_tint(tint, ext: list = [-60., 60.]):
     r"""Extends time interval.
 
     Parameters
@@ -46,15 +46,22 @@ def extend_tint(tint, ext: list = None):
 
     """
 
-    if ext is None:
-        ext = [-60, 60]
+    # Make sure tint and ext are 2 elements array_like
+    message = "must be array_like with 2 elements"
+    assert isinstance(tint, (np.ndarray, list)) and len(tint) == 2, f"tint {message}"
+    assert isinstance(ext, (np.ndarray, list)) and len(ext) == 2, f"ext {message}"
 
-    # Convert extension to timedelta64 in s units
+    # Convert extension to timedelta64[ns]
     ext = np.array(ext) * 1e9
     ext = ext.astype("timedelta64[ns]")
 
-    # Original time interval to datetime64 format in ns units
-    tint_ori = iso86012datetime64(np.array(tint))
+    # Original time interval to datetime64[ns]
+    if isinstance(tint[0], np.datetime64):
+        tint_ori = tint
+    elif isinstance(tint[0], str):
+        tint_ori = iso86012datetime64(np.array(tint))
+    else:
+        raise TypeError("Invalid time format!! Must be datetime64 or str!!")
 
     # New time interval in iso 8601 format
     tint_new = list(datetime642iso8601(tint_ori + ext))
