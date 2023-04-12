@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="88475c3d-889d-493a-b18f-fb929feaa33b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.scrutinizer.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.scrutinizer.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -215,7 +216,7 @@
       <workItem from="1680096657508" duration="17021000" />
       <workItem from="1680458517037" duration="515000" />
       <workItem from="1680529792090" duration="14469000" />
-      <workItem from="1680606714742" duration="37836000" />
+      <workItem from="1680606714742" duration="38239000" />
     </task>
     <servers />
   </component>
