@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import pdb
+
 # 3rd party imports
 import numpy as np
 
@@ -41,7 +43,7 @@ def remove_idist_background(vdf, def_bg):
     """
 
     # Tile background flux to number of energy channels of the FPI-DIS instrument
-    def_bg_tmp = np.tile(def_bg[:, np.newaxis], (1, vdf.energy.shape[1]))
+    def_bg_tmp = np.tile(def_bg.data[:, np.newaxis], (1, vdf.energy.shape[1]))
 
     # Convert differential energy flux (cm^2 s sr)^{-1} of the background population
     # (penetrating radiations) to phase-space density (s^3 m^{-6})
