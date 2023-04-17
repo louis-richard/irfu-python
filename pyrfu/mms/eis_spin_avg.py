@@ -86,34 +86,36 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
         energies_ = scope_data.energy.data
         flux_data = scope_data.data
 
-        flux_av = np.zeros([len(spin_starts), len(energies_)])
-        flux_su = np.zeros([len(spin_starts), len(energies_)])
+        flux_avg = np.zeros([len(spin_starts), len(energies_)])
 
         for i, spin_strt in enumerate(spin_starts):
             t_inds = np.where(spin_nums.data == spin_nums.data[spin_strt])[0]
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                flux_av[i, :] = np.nanmean(flux_data[t_inds, :], axis=0)
-                flux_su[i, :] = np.nansum(flux_data[t_inds, :], axis=0)
+
+                if method.lower() == "mean":
+                    # Average (for particle/energy flux, phase-space density, etc.)
+                    flux_avg[i, :] = np.nanmean(flux_data[t_inds, :], axis=0)
+                elif method.lower() == "sum":
+                    # Sum (for counts)
+                    flux_avg[i, :] = np.nansum(flux_data[t_inds, :], axis=0)
+                else:
+                    raise ValueError("Invalid method!!")
 
         spin_avg_flux[scope] = xr.DataArray(
-            flux_av, coords=[time_recs, energies_], dims=["time", "energy"]
-        )
-        spin_sum_flux[scope] = xr.DataArray(
-            flux_su, coords=[time_recs, energies_], dims=["time", "energy"]
+            flux_avg,
+            coords=[time_recs, energies_],
+            dims=["time", "energy"],
+            attrs=scope_data.attrs,
         )
 
+    # Get spin index
     spin_avg_flux["spin"] = eis_allt["spin"][spin_starts + len_spin // 2]
-    spin_avg_flux["energy_dplus"] = eis_allt.energy_dplus.data
-    spin_avg_flux["energy_dminus"] = eis_allt.energy_dminus.data
-    spin_avg_flux = xr.Dataset(spin_avg_flux, attrs=eis_allt.attrs)
 
-    spin_sum_flux["spin"] = eis_allt["spin"][spin_starts + len_spin // 2]
-    spin_sum_flux["energy_dplus"] = eis_allt.energy_dplus.data
-    spin_sum_flux["energy_dminus"] = eis_allt.energy_dminus.data
-    spin_sum_flux = xr.Dataset(spin_sum_flux, attrs=eis_allt.attrs)
-
-    out = [spin_avg_flux, spin_sum_flux][method.lower() != "mean"]
+    # Construct Dataset
+    out = xr.Dataset(spin_avg_flux, attrs=eis_allt.attrs)
+    out.time.attrs = eis_allt.time.attrs
+    out.energy.attrs = eis_allt.energy.attrs
 
     return out
