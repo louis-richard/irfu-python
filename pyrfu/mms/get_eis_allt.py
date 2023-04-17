@@ -110,7 +110,7 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
     spin_nums = db_get_ts(dset_name, f"{pref}_spin", tint, data_path=data_path)
     sectors = db_get_ts(dset_name, f"{pref}_sector", tint, data_path=data_path)
 
-    e_minu = db_get_variable(
+    e_minus = db_get_variable(
         dset_name,
         f"{pref}_{specie}_t0_energy_dminus",
         tint,
@@ -147,14 +147,19 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
         )
 
     e_plus = e_plus.assign_coords(x=outdict["t0"].energy.data)
-    e_minu = e_minu.assign_coords(x=outdict["t0"].energy.data)
+    e_minus = e_minus.assign_coords(x=outdict["t0"].energy.data)
     e_plus = e_plus.rename({"x": "energy"})
-    e_minu = e_minu.rename({"x": "energy"})
+    e_minus = e_minus.rename({"x": "energy"})
 
-    outdict["energy_dplus"] = e_plus
-    outdict["energy_dminus"] = e_minu
+    # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
+    glob_attrs = {
+        "delta_energy_plus": e_plus.data,
+        "delta_energy_minus": e_minus.data,
+        "species": specie,
+        **outdict["spin"].attrs["GLOBAL"],
+    }
 
     # Build Dataset
-    out = xr.Dataset(outdict, attrs=var)
+    out = xr.Dataset(outdict, attrs=glob_attrs)
 
     return out
