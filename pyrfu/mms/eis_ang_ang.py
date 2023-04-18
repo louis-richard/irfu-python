@@ -34,7 +34,21 @@ def _check_spin(spin):
     return spin_inds, len_spin
 
 
-def eis_ang_ang(inp_allt, en_chan: list = None):
+def _combine_attrs(inp_allt_attrs):
+    attrs = {}
+    for k in inp_allt_attrs[0]:
+        allt_attrs = [inp_allt_attr[k] for inp_allt_attr in inp_allt_attrs]
+        is_same = [allt_attr == allt_attrs[0] for allt_attr in allt_attrs[1:]]
+
+        if all(is_same):
+            attrs[k] = allt_attrs[0]
+        else:
+            continue
+
+    return attrs
+
+
+def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
     r"""Generates EIS angle-angle distribution.
 
     Parameters
@@ -102,18 +116,66 @@ def eis_ang_ang(inp_allt, en_chan: list = None):
 
             out_data[i, :, a_idx, p_idx] = inp_allt[scope].data[t_ind, en_chan]
 
+    # Setup attributes (that of all telescopes + delta energies and particle species)
+    attrs = {k: inp_allt.attrs[k] for k in ["delta_energy_plus", "delta_energy_minus"]}
+    attrs = {"species": inp_allt.attrs["species"], **attrs}
+    attrs = {**attrs, **_combine_attrs([inp_allt[scope].attrs for scope in scopes])}
+    attrs = {k: attrs[k] for k in sorted(attrs)}
+
     out = xr.DataArray(
         out_data,
         coords=[
             time_data,
             inp_allt.energy.data[en_chan],
-            min_azi_edges + 180.0 / n_azi,
-            min_pol_edges + 90.0 / n_pol,
+            mid_azi_edges + 180.0,
+            mid_pol_edges + 90.0,
         ],
         dims=["time", "energy", "phi", "theta"],
+        attrs=attrs,
     )
 
-    out.attrs["energy_dminus"] = inp_allt.energy_dminus.data
-    out.attrs["energy_dplus"] = inp_allt.energy_dplus.data
+    # Fill coordinates attributes
+    out.time.attrs = inp_allt.time.attrs  # time
+    out.energy.attrs = inp_allt.energy.attrs  # energy
+
+    # Fill azimuthal angles attributes
+    out.phi.attrs = {
+        "CATDESC": f"{attrs['CATDESC'][0][:4]} EPD-EIS sky-map azimuth angles",
+        "COORDINATE_SYSTEM": coordinates_system,
+        "DELTA_MINUS_VAR": " ",
+        "DELTA_PLUS_VAR": " ",
+        "FIELDNAM": f"{attrs['CATDESC'][0][:4]} EPD-EIS phi",
+        "FILLVAL": -1e31,
+        "FORMAT": "E12.2",
+        "LABLAXIS": "phi",
+        "REPRESENTATION_1": "t",
+        "SCALETYP": "linear",
+        "SI_CONVERSION": "0.0174532925>rad",
+        "UNITS": "deg",
+        "VALIDMAX": 360.0,
+        "VALIDMIN": 0.0,
+        "VAR_NOTES": "Azimuth angles in the instrument frame",
+        "VAR_TYPE": "support_data",
+    }
+
+    # Fill elevation angles attributes
+    out.theta.attrs = {
+        "CATDESC": f"{attrs['CATDESC'][0][:4]} EPD-EIS sky-map zenith angles",
+        "COORDINATE_SYSTEM": coordinates_system,
+        "DELTA_MINUS_VAR": " ",
+        "DELTA_PLUS_VAR": " ",
+        "FIELDNAM": f"{attrs['CATDESC'][0][:4]} EPD-EIS theta",
+        "FILLVAL": -1e31,
+        "FORMAT": "E12.2",
+        "LABLAXIS": "theta",
+        "REPRESENTATION_1": "t",
+        "SCALETYP": "linear",
+        "SI_CONVERSION": "0.0174532925>rad",
+        "UNITS": "deg",
+        "VALIDMAX": 180.0,
+        "VALIDMIN": 0.0,
+        "VAR_NOTES": "Pixel zenith angles",
+        "VAR_TYPE": "support_data",
+    }
 
     return out
