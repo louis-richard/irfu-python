@@ -93,16 +93,19 @@ def time_clip(inp, tint):
     idx_min = bisect.bisect_left(inp.time.data, t_start)
     idx_max = bisect.bisect_right(inp.time.data, t_stop)
 
-    coord = [inp.time.data[idx_min:idx_max]]
+    coords = [inp.time.data[idx_min:idx_max]]
+    coords_attrs = [inp.time.attrs]
 
     if len(inp.coords) > 1:
         for k in inp.dims[1:]:
-            coord.append(inp.coords[k].data)
+            coords.append(inp.coords[k].data)
+            coords_attrs.append(inp.coords[k].attrs)
 
     out = xr.DataArray(
-        inp.data[idx_min:idx_max, ...], coords=coord, dims=inp.dims, attrs=inp.attrs
+        inp.data[idx_min:idx_max, ...], coords=coords, dims=inp.dims, attrs=inp.attrs
     )
 
-    out.time.attrs = inp.time.attrs
+    for i, k in enumerate(inp.dims):
+        out[k].attrs = coords_attrs[i]
 
     return out

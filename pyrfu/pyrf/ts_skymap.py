@@ -77,18 +77,24 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
         "idx2": np.arange(len(theta)),
     }
 
+    # Construct global attributes and sort them
     glob_attrs = {
+        "energy0": energy0,
+        "energy1": energy1,
+        "esteptable": esteptable,
         **glob_attrs,
-        **{"energy0": energy0, "energy1": energy1, "esteptable": esteptable},
     }
 
+    glob_attrs = {k: glob_attrs[k] for k in sorted(glob_attrs)}
+
+    # Create Dataset
     out = xr.Dataset(out_dict, attrs=glob_attrs)
 
-    # Set coordinates attributes
+    # Sort and fill coordinates attributes
     for k in coords_attrs:
-        out[k].attrs = coords_attrs[k]
+        out[k].attrs = {m: coords_attrs[k][m] for m in sorted(coords_attrs[k])}
 
-    # Set data attributes
-    out.data.attrs = attrs
+    # Sort and fill data attributes
+    out.data.attrs = {k: attrs[k] for k in sorted(attrs)}
 
     return out
