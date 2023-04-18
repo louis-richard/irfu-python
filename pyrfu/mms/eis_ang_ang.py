@@ -8,6 +8,9 @@ import itertools
 import numpy as np
 import xarray as xr
 
+# Local imports
+from .dsl2gse import dsl2gse
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
@@ -78,10 +81,22 @@ def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
 
     for i, scope in enumerate(scopes):
         d_xyz = inp_allt[f"look_{scope}"]
-        # Domain [-180,180], 0 = sunward (GSE)
-        phi[i, :] = np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0]))
-        # Domain [-90,90], Positive is look direction northward
-        theta[i, :] = 90.0 - np.rad2deg(np.arccos(d_xyz[:, 2]))
+
+        # If defatt is given get angles in spacecraft coordinates system
+        if defatt is not None:
+            d_xyz = dsl2gse(d_xyz, defatt, -1)
+            coordinates_system = "DBCS>Despun Body Coordinate System"
+        else:
+            coordinates_system = "GSE>Geocentric Solar Magnetospheric"
+
+        # Domain [-180, 180], 0 = sunward (GSE)
+        # phi[i, :] = np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0]))
+        # Domain [0, 360], 0 = sunward (GSE)
+        phi[i, :] = np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0])) + 180.
+        # Domain [-90, 90], Positive is look direction northward
+        # theta[i, :] = 90.0 - np.rad2deg(np.arccos(d_xyz[:, 2]))
+        # Domain [0, 180], Positive is look direction northward
+        theta[i, :] = np.rad2deg(np.arccos(d_xyz[:, 2]))
 
     spin_ = inp_allt.spin.data
     sect_ = inp_allt.sector.data
@@ -93,9 +108,11 @@ def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
     # Minus 80 plus
     min_pol_edges = -80.0 + 160.0 * np.arange(n_pol) / n_pol
     max_pol_edges = -80.0 + 160.0 * (np.arange(n_pol) + 1) / n_pol
+    mid_pol_edges = min_pol_edges + 90.0 / n_pol
 
     min_azi_edges = -180.0 + 360.0 * np.arange(n_azi) / n_azi
     max_azi_edges = -180.0 + 360.0 * (np.arange(n_azi) + 1) / n_azi
+    mid_azi_edges = min_azi_edges + 180.0 / n_azi
 
     out_data = np.zeros((n_spins, n_en, n_azi, n_pol))
 
