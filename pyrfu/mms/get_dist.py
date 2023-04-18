@@ -99,9 +99,8 @@ def _get_epochs(file, cdf_name, tint):
             out["attrs"] = file.varattsget(depend0_key)
 
             # Shift times if particle data
-            is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
-            is_part = is_part or re.search("^mms[1-4]_hpca_",
-                                           cdf_name)  # Is it HPCA data?
+            is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)
+            is_part = is_part or re.search("^mms[1-4]_hpca_", cdf_name)
 
             if is_part:
                 out = _shift_epochs(file, out)
