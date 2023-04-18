@@ -3,7 +3,6 @@
 
 # Built-in import
 import re
-import pdb
 import warnings
 
 # 3rd party imports
@@ -153,17 +152,15 @@ def get_dist(file_path, cdf_name, tint):
         glob_attrs = {**glob_attrs, **file.globalattsget()}
         glob_attrs = {**glob_attrs, **{"tmmode": tmmode, "species": specie}}
 
-        # Get VDF zVariable attributes and sort them
+        # Get VDF zVariable attributes
         dist_attrs = file.varattsget(cdf_name)
-        dist_attrs = {k: dist_attrs[k] for k in sorted(dist_attrs)}
 
         # Get CDF keys to Epoch, energy, azimuthal and elevation angle zVariables
         depends_keys = [dist_attrs[f"DEPEND_{i:d}"] for i in range(4)]
         depend0_key, depend1_key, depend2_key, depend3_key = depends_keys
 
-        # Get coordinates attributes and sort them
+        # Get coordinates attributes
         coords_attrs = [file.varattsget(k) for k in depends_keys]
-        coords_attrs = [{k: attrs[k] for k in sorted(attrs)} for attrs in coords_attrs]
         coords_names = ["time", "phi", "theta", "energy"]
         coords_attrs = {k: attrs for k, attrs in zip(coords_names, coords_attrs)}
 
@@ -265,9 +262,6 @@ def get_dist(file_path, cdf_name, tint):
         else:
             glob_attrs["delta_energy_plus"] = None
             glob_attrs["delta_energy_minus"] = None
-
-        # Sort the global attributes
-        glob_attrs = {k: glob_attrs[k] for k in sorted(glob_attrs)}
 
         out = ts_skymap(
             times,

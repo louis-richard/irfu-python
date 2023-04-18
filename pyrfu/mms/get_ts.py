@@ -210,7 +210,7 @@ def get_ts(file_path, cdf_name, tint):
     with CDF(file_path) as file:
         var_attrs = file.varattsget(cdf_name)
         glb_attrs = file.globalattsget()
-        out_dict["attrs"] = {**var_attrs, **glb_attrs}
+        out_dict["attrs"] = {"global": glb_attrs, **var_attrs}
         out_dict["attrs"] = {k: out_dict["attrs"][k] for k in sorted(out_dict["attrs"])}
 
         assert "DEPEND_0" in var_attrs and "epoch" in var_attrs["DEPEND_0"].lower()
