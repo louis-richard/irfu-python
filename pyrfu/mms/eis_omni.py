@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 3rd party imports
+import numpy as np
+import xarray as xr
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
@@ -49,19 +53,22 @@ def eis_omni(eis_allt, method: str = "mean"):
 
     scopes = list(filter(lambda x: x[0] == "t", eis_allt))
 
-    flux_omni = None
+    flux_omni = np.zeros_like(eis_allt[scopes[0]].data)
 
     for scope in scopes:
         try:
-            flux_omni += eis_allt[scope].copy()
+            flux_omni += eis_allt[scope].data.copy()
         except TypeError:
-            flux_omni = eis_allt[scope].copy()
+            flux_omni = eis_allt[scope].data.copy()
 
     if method.lower() == "mean":
-        flux_omni.data /= len(scopes)
+        flux_omni /= len(scopes)
 
-    flux_omni.name = "flux_omni"
-    flux_omni.attrs["energy_dplus"] = eis_allt.energy_dplus.data
-    flux_omni.attrs["energy_dminus"] = eis_allt.energy_dminus.data
+    # Get dimensions, coordinates and attributes based on first telescope
+    dims = eis_allt[scopes[0]].dims
+    coords = [eis_allt[scopes[0]][k] for k in dims]
+    attrs = eis_allt[scopes[0]].attrs
+
+    flux_omni = xr.DataArray(flux_omni, coords=coords, dims=dims, attrs=attrs)
 
     return flux_omni

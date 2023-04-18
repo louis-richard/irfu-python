@@ -148,8 +148,10 @@ def _get_energy_dplus_dminus(eis_allt, data_path):
 def _combine_attrs(attrs1, attrs2):
     attrs = {}
     for k in attrs1:
-        if k not in ["delta_energy_plus", "delta_energy_minus"]:
-            if attrs1[k] == attrs2[k] or k.lower() == "global":
+        if k.lower() == "global":
+            attrs[k] = _combine_attrs(attrs1[k], attrs2[k])
+        elif k not in ["delta_energy_plus", "delta_energy_minus"]:
+            if attrs1[k] == attrs2[k]:
                 attrs[k] = attrs1[k]
             else:
                 attrs[k] = [attrs1[k], attrs2[k]]
