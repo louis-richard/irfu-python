@@ -14,10 +14,12 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def _mass_ratio(psd):
-    if psd.attrs["species"] in ["ions", "i"]:
+def _mass_ratio(inp):
+    if inp.attrs["species"] in ["ions", "ion", "protons", "proton"]:
         mass_ratio = 1
-    elif psd.attrs["species"] in ["electrons", "e"]:
+    elif inp.attrs["species"] in ["alphas", "alpha", "helium"]:
+        mass_ratio = 4
+    elif inp.attrs["species"] in ["electrons", "e"]:
         mass_ratio = constants.electron_mass / constants.proton_mass
     else:
         raise ValueError("Invalid specie")

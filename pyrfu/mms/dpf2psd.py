@@ -19,8 +19,10 @@ __status__ = "Prototype"
 
 
 def _mass_ratio(inp):
-    if inp.attrs["species"] in ["ions", "i"]:
+    if inp.attrs["species"] in ["ions", "ion", "protons", "proton"]:
         mass_ratio = 1
+    elif inp.attrs["species"] in ["alphas", "alpha", "helium"]:
+        mass_ratio = 4
     elif inp.attrs["species"] in ["electrons", "e"]:
         mass_ratio = constants.electron_mass / constants.proton_mass
     else:
@@ -30,8 +32,15 @@ def _mass_ratio(inp):
 
 
 def _convert(inp, mass_ratio):
-    if inp.attrs["UNITS"] == "1/(cm^2 s sr keV)":
-        tmp_data = inp.data.data * 1e-3 / 1e12 * 0.53707 * mass_ratio**2
+    if isinstance(inp, xr.Dataset):
+        units = inp.data.attrs["UNITS"]
+    elif isinstance(inp, xr.DataArray):
+        units = inp.attrs["UNITS"]
+    else:
+        raise TypeError("Invalid input!!")
+
+    if units == "1/(cm^2 s sr keV)":
+        tmp_data = inp.data.data * 1e-3 / 1e12 * 0.53707 * mass_ratio ** 2
     else:
         raise ValueError("Invalid unit")
 
