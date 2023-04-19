@@ -35,7 +35,8 @@ logging.basicConfig(
 
 
 def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
-    """Find files in the L2 data repo corresponding to the target time interval.
+    """Find files in the L2 data repo corresponding to the target time
+    interval.
 
     Parameters
     ----------

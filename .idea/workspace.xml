@@ -3,153 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="88475c3d-889d-493a-b18f-fb929feaa33b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.pylintrc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.scrutinizer.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/pyrfu-2.3.27-py3-none-any.whl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/pyrfu-2.3.27.tar.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/conf.py" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/conf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/dispersion/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/dispersion/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/dispersion/disp_surf_calc.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/dispersion/disp_surf_calc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/dispersion/one_fluid_dispersion.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/dispersion/one_fluid_dispersion.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/lp/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/lp/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/lp/photo_current.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/lp/photo_current.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/lp/thermal_current.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/lp/thermal_current.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/calculate_epsilon.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/calculate_epsilon.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/copy_files_ancillary.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/copy_files_ancillary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/correct_edp_probe_timing.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/correct_edp_probe_timing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/db_get_ts.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/db_get_ts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/db_get_variable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/db_get_variable.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/def2psd.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/def2psd.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/download_ancillary.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/download_ancillary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/download_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/download_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/dpf2psd.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/dpf2psd.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/dsl2gse.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/dsl2gse.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/dsl2gsm.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/dsl2gsm.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_ang_ang.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_ang_ang.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_pad.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_pad.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_spec.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_combine_proton_spec.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_moments.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_moments.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_pad.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_pad.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_pad_combine_sc.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_pad_combine_sc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_skymap.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_skymap.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_skymap_combine_sc.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_skymap_combine_sc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_spec_combine_sc.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_spec_combine_sc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/eis_spin_avg.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/eis_spin_avg.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_active_eyes.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_active_eyes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_correct_energies.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_correct_energies.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_energy_table.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_energy_table.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_omni.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_omni.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_pad.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_pad.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_pad_spinavg.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_pad_spinavg.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_pitch_angles.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_pitch_angles.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_remove_bad_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_remove_bad_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_sector_spec.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_sector_spec.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/feeps_spin_avg.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/feeps_spin_avg.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/fk_power_spectrum_4sc.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/fk_power_spectrum_4sc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_dist.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_dist.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_eis_allt.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_eis_allt.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_feeps_alleyes.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_feeps_alleyes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_feeps_omni.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_feeps_omni.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_hpca_dist.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_hpca_dist.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_pitch_angle_dist.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_pitch_angle_dist.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_ts.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_ts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/get_variable.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/get_variable.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/hpca_energies.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/hpca_energies.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/hpca_spin_sum.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/hpca_spin_sum.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/lh_wave_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/lh_wave_analysis.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/list_files.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/list_files.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/list_files_ancillary.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/list_files_ancillary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/load_ancillary.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/load_ancillary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/make_model_kappa.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/make_model_kappa.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/make_model_vdf.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/make_model_vdf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/probe_align_times.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/probe_align_times.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/psd2def.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/psd2def.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/psd2dpf.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/psd2dpf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/psd_moments.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/psd_moments.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/psd_rebin.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/psd_rebin.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/read_feeps_sector_masks_csv.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/read_feeps_sector_masks_csv.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/reduce.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/reduce.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/remove_edist_background.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/remove_edist_background.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/remove_idist_background.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/remove_idist_background.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/remove_imoms_background.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/remove_imoms_background.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/rotate_tensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/rotate_tensor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/scpot2ne.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/scpot2ne.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/tokenize.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/tokenize.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_elim.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_elim.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_omni.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_omni.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_projection.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_projection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_reduce.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_reduce.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/vdf_to_e64.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/vdf_to_e64.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/mms/whistler_b2e.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/mms/whistler_b2e.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/models/igrf.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/models/igrf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/models/magnetopause_normal.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/models/magnetopause_normal.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/add_position.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/add_position.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/make_labels.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/make_labels.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/mms_pl_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/mms_pl_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/pl_scatter_matrix.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/pl_scatter_matrix.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/pl_tx.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/pl_tx.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/plot_ang_ang.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/plot_ang_ang.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/plot_line.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/plot_line.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/plot_magnetosphere.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/plot_magnetosphere.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/plot_projection.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/plot_projection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/plot_sitl_overview.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/plot_sitl_overview.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/plot_spectr.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/plot_spectr.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/plot_surf.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/plot_surf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/span_tint.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/span_tint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/plot/zoom.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/plot/zoom.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/autocorr.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/autocorr.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/average_vdf.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/average_vdf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/c_4_grad.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/c_4_grad.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/c_4_v.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/c_4_v.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/cdfepoch2datetime64.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/cdfepoch2datetime64.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/compress_cwt.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/compress_cwt.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/convert_fac.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/convert_fac.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/corr_deriv.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/corr_deriv.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/cotrans.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/cotrans.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/date_str.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/date_str.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/dist_append.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/dist_append.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/e_vxb.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/e_vxb.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/ebsp.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/ebsp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/edb.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/edb.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/estimate.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/estimate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/extend_tint.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/extend_tint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/filt.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/filt.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/gradient.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/gradient.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/histogram2d.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/histogram2d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/increments.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/increments.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/int_sph_dist.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/int_sph_dist.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/iplasma_calc.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/iplasma_calc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/lowpass.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/lowpass.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/magnetosphere.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/magnetosphere.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/match_phibe_dir.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/match_phibe_dir.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/mean_bins.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/mean_bins.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/median_bins.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/median_bins.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/movmean.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/movmean.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/mva.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/mva.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/new_xyz.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/new_xyz.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/optimize_nbins_1d.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/optimize_nbins_1d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/pvi.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/pvi.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/resample.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/resample.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/struct_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/struct_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/time_clip.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/time_clip.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/trace.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/trace.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/ts_skymap.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/ts_skymap.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/ts_vec_xyz.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/ts_vec_xyz.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/vht.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/vht.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/wavelet.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/wavelet.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/wavepolarize_means.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/wavepolarize_means.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/pyrf/waverage.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/pyrf/waverage.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/solo/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/solo/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/solo/db_init.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/solo/db_init.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyrfu/solo/read_lfr_density.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/solo/read_lfr_density.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyrfu/solo/read_tnr.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/solo/read_tnr.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyrfu/tests/test_pyrf.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyrfu/tests/test_pyrf.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -374,7 +229,7 @@
       <workItem from="1681484455095" duration="1078000" />
       <workItem from="1681488734461" duration="44473000" />
       <workItem from="1681894050026" duration="2779000" />
-      <workItem from="1681906051824" duration="11448000" />
+      <workItem from="1681906051824" duration="11715000" />
     </task>
     <servers />
   </component>
