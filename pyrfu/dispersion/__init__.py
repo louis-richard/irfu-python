@@ -11,3 +11,5 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+__all__ = ["disp_surf_calc", "one_fluid_dispersion"]

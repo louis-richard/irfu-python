@@ -17,7 +17,9 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = ""):
+def get_eis_allt(
+    tar_var, tint, mms_id, verbose: bool = True, data_path: str = ""
+):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all telescopes.
 

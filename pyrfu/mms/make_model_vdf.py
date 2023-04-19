@@ -19,7 +19,9 @@ __version__ = "2.3.7"
 __status__ = "Prototype"
 
 
-def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = False):
+def make_model_vdf(
+    vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = False
+):
     r"""Make a general bi-Maxwellian distribution function based on particle
     moment data in the same format as PDist.
 
@@ -83,7 +85,9 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
 
     # Check that VDF and moments have the same timeline
     message = "VDF and moments have different times."
-    assert np.abs(np.median(np.diff(vdf.time.data - n_s.time.data))) == 0, message
+    assert (
+        np.abs(np.median(np.diff(vdf.time.data - n_s.time.data))) == 0
+    ), message
 
     # Resample b_xyz and sc_pot to particle data resolution
     b_xyz, sc_pot = [resample(b_xyz, n_s), resample(sc_pot, n_s)]
@@ -94,7 +98,9 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
 
     if isotropic:
         t_para = trace(t_xyzfac) / 3
-        t_ratio = ts_scalar(t_xyzfac.time.data, np.ones(len(t_xyzfac.time.data)))
+        t_ratio = ts_scalar(
+            t_xyzfac.time.data, np.ones(len(t_xyzfac.time.data))
+        )
     else:
         t_para = t_xyzfac[:, 0, 0]
         t_ratio = t_xyzfac[:, 0, 0] / t_xyzfac[:, 1, 1]
@@ -136,12 +142,16 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
 
     for i in range(n_ti):
         x_mat[i, ...] = np.outer(
-            -np.cos(np.deg2rad(vdf.phi.data[i, :])), np.sin(np.deg2rad(vdf.theta.data))
+            -np.cos(np.deg2rad(vdf.phi.data[i, :])),
+            np.sin(np.deg2rad(vdf.theta.data)),
         )
         y_mat[i, ...] = np.outer(
-            -np.sin(np.deg2rad(vdf.phi.data[i, :])), np.sin(np.deg2rad(vdf.theta.data))
+            -np.sin(np.deg2rad(vdf.phi.data[i, :])),
+            np.sin(np.deg2rad(vdf.theta.data)),
         )
-        z_mat[i, ...] = np.outer(-np.ones(n_ph), np.cos(np.deg2rad(vdf.theta.data)))
+        z_mat[i, ...] = np.outer(
+            -np.ones(n_ph), np.cos(np.deg2rad(vdf.theta.data))
+        )
         r_mat[i, ...] = np.real(
             np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass)
         )

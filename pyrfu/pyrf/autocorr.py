@@ -40,15 +40,19 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
     else:
         x = inp.data
 
-    n = len(inp)
+    n_t = len(inp)
 
     if maxlags is None:
-        maxlags = n - 1
+        maxlags = n_t - 1
 
-    if maxlags >= n or maxlags < 1:
-        raise ValueError(f"maxlags must be None or strictly positive < {n:d}")
+    if maxlags >= n_t or maxlags < 1:
+        raise ValueError(
+            f"maxlags must be None or strictly positive < {n_t:d}"
+        )
 
-    lags = np.arange(-maxlags, maxlags + 1)
+    lags = np.linspace(
+        -float(maxlags), float(maxlags), 2 * maxlags + 1, dtype=int
+    )
     lags = lags * calc_dt(inp)
 
     out_data = np.zeros_like(x)
@@ -59,11 +63,13 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
         if normed:
             correls /= np.sqrt(np.dot(x[:, i], x[:, i]) ** 2)
 
-        correls = correls[n - 1 - maxlags : n + maxlags]
+        correls = correls[n_t - 1 - maxlags:n_t + maxlags]
         out_data[:, i] = correls[lags >= 0]
 
     if inp.ndim == 1:
-        out = xr.DataArray(np.squeeze(out_data), coords=[lags[lags >= 0]], dims=["lag"])
+        out = xr.DataArray(
+            np.squeeze(out_data), coords=[lags[lags >= 0]], dims=["lag"]
+        )
     elif inp.ndim == 2:
         out = xr.DataArray(
             out_data,

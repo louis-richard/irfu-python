@@ -95,7 +95,8 @@ def magnetopause_normal(
 
     if model in ["mp_shue1998", "bs98"]:
         alpha = (0.58 - 0.007 * b_z_imf) * (1.0 + 0.024 * np.log(p_sw))
-        r0 = (10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))) * p_sw ** (-1.0 / 6.6)
+        r0 = 10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))
+        r0 *= p_sw ** (-1.0 / 6.6)
         warnings.warn("Shue et al., 1998 model used.", UserWarning)
     else:
         alpha = (0.58 - 0.01 * b_z_imf) * (1.0 + 0.01 * p_sw)
@@ -114,7 +115,7 @@ def magnetopause_normal(
     if model[:2].lower() == "mp":
         # Magnetopause
 
-        theta_min, min_val, ierr, numfunc = fminbound(
+        theta_min, min_val, _, _ = fminbound(
             _magnetopause,
             x1=-np.pi / 2,
             x2=np.pi / 2,
@@ -125,7 +126,10 @@ def magnetopause_normal(
         min_dist = np.sqrt(min_val)
 
         # calculate the direction to the spacecraft normal to the magnetopause
-        x_n = r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.cos(theta_min) - r1_x
+        x_n = (
+            r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.cos(theta_min)
+            - r1_x
+        )
         phi = np.arctan2(r1_z, r1_y)
         y_n = (
             np.cos(phi)
@@ -141,20 +145,28 @@ def magnetopause_normal(
         n_vec = np.stack([x_n, y_n, z_n]) / min_dist
 
         # if statement to ensure normal is pointing away from Earth
-        if np.sqrt(r0_x**2 + r0_y**2) > r0 * (2 / (1 + np.cos(theta_min))) ** alpha:
+        if (
+            np.sqrt(r0_x**2 + r0_y**2)
+            > r0 * (2 / (1 + np.cos(theta_min))) ** alpha
+        ):
             n_vec *= -1
             min_dist *= -1
 
     else:
         # Bow shock
-        warnings.warn("Farris & Russell 1994 bow shock model used.", UserWarning)
+        warnings.warn(
+            "Farris & Russell 1994 bow shock model used.", UserWarning
+        )
 
         gamma = 5 / 3
         mach = m_alfven
 
         # Bow shock standoff distance
         rbs = r0 * (
-            1 + 1.1 * ((gamma - 1) * mach**2 + 2) / ((gamma + 1) * (mach**2 - 1))
+            1
+            + 1.1
+            * ((gamma - 1) * mach**2 + 2)
+            / ((gamma + 1) * (mach**2 - 1))
         )
 
         # y ^ 2 = 0 - Ax + Bx ^ 2
@@ -177,7 +189,11 @@ def magnetopause_normal(
         min_dist = np.sqrt(min_val)
 
         qyz = r1_y / r1_z
-        z_n = np.sign(r1_z) * np.sign(x_n) * np.sqrt((1 - x_n**2) / (1 + qyz**2))
+        z_n = (
+            np.sign(r1_z)
+            * np.sign(x_n)
+            * np.sqrt((1 - x_n**2) / (1 + qyz**2))
+        )
         y_n = z_n * qyz
 
         n_vec = np.stack([x_n, y_n, z_n])

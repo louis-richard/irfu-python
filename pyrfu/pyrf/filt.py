@@ -120,10 +120,14 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
         out_data[:, i_col] = signal.filtfilt(num1, den1, inp_data[:, i_col])
 
         if num2 is not None and den2 is not None:
-            out_data[:, i_col] = signal.filtfilt(num2, den2, out_data[:, i_col])
+            out_data[:, i_col] = signal.filtfilt(
+                num2, den2, out_data[:, i_col]
+            )
     if inp_data.shape[1] == 1:
         out_data = out_data[:, 0]
 
-    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
+    out = xr.DataArray(
+        out_data, coords=inp.coords, dims=inp.dims, attrs=inp.attrs
+    )
 
     return out

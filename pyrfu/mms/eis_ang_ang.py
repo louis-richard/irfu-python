@@ -77,7 +77,9 @@ def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
 
     scopes = list(filter(lambda x: x.startswith("t"), inp_allt.keys()))
 
-    phi, theta = [np.zeros((len(scopes), len(inp_allt.time))) for _ in range(2)]
+    phi, theta = [
+        np.zeros((len(scopes), len(inp_allt.time))) for _ in range(2)
+    ]
 
     for i, scope in enumerate(scopes):
         d_xyz = inp_allt[f"look_{scope}"]
@@ -90,9 +92,15 @@ def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
             coordinates_system = "GSE>Geocentric Solar Magnetospheric"
 
         # Domain [-180, 180], 0 = sunward (GSE)
-        # phi[i, :] = np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0]))
+        """
+        phi[i, :] = (
+            np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0]))
+        )
+        """
         # Domain [0, 360], 0 = sunward (GSE)
-        phi[i, :] = np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0])) + 180.
+        phi[i, :] = (
+            np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0])) + 180.0
+        )
         # Domain [-90, 90], Positive is look direction northward
         # theta[i, :] = 90.0 - np.rad2deg(np.arccos(d_xyz[:, 2]))
         # Domain [0, 180], Positive is look direction northward
@@ -120,23 +128,34 @@ def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
 
     for i, spin_ind in enumerate(spin_inds):
         t_inds = np.where(spin_ == spin_[spin_ind])[0]
-        for t_ind, (i_s, scope) in itertools.product(t_inds, enumerate(scopes)):
+        for t_ind, (i_s, scope) in itertools.product(
+            t_inds, enumerate(scopes)
+        ):
             cond_azi = np.logical_and(
-                phi[i_s, t_ind] > min_azi_edges, phi[i_s, t_ind] < max_azi_edges
+                phi[i_s, t_ind] > min_azi_edges,
+                phi[i_s, t_ind] < max_azi_edges,
             )
             a_idx = np.where(cond_azi)[0]
 
             cond_pol = np.logical_and(
-                theta[i_s, t_ind] > min_pol_edges, theta[i_s, t_ind] < max_pol_edges
+                theta[i_s, t_ind] > min_pol_edges,
+                theta[i_s, t_ind] < max_pol_edges,
             )
             p_idx = np.where(cond_pol)[0]
 
             out_data[i, :, a_idx, p_idx] = inp_allt[scope].data[t_ind, en_chan]
 
-    # Setup attributes (that of all telescopes + delta energies and particle species)
-    attrs = {k: inp_allt.attrs[k] for k in ["delta_energy_plus", "delta_energy_minus"]}
+    # Setup attributes (that of all telescopes + delta energies and
+    # particle species)
+    attrs = {
+        k: inp_allt.attrs[k]
+        for k in ["delta_energy_plus", "delta_energy_minus"]
+    }
     attrs = {"species": inp_allt.attrs["species"], **attrs}
-    attrs = {**attrs, **_combine_attrs([inp_allt[scope].attrs for scope in scopes])}
+    attrs = {
+        **attrs,
+        **_combine_attrs([inp_allt[scope].attrs for scope in scopes]),
+    }
     attrs = {k: attrs[k] for k in sorted(attrs)}
 
     out = xr.DataArray(

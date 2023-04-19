@@ -110,7 +110,9 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
 
     # Now loop through PA bins and time, find the telescopes where there is
     # data in those bins and average it up!
-    for pa_idx, ipa in itertools.product(range(len(pa_times)), range(n_pabins)):
+    for pa_idx, ipa in itertools.product(
+        range(len(pa_times)), range(n_pabins)
+    ):
         if not np.isnan(dpa[pa_idx, :][0]):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -121,7 +123,9 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
 
                 if ind[0].size != 0:
                     if len(ind[0]) > 1:
-                        pa_flux[pa_idx, ipa] = np.nanmean(dflux[pa_idx, ind[0]], axis=0)
+                        pa_flux[pa_idx, ipa] = np.nanmean(
+                            dflux[pa_idx, ind[0]], axis=0
+                        )
                     else:
                         pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0]]
 
@@ -130,7 +134,9 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
     return pa_flux
 
 
-def feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636, energy: list = None):
+def feeps_pad(
+    inp_dataset, b_bcs, bin_size: float = 16.3636, energy: list = None
+):
     r"""Compute pitch angle distribution using FEEPS data.
 
     Parameters
@@ -175,7 +181,9 @@ def feeps_pad(inp_dataset, b_bcs, bin_size: float = 16.3636, energy: list = None
         inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id
     )
 
-    pa_flux = _pa_flux(pitch_angles.time, pa_bins, pa_labels, dpa, dflux, d_type)
+    pa_flux = _pa_flux(
+        pitch_angles.time, pa_bins, pa_labels, dpa, dflux, d_type
+    )
 
     pad = xr.DataArray(
         pa_flux, coords=[time, pa_labels], dims=["time", "theta"], attrs=attrs

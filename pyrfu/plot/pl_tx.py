@@ -43,7 +43,9 @@ def pl_tx(axis, inp_list, comp, **kwargs):
 
     for inp in inp_list:
         if len(inp.shape) == 3:
-            data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
+            data = np.reshape(
+                inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2])
+            )
         elif len(inp.shape) == 1:
             data = inp.data[:, np.newaxis]
         else:

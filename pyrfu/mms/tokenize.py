@@ -75,7 +75,16 @@ all_params_vectors = [
     "es34",
 ]
 
-all_params_tensors = ["pi", "partpi", "pe", "partpe", "ti", "partti", "te", "partte"]
+all_params_tensors = [
+    "pi",
+    "partpi",
+    "pe",
+    "partpe",
+    "ti",
+    "partti",
+    "te",
+    "partte",
+]
 
 hpca_params_scalars = [
     "nhplus",
@@ -125,7 +134,16 @@ instruments = [
     "dsp",
 ]
 
-coordinate_systems = ["gse", "gsm", "dsl", "dbcs", "dmpa", "ssc", "bcs", "par"]
+coordinate_systems = [
+    "gse",
+    "gsm",
+    "dsl",
+    "dbcs",
+    "dmpa",
+    "ssc",
+    "bcs",
+    "par",
+]
 
 data_lvls = ["ql", "sitl", "l1b", "l2a", "l2pre", "l2", "l3"]
 

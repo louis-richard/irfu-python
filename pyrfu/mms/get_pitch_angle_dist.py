@@ -159,9 +159,15 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
     else:
         energy = vdf.energy.data
 
-    x_mat = np.squeeze(np.transpose(np.tile(x_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]))
-    y_mat = np.squeeze(np.transpose(np.tile(y_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]))
-    z_mat = np.squeeze(np.transpose(np.tile(z_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]))
+    x_mat = np.squeeze(
+        np.transpose(np.tile(x_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3])
+    )
+    y_mat = np.squeeze(
+        np.transpose(np.tile(y_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3])
+    )
+    z_mat = np.squeeze(
+        np.transpose(np.tile(z_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3])
+    )
 
     theta_b = np.rad2deg(
         np.arccos(
@@ -186,7 +192,9 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
                     np.nanmean(np.nanmean(dists[i], axis=3), axis=2)
                 )
             elif mean_or_sum == "sum":
-                pad_arr[i] = np.squeeze(np.nansum(np.nansum(dists[i], axis=3), axis=2))
+                pad_arr[i] = np.squeeze(
+                    np.nansum(np.nansum(dists[i], axis=3), axis=2)
+                )
             else:
                 raise ValueError("Invalid method")
 
@@ -196,9 +204,15 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
 
     pad = xr.Dataset(
         {
-            "data": (["time", "idx0", "idx1"], np.transpose(pad_arr, [0, 2, 1])),
+            "data": (
+                ["time", "idx0", "idx1"],
+                np.transpose(pad_arr, [0, 2, 1]),
+            ),
             "energy": (["time", "idx0"], np.tile(energy, (len(pad_arr), 1))),
-            "theta": (["time", "idx1"], np.tile(pitch_angles, (len(pad_arr), 1))),
+            "theta": (
+                ["time", "idx1"],
+                np.tile(pitch_angles, (len(pad_arr), 1)),
+            ),
             "time": time,
             "idx0": np.arange(len(energy)),
             "idx1": np.arange(len(pitch_angles)),

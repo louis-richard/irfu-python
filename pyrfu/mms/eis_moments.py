@@ -19,7 +19,10 @@ __status__ = "Prototype"
 
 
 def eis_moments(
-    inp, specie: str = "proton", n_bg: xr.DataArray = None, p_bg: xr.DataArray = None
+    inp,
+    specie: str = "proton",
+    n_bg: xr.DataArray = None,
+    p_bg: xr.DataArray = None,
 ):
     r"""Computes the partial moments given the omni-directional differential
     particle flux and the ion specie under the assumption of angular isotropy
@@ -94,7 +97,11 @@ def eis_moments(
     # Define the integrand as a function of the differential particle flux,
     # the energy and the moment order
     def _int(flux_c, energy_c, order):
-        return np.sqrt(energy_c) ** order * (flux_c / energy_c) * np.sqrt(energy_c)
+        return (
+            np.sqrt(energy_c) ** order
+            * (flux_c / energy_c)
+            * np.sqrt(energy_c)
+        )
 
     # Zeroth order moment number density m^-3
     n_i = fact * integrate.simps(_int(intensity, energy, 0), energy, axis=1)
@@ -124,7 +131,9 @@ def eis_moments(
 
         # Remove background pressure
         p_i.data -= 3.0 * p_bg
-        p_i.data += constants.proton_mass * n_i * v_i**2 * (n_bg / (n_i - n_bg))
+        p_i.data += (
+            constants.proton_mass * n_i * v_i**2 * (n_bg / (n_i - n_bg))
+        )
 
         # Update temperature
         t_i.data = 1e-9 * p_i.data / (1e6 * n_i.data * constants.electron_volt)

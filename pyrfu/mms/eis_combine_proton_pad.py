@@ -32,7 +32,9 @@ def _despin(inp, spin_nums):
     for i, spin_strt in enumerate(spin_starts):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            pad_ds[i, :, :] = np.nanmean(inp.data[c_strt : spin_strt + 1, :, :], axis=0)
+            pad_ds[i, :, :] = np.nanmean(
+                inp.data[c_strt:spin_strt + 1, :, :], axis=0
+            )
         c_strt = spin_strt + 1
 
     out = xr.DataArray(
@@ -101,7 +103,9 @@ def eis_combine_proton_pad(
     extof_pad = eis_pad(extof_allt, vec, energy, pa_width)
 
     # Compute combined PHxTOF and ExTOF omni-directional energy spectrum.
-    proton_combined_spec = eis_omni(eis_combine_proton_spec(phxtof_allt, extof_allt))
+    proton_combined_spec = eis_omni(
+        eis_combine_proton_spec(phxtof_allt, extof_allt)
+    )
 
     data_size = [len(phxtof_pad), len(extof_pad)]
 

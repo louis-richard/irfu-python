@@ -103,10 +103,13 @@ def vht(e, b, flag: int = 1):
     delta_e = e_p.data - e_ht_p.data
 
     poly_fit = np.polyfit(
-        e_ht_p.data.reshape([len(e_ht_p) * 3]), e_p.data.reshape([len(e_p) * 3]), 1
+        e_ht_p.data.reshape([len(e_ht_p) * 3]),
+        e_p.data.reshape([len(e_p) * 3]),
+        1,
     )
     corr_coeff = np.corrcoef(
-        e_ht_p.data.reshape([len(e_ht_p) * 3]), e_p.data.reshape([len(e_p) * 3])
+        e_ht_p.data.reshape([len(e_ht_p) * 3]),
+        e_p.data.reshape([len(e_p) * 3]),
     )
 
     print("slope = {p[0]:6.4f}, offs = {p[1]:6.4f}".format(p=poly_fit))
@@ -120,7 +123,9 @@ def vht(e, b, flag: int = 1):
 
     print(
         "dv_ht ={:7.4f} * {} = {} km/s".format(
-            np.linalg.norm(dv_ht), np.array_str(dv_ht_hat), np.array_str(dv_ht)
+            np.linalg.norm(dv_ht),
+            np.array_str(dv_ht_hat),
+            np.array_str(dv_ht),
         )
     )
 

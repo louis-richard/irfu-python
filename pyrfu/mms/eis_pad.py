@@ -21,12 +21,17 @@ __status__ = "Prototype"
 
 def _calc_angle(look_, vec):
     vec_hat = normalize(vec)
-    theta_ = np.rad2deg(np.pi - np.arccos(np.sum(vec_hat.data * look_.data, axis=1)))
+    theta_ = np.rad2deg(
+        np.pi - np.arccos(np.sum(vec_hat.data * look_.data, axis=1))
+    )
     return theta_
 
 
 def eis_pad(
-    inp_allt, vec: xr.DataArray = None, energy: list = None, pa_width: int = 15
+    inp_allt,
+    vec: xr.DataArray = None,
+    energy: list = None,
+    pa_width: int = 15,
 ):
     r"""Calculates Pitch Angle Distributions (PADs) using data from the MMS
     Energetic Ion Spectrometer (EIS)
@@ -104,7 +109,9 @@ def eis_pad(
 
     flux_file[flux_file == 0] = np.nan
 
-    for (i), (j, pa_lbl) in itertools.product(range(len(time_)), enumerate(pa_label)):
+    for (i), (j, pa_lbl) in itertools.product(
+        range(len(time_)), enumerate(pa_label)
+    ):
         cond_ = np.logical_and(
             pa_file[i, :] + pa_hangw >= pa_lbl - delta_pa,
             pa_file[i, :] - pa_hangw < pa_lbl + delta_pa,

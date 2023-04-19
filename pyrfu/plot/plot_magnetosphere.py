@@ -22,16 +22,23 @@ __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
 def _add_earth(ax=None, **kwargs):
     theta1, theta2 = 90.0, 270.0
-    nightside_ = Wedge((0.0, 0.0), 1.0, theta1, theta2, fc="k", ec="k", **kwargs)
-    dayside_ = Wedge((0.0, 0.0), 1.0, theta2, theta1, fc="w", ec="k", **kwargs)
+    nightside_ = Wedge(
+        (0.0, 0.0), 1.0, theta1, theta2, fc="k", ec="k", **kwargs
+    )
+    dayside_ = Wedge(
+        (0.0, 0.0), 1.0, theta2, theta1, fc="w", ec="k", **kwargs
+    )
     for wedge in [nightside_, dayside_]:
         ax.add_artist(wedge)
+
     return [nightside_, dayside_]
 
 
@@ -40,16 +47,18 @@ def _add_field_lines(ax, tint):
     ut = datetime642unix(iso86012datetime64(np.array(tint)))[0]
     _ = geopack.recalc(ut)
 
-    x_lines_m, y_lines_m, z_lines_m = [[], [], []]
-    x_lines_p, y_lines_p, z_lines_p = [[], [], []]
+    x_lines_m, z_lines_m = [[], []]
+    x_lines_p, z_lines_p = [[], []]
 
-    xx_gsm, zz_gsm = np.meshgrid(np.linspace(-30, 6, 19), np.linspace(-5, 5, 10))
+    xx_gsm, zz_gsm = np.meshgrid(
+        np.linspace(-30, 6, 19), np.linspace(-5, 5, 10)
+    )
     xx_gsm = np.reshape(xx_gsm, (xx_gsm.size,))
     zz_gsm = np.reshape(zz_gsm, (zz_gsm.size,))
 
     for x_gsm, z_gsm in zip(xx_gsm, zz_gsm):
         y_gsm = 0
-        _, _, _, xx, yy, zz = geopack.trace(
+        _, _, _, xx, _, zz = geopack.trace(
             x_gsm,
             y_gsm,
             z_gsm,
@@ -64,7 +73,7 @@ def _add_field_lines(ax, tint):
         x_lines_m.append(xx)
         z_lines_m.append(zz)
 
-        _, _, _, xx, yy, zz = geopack.trace(
+        _, _, _, xx, _, zz = geopack.trace(
             x_gsm,
             y_gsm,
             z_gsm,
@@ -85,10 +94,10 @@ def _add_field_lines(ax, tint):
     for xx, zz in zip(x_lines_p, z_lines_p):
         ax.plot(xx, zz, color="k", linewidth=0.2)
 
-    return
 
-
-def plot_magnetosphere(ax, tint, colors: list = None, field_lines: bool = True):
+def plot_magnetosphere(
+    ax, tint, colors: list = None, field_lines: bool = True
+):
     r"""Plot magnetopause, bow shock and earth.
 
     Parameters

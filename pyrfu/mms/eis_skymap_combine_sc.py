@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pdb
-
 # 3rd party imports
 import numpy as np
-import xarray as xr
 
 from ..pyrf.ts_skymap import ts_skymap
 
@@ -31,7 +28,9 @@ def _combine_attrs(skymaps_attrs):
         "energy1",
     ]
 
-    attrs_keys = list(filter(lambda k: k not in filtered_attrs, skymaps_attrs[0]))
+    attrs_keys = list(
+        filter(lambda k: k not in filtered_attrs, skymaps_attrs[0])
+    )
     print(attrs_keys)
 
     for k in attrs_keys:
@@ -134,7 +133,9 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     # Combine coordinates attributes
     coords_attrs = {}
     for coor in ["time", "energy", "phi", "theta"]:
-        coords_attrs[coor] = _combine_attrs([skymap[coor].attrs for skymap in skymaps])
+        coords_attrs[coor] = _combine_attrs(
+            [skymap[coor].attrs for skymap in skymaps]
+        )
 
     # Combine data attributes
     attrs = _combine_attrs([skymap.data.attrs for skymap in skymaps])

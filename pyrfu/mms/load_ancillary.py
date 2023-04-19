@@ -3,12 +3,9 @@
 
 # Built-in imports
 import os
-import re
 import json
 import bisect
 import logging
-
-import pdb
 
 # 3rd party imports
 import pandas as pd
@@ -27,11 +24,15 @@ __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
-def load_ancillary(product, tint, mms_id, verbose: bool = True, data_path: str = ""):
+def load_ancillary(
+    product, tint, mms_id, verbose: bool = True, data_path: str = ""
+):
     r"""Loads ancillary data.
 
     Parameters

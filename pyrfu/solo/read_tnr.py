@@ -28,7 +28,9 @@ __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
@@ -83,13 +85,21 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
     for date in days:
         if tree:
             local_dir = os.sep.join(
-                [data_path, "L2", "thr", date.strftime("%Y"), date.strftime("%m")]
+                [
+                    data_path,
+                    "L2",
+                    "thr",
+                    date.strftime("%Y"),
+                    date.strftime("%m"),
+                ]
             )
         else:
             local_dir = data_path
 
         if os.name == "nt":
-            full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
+            full_path = os.sep.join(
+                [re.escape(local_dir) + os.sep, file_name]
+            )
         else:
             full_path = os.sep.join([re.escape(local_dir), file_name])
 
@@ -108,9 +118,9 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
 
     # sort in time
     if len(files_out) > 1:
-        return sorted(files_out)
-    else:
-        return files_out
+        files_out = sorted(files_out)
+
+    return files_out
 
 
 def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
@@ -196,7 +206,9 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
 
         timet_ = cdfepoch.to_datetime(epoch_, to_np=True)
 
-        sens0_, sens1_ = [np.where(confg_[:, i] == sensor)[0] for i in range(2)]
+        sens0_, sens1_ = [
+            np.where(confg_[:, i] == sensor)[0] for i in range(2)
+        ]
 
         if sens0_.size and sens1_.size:
             auto_calib = np.vstack([auto1_[sens0_, :], auto2_[sens1_, :]])

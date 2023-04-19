@@ -17,7 +17,11 @@ __status__ = "Prototype"
 
 def _calc_diel(kc_, w_final, theta_, wp_e, wp_i, wc_i):
     # The elements of the dielectric tensor, using Swansons notation
-    diel_s = 1 - wp_e**2 / (w_final**2 - 1) - wp_i**2 / (w_final**2 - wc_i**2)
+    diel_s = (
+        1
+        - wp_e**2 / (w_final**2 - 1)
+        - wp_i**2 / (w_final**2 - wc_i**2)
+    )
     diel_d = -(wp_e**2) / (w_final * (w_final**2 - 1))
     diel_d += wc_i * wp_i**2 / (w_final * (w_final**2 - wc_i**2))
     diel_p = 1 - (wp_e**2 + wp_i**2) / w_final**2
@@ -39,10 +43,10 @@ def _calc_e(diel_tensor):
     e_z = np.ones(e_y.shape)
 
     e_per = np.sqrt(e_x * np.conj(e_x) + e_y * np.conj(e_y))
-    e_tot = np.sqrt(e_x * np.conj(e_x) + e_y * np.conj(e_y) + e_z**2)
     e_pol = -2 * np.imag(e_x * np.conj(e_y)) / e_per**2
+    e_tot = np.sqrt(e_x * np.conj(e_x) + e_y * np.conj(e_y) + e_z**2)
 
-    return e_x, e_y, e_z, e_per, e_tot, e_pol
+    return e_x, e_y, e_z, e_per, e_pol, e_tot
 
 
 def _calc_b(kc_x_mat, kc_z_mat, w_final, e_x, e_y, e_z):
@@ -53,7 +57,9 @@ def _calc_b(kc_x_mat, kc_z_mat, w_final, e_x, e_y, e_z):
     b_par = np.sqrt(b_z * np.conj(b_z))
     b_per = np.sqrt(b_x * np.conj(b_x) + b_y * np.conj(b_y))
     b_pol = -2 * np.imag(b_x * np.conj(b_y)) / b_per**2
-    b_tot = np.sqrt(b_x * np.conj(b_x) + b_y * np.conj(b_y) + b_z * np.conj(b_z))
+    b_tot = np.sqrt(
+        b_x * np.conj(b_x) + b_y * np.conj(b_y) + b_z * np.conj(b_z)
+    )
 
     return b_x, b_y, b_z, b_par, b_per, b_pol, b_tot
 
@@ -64,7 +70,9 @@ def _calc_s(e_x, e_y, e_z, b_x, b_y, b_z):
     s_y = e_z * np.conj(b_x) - e_x * np.conj(b_z)
     s_z = e_x * np.conj(b_y) - e_y * np.conj(b_x)
     s_par = np.abs(s_z)
-    s_tot = np.sqrt(s_x * np.conj(s_x) + s_y * np.conj(s_y) + s_z * np.conj(s_z))
+    s_tot = np.sqrt(
+        s_x * np.conj(s_x) + s_y * np.conj(s_y) + s_z * np.conj(s_z)
+    )
 
     return s_par, s_tot
 
@@ -163,14 +171,20 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     pol_koeff_6 += kc_**4 + (wp_**2 + wc_i) ** 2
     pol_koeff_4 = -(kc_**4) * (1 + wc_i**2 + wp_**2)
     pol_koeff_4 -= 2 * kc_**2 * (wp_**2 + wc_i) ** 2
-    pol_koeff_4 -= (kc_ * wp_) ** 2 * (1 + wc_i**2 - wc_i) * (1 + np.cos(theta_) ** 2)
+    pol_koeff_4 -= (
+        (kc_ * wp_) ** 2 * (1 + wc_i**2 - wc_i) * (1 + np.cos(theta_) ** 2)
+    )
     pol_koeff_4 -= wp_**2 * (wp_**2 + wc_i) ** 2
     pol_koeff_2 = kc_**4 * (
         wp_**2 * (1 + wc_i**2 - wc_i) * np.cos(theta_) ** 2
         + wc_i * (wp_**2 + wc_i)
     )
     pol_koeff_2 += (
-        kc_**2 * wp_**2 * wc_i * (wp_**2 + wc_i) * (1 + np.cos(theta_) ** 2)
+        kc_**2
+        * wp_**2
+        * wc_i
+        * (wp_**2 + wc_i)
+        * (1 + np.cos(theta_) ** 2)
     )
     pol_koeff_0 = -(kc_**4) * wc_i**2 * wp_**2 * np.cos(theta_) ** 2
 
@@ -203,10 +217,10 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
 
     diel_tensor = _calc_diel(kc_, w_final, theta_, wp_e, wp_i, wc_i)
 
-    e_x, e_y, e_z, e_per, e_tot, e_pol = _calc_e(diel_tensor)
+    e_x, e_y, e_z, _, e_pol, e_tot = _calc_e(diel_tensor)
     e_par = (kc_x_mat * e_x + kc_z_mat * e_z) / kc_
 
-    b_x, b_y, b_z, b_par, b_per, b_pol, b_tot = _calc_b(
+    b_x, b_y, b_z, b_par, _, b_pol, b_tot = _calc_b(
         kc_x_mat, kc_z_mat, w_final, e_x, e_y, e_z
     )
 
@@ -219,7 +233,9 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     s_par, s_tot = _calc_s(e_x, e_y, e_z, b_x, b_y, b_z)
 
     # Compute ion and electron velocities
-    v_ex, v_ey, v_ez, v_ix, v_iy, v_iz = _calc_vei(m_i, wc_i, w_final, e_x, e_y, e_z)
+    v_ex, v_ey, v_ez, v_ix, v_iy, v_iz = _calc_vei(
+        m_i, wc_i, w_final, e_x, e_y, e_z
+    )
 
     # Ratio of parallel and perpendicular to B speed
     vepar_perp = v_ez * np.conj(v_ez)

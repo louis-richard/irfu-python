@@ -44,7 +44,9 @@ def _time_avg(vdf, tint):
         raise TypeError("Invalid time interval format")
 
     vdf_new = xr.DataArray(
-        vdf_data, coords=[vdf_ener, vdf_azim, vdf_thet], dims=["energy", "phi", "theta"]
+        vdf_data,
+        coords=[vdf_ener, vdf_azim, vdf_thet],
+        dims=["energy", "phi", "theta"],
     )
 
     return vdf_new
@@ -59,7 +61,9 @@ def _energy_avg(vdf, en_range):
         en_range[1] = np.max(vdf.energy.data[-1], en_range[-1])
 
     idx = np.where(
-        np.logical_and(vdf.energy.data > en_range[0], vdf.energy.data < en_range[1])
+        np.logical_and(
+            vdf.energy.data > en_range[0], vdf.energy.data < en_range[1]
+        )
     )[0]
     assert idx, "Energy range is not covered by the instrument"
 

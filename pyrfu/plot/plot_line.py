@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
@@ -42,7 +41,9 @@ def plot_line(axis, inp, **kwargs):
         _, axis = plt.subplots(1)
 
     if len(inp.shape) == 3:
-        data = np.reshape(inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2]))
+        data = np.reshape(
+            inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2])
+        )
     else:
         data = inp.data
 

@@ -10,6 +10,7 @@ __status__ = "Prototype"
 
 
 def hpca_energies():
+    r"""Construct Hot Plasma Composition Analyser (HPCA) energy bins"""
     return [
         1.35500,
         1.57180,

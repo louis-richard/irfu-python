@@ -46,7 +46,9 @@ def vdf_omni(vdf, method: str = "mean"):
 
     sine_theta = np.ones((np_phi, 1)) * np.sin(np.deg2rad(thetas))
     solid_angles = dangle * dangle * sine_theta
-    all_solid_angles = np.tile(solid_angles, (len(time), energy.shape[1], 1, 1))
+    all_solid_angles = np.tile(
+        solid_angles, (len(time), energy.shape[1], 1, 1)
+    )
 
     if method.lower() == "mean":
         dist = vdf.data.data * all_solid_angles

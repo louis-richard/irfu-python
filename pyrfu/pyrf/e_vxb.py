@@ -81,7 +81,11 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
             res = np.cross(v_xyz.data, b_xyz.data)
             res *= (-1) * 1e-3
 
-        attrs = {"UNITS": "mV/s", "FIELDNAM": "Electric field", "LABLAXIS": "E"}
+        attrs = {
+            "UNITS": "mV/s",
+            "FIELDNAM": "Electric field",
+            "LABLAXIS": "E",
+        }
 
     out = ts_vec_xyz(b_xyz.time.data, res, attrs)
 

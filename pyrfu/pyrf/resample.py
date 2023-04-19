@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pdb
-
 
 # Built-in imports
 import bisect
@@ -50,7 +48,9 @@ def _guess_sampling_frequency(ref_time):
 
     if not_found:
         raise RuntimeError(
-            "Cannot guess sampling frequency. Tried {:d} times".format(max_try)
+            "Cannot guess sampling frequency. Tried {:d} times".format(
+                max_try
+            )
         )
 
     return sfy
@@ -159,7 +159,9 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
                 for k in list(inp.dims)[1:]:
                     coord.append(inp.coords[k].data)
 
-            out = xr.DataArray(out_data, coords=coord, dims=inp.dims, attrs=inp.attrs)
+            out = xr.DataArray(
+                out_data, coords=coord, dims=inp.dims, attrs=inp.attrs
+            )
 
             return out
 
@@ -183,14 +185,18 @@ def _resample_dataset(inp, ref, **kwargs):
     r"""Resample for VDFs (xarray.Dataset)"""
     # Find time dependent zVariables and resample
     tdepnd_zvars = list(filter(lambda x: "time" in inp[x].dims, inp))
-    out_dict = {k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars}
+    out_dict = {
+        k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars
+    }
 
     # Complete the dictionary with non-time dependent zVaraiables
     ndepnd_zvars = list(filter(lambda x: x not in tdepnd_zvars, inp))
     out_dict = {**out_dict, **{k: inp[k] for k in ndepnd_zvars}}
 
     # Find array_like attributes
-    arr_attrs = filter(lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs)
+    arr_attrs = filter(
+        lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs
+    )
     arr_attrs = list(arr_attrs)
 
     # Initialize attributes dictionary with non array_like attributes
@@ -200,11 +206,14 @@ def _resample_dataset(inp, ref, **kwargs):
     for k in arr_attrs:
         attr = inp.attrs[k]
 
-        # If array_like attributes have one dimension equal to time length assume
-        # time dependent. One option would be move the time dependent array_like
-        # attributes to time series to zVaraibles to avoid confusion
+        # If array_like attributes have one dimension equal to time length
+        # assume time dependent. One option would be move the time dependent
+        # array_like attributes to time series to zVaraibles to avoid
+        # confusion
         if attr.shape[0] == len(inp.time.data):
-            coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
+            coords = [
+                np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)
+            ]
             dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
             attr_ts = xr.DataArray(
                 attr, coords=[inp.time.data, *coords], dims=["time", *dims]
@@ -222,7 +231,12 @@ def _resample_dataset(inp, ref, **kwargs):
 
 
 def resample(
-    inp, ref, method: str = "", f_s: float = None, window: int = None, thresh: float = 0
+    inp,
+    ref,
+    method: str = "",
+    f_s: float = None,
+    window: int = None,
+    thresh: float = 0,
 ):
     r"""Resample inp to the time line of ref. If sampling of X is more than two
     times higher than Y, we average X, otherwise we interpolate X.

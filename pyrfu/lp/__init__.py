@@ -7,8 +7,6 @@ from typing import Union
 # 3rd party imports
 import numpy as np
 
-from scipy import constants
-
 # Local imports
 from ..pyrf import estimate
 from .photo_current import photo_current
@@ -21,58 +19,10 @@ __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
 
-
-class Plasma(object):
-    r"""Describes plasma model consisting of several plasma components where
-    each component is characterized by charge size and sign, density, mass of
-    particles, temperature and drift velocity."""
-
-    def __init__(
-        self,
-        name: str = "",
-        n: Union[float, list] = None,
-        mp: Union[float, list] = None,
-        qe: Union[int, list] = None,
-        t: Union[float, list] = None,
-    ):
-        r"""Setup plasma properties. They can be a single number applicable to
-        all plasma components or a vector of the length equal to the number of
-        plasma components.
-
-        Parameters
-        ----------
-        name : str
-            Name of the plasma.
-        n : float or list
-            Species number densities.
-        mp : float or list
-            Species masses in terms of proton mass.
-        qe : float or list
-            Species charges in terms of elementary charge.
-        t : float or float
-            Species temperatures.
-
-        """
-
-        self.name = name
-        self.n = np.atleast_1d(n)
-        self.mp = np.atleast_1d(mp)
-        self.qe = np.atleast_1d(qe)
-        self.t = np.atleast_1d(t)
-
-        # Computes mass and charge in SI units
-        self._m()
-        self._q()
-
-    def _m(self):
-        self.m = self.mp * constants.proton_mass
-        self.m[self.m == 0] = constants.electron_mass
-
-    def _q(self):
-        self.qe * constants.elementary_charge
+__all__ = ["LangmuirProbe", "photo_current", "thermal_current"]
 
 
-class LangmuirProbe(object):
+class LangmuirProbe:
     r"""Defines either spherical, cylindrical, conical or spherical +
     cylindrical/conical probes. Probe belonging to LangmuirProbe is defined
     with properties."""
@@ -196,14 +146,17 @@ class LangmuirProbe(object):
             and isinstance(self.l_wire, (float, int))
         ):
             if self.l_wire > 10 * list([self.r_wire]):
-                c_wire = estimate("capacitance_wire", np.mean(self.r_wire), self.l_wire)
+                c_wire = estimate(
+                    "capacitance_wire", np.mean(self.r_wire), self.l_wire
+                )
             elif self.l_wire > list(self.r_wire):
                 c_wire = estimate(
                     "capacitance_cylinder", np.mean(self.r_wire), self.l_wire
                 )
             else:
                 raise ValueError(
-                    "estimate of capacitance for cylinder " "requires length > radius"
+                    "estimate of capacitance for cylinder "
+                    "requires length > radius"
                 )
 
         self.capacitance = np.sum([c_sphere, c_wire])

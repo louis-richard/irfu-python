@@ -4,7 +4,6 @@
 # Built-in import
 import re
 import warnings
-import datetime
 
 # 3rd party imports
 import numpy as np
@@ -48,7 +47,10 @@ def _shift_epochs(file, epoch):
         flags_vars = [1e3, 1e3]  # Time scaling conversion flags
 
         for i, delta_var in enumerate(delta_vars):
-            if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
+            if (
+                isinstance(delta_var["attrs"], dict)
+                and "UNITS" in delta_var["attrs"]
+            ):
                 if delta_var["attrs"]["UNITS"].lower() == "s":
                     flags_vars[i] = 1e3
                 elif delta_var["attrs"]["UNITS"].lower() == "ms":
@@ -57,16 +59,19 @@ def _shift_epochs(file, epoch):
                     message = " units are not clear, assume s"
                     warnings.warn(message)
             else:
-                message = "Epoch_plus_var/Epoch_minus_var units are not clear, assume s"
+                message = "Epoch_plus_var/Epoch_minus_var units are not " \
+                          "clear, assume s"
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars
         t_offset = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus
+            - delta_minus_var["data"] * flag_minus
         )
         t_offset = np.timedelta64(int(np.round(t_offset, 1) * 1e6 / 2), "ns")
         t_diff = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus
+            - delta_minus_var["data"] * flag_minus
         )
         t_diff = np.timedelta64(int(np.round(t_diff, 1) * 1e6 / 2), "ns")
         t_diff_data = np.median(np.diff(epoch["data"])) / 2
@@ -87,7 +92,9 @@ def _get_epochs(file, cdf_name, tint):
 
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
-    out = {"data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])}
+    out = {
+        "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])
+    }
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         try:
@@ -97,9 +104,12 @@ def _get_epochs(file, cdf_name, tint):
             out["attrs"] = file.varattsget(depend0_key)
 
             # Shift times if particle data
-            is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
-            is_part = is_part or re.search("^mms[1-4]_hpca_",
-                                           cdf_name)  # Is it HPCA data?
+            is_part = re.search(
+                "^mms[1-4]_d[ei]s_", cdf_name
+            )  # Is it FPI data?
+            is_part = is_part or re.search(
+                "^mms[1-4]_hpca_", cdf_name
+            )  # Is it HPCA data?
 
             if is_part:
                 out = _shift_epochs(file, out)
@@ -140,7 +150,9 @@ def _get_depend(file, cdf_name, tint, dep_num=1):
         out["attrs"] = {"LABLAXIS": "comp"}
     else:
         try:
-            out["data"] = file.varget(depend_key, starttime=tint[0], endtime=tint[1])
+            out["data"] = file.varget(
+                depend_key, starttime=tint[0], endtime=tint[1]
+            )
         except IndexError:
             out["data"] = file.varget(depend_key)
 
@@ -191,7 +203,9 @@ def get_ts(file_path, cdf_name, tint):
         if isinstance(tint[0], np.datetime64):
             tint = datetime642iso8601(np.array(tint))
         elif isinstance(tint[0], str):
-            tint = iso86012datetime64(np.array(tint))  # to make sure it is ISO8601 ok!!
+            tint = iso86012datetime64(
+                np.array(tint)
+            )  # to make sure it is ISO8601 ok!!
             tint = datetime642iso8601(np.array(tint))
         else:
             raise TypeError("Values must be in datetime64, or str!!")
@@ -210,10 +224,15 @@ def get_ts(file_path, cdf_name, tint):
     with CDF(file_path) as file:
         var_attrs = file.varattsget(cdf_name)
         glb_attrs = file.globalattsget()
-        out_dict["attrs"] = {"global": glb_attrs, **var_attrs}
-        out_dict["attrs"] = {k: out_dict["attrs"][k] for k in sorted(out_dict["attrs"])}
+        out_dict["attrs"] = {"GLOBAL": glb_attrs, **var_attrs}
+        out_dict["attrs"] = {
+            k: out_dict["attrs"][k] for k in sorted(out_dict["attrs"])
+        }
 
-        assert "DEPEND_0" in var_attrs and "epoch" in var_attrs["DEPEND_0"].lower()
+        assert (
+            "DEPEND_0" in var_attrs
+            and "epoch" in var_attrs["DEPEND_0"].lower()
+        )
 
         time = _get_epochs(file, cdf_name, tint)
 
@@ -224,7 +243,10 @@ def get_ts(file_path, cdf_name, tint):
             depend_1 = _get_depend(file, cdf_name, tint, 1)
 
         elif "afg" in cdf_name or "dfg" in cdf_name:
-            depend_1 = {"data": ["x", "y", "z"], "attrs": {"LABLAXIS": "comp"}}
+            depend_1 = {
+                "data": ["x", "y", "z"],
+                "attrs": {"LABLAXIS": "comp"},
+            }
 
         if "DEPEND_2" in var_attrs or "REPRESENTATION_2" in var_attrs:
             depend_2 = _get_depend(file, cdf_name, tint, 2)
@@ -250,15 +272,17 @@ def get_ts(file_path, cdf_name, tint):
             depend_1["data"] = file.varget(depend_1_key)
             depend_1["attrs"] = file.varattsget(depend_1_key)
 
-            depend_1["attrs"]["LABLAXIS"] = depend_1["attrs"]["LABLAXIS"].replace(
-                " ", "_"
-            )
+            depend_1["attrs"]["LABLAXIS"] = depend_1["attrs"][
+                "LABLAXIS"
+            ].replace(" ", "_")
 
         if "edp_dce_sensor" in cdf_name:
             depend_1["data"] = ["x", "y", "z"]
             depend_1["attrs"] = {"LABLAXIS": "comp"}
 
-        out_dict["data"] = file.varget(cdf_name, starttime=tint[0], endtime=tint[1])
+        out_dict["data"] = file.varget(
+            cdf_name, starttime=tint[0], endtime=tint[1]
+        )
 
         if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
             out_dict["data"] = out_dict["data"][:, :-1]
@@ -282,7 +306,11 @@ def get_ts(file_path, cdf_name, tint):
             depend_1["attrs"]["LABLAXIS"] = "rcomp"
             depend_2["attrs"]["LABLAXIS"] = "ccomp"
 
-        dims = ["time", depend_1["attrs"]["LABLAXIS"], depend_2["attrs"]["LABLAXIS"]]
+        dims = [
+            "time",
+            depend_1["attrs"]["LABLAXIS"],
+            depend_2["attrs"]["LABLAXIS"],
+        ]
         coords_data = [time["data"], depend_1["data"], depend_2["data"]]
         coords_attrs = [time["attrs"], depend_1["attrs"], depend_2["attrs"]]
 
@@ -314,7 +342,10 @@ def get_ts(file_path, cdf_name, tint):
         raise NotImplementedError
 
     out = xr.DataArray(
-        out_dict["data"], coords=coords_data, dims=dims, attrs=out_dict["attrs"]
+        out_dict["data"],
+        coords=coords_data,
+        dims=dims,
+        attrs=out_dict["attrs"],
     )
 
     for dim, coord_attrs in zip(dims, coords_attrs):

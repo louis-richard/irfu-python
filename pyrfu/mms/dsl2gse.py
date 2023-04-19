@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import pdb
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import cotrans, resample, sph2cart, ts_vec_xyz, calc_fs
+from ..pyrf import cotrans, resample, ts_vec_xyz, calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -24,10 +22,18 @@ def _transformation_matrix(spin_axis, direction):
     fact = 1.0 / np.sqrt(r_y**2 + r_z**2)
     out = np.zeros((len(fact), 3, 3))
     out[:, 0, :] = np.transpose(
-        np.stack([fact * (r_y**2 + r_z**2), -fact * r_x * r_y, -fact * r_x * r_z])
+        np.stack(
+            [
+                fact * (r_y**2 + r_z**2),
+                -fact * r_x * r_y,
+                -fact * r_x * r_z,
+            ]
+        )
     )
 
-    out[:, 1, :] = np.transpose(np.stack([0.0 * fact, fact * r_z, -fact * r_y]))
+    out[:, 1, :] = np.transpose(
+        np.stack([0.0 * fact, fact * r_z, -fact * r_y])
+    )
 
     out[:, 2, :] = np.transpose(np.stack([r_x, r_y, r_z]))
 
@@ -47,7 +53,8 @@ def dsl2gse(inp, defatt, direction: int = 1):
     defatt : xarray.Dataset or array_like
         Spacecraft attitude.
     direction : {1, -1}, Optional
-        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL. Default is 1.
+        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
+        Default is 1.
 
     Returns
     -------
@@ -77,8 +84,12 @@ def dsl2gse(inp, defatt, direction: int = 1):
     """
 
     if isinstance(defatt, xr.Dataset):
-        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(np.deg2rad(defatt.z_ra.data))
-        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(np.deg2rad(defatt.z_ra.data))
+        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
+            np.deg2rad(defatt.z_ra.data)
+        )
+        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(
+            np.deg2rad(defatt.z_ra.data)
+        )
         z = np.sin(np.deg2rad(defatt.z_dec))
         sax_gei = np.transpose(
             np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z])

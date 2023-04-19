@@ -8,7 +8,7 @@ import warnings
 # 3rd party imports
 import numpy as np
 
-from cdflib import CDF, cdfepoch
+from cdflib import CDF
 
 # Local imports
 from ..pyrf import (
@@ -28,7 +28,14 @@ __version__ = "2.3.26"
 __status__ = "Prototype"
 
 # Keys of the global attributes to keep from CDF informations
-Globkeys = ["CDF", "Version", "Encoding", "Checksum", "Compressed", "LeapSecondUpdated"]
+Globkeys = [
+    "CDF",
+    "Version",
+    "Encoding",
+    "Checksum",
+    "Compressed",
+    "LeapSecondUpdated",
+]
 
 
 def _shift_epochs(file, epoch):
@@ -50,7 +57,10 @@ def _shift_epochs(file, epoch):
         flags_vars = [1e3, 1e3]  # Time scaling conversion flags
 
         for i, delta_var in enumerate(delta_vars):
-            if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
+            if (
+                isinstance(delta_var["attrs"], dict)
+                and "UNITS" in delta_var["attrs"]
+            ):
                 if delta_var["attrs"]["UNITS"].lower() == "s":
                     flags_vars[i] = 1e3
                 elif delta_var["attrs"]["UNITS"].lower() == "ms":
@@ -59,16 +69,19 @@ def _shift_epochs(file, epoch):
                     message = " units are not clear, assume s"
                     warnings.warn(message)
             else:
-                message = "Epoch_plus_var/Epoch_minus_var units are not clear, assume s"
+                message = "Epoch_plus_var/Epoch_minus_var units are not " \
+                          "clear, assume s"
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars
         t_offset = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus
+            - delta_minus_var["data"] * flag_minus
         )
         t_offset = np.timedelta64(int(np.round(t_offset, 1) * 1e6 / 2), "ns")
         t_diff = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus
+            - delta_minus_var["data"] * flag_minus
         )
         t_diff = np.timedelta64(int(np.round(t_diff, 1) * 1e6 / 2), "ns")
         t_diff_data = np.median(np.diff(epoch["data"])) / 2
@@ -89,7 +102,9 @@ def _get_epochs(file, cdf_name, tint):
 
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
-    out = {"data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])}
+    out = {
+        "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])
+    }
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
         try:
@@ -139,7 +154,9 @@ def get_dist(file_path, cdf_name, tint):
     elif "_des_" in cdf_name:
         specie = "electrons"
     else:
-        raise AttributeError("Couldn't get the particle species from file name!!")
+        raise AttributeError(
+            "Couldn't get the particle species from file name!!"
+        )
 
     tint_org = tint
     tint = extend_tint(tint, [-1, 1])
@@ -154,19 +171,21 @@ def get_dist(file_path, cdf_name, tint):
         # Get VDF zVariable attributes
         dist_attrs = file.varattsget(cdf_name)
 
-        # Get CDF keys to Epoch, energy, azimuthal and elevation angle zVariables
-        depends_keys = [dist_attrs[f"DEPEND_{i:d}"] for i in range(4)]
-        depend0_key, depend1_key, depend2_key, depend3_key = depends_keys
+        # Get CDF keys to Epoch, energy, azimuthal and elevation angle
+        # zVariables
+        dpnd_keys = [dist_attrs[f"DEPEND_{i:d}"] for i in range(4)]
+        _, depend1_key, depend2_key, depend3_key = dpnd_keys
 
         # Get coordinates attributes
-        coords_attrs = [file.varattsget(k) for k in depends_keys]
         coords_names = ["time", "phi", "theta", "energy"]
-        coords_attrs = {k: attrs for k, attrs in zip(coords_names, coords_attrs)}
+        coords_attrs = {
+            n: file.varattsget(k) for n, k in zip(coords_names, dpnd_keys)
+        }
 
         times = _get_epochs(file, cdf_name, tint)
 
-        # If something time is None means that there is nothing interesting in this
-        # file so leave!!
+        # If something time is None means that there is nothing interesting
+        # in this file so leave!!
         if times["data"] is not None:
             times = times["data"]
         else:
@@ -223,7 +242,8 @@ def get_dist(file_path, cdf_name, tint):
                 energy0 = file.varget(en0_name)
                 energy1 = file.varget(en1_name)
 
-            # Overwrite energy to make sure that energy0 and energy1 are used instead
+            # Overwrite energy to make sure that energy0 and energy1
+            # are used instead
             energy = None
 
         elif tmmode == "fast":

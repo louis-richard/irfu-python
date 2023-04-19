@@ -57,18 +57,24 @@ def pl_scatter_matrix(
     assert isinstance(inp1, xr.DataArray) and isinstance(inp2, xr.DataArray)
 
     if not pdf:
-        fig, axs = plt.subplots(3, 3, sharex="all", sharey="all", figsize=(16, 9))
+        fig, axs = plt.subplots(
+            3, 3, sharex="all", sharey="all", figsize=(16, 9)
+        )
         fig.subplots_adjust(
             left=0.1, right=0.9, bottom=0.1, top=0.9, hspace=0.05, wspace=0.05
         )
 
         for i in range(3):
             for j in range(3):
-                axs[j, i].scatter(inp1[:, i].data, inp2[:, j].data, marker="+")
+                axs[j, i].scatter(
+                    inp1[:, i].data, inp2[:, j].data, marker="+"
+                )
 
         out = (fig, axs)
     else:
-        fig, axs = plt.subplots(3, 3, sharex="all", sharey="all", figsize=(16, 9))
+        fig, axs = plt.subplots(
+            3, 3, sharex="all", sharey="all", figsize=(16, 9)
+        )
         fig.subplots_adjust(
             left=0.1, right=0.9, bottom=0.1, top=0.9, hspace=0.05, wspace=0.3
         )

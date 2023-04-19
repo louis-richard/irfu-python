@@ -75,11 +75,14 @@ def psd2def(vdf):
         tmp_data = tmp_data[:, :, None, None]
 
     data_r = np.reshape(
-        tmp_data, (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:]))
+        tmp_data,
+        (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:])),
     )
 
     if energy.ndim == 1:
-        energy_mat = np.tile(energy, (len(vdf.time), np.prod(tmp_data.shape[2:]), 1))
+        energy_mat = np.tile(
+            energy, (len(vdf.time), np.prod(tmp_data.shape[2:]), 1)
+        )
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:
         energy_mat = np.tile(energy, (np.prod(tmp_data.shape[2:]), 1, 1))

@@ -60,7 +60,9 @@ def get_feeps_omni(
     """
 
     # Get all telescopes
-    dataset_feeps = get_feeps_alleyes(tar_var, tint, mms_id, verbose, data_path)
+    dataset_feeps = get_feeps_alleyes(
+        tar_var, tint, mms_id, verbose, data_path
+    )
 
     # Remove bad eyes and bad energy channels (lowest)
     dataset_feeps_washed = feeps_remove_bad_data(dataset_feeps)
@@ -75,6 +77,8 @@ def get_feeps_omni(
     spec_feeps_omni = feeps_omni(dataset_feeps_clean_sun_removed)
 
     if spin_avg:
-        spec_feeps_omni = feeps_spin_avg(spec_feeps_omni, dataset_feeps.spinsectnum)
+        spec_feeps_omni = feeps_spin_avg(
+            spec_feeps_omni, dataset_feeps.spinsectnum
+        )
 
     return spec_feeps_omni

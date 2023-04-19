@@ -91,7 +91,9 @@ def _init(vdf, tint):
     )
 
     if tint is not None and len(tint) == 1:
-        t_id = np.argmin(np.abs(vdf.time.data - iso86012datetime64(np.array(tint))[0]))
+        t_id = np.argmin(
+            np.abs(vdf.time.data - iso86012datetime64(np.array(tint))[0])
+        )
 
         dist = vdf.data.data[t_id, ...]
         dist = dist[None, ...]
@@ -118,13 +120,17 @@ def _init(vdf, tint):
                 np.rad2deg(azimuthal.data),
                 theta.data,
             )
-            newt, dist, energy, phi = psd_rebin(temp, phi, energy0, energy1, step_table)
+            newt, dist, energy, phi = psd_rebin(
+                temp, phi, energy0, energy1, step_table
+            )
             dist = ts_skymap(
                 newt, dist, np.tile(energy, (len(newt), 1)), phi, theta.data
             )
             dist = time_clip(dist.data, tint)
             azimuthal = xr.DataArray(
-                phi, coords=[newt, np.arange(phi.shape[1])], dims=["time", "odx"]
+                phi,
+                coords=[newt, np.arange(phi.shape[1])],
+                dims=["time", "odx"],
             )
             len_e = dist.shape[1]
             energy_edges = np.hstack(
@@ -214,7 +220,9 @@ def _cotrans_jit(
 ):
     out = np.zeros((dist.shape[1], dist.shape[0]))  # azimuthal, energy
 
-    for i_en, i_az in itertools.product(range(dist.shape[0]), range(dist.shape[1])):
+    for i_en, i_az in itertools.product(
+        range(dist.shape[0]), range(dist.shape[1])
+    ):
         # dist.data has dimensions nT x nE x nAz x nPol
         c_mat = dist[i_en, ...].copy()
         c_mat = c_mat * geo_factor_elev * geo_factor_bin_size
@@ -317,11 +325,15 @@ def vdf_projection(
     r_en = speed_table
     v_x = np.matmul(
         r_en[:, None],
-        np.cos(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[None, :],
+        np.cos(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[
+            None, :
+        ],
     )
     v_y = np.matmul(
         r_en[:, None],
-        np.sin(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[None, :],
+        np.sin(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[
+            None, :
+        ],
     )
 
     f_mat[f_mat <= 0] = np.nan

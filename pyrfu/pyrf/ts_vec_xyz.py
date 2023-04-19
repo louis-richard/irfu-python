@@ -38,7 +38,10 @@ def ts_vec_xyz(time, data, attrs: dict = None):
         attrs = {}
 
     out = xr.DataArray(
-        data, coords=[time[:], ["x", "y", "z"]], dims=["time", "comp"], attrs=attrs
+        data,
+        coords=[time[:], ["x", "y", "z"]],
+        dims=["time", "comp"],
+        attrs=attrs,
     )
 
     out.attrs["TENSOR_ORDER"] = 1

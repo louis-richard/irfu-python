@@ -54,14 +54,14 @@ def increments(inp, scale: int = 10):
     if inp.data.ndim == 1:
         result = xr.DataArray(
             np.squeeze(result),
-            coords=[cols[0][0 : len(delta_inp)]],
+            coords=[cols[0][0:len(delta_inp)]],
             dims=inp.dims,
             attrs=inp.attrs,
         )
     else:
         result = xr.DataArray(
             np.squeeze(result),
-            coords=[cols[0][0 : len(delta_inp)], *cols[1:]],
+            coords=[cols[0][0:len(delta_inp)], *cols[1:]],
             dims=inp.dims,
             attrs=inp.attrs,
         )

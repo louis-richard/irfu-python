@@ -6,7 +6,6 @@ import os
 import re
 import glob
 import json
-import bisect
 import fnmatch
 import datetime
 
@@ -14,8 +13,7 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from dateutil import parser
-from dateutil.rrule import rrule, DAILY
+# Local imports
 from ..pyrf import iso86012datetime64, datetime642iso8601, iso86012datetime
 
 __author__ = "Louis Richard"
@@ -66,15 +64,17 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
 
     # Check time interval type
     if isinstance(tint, (np.ndarray, list)):
-        if isinstance(tint[0], datetime.datetime):
-            tint = tint
-        elif isinstance(tint[0], np.datetime64):
-            tint = datetime642iso86012(tint)
-            tint = iso86012datetime(tint)
-        elif isinstance(tint[0], str):
-            tint = iso86012datetime64(np.array(tint))  # to make sure it is ISO8601 ok!
+        if isinstance(tint[0], np.datetime64):
             tint = datetime642iso8601(tint)
             tint = iso86012datetime(tint)
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(
+                np.array(tint)
+            )  # to make sure it is ISO8601 ok!
+            tint = datetime642iso8601(tint)
+            tint = iso86012datetime(tint)
+        elif isinstance(tint[0], datetime.datetime):
+            pass
         else:
             raise TypeError("Values must be in datetime, datetime64, or str!!")
     else:
@@ -90,7 +90,9 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     #   and FILETYPE is either DEFATT, PREDATT, DEFEPH, PREDEPH in uppercase
     #   and start/endDate is YYYYDOY
     #   and version is Vnn (.V00, .V01, etc..)
-    dir_pattern = os.sep.join([data_path, "ancillary", f"mms{mms_id}", product])
+    dir_pattern = os.sep.join(
+        [data_path, "ancillary", f"mms{mms_id}", product]
+    )
     file_pattern = "_".join(
         ["MMS{}".format(mms_id), product.upper(), "???????_???????.V??"]
     )
@@ -102,7 +104,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
 
     # find the files within the time interval
     fname_fmt = (
-        f"MMS{mms_id}_{product.upper()}" + f"_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
+        f"MMS{mms_id}_{product.upper()}_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
     )
 
     if os.name == "nt":

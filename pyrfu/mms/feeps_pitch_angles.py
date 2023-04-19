@@ -160,7 +160,9 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     d_rate = inp_dataset.attrs["tmmode"]
     mms_id = inp_dataset.attrs["mmsId"]
 
-    tint = np.datetime_as_string(np.hstack([np.min(times), np.max(times)]), "ns")
+    tint = np.datetime_as_string(
+        np.hstack([np.min(times), np.max(times)]), "ns"
+    )
 
     eyes = feeps_active_eyes(inp_dataset.attrs, list(tint), mms_id)
 

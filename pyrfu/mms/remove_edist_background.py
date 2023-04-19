@@ -6,11 +6,9 @@ import json
 import os
 
 # 3rd party imports
-from cdflib import cdfread
 import numpy as np
 
-
-from scipy import constants
+from cdflib import cdfread
 
 # Local imports
 from ..pyrf import datetime642iso8601, time_clip, ts_skymap
@@ -27,8 +25,8 @@ __status__ = "Prototype"
 
 
 def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
-    r"""Remove secondary photoelectrons from electron distribution function according
-    to [1]_.
+    r"""Remove secondary photoelectrons from electron distribution function
+    according to [1]_.
 
     Parameters
     ----------
@@ -37,8 +35,8 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     n_sec : float, Optional
         Artificial secondary electron density (isotropic). Default is 0.
     n_art : float, Optional
-        Artificial photoelectron density (sun-angle dependant), Default is ephoto_scale
-        from des-emoms GlobalAttributes.
+        Artificial photoelectron density (sun-angle dependant),
+        Default is ephoto_scale from des-emoms GlobalAttributes.
 
     Returns
     -------
@@ -51,11 +49,11 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
 
     References
     ----------
-    .. [1]  Gershman, D. J., Avanov, L. A., Boardsen,S. A., Dorelli, J. C., Gliese, U.,
-            Barrie, A. C.,... Pollock, C. J. (2017). Spacecraft and instrument
-            photoelectrons measured by the dual electron spectrometers on MMS. Journal
-            of Geophysical Research:Space Physics,122, 11,548–11,558.
-            https://doi.org/10.1002/2017JA024518
+    .. [1]  Gershman, D. J., Avanov, L. A., Boardsen,S. A., Dorelli, J. C.,
+            Gliese, U., Barrie, A. C.,... Pollock, C. J. (2017). Spacecraft
+            and instrument photoelectrons measured by the dual electron
+            spectrometers on MMS. Journal of Geophysical Research:Space
+            Physics,122, 11,548–11,558. https://doi.org/10.1002/2017JA024518
 
     """
 
@@ -72,11 +70,14 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
 
     dataset_name = f"mms{mms_id}_fpi_brst_l2_des-dist"
     startdelphi_count = db_get_ts(
-        dataset_name, f"mms{mms_id}_des_startdelphi_count_brst", tint, verbose=False
+        dataset_name,
+        f"mms{mms_id}_des_startdelphi_count_brst",
+        tint,
+        verbose=False,
     )
 
-    # Load the elctron number density to get the name of the photoelectron model file,
-    # and the photoelectron scaling factor
+    # Load the elctron number density to get the name of the photoelectron
+    # model file, and the photoelectron scaling factor
     n_e = get_data("ne_fpi_brst_l2", tint, mms_id, verbose=False)
 
     photoe_scle = n_e.attrs["Photoelectron_model_scaling_factor"]
@@ -140,7 +141,9 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     # Construct the new VDFs
     glob_attrs = vdf.attrs
     vdf_attrs = vdf.data.attrs
-    coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
+    coords_attrs = {
+        k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]
+    }
 
     vdf_new = ts_skymap(
         vdf.time.data,

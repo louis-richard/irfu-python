@@ -3,7 +3,6 @@
 
 # Built-in imports
 import bisect
-import pdb
 
 # 3rd party imports
 import numpy as np
@@ -47,7 +46,8 @@ def fk_power_spectrum_4sc(
         Positions of the four spacecraft.
     b : list of xarray.DataArray
         background magnetic field in the same coordinates as r. Used to
-        determine the parallel and perpendicular wave numbers using 4SC average.
+        determine the parallel and perpendicular wave numbers using 4SC
+        average.
     tints : list of str
         Time interval over which the power spectrum is calculated. To avoid
         boundary effects use a longer time interval for e and b.
@@ -85,8 +85,8 @@ def fk_power_spectrum_4sc(
 
     >>> tint = ["2015-10-16T13:05:24.00", "2015-10-16T13:05:50.000"]
     >>> ic = range(1, 5)
-    >>> b_fgm_mms = [get_data("b_gse_fgm_brst_l2", tint, i) for i in ic]
-    >>> b_scm_mms = [get_data("b_gse_scm_brst_l2", tint, i) for i in ic]
+    >>> b_fgm = [get_data("b_gse_fgm_brst_l2", tint, i) for i in ic]
+    >>> b_scm = [get_data("b_gse_scm_brst_l2", tint, i) for i in ic]
 
     Load spacecraft position
 
@@ -95,14 +95,14 @@ def fk_power_spectrum_4sc(
 
     Convert magnetic field fluctuations to field aligned coordinates
 
-    >>> b_scm_fac = [convert_fac(b_scm, b_fgm) for b_scm, b_fgm in zip(b_scm_mms, b_fgm_mms)]
-    >>> b_scm_par = [b_scm[:, 0] for b_scm in b_scm_fac]
+    >>> b_fac = [convert_fac(b_s, b_f) for b_s, b_f in zip(b_scm, b_fgm)]
+    >>> b_par = [b_s[:, 0] for b_s in b_fac]
 
     Compute dispersion relation
 
     >>> tint = ["2015-10-16T13:05:26.500", "2015-10-16T13:05:27.000"]
-    >>> pwer = fk_power_spectrum_4sc(b_scm_par, r_gse_mms, b_fgm_mms, tint, 4,
-    ...                                 500, 2, 10, 2)
+    >>> pwer = fk_power_spectrum_4sc(b_par, r_gse, b_fgm, tint, 4, 500, 2,
+    ... 10, 2)
 
     """
 
@@ -125,11 +125,17 @@ def fk_power_spectrum_4sc(
 
     if use_linear:
         cwt_options = dict(
-            linear=df, return_power=False, wavelet_width=5.36 * w_width, cut_edge=False
+            linear=df,
+            return_power=False,
+            wavelet_width=5.36 * w_width,
+            cut_edge=False,
         )
     else:
         cwt_options = dict(
-            nf=num_f, return_power=False, wavelet_width=5.36 * w_width, cut_edge=False
+            nf=num_f,
+            return_power=False,
+            wavelet_width=5.36 * w_width,
+            cut_edge=False,
         )
 
     w = [wavelet(e[i], **cwt_options) for i in range(4)]
@@ -153,8 +159,12 @@ def fk_power_spectrum_4sc(
 
     r = [resample(r[i], av_times) for i in range(4)]
 
-    cx12, cx13, cx14 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
-    cx23, cx24, cx34 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
+    cx12, cx13, cx14 = [
+        np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)
+    ]
+    cx23, cx24, cx34 = [
+        np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)
+    ]
 
     power_avg = np.zeros((n + 1, num_f), dtype="complex128")
 
@@ -247,7 +257,9 @@ def fk_power_spectrum_4sc(
     b_avg_abs = np.linalg.norm(b_avg, axis=1)
     b_avg_abs_mat = np.tile(b_avg_abs, (num_f, 1)).T
 
-    k_par = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
+    k_par = (
+        k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat
+    ) / b_avg_abs_mat
     k_perp = np.sqrt(k_mag**2 - k_par**2)
 
     k_max = np.max(k_mag) * 1.1
@@ -260,7 +272,9 @@ def fk_power_spectrum_4sc(
 
     # Sort power into frequency and wave vector
     print("notice : Computing power versus kx,f; ky,f, kz,f")
-    power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
+    power_k_x_f, power_k_y_f, power_k_z_f = [
+        np.zeros((num_f, num_k)) for _ in range(3)
+    ]
     power_k_mag_f = np.zeros((num_f, num_k))
 
     for nn in range(num_f):
@@ -306,7 +320,9 @@ def fk_power_spectrum_4sc(
         power_k_x_k_z[k_z_number, k_x_number] += np.real(power_avg[:, nn])
         power_k_y_k_z[k_z_number, k_y_number] += np.real(power_avg[:, nn])
 
-        power_k_perp_k_par[k_par_number, k_perp_number] += np.real(power_avg[:, nn])
+        power_k_perp_k_par[k_par_number, k_perp_number] += np.real(
+            power_avg[:, nn]
+        )
 
     power_k_x_k_y /= np.max(power_k_x_k_y)
     power_k_x_k_z /= np.max(power_k_x_k_z)

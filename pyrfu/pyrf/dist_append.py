@@ -56,7 +56,9 @@ def dist_append(inp0, inp1):
     theta = inp0.theta.data
 
     # Coordinates attributes
-    coords_attrs = {k: inp0[k].attrs for k in ["time", "energy", "phi", "theta"]}
+    coords_attrs = {
+        k: inp0[k].attrs for k in ["time", "energy", "phi", "theta"]
+    }
 
     # distribution
     data = np.vstack([inp0.data, inp1.data])
@@ -64,7 +66,10 @@ def dist_append(inp0, inp1):
 
     if "delta_energy_plus" in glob_attrs:
         delta_energy_plus = np.vstack(
-            [inp0.attrs["delta_energy_plus"].data, inp1.attrs["delta_energy_plus"].data]
+            [
+                inp0.attrs["delta_energy_plus"].data,
+                inp1.attrs["delta_energy_plus"].data,
+            ]
         )
         glob_attrs["delta_energy_plus"] = delta_energy_plus
 
@@ -79,7 +84,9 @@ def dist_append(inp0, inp1):
 
     # Energy
     if inp0.attrs["tmmode"] == "brst":
-        step_table = np.hstack([inp0.attrs["esteptable"], inp1.attrs["esteptable"]])
+        step_table = np.hstack(
+            [inp0.attrs["esteptable"], inp1.attrs["esteptable"]]
+        )
 
         out = ts_skymap(
             time,

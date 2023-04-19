@@ -25,7 +25,7 @@ __status__ = "Prototype"
 
 @numba.jit(nopython=True, fastmath=True)
 def _ww(s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
-    # TODO : replace numpy exp and sqrt with math using nested for loop and test speed!!
+    # TODO : use nested for loop and math instead of numpy and test speed!!
     w_w = s_ww * np.exp(
         -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2
     )
@@ -91,7 +91,9 @@ def wavelet(inp, **kwargs):
             delta_f = kwargs["linear"]
         else:
             delta_f = 100
-            warnings.warn("Unknown input for linear delta_f set to 100", UserWarning)
+            warnings.warn(
+                "Unknown input for linear delta_f set to 100", UserWarning
+            )
     else:
         delta_f = 100
         linear_df = False
@@ -141,7 +143,7 @@ def wavelet(inp, **kwargs):
     else:
         raise TypeError("Invalid shape of the inp")
 
-    new_freq_mat, temp_freq = np.meshgrid(new_freq, frequencies, sparse=True)
+    new_freq_mat, _ = np.meshgrid(new_freq, frequencies, sparse=True)
 
     _, frequencies_mat = np.meshgrid(scales, frequencies, sparse=True)
 
@@ -178,10 +180,13 @@ def wavelet(inp, **kwargs):
             for j in range(scale_number):
                 power2[: censure[j], j] = np.nan
 
-                power2[len(data_col) - censure[j] : len(data_col), j] = np.nan
+                power2[len(data_col) - censure[j]:len(data_col), j] = np.nan
 
         if len(inp.shape) == 2:
-            out_dict[inp.comp.data[i]] = (["time", "frequency"], np.fliplr(power2))
+            out_dict[inp.comp.data[i]] = (
+                ["time", "frequency"],
+                np.fliplr(power2),
+            )
 
     if len(inp.shape) == 1:
         out = xr.DataArray(

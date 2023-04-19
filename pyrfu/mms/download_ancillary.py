@@ -4,13 +4,13 @@
 # Built-in imports
 import json
 import os
-import pkg_resources
 import warnings
 
 from datetime import datetime, timedelta
-from dateutil.parser import parse
 from shutil import copyfileobj, copy
 from tempfile import NamedTemporaryFile
+
+import pkg_resources
 
 # 3rd party imports
 import numpy as np
@@ -55,7 +55,9 @@ def _construct_url(tint, mms_id, product):
     end_date = (tint[1] + timedelta(days=1)).strftime("%Y-%m-%d")
 
     url = f"{LASP}/file_info/ancillary"
-    url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
+    url = (
+        f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
+    )
 
     url = f"{url}&product={product}"
 
@@ -93,7 +95,9 @@ def _make_path(file, product, mms_id, data_path: str = ""):
     return out_path, out_file, download_url
 
 
-def download_ancillary(product, tint, mms_id, login, password, data_path: str = ""):
+def download_ancillary(
+    product, tint, mms_id, login, password, data_path: str = ""
+):
     r"""Downloads files containing field `var_str` over the time interval
     `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
 
@@ -133,15 +137,21 @@ def download_ancillary(product, tint, mms_id, login, password, data_path: str = 
     files_in_interval = http_json["files"]
 
     for file in files_in_interval:
-        out_path, out_file, dwl_url = _make_path(file, product, mms_id, data_path)
+        out_path, out_file, dwl_url = _make_path(
+            file, product, mms_id, data_path
+        )
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
-            fsrc = sdc_session.get(dwl_url, stream=True, verify=True, headers=headers)
+            fsrc = sdc_session.get(
+                dwl_url, stream=True, verify=True, headers=headers
+            )
 
         ftmp = NamedTemporaryFile(delete=False)
 
-        with tqdm.tqdm.wrapattr(fsrc.raw, "read", total=file["file_size"]) as fsrc_raw:
+        with tqdm.tqdm.wrapattr(
+            fsrc.raw, "read", total=file["file_size"]
+        ) as fsrc_raw:
             with open(ftmp.name, "wb") as fs:
                 copyfileobj(fsrc_raw, fs)
 

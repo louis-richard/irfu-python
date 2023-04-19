@@ -49,7 +49,10 @@ def pvi(inp, scale: int = 10):
     time = inp.coords[inp.dims[0]].data
 
     result = xr.DataArray(
-        result, coords=[time[0 : len(delta_inp)]], dims=[inp.dims[0]], attrs=inp.attrs
+        result,
+        coords=[time[0:len(delta_inp)]],
+        dims=[inp.dims[0]],
+        attrs=inp.attrs,
     )
 
     result.attrs["units"] = "dimensionless"

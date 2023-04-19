@@ -57,8 +57,12 @@ def vdf_to_e64(vdf_e32):
     # update delta_energy
     log_energy = np.log10(energy_r[0, :])
     log10_energy = np.diff(log_energy)
-    log10_energy_plus = log_energy + 0.5 * np.hstack([log10_energy, log10_energy[-1]])
-    log10_energy_minus = log_energy - 0.5 * np.hstack([log10_energy[0], log10_energy])
+    log10_energy_plus = log_energy + 0.5 * np.hstack(
+        [log10_energy, log10_energy[-1]]
+    )
+    log10_energy_minus = log_energy - 0.5 * np.hstack(
+        [log10_energy[0], log10_energy]
+    )
 
     energy_plus = 10**log10_energy_plus
     energy_minus = 10**log10_energy_minus

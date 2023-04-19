@@ -22,7 +22,9 @@ __status__ = "Prototype"
 
 def _bad_vars(bad_data):
     bad_vars_top = list(filter(lambda x: x not in [6, 7, 8], bad_data["top"]))
-    bad_vars_bot = list(filter(lambda x: x not in [6, 7, 8], bad_data["bottom"]))
+    bad_vars_bot = list(
+        filter(lambda x: x not in [6, 7, 8], bad_data["bottom"])
+    )
 
     bad_vars = [
         *[f"top-{x}" for x in bad_vars_top],

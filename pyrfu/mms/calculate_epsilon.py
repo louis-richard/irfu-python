@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import itertools
-
 # 3rd party imports
 import numpy as np
 
@@ -112,7 +109,9 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     # Calculate speed widths associated with each energy channel.
     energy_scpot = np.transpose(np.tile(sc_pot.data, (energy.shape[1], 1)))
-    energy_corr = energy - np.transpose(np.tile(sc_pot.data, (energy.shape[1], 1)))
+    energy_corr = energy - np.transpose(
+        np.tile(sc_pot.data, (energy.shape[1], 1))
+    )
     velocity = np.real(np.sqrt(2 * q_e * energy_corr / m_s))
 
     if flag_same_e:
@@ -146,14 +145,19 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     theta_mat = np.transpose(theta_mat, [2, 0, 1, 3])
 
     if flag_dphi and flag_dtheta:
-        delta_ang = np.tile(delta_ang, (len(vdf.time.data), len(int_energies), 1, 1))
+        delta_ang = np.tile(
+            delta_ang, (len(vdf.time.data), len(int_energies), 1, 1)
+        )
 
     m_mat = np.sin(np.deg2rad(theta_mat)) * delta_ang
 
     epsilon = np.nansum(
         np.nansum(
             np.nansum(
-                m_mat * vdf_diff[:, int_energies, ...] * v_mat**2 * delta_v_mat,
+                m_mat
+                * vdf_diff[:, int_energies, ...]
+                * v_mat**2
+                * delta_v_mat,
                 axis=-1,
             ),
             axis=-1,

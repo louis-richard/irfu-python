@@ -15,7 +15,7 @@ from cdflib import cdfepoch
 from dateutil import parser
 from dateutil.rrule import rrule, DAILY
 
-from ..pyrf import datetime2iso8601, read_cdf, ts_append, ts_scalar
+from ..pyrf import read_cdf, ts_append, ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -26,7 +26,9 @@ __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
@@ -69,7 +71,7 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
     files_out = []
 
     # directory and file name search patterns:
-    # - assume directories are of the form: [data_path]/L3/lfr_density/year/month/
+    # - assume directories are of the form: [path]/L3/lfr_density/year/month/
     # - assume file names are of the form:
     #   solo_L3_rpw-bia-density-cdag_YYYYMMDD_version.cdf
 
@@ -94,7 +96,9 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
             local_dir = data_path
 
         if os.name == "nt":
-            full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
+            full_path = os.sep.join(
+                [re.escape(local_dir) + os.sep, file_name]
+            )
         else:
             full_path = os.sep.join([re.escape(local_dir), file_name])
 
@@ -113,9 +117,9 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
 
     # sort in time
     if len(files_out) > 1:
-        return sorted(files_out)
-    else:
-        return files_out
+        files_out = sorted(files_out)
+
+    return files_out
 
 
 def read_lfr_density(tint, data_path: str = "", tree: bool = False):

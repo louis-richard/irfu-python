@@ -10,13 +10,16 @@ import numpy as np
 def _compress_cwt_1d(cwt, nc: int = 100):
     nf = cwt.shape[1]
     idxs = np.arange(
-        start=int(nc / 2), stop=len(cwt) - int(nc / 2), step=nc, dtype=np.int64
+        start=int(nc / 2),
+        stop=len(cwt) - int(nc / 2),
+        step=nc,
+        dtype=np.int64,
     )
     cwt_c = np.zeros((len(idxs), nf))
 
     for i, idx in enumerate(idxs):
         for j in range(nf):
-            x_data = cwt[idx - int(nc / 2) : idx + int(nc / 2), j]
+            x_data = cwt[idx - int(nc / 2):idx + int(nc / 2), j]
             cwt_c[i, j] = np.nanmean(x_data)
 
     return cwt_c

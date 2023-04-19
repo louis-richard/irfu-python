@@ -52,7 +52,12 @@ def eis_pad_combine_sc(pads):
     pa_label = 180.0 * np.arange(n_pabins) / n_pabins + size_pabin / 2.0
 
     allmms_pad = np.zeros(
-        (ref_probe.shape[0], ref_probe.shape[1], ref_probe.shape[2], len(pads))
+        (
+            ref_probe.shape[0],
+            ref_probe.shape[1],
+            ref_probe.shape[2],
+            len(pads),
+        )
     )
 
     for i_pad, pad_ in enumerate(pads):

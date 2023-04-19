@@ -93,7 +93,9 @@ def _transformation_matrix(t, tind, hapgood, *args):
                 # Suns mean longitude
                 m_long = 280.460 + 36000.772 * t_zero + 0.04107 * ut
                 l_sun = m_long
-                l_sun += (1.915 - 0.0048 * t_zero) * np.sin(np.deg2rad(m_anom))
+                l_sun += (1.915 - 0.0048 * t_zero) * np.sin(
+                    np.deg2rad(m_anom)
+                )
                 l_sun += 0.020 * np.sin(np.deg2rad(2 * m_anom))
             else:
                 # Source: United States Naval Observatory, Astronomical
@@ -265,12 +267,12 @@ def cotrans(inp, flag, hapgood: bool = True):
         t_zero = day_start_epoch - mjd_ref_epoch
         t_zero /= 3600 * 24 * 36525.0
 
-        hours = (time.astype("datetime64[h]") - time.astype("datetime64[D]")).astype(
-            float
-        )
-        minutes = (time.astype("datetime64[m]") - time.astype("datetime64[h]")).astype(
-            float
-        )
+        hours = (
+            time.astype("datetime64[h]") - time.astype("datetime64[D]")
+        ).astype(float)
+        minutes = (
+            time.astype("datetime64[m]") - time.astype("datetime64[h]")
+        ).astype(float)
         seconds = 1e-9 * (
             time.astype("datetime64[ns]") - time.astype("datetime64[m]")
         ).astype(np.float64)

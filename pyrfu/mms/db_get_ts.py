@@ -19,7 +19,9 @@ __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
@@ -39,7 +41,9 @@ def _tokenize(dataset_name):
     return probe, var
 
 
-def db_get_ts(dataset_name, cdf_name, tint, verbose: bool = True, data_path: str = ""):
+def db_get_ts(
+    dataset_name, cdf_name, tint, verbose: bool = True, data_path: str = ""
+):
     r"""Get variable time series in the cdf file.
 
     Parameters
@@ -70,7 +74,7 @@ def db_get_ts(dataset_name, cdf_name, tint, verbose: bool = True, data_path: str
         logging.info("Loading %s...", cdf_name)
 
     out = None
-    for i, file in enumerate(files):
+    for file in files:
         out = ts_append(out, get_ts(file, cdf_name, tint))
 
     return out

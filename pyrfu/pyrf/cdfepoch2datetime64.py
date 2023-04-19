@@ -51,7 +51,9 @@ def _compose_date(
         nanoseconds,
     ]
 
-    dates = sum([np.asarray(v, dtype=t) for t, v in zip(types, vals) if v is not None])
+    dates = sum(
+        [np.asarray(v, dtype=t) for t, v in zip(types, vals) if v is not None]
+    )
 
     return dates
 

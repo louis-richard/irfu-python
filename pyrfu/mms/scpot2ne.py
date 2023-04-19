@@ -21,7 +21,9 @@ __status__ = "Prototype"
 def _f_one_pop(x, *args):
     i_e, i_aspoc, sc_pot_r = args
     return np.nansum(
-        np.abs(i_e.data + i_aspoc.data - (x[0] * np.exp(-sc_pot_r.data / x[1])))
+        np.abs(
+            i_e.data + i_aspoc.data - (x[0] * np.exp(-sc_pot_r.data / x[1]))
+        )
     )
 
 
@@ -110,7 +112,10 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
 
     # First a simple fit of Iph to Ie using 1 photoelectron population
     opt_p1 = optimize.fmin(
-        _f_one_pop, x0=[500.0, 3.0], args=(i_e, i_aspoc, sc_pot_r), maxfun=5000
+        _f_one_pop,
+        x0=[500.0, 3.0],
+        args=(i_e, i_aspoc, sc_pot_r),
+        maxfun=5000,
     )
 
     # Fit of Iph to Ie for two photoelectron populations
@@ -123,8 +128,12 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     i_ph0, t_ph0, i_ph1, t_ph1 = opt_p2
 
     v_eth = np.sqrt(2 * q_e * resample(t_e, sc_pot).data / m_e)
-    n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(-sc_pot.data / t_ph1)
-    n_esc /= s_surf * q_e * v_eth * (1 + sc_pot.data / resample(t_e, sc_pot).data)
+    n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(
+        -sc_pot.data / t_ph1
+    )
+    n_esc /= (
+        s_surf * q_e * v_eth * (1 + sc_pot.data / resample(t_e, sc_pot).data)
+    )
     n_esc *= 2 * np.sqrt(np.pi) * 1e-12
     n_esc = ts_scalar(sc_pot.time.data, n_esc)
 

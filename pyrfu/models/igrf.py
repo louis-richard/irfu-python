@@ -35,7 +35,9 @@ def igrf(time, flag):
 
     # Root path
     # root_path = os.getcwd()
-    path = os.sep.join([os.path.dirname(os.path.abspath(__file__)), "igrf13coeffs.csv"])
+    path = os.sep.join(
+        [os.path.dirname(os.path.abspath(__file__)), "igrf13coeffs.csv"]
+    )
     df = pd.read_csv(path)
 
     # construct IGRF coefficient matrices
@@ -43,9 +45,7 @@ def igrf(time, flag):
     years_igrf[-1] = float(years_igrf[-1].split("-")[0]) + 5.0
 
     # read in all IGRF coefficients from file
-    i_igrf = df.loc[
-        1:,
-    ].values
+    i_igrf = df.loc[1:, ].values
     i_igrf[:, -1] = i_igrf[:, -2] + 5.0 * i_igrf[:, -1].astype(np.float64)
     h_igrf = i_igrf[i_igrf[:, 0] == "h", 1:].astype(np.float64)
     g_igrf = i_igrf[i_igrf[:, 0] == "g", 1:].astype(np.float64)
@@ -56,7 +56,9 @@ def igrf(time, flag):
     year_ref = year_ref.astype("datetime64[Y]")
     year_ref = year_ref.astype(np.int64) + 1970
     year_ref_unix = (year_ref - 1970).astype("datetime64[Y]")
-    year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(np.int64) / 1e9
+    year_ref_unix = (
+        year_ref_unix.astype("datetime64[ns]").astype(np.int64) / 1e9
+    )
 
     if np.min(year_ref) < np.min(years_igrf):
         message = (

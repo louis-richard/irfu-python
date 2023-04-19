@@ -78,14 +78,21 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
         gamma_ = 5 / 3
 
         rstandoff = x_mp[0] * (
-            1 + 1.1 * ((gamma_ - 1) * m_a**2 + 2) / ((gamma_ + 1) * (m_a**2 - 1))
+            1
+            + 1.1
+            * ((gamma_ - 1) * m_a**2 + 2)
+            / ((gamma_ + 1) * (m_a**2 - 1))
         )
         # Smaller increments at the subsolar point
         x_s = (
-            rstandoff - np.logspace(np.log10(0.1), np.log10(100 + rstandoff), 300) + 0.1
+            rstandoff
+            - np.logspace(np.log10(0.1), np.log10(100 + rstandoff), 300)
+            + 0.1
         )
         # original F/G model adds rstandoff^2=645
-        y_s = np.sqrt(0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff))
+        y_s = np.sqrt(
+            0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff)
+        )
 
     else:
         raise NotImplementedError("This model is not implemented yet!!")

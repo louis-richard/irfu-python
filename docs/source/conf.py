@@ -8,8 +8,7 @@
 import os
 import sys
 import shutil
-from datetime import datetime
-import sphinx_rtd_theme
+import sphinx.apidoc
 
 # -- Path setup --------------------------------------------------------------
 
@@ -24,20 +23,24 @@ import sphinx_rtd_theme
 examples_source = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "examples")
 )
-examples_dest = os.path.abspath(os.path.join(os.path.dirname(__file__), "examples"))
+examples_dest = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "examples")
+)
 
-import sphinx.apidoc
-def setup(app):
-    sphinx.apidoc.main(['-f', #Overwrite existing files
-                        '-T', #Create table of contents
-                        '-e', #Give modules their own pages
-                        #'-E', #user docstring headers
-                        #'-M', #Modules first
-                        '-o', #Output the files to:
-                        './_autogen/', #Output Directory
-                        './../../pyrfu', #Main Module directory
-                        ]
+
+def setup():
+    r"""fill"""
+    sphinx.apidoc.main(
+        [
+            "-f",  # Overwrite existing files
+            "-T",  # Create table of contents
+            "-e",  # Give modules their own pages
+            "-o",  # Output the files to:
+            "./_autogen/",  # Output Directory
+            "./../../pyrfu",  # Main Module directory
+        ]
     )
+
 
 if os.path.exists(examples_dest):
     shutil.rmtree(examples_dest)
@@ -45,11 +48,15 @@ os.mkdir(examples_dest)
 
 for root, dirs, files in os.walk(examples_source):
     for dr in dirs:
-        os.mkdir(os.path.join(root.replace(examples_source, examples_dest), dr))
+        os.mkdir(
+            os.path.join(root.replace(examples_source, examples_dest), dr)
+        )
     for fil in files:
         if os.path.splitext(fil)[1] in [".ipynb", ".md", ".rst"]:
             source_filename = os.path.join(root, fil)
-            dest_filename = source_filename.replace(examples_source, examples_dest)
+            dest_filename = source_filename.replace(
+                examples_source, examples_dest
+            )
             shutil.copyfile(source_filename, dest_filename)
 
 sys.path.insert(0, os.path.abspath("../.."))
@@ -58,7 +65,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 project = "pyrfu"
 author = "Louis Richard"
-copyright = f"2019–{datetime.utcnow().year}, {author}"
+# copyright = f"2019–{datetime.utcnow().year}, {author}"
 
 
 # -- General configuration ---------------------------------------------------
@@ -79,12 +86,6 @@ extensions = [
     "nbsphinx"
     #  "sphinx_gallery.gen_gallery"
 ]
-
-# sphinx_gallery_conf = {
-#     "examples_dirs": "../examples/gallery/",   # path to your example scripts
-#     "gallery_dirs": "auto_examples",  # path where to save gallery generated examples
-# }
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -193,7 +194,13 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "pyrfu.tex", "pyrfu Documentation", "Louis Richard", "manual"),
+    (
+        master_doc,
+        "pyrfu.tex",
+        "pyrfu Documentation",
+        "Louis Richard",
+        "manual",
+    ),
 ]
 
 

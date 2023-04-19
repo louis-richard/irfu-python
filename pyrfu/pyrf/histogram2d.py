@@ -95,12 +95,19 @@ def histogram2d(
         inp2 = resample(inp2, inp1)
 
     h2d, x_edges, y_edges = np.histogram2d(
-        inp1.data, inp2.data, bins=bins, range=y_range, weights=weights, density=density
+        inp1.data,
+        inp2.data,
+        bins=bins,
+        range=y_range,
+        weights=weights,
+        density=density,
     )
 
     x_bins = x_edges[:-1] + np.median(np.diff(x_edges)) / 2
     y_bins = y_edges[:-1] + np.median(np.diff(y_edges)) / 2
 
-    out = xr.DataArray(h2d, coords=[x_bins, y_bins], dims=["x_bins", "y_bins"])
+    out = xr.DataArray(
+        h2d, coords=[x_bins, y_bins], dims=["x_bins", "y_bins"]
+    )
 
     return out

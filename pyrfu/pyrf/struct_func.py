@@ -52,12 +52,17 @@ def struct_func(inp, scales, order):
     result = []
     for scale in scales:
         result.append(
-            np.nanmean(np.abs(data[scale:, :] - data[:-scale, :]) ** order, axis=0)
+            np.nanmean(
+                np.abs(data[scale:, :] - data[:-scale, :]) ** order, axis=0
+            )
         )
 
     if inp.data.ndim == 1:
         result = xr.DataArray(
-            np.squeeze(result), coords=[scales], dims=["scale"], attrs=inp.attrs
+            np.squeeze(result),
+            coords=[scales],
+            dims=["scale"],
+            attrs=inp.attrs,
         )
     else:
         result = xr.DataArray(

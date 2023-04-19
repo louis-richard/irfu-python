@@ -41,7 +41,9 @@ def mms_pl_config(r_mms):
     delta_r = r_xyz - np.tile(r_xyz, (4, 1))
 
     fig = plt.figure(figsize=(9, 9))
-    gs0 = fig.add_gridspec(3, 3, hspace=0.3, left=0.1, right=0.9, bottom=0.1, top=0.9)
+    gs0 = fig.add_gridspec(
+        3, 3, hspace=0.3, left=0.1, right=0.9, bottom=0.1, top=0.9
+    )
 
     gs00 = gs0[0, :].subgridspec(1, 3, wspace=0.35)
     gs10 = gs0[1:, :].subgridspec(1, 1, wspace=0.35)
@@ -62,7 +64,9 @@ def mms_pl_config(r_mms):
     for ax, idx_, idy_, x_lb, y_lb in zip(axs_, idxs_, idys_, x_lbs, y_lbs):
         for i, marker in enumerate(markers):
             ax.scatter(
-                r_xyz[i, idx_] / r_earth, r_xyz[i, idy_] / r_earth, marker=marker
+                r_xyz[i, idx_] / r_earth,
+                r_xyz[i, idy_] / r_earth,
+                marker=marker,
             )
 
         ax.add_artist(earth)
@@ -85,13 +89,22 @@ def mms_pl_config(r_mms):
 
         options = dict(color="k", linestyle="--", linewidth=0.5)
         axs3.plot(
-            [delta_r[i, 0]] * 2, [delta_r[i, 1]] * 2, [-30, delta_r[i, 2]], **options
+            [delta_r[i, 0]] * 2,
+            [delta_r[i, 1]] * 2,
+            [-30, delta_r[i, 2]],
+            **options
         )
         axs3.plot(
-            [delta_r[i, 0]] * 2, [-30, delta_r[i, 1]], [delta_r[i, 2]] * 2, **options
+            [delta_r[i, 0]] * 2,
+            [-30, delta_r[i, 1]],
+            [delta_r[i, 2]] * 2,
+            **options
         )
         axs3.plot(
-            [-30, delta_r[i, 0]], [delta_r[i, 1]] * 2, [delta_r[i, 2]] * 2, **options
+            [-30, delta_r[i, 0]],
+            [delta_r[i, 1]] * 2,
+            [delta_r[i, 2]] * 2,
+            **options
         )
 
     for idx_0, idx_1 in zip([0, 1, 2, 0, 1, 2], [1, 2, 0, 3, 3, 3]):

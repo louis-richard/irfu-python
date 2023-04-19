@@ -47,7 +47,9 @@ def feeps_correct_energies(feeps_alle):
         new_energy = feeps_energy_table(mms_id, sensor, int(eye))
 
         dim = feeps_alle[sensors_eye].dims[1]
-        out_dict[sensors_eye] = feeps_alle[sensors_eye].assign_coords({dim: new_energy})
+        out_dict[sensors_eye] = feeps_alle[sensors_eye].assign_coords(
+            {dim: new_energy}
+        )
         out_dict[sensors_eye] = out_dict[sensors_eye].rename(
             {"time": "time", dim: f"energy-{sensors_eye}"}
         )

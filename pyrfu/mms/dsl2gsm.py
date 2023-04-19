@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import cotrans, resample, sph2cart, ts_vec_xyz, calc_fs
+from ..pyrf import cotrans, resample, ts_vec_xyz, calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -45,7 +45,8 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     defatt : xarray.Dataset or array_like
         Spacecraft attitude.
     direction : {1, -1}, optional
-        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL. Default is 1.
+        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
+        Default is 1.
 
     Returns
     -------
@@ -75,8 +76,12 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     """
 
     if isinstance(defatt, xr.Dataset):
-        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(np.deg2rad(defatt.z_ra.data))
-        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(np.deg2rad(defatt.z_ra.data))
+        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
+            np.deg2rad(defatt.z_ra.data)
+        )
+        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(
+            np.deg2rad(defatt.z_ra.data)
+        )
         z = np.sin(np.deg2rad(defatt.z_dec))
         sax_gei = np.transpose(
             np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z])

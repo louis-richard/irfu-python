@@ -44,7 +44,8 @@ def plot_spectr(
     cmap : str, Optional
         Colormap. Default is "jet".
     colorbar : str, Optional
-        Location of the colorbar with respect to the axis. Set to "none" to hide.
+        Location of the colorbar with respect to the axis.
+        Set to "none" to hide.
 
     Other Parameters
     ----------------
@@ -72,7 +73,9 @@ def plot_spectr(
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
-            options = dict(norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]), cmap=cmap)
+            options = dict(
+                norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]), cmap=cmap
+            )
         else:
             options = dict(norm=mcolors.LogNorm(), cmap=cmap)
     else:
@@ -84,7 +87,12 @@ def plot_spectr(
     x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
     image = axis.pcolormesh(
-        x_data.data, y_data.data, inp.data.T, rasterized=True, shading="auto", **options
+        x_data.data,
+        y_data.data,
+        inp.data.T,
+        rasterized=True,
+        shading="auto",
+        **options
     )
 
     if x_data.dtype == "<M8[ns]":
@@ -107,7 +115,9 @@ def plot_spectr(
             pad = 0.01
 
         pos = axis.get_position()
-        cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height])
+        cax = fig.add_axes(
+            [pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height]
+        )
         plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="vertical")
 
         cax.yaxis.set_ticks_position(colorbar.lower())
@@ -116,7 +126,9 @@ def plot_spectr(
         cax.set_axisbelow(False)
 
         if cscale == "log":
-            cax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
+            cax.yaxis.set_major_locator(
+                ticker.LogLocator(base=10.0, numticks=4)
+            )
         else:
             cax.yaxis.set_major_locator(ticker.MaxNLocator(4))
 
@@ -128,8 +140,12 @@ def plot_spectr(
             pad = 0.01
 
         pos = axis.get_position()
-        cax = fig.add_axes([pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01])
-        plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="horizontal")
+        cax = fig.add_axes(
+            [pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01]
+        )
+        plt.colorbar(
+            mappable=image, cax=cax, ax=axis, orientation="horizontal"
+        )
 
         cax.xaxis.set_ticks_position(colorbar.lower())
         cax.xaxis.set_label_position(colorbar.lower())
@@ -137,7 +153,9 @@ def plot_spectr(
         cax.set_axisbelow(False)
 
         if cscale == "log":
-            cax.xaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
+            cax.xaxis.set_major_locator(
+                ticker.LogLocator(base=10.0, numticks=4)
+            )
         else:
             cax.xaxis.set_major_locator(ticker.MaxNLocator(4))
 
@@ -145,6 +163,8 @@ def plot_spectr(
     elif colorbar.lower() == "none":
         out = axis
     else:
-        raise NotImplementedError("colorbar must be 'right', 'top', or 'none'")
+        raise NotImplementedError(
+            "colorbar must be 'right', 'top', or 'none'"
+        )
 
     return out

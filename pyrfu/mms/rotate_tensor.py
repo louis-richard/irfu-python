@@ -21,24 +21,24 @@ def rotate_tensor(*args):
     Parameters
     ----------
     PeIJ/Peall : xarray.DataArray
-        Time series of either separated terms of the tensor or the complete tensor.
-        If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
+        Time series of either separated terms of the tensor or the complete
+        tensor. If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
 
     flag : str
         Flag of the target coordinates system :
-            * "fac" : 	Field-aligned coordinates, requires background magnetic field
-                        Bback, optional flag "pp"
-                        :math:`\\mathbf{P}_{\\perp 1} = \\mathbf{P}_{\\perp2}` or "qq"
-                        :math:`\\mathbf{P}_{\\perp 1}` and
-                        :math:`\\mathbf{P}_{\\perp 2}` are most unequal, sets P_{23} to
-                        zero.
+            * "fac" : 	Field-aligned coordinates, requires background
+                        magnetic field Bback, optional flag "pp"
+                        :math:`\\mathbf{P}_{\\perp 1} = \\mathbf{P}_{\\perp2}`
+                        or "qq" :math:`\\mathbf{P}_{\\perp 1}` and
+                        :math:`\\mathbf{P}_{\\perp 2}` are most unequal, sets
+                        P_{23} to zero.
 
-            * "rot" :	Arbitrary coordinate system, requires new x-direction xnew, new
-                        y and z directions ynew, znew (if not included y and z
-                        directions are orthogonal to xnew and closest to the original
-                        y and z directions)
+            * "rot" :	Arbitrary coordinate system, requires new x-direction
+                        xnew, new y and z directions ynew, znew (if not
+                        included y and z directions are orthogonal to xnew
+                        and closest to the original y and z directions)
 
-            * "gse" : GSE coordinates, requires MMS spacecraft number 1--4 MMSnum
+            * "gse" : GSE coordinates, requires MMS spacecraft number
 
     Returns
     -------
@@ -98,7 +98,9 @@ def rotate_tensor(*args):
             elif isinstance(args[3], str) and args[3][0] == "q":
                 qqeq = 1
             else:
-                raise ValueError("Flag not recognized no additional rotations applied.")
+                raise ValueError(
+                    "Flag not recognized no additional rotations applied."
+                )
 
         if nargin == 9:
             if isinstance(args[8], str) and args[8][0] == "p":
@@ -106,7 +108,9 @@ def rotate_tensor(*args):
             elif isinstance(args[8], str) and args[8][0] == "q":
                 qqeq = 1
             else:
-                raise ValueError("Flag not recognized no additional rotations applied.")
+                raise ValueError(
+                    "Flag not recognized no additional rotations applied."
+                )
 
         b_vec = b_back / np.linalg.norm(b_back, axis=1, keepdims=True)
 
@@ -123,7 +127,7 @@ def rotate_tensor(*args):
         if nargin == rot_flag_pos:
             raise ValueError("Vector(s) is(are) missing.")
 
-        vectors = list(args[rot_flag_pos + 1 :])
+        vectors = list(args[rot_flag_pos + 1:])
 
         if len(vectors) == 1:
             r_x = vectors[0]
@@ -139,7 +143,9 @@ def rotate_tensor(*args):
             r_y /= np.linalg.norm(r_y, keepdims=True)
 
         elif len(vectors) == 3:
-            r_x, r_y, r_z = [r / np.linalg.norm(r, keepdims=True) for r in vectors]
+            r_x, r_y, r_z = [
+                r / np.linalg.norm(r, keepdims=True) for r in vectors
+            ]
 
         else:
             raise TypeError("Vector format not recognized.")
@@ -163,7 +169,8 @@ def rotate_tensor(*args):
 
     if ppeq:
         thetas = 0.5 * np.arctan(
-            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2])
+            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1])
+            / (2 * p_tensor_p[:, 1, 2])
         )
 
         for i, theta in enumerate(thetas):
@@ -185,7 +192,8 @@ def rotate_tensor(*args):
 
     if qqeq:
         thetas = 0.5 * np.arctan(
-            (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1])
+            (2 * p_tensor_p[:, 1, 2])
+            / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1])
         )
 
         for i, theta in enumerate(thetas):

@@ -134,7 +134,7 @@ def mva(inp, flag: str = "mvar"):
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
         # Force the maximum variance direction to be positive
-        #lmn[:, 0] *= np.sign(lmn[np.argmax(lmn[:, 0]), 0])
+        # lmn[:, 0] *= np.sign(lmn[np.argmax(lmn[:, 0]), 0])
         # lamb[2], lmn[:, 2] = [l_min, np.cross(lmn[:, 0], lmn[:, 1])]
 
     elif flag.lower() == "td":

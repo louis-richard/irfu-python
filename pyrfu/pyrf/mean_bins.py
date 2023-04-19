@@ -90,7 +90,11 @@ def mean_bins(inp0, inp1, bins: int = 10):
 
     bins = x_edge[:-1] + np.median(np.diff(x_edge)) / 2
 
-    out_dict = {"data": (["bins"], y_avg), "sigma": (["bins"], y_std), "bins": bins}
+    out_dict = {
+        "data": (["bins"], y_avg),
+        "sigma": (["bins"], y_std),
+        "bins": bins,
+    }
 
     out = xr.Dataset(out_dict)
 

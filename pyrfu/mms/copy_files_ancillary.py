@@ -18,8 +18,8 @@ __status__ = "Prototype"
 
 
 def copy_files_ancillary(product, tint, mms_id, tar_path: str = "./data/"):
-    r"""Copy ancillary files from local_data_dir as defined in config.json to the target
-    path.
+    r"""Copy ancillary files from local_data_dir as defined in config.json to
+    the target path.
 
     Parameters
     ----------

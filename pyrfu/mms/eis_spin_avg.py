@@ -77,7 +77,7 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
 
     scopes = list(filter(lambda x: x[0] == "t", eis_allt))
 
-    spin_avg_flux, spin_sum_flux = [{}, {}]
+    spin_avg_flux = {}
 
     for scope in scopes:
         scope_data = eis_allt[scope]
@@ -95,7 +95,8 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
                 warnings.simplefilter("ignore", category=RuntimeWarning)
 
                 if method.lower() == "mean":
-                    # Average (for particle/energy flux, phase-space density, etc.)
+                    # Average (for differential partile flux, differential
+                    # energy flux, phase-space density, etc.)
                     flux_avg[i, :] = np.nanmean(flux_data[t_inds, :], axis=0)
                 elif method.lower() == "sum":
                     # Sum (for counts)

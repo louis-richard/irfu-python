@@ -12,7 +12,12 @@ import matplotlib.dates as mdates
 
 # Local imports
 from ..mms import get_data, get_feeps_omni
-from ..pyrf import iso86012datetime64, datetime642iso8601, iso86012datetime, date_str
+from ..pyrf import (
+    iso86012datetime64,
+    datetime642iso8601,
+    iso86012datetime,
+    date_str,
+)
 
 from .plot_line import plot_line
 from .plot_spectr import plot_spectr
@@ -36,7 +41,9 @@ def _tcut_edges(tint):
 
 
 def _get_sclocs(data_rate, tint, mms_id, data_path):
-    r_xyz = get_data(f"r_gse_mec_{data_rate}_l2", tint, mms_id, data_path=data_path)
+    r_xyz = get_data(
+        f"r_gse_mec_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
     return r_xyz
 
 
@@ -46,17 +53,29 @@ def _get_fields(data_rate, tint, mms_id, data_path):
     else:
         data_ratb = data_rate
 
-    b_xyz = get_data(f"b_gse_fgm_{data_ratb}_l2", tint, mms_id, data_path=data_path)
-    e_xyz = get_data(f"e_gse_edp_{data_rate}_l2", tint, mms_id, data_path=data_path)
+    b_xyz = get_data(
+        f"b_gse_fgm_{data_ratb}_l2", tint, mms_id, data_path=data_path
+    )
+    e_xyz = get_data(
+        f"e_gse_edp_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
     return b_xyz, e_xyz
 
 
 def _get_momnts(data_rate, tint, mms_id, data_path):
-    n_i = get_data(f"ni_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path)
-    n_e = get_data(f"ne_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path)
+    n_i = get_data(
+        f"ni_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
+    n_e = get_data(
+        f"ne_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
 
-    v_xyz_i = get_data(f"vi_gse_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path)
-    v_xyz_e = get_data(f"ve_gse_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path)
+    v_xyz_i = get_data(
+        f"vi_gse_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
+    v_xyz_e = get_data(
+        f"ve_gse_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
     return n_i, n_e, v_xyz_i, v_xyz_e
 
 
@@ -67,8 +86,12 @@ def _get_spectr(data_rate, tint, mms_id, data_path):
         data_ratp = data_rate
 
     # FPI-DIS and FPI-DES differential energy flux
-    def_i = get_data(f"defi_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path)
-    def_e = get_data(f"defe_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path)
+    def_i = get_data(
+        f"defi_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
+    def_e = get_data(
+        f"defe_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+    )
 
     if data_rate == "brst":
         dpf_i = get_feeps_omni(
@@ -86,7 +109,14 @@ def _get_spectr(data_rate, tint, mms_id, data_path):
 def _init_fig():
     fig = plt.figure(figsize=(16 * 1.2, 9 * 1.2))
     gsp1 = fig.add_gridspec(
-        18, 4, top=0.95, bottom=0.05, left=0.08, right=0.92, wspace=1, hspace=0.1
+        18,
+        4,
+        top=0.95,
+        bottom=0.05,
+        left=0.08,
+        right=0.92,
+        wspace=1,
+        hspace=0.1,
     )
 
     gsp10 = gsp1[:5, :2].subgridspec(1, 2, hspace=0)
@@ -218,7 +248,9 @@ def _plot_brst(axs, fields, momnts, spectr):
         bbox_to_anchor=(1.0, 1.0),
     )
 
-    axs[3], caxs3 = plot_spectr(axs[3], dpf_i[:, 1:], yscale="log", cscale="log")
+    axs[3], caxs3 = plot_spectr(
+        axs[3], dpf_i[:, 1:], yscale="log", cscale="log"
+    )
     axs[3].set_ylabel("$E_i$" + "\n" + "[keV]")
     caxs3.set_ylabel("Intensity" + "\n" + "[(cm$^2$ s sr keV)$^{-1}$]")
 
@@ -235,7 +267,9 @@ def _plot_brst(axs, fields, momnts, spectr):
         bbox_to_anchor=(1.0, 1.0),
     )
 
-    axs[6], caxs6 = plot_spectr(axs[6], dpf_e[:, 1:], yscale="log", cscale="log")
+    axs[6], caxs6 = plot_spectr(
+        axs[6], dpf_e[:, 1:], yscale="log", cscale="log"
+    )
     axs[6].set_ylabel("$E_e$" + "\n" + "[keV]")
     caxs6.set_ylabel("Intensity" + "\n" + "[(cm$^2$ s sr keV)$^{-1}$]")
 
@@ -354,7 +388,9 @@ def plot_sitl_overview(
 
         tint_iso = datetime642iso8601(iso86012datetime64(np.array(tint_brst)))
         pref = date_str([f"{t_[:-3]}" for t_ in list(tint_iso)], 4)
-        fig.savefig(os.path.join(fig_path, f"{pref}_mms{mms_id}_overview.png"))
+        fig.savefig(
+            os.path.join(fig_path, f"{pref}_mms{mms_id}_overview.png")
+        )
 
         # return fig, [*axs10, *axs11, *axs20]
         return

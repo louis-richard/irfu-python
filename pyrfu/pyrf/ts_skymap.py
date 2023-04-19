@@ -47,8 +47,8 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
     """
 
-    # Check if even (odd) time step energy channels energy1 (energy0), and energy
-    # step table are provided.
+    # Check if even (odd) time step energy channels energy1 (energy0), and
+    # energy step table are provided.
     energy0 = kwargs.get("energy0", None)
     energy1 = kwargs.get("energy1", None)
     esteptable = kwargs.get("esteptable", None)
@@ -57,11 +57,17 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
     glob_attrs = kwargs.get("glob_attrs", {})
 
     if energy is None:
-        assert energy0 is not None and energy1 is not None and esteptable is not None
+        assert (
+            energy0 is not None
+            and energy1 is not None
+            and esteptable is not None
+        )
 
         energy = np.tile(energy0, (len(esteptable), 1))
 
-        energy[esteptable == 1] = np.tile(energy1, (int(np.sum(esteptable)), 1))
+        energy[esteptable == 1] = np.tile(
+            energy1, (int(np.sum(esteptable)), 1)
+        )
 
     if phi.ndim == 1:
         phi = np.tile(phi, (len(time), 1))
@@ -92,7 +98,9 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
     # Sort and fill coordinates attributes
     for k in coords_attrs:
-        out[k].attrs = {m: coords_attrs[k][m] for m in sorted(coords_attrs[k])}
+        out[k].attrs = {
+            m: coords_attrs[k][m] for m in sorted(coords_attrs[k])
+        }
 
     # Sort and fill data attributes
     out.data.attrs = {k: attrs[k] for k in sorted(attrs)}

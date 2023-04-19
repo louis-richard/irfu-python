@@ -82,7 +82,7 @@ def photo_current(
             j0 = photo_current(1, 0, 1, surf)
             print(f"{surf}: Io= {j0 * 1e6:3.2f} uA/m2")
 
-        return
+        return None
 
     # Assert than u is an array
     u = np.atleast_1d(u)
@@ -101,7 +101,6 @@ def photo_current(
         j_photo[u >= 0] *= a_ + b_
 
     elif flag.lower() == "1ev":
-
         j_photo = np.ones(u.shape)
 
         # initialize to current valid for negative potentials

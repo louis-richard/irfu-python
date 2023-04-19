@@ -48,9 +48,9 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
     # Bin size vector
     ds_x = (x_max - x_min) / ns_x
 
-    cs_x = np.zeros(d_x.shape)
+    cs_x = np.zeros(ds_x.shape)
     # Computation of the cost function to x and y
-    for i, n_x in enumumerate(ns_x):
+    for i, n_x in enumerate(ns_x):
         k_i = np.histogram(x, bins=n_x)
         # The mean and the variance are simply computed from the
         # event counts in all the bins of the 1-dimensional histogram.

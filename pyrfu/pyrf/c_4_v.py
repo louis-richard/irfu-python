@@ -21,9 +21,15 @@ def _get_vol_ten(r_xyz, time):
     tckr_x, tckr_y, tckr_z = [[], [], []]
 
     for i in range(4):
-        tckr_x.append(interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 0]))
-        tckr_y.append(interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 1]))
-        tckr_z.append(interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 2]))
+        tckr_x.append(
+            interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 0])
+        )
+        tckr_y.append(
+            interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 1])
+        )
+        tckr_z.append(
+            interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 2])
+        )
 
         r_xyz[i] = np.array(
             [tckr_x[i](time[0]), tckr_y[i](time[0]), tckr_z[i](time[0])]

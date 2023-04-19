@@ -71,7 +71,12 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
 
     # Initialize output to zeros
     out_data = np.zeros(
-        [vdf.data.shape[0], vdf.data.shape[3], vdf.data.shape[1], vdf.data.shape[2]]
+        [
+            vdf.data.shape[0],
+            vdf.data.shape[3],
+            vdf.data.shape[1],
+            vdf.data.shape[2],
+        ]
     )
 
     for i in range(len(vdf.time.data)):

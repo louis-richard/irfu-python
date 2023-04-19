@@ -38,7 +38,9 @@ def time_clip(inp, tint):
     """
 
     if isinstance(inp, xr.Dataset):
-        coords_data = [inp[k] for k in filter(lambda x: x != "time", inp.dims)]
+        coords_data = [
+            inp[k] for k in filter(lambda x: x != "time", inp.dims)
+        ]
         coords_data = [time_clip(inp.time, tint), *coords_data]
         out_dict = {dim: coords_data[i] for i, dim in enumerate(inp.coords)}
 
@@ -49,7 +51,9 @@ def time_clip(inp, tint):
                 out_dict[k] = inp[k]
 
         # Find array_like attributes
-        arr_attrs = filter(lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs)
+        arr_attrs = filter(
+            lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs
+        )
         arr_attrs = list(arr_attrs)
 
         # Initialize attributes dictionary with non array_like attributes
@@ -59,14 +63,19 @@ def time_clip(inp, tint):
         for a in arr_attrs:
             attr = inp.attrs[a]
 
-            # If array_like attributes have one dimension equal to time length assume
-            # time dependent. One option would be move the time dependent array_like
-            # attributes to time series to zVaraibles to avoid confusion
+            # If array_like attributes have one dimension equal to time
+            # length assume time dependent. One option would be move the time
+            # dependent array_like attributes to time series to zVaraibles to
+            # avoid confusion
             if attr.shape[0] == len(inp.time.data):
-                coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
+                coords = [
+                    np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)
+                ]
                 dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
                 attr_ts = xr.DataArray(
-                    attr, coords=[inp.time.data, *coords], dims=["time", *dims]
+                    attr,
+                    coords=[inp.time.data, *coords],
+                    dims=["time", *dims],
                 )
                 out_attrs[a] = time_clip(attr_ts, tint).data
             else:
@@ -102,7 +111,10 @@ def time_clip(inp, tint):
             coords_attrs.append(inp.coords[k].attrs)
 
     out = xr.DataArray(
-        inp.data[idx_min:idx_max, ...], coords=coords, dims=inp.dims, attrs=inp.attrs
+        inp.data[idx_min:idx_max, ...],
+        coords=coords,
+        dims=inp.dims,
+        attrs=inp.attrs,
     )
 
     for i, k in enumerate(inp.dims):

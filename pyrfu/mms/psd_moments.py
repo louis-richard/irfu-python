@@ -72,9 +72,12 @@ def _moms(time_idx, arguments):
                 energy = energy1
                 delta_v = delta_v1
 
-    velocity = np.real(np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass))
+    velocity = np.real(
+        np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass)
+    )
     velocity[
-        energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron < 0
+        energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron
+        < 0
     ] = 0
 
     if is_brst_data:
@@ -295,7 +298,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
             print("notice : Setting spacecraft potential to zero")
 
     int_energies = np.arange(
-        kwargs.get("en_channels", [0, 32])[0], kwargs.get("en_channels", [0, 32])[1]
+        kwargs.get("en_channels", [0, 32])[0],
+        kwargs.get("en_channels", [0, 32])[1],
     )
 
     if "partial_moments" in kwargs:
@@ -306,11 +310,16 @@ def psd_moments(vdf, sc_pot, **kwargs):
         # Check size of partial_moments
         if partial_moments.shape == vdf.data.shape:
             sum_ones = np.sum(
-                np.sum(np.sum(np.sum(partial_moments, axis=-1), axis=-1), axis=-1),
+                np.sum(
+                    np.sum(np.sum(partial_moments, axis=-1), axis=-1), axis=-1
+                ),
                 axis=-1,
             )
             sum_zeros = np.sum(
-                np.sum(np.sum(np.sum(-partial_moments + 1, axis=-1), axis=-1), axis=-1),
+                np.sum(
+                    np.sum(np.sum(-partial_moments + 1, axis=-1), axis=-1),
+                    axis=-1,
+                ),
                 axis=-1,
             )
 
