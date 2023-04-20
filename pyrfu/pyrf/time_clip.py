@@ -38,9 +38,7 @@ def time_clip(inp, tint):
     """
 
     if isinstance(inp, xr.Dataset):
-        coords_data = [
-            inp[k] for k in filter(lambda x: x != "time", inp.dims)
-        ]
+        coords_data = [inp[k] for k in filter(lambda x: x != "time", inp.dims)]
         coords_data = [time_clip(inp.time, tint), *coords_data]
         out_dict = {dim: coords_data[i] for i, dim in enumerate(inp.coords)}
 
@@ -52,7 +50,8 @@ def time_clip(inp, tint):
 
         # Find array_like attributes
         arr_attrs = filter(
-            lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs
+            lambda x: isinstance(inp.attrs[x], np.ndarray),
+            inp.attrs,
         )
         arr_attrs = list(arr_attrs)
 

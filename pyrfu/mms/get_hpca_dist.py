@@ -75,7 +75,8 @@ def _get_dphi(azimuth, full, out_phi, inp):
         out_dphi = np.median(np.diff(azimuth.data[full, ...], axis=1), axis=1)
         out_dphi = np.transpose(out_dphi, [0, 2, 1])
         dphi_reform = np.reshape(
-            out_dphi, [full.size, energy_len, theta_len, 1]
+            out_dphi,
+            [full.size, energy_len, theta_len, 1],
         )
         out_dphi = np.repeat(dphi_reform, phi_len, axis=3)
     elif out_phi.ndim == 3:
@@ -177,7 +178,8 @@ def get_hpca_dist(inp, azimuth):
             continue
 
         out_data[i, ...] = np.transpose(
-            inp.data[start_idx:end_idx, :, :], [2, 0, 1]
+            inp.data[start_idx:end_idx, :, :],
+            [2, 0, 1],
         )
 
     out = {

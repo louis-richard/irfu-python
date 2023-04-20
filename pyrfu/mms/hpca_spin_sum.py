@@ -41,11 +41,11 @@ def hpca_spin_sum(inp, saz, method: str = "mean"):
     for i, spin in enumerate(spin_starts[:-1]):
         if method == "mean":
             out_data.append(
-                inp[spin:spin_starts[i + 1]].mean(dim="time").data
+                inp[spin : spin_starts[i + 1]].mean(dim="time").data,
             )
         elif method == "sum":
             out_data.append(
-                inp[spin:spin_starts[i + 1]].sum(dim="time").data
+                inp[spin : spin_starts[i + 1]].sum(dim="time").data,
             )
         else:
             raise ValueError("Invalid method")

@@ -52,7 +52,8 @@ def feeps_sector_spec(inp_alle):
             spin_sect = sector_data[c_start:spin]
 
             sector_spec[i, spin_sect] = np.nanmean(
-                sensor_data[c_start:spin, :], axis=1
+                sensor_data[c_start:spin, :],
+                axis=1,
             )
 
             c_start = spin

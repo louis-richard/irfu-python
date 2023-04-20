@@ -19,7 +19,7 @@ def _print_header():
     print("IRFU plasma calculator, relativistic effects not fully included")
     print("velocities, gyroradia are relativistically correct")
     print(
-        "can somebody fix relativstically correct frequencies Fpe, Fce,.. ?"
+        "can somebody fix relativstically correct frequencies Fpe, Fce,.. ?",
     )
     print("=" * 70)
 
@@ -62,7 +62,7 @@ def _print_other(n_d, eta, p_mag):
     print("*" * 17)
     print(
         f"{'N_deb':>5} = {n_d:>6.2E} {'':<6} "
-        f"# number of particle in Debye sphere"
+        f"# number of particle in Debye sphere",
     )
     print(f"{'eta':>5} = {eta:>6.2E} {'Ohm m':<6} # Spitzer resistivity")
     print(f"{'P_B':>5} = {p_mag:>6.2E} {'Pa':<6} # Magnetic pressure")
@@ -101,7 +101,7 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
     b_0 = float(input(f"{'Magnetic field in nT [10] ':<34}: ") or "10") * 1e-9
     n_hplus = float(input(f"{'H+ desity in cc [1] ':<34}: ") or "1") * 1e6
     t_e = float(
-        input(f"{'Electron  temperature in eV [100] ':<34}: ") or "10"
+        input(f"{'Electron  temperature in eV [100] ':<34}: ") or "10",
     )
     t_i = float(input(f"{'Ion  temperature in eV [1000] ':<34}: ") or "1000")
 

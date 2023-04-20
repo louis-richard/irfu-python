@@ -46,8 +46,9 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     a = inp_ang_ang.attrs
     a = list(
         filter(
-            lambda k: k not in ["delta_energy_plus", "delta_energy_minus"], a
-        )
+            lambda k: k not in ["delta_energy_plus", "delta_energy_minus"],
+            a,
+        ),
     )
     attrs = {k: inp_ang_ang.attrs[k] for k in a}
     coords_attrs = {

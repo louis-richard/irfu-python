@@ -115,7 +115,7 @@ def thermal_current(
             / (m * v**2 / 2 + constants.Boltzmann * t)
         ) * u
         i_p = np.sqrt(
-            v**2 / 16 + t * constants.Boltzmann / (2.0 * np.pi * m)
+            v**2 / 16 + t * constants.Boltzmann / (2.0 * np.pi * m),
         )
         i_p *= a * n * constants.elementary_charge
 

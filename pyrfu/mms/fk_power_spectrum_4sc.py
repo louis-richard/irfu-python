@@ -172,22 +172,28 @@ def fk_power_spectrum_4sc(
         lb, ub = [int(pos_avm - cav / 2), int(pos_avm + cav / 2)]
 
         cx12[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]), axis=0
+            w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]),
+            axis=0,
         )
         cx13[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]), axis=0
+            w[0].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]),
+            axis=0,
         )
         cx14[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]), axis=0
+            w[0].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
+            axis=0,
         )
         cx23[m, :] = np.nanmean(
-            w[1].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]), axis=0
+            w[1].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]),
+            axis=0,
         )
         cx24[m, :] = np.nanmean(
-            w[1].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]), axis=0
+            w[1].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
+            axis=0,
         )
         cx34[m, :] = np.nanmean(
-            w[2].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]), axis=0
+            w[2].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
+            axis=0,
         )
 
         power_avg[m, :] = np.nanmean(fk_power[lb:ub, :], axis=0)
@@ -238,7 +244,7 @@ def fk_power_spectrum_4sc(
                 r[1][ii, :] - r[0][ii, :],
                 r[2][ii, :] - r[0][ii, :],
                 r[3][ii, :] - r[0][ii, :],
-            ]
+            ],
         )
         for jj in range(num_f):
             m = np.linalg.solve(dr, [dt2[ii, jj], dt3[ii, jj], dt4[ii, jj]])
@@ -321,7 +327,7 @@ def fk_power_spectrum_4sc(
         power_k_y_k_z[k_z_number, k_y_number] += np.real(power_avg[:, nn])
 
         power_k_perp_k_par[k_par_number, k_perp_number] += np.real(
-            power_avg[:, nn]
+            power_avg[:, nn],
         )
 
     power_k_x_k_y /= np.max(power_k_x_k_y)

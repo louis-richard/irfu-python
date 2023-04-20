@@ -61,7 +61,7 @@ def vht(e, b, flag: int = 1):
         e[:, 2] *= 0  # put z component to 0 when using only Ex and Ey
 
         k_mat = np.array(
-            [[p[5], 0, -p[2]], [0, p[5], -p[4]], [-p[2], -p[4], p[0] + p[3]]]
+            [[p[5], 0, -p[2]], [0, p[5], -p[4]], [-p[2], -p[4], p[0] + p[3]]],
         )
     else:
         k_mat = np.array(
@@ -69,7 +69,7 @@ def vht(e, b, flag: int = 1):
                 [p[3] + p[5], -p[1], -p[2]],
                 [-p[1], p[0] + p[5], -p[4]],
                 [-p[2], -p[4], p[0] + p[3]],
-            ]
+            ],
         )
 
     exb = np.cross(e, b)
@@ -87,8 +87,10 @@ def vht(e, b, flag: int = 1):
 
     print(
         "v_ht ={:7.4f} * {} = {} km/s".format(
-            np.linalg.norm(v_ht), np.array_str(v_ht_hat), np.array_str(v_ht)
-        )
+            np.linalg.norm(v_ht),
+            np.array_str(v_ht_hat),
+            np.array_str(v_ht),
+        ),
     )
 
     # Calculate the goodness of the Hoffman Teller frame
@@ -126,7 +128,7 @@ def vht(e, b, flag: int = 1):
             np.linalg.norm(dv_ht),
             np.array_str(dv_ht_hat),
             np.array_str(dv_ht),
-        )
+        ),
     )
 
     return v_ht, e_ht, dv_ht

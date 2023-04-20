@@ -73,7 +73,7 @@ def _moms(time_idx, arguments):
                 delta_v = delta_v1
 
     velocity = np.real(
-        np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass)
+        np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass),
     )
     velocity[
         energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron
@@ -311,7 +311,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
         if partial_moments.shape == vdf.data.shape:
             sum_ones = np.sum(
                 np.sum(
-                    np.sum(np.sum(partial_moments, axis=-1), axis=-1), axis=-1
+                    np.sum(np.sum(partial_moments, axis=-1), axis=-1),
+                    axis=-1,
                 ),
                 axis=-1,
             )
@@ -326,18 +327,18 @@ def psd_moments(vdf, sc_pot, **kwargs):
             if (sum_ones + sum_zeros) == vdf.data.size:
                 print(
                     "notice : partial_moments is correct. Partial moments "
-                    "will be calculated"
+                    "will be calculated",
                 )
                 vdf.data = vdf.data * partial_moments
             else:
                 print(
                     "notice : All values are not ones and zeros in "
-                    "partial_moments. Full " + "moments will be calculated"
+                    "partial_moments. Full " + "moments will be calculated",
                 )
         else:
             print(
                 "notice : Size of partial_moments is wrong. Full moments "
-                "will be calculated"
+                "will be calculated",
             )
 
     tmp_ = kwargs.get("inner_electron", "")

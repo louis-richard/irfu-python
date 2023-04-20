@@ -63,7 +63,7 @@ def _checksampling(e_xyz, delta_b, b_bgd, full_b, flag_no_resamp):
             fs_ = 2 * fs_e
 
             nt = np.min([end(e_xyz), end(delta_b)]) - np.max(
-                [start(e_xyz), start(delta_b)]
+                [start(e_xyz), start(delta_b)],
             )
             nt /= 1 / fs_
             t = np.linspace(
@@ -80,7 +80,8 @@ def _checksampling(e_xyz, delta_b, b_bgd, full_b, flag_no_resamp):
             delta_b = resample(delta_b, t)
 
             warnings.warn(
-                "Interpolating b and e to 2x e sampling", UserWarning
+                "Interpolating b and e to 2x e sampling",
+                UserWarning,
             )
 
     return e_xyz, delta_b, b_bgd, full_b, fs_
@@ -122,7 +123,7 @@ def _freq_int(freq_int, delta_b):
             delta_t = 60  # local
 
             tint = 60 * np.array(
-                [np.round(start(delta_b) / 60), np.round(end(delta_b) / 60)]
+                [np.round(start(delta_b) / 60), np.round(end(delta_b) / 60)],
             )
             tint = datetime642iso8601(unix2datetime64(tint))
 
@@ -384,17 +385,18 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     if flag_want_fac and fac_matrix is None:
         if b_bgd is None:
             raise ValueError(
-                "ebsp(): at least b0 should be given for option FAC"
+                "ebsp(): at least b0 should be given for option FAC",
             )
 
         if xyz is None:
             print(
                 "convert_fac : assuming s/c position [1 0 0] for estimating "
-                "FAC"
+                "FAC",
             )
             xyz = [1, 0, 0]
             xyz = ts_vec_xyz(
-                delta_b.time.data, np.tile(xyz, (len(delta_b), 1))
+                delta_b.time.data,
+                np.tile(xyz, (len(delta_b), 1)),
             )
 
         xyz = resample(xyz, delta_b, **{"f_s": fsb})
@@ -415,7 +417,11 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     if want_ee:
         # Check the sampling rate
         temp_ = _checksampling(
-            e_xyz, delta_b, b_bgd, full_b, flag_no_resample
+            e_xyz,
+            delta_b,
+            b_bgd,
+            full_b,
+            flag_no_resample,
         )
         e_xyz, delta_b, b_bgd, full_b, in_sampling = temp_
 
@@ -430,7 +436,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     if want_ee and e_xyz.shape[1] < 3 and not flag_de_dot_b0:
         raise ValueError(
             "E must have all 3 components or flag de_dot_db=0 "
-            "must be given"
+            "must be given",
         )
 
     if len(delta_b) % 2:
@@ -477,7 +483,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
                 if e_xyz.shape[1] < 3:
                     raise TypeError(
-                        "E must be a 3D vector to be rotated to " "FAC"
+                        "E must be a 3D vector to be rotated to " "FAC",
                     )
 
                 if fac_matrix is None:
@@ -502,7 +508,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
     # to get proper overlap for Morlet
     freq_number = np.ceil(
-        (np.log10(freq_int[1]) - np.log10(freq_int[0])) * 12 * m_width_coeff
+        (np.log10(freq_int[1]) - np.log10(freq_int[0])) * 12 * m_width_coeff,
     )
 
     a_min, a_max = [
@@ -572,9 +578,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     s_plot_y = np.zeros((n_data, n_freq))
     s_plot_z = np.zeros((n_data, n_freq))
 
-    planarity, ellipticity = [
-        np.zeros((n_data_out, n_freq)) for _ in range(2)
-    ]
+    planarity, ellipticity = [np.zeros((n_data_out, n_freq)) for _ in range(2)]
     dop_3d = np.zeros((n_data_out, n_freq), dtype="complex128")
     dop_2d = np.zeros((n_data_out, n_freq), dtype="complex128")
 
@@ -585,7 +589,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     frequency_vec = w_0 / a_
 
     censure = np.floor(
-        2 * a_ * out_sampling / in_sampling * n_wave_period_to_average
+        2 * a_ * out_sampling / in_sampling * n_wave_period_to_average,
     )
 
     for ind_a, f_a in enumerate(a_):
@@ -605,7 +609,9 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         w_exp_mat = np.tile(w_exp_mat, (3, 1)).T
 
         wb = fft.ifft(
-            np.sqrt(1) * sw_b * w_exp_mat, axis=0, workers=os.cpu_count()
+            np.sqrt(1) * sw_b * w_exp_mat,
+            axis=0,
+            workers=os.cpu_count(),
         )
         # wb = pyfftw.interfaces.numpy_fft.ifft(np.sqrt(1) * sw_b * w_exp_mat,
         #                                      axis=0, threads=n_threads)
@@ -615,7 +621,9 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
         if want_ee:
             we = fft.ifft(
-                np.sqrt(1) * sw_e * w_exp_mat, axis=0, workers=os.cpu_count()
+                np.sqrt(1) * sw_e * w_exp_mat,
+                axis=0,
+                workers=os.cpu_count(),
             )
             # arg_ = np.sqrt(1) * sw_e * w_exp_mat
             # we = pyfftw.interfaces.numpy_fft.ifft(arg_, axis=0,
@@ -647,7 +655,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                 )
             else:
                 sum_power_eisr2 = np.sum(
-                    2 * np.pi * (we * np.conj(we)) / new_freq_mat, axis=1
+                    2 * np.pi * (we * np.conj(we)) / new_freq_mat,
+                    axis=1,
                 )
 
             power_2e_isr2_plot[:, ind_a] = sum_power_eisr2
@@ -665,12 +674,14 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                 if flag_want_fac:
                     if fac_matrix is None:
                         arg_ = ts_vec_xyz(
-                            time_b0, np.hstack([we[:, :2], we_z])
+                            time_b0,
+                            np.hstack([we[:, :2], we_z]),
                         )
                         we = convert_fac(arg_, b_bgd, xyz)
                     else:
                         arg_ = ts_vec_xyz(
-                            time_b0, np.hstack([we[:, :2], we_z])
+                            time_b0,
+                            np.hstack([we[:, :2], we_z]),
                         )
                         we = convert_fac(arg_, fac_matrix)
 
@@ -702,7 +713,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                     we_y * np.conj(wb_z)
                     + np.conj(we_y) * wb_z
                     - we_z * np.conj(wb_y)
-                    - np.conj(we_z) * wb_y
+                    - np.conj(we_z) * wb_y,
                 )
                 / new_freq_mat
             )
@@ -712,7 +723,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                     we_z * np.conj(wb_x)
                     + np.conj(we_z) * wb_x
                     - we_x * np.conj(wb_z)
-                    - np.conj(we_x) * wb_z
+                    - np.conj(we_x) * wb_z,
                 )
                 / new_freq_mat
             )
@@ -722,7 +733,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                     we_x * np.conj(wb_y)
                     + np.conj(we_x) * wb_y
                     - we_y * np.conj(wb_x)
-                    - np.conj(we_y) * wb_x
+                    - np.conj(we_y) * wb_x,
                 )
                 / new_freq_mat
             )
@@ -761,7 +772,10 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
             for comp in range(3):
                 s_mat_avg[..., comp] = _average_data(
-                    s_mat[..., comp], in_time, out_time, av_window
+                    s_mat[..., comp],
+                    in_time,
+                    out_time,
+                    av_window,
                 )
 
             # Remove data possibly influenced by edge effects
@@ -772,7 +786,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                         np.max([0, len(out_time) - censure[ind_a] - 1]),
                         len(out_time),
                     ),
-                ]
+                ],
             )
             censure_idx = censure_idx.astype(np.int64)
 
@@ -814,17 +828,17 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                 np.squeeze(
                     np.arctan(
                         np.sqrt(v_mat[0, 2, :] ** 2 + v_mat[1, 2, :] ** 2)
-                        / v_mat[2, 2, :]
-                    )
-                )
+                        / v_mat[2, 2, :],
+                    ),
+                ),
             )
             phi_svd_fac[:, ind_a] = np.squeeze(
-                np.arctan2(v_mat[1, 2, :], v_mat[0, 2, :])
+                np.arctan2(v_mat[1, 2, :], v_mat[0, 2, :]),
             )
 
             # Calculate polarization parameters
             planarity_local = np.squeeze(
-                1 - np.sqrt(w_mat[2, 2, :] / w_mat[0, 0, :])
+                1 - np.sqrt(w_mat[2, 2, :] / w_mat[0, 0, :]),
             )
             planarity_local[censure_idx] = np.nan
 
@@ -834,7 +848,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
             # polarization
 
             ellipticity_local = np.squeeze(
-                w_mat[1, 1, :] / w_mat[0, 0, :]
+                w_mat[1, 1, :] / w_mat[0, 0, :],
             ) * np.sign(np.imag(s_mat_avg[:, 0, 1]))
             ellipticity_local[censure_idx] = np.nan
 
@@ -846,11 +860,13 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                 (3 / 2)
                 * (
                     np.trace(
-                        np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2
+                        np.matmul(s_mat_avg, s_mat_avg),
+                        axis1=1,
+                        axis2=2,
                     )
                     / np.trace(s_mat_avg, axis1=1, axis2=2) ** 2
                 )
-                - 1 / 2
+                - 1 / 2,
             )
 
             dop[censure_idx] = np.nan
@@ -870,11 +886,13 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
                 2
                 * (
                     np.trace(
-                        np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2
+                        np.matmul(s_mat_avg, s_mat_avg),
+                        axis1=1,
+                        axis2=2,
                     )
                     / np.trace(s_mat_avg, axis1=1, axis2=2) ** 2
                 )
-                - 1
+                - 1,
             )
             dop2dim[censure_idx] = np.nan
             dop_2d[:, ind_a] = dop
@@ -887,9 +905,10 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
             [
                 np.arange(np.min([censure[ind_a], len(in_time)])),
                 np.arange(
-                    np.max([1, len(in_time) - censure[ind_a]]), len(in_time)
+                    np.max([1, len(in_time) - censure[ind_a]]),
+                    len(in_time),
                 ),
-            ]
+            ],
         )
 
         censure_idx = censure_idx.astype(np.int64)
@@ -928,7 +947,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         if idx_nan_b[i] < idx_nan_b[i + 1]:
             for j in range(len(a_)):
                 censure_index_front = np.arange(
-                    np.max([i - censure3[j], 0]), i
+                    np.max([i - censure3[j], 0]),
+                    i,
                 )
 
                 power_bx_plot[censure_index_front, j] = np.nan
@@ -943,7 +963,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         if idx_nan_b[i] > idx_nan_b[i + 1]:
             for j in range(len(a_)):
                 censure_index_back = np.arange(
-                    i, np.min([i + censure3[j], n_data2])
+                    i,
+                    np.min([i + censure3[j], n_data2]),
                 )
 
                 power_bx_plot[censure_index_back, j] = np.nan
@@ -961,7 +982,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         if idx_nan_e[i] < idx_nan_e[i + 1]:
             for j in range(len(a_)):
                 censure_index_front = np.arange(
-                    np.max([i - censure3[j], 1]), i
+                    np.max([i - censure3[j], 1]),
+                    i,
                 )
 
                 power_ex_plot[censure_index_front, j] = np.nan
@@ -978,7 +1000,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         elif idx_nan_e[i] > idx_nan_e[i + 1]:
             for j in range(len(a_)):
                 censure_index_back = np.arange(
-                    i, np.min([i + censure3[j], n_data3])
+                    i,
+                    np.min([i + censure3[j], n_data3]),
                 )
 
                 power_ex_plot[censure_index_back, j] = np.nan
@@ -1001,7 +1024,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         if idx_nan_eisr2[i] < idx_nan_eisr2[i + 1]:
             for j in range(len(a_)):
                 censure_index_front = np.arange(
-                    np.max([i - censure3[j], 0]), i
+                    np.max([i - censure3[j], 0]),
+                    i,
                 )
 
                 power_2e_isr2_plot[censure_index_front, j] = np.nan
@@ -1009,7 +1033,8 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         elif idx_nan_eisr2[i] > idx_nan_eisr2[i + 1]:
             for j in range(len(a_)):
                 censure_index_back = np.arange(
-                    i, np.min([i + censure3[j], n_data4])
+                    i,
+                    np.min([i + censure3[j], n_data4]),
                 )
 
                 power_2e_isr2_plot[censure_index_back, j] = np.nan
@@ -1020,7 +1045,10 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
     power_2b_plot = _average_data(power_2b_plot, in_time, out_time)
 
     bb_xxyyzzss = _bb_xxyyzzss(
-        power_bx_plot, power_by_plot, power_bz_plot, power_2b_plot
+        power_bx_plot,
+        power_by_plot,
+        power_bz_plot,
+        power_2b_plot,
     )
 
     # Output
@@ -1039,7 +1067,9 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         power_2e_plot = _average_data(power_2e_plot, in_time, out_time)
 
         power_2e_isr2_plot = _average_data(
-            power_2e_isr2_plot, in_time, out_time
+            power_2e_isr2_plot,
+            in_time,
+            out_time,
         )
         power_2e_isr2_plot = np.real(power_2e_isr2_plot)
 
@@ -1049,7 +1079,10 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         s_azimuth, s_elevation, s_r = cart2sph(s_plot_x, s_plot_y, s_plot_z)
 
         ee_xxyyzzss = _ee_xxyyzzss(
-            power_ex_plot, power_ey_plot, power_ez_plot, power_2e_plot
+            power_ex_plot,
+            power_ey_plot,
+            power_ez_plot,
+            power_2e_plot,
         )
 
         poynting_xyz = np.tile(s_plot_x, (3, 1, 1))
@@ -1100,7 +1133,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         phi_svd_fac[ind_low_ellipticity] = np.nan
 
         k_th_ph_svd_fac = np.zeros(
-            (the_svd_fac.shape[0], the_svd_fac.shape[1], 2)
+            (the_svd_fac.shape[0], the_svd_fac.shape[1], 2),
         )
         k_th_ph_svd_fac[..., 0] = the_svd_fac
         k_th_ph_svd_fac[..., 1] = phi_svd_fac
@@ -1119,7 +1152,9 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
         )
 
         res["planarity"] = xr.DataArray(
-            planarity, coords=[res["t"], res["f"]], dims=["time", "frequency"]
+            planarity,
+            coords=[res["t"], res["f"]],
+            dims=["time", "frequency"],
         )
 
         res["ellipticity"] = xr.DataArray(

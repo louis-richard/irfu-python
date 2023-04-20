@@ -46,13 +46,19 @@ def find_closest(inp1, inp2):
     while flag:
         flag_t1 = np.zeros(inp1.shape)
         tckt1 = interpolate.interp1d(
-            inp1, np.arange(nt1), kind="nearest", fill_value="extrapolate"
+            inp1,
+            np.arange(nt1),
+            kind="nearest",
+            fill_value="extrapolate",
         )
         flag_t1[tckt1(inp2)] = 1
 
         flag_t2 = np.zeros(inp2.shape)
         tckt2 = interpolate.interp1d(
-            inp2, np.arange(nt2), kind="nearest", fill_value="extrapolate"
+            inp2,
+            np.arange(nt2),
+            kind="nearest",
+            fill_value="extrapolate",
         )
         flag_t2[tckt2(inp1)] = 1
 

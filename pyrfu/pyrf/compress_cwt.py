@@ -19,7 +19,7 @@ def _compress_cwt_1d(cwt, nc: int = 100):
 
     for i, idx in enumerate(idxs):
         for j in range(nf):
-            x_data = cwt[idx - int(nc / 2):idx + int(nc / 2), j]
+            x_data = cwt[idx - int(nc / 2) : idx + int(nc / 2), j]
             cwt_c[i, j] = np.nanmean(x_data)
 
     return cwt_c
@@ -49,7 +49,10 @@ def compress_cwt(cwt, nc: int = 100):
     """
 
     indices = np.arange(
-        int(nc / 2), len(cwt.time.data) - int(nc / 2), step=nc, dtype=np.int64
+        int(nc / 2),
+        len(cwt.time.data) - int(nc / 2),
+        step=nc,
+        dtype=np.int64,
     )
 
     cwt_t = cwt.time.data[indices]

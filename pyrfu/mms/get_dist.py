@@ -69,8 +69,10 @@ def _shift_epochs(file, epoch):
                     message = " units are not clear, assume s"
                     warnings.warn(message)
             else:
-                message = "Epoch_plus_var/Epoch_minus_var units are not " \
-                          "clear, assume s"
+                message = (
+                    "Epoch_plus_var/Epoch_minus_var units are not "
+                    "clear, assume s"
+                )
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars
@@ -103,7 +105,7 @@ def _get_epochs(file, cdf_name, tint):
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
     out = {
-        "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])
+        "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1]),
     }
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
@@ -155,7 +157,7 @@ def get_dist(file_path, cdf_name, tint):
         specie = "electrons"
     else:
         raise AttributeError(
-            "Couldn't get the particle species from file name!!"
+            "Couldn't get the particle species from file name!!",
         )
 
     tint_org = tint
@@ -204,7 +206,7 @@ def get_dist(file_path, cdf_name, tint):
                     cdf_name.split("_")[1],
                     "energy0",
                     cdf_name.split("_")[-1],
-                ]
+                ],
             )
             en1_name = "_".join(
                 [
@@ -212,7 +214,7 @@ def get_dist(file_path, cdf_name, tint):
                     cdf_name.split("_")[1],
                     "energy1",
                     cdf_name.split("_")[-1],
-                ]
+                ],
             )
 
             e_step_table_name = "_".join(
@@ -221,11 +223,13 @@ def get_dist(file_path, cdf_name, tint):
                     cdf_name.split("_")[1],
                     "steptable_parity",
                     cdf_name.split("_")[-1],
-                ]
+                ],
             )
 
             step_table = file.varget(
-                e_step_table_name, starttime=tint[0], endtime=tint[1]
+                e_step_table_name,
+                starttime=tint[0],
+                endtime=tint[1],
             )
 
             if en0_name not in file.cdf_info()["zVariables"]:
@@ -268,15 +272,19 @@ def get_dist(file_path, cdf_name, tint):
                 cdf_name.split("_")[1],
                 "energy_delta",
                 cdf_name.split("_")[-1],
-            ]
+            ],
         )
 
         if d_en_name in file.cdf_info()["zVariables"]:
             glob_attrs["delta_energy_plus"] = file.varget(
-                d_en_name, starttime=tint[0], endtime=tint[1]
+                d_en_name,
+                starttime=tint[0],
+                endtime=tint[1],
             )
             glob_attrs["delta_energy_minus"] = file.varget(
-                d_en_name, starttime=tint[0], endtime=tint[1]
+                d_en_name,
+                starttime=tint[0],
+                endtime=tint[1],
             )
         else:
             glob_attrs["delta_energy_plus"] = None

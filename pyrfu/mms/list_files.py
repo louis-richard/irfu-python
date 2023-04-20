@@ -73,7 +73,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
             tint = datetime642iso8601(np.array(tint))
         elif isinstance(tint[0], str):
             tint = iso86012datetime64(
-                np.array(tint)
+                np.array(tint),
             )  # to make sure it is ISO8601 ok!!
             tint = datetime642iso8601(np.array(tint))
         else:
@@ -118,7 +118,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                     date.strftime("%Y"),
                     date.strftime("%m"),
                     date.strftime("%d"),
-                ]
+                ],
             )
         else:
             local_dir = os.sep.join(
@@ -130,7 +130,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                     level_and_dtype,
                     date.strftime("%Y"),
                     date.strftime("%m"),
-                ]
+                ],
             )
 
         if os.name == "nt":
@@ -155,7 +155,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                                     "timetag": "",
                                     "full_name": this_file,
                                     "file_size": "",
-                                }
+                                },
                             )
 
     in_files = files_out
@@ -175,7 +175,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                     parser.parse(matches.groups()[0]).timestamp(),
                     file["timetag"],
                     file["file_size"],
-                )
+                ),
             )
 
     # sort in time
@@ -196,17 +196,17 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                     "file_name": file[0],
                     "timetag": file[2],
                     "file_size": file[3],
-                }
+                },
             )
     else:
         files_in_interval = []
-        for file in sorted_files[idx_min - 1:]:
+        for file in sorted_files[idx_min - 1 :]:
             files_in_interval.append(
                 {
                     "file_name": file[0],
                     "timetag": file[2],
                     "file_size": file[3],
-                }
+                },
             )
 
     local_files = []

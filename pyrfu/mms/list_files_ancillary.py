@@ -69,7 +69,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
             tint = iso86012datetime(tint)
         elif isinstance(tint[0], str):
             tint = iso86012datetime64(
-                np.array(tint)
+                np.array(tint),
             )  # to make sure it is ISO8601 ok!
             tint = datetime642iso8601(tint)
             tint = iso86012datetime(tint)
@@ -91,10 +91,10 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     #   and start/endDate is YYYYDOY
     #   and version is Vnn (.V00, .V01, etc..)
     dir_pattern = os.sep.join(
-        [data_path, "ancillary", f"mms{mms_id}", product]
+        [data_path, "ancillary", f"mms{mms_id}", product],
     )
     file_pattern = "_".join(
-        ["MMS{}".format(mms_id), product.upper(), "???????_???????.V??"]
+        ["MMS{}".format(mms_id), product.upper(), "???????_???????.V??"],
     )
 
     files_in_tint = []

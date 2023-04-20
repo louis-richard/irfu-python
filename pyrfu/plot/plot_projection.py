@@ -72,16 +72,19 @@ def plot_projection(
     pos = axis.get_position()
     if cbar_pos == "top":
         caxis = f.add_axes(
-            [pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01]
+            [pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01],
         )
         f.colorbar(
-            mappable=image, cax=caxis, ax=axis, orientation="horizontal"
+            mappable=image,
+            cax=caxis,
+            ax=axis,
+            orientation="horizontal",
         )
         caxis.xaxis.set_ticks_position("top")
         caxis.xaxis.set_label_position("top")
     elif cbar_pos == "right":
         caxis = f.add_axes(
-            [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height]
+            [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height],
         )
         f.colorbar(mappable=image, cax=caxis, ax=axis)
     else:

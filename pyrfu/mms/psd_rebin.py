@@ -85,7 +85,9 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
             phi_r[new_el_num, :] = (phi.data[idx, :] + phi_s[idx + 1, :]) / 2
 
             vdf_temp = np.roll(
-                np.squeeze(vdf.data.data[idx + 1, ...]), 2, axis=1
+                np.squeeze(vdf.data.data[idx + 1, ...]),
+                2,
+                axis=1,
             )
 
             if step_table[idx]:

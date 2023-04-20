@@ -53,13 +53,16 @@ def average_vdf(vdf, n_pts):
         l_bound = int(avg_ind - pad_value)
         r_bound = int(avg_ind + pad_value)
         vdf_avg[i, ...] = np.nanmean(
-            vdf.data.data[l_bound:r_bound, ...], axis=0
+            vdf.data.data[l_bound:r_bound, ...],
+            axis=0,
         )
         energy_avg[i, ...] = np.nanmean(
-            vdf.energy.data[l_bound:r_bound, ...], axis=0
+            vdf.energy.data[l_bound:r_bound, ...],
+            axis=0,
         )
         phi_avg[i, ...] = np.nanmean(
-            vdf.phi.data[l_bound:r_bound, ...], axis=0
+            vdf.phi.data[l_bound:r_bound, ...],
+            axis=0,
         )
 
     # Attributes
@@ -73,9 +76,7 @@ def average_vdf(vdf, n_pts):
     glob_attrs["delta_energy_minus"] = glob_attrs["delta_energy_minus"][
         avg_inds
     ]
-    glob_attrs["delta_energy_plus"] = glob_attrs["delta_energy_plus"][
-        avg_inds
-    ]
+    glob_attrs["delta_energy_plus"] = glob_attrs["delta_energy_plus"][avg_inds]
 
     glob_attrs["esteptable"] = glob_attrs["esteptable"][: len(avg_inds)]
 

@@ -44,7 +44,12 @@ def _tokenize(tar_var):
 
 
 def _get_oneeye(
-    tar_var, e_id, tint, mms_id, verbose: bool = True, data_path: str = ""
+    tar_var,
+    e_id,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
 ):
     mms_id = int(mms_id)
 
@@ -83,7 +88,11 @@ def _get_oneeye(
 
 
 def get_feeps_alleyes(
-    tar_var, tint, mms_id, verbose: bool = True, data_path: str = ""
+    tar_var,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
 ):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all FEEPS eyes.
@@ -163,7 +172,12 @@ def get_feeps_alleyes(
 
     for e_id in e_ids:
         out_dict[e_id] = _get_oneeye(
-            tar_var, e_id, tint, mms_id, verbose, data_path=data_path
+            tar_var,
+            e_id,
+            tint,
+            mms_id,
+            verbose,
+            data_path=data_path,
         )
         dims = {
             "time": out_dict[e_id].dims[0],

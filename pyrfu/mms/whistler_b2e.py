@@ -65,7 +65,7 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
     n2 += pp * ss * (1 + np.cos(theta_k) ** 2)
     n2 -= np.sqrt(
         (rr * ll - pp * ss) ** 2 * np.sin(theta_k) ** 4
-        + 4 * (pp**2) * (dd**2) * np.cos(theta_k) ** 2
+        + 4 * (pp**2) * (dd**2) * np.cos(theta_k) ** 2,
     )
     n2 /= 2 * (ss * np.sin(theta_k) ** 2 + pp * np.cos(theta_k) ** 2)
 

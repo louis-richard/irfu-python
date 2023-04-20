@@ -92,14 +92,14 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
                     "thr",
                     date.strftime("%Y"),
                     date.strftime("%m"),
-                ]
+                ],
             )
         else:
             local_dir = data_path
 
         if os.name == "nt":
             full_path = os.sep.join(
-                [re.escape(local_dir) + os.sep, file_name]
+                [re.escape(local_dir) + os.sep, file_name],
             )
         else:
             full_path = os.sep.join([re.escape(local_dir), file_name])

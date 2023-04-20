@@ -48,10 +48,10 @@ def feeps_correct_energies(feeps_alle):
 
         dim = feeps_alle[sensors_eye].dims[1]
         out_dict[sensors_eye] = feeps_alle[sensors_eye].assign_coords(
-            {dim: new_energy}
+            {dim: new_energy},
         )
         out_dict[sensors_eye] = out_dict[sensors_eye].rename(
-            {"time": "time", dim: f"energy-{sensors_eye}"}
+            {"time": "time", dim: f"energy-{sensors_eye}"},
         )
 
     out = xr.Dataset(out_dict)

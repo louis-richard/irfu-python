@@ -79,7 +79,7 @@ def vdf_elim(vdf, e_int):
         print(
             f"Effective energies alternate in time between "
             f"{energy.data[0, e_levels]:5.2f} and "
-            f"{energy.data[1, e_levels]:5.2f}"
+            f"{energy.data[1, e_levels]:5.2f}",
         )
 
     vdf_e_clipped = ts_skymap(

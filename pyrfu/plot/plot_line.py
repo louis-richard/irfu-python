@@ -42,7 +42,8 @@ def plot_line(axis, inp, **kwargs):
 
     if len(inp.shape) == 3:
         data = np.reshape(
-            inp.data, (inp.shape[0], inp.shape[1] * inp.shape[2])
+            inp.data,
+            (inp.shape[0], inp.shape[1] * inp.shape[2]),
         )
     else:
         data = inp.data

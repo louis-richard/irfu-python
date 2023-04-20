@@ -89,7 +89,8 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     # Average omni flux over all spacecraft and define common energy grid
     for i_p, flux_ in enumerate(omni_vars):
         idx_closest = _idx_closest(
-            flux_.energy.data, ener_refprobe.energy.data
+            flux_.energy.data,
+            ener_refprobe.energy.data,
         )
         # energy_data[:, pp] = flux_.energy.data[0:ne_ref]
         omni_spec_data[0:nt_ref, :, i_p] = flux_.data[0:nt_ref, idx_closest]
@@ -98,11 +99,13 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     for i_t, i_e in itertools.product(range(nt_ref), range(ne_ref)):
         if method.lower() == "mean":
             omni_spec[i_t, i_e] = np.nanmean(
-                omni_spec_data[i_t, i_e, :], axis=0
+                omni_spec_data[i_t, i_e, :],
+                axis=0,
             )
         else:
             omni_spec[i_t, i_e] = np.nansum(
-                omni_spec_data[i_t, i_e, :], axis=0
+                omni_spec_data[i_t, i_e, :],
+                axis=0,
             )
 
     omni_spec = xr.DataArray(

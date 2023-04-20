@@ -40,7 +40,11 @@ def _bow_shock(r_xy, *args):
 
 
 def magnetopause_normal(
-    r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997", m_alfven: float = 4.0
+    r_gsm,
+    b_z_imf,
+    p_sw,
+    model: str = "mp_shue1997",
+    m_alfven: float = 4.0,
 ):
     r"""Computes the distance and normal vector to the magnetopause for
     Shue et al., 1997 or Shue et al., 1998 model. Or bow shock for
@@ -155,7 +159,8 @@ def magnetopause_normal(
     else:
         # Bow shock
         warnings.warn(
-            "Farris & Russell 1994 bow shock model used.", UserWarning
+            "Farris & Russell 1994 bow shock model used.",
+            UserWarning,
         )
 
         gamma = 5 / 3

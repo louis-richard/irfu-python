@@ -65,21 +65,26 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase):
 
     # Correct for timing in spacecraft potential data.
     e12 = ts_scalar(
-        sc_pot.time.data, (sc_pot.data[:, 0] - sc_pot.data[:, 1]) / 0.120
+        sc_pot.time.data,
+        (sc_pot.data[:, 0] - sc_pot.data[:, 1]) / 0.120,
     )
     e34 = ts_scalar(
-        sc_pot.time.data, (sc_pot.data[:, 2] - sc_pot.data[:, 3]) / 0.120
+        sc_pot.time.data,
+        (sc_pot.data[:, 2] - sc_pot.data[:, 3]) / 0.120,
     )
     e56 = ts_scalar(
-        sc_pot.time.data, (sc_pot.data[:, 4] - sc_pot.data[:, 4]) / 0.0292
+        sc_pot.time.data,
+        (sc_pot.data[:, 4] - sc_pot.data[:, 4]) / 0.0292,
     )
 
     v_1 = ts_scalar(sc_pot.time.data, sc_pot.data[:, 0])
     v_3 = ts_scalar(
-        sc_pot.time.data + np.timedelta64(7629, "ns"), sc_pot.data[:, 2]
+        sc_pot.time.data + np.timedelta64(7629, "ns"),
+        sc_pot.data[:, 2],
     )
     v_5 = ts_scalar(
-        sc_pot.time.data + np.timedelta64(15259, "ns"), sc_pot.data[:, 4]
+        sc_pot.time.data + np.timedelta64(15259, "ns"),
+        sc_pot.data[:, 4],
     )
 
     e12.time.data += np.timedelta64(26703, "ns")
@@ -94,7 +99,7 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase):
     v_6 = v_5 - e56 * 0.0292
 
     sc_pot = np.hstack(
-        [v_1.data, v_2.data, v_3.data, v_4.data, v_5.data, v_6.data]
+        [v_1.data, v_2.data, v_3.data, v_4.data, v_5.data, v_6.data],
     )
 
     sc_pot = xr.DataArray(
@@ -166,7 +171,7 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase):
     e34 = (sc_pot.data[:, 2] - sc_pot.data[:, 3]) * 1e3 / 120
 
     idx_b = np.sqrt(b_xyz.data[:, 0] ** 2 + b_xyz.data[:, 1] ** 2) < abs(
-        b_xyz.data[:, 2]
+        b_xyz.data[:, 2],
     )
     thresh_ang = 25.0
 

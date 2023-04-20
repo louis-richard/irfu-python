@@ -31,11 +31,19 @@ def _connect_bbox(
         prop_patches = {**prop_lines, "alpha": prop_lines.get("alpha", 1) * 0}
 
     connector_a = BboxConnector(
-        bbox1, bbox2, loc1=loc1a, loc2=loc2a, **prop_lines
+        bbox1,
+        bbox2,
+        loc1=loc1a,
+        loc2=loc2a,
+        **prop_lines,
     )
     connector_a.set_clip_on(False)
     connector_b = BboxConnector(
-        bbox1, bbox2, loc1=loc1b, loc2=loc2b, **prop_lines
+        bbox1,
+        bbox2,
+        loc1=loc1b,
+        loc2=loc2b,
+        **prop_lines,
     )
     connector_b.set_clip_on(False)
 
@@ -49,7 +57,7 @@ def _connect_bbox(
         loc2a=loc2a,
         loc1b=loc1b,
         loc2b=loc2b,
-        **prop_patches
+        **prop_patches,
     )
 
     connector_patch.set_clip_on(False)
@@ -89,7 +97,13 @@ def zoom(ax1, ax2, **kwargs):
     bbox_2 = TransformedBbox(ax1.viewLim, trans)
 
     c1, c2, p1, p2, p = _connect_bbox(
-        bbox_1, bbox_2, loc1a=2, loc2a=3, loc1b=1, loc2b=4, prop_lines=kwargs
+        bbox_1,
+        bbox_2,
+        loc1a=2,
+        loc2a=3,
+        loc1b=1,
+        loc2b=4,
+        prop_lines=kwargs,
     )
 
     ax1.add_patch(p1)

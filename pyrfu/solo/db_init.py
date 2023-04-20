@@ -26,7 +26,7 @@ def db_init(local_data_dir):
     # Normalize the path and make sure that it exists
     local_data_dir = os.path.normpath(local_data_dir)
     assert os.path.exists(
-        local_data_dir
+        local_data_dir,
     ), f"{local_data_dir} doesn't exists!!"
 
     # Path to the configuration file.

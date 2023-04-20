@@ -102,7 +102,9 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
     if vdf.phi.data.ndim == 1:
         phi = np.tile(vdf.phi.data, (len(time), 1))
         phi = xr.DataArray(
-            phi, coords=[time, np.arange(len(phi))], dims=["time", "idx1"]
+            phi,
+            coords=[time, np.arange(len(phi))],
+            dims=["time", "idx1"],
         )
     else:
         phi = vdf.phi
@@ -128,13 +130,16 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
     b_vec = normalize(b_xyz)
 
     b_vec_x = np.transpose(
-        np.tile(b_vec.data[:, 0], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2]
+        np.tile(b_vec.data[:, 0], [n_en, n_phi, n_theta, 1]),
+        [3, 0, 1, 2],
     )
     b_vec_y = np.transpose(
-        np.tile(b_vec.data[:, 1], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2]
+        np.tile(b_vec.data[:, 1], [n_en, n_phi, n_theta, 1]),
+        [3, 0, 1, 2],
     )
     b_vec_z = np.transpose(
-        np.tile(b_vec.data[:, 2], [n_en, n_phi, n_theta, 1]), [3, 0, 1, 2]
+        np.tile(b_vec.data[:, 2], [n_en, n_phi, n_theta, 1]),
+        [3, 0, 1, 2],
     )
 
     x_vec = np.zeros((len(time), n_phi, n_theta))
@@ -151,7 +156,8 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
             np.sin(np.deg2rad(theta.data[:, None])).T,
         )
         z_vec[i, ...] = np.dot(
-            -np.ones((n_phi, 1)), np.cos(np.deg2rad(theta.data[:, None])).T
+            -np.ones((n_phi, 1)),
+            np.cos(np.deg2rad(theta.data[:, None])).T,
         )
 
     if tint is not None:
@@ -160,21 +166,21 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
         energy = vdf.energy.data
 
     x_mat = np.squeeze(
-        np.transpose(np.tile(x_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3])
+        np.transpose(np.tile(x_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]),
     )
     y_mat = np.squeeze(
-        np.transpose(np.tile(y_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3])
+        np.transpose(np.tile(y_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]),
     )
     z_mat = np.squeeze(
-        np.transpose(np.tile(z_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3])
+        np.transpose(np.tile(z_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]),
     )
 
     theta_b = np.rad2deg(
         np.arccos(
             x_mat * np.squeeze(b_vec_x)
             + y_mat * np.squeeze(b_vec_y)
-            + z_mat * np.squeeze(b_vec_z)
-        )
+            + z_mat * np.squeeze(b_vec_z),
+        ),
     )
 
     dists = [vdf0.data.copy() for _ in range(n_angles)]
@@ -189,11 +195,11 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
             warnings.simplefilter("ignore", category=RuntimeWarning)
             if mean_or_sum == "mean":
                 pad_arr[i] = np.squeeze(
-                    np.nanmean(np.nanmean(dists[i], axis=3), axis=2)
+                    np.nanmean(np.nanmean(dists[i], axis=3), axis=2),
                 )
             elif mean_or_sum == "sum":
                 pad_arr[i] = np.squeeze(
-                    np.nansum(np.nansum(dists[i], axis=3), axis=2)
+                    np.nansum(np.nansum(dists[i], axis=3), axis=2),
                 )
             else:
                 raise ValueError("Invalid method")
@@ -216,7 +222,7 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
             "time": time,
             "idx0": np.arange(len(energy)),
             "idx1": np.arange(len(pitch_angles)),
-        }
+        },
     )
 
     pad.attrs = vdf.attrs

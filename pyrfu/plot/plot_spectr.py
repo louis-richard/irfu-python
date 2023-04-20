@@ -25,7 +25,7 @@ def plot_spectr(
     clim: list = None,
     cmap: str = "",
     colorbar: str = "right",
-    **kwargs
+    **kwargs,
 ):
     r"""Plot a spectrogram using pcolormesh.
 
@@ -74,7 +74,8 @@ def plot_spectr(
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
             options = dict(
-                norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]), cmap=cmap
+                norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]),
+                cmap=cmap,
             )
         else:
             options = dict(norm=mcolors.LogNorm(), cmap=cmap)
@@ -92,7 +93,7 @@ def plot_spectr(
         inp.data.T,
         rasterized=True,
         shading="auto",
-        **options
+        **options,
     )
 
     if x_data.dtype == "<M8[ns]":
@@ -116,7 +117,7 @@ def plot_spectr(
 
         pos = axis.get_position()
         cax = fig.add_axes(
-            [pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height]
+            [pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height],
         )
         plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="vertical")
 
@@ -127,7 +128,7 @@ def plot_spectr(
 
         if cscale == "log":
             cax.yaxis.set_major_locator(
-                ticker.LogLocator(base=10.0, numticks=4)
+                ticker.LogLocator(base=10.0, numticks=4),
             )
         else:
             cax.yaxis.set_major_locator(ticker.MaxNLocator(4))
@@ -141,10 +142,13 @@ def plot_spectr(
 
         pos = axis.get_position()
         cax = fig.add_axes(
-            [pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01]
+            [pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01],
         )
         plt.colorbar(
-            mappable=image, cax=cax, ax=axis, orientation="horizontal"
+            mappable=image,
+            cax=cax,
+            ax=axis,
+            orientation="horizontal",
         )
 
         cax.xaxis.set_ticks_position(colorbar.lower())
@@ -154,7 +158,7 @@ def plot_spectr(
 
         if cscale == "log":
             cax.xaxis.set_major_locator(
-                ticker.LogLocator(base=10.0, numticks=4)
+                ticker.LogLocator(base=10.0, numticks=4),
             )
         else:
             cax.xaxis.set_major_locator(ticker.MaxNLocator(4))
@@ -164,7 +168,7 @@ def plot_spectr(
         out = axis
     else:
         raise NotImplementedError(
-            "colorbar must be 'right', 'top', or 'none'"
+            "colorbar must be 'right', 'top', or 'none'",
         )
 
     return out

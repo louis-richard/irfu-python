@@ -20,7 +20,13 @@ __status__ = "Prototype"
 
 
 def make_model_vdf(
-    vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = False
+    vdf,
+    b_xyz,
+    sc_pot,
+    n_s,
+    v_xyz,
+    t_xyz,
+    isotropic: bool = False,
 ):
     r"""Make a general bi-Maxwellian distribution function based on particle
     moment data in the same format as PDist.
@@ -99,7 +105,8 @@ def make_model_vdf(
     if isotropic:
         t_para = trace(t_xyzfac) / 3
         t_ratio = ts_scalar(
-            t_xyzfac.time.data, np.ones(len(t_xyzfac.time.data))
+            t_xyzfac.time.data,
+            np.ones(len(t_xyzfac.time.data)),
         )
     else:
         t_para = t_xyzfac[:, 0, 0]
@@ -150,10 +157,11 @@ def make_model_vdf(
             np.sin(np.deg2rad(vdf.theta.data)),
         )
         z_mat[i, ...] = np.outer(
-            -np.ones(n_ph), np.cos(np.deg2rad(vdf.theta.data))
+            -np.ones(n_ph),
+            np.cos(np.deg2rad(vdf.theta.data)),
         )
         r_mat[i, ...] = np.real(
-            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass)
+            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass),
         )
 
     r_mat[r_mat == 0] = 0.0
@@ -204,16 +212,16 @@ def make_model_vdf(
         bi_max_temp = coeff * np.exp(
             -((x_p[i, ...] * r_mat[i, ...] - v_perp_mag_data[i]) ** 2)
             / (vth_para.data[i] ** 2)
-            * t_ratio.data[i]
+            * t_ratio.data[i],
         )
         bi_max_temp = bi_max_temp * np.exp(
             -((y_p[i, ...] * r_mat[i, ...]) ** 2)
             / (vth_para.data[i] ** 2)
-            * t_ratio.data[i]
+            * t_ratio.data[i],
         )
         bi_max_temp = bi_max_temp * np.exp(
             -((z_p[i, ...] * r_mat[i, ...] - v_para_data[i]) ** 2)
-            / (vth_para.data[i] ** 2)
+            / (vth_para.data[i] ** 2),
         )
 
         bi_max_dist[i, ...] = bi_max_temp

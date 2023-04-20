@@ -24,14 +24,14 @@ t_top = np.array(
         [1.0 / np.sqrt(2.0), -1.0 / np.sqrt(2.0), 0],
         [1.0 / np.sqrt(2.0), 1.0 / np.sqrt(2.0), 0],
         [0, 0, 1],
-    ]
+    ],
 )
 t_bot = np.array(
     [
         [-1.0 / np.sqrt(2.0), -1.0 / np.sqrt(2.0), 0],
         [-1.0 / np.sqrt(2.0), 1.0 / np.sqrt(2.0), 0],
         [0, 0, -1],
-    ]
+    ],
 )
 
 # the following 2 hash tables map TOP/BOTTOM telescope #s to index of the
@@ -161,7 +161,8 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     mms_id = inp_dataset.attrs["mmsId"]
 
     tint = np.datetime_as_string(
-        np.hstack([np.min(times), np.max(times)]), "ns"
+        np.hstack([np.min(times), np.max(times)]),
+        "ns",
     )
 
     eyes = feeps_active_eyes(inp_dataset.attrs, list(tint), mms_id)

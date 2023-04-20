@@ -58,7 +58,7 @@ def _calc_b(kc_x_mat, kc_z_mat, w_final, e_x, e_y, e_z):
     b_per = np.sqrt(b_x * np.conj(b_x) + b_y * np.conj(b_y))
     b_pol = -2 * np.imag(b_x * np.conj(b_y)) / b_per**2
     b_tot = np.sqrt(
-        b_x * np.conj(b_x) + b_y * np.conj(b_y) + b_z * np.conj(b_z)
+        b_x * np.conj(b_x) + b_y * np.conj(b_y) + b_z * np.conj(b_z),
     )
 
     return b_x, b_y, b_z, b_par, b_per, b_pol, b_tot
@@ -71,7 +71,7 @@ def _calc_s(e_x, e_y, e_z, b_x, b_y, b_z):
     s_z = e_x * np.conj(b_y) - e_y * np.conj(b_x)
     s_par = np.abs(s_z)
     s_tot = np.sqrt(
-        s_x * np.conj(s_x) + s_y * np.conj(s_y) + s_z * np.conj(s_z)
+        s_x * np.conj(s_x) + s_y * np.conj(s_y) + s_z * np.conj(s_z),
     )
 
     return s_par, s_tot
@@ -221,7 +221,12 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     e_par = (kc_x_mat * e_x + kc_z_mat * e_z) / kc_
 
     b_x, b_y, b_z, b_par, _, b_pol, b_tot = _calc_b(
-        kc_x_mat, kc_z_mat, w_final, e_x, e_y, e_z
+        kc_x_mat,
+        kc_z_mat,
+        w_final,
+        e_x,
+        e_y,
+        e_z,
     )
 
     dk_x, dk_z = [kc_x_mat[1], kc_z_mat[1]]
@@ -234,7 +239,12 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
 
     # Compute ion and electron velocities
     v_ex, v_ey, v_ez, v_ix, v_iy, v_iz = _calc_vei(
-        m_i, wc_i, w_final, e_x, e_y, e_z
+        m_i,
+        wc_i,
+        w_final,
+        e_x,
+        e_y,
+        e_z,
     )
 
     # Ratio of parallel and perpendicular to B speed
@@ -257,7 +267,13 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
 
     # Continuity equation
     dn_e_n, dn_i_n, dne_dni = _calc_continuity(
-        kc_x_mat, kc_z_mat, w_final, v_ex, v_ez, v_ix, v_iz
+        kc_x_mat,
+        kc_z_mat,
+        w_final,
+        v_ex,
+        v_ez,
+        v_ix,
+        v_iz,
     )
 
     dn_e_n_db_b = dn_e_n / b_tot

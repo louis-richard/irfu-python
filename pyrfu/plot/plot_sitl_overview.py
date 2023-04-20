@@ -42,7 +42,10 @@ def _tcut_edges(tint):
 
 def _get_sclocs(data_rate, tint, mms_id, data_path):
     r_xyz = get_data(
-        f"r_gse_mec_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"r_gse_mec_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
     return r_xyz
 
@@ -54,27 +57,45 @@ def _get_fields(data_rate, tint, mms_id, data_path):
         data_ratb = data_rate
 
     b_xyz = get_data(
-        f"b_gse_fgm_{data_ratb}_l2", tint, mms_id, data_path=data_path
+        f"b_gse_fgm_{data_ratb}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
     e_xyz = get_data(
-        f"e_gse_edp_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"e_gse_edp_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
     return b_xyz, e_xyz
 
 
 def _get_momnts(data_rate, tint, mms_id, data_path):
     n_i = get_data(
-        f"ni_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"ni_fpi_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
     n_e = get_data(
-        f"ne_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"ne_fpi_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
 
     v_xyz_i = get_data(
-        f"vi_gse_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"vi_gse_fpi_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
     v_xyz_e = get_data(
-        f"ve_gse_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"ve_gse_fpi_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
     return n_i, n_e, v_xyz_i, v_xyz_e
 
@@ -87,18 +108,30 @@ def _get_spectr(data_rate, tint, mms_id, data_path):
 
     # FPI-DIS and FPI-DES differential energy flux
     def_i = get_data(
-        f"defi_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"defi_fpi_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
     def_e = get_data(
-        f"defe_fpi_{data_rate}_l2", tint, mms_id, data_path=data_path
+        f"defe_fpi_{data_rate}_l2",
+        tint,
+        mms_id,
+        data_path=data_path,
     )
 
     if data_rate == "brst":
         dpf_i = get_feeps_omni(
-            f"fluxi_{data_ratp}_l2", tint, mms_id, data_path=data_path
+            f"fluxi_{data_ratp}_l2",
+            tint,
+            mms_id,
+            data_path=data_path,
         )
         dpf_e = get_feeps_omni(
-            f"fluxe_{data_ratp}_l2", tint, mms_id, data_path=data_path
+            f"fluxe_{data_ratp}_l2",
+            tint,
+            mms_id,
+            data_path=data_path,
         )
     else:
         dpf_i, dpf_e = [None, None]
@@ -249,7 +282,10 @@ def _plot_brst(axs, fields, momnts, spectr):
     )
 
     axs[3], caxs3 = plot_spectr(
-        axs[3], dpf_i[:, 1:], yscale="log", cscale="log"
+        axs[3],
+        dpf_i[:, 1:],
+        yscale="log",
+        cscale="log",
     )
     axs[3].set_ylabel("$E_i$" + "\n" + "[keV]")
     caxs3.set_ylabel("Intensity" + "\n" + "[(cm$^2$ s sr keV)$^{-1}$]")
@@ -268,7 +304,10 @@ def _plot_brst(axs, fields, momnts, spectr):
     )
 
     axs[6], caxs6 = plot_spectr(
-        axs[6], dpf_e[:, 1:], yscale="log", cscale="log"
+        axs[6],
+        dpf_e[:, 1:],
+        yscale="log",
+        cscale="log",
     )
     axs[6].set_ylabel("$E_e$" + "\n" + "[keV]")
     caxs6.set_ylabel("Intensity" + "\n" + "[(cm$^2$ s sr keV)$^{-1}$]")
@@ -336,22 +375,28 @@ def plot_sitl_overview(
 
     file_name = "IRF_logo_blue_on_white.jpg"
     logo_path = os.sep.join(
-        [os.path.dirname(os.path.abspath(__file__)), "logo", file_name]
+        [os.path.dirname(os.path.abspath(__file__)), "logo", file_name],
     )
 
     tint_dt = iso86012datetime(np.array(tint_brst))
     t_start = np.datetime64(
-        f"{tint_brst[0][:11]}{tint_dt[0].hour - tint_dt[0].hour % 2:02}:00:00"
+        f"{tint_brst[0][:11]}{tint_dt[0].hour - tint_dt[0].hour % 2:02}:00:00",
     )
 
     if t_start + np.timedelta64(2, "h") < np.datetime64(tint_brst[1]):
         tint_tmp0 = np.array([tint_brst[0], t_start + np.timedelta64(2, "h")])
         tint_tmp1 = np.array([tint_tmp0[1], np.datetime64(tint_brst[1])])
         plot_sitl_overview(
-            list(datetime642iso8601(tint_tmp0)), title, mms_id, data_path
+            list(datetime642iso8601(tint_tmp0)),
+            title,
+            mms_id,
+            data_path,
         )
         plot_sitl_overview(
-            list(datetime642iso8601(tint_tmp1)), title, mms_id, data_path
+            list(datetime642iso8601(tint_tmp1)),
+            title,
+            mms_id,
+            data_path,
         )
     else:
         tint_fast = np.array([t_start, t_start + np.timedelta64(2, "h")])
@@ -389,7 +434,7 @@ def plot_sitl_overview(
         tint_iso = datetime642iso8601(iso86012datetime64(np.array(tint_brst)))
         pref = date_str([f"{t_[:-3]}" for t_ in list(tint_iso)], 4)
         fig.savefig(
-            os.path.join(fig_path, f"{pref}_mms{mms_id}_overview.png")
+            os.path.join(fig_path, f"{pref}_mms{mms_id}_overview.png"),
         )
 
         # return fig, [*axs10, *axs11, *axs20]

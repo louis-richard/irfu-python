@@ -36,7 +36,7 @@ def igrf(time, flag):
     # Root path
     # root_path = os.getcwd()
     path = os.sep.join(
-        [os.path.dirname(os.path.abspath(__file__)), "igrf13coeffs.csv"]
+        [os.path.dirname(os.path.abspath(__file__)), "igrf13coeffs.csv"],
     )
     df = pd.read_csv(path)
 
@@ -45,7 +45,7 @@ def igrf(time, flag):
     years_igrf[-1] = float(years_igrf[-1].split("-")[0]) + 5.0
 
     # read in all IGRF coefficients from file
-    i_igrf = df.loc[1:, ].values
+    i_igrf = df.loc[1:,].values
     i_igrf[:, -1] = i_igrf[:, -2] + 5.0 * i_igrf[:, -1].astype(np.float64)
     h_igrf = i_igrf[i_igrf[:, 0] == "h", 1:].astype(np.float64)
     g_igrf = i_igrf[i_igrf[:, 0] == "g", 1:].astype(np.float64)
@@ -70,13 +70,22 @@ def igrf(time, flag):
     assert flag == "dipole", "input flag is not recognized"
 
     tck_g0_igrf = interpolate.interp1d(
-        years_igrf, g_igrf[0, 2:], kind="linear", fill_value="extrapolate"
+        years_igrf,
+        g_igrf[0, 2:],
+        kind="linear",
+        fill_value="extrapolate",
     )
     tck_g1_igrf = interpolate.interp1d(
-        years_igrf, g_igrf[1, 2:], kind="linear", fill_value="extrapolate"
+        years_igrf,
+        g_igrf[1, 2:],
+        kind="linear",
+        fill_value="extrapolate",
     )
     tck_h0_igrf = interpolate.interp1d(
-        years_igrf, h_igrf[0, 2:], kind="linear", fill_value="extrapolate"
+        years_igrf,
+        h_igrf[0, 2:],
+        kind="linear",
+        fill_value="extrapolate",
     )
 
     g01 = tck_g0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))

@@ -57,7 +57,7 @@ def eis_pad_combine_sc(pads):
             ref_probe.shape[1],
             ref_probe.shape[2],
             len(pads),
-        )
+        ),
     )
 
     for i_pad, pad_ in enumerate(pads):

@@ -21,10 +21,10 @@ import sphinx.apidoc
 # sys.path.insert(0, "/Users/louisr/Documents/PhD/irfu-python/pyrfu")
 
 examples_source = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "examples")
+    os.path.join(os.path.dirname(__file__), "..", "..", "examples"),
 )
 examples_dest = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "examples")
+    os.path.join(os.path.dirname(__file__), "examples"),
 )
 
 
@@ -38,7 +38,7 @@ def setup():
             "-o",  # Output the files to:
             "./_autogen/",  # Output Directory
             "./../../pyrfu",  # Main Module directory
-        ]
+        ],
     )
 
 
@@ -49,13 +49,14 @@ os.mkdir(examples_dest)
 for root, dirs, files in os.walk(examples_source):
     for dr in dirs:
         os.mkdir(
-            os.path.join(root.replace(examples_source, examples_dest), dr)
+            os.path.join(root.replace(examples_source, examples_dest), dr),
         )
     for fil in files:
         if os.path.splitext(fil)[1] in [".ipynb", ".md", ".rst"]:
             source_filename = os.path.join(root, fil)
             dest_filename = source_filename.replace(
-                examples_source, examples_dest
+                examples_source,
+                examples_dest,
             )
             shutil.copyfile(source_filename, dest_filename)
 
@@ -83,7 +84,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinxcontrib.apidoc",
     "sphinx.ext.todo",
-    "nbsphinx"
+    "nbsphinx",
     #  "sphinx_gallery.gen_gallery"
 ]
 

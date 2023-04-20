@@ -31,7 +31,11 @@ logging.basicConfig(
 
 
 def load_ancillary(
-    product, tint, mms_id, verbose: bool = True, data_path: str = ""
+    product,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
 ):
     r"""Loads ancillary data.
 

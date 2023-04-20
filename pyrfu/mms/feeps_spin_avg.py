@@ -45,7 +45,8 @@ def feeps_spin_avg(flux_omni, spin_sectors):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             spin_avg[i, :] = np.nanmean(
-                data[c_start:spin_start + 1, :], axis=0
+                data[c_start : spin_start + 1, :],
+                axis=0,
             )
         c_start = spin_start + 1
 

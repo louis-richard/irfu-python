@@ -42,7 +42,11 @@ def _tokenize(dataset_name):
 
 
 def db_get_ts(
-    dataset_name, cdf_name, tint, verbose: bool = True, data_path: str = ""
+    dataset_name,
+    cdf_name,
+    tint,
+    verbose: bool = True,
+    data_path: str = "",
 ):
     r"""Get variable time series in the cdf file.
 

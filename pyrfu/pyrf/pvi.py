@@ -50,7 +50,7 @@ def pvi(inp, scale: int = 10):
 
     result = xr.DataArray(
         result,
-        coords=[time[0:len(delta_inp)]],
+        coords=[time[0 : len(delta_inp)]],
         dims=[inp.dims[0]],
         attrs=inp.attrs,
     )

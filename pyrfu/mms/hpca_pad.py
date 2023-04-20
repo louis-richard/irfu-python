@@ -134,7 +134,9 @@ def hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     t0_start = t0_[0]
     t0_ -= t0_start
     tck_ = interpolate.interp1d(
-        np.arange(0, n_en * len(t0_), n_en), t0_, fill_value="extrapolate"
+        np.arange(0, n_en * len(t0_), n_en),
+        t0_,
+        fill_value="extrapolate",
     )
     t1_tt = tck_(np.arange(0, n_en * len(t0_))) + t0_start
     t1_tt = t1_tt.astype("datetime64[ns]")

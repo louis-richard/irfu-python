@@ -62,7 +62,9 @@ def copy_files_ancillary(product, tint, mms_id, tar_path: str = "./data/"):
             os.makedirs(path)
 
         s_proc = subprocess.Popen(
-            f"cp {file} {target_file}", stdout=subprocess.PIPE, shell=True
+            f"cp {file} {target_file}",
+            stdout=subprocess.PIPE,
+            shell=True,
         )
         (_, _) = s_proc.communicate()
 

@@ -45,14 +45,14 @@ def date_str(tint, fmt: int = 1):
             [
                 start_time.strftime("%Y%m%d_%H%M%S"),
                 end_time.strftime("%H%M%S"),
-            ]
+            ],
         )
     elif fmt == 4:
         out = "_".join(
             [
                 start_time.strftime("%Y%m%d_%H%M%S"),
                 end_time.strftime("%Y%m%d_%H%M%S"),
-            ]
+            ],
         )
     else:
         raise ValueError("Unknown format")

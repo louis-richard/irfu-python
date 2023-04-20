@@ -79,7 +79,8 @@ def psd2dpf(psd):
 
     if energy.ndim == 1:
         energy_mat = np.tile(
-            energy, (len(psd.time), np.prod(tmp_data.shape[2:]), 1)
+            energy,
+            (len(psd.time), np.prod(tmp_data.shape[2:]), 1),
         )
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:

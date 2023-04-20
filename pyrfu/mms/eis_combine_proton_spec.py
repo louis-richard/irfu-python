@@ -34,13 +34,13 @@ def _check_time(proton_phxtof, proton_extof):
             for i_t in range(data_size[1]):
                 dt_dummy = np.min(
                     np.abs(
-                        proton_extof.time.data[i_t] - proton_extof.time.data
-                    )
+                        proton_extof.time.data[i_t] - proton_extof.time.data,
+                    ),
                 )
                 t_ind = np.argmin(
                     np.abs(
-                        proton_extof.time.data[i_t] - proton_extof.time.data
-                    )
+                        proton_extof.time.data[i_t] - proton_extof.time.data,
+                    ),
                 )
                 if dt_dummy == 0:
                     extof_inds.append(i_t)
@@ -69,13 +69,13 @@ def _check_time(proton_phxtof, proton_extof):
             for i_t in range(data_size[1]):
                 dt_dummy = np.min(
                     np.abs(
-                        proton_extof.time.data[i_t] - proton_phxtof.time.data
-                    )
+                        proton_extof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 t_ind = np.argmin(
                     np.abs(
-                        proton_extof.time.data[i_t] - proton_phxtof.time.data
-                    )
+                        proton_extof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 if dt_dummy == 0:
                     extof_inds.append(i_t)
@@ -104,13 +104,13 @@ def _check_time(proton_phxtof, proton_extof):
             for i_t in range(data_size[0]):
                 dt_dummy = np.min(
                     np.abs(
-                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data
-                    )
+                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 t_ind = np.argmin(
                     np.abs(
-                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data
-                    )
+                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 if dt_dummy == 0:
                     phxtof_inds.append(i_t)
@@ -211,7 +211,8 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     energy_combined_low, energy_combined_hig = [None] * 2
 
     time_sect, _, extof_sect = _check_time(
-        phxtof_allt["sector"], extof_allt["sector"]
+        phxtof_allt["sector"],
+        extof_allt["sector"],
     )
     sect = xr.DataArray(
         extof_sect,
@@ -234,7 +235,8 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         proton_extof = extof_allt[scope]
 
         time_data, phxtof_data, extof_data = _check_time(
-            proton_phxtof, proton_extof
+            proton_phxtof,
+            proton_extof,
         )
 
         energy_phxtof = proton_phxtof.energy.data
@@ -242,7 +244,8 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
 
         idx_phxtof = np.where(energy_phxtof < energy_extof[0])[0]
         cond_ = np.logical_and(
-            energy_phxtof > energy_extof[0], energy_phxtof < energy_phxtof[-1]
+            energy_phxtof > energy_extof[0],
+            energy_phxtof < energy_phxtof[-1],
         )
         idx_phxtof_cross = np.where(cond_)[0]
 
@@ -271,7 +274,8 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         )
 
         for (i, i_phx), i_ex in zip(
-            enumerate(idx_phxtof_cross), idx_extof_cross
+            enumerate(idx_phxtof_cross),
+            idx_extof_cross,
         ):
             idx_ = n_phxtof + i
             data_combined[:, idx_] = np.nanmean(
@@ -282,16 +286,16 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
                 [
                     energy_phxtof[idx_] - delta_energy_minus_phxtof[idx_],
                     energy_extof[i] - delta_energy_minus_extof[i],
-                ]
+                ],
             )
             energy_combined_hig[idx_] = np.nanmax(
                 [
                     energy_phxtof[idx_] + delta_energy_plus_phxtof[idx_],
                     energy_extof[i] + delta_energy_plus_extof[i],
-                ]
+                ],
             )
             energy_combined[idx_] = np.sqrt(
-                energy_combined_low[idx_] * energy_combined_hig[idx_]
+                energy_combined_low[idx_] * energy_combined_hig[idx_],
             )
 
         data_combined[:, -n_extof:] = extof_data[:, idx_extof]
@@ -304,7 +308,8 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         )
 
         attrs = _combine_attrs(
-            phxtof_allt[scope].attrs, extof_allt[scope].attrs
+            phxtof_allt[scope].attrs,
+            extof_allt[scope].attrs,
         )
 
         out_dict[scope] = xr.DataArray(
@@ -328,10 +333,12 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     # Create Dataset
     comb_allt = xr.Dataset(out_dict, attrs=attrs)
     comb_allt.time.attrs = _combine_attrs(
-        phxtof_allt.time.attrs, extof_allt.time.attrs
+        phxtof_allt.time.attrs,
+        extof_allt.time.attrs,
     )
     comb_allt.energy.attrs = _combine_attrs(
-        phxtof_allt.energy.attrs, extof_allt.energy.attrs
+        phxtof_allt.energy.attrs,
+        extof_allt.energy.attrs,
     )
 
     return comb_allt

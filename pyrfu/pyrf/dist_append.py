@@ -69,7 +69,7 @@ def dist_append(inp0, inp1):
             [
                 inp0.attrs["delta_energy_plus"].data,
                 inp1.attrs["delta_energy_plus"].data,
-            ]
+            ],
         )
         glob_attrs["delta_energy_plus"] = delta_energy_plus
 
@@ -78,14 +78,14 @@ def dist_append(inp0, inp1):
             [
                 inp0.attrs["delta_energy_minus"].data,
                 inp1.attrs["delta_energy_minus"].data,
-            ]
+            ],
         )
         glob_attrs["delta_energy_minus"] = delta_energy_minus
 
     # Energy
     if inp0.attrs["tmmode"] == "brst":
         step_table = np.hstack(
-            [inp0.attrs["esteptable"], inp1.attrs["esteptable"]]
+            [inp0.attrs["esteptable"], inp1.attrs["esteptable"]],
         )
 
         out = ts_skymap(

@@ -40,15 +40,15 @@ def solid_angle(inp0, inp1, inp2):
     # Calculate the angles in the spherical triangle (Law of Cosines)
     alpha = np.arccos(
         (np.cos(acos_12) - np.cos(acos_02) * np.cos(acos_01))
-        / (np.sin(acos_02) * np.sin(acos_01))
+        / (np.sin(acos_02) * np.sin(acos_01)),
     )
     beta = np.arccos(
         (np.cos(acos_02) - np.cos(acos_12) * np.cos(acos_01))
-        / (np.sin(acos_12) * np.sin(acos_01))
+        / (np.sin(acos_12) * np.sin(acos_01)),
     )
     gamma = np.arccos(
         (np.cos(acos_01) - np.cos(acos_02) * np.cos(acos_12))
-        / (np.sin(acos_02) * np.sin(acos_12))
+        / (np.sin(acos_02) * np.sin(acos_12)),
     )
 
     # Calculates the Surface area on the unit sphere (solid angle)

@@ -72,6 +72,6 @@ setup(
             "version": ("setup.py", VERSION),
             "release": ("setup.py", VERSION),
             "source_dir": ("setup.py", "docs"),
-        }
+        },
     },
 )

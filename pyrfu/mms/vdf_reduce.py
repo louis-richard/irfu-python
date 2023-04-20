@@ -126,7 +126,8 @@ def _interp_skymap_cart(vdf, energy, phi, theta, grid_cart):
     theta_grid = np.rad2deg(theta_grid)
 
     grid_sphe = np.transpose(
-        np.stack([energy_grid, phi_grid, theta_grid]), [1, 2, 3, 0]
+        np.stack([energy_grid, phi_grid, theta_grid]),
+        [1, 2, 3, 0],
     )
 
     # Interpolate the skymap distribution onto the spherical grid
@@ -179,7 +180,7 @@ def vdf_frame_transformation(vdf, v_gse):
 
         phi_mat, en_mat, theta_mat = np.meshgrid(phi, energy, theta)
         v_mat = np.sqrt(
-            2 * en_mat * constants.electron_volt / constants.proton_mass
+            2 * en_mat * constants.electron_volt / constants.proton_mass,
         )
         v_xyz = sph2cart(np.deg2rad(phi_mat), np.deg2rad(theta_mat), v_mat)
 
@@ -188,11 +189,15 @@ def vdf_frame_transformation(vdf, v_gse):
                 v_xyz[0] - v_gse.data[i, 0, None, None, None],
                 v_xyz[1] - v_gse.data[i, 1, None, None, None],
                 v_xyz[2] - v_gse.data[i, 2, None, None, None],
-            ]
+            ],
         )
 
         out_data[i, ...] = _interp_skymap_cart(
-            vdf_data, energy, phi, theta, grid_cart
+            vdf_data,
+            energy,
+            phi,
+            theta,
+            grid_cart,
         )
 
     out = vdf.copy()
@@ -274,7 +279,9 @@ def vdf_reduce(
         dv_ = np.abs(np.diff(v_z)[0])
         red_vdf = np.nansum(interp_vdf, axis=-1) * dv_
         out = xr.DataArray(
-            red_vdf, coords=[v_x / 1e6, v_y / 1e6], dims=["vx", "vy"]
+            red_vdf,
+            coords=[v_x / 1e6, v_y / 1e6],
+            dims=["vx", "vy"],
         )
     elif dim.lower() == "1d":
         dv_ = np.abs(np.diff(v_y)[0] * np.diff(v_z)[0])

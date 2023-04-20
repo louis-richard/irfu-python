@@ -18,7 +18,11 @@ __status__ = "Prototype"
 
 
 def get_eis_allt(
-    tar_var, tint, mms_id, verbose: bool = True, data_path: str = ""
+    tar_var,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
 ):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all telescopes.
@@ -134,10 +138,14 @@ def get_eis_allt(
         scope_key = f"t{i:d}"
 
         outdict[scope_key] = db_get_ts(
-            dset_name, cdfname, tint, verbose=verbose, data_path=data_path
+            dset_name,
+            cdfname,
+            tint,
+            verbose=verbose,
+            data_path=data_path,
         )
         outdict[scope_key] = outdict[scope_key].rename(
-            {"time": "time", "Energy": "energy"}
+            {"time": "time", "Energy": "energy"},
         )
 
         outdict[f"look_{scope_key}"] = db_get_ts(

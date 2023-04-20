@@ -212,7 +212,7 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
             "rho_e": (["time"], rho_e),
             "rho_p": (["time"], rho_p),
             "rho_s": (["time"], rho_s),
-        }
+        },
     )
 
     return out

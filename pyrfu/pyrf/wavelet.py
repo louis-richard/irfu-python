@@ -27,7 +27,7 @@ __status__ = "Prototype"
 def _ww(s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
     # TODO : use nested for loop and math instead of numpy and test speed!!
     w_w = s_ww * np.exp(
-        -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2
+        -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2,
     )
     w_w = w_w * np.sqrt(1)
     return w_w
@@ -92,7 +92,8 @@ def wavelet(inp, **kwargs):
         else:
             delta_f = 100
             warnings.warn(
-                "Unknown input for linear delta_f set to 100", UserWarning
+                "Unknown input for linear delta_f set to 100",
+                UserWarning,
             )
     else:
         delta_f = 100
@@ -101,7 +102,8 @@ def wavelet(inp, **kwargs):
     scale_min, scale_max = [0.01, 2]
 
     f_min, f_max = kwargs.get(
-        "f", [0.5 * f_s / 10**scale_max, 0.5 * f_s / 10**scale_min]
+        "f",
+        [0.5 * f_s / 10**scale_max, 0.5 * f_s / 10**scale_min],
     )
 
     f_nyq, scale_number, sigma = [f_s / 2, n_freqs, wavelet_width / (f_s / 2)]
@@ -180,7 +182,7 @@ def wavelet(inp, **kwargs):
             for j in range(scale_number):
                 power2[: censure[j], j] = np.nan
 
-                power2[len(data_col) - censure[j]:len(data_col), j] = np.nan
+                power2[len(data_col) - censure[j] : len(data_col), j] = np.nan
 
         if len(inp.shape) == 2:
             out_dict[inp.comp.data[i]] = (
@@ -196,7 +198,8 @@ def wavelet(inp, **kwargs):
         )
     elif len(inp.shape) == 2:
         out = xr.Dataset(
-            out_dict, coords={"time": time, "frequency": np.flip(new_freq)}
+            out_dict,
+            coords={"time": time, "frequency": np.flip(new_freq)},
         )
     else:
         raise TypeError("Invalid shape")

@@ -59,7 +59,7 @@ def read_feeps_sector_masks_csv(tint):
     for mms_sc in np.arange(1, 5):
         file_name = f"MMS{mms_sc:d}_FEEPS_ContaminatedSectors_{str_date}.csv"
         csv_file = os.sep.join(
-            [os.path.dirname(os.path.abspath(__file__)), "sun", file_name]
+            [os.path.dirname(os.path.abspath(__file__)), "sun", file_name],
         )
 
         csv_file = open(csv_file, "r")

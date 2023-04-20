@@ -61,7 +61,11 @@ def histogram(
     """
 
     hist, bins = np.histogram(
-        inp.data, bins=bins, range=y_range, weights=weights, density=density
+        inp.data,
+        bins=bins,
+        range=y_range,
+        weights=weights,
+        density=density,
     )
     bin_center = (bins[1:] + bins[:-1]) * 0.5
 

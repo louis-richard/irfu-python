@@ -129,7 +129,8 @@ def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
     for i, spin_ind in enumerate(spin_inds):
         t_inds = np.where(spin_ == spin_[spin_ind])[0]
         for t_ind, (i_s, scope) in itertools.product(
-            t_inds, enumerate(scopes)
+            t_inds,
+            enumerate(scopes),
         ):
             cond_azi = np.logical_and(
                 phi[i_s, t_ind] > min_azi_edges,

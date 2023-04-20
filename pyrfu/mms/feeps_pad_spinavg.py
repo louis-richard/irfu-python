@@ -65,7 +65,8 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             spin_avg_flux[i, :] = np.nanmean(
-                data[c_start:spin + 1, :], axis=0
+                data[c_start : spin + 1, :],
+                axis=0,
             )
             spin_times[i] = times[c_start]
 
@@ -84,7 +85,9 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
         c_start = spin + 1
 
     out = xr.DataArray(
-        rebinned_data, coords=[spin_times, new_bins], dims=["time", "theta"]
+        rebinned_data,
+        coords=[spin_times, new_bins],
+        dims=["time", "theta"],
     )
 
     return out

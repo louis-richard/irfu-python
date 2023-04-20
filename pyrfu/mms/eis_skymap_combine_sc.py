@@ -29,7 +29,7 @@ def _combine_attrs(skymaps_attrs):
     ]
 
     attrs_keys = list(
-        filter(lambda k: k not in filtered_attrs, skymaps_attrs[0])
+        filter(lambda k: k not in filtered_attrs, skymaps_attrs[0]),
     )
     print(attrs_keys)
 
@@ -107,7 +107,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     theta = ref_probe.theta.data
 
     allmms_skymap = np.zeros(
-        [ref_sc_time_size, size_en, phi.shape[1], len(theta), len(skymaps)]
+        [ref_sc_time_size, size_en, phi.shape[1], len(theta), len(skymaps)],
     )
 
     for i_s, skymap in enumerate(skymaps):
@@ -134,7 +134,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     coords_attrs = {}
     for coor in ["time", "energy", "phi", "theta"]:
         coords_attrs[coor] = _combine_attrs(
-            [skymap[coor].attrs for skymap in skymaps]
+            [skymap[coor].attrs for skymap in skymaps],
         )
 
     # Combine data attributes

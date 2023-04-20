@@ -30,7 +30,7 @@ anodes_theta = np.array(
         348.75000,
         168.75000,
         146.25000,
-    ]
+    ],
 )
 
 
@@ -71,7 +71,9 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
         updated_spectra = inp.data[:, anodes_in_fov, :].sum(axis=1)
 
     out = xr.DataArray(
-        updated_spectra, coords=[times, energies], dims=["time", "energy"]
+        updated_spectra,
+        coords=[times, energies],
+        dims=["time", "energy"],
     )
 
     return out

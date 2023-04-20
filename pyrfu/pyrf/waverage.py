@@ -37,7 +37,7 @@ def waverage(inp, f_sampl: float = None, n_pts: int = 7):
         f_sampl = 1e9 / (inp.time.data[1] - inp.time.data[0]).view("i8")
 
     n_data = np.round(
-        1e-9 * (inp.time.data[-1] - inp.time.data[0]).view("i8") * f_sampl
+        1e-9 * (inp.time.data[-1] - inp.time.data[0]).view("i8") * f_sampl,
     )
 
     inp_data = inp.data
@@ -65,7 +65,7 @@ def waverage(inp, f_sampl: float = None, n_pts: int = 7):
             raise ValueError("n_pts must be 5 or 7")
 
         for j in range(n_data + 1):
-            out[j, col] = _wave(new_data[j:j + n_pts - 1], n_pts)
+            out[j, col] = _wave(new_data[j : j + n_pts - 1], n_pts)
 
     # Make sure we do return matrix of the same size
     out = out[indices, :]

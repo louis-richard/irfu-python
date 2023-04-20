@@ -42,7 +42,13 @@ def mms_pl_config(r_mms):
 
     fig = plt.figure(figsize=(9, 9))
     gs0 = fig.add_gridspec(
-        3, 3, hspace=0.3, left=0.1, right=0.9, bottom=0.1, top=0.9
+        3,
+        3,
+        hspace=0.3,
+        left=0.1,
+        right=0.9,
+        bottom=0.1,
+        top=0.9,
     )
 
     gs00 = gs0[0, :].subgridspec(1, 3, wspace=0.35)
@@ -92,19 +98,19 @@ def mms_pl_config(r_mms):
             [delta_r[i, 0]] * 2,
             [delta_r[i, 1]] * 2,
             [-30, delta_r[i, 2]],
-            **options
+            **options,
         )
         axs3.plot(
             [delta_r[i, 0]] * 2,
             [-30, delta_r[i, 1]],
             [delta_r[i, 2]] * 2,
-            **options
+            **options,
         )
         axs3.plot(
             [-30, delta_r[i, 0]],
             [delta_r[i, 1]] * 2,
             [delta_r[i, 2]] * 2,
-            **options
+            **options,
         )
 
     for idx_0, idx_1 in zip([0, 1, 2, 0, 1, 2], [1, 2, 0, 3, 3, 3]):

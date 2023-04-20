@@ -107,7 +107,9 @@ def histogram2d(
     y_bins = y_edges[:-1] + np.median(np.diff(y_edges)) / 2
 
     out = xr.DataArray(
-        h2d, coords=[x_bins, y_bins], dims=["x_bins", "y_bins"]
+        h2d,
+        coords=[x_bins, y_bins],
+        dims=["x_bins", "y_bins"],
     )
 
     return out

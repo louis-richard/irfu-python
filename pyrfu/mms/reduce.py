@@ -113,7 +113,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     # Construct the time series of transformation matrix
     xyz_ts = np.transpose(
-        np.stack([x_phat_ts, y_phat_ts, z_phat_ts]), [1, 2, 0]
+        np.stack([x_phat_ts, y_phat_ts, z_phat_ts]),
+        [1, 2, 0],
     )
 
     # Set azimuthal angle projection grid
@@ -174,7 +175,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         # 3d data matrix for time index
         f_3d = np.squeeze(vdf_data.data[i_t, ...])  # s^3/m^6
         f_3d = f_3d.astype(
-            np.float64
+            np.float64,
         ).copy()  # convert to C contiguous float64
 
         # Energies
@@ -209,7 +210,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         # Set velocity projection grid.
         if speed_grid_edges is not None:
             speed_grid = speed_grid_edges[:-1] + 0.5 * np.diff(
-                speed_grid_edges
+                speed_grid_edges,
             )
         elif speed_grid is None:
             if base == "pol":

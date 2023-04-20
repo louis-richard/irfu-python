@@ -25,7 +25,11 @@ logging.basicConfig(
 
 
 def db_get_variable(
-    dataset_name, cdf_name, tint, verbose: bool = True, data_path: str = ""
+    dataset_name,
+    cdf_name,
+    tint,
+    verbose: bool = True,
+    data_path: str = "",
 ):
     r"""Get variable in the cdf file.
 

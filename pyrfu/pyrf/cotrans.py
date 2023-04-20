@@ -47,11 +47,12 @@ def _dipole_direction_gse(time, flag: str = "dipole"):
             cos_phi * np.cos(np.deg2rad(lambda_)),
             cos_phi * np.sin(np.deg2rad(lambda_)),
             np.sin(np.deg2rad(phi)),
-        ]
+        ],
     ).T
 
     dipole_direction_gse_ = cotrans(
-        np.hstack([time[:, None], dipole_direction_geo_]), "geo>gse"
+        np.hstack([time[:, None], dipole_direction_geo_]),
+        "geo>gse",
     )
 
     return dipole_direction_gse_
@@ -94,7 +95,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
                 m_long = 280.460 + 36000.772 * t_zero + 0.04107 * ut
                 l_sun = m_long
                 l_sun += (1.915 - 0.0048 * t_zero) * np.sin(
-                    np.deg2rad(m_anom)
+                    np.deg2rad(m_anom),
                 )
                 l_sun += 0.020 * np.sin(np.deg2rad(2 * m_anom))
             else:
@@ -126,7 +127,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
 
             mu = np.arctan(
                 dipole_direction_gse_[:, 1]
-                / np.sqrt(np.sum(dipole_direction_gse_[:, 2:] ** 2, axis=1))
+                / np.sqrt(np.sum(dipole_direction_gse_[:, 2:] ** 2, axis=1)),
             )
             mu = np.rad2deg(mu)
 

@@ -53,8 +53,9 @@ def struct_func(inp, scales, order):
     for scale in scales:
         result.append(
             np.nanmean(
-                np.abs(data[scale:, :] - data[:-scale, :]) ** order, axis=0
-            )
+                np.abs(data[scale:, :] - data[:-scale, :]) ** order,
+                axis=0,
+            ),
         )
 
     if inp.data.ndim == 1:

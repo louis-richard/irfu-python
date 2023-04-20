@@ -52,7 +52,7 @@ def _compose_date(
     ]
 
     dates = sum(
-        [np.asarray(v, dtype=t) for t, v in zip(types, vals) if v is not None]
+        [np.asarray(v, dtype=t) for t, v in zip(types, vals) if v is not None],
     )
 
     return dates

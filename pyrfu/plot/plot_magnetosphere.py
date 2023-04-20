@@ -31,10 +31,22 @@ logging.basicConfig(
 def _add_earth(ax=None, **kwargs):
     theta1, theta2 = 90.0, 270.0
     nightside_ = Wedge(
-        (0.0, 0.0), 1.0, theta1, theta2, fc="k", ec="k", **kwargs
+        (0.0, 0.0),
+        1.0,
+        theta1,
+        theta2,
+        fc="k",
+        ec="k",
+        **kwargs,
     )
     dayside_ = Wedge(
-        (0.0, 0.0), 1.0, theta2, theta1, fc="w", ec="k", **kwargs
+        (0.0, 0.0),
+        1.0,
+        theta2,
+        theta1,
+        fc="w",
+        ec="k",
+        **kwargs,
     )
     for wedge in [nightside_, dayside_]:
         ax.add_artist(wedge)
@@ -51,7 +63,8 @@ def _add_field_lines(ax, tint):
     x_lines_p, z_lines_p = [[], []]
 
     xx_gsm, zz_gsm = np.meshgrid(
-        np.linspace(-30, 6, 19), np.linspace(-5, 5, 10)
+        np.linspace(-30, 6, 19),
+        np.linspace(-5, 5, 10),
     )
     xx_gsm = np.reshape(xx_gsm, (xx_gsm.size,))
     zz_gsm = np.reshape(zz_gsm, (zz_gsm.size,))
@@ -96,7 +109,10 @@ def _add_field_lines(ax, tint):
 
 
 def plot_magnetosphere(
-    ax, tint, colors: list = None, field_lines: bool = True
+    ax,
+    tint,
+    colors: list = None,
+    field_lines: bool = True,
 ):
     r"""Plot magnetopause, bow shock and earth.
 

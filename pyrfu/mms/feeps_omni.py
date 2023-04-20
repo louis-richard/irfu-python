@@ -33,7 +33,7 @@ energies_ = {
             373.2,
             436.0,
             509.2,
-        ]
+        ],
     ),
     "ion": np.array(
         [
@@ -52,7 +52,7 @@ energies_ = {
             419.7,
             484.2,
             558.6,
-        ]
+        ],
     ),
 }
 
@@ -103,7 +103,7 @@ def feeps_omni(inp_dataset):
             len(inp_dataset.time),
             len(energies),
             len(top_sensors) + len(bot_sensors),
-        )
+        ),
     )
     dalleyes[:] = np.nan
 

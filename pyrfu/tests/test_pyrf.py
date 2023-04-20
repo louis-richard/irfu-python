@@ -53,7 +53,7 @@ class TestPyrf(unittest.TestCase):
             (
                 pyrf.resample(e_xyz, self.b_xyz).time.data
                 == self.b_xyz.time.data
-            ).all()
+            ).all(),
         )
 
 

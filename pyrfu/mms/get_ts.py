@@ -59,8 +59,10 @@ def _shift_epochs(file, epoch):
                     message = " units are not clear, assume s"
                     warnings.warn(message)
             else:
-                message = "Epoch_plus_var/Epoch_minus_var units are not " \
-                          "clear, assume s"
+                message = (
+                    "Epoch_plus_var/Epoch_minus_var units are not "
+                    "clear, assume s"
+                )
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars
@@ -93,7 +95,7 @@ def _get_epochs(file, cdf_name, tint):
     depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
 
     out = {
-        "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])
+        "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1]),
     }
 
     if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
@@ -105,10 +107,12 @@ def _get_epochs(file, cdf_name, tint):
 
             # Shift times if particle data
             is_part = re.search(
-                "^mms[1-4]_d[ei]s_", cdf_name
+                "^mms[1-4]_d[ei]s_",
+                cdf_name,
             )  # Is it FPI data?
             is_part = is_part or re.search(
-                "^mms[1-4]_hpca_", cdf_name
+                "^mms[1-4]_hpca_",
+                cdf_name,
             )  # Is it HPCA data?
 
             if is_part:
@@ -151,7 +155,9 @@ def _get_depend(file, cdf_name, tint, dep_num=1):
     else:
         try:
             out["data"] = file.varget(
-                depend_key, starttime=tint[0], endtime=tint[1]
+                depend_key,
+                starttime=tint[0],
+                endtime=tint[1],
             )
         except IndexError:
             out["data"] = file.varget(depend_key)
@@ -204,7 +210,7 @@ def get_ts(file_path, cdf_name, tint):
             tint = datetime642iso8601(np.array(tint))
         elif isinstance(tint[0], str):
             tint = iso86012datetime64(
-                np.array(tint)
+                np.array(tint),
             )  # to make sure it is ISO8601 ok!!
             tint = datetime642iso8601(np.array(tint))
         else:
@@ -281,7 +287,9 @@ def get_ts(file_path, cdf_name, tint):
             depend_1["attrs"] = {"LABLAXIS": "comp"}
 
         out_dict["data"] = file.varget(
-            cdf_name, starttime=tint[0], endtime=tint[1]
+            cdf_name,
+            starttime=tint[0],
+            endtime=tint[1],
         )
 
         if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:

@@ -118,7 +118,8 @@ def eis_moments(
     v_i = ts_scalar(inp.time.data, v_i * 1e-3)  # km s^-1
     p_i = ts_scalar(inp.time.data, p_i * 1e9)  # nPa
     t_i = ts_scalar(
-        inp.time.data, t_i * constants.Boltzmann / constants.elementary_charge
+        inp.time.data,
+        t_i * constants.Boltzmann / constants.elementary_charge,
     )  # eV
 
     if n_bg is not None and p_bg is not None:

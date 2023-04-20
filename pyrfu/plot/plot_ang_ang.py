@@ -62,15 +62,18 @@ def _energy_avg(vdf, en_range):
 
     idx = np.where(
         np.logical_and(
-            vdf.energy.data > en_range[0], vdf.energy.data < en_range[1]
-        )
+            vdf.energy.data > en_range[0],
+            vdf.energy.data < en_range[1],
+        ),
     )[0]
     assert idx, "Energy range is not covered by the instrument"
 
     out_data = np.nanmean(vdf.data[idx, ...], axis=0)
 
     out = xr.DataArray(
-        out_data, coords=[vdf.phi.data, vdf.theta.data], dims=["phi", "theta"]
+        out_data,
+        coords=[vdf.phi.data, vdf.theta.data],
+        dims=["phi", "theta"],
     )
     return out
 

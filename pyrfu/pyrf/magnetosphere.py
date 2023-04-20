@@ -91,7 +91,7 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
         )
         # original F/G model adds rstandoff^2=645
         y_s = np.sqrt(
-            0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff)
+            0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff),
         )
 
     else:

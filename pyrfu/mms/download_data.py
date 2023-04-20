@@ -96,7 +96,7 @@ def _files_in_interval(in_files, trange):
                     parse(matches.groups()[0]).timestamp(),
                     file["timetag"],
                     file["file_size"],
-                )
+                ),
             )
 
     # sort in time
@@ -112,7 +112,7 @@ def _files_in_interval(in_files, trange):
     if idx_min == 0:
         files = list(map(mkout, sorted_files[idx_min:]))
     else:
-        files = list(map(mkout, sorted_files[idx_min - 1:]))
+        files = list(map(mkout, sorted_files[idx_min - 1 :]))
 
     return files
 
@@ -209,13 +209,18 @@ def download_data(var_str, tint, mms_id, login, password, data_path: str = ""):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
             fsrc = sdc_session.get(
-                dwl_url, stream=True, verify=True, headers=headers
+                dwl_url,
+                stream=True,
+                verify=True,
+                headers=headers,
             )
 
         ftmp = NamedTemporaryFile(delete=False)
 
         with tqdm.tqdm.wrapattr(
-            fsrc.raw, "read", total=file["size"]
+            fsrc.raw,
+            "read",
+            total=file["size"],
         ) as fsrc_raw:
             with open(ftmp.name, "wb") as fs:
                 copyfileobj(fsrc_raw, fs)

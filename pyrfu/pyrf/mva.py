@@ -74,7 +74,7 @@ def mva(inp, flag: str = "mvar"):
         raise ValueError("invalid flag")
 
     m_mu_nu = np.array(
-        [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+        [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
     )
 
     # Compute eigenvalues and eigenvectors
@@ -126,7 +126,7 @@ def mva(inp, flag: str = "mvar"):
         m_mu_nu_m -= inp_data_2_m[idx_1] * inp_data_2_m[idx_2]
 
         m_mu_nu = np.array(
-            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
         lamb, lmn = np.linalg.eig(m_mu_nu)
@@ -150,7 +150,7 @@ def mva(inp, flag: str = "mvar"):
         m_mu_nu_m -= inp_data_2_m[idx_1] * inp_data_2_m[idx_2]
 
         m_mu_nu = np.array(
-            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
         lamb, lmn = np.linalg.eig(m_mu_nu)

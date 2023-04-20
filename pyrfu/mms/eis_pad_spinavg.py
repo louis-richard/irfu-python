@@ -38,7 +38,7 @@ def eis_pad_spinavg(inp, spin_nums):
 
     spin_times = np.zeros(len(spin_starts), dtype="<M8[ns]")
     spin_sum_flux = np.zeros(
-        (len(spin_starts), len(inp.theta.data), len(inp.energy.data))
+        (len(spin_starts), len(inp.theta.data), len(inp.energy.data)),
     )
 
     current_start = 0

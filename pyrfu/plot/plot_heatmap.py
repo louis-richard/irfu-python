@@ -21,7 +21,7 @@ def plot_heatmap(
     col_labels,
     cbar_kw: dict = None,
     cbarlabel: str = "",
-    **kwargs
+    **kwargs,
 ):
     r"""Creates a heatmap from a numpy array and two lists of labels.
 

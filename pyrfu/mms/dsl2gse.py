@@ -27,12 +27,12 @@ def _transformation_matrix(spin_axis, direction):
                 fact * (r_y**2 + r_z**2),
                 -fact * r_x * r_y,
                 -fact * r_x * r_z,
-            ]
-        )
+            ],
+        ),
     )
 
     out[:, 1, :] = np.transpose(
-        np.stack([0.0 * fact, fact * r_z, -fact * r_y])
+        np.stack([0.0 * fact, fact * r_z, -fact * r_y]),
     )
 
     out[:, 2, :] = np.transpose(np.stack([r_x, r_y, r_z]))
@@ -85,18 +85,19 @@ def dsl2gse(inp, defatt, direction: int = 1):
 
     if isinstance(defatt, xr.Dataset):
         x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
-            np.deg2rad(defatt.z_ra.data)
+            np.deg2rad(defatt.z_ra.data),
         )
         y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(
-            np.deg2rad(defatt.z_ra.data)
+            np.deg2rad(defatt.z_ra.data),
         )
         z = np.sin(np.deg2rad(defatt.z_dec))
         sax_gei = np.transpose(
-            np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z])
+            np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z]),
         )
         sax_gse = cotrans(sax_gei, "gei>gse")
         sax_gse = ts_vec_xyz(
-            (sax_gse[:, 0] * 1e9).astype("datetime64[ns]"), sax_gse[:, 1:]
+            (sax_gse[:, 0] * 1e9).astype("datetime64[ns]"),
+            sax_gse[:, 1:],
         )
 
         spin_ax_gse = resample(sax_gse, inp, f_s=calc_fs(inp))

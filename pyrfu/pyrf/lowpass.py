@@ -44,12 +44,18 @@ def lowpass(inp, f_cut, fhz):
     f_nyq, r_pass, r_stop, order = [fhz / 2, 0.1, 60, 4]
 
     elliptic_filter = signal.ellip(
-        order, r_pass, r_stop, f_cut / f_nyq, output="ba"
+        order,
+        r_pass,
+        r_stop,
+        f_cut / f_nyq,
+        output="ba",
     )
 
     # Filter data
     out_data = signal.filtfilt(
-        elliptic_filter[0], elliptic_filter[1], data_detrend
+        elliptic_filter[0],
+        elliptic_filter[1],
+        data_detrend,
     )
 
     out = xr.DataArray(out_data + rest, coords=inp.coords, dims=inp.dims)

@@ -99,7 +99,7 @@ def rotate_tensor(*args):
                 qqeq = 1
             else:
                 raise ValueError(
-                    "Flag not recognized no additional rotations applied."
+                    "Flag not recognized no additional rotations applied.",
                 )
 
         if nargin == 9:
@@ -109,7 +109,7 @@ def rotate_tensor(*args):
                 qqeq = 1
             else:
                 raise ValueError(
-                    "Flag not recognized no additional rotations applied."
+                    "Flag not recognized no additional rotations applied.",
                 )
 
         b_vec = b_back / np.linalg.norm(b_back, axis=1, keepdims=True)
@@ -127,7 +127,7 @@ def rotate_tensor(*args):
         if nargin == rot_flag_pos:
             raise ValueError("Vector(s) is(are) missing.")
 
-        vectors = list(args[rot_flag_pos + 1:])
+        vectors = list(args[rot_flag_pos + 1 :])
 
         if len(vectors) == 1:
             r_x = vectors[0]
@@ -170,7 +170,7 @@ def rotate_tensor(*args):
     if ppeq:
         thetas = 0.5 * np.arctan(
             (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1])
-            / (2 * p_tensor_p[:, 1, 2])
+            / (2 * p_tensor_p[:, 1, 2]),
         )
 
         for i, theta in enumerate(thetas):
@@ -182,7 +182,7 @@ def rotate_tensor(*args):
                     [1, 0, 0],
                     [0, np.cos(theta), np.sin(theta)],
                     [0, -np.sin(theta), np.cos(theta)],
-                ]
+                ],
             )
 
             p_tensor_p[i, :, :] = np.matmul(
@@ -193,7 +193,7 @@ def rotate_tensor(*args):
     if qqeq:
         thetas = 0.5 * np.arctan(
             (2 * p_tensor_p[:, 1, 2])
-            / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1])
+            / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
         )
 
         for i, theta in enumerate(thetas):
@@ -202,7 +202,7 @@ def rotate_tensor(*args):
                     [1, 0, 0],
                     [0, np.cos(theta), -np.sin(theta)],
                     [0, np.sin(theta), np.cos(theta)],
-                ]
+                ],
             )
 
             p_tensor_p[i, :, :] = np.matmul(

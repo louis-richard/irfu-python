@@ -182,10 +182,12 @@ def lh_wave_analysis(
     v_best = vph_vec[corr_vpos]
 
     options = dict(
-        coords=[phi_bs.time, ["Ebest", "Bs"]], dims=["time", "comp"]
+        coords=[phi_bs.time, ["Ebest", "Bs"]],
+        dims=["time", "comp"],
     )
     phi_eb = xr.DataArray(
-        np.vstack([phi_e_best.data, phi_bs.data]).T, **options
+        np.vstack([phi_e_best.data, phi_bs.data]).T,
+        **options,
     )
 
     return phi_eb, v_best, dir_best, thetas, corrs

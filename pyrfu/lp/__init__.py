@@ -147,16 +147,20 @@ class LangmuirProbe:
         ):
             if self.l_wire > 10 * list([self.r_wire]):
                 c_wire = estimate(
-                    "capacitance_wire", np.mean(self.r_wire), self.l_wire
+                    "capacitance_wire",
+                    np.mean(self.r_wire),
+                    self.l_wire,
                 )
             elif self.l_wire > list(self.r_wire):
                 c_wire = estimate(
-                    "capacitance_cylinder", np.mean(self.r_wire), self.l_wire
+                    "capacitance_cylinder",
+                    np.mean(self.r_wire),
+                    self.l_wire,
                 )
             else:
                 raise ValueError(
                     "estimate of capacitance for cylinder "
-                    "requires length > radius"
+                    "requires length > radius",
                 )
 
         self.capacitance = np.sum([c_sphere, c_wire])

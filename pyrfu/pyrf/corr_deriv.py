@@ -105,19 +105,11 @@ def corr_deriv(inp0, inp1, flag: bool = False):
         ind_zeros1 = np.delete(ind_zeros1, np.where(ind_zeros1 == 1)[0])
         ind_zeros2 = np.delete(ind_zeros2, np.where(ind_zeros2 == 1)[0])
 
-        ind_zeros1_p = np.where(inp0[ind_zeros1 - 1] - inp0[ind_zeros1] > 0)[
-            0
-        ]
-        ind_zeros2_p = np.where(inp1[ind_zeros2 - 1] - inp1[ind_zeros2] > 0)[
-            0
-        ]
+        ind_zeros1_p = np.where(inp0[ind_zeros1 - 1] - inp0[ind_zeros1] > 0)[0]
+        ind_zeros2_p = np.where(inp1[ind_zeros2 - 1] - inp1[ind_zeros2] > 0)[0]
 
-        ind_zeros1_m = np.where(inp0[ind_zeros1 - 1] - inp0[ind_zeros1] < 0)[
-            0
-        ]
-        ind_zeros2_m = np.where(inp1[ind_zeros2 - 1] - inp1[ind_zeros2] < 0)[
-            0
-        ]
+        ind_zeros1_m = np.where(inp0[ind_zeros1 - 1] - inp0[ind_zeros1] < 0)[0]
+        ind_zeros2_m = np.where(inp1[ind_zeros2 - 1] - inp1[ind_zeros2] < 0)[0]
 
         ind1_p = ind_zeros1[ind_zeros1_p]
         ind1_m = ind_zeros1[ind_zeros1_m]
@@ -153,39 +145,31 @@ def corr_deriv(inp0, inp1, flag: bool = False):
         ind_zeros1 = np.delete(ind_zeros1, np.where(ind_zeros1 == 1)[0])
         ind_zeros2 = np.delete(ind_zeros2, np.where(ind_zeros2 == 1)[0])
 
-        ind_zeros1_p = np.where(ddx1[ind_zeros1 - 1] - ddx1[ind_zeros1] > 0)[
-            0
-        ]
-        ind_zeros2_p = np.where(ddx2[ind_zeros2 - 1] - ddx2[ind_zeros2] > 0)[
-            0
-        ]
+        ind_zeros1_p = np.where(ddx1[ind_zeros1 - 1] - ddx1[ind_zeros1] > 0)[0]
+        ind_zeros2_p = np.where(ddx2[ind_zeros2 - 1] - ddx2[ind_zeros2] > 0)[0]
 
-        ind_zeros1_m = np.where(ddx1[ind_zeros1 - 1] - ddx1[ind_zeros1] < 0)[
-            0
-        ]
-        ind_zeros2_m = np.where(ddx2[ind_zeros2 - 1] - ddx2[ind_zeros2] < 0)[
-            0
-        ]
+        ind_zeros1_m = np.where(ddx1[ind_zeros1 - 1] - ddx1[ind_zeros1] < 0)[0]
+        ind_zeros2_m = np.where(ddx2[ind_zeros2 - 1] - ddx2[ind_zeros2] < 0)[0]
 
         ind1_p = ind_zeros1[ind_zeros1_p]
         ind1_m = ind_zeros1[ind_zeros1_m]
 
-        t_zeros1_p = dd_tx1[ind1_p] + (
-            dd_tx1[ind1_p + 1] - dd_tx1[ind1_p]
-        ) / (1 + np.abs(ddx1[ind1_p + 1]) / np.abs(ddx1[ind1_p]))
-        t_zeros1_m = dd_tx1[ind1_m] + (
-            dd_tx1[ind1_m + 1] - dd_tx1[ind1_m]
-        ) / (1 + np.abs(ddx1[ind1_m + 1]) / np.abs(ddx1[ind1_m]))
+        t_zeros1_p = dd_tx1[ind1_p] + (dd_tx1[ind1_p + 1] - dd_tx1[ind1_p]) / (
+            1 + np.abs(ddx1[ind1_p + 1]) / np.abs(ddx1[ind1_p])
+        )
+        t_zeros1_m = dd_tx1[ind1_m] + (dd_tx1[ind1_m + 1] - dd_tx1[ind1_m]) / (
+            1 + np.abs(ddx1[ind1_m + 1]) / np.abs(ddx1[ind1_m])
+        )
 
         ind2_p = ind_zeros2[ind_zeros2_p]
         ind2_m = ind_zeros2[ind_zeros2_m]
 
-        t_zeros2_p = dd_tx2[ind2_p] + (
-            dd_tx2[ind2_p + 1] - dd_tx2[ind2_p]
-        ) / (1 + np.abs(ddx2[ind2_p + 1]) / np.abs(ddx2[ind2_p]))
-        t_zeros2_m = dd_tx2[ind2_m] + (
-            dd_tx2[ind2_m + 1] - dd_tx2[ind2_m]
-        ) / (1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m]))
+        t_zeros2_p = dd_tx2[ind2_p] + (dd_tx2[ind2_p + 1] - dd_tx2[ind2_p]) / (
+            1 + np.abs(ddx2[ind2_p + 1]) / np.abs(ddx2[ind2_p])
+        )
+        t_zeros2_m = dd_tx2[ind2_m] + (dd_tx2[ind2_m + 1] - dd_tx2[ind2_m]) / (
+            1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m])
+        )
 
     # Define identical pairs of two time axis
     t1_dd_p, t2_dd_p, _, _ = find_closest(t_zeros1_p, t_zeros2_p)

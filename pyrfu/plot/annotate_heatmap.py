@@ -23,7 +23,7 @@ def annotate_heatmap(
     valfmt: str = "{x:.2f}",
     textcolors: tuple = ("black", "white"),
     threshold: float = None,
-    **textkw
+    **textkw,
 ):
     r"""Annotate a heatmap.
 

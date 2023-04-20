@@ -50,7 +50,8 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
     pa_data = pitch_angles.data
 
     trange = np.datetime_as_string(
-        np.hstack([np.min(pa_times.data), np.max(pa_times.data)]), "ns"
+        np.hstack([np.min(pa_times.data), np.max(pa_times.data)]),
+        "ns",
     )
 
     eyes = feeps_active_eyes(inp_dataset.attrs, list(trange), mms_id)
@@ -83,7 +84,7 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
 
             # energy indices to use:
             idx = np.where(
-                np.logical_and(energies >= energy[0], energies <= energy[1])
+                np.logical_and(energies >= energy[0], energies <= energy[1]),
             )[0]
 
             with warnings.catch_warnings():
@@ -111,20 +112,22 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
     # Now loop through PA bins and time, find the telescopes where there is
     # data in those bins and average it up!
     for pa_idx, ipa in itertools.product(
-        range(len(pa_times)), range(n_pabins)
+        range(len(pa_times)),
+        range(n_pabins),
     ):
         if not np.isnan(dpa[pa_idx, :][0]):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 ind = np.where(
                     (dpa[pa_idx, :] + dangresp >= pa_labels[ipa] - delta_pa)
-                    & (dpa[pa_idx, :] - dangresp < pa_labels[ipa] + delta_pa)
+                    & (dpa[pa_idx, :] - dangresp < pa_labels[ipa] + delta_pa),
                 )
 
                 if ind[0].size != 0:
                     if len(ind[0]) > 1:
                         pa_flux[pa_idx, ipa] = np.nanmean(
-                            dflux[pa_idx, ind[0]], axis=0
+                            dflux[pa_idx, ind[0]],
+                            axis=0,
                         )
                     else:
                         pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0]]
@@ -135,7 +138,10 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
 
 
 def feeps_pad(
-    inp_dataset, b_bcs, bin_size: float = 16.3636, energy: list = None
+    inp_dataset,
+    b_bcs,
+    bin_size: float = 16.3636,
+    energy: list = None,
 ):
     r"""Compute pitch angle distribution using FEEPS data.
 
@@ -178,15 +184,28 @@ def feeps_pad(
     pa_data_map = _pa_data_map(idx_maps, d_type, d_rate)
 
     dpa, dflux = _dpa_dflux(
-        inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id
+        inp_dataset,
+        pitch_angles,
+        pa_data_map,
+        energy,
+        d_type,
+        mms_id,
     )
 
     pa_flux = _pa_flux(
-        pitch_angles.time, pa_bins, pa_labels, dpa, dflux, d_type
+        pitch_angles.time,
+        pa_bins,
+        pa_labels,
+        dpa,
+        dflux,
+        d_type,
     )
 
     pad = xr.DataArray(
-        pa_flux, coords=[time, pa_labels], dims=["time", "theta"], attrs=attrs
+        pa_flux,
+        coords=[time, pa_labels],
+        dims=["time", "theta"],
+        attrs=attrs,
     )
 
     return pad

@@ -43,7 +43,7 @@ def correct_edp_probe_timing(sc_pot):
     diff_sc_pot = []
     for i, fact in zip([0, 2, 4], e_fact):
         diff_sc_pot.append(
-            ts_scalar(time, np.diff(sc_pot.data[:, i:i + 2]) / fact)
+            ts_scalar(time, np.diff(sc_pot.data[:, i : i + 2]) / fact),
         )
 
     # Correct the time tags to create individual time series

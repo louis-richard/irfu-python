@@ -96,7 +96,12 @@ def _make_path(file, product, mms_id, data_path: str = ""):
 
 
 def download_ancillary(
-    product, tint, mms_id, login, password, data_path: str = ""
+    product,
+    tint,
+    mms_id,
+    login,
+    password,
+    data_path: str = "",
 ):
     r"""Downloads files containing field `var_str` over the time interval
     `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
@@ -138,19 +143,27 @@ def download_ancillary(
 
     for file in files_in_interval:
         out_path, out_file, dwl_url = _make_path(
-            file, product, mms_id, data_path
+            file,
+            product,
+            mms_id,
+            data_path,
         )
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
             fsrc = sdc_session.get(
-                dwl_url, stream=True, verify=True, headers=headers
+                dwl_url,
+                stream=True,
+                verify=True,
+                headers=headers,
             )
 
         ftmp = NamedTemporaryFile(delete=False)
 
         with tqdm.tqdm.wrapattr(
-            fsrc.raw, "read", total=file["file_size"]
+            fsrc.raw,
+            "read",
+            total=file["file_size"],
         ) as fsrc_raw:
             with open(ftmp.name, "wb") as fs:
                 copyfileobj(fsrc_raw, fs)

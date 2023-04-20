@@ -57,7 +57,10 @@ def gradient(inp):
     d_inp_dt = np.gradient(inp.data, axis=0) / delta_t
 
     out = xr.DataArray(
-        d_inp_dt, coords=inp.coords, dims=inp.dims, attrs=inp.attrs
+        d_inp_dt,
+        coords=inp.coords,
+        dims=inp.dims,
+        attrs=inp.attrs,
     )
 
     if "UNITS" in out.attrs:

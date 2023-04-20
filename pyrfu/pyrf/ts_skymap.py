@@ -66,7 +66,8 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
         energy = np.tile(energy0, (len(esteptable), 1))
 
         energy[esteptable == 1] = np.tile(
-            energy1, (int(np.sum(esteptable)), 1)
+            energy1,
+            (int(np.sum(esteptable)), 1),
         )
 
     if phi.ndim == 1:
@@ -98,9 +99,7 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
     # Sort and fill coordinates attributes
     for k in coords_attrs:
-        out[k].attrs = {
-            m: coords_attrs[k][m] for m in sorted(coords_attrs[k])
-        }
+        out[k].attrs = {m: coords_attrs[k][m] for m in sorted(coords_attrs[k])}
 
     # Sort and fill data attributes
     out.data.attrs = {k: attrs[k] for k in sorted(attrs)}

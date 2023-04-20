@@ -32,7 +32,7 @@ def _estimate_capa_wire(radius, length):
     else:
         raise ValueError(
             "capacitance_wire requires length at least 10 times "
-            "the radius!"
+            "the radius!",
         )
     return out
 

@@ -72,7 +72,8 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
     """
 
     assert r_xyz is None or isinstance(
-        r_xyz, (xr.DataArray, list, np.ndarray)
+        r_xyz,
+        (xr.DataArray, list, np.ndarray),
     )
 
     if r_xyz is None:
@@ -109,7 +110,9 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
 
         # xarray
         out = xr.DataArray(
-            out_data, coords=[time, inp.comp], dims=["time", "comp"]
+            out_data,
+            coords=[time, inp.comp],
+            dims=["time", "comp"],
         )
 
     else:

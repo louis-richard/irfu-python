@@ -49,8 +49,8 @@ def _guess_sampling_frequency(ref_time):
     if not_found:
         raise RuntimeError(
             "Cannot guess sampling frequency. Tried {:d} times".format(
-                max_try
-            )
+                max_try,
+            ),
         )
 
     return sfy
@@ -85,11 +85,13 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
                 for j, stdd in enumerate(std_):
                     if not np.isnan(stdd):
                         idx_r = bisect.bisect_right(
-                            inp_data[idx, j + 1] - mean_[j], thresh * stdd
+                            inp_data[idx, j + 1] - mean_[j],
+                            thresh * stdd,
                         )
                         if idx_r:
                             out_data[i, j + 1] = np.mean(
-                                inp_data[idx[idx_r], j + 1], axis=0
+                                inp_data[idx[idx_r], j + 1],
+                                axis=0,
                             )
                         else:
                             out_data[i, j + 1] = np.nan
@@ -160,13 +162,20 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
                     coord.append(inp.coords[k].data)
 
             out = xr.DataArray(
-                out_data, coords=coord, dims=inp.dims, attrs=inp.attrs
+                out_data,
+                coords=coord,
+                dims=inp.dims,
+                attrs=inp.attrs,
             )
 
             return out
 
         tck = interpolate.interp1d(
-            inp_time, inp.data, kind=method, axis=0, fill_value="extrapolate"
+            inp_time,
+            inp.data,
+            kind=method,
+            axis=0,
+            fill_value="extrapolate",
         )
         out_data = tck(ref_time)
 
@@ -195,7 +204,8 @@ def _resample_dataset(inp, ref, **kwargs):
 
     # Find array_like attributes
     arr_attrs = filter(
-        lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs
+        lambda x: isinstance(inp.attrs[x], np.ndarray),
+        inp.attrs,
     )
     arr_attrs = list(arr_attrs)
 
@@ -216,7 +226,9 @@ def _resample_dataset(inp, ref, **kwargs):
             ]
             dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
             attr_ts = xr.DataArray(
-                attr, coords=[inp.time.data, *coords], dims=["time", *dims]
+                attr,
+                coords=[inp.time.data, *coords],
+                dims=["time", *dims],
             )
             out_attrs[k] = _resample_dataarray(attr_ts, ref, **kwargs).data
         else:

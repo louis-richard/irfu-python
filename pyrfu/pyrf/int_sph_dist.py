@@ -83,7 +83,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
         d_phi_grid = np.median(np.diff(phi_grid))
     else:
         raise RuntimeError(
-            "1d projection with phi_grid provided doesn't make sense!!"
+            "1d projection with phi_grid provided doesn't make sense!!",
         )
 
     # Make sure the transformation matrix is orthonormal.
@@ -128,7 +128,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
         n_mc_mat = np.ceil(n_sum / np.sum(vdf) * vdf)
     elif weight == "log":
         n_mc_mat = np.ceil(
-            n_sum / np.sum(np.log10(vdf + 1)) * np.log10(vdf + 1)
+            n_sum / np.sum(np.log10(vdf + 1)) * np.log10(vdf + 1),
         )
     else:
         n_mc_mat = np.zeros_like(vdf)
@@ -162,7 +162,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
             )
         else:
             raise NotImplementedError(
-                "2d projection on polar grid is not ready yet!!"
+                "2d projection on polar grid is not ready yet!!",
             )
 
     elif projection_base == "cart" and projection_dim == "2d":
@@ -226,7 +226,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
         }
     else:
         raise NotImplementedError(
-            "2d projection on polar grid is not ready yet!!"
+            "2d projection on polar grid is not ready yet!!",
         )
 
     return pst

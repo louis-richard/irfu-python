@@ -22,8 +22,8 @@ def _f_one_pop(x, *args):
     i_e, i_aspoc, sc_pot_r = args
     return np.nansum(
         np.abs(
-            i_e.data + i_aspoc.data - (x[0] * np.exp(-sc_pot_r.data / x[1]))
-        )
+            i_e.data + i_aspoc.data - (x[0] * np.exp(-sc_pot_r.data / x[1])),
+        ),
     )
 
 
@@ -34,8 +34,8 @@ def _f_two_pop(x, *args):
             i_e.data
             + i_aspoc.data
             - (x[0] * np.exp(-sc_pot_r.data / x[1]))
-            + (x[2] * np.exp(-sc_pot_r.data / x[3]))
-        )
+            + (x[2] * np.exp(-sc_pot_r.data / x[3])),
+        ),
     )
 
 
@@ -129,7 +129,7 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
 
     v_eth = np.sqrt(2 * q_e * resample(t_e, sc_pot).data / m_e)
     n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(
-        -sc_pot.data / t_ph1
+        -sc_pot.data / t_ph1,
     )
     n_esc /= (
         s_surf * q_e * v_eth * (1 + sc_pot.data / resample(t_e, sc_pot).data)

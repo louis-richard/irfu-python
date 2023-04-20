@@ -67,7 +67,7 @@ def ts_append(inp1, inp2):
                 # if attrs is array time append
                 if isinstance(inp1[dim].attrs[k], np.ndarray):
                     depends[i]["attrs"][k] = np.hstack(
-                        [inp1[dim].attrs[k], inp2[dim].attrs[k]]
+                        [inp1[dim].attrs[k], inp2[dim].attrs[k]],
                     )
 
                 else:
