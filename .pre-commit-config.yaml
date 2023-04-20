@@ -1,0 +1,28 @@
+repos:
+  # The following code can be uncommented to automatically keep all pre-commit rev's updated
+  #- repo: local
+  # # First a local check if new "rev" exists...
+  # hooks:
+  #   - id: pre-commit-autoupdate
+  #     name: Check for new rev with pre-commit autoupdate
+  #     entry: "pre-commit autoupdate"
+  #     language: system
+  #     pass_filenames: false
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.4.0"
+    hooks:
+      - id: check-yaml
+      - id: check-symlinks
+      - id: check-merge-conflict
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/ambv/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+        language_version: python3.9
+  - repo: https://github.com/pycqa/flake8
+    rev: "6.0.0"
+    hooks:
+      - id: flake8
+
