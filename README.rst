@@ -23,11 +23,11 @@
 .. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu?logo=pypi&color=blue
     :target: https://pypi.org/project/pyrfu/
 
-.. |ScrutinizerBuild| image:: https://img.shields.io/scrutinizer/build/g/louis-richard/irfu-python?logo=scrutinizer-ci
-    :target: https://scrutinizer-ci.com/g/louis-richard/irfu-python/
+.. |Flake8| image:: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml/badge.svg
+    :target: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml
 
-.. |ScrutinizerQuality| image:: https://img.shields.io/scrutinizer/quality/g/louis-richard/irfu-python?logo=scrutinizer-ci
-    :target: https://scrutinizer-ci.com/g/louis-richard/irfu-python/
+.. |PyLint| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
+    :target: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
 
 .. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
     :target: https://github.com/louis-richard/irfu-python/issues
