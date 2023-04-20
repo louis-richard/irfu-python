@@ -51,8 +51,8 @@ pyRFU
 =====
 .. start-marker-intro-do-not-remove
 
-|License| |Python| |PyPi| |Format| |Wheel| |Status| |Downloads| |ScrutinizerBuild|
-|ScrutinizerQuality| |Commits| |Issues| |Readthedocs| |Gitter| |Black|
+|License| |Python| |PyPi| |Format| |Wheel| |Status| |Downloads| |Flake8|
+|PyLint| |Commits| |Issues| |Readthedocs| |Gitter| |Black|
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
