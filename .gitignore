@@ -1,0 +1,12 @@
+docs/build/
+__pycache__
+*.pyc
+*~
+*.swp
+.coverage
+pyrfu.egg-info/
+build/
+
+# Added/ignored for workflow.
+# PyCharm uses .idea/
+.idea/
