@@ -86,8 +86,8 @@ def eis_pad(
 
     pa_file = np.zeros([len(time_), len(scopes)])
 
-    e_minu = inp_allt.energy.data + inp_allt.energy_dminus.data
-    e_plus = inp_allt.energy.data + inp_allt.energy_dplus.data
+    e_minu = inp_allt.energy.data + inp_allt.delta_energy_minus
+    e_plus = inp_allt.energy.data + inp_allt.delta_energy_plus
 
     cond_low = np.logical_and(e_minu >= energy[0], e_minu <= energy[1])
     cond_hig = np.logical_and(e_plus >= energy[0], e_plus <= energy[1])
