@@ -50,10 +50,7 @@ class TestPyrf(unittest.TestCase):
         e_xyz = pyrf.resample(self.e_xyz, self.b_xyz)
 
         self.assertTrue(
-            (
-                pyrf.resample(e_xyz, self.b_xyz).time.data
-                == self.b_xyz.time.data
-            ).all(),
+            (pyrf.resample(e_xyz, self.b_xyz).time.data == self.b_xyz.time.data).all(),
         )
 
 

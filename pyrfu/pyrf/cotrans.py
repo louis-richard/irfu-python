@@ -268,12 +268,12 @@ def cotrans(inp, flag, hapgood: bool = True):
         t_zero = day_start_epoch - mjd_ref_epoch
         t_zero /= 3600 * 24 * 36525.0
 
-        hours = (
-            time.astype("datetime64[h]") - time.astype("datetime64[D]")
-        ).astype(float)
-        minutes = (
-            time.astype("datetime64[m]") - time.astype("datetime64[h]")
-        ).astype(float)
+        hours = (time.astype("datetime64[h]") - time.astype("datetime64[D]")).astype(
+            float
+        )
+        minutes = (time.astype("datetime64[m]") - time.astype("datetime64[h]")).astype(
+            float
+        )
         seconds = 1e-9 * (
             time.astype("datetime64[ns]") - time.astype("datetime64[m]")
         ).astype(np.float64)

@@ -194,9 +194,7 @@ def _resample_dataset(inp, ref, **kwargs):
     r"""Resample for VDFs (xarray.Dataset)"""
     # Find time dependent zVariables and resample
     tdepnd_zvars = list(filter(lambda x: "time" in inp[x].dims, inp))
-    out_dict = {
-        k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars
-    }
+    out_dict = {k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars}
 
     # Complete the dictionary with non-time dependent zVaraiables
     ndepnd_zvars = list(filter(lambda x: x not in tdepnd_zvars, inp))
@@ -221,9 +219,7 @@ def _resample_dataset(inp, ref, **kwargs):
         # array_like attributes to time series to zVaraibles to avoid
         # confusion
         if attr.shape[0] == len(inp.time.data):
-            coords = [
-                np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)
-            ]
+            coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
             dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
             attr_ts = xr.DataArray(
                 attr,

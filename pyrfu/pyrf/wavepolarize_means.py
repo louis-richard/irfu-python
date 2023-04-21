@@ -160,22 +160,13 @@ def wavepolarize_means(
             1 - np.cos(2 * np.pi * np.arange(1, nop_fft + 1) / nop_fft)
         )
         temp_x = (
-            smooth
-            * xs[
-                ((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)
-            ]
+            smooth * xs[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
         )
         temp_y = (
-            smooth
-            * ys[
-                ((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)
-            ]
+            smooth * ys[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
         )
         temp_z = (
-            smooth
-            * zs[
-                ((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)
-            ]
+            smooth * zs[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
         )
 
         spec_x = np.fft.fft(temp_x)
@@ -202,8 +193,7 @@ def wavepolarize_means(
             for ir in range(3):
                 for ic in range(3):
                     e_spec_mat[k, ir, ic] = np.sum(
-                        aa[:n_bin]
-                        * spec_mat[(k - off_idx) : (k + off_idx), ir, ic],
+                        aa[:n_bin] * spec_mat[(k - off_idx) : (k + off_idx), ir, ic],
                     )
 
         # Calculation of the minimum variance direction and wave normal angle
@@ -224,19 +214,11 @@ def wavepolarize_means(
         # calc of square of smoothed spec matrix
         for ir in range(3):
             for ic in range(3):
-                sqrd_mat[:, ir, ic] = (
-                    e_spec_mat[:, ir, 0] * e_spec_mat[:, 0, ic]
-                )
-                sqrd_mat[:, ir, ic] += (
-                    e_spec_mat[:, ir, 1] * e_spec_mat[:, 1, ic]
-                )
-                sqrd_mat[:, ir, ic] += (
-                    e_spec_mat[:, ir, 2] * e_spec_mat[:, 2, ic]
-                )
+                sqrd_mat[:, ir, ic] = e_spec_mat[:, ir, 0] * e_spec_mat[:, 0, ic]
+                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 1] * e_spec_mat[:, 1, ic]
+                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 2] * e_spec_mat[:, 2, ic]
 
-        trace_sqrd_mat = (
-            sqrd_mat[:, 0, 0] + sqrd_mat[:, 1, 1] + sqrd_mat[:, 2, 2]
-        )
+        trace_sqrd_mat = sqrd_mat[:, 0, 0] + sqrd_mat[:, 1, 1] + sqrd_mat[:, 2, 2]
         trace_spec_mat[j, :] = (
             e_spec_mat[:, 0, 0] + e_spec_mat[:, 1, 1] + e_spec_mat[:, 2, 2]
         )
@@ -313,9 +295,7 @@ def wavepolarize_means(
             for xyz in range(3):
                 # HELICITY CALCULATION
                 upper = np.sum(
-                    2
-                    * np.real(lambda_u[k, xyz, :3])
-                    * (np.imag(lambda_u[k, xyz, :3])),
+                    2 * np.real(lambda_u[k, xyz, :3]) * (np.imag(lambda_u[k, xyz, :3])),
                 )
                 lower = np.sum(
                     (np.real(lambda_u[k, xyz, :3])) ** 2
@@ -325,13 +305,9 @@ def wavepolarize_means(
                 if upper[j, k] > 0:
                     gamma = np.arctan(upper[j, k] / lower[j, k])
                 else:
-                    gamma = np.pi + (
-                        np.pi + np.arctan(upper[j, k] / lower[j, k])
-                    )
+                    gamma = np.pi + (np.pi + np.arctan(upper[j, k] / lower[j, k]))
 
-                lambda_u[k, xyz, :] = (
-                    np.exp(-0.5 * gamma * 1j) * lambda_u[k, xyz, :]
-                )
+                lambda_u[k, xyz, :] = np.exp(-0.5 * gamma * 1j) * lambda_u[k, xyz, :]
                 helic[j, k, xyz] = np.sqrt(
                     np.sum(np.real(lambda_u[k, xyz, :3]) ** 2),
                 )
@@ -342,8 +318,7 @@ def wavepolarize_means(
 
                 # ELLIPTICITY CALCULATION
                 upper_e = np.sum(
-                    np.imag(lambda_u[k, xyz, :3])
-                    * np.real(lambda_u[k, xyz, :3]),
+                    np.imag(lambda_u[k, xyz, :3]) * np.real(lambda_u[k, xyz, :3]),
                 )
                 lower_e = np.sum(np.real(lambda_u[k, xyz, :2]) ** 2) - np.sum(
                     np.imag(lambda_u[k, xyz, :2]) ** 2,
@@ -389,9 +364,7 @@ def wavepolarize_means(
         1 / W * 2 * trace_spec_mat[:, 1 : nop_fft / 2 - 1] / bin_width
     )
     power_spec[:, 1] = 1 / W * trace_spec_mat[:, 0] / bin_width
-    power_spec[:, nop_fft / 2] = (
-        1 / W * trace_spec_mat[:, nop_fft / 2] / bin_width
-    )
+    power_spec[:, nop_fft / 2] = 1 / W * trace_spec_mat[:, nop_fft / 2] / bin_width
 
     # KICK OUT THE ANALYSIS OF THE WEAK SIGNALS
     wave_angle[power_spec < min_psd] = np.nan

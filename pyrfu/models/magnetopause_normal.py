@@ -130,10 +130,7 @@ def magnetopause_normal(
         min_dist = np.sqrt(min_val)
 
         # calculate the direction to the spacecraft normal to the magnetopause
-        x_n = (
-            r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.cos(theta_min)
-            - r1_x
-        )
+        x_n = r0 * (2 / (1 + np.cos(theta_min))) ** alpha * np.cos(theta_min) - r1_x
         phi = np.arctan2(r1_z, r1_y)
         y_n = (
             np.cos(phi)
@@ -149,10 +146,7 @@ def magnetopause_normal(
         n_vec = np.stack([x_n, y_n, z_n]) / min_dist
 
         # if statement to ensure normal is pointing away from Earth
-        if (
-            np.sqrt(r0_x**2 + r0_y**2)
-            > r0 * (2 / (1 + np.cos(theta_min))) ** alpha
-        ):
+        if np.sqrt(r0_x**2 + r0_y**2) > r0 * (2 / (1 + np.cos(theta_min))) ** alpha:
             n_vec *= -1
             min_dist *= -1
 
@@ -168,10 +162,7 @@ def magnetopause_normal(
 
         # Bow shock standoff distance
         rbs = r0 * (
-            1
-            + 1.1
-            * ((gamma - 1) * mach**2 + 2)
-            / ((gamma + 1) * (mach**2 - 1))
+            1 + 1.1 * ((gamma - 1) * mach**2 + 2) / ((gamma + 1) * (mach**2 - 1))
         )
 
         # y ^ 2 = 0 - Ax + Bx ^ 2
@@ -194,11 +185,7 @@ def magnetopause_normal(
         min_dist = np.sqrt(min_val)
 
         qyz = r1_y / r1_z
-        z_n = (
-            np.sign(r1_z)
-            * np.sign(x_n)
-            * np.sqrt((1 - x_n**2) / (1 + qyz**2))
-        )
+        z_n = np.sign(r1_z) * np.sign(x_n) * np.sqrt((1 - x_n**2) / (1 + qyz**2))
         y_n = z_n * qyz
 
         n_vec = np.stack([x_n, y_n, z_n])

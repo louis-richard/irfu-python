@@ -390,8 +390,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
         if xyz is None:
             print(
-                "convert_fac : assuming s/c position [1 0 0] for estimating "
-                "FAC",
+                "convert_fac : assuming s/c position [1 0 0] for estimating " "FAC",
             )
             xyz = [1, 0, 0]
             xyz = ts_vec_xyz(
@@ -435,8 +434,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
 
     if want_ee and e_xyz.shape[1] < 3 and not flag_de_dot_b0:
         raise ValueError(
-            "E must have all 3 components or flag de_dot_db=0 "
-            "must be given",
+            "E must have all 3 components or flag de_dot_db=0 " "must be given",
         )
 
     if len(delta_b) % 2:
@@ -759,10 +757,7 @@ def ebsp(e_xyz, delta_b, full_b, b_bgd, xyz, freq_int, **kwargs):
             for i in range(3):
                 for j in range(3):
                     s_mat[i, j, :] = (
-                        2
-                        * np.pi
-                        * (wb[:, i] * np.conj(wb[:, j]))
-                        / new_freq_mat
+                        2 * np.pi * (wb[:, i] * np.conj(wb[:, j])) / new_freq_mat
                     )
 
             s_mat = np.transpose(s_mat, [2, 0, 1])

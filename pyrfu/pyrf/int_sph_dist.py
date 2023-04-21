@@ -138,9 +138,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
 
     if projection_base == "pol":
         # Area or line element (primed)
-        d_a_grid = (
-            speed_grid ** (int(projection_dim[0]) - 1) * d_phi_grid * d_v_grid
-        )
+        d_a_grid = speed_grid ** (int(projection_dim[0]) - 1) * d_phi_grid * d_v_grid
         d_a_grid = d_a_grid.astype(np.float64)
 
         if projection_dim == "1d":
@@ -304,13 +302,7 @@ def mc_pol_1d(
                 if vdf[i][j][k] == 0.0:
                     continue
 
-                dtau_ijk = (
-                    v[i] ** 2
-                    * np.cos(theta[k])
-                    * d_v[i]
-                    * d_phi[j]
-                    * d_theta[k]
-                )
+                dtau_ijk = v[i] ** 2 * np.cos(theta[k]) * d_v[i] * d_phi[j] * d_theta[k]
                 c_ijk = dtau_ijk / n_mc_ijk
                 f_ijk = vdf[i, j, k]
 
@@ -332,29 +324,15 @@ def mc_pol_1d(
 
                     # Get velocities in primed coordinate system
                     # vxp = [vx, vy, vz] * xphat'; % all MC points
-                    v_x_p = (
-                        r_mat[0, 0] * v_x
-                        + r_mat[1, 0] * v_y
-                        + r_mat[2, 0] * v_z
-                    )
-                    v_y_p = (
-                        r_mat[0, 1] * v_x
-                        + r_mat[1, 1] * v_y
-                        + r_mat[2, 1] * v_z
-                    )
-                    v_z_p = (
-                        r_mat[0, 2] * v_x
-                        + r_mat[1, 2] * v_y
-                        + r_mat[2, 2] * v_z
-                    )
+                    v_x_p = r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
+                    v_y_p = r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
+                    v_z_p = r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
 
                     v_z_p = sqrt(pow(v_y_p, 2) + pow(v_z_p, 2))
                     alpha = asin(v_z_p / v_mc)
 
                     use_point = (v_z_p >= v_lim[0]) * (v_z_p < v_lim[1])
-                    use_point = (
-                        use_point * (alpha >= a_lim[0]) * (alpha < a_lim[1])
-                    )
+                    use_point = use_point * (alpha >= a_lim[0]) * (alpha < a_lim[1])
 
                     i_vxg = np.searchsorted(vg_edges[:-2], v_x_p)
                     d_a = d_a_grid[i_vxg]
@@ -438,9 +416,7 @@ def mc_cart_3d(
                 if vdf[i][j][k] == 0.0:
                     continue
 
-                dtau_ijk = (
-                    v[i] ** 2 * cos(theta[k]) * d_v[i] * d_phi[j] * d_theta[k]
-                )
+                dtau_ijk = v[i] ** 2 * cos(theta[k]) * d_v[i] * d_phi[j] * d_theta[k]
                 c_ijk = dtau_ijk / n_mc_ijk
                 f_ijk = vdf[i, j, k]
 
@@ -460,29 +436,15 @@ def mc_cart_3d(
 
                     # Get velocities in primed coordinate system
                     # vxp = [vx, vy, vz] * xphat'; % all MC points
-                    v_x_p = (
-                        r_mat[0, 0] * v_x
-                        + r_mat[1, 0] * v_y
-                        + r_mat[2, 0] * v_z
-                    )
-                    v_y_p = (
-                        r_mat[0, 1] * v_x
-                        + r_mat[1, 1] * v_y
-                        + r_mat[2, 1] * v_z
-                    )
-                    v_z_p = (
-                        r_mat[0, 2] * v_x
-                        + r_mat[1, 2] * v_y
-                        + r_mat[2, 2] * v_z
-                    )
+                    v_x_p = r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
+                    v_y_p = r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
+                    v_z_p = r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
                     # velocity within [-dVm, +dVp]
 
                     alpha = asin(v_z_p / v_mc)
 
                     use_point = v_z_p >= v_lim[0] * v_z_p < v_lim[1]
-                    use_point = (
-                        use_point * alpha >= a_lim[0] * alpha < a_lim[1]
-                    )
+                    use_point = use_point * alpha >= a_lim[0] * alpha < a_lim[1]
 
                     i_vxg = np.searchsorted(vg_edges[:-2], v_x_p)
                     i_vyg = np.searchsorted(vg_edges[:-2], v_y_p)
@@ -568,9 +530,7 @@ def mc_cart_2d(
                 if vdf[i][j][k] == 0.0:
                     continue
 
-                dtau_ijk = (
-                    v[i] ** 2 * cos(theta[k]) * d_v[i] * d_phi[j] * d_theta[k]
-                )
+                dtau_ijk = v[i] ** 2 * cos(theta[k]) * d_v[i] * d_phi[j] * d_theta[k]
                 c_ijk = dtau_ijk / n_mc_ijk
                 f_ijk = vdf[i, j, k]
 
@@ -590,29 +550,15 @@ def mc_cart_2d(
 
                     # Get velocities in primed coordinate system
                     # vxp = [vx, vy, vz] * xphat'; % all MC points
-                    v_x_p = (
-                        r_mat[0, 0] * v_x
-                        + r_mat[1, 0] * v_y
-                        + r_mat[2, 0] * v_z
-                    )
-                    v_y_p = (
-                        r_mat[0, 1] * v_x
-                        + r_mat[1, 1] * v_y
-                        + r_mat[2, 1] * v_z
-                    )
-                    v_z_p = (
-                        r_mat[0, 2] * v_x
-                        + r_mat[1, 2] * v_y
-                        + r_mat[2, 2] * v_z
-                    )
+                    v_x_p = r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
+                    v_y_p = r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
+                    v_z_p = r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
                     # velocity within [-dVm, +dVp]
 
                     alpha = asin(v_z_p / v_mc)
 
                     use_point = v_z_p >= v_lim[0] * v_z_p < v_lim[1]
-                    use_point = (
-                        use_point * alpha >= a_lim[0] * alpha < a_lim[1]
-                    )
+                    use_point = use_point * alpha >= a_lim[0] * alpha < a_lim[1]
 
                     i_vxg = np.searchsorted(vg_edges, v_x_p)
                     i_vyg = np.searchsorted(vg_edges, v_y_p)

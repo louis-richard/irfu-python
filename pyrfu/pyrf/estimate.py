@@ -31,8 +31,7 @@ def _estimate_capa_wire(radius, length):
         out *= 2 * np.pi * constants.epsilon_0
     else:
         raise ValueError(
-            "capacitance_wire requires length at least 10 times "
-            "the radius!",
+            "capacitance_wire requires length at least 10 times " "the radius!",
         )
     return out
 

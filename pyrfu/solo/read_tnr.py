@@ -207,9 +207,7 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
 
         timet_ = cdfepoch.to_datetime(epoch_, to_np=True)
 
-        sens0_, sens1_ = [
-            np.where(confg_[:, i] == sensor)[0] for i in range(2)
-        ]
+        sens0_, sens1_ = [np.where(confg_[:, i] == sensor)[0] for i in range(2)]
 
         if sens0_.size and sens1_.size:
             auto_calib = np.vstack([auto1_[sens0_, :], auto2_[sens1_, :]])

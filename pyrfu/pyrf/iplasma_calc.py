@@ -61,8 +61,7 @@ def _print_other(n_d, eta, p_mag):
     print("\nOther parameters: ")
     print("*" * 17)
     print(
-        f"{'N_deb':>5} = {n_d:>6.2E} {'':<6} "
-        f"# number of particle in Debye sphere",
+        f"{'N_deb':>5} = {n_d:>6.2E} {'':<6} " f"# number of particle in Debye sphere",
     )
     print(f"{'eta':>5} = {eta:>6.2E} {'Ohm m':<6} # Spitzer resistivity")
     print(f"{'P_B':>5} = {p_mag:>6.2E} {'Pa':<6} # Magnetic pressure")

@@ -67,9 +67,7 @@ def time_clip(inp, tint):
             # dependent array_like attributes to time series to zVaraibles to
             # avoid confusion
             if attr.shape[0] == len(inp.time.data):
-                coords = [
-                    np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)
-                ]
+                coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
                 dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
                 attr_ts = xr.DataArray(
                     attr,

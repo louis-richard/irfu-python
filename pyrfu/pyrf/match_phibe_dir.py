@@ -141,8 +141,7 @@ def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
         # Get correlation
         corr_ = signal.correlate(int_e_dt[:, k], b_z[:, 1], mode="valid")
         scale = np.sqrt(
-            np.dot(int_e_dt[:, k], int_e_dt[:, k])
-            * np.dot(b_z[:, 1], b_z[:, 1]),
+            np.dot(int_e_dt[:, k], int_e_dt[:, k]) * np.dot(b_z[:, 1], b_z[:, 1]),
         )
         corr_vec[k] = corr_ / scale
 

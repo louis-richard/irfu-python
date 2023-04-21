@@ -56,9 +56,7 @@ def igrf(time, flag):
     year_ref = year_ref.astype("datetime64[Y]")
     year_ref = year_ref.astype(np.int64) + 1970
     year_ref_unix = (year_ref - 1970).astype("datetime64[Y]")
-    year_ref_unix = (
-        year_ref_unix.astype("datetime64[ns]").astype(np.int64) / 1e9
-    )
+    year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(np.int64) / 1e9
 
     if np.min(year_ref) < np.min(years_igrf):
         message = (

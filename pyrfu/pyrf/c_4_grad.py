@@ -132,9 +132,7 @@ def c_4_grad(r_list, b_list, method: str = "grad"):
         grad_b = np.zeros((len(b_dict["1"]), 3, 3))
 
         for i, j, i_sc in itertools.product(range(3), range(3), mms_list):
-            grad_b[:, j, i] += (
-                k_dict[i_sc][:, i].data * b_dict[i_sc][:, j].data
-            )
+            grad_b[:, j, i] += k_dict[i_sc][:, i].data * b_dict[i_sc][:, j].data
 
     # Gradient
     if method.lower() == "grad":

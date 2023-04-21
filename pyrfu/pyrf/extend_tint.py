@@ -52,12 +52,8 @@ def extend_tint(tint, ext: list = None):
 
     # Make sure tint and ext are 2 elements array_like
     message = "must be array_like with 2 elements"
-    assert (
-        isinstance(tint, (np.ndarray, list)) and len(tint) == 2
-    ), f"tint {message}"
-    assert (
-        isinstance(ext, (np.ndarray, list)) and len(ext) == 2
-    ), f"ext {message}"
+    assert isinstance(tint, (np.ndarray, list)) and len(tint) == 2, f"tint {message}"
+    assert isinstance(ext, (np.ndarray, list)) and len(ext) == 2, f"ext {message}"
 
     # Convert extension to timedelta64[ns]
     ext = np.array(ext) * 1e9

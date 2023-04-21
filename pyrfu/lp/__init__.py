@@ -159,8 +159,7 @@ class LangmuirProbe:
                 )
             else:
                 raise ValueError(
-                    "estimate of capacitance for cylinder "
-                    "requires length > radius",
+                    "estimate of capacitance for cylinder " "requires length > radius",
                 )
 
         self.capacitance = np.sum([c_sphere, c_wire])

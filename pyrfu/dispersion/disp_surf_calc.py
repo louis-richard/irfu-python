@@ -17,11 +17,7 @@ __status__ = "Prototype"
 
 def _calc_diel(kc_, w_final, theta_, wp_e, wp_i, wc_i):
     # The elements of the dielectric tensor, using Swansons notation
-    diel_s = (
-        1
-        - wp_e**2 / (w_final**2 - 1)
-        - wp_i**2 / (w_final**2 - wc_i**2)
-    )
+    diel_s = 1 - wp_e**2 / (w_final**2 - 1) - wp_i**2 / (w_final**2 - wc_i**2)
     diel_d = -(wp_e**2) / (w_final * (w_final**2 - 1))
     diel_d += wc_i * wp_i**2 / (w_final * (w_final**2 - wc_i**2))
     diel_p = 1 - (wp_e**2 + wp_i**2) / w_final**2
@@ -171,20 +167,14 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     pol_koeff_6 += kc_**4 + (wp_**2 + wc_i) ** 2
     pol_koeff_4 = -(kc_**4) * (1 + wc_i**2 + wp_**2)
     pol_koeff_4 -= 2 * kc_**2 * (wp_**2 + wc_i) ** 2
-    pol_koeff_4 -= (
-        (kc_ * wp_) ** 2 * (1 + wc_i**2 - wc_i) * (1 + np.cos(theta_) ** 2)
-    )
+    pol_koeff_4 -= (kc_ * wp_) ** 2 * (1 + wc_i**2 - wc_i) * (1 + np.cos(theta_) ** 2)
     pol_koeff_4 -= wp_**2 * (wp_**2 + wc_i) ** 2
     pol_koeff_2 = kc_**4 * (
         wp_**2 * (1 + wc_i**2 - wc_i) * np.cos(theta_) ** 2
         + wc_i * (wp_**2 + wc_i)
     )
     pol_koeff_2 += (
-        kc_**2
-        * wp_**2
-        * wc_i
-        * (wp_**2 + wc_i)
-        * (1 + np.cos(theta_) ** 2)
+        kc_**2 * wp_**2 * wc_i * (wp_**2 + wc_i) * (1 + np.cos(theta_) ** 2)
     )
     pol_koeff_0 = -(kc_**4) * wc_i**2 * wp_**2 * np.cos(theta_) ** 2
 

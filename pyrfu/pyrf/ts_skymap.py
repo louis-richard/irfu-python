@@ -57,11 +57,7 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
     glob_attrs = kwargs.get("glob_attrs", {})
 
     if energy is None:
-        assert (
-            energy0 is not None
-            and energy1 is not None
-            and esteptable is not None
-        )
+        assert energy0 is not None and energy1 is not None and esteptable is not None
 
         energy = np.tile(energy0, (len(esteptable), 1))
 

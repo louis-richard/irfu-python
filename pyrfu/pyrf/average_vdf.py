@@ -32,9 +32,7 @@ def average_vdf(vdf, n_pts):
 
     """
 
-    assert (
-        n_pts % 2 != 0
-    ), "The number of distributions to be averaged must be an odd"
+    assert n_pts % 2 != 0, "The number of distributions to be averaged must be an odd"
 
     assert np.median(vdf.energy.data[0, :] - vdf.energy.data[0, :]) == 0
 
@@ -68,14 +66,10 @@ def average_vdf(vdf, n_pts):
     # Attributes
     glob_attrs = vdf.attrs  # Global attributes
     vdf_attrs = vdf.data.attrs  # VDF attributes
-    coords_attrs = {
-        k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]
-    }
+    coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
 
     # Get delta energy in global attributes for selected timestamps
-    glob_attrs["delta_energy_minus"] = glob_attrs["delta_energy_minus"][
-        avg_inds
-    ]
+    glob_attrs["delta_energy_minus"] = glob_attrs["delta_energy_minus"][avg_inds]
     glob_attrs["delta_energy_plus"] = glob_attrs["delta_energy_plus"][avg_inds]
 
     glob_attrs["esteptable"] = glob_attrs["esteptable"][: len(avg_inds)]
