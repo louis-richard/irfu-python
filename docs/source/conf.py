@@ -7,6 +7,7 @@
 # Built-in imports
 import os
 import sys
+import shutil
 
 # 3rd party imports
 import pydata_sphinx_theme
@@ -20,7 +21,7 @@ import pydata_sphinx_theme
 # import os
 # import sys
 # sys.path.insert(0, "/Users/louisr/Documents/PhD/irfu-python/pyrfu")
-"""
+
 examples_source = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "examples"),
 )
@@ -28,9 +29,9 @@ examples_dest = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "examples"),
 )
 
-
+"""
 def setup(app):
-    sphinxcontrib.apidoc.main(
+    sphinxcontrib.apidoc.setup(
         [
             "-f",  # Overwrite existing files
             "-T",  # Create table of contents
@@ -61,6 +62,22 @@ for root, dirs, files in os.walk(examples_source):
             shutil.copyfile(source_filename, dest_filename)
 
 """
+
+
+if os.path.exists(examples_dest):
+    shutil.rmtree(examples_dest)
+os.mkdir(examples_dest)
+
+for root, dirs, files in os.walk(examples_source):
+    for dr in dirs:
+        os.mkdir(os.path.join(root.replace(examples_source, examples_dest), dr))
+    for fil in files:
+        if os.path.splitext(fil)[1] in [".ipynb", ".md", ".rst"]:
+            source_filename = os.path.join(root, fil)
+            dest_filename = source_filename.replace(examples_source, examples_dest)
+            shutil.copyfile(source_filename, dest_filename)
+
+
 sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
