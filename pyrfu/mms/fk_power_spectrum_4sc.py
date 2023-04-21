@@ -162,12 +162,8 @@ def fk_power_spectrum_4sc(
 
     r = [resample(r[i], av_times) for i in range(4)]
 
-    cx12, cx13, cx14 = [
-        np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)
-    ]
-    cx23, cx24, cx34 = [
-        np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)
-    ]
+    cx12, cx13, cx14 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
+    cx23, cx24, cx34 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
 
     power_avg = np.zeros((n + 1, num_f), dtype="complex128")
 
@@ -266,9 +262,7 @@ def fk_power_spectrum_4sc(
     b_avg_abs = np.linalg.norm(b_avg, axis=1)
     b_avg_abs_mat = np.tile(b_avg_abs, (num_f, 1)).T
 
-    k_par = (
-        k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat
-    ) / b_avg_abs_mat
+    k_par = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
     k_perp = np.sqrt(k_mag**2 - k_par**2)
 
     k_max = np.max(k_mag) * 1.1
@@ -281,9 +275,7 @@ def fk_power_spectrum_4sc(
 
     # Sort power into frequency and wave vector
     print("notice : Computing power versus kx,f; ky,f, kz,f")
-    power_k_x_f, power_k_y_f, power_k_z_f = [
-        np.zeros((num_f, num_k)) for _ in range(3)
-    ]
+    power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
     power_k_mag_f = np.zeros((num_f, num_k))
 
     for nn in range(num_f):

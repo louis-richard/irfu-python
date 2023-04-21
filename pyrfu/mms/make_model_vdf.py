@@ -95,9 +95,7 @@ def make_model_vdf(
 
     # Check that VDF and moments have the same timeline
     message = "VDF and moments have different times."
-    assert (
-        np.abs(np.median(np.diff(vdf.time.data - n_s.time.data))) == 0
-    ), message
+    assert np.abs(np.median(np.diff(vdf.time.data - n_s.time.data))) == 0, message
 
     # Resample b_xyz and sc_pot to particle data resolution
     b_xyz, sc_pot = [resample(b_xyz, n_s), resample(sc_pot, n_s)]

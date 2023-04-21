@@ -69,9 +69,9 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
     )
     n2 /= 2 * (ss * np.sin(theta_k) ** 2 + pp * np.cos(theta_k) ** 2)
 
-    e_temp1 = (pp - n2 * np.sin(theta_k) ** 2) ** 2.0 * (
-        (dd / (ss - n2)) ** 2 + 1
-    ) + (n2 * np.cos(theta_k) * np.sin(theta_k)) ** 2
+    e_temp1 = (pp - n2 * np.sin(theta_k) ** 2) ** 2.0 * ((dd / (ss - n2)) ** 2 + 1) + (
+        n2 * np.cos(theta_k) * np.sin(theta_k)
+    ) ** 2
     e_temp2 = (dd / (ss - n2)) ** 2 * (
         pp - n2 * np.sin(theta_k) ** 2
     ) ** 2 + pp**2 * np.cos(theta_k) ** 2

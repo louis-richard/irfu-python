@@ -156,10 +156,7 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     epsilon = np.nansum(
         np.nansum(
             np.nansum(
-                m_mat
-                * vdf_diff[:, int_energies, ...]
-                * v_mat**2
-                * delta_v_mat,
+                m_mat * vdf_diff[:, int_energies, ...] * v_mat**2 * delta_v_mat,
                 axis=-1,
             ),
             axis=-1,

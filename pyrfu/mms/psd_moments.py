@@ -79,8 +79,7 @@ def _moms(time_idx, arguments):
         np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass),
     )
     velocity[
-        energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron
-        < 0
+        energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron < 0
     ] = 0
 
     if is_brst_data:

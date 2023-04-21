@@ -90,10 +90,7 @@ def feeps_active_eyes(var, tint, mms_id):
         start_day = tint[0].astype("<M8[D]")
 
     # srvy mode, after 16 August 2017
-    if (
-        start_day >= np.datetime64("2017-08-16")
-        and var["tmmode"].lower() == "srvy"
-    ):
+    if start_day >= np.datetime64("2017-08-16") and var["tmmode"].lower() == "srvy":
         active_table = {
             "1-electron": {},
             "1-ion": {},

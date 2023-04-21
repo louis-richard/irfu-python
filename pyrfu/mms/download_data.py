@@ -61,9 +61,7 @@ def _construct_url(tint, mms_id, var):
     end_date = (tint[1] - timedelta(seconds=1)).strftime("%Y-%m-%d-%H-%M-%S")
 
     url = f"{LASP}/file_info/science"
-    url = (
-        f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
-    )
+    url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
 
     url = f"{url}&instrument_id={var['inst']}"
     url = f"{url}&data_rate_mode={var['tmmode']}"

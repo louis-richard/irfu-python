@@ -55,10 +55,7 @@ def _shift_epochs(file, epoch):
         flags_vars = [1e3, 1e3]  # Time scaling conversion flags
 
         for i, delta_var in enumerate(delta_vars):
-            if (
-                isinstance(delta_var["attrs"], dict)
-                and "UNITS" in delta_var["attrs"]
-            ):
+            if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
                 if delta_var["attrs"]["UNITS"].lower() == "s":
                     flags_vars[i] = 1e3
                 elif delta_var["attrs"]["UNITS"].lower() == "ms":
@@ -68,20 +65,17 @@ def _shift_epochs(file, epoch):
                     warnings.warn(message)
             else:
                 message = (
-                    "Epoch_plus_var/Epoch_minus_var units are not "
-                    "clear, assume s"
+                    "Epoch_plus_var/Epoch_minus_var units are not " "clear, assume s"
                 )
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars
         t_offset = (
-            delta_plus_var["data"] * flag_plus
-            - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
         )
         t_offset = np.timedelta64(int(np.round(t_offset, 1) * 1e6 / 2), "ns")
         t_diff = (
-            delta_plus_var["data"] * flag_plus
-            - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
         )
         t_diff = np.timedelta64(int(np.round(t_diff, 1) * 1e6 / 2), "ns")
         t_diff_data = np.median(np.diff(epoch["data"])) / 2
@@ -178,9 +172,7 @@ def get_dist(file_path, cdf_name, tint):
 
         # Get coordinates attributes
         coords_names = ["time", "phi", "theta", "energy"]
-        coords_attrs = {
-            n: file.varattsget(k) for n, k in zip(coords_names, dpnd_keys)
-        }
+        coords_attrs = {n: file.varattsget(k) for n, k in zip(coords_names, dpnd_keys)}
 
         times = _get_epochs(file, cdf_name, tint)
 

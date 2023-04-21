@@ -150,9 +150,7 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase):
     theta_pb = [None] * 4
 
     for i in [0, 2]:
-        theta_pb[i] = (
-            r_p[i][:, 0] * b_xyz.data[:, 0] + r_p[i][:, 1] * b_xyz.data[:, 1]
-        )
+        theta_pb[i] = r_p[i][:, 0] * b_xyz.data[:, 0] + r_p[i][:, 1] * b_xyz.data[:, 1]
         theta_pb[i] /= np.sqrt(r_p[i][:, 0] ** 2 + r_p[i][:, 1] ** 2)
         theta_pb[i] /= np.sqrt(b_xyz[:, 0] ** 2 + b_xyz[:, 1] ** 2)
         theta_pb[i] = np.arccos(abs(theta_pb[i])) * 180 / np.pi

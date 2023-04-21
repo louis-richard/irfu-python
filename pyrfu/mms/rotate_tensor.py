@@ -145,9 +145,7 @@ def rotate_tensor(*args):
             r_y /= np.linalg.norm(r_y, keepdims=True)
 
         elif len(vectors) == 3:
-            r_x, r_y, r_z = [
-                r / np.linalg.norm(r, keepdims=True) for r in vectors
-            ]
+            r_x, r_y, r_z = [r / np.linalg.norm(r, keepdims=True) for r in vectors]
 
         else:
             raise TypeError("Vector format not recognized.")
@@ -171,8 +169,7 @@ def rotate_tensor(*args):
 
     if ppeq:
         thetas = 0.5 * np.arctan(
-            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1])
-            / (2 * p_tensor_p[:, 1, 2]),
+            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
         )
 
         for i, theta in enumerate(thetas):
@@ -194,8 +191,7 @@ def rotate_tensor(*args):
 
     if qqeq:
         thetas = 0.5 * np.arctan(
-            (2 * p_tensor_p[:, 1, 2])
-            / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
+            (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
         )
 
         for i, theta in enumerate(thetas):

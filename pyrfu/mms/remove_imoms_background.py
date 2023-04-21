@@ -73,12 +73,8 @@ def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
         p_gse_i_new[:, i, j] += p_gse_i.data[:, i, j]
 
         # TODO : use * instead of np.multiply??
-        p_gse_i_new[:, i, j] += (
-            m_p * n_old * np.multiply(v_old[:, i], v_old[:, j])
-        )
-        p_gse_i_new[:, i, j] -= (
-            m_p * n_new * np.multiply(v_new[:, i], v_new[:, j])
-        )
+        p_gse_i_new[:, i, j] += m_p * n_old * np.multiply(v_old[:, i], v_old[:, j])
+        p_gse_i_new[:, i, j] -= m_p * n_new * np.multiply(v_new[:, i], v_new[:, j])
 
     # Remove isotropic background pressure
     p_bkg_mat = np.tile(np.eye(3, 3), (len(p_bg_i.data), 1, 1))

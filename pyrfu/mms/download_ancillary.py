@@ -55,9 +55,7 @@ def _construct_url(tint, mms_id, product):
     end_date = (tint[1] + timedelta(days=1)).strftime("%Y-%m-%d")
 
     url = f"{LASP}/file_info/ancillary"
-    url = (
-        f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
-    )
+    url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
 
     url = f"{url}&product={product}"
 

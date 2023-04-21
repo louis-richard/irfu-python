@@ -45,10 +45,7 @@ def _shift_epochs(file, epoch):
         flags_vars = [1e3, 1e3]  # Time scaling conversion flags
 
         for i, delta_var in enumerate(delta_vars):
-            if (
-                isinstance(delta_var["attrs"], dict)
-                and "UNITS" in delta_var["attrs"]
-            ):
+            if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
                 if delta_var["attrs"]["UNITS"].lower() == "s":
                     flags_vars[i] = 1e3
                 elif delta_var["attrs"]["UNITS"].lower() == "ms":
@@ -58,20 +55,17 @@ def _shift_epochs(file, epoch):
                     warnings.warn(message)
             else:
                 message = (
-                    "Epoch_plus_var/Epoch_minus_var units are not "
-                    "clear, assume s"
+                    "Epoch_plus_var/Epoch_minus_var units are not " "clear, assume s"
                 )
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars
         t_offset = (
-            delta_plus_var["data"] * flag_plus
-            - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
         )
         t_offset = np.timedelta64(int(np.round(t_offset, 1) * 1e6 / 2), "ns")
         t_diff = (
-            delta_plus_var["data"] * flag_plus
-            - delta_minus_var["data"] * flag_minus
+            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
         )
         t_diff = np.timedelta64(int(np.round(t_diff, 1) * 1e6 / 2), "ns")
         t_diff_data = np.median(np.diff(epoch["data"])) / 2
@@ -229,14 +223,9 @@ def get_ts(file_path, cdf_name, tint):
         var_attrs = file.varattsget(cdf_name)
         glb_attrs = file.globalattsget()
         out_dict["attrs"] = {"GLOBAL": glb_attrs, **var_attrs}
-        out_dict["attrs"] = {
-            k: out_dict["attrs"][k] for k in sorted(out_dict["attrs"])
-        }
+        out_dict["attrs"] = {k: out_dict["attrs"][k] for k in sorted(out_dict["attrs"])}
 
-        assert (
-            "DEPEND_0" in var_attrs
-            and "epoch" in var_attrs["DEPEND_0"].lower()
-        )
+        assert "DEPEND_0" in var_attrs and "epoch" in var_attrs["DEPEND_0"].lower()
 
         time = _get_epochs(file, cdf_name, tint)
 
@@ -276,9 +265,9 @@ def get_ts(file_path, cdf_name, tint):
             depend_1["data"] = file.varget(depend_1_key)
             depend_1["attrs"] = file.varattsget(depend_1_key)
 
-            depend_1["attrs"]["LABLAXIS"] = depend_1["attrs"][
-                "LABLAXIS"
-            ].replace(" ", "_")
+            depend_1["attrs"]["LABLAXIS"] = depend_1["attrs"]["LABLAXIS"].replace(
+                " ", "_"
+            )
 
         if "edp_dce_sensor" in cdf_name:
             depend_1["data"] = ["x", "y", "z"]

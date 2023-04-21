@@ -142,9 +142,7 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     # Construct the new VDFs
     glob_attrs = vdf.attrs
     vdf_attrs = vdf.data.attrs
-    coords_attrs = {
-        k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]
-    }
+    coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
 
     vdf_new = ts_skymap(
         vdf.time.data,

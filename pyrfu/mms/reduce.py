@@ -184,9 +184,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         # below the threshold energy or below the spacecraft potential if
         # provided.
         thresh_e = np.max([lower_e_lim[i_t], sc_pot[i_t]])
-        e_min_idx = np.where(energy - delta_energy_minu[i_t, :] > thresh_e)[0][
-            0
-        ]
+        e_min_idx = np.where(energy - delta_energy_minu[i_t, :] > thresh_e)[0][0]
         f_3d[:e_min_idx] = 0.0
 
         # Correct energy shift due to spacecraft potential
@@ -241,9 +239,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         f_g[i_t, ...] = tmpst["f"]
 
         for i in range(n_pr):
-            all_v[f"v{chr(120 + i)}"][i_t, :] = (
-                tmpst[f"v{chr(120 + i)}"] / 1e3
-            )  # km/s
+            all_v[f"v{chr(120 + i)}"][i_t, :] = tmpst[f"v{chr(120 + i)}"] / 1e3  # km/s
 
     # Build output as a time series with dimensions:
     #   - (time x vx) for 1D reduced distribution

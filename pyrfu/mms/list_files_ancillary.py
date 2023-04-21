@@ -105,9 +105,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     files = glob.glob(os.sep.join([dir_pattern, file_pattern]))
 
     # find the files within the time interval
-    fname_fmt = (
-        f"MMS{mms_id}_{product.upper()}_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
-    )
+    fname_fmt = f"MMS{mms_id}_{product.upper()}_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
 
     if os.name == "nt":
         full_path = os.sep.join([re.escape(dir_pattern) + os.sep, fname_fmt])

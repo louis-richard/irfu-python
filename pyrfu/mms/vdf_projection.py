@@ -12,6 +12,7 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
+from .psd_rebin import psd_rebin
 from ..pyrf.iso86012datetime64 import iso86012datetime64
 from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_scalar import ts_scalar
@@ -343,15 +344,11 @@ def vdf_projection(
     r_en = speed_table
     v_x = np.matmul(
         r_en[:, None],
-        np.cos(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[
-            None, :
-        ],
+        np.cos(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[None, :],
     )
     v_y = np.matmul(
         r_en[:, None],
-        np.sin(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[
-            None, :
-        ],
+        np.sin(np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1) + np.pi)[None, :],
     )
 
     f_mat[f_mat <= 0] = np.nan

@@ -47,9 +47,7 @@ def remove_idist_background(vdf, def_bg):
 
     # Convert differential energy flux (cm^2 s sr)^{-1} of the background
     # population (penetrating radiations) to phase-space density (s^3 m^{-6})
-    coeff = constants.proton_mass / (
-        constants.elementary_charge * vdf.energy.data
-    )
+    coeff = constants.proton_mass / (constants.elementary_charge * vdf.energy.data)
     vdf_bg = def_bg_tmp.copy() * 1e4 / 2
     vdf_bg *= coeff**2
     vdf_bg /= 1e12

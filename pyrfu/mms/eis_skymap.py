@@ -50,9 +50,7 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
         ),
     )
     attrs = {k: inp_ang_ang.attrs[k] for k in a}
-    coords_attrs = {
-        k: inp_ang_ang[k].attrs for k in ["time", "energy", "phi", "theta"]
-    }
+    coords_attrs = {k: inp_ang_ang[k].attrs for k in ["time", "energy", "phi", "theta"]}
 
     glob_attrs = inp_ang_ang.attrs["GLOBAL"]
     glob_attrs = {

@@ -57,9 +57,7 @@ def _check_time(proton_phxtof, proton_extof):
             extof_data = proton_extof.data
 
     elif data_size[0] > data_size[1]:
-        cond = (
-            proton_phxtof.time.data[: data_size[1]] != proton_extof.time.data
-        )
+        cond = proton_phxtof.time.data[: data_size[1]] != proton_extof.time.data
         bad_inds = np.where(cond)[0]
 
         if bad_inds.size:
@@ -92,9 +90,7 @@ def _check_time(proton_phxtof, proton_extof):
             extof_data = proton_extof.data
 
     elif data_size[0] < data_size[1]:
-        cond = (
-            proton_phxtof.time.data != proton_extof.time.data[: data_size[0]]
-        )
+        cond = proton_phxtof.time.data != proton_extof.time.data[: data_size[0]]
         bad_inds = np.where(cond)[0]
 
         if bad_inds.size:
@@ -258,9 +254,7 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         n_en = n_phxtof + n_phxtof_cross + n_extof
 
         energy_combined = np.zeros(n_en)
-        energy_combined_low, energy_combined_hig = [
-            np.zeros(n_en) for _ in range(2)
-        ]
+        energy_combined_low, energy_combined_hig = [np.zeros(n_en) for _ in range(2)]
 
         data_combined = np.zeros((len(time_data), n_en))
         data_combined[:, :n_phxtof] = phxtof_data[:, idx_phxtof]
