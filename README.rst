@@ -1,55 +1,53 @@
-
-.. |Logo| image:: docs/source/_static/logo-pyrfu.png
-    :target: https://pypi.org/project/pyrfu/
-
-.. |License| image:: https://img.shields.io/pypi/l/pyrfu
-    :target: https://opensource.org/licenses/MIT
-
-.. |Python| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python
-    :target: https://pypi.org/project/pyrfu/
-
-.. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=pypi
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Format| image:: https://img.shields.io/pypi/format/pyrfu?color=blue&logo=pypi
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Wheel| image:: https://img.shields.io/pypi/wheel/pyrfu?logo=pypi&color=blue
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Status| image:: https://img.shields.io/pypi/status/pyrfu?logo=pypi&color=blue
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu?logo=pypi&color=blue
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Flake8| image:: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml/badge.svg
-    :target: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml
-
-.. |PyLint| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
-    :target: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
-
-.. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
-    :target: https://github.com/louis-richard/irfu-python/issues
-
-.. |Commits| image:: https://img.shields.io/github/last-commit/louis-richard/irfu-python?logo=github&color=9cf
-    :target: https://github.com/louis-richard/irfu-python/commits/master
-
-.. |Readthedocs| image:: https://img.shields.io/readthedocs/pyrfu?logo=read-the-docs&color=blueviolet
-    :target: https://pyrfu.readthedocs.io/en/latest/
-
-.. |Gitter| image:: https://img.shields.io/gitter/room/louis-richard/pyrfu?logo=gitter&color=orange
-    :target: https://gitter.im/pyrfu
-
-.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://github.com/psf/black
+.. -*- mode: rst -*-
 
 pyRFU
 =====
+
 .. start-marker-intro-do-not-remove
 
-|License| |Python| |PyPi| |Format| |Wheel| |Status| |Downloads| |Flake8|
-|PyLint| |Commits| |Issues| |Readthedocs| |Gitter| |Black|
+.. |License| image:: https://img.shields.io/pypi/l/pyrfu
+.. _License: https://opensource.org/licenses/MIT
+
+.. |Python| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python
+.. _Python: https://pypi.org/project/pyrfu/
+
+.. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=pypi
+.. _PyPi: https://pypi.org/project/pyrfu/
+
+.. |Format| image:: https://img.shields.io/pypi/format/pyrfu?color=blue&logo=pypi
+.. _Format: https://pypi.org/project/pyrfu/
+
+.. |Wheel| image:: https://img.shields.io/pypi/wheel/pyrfu?logo=pypi&color=blue
+.. _Wheel: https://pypi.org/project/pyrfu/
+
+.. |Status| image:: https://img.shields.io/pypi/status/pyrfu?logo=pypi&color=blue
+.. _Status: https://pypi.org/project/pyrfu/
+
+.. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu?logo=pypi&color=blue
+.. _Downloads: https://pypi.org/project/pyrfu/
+
+.. |Flake8| image:: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml/badge.svg
+.. _Flake8: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml
+
+.. |PyLint| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
+.. _PyLint: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
+
+.. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
+.. _Issues: https://github.com/louis-richard/irfu-python/issues
+
+.. |Commits| image:: https://img.shields.io/github/last-commit/louis-richard/irfu-python?logo=github&color=9cf
+.. _Commits: https://github.com/louis-richard/irfu-python/commits/master
+
+.. |Readthedocs| image:: https://img.shields.io/readthedocs/pyrfu?logo=read-the-docs&color=blueviolet
+.. _Readthedocs: https://pyrfu.readthedocs.io/en/latest/
+
+.. |Gitter| image:: https://img.shields.io/gitter/room/louis-richard/pyrfu?logo=gitter&color=orange
+.. _Gitter: https://gitter.im/pyrfu
+
+.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+.. _Black: https://github.com/psf/black
+
+|License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |Flake8|_ |PyLint|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
