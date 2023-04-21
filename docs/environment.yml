@@ -1,18 +1,21 @@
-name: pyrfu_ci
+name: pyrfu-docs
 channels:
-- conda-forge
-- defaults
+  - conda-forge
 dependencies:
-- cdflib
-- ipykernel
-- ipython
-- matplotlib
-- nbsphinx
-- numpy
-- pandas
-- pydata-sphinx-theme
-- scipy
-- sphinx
-- sphinxcontrib-apidoc
-- sphinx_rtd_theme
-- xarray
+  - python
+  - pip
+  - sphinx
+  - pip:
+    - cdflib
+    - ipykernel
+    - ipython
+    - matplotlib
+    - nbsphinx
+    - numpy
+    - pandas
+    - pydata-sphinx-theme
+    - scipy
+    - sphinx
+    - sphinxcontrib-apidoc
+    - sphinx_rtd_theme
+    - xarray
