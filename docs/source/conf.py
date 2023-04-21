@@ -4,11 +4,12 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-
+# Built-in imports
 import os
 import sys
-import shutil
-import sphinx.apidoc
+
+# 3rd party imports
+import pydata_sphinx_theme
 
 # -- Path setup --------------------------------------------------------------
 
@@ -19,7 +20,7 @@ import sphinx.apidoc
 # import os
 # import sys
 # sys.path.insert(0, "/Users/louisr/Documents/PhD/irfu-python/pyrfu")
-
+"""
 examples_source = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "examples"),
 )
@@ -28,9 +29,8 @@ examples_dest = os.path.abspath(
 )
 
 
-def setup():
-    r"""fill"""
-    sphinx.apidoc.main(
+def setup(app):
+    sphinxcontrib.apidoc.main(
         [
             "-f",  # Overwrite existing files
             "-T",  # Create table of contents
@@ -60,6 +60,7 @@ for root, dirs, files in os.walk(examples_source):
             )
             shutil.copyfile(source_filename, dest_filename)
 
+"""
 sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
@@ -74,6 +75,7 @@ author = "Louis Richard"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named "sphinx.ext.*") or your custom
 # ones.
+
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
@@ -87,6 +89,7 @@ extensions = [
     "nbsphinx",
     #  "sphinx_gallery.gen_gallery"
 ]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -125,7 +128,7 @@ autodoc_mock_imports = ["numba", "sfs"]
 # a list of builtin themes.
 #
 # html_theme = "alabaster"
-html_theme = "pydata_sphinx_theme"
+html_theme = pydata_sphinx_theme.__name__
 # html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
