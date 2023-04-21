@@ -10,10 +10,11 @@ import logging
 # 3rd party imports
 import pandas as pd
 
-from ..pyrf import iso86012datetime, extend_tint
-
 # Local imports
 from .list_files_ancillary import list_files_ancillary
+from ..pyrf.iso86012datetime import iso86012datetime
+from ..pyrf.extend_tint import extend_tint
+
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -9,7 +9,9 @@ import csv
 import numpy as np
 
 # Local imports
-from ..pyrf import datetime642unix, unix2datetime64, iso86012datetime64
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.unix2datetime64 import unix2datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

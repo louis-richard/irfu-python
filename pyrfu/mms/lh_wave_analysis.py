@@ -8,16 +8,14 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from ..pyrf import (
-    filt,
-    calc_dt,
-    resample,
-    convert_fac,
-    ts_scalar,
-    extend_tint,
-    time_clip,
-    ts_vec_xyz,
-)
+from ..pyrf.calc_dt import calc_dt
+from ..pyrf.convert_fac import convert_fac
+from ..pyrf.extend_tint import extend_tint
+from ..pyrf.filt import filt
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

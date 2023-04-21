@@ -12,9 +12,11 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from ..pyrf import iso86012datetime64, time_clip, ts_scalar, ts_skymap
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_skymap import ts_skymap
 
-from .psd_rebin import psd_rebin
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

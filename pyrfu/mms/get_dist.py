@@ -11,14 +11,12 @@ import numpy as np
 from cdflib import CDF
 
 # Local imports
-from ..pyrf import (
-    ts_skymap,
-    iso86012datetime64,
-    datetime642ttns,
-    cdfepoch2datetime64,
-    extend_tint,
-    time_clip,
-)
+from ..pyrf.cdfepoch2datetime64 import cdfepoch2datetime64
+from ..pyrf.datetime642ttns import datetime642ttns
+from ..pyrf.extend_tint import extend_tint
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

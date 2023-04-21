@@ -14,7 +14,9 @@ import numpy as np
 import pandas as pd
 
 # Local imports
-from ..pyrf import iso86012datetime64, datetime642iso8601, iso86012datetime
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.iso86012datetime import iso86012datetime
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

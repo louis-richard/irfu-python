@@ -5,9 +5,8 @@
 import numpy as np
 
 # Local imports
-from ..pyrf import ts_skymap
-
 from .psd_rebin import psd_rebin
+from ..pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -7,9 +7,13 @@ import numpy as np
 from scipy import constants
 
 # Local imports
-from ..pyrf import resample, dec_par_perp, norm, trace, ts_scalar
-
 from . import rotate_tensor
+from ..pyrf.dec_par_perp import dec_par_perp
+from ..pyrf.norm import norm
+from ..pyrf.resample import resample
+from ..pyrf.trace import trace
+from ..pyrf.ts_scalar import ts_scalar
+
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

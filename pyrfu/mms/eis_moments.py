@@ -8,7 +8,8 @@ import xarray as xr
 from scipy import constants, integrate
 
 # Local imports
-from ..pyrf import ts_scalar, resample
+from ..pyrf.resample import resample
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -7,7 +7,7 @@ import numpy as np
 from scipy import constants
 
 # Local imports
-from ..pyrf import ts_tensor_xyz
+from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -40,12 +40,12 @@ def _convert(psd, mass_ratio):
     return tmp_data
 
 
-def psd2dpf(psd):
+def psd2dpf(vdf):
     r"""Compute differential particle flux from phase density.
 
     Parameters
     ----------
-    psd : xarray.Dataset
+    vdf : xarray.Dataset
         Time series of the velocity distribution function with :
             * time : Time samples.
             * data : 3D velocity distribution.
@@ -65,9 +65,9 @@ def psd2dpf(psd):
 
     """
 
-    tmp_data = _convert(psd, _mass_ratio(psd))
+    tmp_data = _convert(vdf, _mass_ratio(vdf))
 
-    energy = psd.energy.data
+    energy = vdf.energy.data
 
     if tmp_data.ndim == 2:
         tmp_data = tmp_data[:, :, None, None]
@@ -80,7 +80,7 @@ def psd2dpf(psd):
     if energy.ndim == 1:
         energy_mat = np.tile(
             energy,
-            (len(psd.time), np.prod(tmp_data.shape[2:]), 1),
+            (len(vdf.time), np.prod(tmp_data.shape[2:]), 1),
         )
         energy_mat = np.transpose(energy_mat, [0, 2, 1])
     elif energy.ndim == 2:
@@ -92,7 +92,7 @@ def psd2dpf(psd):
     data_r *= energy_mat
     tmp_data = np.reshape(data_r, tmp_data.shape)
 
-    dpf = psd.copy()
+    dpf = vdf.copy()
     dpf.data.data = np.squeeze(tmp_data) * 1e3
     dpf.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
 

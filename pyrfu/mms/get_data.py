@@ -7,12 +7,13 @@ import json
 import logging
 
 # Local imports
-from ..pyrf import dist_append, ts_append, ttns2datetime64
-
 from .tokenize import tokenize
 from .list_files import list_files
 from .get_ts import get_ts
 from .get_dist import get_dist
+from ..pyrf.dist_append import dist_append
+from ..pyrf.ts_append import ts_append
+from ..pyrf.ttns2datetime64 import ttns2datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

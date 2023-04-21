@@ -9,7 +9,9 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import ts_vec_xyz, normalize, resample
+from ..pyrf.normalize import normalize
+from ..pyrf.resample import resample
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

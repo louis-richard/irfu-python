@@ -6,7 +6,10 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import ts_scalar, resample, extend_tint, time_clip
+from ..pyrf.extend_tint import extend_tint
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -6,7 +6,10 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import cotrans, resample, ts_vec_xyz, calc_fs
+from ..pyrf.calc_fs import calc_fs
+from ..pyrf.cotrans import cotrans
+from ..pyrf.resample import resample
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

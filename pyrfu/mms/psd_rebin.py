@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import calc_dt
+from ..pyrf.calc_dt import calc_dt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

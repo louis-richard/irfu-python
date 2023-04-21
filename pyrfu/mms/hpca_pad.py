@@ -11,7 +11,10 @@ import xarray as xr
 from scipy import interpolate
 
 # Local imports
-from ..pyrf import time_clip, resample, normalize, ts_scalar
+from ..pyrf.normalize import normalize
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

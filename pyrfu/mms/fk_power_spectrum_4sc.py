@@ -9,7 +9,10 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import resample, avg_4sc, time_clip, wavelet
+from ..pyrf.avg_4sc import avg_4sc
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.wavelet import wavelet
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

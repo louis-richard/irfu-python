@@ -8,7 +8,7 @@ import xarray as xr
 from scipy import special, constants
 
 # Local imports
-from ..pyrf import resample
+from ..pyrf.resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

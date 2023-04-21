@@ -9,7 +9,9 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import time_clip, resample, normalize
+from ..pyrf.normalize import normalize
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

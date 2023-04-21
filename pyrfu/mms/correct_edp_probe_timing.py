@@ -6,7 +6,15 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import ts_scalar, resample
+from ..pyrf.resample import resample
+from ..pyrf.ts_scalar import ts_scalar
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2021"
+__license__ = "MIT"
+__version__ = "2.3.7"
+__status__ = "Prototype"
 
 
 def correct_edp_probe_timing(sc_pot):

@@ -6,9 +6,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import resample
-
 from .feeps_active_eyes import feeps_active_eyes
+from ..pyrf.resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

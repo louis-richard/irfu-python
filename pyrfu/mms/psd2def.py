@@ -65,7 +65,7 @@ def psd2def(vdf):
 
     """
 
-    mass_ratio = _mass_ratio(vdf.attrs["species"])
+    mass_ratio = _mass_ratio(vdf)
 
     tmp_data = _convert(vdf, mass_ratio)
 

@@ -7,7 +7,8 @@ import numpy as np
 from scipy import constants
 
 # Local imports
-from ..pyrf import resample, ts_scalar
+from ..pyrf.resample import resample
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

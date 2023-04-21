@@ -12,7 +12,10 @@ import requests
 from scipy.io import readsav
 
 # Local imports
-from ..pyrf import ts_time, time_clip, extend_tint, datetime642iso8601
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.extend_tint import extend_tint
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_time import ts_time
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

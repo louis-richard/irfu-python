@@ -15,7 +15,8 @@ from dateutil import parser
 from dateutil.rrule import rrule, DAILY
 
 # Local imports
-from ..pyrf import iso86012datetime64, datetime642iso8601
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

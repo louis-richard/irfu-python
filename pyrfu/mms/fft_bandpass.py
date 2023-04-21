@@ -5,7 +5,9 @@
 import numpy as np
 
 # Local imports
-from ..pyrf import calc_fs, ts_scalar, ts_vec_xyz
+from ..pyrf.calc_fs import calc_fs
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

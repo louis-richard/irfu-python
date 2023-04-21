@@ -7,7 +7,7 @@ import numpy as np
 from scipy import constants
 
 # Local imports
-from ..pyrf import plasma_calc
+from ..pyrf.plasma_calc import plasma_calc
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

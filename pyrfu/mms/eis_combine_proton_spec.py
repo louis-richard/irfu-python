@@ -8,9 +8,8 @@ import xarray as xr
 from cdflib import cdfread
 
 # Local imports
-from ..pyrf import datetime642iso8601
-
 from .list_files import list_files
+from ..pyrf.datetime642iso8601 import datetime642iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -8,7 +8,10 @@ import xarray as xr
 from scipy import constants, optimize
 
 # Local imports
-from ..pyrf import trace, ts_tensor_xyz, ts_scalar, resample
+from ..pyrf.resample import resample
+from ..pyrf.trace import trace
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

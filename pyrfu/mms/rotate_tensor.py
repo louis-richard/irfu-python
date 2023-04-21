@@ -5,7 +5,9 @@
 import numpy as np
 
 # Local imports
-from ..pyrf import resample, ts_tensor_xyz, calc_fs
+from ..pyrf.calc_fs import calc_fs
+from ..pyrf.resample import resample
+from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

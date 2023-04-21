@@ -16,13 +16,11 @@ from scipy.constants import (
 )
 
 # Local imports
-from ..pyrf import (
-    resample,
-    time_clip,
-    datetime642iso8601,
-    ts_scalar,
-    int_sph_dist,
-)
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.int_sph_dist import int_sph_dist
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
