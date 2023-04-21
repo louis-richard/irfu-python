@@ -7,6 +7,7 @@ Welcome to pyrfu's documentation!
 =================================
 
 .. include:: ../../README.rst
+   :start-after: start-marker-intro-do-not-remove
    :end-before: end-marker-intro-do-not-remove
 
 
