@@ -103,6 +103,18 @@ def dist_append(inp0, inp1):
     else:
         energy = np.vstack([inp0.energy.data, inp1.energy.data])
 
-        out = ts_skymap(time, data, energy, phi, theta)
+        out = ts_skymap(
+            time,
+            data,
+            energy,
+            phi,
+            theta,
+            energy0=inp0.energy0,
+            energy1=inp0.energy1,
+            esteptable=np.ones(energy.shape[0]),
+            attrs=data_attrs,
+            coords_attrs=coords_attrs,
+            glob_attrs=glob_attrs,
+        )
 
     return out
