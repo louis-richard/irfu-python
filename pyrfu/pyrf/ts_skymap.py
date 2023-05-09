@@ -81,6 +81,9 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
     }
 
     # Construct global attributes and sort them
+    # remove energy0, energy1, and esteptable from global attrs to overwrite
+    overwrite_keys = ["energy0", "energy1", "esteptable"]
+    glob_attrs = {k: glob_attrs[k] for k in glob_attrs if k not in overwrite_keys}
     glob_attrs = {
         "energy0": energy0,
         "energy1": energy1,
