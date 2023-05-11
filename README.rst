@@ -29,8 +29,8 @@ pyRFU
 .. |Flake8| image:: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml/badge.svg
 .. _Flake8: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml
 
-.. |PyLint| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
-.. _PyLint: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
+.. |PyLintB| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
+.. _PyLintB: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
 
 .. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
 .. _Issues: https://github.com/louis-richard/irfu-python/issues
@@ -47,7 +47,7 @@ pyRFU
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
 .. _Black: https://github.com/psf/black
 
-|License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |Flake8|_ |PyLint|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
+|License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |Flake8|_ |PyLintB|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
