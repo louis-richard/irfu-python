@@ -167,7 +167,7 @@ def _freq_int(freq_int, delta_b):
     return any_range, freq_int, fs_out, out_time
 
 
-@numba.jit(cache=True, parallel=True, nopython=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
 def _average_data(data=None, x=None, y=None, av_window=None):
     # average data with time x to time y using window
 
@@ -217,7 +217,7 @@ def _ee_xxyyzzss(power_ex_plot, power_ey_plot, power_ez_plot, power_2e_plot):
     return np.real(ee_xxyyzzss)
 
 
-@numba.jit(nopython=True, fastmath=True, parallel=True, cache=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
 def _censure_plot(inp, idx_nan, censure, n_data, a_):
     out = inp.copy()
 
