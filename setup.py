@@ -7,7 +7,7 @@ import pathlib
 from setuptools import setup, find_packages
 
 # 3rd party imports
-from sphinx.setup_command import BuildDoc
+# from sphinx.setup_command import BuildDoc
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -41,7 +41,7 @@ INSTALL_REQUIRES = [
     "python-dateutil",
     "requests",
     "scipy",
-    "Sphinx",
+    "sphinx",
     "tqdm",
     "xarray",
 ]
@@ -49,7 +49,7 @@ INSTALL_REQUIRES = [
 PYTHON_REQUIRES = ">=3.7"
 
 
-cmdclass = {"build_sphinx": BuildDoc}
+# cmdclass = {"build_sphinx": BuildDoc}
 
 setup(
     name=PACKAGE_NAME,
@@ -64,14 +64,13 @@ setup(
     python_requires=PYTHON_REQUIRES,
     packages=find_packages(),
     include_package_data=True,
-    cmdclass=cmdclass,
     # these are optional and override conf.py settings
-    command_options={
-        "build_sphinx": {
-            "project": ("setup.py", PACKAGE_NAME),
-            "version": ("setup.py", VERSION),
-            "release": ("setup.py", VERSION),
-            "source_dir": ("setup.py", "docs"),
-        },
-    },
+    # command_options={
+    #    "build_sphinx": {
+    #        "project": ("setup.py", PACKAGE_NAME),
+    #        "version": ("setup.py", VERSION),
+    #        "release": ("setup.py", VERSION),
+    #        "source_dir": ("setup.py", "docs"),
+    #    },
+    # },
 )
