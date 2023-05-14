@@ -31,7 +31,6 @@ def _combine_attrs(skymaps_attrs):
     attrs_keys = list(
         filter(lambda k: k not in filtered_attrs, skymaps_attrs[0]),
     )
-    print(attrs_keys)
 
     for k in attrs_keys:
         sms_attrs = [skymaps_attr[k] for skymaps_attr in skymaps_attrs]
