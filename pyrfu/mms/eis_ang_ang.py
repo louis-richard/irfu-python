@@ -90,11 +90,7 @@ def eis_ang_ang(inp_allt, en_chan: list = None, defatt: xr.Dataset = None):
             coordinates_system = "GSE>Geocentric Solar Magnetospheric"
 
         # Domain [-180, 180], 0 = sunward (GSE)
-        """
-        phi[i, :] = (
-            np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0]))
-        )
-        """
+        # phi[i, :] = (np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0])))
         # Domain [0, 360], 0 = sunward (GSE)
         phi[i, :] = np.rad2deg(np.arctan2(d_xyz.data[:, 1], d_xyz.data[:, 0])) + 180.0
         # Domain [-90, 90], Positive is look direction northward

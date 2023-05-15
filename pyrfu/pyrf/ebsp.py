@@ -44,7 +44,7 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
 
     fs_e, fs_b = [calc_fs(e_xyz), calc_fs(db_xyz)]
 
-    resample_b_options = dict(f_s=fs_b)
+    resample_b_options = {"f_s": fs_b}
 
     if flag_no_resamp:
         assert fs_e == fs_b
@@ -167,7 +167,7 @@ def _freq_int(freq_int, delta_b):
     return any_range, freq_int, fs_out, out_time
 
 
-@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True, fastmath=True)
 def _average_data(data=None, x=None, y=None, av_window=None):
     # average data with time x to time y using window
 
@@ -217,7 +217,7 @@ def _ee_xxyyzzss(power_ex_plot, power_ey_plot, power_ez_plot, power_2e_plot):
     return np.real(ee_xxyyzzss)
 
 
-@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True, fastmath=True)
 def _censure_plot(inp, idx_nan, censure, n_data, a_):
     out = inp.copy()
 
@@ -372,24 +372,24 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     want_ee = e_xyz is not None
 
-    res = dict(
-        t=None,
-        f=None,
-        flagFac=0,
-        bb_xxyyzzss=None,
-        ee_xxyyzzss=None,
-        ee_ss=None,
-        pf_xyz=None,
-        pf_rtp=None,
-        dop=None,
-        dop2d=None,
-        planarity=None,
-        ellipticity=None,
-        k_tp=None,
-        full_b=b_xyz,
-        b0=b_bgd,
-        r=xyz,
-    )
+    res = {
+        "t": None,
+        "f": None,
+        "flagFac": 0,
+        "bb_xxyyzzss": None,
+        "ee_xxyyzzss": None,
+        "ee_ss": None,
+        "pf_xyz": None,
+        "pf_rtp": None,
+        "dop": None,
+        "dop2d": None,
+        "planarity": None,
+        "ellipticity": None,
+        "k_tp": None,
+        "full_b": b_xyz,
+        "b0": b_bgd,
+        "r": xyz,
+    }
 
     want_polarization = kwargs.get("polarization", False)
 
@@ -446,7 +446,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     if want_ee and e_xyz.shape[1] < 3 and not flag_de_dot_b0:
         raise ValueError(
-            "E must have all 3 components or flag de_dot_db=0 " "must be given"
+            "E must have all 3 components or flag de_dot_db=0 must be given"
         )
 
     if len(db_xyz) % 2:
@@ -473,8 +473,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         b_x, b_y, b_z = [b_xyz[:, i].data for i in range(3)]
 
         # Remove the last sample if the total number of samples is odd
-        temp_ = _b_elevation(b_x, b_y, b_z, angle_b_elevation_max)
-        angle_b_elevation, idx_b_par_spin_plane = temp_
+        # temp_ = _b_elevation(b_x, b_y, b_z, angle_b_elevation_max)
+        # angle_b_elevation, idx_b_par_spin_plane = temp_
+        _, idx_b_par_spin_plane = _b_elevation(b_x, b_y, b_z, angle_b_elevation_max)
 
     # If E has all three components, transform E and B waveforms to a magnetic
     # field aligned coordinate (FAC) and save eisr for computation of e_sum.
@@ -493,7 +494,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             idx_nan_eisr2 = np.isnan(eisr2.data)
 
             if e_xyz.shape[1] < 3:
-                raise TypeError("E must be a 3D vector to be rotated to " "FAC")
+                raise TypeError("E must be a 3D vector to be rotated to FAC")
 
             if fac_matrix is None:
                 e_xyz = convert_fac(e_xyz, b_bgd, xyz)
@@ -596,8 +597,8 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     censure = np.floor(2 * a_ * out_sampling / in_sampling * n_wave_period_to_average)
 
-    for ind_a in range(len(a_)):
-        new_freq_mat = w_0 / a_[ind_a]
+    for ind_a, a_0 in enumerate(a_):
+        new_freq_mat = w_0 / a_0
 
         # resample to 1 second sampling for Pc1-2 or 1 minute sampling for
         # Pc3-5 average top frequencies to 1 second/1 minute below will be
@@ -610,22 +611,26 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             av_window = n_wave_period_to_average / frequency_vec[ind_a]
 
         # Get the wavelet transform by backward FFT
-        w_exp_mat = np.exp(-sigma * sigma * ((a_[ind_a] * w_ - w_0) ** 2) / 2)
+        w_exp_mat = np.exp(-sigma * sigma * ((a_0 * w_ - w_0) ** 2) / 2)
         w_exp_mat2 = np.tile(w_exp_mat[:, np.newaxis], (1, 2))
         w_exp_mat = np.tile(w_exp_mat[:, np.newaxis], (1, 3))
+
         wb = fft.ifft(np.sqrt(1) * swb * w_exp_mat, axis=0, workers=os.cpu_count())
+        wb = np.array(wb)  # Make sure it's an array (scipy.fft.ifft returns Any type)
         wb[idx_nan_b] = np.nan
 
         we, w_eisr2 = [None, None]
 
         if want_ee:
             we = fft.ifft(np.sqrt(1) * sw_e * w_exp_mat, axis=0, workers=os.cpu_count())
+            we = np.array(we)
             we[idx_nan_e] = np.nan
 
             if flag_want_fac and not flag_de_dot_b0:
                 w_eisr2 = fft.ifft(
                     np.sqrt(1) * sw_eisr2 * w_exp_mat2, axis=0, workers=os.cpu_count()
                 )
+                w_eisr2 = np.array(w_eisr2)
                 w_eisr2[idx_nan_eisr2] = np.nan
 
                 # Power spectrum of E, power = (2*pi)*conj(W).*W./new_freq_mat

@@ -32,6 +32,8 @@ repos:
         args:
           - --rcfile
           - setup.cfg
+          - --disable
+          - import-error
           - --output-format
           - colorized
 

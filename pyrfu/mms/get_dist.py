@@ -64,9 +64,7 @@ def _shift_epochs(file, epoch):
                     message = " units are not clear, assume s"
                     warnings.warn(message)
             else:
-                message = (
-                    "Epoch_plus_var/Epoch_minus_var units are not " "clear, assume s"
-                )
+                message = "Epoch_plus_var/Epoch_minus_var units are not clear, assume s"
                 warnings.warn(message)
 
         flag_minus, flag_plus = flags_vars

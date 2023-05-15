@@ -69,49 +69,47 @@ class LangmuirProbe:
         assert not r_wire or np.atleast_1d(r_wire) <= 2, message
 
         self.name = name
-        self.surface = surface
-        self.r_sphere = r_sphere
-        self.r_wire = np.atleast_1d(r_wire)
-        self.l_wire = l_wire
+        self.wire = {"l": l_wire, "r": np.atleast_1d(r_wire)}
+        self.sphere = {"r": r_sphere, "surface": surface}
         self.s_photoemission = s_photoemission
 
         # Probe type according to the specified parameters: Sphere + Wire or
         # Wire or Sphere
-        self._get_probe_type()
+        self.get_probe_type()
 
         # Get probe area
-        self._get_probe_area()
+        self.get_probe_area()
 
         # Get probe capacitance
-        self._get_probe_capa()
+        self.get_probe_capa()
 
-    def _get_probe_type(self):
+    def get_probe_type(self):
         r"""Define probe type according to the specified parameters."""
-        if self.r_sphere and self.r_wire and self.l_wire:
+        if self.sphere["r"] and self.wire["r"] and self.wire["l"]:
             self.probe_type = "sphere+wire"
-        elif self.r_wire and self.l_wire:
+        elif self.wire["r"] and self.wire["l"]:
             self.probe_type = "wire"
-        elif self.r_sphere:
+        elif self.sphere["r"]:
             self.probe_type = "sphere"
         else:
             self.probe_type = None
 
-    def _get_probe_area(self):
+    def get_probe_area(self):
         r"""Computes probe area."""
         a_sphere_sunlit, a_sphere_total = [0, 0]
         a_wire_sunlit, a_wire_total = [0, 0]
 
-        if isinstance(self.r_sphere, (float, int)):
-            a_sphere_sunlit = np.pi * self.r_sphere**2
+        if isinstance(self.sphere["r"], (float, int)):
+            a_sphere_sunlit = np.pi * self.sphere["r"] ** 2
             a_sphere_total = 4 * a_sphere_sunlit
 
         if (
-            self.r_wire
-            and isinstance(self.r_wire, (float, int, list))
-            and self.l_wire
-            and isinstance(self.l_wire, (float, int))
+            self.wire["r"]
+            and isinstance(self.wire["r"], (float, int, list))
+            and self.wire["l"]
+            and isinstance(self.wire["l"], (float, int))
         ):
-            a_wire_sunlit = 2 * np.mean(self.r_wire) * self.l_wire
+            a_wire_sunlit = 2 * np.mean(self.wire["r"]) * self.wire["l"]
             a_wire_total = np.pi * a_wire_sunlit
 
         self.area = {
@@ -123,7 +121,7 @@ class LangmuirProbe:
         self.area["total_sunlit"] = self.area["total"] / self.area["sunlit"]
         self.area["sunlit_total"] = 1 / self.area["total_sunlit"]
 
-    def _get_probe_capa(self):
+    def get_probe_capa(self):
         r"""Computes probe capacitance.
 
         Raises
@@ -137,36 +135,36 @@ class LangmuirProbe:
         """
 
         c_wire = 0
-        c_sphere = estimate("capacitance_sphere", self.r_sphere)
+        c_sphere = estimate("capacitance_sphere", self.sphere["r"])
 
         if (
-            self.r_wire
-            and isinstance(self.r_wire, (float, int, list))
-            and self.l_wire
-            and isinstance(self.l_wire, (float, int))
+            self.wire["r"]
+            and isinstance(self.wire["r"], (float, int, list))
+            and self.wire["l"]
+            and isinstance(self.wire["l"], (float, int))
         ):
-            if self.l_wire > 10 * list([self.r_wire]):
+            if self.wire["l"] > 10 * list([self.wire["r"]]):
                 c_wire = estimate(
                     "capacitance_wire",
-                    np.mean(self.r_wire),
-                    self.l_wire,
+                    np.mean(self.wire["r"]),
+                    self.wire["l"],
                 )
-            elif self.l_wire > list(self.r_wire):
+            elif self.wire["l"] > list(self.wire["r"]):
                 c_wire = estimate(
                     "capacitance_cylinder",
-                    np.mean(self.r_wire),
-                    self.l_wire,
+                    np.mean(self.wire["r"]),
+                    self.wire["l"],
                 )
             else:
                 raise ValueError(
-                    "estimate of capacitance for cylinder " "requires length > radius",
+                    "estimate of capacitance for cylinder requires length > radius",
                 )
 
         self.capacitance = np.sum([c_sphere, c_wire])
 
-    def _get_probe_surface_photoemission(self):
+    def get_probe_surface_photoemission(self):
         r"""Computes (or get) surface photo emission."""
-        if self.surface:
+        if self.sphere["surface"]:
             self.s_photoemission = self.s_photoemission
         else:
-            self.s_photoemission = photo_current(1.0, 0.0, 1.0, self.surface)
+            self.s_photoemission = photo_current(1.0, 0.0, 1.0, self.sphere["surface"])

@@ -199,7 +199,6 @@ __all__ = [
     "time_clip",
     "timevec2iso8601",
     "trace",
-    "transformation_indices.json",
     "ts_append",
     "ts_scalar",
     "ts_skymap",
