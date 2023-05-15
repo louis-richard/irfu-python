@@ -48,9 +48,6 @@ INSTALL_REQUIRES = [
 
 PYTHON_REQUIRES = ">=3.7"
 
-
-# cmdclass = {"build_sphinx": BuildDoc}
-
 setup(
     name=PACKAGE_NAME,
     version=VERSION,
@@ -64,13 +61,4 @@ setup(
     python_requires=PYTHON_REQUIRES,
     packages=find_packages(),
     include_package_data=True,
-    # these are optional and override conf.py settings
-    # command_options={
-    #    "build_sphinx": {
-    #        "project": ("setup.py", PACKAGE_NAME),
-    #        "version": ("setup.py", VERSION),
-    #        "release": ("setup.py", VERSION),
-    #        "source_dir": ("setup.py", "docs"),
-    #    },
-    # },
 )
