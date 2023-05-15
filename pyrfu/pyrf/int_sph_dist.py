@@ -230,7 +230,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
     return pst
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
 def mc_pol_1d(
     vdf,
     v,
@@ -456,7 +456,7 @@ def mc_cart_3d(
     return f_g
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
 def mc_cart_2d(
     vdf,
     v,
