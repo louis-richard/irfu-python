@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import logging
 import multiprocessing as mp
 
 # 3rd party imports
@@ -22,6 +23,13 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 # noinspection PyUnboundLocalVariable
@@ -245,10 +253,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     if "brst" in field_name:
         is_brst_data = True
-        print("notice : Burst resolution data is used")
+        logging.info("Burst resolution data is used")
     elif "fast" in field_name:
         is_brst_data = False
-        print("notice : Fast resolution data is used")
+        logging.info("Fast resolution data is used")
     else:
         raise TypeError("Could not identify if data is fast or burst.")
 
@@ -292,12 +300,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
             # start_e = bisect.bisect_left(energy0, e_min_max[0])
             # stop_e = bisect.bisect_left(energy0, e_min_max[1])
 
-            print("notice : Using partial energy range")
+            logging.info("Using partial energy range")
 
     if "no_sc_pot" in kwargs:
         if isinstance(kwargs["no_sc_pot"], bool) and not kwargs["no_sc_pot"]:
             sc_pot.data = np.zeros(sc_pot.shape)
-            print("notice : Setting spacecraft potential to zero")
+            logging.info("Setting spacecraft potential to zero")
 
     int_energies = np.arange(
         kwargs.get("en_channels", [0, 32])[0],
@@ -327,20 +335,18 @@ def psd_moments(vdf, sc_pot, **kwargs):
             )
 
             if (sum_ones + sum_zeros) == vdf.data.size:
-                print(
-                    "notice : partial_moments is correct. Partial moments "
-                    "will be calculated",
+                logging.info(
+                    "partial_moments is correct. Partial moments will be calculated"
                 )
                 vdf.data = vdf.data * partial_moments
             else:
-                print(
-                    "notice : All values are not ones and zeros in "
-                    "partial_moments. Full " + "moments will be calculated",
+                logging.info(
+                    "All values are not ones and zeros in partial_moments. "
+                    "Full moments will be calculated"
                 )
         else:
-            print(
-                "notice : Size of partial_moments is wrong. Full moments "
-                "will be calculated",
+            logging.info(
+                "Size of partial_moments is wrong. Full moments will be calculated"
             )
 
     tmp_ = kwargs.get("inner_electron", "")
@@ -352,11 +358,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     if particle_type[0] == "e":
         p_mass = constants.electron_mass
-        print("notice : Particles are electrons")
+        logging.info("Particles are electrons")
     elif particle_type[0] == "i":
         p_mass = constants.proton_mass
         sc_pot.data = -1.0 * sc_pot.data
-        print("notice : Particles are ions")
+        logging.info("Particles are ions")
     else:
         raise ValueError("Could not identify the particle type")
 
@@ -476,18 +482,16 @@ def psd_moments(vdf, sc_pot, **kwargs):
             delta_ang,
         )
 
-    pool = mp.Pool(mp.cpu_count())
-    res = pool.starmap(_moms, [(nt, args_) for nt in range(len(vdf.time))])
-    out = np.vstack(res)
+    with mp.Pool(mp.cpu_count()) as pool:
+        res = pool.starmap(_moms, [(nt, args_) for nt in range(len(vdf.time))])
+        out = np.vstack(res)
 
-    n_psd = np.array(out[:, 0], dtype="float")
-    v_psd = np.vstack(out[:, 1][:])
-    p_psd = np.vstack(out[:, 2][:])
-    p_psd = np.reshape(p_psd, (len(n_psd), 3, 3))
-    h_psd = np.vstack(out[:, 3][:])
-    p2_psd = np.zeros((len(vdf.time), 3, 3))
-
-    pool.close()
+        n_psd = np.array(out[:, 0], dtype="float")
+        v_psd = np.vstack(out[:, 1][:])
+        p_psd = np.vstack(out[:, 2][:])
+        p_psd = np.reshape(p_psd, (len(n_psd), 3, 3))
+        h_psd = np.vstack(out[:, 3][:])
+        p2_psd = np.zeros((len(vdf.time), 3, 3))
 
     # Compute moments in SI units
     p_psd *= p_mass

@@ -17,10 +17,9 @@ __license__ = "MIT"
 __version__ = "2.3.10"
 __status__ = "Prototype"
 
-
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s",
+    format="[%(asctime)s] %(levelname)s: %(message)s",
     datefmt="%d-%b-%y %H:%M:%S",
     level=logging.INFO,
 )
@@ -64,7 +63,10 @@ def vdf_elim(vdf, e_int):
         e_levels = list(e_levels.astype(np.int64))
         e_min = np.min(energy.data[:, e_levels])
         e_max = np.max(energy.data[:, e_levels])
-        print(f"Effective eint = [{e_min:5.2f}, {e_max:5.2f}]")
+        logging.info(
+            "Effective eint = [%(e_min)5.2f, %(e_max)5.2f]",
+            {"e_min": e_min, "e_max": e_max},
+        )
 
     else:
         # pick closest energy level
@@ -76,10 +78,9 @@ def vdf_elim(vdf, e_int):
             e_diff = e_diff1
 
         e_levels = int(np.where(e_diff == np.min(e_diff))[0][0])
-        print(
-            f"Effective energies alternate in time between "
-            f"{energy.data[0, e_levels]:5.2f} and "
-            f"{energy.data[1, e_levels]:5.2f}",
+        logging.info(
+            "Effective energies alternate in time between %(e0)5.2f and %(e1)5.2f",
+            {"e0": energy.data[0, e_levels], "e1": energy.data[1, e_levels]},
         )
 
     vdf_e_clipped = ts_skymap(

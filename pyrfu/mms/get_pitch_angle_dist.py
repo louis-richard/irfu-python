@@ -3,6 +3,7 @@
 
 # Built-in imports
 import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
@@ -19,6 +20,13 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
@@ -79,13 +87,13 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
             d_angles = 180 / n_angles
             angles_v = np.linspace(d_angles, 180, n_angles)
             d_angles = d_angles * np.ones(n_angles)
-            print("notice : User defined number of pitch angles.")
+            logging.info("User defined number of pitch angles.")
 
         elif isinstance(kwargs["angles"], (list, np.ndarray)):
             angles_v = kwargs["angles"]
             d_angles = np.diff(angles_v)
             angles_v = angles_v[1:]
-            print("notice : User defined pitch angle limits.")
+            logging.info("User defined pitch angle limits.")
 
         else:
             raise ValueError("angles parameter not understood.")

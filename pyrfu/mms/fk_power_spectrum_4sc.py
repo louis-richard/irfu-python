@@ -3,6 +3,7 @@
 
 # Built-in imports
 import bisect
+import logging
 
 # 3rd party imports
 import numpy as np
@@ -20,6 +21,13 @@ __copyright__ = "Copyright 2022"
 __license__ = "MIT"
 __version__ = "2.3.22"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def fk_power_spectrum_4sc(
@@ -274,7 +282,7 @@ def fk_power_spectrum_4sc(
     dk = 2 * k_max / num_k
 
     # Sort power into frequency and wave vector
-    print("notice : Computing power versus kx,f; ky,f, kz,f")
+    logging.info("Computing power versus kx,f; ky,f, kz,f")
     power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
     power_k_mag_f = np.zeros((num_f, num_k))
 
@@ -303,7 +311,7 @@ def fk_power_spectrum_4sc(
         idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
         idx_f = idx_f[idx_min_freq:idx_max_freq]
 
-    print("notice : Computing power versus kx,ky; kx,kz; ky,kz\n")
+    logging.info("Computing power versus kx,ky; kx,kz; ky,kz")
     power_k_x_k_y = np.zeros((num_k, num_k))
     power_k_x_k_z = np.zeros((num_k, num_k))
     power_k_y_k_z = np.zeros((num_k, num_k))

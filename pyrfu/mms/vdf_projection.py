@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
 import itertools
+import logging
 
 # 3rd party imports
 import numpy as np
@@ -26,6 +26,13 @@ __license__ = "MIT"
 __version__ = "2.3.10"
 __status__ = "Prototype"
 
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
+
 
 def _coord_sys(coord_sys):
     x_vec = coord_sys[0, :] / np.linalg.norm(coord_sys[0, :])
@@ -38,19 +45,17 @@ def _coord_sys(coord_sys):
 
     for i, vec, comp in zip([0, 1, 2], [x_vec, y_vec, z_vec], ["x", "y", "z"]):
         if abs(np.rad2deg(np.arccos(np.dot(vec, coord_sys[:, i])))) > 1.0:
-            msg = " ".join(
-                [
-                    "In making 'xyz' a right handed orthogonal",
-                    f"coordinate system, {comp} (in-plane {i:d}) was",
-                    "changed from",
-                    np.array2string(coord_sys[:, i]),
-                    "to",
-                    np.array2string(x_vec),
-                    "Please verify that this is according to your",
-                    "intentions.",
-                ],
+            logging.warning(
+                "In making xyz a right handed orthogonal coordinate system, %(comp)s "
+                "(in-plane %(i)d) was changed from %(x_old)s to %(x_new)s. Please "
+                "verify that this is according to your intentions.",
+                {
+                    "comp": comp,
+                    "i": i,
+                    "x_old": np.array2string(coord_sys[:, i]),
+                    "x_new": np.array2string(x_vec),
+                },
             )
-            warnings.warn(msg, UserWarning)
             changed_xyz[i] = True
 
     return x_vec, y_vec, z_vec, changed_xyz
@@ -115,7 +120,7 @@ def _init(vdf, tint):
         azimuthal = time_clip(azimuthal, tint)
 
         if len(dist.time) > 1 and list(energy0) != list(energy1):
-            print("notice: Rebinning distribution.")
+            logging.info("Rebinning distribution.")
             temp = ts_skymap(
                 dist.time.data,
                 dist.data,
