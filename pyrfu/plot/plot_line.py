@@ -5,7 +5,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import matplotlib.ticker as ticker
+import matplotlib.ticker as mticker
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -58,6 +58,6 @@ def plot_line(axis, inp, **kwargs):
         axis.xaxis.set_major_formatter(formatter)
 
     axis.grid(True, which="major", linestyle="-", linewidth="0.2", c="0.5")
-    axis.yaxis.set_major_locator(ticker.MaxNLocator(4))
+    axis.yaxis.set_major_locator(mticker.MaxNLocator(4))
 
     return axis

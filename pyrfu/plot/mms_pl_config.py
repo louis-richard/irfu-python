@@ -85,15 +85,15 @@ def mms_pl_config(r_mms):
     axs3.view_init(elev=13, azim=-20)
 
     for i, marker in enumerate(markers):
-        options = dict(s=50, marker=marker)
+        options = {"s": 50, "marker": marker}
         axs3.scatter(delta_r[i, 0], delta_r[i, 1], delta_r[i, 2], **options)
 
-        options = dict(color=colors[i], marker=marker, zdir="z", zs=-30)
+        options = {"color": colors[i], "marker": marker, "zdir": "z", "zs": -30}
         axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 1]] * 2, **options)
         axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 2]] * 2, **options)
         axs3.plot([delta_r[i, 1]] * 2, [delta_r[i, 2]] * 2, **options)
 
-        options = dict(color="k", linestyle="--", linewidth=0.5)
+        options = {"color": "k", "linestyle": "--", "linewidth": 0.5}
         axs3.plot(
             [delta_r[i, 0]] * 2,
             [delta_r[i, 1]] * 2,

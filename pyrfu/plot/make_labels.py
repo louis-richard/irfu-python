@@ -36,7 +36,7 @@ def make_labels(axs, pos, pad: float = 0, **kwargs):
             axis.text2D(
                 pos[0],
                 pos[1],
-                "({})".format(label),
+                f"({label})",
                 transform=axis.transAxes,
                 **kwargs,
             )
@@ -44,7 +44,7 @@ def make_labels(axs, pos, pad: float = 0, **kwargs):
             axis.text(
                 pos[0],
                 pos[1],
-                "({})".format(label),
+                f"({label})",
                 transform=axis.transAxes,
                 **kwargs,
             )

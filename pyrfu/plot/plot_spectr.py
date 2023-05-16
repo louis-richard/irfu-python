@@ -5,7 +5,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.colors as mcolors
-import matplotlib.ticker as ticker
+import matplotlib.ticker as mticker
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -73,17 +73,17 @@ def plot_spectr(
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
-            options = dict(
-                norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]),
-                cmap=cmap,
-            )
+            options = {
+                "norm": mcolors.LogNorm(vmin=clim[0], vmax=clim[1]),
+                "cmap": cmap,
+            }
         else:
-            options = dict(norm=mcolors.LogNorm(), cmap=cmap)
+            options = {"norm": mcolors.LogNorm(), "cmap": cmap}
     else:
         if clim is not None and isinstance(clim, list):
-            options = dict(cmap=cmap, vmin=clim[0], vmax=clim[1])
+            options = {"cmap": cmap, "vmin": clim[0], "vmax": clim[1]}
         else:
-            options = dict(cmap=cmap, vmin=None, vmax=None)
+            options = {"cmap": cmap, "vmin": None, "vmax": None}
 
     x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
@@ -104,7 +104,7 @@ def plot_spectr(
 
     if yscale == "log":
         axis.set_yscale("log")
-        axis.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
+        axis.yaxis.set_major_locator(mticker.LogLocator(base=10.0, numticks=4))
 
     axis.set_axisbelow(False)
     axis.set_ylim(inp[inp.dims[1]].data[[0, -1]])
@@ -128,10 +128,10 @@ def plot_spectr(
 
         if cscale == "log":
             cax.yaxis.set_major_locator(
-                ticker.LogLocator(base=10.0, numticks=4),
+                mticker.LogLocator(base=10.0, numticks=4),
             )
         else:
-            cax.yaxis.set_major_locator(ticker.MaxNLocator(4))
+            cax.yaxis.set_major_locator(mticker.MaxNLocator(4))
 
         out = (axis, cax)
     elif colorbar.lower() == "top":
@@ -158,17 +158,15 @@ def plot_spectr(
 
         if cscale == "log":
             cax.xaxis.set_major_locator(
-                ticker.LogLocator(base=10.0, numticks=4),
+                mticker.LogLocator(base=10.0, numticks=4),
             )
         else:
-            cax.xaxis.set_major_locator(ticker.MaxNLocator(4))
+            cax.xaxis.set_major_locator(mticker.MaxNLocator(4))
 
         out = (axis, cax)
     elif colorbar.lower() == "none":
         out = axis
     else:
-        raise NotImplementedError(
-            "colorbar must be 'right', 'top', or 'none'",
-        )
+        raise NotImplementedError("colorbar must be: 'right', 'top', or 'none'")
 
     return out

@@ -69,7 +69,7 @@ def _make_path(file, product, mms_id, data_path: str = ""):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf8") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])

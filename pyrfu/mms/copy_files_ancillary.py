@@ -42,7 +42,7 @@ def copy_files_ancillary(product, tint, mms_id, tar_path: str = "./data/"):
     pkg_path = os.path.dirname(os.path.abspath(__file__))
 
     # Read the current version of the MMS configuration file
-    with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf8") as fs:
+    with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
     # Normalize the local_data_dir path and make sure it exists.

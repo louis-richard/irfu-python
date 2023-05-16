@@ -36,7 +36,7 @@ def _var_and_cdf_name(var_str, mms_id):
     root_path = os.path.dirname(os.path.abspath(__file__))
 
     with open(
-        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf8"
+        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf-8"
     ) as json_file:
         keys_ = json.load(json_file)
 

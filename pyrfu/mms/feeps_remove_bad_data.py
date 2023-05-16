@@ -120,7 +120,7 @@ def feeps_remove_bad_data(inp_dataset):
     root_path = os.path.dirname(os.path.abspath(__file__))
 
     with open(
-        os.path.join(root_path, "feeps_bad_data.json"), "r", encoding="utf8"
+        os.path.join(root_path, "feeps_bad_data.json"), "r", encoding="utf-8"
     ) as file:
         feeps_bad_data = json.load(file)
 

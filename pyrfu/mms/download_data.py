@@ -124,7 +124,7 @@ def _make_path(file, var, mms_id, data_path: str = ""):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf8") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -189,7 +189,7 @@ def download_data(var_str, tint, mms_id, login, password, data_path: str = ""):
     root_path = os.path.dirname(os.path.abspath(__file__))
 
     with open(
-        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf8"
+        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf-8"
     ) as json_file:
         keys_ = json.load(json_file)
 
