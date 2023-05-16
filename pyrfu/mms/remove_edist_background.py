@@ -89,14 +89,14 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
 
     # Check path
     # Guess data path from CDF attributes
-    data_path = str(vdf.attrs["CDF"]).split(f"mms{mms_id}/fpi")[0]
+    data_path = str(vdf.attrs["CDF"]).split(f"mms{mms_id}/fpi", maxsplit=1)[0]
 
     # Check if path exists if not use the default
     if not os.path.exists(data_path):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -118,7 +118,7 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     else:
         n_photo = photoe_scle
 
-    for i in range(len(vdf.time.data)):
+    for i, _ in enumerate(vdf.time.data):
         istartdelphi_count = startdelphi_count.data[i]
         iebgdist = int(np.fix(istartdelphi_count / 16))
 

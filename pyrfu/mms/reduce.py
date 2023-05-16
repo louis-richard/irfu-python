@@ -223,16 +223,16 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         else:
             pass
 
-        options = dict(
-            xyz=xyz_ts[i_t, ...],
-            n_mc=n_mc,
-            weight=weight,
-            v_lim=v_lim,
-            a_lim=a_lim,
-            projection_dim=dim,
-            projection_base=base,
-            speed_grid_edges=speed_grid_edges,
-        )
+        options = {
+            "xyz": xyz_ts[i_t, ...],
+            "n_mc": n_mc,
+            "weight": weight,
+            "v_lim": v_lim,
+            "a_lim": a_lim,
+            "projection_dim": dim,
+            "projection_base": base,
+            "speed_grid_edges": speed_grid_edges,
+        }
 
         tmpst = int_sph_dist(f_3d, speed, phi, theta, speed_grid, **options)
 

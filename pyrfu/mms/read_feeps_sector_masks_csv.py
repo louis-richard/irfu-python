@@ -64,16 +64,8 @@ def read_feeps_sector_masks_csv(tint):
             [os.path.dirname(os.path.abspath(__file__)), "sun", file_name],
         )
 
-        csv_file = open(csv_file, "r")
-
-        csv_reader = csv.reader(csv_file)
-
-        csv_data = []
-
-        for line in csv_reader:
-            csv_data.append([float(x) for x in line])
-
-        csv_file.close()
+        with open(csv_file, "r", encoding="utf-8") as csv_file:
+            csv_data = [[float(x) for x in line] for line in csv.reader(csv_file)]
 
         csv_data = np.array(csv_data)
 
