@@ -342,7 +342,7 @@ def _add_logo(fig, path, loc=None):
     imax = fig.add_axes(loc)
     # remove ticks & the box from imax
     imax.set_axis_off()
-    # print the logo with aspect="equal" to avoid distorting the logo
+    # plot the logo with aspect="equal" to avoid distorting the logo
     imax.imshow(im, aspect="equal")
 
 
