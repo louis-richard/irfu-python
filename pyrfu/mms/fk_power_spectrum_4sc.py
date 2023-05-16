@@ -127,19 +127,19 @@ def fk_power_spectrum_4sc(
         idx = idx[:-1]
 
     if use_linear:
-        cwt_options = dict(
-            linear=df,
-            return_power=False,
-            wavelet_width=5.36 * w_width,
-            cut_edge=False,
-        )
+        cwt_options = {
+            "linear": df,
+            "return_power": False,
+            "wavelet_width": 5.36 * w_width,
+            "cut_edge": False,
+        }
     else:
-        cwt_options = dict(
-            nf=num_f,
-            return_power=False,
-            wavelet_width=5.36 * w_width,
-            cut_edge=False,
-        )
+        cwt_options = {
+            "nf": num_f,
+            "return_power": False,
+            "wavelet_width": 5.36 * w_width,
+            "cut_edge": False,
+        }
 
     w = [wavelet(e[i], **cwt_options) for i in range(4)]
 

@@ -71,7 +71,7 @@ def load_ancillary(
     # Root path
     pkg_path = os.path.dirname(os.path.abspath(__file__))
 
-    with open(os.sep.join([pkg_path, "ancillary.json"])) as file:
+    with open(os.sep.join([pkg_path, "ancillary.json"]), "r", encoding="utf8") as file:
         anc_dict = json.load(file)
 
     if verbose:

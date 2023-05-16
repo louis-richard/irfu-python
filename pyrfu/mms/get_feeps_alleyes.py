@@ -83,7 +83,7 @@ def _get_oneeye(
     out.attrs["lev"] = var["lev"]
     out.attrs["mms_id"] = mms_id
     out.attrs["dtype"] = var["dtype"]
-    out.attrs["species"] = "{}s".format(var["dtype"])
+    out.attrs["species"] = f"{var['dtype']}s"
     return out
 
 

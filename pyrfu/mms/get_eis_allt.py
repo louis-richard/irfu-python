@@ -111,7 +111,7 @@ def get_eis_allt(
     )
 
     # Names of the energy spectra in the CDF (one for each telescope)
-    cdfnames = ["{}_{}{:d}".format(pref, suf, t) for t in range(6)]
+    cdfnames = [f"{pref}_{suf}{t:d}" for t in range(6)]
 
     spin_nums = db_get_ts(dset_name, f"{pref}_spin", tint, data_path=data_path)
     sectors = db_get_ts(dset_name, f"{pref}_sector", tint, data_path=data_path)

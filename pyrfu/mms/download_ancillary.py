@@ -69,7 +69,7 @@ def _make_path(file, product, mms_id, data_path: str = ""):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -156,21 +156,17 @@ def download_ancillary(
                 headers=headers,
             )
 
-        ftmp = NamedTemporaryFile(delete=False)
-
-        with tqdm.tqdm.wrapattr(
-            fsrc.raw,
-            "read",
-            total=file["file_size"],
-        ) as fsrc_raw:
-            with open(ftmp.name, "wb") as fs:
-                copyfileobj(fsrc_raw, fs)
+        with NamedTemporaryFile(delete=False) as ftmp:
+            with tqdm.tqdm.wrapattr(
+                fsrc.raw, "read", total=file["file_size"]
+            ) as fsrc_raw:
+                with open(ftmp.name, "wb") as fs:
+                    copyfileobj(fsrc_raw, fs)
 
         os.makedirs(out_path, exist_ok=True)
 
         # if the download was successful, copy to data directory
         copy(ftmp.name, out_file)
         fsrc.close()
-        ftmp.close()
 
     sdc_session.close()

@@ -70,7 +70,7 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
         particle_idxs = [eye - 1 for eye in eyes[s_type]]
 
         for isen, sensor_num in enumerate(particle_idxs):
-            var_name = "{}-{:d}".format(s_type, sensor_num + 1)
+            var_name = f"{s_type}-{sensor_num + 1:d}"
 
             data = inp_dataset[var_name].data
             energies = inp_dataset[inp_dataset[var_name].dims[1]].data

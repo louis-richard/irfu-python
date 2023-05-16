@@ -124,7 +124,7 @@ def _make_path(file, var, mms_id, data_path: str = ""):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -188,7 +188,9 @@ def download_data(var_str, tint, mms_id, login, password, data_path: str = ""):
 
     root_path = os.path.dirname(os.path.abspath(__file__))
 
-    with open(os.sep.join([root_path, "mms_keys.json"]), "r") as json_file:
+    with open(
+        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf8"
+    ) as json_file:
         keys_ = json.load(json_file)
 
     var["dtype"] = keys_[var["inst"]][var_str.lower()]["dtype"]
@@ -206,28 +208,24 @@ def download_data(var_str, tint, mms_id, login, password, data_path: str = ""):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
-            fsrc = sdc_session.get(
+            with sdc_session.get(
                 dwl_url,
                 stream=True,
                 verify=True,
                 headers=headers,
-            )
+            ) as fsrc:
+                with NamedTemporaryFile(delete=False) as ftmp:
+                    with tqdm.tqdm.wrapattr(
+                        fsrc.raw,
+                        "read",
+                        total=file["size"],
+                    ) as fsrc_raw:
+                        with open(ftmp.name, "wb") as fs:
+                            copyfileobj(fsrc_raw, fs)
 
-        ftmp = NamedTemporaryFile(delete=False)
+                os.makedirs(out_path, exist_ok=True)
 
-        with tqdm.tqdm.wrapattr(
-            fsrc.raw,
-            "read",
-            total=file["size"],
-        ) as fsrc_raw:
-            with open(ftmp.name, "wb") as fs:
-                copyfileobj(fsrc_raw, fs)
-
-        os.makedirs(out_path, exist_ok=True)
-
-        # if the download was successful, copy to data directory
-        copy(ftmp.name, out_file)
-        fsrc.close()
-        ftmp.close()
+                # if the download was successful, copy to data directory
+                copy(ftmp.name, out_file)
 
     sdc_session.close()

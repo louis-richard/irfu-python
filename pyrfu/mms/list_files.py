@@ -58,7 +58,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])

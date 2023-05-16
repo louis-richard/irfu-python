@@ -91,7 +91,7 @@ def correct_edp_probe_timing(sc_pot):
             sc_pot_corrected.append(item.data)
 
     # Create the new time series with the corrected values
-    options = dict(coords=[time, np.arange(1, 7)], dims=["time", "probe"])
+    options = {"coords": [time, np.arange(1, 7)], "dims": ["time", "probe"]}
     sc_pot_corrected = xr.DataArray(sc_pot_corrected, **options)
 
     return sc_pot_corrected

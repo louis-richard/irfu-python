@@ -51,7 +51,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -92,12 +92,8 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     #   and FILETYPE is either DEFATT, PREDATT, DEFEPH, PREDEPH in uppercase
     #   and start/endDate is YYYYDOY
     #   and version is Vnn (.V00, .V01, etc..)
-    dir_pattern = os.sep.join(
-        [data_path, "ancillary", f"mms{mms_id}", product],
-    )
-    file_pattern = "_".join(
-        ["MMS{}".format(mms_id), product.upper(), "???????_???????.V??"],
-    )
+    dir_pattern = os.sep.join([data_path, "ancillary", f"mms{mms_id}", product])
+    file_pattern = "_".join([f"MMS{mms_id}", product.upper(), "???????_???????.V??"])
 
     files_in_tint = []
     out_files = []
