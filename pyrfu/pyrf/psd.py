@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
@@ -81,7 +81,7 @@ def psd(
 
     if n_fft < n_persegs:
         n_fft = n_persegs
-        warnings.warn("nfft < n_persegs. set to n_persegs", UserWarning)
+        logging.warning("nfft < n_persegs. set to n_persegs")
 
     f_samp = 1e9 / np.median(np.diff(inp.time.data)).astype(np.float64)
 

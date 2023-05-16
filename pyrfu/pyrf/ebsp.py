@@ -55,13 +55,13 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             b_bgd = resample(b_bgd, db_xyz, **resample_b_options)
 
             fs_ = fs_b
-            warnings.warn("Interpolating e to b", UserWarning)
+            logging.info("Interpolating e to b")
         elif fs_e > 1.5 * fs_b:
             db_xyz = resample(db_xyz, e_xyz)
             b_bgd = resample(b_bgd, e_xyz)
 
             fs_ = fs_e
-            warnings.warn("Interpolating b to e", UserWarning)
+            logging.info("Interpolating b to e")
         elif fs_e == fs_b and len(e_xyz) == len(db_xyz):
             fs_ = fs_e
         else:
@@ -90,7 +90,7 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             b_xyz = resample(b_xyz, t)
             db_xyz = resample(db_xyz, t)
 
-            warnings.warn("Interpolating b and e to 2x e sampling", UserWarning)
+            logging.info("Interpolating b and e to 2x e sampling")
 
     return e_xyz, db_xyz, b_xyz, b_bgd, fs_
 
@@ -411,8 +411,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             raise ValueError("ebsp(): at least b0 should be given for option FAC")
 
         if xyz is None:
-            message = "convert_fac : assuming s/c position [1 0 0] for estimating FAC"
-            warnings.warn(message)
+            logging.info(
+                "convert_fac : assuming s/c position [1 0 0] for estimating FAC"
+            )
             xyz = [1, 0, 0]
             xyz = ts_vec_xyz(db_xyz.time.data, np.tile(xyz, (len(db_xyz), 1)))
 

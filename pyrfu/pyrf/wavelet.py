@@ -3,7 +3,7 @@
 
 # Built-in imports
 import os
-import warnings
+import logging
 
 # 3rd party imports
 import numba
@@ -21,6 +21,13 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 @numba.jit(nopython=True, fastmath=True)
@@ -91,10 +98,7 @@ def wavelet(inp, **kwargs):
             delta_f = kwargs["linear"]
         else:
             delta_f = 100
-            warnings.warn(
-                "Unknown input for linear delta_f set to 100",
-                UserWarning,
-            )
+            logging.warning("Unknown input for linear delta_f set to 100")
     else:
         delta_f = 100
         linear_df = False

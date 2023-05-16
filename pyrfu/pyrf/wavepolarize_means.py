@@ -137,9 +137,10 @@ def wavepolarize_means(
     end_sample_freq = 1 / (ct[-1] - ct[-2])
 
     if sample_freq != end_sample_freq:
-        logging.warning(
-            "file sampling frequency changes {sample_freq} Hz to %3.2f Hz",
-            end_sample_freq,
+        logging.info(
+            "file sampling frequency changes %(sample_freq)3.2f Hz "
+            "to %(end_sample_freq)3.2f Hz",
+            {"sample_freq": sample_freq, "end_sample_freq": end_sample_freq},
         )
     else:
         logging.info("ac file sampling frequency %3.2f Hz", sample_freq)

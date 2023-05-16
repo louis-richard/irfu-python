@@ -3,7 +3,7 @@
 
 # Built-in imports
 import bisect
-import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
@@ -17,6 +17,13 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def _guess_sampling_frequency(ref_time):
@@ -47,11 +54,7 @@ def _guess_sampling_frequency(ref_time):
         cur += 1
 
     if not_found:
-        raise RuntimeError(
-            "Cannot guess sampling frequency. Tried {:d} times".format(
-                max_try,
-            ),
-        )
+        raise RuntimeError(f"Cannot guess sampling frequency. Tried {max_try:d} times")
 
     return sfy
 
@@ -132,7 +135,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
 
             if len(inp_time) / (inp_time[-1] - inp_time[0]) > 2 * sfy:
                 flag_do = "average"
-                warnings.warn("Using averages in resample", UserWarning)
+                logging.info("Using averages in resample")
             else:
                 flag_do = "interpolation"
         else:
@@ -299,7 +302,7 @@ def resample(
 
     """
 
-    options = dict(method=method, f_s=f_s, window=window, thresh=thresh)
+    options = {"method": method, "f_s": f_s, "window": window, "thresh": thresh}
 
     if isinstance(inp, xr.DataArray):
         out = _resample_dataarray(inp, ref, **options)
