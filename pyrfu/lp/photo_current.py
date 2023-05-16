@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import logging
+
 from typing import Union
 
 # 3rd party imports
@@ -15,6 +17,13 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 surface_materials = [
     "cluster",
@@ -80,7 +89,9 @@ def photo_current(
     if not iluminated_area and not u and not distance_sun:
         for surf in surface_materials:
             j0 = photo_current(1, 0, 1, surf)
-            print(f"{surf}: Io= {j0 * 1e6:3.2f} uA/m2")
+            logging.info(
+                "%(surf)s: Io= %(i0)3.2f uA/m2", {"surf": surf, "i0": j0 * 1e6}
+            )
 
         return None
 
