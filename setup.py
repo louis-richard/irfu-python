@@ -27,7 +27,7 @@ URL = "https://github.com/louis-richard/irfu-python"
 LICENSE = "MIT License"
 DESCRIPTION = "Python Space Physics (RymdFysik) Utilities"
 
-with open("README.rst", "r") as fh:
+with open("README.rst", "r", encoding="utf8") as fh:
     LONG_DESCRIPTION = fh.read()
 
 
