@@ -55,13 +55,13 @@ def wave_fft(
     n_per_seg = np.round(frame_length * f_sampling).astype(np.int64)
     n_overlap = np.round(frame_overlap * f_sampling).astype(np.int64)
 
-    options = dict(
-        fs=f_sampling,
-        window=window,
-        nperseg=n_per_seg,
-        noverlap=n_overlap,
-        mode="complex",
-    )
+    options = {
+        "fs": f_sampling,
+        "window": window,
+        "nperseg": n_per_seg,
+        "noverlap": n_overlap,
+        "mode": "complex",
+    }
     frequencies, time, spectrogram = signal.spectrogram(inp, **options)
 
     return frequencies, time, spectrogram

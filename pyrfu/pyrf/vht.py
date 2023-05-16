@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+import logging
+
 import numpy as np
 
 # Local imports
@@ -85,12 +87,9 @@ def vht(e, b, flag: int = 1):
 
     v_ht_hat = v_ht / np.linalg.norm(v_ht, keepdims=True)
 
-    print(
-        "v_ht ={:7.4f} * {} = {} km/s".format(
-            np.linalg.norm(v_ht),
-            np.array_str(v_ht_hat),
-            np.array_str(v_ht),
-        ),
+    logging.info(
+        "v_ht =%(v_mag)7.4f} * %(v_vec)s km/s",
+        {"v_mag": np.linalg.norm(v_ht), "v_vec": np.array_str(v_ht_hat)},
     )
 
     # Calculate the goodness of the Hoffman Teller frame
@@ -114,8 +113,10 @@ def vht(e, b, flag: int = 1):
         e_p.data.reshape([len(e_p) * 3]),
     )
 
-    print("slope = {p[0]:6.4f}, offs = {p[1]:6.4f}".format(p=poly_fit))
-    print("cc = {:6.4f}".format(corr_coeff[0, 1]))
+    logging.info(
+        "slope = %(slope)6.4f, offs = %(offset)6.4f, cc = %(cc)6.4f",
+        {"slope": poly_fit[0], "offset": poly_fit[1], "cc": corr_coeff[0, 1]},
+    )
 
     dv_ht = np.sum(np.sum(delta_e**2)) / len(ind_data)
     s_mat = (dv_ht / (2 * len(ind_data) - 3)) / k_mat
@@ -123,12 +124,9 @@ def vht(e, b, flag: int = 1):
 
     dv_ht_hat = dv_ht / np.linalg.norm(dv_ht)
 
-    print(
-        "dv_ht ={:7.4f} * {} = {} km/s".format(
-            np.linalg.norm(dv_ht),
-            np.array_str(dv_ht_hat),
-            np.array_str(dv_ht),
-        ),
+    logging.info(
+        "dv_ht =%(dv_mag)7.4f} * %(dv_vec)s km/s",
+        {"v_mag": np.linalg.norm(dv_ht), "v_vec": np.array_str(dv_ht_hat)},
     )
 
     return v_ht, e_ht, dv_ht

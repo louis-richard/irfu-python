@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
@@ -18,6 +18,13 @@ __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
 __version__ = "2.3.7"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="%(asctime)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def _spec_mat(half_spec_x, half_spec_y, half_spec_z):
@@ -130,13 +137,12 @@ def wavepolarize_means(
     end_sample_freq = 1 / (ct[-1] - ct[-2])
 
     if sample_freq != end_sample_freq:
-        warnings.warn(
-            f"file sampling frequency changes {sample_freq} Hz to "
-            f"{end_sample_freq} Hz",
-            UserWarning,
+        logging.warning(
+            "file sampling frequency changes {sample_freq} Hz to %3.2f Hz",
+            end_sample_freq,
         )
     else:
-        print("ac file sampling frequency {} Hz".format(sample_freq))
+        logging.info("ac file sampling frequency %3.2f Hz", sample_freq)
 
     # FFT calculation
     # Minimum variance direction and wave normal angle
