@@ -311,8 +311,6 @@ def mc_pol_1d(
                     d_phi_mc = (random.random() - 0.5) * d_phi[j]
                     d_the_mc = (random.random() - 0.5) * d_theta[k]
 
-                    # printf("%f, %f\n", d_v_m[0], d_v_mc)
-
                     # convert instrument bin to cartesian velocity
                     v_mc = v[i] + d_v_mc
                     phi_mc = phi[j] + d_phi_mc
