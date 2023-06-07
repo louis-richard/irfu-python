@@ -157,7 +157,7 @@ def read_lfr_density(tint, data_path: str = "", tree: bool = False):
 
         # Get time from Epoch
         epoch = data_l3["epoch"].data
-        time = cdfepoch.to_datetime(epoch, to_np=True)
+        time = cdfepoch.to_datetime(epoch)
 
         # Get density data and contruct time series.
         density = data_l3["density"].data

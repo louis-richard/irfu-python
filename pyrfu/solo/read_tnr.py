@@ -205,7 +205,7 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
                 idx_l, idx_r = [xdelta_sw[inswn] + 1, xdelta_sw[inswn + 1]]
                 sweep_num[idx_l:idx_r] += sweep_num[xdelta_sw[inswn]]
 
-        timet_ = cdfepoch.to_datetime(epoch_, to_np=True)
+        timet_ = cdfepoch.to_datetime(epoch_)
 
         sens0_, sens1_ = [np.where(confg_[:, i] == sensor)[0] for i in range(2)]
 
