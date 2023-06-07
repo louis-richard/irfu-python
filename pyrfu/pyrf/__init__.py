@@ -101,6 +101,8 @@ from .struct_func import struct_func
 from .autocorr import autocorr
 from .increments import increments
 from .int_sph_dist import int_sph_dist
+from .shock_normal import shock_normal
+from .shock_parameters import shock_parameters
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -190,6 +192,8 @@ __all__ = [
     "read_cdf",
     "remove_repeated_points",
     "resample",
+    "shock_normal",
+    "shock_parameters",
     "solid_angle",
     "sph2cart",
     "st_diff",
