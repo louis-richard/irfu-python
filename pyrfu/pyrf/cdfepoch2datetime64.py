@@ -76,7 +76,7 @@ def cdfepoch2datetime64(epochs):
 
     """
 
-    times = cdfepoch.breakdown(epochs, to_np=True)
+    times = cdfepoch.breakdown(epochs)
     times = np.transpose(np.atleast_2d(times))
 
     times = _compose_date(*times).astype("datetime64[ns]")

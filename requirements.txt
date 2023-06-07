@@ -1,5 +1,5 @@
 # cat requirements.txt
-cdflib>=0.4.7
+cdflib>=1.0.4
 geopack>=1.0.9
 matplotlib>=3.5.2
 numba>=0.54.1
