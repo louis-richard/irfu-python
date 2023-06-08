@@ -88,7 +88,7 @@ def _get_epochs(file, cdf_name, tint):
         "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1]),
     }
 
-    if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
+    if file.varinq(depend0_key).Data_Type_Description == "CDF_TIME_TT2000":
         try:
             out["data"] = cdfepoch2datetime64(out["data"])
 
@@ -212,7 +212,7 @@ def get_ts(file_path, cdf_name, tint):
     tint_org = tint.copy()
     tint = extend_tint(tint, [-1.0, 1.0])
     tint = list(datetime642iso8601(iso86012datetime64(np.array(tint))))
-    tint = list(map(cdfepoch.parse, tint))
+    tint = np.stack(list(map(cdfepoch.parse, tint)))
 
     out_dict = {}
     time, depend_1, depend_2, depend_3 = [{}, {}, {}, {}]
