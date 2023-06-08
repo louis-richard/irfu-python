@@ -240,4 +240,8 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
     pad.attrs["delta_pitchangle_minus"] = d_angles * 0.5
     pad.attrs["delta_pitchangle_plus"] = d_angles * 0.5
 
+    pad.time.attrs = vdf.time.attrs
+    pad.energy.attrs = vdf.energy.attrs
+    pad.data.attrs["UNITS"] = vdf.data.attrs["UNITS"]
+
     return pad
