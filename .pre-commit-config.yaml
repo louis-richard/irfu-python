@@ -21,6 +21,17 @@ repos:
     hooks:
       - id: black
         language_version: python3.9
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.0
+    hooks:
+      - id: nbqa-black
+        name: nbqa-black
+        description: "Run 'black' on a Jupyter Notebook"
+        entry: nbqa black
+        language: python
+        require_serial: true
+        types: [ jupyter ]
+        additional_dependencies: [ black ]
   - repo: https://github.com/pycqa/flake8
     rev: "6.0.0"
     hooks:
