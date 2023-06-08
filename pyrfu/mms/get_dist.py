@@ -98,7 +98,7 @@ def _get_epochs(file, cdf_name, tint):
         "data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1]),
     }
 
-    if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
+    if file.varinq(depend0_key).Data_Type_Description == "CDF_TIME_TT2000":
         try:
             out["data"] = cdfepoch2datetime64(out["data"])
 
@@ -156,9 +156,11 @@ def get_dist(file_path, cdf_name, tint):
     tint = np.stack(list(map(cdfepoch.parse, tint)))
 
     with CDF(file_path) as file:
-        # Get the relevant CDF file information and add the global attributes
-        glob_attrs = {k: file.cdf_info()[k] for k in Globkeys}
-        glob_attrs = {**glob_attrs, **file.globalattsget()}
+        # Get the relevant CDF file information (zVariables)
+        z_vars = file.cdf_info().zVariables
+
+        # Get the global attributes
+        glob_attrs = file.globalattsget()
         glob_attrs = {**glob_attrs, **{"tmmode": tmmode, "species": specie}}
 
         # Get VDF zVariable attributes
@@ -221,7 +223,7 @@ def get_dist(file_path, cdf_name, tint):
                 endtime=tint[1],
             )
 
-            if en0_name not in file.cdf_info()["zVariables"]:
+            if en0_name not in z_vars:
                 if energy.ndim == 1:
                     energy0 = energy
                     energy1 = energy
@@ -264,7 +266,7 @@ def get_dist(file_path, cdf_name, tint):
             ],
         )
 
-        if d_en_name in file.cdf_info()["zVariables"]:
+        if d_en_name in z_vars:
             glob_attrs["delta_energy_plus"] = file.varget(
                 d_en_name,
                 starttime=tint[0],
