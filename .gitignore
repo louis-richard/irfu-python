@@ -7,7 +7,7 @@ __pycache__
 pyrfu.egg-info/
 build/
 dist/
-venv
+venv/
 
 # Added/ignored for workflow.
 # PyCharm uses .idea/
