@@ -75,7 +75,7 @@ def _init(vdf, tint):
     else:
         phi = vdf.phi
 
-    theta = vdf.theta
+    theta = vdf.theta.data
     polar = np.deg2rad(theta)
     azimuthal = np.deg2rad(phi)
     step_table = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
@@ -106,7 +106,7 @@ def _init(vdf, tint):
         dist = vdf.data.data[t_id, ...]
         dist = dist[None, ...]
         step_table = step_table[t_id]
-        azimuthal = azimuthal[t_id, ...]
+        azimuthal = azimuthal.data[t_id, ...]
 
         if step_table.data:
             energy_edges = energy1_edges
@@ -126,7 +126,7 @@ def _init(vdf, tint):
                 dist.data,
                 time_clip(vdf.energy, tint).data,
                 np.rad2deg(azimuthal.data),
-                theta.data,
+                theta,
             )
             newt, dist, energy, phi = psd_rebin(
                 temp,
@@ -140,7 +140,7 @@ def _init(vdf, tint):
                 dist,
                 np.tile(energy, (len(newt), 1)),
                 phi,
-                theta.data,
+                theta,
             )
             dist = time_clip(dist.data, tint)
             azimuthal = xr.DataArray(
@@ -160,10 +160,13 @@ def _init(vdf, tint):
                 energy_edges = energy1_edges
             else:
                 energy_edges = energy0_edges
+
+        dist = dist.data.data
+        azimuthal = azimuthal.data
     else:
         raise ValueError("Invalid time interval")
 
-    return dist, polar.data, azimuthal.data, energy_edges, len_e
+    return dist, polar, azimuthal, energy_edges, len_e
 
 
 def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
@@ -213,7 +216,7 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
             geo_factor_bin_size = np.ones(pol_mat.shape)
 
         f_mat[i, ...] = _cotrans_jit(
-            dist.data[i, ...],
+            dist[i, ...],
             elevation_angle,
             e_lim,
             plane_az,
