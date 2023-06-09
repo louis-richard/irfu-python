@@ -152,7 +152,7 @@ Dependencies
 
 The required dependencies are:
 
-- `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=0.4.7
+- `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=1.0.0
 - `geopack <https://github.com/tsssss/geopack>`_ >=1.0.9
 - `matplotlib <https://matplotlib.org>`_ >=3.5.2
 - `numba <http://numba.pydata.org>`_ >=0.54.1
