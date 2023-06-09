@@ -6,6 +6,7 @@ __pycache__
 .coverage
 pyrfu.egg-info/
 build/
+dist/
 
 # Added/ignored for workflow.
 # PyCharm uses .idea/
