@@ -12,4 +12,6 @@ build/
 .idea/
 
 # Ignore .ipynb_checkpoints
+examples/00_overview/.ipynb_checkpoints
 examples/01_mms/.ipynb_checkpoints
+examples/02_dispersion/.ipynb_checkpoints
