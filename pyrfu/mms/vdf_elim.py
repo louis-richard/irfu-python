@@ -14,7 +14,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2021"
 __license__ = "MIT"
-__version__ = "2.3.10"
+__version__ = "2.3.33"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
@@ -83,19 +83,32 @@ def vdf_elim(vdf, e_int):
             {"e0": energy.data[0, e_levels], "e1": energy.data[1, e_levels]},
         )
 
+    # Data attributes
+    data_attrs = vdf.data.attrs
+
+    # Coordinates attributes
+    coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
+
+    # Global attributes
+    glob_attrs = vdf.attrs
+
+    # Get energies levels
+    energy_0 = glob_attrs.get("energy0", unique_etables[0, :])[e_levels]
+    energy_1 = glob_attrs.get("energy1", unique_etables[0, :])[e_levels]
+    esteptable = glob_attrs.get("esteptable", np.zeros(len(vdf.time)))
+
     vdf_e_clipped = ts_skymap(
         vdf.time.data,
         vdf.data.data[:, e_levels, ...],
         energy=energy.data[:, e_levels],
         phi=vdf.phi.data,
         theta=vdf.theta.data,
+        energy0=energy_0,
+        energy1=energy_1,
+        esteptable=esteptable,
+        attrs=data_attrs,
+        coords_attrs=coords_attrs,
+        glob_attrs=glob_attrs,
     )
-
-    energy_0 = vdf.attrs.get("energy0", unique_etables[0, :])[e_levels]
-    energy_1 = vdf.attrs.get("energy1", unique_etables[0, :])[e_levels]
-    esteptable = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
-    vdf_e_clipped.attrs["energy0"] = energy_0
-    vdf_e_clipped.attrs["energy1"] = energy_1
-    vdf_e_clipped.attrs["esteptable"] = esteptable
 
     return vdf_e_clipped
