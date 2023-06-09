@@ -26,7 +26,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.3.33"
 __status__ = "Prototype"
 
 
@@ -169,7 +169,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     f_g = np.zeros([n_t, *[n_vg] * n_pr])
     all_v = {f"v{chr(120 + i)}": np.zeros((n_t, n_vg)) for i in range(n_pr)}
 
-    for i_t in tqdm.tqdm(range(n_t)):  # display progress
+    for i_t in tqdm.tqdm(range(n_t), ncols=60):  # display progress
         # 3d data matrix for time index
         f_3d = np.squeeze(vdf_data.data[i_t, ...])  # s^3/m^6
         f_3d = f_3d.astype(
