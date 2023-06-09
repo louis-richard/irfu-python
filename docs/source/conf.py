@@ -6,8 +6,8 @@
 
 # Built-in imports
 import os
-import sys
 import shutil
+import sys
 
 # 3rd party imports
 import pydata_sphinx_theme
