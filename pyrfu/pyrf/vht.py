@@ -6,9 +6,10 @@ import logging
 
 import numpy as np
 
+from .e_vxb import e_vxb
+
 # Local imports
 from .resample import resample
-from .e_vxb import e_vxb
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

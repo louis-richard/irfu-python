@@ -8,9 +8,10 @@ import logging
 import numpy as np
 import xarray as xr
 
+from .datetime642unix import datetime642unix
+
 # Local imports
 from .resample import resample
-from .datetime642unix import datetime642unix
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

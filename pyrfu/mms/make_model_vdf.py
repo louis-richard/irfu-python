@@ -3,17 +3,16 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import constants
 
-# Local imports
-from . import rotate_tensor
 from ..pyrf.dec_par_perp import dec_par_perp
 from ..pyrf.norm import norm
 from ..pyrf.resample import resample
 from ..pyrf.trace import trace
 from ..pyrf.ts_scalar import ts_scalar
 
+# Local imports
+from . import rotate_tensor
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

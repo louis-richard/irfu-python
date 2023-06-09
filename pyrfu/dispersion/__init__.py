@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .disp_surf_calc import disp_surf_calc
+
 # @Louis Richard
 from .one_fluid_dispersion import one_fluid_dispersion
-from .disp_surf_calc import disp_surf_calc
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

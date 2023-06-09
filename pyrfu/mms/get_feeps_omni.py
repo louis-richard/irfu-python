@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .feeps_omni import feeps_omni
+from .feeps_remove_bad_data import feeps_remove_bad_data
+from .feeps_remove_sun import feeps_remove_sun
+from .feeps_spin_avg import feeps_spin_avg
+from .feeps_split_integral_ch import feeps_split_integral_ch
+
 # Local imports
 from .get_feeps_alleyes import get_feeps_alleyes
-from .feeps_remove_bad_data import feeps_remove_bad_data
-from .feeps_split_integral_ch import feeps_split_integral_ch
-from .feeps_remove_sun import feeps_remove_sun
-from .feeps_omni import feeps_omni
-from .feeps_spin_avg import feeps_spin_avg
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

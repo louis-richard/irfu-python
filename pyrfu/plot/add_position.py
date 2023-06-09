@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-
 from matplotlib.dates import num2date
 
 # Local imports

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
+
 # Built-in imports
 import os
-import json
 import subprocess
 
 # Local imports

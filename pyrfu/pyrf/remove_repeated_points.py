@@ -5,9 +5,10 @@
 import numpy as np
 import xarray as xr
 
+from .ts_scalar import ts_scalar
+
 # Local imports
 from .ts_vec_xyz import ts_vec_xyz
-from .ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -8,7 +8,6 @@ import logging
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import interpolate
 
 __author__ = "Louis Richard"

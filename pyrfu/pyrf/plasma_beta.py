@@ -3,7 +3,6 @@
 
 # Local imports
 from ..mms import rotate_tensor
-
 from .norm import norm
 from .resample import resample
 from .ts_scalar import ts_scalar

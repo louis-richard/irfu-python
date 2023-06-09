@@ -4,8 +4,7 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
-from cdflib import cdfread, cdfepoch
+from cdflib import cdfepoch, cdfread
 from dateutil import parser
 
 # Local imports

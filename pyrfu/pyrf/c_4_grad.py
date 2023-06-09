@@ -8,13 +8,14 @@ import itertools
 import numpy as np
 import xarray as xr
 
+from .avg_4sc import avg_4sc
+from .c_4_k import c_4_k
+from .cross import cross
+from .dot import dot
+from .normalize import normalize
+
 # Local imports
 from .resample import resample
-from .c_4_k import c_4_k
-from .normalize import normalize
-from .avg_4sc import avg_4sc
-from .dot import dot
-from .cross import cross
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

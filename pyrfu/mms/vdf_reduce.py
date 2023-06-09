@@ -4,11 +4,10 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
-from scipy import interpolate, constants
+from scipy import constants, interpolate
 
 # Local imports
-from pyrfu.pyrf import cart2sph, sph2cart, resample, time_clip
+from pyrfu.pyrf import cart2sph, resample, sph2cart, time_clip
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

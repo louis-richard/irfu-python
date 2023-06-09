@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import csv
+
 # Built-in imports
 import os
-import csv
 
 # 3rd party imports
 import numpy as np

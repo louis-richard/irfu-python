@@ -11,10 +11,9 @@ import re
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from cdflib import cdfepoch
 from dateutil import parser
-from dateutil.rrule import rrule, DAILY
+from dateutil.rrule import DAILY, rrule
 from scipy import integrate
 
 from ..pyrf import read_cdf, ts_append

@@ -5,10 +5,11 @@
 import bisect
 import warnings
 
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
 
 # Local imports
 from ..pyrf import datetime642iso8601, time_clip

@@ -8,14 +8,13 @@ import multiprocessing as mp
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import constants
 
 # Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
-from ..pyrf.ts_vec_xyz import ts_vec_xyz
 from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -3,16 +3,16 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import signal
+
+from .calc_dt import calc_dt
+from .filt import filt
+from .integrate import integrate
+from .norm import norm
 
 # Local imports
 from .resample import resample
-from .filt import filt
-from .norm import norm
-from .integrate import integrate
 from .ts_scalar import ts_scalar
-from .calc_dt import calc_dt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

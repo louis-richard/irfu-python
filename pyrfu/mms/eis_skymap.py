@@ -4,9 +4,10 @@
 # 3rd party imports
 import numpy as np
 
+from ..pyrf.ts_skymap import ts_skymap
+
 # Local imports
 from .dpf2psd import dpf2psd
-from ..pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

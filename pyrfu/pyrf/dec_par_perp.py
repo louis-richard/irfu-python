@@ -4,9 +4,10 @@
 # 3rd party imports
 import numpy as np
 
+from .dot import dot
+
 # Local imports
 from .resample import resample
-from .dot import dot
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

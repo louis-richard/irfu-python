@@ -7,7 +7,6 @@ import warnings
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import interpolate
 
 # Local imports

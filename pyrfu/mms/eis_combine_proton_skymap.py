@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .eis_ang_ang import eis_ang_ang
+
 # Local imports
 from .eis_combine_proton_spec import eis_combine_proton_spec
-from .eis_ang_ang import eis_ang_ang
 from .eis_skymap import eis_skymap
 
 __author__ = "Louis Richard"

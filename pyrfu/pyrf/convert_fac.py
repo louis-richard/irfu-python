@@ -5,10 +5,11 @@
 import numpy as np
 import xarray as xr
 
+from .calc_fs import calc_fs
+
 # Local imports
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
-from .calc_fs import calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

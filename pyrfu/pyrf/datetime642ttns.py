@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-
 from cdflib import cdfepoch
 
 # local imports

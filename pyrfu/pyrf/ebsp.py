@@ -10,19 +10,19 @@ import warnings
 import numba
 import numpy as np
 import xarray as xr
-
 from scipy import fft
+
+from .calc_fs import calc_fs
+from .cart2sph import cart2sph
+from .convert_fac import convert_fac
+from .datetime642iso8601 import datetime642iso8601
+from .iso2unix import iso2unix
+from .resample import resample
 
 # Local imports
 from .ts_time import ts_time
 from .ts_vec_xyz import ts_vec_xyz
-from .resample import resample
-from .iso2unix import iso2unix
-from .cart2sph import cart2sph
-from .calc_fs import calc_fs
-from .convert_fac import convert_fac
 from .unix2datetime64 import unix2datetime64
-from .datetime642iso8601 import datetime642iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

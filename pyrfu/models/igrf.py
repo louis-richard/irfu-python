@@ -8,7 +8,6 @@ import warnings
 # 3rd party imports
 import numpy as np
 import pandas as pd
-
 from scipy import interpolate
 
 

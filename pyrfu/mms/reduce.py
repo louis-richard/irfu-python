@@ -1,19 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import tqdm
-
 # Third party imports
 import numpy as np
-import xarray as xr
 
-from scipy.constants import (
-    speed_of_light,
-    electron_volt,
-    proton_mass,
-    electron_mass,
-)
+# Built-in imports
+import tqdm
+import xarray as xr
+from scipy.constants import electron_mass, electron_volt, proton_mass, speed_of_light
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601

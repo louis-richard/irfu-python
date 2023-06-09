@@ -4,10 +4,11 @@
 # 3rd party imports
 import xarray as xr
 
-# Local imports
-from .list_files import list_files
 from .db_get_ts import db_get_ts
 from .db_get_variable import db_get_variable
+
+# Local imports
+from .list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -4,24 +4,19 @@
 # Built-in imports
 import os
 
+import matplotlib.dates as mdates
+import matplotlib.image as mimg
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.image as mimg
-import matplotlib.dates as mdates
 
 # Local imports
 from ..mms import get_data, get_feeps_omni
-from ..pyrf import (
-    iso86012datetime64,
-    datetime642iso8601,
-    iso86012datetime,
-    date_str,
-)
-
+from ..pyrf import date_str, datetime642iso8601, iso86012datetime, iso86012datetime64
 from .plot_line import plot_line
-from .plot_spectr import plot_spectr
 from .plot_magnetosphere import plot_magnetosphere
+from .plot_spectr import plot_spectr
 from .span_tint import span_tint
 
 __author__ = "Louis Richard"

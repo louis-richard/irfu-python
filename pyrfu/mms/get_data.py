@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import os
 import json
 import logging
 
-# Local imports
-from .tokenize import tokenize
-from .list_files import list_files
-from .get_ts import get_ts
-from .get_dist import get_dist
+# Built-in imports
+import os
+
 from ..pyrf.dist_append import dist_append
 from ..pyrf.ts_append import ts_append
 from ..pyrf.ttns2datetime64 import ttns2datetime64
+from .get_dist import get_dist
+from .get_ts import get_ts
+from .list_files import list_files
+
+# Local imports
+from .tokenize import tokenize
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -3,12 +3,10 @@
 
 # Built-in imports
 import logging
-
 from typing import Union
 
 # 3rd party imports
 import numpy as np
-
 from scipy import interpolate
 
 __author__ = "Louis Richard"

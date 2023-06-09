@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
-import matplotlib.pyplot as plt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

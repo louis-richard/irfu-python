@@ -4,9 +4,10 @@
 # Built-in imports
 import warnings
 
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import xarray as xr
-import matplotlib.pyplot as plt
 
 # Local imports
 from ..pyrf import histogram2d

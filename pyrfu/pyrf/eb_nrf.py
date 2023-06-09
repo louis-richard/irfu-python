@@ -5,11 +5,12 @@
 import numpy as np
 import xarray as xr
 
-# Local imports
-from .resample import resample
+from .cross import cross
 from .dot import dot
 from .normalize import normalize
-from .cross import cross
+
+# Local imports
+from .resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

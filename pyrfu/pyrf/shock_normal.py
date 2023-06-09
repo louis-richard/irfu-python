@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
+
 # Built-in imports
 import os
-import json
 
 # Thrid party imports
 import numpy as np
 import xarray as xr
-
-from scipy import interpolate, optimize, constants
+from scipy import constants, interpolate, optimize
 from scipy.spatial.transform import Rotation as R
 
 __author__ = "Louis Richard"

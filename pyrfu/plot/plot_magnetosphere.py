@@ -6,12 +6,11 @@ import logging
 
 # 3rd party imports
 import numpy as np
-
 from geopack import geopack
 from matplotlib.patches import Wedge
 
 # Local imports
-from ..pyrf import magnetosphere, datetime642unix, iso86012datetime64
+from ..pyrf import datetime642unix, iso86012datetime64, magnetosphere
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

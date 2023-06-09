@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import signal
 
 __author__ = "Louis Richard"

@@ -4,10 +4,11 @@
 # Built-in imports
 import logging
 
+from ..pyrf.ts_append import ts_append
+from .get_ts import get_ts
+
 # Local imports
 from .list_files import list_files
-from .get_ts import get_ts
-from ..pyrf.ts_append import ts_append
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

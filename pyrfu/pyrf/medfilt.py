@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
-import xarray as xr
 import numpy as np
 
+# 3rd party imports
+import xarray as xr
 from scipy import signal
 
 __author__ = "Louis Richard"

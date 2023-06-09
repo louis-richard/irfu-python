@@ -4,8 +4,7 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
-from scipy import special, constants
+from scipy import constants, special
 
 # Local imports
 from ..pyrf.resample import resample

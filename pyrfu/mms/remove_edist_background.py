@@ -7,15 +7,15 @@ import os
 
 # 3rd party imports
 import numpy as np
-
 from cdflib import cdfread
+
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_skymap import ts_skymap
 
 # Local imports
 from .db_get_ts import db_get_ts
 from .get_data import get_data
-from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.time_clip import time_clip
-from ..pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

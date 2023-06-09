@@ -6,9 +6,7 @@ from typing import Union
 
 # 3rd party imports
 import numpy as np
-
-from scipy import constants
-from scipy import special
+from scipy import constants, special
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

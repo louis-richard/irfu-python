@@ -8,7 +8,6 @@ import os
 # Third party imports
 import numpy as np
 import requests
-
 from scipy.io import readsav
 
 # Local imports

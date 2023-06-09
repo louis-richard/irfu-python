@@ -7,14 +7,14 @@ import warnings
 
 # 3rd party imports
 import numpy as np
-
 from cdflib import CDF, cdfepoch
+
+from ..pyrf.cdfepoch2datetime64 import cdfepoch2datetime64
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.iso86012datetime64 import iso86012datetime64
-from ..pyrf.cdfepoch2datetime64 import cdfepoch2datetime64
 from ..pyrf.extend_tint import extend_tint
+from ..pyrf.iso86012datetime64 import iso86012datetime64
 from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_skymap import ts_skymap
 
@@ -157,7 +157,8 @@ def get_dist(file_path, cdf_name, tint):
 
     with CDF(file_path) as file:
         # Get the relevant CDF file information (zVariables)
-        z_vars = file.cdf_info().zVariables
+        cdf_infos = file.cdf_info()
+        z_vars = cdf_infos.zVariables
 
         # Get the global attributes
         glob_attrs = file.globalattsget()

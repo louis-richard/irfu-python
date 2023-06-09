@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import datetime
+import json
+
 # Built-in imports
 import os
-import json
-import datetime
 
 # 3rd party imports
 import numpy as np

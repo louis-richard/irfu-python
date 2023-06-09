@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import datetime
+import fnmatch
+import glob
+import json
+
 # Built-in imports
 import os
 import re
-import glob
-import json
-import fnmatch
-import datetime
 
 # 3rd party imports
 import numpy as np
@@ -15,8 +16,8 @@ import pandas as pd
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.iso86012datetime64 import iso86012datetime64
 from ..pyrf.iso86012datetime import iso86012datetime
+from ..pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

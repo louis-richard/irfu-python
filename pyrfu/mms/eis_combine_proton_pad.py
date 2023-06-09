@@ -8,10 +8,11 @@ import warnings
 import numpy as np
 import xarray as xr
 
+from .eis_combine_proton_spec import eis_combine_proton_spec
+from .eis_omni import eis_omni
+
 # Local imports
 from .eis_pad import eis_pad
-from .eis_omni import eis_omni
-from .eis_combine_proton_spec import eis_combine_proton_spec
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -4,9 +4,10 @@
 # 3rd party imports
 import numpy as np
 
+from .datetime642iso8601 import datetime642iso8601
+
 # Local imports
 from .iso86012datetime64 import iso86012datetime64
-from .datetime642iso8601 import datetime642iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

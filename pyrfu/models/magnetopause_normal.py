@@ -6,7 +6,6 @@ import warnings
 
 # 3rd party imports
 import numpy as np
-
 from scipy.optimize import fminbound
 
 __author__ = "Louis Richard"

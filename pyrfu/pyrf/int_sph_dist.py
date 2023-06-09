@@ -3,8 +3,7 @@
 
 # Built-in imports
 import random
-
-from math import cos, sin, asin, sqrt
+from math import asin, cos, sin, sqrt
 
 # Third party imports
 import numba

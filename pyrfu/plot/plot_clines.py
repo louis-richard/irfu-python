@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party import
-import numpy as np
 import matplotlib.pyplot as plt
 
+# 3rd party import
+import numpy as np
 from matplotlib.cm import get_cmap
-from matplotlib.colors import LogNorm
 from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import LogNorm
 
 # Local imports
 from .plot_line import plot_line

@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import itertools
+
 # Built-in imports
 import warnings
-import itertools
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
+from .feeps_active_eyes import feeps_active_eyes
+
 # Local imports
 from .feeps_pitch_angles import feeps_pitch_angles
-from .feeps_active_eyes import feeps_active_eyes
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

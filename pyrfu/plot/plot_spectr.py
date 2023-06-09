@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib.colors as mcolors
+import matplotlib.dates as mdates
+
 # 3rd party imports
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.colors as mcolors
 import matplotlib.ticker as mticker
 
 __author__ = "Louis Richard"

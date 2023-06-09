@@ -4,9 +4,10 @@
 # 3rd party imports
 import xarray as xr
 
+from .db_get_ts import db_get_ts
+
 # Local imports
 from .feeps_active_eyes import feeps_active_eyes
-from .db_get_ts import db_get_ts
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

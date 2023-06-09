@@ -4,7 +4,6 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy.stats import kurtosis
 
 __author__ = "Louis Richard"

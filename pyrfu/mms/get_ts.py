@@ -8,14 +8,14 @@ import warnings
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from cdflib import CDF, cdfepoch
+
+from ..pyrf.cdfepoch2datetime64 import cdfepoch2datetime64
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.iso86012datetime64 import iso86012datetime64
-from ..pyrf.cdfepoch2datetime64 import cdfepoch2datetime64
 from ..pyrf.extend_tint import extend_tint
+from ..pyrf.iso86012datetime64 import iso86012datetime64
 from ..pyrf.time_clip import time_clip
 
 __author__ = "Louis Richard"

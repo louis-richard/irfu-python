@@ -3,18 +3,16 @@
 
 # Built-in imports
 import json
+import logging
 import os
 import warnings
-import logging
-
 from datetime import datetime, timedelta
-from shutil import copyfileobj, copy
+from shutil import copy, copyfileobj
 from tempfile import NamedTemporaryFile
-
-import pkg_resources
 
 # 3rd party imports
 import numpy as np
+import pkg_resources
 import requests
 import tqdm
 

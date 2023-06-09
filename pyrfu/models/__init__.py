@@ -20,5 +20,4 @@
 from .igrf import igrf
 from .magnetopause_normal import magnetopause_normal
 
-
 __all__ = ["igrf", "magnetopause_normal"]

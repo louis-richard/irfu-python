@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
+
 # Built-in imports
 import warnings
-import logging
 
 # 3rd party imports
 import numpy as np

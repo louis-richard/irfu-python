@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import datetime
+
 # Built-in imports
 import urllib
-import datetime
 
 # 3rd party imports
 import numpy as np

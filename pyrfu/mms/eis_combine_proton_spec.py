@@ -4,12 +4,12 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from cdflib import cdfread
+
+from ..pyrf.datetime642iso8601 import datetime642iso8601
 
 # Local imports
 from .list_files import list_files
-from ..pyrf.datetime642iso8601 import datetime642iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

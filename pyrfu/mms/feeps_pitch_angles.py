@@ -5,9 +5,10 @@
 import numpy as np
 import xarray as xr
 
+from ..pyrf.resample import resample
+
 # Local imports
 from .feeps_active_eyes import feeps_active_eyes
-from ..pyrf.resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

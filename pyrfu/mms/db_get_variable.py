@@ -4,9 +4,10 @@
 # Built-in imports
 import logging
 
+from .get_variable import get_variable
+
 # Local imports
 from .list_files import list_files
-from .get_variable import get_variable
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

@@ -4,10 +4,11 @@
 # 3rd party imports
 import numpy as np
 
+from .avg_4sc import avg_4sc
+
 # Local imports
 from .c_4_grad import c_4_grad
 from .gradient import gradient
-from .avg_4sc import avg_4sc
 from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"

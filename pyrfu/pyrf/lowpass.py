@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import xarray as xr
-
 from scipy import signal
 
 __author__ = "Louis Richard"

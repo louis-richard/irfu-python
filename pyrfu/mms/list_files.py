@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import bisect
+import datetime
+import json
+
 # Built-in imports
 import os
 import re
-import json
-import bisect
-import datetime
 
 # 3rd party imports
 import numpy as np
-
 from dateutil import parser
-from dateutil.rrule import rrule, DAILY
+from dateutil.rrule import DAILY, rrule
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601

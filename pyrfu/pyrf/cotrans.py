@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
+
 # Built-in imports
 import os
-import json
 
 # 3rd party imports
 import numpy as np
@@ -11,7 +12,6 @@ import xarray as xr
 
 # Local imports
 from ..models import igrf
-
 from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"

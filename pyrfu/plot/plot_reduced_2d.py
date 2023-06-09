@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
-import numpy as np
 import matplotlib.pyplot as plt
 
+# 3rd party imports
+import numpy as np
 from matplotlib import colors
 
 __author__ = "Louis Richard"

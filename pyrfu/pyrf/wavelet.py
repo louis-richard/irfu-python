@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
+
 # Built-in imports
 import os
-import logging
 
 # 3rd party imports
 import numba
 import numpy as np
 import xarray as xr
-
 from scipy import fft
 
 # Local imports

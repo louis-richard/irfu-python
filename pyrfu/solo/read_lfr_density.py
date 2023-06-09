@@ -10,10 +10,9 @@ import re
 
 # 3rd party imports
 import numpy as np
-
 from cdflib import cdfepoch
 from dateutil import parser
-from dateutil.rrule import rrule, DAILY
+from dateutil.rrule import DAILY, rrule
 
 from ..pyrf import read_cdf, ts_append, ts_scalar
 

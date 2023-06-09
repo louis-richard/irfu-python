@@ -4,9 +4,9 @@
 # 3rd party imports
 from matplotlib.transforms import TransformedBbox, blended_transform_factory
 from mpl_toolkits.axes_grid1.inset_locator import (
-    BboxPatch,
     BboxConnector,
     BboxConnectorPatch,
+    BboxPatch,
 )
 
 __author__ = "Louis Richard"

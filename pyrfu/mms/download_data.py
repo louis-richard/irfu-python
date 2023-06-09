@@ -3,23 +3,21 @@
 
 # Built-in imports
 import json
+import logging
 import os
 import re
 import warnings
-import logging
-
 from bisect import bisect_left
 from datetime import datetime, timedelta
-from shutil import copyfileobj, copy
+from shutil import copy, copyfileobj
 from tempfile import NamedTemporaryFile
-from dateutil.parser import parse
-
-import pkg_resources
 
 # 3rd party imports
 import numpy as np
+import pkg_resources
 import requests
 import tqdm
+from dateutil.parser import parse
 
 # Local imports
 from pyrfu.mms import tokenize

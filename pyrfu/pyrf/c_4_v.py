@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import interpolate
 
 __author__ = "Louis Richard"

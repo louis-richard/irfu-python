@@ -8,16 +8,15 @@ import logging
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import constants
 
-# Local imports
-from .psd_rebin import psd_rebin
 from ..pyrf.iso86012datetime64 import iso86012datetime64
 from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_scalar import ts_scalar
 from ..pyrf.ts_skymap import ts_skymap
 
+# Local imports
+from .psd_rebin import psd_rebin
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -106,7 +105,7 @@ def _init(vdf, tint):
         dist = vdf.data.data[t_id, ...]
         dist = dist[None, ...]
         step_table = step_table[t_id]
-        azimuthal = azimuthal.data[t_id, ...]
+        azimuthal = azimuthal[t_id, ...].data
 
         if step_table.data:
             energy_edges = energy1_edges
