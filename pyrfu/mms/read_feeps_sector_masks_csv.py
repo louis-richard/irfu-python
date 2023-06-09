@@ -55,7 +55,7 @@ def read_feeps_sector_masks_csv(tint):
     date = datetime642unix(iso86012datetime64(np.array(tint)[0]))
     nearest_date = dates[np.argmin((np.abs(np.array(dates) - date)))]
     nearest_date = unix2datetime64(np.array(nearest_date))
-    str_date = nearest_date.astype("<M8[D]").astype(str)[0]
+    str_date = str(nearest_date.astype("<M8[D]"))
     str_date = str_date.replace("-", "")
 
     for mms_sc in np.arange(1, 5):

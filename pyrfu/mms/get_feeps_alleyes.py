@@ -179,11 +179,10 @@ def get_feeps_alleyes(
             verbose,
             data_path=data_path,
         )
-        dims = {
-            "time": out_dict[e_id].dims[0],
-            f"energy_{e_id}": out_dict[e_id].dims[1],
-        }
-        out_dict[e_id] = out_dict[e_id].rename(dims)
+
+        out_dict[e_id] = out_dict[e_id].rename(
+            {out_dict[e_id].dims[1]: f"energy_{e_id}"}
+        )
 
     out = xr.Dataset(out_dict)
 
