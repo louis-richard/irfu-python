@@ -21,4 +21,4 @@ jobs:
         pip install pylint
     - name: pylint
       run: |
-        pylint --rcfile=setup.cfg $(git ls-files '*.py')
+        pylint --rcfile=pyproject.toml $(git ls-files '*.py')

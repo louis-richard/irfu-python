@@ -3,6 +3,65 @@ requires = [
     "setuptools>=42",
     "wheel==0.38.1",
 ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyrfu"
+version = "2.3.35"
+description = "Python Space Physics (RymdFysik) Utilities"
+readme = "README.rst"
+authors = [{ name = "Louis RICHARD", email = "louir@irfu.se" }]
+license = { file = "LICENSE.txt" }
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Other Environment",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: MacOS",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft",
+    "Operating System :: Microsoft :: MS-DOS",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "cdflib>=1.0.4",
+    "geopack>=1.0.9",
+    "matplotlib>=3.5.2",
+    "numba>=0.54.1",
+    "numpy>=1.20.3",
+    "pandas>=1.3.4",
+    "pydata-sphinx-theme>=0.13.0",
+    "python-dateutil>=2.8.2",
+    "requests>=2.26.0",
+    "scipy>=1.7.3",
+    "Sphinx>=4.3.0",
+    "tqdm>=4.62.3",
+    "xarray>=0.20.1",
+]
+requires-python = ">=3.7"
+
+[project.optional-dependencies]
+dev = ["black", "pip-tools"]
+
+[project.urls]
+homepage = "https://pypi.org/project/pyrfu/"
+documentation = "https://pyrfu.readthedocs.io/en/latest/"
+source = "https://github.com/louis-richard/irfu-python"
+
+
+[tool.setuptools]
+package-dir = {"" = "."}
+include-package-data = true
 
 [tool.black]
 py36 = true
@@ -23,3 +82,48 @@ exclude = '''
   | blib2to3
   | tests/data
 )/'''
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = """
+    missing-module-docstring,
+    too-many-arguments,
+    too-many-locals,
+    too-many-lines,
+    too-many-statements,
+    too-many-branches,
+    too-many-nested-blocks,
+    invalid-name,
+    duplicate-code,
+    not-an-iterable,
+    fixme
+"""
+ignore = """
+    ancillary.json,
+    config.json,
+    feeps_bad_data.json,
+    igrf13coeffs.csv,
+    mms_keys.json,
+    transformation_indices.json
+"""
+ignored-modules = "scipy,cdflib"
+
+[tool.bumpver]
+current_version = "2023.1001-alpha"
+version_pattern = "YYYY.BUILD[-TAG]"
+commit_message = "bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+]
+"README.rst" = [
+    "{version}",
+    "{pep440_version}",
+]
+
