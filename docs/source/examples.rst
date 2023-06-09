@@ -7,6 +7,7 @@ the different subpackages of the ``pyrfu`` package.
 .. toctree::
     :maxdepth: 1
 
+    examples/00_overview/quick-overview.ipynb
     examples/01_mms/example_mms_b_e_j.ipynb
     examples/01_mms/example_mms_ebfields.ipynb
     examples/01_mms/example_mms_edr_signatures.ipynb
