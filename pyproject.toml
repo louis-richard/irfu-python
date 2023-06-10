@@ -60,8 +60,13 @@ source = "https://github.com/louis-richard/irfu-python"
 
 
 [tool.setuptools]
-package-dir = {"" = "."}
 include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.csv"]
 
 [tool.black]
 py36 = true
