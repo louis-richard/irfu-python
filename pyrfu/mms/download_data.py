@@ -20,7 +20,7 @@ import tqdm
 from dateutil.parser import parse
 
 # Local imports
-from pyrfu.mms import tokenize
+from .tokenize import tokenize
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
