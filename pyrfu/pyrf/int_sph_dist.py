@@ -340,7 +340,7 @@ def mc_pol_1d(
     return f_g
 
 
-@numba.jit(fastmath=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
 def mc_cart_3d(
     vdf,
     v,
