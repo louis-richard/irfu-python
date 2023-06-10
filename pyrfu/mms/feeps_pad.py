@@ -17,9 +17,9 @@ from .feeps_pitch_angles import feeps_pitch_angles
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 # Angular response (finite field of view) of instruments electrons can use

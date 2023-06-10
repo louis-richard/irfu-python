@@ -11,9 +11,9 @@ from pyrfu.pyrf import cart2sph, resample, sph2cart, time_clip
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.12"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 __all__ = ["vdf_frame_transformation", "vdf_reduce"]
