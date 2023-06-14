@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from .autocorr import autocorr
+from .average_vdf import average_vdf
 from .avg_4sc import avg_4sc
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
