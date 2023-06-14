@@ -15,6 +15,7 @@ the different subpackages of the ``pyrfu`` package.
     examples/01_mms/example_mms_electron_psd.ipynb
     examples/01_mms/example_mms_feeps.ipynb
     examples/01_mms/example_mms_hpca.ipynb
+    examples/01_mms/example_mms_ipshocks.ipynb
     examples/01_mms/example_mms_ohmslaw.ipynb
     examples/01_mms/example_mms_particle_deflux.ipynb
     examples/01_mms/example_mms_particle_distributions.ipynb
