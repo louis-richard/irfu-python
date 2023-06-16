@@ -125,12 +125,4 @@ push            = false
 
 [tool.bumpver.file_patterns]
 "pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
-"pyrfu/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/dispersion/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/lp/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/mms/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/models/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/plot/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/pyrf/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/solo/*.py" = ["{version}", "Copyright 2020-YYYY"]
-"pyrfu/tests/*.py" = ["{version}", "Copyright 2020-YYYY"]
+"pyrfu/__init__.py" = ["{version}", "Copyright 2020-YYYY"]
