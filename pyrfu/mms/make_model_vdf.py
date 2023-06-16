@@ -12,7 +12,7 @@ from ..pyrf.trace import trace
 from ..pyrf.ts_scalar import ts_scalar
 
 # Local imports
-from . import rotate_tensor
+from .rotate_tensor import rotate_tensor
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
