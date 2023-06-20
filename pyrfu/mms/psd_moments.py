@@ -248,7 +248,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     vdf.data.data *= 1e12
 
     # Check if data is fast or burst resolution
-    field_name = vdf.attrs["FIELDNAM"]
+    field_name = vdf.data.attrs["FIELDNAM"]
 
     if "brst" in field_name:
         is_brst_data = True
