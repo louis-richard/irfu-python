@@ -23,28 +23,8 @@ older python versions.
 
 Coding style
 ------------
-Stick as much as possible to
-`PEP8 <https://www.python.org/dev/peps/pep-0008/>`__ for general
-guidelines in term of coding conventions and to
-`PEP257 <https://www.python.org/dev/peps/pep-0257/>`__ for typical
-docstring conventions. You can also have a look to `Python
-anti-pattern <https://docs.quantifiedcode.com/python-anti-patterns/>`__.
-
-Main guidelines from PEP8
--------------------------
-PEP8 coding conventions are:
-
--  Use 4 spaces per indentation level.
--  Limit all lines to a maximum of 100 characters.
--  Separate top-level function and class definitions with two blank
-   lines.
--  Make sure that all variables are used.
--  Imports should be grouped in the following order:
-
-    -  Standard library imports.
-    -  Related third party imports.
-    -  Local application/library specific imports.
-    -  A blank line between each group of imports.
+The pyrfu package uses the `Black code style <https://black.readthedocs
+.io/en/stable/the_black_code_style/current_style.html>`__ .
 
 Use Linters
 ------------
@@ -65,7 +45,7 @@ or `there <https://realpython.com/python-code-quality/>`__.
 Also, a lot of features can also be provided natively or by installing
 plugins with your IDE (PyCharm, Spyder, Eclipse, etc.).
 
-To be accepted to ``pyrfu`` every new code as to get a pylint score higher than 9/10.
+To be accepted to ``pyrfu`` every new code as to get a pylint score of 10/10.
 
 Documentation
 -------------
