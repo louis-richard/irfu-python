@@ -94,8 +94,8 @@ def get_hpca_dist(inp, azimuth):
     r"""Returns pseudo-3D particle data structures containing mms hpca data
     for use with spd_slice2d.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     inp : xarray.DataArray
         HPCA ion spec
     azimuth : xarray.DataArray
@@ -108,6 +108,7 @@ def get_hpca_dist(inp, azimuth):
 
 
     """
+
     # check if the time series is monotonic to avoid doing incorrect
     # calculations when there's a problem with the CDF files
     time_data = azimuth.time.data

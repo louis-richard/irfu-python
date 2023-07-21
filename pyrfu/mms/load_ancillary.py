@@ -104,7 +104,7 @@ def load_ancillary(
     data_frame = data_frame_dict[0]
 
     for k in list(data_frame_dict.keys())[1:]:
-        data_frame = data_frame.append(data_frame_dict[k])
+        data_frame = pd.concat([data_frame, data_frame_dict[k]], ignore_index=True)
 
     data_frame = data_frame.sort_values(by="time").set_index(["time"])
 

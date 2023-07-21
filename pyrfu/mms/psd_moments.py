@@ -183,7 +183,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         Time series of the spacecraft potential.
 
     Returns
-    --------
+    -------
     n_psd : xarray.DataArray
         Time series of the number density (1rst moment).
     v_psd : xarray.DataArray
@@ -209,11 +209,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
     en_channels : array_like
         Set energy channels to integrate over [min max]; min and max between
         must be between 1 and 32.
-    partial_moments : ndarray or xarray.DataArray
-        Use a binary array (or DataArray) (pmomsarr) to select which psd
-        points are used in the moments calculation. pmomsarr must be a
-        binary array (1s and 0s, 1s correspond to points used). Array (or
-        data of Dataarray) must be the same size as vdf.data.
+    partial_moments : numpy.ndarray or xarray.DataArray
+        Use a binary array to select which psd points are used in the moments
+        calculation. `partial_moments` must be a binary array (1s and 0s,
+        1s correspond to points used). Array (or data of Dataarray) must be the same
+        size as vdf.data.
     inner_electron : {"on", "off"}
         inner_electrontron potential for electron moments.
 

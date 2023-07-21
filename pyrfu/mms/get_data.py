@@ -97,7 +97,7 @@ def get_data(var_str, tint, mms_id, verbose: bool = True, data_path: str = ""):
 
     Load magnetic field from FGM
 
-    >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_brst, ic)
+    >>> b_xyz = mms.get_data("b_gse_fgm_brst_l2", tint_brst, ic)
 
     """
 

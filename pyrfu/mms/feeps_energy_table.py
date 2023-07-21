@@ -148,9 +148,8 @@ def feeps_energy_table(mms_id, eye, sensor_id):
 
     Notes
     -----
-    Bad eyes are replaced by NaNs.
-    Different original energy tables are used depending on if the sensor head
-    is 6-8 (ions) or not (electrons) :
+    Bad eyes are replaced by NaNs. Different original energy tables are used
+    depending on if the sensor head is 6-8 (ions) or not (electrons) :
         * Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
         * Ion Eyes: 6, 7, 8
 

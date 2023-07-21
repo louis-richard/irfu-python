@@ -47,8 +47,8 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
     pad : xarray.DataArray
         Particle pitch angle distribution
 
-    Other Paramters
-    ---------------
+    Other Parameters
+    ----------------
     angles : int or float or list of ndarray
         User defined angles.
     meanorsum : {'mean', 'sum', 'sum_weighted'}

@@ -47,7 +47,7 @@ def get_feeps_omni(
         Spin average the omni-directional flux. Default is False.
 
     Returns
-    --------
+    -------
     flux_omni : xarray.DataArray
         Energy spectrum of the target data unit for the target specie in omni
         direction.

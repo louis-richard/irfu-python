@@ -28,22 +28,22 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
         Time series of the particle distribution.
     phi : xarray.DataArray
         Time series of the phi angles.
-    energy0 : xarray.DataArray or ndarray
+    energy0 : xarray.DataArray or numpy.ndarray
         Energy table 0.
-    energy1 : xarray.DataArray or ndarray
+    energy1 : xarray.DataArray or numpy.ndarray
         Energy table 1.
     step_table : xarray.DataArray
         Time series of the stepping table between energies (burst).
 
     Returns
     -------
-    time_r : ndarray
+    time_r : numpy.ndarray
         Revised time steps.
-    vdf_r : ndarray
+    vdf_r : numpy.ndarray
         Rebinned particle distribution.
-    energy_r : ndarray
+    energy_r : numpy.ndarray
         Revised energy table.
-    phi_r : ndarray
+    phi_r : numpy.ndarray
         Time series of the recalculated phi angle.
 
     Notes

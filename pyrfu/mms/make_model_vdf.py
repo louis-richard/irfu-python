@@ -58,8 +58,7 @@ def make_model_vdf(
 
     See also
     --------
-    pyrfu.mms.calculate_epsilon : Calculates epsilon parameter using model
-    distribution.
+    pyrfu.mms.calculate_epsilon : Calculates epsilon parameter using model distribution.
 
     Examples
     --------
