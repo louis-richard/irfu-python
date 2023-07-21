@@ -109,7 +109,8 @@ ignore = """
     feeps_bad_data.json,
     igrf13coeffs.csv,
     mms_keys.json,
-    transformation_indices.json
+    transformation_indices.json,
+    test_pyrf.py
 """
 ignored-modules = "scipy,cdflib"
 
