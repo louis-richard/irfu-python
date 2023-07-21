@@ -19,7 +19,7 @@ __status__ = "Prototype"
 
 def c_4_j(r_list, b_list):
     r"""Calculate current density :math:`J` from using 4
-    spacecraft technique [4]_, the divergence of the magnetic field
+    spacecraft technique [1]_, the divergence of the magnetic field
     :math:`\nabla . B`, magnetic field at the center of
     mass of the tetrahedron, :math:`J \times B`
     force, part of the divergence of stress associated with
@@ -37,7 +37,7 @@ def c_4_j(r_list, b_list):
         \nabla P_b = \nabla \frac{B^2}{2\mu_0}
 
     The divergence of the magnetic field is current density units as
-    it shows the error on the estimation of the current density [5]_ .
+    it shows the error on the estimation of the current density [2]_ .
 
     Parameters
     ----------
@@ -73,12 +73,12 @@ def c_4_j(r_list, b_list):
 
     References
     ----------
-    .. [4]	Dunlop, M. W., A. Balogh, K.-H. Glassmeier, and P. Robert
+    .. [1]	Dunlop, M. W., A. Balogh, K.-H. Glassmeier, and P. Robert
             (2002a), Four-point Cluster application of magnetic field
             analysis tools: The Curl- ometer, J. Geophys. Res.,
             107(A11), 1384, doi : https://doi.org/10.1029/2001JA005088.
 
-    .. [5]	Robert, P., et al. (1998), Accuracy of current determination,
+    .. [2]	Robert, P., et al. (1998), Accuracy of current determination,
             in Analysis Methods for Multi-Spacecraft Data, edited by G.
             Paschmann and P. W. Daly, pp. 395–418, Int. Space Sci. Inst.,
             Bern. url : http://www.issibern.ch/forads/sr-001-16.pdf
@@ -98,13 +98,12 @@ def c_4_j(r_list, b_list):
 
     Load magnetic field and spacecraft position
 
-    >>> b_mms = [mms.get_data("B_gse_fgm_srvy_l2", tint, i) for i in mms_list]
-    >>> r_mms = [mms.get_data("R_gse", tint, i) for i in mms_list]
+    >>> b_mms = [mms.get_data("b_gse_fgm_srvy_l2", tint, i) for i in mms_list]
+    >>> r_mms = [mms.get_data("r_gse_mec_srvy_l2", tint, i) for i in mms_list]
 
     Compute current density, divergence of b, etc. using curlometer technique
 
-    >>> j_xyz, _, b_xyz, _, _, _ = pyrf.c_4_j(r_mms,
-    b_mms)
+    >>> j_xyz, _, b_xyz, _, _, _ = pyrf.c_4_j(r_mms, b_mms)
 
     """
 

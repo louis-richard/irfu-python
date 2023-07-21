@@ -66,7 +66,7 @@ def median_bins(inp0, inp1, bins: int = 10):
     >>> b_mag = pyrf.norm(b_xyz)
     >>> j_mag = pyrf.norm(j_xyz)
 
-    Median value of |J| for 10 bins of |B|
+    Median value of J for 10 bins of B
 
     >>> med_b_j = pyrf.mean_bins(b_mag, j_mag)
 

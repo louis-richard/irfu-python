@@ -152,7 +152,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
 
 
 def cotrans(inp, flag, hapgood: bool = True):
-    r"""Coordinate transformation GE0/GEI/GSE/GSM/SM/MAG
+    r"""Coordinate transformation GE0/GEI/GSE/GSM/SM/MAG as described in [1]_
 
     Parameters
     ----------
@@ -195,16 +195,13 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     Compute the dipole direction in GSE
 
-    >>> dipole = cotrans(b_gse.time,
-    'dipoledirectiongse')
+    >>> dipole = cotrans(b_gse.time, 'dipoledirectiongse')
 
 
     References
     ----------
-    .. [17]     Hapgood 1997 (corrected version of Hapgood 1992) Planet.Space
-                Sci..Vol. 40, No. 5. pp. 71l - 717, 1992
-
-    .. [18]     USNO - AA 2011 & 2012
+    .. [1]  Hapgood 1997 (corrected version of Hapgood 1992) Planet.Space Sci..Vol.
+            40, No. 5. pp. 71l - 717, 1992
 
     """
 

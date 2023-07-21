@@ -66,7 +66,7 @@ def mean_bins(inp0, inp1, bins: int = 10):
     >>> b_mag = pyrf.norm(b_xyz)
     >>> j_mag = pyrf.norm(j_xyz)
 
-    Mean value of |J| for 10 bins of |B|
+    Mean value of J for 10 bins of B
 
     >>> m_b_j = pyrf.mean_bins(b_mag, j_mag)
 

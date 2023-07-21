@@ -84,7 +84,7 @@ def histogram2d(
     >>> b_mag = pyrf.norm(b_xyz)
     >>> j_mag = pyrf.norm(j_xyz)
 
-    Histogram of |J| vs |B|
+    Histogram of J vs B
 
     >>> h2d_b_j = pyrf.histogram2d(b_mag, j_mag)
 
