@@ -70,6 +70,7 @@ all_params_vectors = [
     "errqe",
     "b",
     "e",
+    "hmfe",
     "e2d",
     "es12",
     "es34",
