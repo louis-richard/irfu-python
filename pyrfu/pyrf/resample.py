@@ -273,10 +273,6 @@ def resample(
     out : xarray.DataArray
         Resampled input to the reference time line using the selected method.
 
-    TODO
-    ----
-    Make the resampling VDF (xarray.Dataset) compliant.
-
 
     Examples
     --------
@@ -292,8 +288,8 @@ def resample(
 
     Load magnetic field and electric field
 
-    >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-    >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
+    >>> b_xyz = mms.get_data("e_gse_fgm_srvy_l2", tint, mms_id)
+    >>> e_xyz = mms.get_data("e_gse_edp_fast_l2", tint, mms_id)
 
     Resample magnetic field to electric field sampling
 

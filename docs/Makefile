@@ -4,8 +4,8 @@
 # You can set these variables from the command line, and also
 # from the environment for the first two.
 SPHINXOPTS    =
-SPHINXBUILD   = python -msphinx
-SPHINXPROJ    = speasy
+SPHINXBUILD   = python -m sphinx
+SPHINXPROJ    = pyrfu
 SOURCEDIR     = .
 BUILDDIR      = _build
 

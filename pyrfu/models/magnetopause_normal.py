@@ -46,8 +46,7 @@ def magnetopause_normal(
     m_alfven: float = 4.0,
 ):
     r"""Computes the distance and normal vector to the magnetopause for
-    Shue et al., 1997 or Shue et al., 1998 model. Or bow shock for
-    Farris & Russell 1994 model.
+    [1]_ or [2]_ model. Or bow shock for [3]_ model.
 
     Parameters
     ----------

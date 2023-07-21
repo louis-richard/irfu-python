@@ -19,7 +19,7 @@ def iso86012timevec(time):
     r"""Convert ISO 8601 time string into time vector.
 
     Parameters
-    ---------
+    ----------
     time : str
         Time in ISO 8601 format YYYY-MM-DDThh:mm:ss.mmmuuunnn.
 

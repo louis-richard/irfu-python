@@ -42,13 +42,12 @@ def shock_normal(spec, leq90: bool = True):
             * v_d : Downstream plasma bulk velocity.
             * n_u : Upstream number density (cm^-3).
             * n_d : Downstream number density.
-        Optional:
             * r_xyz : Spacecraft position in time series format of 1x3 vector. Optional.
             * d2u : Down-to-up, is 1 or -1. Optional.
             * dt_f : Time duration of shock foot (s). Optional.
             * f_cp : Reflected ion gyrofrequency (Hz). Optional.
-            * n : Number of Monte Carlo particles used in determining errorbars.
-            Optional, default is 100.
+            * n : Number of Monte Carlo particles. Optional, default is 100.
+
     leq90 : bool, Optional
         Force angles to be less than 90 (default). For leq90 = 0, angles can be between
         0 and 180 deg. For time series input and quasi-perp shocks,leq90 = 0 is
