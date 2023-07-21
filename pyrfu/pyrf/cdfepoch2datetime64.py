@@ -65,7 +65,7 @@ def cdfepoch2datetime64(epochs):
 
     Parameters
     ----------
-    epochs : array_like
+    epochs : float or int or array_like
         CDF epochs to convert.
 
     Returns
@@ -74,6 +74,10 @@ def cdfepoch2datetime64(epochs):
         Array of times in datetime64([ns]).
 
     """
+
+    # Check input type
+    message = "epochs must be array_like"
+    assert isinstance(epochs, (float, int, list, np.ndarray)), message
 
     times = cdfepoch.breakdown(epochs)
     times = np.transpose(np.atleast_2d(times))

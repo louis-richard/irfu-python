@@ -3,6 +3,10 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
+
+# Local imports
+from .ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -64,13 +68,22 @@ def calc_sqrtq(p_xyz):
 
     """
 
+    # Check input type
+    assert isinstance(p_xyz, xr.DataArray), "p_xyz must be a xarray.DataArray"
+
+    # Check import shape
+    message = "p_xyz must be a time series of a tensor"
+    assert p_xyz.data.ndim == 3 and p_xyz.shape[1] == 3 and p_xyz.shape[2] == 3, message
+
     # Parallel and perpendicular components
-    p_para, p_perp = [p_xyz[:, 0, 0], (p_xyz[:, 1, 1] + p_xyz[:, 2, 2]) / 2]
+    p_para = p_xyz.data[:, 0, 0]
+    p_perp = (p_xyz.data[:, 1, 1] + p_xyz.data[:, 2, 2]) / 2
 
     # Off-diagonal terms
-    p_12, p_13, p_23 = [p_xyz[:, 0, 1], p_xyz[:, 0, 2], p_xyz[:, 1, 2]]
+    p_12, p_13, p_23 = [p_xyz.data[:, 0, 1], p_xyz.data[:, 0, 2], p_xyz.data[:, 1, 2]]
 
     sqrt_q = np.sqrt(p_12**2 + p_13**2 + p_23**2)
     sqrt_q /= np.sqrt(p_perp**2 + 2 * p_perp * p_para)
+    sqrt_q = ts_scalar(p_xyz.time.data, sqrt_q)
 
     return sqrt_q

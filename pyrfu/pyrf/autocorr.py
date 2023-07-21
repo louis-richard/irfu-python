@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# #rd party imports
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -22,7 +22,7 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
     Parameters
     ----------
     inp : xarray.DataArray
-        Input time series.
+        Input time series (scalar of vector).
     maxlags : int, Optional
         Maximum lag in number of points. Default is None (i.e., len(inp) - 1).
     normed : bool, Optional
@@ -35,6 +35,12 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
 
     """
 
+    # Check input type
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+
+    # Check input dimension (scalar or vector)
+    assert inp.ndim < 3, "inp must be a scalar or a vector"
+
     if inp.ndim == 1:
         x = inp.data[:, None]
     else:
@@ -46,19 +52,12 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
         maxlags = n_t - 1
 
     if maxlags >= n_t or maxlags < 1:
-        raise ValueError(
-            f"maxlags must be None or strictly positive < {n_t:d}",
-        )
+        raise ValueError(f"maxlags must be None or strictly positive < {n_t:d}")
 
-    lags = np.linspace(
-        -float(maxlags),
-        float(maxlags),
-        2 * maxlags + 1,
-        dtype=int,
-    )
+    lags = np.linspace(-float(maxlags), float(maxlags), 2 * maxlags + 1, dtype=int)
     lags = lags * calc_dt(inp)
 
-    out_data = np.zeros_like(x)
+    out_data = np.zeros((maxlags + 1, x.shape[1]))
 
     for i in range(x.shape[1]):
         correls = np.correlate(x[:, i], x[:, i], mode="full")
@@ -75,13 +74,11 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
             coords=[lags[lags >= 0]],
             dims=["lag"],
         )
-    elif inp.ndim == 2:
+    else:
         out = xr.DataArray(
             out_data,
             coords=[lags[lags >= 0], inp[inp.dims[1]].data],
             dims=["lag", inp.dims[1]],
         )
-    else:
-        raise ValueError("invalid shape!!")
 
     return out
