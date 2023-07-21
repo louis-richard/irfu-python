@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -17,7 +18,7 @@ def calc_fs(inp):
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : xarray.DataArray or xarray.Dataset
         Time series of the input variable.
 
     Returns
@@ -26,6 +27,9 @@ def calc_fs(inp):
         Sampling frequency in Hz.
 
     """
+
+    message = "Input must be a time series"
+    assert isinstance(inp, (xr.Dataset, xr.DataArray)), message
 
     out = 1 / (np.median(np.diff(inp.time.data)).astype(np.float64) * 1e-9)
 

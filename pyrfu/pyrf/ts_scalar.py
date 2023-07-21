@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+import numpy as np
 import xarray as xr
 
 __author__ = "Louis Richard"
@@ -17,9 +18,9 @@ def ts_scalar(time, data, attrs: dict = None):
 
     Parameters
     ----------
-    time : ndarray
+    time : numpy.ndarray
         Array of times.
-    data : ndarray
+    data : numpy.ndarray
         Data corresponding to the time list.
     attrs : dict, Optional
         Attributes of the data list.
@@ -31,10 +32,15 @@ def ts_scalar(time, data, attrs: dict = None):
 
     """
 
+    # Check input type
+    assert isinstance(time, np.ndarray), "time must be a numpy.ndarray"
+    assert isinstance(data, np.ndarray), "data must be a numpy.ndarray"
+
+    # Check input shape must be (n, )
     assert data.ndim == 1, "Input must be a scalar"
     assert len(time) == len(data), "Time and data must have the same length"
 
-    if attrs is None:
+    if attrs is None or not isinstance(attrs, dict):
         attrs = {}
 
     out = xr.DataArray(data, coords=[time[:]], dims="time", attrs=attrs)
