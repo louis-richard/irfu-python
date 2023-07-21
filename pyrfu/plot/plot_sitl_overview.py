@@ -346,18 +346,20 @@ def plot_sitl_overview(
     title,
     mms_id: int = 2,
     data_path: str = "/Volumes/mms",
-    fig_path: str = "figures",
+    fig_path: str = "./figures",
 ):
     r"""Creates overview plot from SITL selections.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     tint_brst : list
         Time interval selected.
     mms_id : int, Optional
         Spacecraft index. Default is 1.
     data_path : str, Optional
-        Path to MMS data. Default is /Volumes/
+        Path to MMS data. Default is the one defined in pyrfu.mms.config.json
+    fig_path : str, Optional
+        Path to save the figures. Default is ./figures
 
     Returns
     -------
