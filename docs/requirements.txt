@@ -1,4 +1,7 @@
+nbsphinx
 numpydoc
+pydata-sphinx-theme
+sphinx
 sphinx-codeautolink
 sphinx-copybutton
 sphinx-gallery

@@ -161,7 +161,6 @@ The required dependencies are:
 - `python-datetutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.2
 - `requests <https://requests.readthedocs.io/en/latest/>`_ >=2.26.0
 - `scipy <https://scipy.org>`_ >=1.7.3
-- `Sphinx <https://www.sphinx-doc.org/en/master/>`_ >=4.3.0
 - `tqdm <https://tqdm.github.io/>`_ >=4.62.3
 - `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.20.1
 
