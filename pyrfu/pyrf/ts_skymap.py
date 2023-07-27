@@ -47,27 +47,38 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
 
     """
 
+    # Check input type
+    assert isinstance(time, np.ndarray), "time must be numpy.ndarray"
+    assert isinstance(data, np.ndarray), "data must be numpy.ndarray"
+    assert isinstance(energy, np.ndarray), "energy must be numpy.ndarray"
+    assert isinstance(phi, np.ndarray), "phi must be numpy.ndarray"
+    assert isinstance(theta, np.ndarray), "theta must be numpy.ndarray"
+
     # Check if even (odd) time step energy channels energy1 (energy0), and
     # energy step table are provided.
-    energy0 = kwargs.get("energy0", None)
-    energy1 = kwargs.get("energy1", None)
-    esteptable = kwargs.get("esteptable", None)
+    energy0 = kwargs.get("energy0", energy[0, :])
+    energy1 = kwargs.get("energy1", energy[1, :])
+    esteptable = kwargs.get("esteptable", np.zeros(len(time)))
+
+    # Check that energy0 and energy1
+    assert isinstance(energy0, np.ndarray), "energy0 must be 1D numpy.ndarray"
+    assert energy0.ndim == 1, "energy0 must be 1D numpy.ndarray"
+    assert energy0.shape[0] == energy.shape[1], "energy0 is not consistent with time"
+    assert isinstance(energy1, np.ndarray), "energy1 must be 1D numpy.ndarray"
+    assert energy1.ndim == 1, "energy1 must be 1D numpy.ndarray"
+    assert energy1.shape[0] == energy.shape[1], "energy1 is not consistent with time"
+
+    # Check esteptable
+    assert isinstance(esteptable, np.ndarray), "esteptable must be 1D numpy.ndarray"
+    assert esteptable.ndim == 1, "esteptable must be 1D numpy.ndarray"
+    assert esteptable.shape[0] == len(time), "esteptable is not consistent with time"
+
     attrs = kwargs.get("attrs", {})
     coords_attrs = kwargs.get("coords_attrs", {})
     glob_attrs = kwargs.get("glob_attrs", {})
 
-    if energy is None:
-        assert energy0 is not None and energy1 is not None and esteptable is not None
-
-        energy = np.tile(energy0, (len(esteptable), 1))
-
-        energy[esteptable == 1] = np.tile(
-            energy1,
-            (int(np.sum(esteptable)), 1),
-        )
-
-    if phi.ndim == 1:
-        phi = np.tile(phi, (len(time), 1))
+    # Check attributes are dictionaries
+    assert isinstance(attrs, dict)
 
     out_dict = {
         "data": (["time", "idx0", "idx1", "idx2"], data),

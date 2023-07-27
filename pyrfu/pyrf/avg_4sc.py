@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 3rd party imports
+import xarray as xr
+
 # Local imports
 from .calc_fs import calc_fs
 from .resample import resample
@@ -44,8 +47,18 @@ def avg_4sc(b_list):
 
     """
 
-    b_list = [resample(b, b_list[0], f_s=calc_fs(b_list[0])) for b in b_list]
+    # Check input type
+    assert isinstance(b_list, list), "b_list must be a list"
 
+    b_list_r = []
+
+    for b in b_list:
+        if isinstance(b, xr.DataArray):
+            b_list_r.append(resample(b, b_list[0], f_s=calc_fs(b_list[0])))
+        else:
+            raise TypeError("elements of b_list must be xarray.DataArray")
+
+    # Average the resamples time series
     b_avg = sum(b_list) / len(b_list)
 
     return b_avg

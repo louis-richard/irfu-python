@@ -94,6 +94,91 @@ class AutoCorrTestCase(unittest.TestCase):
         self.assertEqual(result.shape[1], 3)
 
 
+class TsSkymapTestCase(unittest.TestCase):
+    def test_ts_skymap_input_type(self):
+        with self.assertRaises(AssertionError):
+            pyrf.ts_skymap(0, 0, 0, 0, 0)
+
+    def test_ts_skymap_output_type(self):
+        result = pyrf.ts_skymap(
+            generate_timeline(64.0, 100),
+            np.random.random((100, 32, 32, 16)),
+            np.random.random((100, 32)),
+            np.random.random((100, 32)),
+            np.random.random(16),
+        )
+        self.assertIsInstance(result, xr.Dataset)
+
+    def test_ts_skymap_output_shape(self):
+        result = pyrf.ts_skymap(
+            generate_timeline(64.0, 100),
+            np.random.random((100, 32, 32, 16)),
+            np.random.random((100, 32)),
+            np.random.random((100, 32)),
+            np.random.random(16),
+        )
+        self.assertEqual(result.data.ndim, 4)
+        self.assertListEqual(list(result.data.shape), [100, 32, 32, 16])
+        self.assertEqual(result.energy.ndim, 2)
+        self.assertListEqual(list(result.energy.shape), [100, 32])
+        self.assertEqual(result.phi.ndim, 2)
+        self.assertListEqual(list(result.phi.shape), [100, 32])
+        self.assertEqual(result.theta.ndim, 1)
+        self.assertListEqual(list(result.theta.shape), [16])
+
+    def test_ts_skymap_output_meta(self):
+        result = pyrf.ts_skymap(
+            generate_timeline(64.0, 100),
+            np.random.random((100, 32, 32, 16)),
+            np.random.random((100, 32)),
+            np.random.random((100, 32)),
+            np.random.random(16),
+        )
+        self.assertListEqual(
+            list(result.attrs.keys()), ["energy0", "energy1", "esteptable"]
+        )
+        self.assertListEqual(
+            list(result.attrs["energy0"].shape),
+            [
+                32,
+            ],
+        )
+        self.assertListEqual(
+            list(result.attrs["energy1"].shape),
+            [
+                32,
+            ],
+        )
+        self.assertListEqual(
+            list(result.attrs["esteptable"].shape),
+            [
+                100,
+            ],
+        )
+
+        for k in result:
+            self.assertEqual(result[k].attrs, {})
+
+
+class StartTestCase(unittest.TestCase):
+    def test_start_input_type(self):
+        self.assertIsNotNone(pyrf.start(generate_ts(64.0, 100, "scalar")))
+        self.assertIsNotNone(pyrf.start(generate_ts(64.0, 100, "vector")))
+        self.assertIsNotNone(pyrf.start(generate_ts(64.0, 100, "tensor")))
+
+        with self.assertRaises(AssertionError):
+            pyrf.start(0)
+            pyrf.start(generate_timeline(64.0, 100))
+
+    def test_start_output(self):
+        result = pyrf.start(generate_ts(64.0, 100, "scalar"))
+        self.assertIsInstance(result, np.float64)
+        self.assertEqual(
+            np.datetime64(int(result * 1e9), "ns"),
+            np.datetime64("2019-01-01T00:00:00.000"),
+        )
+
+
 class TsScalarTestCase(unittest.TestCase):
     def test_ts_scalar_input_type(self):
         with self.assertRaises(AssertionError):
@@ -419,6 +504,83 @@ class Datetime2Iso8601TestCase(unittest.TestCase):
         # ISO8601 contains 29 characters (nanosecond precision)
         self.assertEqual(len(pyrf.datetime2iso8601(ref_time)), 29)
         self.assertEqual(len(pyrf.datetime2iso8601(time_line)), 10)
+
+
+class TraceTestCase(unittest.TestCase):
+    def test_trace_input(self):
+        self.assertIsNotNone(pyrf.trace(generate_ts(64.0, 100, "tensor")))
+
+        with self.assertRaises(AssertionError):
+            pyrf.trace(generate_data(100, "tensor"))
+            pyrf.trace(generate_ts(64.0, 100, "scalar"))
+            pyrf.trace(generate_ts(64.0, 100, "vector"))
+
+    def test_trace_output(self):
+        result = pyrf.trace(generate_ts(64.0, 100, "tensor"))
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(
+            list(result.shape),
+            [
+                100,
+            ],
+        )
+
+
+class Avg4SCTestCase(unittest.TestCase):
+    def test_avg_4sc_input(self):
+        self.assertIsNotNone(
+            pyrf.avg_4sc(
+                [
+                    generate_ts(64.0, 100, "scalar"),
+                    generate_ts(64.0, 100, "scalar"),
+                    generate_ts(64.0, 100, "scalar"),
+                    generate_ts(64.0, 100, "scalar"),
+                ]
+            )
+        )
+        self.assertIsNotNone(
+            pyrf.avg_4sc(
+                [
+                    generate_ts(64.0, 100, "vector"),
+                    generate_ts(64.0, 100, "vector"),
+                    generate_ts(64.0, 100, "vector"),
+                    generate_ts(64.0, 100, "vector"),
+                ]
+            )
+        )
+        self.assertIsNotNone(
+            pyrf.avg_4sc(
+                [
+                    generate_ts(64.0, 100, "tensor"),
+                    generate_ts(64.0, 100, "tensor"),
+                    generate_ts(64.0, 100, "tensor"),
+                    generate_ts(64.0, 100, "tensor"),
+                ]
+            )
+        )
+
+        with self.assertRaises(TypeError):
+            pyrf.avg_4sc(
+                [
+                    generate_data(100, "tensor"),
+                    generate_data(100, "tensor"),
+                    generate_data(100, "tensor"),
+                    generate_data(100, "tensor"),
+                ]
+            )
+
+    def test_avg_4sc_output(self):
+        result = pyrf.avg_4sc(
+            [
+                generate_ts(64.0, 100, "tensor"),
+                generate_ts(64.0, 100, "tensor"),
+                generate_ts(64.0, 100, "tensor"),
+                generate_ts(64.0, 100, "tensor"),
+            ]
+        )
+
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3, 3])
 
 
 if __name__ == "__main__":

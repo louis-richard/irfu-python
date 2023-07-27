@@ -3,6 +3,7 @@
 
 # 3rd party import
 import numpy as np
+import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -26,6 +27,12 @@ def start(inp):
         Value of the first time in the desired format.
 
     """
+
+    # Check input type
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+
+    # Make sure this is a time series
+    assert list(inp.dims)[0] == "time", "inp must be a time series"
 
     out = inp.time.data[0].astype(np.int64) * 1e-9
 
