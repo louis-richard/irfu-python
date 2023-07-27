@@ -174,7 +174,7 @@ def _get_depend(file, cdf_name, tint, dep_num=1):
     return out
 
 
-def get_ts(file_path, cdf_name, tint):
+def get_ts(file_path, cdf_name, tint: list = None):
     r"""Reads field named cdf_name in file and convert to time series.
 
     Parameters
@@ -183,7 +183,7 @@ def get_ts(file_path, cdf_name, tint):
         Path of the cdf file.
     cdf_name : str
         Name of the target variable in the cdf file.
-    tint : list of str
+    tint : list of str, Optional
         Time interval.
 
     Returns
@@ -195,7 +195,9 @@ def get_ts(file_path, cdf_name, tint):
 
     # Check time interval type
     # Check time interval
-    if isinstance(tint, (np.ndarray, list)):
+    if tint is None:
+        tint = ["1995-10-06T18:50:00.000000000", "2200-10-06T18:50:00.000000000"]
+    elif isinstance(tint, (np.ndarray, list)):
         if isinstance(tint[0], np.datetime64):
             tint = datetime642iso8601(np.array(tint))
         elif isinstance(tint[0], str):

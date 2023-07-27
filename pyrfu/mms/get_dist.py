@@ -118,7 +118,7 @@ def _get_epochs(file, cdf_name, tint):
     return out
 
 
-def get_dist(file_path, cdf_name, tint):
+def get_dist(file_path, cdf_name, tint: list = None):
     r"""Read field named cdf_name in file and convert to velocity distribution
     function.
 
@@ -128,7 +128,7 @@ def get_dist(file_path, cdf_name, tint):
         Path of the cdf file.
     cdf_name : str
         Name of the target variable in the cdf file.
-    tint : list of str
+    tint : list of str, Optional
         Time interval.
 
     Returns
@@ -150,8 +150,26 @@ def get_dist(file_path, cdf_name, tint):
             "Couldn't get the particle species from file name!!",
         )
 
-    tint_org = tint
-    tint = extend_tint(tint, [-1, 1])
+    # Check time interval type
+    # Check time interval
+    if tint is None:
+        tint = ["1995-10-06T18:50:00.000000000", "2200-10-06T18:50:00.000000000"]
+    elif isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], np.datetime64):
+            tint = datetime642iso8601(np.array(tint))
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(
+                np.array(tint),
+            )  # to make sure it is ISO8601 ok!!
+            tint = datetime642iso8601(np.array(tint))
+        else:
+            raise TypeError("Values must be in datetime64, or str!!")
+    else:
+        raise TypeError("tint must be array_like!!")
+
+    # Extend time interval by 1s and convert time interval to epochs
+    tint_org = tint.copy()
+    tint = extend_tint(tint, [-1.0, 1.0])
     tint = list(datetime642iso8601(iso86012datetime64(np.array(tint))))
     tint = np.stack(list(map(cdfepoch.parse, tint)))
 
@@ -240,7 +258,8 @@ def get_dist(file_path, cdf_name, tint):
 
             # Overwrite energy to make sure that energy0 and energy1
             # are used instead
-            energy = None
+            energy = np.tile(energy0, (len(step_table), 1))
+            energy[step_table == 1] = np.tile(energy1, (int(np.sum(step_table)), 1))
 
         elif tmmode == "fast":
             if energy.ndim == 1:
