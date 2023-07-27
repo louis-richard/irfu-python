@@ -80,41 +80,24 @@ def dist_append(inp0, inp1):
         )
         glob_attrs["delta_energy_minus"] = delta_energy_minus
 
-    # Energy
-    if inp0.attrs["tmmode"] == "brst":
-        step_table = np.hstack(
-            [inp0.attrs["esteptable"], inp1.attrs["esteptable"]],
-        )
+    step_table = np.hstack(
+        [inp0.attrs["esteptable"], inp1.attrs["esteptable"]],
+    )
 
-        out = ts_skymap(
-            time,
-            data,
-            None,
-            phi,
-            theta,
-            energy0=inp0.energy0,
-            energy1=inp0.energy1,
-            esteptable=step_table,
-            attrs=data_attrs,
-            coords_attrs=coords_attrs,
-            glob_attrs=glob_attrs,
-        )
+    energy = np.vstack([inp0.energy.data, inp1.energy.data])
 
-    else:
-        energy = np.vstack([inp0.energy.data, inp1.energy.data])
-
-        out = ts_skymap(
-            time,
-            data,
-            energy,
-            phi,
-            theta,
-            energy0=inp0.energy0,
-            energy1=inp0.energy1,
-            esteptable=np.ones(energy.shape[0]),
-            attrs=data_attrs,
-            coords_attrs=coords_attrs,
-            glob_attrs=glob_attrs,
-        )
+    out = ts_skymap(
+        time,
+        data,
+        energy,
+        phi,
+        theta,
+        energy0=inp0.energy0,
+        energy1=inp0.energy1,
+        esteptable=step_table,
+        attrs=data_attrs,
+        coords_attrs=coords_attrs,
+        glob_attrs=glob_attrs,
+    )
 
     return out
