@@ -465,6 +465,24 @@ class Cart2SphTestCase(unittest.TestCase):
         )
 
 
+class Cart2SphTsTestCase(unittest.TestCase):
+    def test_cart2sph_ts_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.cart2sph_ts(0.0)
+            pyrf.cart2sph_ts(generate_data(100, "vector"))
+            pyrf.cart2sph_ts(generate_ts(64.0, 100, "scalar"))
+            pyrf.cart2sph_ts(generate_ts(64.0, 100, "vector"), 2)
+
+    def test_cart2sph_ts_output(self):
+        result = pyrf.cart2sph_ts(generate_ts(64.0, 100, "vector"), 1)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.cart2sph_ts(generate_ts(64.0, 100, "vector"), -1)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+
 class CdfEpoch2Datetime64TestCase(unittest.TestCase):
     def test_cdfepoch2datetime64_input_type(self):
         ref_time = 599572869184000000
