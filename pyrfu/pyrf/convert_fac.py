@@ -72,6 +72,10 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
 
     """
 
+    # Check input type
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    assert isinstance(b_bgd, xr.DataArray), "b_xyz must be a xarray.DataArray"
+
     assert r_xyz is None or isinstance(
         r_xyz,
         (xr.DataArray, list, np.ndarray),
@@ -100,28 +104,26 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
     r_perp_x = np.cross(r_perp_y, b_bgd, axis=1)
     r_perp_x /= np.linalg.norm(r_perp_x, axis=1, keepdims=True)
 
-    assert inp_data.shape[1] in [1, 3], "Invalid dimension of inp"
-
-    if inp_data.shape[1] == 3:
+    if inp_data.ndim == 2 and inp_data.shape[1] == 3:
         out_data = np.zeros(inp.shape)
 
         out_data[:, 0] = np.sum(r_perp_x * inp_data, axis=1)
         out_data[:, 1] = np.sum(r_perp_y * inp_data, axis=1)
         out_data[:, 2] = np.sum(b_hat * inp_data, axis=1)
 
-        # xarray
-        out = xr.DataArray(
-            out_data,
-            coords=[time, inp.comp],
-            dims=["time", "comp"],
-        )
-
-    else:
-        out_data = np.zeros([3, inp_data.shape[0]])
-
-        out_data[:, 0] = inp[:, 0] * np.sum(r_perp_x * r_xyz, axis=1)
-        out_data[:, 1] = inp[:, 0] * np.sum(b_hat * r_xyz, axis=1)
-
+        # To xarray
         out = ts_vec_xyz(time, out_data, attrs=inp.attrs)
+
+    elif inp_data.ndim == 1:
+        out_data = np.zeros([inp_data.shape[0], 2])
+
+        out_data[:, 0] = inp * np.sum(r_perp_x * r_xyz, axis=1)
+        out_data[:, 1] = inp * np.sum(b_hat * r_xyz, axis=1)
+
+        out = xr.DataArray(
+            out_data, coords=[time, ["perp", "para"]], dims=["time", "comp"]
+        )
+    else:
+        raise TypeError("inp must be a vector or scalar")
 
     return out

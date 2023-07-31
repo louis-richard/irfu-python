@@ -483,6 +483,63 @@ class Cart2SphTsTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [100, 3])
 
 
+class ConvertFACTestCase(unittest.TestCase):
+    def test_convert_fac_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.convert_fac(0, 0)
+            pyrf.convert_fac(generate_data(100, "vector"), generate_data(100, "vector"))
+
+        with self.assertRaises(TypeError):
+            pyrf.convert_fac(
+                generate_ts(64.0, 100, "tensor"), generate_ts(64.0, 100, "vector")
+            )
+
+    def test_convert_fac_output(self):
+        result = pyrf.convert_fac(
+            generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector")
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.convert_fac(
+            generate_ts(64.0, 100, "vector"), generate_ts(64.0, 98, "vector")
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.convert_fac(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            np.random.random(3),
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.convert_fac(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.convert_fac(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 97, "vector"),
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.convert_fac(
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 2])
+
+
 class CdfEpoch2Datetime64TestCase(unittest.TestCase):
     def test_cdfepoch2datetime64_input_type(self):
         ref_time = 599572869184000000
