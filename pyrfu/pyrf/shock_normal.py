@@ -125,12 +125,15 @@ def shock_normal(spec, leq90: bool = True):
 
     """
 
+    # Check input
+    assert isinstance(spec, dict), "spec must be a dictionary"
+
     if spec["b_u"].ndim > 1 or spec["b_d"].ndim > 1:
         n_bu = len(spec["b_u"])
         n_bd = len(spec["b_d"])
 
         # randomize points upstream and downstream
-        n = spec.get("n", 10.0)
+        n = int(np.floor(spec.get("n", 10.0)))
         idt_u, idt_d = [np.random.rand(n) for _ in range(2)]
 
         tmp_spec = {}
@@ -249,10 +252,8 @@ def _shear_angle(au, ad):
 def _shock_angle(spec, n, field, leq90):
     if field.lower() == "b":
         a = spec["b_u"]
-    elif field.lower() == "v":
-        a = spec["v_u"]
     else:
-        raise ValueError("Invalid field. Must be 'b' or 'v'!!")
+        a = spec["v_u"]
 
     theta = {}
 
@@ -326,22 +327,16 @@ def _shock_model(spec, *args):
 
 
 def _shock_speed(spec, n, theta_bn, method):
-    if method.lower() == "gt":
-        if "f_cp" in spec and "dt_f" in spec and "d2u" in spec:
-            v_sh = _speed_gosling_thomsen(spec, n, theta_bn)
-        else:
-            v_sh = {k: 0.0 for k in n}
+    if method.lower() == "gt" and "f_cp" in spec and "dt_f" in spec and "d2u" in spec:
+        v_sh = _speed_gosling_thomsen(spec, n, theta_bn)
     elif method.lower() == "mf":
         v_sh = _speed_mass_flux(spec, n)
     elif method.lower() == "sb":
         v_sh = _speed_smith_burton(spec, n)
-    elif method.lower() == "mo":
-        if "f_cp" in spec and "dt_f" in spec and "d2u" in spec:
-            v_sh = _speed_moses(spec, n, theta_bn)
-        else:
-            v_sh = {k: 0.0 for k in n}
+    elif method.lower() == "mo" and "f_cp" in spec and "dt_f" in spec and "d2u" in spec:
+        v_sh = _speed_moses(spec, n, theta_bn)
     else:
-        raise ValueError("Invalid method!")
+        v_sh = {k: 0.0 for k in n}
 
     return v_sh
 
@@ -350,7 +345,7 @@ def _speed_gosling_thomsen(spec, n, theta_bn):
     v_sh = {}
 
     for k, nvec in n.items():
-        theta = np.deg2rad(theta_bn)
+        theta = np.deg2rad(theta_bn[k])
         nvec = n[k]
 
         # Notation as in (Gosling and Thomsen 1985)

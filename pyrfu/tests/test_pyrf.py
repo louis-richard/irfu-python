@@ -3,6 +3,7 @@
 
 # Built-in imports
 import datetime
+import random
 import unittest
 
 # 3rd party imports
@@ -657,6 +658,25 @@ class CrossTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [100, 3])
 
 
+@ddt
+class DateStrTestCase(unittest.TestCase):
+    def test_date_str_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.date_str("2019-01-01T00:00:00")
+            pyrf.date_str([np.datetime64("2019-01-01T00:00:00"), "2019-01-01T00:10:00"])
+            pyrf.date_str(["2019-01-01T00:00:00", "2019-01-01T00:10:00"], 1)
+
+            tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+            pyrf.date_str(tint, 0)
+            pyrf.date_str(tint, 5)
+
+    @data(1, 2, 3, 4)
+    def test_date_str_output(self, value):
+        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+        result = pyrf.date_str(tint, value)
+        self.assertIsInstance(result, str)
+
+
 class Datetime2Iso8601TestCase(unittest.TestCase):
     def test_datetime2iso8601_input_type(self):
         ref_time = datetime.datetime(2019, 1, 1, 0, 0, 0, 0)
@@ -697,6 +717,79 @@ class TraceTestCase(unittest.TestCase):
                 100,
             ],
         )
+
+
+@ddt
+class ShockNormalTestCase(unittest.TestCase):
+    def test_shock_normal_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.shock_normal([])
+
+        with self.assertRaises(TypeError):
+            pyrf.shock_normal(
+                {
+                    "b_u": np.random.random((3)),
+                    "b_d": np.random.random((3)),
+                    "v_u": np.random.random((3)),
+                    "v_d": np.random.random((3)),
+                    "n_u": random.random(),
+                    "n_d": random.random(),
+                    "r_xyz": random.random(),
+                }
+            )
+
+    @data(
+        {
+            "b_u": np.random.random((3)),
+            "b_d": np.random.random((3)),
+            "v_u": np.random.random((3)),
+            "v_d": np.random.random((3)),
+            "n_u": random.random(),
+            "n_d": random.random(),
+        },
+        {
+            "b_u": np.random.random((2, 3)),
+            "b_d": np.random.random((2, 3)),
+            "v_u": np.random.random((2, 3)),
+            "v_d": np.random.random((2, 3)),
+            "n_u": np.random.random((2, 1)),
+            "n_d": np.random.random((2, 1)),
+        },
+        {
+            "b_u": np.random.random((3)),
+            "b_d": np.random.random((3)),
+            "v_u": np.random.random((3)),
+            "v_d": np.random.random((3)),
+            "n_u": random.random(),
+            "n_d": random.random(),
+            "r_xyz": np.random.random((3)),
+        },
+        {
+            "b_u": np.random.random((3)),
+            "b_d": np.random.random((3)),
+            "v_u": np.random.random((3)),
+            "v_d": np.random.random((3)),
+            "n_u": random.random(),
+            "n_d": random.random(),
+            "r_xyz": generate_ts(64.0, 100, "vector"),
+        },
+        {
+            "b_u": np.random.random((3)),
+            "b_d": np.random.random((3)),
+            "v_u": np.random.random((3)),
+            "v_d": np.random.random((3)),
+            "n_u": random.random(),
+            "n_d": random.random(),
+            "r_xyz": generate_ts(64.0, 100, "vector"),
+            "d2u": random.choice([-1, 1]),
+            "dt_f": random.random(),
+            "f_cp": random.random(),
+        },
+    )
+    def test_shock_normal_ouput(self, value):
+        result = pyrf.shock_normal(value)
+        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result["v_sh"], dict)
 
 
 class StartTestCase(unittest.TestCase):

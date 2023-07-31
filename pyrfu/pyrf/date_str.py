@@ -33,6 +33,17 @@ def date_str(tint, fmt: int = 1):
 
     """
 
+    # Check input
+    assert isinstance(tint, list), "tint must be a list"
+    assert isinstance(tint[0], str), "1st element of tint must be a string"
+    assert isinstance(tint[1], str), "2nd element of tint must be a string"
+    assert fmt in range(1, 5), "fmt must be 1, 2, 3, or 4"
+
+    assert len(tint[0]) > 25, "tint[0] must be in %Y-%m-%dT%H:%M:%S.%f format"
+    assert len(tint[1]) > 25, "tint[1] must be in %Y-%m-%dT%H:%M:%S.%f format"
+
+    tint = [t_[:26] for t_ in tint]
+
     start_time = datetime.strptime(tint[0], "%Y-%m-%dT%H:%M:%S.%f")
     end_time = datetime.strptime(tint[1], "%Y-%m-%dT%H:%M:%S.%f")
 
@@ -47,14 +58,12 @@ def date_str(tint, fmt: int = 1):
                 end_time.strftime("%H%M%S"),
             ],
         )
-    elif fmt == 4:
+    else:
         out = "_".join(
             [
                 start_time.strftime("%Y%m%d_%H%M%S"),
                 end_time.strftime("%Y%m%d_%H%M%S"),
             ],
         )
-    else:
-        raise ValueError("Unknown format")
 
     return out
