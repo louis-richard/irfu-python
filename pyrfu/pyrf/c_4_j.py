@@ -107,7 +107,8 @@ def c_4_j(r_list, b_list):
 
     """
 
-    mu0 = constants.mu_0
+    assert isinstance(r_list, list) and len(r_list) == 4, "r_list must a list of s/c"
+    assert isinstance(b_list, list) and len(b_list) == 4, "b_list must a list of s/c"
 
     b_avg = 1e-9 * avg_4sc(b_list)
 
@@ -115,18 +116,18 @@ def c_4_j(r_list, b_list):
     div_b = c_4_grad(r_list, b_list, "div")
 
     # to get right units
-    div_b *= 1.0e-3 * 1e-9 / mu0
+    div_b *= 1.0e-3 * 1e-9 / constants.mu_0
 
     # estimate current j [A/m2]
     j = c_4_grad(r_list, b_list, "curl")
-    j.data *= 1.0e-3 * 1e-9 / mu0
+    j.data *= 1.0e-3 * 1e-9 / constants.mu_0
 
     # estimate jxB force [T A/m2]
     jxb = cross(j, b_avg)
 
     # estimate divTshear = (1/muo) (B*div)B [T A/m2]
     div_t_shear = c_4_grad(r_list, b_list, "bdivb")
-    div_t_shear.data *= 1.0e-3 * 1e-9 * 1e-9 / mu0
+    div_t_shear.data *= 1.0e-3 * 1e-9 * 1e-9 / constants.mu_0
 
     # estimate divPb = (1/muo) grad (B^2/2) = divTshear-jxB
     div_pb = div_t_shear.copy()

@@ -195,7 +195,7 @@ class Avg4SCTestCase(unittest.TestCase):
 
 
 class C4GradTestCase(unittest.TestCase):
-    def test_c_4_grad_input_type(self):
+    def test_c_4_grad_input(self):
         with self.assertRaises(AssertionError):
             pyrf.c_4_grad(
                 generate_ts(64.0, 100, kind="vector"),
@@ -215,7 +215,7 @@ class C4GradTestCase(unittest.TestCase):
                 "bazinga",
             )
 
-    def test_c_4_grad_output_type(self):
+    def test_c_4_grad_output(self):
         r_mms = [generate_ts(64.0, 100, kind="vector") for _ in range(4)]
         b_mms = [generate_ts(64.0, 100, kind="vector") for _ in range(4)]
         n_mms = [generate_ts(64.0, 100, kind="scalar") for _ in range(4)]
@@ -248,6 +248,44 @@ class C4GradTestCase(unittest.TestCase):
         result = pyrf.c_4_grad(r_mms, n_mms, "grad")
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
+
+
+class C4JTestCase(unittest.TestCase):
+    def test_c_4_j_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.c_4_j(
+                generate_ts(64.0, 100, kind="vector"),
+                generate_ts(64.0, 100, kind="vector"),
+            )
+            pyrf.c_4_j([], [])
+
+    def test_c_4_j_output(self):
+        r_mms = [generate_ts(64.0, 100, kind="vector") for _ in range(4)]
+        b_mms = [generate_ts(64.0, 100, kind="vector") for _ in range(4)]
+        j, div_b, b_avg, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
+
+        self.assertIsInstance(j, xr.DataArray)
+        self.assertListEqual(list(j.shape), [100, 3])
+
+        self.assertIsInstance(div_b, xr.DataArray)
+        self.assertListEqual(
+            list(div_b.shape),
+            [
+                100,
+            ],
+        )
+
+        self.assertIsInstance(b_avg, xr.DataArray)
+        self.assertListEqual(list(b_avg.shape), [100, 3])
+
+        self.assertIsInstance(jxb, xr.DataArray)
+        self.assertListEqual(list(jxb.shape), [100, 3])
+
+        self.assertIsInstance(div_t_shear, xr.DataArray)
+        self.assertListEqual(list(div_t_shear.shape), [100, 3])
+
+        self.assertIsInstance(div_pb, xr.DataArray)
+        self.assertListEqual(list(div_pb.shape), [100, 3])
 
 
 class CalcFsTestCase(unittest.TestCase):
