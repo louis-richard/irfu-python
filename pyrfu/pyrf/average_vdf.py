@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 # Local imports
 from .ts_skymap import ts_skymap
@@ -32,9 +33,10 @@ def average_vdf(vdf, n_pts):
 
     """
 
-    assert n_pts % 2 != 0, "The number of distributions to be averaged must be an odd"
+    # Check input type
+    assert isinstance(vdf, xr.Dataset), "vdf must be a xarray.Dataset"
 
-    assert np.median(vdf.energy.data[0, :] - vdf.energy.data[0, :]) == 0
+    assert n_pts % 2 != 0, "The number of distributions to be averaged must be an odd"
 
     n_vdf = len(vdf.time.data)
     times = vdf.time.data
@@ -69,8 +71,11 @@ def average_vdf(vdf, n_pts):
     coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
 
     # Get delta energy in global attributes for selected timestamps
-    glob_attrs["delta_energy_minus"] = glob_attrs["delta_energy_minus"][avg_inds]
-    glob_attrs["delta_energy_plus"] = glob_attrs["delta_energy_plus"][avg_inds]
+    if "delta_energy_minus" in glob_attrs:
+        glob_attrs["delta_energy_minus"] = glob_attrs["delta_energy_minus"][avg_inds, :]
+
+    if "delta_energy_plus" in glob_attrs:
+        glob_attrs["delta_energy_plus"] = glob_attrs["delta_energy_plus"][avg_inds, :]
 
     glob_attrs["esteptable"] = glob_attrs["esteptable"][: len(avg_inds)]
 
