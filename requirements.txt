@@ -72,5 +72,5 @@ tzdata==2023.3
     # via pandas
 urllib3==2.0.3
     # via requests
-xarray==2023.5.0
+xarray>=2023.1.0
     # via pyrfu (pyproject.toml)
