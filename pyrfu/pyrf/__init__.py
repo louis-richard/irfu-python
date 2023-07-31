@@ -65,6 +65,7 @@ from .medfilt import medfilt
 from .median_bins import median_bins
 from .movmean import movmean
 from .mva import mva
+from .mva_gui import mva_gui
 from .new_xyz import new_xyz
 from .norm import norm
 from .normalize import normalize
@@ -178,6 +179,7 @@ __all__ = [
     "median_bins",
     "movmean",
     "mva",
+    "mva_gui",
     "new_xyz",
     "norm",
     "normalize",
