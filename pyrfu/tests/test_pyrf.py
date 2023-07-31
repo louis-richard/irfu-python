@@ -630,6 +630,33 @@ class CdfEpoch2Datetime64TestCase(unittest.TestCase):
         self.assertEqual(len(pyrf.cdfepoch2datetime64(list(time_line))), 100)
 
 
+class CrossTestCase(unittest.TestCase):
+    def test_cross_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.cross(
+                generate_ts(64.0, 100, "scalar"), generate_ts(64.0, 100, "scalar")
+            )
+            pyrf.cross(
+                generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "scalar")
+            )
+            pyrf.cross(
+                generate_ts(64.0, 100, "scalar"), generate_ts(64.0, 100, "vector")
+            )
+
+    def test_cross_output(self):
+        result = pyrf.cross(
+            generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector")
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.cross(
+            generate_ts(64.0, 100, "vector"), generate_ts(64.0, 97, "vector")
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+
 class Datetime2Iso8601TestCase(unittest.TestCase):
     def test_datetime2iso8601_input_type(self):
         ref_time = datetime.datetime(2019, 1, 1, 0, 0, 0, 0)
