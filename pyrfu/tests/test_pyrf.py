@@ -3,13 +3,14 @@
 
 # Built-in imports
 import datetime
+import itertools
 import random
 import unittest
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from ddt import data, ddt
+from ddt import data, ddt, idata
 
 from pyrfu import pyrf
 
@@ -554,56 +555,26 @@ class CotransTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             pyrf.cotrans(generate_ts(64.0, 100, "vector"), "gsm")
 
-    @data(
-        "gse>gsm",
-        "gsm>gse",
-        "gse>gei",
-        "gse>geo",
-        "gse>sm",
-        "gse>mag",
-        "gsm>gei",
-        "gsm>geo",
-        "gsm>sm",
-        "gsm>mag",
-        "sm>gei",
-        "sm>geo",
-        "sm>gse",
-        "sm>gsm",
-        "sm>mag",
-        "mag>gei",
-        "mag>geo",
-        "mag>gse",
-        "mag>gsm",
-        "mag>sm",
-        "geo>gei",
-        "geo>gse",
-        "geo>gsm",
-        "geo>sm",
-        "geo>mag",
-        "gei>geo",
-        "gei>gse",
-        "gei>gsm",
-        "gei>sm",
-        "gei>mag",
-    )
+    @idata(itertools.permutations(["gei", "geo", "gse", "gsm", "mag", "sm"], 2))
     def test_cotrans_output(self, value):
-        result = pyrf.cotrans(generate_ts(64.0, 100, "vector"), value)
+        transf = f"{value[0]}>{value[1]}"
+        result = pyrf.cotrans(generate_ts(64.0, 100, "vector"), transf)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
 
-        result = pyrf.cotrans(generate_ts(64.0, 100, "vector"), value, hapgood=False)
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
-
-        inp = generate_ts(64.0, 100, "vector")
-        inp.attrs["COORDINATE_SYSTEM"] = "gse"
-        result = pyrf.cotrans(inp, value.split(">")[1], hapgood=False)
+        result = pyrf.cotrans(generate_ts(64.0, 100, "vector"), transf, hapgood=False)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
 
         inp = generate_ts(64.0, 100, "vector")
-        inp.attrs["COORDINATE_SYSTEM"] = "gse"
-        result = pyrf.cotrans(inp, value.split(">")[1], hapgood=True)
+        inp.attrs["COORDINATE_SYSTEM"] = value[0]
+        result = pyrf.cotrans(inp, value[1], hapgood=False)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        inp = generate_ts(64.0, 100, "vector")
+        inp.attrs["COORDINATE_SYSTEM"] = value[0]
+        result = pyrf.cotrans(inp, value[1], hapgood=True)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
 
@@ -670,7 +641,7 @@ class DateStrTestCase(unittest.TestCase):
             pyrf.date_str(tint, 0)
             pyrf.date_str(tint, 5)
 
-    @data(1, 2, 3, 4)
+    @idata(range(1, 5))
     def test_date_str_output(self, value):
         tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
         result = pyrf.date_str(tint, value)
