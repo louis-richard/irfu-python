@@ -30,8 +30,17 @@ jobs:
         pip install pytest pytest-cov sphinx pandoc
         pip install -r docs/requirements.txt
         pytest
+    - name: Test with pytest (coverage + long tests)
+      if: matrix.python-version == '3.9' && matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt update && sudo apt install -y texlive pandoc
+        pip install pytest pytest-cov sphinx pandoc
+        pip install -r docs/requirements.txt
+        pytest --cov=./ --cov-report=xml
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: true
+      if: matrix.python-version == '3.9' && matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: unittests
