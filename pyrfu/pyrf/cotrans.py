@@ -236,7 +236,7 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     if isinstance(inp, xr.DataArray):
         time = inp.time.data
-        t = time.view("i8") * 1e-9
+        t = time.astype(int) * 1e-9
 
         #  Terrestial Time (seconds since J2000)
         tts = t - j2000
@@ -251,7 +251,7 @@ def cotrans(inp, flag, hapgood: bool = True):
         inp_ts = None
         inp = inp[:, 1:]
     else:
-        raise TypeError("invalid inpu")
+        raise TypeError("invalid input")
 
     if hapgood:
         day_start_epoch = time.astype("datetime64[D]")
