@@ -194,6 +194,62 @@ class Avg4SCTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [100, 3, 3])
 
 
+class C4GradTestCase(unittest.TestCase):
+    def test_c_4_grad_input_type(self):
+        with self.assertRaises(AssertionError):
+            pyrf.c_4_grad(
+                generate_ts(64.0, 100, kind="vector"),
+                generate_ts(64.0, 100, kind="vector"),
+            )
+            pyrf.c_4_grad([], [])
+
+            pyrf.c_4_grad(
+                [generate_ts(64.0, 100, kind="vector") for _ in range(4)],
+                [generate_ts(64.0, 100, kind="vector") for _ in range(4)],
+                0,
+            )
+
+            pyrf.c_4_grad(
+                [generate_ts(64.0, 100, kind="vector") for _ in range(4)],
+                [generate_ts(64.0, 100, kind="vector") for _ in range(4)],
+                "bazinga",
+            )
+
+    def test_c_4_grad_output_type(self):
+        r_mms = [generate_ts(64.0, 100, kind="vector") for _ in range(4)]
+        b_mms = [generate_ts(64.0, 100, kind="vector") for _ in range(4)]
+        n_mms = [generate_ts(64.0, 100, kind="scalar") for _ in range(4)]
+
+        result = pyrf.c_4_grad(r_mms, b_mms, "grad")
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3, 3])
+
+        result = pyrf.c_4_grad(r_mms, b_mms, "div")
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(
+            list(result.shape),
+            [
+                100,
+            ],
+        )
+
+        result = pyrf.c_4_grad(r_mms, b_mms, "curl")
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.c_4_grad(r_mms, b_mms, "bdivb")
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.c_4_grad(r_mms, b_mms, "curv")
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.c_4_grad(r_mms, n_mms, "grad")
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+
 class CalcFsTestCase(unittest.TestCase):
     def test_calc_fs_input_type(self):
         self.assertIsNotNone(pyrf.calc_fs(generate_ts(64.0, 100)))
