@@ -432,6 +432,39 @@ class CalcSqrtQTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
+class Cart2SphTestCase(unittest.TestCase):
+    def test_cart2sph_output(self):
+        result = pyrf.cart2sph(1.0, 1.0, 1.0)
+        self.assertIsInstance(result[0], np.float64)
+        self.assertIsInstance(result[1], np.float64)
+        self.assertIsInstance(result[2], np.float64)
+
+        result = pyrf.cart2sph(
+            np.random.random(100), np.random.random(100), np.random.random(100)
+        )
+        self.assertIsInstance(result[0], np.ndarray)
+        self.assertListEqual(
+            list(result[0].shape),
+            [
+                100,
+            ],
+        )
+        self.assertIsInstance(result[1], np.ndarray)
+        self.assertListEqual(
+            list(result[1].shape),
+            [
+                100,
+            ],
+        )
+        self.assertIsInstance(result[2], np.ndarray)
+        self.assertListEqual(
+            list(result[2].shape),
+            [
+                100,
+            ],
+        )
+
+
 class CdfEpoch2Datetime64TestCase(unittest.TestCase):
     def test_cdfepoch2datetime64_input_type(self):
         ref_time = 599572869184000000
