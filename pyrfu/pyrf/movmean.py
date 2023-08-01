@@ -51,7 +51,7 @@ def movmean(inp, n_pts: int = 100):
     Running average the pressure tensor over 10s
 
     >>> fs = pyrf.calc_fs(p_xyz_i)
-    >>>> p_xyz_i = pyrf.movmean(p_xyz_i, int(10 * fs))
+    >>> p_xyz_i = pyrf.movmean(p_xyz_i, int(10 * fs))
 
     """
 
