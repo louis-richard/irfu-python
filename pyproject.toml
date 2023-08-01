@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyrfu"
-version = "2.4.5"
+version = "2.4.6"
 description = "Python Space Physics (RymdFysik) Utilities"
 readme = "README.rst"
 authors = [{ name = "Louis RICHARD", email = "louir@irfu.se" }]
@@ -18,6 +18,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
+    "Operating System :: Unix",
     "Operating System :: MacOS",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft",
@@ -29,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -110,7 +112,8 @@ ignore = """
     mms_keys.json,
     transformation_indices.json,
     test_pyrf.py,
-    test_dispersion.py
+    test_dispersion.py,
+    test_solo.py
 """
 ignored-modules = "scipy,cdflib"
 
@@ -119,7 +122,7 @@ current_version = "2.4.5"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true
-tag             = true
+tag             = false
 push            = false
 
 [tool.bumpver.file_patterns]
