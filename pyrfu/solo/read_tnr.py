@@ -78,6 +78,12 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
 
     file_name = r"solo_L2_rpw-tnr-surv.*_([0-9]{8})_V[0-9]{2}.cdf"
 
+    # Check tint
+    assert isinstance(tint, (list, np.ndarray)), "tint must be array_like"
+    assert len(tint) == 2, "tint must contain two elements"
+    assert isinstance(tint[0], str), "tint[0] must be a string"
+    assert isinstance(tint[1], str), "tint[1] must be a string"
+
     d_start = parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d"))
     until_ = parser.parse(tint[1]) - datetime.timedelta(seconds=1)
     days = rrule(DAILY, dtstart=d_start, until=until_)
@@ -156,9 +162,10 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
 
     """
 
-    files = _list_files_tnr_l2(tint, data_path, tree)
+    # Check input types
+    assert isinstance(sensor, int), "sensor must integer"
 
-    assert files, "No files found. Make sure that the data_path is correct"
+    files = _list_files_tnr_l2(tint, data_path, tree)
 
     # Initialize spectrum output to None
     out = None
@@ -275,6 +282,6 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
             ),
         )
 
-    out = out[np.argsort(out.time.data)]
+        out = out[np.argsort(out.time.data)]
 
     return out

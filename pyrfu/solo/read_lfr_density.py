@@ -52,6 +52,13 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
 
     """
 
+    # Check input types
+    assert isinstance(tint, (list, np.ndarray)), "tint must be array_like"
+    assert len(tint) == 2, "tint must contain two elements"
+    assert isinstance(tint[0], str), "tint[0] must be a string"
+    assert isinstance(tint[1], str), "tint[1] must be a string"
+    assert isinstance(tree, bool), "tree must be a boolean"
+
     # Check path
     if not data_path:
         # pkg_path = os.path.dirname(os.path.abspath(__file__))
