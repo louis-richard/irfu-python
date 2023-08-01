@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 3rd party imports
+import numpy as np
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -29,9 +32,9 @@ def unix2datetime64(time):
     """
 
     # Make sure that time is in ns format
-    time_unix = (time * 1e9).astype("int64")
+    time_unix = (time * 1e9).astype(np.int64)
 
     # Convert to unix
-    time_datetime64 = time_unix.astype("<M8[ns]")
+    time_datetime64 = time_unix.astype("datetime64[ns]")
 
     return time_datetime64

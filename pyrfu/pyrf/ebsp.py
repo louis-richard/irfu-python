@@ -66,18 +66,18 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             fs_ = 2 * fs_e
             start_time = np.max(
                 [
-                    e_xyz.time.data[0].astype(int) / 1e9,
-                    db_xyz.time.data[0].astype(int) / 1e9,
+                    e_xyz.time.data[0].astype(np.float64) / 1e9,
+                    db_xyz.time.data[0].astype(np.float64) / 1e9,
                 ]
             )
             end_time = np.min(
                 [
-                    e_xyz.time.data[-1].astype(int) / 1e9,
-                    db_xyz.time.data[-1].astype(int) / 1e9,
+                    e_xyz.time.data[-1].astype(np.float64) / 1e9,
+                    db_xyz.time.data[-1].astype(np.float64) / 1e9,
                 ]
             )
 
-            nt = int((end_time - start_time) * fs_)
+            nt = np.floor((end_time - start_time) * fs_).astype(np.int64)
 
             t = np.linspace(start_time, end_time, nt)
 
@@ -107,8 +107,8 @@ def _b_elevation(b_x, b_y, b_z, angle_b_elevation_max):
 
 
 def _freq_int(freq_int, delta_b):
-    start_time = delta_b.time.data[0].astype(int) / 1e9
-    end_time = delta_b.time.data[-1].astype(int) / 1e9
+    start_time = delta_b.time.data[0].astype(np.float64) / 1e9
+    end_time = delta_b.time.data[-1].astype(np.float64) / 1e9
 
     pc12_range, other_range = [False, False]
 
@@ -116,7 +116,7 @@ def _freq_int(freq_int, delta_b):
         if freq_int.lower() == "pc12":
             pc12_range = True
 
-            freq_int = [0.1, 5]
+            freq_int = [0.1, 5.0]
 
             delta_t = 1  # local
 
@@ -139,10 +139,10 @@ def _freq_int(freq_int, delta_b):
         else:
             raise ValueError("FREQ_INT must be [f_min f_max], f_min<f_max")
 
-    nt = np.round((end_time - start_time) / delta_t).astype(int)
+    nt = np.floor((end_time - start_time) / delta_t).astype(np.int64)
 
-    out_time = np.linspace(start_time, end_time, nt)
-    out_time += delta_t / 2
+    out_time = np.linspace(start_time, end_time, nt, dtype=np.float64)
+    out_time += delta_t / 2.0
     out_time = out_time[:-1]
 
     any_range = [pc12_range, other_range]
@@ -450,7 +450,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         if want_ee:
             e_xyz = e_xyz[:-1, :]
 
-    in_time = db_xyz.time.data.astype("int64") / 1e9
+    in_time = db_xyz.time.data.astype(np.float64) / 1e9
 
     b_x, b_y, b_z = [None, None, None]
 
@@ -473,7 +473,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     if flag_want_fac:
         res["flagFac"] = True
 
-        time_b0 = b_bgd.time.data.astype("int64") / 1e9
+        time_b0 = b_bgd.time.data.astype(np.float64) / 1e9
 
         if want_ee and not flag_de_dot_b0:
             eisr2 = e_xyz[:, :2]
@@ -741,7 +741,8 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
                         np.max([0, len(out_time) - censure[ind_a] - 1]), len(out_time)
                     ),
                 ]
-            ).astype(int)
+            )
+            censure_idx = censure_idx.astype(np.int64)
 
             s_mat_avg[censure_idx, ...] = np.nan
 
@@ -846,7 +847,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             ]
         )
 
-        censure_idx = censure_idx.astype(int)
+        censure_idx = censure_idx.astype(np.int64)
 
         power_bx_plot[censure_idx, ind_a] = np.nan
         power_by_plot[censure_idx, ind_a] = np.nan
@@ -949,17 +950,17 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         poynting_xyz = np.transpose(poynting_xyz, [1, 2, 0])
         poynting_xyz[:, :, 1] = s_plot_y
         poynting_xyz[:, :, 2] = s_plot_z
-        poynting_xyz = poynting_xyz.astype(float)
+        poynting_xyz = poynting_xyz.astype(np.float64)
 
         poynting_r_th_ph = np.tile(s_r, (3, 1, 1))
         poynting_r_th_ph = np.transpose(poynting_r_th_ph, [1, 2, 0])
         poynting_r_th_ph[..., 1] = np.pi / 2 - s_elevation
         poynting_r_th_ph[..., 2] = s_azimuth
         poynting_r_th_ph[..., 1:] = poynting_r_th_ph[..., 1:] * 180 / np.pi
-        poynting_r_th_ph = poynting_r_th_ph.astype(float)
+        poynting_r_th_ph = poynting_r_th_ph.astype(np.float64)
 
         # Output
-        res["ee_ss"] = power_2e_isr2_plot.astype(float)
+        res["ee_ss"] = power_2e_isr2_plot.astype(np.float64)
 
         res["ee_xxyyzzss"] = xr.DataArray(
             ee_xxyyzzss[:, ::-1, ...],

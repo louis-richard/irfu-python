@@ -38,6 +38,6 @@ def ttns2datetime64(time):
     time_iso8601 = timevec2iso8601(time_tt2000)
 
     #
-    time_datetime64 = time_iso8601.astype("<M8[ns]")
+    time_datetime64 = time_iso8601.astype("datetime64[ns]")
 
     return time_datetime64

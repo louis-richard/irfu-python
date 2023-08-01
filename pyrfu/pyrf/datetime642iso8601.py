@@ -33,9 +33,9 @@ def datetime642iso8601(time):
 
     if isinstance(time, np.datetime64):
         time = np.array([time])
-        time_datetime64 = time.astype("<M8[ns]")
+        time_datetime64 = time.astype("datetime64[ns]")
     elif isinstance(time, (list, np.ndarray)) and isinstance(time[0], np.datetime64):
-        time_datetime64 = time.astype("<M8[ns]")
+        time_datetime64 = time.astype("datetime64[ns]")
     else:
         raise TypeError("time must be numpy.datetime64 or array_like")
 

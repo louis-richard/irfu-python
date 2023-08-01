@@ -28,6 +28,6 @@ def iso86012datetime64(time):
 
     """
 
-    time_datetime64 = time.astype("<M8[ns]")
+    time_datetime64 = time.astype("datetime64[ns]")
 
     return time_datetime64

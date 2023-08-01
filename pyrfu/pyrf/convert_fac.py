@@ -113,7 +113,7 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
         raise TypeError("b_bgd must be a vector or a tensor time series")
 
     if inp_data.ndim == 2 and inp_data.shape[1] == 3:
-        out_data = np.zeros(inp.shape)
+        out_data = np.zeros(inp.shape, dtype=inp_data.dtype)
 
         out_data[:, 0] = np.sum(r_perp_x * inp_data, axis=1)
         out_data[:, 1] = np.sum(r_perp_y * inp_data, axis=1)

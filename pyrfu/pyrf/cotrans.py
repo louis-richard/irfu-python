@@ -236,7 +236,7 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     if isinstance(inp, xr.DataArray):
         time = inp.time.data
-        t = time.astype(int) * 1e-9
+        t = (time.astype(np.int64) * 1e-9).astype(np.float64)
 
         #  Terrestial Time (seconds since J2000)
         tts = t - j2000

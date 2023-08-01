@@ -156,7 +156,7 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
 
     """
 
-    tint = iso86012datetime64(np.array(tint)).astype("<M8[s]")
+    tint = iso86012datetime64(np.array(tint)).astype("datetime64[s]")
 
     url_ = _omni_url(tint, database)
 
@@ -176,8 +176,8 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     data["time"] = pd.to_datetime(data["time"], format="%Y-%j/%H")
 
     data = data.set_index("time").astype(np.float64)
-    fmt_ = f"<M8[{database[5].lower()}]"
-    data = data.loc[data.index.isin(tint.astype(fmt_).astype("<M8[ns]"))]
+    fmt_ = f"datetime64[{database[5].lower()}]"
+    data = data.loc[data.index.isin(tint.astype(fmt_).astype("datetime64[ns]"))]
     data = data.to_xarray()
 
     return data
