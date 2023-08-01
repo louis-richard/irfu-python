@@ -32,6 +32,12 @@ pyRFU
 .. |PyLintB| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
 .. _PyLintB: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
 
+.. |CodeQL| image:: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml/badge.svg
+.. _CodeQL: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml
+
+.. |CodeCov| image:: https://codecov.io/gh/louis-richard/irfu-python/coverage.svg?branch=main
+.. _CodeCov: https://codecov.io/gh/louis-richard/irfu-python/branch/main
+
 .. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
 .. _Issues: https://github.com/louis-richard/irfu-python/issues
 
@@ -48,17 +54,12 @@ pyRFU
 .. _Black: https://github.com/psf/black
 
 |License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |CI|_
-|PyLintB|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
+|PyLintB|_ |CodeQL|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
 
 It is distributed under the open-source MIT license.
-
-.. end-marker-intro-do-not-remove
-
-Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
-
 
 Quickstart
 ==========
@@ -133,18 +134,27 @@ Plot time series of magnetic field and ion bulk velocity
     axs[1].set_ylabel("$V_i~[\\mathrm{km}~\\mathrm{s}^{-1}]$")
     axs[1].legend(["$V_{ix}$", "$V_{iy}$", "$V_{iz}$"], ncol=4)
 
+.. end-marker-intro-do-not-remove
+
+Documentation
+=============
+Full documentation can be found `here <https://pyrfu.readthedocs.io/en/latest/index.html>`_
+
+Examples
+========
+A list of examples is available `here <https://pyrfu.readthedocs.io/en/latest/examples/index.html>`_
 
 Credits
--------
+=======
 This software was developed by Louis RICHARD (louisr@irfu.se) based on the IRFU-MATLAB library.
 
 Acknowledgement
----------------
+===============
 Please use the following to acknowledge use of pyrfu in your publications:
 Data analysis was performed using the pyrfu analysis package available at https://github.com/louis-richard/irfu-python
 
 Additional Information
-----------------------
+======================
 MMS Science Data Center: https://lasp.colorado.edu/mms/sdc/public/
 
 MMS Datasets: https://lasp.colorado.edu/mms/sdc/public/datasets/

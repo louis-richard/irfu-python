@@ -20,16 +20,6 @@ Welcome to pyrfu's documentation!
    :start-after: start-marker-intro-do-not-remove
    :end-before: end-marker-intro-do-not-remove
 
-Quickstart
-==========
-
-Installing pyrfu with pip (:doc:`more details here <installation>`):
-
-.. code-block:: console
-
-    $ python -m pip install pyrfu
-    # or
-    $ python -m pip install --user pyrfu
 
 
 Examples
