@@ -56,17 +56,14 @@ pyRFU
 |License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |CI|_
 |PyLintB|_ |CodeQL|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
 
-The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
-Magnetospheric MultiScale (MMS) mission.
+The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the Magnetospheric MultiScale (MMS) mission.
 
 It is distributed under the open-source MIT license.
 
 Quickstart
 ==========
 
-Installing pyrfu with pip (`more details here`_):
-
-.. _more details here: https://pyrfu.readthedocs.io/en/latest/installation.html
+Installing pyrfu with pip (`more details here <https://pyrfu.readthedocs.io/en/latest/installation.html>`_):
 
 .. code-block:: console
 
@@ -74,10 +71,8 @@ Installing pyrfu with pip (`more details here`_):
     # or
     $ python -m pip install --user pyrfu
 
-Import `pyrfu.mms`_ package with routines specific to work with the
+Import `pyrfu.mms <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.mms.html>`_ package with routines specific to work with the
 Magnetospheric Multiscale mission (MMS)
-
-.. _pyrfu.mms: https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.mms.html
 
 .. code:: python
 
@@ -89,6 +84,7 @@ Setup path to MMS data
 
     mms.db_init("/Volumes/mms")
 
+
 Load magnetic field and ion bulk velocity data
 
 .. code:: python
@@ -97,9 +93,8 @@ Load magnetic field and ion bulk velocity data
     b_gsm = mms.get_data("b_gsm_fgm_srvy_l2", tint, 1)
     v_gse_i = mms.get_data("vi_gse_fpi_fast_l2", tint, 1)
 
-Import `pyrfu.pyrf`_ package with generic routines
 
-.. _pyrfu.pyrf: https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.pyrf.html
+Import `pyrfu.pyrf <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.pyrf.html>`_ package with generic routines
 
 .. code:: python
 
@@ -111,13 +106,12 @@ Transform ion bulk velocity to geocentric solar magnetospheric (GSM) coordinates
 
     v_gsm_i = pyrf.cotrans(v_gse_i, "gse>gsm")
 
-Import `pyrfu.plot`_ package with plotting routines
-
-.. _pyrfu.plot: https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.plot.html
+Import `pyrfu.plot <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.plot.html>`_ package with plotting routines
 
 .. code:: python
 
     from pyrfu import plot
+
 
 Plot time series of magnetic field and ion bulk velocity
 
@@ -138,7 +132,7 @@ Plot time series of magnetic field and ion bulk velocity
 
 Documentation
 =============
-Full documentation can be found `here <https://pyrfu.readthedocs.io/en/latest/index.html>`_
+Full documentation can be found on `pyrfu.readthedocs.io <https://pyrfu.readthedocs.io/en/latest/index.html>`_
 
 Examples
 ========
