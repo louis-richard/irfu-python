@@ -1,4 +1,4 @@
-name: tests
+name: CI
 
 on: [push]
 
@@ -31,12 +31,22 @@ jobs:
         pip install -r docs/requirements.txt
         pytest
     - name: Test with pytest (coverage + long tests)
-      if: matrix.python-version == '3.9' && matrix.os == 'ubuntu-latest'
+      if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
       run: |
         sudo apt update && sudo apt install -y texlive pandoc
         pip install pytest ddt pytest-cov sphinx pandoc
         pip install -r docs/requirements.txt
         pytest --cov=./ --cov-report=xml
+    - name: Check that release process is not broken
+      if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TEST_PASSWORD }}
+      run: |
+        pip install build wheel twine
+        python -m build .
+        twine check dist/*
+        twine upload --repository testpypi --skip-existing dist/*
     - name: Upload coverage reports to Codecov
       if: matrix.python-version == '3.9' && matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v1
