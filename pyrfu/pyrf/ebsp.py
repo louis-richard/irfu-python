@@ -15,8 +15,6 @@ from scipy import fft
 from .calc_fs import calc_fs
 from .cart2sph import cart2sph
 from .convert_fac import convert_fac
-from .datetime642iso8601 import datetime642iso8601
-from .iso2unix import iso2unix
 from .resample import resample
 
 # Local imports
@@ -97,9 +95,9 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
 
 def _b_elevation(b_x, b_y, b_z, angle_b_elevation_max):
     # Remove the last sample if the total number of samples is odd
-    b_x = b_x[: int(2 * (len(b_x) // 2)), :]
-    b_y = b_y[: int(2 * (len(b_y) // 2)), :]
-    b_z = b_z[: int(2 * (len(b_z) // 2)), :]
+    b_x = b_x[: int(2 * (len(b_x) // 2))]
+    b_y = b_y[: int(2 * (len(b_y) // 2))]
+    b_z = b_z[: int(2 * (len(b_z) // 2))]
 
     angle_b_elevation = np.arctan(b_z / np.sqrt(b_x**2 + b_y**2))
     angle_b_elevation = np.rad2deg(angle_b_elevation)
@@ -112,7 +110,7 @@ def _freq_int(freq_int, delta_b):
     start_time = delta_b.time.data[0].astype(int) / 1e9
     end_time = delta_b.time.data[-1].astype(int) / 1e9
 
-    pc12_range, pc35_range, other_range = [False, False, False]
+    pc12_range, other_range = [False, False]
 
     if isinstance(freq_int, str):
         if freq_int.lower() == "pc12":
@@ -122,30 +120,15 @@ def _freq_int(freq_int, delta_b):
 
             delta_t = 1  # local
 
-            tint = np.round([start_time, end_time])
-            tint = list(datetime642iso8601(unix2datetime64(tint)))
-
         elif freq_int.lower() == "pc35":
-            pc35_range = True
-
             freq_int = [0.002, 0.1]
 
             delta_t = 60  # local
-
-            tint = 60 * np.array([np.round(start_time / 60), np.round(end_time / 60)])
-            tint = datetime642iso8601(unix2datetime64(tint))
 
         else:
             raise ValueError("Invalid format of interval")
 
         fs_out = 1 / delta_t
-
-        nt = np.round((iso2unix(tint[1]) - iso2unix(tint[0])) / delta_t)
-        nt = nt.astype(int)  # local
-
-        out_time = np.linspace(iso2unix(tint[0]), iso2unix(tint[1]), nt)
-        out_time += delta_t / 2
-        out_time = out_time[:-1]
     else:
         if freq_int[1] >= freq_int[0]:
             other_range = True
@@ -153,16 +136,16 @@ def _freq_int(freq_int, delta_b):
             fs_out = freq_int[1] / 5
 
             delta_t = 1 / fs_out  # local
-
-            nt = np.round((end_time - start_time) / delta_t).astype(int)
-
-            out_time = np.linspace(start_time, end_time, nt)
-            out_time += delta_t / 2
-            out_time = out_time[:-1]
         else:
             raise ValueError("FREQ_INT must be [f_min f_max], f_min<f_max")
 
-    any_range = [pc12_range, pc35_range, other_range]
+    nt = np.round((end_time - start_time) / delta_t).astype(int)
+
+    out_time = np.linspace(start_time, end_time, nt)
+    out_time += delta_t / 2
+    out_time = out_time[:-1]
+
+    any_range = [pc12_range, other_range]
 
     return any_range, freq_int, fs_out, out_time
 
@@ -300,13 +283,13 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     ----------------
     polarization : bool
         Computes polarization parameters. Default False.
-    noresamp : bool
+    no_resample : bool
         No resampling, E and delta_b are given at the same time line.
         Default False.
     fac : bool
         Uses FAC coordinate system (defined by b0 and optionally xyz),
         otherwise no coordinate system transformation is performed. Default
-        False.
+        True.
     de_dot_b0 : bool
         Computes dEz from delta_b dot B = 0, uses full_b. Default False.
     full_b_db : bool
@@ -362,7 +345,14 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     assert isinstance(db_xyz, xr.DataArray), "delta_b must be a DataArray"
     assert isinstance(b_xyz, xr.DataArray), "full_b must be a DataArray"
     assert isinstance(b_bgd, xr.DataArray), "b0 must be a DataArray"
-    assert isinstance(xyz, xr.DataArray), "xyz must be a DataArray"
+
+    message = "freq_int must be a string or array_like"
+    assert isinstance(freq_int, (list, np.ndarray, str)), message
+
+    if isinstance(freq_int, (list, np.ndarray)):
+        assert len(freq_int) == 2, "freq_int list must contain two elements"
+    else:
+        assert freq_int in ["pc12", "pc35"], "string freq_int must be pc12 or pc35"
 
     # Compute magnetic field fluctuations sampling frequency
     fs_b = calc_fs(db_xyz)
@@ -394,7 +384,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     want_polarization = kwargs.get("polarization", False)
 
     flag_no_resample = kwargs.get("no_resample", False)
-    flag_want_fac = kwargs.get("fac", False)
+    flag_want_fac = kwargs.get("fac", True)
     flag_de_dot_b0 = kwargs.get("de_dot_b0", False)
     flag_full_b_db = kwargs.get("full_b_db", False)
 
@@ -407,15 +397,14 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     fac_matrix = kwargs.get("fac_matrix", None)
 
     if flag_want_fac and fac_matrix is None:
-        if b_bgd is None:
-            raise ValueError("ebsp(): at least b0 should be given for option FAC")
-
         if xyz is None:
             logging.info(
                 "convert_fac : assuming s/c position [1 0 0] for estimating FAC"
             )
             xyz = [1, 0, 0]
             xyz = ts_vec_xyz(db_xyz.time.data, np.tile(xyz, (len(db_xyz), 1)))
+        else:
+            assert isinstance(xyz, xr.DataArray), "xyz must be a DataArray"
 
         xyz = resample(xyz, db_xyz, **{"f_s": fs_b})
 
@@ -426,11 +415,8 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         res["full_b"] = b_xyz
         db_xyz = db_xyz - b_bgd
 
-    if flag_de_dot_b0 and b_xyz is None:
-        raise ValueError("full_b must be given for option de_dot_b0=0")
-
     any_range, freq_int, out_sampling, out_time = _freq_int(freq_int, db_xyz)
-    pc12_range, pc35_range, other_range = any_range
+    pc12_range, other_range = any_range
 
     if want_ee:
         # Check the sampling rate
@@ -446,7 +432,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         raise ValueError("F_MAX must be lower than the Nyquist frequency")
 
     if want_ee and e_xyz.shape[1] < 3 and not flag_de_dot_b0:
-        raise ValueError(
+        raise TypeError(
             "E must have all 3 components or flag de_dot_db=0 must be given"
         )
 
@@ -495,7 +481,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             idx_nan_eisr2 = np.isnan(eisr2.data)
 
             if e_xyz.shape[1] < 3:
-                raise TypeError("E must be a 3D vector to be rotated to FAC")
+                raise IndexError("E must be a 3D vector to be rotated to FAC")
 
             if fac_matrix is None:
                 e_xyz = convert_fac(e_xyz, b_bgd, xyz)
@@ -503,18 +489,18 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
                 e_xyz = convert_fac(e_xyz, fac_matrix)
 
         else:
-            idx_nan_e = None
+            idx_nan_e = np.full((len(in_time), 3), False)
             eisr2 = None
-            idx_nan_eisr2 = None
+            idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
         if fac_matrix is None:
             db_xyz = convert_fac(db_xyz, b_bgd, xyz)
         else:
             db_xyz = convert_fac(db_xyz, fac_matrix)
     else:
-        idx_nan_e = None
+        idx_nan_e = np.full((len(in_time), 3), False)
         eisr2 = None
-        idx_nan_eisr2 = None
+        idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
     # Find the frequencies for an FFT of all data and set important parameters
     nd2 = len(in_time) / 2
@@ -656,13 +642,13 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
                 if flag_want_fac:
                     if fac_matrix is None:
-                        arg_ = ts_vec_xyz(time_b0, np.hstack([we[:, :2], we_z]))
+                        tmp = np.vstack([np.transpose(we[:, :2]), np.transpose(we_z)])
+                        arg_ = ts_vec_xyz(time_b0, np.transpose(tmp))
                         we = convert_fac(arg_, b_bgd, xyz)
                     else:
-                        arg_ = ts_vec_xyz(time_b0, np.hstack([we[:, :2], we_z]))
+                        tmp = np.vstack([np.transpose(we[:, :2]), np.transpose(we_z)])
+                        arg_ = ts_vec_xyz(time_b0, np.transpose(tmp))
                         we = convert_fac(arg_, fac_matrix)
-
-                    we = we[:, 1:]
                 else:
                     we = np.hstack([we[:, :2], we_z])
 
@@ -888,10 +874,8 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     if pc12_range or other_range:
         censure3 = np.floor(1.8 * a_)
-    elif pc35_range:
-        censure3 = np.floor(0.4 * a_)
     else:
-        raise ValueError("Invalid range")
+        censure3 = np.floor(0.4 * a_)
 
     # Censure magnetic fied
     power_bx_plot = _censure_plot(power_bx_plot, idx_nan_b, censure3, n_power_b, a_)

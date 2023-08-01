@@ -525,6 +525,11 @@ class ConvertFACTestCase(unittest.TestCase):
                 generate_ts(64.0, 100, "tensor"), generate_ts(64.0, 100, "vector")
             )
 
+        with self.assertRaises(TypeError):
+            pyrf.convert_fac(
+                generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "scalar")
+            )
+
     def test_convert_fac_output(self):
         result = pyrf.convert_fac(
             generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector")
@@ -741,6 +746,227 @@ class Datetime642UnixTestCase(unittest.TestCase):
     @data(np.datetime64("2019-01-01T00:00:00.000000000"), generate_timeline(64.0, 100))
     def test_datetime642unix_output(self, value):
         self.assertIsInstance(pyrf.datetime642unix(value), np.ndarray)
+
+
+@ddt
+class EbspTestCase(unittest.TestCase):
+    @data(
+        (
+            None,
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+        ),
+        (
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 98, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 120, "vector"),
+            [1e0, 1e1],
+        ),
+        (
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            [1e0, 1e1],
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            None,
+            [1e0, 1e1],
+        ),
+    )
+    @unpack
+    def test_ebsp_input_pass(self, e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int):
+        self.assertIsNotNone(pyrf.ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int))
+
+    @data(
+        (
+            generate_ts(64.0, 100, "vector"),
+            None,
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            None,
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            None,
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+        ),
+        (
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+        ),
+    )
+    @unpack
+    def test_ebsp_input_fail(self, e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int):
+        with self.assertRaises((AssertionError, TypeError, IndexError)):
+            pyrf.ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int)
+
+    @data(
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": True,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": True,
+            "fac": True,
+            "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": False,
+            "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": True,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": False,
+            "full_b_db": True,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": random.randint(2, 50),
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": True,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": generate_ts(64.0, 100, "tensor"),
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": generate_ts(64.0, 100, "tensor"),
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": True,
+            "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": random.random(),
+        },
+    )
+    def test_ebsp_options(self, value):
+        result = pyrf.ebsp(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+            **value,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result["bb_xxyyzzss"], xr.DataArray)
+
+    @data("pc12", "pc35", [1e0, 1e1])
+    def test_ebsp_freq_int_pass(self, value):
+        self.assertIsNotNone(
+            pyrf.ebsp(
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                value,
+            )
+        )
+
+    @data(random.random(), np.random.random(3), "bazinga", [1, 100])
+    def test_ebsp_freq_int_fail(self, value):
+        with self.assertRaises((AssertionError, ValueError)):
+            pyrf.ebsp(
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 10000, "vector"),
+                value,
+            )
 
 
 class TraceTestCase(unittest.TestCase):
