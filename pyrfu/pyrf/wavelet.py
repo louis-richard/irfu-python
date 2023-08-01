@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
-
 # Built-in imports
+import logging
 import os
 
 # 3rd party imports
@@ -94,11 +93,13 @@ def wavelet(inp, **kwargs):
 
     if kwargs.get("linear"):
         linear_df = True
-        if isinstance(kwargs["linear"], (int, float)):
-            delta_f = kwargs["linear"]
-        else:
+        if isinstance(kwargs["linear"], bool) and kwargs["linear"]:
             delta_f = 100
             logging.warning("Unknown input for linear delta_f set to 100")
+        elif isinstance(kwargs["linear"], (int, float)):
+            delta_f = kwargs["linear"]
+        else:
+            raise TypeError("linear keyword argument must be bool, float or int")
     else:
         delta_f = 100
         linear_df = False
@@ -200,12 +201,10 @@ def wavelet(inp, **kwargs):
             coords=[time, np.flip(new_freq)],
             dims=["time", "frequency"],
         )
-    elif len(inp.shape) == 2:
+    else:
         out = xr.Dataset(
             out_dict,
             coords={"time": time, "frequency": np.flip(new_freq)},
         )
-    else:
-        raise TypeError("Invalid shape")
 
     return out

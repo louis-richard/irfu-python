@@ -10,7 +10,7 @@ import unittest
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from ddt import data, ddt, idata
+from ddt import data, ddt, idata, unpack
 
 from pyrfu import pyrf
 
@@ -291,34 +291,6 @@ class C4JTestCase(unittest.TestCase):
         self.assertListEqual(list(div_pb.shape), [100, 3])
 
 
-class CalcFsTestCase(unittest.TestCase):
-    def test_calc_fs_input_type(self):
-        self.assertIsNotNone(pyrf.calc_fs(generate_ts(64.0, 100)))
-
-        with self.assertRaises(AssertionError):
-            # Raises error if input is not a xarray
-            pyrf.calc_fs(0)
-            pyrf.calc_fs(generate_data(100))
-
-    def test_calc_fs_output_type(self):
-        self.assertIsInstance(pyrf.calc_fs(generate_ts(64.0, 100)), float)
-
-
-class CalcDtTestCase(unittest.TestCase):
-    def test_calc_dt_input_type(self):
-        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, "scalar")))
-        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, "vector")))
-        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, "tensor")))
-
-        with self.assertRaises(AssertionError):
-            # Raises error if input is not a xarray
-            pyrf.calc_dt(0)
-            pyrf.calc_dt(generate_data(100))
-
-    def test_calc_dt_output_type(self):
-        self.assertIsInstance(pyrf.calc_dt(generate_ts(64.0, 100)), float)
-
-
 class CalcAgTestCase(unittest.TestCase):
     def test_calc_ag_input_type(self):
         self.assertIsNotNone(pyrf.calc_ag(generate_ts(64.0, 100, "tensor")))
@@ -406,6 +378,34 @@ class CalcDngTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
+class CalcFsTestCase(unittest.TestCase):
+    def test_calc_fs_input_type(self):
+        self.assertIsNotNone(pyrf.calc_fs(generate_ts(64.0, 100)))
+
+        with self.assertRaises(AssertionError):
+            # Raises error if input is not a xarray
+            pyrf.calc_fs(0)
+            pyrf.calc_fs(generate_data(100))
+
+    def test_calc_fs_output_type(self):
+        self.assertIsInstance(pyrf.calc_fs(generate_ts(64.0, 100)), float)
+
+
+class CalcDtTestCase(unittest.TestCase):
+    def test_calc_dt_input_type(self):
+        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, "scalar")))
+        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, "vector")))
+        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, "tensor")))
+
+        with self.assertRaises(AssertionError):
+            # Raises error if input is not a xarray
+            pyrf.calc_dt(0)
+            pyrf.calc_dt(generate_data(100))
+
+    def test_calc_dt_output_type(self):
+        self.assertIsInstance(pyrf.calc_dt(generate_ts(64.0, 100)), float)
+
+
 class CalcSqrtQTestCase(unittest.TestCase):
     def test_calc_sqrtq_input_type(self):
         self.assertIsNotNone(pyrf.calc_sqrtq(generate_ts(64.0, 100, "tensor")))
@@ -484,6 +484,34 @@ class Cart2SphTsTestCase(unittest.TestCase):
         result = pyrf.cart2sph_ts(generate_ts(64.0, 100, "vector"), -1)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
+
+
+@ddt
+class CompressCwtTestCase(unittest.TestCase):
+    @data(([], 10), (np.random.random((100, 100)), 100))
+    @unpack
+    def test_compress_cwt_input(self, cwt, nc):
+        with self.assertRaises(AssertionError):
+            pyrf.compress_cwt(cwt, nc)
+
+    def test_compress_cwt_output(self):
+        times = generate_timeline(64.0, 1000)
+        freqs = np.logspace(0, 3, 100)
+        cwt_x = xr.DataArray(
+            np.random.random((1000, 100)), coords=[times, freqs], dims=["time", "f"]
+        )
+        cwt_y = xr.DataArray(
+            np.random.random((1000, 100)), coords=[times, freqs], dims=["time", "f"]
+        )
+        cwt_z = xr.DataArray(
+            np.random.random((1000, 100)), coords=[times, freqs], dims=["time", "f"]
+        )
+        cwt = xr.Dataset({"x": cwt_x, "y": cwt_y, "z": cwt_z})
+        result = pyrf.compress_cwt(cwt, 10)
+        self.assertIsInstance(result[0], np.ndarray)
+
+        self.assertIsInstance(result[1], np.ndarray)
+        self.assertIsInstance(result[2], np.ndarray)
 
 
 class ConvertFACTestCase(unittest.TestCase):
@@ -984,6 +1012,33 @@ class TsTensorXYZTestCase(unittest.TestCase):
             generate_timeline(64.0, 100), generate_data(100, "tensor")
         )
         self.assertEqual(result.attrs["TENSOR_ORDER"], 2)
+
+
+@ddt
+class WaveletTestCase(unittest.TestCase):
+    @data(
+        (generate_ts(64.0, 100, "tensor"), {}),
+        (generate_ts(64, 100, "vector"), {"linear": [random.randint(10, 100)]}),
+    )
+    @unpack
+    def test_wavelet_input(self, inp, options):
+        with self.assertRaises(TypeError):
+            pyrf.wavelet(inp, **options)
+
+    @data(
+        (generate_ts(64, 100, "scalar"), {}),
+        (generate_ts(64, 99, "scalar"), {}),
+        (generate_ts(64, 100, "vector"), {}),
+        (generate_ts(64, 100, "vector"), {"linear": True}),
+        (generate_ts(64, 100, "vector"), {"linear": random.randint(10, 100)}),
+        (
+            generate_ts(64, 100, "vector"),
+            {"linear": random.randint(10, 100), "return_power": False},
+        ),
+    )
+    @unpack
+    def test_wavelet_output(self, inp, options):
+        self.assertIsNotNone(pyrf.wavelet(inp, **options))
 
 
 if __name__ == "__main__":
