@@ -26,8 +26,8 @@ pyRFU
 .. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu?logo=pypi&color=blue
 .. _Downloads: https://pypi.org/project/pyrfu/
 
-.. |Flake8| image:: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml/badge.svg
-.. _Flake8: https://github.com/louis-richard/irfu-python/actions/workflows/flake8.yml
+.. |CI| image:: https://github.com/louis-richard/irfu-python/actions/workflows/tests.yml/badge.svg
+.. _CI: https://github.com/louis-richard/irfu-python/actions/workflows/tests.yml
 
 .. |PyLintB| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
 .. _PyLintB: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
@@ -47,7 +47,8 @@ pyRFU
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
 .. _Black: https://github.com/psf/black
 
-|License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |Flake8|_ |PyLintB|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
+|License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |CI|_
+|PyLintB|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
 Magnetospheric MultiScale (MMS) mission.
@@ -59,156 +60,79 @@ It is distributed under the open-source MIT license.
 Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
 
 
-Installation
-------------
-.. start-marker-install-do-not-remove
+Quickstart
+==========
 
-The package ``pyrfu`` has been tested only for Mac OS.
+Installing pyrfu with pip (`more details here`_):
 
-Using PyPi
-**********
+.. _more details here: https://pyrfu.readthedocs.io/en/latest/installation.html
 
-``pyrfu`` is available for pip.
+.. code-block:: console
 
-.. code-block:: bash
+    $ python -m pip install pyrfu
+    # or
+    $ python -m pip install --user pyrfu
 
-        pip install pyrfu
+Import `pyrfu.mms`_ package with routines specific to work with the
+Magnetospheric Multiscale mission (MMS)
 
-
-From sources
-************
-
-The sources are located on **GitHub**:
-
-    https://github.com/louis-richard/irfu-python
-
-1) Clone the GitHub repo:
-
-Open a terminal and write the below command to clone in your PC the ``pyrfu`` repo:
-
-.. code-block:: bash
-
-    git clone https://github.com/louis-richard/irfu-python.git
-    cd irfu-python
-
-
-2) Create a virtual env
-
-pyrfu needs a significant number of dependencies. The easiest
-way to get everything installed is to use a virtual environment.
-
--  Anaconda
-
-You can create a virtual environment and install all the dependencies using conda_
-with the following commands:
-
-.. code-block:: bash
-
-    pip install conda
-    conda create -n pyrfu
-    source activate pyrfu
-
-.. _conda: http://conda.io/
-
-
-- Virtual Env
-
-Virtualenv_ can also be used:
-
-.. code-block:: bash
-
-    pip install virtualenv
-    virtualenv pyrfu
-    source pyrfu/bin/activate
-
-.. _virtualenv: https://virtualenv.pypa.io/en/latest/#
-
-
-3) Install the package via the commands:
-
-.. code-block:: bash
-
-        python setup.py install
-
-
-5) (Optional) Generate the docs: install the extra dependencies of doc and run
-the `setup.py` file:
-
-.. code-block:: bash
-
-        pip install pyrfu
-        python setup.py build_sphinx
-
-Once installed, the doc can be generated with:
-
-.. code-block:: bash
-
-        cd doc
-        make html
-
-
-Dependencies
-************
-
-The required dependencies are:
-
-- `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=1.0.0
-- `geopack <https://github.com/tsssss/geopack>`_ >=1.0.9
-- `matplotlib <https://matplotlib.org>`_ >=3.5.2
-- `numba <http://numba.pydata.org>`_ >=0.54.1
-- `numpy <https://www.numpy.org>`_ >=1.20.3
-- `pandas <https://pandas.pydata.org/>`_ >=1.3.4
-- `python-datetutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.2
-- `requests <https://requests.readthedocs.io/en/latest/>`_ >=2.26.0
-- `scipy <https://scipy.org>`_ >=1.7.3
-- `tqdm <https://tqdm.github.io/>`_ >=4.62.3
-- `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.20.1
-
-
-Testing dependencies are:
-
-- `pytest <https://docs.pytest.org/en/latest/>`_ >= 2.8
-
-Extra testing dependencies:
-
-- `coverage <https://coverage.readthedocs.io>`_ >= 4.4
-- `pylint <https://www.pylint.org>`_ >= 1.6.0
-
-.. end-marker-install-do-not-remove
-
-Usage
------
-To import generic space plasma physics functions
-
-.. code:: python
-
-    from pyrfu import pyrf
-
-
-To import functions specific to Magnetospheric Multi-Scale (MMS)
+.. _pyrfu.mms: https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.mms.html
 
 .. code:: python
 
     from pyrfu import mms
 
-
-To import functions specific to Solar Orbiter (SolO)
+Setup path to MMS data
 
 .. code:: python
 
-    from pyrfu import solo
+    mms.db_init("/Volumes/mms")
 
+Load magnetic field and ion bulk velocity data
 
-To import plotting functions
+.. code:: python
+
+    tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+    b_gsm = mms.get_data("b_gsm_fgm_srvy_l2", tint, 1)
+    v_gse_i = mms.get_data("vi_gse_fpi_fast_l2", tint, 1)
+
+Import `pyrfu.pyrf`_ package with generic routines
+
+.. _pyrfu.pyrf: https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.pyrf.html
+
+.. code:: python
+
+    from pyrfu import pyrf
+
+Transform ion bulk velocity to geocentric solar magnetospheric (GSM) coordinates
+
+.. code:: python
+
+    v_gsm_i = pyrf.cotrans(v_gse_i, "gse>gsm")
+
+Import `pyrfu.plot`_ package with plotting routines
+
+.. _pyrfu.plot: https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.plot.html
 
 .. code:: python
 
     from pyrfu import plot
 
+Plot time series of magnetic field and ion bulk velocity
 
-Configuration
--------------
-Default configuration settings for MMS data (i.e data path) are stored in pyrfu/mms/config.json and can be changed at anytime using mms.db_init(local_path_dir).
+.. code:: python
+
+    import matplotlib.pyplot as plt
+
+    f, axs = plt.subplots(2, sharex="all")
+    plot.plot_line(axs[0], b_gsm)
+    axs[0].set_ylabel("$B~[\\mathrm{nT}]$")
+    axs[0].legend(["$B_{x}$", "$B_{y}$", "$B_{z}$"], ncol=4)
+
+    plot.plot_line(axs[1], v_gsm_i)
+    axs[1].set_ylabel("$V_i~[\\mathrm{km}~\\mathrm{s}^{-1}]$")
+    axs[1].legend(["$V_{ix}$", "$V_{iy}$", "$V_{iz}$"], ncol=4)
+
 
 Credits
 -------
