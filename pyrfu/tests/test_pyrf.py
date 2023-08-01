@@ -947,11 +947,11 @@ class EbspTestCase(unittest.TestCase):
     def test_ebsp_freq_int_pass(self, value):
         self.assertIsNotNone(
             pyrf.ebsp(
-                generate_ts(64.0, 10000, "vector"),
-                generate_ts(64.0, 10000, "vector"),
-                generate_ts(64.0, 10000, "vector"),
-                generate_ts(64.0, 10000, "vector"),
-                generate_ts(64.0, 10000, "vector"),
+                generate_ts(64.0, 100000, "vector"),
+                generate_ts(64.0, 100000, "vector"),
+                generate_ts(64.0, 100000, "vector"),
+                generate_ts(64.0, 100000, "vector"),
+                generate_ts(64.0, 100000, "vector"),
                 value,
             )
         )
