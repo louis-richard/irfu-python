@@ -698,6 +698,51 @@ class Datetime2Iso8601TestCase(unittest.TestCase):
         self.assertEqual(len(pyrf.datetime2iso8601(time_line)), 10)
 
 
+@ddt
+class Datetime642Iso8601TestCase(unittest.TestCase):
+    @data(
+        datetime.datetime(2019, 1, 1, 0, 0, 0),
+        "2019-01-01T00:00:00.000000000",
+    )
+    def test_datetime642iso8601_input(self, value):
+        with self.assertRaises(TypeError):
+            pyrf.datetime642iso8601(value)
+
+    @data(np.datetime64("2019-01-01T00:00:00.000000000"), generate_timeline(64.0, 100))
+    def test_datetime642iso8601_output(self, value):
+        self.assertIsInstance(pyrf.datetime642iso8601(value), np.ndarray)
+
+
+@ddt
+class Datetime642TtnsTestCase(unittest.TestCase):
+    @data(
+        datetime.datetime(2019, 1, 1, 0, 0, 0),
+        "2019-01-01T00:00:00.000000000",
+    )
+    def test_datetime642ttns_input(self, value):
+        with self.assertRaises(TypeError):
+            pyrf.datetime642ttns(value)
+
+    @data(np.datetime64("2019-01-01T00:00:00.000000000"), generate_timeline(64.0, 100))
+    def test_datetime642ttns_output(self, value):
+        self.assertIsInstance(pyrf.datetime642ttns(value), np.ndarray)
+
+
+@ddt
+class Datetime642UnixTestCase(unittest.TestCase):
+    @data(
+        datetime.datetime(2019, 1, 1, 0, 0, 0),
+        "2019-01-01T00:00:00.000000000",
+    )
+    def test_datetime642unix_input(self, value):
+        with self.assertRaises(TypeError):
+            pyrf.datetime642unix(value)
+
+    @data(np.datetime64("2019-01-01T00:00:00.000000000"), generate_timeline(64.0, 100))
+    def test_datetime642unix_output(self, value):
+        self.assertIsInstance(pyrf.datetime642unix(value), np.ndarray)
+
+
 class TraceTestCase(unittest.TestCase):
     def test_trace_input(self):
         self.assertIsNotNone(pyrf.trace(generate_ts(64.0, 100, "tensor")))

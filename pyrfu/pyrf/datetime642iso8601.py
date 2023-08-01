@@ -31,8 +31,13 @@ def datetime642iso8601(time):
 
     """
 
-    # Convert to required precision
-    time_datetime64 = time.astype("<M8[ns]")
+    if isinstance(time, np.datetime64):
+        time = np.array([time])
+        time_datetime64 = time.astype("<M8[ns]")
+    elif isinstance(time, (list, np.ndarray)) and isinstance(time[0], np.datetime64):
+        time_datetime64 = time.astype("<M8[ns]")
+    else:
+        raise TypeError("time must be numpy.datetime64 or array_like")
 
     # Convert to string
     time_iso8601 = time_datetime64.astype(str)
