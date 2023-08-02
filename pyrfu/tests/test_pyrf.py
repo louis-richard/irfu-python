@@ -56,22 +56,47 @@ def generate_ts(f_s, n_pts, kind: str = "scalar"):
     return out
 
 
-def generate_ts_scalar(f_s, n_pts):
-    return pyrf.ts_scalar(generate_timeline(f_s, n_pts), generate_data(n_pts, "vector"))
+def generate_vdf(f_s, n_pts, shape, energy01: bool = False, specie: str = "ions"):
+    times = generate_timeline(f_s, n_pts)
 
+    phi = np.arange(shape[1])
+    phi = np.tile(phi, (n_pts, 1))
+    theta = np.arange(shape[2])
+    data = np.random.random((n_pts, *shape))
 
-def generate_ts_skymap(f_s, n_pts):
-    return pyrf.ts_skymap(
-        generate_timeline(f_s, n_pts),
-        np.random.random((n_pts, 32, 32, 16)),
-        np.random.random((n_pts, 32)),
-        np.random.random((n_pts, 32)),
-        np.random.random(16),
-        glob_attrs={
-            "delta_energy_plus": np.random.random((n_pts, 32)),
-            "delta_energy_minus": np.random.random((n_pts, 32)),
-        },
+    if energy01:
+        energy0 = np.arange(shape[0])
+        energy1 = np.arange(shape[0]) + 1
+        esteptable = np.arange(100) % 2
+        energy = np.tile(energy0, (n_pts, 1))
+        energy[esteptable == 1, :] = np.tile(energy1, (np.sum(esteptable), 1))
+    else:
+        energy = np.arange(shape[0])
+        energy = np.tile(energy, (n_pts, 1))
+        energy0 = energy[0, :]
+        energy1 = energy[1, :]
+        esteptable = np.zeros(n_pts)
+
+    attrs = {}
+    glob_attrs = {
+        "specie": specie,
+        "delta_energy_plus": np.ones((n_pts, shape[0])),
+        "delta_energy_minus": np.ones((n_pts, shape[0])),
+    }
+
+    out = pyrf.ts_skymap(
+        times,
+        data,
+        energy,
+        phi,
+        theta,
+        energy0=energy0,
+        energy1=energy1,
+        esteptable=esteptable,
+        attrs=attrs,
+        glob_attrs=glob_attrs,
     )
+    return out
 
 
 class AutoCorrTestCase(unittest.TestCase):
@@ -116,20 +141,20 @@ class AverageVDFTestCase(unittest.TestCase):
         with self.assertRaises(AssertionError):
             pyrf.average_vdf(0, 3)
             pyrf.average_vdf(np.random.random((100, 32, 32, 16)), 3)
-            pyrf.average_vdf(generate_ts_skymap(64.0, 100), [3, 5])
+            pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), [3, 5])
 
     def test_average_vdf_values(self):
         with self.assertRaises(AssertionError):
-            pyrf.average_vdf(generate_ts_skymap(64.0, 100), 2)
+            pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 2)
 
     def test_average_vdf_output_type(self):
         self.assertIsInstance(
-            pyrf.average_vdf(generate_ts_skymap(64.0, 100), 3), xr.Dataset
+            pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 3), xr.Dataset
         )
 
     def test_average_vdf_output_meta(self):
         avg_inds = np.arange(1, 99, 3, dtype=int)
-        result = pyrf.average_vdf(generate_ts_skymap(64.0, 100), 3)
+        result = pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 3)
 
         self.assertIsInstance(result.attrs["delta_energy_plus"], np.ndarray)
         self.assertEqual(result.attrs["delta_energy_plus"].ndim, 2)
@@ -378,19 +403,6 @@ class CalcDngTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
-class CalcFsTestCase(unittest.TestCase):
-    def test_calc_fs_input_type(self):
-        self.assertIsNotNone(pyrf.calc_fs(generate_ts(64.0, 100)))
-
-        with self.assertRaises(AssertionError):
-            # Raises error if input is not a xarray
-            pyrf.calc_fs(0)
-            pyrf.calc_fs(generate_data(100))
-
-    def test_calc_fs_output_type(self):
-        self.assertIsInstance(pyrf.calc_fs(generate_ts(64.0, 100)), float)
-
-
 class CalcDtTestCase(unittest.TestCase):
     def test_calc_dt_input_type(self):
         self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, "scalar")))
@@ -404,6 +416,19 @@ class CalcDtTestCase(unittest.TestCase):
 
     def test_calc_dt_output_type(self):
         self.assertIsInstance(pyrf.calc_dt(generate_ts(64.0, 100)), float)
+
+
+class CalcFsTestCase(unittest.TestCase):
+    def test_calc_fs_input_type(self):
+        self.assertIsNotNone(pyrf.calc_fs(generate_ts(64.0, 100)))
+
+        with self.assertRaises(AssertionError):
+            # Raises error if input is not a xarray
+            pyrf.calc_fs(0)
+            pyrf.calc_fs(generate_data(100))
+
+    def test_calc_fs_output_type(self):
+        self.assertIsInstance(pyrf.calc_fs(generate_ts(64.0, 100)), float)
 
 
 class CalcSqrtQTestCase(unittest.TestCase):
@@ -484,6 +509,29 @@ class Cart2SphTsTestCase(unittest.TestCase):
         result = pyrf.cart2sph_ts(generate_ts(64.0, 100, "vector"), -1)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
+
+
+class CdfEpoch2Datetime64TestCase(unittest.TestCase):
+    def test_cdfepoch2datetime64_input_type(self):
+        ref_time = 599572869184000000
+        self.assertIsNotNone(pyrf.cdfepoch2datetime64(ref_time))
+        time_line = np.arange(ref_time, int(ref_time + 100))
+        self.assertIsNotNone(pyrf.cdfepoch2datetime64(time_line))
+        self.assertIsNotNone(pyrf.cdfepoch2datetime64(list(time_line)))
+
+    def test_cdfepoch2datetime64_output_type(self):
+        ref_time = 599572869184000000
+        self.assertIsInstance(pyrf.cdfepoch2datetime64(ref_time), np.ndarray)
+        time_line = np.arange(ref_time, int(ref_time + 100))
+        self.assertIsInstance(pyrf.cdfepoch2datetime64(time_line), np.ndarray)
+        self.assertIsInstance(pyrf.cdfepoch2datetime64(list(time_line)), np.ndarray)
+
+    def test_cdfepoch2datetime64_output_shape(self):
+        ref_time = 599572869184000000
+        self.assertEqual(len(pyrf.cdfepoch2datetime64(ref_time)), 1)
+        time_line = np.arange(ref_time, int(ref_time + 100))
+        self.assertEqual(len(pyrf.cdfepoch2datetime64(time_line)), 100)
+        self.assertEqual(len(pyrf.cdfepoch2datetime64(list(time_line))), 100)
 
 
 @ddt
@@ -612,29 +660,6 @@ class CotransTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [100, 3])
 
 
-class CdfEpoch2Datetime64TestCase(unittest.TestCase):
-    def test_cdfepoch2datetime64_input_type(self):
-        ref_time = 599572869184000000
-        self.assertIsNotNone(pyrf.cdfepoch2datetime64(ref_time))
-        time_line = np.arange(ref_time, int(ref_time + 100))
-        self.assertIsNotNone(pyrf.cdfepoch2datetime64(time_line))
-        self.assertIsNotNone(pyrf.cdfepoch2datetime64(list(time_line)))
-
-    def test_cdfepoch2datetime64_output_type(self):
-        ref_time = 599572869184000000
-        self.assertIsInstance(pyrf.cdfepoch2datetime64(ref_time), np.ndarray)
-        time_line = np.arange(ref_time, int(ref_time + 100))
-        self.assertIsInstance(pyrf.cdfepoch2datetime64(time_line), np.ndarray)
-        self.assertIsInstance(pyrf.cdfepoch2datetime64(list(time_line)), np.ndarray)
-
-    def test_cdfepoch2datetime64_output_shape(self):
-        ref_time = 599572869184000000
-        self.assertEqual(len(pyrf.cdfepoch2datetime64(ref_time)), 1)
-        time_line = np.arange(ref_time, int(ref_time + 100))
-        self.assertEqual(len(pyrf.cdfepoch2datetime64(time_line)), 100)
-        self.assertEqual(len(pyrf.cdfepoch2datetime64(list(time_line))), 100)
-
-
 class CrossTestCase(unittest.TestCase):
     def test_cross_input(self):
         with self.assertRaises(AssertionError):
@@ -746,6 +771,68 @@ class Datetime642UnixTestCase(unittest.TestCase):
     @data(np.datetime64("2019-01-01T00:00:00.000000000"), generate_timeline(64.0, 100))
     def test_datetime642unix_output(self, value):
         self.assertIsInstance(pyrf.datetime642unix(value), np.ndarray)
+
+
+@ddt
+class DecParPerpTestCase(unittest.TestCase):
+    @data(
+        (generate_data(100, "vector"), generate_ts(64.0, 100, "vector"), False),
+        (generate_ts(64.0, 100, "vector"), generate_data(100, "vector"), False),
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector"), 0),
+        (generate_ts(64.0, 100, "scalar"), generate_ts(64.0, 100, "vector"), False),
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "scalar"), False),
+    )
+    @unpack
+    def test_dec_par_perp_input(self, inp, b_bgd, flag_spin_plane):
+        with self.assertRaises(AssertionError):
+            pyrf.dec_par_perp(inp, b_bgd, flag_spin_plane)
+
+    @data(
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector"), False),
+        (
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector") * 1e-4,
+            False,
+        ),
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector"), True),
+    )
+    @unpack
+    def test_dec_par_perp_output(self, inp, b_bgd, flag_spin_plane):
+        a_para, a_perp, alpha = pyrf.dec_par_perp(inp, b_bgd, flag_spin_plane)
+        self.assertIsInstance(a_para, xr.DataArray)
+        self.assertIsInstance(a_perp, xr.DataArray)
+
+
+@ddt
+class DistAppendTestCase(unittest.TestCase):
+    @data(
+        (None, generate_vdf(64.0, 100, [32, 32, 16])),
+        (generate_vdf(64.0, 100, [32, 32, 16]), generate_vdf(64.0, 100, [32, 32, 16])),
+    )
+    @unpack
+    def test_dist_append_output(self, inp0, inp1):
+        result = pyrf.dist_append(inp0, inp1)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class DynamicPressTestCase(unittest.TestCase):
+    @data(
+        (generate_data(100, "scalar"), generate_ts(64.0, 100, "vector"), "ions"),
+        (generate_ts(64.0, 100, "scalar"), generate_data(100, "vector"), "ions"),
+    )
+    @unpack
+    def test_dynamic_press_input(self, n_s, v_xyz, specie):
+        with self.assertRaises(AssertionError):
+            pyrf.dynamic_press(n_s, v_xyz, specie)
+
+    @data("ions", "electrons")
+    def test_dynamic_press_output(self, value):
+        result = pyrf.dynamic_press(
+            generate_ts(64.0, 100, "scalar"), generate_ts(64.0, 100, "vector"), value
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.ndim, 1)
 
 
 @ddt
