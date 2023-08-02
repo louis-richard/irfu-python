@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 3rd party imports
+import xarray as xr
+
 # Local imports
 from .cotrans import cotrans
 
@@ -35,7 +38,11 @@ def gse2gsm(inp, flag: str = "gse>gsm"):
 
     """
 
-    assert flag in ["gse>gsm", "gsm>gse"], "invalid flag"
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    assert inp.ndim == 2 and inp.shape[1] == 3, "inp must be a vector"
+
+    message = "flag must be a string gse>gsm or gsm>gse"
+    assert isinstance(flag, str) and flag.lower() in ["gse>gsm", "gsm>gse"], message
 
     out = cotrans(inp, flag)
 

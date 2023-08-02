@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+import numpy as np
 from cdflib import cdfepoch
 
 # Local imports
@@ -30,6 +31,9 @@ def ttns2datetime64(time):
         Time in datetime64 format in ns units.
 
     """
+
+    message = "time must be float, int, or array_like"
+    assert isinstance(time, (float, int, list, np.ndarray)), message
 
     #
     time_tt2000 = cdfepoch.breakdown_tt2000(time)

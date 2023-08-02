@@ -1246,6 +1246,27 @@ class FiltTestCase(unittest.TestCase):
 
 
 @ddt
+class Gse2GsmTestCase(unittest.TestCase):
+    @data(
+        (generate_data(100, "vector"), "gse>gsm"),
+        (generate_ts(64.0, 100, "scalar"), "gse>gsm"),
+        (generate_ts(64.0, 100, "vector"), "bazinga"),
+    )
+    @unpack
+    def test_gse2gsm_input(self, inp, flag):
+        with self.assertRaises(AssertionError):
+            pyrf.gse2gsm(inp, flag)
+
+    @data(
+        (generate_ts(64.0, 100, "vector"), "gse>gsm"),
+        (generate_ts(64.0, 100, "vector"), "gsm>gse"),
+    )
+    @unpack
+    def test_gse2gsm_output(self, inp, flag):
+        pyrf.gse2gsm(inp, flag)
+
+
+@ddt
 class Iso86012Unix(unittest.TestCase):
     @data(
         "2019-01-01T00:00:00.000000000",
@@ -1348,6 +1369,70 @@ class ShockNormalTestCase(unittest.TestCase):
         result = pyrf.shock_normal(value)
         self.assertIsInstance(result, dict)
         self.assertIsInstance(result["v_sh"], dict)
+
+
+@ddt
+class ShockParametersTestCase(unittest.TestCase):
+    def test_shock_parameters_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.shock_parameters(
+                {
+                    "b": np.random.random(3),
+                    "n": random.random(),
+                    "v": np.random.random(3),
+                    "t_i": random.random(),
+                    "t_e": random.random(),
+                    "v_sh": random.random(),
+                    "nvec": np.random.random(3),
+                    "ref_sys": "bazinga",
+                }
+            )
+
+    @data(
+        {
+            "b": np.random.random(3),
+            "n": random.random(),
+            "v": np.random.random(3),
+            "t_i": random.random(),
+            "t_e": random.random(),
+            "ref_sys": "nif",
+        },
+        {
+            "b": np.random.random(3),
+            "n": random.random(),
+            "v": np.random.random(3),
+            "t_i": random.random(),
+            "t_e": random.random(),
+            "v_sh": random.random(),
+            "nvec": np.random.random(3),
+            "ref_sys": "nif",
+        },
+        {
+            "b": np.random.random(3),
+            "n": random.random(),
+            "v": np.random.random(3),
+            "t_i": random.random(),
+            "t_e": random.random(),
+            "v_sh": random.random(),
+            "nvec": np.random.random(3),
+            "ref_sys": "sc",
+        },
+    )
+    def test_shock_parameters_output(self, value):
+        pyrf.shock_parameters(value)
+
+
+@ddt
+class SolidAngleTestCase(unittest.TestCase):
+    @data(
+        tuple(np.random.random(3) for _ in range(3)),
+        tuple(generate_data(100, "vector") for _ in range(3)),
+        tuple(generate_ts(64.0, 100, "vector") for _ in range(3)),
+    )
+    @unpack
+    def test_solid_angle_ouput(self, inp0, inp1, inp2):
+        result = pyrf.solid_angle(inp0, inp1, inp2)
+        self.assertIsInstance(result, np.ndarray)
 
 
 class StartTestCase(unittest.TestCase):
@@ -1571,6 +1656,18 @@ class TsTensorXYZTestCase(unittest.TestCase):
             generate_timeline(64.0, 100), generate_data(100, "tensor")
         )
         self.assertEqual(result.attrs["TENSOR_ORDER"], 2)
+
+
+@ddt
+class Ttns2Datetime64TestCase(unittest.TestCase):
+    @data(
+        int(random.random() * 1e12),
+        [int(random.random() * 1e12), int(random.random() * 1e12)],
+        np.array([int(random.random() * 1e12), int(random.random() * 1e12)]),
+    )
+    def test_ttns2datetime64_output(self, value):
+        result = pyrf.ttns2datetime64(value)
+        self.assertIsInstance(result, np.ndarray)
 
 
 @ddt

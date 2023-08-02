@@ -29,6 +29,6 @@ def iso86012unix(time):
 
     assert isinstance(time, (str, list, np.ndarray)), "time must be a str or array_like"
 
-    out = np.squeeze(np.array([time], dtype="datetime64[ns]"))
+    out = np.atleast_1d(time).astype("datetime64[ns]")
 
     return out

@@ -48,11 +48,12 @@ def shock_parameters(spec):
     regions = regions if len(regions) > 1 else [""]
 
     spec["ref_sys"] = spec.get("ref_sys", "sc")
+    assert spec["ref_sys"].lower() in ["sc", "nif"], "Invalid reference frame"
 
     if spec["ref_sys"].lower() == "nif":
         if "nvec" not in spec:
-            logging.warning("Setting shock speed, nvec to None")
-            spec["nvec"] = None
+            logging.warning("Setting shock speed, nvec to [1, 0, 0]")
+            spec["nvec"] = np.array([1, 0, 0])
 
         if "v_sh" not in spec:
             logging.warning("Setting shock speed, Vsh, to 0.")
@@ -131,9 +132,9 @@ def shock_parameters(spec):
 
     # Sonic Mach number
     if (
-        f"t_i{regions[0]}" in spec
+        f"v{regions[0]}" in spec
+        and f"t_i{regions[0]}" in spec
         and f"t_e{regions[0]}" in spec
-        and f"v{regions[0]}" in spec
     ):
         for region in regions:
             dspec[f"m_s{region}"] = _sonic_mach(
@@ -150,7 +151,6 @@ def shock_parameters(spec):
         and f"v{regions[0]}" in spec
         and f"t_i{regions[0]}" in spec
         and f"t_e{regions[0]}" in spec
-        and f"v{regions[0]}" in spec
     ):
         for region in regions:
             dspec[f"m_f{region}"] = _fast_mach(
@@ -275,12 +275,10 @@ def _alfv_mach(b, n, v, ref_sys, v_sh, nvec):
     v_si = 1e3 * v
     v_sh_si = 1e3 * v_sh
 
-    if ref_sys.lower() == "sc":
-        m_a = np.linalg.norm(v_si) / _v_alfv(b, n)
-    elif ref_sys.lower() == "nif" and nvec is not None:
+    if ref_sys.lower() == "nif" and nvec is not None:
         m_a = np.abs(np.sum(v_si * nvec) - v_sh_si) / _v_alfv(b, n)
     else:
-        raise ValueError("Invalid reference frame")
+        m_a = np.linalg.norm(v_si) / _v_alfv(b, n)
 
     return m_a
 
@@ -289,12 +287,10 @@ def _sonic_mach(v, t_i, t_e, ref_sys, v_sh, nvec):
     v_si = 1e3 * v
     v_sh_si = 1e3 * v_sh
 
-    if ref_sys.lower() == "sc":
-        m_s = np.linalg.norm(v_si) / _v_sound(t_i, t_e)
-    elif ref_sys.lower() == "nif" and nvec is not None:
+    if ref_sys.lower() == "nif" and nvec is not None:
         m_s = np.abs(np.sum(v_si * nvec) - v_sh_si) / _v_sound(t_i, t_e)
     else:
-        raise ValueError("Invalid reference frame")
+        m_s = np.linalg.norm(v_si) / _v_sound(t_i, t_e)
 
     return m_s
 
@@ -303,15 +299,13 @@ def _fast_mach(b, n, v, t_i, t_e, ref_sys, v_sh, nvec):
     v_si = 1e3 * v
     v_sh_si = 1e3 * v_sh
 
-    if ref_sys.lower() == "sc":
-        m_f = np.linalg.norm(v_si) / _v_fast(b, n, v, t_i, t_e)
-    elif ref_sys.lower() == "nif" and nvec is not None:
+    if ref_sys.lower() == "nif" and nvec is not None:
         theta_bn = np.rad2deg(np.arccos(np.sum(b * nvec) / np.linalg.norm(b)))
         m_f = np.abs(np.sum(v_si * nvec) - v_sh_si) / _v_fast(
             b, n, v, t_i, t_e, theta_bn
         )
     else:
-        raise ValueError("Invalid reference frame")
+        m_f = np.linalg.norm(v_si) / _v_fast(b, n, v, t_i, t_e)
 
     return m_f
 
