@@ -860,25 +860,28 @@ class EVxBTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [100, 3])
 
 
+@ddt
 class EbNRFTestCase(unittest.TestCase):
-    def test_eb_nrf_output(self):
-        pyrf.eb_nrf(
+    @data("a", "b", np.random.random(3))
+    def test_eb_nrf_output(self, value):
+        result = pyrf.eb_nrf(
             generate_ts(64.0, 100, "vector"),
             generate_ts(64.0, 100, "vector"),
             generate_ts(64.0, 100, "vector"),
-            "a",
+            value,
         )
-        pyrf.eb_nrf(
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class EdbTestCase(unittest.TestCase):
+    @data("e.b=0", "e_perp+nan", "e_par")
+    def test_edb_output(self, value):
+        pyrf.edb(
             generate_ts(64.0, 100, "vector"),
             generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "vector"),
-            "b",
-        )
-        pyrf.eb_nrf(
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "vector"),
-            np.random.random(3),
+            random.random() * 90,
+            value,
         )
 
 
@@ -1101,6 +1104,41 @@ class EbspTestCase(unittest.TestCase):
                 generate_ts(64.0, 10000, "vector"),
                 value,
             )
+
+
+class EndTestCase(unittest.TestCase):
+    def test_end_input(self):
+        with self.assertRaises(AssertionError):
+            pyrf.end(generate_timeline(64.0, 100))
+
+    def test_end_output(self):
+        pyrf.end(generate_ts(64.0, 100))
+
+
+@ddt
+class EstimateTestCase(unittest.TestCase):
+    @data(
+        ("bazinga", random.random(), None),
+        ("capacitance_wire", 0, random.random()),
+        ("capacitance_wire", random.randint(1, 9), random.randint(1, 9)),
+        ("capacitance_cylinder", random.randint(20, 100), random.randint(0, 9)),
+    )
+    @unpack
+    def test_estimate_input(self, what_to_estimate, radius, length):
+        with self.assertRaises((NotImplementedError, ValueError)):
+            pyrf.estimate(what_to_estimate, radius, length)
+
+    @data(
+        ("capacitance_disk", random.random(), None),
+        ("capacitance_sphere", random.random(), None),
+        ("capacitance_wire", random.random(), random.randint(10, 100)),
+        ("capacitance_cylinder", random.randint(0, 9), random.randint(40, 100)),
+        ("capacitance_cylinder", random.randint(0, 9), random.randint(5, 26)),
+    )
+    @unpack
+    def test_estimate_output(self, what_to_estimate, radius, length):
+        result = pyrf.estimate(what_to_estimate, radius, length)
+        self.assertIsInstance(result, float)
 
 
 class TraceTestCase(unittest.TestCase):

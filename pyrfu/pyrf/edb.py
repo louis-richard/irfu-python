@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 # Local imports
 from .resample import resample
@@ -79,6 +80,10 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
 
     """
 
+    assert isinstance(e_xyz, xr.DataArray), "e_xyz must be a xarray.DataArray"
+    assert isinstance(b_bgd, xr.DataArray), "b_bgd must be a xarray.DataArray"
+    assert isinstance(angle_lim, (int, float)), "angle_lime must be int or float"
+
     flag_method, default_value = _check_method(flag_method)
 
     # Make sure that background magnetic field sampling matches the
@@ -118,13 +123,13 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
         if True in ind:
             e_data[ind, 2] = np.sum(e_data[ind, :2] * b_data[ind, :2], axis=1)
             e_data[ind, 2] *= b_data[ind, 2]
-            e_data[ind, 2] /= np.linalg.norm(b_data[:, :2], axis=1) ** 2
+            e_data[ind, 2] /= np.linalg.norm(b_data[ind, :2], axis=1) ** 2
 
     b_angle = ts_scalar(e_xyz.time.data, b_angle, {"UNITS": "degrees"})
     e_data = ts_vec_xyz(
         e_xyz.time.data,
         e_data,
-        {"UNITS": e_xyz.attrs["UNITS"]},
+        e_xyz.attrs,
     )
 
     return e_data, b_angle

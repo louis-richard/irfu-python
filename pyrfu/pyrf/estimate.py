@@ -22,9 +22,7 @@ def _estimate_capa_sphe(radius):
 
 
 def _estimate_capa_wire(radius, length):
-    if not radius or radius == 0 or not length:
-        out = None
-    elif length and radius and length >= 10 * radius:
+    if length and radius != 0 and length >= 10 * radius:
         l_ = np.log(length / radius)
         out = length / l_ * (1 + 1 / l_ * (1 - np.log(2)))
         out *= 2 * np.pi * constants.epsilon_0
