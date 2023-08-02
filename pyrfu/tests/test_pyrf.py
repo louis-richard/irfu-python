@@ -836,6 +836,53 @@ class DynamicPressTestCase(unittest.TestCase):
 
 
 @ddt
+class EVxBTestCase(unittest.TestCase):
+    @data(
+        (generate_data(100, "vector"), generate_ts(64.0, 100, "vector"), "vxb"),
+        (generate_ts(64.0, 100, "vector"), generate_data(100, "vector"), "vxb"),
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector"), "bazinga"),
+    )
+    @unpack
+    def test_e_vxb_input(self, v_xyz, b_xyz, flag):
+        with self.assertRaises((TypeError, AssertionError)):
+            pyrf.e_vxb(v_xyz, b_xyz, flag)
+
+    @data(
+        (generate_ts(64.0, 100, "vector"), "vxb"),
+        (generate_ts(64.0, 100, "vector"), "exb"),
+        (np.random.random(3), "vxb"),
+        (np.random.random(3), "exb"),
+    )
+    @unpack
+    def test_e_vxb_output(self, v_xyz, flag):
+        result = pyrf.e_vxb(v_xyz, generate_ts(64.0, 100, "vector"), flag)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+
+class EbNRFTestCase(unittest.TestCase):
+    def test_eb_nrf_output(self):
+        pyrf.eb_nrf(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            "a",
+        )
+        pyrf.eb_nrf(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            "b",
+        )
+        pyrf.eb_nrf(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            np.random.random(3),
+        )
+
+
+@ddt
 class EbspTestCase(unittest.TestCase):
     @data(
         (
