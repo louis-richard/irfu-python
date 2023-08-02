@@ -12,12 +12,12 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def iso2unix(time):
+def iso86012unix(time):
     r"""Converts time in iso format to unix
 
     Parameters
     ----------
-    time : str or list of str
+    time : str or array_like of str
         Time.
 
     Returns
@@ -27,7 +27,8 @@ def iso2unix(time):
 
     """
 
-    # Convert iso time to unix
-    out = np.array(time).astype("datetime64[ns]")
+    assert isinstance(time, (str, list, np.ndarray)), "time must be a str or array_like"
+
+    out = np.squeeze(np.array([time], dtype="datetime64[ns]"))
 
     return out

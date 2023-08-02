@@ -49,10 +49,10 @@ from .increments import increments
 from .int_sph_dist import int_sph_dist
 from .integrate import integrate
 from .iplasma_calc import iplasma_calc
-from .iso2unix import iso2unix
 from .iso86012datetime import iso86012datetime
 from .iso86012datetime64 import iso86012datetime64
 from .iso86012timevec import iso86012timevec
+from .iso86012unix import iso86012unix
 from .l_shell import l_shell
 from .lowpass import lowpass
 from .magnetosphere import magnetosphere
@@ -163,7 +163,7 @@ __all__ = [
     "int_sph_dist",
     "integrate",
     "iplasma_calc",
-    "iso2unix",
+    "iso86012unix",
     "iso86012datetime",
     "iso86012datetime64",
     "iso86012timevec",

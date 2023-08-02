@@ -1121,7 +1121,7 @@ class EstimateTestCase(unittest.TestCase):
         ("bazinga", random.random(), None),
         ("capacitance_wire", 0, random.random()),
         ("capacitance_wire", random.randint(1, 9), random.randint(1, 9)),
-        ("capacitance_cylinder", random.randint(20, 100), random.randint(0, 9)),
+        ("capacitance_cylinder", random.randint(20, 100), random.randint(1, 9)),
     )
     @unpack
     def test_estimate_input(self, what_to_estimate, radius, length):
@@ -1132,13 +1132,129 @@ class EstimateTestCase(unittest.TestCase):
         ("capacitance_disk", random.random(), None),
         ("capacitance_sphere", random.random(), None),
         ("capacitance_wire", random.random(), random.randint(10, 100)),
-        ("capacitance_cylinder", random.randint(0, 9), random.randint(40, 100)),
-        ("capacitance_cylinder", random.randint(0, 9), random.randint(5, 26)),
+        ("capacitance_cylinder", random.randint(1, 9), random.randint(40, 100)),
+        ("capacitance_cylinder", random.randint(1, 9), random.randint(5, 26)),
     )
     @unpack
     def test_estimate_output(self, what_to_estimate, radius, length):
         result = pyrf.estimate(what_to_estimate, radius, length)
         self.assertIsInstance(result, float)
+
+
+@ddt
+class ExtendTintTestCase(unittest.TestCase):
+    def test_extend_tint_input(self):
+        with self.assertRaises(TypeError):
+            pyrf.extend_tint([0, 0], None)
+
+    @data(
+        (
+            ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"],
+            [-random.random(), random.random()],
+        ),
+        (["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"], None),
+        (
+            [
+                np.datetime64("2019-01-01T00:00:00.000000000"),
+                np.datetime64("2019-01-01T00:10:00.000000000"),
+            ],
+            None,
+        ),
+    )
+    @unpack
+    def test_extend_tint_ouput(self, tint, ext):
+        pyrf.extend_tint(tint, ext)
+
+
+@ddt
+class FiltTestCase(unittest.TestCase):
+    @data(
+        (generate_data(100), 0, random.randint(1, 22), random.choice(range(1, 10, 2))),
+        (
+            generate_ts(64.0, 100),
+            "bazinga",
+            random.randint(1, 22),
+            random.choice(range(1, 10, 2)),
+        ),
+        (
+            generate_ts(64.0, 100),
+            random.randint(1, 22),
+            "bazinga",
+            random.choice(range(1, 10, 2)),
+        ),
+        (generate_ts(64.0, 100), 0, random.randint(1, 22), "ORDEEERRRR"),
+    )
+    @unpack
+    def test_filt_input(self, inp, f_min, f_max, order):
+        with self.assertRaises(AssertionError):
+            pyrf.filt(inp, f_min, f_max, order)
+
+    @data(
+        (
+            generate_ts(64.0, 100, "scalar"),
+            0,
+            1,
+            -1,
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            0,
+            1,
+            -1,
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            0,
+            random.randint(2, 22),
+            -1,
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            0,
+            random.randint(2, 22),
+            random.choice(range(1, 10, 2)),
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            random.randint(2, 22),
+            0,
+            -1,
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            random.randint(2, 22),
+            0,
+            random.choice(range(1, 10, 2)),
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            random.randint(2, 11),
+            random.randint(12, 22),
+            -1,
+        ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            random.randint(2, 11),
+            random.randint(12, 22),
+            random.choice(range(1, 10, 2)),
+        ),
+    )
+    @unpack
+    def test_filt_output(self, inp, f_min, f_max, order):
+        result = pyrf.filt(inp, f_min, f_max, order)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Iso86012Unix(unittest.TestCase):
+    @data(
+        "2019-01-01T00:00:00.000000000",
+        ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"],
+        np.array(["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]),
+    )
+    def test_iso86012unix_output(self, value):
+        result = pyrf.iso86012unix(value)
+        self.assertIsInstance(result, np.ndarray)
 
 
 class TraceTestCase(unittest.TestCase):

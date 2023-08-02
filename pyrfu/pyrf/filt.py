@@ -40,19 +40,18 @@ def _ellip_coefficients(f_min, f_max, order):
         num1, den1 = signal.ellip(order, 0.5, 60, f_min, btype="highpass")
     else:
         if order == -1:
-            order, f_max = signal.ellipord(
+            order1, f_max = signal.ellipord(
                 f_max,
                 np.min([f_max * 1.3, 0.9999]),
                 0.5,
                 60,
             )
+            order2, f_min = signal.ellipord(f_min, f_min * 0.75, 0.5, 60)
+        else:
+            order1, order2 = [order, order]
 
-        num1, den1 = signal.ellip(order, 0.5, 60, f_max)
-
-        if order == -1:
-            order, f_min = signal.ellipord(f_min, f_min * 0.75, 0.5, 60)
-
-        num2, den2 = signal.ellip(order, 0.5, 60, f_min)
+        num1, den1 = signal.ellip(order1, 0.5, 60, f_max)
+        num2, den2 = signal.ellip(order2, 0.5, 60, f_min)
 
     return num1, den1, num2, den2
 
@@ -104,10 +103,16 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
 
     """
 
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+
     f_samp = 1 / (np.median(np.diff(inp.time)).astype(np.int64) * 1e-9)
 
     # Data of the input
     inp_data = inp.data
+
+    assert isinstance(f_min, (int, float)), "f_min must be int or float"
+    assert isinstance(f_max, (int, float)), "f_max must be int or float"
+    assert isinstance(order, (int, float)), "order must be int or float"
 
     f_min, f_max = [f_min / (f_samp / 2), f_max / (f_samp / 2)]
 
