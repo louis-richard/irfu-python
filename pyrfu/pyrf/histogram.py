@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Union
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -16,13 +13,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def histogram(
-    inp,
-    bins: Union[str, int, np.ndarray, list] = 100,
-    y_range: tuple = None,
-    weights=None,
-    density: bool = True,
-):
+def histogram(inp, bins=100, y_range=None, weights=None, density=True):
     r"""Computes 1D histogram of the inp with bins bins
 
     Parameters
@@ -33,15 +24,15 @@ def histogram(
         Number of bins. Default is ``bins=100``.
     y_range : (float, float), Optional
         The lower and upper range of the bins.  If not provided, range
-        is simply ``(a.min(), a.max())``.  Values outside the range are
+        is simply ``(inp.min(), inp.max())``.  Values outside the range are
         ignored. The first element of the range must be less than or
         equal to the second. `range` affects the automatic bin
         computation as well. While bin width is computed to be optimal
         based on the actual data within `range`, the bin count will fill
         the entire range including portions containing no data.
     weights : array_like, Optional
-        An array of weights, of the same shape as `a`.  Each value in
-        `a` only contributes its associated weight towards the bin count
+        An array of weights, of the same shape as `inp`.  Each value in
+        `inp` only contributes its associated weight towards the bin count
         (instead of 1). If `density` is True, the weights are
         normalized, so that the integral of the density over the range
         remains 1.
@@ -59,6 +50,10 @@ def histogram(
         1D distribution of the input time series.
 
     """
+
+    # Check input
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    assert inp.ndim == 1, "inp must be a scalar time series"
 
     hist, bins = np.histogram(
         inp.data,

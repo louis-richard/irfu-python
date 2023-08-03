@@ -1246,6 +1246,20 @@ class FiltTestCase(unittest.TestCase):
 
 
 @ddt
+class GradientTestCase(unittest.TestCase):
+    @data(
+        generate_ts(64.0, 100, "scalar"),
+        generate_ts(64.0, 100, "vector"),
+        generate_ts(64.0, 100, "tensor"),
+    )
+    def test_gradient_output(self, value):
+        value.attrs = {"UNITS": "bazinga"}
+        result = pyrf.gradient(value)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), list(value.shape))
+
+
+@ddt
 class Gse2GsmTestCase(unittest.TestCase):
     @data(
         (generate_data(100, "vector"), "gse>gsm"),
@@ -1264,6 +1278,70 @@ class Gse2GsmTestCase(unittest.TestCase):
     @unpack
     def test_gse2gsm_output(self, inp, flag):
         pyrf.gse2gsm(inp, flag)
+
+
+@ddt
+class HistogramTestCase(unittest.TestCase):
+    @data(
+        (random.randint(2, 100), None, None, None),
+        (np.sort(np.random.random(10)), None, None, None),
+        ("fd", None, None, None),
+        ("auto", np.sort(np.random.random(2)), None, None),
+        (100, None, np.random.random(1000), None),
+        ("auto", None, None, True),
+    )
+    @unpack
+    def test_histogram_output(self, bins, y_range, weights, density):
+        result = pyrf.histogram(
+            generate_ts(64.0, 1000), bins, y_range, weights, density
+        )
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Histogram2DTestCase(unittest.TestCase):
+    @data(
+        (random.randint(2, 100), None, None, None),
+        (np.sort(np.random.random(100)), None, None, None),
+        (np.random.randint(2, 100, size=(2,)), None, None, None),
+        ([np.sort(np.random.random(100)) for _ in range(2)], None, None, None),
+        (100, np.sort(np.random.random((2, 2)), axis=1), None, None),
+        (100, None, np.random.random(1000), None),
+        (100, None, None, True),
+    )
+    @unpack
+    def test_histogram2d_output(self, bins, y_range, weights, density):
+        result = pyrf.histogram2d(
+            generate_ts(64.0, 1000),
+            generate_ts(64.0, 900),
+            bins,
+            y_range,
+            weights,
+            density,
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        result = pyrf.histogram2d(
+            generate_ts(64.0, 1000),
+            generate_ts(64.0, 1000),
+            bins,
+            y_range,
+            weights,
+            density,
+        )
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class IncrementsTestCase(unittest.TestCase):
+    @data(
+        generate_ts(64.0, 100, "scalar"),
+        generate_ts(64.0, 100, "vector"),
+        generate_ts(64.0, 100, "tensor"),
+    )
+    def test_increments_output(self, value):
+        result = pyrf.increments(value, random.randint(1, 99))
+        self.assertIsInstance(result[0], np.ndarray)
+        self.assertIsInstance(result[1], xr.DataArray)
 
 
 @ddt
