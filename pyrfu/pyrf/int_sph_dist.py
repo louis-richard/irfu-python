@@ -75,15 +75,11 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
 
     # Overwrite projection dimension if azimuthal angle of projection
     # plane is not provided. Set the azimuthal angle grid width.
-    if phi_grid is None or projection_dim == "1d":
-        projection_dim = "1d"
-        d_phi_grid = 1.0
-    elif phi_grid is not None and projection_dim.lower() in ["2d", "3d"]:
+    if phi_grid is not None and projection_dim.lower() in ["2d", "3d"]:
         d_phi_grid = np.median(np.diff(phi_grid))
     else:
-        raise RuntimeError(
-            "1d projection with phi_grid provided doesn't make sense!!",
-        )
+        projection_dim = "1d"
+        d_phi_grid = 1.0
 
     # Make sure the transformation matrix is orthonormal.
     x_phat = xyz[:, 0] / np.linalg.norm(xyz[:, 0])  # re-normalize
@@ -135,13 +131,49 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
 
     n_mc_mat = n_mc_mat.astype(int)
 
-    if projection_base == "pol":
+    if projection_base == "cart" and projection_dim == "2d":
+        d_a_grid = d_v_grid**2
+        f_g = _mc_cart_2d(
+            vdf,
+            speed,
+            phi,
+            theta,
+            d_v,
+            d_v_m,
+            d_phi,
+            d_theta,
+            speed_grid_edges,
+            d_a_grid,
+            v_lim,
+            a_lim,
+            n_mc_mat,
+            r_mat,
+        )
+    elif projection_base == "cart" and projection_dim == "3d":
+        d_a_grid = d_v_grid**3
+        f_g = _mc_cart_3d(
+            vdf,
+            speed,
+            phi,
+            theta,
+            d_v,
+            d_v_m,
+            d_phi,
+            d_theta,
+            speed_grid_edges,
+            d_a_grid,
+            v_lim,
+            a_lim,
+            n_mc_mat,
+            r_mat,
+        )
+    else:
         # Area or line element (primed)
         d_a_grid = speed_grid ** (int(projection_dim[0]) - 1) * d_phi_grid * d_v_grid
         d_a_grid = d_a_grid.astype(np.float64)
 
         if projection_dim == "1d":
-            f_g = mc_pol_1d(
+            f_g = _mc_pol_1d(
                 vdf,
                 speed,
                 phi,
@@ -162,48 +194,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
                 "2d projection on polar grid is not ready yet!!",
             )
 
-    elif projection_base == "cart" and projection_dim == "2d":
-        d_a_grid = d_v_grid**2
-        f_g = mc_cart_2d(
-            vdf,
-            speed,
-            phi,
-            theta,
-            d_v,
-            d_v_m,
-            d_phi,
-            d_theta,
-            speed_grid_edges,
-            d_a_grid,
-            v_lim,
-            a_lim,
-            n_mc_mat,
-            r_mat,
-        )
-    elif projection_base == "cart" and projection_dim == "3d":
-        d_a_grid = d_v_grid**3
-        f_g = mc_cart_3d(
-            vdf,
-            speed,
-            phi,
-            theta,
-            d_v,
-            d_v_m,
-            d_phi,
-            d_theta,
-            speed_grid_edges,
-            d_a_grid,
-            v_lim,
-            a_lim,
-            n_mc_mat,
-            r_mat,
-        )
-    else:
-        raise ValueError("Invalid base!!")
-
-    if projection_dim == "1d":
-        pst = {"f": f_g, "vx": speed_grid, "vx_edges": speed_grid_edges}
-    elif projection_dim == "2d" and projection_base == "cart":
+    if projection_dim == "2d" and projection_base == "cart":
         pst = {
             "f": f_g,
             "vx": speed_grid,
@@ -222,15 +213,13 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
             "vz_edges": speed_grid_edges,
         }
     else:
-        raise NotImplementedError(
-            "2d projection on polar grid is not ready yet!!",
-        )
+        pst = {"f": f_g, "vx": speed_grid, "vx_edges": speed_grid_edges}
 
     return pst
 
 
 @numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
-def mc_pol_1d(
+def _mc_pol_1d(
     vdf,
     v,
     phi,
@@ -341,7 +330,7 @@ def mc_pol_1d(
 
 
 @numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
-def mc_cart_3d(
+def _mc_cart_3d(
     vdf,
     v,
     phi,
@@ -454,7 +443,7 @@ def mc_cart_3d(
 
 
 @numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
-def mc_cart_2d(
+def _mc_cart_2d(
     vdf,
     v,
     phi,

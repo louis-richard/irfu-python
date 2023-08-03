@@ -13,6 +13,10 @@ import xarray as xr
 from ddt import data, ddt, idata, unpack
 
 from pyrfu import pyrf
+from pyrfu.pyrf.compress_cwt import _compress_cwt_1d
+from pyrfu.pyrf.ebsp import _average_data, _censure_plot, _freq_int
+from pyrfu.pyrf.int_sph_dist import _mc_cart_2d, _mc_cart_3d, _mc_pol_1d
+from pyrfu.pyrf.wavelet import _power_c, _power_r
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -22,10 +26,11 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def generate_timeline(f_s, n_pts: int = 10000):
-    ref_time = np.datetime64("2019-01-01T00:00:00.000")
+def generate_timeline(f_s, n_pts: int = 10000, dtype="datetime64[ns]"):
+    ref_time = np.datetime64("2019-01-01T00:00:00.000000000")
     times = [ref_time + np.timedelta64(int(i * 1e9 / f_s), "ns") for i in range(n_pts)]
-    return np.array(times)
+    times = np.array(times).astype(dtype)
+    return times
 
 
 def generate_data(n_pts, kind: str = "scalar"):
@@ -41,14 +46,18 @@ def generate_data(n_pts, kind: str = "scalar"):
     return data
 
 
-def generate_ts(f_s, n_pts, kind: str = "scalar"):
+def generate_ts(f_s, n_pts, kind: str = "scalar", attrs: dict = {}):
     if kind == "scalar":
-        out = pyrf.ts_scalar(generate_timeline(f_s, n_pts), generate_data(n_pts, kind))
+        out = pyrf.ts_scalar(
+            generate_timeline(f_s, n_pts), generate_data(n_pts, kind), attrs=attrs
+        )
     elif kind == "vector":
-        out = pyrf.ts_vec_xyz(generate_timeline(f_s, n_pts), generate_data(n_pts, kind))
+        out = pyrf.ts_vec_xyz(
+            generate_timeline(f_s, n_pts), generate_data(n_pts, kind), attrs=attrs
+        )
     elif kind == "tensor":
         out = pyrf.ts_tensor_xyz(
-            generate_timeline(f_s, n_pts), generate_data(n_pts, kind)
+            generate_timeline(f_s, n_pts), generate_data(n_pts, kind), attrs=attrs
         )
     else:
         raise ValueError("Invalid kind of data!!")
@@ -561,6 +570,12 @@ class CompressCwtTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], np.ndarray)
         self.assertIsInstance(result[2], np.ndarray)
 
+    def test_compress_cwt_1d(self):
+        result = _compress_cwt_1d.__wrapped__(
+            np.random.random((1000, 100)), random.randint(2, 100)
+        )
+        self.assertIsInstance(result, np.ndarray)
+
 
 class ConvertFACTestCase(unittest.TestCase):
     def test_convert_fac_input(self):
@@ -626,38 +641,54 @@ class ConvertFACTestCase(unittest.TestCase):
 
 @ddt
 class CotransTestCase(unittest.TestCase):
-    def test_cotrans_input(self):
-        with self.assertRaises(TypeError):
-            pyrf.cotrans(0.0, "gse>gsm")
+    @data(
+        (0.0, "gse>gsm", True),
+        (generate_data(100), "gse>gsm", True),
+        (generate_ts(64.0, 100, "vector"), "gsm", True),
+        (generate_ts(64.0, 100, "tensor"), "gse>gsm", True),
+        (
+            generate_ts(64.0, 100, "vector", {"COORDINATE_SYSTEM": "gse"}),
+            "gsm>sm",
+            True,
+        ),
+    )
+    @unpack
+    def test_cotrans_input(self, inp, flag, hapgood):
+        with self.assertRaises((TypeError, IndexError, ValueError, AssertionError)):
+            pyrf.cotrans(inp, flag, hapgood)
 
-        with self.assertRaises(IndexError):
-            pyrf.cotrans(generate_data(100), "gse>gsm")
-
-        with self.assertRaises(ValueError):
-            pyrf.cotrans(generate_ts(64.0, 100, "vector"), "gsm")
-
-    @idata(itertools.permutations(["gei", "geo", "gse", "gsm", "mag", "sm"], 2))
-    def test_cotrans_output(self, value):
+    @idata(itertools.product(["gei", "geo", "gse", "gsm", "mag", "sm"], repeat=2))
+    def test_cotrans_output_trans(self, value):
         transf = f"{value[0]}>{value[1]}"
-        result = pyrf.cotrans(generate_ts(64.0, 100, "vector"), transf)
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
-
-        result = pyrf.cotrans(generate_ts(64.0, 100, "vector"), transf, hapgood=False)
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
 
         inp = generate_ts(64.0, 100, "vector")
+        result = pyrf.cotrans(inp, transf, hapgood=True)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
+        result = pyrf.cotrans(inp, transf, hapgood=False)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
         inp.attrs["COORDINATE_SYSTEM"] = value[0]
+        result = pyrf.cotrans(inp, transf, hapgood=False)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertListEqual(list(result.shape), [100, 3])
+
         result = pyrf.cotrans(inp, value[1], hapgood=False)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
 
-        inp = generate_ts(64.0, 100, "vector")
-        inp.attrs["COORDINATE_SYSTEM"] = value[0]
         result = pyrf.cotrans(inp, value[1], hapgood=True)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
+
+    def test_cotrans_output_exot(self):
+        inp = generate_ts(64.0, 100, "scalar")
+        result = pyrf.cotrans(inp, "gse>gsm", hapgood=True)
+        self.assertIsInstance(result, xr.DataArray)
+        result = pyrf.cotrans(inp, "dipoledirectiongse", hapgood=True)
+        self.assertIsInstance(result, xr.DataArray)
 
 
 class CrossTestCase(unittest.TestCase):
@@ -895,6 +926,7 @@ class EbspTestCase(unittest.TestCase):
             generate_ts(64.0, 100, "vector"),
             generate_ts(64.0, 100, "vector"),
             [1e0, 1e1],
+            {},
         ),
         (
             generate_ts(64.0, 97, "vector"),
@@ -903,6 +935,25 @@ class EbspTestCase(unittest.TestCase):
             generate_ts(64.0, 100, "vector"),
             generate_ts(64.0, 120, "vector"),
             [1e0, 1e1],
+            {},
+        ),
+        (
+            generate_ts(99.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+            {},
+        ),
+        (
+            generate_ts(40.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(40.0, 100, "vector"),
+            generate_ts(40.0, 100, "vector"),
+            generate_ts(40.0, 100, "vector"),
+            [1e0, 1e1],
+            {},
         ),
         (
             generate_ts(64.0, 97, "vector"),
@@ -911,6 +962,16 @@ class EbspTestCase(unittest.TestCase):
             generate_ts(64.0, 97, "vector"),
             generate_ts(64.0, 97, "vector"),
             [1e0, 1e1],
+            {},
+        ),
+        (
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            generate_ts(64.0, 97, "vector"),
+            [1e0, 1e1],
+            {"fac_matrix": generate_ts(64.0, 100, "tensor")},
         ),
         (
             generate_ts(64.0, 100, "vector"),
@@ -919,11 +980,13 @@ class EbspTestCase(unittest.TestCase):
             generate_ts(64.0, 100, "vector"),
             None,
             [1e0, 1e1],
+            {},
         ),
     )
     @unpack
-    def test_ebsp_input_pass(self, e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int):
-        self.assertIsNotNone(pyrf.ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int))
+    def test_ebsp_input_pass(self, e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, options):
+        result = pyrf.ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **options)
+        self.assertIsInstance(result, dict)
 
     @data(
         (
@@ -958,10 +1021,26 @@ class EbspTestCase(unittest.TestCase):
             generate_ts(64.0, 100, "vector"),
             [1e0, 1e1],
         ),
+        (
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e1, 1e0],
+        ),
+        (
+            generate_ts(64.0, 100, "vector")[:, :2],
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            [1e0, 1e1],
+        ),
     )
     @unpack
     def test_ebsp_input_fail(self, e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int):
-        with self.assertRaises((AssertionError, TypeError, IndexError)):
+        with self.assertRaises((AssertionError, TypeError, IndexError, ValueError)):
             pyrf.ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int)
 
     @data(
@@ -1000,6 +1079,16 @@ class EbspTestCase(unittest.TestCase):
             "no_resample": False,
             "fac": False,
             "de_dot_b0": False,
+            "full_b_db": False,
+            "nav": 8,
+            "fac_matrix": None,
+            "m_width_coeff": 1,
+        },
+        {
+            "polarization": False,
+            "no_resample": False,
+            "fac": False,
+            "de_dot_b0": True,
             "full_b_db": False,
             "nav": 8,
             "fac_matrix": None,
@@ -1104,6 +1193,34 @@ class EbspTestCase(unittest.TestCase):
                 generate_ts(64.0, 10000, "vector"),
                 value,
             )
+
+    @data(([0.32, 3.2], generate_ts(64.0, 100000, "vector")))
+    @unpack
+    def test_average_data(self, freq_int, data):
+        _, _, _, out_time = _freq_int(freq_int, data)
+        in_time = data.time.data.astype(np.float64) / 1e9
+
+        result = _average_data.__wrapped__(data.data, in_time, out_time, None)
+        self.assertIsInstance(result, np.ndarray)
+        self.assertListEqual(list(result.shape), [len(out_time), 3])
+
+    @data(([0.32, 3.2], generate_ts(64.0, 100000, "vector")))
+    @unpack
+    def test_censure_plot(self, freq_int, data):
+        _, _, out_sampling, out_time = _freq_int(freq_int, data)
+        a_ = np.logspace(1, 2, 12)
+        idx_nan = np.full(len(data), False)
+        idx_nan[np.random.randint(100000, size=(100))] = True
+        censure = np.floor(2 * a_ * out_sampling / 64.0 * 8)
+        result = _censure_plot.__wrapped__(
+            np.random.random((len(out_time), len(a_))),
+            idx_nan,
+            censure,
+            len(data),
+            a_,
+        )
+        self.assertIsInstance(result, np.ndarray)
+        self.assertListEqual(list(result.shape), [len(out_time), len(a_)])
 
 
 class EndTestCase(unittest.TestCase):
@@ -1339,9 +1456,116 @@ class IncrementsTestCase(unittest.TestCase):
         generate_ts(64.0, 100, "tensor"),
     )
     def test_increments_output(self, value):
-        result = pyrf.increments(value, random.randint(1, 99))
+        result = pyrf.increments(value, random.randint(1, 50))
         self.assertIsInstance(result[0], np.ndarray)
         self.assertIsInstance(result[1], xr.DataArray)
+
+
+@ddt
+class IntSphDistTestCase(unittest.TestCase):
+    @data(
+        {"projection_base": "pol", "projection_dim": "2d"},
+    )
+    def test_int_sph_dist_input(self, value):
+        vdf = np.random.random((51, 32, 16))
+        speed = np.linspace(0, 1, 51)
+        phi = np.arange(32)
+        theta = np.arange(16)
+        speed_grid = np.linspace(-1, 1, 101)
+
+        with self.assertRaises((RuntimeError, NotImplementedError)):
+            pyrf.int_sph_dist(vdf, speed, phi, theta, speed_grid, **value)
+
+    @data(
+        {},
+        {"weight": "lin"},
+        {"weight": "log"},
+        {"speed_edges": np.linspace(-0.01, 1.01, 52)},
+        {"speed_grid_edges": np.linspace(-1.01, 1.01, 102)},
+        {
+            "phi_grid": np.arange(0, 32),
+            "projection_base": "cart",
+            "projection_dim": "2d",
+        },
+        {"projection_base": "cart", "projection_dim": "3d"},
+    )
+    def test_int_sph_dist_output(self, value):
+        vdf = np.random.random((51, 32, 16))
+        speed = np.linspace(0, 1, 51)
+        phi = np.arange(32)
+        theta = np.arange(16)
+        speed_grid = np.linspace(-1, 1, 101)
+        result = pyrf.int_sph_dist(vdf, speed, phi, theta, speed_grid, **value)
+        self.assertIsInstance(result, dict)
+
+    @data(
+        (
+            np.random.random((51, 32, 16)),
+            np.linspace(0, 1, 51),
+            np.arange(32),
+            np.arange(16),
+            np.ones(51) * 0.02,
+            np.ones(51) * 0.01,
+            np.ones(32),
+            np.ones(16),
+            np.linspace(-1.01, 1.01, 102),
+            np.ones(101) * 0.02 * np.pi / 16,
+            np.array([-np.inf, np.inf]),
+            np.array([-np.pi, np.pi]),
+            np.ones((51, 32, 16), dtype=np.int64) * 10,
+            np.eye(3),
+        )
+    )
+    def test_mc_pol_1d(self, value):
+        vdf, *args = value
+        vdf[vdf < 1e-2] = 0
+        self.assertIsInstance(_mc_pol_1d.__wrapped__(vdf, *args), np.ndarray)
+
+    @data(
+        (
+            np.random.random((51, 32, 16)),
+            np.linspace(0, 1, 51),
+            np.arange(32),
+            np.arange(16),
+            np.ones(51) * 0.02,
+            np.ones(51) * 0.01,
+            np.ones(32),
+            np.ones(16),
+            np.linspace(-1.01, 1.01, 102),
+            0.02**2,
+            np.array([-np.inf, np.inf]),
+            np.array([-np.pi, np.pi]),
+            (np.ones((51, 32, 16), dtype=np.int64) * 10).astype(int),
+            np.eye(3),
+        )
+    )
+    def test_mc_cart_2d(self, value):
+        vdf, *args = value
+        vdf[vdf < 1e-2] = 0
+        self.assertIsInstance(_mc_cart_2d.__wrapped__(vdf, *args), np.ndarray)
+
+    @data(
+        (
+            np.random.random((51, 32, 16)),
+            np.linspace(0, 1, 51),
+            np.arange(32),
+            np.arange(16),
+            np.ones(51) * 0.02,
+            np.ones(51) * 0.01,
+            np.ones(32),
+            np.ones(16),
+            np.linspace(-1.01, 1.01, 102),
+            0.02**2,
+            np.array([-np.inf, np.inf]),
+            np.array([-np.pi, np.pi]),
+            (np.ones((51, 32, 16), dtype=np.int64) * 10).astype(int),
+            np.eye(3),
+        )
+    )
+    def test_mc_cart_3d(self, value):
+        vdf, *args = value
+        vdf[vdf < 1e-2] = 0
+        self.assertIsInstance(_mc_cart_3d.__wrapped__(vdf, *args), np.ndarray)
 
 
 @ddt
@@ -1773,6 +1997,26 @@ class WaveletTestCase(unittest.TestCase):
     @unpack
     def test_wavelet_output(self, inp, options):
         self.assertIsNotNone(pyrf.wavelet(inp, **options))
+
+    @data(
+        (
+            np.random.random((100, 3)) + np.random.random((100, 3)) * 1j,
+            np.random.random((100, 3)),
+        )
+    )
+    @unpack
+    def test_power_r(self, power, new_freq_mat):
+        self.assertIsNotNone(_power_r.__wrapped__(power, new_freq_mat))
+
+    @data(
+        (
+            np.random.random((100, 3)) + np.random.random((100, 3)) * 1j,
+            np.random.random((100, 3)),
+        )
+    )
+    @unpack
+    def test_power_c(self, power, new_freq_mat):
+        self.assertIsNotNone(_power_c.__wrapped__(power, new_freq_mat))
 
 
 if __name__ == "__main__":

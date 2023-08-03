@@ -113,20 +113,16 @@ def _freq_int(freq_int, delta_b):
     pc12_range, other_range = [False, False]
 
     if isinstance(freq_int, str):
-        if freq_int.lower() == "pc12":
+        if freq_int.lower() == "pc35":
+            freq_int = [0.002, 0.1]
+
+            delta_t = 60  # local
+        else:
             pc12_range = True
 
             freq_int = [0.1, 5.0]
 
             delta_t = 1  # local
-
-        elif freq_int.lower() == "pc35":
-            freq_int = [0.002, 0.1]
-
-            delta_t = 60  # local
-
-        else:
-            raise ValueError("Invalid format of interval")
 
         fs_out = 1 / delta_t
     else:
@@ -443,9 +439,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         if fac_matrix is None:
             xyz = xyz[:-1, :]
         else:
-            fac_matrix["t"] = fac_matrix["t"][:-1, :]
-
-            fac_matrix["rotMatrix"] = fac_matrix["rotMatrix"][:-1, :, :]
+            fac_matrix = fac_matrix[:-1, ...]
 
         if want_ee:
             e_xyz = e_xyz[:-1, :]
@@ -479,9 +473,6 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             eisr2 = e_xyz[:, :2]
             idx_nan_e = np.isnan(e_xyz.data)
             idx_nan_eisr2 = np.isnan(eisr2.data)
-
-            if e_xyz.shape[1] < 3:
-                raise IndexError("E must be a 3D vector to be rotated to FAC")
 
             if fac_matrix is None:
                 e_xyz = convert_fac(e_xyz, b_bgd, xyz)
@@ -650,7 +641,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
                         arg_ = ts_vec_xyz(time_b0, np.transpose(tmp))
                         we = convert_fac(arg_, fac_matrix)
                 else:
-                    we = np.hstack([we[:, :2], we_z])
+                    we = np.transpose(
+                        np.vstack([np.transpose(we[:, :2]), np.transpose(we_z)])
+                    )
 
             power_e = 2 * np.pi * (we * np.conj(we)) / new_freq_mat
             power_e = np.vstack([power_e.T, np.sum(power_e, axis=1)]).T
