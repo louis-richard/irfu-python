@@ -64,6 +64,6 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
     # combination of i and j that produces the minimum cost function
     idx_min = np.argmin(cs_x)  # get the index of the min Cxy
 
-    opt_n_x = ns_x[idx_min]
+    opt_n_x = int(ns_x[idx_min])
 
     return opt_n_x

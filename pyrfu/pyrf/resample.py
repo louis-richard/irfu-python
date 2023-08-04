@@ -297,13 +297,14 @@ def resample(
 
     """
 
+    message = "Invalid input type. Input must be xarray.DataArary or xarray.Dataset"
+    assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
+
     options = {"method": method, "f_s": f_s, "window": window, "thresh": thresh}
 
     if isinstance(inp, xr.DataArray):
         out = _resample_dataarray(inp, ref, **options)
-    elif isinstance(inp, xr.Dataset):
-        out = _resample_dataset(inp, ref, **options)
     else:
-        raise TypeError("Invalid input type. Input must be a xarray!!")
+        out = _resample_dataset(inp, ref, **options)
 
     return out

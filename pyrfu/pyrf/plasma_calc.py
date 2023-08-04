@@ -130,27 +130,15 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     mp_me = m_p / m_e
 
     # Resample all variables with respect to the magnetic field
-    n_t = len(b_xyz)
-
-    if len(t_i) != n_t:
-        t_i = resample(t_i, b_xyz).data
-
-    if len(t_e) != n_t:
-        t_e = resample(t_e, b_xyz).data
-
-    if len(n_i) != n_t:
-        n_i = resample(n_i, b_xyz).data
-
-    if len(n_e) != n_t:
-        n_e = resample(n_e, b_xyz).data
+    t_i = resample(t_i, b_xyz).data
+    t_e = resample(t_e, b_xyz).data
+    n_i = resample(n_i, b_xyz).data
+    n_e = resample(n_e, b_xyz).data
 
     # Transform number density and magnetic field to SI units
     n_i, n_e = [1e6 * n_i, 1e6 * n_e]
 
-    if b_xyz.ndim == 2:
-        b_si = 1e-9 * np.linalg.norm(b_xyz, axis=1)
-    else:
-        b_si = 1e-9 * np.linalg.norm(b_xyz, axis=1)
+    b_si = 1e-9 * np.linalg.norm(b_xyz, axis=1)
 
     w_pe = np.sqrt(n_e * q_e**2 / (m_e * ep0))  # rad/s
     w_ce = q_e * b_si / m_e  # rad/s

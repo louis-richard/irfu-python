@@ -30,7 +30,8 @@ def struct_func(inp, scales, order):
         A list or an array containing the scales to calculate.
     order : int
         Order of the exponential of the structure function.
-
+    ncut : int, Optional
+        Number of standard deviation to cut (Kiyani et al., XXXX)
     Returns
     -------
     values : xarray.DataArray
@@ -42,36 +43,26 @@ def struct_func(inp, scales, order):
     """
 
     if scales is None:
-        scales = [1]
+        scales = np.arange(1, len(inp) // 2)
 
-    data = inp.data
-
-    if data.ndim == 1:
-        data = np.transpose(np.atleast_2d(data))
+    if inp.ndim == 1:
+        data = inp.data[:, np.newaxis]
+    else:
+        data = inp.data
 
     result = []
     for scale in scales:
-        result.append(
-            np.nanmean(
-                np.abs(data[scale:, :] - data[:-scale, :]) ** order,
-                axis=0,
-            ),
-        )
+        increment = np.abs(data[scale:, ...] - data[:-scale, ...])
+        result.append(np.nanmean(increment**order, axis=0))
 
-    if inp.data.ndim == 1:
-        result = xr.DataArray(
-            np.squeeze(result),
-            coords=[scales],
-            dims=["scale"],
-            attrs=inp.attrs,
-        )
-    else:
-        result = xr.DataArray(
-            np.squeeze(result),
-            coords=[scales, inp.coords[inp.dims[1]]],
-            dims=["scale", inp.dims[1]],
-            attrs=inp.attrs,
-        )
+    _, *comp = [inp.coords[dim].data for dim in inp.dims]
+
+    result = xr.DataArray(
+        np.squeeze(np.stack(result)),
+        coords=[scales, *comp],
+        dims=["scales", *inp.dims[1:]],
+        attrs=inp.attrs,
+    )
 
     result.attrs["order"] = order
 

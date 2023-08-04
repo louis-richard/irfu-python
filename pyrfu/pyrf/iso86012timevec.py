@@ -20,7 +20,7 @@ def iso86012timevec(time):
 
     Parameters
     ----------
-    time : str
+    time : ndarray or list or str
         Time in ISO 8601 format YYYY-MM-DDThh:mm:ss.mmmuuunnn.
 
     Returns
@@ -43,6 +43,9 @@ def iso86012timevec(time):
 
     # Define parser
     fmt = re.compile(iso_8601)
+
+    # Make time is a 1d array
+    time = np.atleast_1d(time)
 
     time_vec = [[int(p_) for p_ in fmt.match(t_).groups()] for t_ in time]
     time_vec = np.array(time_vec)

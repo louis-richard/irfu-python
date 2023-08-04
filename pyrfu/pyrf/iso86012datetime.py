@@ -20,7 +20,7 @@ def iso86012datetime(time):
 
     Parameters
     ----------
-    time : ndarray or list
+    time : ndarray or list or str
         Time
 
     Returns
@@ -31,7 +31,7 @@ def iso86012datetime(time):
     """
 
     # Make sure that str is in ISO8601 format
-    time = np.array(time).astype("<M8[ns]").astype(str)
+    time = np.atleast_1d(time).astype("datetime64[ns]").astype(str)
 
     # ISO 8601 format with miliseconds precision (max precision for datetime)
     fmt = "%Y-%m-%dT%H:%M:%S.%f"

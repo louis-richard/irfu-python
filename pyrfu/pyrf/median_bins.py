@@ -72,6 +72,12 @@ def median_bins(inp0, inp1, bins: int = 10):
 
     """
 
+    assert isinstance(inp0, xr.DataArray), "inp0 must be xaray.DataArray"
+    assert isinstance(inp1, xr.DataArray), "inp1 must be xaray.DataArray"
+
+    assert inp0.ndim == 1, "inp0 must be a scalar"
+    assert inp1.ndim == 1, "inp1 must be a scalar"
+
     x_sort = np.sort(inp0.data)
     x_edge = np.linspace(x_sort[0], x_sort[-1], bins + 1)
 
@@ -95,4 +101,4 @@ def median_bins(inp0, inp1, bins: int = 10):
 
     out = xr.Dataset(out_dict)
 
-    return bins, y_med, out
+    return out

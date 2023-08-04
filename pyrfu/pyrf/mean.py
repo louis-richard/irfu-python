@@ -20,7 +20,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def mean(inp, r_xyz, b_xyz, dipole_axis):
+def mean(inp, r_xyz, b_xyz, dipole_axis: xr.DataArray = None):
     r"""Put inp into mean field coordinates defined by position vector r and
     magnetic field b if earth magnetic dipole axis z is given then  uses
     another algorithm (good for auroral passages)
@@ -33,7 +33,7 @@ def mean(inp, r_xyz, b_xyz, dipole_axis):
         Time series of the spacecraft position.
     b_xyz : xarray.DataArray
         Time series of the background magnetic field.
-    dipole_axis : xarray.DataArray
+    dipole_axis : xarray.DataArray, Optional
         Earth magnetic dipole axis.
 
     Returns
@@ -47,8 +47,7 @@ def mean(inp, r_xyz, b_xyz, dipole_axis):
         assert isinstance(dipole_axis, xr.DataArray)
         flag_dipole = True
 
-        if len(dipole_axis) != len(inp):
-            dipole_axis = resample(dipole_axis, inp)
+        dipole_axis = resample(dipole_axis, inp)
 
     else:
         flag_dipole = False

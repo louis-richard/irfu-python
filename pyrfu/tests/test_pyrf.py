@@ -16,7 +16,7 @@ from pyrfu import pyrf
 from pyrfu.pyrf.compress_cwt import _compress_cwt_1d
 from pyrfu.pyrf.ebsp import _average_data, _censure_plot, _freq_int
 from pyrfu.pyrf.int_sph_dist import _mc_cart_2d, _mc_cart_3d, _mc_pol_1d
-from pyrfu.pyrf.wavelet import _power_c, _power_r
+from pyrfu.pyrf.wavelet import _power_c, _power_r, _ww
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -1569,6 +1569,26 @@ class IntSphDistTestCase(unittest.TestCase):
 
 
 @ddt
+class IntegrateTestCase(unittest.TestCase):
+    @data(generate_ts(64.0, 100, "scalar"), generate_ts(64.0, 100, "vector"))
+    def test_integrate_output(self, value):
+        result = pyrf.integrate(value)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Iso86012DatetimeTestCase(unittest.TestCase):
+    @data(
+        "2019-01-01T00:00:00.000000000",
+        ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"],
+        np.array(["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]),
+    )
+    def test_iso86012datetime(self, value):
+        result = pyrf.iso86012datetime(value)
+        self.assertIsInstance(result, list)
+
+
+@ddt
 class Iso86012Unix(unittest.TestCase):
     @data(
         "2019-01-01T00:00:00.000000000",
@@ -1578,6 +1598,99 @@ class Iso86012Unix(unittest.TestCase):
     def test_iso86012unix_output(self, value):
         result = pyrf.iso86012unix(value)
         self.assertIsInstance(result, np.ndarray)
+
+
+@ddt
+class Iso86012TimeVec(unittest.TestCase):
+    @data(
+        "2019-01-01T00:00:00.000000000",
+        ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"],
+        np.array(["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]),
+    )
+    def test_iso86012timevec_output(self, value):
+        result = pyrf.iso86012timevec(value)
+        self.assertIsInstance(result, np.ndarray)
+
+
+@ddt
+class LowPassTestCase(unittest.TestCase):
+    @data(
+        generate_ts(64.0, 10000, "scalar"),
+        generate_ts(64.0, 10000, "vector"),
+        generate_ts(64.0, 10000, "tensor"),
+    )
+    def test_lowpass_output(self, value):
+        pyrf.lowpass(value, random.random(), 64.0)
+
+
+@ddt
+class LShellTestCase(unittest.TestCase):
+    @data("gei", "geo", "gse", "gsm", "mag", "sm")
+    def test_l_shell_output(self, value):
+        result = pyrf.l_shell(
+            generate_ts(64.0, 100, "vector", {"COORDINATE_SYSTEM": value})
+        )
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class MeanTestCase(unittest.TestCase):
+    @data(None, generate_ts(64.0, 100, "vector"))
+    def test_mean_output(self, value):
+        result = pyrf.mean(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "vector"),
+            value,
+        )
+        self.assertIsInstance(result, xr.DataArray)
+
+
+class MeanBinsTestCase(unittest.TestCase):
+    def test_mean_bins_output(self):
+        result = pyrf.mean_bins(
+            generate_ts(64.0, 100), generate_ts(64.0, 100), random.randint(2, 20)
+        )
+        self.assertIsInstance(result, xr.Dataset)
+
+
+class MedianBinsTestCase(unittest.TestCase):
+    def test_median_bins_output(self):
+        result = pyrf.median_bins(
+            generate_ts(64.0, 100), generate_ts(64.0, 100), random.randint(2, 20)
+        )
+        self.assertIsInstance(result, xr.Dataset)
+
+
+class NormTestCase(unittest.TestCase):
+    def test_norm_output(self):
+        result = pyrf.norm(generate_ts(64.0, 100, "vector"))
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.ndim, 1)
+        self.assertEqual(len(result), 100)
+
+
+@ddt
+class PlasmaBetaTestCase(unittest.TestCase):
+    @data((generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "tensor")))
+    @unpack
+    def test_plasma_beta_output(self, b_xyz, p_xyz):
+        result = pyrf.plasma_beta(b_xyz, p_xyz)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class StructFuncTestCase(unittest.TestCase):
+    @data(
+        (generate_ts(64.0, 100, "scalar"), None, random.randint(1, 100)),
+        (generate_ts(64.0, 100, "vector"), None, random.randint(1, 100)),
+        (generate_ts(64.0, 100, "tensor"), None, random.randint(1, 100)),
+        (generate_ts(64.0, 100, "vector"), np.random.randint([1] * 50, [50] * 50), 1),
+    )
+    @unpack
+    def test_struct_func_output(self, inp, scales, order):
+        result = pyrf.struct_func(inp, scales, order)
+        self.assertIsInstance(result, xr.DataArray)
 
 
 class TraceTestCase(unittest.TestCase):
@@ -1598,6 +1711,68 @@ class TraceTestCase(unittest.TestCase):
                 100,
             ],
         )
+
+
+class OptimizeNbins1DTestCase(unittest.TestCase):
+    def test_optimize_nbins_1d(self):
+        result = pyrf.optimize_nbins_1d(
+            generate_ts(64.0, 1000),
+            n_min=random.randint(2, 10),
+            n_max=random.randint(20, 100),
+        )
+
+        self.assertIsInstance(result, int)
+
+
+class OptimizeNbins2DTestCase(unittest.TestCase):
+    def test_optimize_nbins_2d(self):
+        result = pyrf.optimize_nbins_2d(
+            generate_ts(64.0, 1000),
+            generate_ts(64.0, 1000),
+            n_min=[random.randint(2, 10), random.randint(2, 10)],
+            n_max=[random.randint(20, 100), random.randint(20, 100)],
+        )
+        self.assertIsInstance(result[0], int)
+        self.assertIsInstance(result[1], int)
+
+
+class Pid4SCTestCase(unittest.TestCase):
+    def test_pid_4sc_output(self):
+        result = pyrf.pid_4sc(
+            [generate_ts(64.0, 100, "vector") for _ in range(4)],
+            [generate_ts(64.0, 100, "vector") for _ in range(4)],
+            [generate_ts(64.0, 100, "tensor") for _ in range(4)],
+            [generate_ts(64.0, 100, "vector") for _ in range(4)],
+        )
+        self.assertIsInstance(result[0], xr.DataArray)
+        self.assertIsInstance(result[1], xr.DataArray)
+
+
+class PlasmaCalcTestCase(unittest.TestCase):
+    def test_plasma_calc_output(self):
+        result = pyrf.plasma_calc(
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+        )
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class ResampleTestCase(unittest.TestCase):
+    @data(
+        (generate_ts(64.0, 100), generate_ts(640.0, 1000)),
+        (generate_ts(640.0, 1000), generate_ts(64.0, 100)),
+        (generate_vdf(64.0, 100, [32, 32, 16]), generate_ts(640.0, 1000)),
+        (generate_ts(64.0, 100), generate_ts(640.0, 2)),
+        (generate_ts(64.0, 100), generate_ts(640.0, 1)),
+    )
+    @unpack
+    def test_resample_output(self, inp, ref):
+        result = pyrf.resample(inp, ref)
+        self.assertIsInstance(result, type(inp))
 
 
 @ddt
@@ -1737,6 +1912,17 @@ class SolidAngleTestCase(unittest.TestCase):
         self.assertIsInstance(result, np.ndarray)
 
 
+@ddt
+class Sph2CartTestCase(unittest.TestCase):
+    @data(
+        tuple(generate_data(100, "scalar") for _ in range(3)),
+        tuple(generate_ts(64.0, 100, "scalar") for _ in range(3)),
+    )
+    @unpack
+    def test_sph2cart_output(self, azimuth, elevation, r):
+        self.assertIsNotNone(pyrf.sph2cart(azimuth, elevation, r))
+
+
 class StartTestCase(unittest.TestCase):
     def test_start_input_type(self):
         self.assertIsNotNone(pyrf.start(generate_ts(64.0, 100, "scalar")))
@@ -1754,6 +1940,67 @@ class StartTestCase(unittest.TestCase):
             np.datetime64(int(result * 1e9), "ns"),
             np.datetime64("2019-01-01T00:00:00.000"),
         )
+
+
+@ddt
+class TsAppendTestCase(unittest.TestCase):
+    @data(
+        generate_ts(64.0, 100, "scalar"),
+        generate_ts(64.0, 100, "vector"),
+        generate_ts(64.0, 100, "tensor"),
+    )
+    def test_ts_append_output(self, value):
+        value.attrs = {
+            "bazinga": "This is my spot!!",
+            "I AM GROOT": "I AM STEVE ROGERS",
+            "random": np.random.random(100),
+        }
+        value.time.attrs = {
+            "bazinga": "This is my spot!!",
+            "I AM GROOT": "I AM STEVE ROGERS",
+            "random": np.random.random(100),
+        }
+
+        result = pyrf.ts_append(None, value)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.ndim, value.ndim)
+
+        result = pyrf.ts_append(value, value)
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.ndim, value.ndim)
+
+
+@ddt
+class TimeClipTestCase(unittest.TestCase):
+    @data(
+        [
+            datetime.datetime(2019, 1, 1, 0, 0, 0, 312),
+            datetime.datetime(2019, 1, 1, 0, 0, 0, 468),
+        ],
+        "2019-01-01T00:00:00.312",
+    )
+    def test_time_clip_input(self, value):
+        with self.assertRaises(TypeError):
+            pyrf.time_clip(generate_ts(64.0, 100), value)
+
+    @data(generate_ts(64.0, 100), generate_vdf(64.0, 100, (32, 32, 16)))
+    def test_time_clip_output(self, value):
+        result = pyrf.time_clip(
+            value, ["2019-01-01T00:00:00.312", "2019-01-01T00:00:00.468"]
+        )
+        self.assertIsInstance(result, type(value))
+
+        result = pyrf.time_clip(
+            value,
+            [
+                np.datetime64("2019-01-01T00:00:00.312"),
+                np.datetime64("2019-01-01T00:00:00.468"),
+            ],
+        )
+        self.assertIsInstance(result, type(value))
+
+        result = pyrf.time_clip(value, generate_ts(64.0, 20))
+        self.assertIsInstance(result, type(value))
 
 
 class TsSkymapTestCase(unittest.TestCase):
@@ -1997,6 +2244,21 @@ class WaveletTestCase(unittest.TestCase):
     @unpack
     def test_wavelet_output(self, inp, options):
         self.assertIsNotNone(pyrf.wavelet(inp, **options))
+
+    @data(
+        (
+            np.random.random((100, 1)),
+            np.random.random((1, 200)),
+            random.random(),
+            np.random.random((100, 1)),
+            random.randint(16, 96),
+        )
+    )
+    @unpack
+    def test_ww(self, s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
+        self.assertIsNotNone(
+            _ww.__wrapped__(s_ww, scales_mat, sigma, frequencies_mat, f_nyq)
+        )
 
     @data(
         (

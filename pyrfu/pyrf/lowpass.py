@@ -36,7 +36,7 @@ def lowpass(inp, f_cut, fhz):
     data = inp.data
 
     # Remove trend
-    data_detrend = signal.detrend(data, type="linear")
+    data_detrend = signal.detrend(data, type="linear", axis=0)
     rest = data - data_detrend
 
     # Elliptic filter
@@ -55,6 +55,7 @@ def lowpass(inp, f_cut, fhz):
         elliptic_filter[0],
         elliptic_filter[1],
         data_detrend,
+        axis=0,
     )
 
     out = xr.DataArray(out_data + rest, coords=inp.coords, dims=inp.dims)
