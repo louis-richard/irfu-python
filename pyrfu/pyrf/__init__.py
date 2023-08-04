@@ -72,6 +72,7 @@ from .normalize import normalize
 from .optimize_nbins_1d import optimize_nbins_1d
 from .optimize_nbins_2d import optimize_nbins_2d
 from .pid_4sc import pid_4sc
+from .plasma_beta import plasma_beta
 from .plasma_calc import plasma_calc
 from .poynting_flux import poynting_flux
 from .pres_anis import pres_anis
