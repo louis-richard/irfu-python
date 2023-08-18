@@ -113,7 +113,8 @@ ignore = """
     transformation_indices.json,
     test_pyrf.py,
     test_dispersion.py,
-    test_solo.py
+    test_solo.py,
+    test_mms.py,
 """
 ignored-modules = "scipy,cdflib"
 

@@ -86,23 +86,16 @@ def dsl2gsm(inp, defatt, direction: int = 1):
             np.deg2rad(defatt.z_ra.data),
         )
         z = np.sin(np.deg2rad(defatt.z_dec))
-        sax_gei = np.transpose(
-            np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z]),
-        )
+        sax_gei = ts_vec_xyz(defatt.time.data, np.transpose(np.vstack([x, y, z])))
         sax_gsm = cotrans(sax_gei, "gei>gsm")
-        sax_gsm = ts_vec_xyz(
-            (sax_gsm[:, 0] * 1e9).astype("datetime64[ns]"),
-            sax_gsm[:, 1:],
-        )
-
         spin_ax_gsm = resample(sax_gsm, inp, f_s=calc_fs(inp))
         spin_axis = spin_ax_gsm.data
 
     elif isinstance(defatt, (np.ndarray, list)) and len(defatt) == 3:
-        spin_axis = defatt
+        spin_axis = np.atleast_2d(defatt)
 
     else:
-        raise ValueError("unrecognized DEFATT/SAX input")
+        raise TypeError("DEFATT/SAX input must be xarray.Dataset or vector")
 
     # Compute transformation matrix
     transf_mat = _transformation_matrix(spin_axis, direction)

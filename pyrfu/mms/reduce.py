@@ -61,7 +61,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     # Clip the distribution. If no time interval provided use the entire
     # time series.
     vdf_time = vdf.time.copy()
-    tint = kwargs.get("tint", list(datetime642iso8601(vdf_time[[0, -1]])))
+    tint = kwargs.get("tint", list(datetime642iso8601(vdf_time.data[[0, -1]])))
     vdf_time = time_clip(vdf_time, tint).copy()
     vdf_energy = time_clip(vdf.energy, tint).copy()
     delta_energy_minu = time_clip(delta_energy_minu, tint)
@@ -81,7 +81,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     # Get VDF dimension (time, energy, phi, theta)
     # n_t, _, n_ph, _ = vdf_data.shape
-    n_t, _, _, _ = vdf_data.shape
+    n_t, n_en, _, _ = vdf_data.shape
 
     # Construct or resample the time series of transformation matrix
     if isinstance(xyz, xr.DataArray):
@@ -152,13 +152,21 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     gamma_max = 1 + electron_volt * e_max / (m_p * speed_of_light**2)
     v_max = speed_of_light * np.sqrt(1 - 1 / gamma_max**2)  # m/s
 
-    speed_grid_cart = np.linspace(-v_max, v_max, endpoint=True)
-
     speed_grid = kwargs.get("vg", None)  # TODO : check that for no input!!
     speed_grid_edges = kwargs.get("vg_edges", None)
 
     # initiate projected f
-    n_vg = len(speed_grid)
+    if speed_grid_edges is not None:
+        n_vg = len(speed_grid_edges) - 1
+        speed_grid_cart = None
+        speed_grid = speed_grid_edges[:-1] + 0.5 * np.diff(speed_grid_edges)
+    elif speed_grid is not None:
+        n_vg = len(speed_grid)
+        speed_grid_cart = None
+    else:
+        n_vg = 2 * n_en
+        speed_grid_cart = np.linspace(-v_max, v_max, n_vg, endpoint=True)
+
     n_pr = int(dim[0])
     f_g = np.zeros([n_t, *[n_vg] * n_pr])
     all_v = {f"v{chr(120 + i)}": np.zeros((n_t, n_vg)) for i in range(n_pr)}
@@ -198,22 +206,17 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         theta = np.deg2rad(theta - 90.0)  # in radians
 
         # Set velocity projection grid.
-        if speed_grid_edges is not None:
-            speed_grid = speed_grid_edges[:-1] + 0.5 * np.diff(
-                speed_grid_edges,
-            )
-        elif speed_grid is None:
+        if speed_grid is None:
             if base == "pol":
                 if dim == "1d":
                     speed_grid = np.hstack((-np.flip(speed), speed))
-                elif dim in ["2d", "3d"]:
-                    speed_grid = speed
                 else:
-                    raise ValueError("Invalid projection dimension!!")
-            elif base == "cart":
-                speed_grid = speed_grid_cart
+                    # speed_grid = speed
+                    raise NotImplementedError(
+                        "2d projection on polar grid is not ready yet!!",
+                    )
             else:
-                raise ValueError("Invalid base!!")
+                speed_grid = speed_grid_cart
         else:
             pass
 
