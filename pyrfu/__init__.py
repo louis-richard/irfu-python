@@ -7,7 +7,7 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.4.5"
+__version__ = "2.4.7"
 __status__ = "Prototype"
 
 __all__ = ["dispersion", "lp", "mms", "models", "plot", "pyrf"]
