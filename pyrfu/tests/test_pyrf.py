@@ -2032,6 +2032,41 @@ class TsScalarTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
+@ddt
+class TsSpectrTestCase(unittest.TestCase):
+    @data(
+        (0, np.random.random(10), np.random.random((100, 10)), "energy", None),
+        (generate_timeline(64.0, 100), 0, np.random.random((100, 10)), "energy", None),
+        (generate_timeline(64.0, 100), 0, np.random.random((100, 10)), "energy", None),
+        (
+            generate_timeline(64.0, 100),
+            np.random.random(10),
+            np.random.random((98, 10)),
+            "energy",
+            None,
+        ),
+        (
+            generate_timeline(64.0, 100),
+            np.random.random(10),
+            np.random.random((100, 9)),
+            "energy",
+            None,
+        ),
+    )
+    @unpack
+    def test_ts_spectr_input(self, time, ener, data, comp_name, attrs):
+        with self.assertRaises(AssertionError):
+            pyrf.ts_spectr(time, ener, data, comp_name, attrs)
+
+    def test_ts_spectr_output(self):
+        result = pyrf.ts_spectr(
+            generate_timeline(64.0, 100),
+            np.random.random(10),
+            np.random.random((100, 10)),
+        )
+        self.assertIsInstance(result, xr.DataArray)
+
+
 class TsVecXYZTestCase(unittest.TestCase):
     def test_ts_vec_xyz_input_type(self):
         with self.assertRaises(AssertionError):

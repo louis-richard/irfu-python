@@ -97,6 +97,7 @@ from .trace import trace
 from .ts_append import ts_append
 from .ts_scalar import ts_scalar
 from .ts_skymap import ts_skymap
+from .ts_spectr import ts_spectr
 from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_time import ts_time
 from .ts_vec_xyz import ts_vec_xyz
@@ -210,6 +211,7 @@ __all__ = [
     "trace",
     "ts_append",
     "ts_scalar",
+    "ts_spectr",
     "ts_skymap",
     "ts_tensor_xyz",
     "ts_time",

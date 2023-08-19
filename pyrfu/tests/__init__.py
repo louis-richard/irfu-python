@@ -94,6 +94,29 @@ def generate_ts(f_s, n_pts, kind: str = "scalar", attrs=None):
     return out
 
 
+def generate_spectr(f_s, n_pts, shape, attrs=None):
+    r"""Generates spectrum for testings
+
+    Parameters
+    ----------
+    f_s
+    n_pts
+    shape
+    attrs
+
+    Returns
+    -------
+
+    """
+    out = pyrf.ts_spectr(
+        generate_timeline(f_s, n_pts),
+        np.random.random(shape),
+        np.random.random((n_pts, shape)),
+        attrs=attrs,
+    )
+    return out
+
+
 def generate_vdf(f_s, n_pts, shape, energy01: bool = False, species: str = "ions"):
     r"""Generate skymap for testings
 
