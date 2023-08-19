@@ -47,7 +47,7 @@ dependencies = [
     "tqdm>=4.62.3",
     "xarray>=0.20.1",
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.8,<3.12"
 
 [project.optional-dependencies]
 dev = ["black", "pip-tools"]
