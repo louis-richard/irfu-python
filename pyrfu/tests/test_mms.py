@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import random
+
 # Built-in imports
 import unittest
 
@@ -53,6 +55,61 @@ class Dsl2GsmTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         result = mms.dsl2gsm(generate_ts(64.0, 42, "vector"), value, -1)
         self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class MakeModelVDFTestCase(unittest.TestCase):
+    @data(
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), False),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), False),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), True),
+    )
+    @unpack
+    def test_make_Model_vdf_output(self, vdf, isotropic):
+        result = mms.make_model_vdf(
+            vdf,
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "tensor"),
+            isotropic,
+        )
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class MakeModelKappaTestCase(unittest.TestCase):
+    @data(
+        (generate_vdf(64.0, 100, (32, 16, 16), species="bazinga"), random.random()),
+    )
+    @unpack
+    def test_make_model_kappa_input(self, vdf, kappa):
+        with self.assertRaises(ValueError):
+            mms.make_model_kappa(
+                vdf,
+                generate_ts(64.0, 100, "scalar"),
+                generate_ts(64.0, 100, "vector"),
+                generate_ts(64.0, 100, "scalar"),
+                kappa,
+            )
+
+    @data(
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), random.random()),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
+    )
+    @unpack
+    def test_make_model_kappa_output(self, vdf, kappa):
+        result = mms.make_model_kappa(
+            vdf,
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "scalar"),
+            kappa,
+        )
+
+        self.assertIsInstance(result, xr.Dataset)
 
 
 @ddt

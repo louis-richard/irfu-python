@@ -53,6 +53,11 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
     See also
     --------
     pyrfu.mms.make_model_vdf
+
+    Todo
+    ----
+    Generalize to bi-Kappa distributions.
+
     """
 
     # Unpack azimuthal and elevation angles from the skymap distribution
