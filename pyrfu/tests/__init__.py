@@ -13,7 +13,13 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-__all__ = ["generate_timeline", "generate_data", "generate_ts", "generate_vdf"]
+__all__ = [
+    "generate_timeline",
+    "generate_data",
+    "generate_ts",
+    "generate_spectr",
+    "generate_vdf",
+]
 
 
 def generate_timeline(f_s, n_pts: int = 10000, dtype="datetime64[ns]"):

@@ -54,9 +54,7 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     """
 
-    flag_same_e = 0
-    flag_dphi = 0
-    flag_dtheta = 0
+    flag_same_e, flag_dphi, flag_dtheta = False, False, False
 
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
@@ -85,8 +83,7 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     energy_range = kwargs.get("en_channels", [0, vdf.energy.shape[1]])
     int_energies = np.arange(energy_range[0], energy_range[1])
 
-    if np.sum(np.abs(vdf.attrs["energy0"] - vdf.attrs["energy1"])) < 1e-4:
-        flag_same_e = 1
+    flag_same_e = np.sum(np.abs(vdf.attrs["energy0"] - vdf.attrs["energy1"])) < 1e-4
 
     # Calculate angle differences
     delta_phi = np.deg2rad(np.median(np.diff(phi[0, :])))
@@ -94,15 +91,8 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     delta_ang = delta_phi * delta_theta
 
-    if phi.ndim == 2:
-        phi_tr = phi.copy()
-    else:
-        phi_tr = np.tile(phi, (len(vdf.time.data), 1))
-
-    if theta.ndim == 2:
-        theta_tr = theta
-    else:
-        theta_tr = np.tile(theta, (len(vdf.time.data), 1))
+    phi_tr = phi.copy()
+    theta_tr = np.tile(theta, (len(vdf.time.data), 1))
 
     energy_minus = vdf.attrs["delta_energy_minus"]
     energy_plus = vdf.attrs["delta_energy_plus"]

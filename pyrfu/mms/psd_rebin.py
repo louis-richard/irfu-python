@@ -3,7 +3,6 @@
 
 # 3rd party
 import numpy as np
-import xarray as xr
 
 # Local imports
 from ..pyrf.calc_dt import calc_dt
@@ -16,7 +15,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def psd_rebin(vdf, phi, energy0, energy1, step_table):
+def psd_rebin(vdf, phi, energy0, energy1, esteptable):
     r"""Converts burst mode distribution into 64 energy channel distribution.
     Functions takes the burst mode distribution sampled in two energy tables
     and converts to a single energy table with 64 energy channels. Time
@@ -28,11 +27,11 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
         Time series of the particle distribution.
     phi : xarray.DataArray
         Time series of the phi angles.
-    energy0 : xarray.DataArray or numpy.ndarray
+    energy0 : numpy.ndarray
         Energy table 0.
-    energy1 : xarray.DataArray or numpy.ndarray
+    energy1 : numpy.ndarray
         Energy table 1.
-    step_table : xarray.DataArray
+    esteptable : numpy.ndarray
         Time series of the stepping table between energies (burst).
 
     Returns
@@ -53,17 +52,9 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
 
     """
 
-    if isinstance(energy0, xr.DataArray):
-        energy0 = energy0.data
-    else:
-        pass
-
-    if isinstance(energy1, xr.DataArray):
-        energy1 = energy1.data
-    else:
-        pass
-
-    step_table = step_table.data
+    assert isinstance(energy0, np.ndarray), "energy0 must be a numpy.ndarray"
+    assert isinstance(energy1, np.ndarray), "energy1 must be a numpy.ndarray"
+    assert isinstance(esteptable, np.ndarray), "step_table must be a numpy.ndarray"
 
     # Sort energy levels
     energy_r = np.sort(np.hstack([energy0, energy1]))
@@ -72,8 +63,8 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
     delta_t = calc_dt(vdf.data)
     time_r = vdf.time.data[:-1:2] + int(delta_t * 1e9 / 2)
 
-    vdf_r = np.zeros((len(time_r), 64, 32, 16))
-    phi_r = np.zeros((len(time_r), 32))
+    vdf_r = np.zeros((len(time_r), 64, *vdf.data.shape[2:]))
+    phi_r = np.zeros((len(time_r), vdf.data.shape[2]))
 
     phi_s = np.roll(phi.data, 2, axis=1)
     phi_s[:, 0] = phi_s[:, 0] - 360
@@ -90,7 +81,7 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
                 axis=1,
             )
 
-            if step_table[idx]:
+            if esteptable[idx]:
                 vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[idx, ...]
                 vdf_r[new_el_num, 0:63:2, ...] = vdf_temp
             else:
@@ -101,7 +92,7 @@ def psd_rebin(vdf, phi, energy0, energy1, step_table):
             phi_r[new_el_num, :] = phi.data[idx, :] + phi.data[idx + 1, :]
             phi_r[new_el_num, :] /= 2
 
-            if step_table[idx]:
+            if esteptable[idx]:
                 vdf_r[new_el_num, 1:64:2, ...] = vdf.data.data[idx, ...]
                 vdf_r[new_el_num, 0:63:2, ...] = vdf.data.data[idx + 1, ...]
             else:

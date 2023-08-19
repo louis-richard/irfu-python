@@ -13,7 +13,7 @@ from ddt import data, ddt, unpack
 
 from pyrfu import mms
 
-from . import generate_data, generate_ts, generate_vdf
+from . import generate_data, generate_spectr, generate_ts, generate_vdf
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -21,6 +21,55 @@ __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+@ddt
+class CalcEpsilonTestCase(unittest.TestCase):
+    @data(
+        (
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="bazinga"),
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="bazinga"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+        ),
+        (
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
+            generate_ts(32.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+        ),
+    )
+    @unpack
+    def test_calc_epsilon_input(self, vdf, model_vdf, n_s, sc_pot):
+        with self.assertRaises(ValueError):
+            mms.calculate_epsilon(vdf, model_vdf, n_s, sc_pot)
+
+    @data(
+        (
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
+            {},
+        ),
+        (
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="electrons"),
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="electrons"),
+            {},
+        ),
+        (
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=True, species="ions"),
+            generate_vdf(64.0, 100, (32, 16, 16), energy01=True, species="ions"),
+            {},
+        ),
+    )
+    @unpack
+    def test_calc_epsilon_output(self, vdf, model_vdf, kwargs):
+        mms.calculate_epsilon(
+            vdf,
+            model_vdf,
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+            **kwargs,
+        )
 
 
 @ddt
@@ -161,3 +210,32 @@ class ReduceTestCase(unittest.TestCase):
         vdf.data.attrs["UNITS"] = units
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
+
+
+@ddt
+class PsdRebinTestCase(unittest.TestCase):
+    @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
+    def test_psd_rebin_output(self, vdf):
+        result = mms.psd_rebin(
+            vdf,
+            vdf.phi,
+            vdf.attrs["energy0"],
+            vdf.attrs["energy1"],
+            vdf.attrs["esteptable"],
+        )
+        self.assertIsInstance(result[0], np.ndarray)
+        self.assertEqual(len(result[0]), 50)
+        self.assertIsInstance(result[1], np.ndarray)
+        self.assertListEqual(list(result[1].shape), [50, 64, 32, 16])
+        self.assertIsInstance(result[2], np.ndarray)
+        self.assertEqual(len(result[2]), 64)
+        self.assertIsInstance(result[3], np.ndarray)
+        self.assertListEqual(list(result[3].shape), [50, 32])
+
+
+@ddt
+class SpectrToDatasetTestCase(unittest.TestCase):
+    @data(generate_spectr(64.0, 100, 10))
+    def test_spectr_to_dataset_output(self, spectr):
+        result = mms.spectr_to_dataset(spectr)
+        self.assertIsInstance(result, xr.Dataset)
