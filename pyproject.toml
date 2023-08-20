@@ -67,6 +67,11 @@ where = ["."]
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.csv"]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::RuntimeWarning",
+]
+
 [tool.black]
 py36 = true
 include = '\.pyi?$'
