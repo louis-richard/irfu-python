@@ -12,9 +12,15 @@ import numpy as np
 import xarray as xr
 from ddt import data, ddt, idata, unpack
 
-from pyrfu import mms
+from pyrfu import mms, pyrf
 
-from . import generate_data, generate_spectr, generate_ts, generate_vdf
+from . import (
+    generate_data,
+    generate_spectr,
+    generate_timeline,
+    generate_ts,
+    generate_vdf,
+)
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -22,6 +28,22 @@ __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+def generate_feeps(f_s, n_pts, data_rate, dtype, lev, mms_id):
+    var = {"tmmode": data_rate, "dtype": dtype, "lev": lev}
+    tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+    eyes = mms.feeps_active_eyes(var, tint, mms_id)
+    keys = [f"{k}-{eyes[k][i]}" for k in eyes for i in range(len(eyes[k]))]
+    feeps_dict = {k: generate_spectr(f_s, n_pts, 16, f"energy-{k}") for k in keys}
+    feeps_dict["spinsectnum"] = pyrf.ts_scalar(
+        generate_timeline(f_s, n_pts), np.tile(np.arange(12), n_pts // 12 + 1)[:n_pts]
+    )
+
+    feeps_alle = xr.Dataset(feeps_dict)
+    feeps_alle.attrs = {"mmsId": mms_id, **var}
+
+    return feeps_alle
 
 
 @ddt
@@ -399,4 +421,170 @@ class Dpf2PsdTestCase(unittest.TestCase):
 
         spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
         result = mms.dpf2psd(spectr)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsActiveEyesTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"], ["sitl", "l2"]))
+    @unpack
+    def test_feeps_active_eyes_output(self, data_rate, dtype, lev):
+        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+        result = mms.feeps_active_eyes(
+            {"tmmode": data_rate, "dtype": dtype, "lev": lev},
+            tint,
+            random.randint(1, 4),
+        )
+        self.assertIsInstance(result, dict)
+
+        result = mms.feeps_active_eyes(
+            {"tmmode": data_rate, "dtype": dtype, "lev": lev},
+            pyrf.iso86012datetime64(np.array(tint)),
+            str(random.randint(1, 4)),
+        )
+        self.assertIsInstance(result, dict)
+
+
+@ddt
+class FeepsCorrectEnergiesTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_correct_energies_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+
+        result = mms.feeps_correct_energies(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_flat_field_corrections_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+
+        result = mms.feeps_flat_field_corrections(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsRemoveBadDataTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_remove_bad_data_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsSplitIntegralChTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_split_integral_ch(self, data_rate, dtype):
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        mms.feeps_split_integral_ch(feeps_alle)
+
+
+@ddt
+class FeepsRemoveSunTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_remove_sun(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_remove_sun(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsOmniTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_omni_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_omni(feeps_alle)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsSpinAvgTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_spin_avg(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_omni = mms.feeps_omni(feeps_alle)
+
+        result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsPitchAnglesTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_pitch_angles_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_pitch_angles(feeps_alle, generate_ts(64.0, 100, "vector"))
+        self.assertIsInstance(result[0], xr.DataArray)
+
+
+@ddt
+class FeepsPadTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_pad_ouput(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsPadSpinAvgTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_pad_spin_avg(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
+        result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)

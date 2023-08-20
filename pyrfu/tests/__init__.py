@@ -116,7 +116,7 @@ def generate_spectr(f_s, n_pts, shape, attrs=None):
     """
     out = pyrf.ts_spectr(
         generate_timeline(f_s, n_pts),
-        np.random.random(shape),
+        np.arange(shape),
         np.random.random((n_pts, shape)),
         attrs=attrs,
     )
