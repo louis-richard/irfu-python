@@ -14,9 +14,9 @@ venv/
 .idea/
 
 # Ignore .ipynb_checkpoints
-examples/00_overview/.ipynb_checkpoints
-examples/01_mms/.ipynb_checkpoints
-examples/02_dispersion/.ipynb_checkpoints
+docs/examples/00_overview/.ipynb_checkpoints
+docs/examples/01_mms/.ipynb_checkpoints
+docs/examples/02_dispersion/.ipynb_checkpoints
 
 # Ignore coverage report files
 .coverage*
