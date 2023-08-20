@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 from scipy import constants
 
 __author__ = "Louis Richard"
@@ -14,11 +15,11 @@ __status__ = "Prototype"
 
 
 def _mass_ratio(inp):
-    if inp.attrs["species"] in ["ions", "ion", "protons", "proton"]:
+    if inp.attrs["species"].lower() in ["ions", "ion", "protons", "proton"]:
         mass_ratio = 1
-    elif inp.attrs["species"] in ["alphas", "alpha", "helium"]:
+    elif inp.attrs["species"].lower() in ["alphas", "alpha", "helium"]:
         mass_ratio = 4
-    elif inp.attrs["species"] in ["electrons", "e"]:
+    elif inp.attrs["species"].lower() in ["electrons", "e"]:
         mass_ratio = constants.electron_mass / constants.proton_mass
     else:
         raise ValueError("Invalid specie")
@@ -26,20 +27,22 @@ def _mass_ratio(inp):
     return mass_ratio
 
 
-def _convert(vdf, mass_ratio):
-    if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
-        out = vdf.data.data * 1e30 / (1e6 * 0.53707 * mass_ratio**2)
-    elif vdf.data.attrs["UNITS"].lower() == "s^3/m^6":
-        out = vdf.data.data * 1e18 / (1e6 * 0.53707 * mass_ratio**2)
-    elif vdf.data.attrs["UNITS"].lower() == "s^3/km^6":
-        out = vdf.data.data / (1e6 * 0.53707 * mass_ratio**2)
+def _convert(inp, units, mass_ratio):
+    fact = 1 / (1e6 * 0.53707 * mass_ratio**2)
+
+    if units.lower() == "s^3/cm^6":
+        out = inp * 1e30 * fact
+    elif units.lower() == "s^3/m^6":
+        out = inp * 1e18 * fact
+    elif units.lower() == "s^3/km^6":
+        out = inp * fact
     else:
         raise ValueError("Invalid unit")
 
     return out
 
 
-def psd2def(vdf):
+def psd2def(inp):
     r"""Changes units to differential energy flux.
 
     Parameters
@@ -64,37 +67,23 @@ def psd2def(vdf):
 
     """
 
-    mass_ratio = _mass_ratio(vdf)
+    assert isinstance(inp, (xr.DataArray, xr.Dataset)), "inp must be a xarray"
 
-    tmp_data = _convert(vdf, mass_ratio)
-
-    energy = vdf.energy.data
-
-    if tmp_data.ndim == 2:
-        tmp_data = tmp_data[:, :, None, None]
-
-    data_r = np.reshape(
-        tmp_data,
-        (tmp_data.shape[0], tmp_data.shape[1], np.prod(tmp_data.shape[2:])),
-    )
-
-    if energy.ndim == 1:
-        energy_mat = np.tile(
-            energy,
-            (len(vdf.time), np.prod(tmp_data.shape[2:]), 1),
-        )
-        energy_mat = np.transpose(energy_mat, [0, 2, 1])
-    elif energy.ndim == 2:
-        energy_mat = np.tile(energy, (np.prod(tmp_data.shape[2:]), 1, 1))
-        energy_mat = np.transpose(energy_mat, [1, 2, 0])
+    if isinstance(inp, xr.Dataset):
+        tmp_data = _convert(inp.data.data, inp.data.attrs["UNITS"], _mass_ratio(inp))
+        energy = inp.energy.data
+        energy_mat = np.tile(energy[:, :, None, None], (1, 1, *tmp_data.shape[2:]))
+        tmp_data *= energy_mat**2
+        out = inp.copy()
+        out.data.data = np.squeeze(tmp_data)
+        out.data.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
     else:
-        raise ValueError("Invalid energy shape")
-
-    data_r *= energy_mat**2
-    tmp_data = np.reshape(data_r, tmp_data.shape)
-
-    out = vdf.copy()
-    out.data.data = np.squeeze(tmp_data)
-    out.data.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
+        tmp_data = _convert(inp.data, inp.attrs["UNITS"], _mass_ratio(inp))
+        energy = inp.energy.data
+        energy_mat = np.tile(energy, (tmp_data.shape[0], 1))
+        tmp_data *= energy_mat**2
+        out = inp.copy()
+        out.data = np.squeeze(tmp_data)
+        out.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
 
     return out

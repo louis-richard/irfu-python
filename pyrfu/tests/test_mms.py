@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import itertools
 import random
 
 # Built-in imports
@@ -9,7 +10,7 @@ import unittest
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from ddt import data, ddt, unpack
+from ddt import data, ddt, idata, unpack
 
 from pyrfu import mms
 
@@ -246,4 +247,156 @@ class VdfOmniTestCase(unittest.TestCase):
     @data("mean", "sum")
     def test_vdf_omni_output(self, method):
         result = mms.vdf_omni(generate_vdf(64.0, 100, (32, 32, 16)), method)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Psd2DefTestCase(unittest.TestCase):
+    @data(
+        ("I AM GROOT!!", "s^3/cm^6"),
+        ("ions", "bazinga"),
+    )
+    @unpack
+    def test_psd2def_input(self, species, units):
+        with self.assertRaises(ValueError):
+            mms.psd2def(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
+
+    @idata(
+        itertools.product(
+            [
+                "ions",
+                "ion",
+                "protons",
+                "proton",
+                "alphas",
+                "alpha",
+                "helium",
+                "electrons",
+                "e",
+            ],
+            ["s^3/cm^6", "s^3/m^6", "s^3/km^6"],
+        )
+    )
+    @unpack
+    def test_psd2def_output(self, species, units):
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
+        result = mms.psd2def(vdf)
+        self.assertIsInstance(result, xr.Dataset)
+
+        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
+        result = mms.psd2def(spectr)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Psd2DpfTestCase(unittest.TestCase):
+    @data(
+        ("I AM GROOT!!", "s^3/cm^6"),
+        ("ions", "bazinga"),
+    )
+    @unpack
+    def test_psd2dpf_input(self, species, units):
+        with self.assertRaises(ValueError):
+            mms.psd2dpf(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
+
+    @idata(
+        itertools.product(
+            [
+                "ions",
+                "ion",
+                "protons",
+                "proton",
+                "alphas",
+                "alpha",
+                "helium",
+                "electrons",
+                "e",
+            ],
+            ["s^3/cm^6", "s^3/m^6", "s^3/km^6"],
+        )
+    )
+    @unpack
+    def test_psd2dpf_output(self, species, units):
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
+        result = mms.psd2dpf(vdf)
+        self.assertIsInstance(result, xr.Dataset)
+
+        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
+        result = mms.psd2dpf(spectr)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Def2PsdTestCase(unittest.TestCase):
+    @data(
+        ("I AM GROOT!!", "s^3/cm^6"),
+        ("ions", "bazinga"),
+    )
+    @unpack
+    def test_def2psd_input(self, species, units):
+        with self.assertRaises(ValueError):
+            mms.def2psd(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
+
+    @idata(
+        itertools.product(
+            [
+                "ions",
+                "ion",
+                "protons",
+                "proton",
+                "alphas",
+                "alpha",
+                "helium",
+                "electrons",
+                "e",
+            ],
+            ["keV/(cm^2 s sr keV)", "eV/(cm^2 s sr eV)", "1/(cm^2 s sr)"],
+        )
+    )
+    @unpack
+    def test_def2psd_output(self, species, units):
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
+        result = mms.def2psd(vdf)
+        self.assertIsInstance(result, xr.Dataset)
+
+        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
+        result = mms.def2psd(spectr)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Dpf2PsdTestCase(unittest.TestCase):
+    @data(
+        ("I AM GROOT!!", "s^3/cm^6"),
+        ("ions", "bazinga"),
+    )
+    @unpack
+    def test_dpf2psd_input(self, species, units):
+        with self.assertRaises(ValueError):
+            mms.dpf2psd(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
+
+    @idata(
+        itertools.product(
+            [
+                "ions",
+                "ion",
+                "protons",
+                "proton",
+                "alphas",
+                "alpha",
+                "helium",
+                "electrons",
+                "e",
+            ],
+            ["1/(cm^2 s sr keV)", "1/(cm^2 s sr eV)"],
+        )
+    )
+    @unpack
+    def test_dpf2psd_output(self, species, units):
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
+        result = mms.dpf2psd(vdf)
+        self.assertIsInstance(result, xr.Dataset)
+
+        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
+        result = mms.dpf2psd(spectr)
         self.assertIsInstance(result, xr.DataArray)

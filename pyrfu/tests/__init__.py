@@ -123,7 +123,14 @@ def generate_spectr(f_s, n_pts, shape, attrs=None):
     return out
 
 
-def generate_vdf(f_s, n_pts, shape, energy01: bool = False, species: str = "ions"):
+def generate_vdf(
+    f_s,
+    n_pts,
+    shape,
+    energy01: bool = False,
+    species: str = "ions",
+    units: str = "s^3/cm^6",
+):
     r"""Generate skymap for testings
 
     Parameters
@@ -158,7 +165,7 @@ def generate_vdf(f_s, n_pts, shape, energy01: bool = False, species: str = "ions
         energy1 = energy[1, :]
         esteptable = np.zeros(n_pts)
 
-    attrs = {"UNITS": "s^3/cm^6"}
+    attrs = {"UNITS": units}
     glob_attrs = {
         "species": species,
         "delta_energy_plus": np.ones((n_pts, shape[0])),
