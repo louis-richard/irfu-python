@@ -239,3 +239,11 @@ class SpectrToDatasetTestCase(unittest.TestCase):
     def test_spectr_to_dataset_output(self, spectr):
         result = mms.spectr_to_dataset(spectr)
         self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class VdfOmniTestCase(unittest.TestCase):
+    @data("mean", "sum")
+    def test_vdf_omni_output(self, method):
+        result = mms.vdf_omni(generate_vdf(64.0, 100, (32, 32, 16)), method)
+        self.assertIsInstance(result, xr.DataArray)

@@ -37,6 +37,8 @@ def vdf_omni(vdf, method: str = "mean"):
 
     """
 
+    assert method.lower() in ["mean", "sum"], "invalid method!!"
+
     time = vdf.time.data
 
     energy = vdf.energy.data
@@ -55,19 +57,21 @@ def vdf_omni(vdf, method: str = "mean"):
         dist = vdf.data.data * all_solid_angles
         omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
         omni /= np.mean(np.mean(solid_angles))
-    elif method.lower() == "sum":
+    else:
         dist = vdf.data.data
         omni = np.squeeze(np.nansum(np.nansum(dist, axis=3), axis=2))
-    else:
-        raise ValueError("invalid method!!")
 
     energy = np.mean(energy[:2, :], axis=0)
+
+    # Use global and zVariable attributes
+    attrs = {**vdf.data.attrs, **vdf.attrs}
+    attrs = {k: attrs[k] for k in sorted(attrs)}
 
     out = xr.DataArray(
         omni,
         coords=[time, energy],
         dims=["time", "energy"],
-        attrs=vdf.attrs,
+        attrs=attrs,
     )
 
     return out
