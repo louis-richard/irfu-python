@@ -588,3 +588,19 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class PsdMomentsTestCase(unittest.TestCase):
+    @data(
+        (generate_vdf(64.0, 100, (32, 32, 16)), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16), species="electrons"), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16), energy01=False, species="ions"), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16)), {"energy_range": [1, 1000]}),
+        (generate_vdf(64.0, 100, (32, 32, 16)), {"no_sc_pot": True}),
+    )
+    @unpack
+    def test_psd_moments_output(self, vdf, options):
+        vdf.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS brstSkyMap dist"
+        mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"), **options)
