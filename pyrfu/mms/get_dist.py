@@ -262,6 +262,8 @@ def get_dist(file_path, cdf_name, tint: list = None):
             energy[step_table == 1] = np.tile(energy1, (int(np.sum(step_table)), 1))
 
         elif tmmode == "fast":
+            phi = np.tile(phi, (len(times), 1))
+
             if energy.ndim == 1:
                 energy0 = energy
                 energy1 = energy
