@@ -76,9 +76,6 @@ def cdfepoch2datetime64(epochs):
     """
 
     # Check input type
-    message = "epochs must be array_like"
-    assert isinstance(epochs, (float, int, list, np.ndarray)), message
-
     times = cdfepoch.breakdown(epochs)
     times = np.transpose(np.atleast_2d(times))
 
