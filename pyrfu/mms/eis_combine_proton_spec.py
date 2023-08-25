@@ -4,12 +4,6 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from cdflib import cdfread
-
-from ..pyrf.datetime642iso8601 import datetime642iso8601
-
-# Local imports
-from .list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -127,31 +121,6 @@ def _check_time(proton_phxtof, proton_extof):
         raise ValueError
 
     return time_data, phxtof_data, extof_data
-
-
-def _get_energy_dplus_dminus(eis_allt, data_path):
-    tint = list(datetime642iso8601(eis_allt.time.data[[0, -1]]))
-
-    name_ = eis_allt.t0.attrs["FIELDNAM"]
-
-    mms_id = int(name_.split("_")[0][-1])
-
-    var = {"inst": "epd-eis", "lev": "l2"}
-
-    if "brst" in name_:
-        var["tmmode"] = "brst"
-    else:
-        var["tmmode"] = "srvy"
-
-    var["dtype"] = name_.split("_")[-5]
-
-    files = list_files(tint, mms_id, var, data_path=data_path)
-
-    with cdfread.CDF(files[0]) as file:
-        d_plus = file.varget(eis_allt.t0.energy.attrs["DELTA_PLUS_VAR"])
-        d_minus = file.varget(eis_allt.t0.energy.attrs["DELTA_MINUS_VAR"])
-
-    return d_plus, d_minus
 
 
 def _combine_attrs(attrs1, attrs2):

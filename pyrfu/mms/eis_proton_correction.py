@@ -66,6 +66,8 @@ def eis_proton_correction(flux_eis):
 
     """
 
+    assert isinstance(flux_eis, (xr.Dataset, xr.DataArray)), "flux_eis must be a xarray"
+
     #  Coefficients from EPD Data Product Guide
     alpha_, beta_, gamma_ = [-0.3, 49e-3, 1e-3]
 
@@ -89,11 +91,9 @@ def eis_proton_correction(flux_eis):
             out_dict[scope].data *= eis_corr
 
         flux_eis_corr = xr.Dataset(out_dict)
-    elif isinstance(flux_eis, xr.DataArray):
+    else:
         # Apply correction to omni-directional energy spectrum
         flux_eis_corr = flux_eis.copy()
         flux_eis_corr.data *= eis_corr
-    else:
-        raise TypeError("flux_eis must be a Dataset or a DataArray")
 
     return flux_eis_corr

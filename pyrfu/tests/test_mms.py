@@ -3,6 +3,7 @@
 
 import itertools
 import random
+import string
 
 # Built-in imports
 import unittest
@@ -44,6 +45,48 @@ def generate_feeps(f_s, n_pts, data_rate, dtype, lev, mms_id):
     feeps_alle.attrs = {"mmsId": mms_id, **var}
 
     return feeps_alle
+
+
+def generate_eis(f_s, n_pts, data_rate, dtype, lev, specie, data_unit, mms_id):
+    pref = f"mms{mms_id:d}_epd_eis"
+    pref = f"{pref}_{data_rate}_{lev}_{dtype}"
+
+    if data_rate == "brst":
+        pref = f"{pref}_{data_rate}_{dtype}"
+    else:
+        pref = f"{pref}_{dtype}"
+
+    suf = f"{specie}_P1_{data_unit.lower()}_t"
+
+    keys = [f"{pref}_{suf}{t:d}" for t in range(6)]
+
+    spin_nums = pyrf.ts_scalar(
+        generate_timeline(f_s, n_pts),
+        np.sort(np.tile(np.arange(n_pts // 12 + 1), (12,)))[1 : n_pts + 1],
+    )
+    sectors = pyrf.ts_scalar(
+        generate_timeline(f_s, n_pts),
+        np.tile(np.arange(12), n_pts // 12 + 1)[1 : n_pts + 1],
+    )
+
+    eis_dict = {"spin": spin_nums, "sector": sectors}
+
+    for i, k in enumerate(keys):
+        eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, 16, "energy")
+        eis_dict[f"look_t{i:d}"] = generate_ts(f_s, n_pts, "vector")
+
+    # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
+    glob_attrs = {
+        "delta_energy_plus": 0.5 * np.ones(16),
+        "delta_energy_minus": 0.5 * np.ones(16),
+        "species": specie,
+        "randattrs": "".join(random.choice(string.ascii_lowercase) for _ in range(10)),
+    }
+
+    # Build Dataset
+    eis = xr.Dataset(eis_dict, attrs=glob_attrs)
+
+    return eis
 
 
 @ddt
@@ -604,3 +647,129 @@ class PsdMomentsTestCase(unittest.TestCase):
     def test_psd_moments_output(self, vdf, options):
         vdf.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS brstSkyMap dist"
         mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"), **options)
+
+
+@ddt
+class EisProtonCorrectionTestCase(unittest.TestCase):
+    def test_eis_proton_correction_dataarray(self):
+        flux_eis = generate_spectr(64, 100, 16, "energy")
+        result = mms.eis_proton_correction(flux_eis)
+        self.assertIsInstance(result, xr.DataArray)
+
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_proton_correction_dataset(self, tmmode, dtype, specie, unit):
+        flux_eis = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        result = mms.eis_proton_correction(flux_eis)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class EisSpinAvgTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["mean", "sum"],
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_spin_avg_output(self, method, tmmode, dtype, specie, unit):
+        eis_allt = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        result = mms.eis_spin_avg(eis_allt, method)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class EisOmniTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_omni_output(self, tmmode, dtype, specie, unit):
+        eis = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        result = mms.eis_omni(eis, "mean")
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class EisPadTestCase(unittest.TestCase):
+    @data(None, [1, 0, 0], generate_ts(64.0, 10, "vector"))
+    def test_eis_pad_output(self, vec):
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        result = mms.eis_pad(eis, vec)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class EisPadSpinAvgTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_pad_spin_avg_output(self, tmmode, dtype, specie, unit):
+        eis = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        eis_pad = mms.eis_pad(eis)
+        result = mms.eis_pad_spinavg(eis_pad, eis.spin)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class EisCombineProtonSpecTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_combine_proton_spec_output(self, tmmode, specie, unit):
+        mms_id = random.randint(1, 5)
+        phxtof_allt = generate_eis(
+            64.0, 100, tmmode, "phxtof", "l2", specie, unit, mms_id
+        )
+        extof_allt = generate_eis(
+            64.0, 100, tmmode, "extof", "l2", specie, unit, mms_id
+        )
+        result = mms.eis_combine_proton_spec(phxtof_allt, extof_allt)
+        self.assertIsInstance(result, xr.Dataset)
+
+    @idata(itertools.product([99, 100], repeat=2))
+    @unpack
+    def test_eis_combine_proton_spec_ctimes(self, n_phxtof, n_extof):
+        phxtof_allt = generate_eis(
+            64.0, n_phxtof, "brst", "phxtof", "l2", "proton", "flux", 1
+        )
+        extof_allt = generate_eis(
+            64.0, n_extof, "brst", "extof", "l2", "proton", "flux", 1
+        )
+        result = mms.eis_combine_proton_spec(phxtof_allt, extof_allt)
+        self.assertIsInstance(result, xr.Dataset)

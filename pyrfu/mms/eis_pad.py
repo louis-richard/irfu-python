@@ -72,7 +72,7 @@ def eis_pad(
         vec = resample(vec, inp_allt.time)
 
     if energy is None:
-        energy = [55, 800]
+        energy = inp_allt.energy.data[[0, -1]]
 
     # set up the number of pa bins to create
     n_pabins = int(180.0 / pa_width)

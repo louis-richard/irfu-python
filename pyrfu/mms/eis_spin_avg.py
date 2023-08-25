@@ -71,6 +71,8 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
 
     """
 
+    assert method.lower() in ["mean", "sum"]
+
     spin_nums = eis_allt.spin
 
     spin_starts, len_spin = _check_spin(spin_nums.data)
@@ -94,15 +96,14 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
 
-                if method.lower() == "mean":
+                if method.lower() == "sum":
+                    # Sum (for counts)
+                    flux_avg[i, :] = np.nansum(flux_data[t_inds, :], axis=0)
+
+                else:
                     # Average (for differential partile flux, differential
                     # energy flux, phase-space density, etc.)
                     flux_avg[i, :] = np.nanmean(flux_data[t_inds, :], axis=0)
-                elif method.lower() == "sum":
-                    # Sum (for counts)
-                    flux_avg[i, :] = np.nansum(flux_data[t_inds, :], axis=0)
-                else:
-                    raise ValueError("Invalid method!!")
 
         spin_avg_flux[scope] = xr.DataArray(
             flux_avg,
