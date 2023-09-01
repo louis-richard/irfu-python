@@ -91,7 +91,7 @@ def eis_combine_proton_pad(
     """
 
     if energy is None:
-        energy = [55, 800]
+        energy = [phxtof_allt.energy.data[0], extof_allt.energy.data[-1]]
 
     # set up the number of pa bins to create
     n_pabins = int(180.0 / pa_width)
@@ -111,11 +111,7 @@ def eis_combine_proton_pad(
 
     data_size = [len(phxtof_pad), len(extof_pad)]
 
-    if data_size[0] == data_size[1]:
-        time_data = phxtof_pad.time.data
-        phxtof_pad_data = phxtof_pad.data
-        extof_pad_data = extof_pad.data
-    elif data_size[0] > data_size[1]:
+    if data_size[0] > data_size[1]:
         time_data = extof_pad.time.data
         phxtof_pad_data = phxtof_pad.data[: data_size[1], ...]
         extof_pad_data = extof_pad.data
@@ -124,7 +120,9 @@ def eis_combine_proton_pad(
         phxtof_pad_data = phxtof_pad.data
         extof_pad_data = extof_pad.data[: data_size[0], ...]
     else:
-        raise ValueError
+        time_data = phxtof_pad.time.data
+        phxtof_pad_data = phxtof_pad.data
+        extof_pad_data = extof_pad.data
 
     cond_ = np.logical_and(
         proton_combined_spec.energy.data > energy[0],
