@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import builtins
+
 # Built-in imports
 import datetime
 import itertools
 import random
 import unittest
+from unittest import mock
 
 # 3rd party imports
 import numpy as np
@@ -1496,6 +1499,16 @@ class IntegrateTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+class IPlasmaCalcTestCase(unittest.TestCase):
+    def test_iplasma_calc_output(self):
+        with mock.patch.object(builtins, "input", lambda _: random.randint(10, 100)):
+            result = pyrf.iplasma_calc(True, True)
+            self.assertIsInstance(result, dict)
+
+            result = pyrf.iplasma_calc(False, False)
+            self.assertIsNone(result)
+
+
 @ddt
 class Iso86012DatetimeTestCase(unittest.TestCase):
     @data(
@@ -1580,6 +1593,25 @@ class MedianBinsTestCase(unittest.TestCase):
             generate_ts(64.0, 100), generate_ts(64.0, 100), random.randint(2, 20)
         )
         self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class MvaTestCase(unittest.TestCase):
+    @data("mvar", "<bn>=0", "td")
+    def test_mva_output(self, method):
+        result = pyrf.mva(generate_ts(64.0, 100, "vector"), method)
+        self.assertIsInstance(result[0], xr.DataArray)
+        self.assertIsInstance(result[1], np.ndarray)
+        self.assertIsInstance(result[2], np.ndarray)
+
+
+@ddt
+class NewXyzTestCase(unittest.TestCase):
+    @data(generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "tensor"))
+    def test_new_xyz_output(self, inp):
+        result = pyrf.new_xyz(inp, np.random.random((3, 3)))
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.ndim, inp.ndim)
 
 
 class NormTestCase(unittest.TestCase):
@@ -1693,6 +1725,33 @@ class ResampleTestCase(unittest.TestCase):
     def test_resample_output(self, inp, ref):
         result = pyrf.resample(inp, ref)
         self.assertIsInstance(result, type(inp))
+
+
+@ddt
+class PoyntingFluxTestCase(unittest.TestCase):
+    @data(
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector")),
+        (generate_ts(128.0, 200, "vector"), generate_ts(64.0, 100, "vector")),
+        (generate_ts(64.0, 100, "vector"), generate_ts(128.0, 200, "vector")),
+    )
+    @unpack
+    def test_poynting_flux_output(self, e_xyz, b_xyz):
+        result = pyrf.poynting_flux(e_xyz, b_xyz, None)
+        self.assertIsInstance(result[0], xr.DataArray)
+        self.assertIsInstance(result[1], xr.DataArray)
+
+        result = pyrf.poynting_flux(e_xyz, b_xyz, generate_ts(64.0, 100, "vector"))
+        self.assertIsInstance(result[0], xr.DataArray)
+        self.assertIsInstance(result[1], xr.DataArray)
+        self.assertIsInstance(result[2], xr.DataArray)
+
+
+class PresAnisTestCase(unittest.TestCase):
+    def test_pres_anis_output(self):
+        result = pyrf.pres_anis(
+            generate_ts(64.0, 100, "tensor"), generate_ts(64.0, 100, "vector")
+        )
+        self.assertIsInstance(result, xr.DataArray)
 
 
 @ddt
@@ -2234,6 +2293,22 @@ class WaveletTestCase(unittest.TestCase):
     @unpack
     def test_power_c(self, power, new_freq_mat):
         self.assertIsNotNone(_power_c.__wrapped__(power, new_freq_mat))
+
+
+@ddt
+class VhtTestCase(unittest.TestCase):
+    @data(
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector"), True),
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 103, "vector"), True),
+        (generate_ts(64.0, 100, "vector"), generate_ts(64.0, 100, "vector"), False),
+    )
+    @unpack
+    def test_vht_output(self, e, b, no_ez):
+        result = pyrf.vht(e, b, no_ez)
+
+        self.assertIsInstance(result[0], np.ndarray)
+        self.assertIsInstance(result[1], xr.DataArray)
+        self.assertIsInstance(result[2], np.ndarray)
 
 
 if __name__ == "__main__":
