@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 # Local imports
 from ..pyrf.calc_fs import calc_fs
@@ -17,7 +18,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def rotate_tensor(*args):
+def rotate_tensor(inp, rot_flag, vec, perp: str = "pp"):
     """Rotates pressure or temperature tensor into another coordinate system.
 
     Parameters
@@ -26,7 +27,7 @@ def rotate_tensor(*args):
         Time series of either separated terms of the tensor or the complete
         tensor. If columns (PeXX,PeXY,PeXZ,PeYY,PeYZ,PeZZ)
 
-    flag : str
+    rot_flag : str
         Flag of the target coordinates system :
             * "fac" : 	Field-aligned coordinates, requires background
                         magnetic field Bback, optional flag "pp"
@@ -41,6 +42,17 @@ def rotate_tensor(*args):
                         and closest to the original y and z directions)
 
             * "gse" : GSE coordinates, requires MMS spacecraft number
+
+    vec : xarray.DataArray or numpy.ndarray
+        Vector or coordinates system to rotate the tensor. If vec is timeseries of a
+        vector tensor is rotated in field aligned coordinates. If vec is a
+        numpy.ndarray rotates to a time independant coordinates system.
+
+    perp : str, Optional
+        Flag for perpandicular components of the tensor. Default is pp.
+            * "pp" : perpendicular diagonal components are equal
+            * "qq" : perpendicular diagonal components are most unequal
+
 
     Returns
     -------
@@ -63,56 +75,24 @@ def rotate_tensor(*args):
     >>> # Compute ion temperature in field aligned coordinates
     >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 
-    TODO : change input, add check that vectors are orthogonal L145
+    TODO : implement method "gse"
     """
 
-    nargin = len(args)
+    assert isinstance(rot_flag, str), "flag must be a string"
+    assert rot_flag.lower() in ["fac", "rot", "gse"], "flag must be fac, rot or gse"
+
+    assert isinstance(perp, str), "perp must be a string"
+    assert perp.lower() in ["pp", "qq"], "perp must be pp or qq"
 
     # Check input and load pressure/temperature terms
-    if isinstance(args[1], str):
-        rot_flag = args[1]
-        rot_flag_pos = 1
-        p_all = args[0]
-        p_times = p_all.time.data
+    inp_times = inp.time.data
+    n_t = len(inp_times)
 
-        if p_all.data.ndim == 3:
-            p_tensor = p_all
-        else:
-            p_tensor = np.reshape(p_all.data, (p_all.shape[0], 3, 3))
-            p_tensor = ts_tensor_xyz(p_times, p_tensor)
-    else:
-        raise SystemError("critical','Something is wrong with the input.")
-
-    ppeq, qqeq = [0, 0]
-
-    rot_mat = np.zeros((len(p_times), 3, 3))
+    rot_mat = np.zeros((n_t, 3, 3))
 
     if rot_flag[0] == "f":
-        if nargin == rot_flag_pos:
-            raise ValueError("B TSeries is missing.")
-
-        b_back = args[rot_flag_pos + 1]
-        b_back = resample(b_back, p_tensor, f_s=calc_fs(p_tensor))
-
-        if nargin == 4:
-            if isinstance(args[3], str) and args[3][0] == "p":
-                ppeq = 1
-            elif isinstance(args[3], str) and args[3][0] == "q":
-                qqeq = 1
-            else:
-                raise ValueError(
-                    "Flag not recognized no additional rotations applied.",
-                )
-
-        if nargin == 9:
-            if isinstance(args[8], str) and args[8][0] == "p":
-                ppeq = 1
-            elif isinstance(args[8], str) and args[8][0] == "q":
-                qqeq = 1
-            else:
-                raise ValueError(
-                    "Flag not recognized no additional rotations applied.",
-                )
+        assert isinstance(vec, xr.DataArray)
+        b_back = resample(vec, inp, f_s=calc_fs(inp))
 
         b_vec = b_back / np.linalg.norm(b_back, axis=1, keepdims=True)
 
@@ -126,17 +106,10 @@ def rotate_tensor(*args):
         rot_mat[:, 0, :], rot_mat[:, 1, :], rot_mat[:, 2, :] = [r_x, r_y, r_z]
 
     elif rot_flag[0] == "r":
-        if nargin == rot_flag_pos:
-            raise ValueError("Vector(s) is(are) missing.")
+        assert isinstance(vec, np.ndarray)
 
-        vectors = list(args[rot_flag_pos + 1 :])
-
-        if len(vectors) == 1:
-            r_x = vectors[0]
-
-            if len(r_x) != 3:
-                raise TypeError("Vector format not recognized.")
-
+        if vec.ndim == 1 and vec.shape[0] == 3:
+            r_x = vec
             r_x /= np.linalg.norm(r_x, keepdims=True)
             r_y = np.array([0, 1, 0])
             r_z = np.cross(r_x, r_y)
@@ -144,38 +117,38 @@ def rotate_tensor(*args):
             r_y = np.cross(r_z, r_x)
             r_y /= np.linalg.norm(r_y, keepdims=True)
 
-        elif len(vectors) == 3:
-            r_x, r_y, r_z = [r / np.linalg.norm(r, keepdims=True) for r in vectors]
+        elif vec.ndim == 2 and vec.shape[0] == 3 and vec.shape[1] == 3:
+            r_x = vec[:, 0] / np.linalg.norm(vec[:, 0], keepdims=True)
+            r_y = vec[:, 1] / np.linalg.norm(vec[:, 1], keepdims=True)
+            r_z = vec[:, 2] / np.linalg.norm(vec[:, 2], keepdims=True)
 
         else:
             raise TypeError("Vector format not recognized.")
 
-        rot_mat[:, 0, :] = np.ones((len(p_times), 1)) * r_x
-        rot_mat[:, 1, :] = np.ones((len(p_times), 1)) * r_y
-        rot_mat[:, 2, :] = np.ones((len(p_times), 1)) * r_z
+        rot_mat[:, 0, :] = np.ones((n_t, 1)) * r_x
+        rot_mat[:, 1, :] = np.ones((n_t, 1)) * r_y
+        rot_mat[:, 2, :] = np.ones((n_t, 1)) * r_z
 
     else:
-        raise ValueError("Flag is not recognized.")
+        raise NotImplementedError("gse is not yet implemented!!")
 
-    p_tensor_p = np.zeros((len(p_times), 3, 3))
+    p_tensor_p = np.zeros((n_t, 3, 3))
 
-    for i in range(len(p_times)):
+    for i in range(n_t):
         rot_temp = np.squeeze(rot_mat[i, :, :])
 
         p_tensor_p[i, :, :] = np.matmul(
-            np.matmul(rot_temp, np.squeeze(p_tensor.data[i, :, :])),
+            np.matmul(rot_temp, np.squeeze(inp.data[i, :, :])),
             np.transpose(rot_temp),
         )
 
-    if ppeq:
+    if perp.lower() == "pp":
         thetas = 0.5 * np.arctan(
             (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
         )
+        thetas[np.isnan(thetas)] = 0.0
 
         for i, theta in enumerate(thetas):
-            if np.isnan(theta):
-                theta = 0
-
             rot_temp = np.array(
                 [
                     [1, 0, 0],
@@ -189,7 +162,7 @@ def rotate_tensor(*args):
                 np.transpose(rot_temp),
             )
 
-    if qqeq:
+    else:
         thetas = 0.5 * np.arctan(
             (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
         )
@@ -209,11 +182,6 @@ def rotate_tensor(*args):
             )
 
     # Construct output
-    p_new = ts_tensor_xyz(p_times, p_tensor_p)
-
-    try:
-        p_new.attrs["units"] = args[0].attrs["units"]
-    except KeyError:
-        pass
+    p_new = ts_tensor_xyz(inp_times, p_tensor_p, attrs=inp.attrs)
 
     return p_new
