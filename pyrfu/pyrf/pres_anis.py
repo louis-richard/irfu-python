@@ -7,6 +7,7 @@ from scipy import constants
 
 # Local imports
 from .resample import resample
+from .ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -66,16 +67,17 @@ def pres_anis(p_fac, b_xyz):
 
     """
 
-    b_xyz = resample(b_xyz, p_fac)
-
     # Get parallel and perpendicular pressure
-    p_para = p_fac[:, 0, 0]
-    p_perp = (p_fac[:, 1, 1] + p_fac[:, 2, 2]) / 2
+    p_para = p_fac.data[:, 0, 0]
+    p_perp = (p_fac.data[:, 1, 1] + p_fac.data[:, 2, 2]) / 2
 
-    # Load permittivity
-    mu0 = constants.mu_0
+    # Compute magnetic pressure
+    b_xyz = resample(b_xyz, p_fac)
+    b_mag = np.linalg.norm(b_xyz.data, axis=1)
+    p_mag = 1e-18 * b_mag**2 / (2 * constants.mu_0)
 
     # Compute pressure anistropy
-    p_anis = 1e9 * mu0 * (p_para - p_perp) / np.linalg.norm(b_xyz) ** 2
+    p_anis = (1e-9 * (p_para - p_perp) / 2) / p_mag
+    p_anis = ts_scalar(p_fac.time.data, p_anis)
 
     return p_anis
