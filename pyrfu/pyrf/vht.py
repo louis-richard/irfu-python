@@ -19,7 +19,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def vht(e, b, flag: int = 1):
+def vht(e, b, no_ez: bool = False):
     r"""Estimate velocity of the De Hoffman-Teller frame from the velocity
     estimate the electric field eht=-vht x b
 
@@ -29,16 +29,16 @@ def vht(e, b, flag: int = 1):
         Time series of the electric field.
     b : xarray.DataArray
         Time series of the magnetic field.
-    flag : int, Optional
-        If 2 assumed no Ez.
+    no_ez : boolean, Optional
+        If True assumed no Ez. Default is False.
 
     Returns
     -------
-    vht : ndarray
+    vht : numpy.ndarray
         De Hoffman Teller frame velocity [km/s].
     vht : xarray.DataArray
         Time series of the electric field in the De Hoffman frame.
-    dv_ht : ndarray
+    dv_ht : numpy.ndarray
         Error of De Hoffman Teller frame.
 
     """
@@ -60,7 +60,7 @@ def vht(e, b, flag: int = 1):
     p[5] = np.sum(b[:, 2].data * b[:, 2].data) / n_samples  # Bz*Bz
 
     # assume only Ex and Ey
-    if flag == 2:
+    if no_ez:
         e[:, 2] *= 0  # put z component to 0 when using only Ex and Ey
 
         k_mat = np.array(
@@ -89,14 +89,14 @@ def vht(e, b, flag: int = 1):
     v_ht_hat = v_ht / np.linalg.norm(v_ht, keepdims=True)
 
     logging.info(
-        "v_ht =%(v_mag)7.4f} * %(v_vec)s km/s",
+        "v_ht =%(v_mag)7.4f * %(v_vec)s km/s",
         {"v_mag": np.linalg.norm(v_ht), "v_vec": np.array_str(v_ht_hat)},
     )
 
     # Calculate the goodness of the Hoffman Teller frame
     e_ht = e_vxb(v_ht, b)
 
-    if flag == 2:
+    if no_ez:
         e_p, e_ht_p = [e[ind_data], e_ht[ind_data]]
         e_p.data[:, 2], e_ht_p.data[:, 2] = [0, 0]
     else:
@@ -126,8 +126,8 @@ def vht(e, b, flag: int = 1):
     dv_ht_hat = dv_ht / np.linalg.norm(dv_ht)
 
     logging.info(
-        "dv_ht =%(dv_mag)7.4f} * %(dv_vec)s km/s",
-        {"v_mag": np.linalg.norm(dv_ht), "v_vec": np.array_str(dv_ht_hat)},
+        "dv_ht =%(dv_mag)7.4f * %(dv_vec)s km/s",
+        {"dv_mag": np.linalg.norm(dv_ht), "dv_vec": np.array_str(dv_ht_hat)},
     )
 
     return v_ht, e_ht, dv_ht
