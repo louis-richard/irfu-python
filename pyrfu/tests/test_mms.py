@@ -228,57 +228,6 @@ class MakeModelKappaTestCase(unittest.TestCase):
 
 
 @ddt
-class ReduceTestCase(unittest.TestCase):
-    @data("s^3/cm^6", "s^3/m^6", "s^3/km^6")
-    def test_reduce_units(self, value):
-        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=True, species="ions")
-        vdf.data.attrs["UNITS"] = value
-        result = mms.reduce(vdf, np.eye(3), "1d", "cart")
-        self.assertIsInstance(result, xr.DataArray)
-
-    @data(
-        (False, "ions", np.eye(3), "1d", "cart"),
-        (False, "electrons", np.eye(3), "1d", "cart"),
-        (True, "ions", np.eye(3), "1d", "cart"),
-        (True, "electrons", np.eye(3), "1d", "cart"),
-        (False, "electrons", generate_ts(64.0, 42, "tensor"), "1d", "cart"),
-        (False, "ions", np.eye(3), "1d", "pol"),
-        # (False, "ions", np.eye(3), "2d", "pol"), mc_pol_2d NotImplementedError
-    )
-    @unpack
-    def test_reduce_output(self, energy01, species, xyz, dim, base):
-        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01, species)
-        result = mms.reduce(vdf, xyz, dim, base)
-        self.assertIsInstance(result, xr.DataArray)
-
-    @data(
-        ("1d", "cart", {"vg": np.linspace(-1, 1, 42)}),
-        ("1d", "cart", {"lower_e_lim": generate_ts(64.0, 42)}),
-        ("1d", "cart", {"vg_edges": np.linspace(-1.01, 1.01, 102)}),
-    )
-    @unpack
-    def test_reduce_options(self, dim, base, options):
-        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=False, species="ions")
-        xyz = np.eye(3)
-        result = mms.reduce(vdf, xyz, dim, base, **options)
-        self.assertIsInstance(result, xr.DataArray)
-
-    @data(
-        ("ions", "s^3/m^6", np.array([1, 0, 0]), "1d", "pol", {}),
-        ("I AM GROOT", "s^3/m^6", np.eye(3), "1d", "pol", {}),
-        ("ions", "bazinga", np.eye(3), "1d", "pol", {}),
-        ("ions", "s^3/m^6", np.eye(3), "2d", "pol", {}),
-        ("ions", "s^3/m^6", np.eye(3), "1d", "pol", {"lower_e_lim": generate_data(42)}),
-    )
-    @unpack
-    def test_reduce_nonononono(self, species, units, xyz, dim, base, options):
-        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=True, species=species)
-        vdf.data.attrs["UNITS"] = units
-        with self.assertRaises((TypeError, ValueError, NotImplementedError)):
-            mms.reduce(vdf, xyz, dim, base, **options)
-
-
-@ddt
 class PsdRebinTestCase(unittest.TestCase):
     @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
     def test_psd_rebin_output(self, vdf):
@@ -742,6 +691,57 @@ class EisPadSpinAvgTestCase(unittest.TestCase):
 
 
 @ddt
+class EisCombineProtonPadTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_combine_proton_pad_output(self, tmmode, specie, unit):
+        mms_id = random.randint(1, 5)
+        phxtof_allt = generate_eis(
+            64.0, 100, tmmode, "phxtof", "l2", specie, unit, mms_id
+        )
+        extof_allt = generate_eis(
+            64.0, 100, tmmode, "extof", "l2", specie, unit, mms_id
+        )
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt)
+        self.assertIsInstance(result, xr.DataArray)
+
+    @idata(itertools.product([99, 100], repeat=2))
+    @unpack
+    def test_eis_combine_proton_pad_input(self, n_phxtof, n_extof):
+        phxtof_allt = generate_eis(
+            64.0, n_phxtof, "brst", "phxtof", "l2", "proton", "flux", 1
+        )
+        extof_allt = generate_eis(
+            64.0, n_extof, "brst", "extof", "l2", "proton", "flux", 1
+        )
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt)
+        self.assertIsInstance(result, xr.DataArray)
+
+    @data(None, [1, 0, 0], generate_ts(64.0, 10, "vector"))
+    def test_eis_combine_proton_pad_vec(self, vec):
+        phxtof_allt = generate_eis(
+            64.0, 100, "brst", "phxtof", "l2", "proton", "flux", 1
+        )
+        extof_allt = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, vec)
+        self.assertIsInstance(result, xr.DataArray)
+
+    def test_eis_combine_proton_pad_options(self):
+        phxtof_allt = generate_eis(
+            64.0, 100, "brst", "phxtof", "l2", "proton", "flux", 1
+        )
+        extof_allt = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, None, despin=True)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
 class EisCombineProtonSpecTestCase(unittest.TestCase):
     @idata(
         itertools.product(
@@ -773,3 +773,76 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         )
         result = mms.eis_combine_proton_spec(phxtof_allt, extof_allt)
         self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class ReduceTestCase(unittest.TestCase):
+    @data("s^3/cm^6", "s^3/m^6", "s^3/km^6")
+    def test_reduce_units(self, value):
+        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=True, species="ions")
+        vdf.data.attrs["UNITS"] = value
+        result = mms.reduce(vdf, np.eye(3), "1d", "cart")
+        self.assertIsInstance(result, xr.DataArray)
+
+    @data(
+        (False, "ions", np.eye(3), "1d", "cart"),
+        (False, "electrons", np.eye(3), "1d", "cart"),
+        (True, "ions", np.eye(3), "1d", "cart"),
+        (True, "electrons", np.eye(3), "1d", "cart"),
+        (False, "electrons", generate_ts(64.0, 42, "tensor"), "1d", "cart"),
+        (False, "ions", np.eye(3), "1d", "pol"),
+        # (False, "ions", np.eye(3), "2d", "pol"), mc_pol_2d NotImplementedError
+    )
+    @unpack
+    def test_reduce_output(self, energy01, species, xyz, dim, base):
+        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01, species)
+        result = mms.reduce(vdf, xyz, dim, base)
+        self.assertIsInstance(result, xr.DataArray)
+
+    @data(
+        ("1d", "cart", {"vg": np.linspace(-1, 1, 42)}),
+        ("1d", "cart", {"lower_e_lim": generate_ts(64.0, 42)}),
+        ("1d", "cart", {"vg_edges": np.linspace(-1.01, 1.01, 102)}),
+    )
+    @unpack
+    def test_reduce_options(self, dim, base, options):
+        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=False, species="ions")
+        xyz = np.eye(3)
+        result = mms.reduce(vdf, xyz, dim, base, **options)
+        self.assertIsInstance(result, xr.DataArray)
+
+    @data(
+        ("ions", "s^3/m^6", np.array([1, 0, 0]), "1d", "pol", {}),
+        ("I AM GROOT", "s^3/m^6", np.eye(3), "1d", "pol", {}),
+        ("ions", "bazinga", np.eye(3), "1d", "pol", {}),
+        ("ions", "s^3/m^6", np.eye(3), "2d", "pol", {}),
+        ("ions", "s^3/m^6", np.eye(3), "1d", "pol", {"lower_e_lim": generate_data(42)}),
+    )
+    @unpack
+    def test_reduce_input(self, species, units, xyz, dim, base, options):
+        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=True, species=species)
+        vdf.data.attrs["UNITS"] = units
+        with self.assertRaises((TypeError, ValueError, NotImplementedError)):
+            mms.reduce(vdf, xyz, dim, base, **options)
+
+
+@ddt
+class RotateTensorTestCase(unittest.TestCase):
+    @data(("rot", generate_data(100, "vector")), ("gse", None))
+    @unpack
+    def test_rotate_tensor_input(self, flag, vec):
+        with self.assertRaises((TypeError, NotImplementedError)):
+            mms.rotate_tensor(generate_ts(64.0, 100, "tensor"), flag, vec)
+
+    @data(
+        ("fac", generate_ts(64.0, 100, "vector"), "pp"),
+        ("fac", generate_ts(64.0, 100, "vector"), "qq"),
+        ("rot", np.random.random(3), "pp"),
+        ("rot", np.random.random((3, 3)), "pp"),
+    )
+    @unpack
+    def test_rotate_tensor_output(self, rot_flag, vec, perp):
+        result = mms.rotate_tensor(
+            generate_ts(64.0, 100, "tensor"), rot_flag, vec, perp
+        )
+        self.assertIsInstance(result, xr.DataArray)
