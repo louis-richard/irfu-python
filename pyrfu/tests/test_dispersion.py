@@ -48,3 +48,7 @@ class OneFluidDispersionTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], xr.DataArray)
         self.assertIsInstance(result[1], xr.DataArray)
         self.assertIsInstance(result[2], xr.DataArray)
+
+
+if __name__ == "__main__":
+    unittest.main()

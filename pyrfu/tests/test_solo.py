@@ -69,3 +69,7 @@ class ReadTNRTestCase(unittest.TestCase):
     @unpack
     def test_read_tnr_output(self, tint, sensor, data_path):
         self.assertIsNone(solo.read_tnr(tint, sensor, data_path))
+
+
+if __name__ == "__main__":
+    unittest.main()

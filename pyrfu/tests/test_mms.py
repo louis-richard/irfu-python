@@ -139,208 +139,6 @@ class CalcEpsilonTestCase(unittest.TestCase):
 
 
 @ddt
-class Dsl2GseTestCase(unittest.TestCase):
-    def test_dsl2gse_input(self):
-        with self.assertRaises(TypeError):
-            mms.dsl2gse(generate_ts(64.0, 42, "vector"), np.random.random((42, 3)), 1)
-
-    @data(
-        xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
-        np.random.random(3),
-    )
-    def test_dsl2gse_output(self, value):
-        result = mms.dsl2gse(generate_ts(64.0, 42, "vector"), value, 1)
-        self.assertIsInstance(result, xr.DataArray)
-        result = mms.dsl2gse(generate_ts(64.0, 42, "vector"), value, -1)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class Dsl2GsmTestCase(unittest.TestCase):
-    def test_dsl2gsm_input(self):
-        with self.assertRaises(TypeError):
-            mms.dsl2gsm(generate_ts(64.0, 42, "vector"), np.random.random((42, 3)), 1)
-
-    @data(
-        xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
-        np.random.random(3),
-    )
-    def test_dsl2gsm_output(self, value):
-        result = mms.dsl2gsm(generate_ts(64.0, 42, "vector"), value, 1)
-        self.assertIsInstance(result, xr.DataArray)
-        result = mms.dsl2gsm(generate_ts(64.0, 42, "vector"), value, -1)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class MakeModelVDFTestCase(unittest.TestCase):
-    @data(
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), False),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), False),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), True),
-    )
-    @unpack
-    def test_make_Model_vdf_output(self, vdf, isotropic):
-        result = mms.make_model_vdf(
-            vdf,
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "tensor"),
-            isotropic,
-        )
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class MakeModelKappaTestCase(unittest.TestCase):
-    @data(
-        (generate_vdf(64.0, 100, (32, 16, 16), species="bazinga"), random.random()),
-    )
-    @unpack
-    def test_make_model_kappa_input(self, vdf, kappa):
-        with self.assertRaises(ValueError):
-            mms.make_model_kappa(
-                vdf,
-                generate_ts(64.0, 100, "scalar"),
-                generate_ts(64.0, 100, "vector"),
-                generate_ts(64.0, 100, "scalar"),
-                kappa,
-            )
-
-    @data(
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), random.random()),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
-    )
-    @unpack
-    def test_make_model_kappa_output(self, vdf, kappa):
-        result = mms.make_model_kappa(
-            vdf,
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "scalar"),
-            kappa,
-        )
-
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class PsdRebinTestCase(unittest.TestCase):
-    @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
-    def test_psd_rebin_output(self, vdf):
-        result = mms.psd_rebin(
-            vdf,
-            vdf.phi,
-            vdf.attrs["energy0"],
-            vdf.attrs["energy1"],
-            vdf.attrs["esteptable"],
-        )
-        self.assertIsInstance(result[0], np.ndarray)
-        self.assertEqual(len(result[0]), 50)
-        self.assertIsInstance(result[1], np.ndarray)
-        self.assertListEqual(list(result[1].shape), [50, 64, 32, 16])
-        self.assertIsInstance(result[2], np.ndarray)
-        self.assertEqual(len(result[2]), 64)
-        self.assertIsInstance(result[3], np.ndarray)
-        self.assertListEqual(list(result[3].shape), [50, 32])
-
-
-@ddt
-class SpectrToDatasetTestCase(unittest.TestCase):
-    @data(generate_spectr(64.0, 100, 10))
-    def test_spectr_to_dataset_output(self, spectr):
-        result = mms.spectr_to_dataset(spectr)
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class VdfOmniTestCase(unittest.TestCase):
-    @data("mean", "sum")
-    def test_vdf_omni_output(self, method):
-        result = mms.vdf_omni(generate_vdf(64.0, 100, (32, 32, 16)), method)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class Psd2DefTestCase(unittest.TestCase):
-    @data(
-        ("I AM GROOT!!", "s^3/cm^6"),
-        ("ions", "bazinga"),
-    )
-    @unpack
-    def test_psd2def_input(self, species, units):
-        with self.assertRaises(ValueError):
-            mms.psd2def(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
-
-    @idata(
-        itertools.product(
-            [
-                "ions",
-                "ion",
-                "protons",
-                "proton",
-                "alphas",
-                "alpha",
-                "helium",
-                "electrons",
-                "e",
-            ],
-            ["s^3/cm^6", "s^3/m^6", "s^3/km^6"],
-        )
-    )
-    @unpack
-    def test_psd2def_output(self, species, units):
-        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
-        result = mms.psd2def(vdf)
-        self.assertIsInstance(result, xr.Dataset)
-
-        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
-        result = mms.psd2def(spectr)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class Psd2DpfTestCase(unittest.TestCase):
-    @data(
-        ("I AM GROOT!!", "s^3/cm^6"),
-        ("ions", "bazinga"),
-    )
-    @unpack
-    def test_psd2dpf_input(self, species, units):
-        with self.assertRaises(ValueError):
-            mms.psd2dpf(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
-
-    @idata(
-        itertools.product(
-            [
-                "ions",
-                "ion",
-                "protons",
-                "proton",
-                "alphas",
-                "alpha",
-                "helium",
-                "electrons",
-                "e",
-            ],
-            ["s^3/cm^6", "s^3/m^6", "s^3/km^6"],
-        )
-    )
-    @unpack
-    def test_psd2dpf_output(self, species, units):
-        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
-        result = mms.psd2dpf(vdf)
-        self.assertIsInstance(result, xr.Dataset)
-
-        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
-        result = mms.psd2dpf(spectr)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
 class Def2PsdTestCase(unittest.TestCase):
     @data(
         ("I AM GROOT!!", "s^3/cm^6"),
@@ -417,276 +215,36 @@ class Dpf2PsdTestCase(unittest.TestCase):
 
 
 @ddt
-class FeepsActiveEyesTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"], ["sitl", "l2"]))
-    @unpack
-    def test_feeps_active_eyes_output(self, data_rate, dtype, lev):
-        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
-        result = mms.feeps_active_eyes(
-            {"tmmode": data_rate, "dtype": dtype, "lev": lev},
-            tint,
-            random.randint(1, 4),
-        )
-        self.assertIsInstance(result, dict)
+class Dsl2GseTestCase(unittest.TestCase):
+    def test_dsl2gse_input(self):
+        with self.assertRaises(TypeError):
+            mms.dsl2gse(generate_ts(64.0, 42, "vector"), np.random.random((42, 3)), 1)
 
-        result = mms.feeps_active_eyes(
-            {"tmmode": data_rate, "dtype": dtype, "lev": lev},
-            pyrf.iso86012datetime64(np.array(tint)),
-            str(random.randint(1, 4)),
-        )
-        self.assertIsInstance(result, dict)
-
-
-@ddt
-class FeepsCorrectEnergiesTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_correct_energies_output(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-
-        result = mms.feeps_correct_energies(feeps_alle)
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_flat_field_corrections_output(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-
-        result = mms.feeps_flat_field_corrections(feeps_alle)
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class FeepsRemoveBadDataTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_remove_bad_data_output(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-
-        result = mms.feeps_remove_bad_data(feeps_alle)
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class FeepsSplitIntegralChTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_split_integral_ch(self, data_rate, dtype):
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-        mms.feeps_split_integral_ch(feeps_alle)
-
-
-@ddt
-class FeepsRemoveSunTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_remove_sun(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
-
-        result = mms.feeps_remove_sun(feeps_alle)
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class FeepsOmniTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_omni_output(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
-
-        result = mms.feeps_omni(feeps_alle)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class FeepsSpinAvgTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_spin_avg(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
-        feeps_omni = mms.feeps_omni(feeps_alle)
-
-        result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class FeepsPitchAnglesTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_pitch_angles_output(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
-
-        result = mms.feeps_pitch_angles(feeps_alle, generate_ts(64.0, 100, "vector"))
-        self.assertIsInstance(result[0], xr.DataArray)
-
-
-@ddt
-class FeepsPadTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_pad_ouput(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
-
-        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class FeepsPadSpinAvgTestCase(unittest.TestCase):
-    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
-    @unpack
-    def test_feeps_pad_spin_avg(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
-
-        feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
-        result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
-        self.assertIsInstance(result, xr.DataArray)
-
-
-@ddt
-class PsdMomentsTestCase(unittest.TestCase):
     @data(
-        (generate_vdf(64.0, 100, (32, 32, 16)), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16), species="electrons"), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16), energy01=False, species="ions"), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16)), {"energy_range": [1, 1000]}),
-        (generate_vdf(64.0, 100, (32, 32, 16)), {"no_sc_pot": True}),
+        xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
+        np.random.random(3),
     )
-    @unpack
-    def test_psd_moments_output(self, vdf, options):
-        vdf.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS brstSkyMap dist"
-        mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"), **options)
-
-
-@ddt
-class EisProtonCorrectionTestCase(unittest.TestCase):
-    def test_eis_proton_correction_dataarray(self):
-        flux_eis = generate_spectr(64, 100, 16, "energy")
-        result = mms.eis_proton_correction(flux_eis)
+    def test_dsl2gse_output(self, value):
+        result = mms.dsl2gse(generate_ts(64.0, 42, "vector"), value, 1)
         self.assertIsInstance(result, xr.DataArray)
-
-    @idata(
-        itertools.product(
-            ["srvy", "brst"],
-            ["extof", "phxtof"],
-            ["proton", "alpha", "oxygen"],
-            ["flux", "cps", "counts"],
-        )
-    )
-    @unpack
-    def test_eis_proton_correction_dataset(self, tmmode, dtype, specie, unit):
-        flux_eis = generate_eis(
-            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
-        )
-        result = mms.eis_proton_correction(flux_eis)
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class EisSpinAvgTestCase(unittest.TestCase):
-    @idata(
-        itertools.product(
-            ["mean", "sum"],
-            ["srvy", "brst"],
-            ["extof", "phxtof"],
-            ["proton", "alpha", "oxygen"],
-            ["flux", "cps", "counts"],
-        )
-    )
-    @unpack
-    def test_eis_spin_avg_output(self, method, tmmode, dtype, specie, unit):
-        eis_allt = generate_eis(
-            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
-        )
-        result = mms.eis_spin_avg(eis_allt, method)
-        self.assertIsInstance(result, xr.Dataset)
-
-
-@ddt
-class EisOmniTestCase(unittest.TestCase):
-    @idata(
-        itertools.product(
-            ["srvy", "brst"],
-            ["extof", "phxtof"],
-            ["proton", "alpha", "oxygen"],
-            ["flux", "cps", "counts"],
-        )
-    )
-    @unpack
-    def test_eis_omni_output(self, tmmode, dtype, specie, unit):
-        eis = generate_eis(
-            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
-        )
-        result = mms.eis_omni(eis, "mean")
+        result = mms.dsl2gse(generate_ts(64.0, 42, "vector"), value, -1)
         self.assertIsInstance(result, xr.DataArray)
 
 
 @ddt
-class EisPadTestCase(unittest.TestCase):
-    @data(None, [1, 0, 0], generate_ts(64.0, 10, "vector"))
-    def test_eis_pad_output(self, vec):
-        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
-        result = mms.eis_pad(eis, vec)
-        self.assertIsInstance(result, xr.DataArray)
+class Dsl2GsmTestCase(unittest.TestCase):
+    def test_dsl2gsm_input(self):
+        with self.assertRaises(TypeError):
+            mms.dsl2gsm(generate_ts(64.0, 42, "vector"), np.random.random((42, 3)), 1)
 
-
-@ddt
-class EisPadSpinAvgTestCase(unittest.TestCase):
-    @idata(
-        itertools.product(
-            ["srvy", "brst"],
-            ["extof", "phxtof"],
-            ["proton", "alpha", "oxygen"],
-            ["flux", "cps", "counts"],
-        )
+    @data(
+        xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
+        np.random.random(3),
     )
-    @unpack
-    def test_eis_pad_spin_avg_output(self, tmmode, dtype, specie, unit):
-        eis = generate_eis(
-            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
-        )
-        eis_pad = mms.eis_pad(eis)
-        result = mms.eis_pad_spinavg(eis_pad, eis.spin)
+    def test_dsl2gsm_output(self, value):
+        result = mms.dsl2gsm(generate_ts(64.0, 42, "vector"), value, 1)
+        self.assertIsInstance(result, xr.DataArray)
+        result = mms.dsl2gsm(generate_ts(64.0, 42, "vector"), value, -1)
         self.assertIsInstance(result, xr.DataArray)
 
 
@@ -776,6 +334,432 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
 
 
 @ddt
+class EisOmniTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_omni_output(self, tmmode, dtype, specie, unit):
+        eis = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        result = mms.eis_omni(eis, "mean")
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class EisPadTestCase(unittest.TestCase):
+    @data(None, [1, 0, 0], generate_ts(64.0, 10, "vector"))
+    def test_eis_pad_output(self, vec):
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        result = mms.eis_pad(eis, vec)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class EisPadSpinAvgTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_pad_spin_avg_output(self, tmmode, dtype, specie, unit):
+        eis = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        eis_pad = mms.eis_pad(eis)
+        result = mms.eis_pad_spinavg(eis_pad, eis.spin)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class EisProtonCorrectionTestCase(unittest.TestCase):
+    def test_eis_proton_correction_dataarray(self):
+        flux_eis = generate_spectr(64, 100, 16, "energy")
+        result = mms.eis_proton_correction(flux_eis)
+        self.assertIsInstance(result, xr.DataArray)
+
+    @idata(
+        itertools.product(
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_proton_correction_dataset(self, tmmode, dtype, specie, unit):
+        flux_eis = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        result = mms.eis_proton_correction(flux_eis)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class EisSpinAvgTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            ["mean", "sum"],
+            ["srvy", "brst"],
+            ["extof", "phxtof"],
+            ["proton", "alpha", "oxygen"],
+            ["flux", "cps", "counts"],
+        )
+    )
+    @unpack
+    def test_eis_spin_avg_output(self, method, tmmode, dtype, specie, unit):
+        eis_allt = generate_eis(
+            64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
+        )
+        result = mms.eis_spin_avg(eis_allt, method)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class MakeModelVDFTestCase(unittest.TestCase):
+    @data(
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), False),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), False),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), True),
+    )
+    @unpack
+    def test_make_Model_vdf_output(self, vdf, isotropic):
+        result = mms.make_model_vdf(
+            vdf,
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "tensor"),
+            isotropic,
+        )
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class MakeModelKappaTestCase(unittest.TestCase):
+    @data(
+        (generate_vdf(64.0, 100, (32, 16, 16), species="bazinga"), random.random()),
+    )
+    @unpack
+    def test_make_model_kappa_input(self, vdf, kappa):
+        with self.assertRaises(ValueError):
+            mms.make_model_kappa(
+                vdf,
+                generate_ts(64.0, 100, "scalar"),
+                generate_ts(64.0, 100, "vector"),
+                generate_ts(64.0, 100, "scalar"),
+                kappa,
+            )
+
+    @data(
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), random.random()),
+        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
+    )
+    @unpack
+    def test_make_model_kappa_output(self, vdf, kappa):
+        result = mms.make_model_kappa(
+            vdf,
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "vector"),
+            generate_ts(64.0, 100, "scalar"),
+            kappa,
+        )
+
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class Psd2DefTestCase(unittest.TestCase):
+    @data(
+        ("I AM GROOT!!", "s^3/cm^6"),
+        ("ions", "bazinga"),
+    )
+    @unpack
+    def test_psd2def_input(self, species, units):
+        with self.assertRaises(ValueError):
+            mms.psd2def(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
+
+    @idata(
+        itertools.product(
+            [
+                "ions",
+                "ion",
+                "protons",
+                "proton",
+                "alphas",
+                "alpha",
+                "helium",
+                "electrons",
+                "e",
+            ],
+            ["s^3/cm^6", "s^3/m^6", "s^3/km^6"],
+        )
+    )
+    @unpack
+    def test_psd2def_output(self, species, units):
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
+        result = mms.psd2def(vdf)
+        self.assertIsInstance(result, xr.Dataset)
+
+        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
+        result = mms.psd2def(spectr)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class Psd2DpfTestCase(unittest.TestCase):
+    @data(
+        ("I AM GROOT!!", "s^3/cm^6"),
+        ("ions", "bazinga"),
+    )
+    @unpack
+    def test_psd2dpf_input(self, species, units):
+        with self.assertRaises(ValueError):
+            mms.psd2dpf(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
+
+    @idata(
+        itertools.product(
+            [
+                "ions",
+                "ion",
+                "protons",
+                "proton",
+                "alphas",
+                "alpha",
+                "helium",
+                "electrons",
+                "e",
+            ],
+            ["s^3/cm^6", "s^3/m^6", "s^3/km^6"],
+        )
+    )
+    @unpack
+    def test_psd2dpf_output(self, species, units):
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, species, units)
+        result = mms.psd2dpf(vdf)
+        self.assertIsInstance(result, xr.Dataset)
+
+        spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
+        result = mms.psd2dpf(spectr)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class PsdMomentsTestCase(unittest.TestCase):
+    @data(
+        (generate_vdf(64.0, 100, (32, 32, 16)), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16), species="electrons"), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16), energy01=False, species="ions"), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"), {}),
+        (generate_vdf(64.0, 100, (32, 32, 16)), {"energy_range": [1, 1000]}),
+        (generate_vdf(64.0, 100, (32, 32, 16)), {"no_sc_pot": True}),
+    )
+    @unpack
+    def test_psd_moments_output(self, vdf, options):
+        vdf.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS brstSkyMap dist"
+        mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"), **options)
+
+
+@ddt
+class PsdRebinTestCase(unittest.TestCase):
+    @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
+    def test_psd_rebin_output(self, vdf):
+        result = mms.psd_rebin(
+            vdf,
+            vdf.phi,
+            vdf.attrs["energy0"],
+            vdf.attrs["energy1"],
+            vdf.attrs["esteptable"],
+        )
+        self.assertIsInstance(result[0], np.ndarray)
+        self.assertEqual(len(result[0]), 50)
+        self.assertIsInstance(result[1], np.ndarray)
+        self.assertListEqual(list(result[1].shape), [50, 64, 32, 16])
+        self.assertIsInstance(result[2], np.ndarray)
+        self.assertEqual(len(result[2]), 64)
+        self.assertIsInstance(result[3], np.ndarray)
+        self.assertListEqual(list(result[3].shape), [50, 32])
+
+
+@ddt
+class FeepsActiveEyesTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"], ["sitl", "l2"]))
+    @unpack
+    def test_feeps_active_eyes_output(self, data_rate, dtype, lev):
+        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+        result = mms.feeps_active_eyes(
+            {"tmmode": data_rate, "dtype": dtype, "lev": lev},
+            tint,
+            random.randint(1, 4),
+        )
+        self.assertIsInstance(result, dict)
+
+        result = mms.feeps_active_eyes(
+            {"tmmode": data_rate, "dtype": dtype, "lev": lev},
+            pyrf.iso86012datetime64(np.array(tint)),
+            str(random.randint(1, 4)),
+        )
+        self.assertIsInstance(result, dict)
+
+
+@ddt
+class FeepsCorrectEnergiesTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_correct_energies_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+
+        result = mms.feeps_correct_energies(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_flat_field_corrections_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+
+        result = mms.feeps_flat_field_corrections(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsOmniTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_omni_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_omni(feeps_alle)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsPadTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_pad_ouput(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsPadSpinAvgTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_pad_spin_avg(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
+        result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsPitchAnglesTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_pitch_angles_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_pitch_angles(feeps_alle, generate_ts(64.0, 100, "vector"))
+        self.assertIsInstance(result[0], xr.DataArray)
+
+
+@ddt
+class FeepsRemoveBadDataTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_remove_bad_data_output(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsRemoveSunTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_remove_sun(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        result = mms.feeps_remove_sun(feeps_alle)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class FeepsSpinAvgTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_spin_avg(self, data_rate, dtype):
+        # Generate fake FEEPS data
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_omni = mms.feeps_omni(feeps_alle)
+
+        result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class FeepsSplitIntegralChTestCase(unittest.TestCase):
+    @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
+    @unpack
+    def test_feeps_split_integral_ch(self, data_rate, dtype):
+        feeps_alle = generate_feeps(
+            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+        )
+        mms.feeps_split_integral_ch(feeps_alle)
+
+
+@ddt
 class ReduceTestCase(unittest.TestCase):
     @data("s^3/cm^6", "s^3/m^6", "s^3/km^6")
     def test_reduce_units(self, value):
@@ -846,3 +830,23 @@ class RotateTensorTestCase(unittest.TestCase):
             generate_ts(64.0, 100, "tensor"), rot_flag, vec, perp
         )
         self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class SpectrToDatasetTestCase(unittest.TestCase):
+    @data(generate_spectr(64.0, 100, 10))
+    def test_spectr_to_dataset_output(self, spectr):
+        result = mms.spectr_to_dataset(spectr)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class VdfOmniTestCase(unittest.TestCase):
+    @data("mean", "sum")
+    def test_vdf_omni_output(self, method):
+        result = mms.vdf_omni(generate_vdf(64.0, 100, (32, 32, 16)), method)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+if __name__ == "__main__":
+    unittest.main()
