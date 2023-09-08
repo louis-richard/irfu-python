@@ -153,13 +153,13 @@ def generate_vdf(
     data = np.random.random((n_pts, *shape))
 
     if energy01:
-        energy0 = np.arange(shape[0])
-        energy1 = np.arange(shape[0]) + 1
+        energy0 = np.linspace(0, shape[0], shape[0], endpoint=False)
+        energy1 = np.linspace(0, shape[0], shape[0], endpoint=False) + 0.5
         esteptable = np.arange(n_pts) % 2
         energy = np.tile(energy0, (n_pts, 1))
         energy[esteptable == 1, :] = np.tile(energy1, (np.sum(esteptable), 1))
     else:
-        energy = np.arange(shape[0])
+        energy = np.linspace(0, shape[0], shape[0], endpoint=False)
         energy = np.tile(energy, (n_pts, 1))
         energy0 = energy[0, :]
         energy1 = energy[1, :]
