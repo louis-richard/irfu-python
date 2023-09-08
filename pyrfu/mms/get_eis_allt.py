@@ -86,6 +86,9 @@ def get_eis_allt(
     # before.
     files = list_files(tint, mms_id, var, data_path=data_path)
 
+    if not files:
+        raise FileNotFoundError("no files for these inputs!!")
+
     file_version = int(files[0].split("_")[-1][1])
     var["version"] = file_version
 
