@@ -15,6 +15,7 @@ import xarray as xr
 from ddt import data, ddt, idata, unpack
 
 from pyrfu import mms, pyrf
+from pyrfu.mms.psd_moments import _moms
 
 from . import (
     generate_data,
@@ -633,17 +634,52 @@ class Psd2DpfTestCase(unittest.TestCase):
 @ddt
 class PsdMomentsTestCase(unittest.TestCase):
     @data(
-        (generate_vdf(64.0, 100, (32, 32, 16)), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16), species="electrons"), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16), energy01=False, species="ions"), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"), {}),
-        (generate_vdf(64.0, 100, (32, 32, 16)), {"energy_range": [1, 1000]}),
-        (generate_vdf(64.0, 100, (32, 32, 16)), {"no_sc_pot": True}),
+        (generate_vdf(64.0, 100, (32, 32, 16)), "brst"),
+        (generate_vdf(64.0, 100, (32, 32, 16), species="electrons"), "brst"),
+        (generate_vdf(64.0, 100, (32, 32, 16), energy01=False), "brst"),
+        (generate_vdf(64.0, 100, (32, 32, 16), energy01=False), "fast"),
+        (generate_vdf(64.0, 100, (32, 32, 16), energy01=True), "brst"),
     )
     @unpack
-    def test_psd_moments_output(self, vdf, options):
+    def test_psd_moments_input(self, vdf, data_rate):
+        delta_theta = 0.5 * np.ones(vdf.data.shape[3])
+        vdf.attrs["delta_theta_minus"] = delta_theta
+        vdf.attrs["delta_theta_plus"] = delta_theta
+
+        delta_phi = 0.5 * np.ones((vdf.data.shape[0], vdf.data.shape[2]))
+        vdf.attrs["delta_phi_minus"] = delta_phi
+        vdf.attrs["delta_phi_plus"] = delta_phi
+        vdf.data.attrs["FIELDNAM"] = f"MMS1 FPI/DIS {data_rate}SkyMap dist"
+        mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"))
+
+    @data({"energy_range": [1, 1000]}, {"no_sc_pot": True})
+    def test_psd_moments_options(self, options):
+        vdf = generate_vdf(64.0, 100, (32, 32, 16))
         vdf.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS brstSkyMap dist"
         mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"), **options)
+
+    @data(
+        (
+            np.random.random((100, 32)),  # energy
+            np.random.random((10000, 32)),  # delta_v
+            random.random(),  # q_e
+            np.random.random(100),  # sc_pot
+            random.random(),  # p_mass
+            random.choice([True, False]),  # flag_inner_electron
+            random.random(),  # w_inner_electron
+            np.random.random((100, 32, 16)),  # phi
+            np.random.random((100, 32, 16)),  # theta
+            np.arange(32),  # int_energies
+            np.random.random((100, 32, 32, 16)),  # vdf
+            np.random.random((100, 32, 16)),  # delta_ang
+        )
+    )
+    def test_moms(self, value):
+        result = _moms.__wrapped__(*value)
+        self.assertIsInstance(result[0], np.ndarray)
+        self.assertIsInstance(result[1], np.ndarray)
+        self.assertIsInstance(result[2], np.ndarray)
+        self.assertIsInstance(result[3], np.ndarray)
 
 
 @ddt

@@ -200,8 +200,6 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     """
 
-    flag_same_e, flag_inner_electron = [False] * 2
-
     # [eV] sc_pot + w_inner_electron for electron moments calculation
     w_inner_electron = 3.5
 
@@ -217,6 +215,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     theta = vdf.theta.data
     particle_type = vdf.attrs["species"]
+    assert particle_type[0].lower() in ["e", "i"], "invalid particle type"
 
     vdf_data = vdf.data.data * 1e12  # In SI units
 
@@ -226,11 +225,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     energy1 = vdf.attrs["energy1"]
     e_tmp = energy1 - energy0
 
-    if is_brst_data:
-        flag_same_e = all(e_tmp) == 0
-    else:
-        assert all(e_tmp) == 0, "Could not identify if data is fast or burst."
-        energy = energy[0, :]
+    flag_same_e = all(e_tmp) == 0
 
     # resample sc_pot to same resolution as particle distributions
     sc_pot = resample(sc_pot, vdf.time).data
@@ -249,10 +244,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
             logging.info("Using partial energy range")
 
-    if "no_sc_pot" in kwargs:
-        if isinstance(kwargs["no_sc_pot"], bool) and not kwargs["no_sc_pot"]:
-            sc_pot = np.zeros(sc_pot.shape)
-            logging.info("Setting spacecraft potential to zero")
+    no_sc_pot = kwargs.get("no_sc_pot", False)
+    if no_sc_pot:
+        sc_pot = np.zeros(sc_pot.shape)
+        logging.info("Setting spacecraft potential to zero")
 
     int_energies = np.arange(
         kwargs.get("en_channels", [0, 32])[0],
@@ -306,12 +301,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
     if particle_type[0] == "e":
         p_mass = constants.electron_mass
         logging.info("Particles are electrons")
-    elif particle_type[0] == "i":
+    else:
         p_mass = constants.proton_mass
         sc_pot *= -1.0
         logging.info("Particles are ions")
-    else:
-        raise ValueError("Could not identify the particle type")
 
     # angle between theta and phi points is 360/32 = 11.25 degrees
     phi = vdf.phi.data
@@ -396,13 +389,13 @@ def psd_moments(vdf, sc_pot, **kwargs):
             delta_v[step_table == 1, :] = delta_v1
 
     else:  # Fast mode energy/speed widths
-        energy_all = np.log10(energy)
+        energy_all = np.log10(energy[0, :])
         temp0 = 2 * energy_all[0] - energy_all[1]
         temp33 = 2 * energy_all[31] - energy_all[30]
         energy_all = np.hstack([temp0, energy_all, temp33])
         diff_en_all = np.diff(energy_all)
-        energy_upper = 10 ** (np.log10(energy) + diff_en_all[1:33] / 4)
-        energy_lower = 10 ** (np.log10(energy) - diff_en_all[0:32] / 4)
+        energy_upper = 10 ** (np.log10(energy[0, :]) + diff_en_all[1:33] / 4)
+        energy_lower = 10 ** (np.log10(energy[0, :]) - diff_en_all[0:32] / 4)
         v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
         v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
         delta_v = (v_upper - v_lower) * 2.0
