@@ -128,11 +128,11 @@ def fk_power_spectrum_4sc(
     times = e[0].time
     use_linear = df is not None
 
-    idx = time_clip(e[0].time, list(tints))
+    # idx = time_clip(e[0].time, list(tints))
 
     # If odd, remove last data point (as is done in irf_wavelet)
-    if len(idx) % 2:
-        idx = idx[:-1]
+    # if len(idx) % 2:
+    #     idx = idx[:-1]
 
     if use_linear:
         cwt_options = {

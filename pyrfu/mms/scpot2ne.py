@@ -93,11 +93,9 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     else:
         i_aspoc = ts_scalar(n_e.time.data, np.zeros(len(n_e)))
 
-    # Check format of electron temperature
-    if t_e.ndim == 3 and t_e.shape[1:] == (3, 3):
-        t_e = trace(ts_tensor_xyz(t_e.time.data, t_e.data)) / 3
-    else:
-        raise IndexError("Te format not recognized")
+    # Check format of electron temperature (tensor)
+    assert t_e.ndim == 3 and t_e.shape[1:] == (3, 3), "te must be timeseries of tensor"
+    t_e = trace(ts_tensor_xyz(t_e.time.data, t_e.data)) / 3
 
     # Define constants
     m_e = constants.electron_mass

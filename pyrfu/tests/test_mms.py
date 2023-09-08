@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import itertools
+import os
 import random
 import string
 
@@ -69,22 +70,80 @@ def generate_eis(f_s, n_pts, data_rate, dtype, lev, specie, data_unit, mms_id):
         np.tile(np.arange(12), n_pts // 12 + 1)[1 : n_pts + 1],
     )
 
+    if dtype.lower() == "extof":
+        energies = np.array(
+            [
+                47.645324,
+                54.928681,
+                62.419454,
+                70.833554,
+                80.315371,
+                91.00098,
+                103.018894,
+                116.554129,
+                131.801143,
+                148.970297,
+                168.295534,
+                190.060874,
+                214.590996,
+                242.245343,
+                273.466432,
+                308.768669,
+                348.73539,
+                394.035378,
+                445.404668,
+                503.597543,
+                569.429005,
+                643.764143,
+                727.683404,
+                822.660211,
+                930.654627,
+            ]
+        )
+    else:
+        energies = np.array(
+            [
+                10.51516,
+                11.509144,
+                12.612351,
+                13.817409,
+                15.111664,
+                16.55435,
+                18.134081,
+                19.857029,
+                21.774935,
+                23.807037,
+                26.021971,
+                28.526016,
+                31.215776,
+                34.228877,
+                37.604494,
+                41.116729,
+                45.29041,
+                51.412368,
+                58.570702,
+                65.951929,
+                75.09237,
+            ]
+        )
+
     eis_dict = {"spin": spin_nums, "sector": sectors}
 
     for i, k in enumerate(keys):
-        eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, 16, "energy")
+        eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, len(energies), "energy")
         eis_dict[f"look_t{i:d}"] = generate_ts(f_s, n_pts, "vector")
 
     # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
     glob_attrs = {
-        "delta_energy_plus": 0.5 * np.ones(16),
-        "delta_energy_minus": 0.5 * np.ones(16),
+        "delta_energy_plus": 0.5 * np.ones(len(energies)),
+        "delta_energy_minus": 0.5 * np.ones(len(energies)),
         "species": specie,
         "randattrs": "".join(random.choice(string.ascii_lowercase) for _ in range(10)),
     }
 
     # Build Dataset
     eis = xr.Dataset(eis_dict, attrs=glob_attrs)
+    eis = eis.assign_coords(energy=energies)
 
     return eis
 
@@ -136,6 +195,15 @@ class CalcEpsilonTestCase(unittest.TestCase):
             generate_ts(64.0, 100, "scalar"),
             **kwargs,
         )
+
+
+class DbInitTestCase(unittest.TestCase):
+    def test_db_init_inpput(self):
+        with self.assertRaises(AssertionError):
+            mms.db_init("bazinga!")
+
+    def test_db_init_output(self):
+        self.assertIsNone(mms.db_init(os.getcwd()))
 
 
 @ddt
@@ -444,6 +512,12 @@ class MakeModelVDFTestCase(unittest.TestCase):
             isotropic,
         )
         self.assertIsInstance(result, xr.Dataset)
+
+
+class HpcaEnergiesTestCase(unittest.TestCase):
+    def test_hpca_energies_output(self):
+        result = mms.hpca_energies()
+        self.assertIsInstance(result, list)
 
 
 @ddt
@@ -760,6 +834,22 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
 
 
 @ddt
+class FkPowerSpectrum4scTestCase(unittest.TestCase):
+    @data((None, None), (random.random(), None), (None, [0.1, 1]))
+    @unpack
+    def test_fk_power_spectrum_4sc(self, df, f_range):
+        e_mms = [generate_ts(64.0, 100, "scalar") for _ in range(4)]
+        r_mms = [generate_ts(64.0, 100, "vector") for _ in range(4)]
+        b_mms = [generate_ts(64.0, 100, "vector") for _ in range(4)]
+        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+
+        result = mms.fk_power_spectrum_4sc(
+            e_mms, r_mms, b_mms, tint, df=df, f_range=f_range
+        )
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
 class ReduceTestCase(unittest.TestCase):
     @data("s^3/cm^6", "s^3/m^6", "s^3/km^6")
     def test_reduce_units(self, value):
@@ -837,6 +927,89 @@ class SpectrToDatasetTestCase(unittest.TestCase):
     @data(generate_spectr(64.0, 100, 10))
     def test_spectr_to_dataset_output(self, spectr):
         result = mms.spectr_to_dataset(spectr)
+        self.assertIsInstance(result, xr.Dataset)
+
+
+@ddt
+class Scpot2NeTestCase(unittest.TestCase):
+    @data(None, generate_ts(64.0, 100, "scalar"))
+    def test_scpot2ne_output(self, i_aspoc):
+        result = mms.scpot2ne(
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, "tensor"),
+            i_aspoc,
+        )
+        self.assertIsInstance(result[0], xr.DataArray)
+        self.assertIsInstance(result[1], float)
+        self.assertIsInstance(result[2], float)
+        self.assertIsInstance(result[3], float)
+        self.assertIsInstance(result[4], float)
+
+
+@ddt
+class TokenizeTestCase(unittest.TestCase):
+    @idata(
+        itertools.product(
+            mms.tokenize.__globals__["PARAMS_SCALARS"],
+            mms.tokenize.__globals__["INSTRUMENTS"],
+            mms.tokenize.__globals__["SAMPLING_RATES"],
+            mms.tokenize.__globals__["DATA_LVLS"],
+        )
+    )
+    def test_tokenize_scalar(self, var):
+        result = mms.tokenize("_".join(var))
+        self.assertIsInstance(result, dict)
+        self.assertListEqual(
+            list(result.keys()), ["param", "to", "cs", "inst", "tmmode", "lev"]
+        )
+        self.assertEqual(result["to"], 0)
+
+    @idata(
+        itertools.product(
+            mms.tokenize.__globals__["PARAMS_VECTORS"],
+            mms.tokenize.__globals__["COORDINATE_SYSTEMS"],
+            mms.tokenize.__globals__["INSTRUMENTS"],
+            mms.tokenize.__globals__["SAMPLING_RATES"],
+            mms.tokenize.__globals__["DATA_LVLS"],
+        )
+    )
+    def test_tokenize_vector(self, var):
+        result = mms.tokenize("_".join(var))
+        self.assertIsInstance(result, dict)
+        self.assertListEqual(
+            list(result.keys()), ["param", "to", "cs", "inst", "tmmode", "lev"]
+        )
+        self.assertEqual(result["to"], 1)
+
+    @idata(
+        itertools.product(
+            mms.tokenize.__globals__["PARAMS_TENSORS"],
+            mms.tokenize.__globals__["COORDINATE_SYSTEMS"],
+            mms.tokenize.__globals__["INSTRUMENTS"],
+            mms.tokenize.__globals__["SAMPLING_RATES"],
+            mms.tokenize.__globals__["DATA_LVLS"],
+        )
+    )
+    def test_tokenize_tensor(self, var):
+        result = mms.tokenize("_".join(var))
+        self.assertIsInstance(result, dict)
+        self.assertListEqual(
+            list(result.keys()), ["param", "to", "cs", "inst", "tmmode", "lev"]
+        )
+
+
+@ddt
+class VdfElimTestCase(unittest.TestCase):
+    @data(
+        random.randint(0, 15),
+        random.randint(0, 15) + 0.4,
+        [random.randint(0, 15), random.randint(16, 31)],
+    )
+    def test_vdf_elim_output(self, e_int):
+        result = mms.vdf_elim(
+            generate_vdf(64.0, 42, [32, 32, 16], energy01=True), e_int
+        )
         self.assertIsInstance(result, xr.Dataset)
 
 

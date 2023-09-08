@@ -54,8 +54,6 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     """
 
-    flag_same_e, flag_dphi, flag_dtheta = False, False, False
-
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
 
@@ -133,12 +131,6 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     theta_mat = np.tile(theta_tr, (len(int_energies), phi_tr.shape[1], 1, 1))
     theta_mat = np.transpose(theta_mat, [2, 0, 1, 3])
-
-    if flag_dphi and flag_dtheta:
-        delta_ang = np.tile(
-            delta_ang,
-            (len(vdf.time.data), len(int_energies), 1, 1),
-        )
 
     m_mat = np.sin(np.deg2rad(theta_mat)) * delta_ang
 

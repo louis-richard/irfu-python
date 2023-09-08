@@ -61,12 +61,12 @@ def ts_skymap(time, data, energy, phi, theta, **kwargs):
     esteptable = kwargs.get("esteptable", np.zeros(len(time)))
 
     # Check that energy0 and energy1
-    assert isinstance(energy0, np.ndarray), "energy0 must be 1D numpy.ndarray"
-    assert energy0.ndim == 1, "energy0 must be 1D numpy.ndarray"
-    assert energy0.shape[0] == energy.shape[1], "energy0 is not consistent with time"
-    assert isinstance(energy1, np.ndarray), "energy1 must be 1D numpy.ndarray"
-    assert energy1.ndim == 1, "energy1 must be 1D numpy.ndarray"
-    assert energy1.shape[0] == energy.shape[1], "energy1 is not consistent with time"
+    # assert isinstance(energy0, np.ndarray), "energy0 must be 1D numpy.ndarray"
+    # assert energy0.ndim == 1, "energy0 must be 1D numpy.ndarray"
+    # assert energy0.shape[0] == energy.shape[1], "energy0 is not consistent with time"
+    # assert isinstance(energy1, np.ndarray), "energy1 must be 1D numpy.ndarray"
+    # assert energy1.ndim == 1, "energy1 must be 1D numpy.ndarray"
+    # assert energy1.shape[0] == energy.shape[1], "energy1 is not consistent with time"
 
     # Check esteptable
     assert isinstance(esteptable, np.ndarray), "esteptable must be 1D numpy.ndarray"

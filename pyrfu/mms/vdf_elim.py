@@ -48,6 +48,7 @@ def vdf_elim(vdf, e_int):
     n_etables = unique_etables.shape[0]
 
     e_int = list(np.atleast_1d(e_int))
+    e_int.sort()
 
     # energy interval
     if len(e_int) == 2:
@@ -67,6 +68,8 @@ def vdf_elim(vdf, e_int):
             "Effective eint = [%(e_min)5.2f, %(e_max)5.2f]",
             {"e_min": e_min, "e_max": e_max},
         )
+        energies = energy.data[:, e_levels]
+        data = vdf.data.data[:, e_levels, ...]
 
     else:
         # pick closest energy level
@@ -82,6 +85,10 @@ def vdf_elim(vdf, e_int):
             "Effective energies alternate in time between %(e0)5.2f and %(e1)5.2f",
             {"e0": energy.data[0, e_levels], "e1": energy.data[1, e_levels]},
         )
+        energies = energy.data[:, e_levels]
+        energies = energies[:, np.newaxis]
+        data = vdf.data.data[:, e_levels, ...]
+        data = data[:, np.newaxis, ...]
 
     # Data attributes
     data_attrs = vdf.data.attrs
@@ -99,10 +106,10 @@ def vdf_elim(vdf, e_int):
 
     vdf_e_clipped = ts_skymap(
         vdf.time.data,
-        vdf.data.data[:, e_levels, ...],
-        energy=energy.data[:, e_levels],
-        phi=vdf.phi.data,
-        theta=vdf.theta.data,
+        data,
+        energies,
+        vdf.phi.data,
+        vdf.theta.data,
         energy0=energy_0,
         energy1=energy_1,
         esteptable=esteptable,

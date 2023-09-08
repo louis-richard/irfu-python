@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -12,7 +11,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-all_params_scalars = [
+ALL_PARAMS_SCALARS = [
     "ni",
     "nbgi",
     "pbgi",
@@ -54,7 +53,7 @@ all_params_scalars = [
     "epsd",
 ]
 
-all_params_vectors = [
+ALL_PARAMS_VECTORS = [
     "r",
     "sti",
     "vi",
@@ -76,7 +75,7 @@ all_params_vectors = [
     "es34",
 ]
 
-all_params_tensors = [
+ALL_PARAMS_TENSORS = [
     "pi",
     "partpi",
     "pe",
@@ -87,7 +86,7 @@ all_params_tensors = [
     "partte",
 ]
 
-hpca_params_scalars = [
+HPCA_PARAMS_SCALARS = [
     "nhplus",
     "nheplus",
     "nheplusplus",
@@ -106,7 +105,7 @@ hpca_params_scalars = [
     "azimuth",
 ]
 
-hpca_params_tensors = [
+HPCA_PARAMS_TENSORS = [
     "vhplus",
     "vheplus",
     "vheplusplus",
@@ -121,7 +120,24 @@ hpca_params_tensors = [
     "toplus",
 ]
 
-instruments = [
+PARAMS_SCALARS = [*ALL_PARAMS_SCALARS, *HPCA_PARAMS_SCALARS]
+PARAMS_VECTORS = [*ALL_PARAMS_VECTORS]
+PARAMS_TENSORS = [*ALL_PARAMS_TENSORS, *HPCA_PARAMS_TENSORS]
+ALL_PARAMETERS = [*PARAMS_SCALARS, *PARAMS_VECTORS, *PARAMS_TENSORS]
+
+
+COORDINATE_SYSTEMS = [
+    "gse",
+    "gsm",
+    "dsl",
+    "dbcs",
+    "dmpa",
+    "ssc",
+    "bcs",
+    "par",
+]
+
+INSTRUMENTS = [
     "mec",
     "fpi",
     "edp",
@@ -135,31 +151,22 @@ instruments = [
     "dsp",
 ]
 
-coordinate_systems = [
-    "gse",
-    "gsm",
-    "dsl",
-    "dbcs",
-    "dmpa",
-    "ssc",
-    "bcs",
-    "par",
-]
 
-data_lvls = ["ql", "sitl", "l1b", "l2a", "l2pre", "l2", "l3"]
+SAMPLING_RATES = ["brst", "fast", "slow", "srvy"]
+
+DATA_LVLS = ["ql", "sitl", "l1b", "l2a", "l2pre", "l2", "l3"]
 
 
 def _tensor_order(splitted_key):
-    param_low = splitted_key[0].lower()
+    param = splitted_key[0].lower()
+    assert param in ALL_PARAMETERS, f"invalid PARAM : {param}"
 
-    if param_low in all_params_scalars or param_low in hpca_params_scalars:
+    if param in PARAMS_SCALARS:
         tensor_order = 0
-    elif param_low in all_params_vectors or param_low in hpca_params_tensors:
+    elif param in ALL_PARAMS_VECTORS:
         tensor_order = 1
-    elif param_low in all_params_tensors:
-        tensor_order = 2
     else:
-        raise ValueError(f"invalid PARAM : {param_low}")
+        tensor_order = 2
 
     return tensor_order
 
@@ -186,43 +193,35 @@ def tokenize(var_str):
     """
 
     splitted_key = var_str.split("_")
+    assert len(splitted_key) == 4 or len(splitted_key) == 5
 
     tensor_order = _tensor_order(splitted_key)
 
-    coordinate_system = []
-    idx = 0
-
-    if tensor_order > 0:
-        coordinate_system = splitted_key[idx + 1]
-        assert coordinate_system in coordinate_systems, "invalid coord. sys."
-        idx += 1
-
-    instrument = splitted_key[idx + 1]
-    assert instrument in instruments, "invalid INSTRUMENT"
-
-    idx += 1
-
-    tmmode = splitted_key[idx + 1]
-    idx += 1
-
-    if tmmode not in ["brst", "fast", "slow", "srvy"]:
-        tmmode = "fast"
-        idx -= 1
-        warnings.warn("assuming TM_MODE = FAST", UserWarning)
-
-    if len(splitted_key) == idx + 1:
-        data_lvl = "l2"  # default
+    if len(splitted_key) == 5 and tensor_order > 0:
+        parameter, coordinates_system, instrument, data_rate, data_level = splitted_key
+        assert coordinates_system in COORDINATE_SYSTEMS, "invalid coord. sys."
     else:
-        data_lvl = splitted_key[idx + 1]
-        assert data_lvl in data_lvls, "invalid DATA_LEVEL level"
+        parameter, instrument, data_rate, data_level = splitted_key
+        coordinates_system = []
+
+    assert parameter in ALL_PARAMETERS, "invalid parameter"
+
+    # Instrument
+    assert instrument in INSTRUMENTS, "invalid INSTRUMENT"
+
+    # Sampling rate
+    assert data_rate in SAMPLING_RATES, "invalid sampling mode"
+
+    # Data level
+    assert data_level in DATA_LVLS, "invalid DATA_LEVEL level"
 
     res = {
         "param": splitted_key[0],
         "to": tensor_order,
-        "cs": coordinate_system,
+        "cs": coordinates_system,
         "inst": instrument,
-        "tmmode": tmmode,
-        "lev": data_lvl,
+        "tmmode": data_rate,
+        "lev": data_level,
     }
 
     return res
