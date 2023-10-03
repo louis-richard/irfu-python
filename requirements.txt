@@ -70,7 +70,7 @@ tqdm==4.65.0
     # via pyrfu (pyproject.toml)
 tzdata==2023.3
     # via pandas
-urllib3==2.0.3
+urllib3==2.0.6
     # via requests
 xarray>=2023.1.0
     # via pyrfu (pyproject.toml)
