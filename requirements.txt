@@ -47,7 +47,7 @@ pandas==2.0.2
     # via
     #   pyrfu (pyproject.toml)
     #   xarray
-pillow==9.5.0
+pillow==10.0.1
     # via matplotlib
 pyparsing==3.0.9
     # via matplotlib
