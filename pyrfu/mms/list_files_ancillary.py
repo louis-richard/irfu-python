@@ -23,12 +23,13 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.11"
 __status__ = "Prototype"
 
 
 def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
-    r"""Loads ancillary data.
+    r"""Find available ancillary files in the data directories for the target product
+    type.
 
     Parameters
     ----------
@@ -43,10 +44,11 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
 
     Returns
     -------
-    files_names : list
+    file_names : list
         Ancillary files in interval.
 
     """
+
     # Check path
     if not data_path:
         pkg_path = os.path.dirname(os.path.abspath(__file__))
@@ -129,7 +131,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
         else:
             out_files.append(versions[0])
 
-    files_names = list(set(out_files))
-    files_names.sort()
+    file_names = list(set(out_files))
+    file_names.sort()
 
-    return files_names
+    return file_names

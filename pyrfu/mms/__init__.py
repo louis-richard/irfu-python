@@ -69,6 +69,8 @@ from .hpca_spin_sum import hpca_spin_sum
 from .lh_wave_analysis import lh_wave_analysis
 from .list_files import list_files
 from .list_files_ancillary import list_files_ancillary
+from .list_files_ancillary_sdc import list_files_ancillary_sdc
+from .list_files_sdc import list_files_sdc
 from .load_ancillary import load_ancillary
 from .load_brst_segments import load_brst_segments
 from .make_model_kappa import make_model_kappa
@@ -163,7 +165,9 @@ __all__ = [
     "hpca_spin_sum",
     "lh_wave_analysis",
     "list_files",
+    "list_files_sdc",
     "list_files_ancillary",
+    "list_files_ancillary_sdc",
     "load_ancillary",
     "load_brst_segments",
     "make_model_kappa",

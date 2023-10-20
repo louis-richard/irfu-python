@@ -22,13 +22,13 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.11"
 __status__ = "Prototype"
 
 
 def list_files(tint, mms_id, var, data_path: str = ""):
-    """Find files in the data directories of the target instrument, data type,
-    data rate, mms_id and level during the target time interval.
+    r"""Find available files in the data directories of the target instrument,
+    data type, data rate, mms_id and level during the target time interval.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
 
     Returns
     -------
-    files : list
+    file_names : list
         List of files corresponding to the parameters in the selected time
         interval
 
@@ -218,4 +218,6 @@ def list_files(tint, mms_id, var, data_path: str = ""):
         if file["file_name"] in file_names:
             local_files.append(file["full_name"])
 
-    return sorted(local_files)
+    file_names = sorted(local_files)
+
+    return file_names

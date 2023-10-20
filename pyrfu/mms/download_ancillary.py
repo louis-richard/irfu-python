@@ -6,15 +6,16 @@ import json
 import logging
 import os
 import warnings
-from datetime import datetime, timedelta
 from shutil import copy, copyfileobj
 from tempfile import NamedTemporaryFile
 
 # 3rd party imports
-import numpy as np
-import pkg_resources
-import requests
 import tqdm
+
+from .list_files_ancillary_sdc import list_files_ancillary_sdc
+
+# Local imports
+from .list_files_sdc import _login_lasp
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -34,42 +35,7 @@ LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 
 
-def _login_lasp(user: str, password: str, lasp_url: str):
-    r"""Login to LASP colorado."""
-
-    session = requests.Session()
-    session.auth = (user, password)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ResourceWarning)
-        _ = session.post("https://lasp.colorado.edu", verify=True, timeout=5)
-        testget = session.get(lasp_url, verify=True, timeout=5)
-
-    assert testget != "401", "Login failed!!"
-
-    return session, user
-
-
-def _construct_url(tint, mms_id, product, lasp_url):
-    r"""Construct the url that return a json-formatted string of science
-    filenames that are available for download according to:
-    https://lasp.colorado.edu/mms/sdc/team/about/how-to/
-    """
-
-    tint = np.array(tint).astype("<M8[ns]").astype(str)
-    tint = [datetime.strptime(t_[:-3], "%Y-%m-%dT%H:%M:%S.%f") for t_ in tint]
-    start_date = (tint[0] - timedelta(days=1)).strftime("%Y-%m-%d")
-    end_date = (tint[1] + timedelta(days=1)).strftime("%Y-%m-%d")
-
-    url = f"{lasp_url}/file_info/ancillary"
-    url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
-
-    url = f"{url}&product={product}"
-
-    return url
-
-
-def _make_path(file, product, mms_id, lasp_url, data_path: str = ""):
+def _make_path_local(file, product, mms_id, data_path: str = ""):
     r"""Construct path of the data file using the standard convention."""
 
     if not data_path:
@@ -95,9 +61,7 @@ def _make_path(file, product, mms_id, lasp_url, data_path: str = ""):
     out_path = os.path.join(*path_list)
     out_file = os.path.join(*path_list, file["file_name"])
 
-    download_url = f"{lasp_url}download/ancillary?file={file['file_name']}"
-
-    return out_path, out_file, download_url
+    return out_path, out_file
 
 
 def download_ancillary(
@@ -130,44 +94,26 @@ def download_ancillary(
 
     """
 
-    if not login:
-        lasp_url = LASP_PUBL
-    else:
-        lasp_url = LASP_SITL
+    sdc_session, headers, _ = _login_lasp(login, password)
 
-    sdc_session, _ = _login_lasp(login, password, lasp_url)
-
-    headers = {}
-    try:
-        release_version = pkg_resources.get_distribution("pyrfu").version
-    except pkg_resources.DistributionNotFound:
-        release_version = "bleeding edge"
-
-    headers["User-Agent"] = f"pyrfu {release_version}"
-
-    url = _construct_url(tint, mms_id, product, lasp_url)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ResourceWarning)
-        http_json = sdc_session.get(url, verify=True, headers=headers).json()
-
-    files_in_interval = http_json["files"]
+    files_in_interval = list_files_ancillary_sdc(tint, mms_id, product, login, password)
 
     for file in files_in_interval:
-        out_path, out_file, dwl_url = _make_path(
+        out_path, out_file = _make_path_local(
             file,
             product,
             mms_id,
-            lasp_url,
             data_path,
         )
 
-        logging.info("Downloading %s from %s...", os.path.basename(out_file), dwl_url)
+        logging.info(
+            "Downloading %s from %s...", os.path.basename(out_file), file["url"]
+        )
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
             fsrc = sdc_session.get(
-                dwl_url,
+                file["url"],
                 stream=True,
                 verify=True,
                 headers=headers,

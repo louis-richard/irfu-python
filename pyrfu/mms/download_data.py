@@ -5,22 +5,17 @@
 import json
 import logging
 import os
-import re
 import warnings
-from bisect import bisect_left
-from datetime import datetime, timedelta
 from shutil import copy, copyfileobj
 from tempfile import NamedTemporaryFile
 
 # 3rd party imports
-import numpy as np
-import pkg_resources
-import requests
 import tqdm
 from dateutil.parser import parse
 
 # Local imports
-from .tokenize import tokenize
+from .get_data import _var_and_cdf_name
+from .list_files_sdc import _login_lasp, list_files_sdc
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -36,93 +31,8 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
-LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 
-
-def _login_lasp(user: str, password: str, lasp_url: str):
-    r"""Login to LASP colorado."""
-
-    session = requests.Session()
-    session.auth = (user, password)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ResourceWarning)
-        _ = session.post("https://lasp.colorado.edu", verify=True, timeout=5)
-        testget = session.get(lasp_url, verify=True, timeout=5)
-
-    assert testget != "401", "Login failed!!"
-
-    return session, user
-
-
-def _construct_url(tint, mms_id, var, lasp_url):
-    r"""Construct the url that return a json-formatted string of science
-    filenames that are available for download according to:
-    https://lasp.colorado.edu/mms/sdc/team/about/how-to/
-    """
-
-    tint = np.array(tint).astype("<M8[ns]").astype(str)
-    tint = [datetime.strptime(t_[:-3], "%Y-%m-%dT%H:%M:%S.%f") for t_ in tint]
-    start_date = tint[0].strftime("%Y-%m-%d")
-    end_date = (tint[1] - timedelta(seconds=1)).strftime("%Y-%m-%d-%H-%M-%S")
-
-    url = f"{lasp_url}/file_info/science"
-    url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
-
-    url = f"{url}&instrument_id={var['inst']}"
-    url = f"{url}&data_rate_mode={var['tmmode']}"
-    url = f"{url}&data_level={var['lev']}"
-
-    if var["dtype"]:
-        url = f"{url}&descriptor={var['dtype']}"
-
-    return url
-
-
-def _files_in_interval(in_files, trange):
-    r"""Filters the file list returned by the SDC to the requested time
-    range. This filter is purposefully liberal, it regularly grabs an extra
-    file due to special cases
-    """
-
-    file_name = r"mms.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
-
-    file_times = []
-
-    regex = re.compile(file_name)
-
-    for file in in_files:
-        matches = regex.match(file["file_name"])
-        if matches:
-            file_times.append(
-                (
-                    file["file_name"],
-                    parse(matches.groups()[0]).timestamp(),
-                    file["timetag"],
-                    file["file_size"],
-                ),
-            )
-
-    # sort in time
-    sorted_files = sorted(file_times, key=lambda x: x[1])
-
-    times = [t[1] for t in sorted_files]
-
-    idx_min = bisect_left(times, parse(trange[0]).timestamp())
-
-    def mkout(f):
-        return {"file_name": f[0], "timetag": f[2], "size": f[3]}
-
-    if idx_min == 0:
-        files = list(map(mkout, sorted_files[idx_min:]))
-    else:
-        files = list(map(mkout, sorted_files[idx_min - 1 :]))
-
-    return files
-
-
-def _make_path(file, var, mms_id, lasp_url, data_path: str = ""):
+def _make_path_local(file, var, mms_id, data_path: str = ""):
     r"""Construct path of the data file using the standard convention."""
 
     file_date = parse(file["timetag"])
@@ -156,9 +66,7 @@ def _make_path(file, var, mms_id, lasp_url, data_path: str = ""):
     out_path = os.path.join(*path_list)
     out_file = os.path.join(*path_list, file["file_name"])
 
-    download_url = f"{lasp_url}download/science?file={file['file_name']}"
-
-    return out_path, out_file, download_url
+    return out_path, out_file
 
 
 def download_data(
@@ -186,49 +94,23 @@ def download_data(
 
     """
 
-    if not login:
-        lasp_url = LASP_PUBL
-    else:
-        lasp_url = LASP_SITL
+    sdc_session, headers, _ = _login_lasp(login, password)
 
-    sdc_session, _ = _login_lasp(login, password, lasp_url)
+    var, _ = _var_and_cdf_name(var_str, mms_id)
 
-    headers = {}
-    try:
-        release_version = pkg_resources.get_distribution("pyrfu").version
-    except pkg_resources.DistributionNotFound:
-        release_version = "bleeding edge"
-
-    headers["User-Agent"] = f"pyrfu {release_version}"
-
-    var = tokenize(var_str)
-
-    root_path = os.path.dirname(os.path.abspath(__file__))
-
-    with open(
-        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf-8"
-    ) as json_file:
-        keys_ = json.load(json_file)
-
-    var["dtype"] = keys_[var["inst"]][var_str.lower()]["dtype"]
-
-    url = _construct_url(tint, mms_id, var, lasp_url)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ResourceWarning)
-        http_json = sdc_session.get(url, verify=True, headers=headers).json()
-
-    files_in_interval = _files_in_interval(http_json["files"], tint)
+    files_in_interval = list_files_sdc(tint, mms_id, var, login, password)
 
     for file in files_in_interval:
-        out_path, out_file, dwl_url = _make_path(file, var, mms_id, lasp_url, data_path)
+        out_path, out_file = _make_path_local(file, var, mms_id, data_path)
 
-        logging.info("Downloading %s from %s...", os.path.basename(out_file), dwl_url)
+        logging.info(
+            "Downloading %s from %s...", os.path.basename(out_file), file["url"]
+        )
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
             with sdc_session.get(
-                dwl_url,
+                file["url"],
                 stream=True,
                 verify=True,
                 headers=headers,
