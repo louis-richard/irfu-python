@@ -60,9 +60,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     # Clip the distribution. If no time interval provided use the entire
     # time series.
-    vdf_time = vdf.time.copy()
+    vdf_time = vdf.time
     tint = kwargs.get("tint", list(datetime642iso8601(vdf_time.data[[0, -1]])))
-    vdf_time = time_clip(vdf_time, tint).copy()
+    vdf_time = time_clip(vdf_time, tint)
     vdf_energy = time_clip(vdf.energy, tint).copy()
     delta_energy_minu = time_clip(delta_energy_minu, tint)
     vdf_phi = time_clip(vdf.phi, tint).copy()
