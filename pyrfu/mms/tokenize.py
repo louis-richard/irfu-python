@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
+
 # Built-in imports
+import os
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -215,6 +218,13 @@ def tokenize(var_str):
     # Data level
     assert data_level in DATA_LVLS, "invalid DATA_LEVEL level"
 
+    root_path = os.path.dirname(os.path.abspath(__file__))
+
+    with open(
+        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf-8"
+    ) as json_file:
+        keys_ = json.load(json_file)
+
     res = {
         "param": splitted_key[0],
         "to": tensor_order,
@@ -222,6 +232,8 @@ def tokenize(var_str):
         "inst": instrument,
         "tmmode": data_rate,
         "lev": data_level,
+        "dtype": keys_[instrument][var_str.lower()]["dtype"],
+        "cdf_name": keys_[instrument][var_str.lower()]["cdf_name"],
     }
 
     return res

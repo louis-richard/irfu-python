@@ -92,14 +92,6 @@
             "dtype": "dce2d",
             "cdf_name": "edp_dce_xyz_dsl"
         },
-        "e2d_dsl_edp_l2pre": {
-            "dtype": "dce2d",
-            "cdf_name": "edp_dce_dsl_fast_l2pre"
-        },
-        "e_dsl_edp_l2pre": {
-            "dtype": "dce",
-            "cdf_name": "edp_dce_dsl_fast_l2pre"
-        },
         "e_dsl_edp_fast_l2pre": {
             "dtype": "dce",
             "cdf_name": "edp_dce_dsl_fast_l2pre"
@@ -238,11 +230,11 @@
             "dtype": "des-moms",
             "cdf_name": "des_numberdensity_fast"
         },
-        "ni_fpi_ql": {
+        "ni_fpi_fast_ql": {
             "dtype": "dis",
             "cdf_name": "dis_numberdensity_fast"
         },
-        "ne_fpi_ql": {
+        "ne_fpi_fast_ql": {
             "dtype": "des",
             "cdf_name": "des_numberdensity_fast"
         },
@@ -260,7 +252,7 @@
         },
         "sti_dbcs_fpi_fast_l2": {
             "dtype": "dis-moms",
-            "cdf_name": "dis_bulkv_spin_dbcs_fast"
+            "cdf_name": "dis_bulkv_spintone_dbcs_fast"
         },
         "ve_dbcs_fpi_fast_l2": {
             "dtype": "des-moms",
@@ -318,19 +310,19 @@
             "dtype": "des-moms",
             "cdf_name": "des_bulkv_spintone_gse_brst"
         },
-        "vi_dbcs_fpi_ql": {
+        "vi_dbcs_fpi_fast_ql": {
             "dtype": "dis",
             "cdf_name": "dis_bulkv_dbcs_fast"
         },
-        "ve_dbcs_fpi_ql": {
+        "ve_dbcs_fpi_fast_ql": {
             "dtype": "des",
             "cdf_name": "des_bulkv_dbcs_fast"
         },
-        "vi_gse_fpi_ql": {
+        "vi_gse_fpi_fast_ql": {
             "dtype": "dis",
             "cdf_name": "dis_bulkv_gse_fast"
         },
-        "ve_gse_fpi_ql": {
+        "ve_gse_fpi_fast_ql": {
             "dtype": "des",
             "cdf_name": "des_bulkv_gse_fast"
         },
@@ -430,11 +422,11 @@
             "dtype": "des-moms",
             "cdf_name": "des_temptensor_gse_fast"
         },
-        "te_gse_fpi_ql": {
+        "te_gse_fpi_fast_ql": {
             "dtype": "des",
             "cdf_name": "des_temptensor_gse_fast"
         },
-        "te_dbcs_fpi_ql": {
+        "te_dbcs_fpi_fast_ql": {
             "dtype": "des",
             "cdf_name": "des_temptensor_dbcs_fast"
         },
@@ -518,19 +510,19 @@
             "dtype": "des-partmoms",
             "cdf_name": "des_prestensor_part_gse_brst"
         },
-        "pi_dbcs_fpi_ql": {
+        "pi_dbcs_fpi_fast_ql": {
             "dtype": "dis",
             "cdf_name": "dis_prestensor_dbcs_fast"
         },
-        "pe_dbcs_fpi_ql": {
+        "pe_dbcs_fpi_fast_ql": {
             "dtype": "des",
             "cdf_name": "des_prestensor_dbcs_fast"
         },
-        "pi_gse_fpi_ql": {
+        "pi_gse_fpi_fast_ql": {
             "dtype": "dis",
             "cdf_name": "dis_prestensor_gse_fast"
         },
-        "pe_gse_fpi_ql": {
+        "pe_gse_fpi_fast_ql": {
             "dtype": "des",
             "cdf_name": "des_prestensor_gse_fast"
         },
