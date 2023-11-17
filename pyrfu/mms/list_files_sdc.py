@@ -8,7 +8,6 @@ from bisect import bisect_left
 from datetime import datetime, timedelta
 
 # 3rd party imports
-import importlib_metadata
 import numpy as np
 import requests
 from dateutil.parser import parse
@@ -42,7 +41,7 @@ def _login_lasp(user: str = "", password: str = ""):
 
     assert testget != "401", "Login failed!!"
 
-    headers = {"User-Agent": f"pyrfu {importlib_metadata.version('pyrfu')}"}
+    headers = {"User-Agent": "pyrfu"}
 
     return session, headers, lasp_url
 

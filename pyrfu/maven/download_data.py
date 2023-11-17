@@ -11,7 +11,6 @@ from shutil import copy, copyfileobj
 from tempfile import NamedTemporaryFile
 
 # 3rd party imports
-import importlib_metadata
 import numpy as np
 import requests
 import tqdm
@@ -142,7 +141,7 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
 
     sdc_session = _login_lasp(login, password)
 
-    headers = {"User-Agent": f"pyrfu {importlib_metadata.version('pyrfu')}"}
+    headers = {"User-Agent": "pyrfu"}
 
     url = _construct_url(tint, var, lasp_url)
 
