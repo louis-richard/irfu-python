@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from pyrfu import dispersion, lp, mms, models, plot, pyrf
+from pyrfu import dispersion, lp, maven, mms, models, plot, pyrf
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -10,4 +10,4 @@ __license__ = "MIT"
 __version__ = "2.4.9"
 __status__ = "Prototype"
 
-__all__ = ["dispersion", "lp", "mms", "models", "plot", "pyrf"]
+__all__ = ["dispersion", "lp", "maven", "mms", "models", "plot", "pyrf"]
