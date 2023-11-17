@@ -27,7 +27,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -35,7 +34,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
+    "cdflib>=1.0.4",
     "geopack>=1.0.9",
+    "importlib-metadata>=6.8.0",
     "matplotlib>=3.5.2",
     "numba>=0.54.1",
     "numpy>=1.20.3,<1.25.0",
@@ -47,7 +48,7 @@ dependencies = [
     "tqdm>=4.62.3",
     "xarray>=0.20.1",
 ]
-requires-python = ">=3.8,<3.12"
+requires-python = ">=3.9,<3.12"
 
 [project.optional-dependencies]
 dev = ["black", "pip-tools"]
