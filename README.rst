@@ -47,14 +47,15 @@ pyRFU
 .. |Readthedocs| image:: https://img.shields.io/readthedocs/pyrfu?logo=read-the-docs&color=blueviolet
 .. _Readthedocs: https://pyrfu.readthedocs.io/en/latest/
 
-.. |Gitter| image:: https://img.shields.io/gitter/room/louis-richard/pyrfu?logo=gitter&color=orange
-.. _Gitter: https://gitter.im/pyrfu
+.. |Matrix| image:: https://matrix.to/img/matrix-badge.svg
+.. _Matrix: https://matrix.to/#/#pyrfu:matrix.org
 
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
 .. _Black: https://github.com/psf/black
 
 |License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |CI|_
-|PyLintB|_ |CodeQL|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Gitter|_ |Black|_
+|PyLintB|_ |CodeQL|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Matrix|_
+|Black|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the Magnetospheric MultiScale (MMS) mission.
 
