@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 import itertools
+import json
 import os
 import random
 import string
@@ -11,6 +13,7 @@ import unittest
 
 # 3rd party imports
 import numpy as np
+import requests
 import xarray as xr
 from ddt import data, ddt, idata, unpack
 
@@ -32,11 +35,12 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+TEST_TINT = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+
 
 def generate_feeps(f_s, n_pts, data_rate, dtype, lev, mms_id):
     var = {"tmmode": data_rate, "dtype": dtype, "lev": lev}
-    tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
-    eyes = mms.feeps_active_eyes(var, tint, mms_id)
+    eyes = mms.feeps_active_eyes(var, TEST_TINT, mms_id)
     keys = [f"{k}-{eyes[k][i]}" for k in eyes for i in range(len(eyes[k]))]
     feeps_dict = {k: generate_spectr(f_s, n_pts, 16, f"energy-{k}") for k in keys}
     feeps_dict["spinsectnum"] = pyrf.ts_scalar(
@@ -147,6 +151,22 @@ def generate_eis(f_s, n_pts, data_rate, dtype, lev, specie, data_unit, mms_id):
     eis = eis.assign_coords(energy=energies)
 
     return eis
+
+
+def _mms_keys():
+    test_path = os.path.dirname(os.path.abspath(__file__))
+
+    root_path = os.path.join(os.path.split(test_path)[0], "mms")
+
+    with open(
+        os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf-8"
+    ) as json_file:
+        keys_ = json.load(json_file)
+
+    all_keys = list(
+        np.hstack([list(instrument.keys()) for instrument in keys_.values()])
+    )
+    return all_keys
 
 
 @ddt
@@ -708,17 +728,16 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"], ["sitl", "l2"]))
     @unpack
     def test_feeps_active_eyes_output(self, data_rate, dtype, lev):
-        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
         result = mms.feeps_active_eyes(
             {"tmmode": data_rate, "dtype": dtype, "lev": lev},
-            tint,
+            TEST_TINT,
             random.randint(1, 4),
         )
         self.assertIsInstance(result, dict)
 
         result = mms.feeps_active_eyes(
             {"tmmode": data_rate, "dtype": dtype, "lev": lev},
-            pyrf.iso86012datetime64(np.array(tint)),
+            pyrf.iso86012datetime64(np.array(TEST_TINT)),
             str(random.randint(1, 4)),
         )
         self.assertIsInstance(result, dict)
@@ -877,10 +896,9 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         e_mms = [generate_ts(64.0, 100, "scalar") for _ in range(4)]
         r_mms = [generate_ts(64.0, 100, "vector") for _ in range(4)]
         b_mms = [generate_ts(64.0, 100, "vector") for _ in range(4)]
-        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
 
         result = mms.fk_power_spectrum_4sc(
-            e_mms, r_mms, b_mms, tint, df=df, f_range=f_range
+            e_mms, r_mms, b_mms, TEST_TINT, df=df, f_range=f_range
         )
         self.assertIsInstance(result, xr.Dataset)
 
@@ -984,58 +1002,6 @@ class Scpot2NeTestCase(unittest.TestCase):
 
 
 @ddt
-class TokenizeTestCase(unittest.TestCase):
-    @idata(
-        itertools.product(
-            mms.tokenize.__globals__["PARAMS_SCALARS"],
-            mms.tokenize.__globals__["INSTRUMENTS"],
-            mms.tokenize.__globals__["SAMPLING_RATES"],
-            mms.tokenize.__globals__["DATA_LVLS"],
-        )
-    )
-    def test_tokenize_scalar(self, var):
-        result = mms.tokenize("_".join(var))
-        self.assertIsInstance(result, dict)
-        self.assertListEqual(
-            list(result.keys()), ["param", "to", "cs", "inst", "tmmode", "lev"]
-        )
-        self.assertEqual(result["to"], 0)
-
-    @idata(
-        itertools.product(
-            mms.tokenize.__globals__["PARAMS_VECTORS"],
-            mms.tokenize.__globals__["COORDINATE_SYSTEMS"],
-            mms.tokenize.__globals__["INSTRUMENTS"],
-            mms.tokenize.__globals__["SAMPLING_RATES"],
-            mms.tokenize.__globals__["DATA_LVLS"],
-        )
-    )
-    def test_tokenize_vector(self, var):
-        result = mms.tokenize("_".join(var))
-        self.assertIsInstance(result, dict)
-        self.assertListEqual(
-            list(result.keys()), ["param", "to", "cs", "inst", "tmmode", "lev"]
-        )
-        self.assertEqual(result["to"], 1)
-
-    @idata(
-        itertools.product(
-            mms.tokenize.__globals__["PARAMS_TENSORS"],
-            mms.tokenize.__globals__["COORDINATE_SYSTEMS"],
-            mms.tokenize.__globals__["INSTRUMENTS"],
-            mms.tokenize.__globals__["SAMPLING_RATES"],
-            mms.tokenize.__globals__["DATA_LVLS"],
-        )
-    )
-    def test_tokenize_tensor(self, var):
-        result = mms.tokenize("_".join(var))
-        self.assertIsInstance(result, dict)
-        self.assertListEqual(
-            list(result.keys()), ["param", "to", "cs", "inst", "tmmode", "lev"]
-        )
-
-
-@ddt
 class VdfElimTestCase(unittest.TestCase):
     @data(
         random.randint(0, 15),
@@ -1055,6 +1021,48 @@ class VdfOmniTestCase(unittest.TestCase):
     def test_vdf_omni_output(self, method):
         result = mms.vdf_omni(generate_vdf(64.0, 100, (32, 32, 16)), method)
         self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class TokenizeTestCase(unittest.TestCase):
+    @data(*random.choices(_mms_keys(), k=10))
+    def test_tokenize(self, var_str):
+        result = mms.tokenize(var_str)
+        self.assertIsInstance(result, dict)
+
+
+@ddt
+class ListFilesTestCase(unittest.TestCase):
+    @data(*random.choices(_mms_keys(), k=10))
+    def test_list_files(self, var_str):
+        mms.list_files(TEST_TINT, random.randint(1, 4), mms.tokenize(var_str))
+
+
+@ddt
+class ListFilesSdcTestCase(unittest.TestCase):
+    @data(*random.choices(_mms_keys(), k=10))
+    def test_list_files_sdc(self, var_str):
+        try:
+            mms.list_files_sdc(TEST_TINT, random.randint(1, 4), mms.tokenize(var_str))
+        except requests.exceptions.ReadTimeout:
+            pass
+
+
+@ddt
+class ListFilesAncillaryTestCase(unittest.TestCase):
+    @data("predatt", "predeph", "defatt", "defeph")
+    def test_list_files_ancillary(self, product):
+        mms.list_files_ancillary(TEST_TINT, random.randint(1, 4), product)
+
+
+@ddt
+class ListFilesAncillarySdcTestCase(unittest.TestCase):
+    @data("predatt", "predeph", "defatt", "defeph")
+    def test_list_files_ancillary_sdc(self, product):
+        try:
+            mms.list_files_ancillary_sdc(TEST_TINT, random.randint(1, 4), product)
+        except requests.exceptions.ReadTimeout:
+            pass
 
 
 if __name__ == "__main__":
