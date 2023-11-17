@@ -394,6 +394,22 @@
             "dtype": "dis-moms",
             "cdf_name": "dis_temptensor_dbcs_brst"
         },
+        "tperpi_fpi_brst_l2": {
+            "dtype": "dis-moms",
+            "cdf_name": "dis_tempperp_brst"
+        },
+        "tparai_fpi_brst_l2": {
+            "dtype": "dis-moms",
+            "cdf_name": "dis_temppara_brst"
+        },
+        "parttperpi_fpi_brst_l2": {
+            "dtype": "dis-partmoms",
+            "cdf_name": "dis_tempperp_part_brst"
+        },
+        "parttparai_fpi_brst_l2": {
+            "dtype": "dis-partmoms",
+            "cdf_name": "dis_temppara_part_brst"
+        },
         "te_dbcs_fpi_brst_l2": {
             "dtype": "des-moms",
             "cdf_name": "des_temptensor_dbcs_brst"
@@ -401,6 +417,22 @@
         "ti_dbcs_fpi_fast_l2": {
             "dtype": "dis-moms",
             "cdf_name": "dis_temptensor_dbcs_fast"
+        },
+        "tperpi_fpi_fast_l2": {
+            "dtype": "dis-moms",
+            "cdf_name": "dis_tempperp_fast"
+        },
+        "tparai_fpi_fast_l2": {
+            "dtype": "dis-moms",
+            "cdf_name": "dis_temppara_fast"
+        },
+        "parttperpi_fpi_fast_l2": {
+            "dtype": "dis-partmoms",
+            "cdf_name": "dis_tempperp_part_fast"
+        },
+        "parttparai_fpi_fast_l2": {
+            "dtype": "dis-partmoms",
+            "cdf_name": "dis_temppara_part_fast"
         },
         "te_dbcs_fpi_fast_l2": {
             "dtype": "des-moms",
