@@ -118,7 +118,7 @@ def get_data(
 
     for file_name in file_names:
         if from_sdc:
-            file = requests.get(file_name).content
+            file = requests.get(file_name, timeout=None).content
         else:
             file = os.path.normpath(file_name)
 
