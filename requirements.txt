@@ -4,8 +4,6 @@
 #
 #    pip-compile --output-file=requirements.txt pyproject.toml
 #
-cdflib==1.0.4
-    # via pyrfu (pyproject.toml)
 certifi==2023.7.22
     # via requests
 charset-normalizer==3.1.0
@@ -30,12 +28,12 @@ numba==0.57.0
     # via pyrfu (pyproject.toml)
 numpy==1.24.3
     # via
-    #   cdflib
     #   contourpy
     #   geopack
     #   matplotlib
     #   numba
     #   pandas
+    #   pycdfpp
     #   pyrfu (pyproject.toml)
     #   scipy
     #   xarray
@@ -47,8 +45,10 @@ pandas==2.0.2
     # via
     #   pyrfu (pyproject.toml)
     #   xarray
-pillow==9.5.0
+pillow==10.0.1
     # via matplotlib
+pycdfpp==0.6.0
+    # via pyrfu (pyproject.toml)
 pyparsing==3.0.9
     # via matplotlib
 python-dateutil==2.8.2
@@ -58,6 +58,8 @@ python-dateutil==2.8.2
     #   pyrfu (pyproject.toml)
 pytz==2023.3
     # via pandas
+pyyaml==6.0.1
+    # via pycdfpp
 requests==2.31.0
     # via pyrfu (pyproject.toml)
 scipy==1.10.1
@@ -70,7 +72,7 @@ tqdm==4.65.0
     # via pyrfu (pyproject.toml)
 tzdata==2023.3
     # via pandas
-urllib3==2.0.6
+urllib3==2.0.7
     # via requests
-xarray>=2023.1.0
+xarray==2023.9.0
     # via pyrfu (pyproject.toml)
