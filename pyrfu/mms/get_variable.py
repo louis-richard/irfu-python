@@ -4,7 +4,7 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from pycdfpp import load
+from pycdfpp import _pycdfpp, load, to_datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -21,7 +21,12 @@ def _pycdfpp_attributes_to_dict(attributes):
         tmp = [attributes[k][i] for i in range(len(attributes[k]))]
 
         if np.size(tmp) == 1:
-            attributes_dict[k] = tmp[0]
+            if isinstance(tmp[0], (list, np.ndarray)) and isinstance(
+                tmp[0][0], _pycdfpp.tt2000_t
+            ):
+                attributes_dict[k] = to_datetime64(tmp[0][0])
+            else:
+                attributes_dict[k] = tmp[0]
         else:
             attributes_dict[k] = tmp[:]
 

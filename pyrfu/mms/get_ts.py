@@ -152,8 +152,10 @@ def _get_depend(file, cdf_name, dep_num=1):
         if len(out["data"]) == 1:
             out["data"] = out["data"][0]
 
-        if len(out["data"]) == 4 and out["data"] == ["x", "y", "z", "r"]:
-            out["data"] = out["data"][:-1]
+        if len(out["data"]) == 4 and all(
+            out["data"].astype(str) == ["x", "y", "z", "r"]
+        ):
+            out["data"] = out["data"].astype(str)[:-1]
 
         elif out["data"].ndim == 2:
             if len(out["data"].flatten()) == 3:
@@ -266,7 +268,7 @@ def get_ts(file_path, cdf_name, tint: list = None):
 
     if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
         out_dict["data"] = out_dict["data"][:, :-1]
-        depend_1["data"] = depend_1["data"][:-1]
+        # depend_1["data"] = depend_1["data"][:-1]
 
     if out_dict["data"].ndim == 2 and not depend_1:
         depend_1["data"] = np.arange(out_dict["data"].shape[1])
