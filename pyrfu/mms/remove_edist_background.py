@@ -62,7 +62,7 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     tint = list(datetime642iso8601(vdf.time.data[[0, -1]]))
 
     # Get spacecraft index from VDF metadata
-    mms_id = vdf.attrs["CATDESC"].split(" ")[0].lower()
+    mms_id = vdf.data.attrs["CATDESC"].split(" ")[0].lower()
     mms_id = int(mms_id[-1])
 
     vdf_tmp = time_clip(vdf, tint)
@@ -81,27 +81,20 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     # model file, and the photoelectron scaling factor
     n_e = get_data("ne_fpi_brst_l2", tint, mms_id, verbose=False)
 
-    photoe_scle = n_e.attrs["Photoelectron_model_scaling_factor"]
+    photoe_scle = n_e.attrs["GLOBAL"]["Photoelectron_model_scaling_factor"]
     photoe_scle = float(photoe_scle)
 
     # Load the model internal photoelectrons
-    bkg_fname = n_e.attrs["Photoelectron_model_filenames"]
+    bkg_fname = n_e.attrs["GLOBAL"]["Photoelectron_model_filenames"]
 
     # Check path
-    # Guess data path from CDF attributes
-    data_path = str(vdf.attrs["CDF"]).split(f"mms{mms_id}/fpi", maxsplit=1)[0]
+    pkg_path = os.path.dirname(os.path.abspath(__file__))
 
-    # Check if path exists if not use the default
-    if not os.path.exists(data_path):
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
+    # Read the current version of the MMS configuration file
+    with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        config = json.load(fs)
 
-        # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        data_path = os.path.normpath(config["local_data_dir"])
-    else:
-        data_path = os.path.normpath(data_path)
+    data_path = os.path.normpath(config["local_data_dir"])
 
     bkg_fname = os.path.join(data_path, "models", "fpi", bkg_fname)
 
