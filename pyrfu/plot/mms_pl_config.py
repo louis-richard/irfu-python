@@ -13,7 +13,6 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
-plt.style.use("seaborn-ticks")
 colors = ["tab:blue", "tab:green", "tab:red", "k"]
 markers = ["s", "d", "o", "^"]
 
@@ -125,9 +124,9 @@ def mms_pl_config(r_mms):
     axs3.set_xlim([-30, 30])
     axs3.set_ylim([30, -30])
     axs3.set_zlim([-30, 30])
-    axs3.set_xlabel("$\\Delta X$ [km]")
-    axs3.set_ylabel("$\\Delta Y$ [km]")
-    axs3.set_zlabel("$\\Delta Z$ [km]")
+    axs3.set_xlabel(r"$\Delta X$ [km]")
+    axs3.set_ylabel(r"$\Delta Y$ [km]")
+    axs3.set_zlabel(r"$\Delta Z$ [km]")
 
     axs3.legend(["MMS1", "MMS2", "MMS3", "MMS4"], frameon=False)
 
