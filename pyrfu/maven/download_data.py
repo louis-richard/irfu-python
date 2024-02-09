@@ -94,9 +94,11 @@ def _make_path(file, var, lasp_url, data_path: str = ""):
     assert os.path.exists(data_path), "local data directory doesn't exist!"
 
     path_list = [
-        data_path,
-        var["inst"],
-        var["level"],
+        data_path,  # root path to data
+        var["inst"],  # instrument sub-directory
+        var["level"],  # data level sub-directory
+        file["file_name"].split("_")[4][:4],  # year sub-directory
+        file["file_name"].split("_")[4][4:6],  # month sub-directory
     ]
 
     out_path = os.path.join(*path_list)
