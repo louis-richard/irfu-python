@@ -16,7 +16,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def average_vdf(vdf, n_pts):
+def average_vdf(vdf, n_pts, method: str = "mean"):
     r"""Time averages the velocity distribution functions over `n_pts` in time.
 
     Parameters
@@ -25,6 +25,8 @@ def average_vdf(vdf, n_pts):
         Time series of the velocity distribution function.
     n_pts : int
         Number of points (samples) of the averaging window.
+    method : {'mean', 'sum'}, Optional
+        Method for averaging. Use 'sum' for counts. Default is 'mean'.
 
     Returns
     -------
@@ -52,10 +54,13 @@ def average_vdf(vdf, n_pts):
     for i, avg_ind in enumerate(avg_inds):
         l_bound = int(avg_ind - pad_value)
         r_bound = int(avg_ind + pad_value)
-        vdf_avg[i, ...] = np.nanmean(
-            vdf.data.data[l_bound:r_bound, ...],
-            axis=0,
-        )
+        if method == "mean":
+            vdf_avg[i, ...] = np.nanmean(vdf.data.data[l_bound:r_bound, ...], axis=0)
+        elif method == "sum":
+            vdf_avg[i, ...] = np.nansum(vdf.data.data[l_bound:r_bound, ...], axis=0)
+        else:
+            raise NotImplementedError("method not implemented feel free to do it!!")
+
         energy_avg[i, ...] = np.nanmean(
             vdf.energy.data[l_bound:r_bound, ...],
             axis=0,
