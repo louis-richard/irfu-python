@@ -1,0 +1,74 @@
+## *************************************************************************************
+## * Matplotlib style sheet for APS publications *
+## author : Louis Richard
+## email : louisr@irfu.se
+## *************************************************************************************
+
+## Fonts
+font.family: serif
+font.style: normal
+font.variant: normal
+font.weight: normal
+font.stretch: normal
+font.size: 8.0
+#font.serif: Times, Computer Modern Roman
+#font.sans-serif: Helvetica, Computer Modern Sans serif
+
+## LaTeX
+#text.usetex: True
+#text.latex.preamble: \usepackage{bm}
+pgf.texsystem: xelatex
+
+## Axes
+axes.labelsize: 8
+axes.linewidth: .5
+axes.xmargin: 0
+axes.ymargin: 0
+
+## Save
+savefig.dpi: 600
+savefig.format: eps
+# savefig.bbox: tight
+
+## Legend
+legend.loc: best
+legend.frameon: False  # if True, draw the legend on a background patch
+legend.framealpha: 0.8  # legend patch transparency
+legend.facecolor: inherit  # inherit from axes.facecolor; or color spec
+legend.edgecolor: 0.8  # background patch boundary color
+legend.fancybox: False  # if True, use a rectangle box for the legend background
+legend.shadow: False  # if True, give background a shadow effect
+legend.numpoints: 1  # the number of marker points in the legend line
+legend.scatterpoints: 1  # number of scatter points
+legend.markerscale: 0.9  # the relative size of legend markers vs. original
+legend.fontsize: 8
+legend.title_fontsize: None  # None sets to the same as the default axes.
+
+## Dimensions as fraction of fontsize:
+legend.borderpad: 0.2  # border whitespace
+legend.labelspacing: 0.2  # the vertical space between the legend entries
+legend.handlelength: 0.1  # the length of the legend lines
+#legend.handleheight: 0.4  # the height of the legend handle
+legend.handletextpad: 0.1  # the space between the legend line and legend text
+legend.borderaxespad: 0.4  # the border between the axes and legend edge
+legend.columnspacing: 0.8  # column separation
+
+## Ticks
+xtick.labelsize: 8
+xtick.major.size: 2
+xtick.minor.size: 1.2
+xtick.direction: in
+xtick.top: True
+
+ytick.labelsize: 8
+ytick.major.size: 2
+ytick.minor.size: 1.2
+ytick.direction : in
+ytick.right: True
+
+## Lines
+lines.linewidth: 0.6
+lines.markersize: 3
+
+## Errorbars
+errorbar.capsize: 2
