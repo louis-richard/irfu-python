@@ -28,7 +28,7 @@ matplotlib==3.7.1
     # via pyrfu (pyproject.toml)
 numba==0.57.0
     # via pyrfu (pyproject.toml)
-numpy==1.24.3
+numpy<=1.27.0
     # via
     #   cdflib
     #   contourpy
