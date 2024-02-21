@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
+# Built-in imports
 import itertools
 import json
 import os
 import random
 import string
-
-# Built-in imports
 import unittest
 
 # 3rd party imports
@@ -17,9 +15,9 @@ import requests
 import xarray as xr
 from ddt import data, ddt, idata, unpack
 
-from pyrfu import mms, pyrf
-from pyrfu.mms.psd_moments import _moms
-
+# Local imports
+from .. import mms, pyrf
+from ..mms.psd_moments import _moms
 from . import (
     generate_data,
     generate_spectr,
@@ -30,7 +28,7 @@ from . import (
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
@@ -136,7 +134,7 @@ def generate_eis(f_s, n_pts, data_rate, dtype, lev, specie, data_unit, mms_id):
 
     for i, k in enumerate(keys):
         eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, len(energies), "energy")
-        eis_dict[f"look_t{i:d}"] = generate_ts(f_s, n_pts, "vector")
+        eis_dict[f"look_t{i:d}"] = generate_ts(f_s, n_pts, tensor_order=1)
 
     # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
     glob_attrs = {
@@ -175,14 +173,14 @@ class CalcEpsilonTestCase(unittest.TestCase):
         (
             generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="bazinga"),
             generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="bazinga"),
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=0),
         ),
         (
             generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
             generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
-            generate_ts(32.0, 100, "scalar"),
-            generate_ts(64.0, 100, "scalar"),
+            generate_ts(32.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=0),
         ),
     )
     @unpack
@@ -212,19 +210,19 @@ class CalcEpsilonTestCase(unittest.TestCase):
         mms.calculate_epsilon(
             vdf,
             model_vdf,
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=0),
             **kwargs,
         )
 
 
 class DbInitTestCase(unittest.TestCase):
     def test_db_init_inpput(self):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(NotImplementedError):
             mms.db_init("bazinga!")
 
     def test_db_init_output(self):
-        self.assertIsNone(mms.db_init(os.getcwd()))
+        self.assertIsNone(mms.db_init(local=os.getcwd()))
 
 
 @ddt
@@ -307,16 +305,18 @@ class Dpf2PsdTestCase(unittest.TestCase):
 class Dsl2GseTestCase(unittest.TestCase):
     def test_dsl2gse_input(self):
         with self.assertRaises(TypeError):
-            mms.dsl2gse(generate_ts(64.0, 42, "vector"), np.random.random((42, 3)), 1)
+            mms.dsl2gse(
+                generate_ts(64.0, 42, tensor_order=1), np.random.random((42, 3)), 1
+            )
 
     @data(
         xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
         np.random.random(3),
     )
     def test_dsl2gse_output(self, value):
-        result = mms.dsl2gse(generate_ts(64.0, 42, "vector"), value, 1)
+        result = mms.dsl2gse(generate_ts(64.0, 42, tensor_order=1), value, 1)
         self.assertIsInstance(result, xr.DataArray)
-        result = mms.dsl2gse(generate_ts(64.0, 42, "vector"), value, -1)
+        result = mms.dsl2gse(generate_ts(64.0, 42, tensor_order=1), value, -1)
         self.assertIsInstance(result, xr.DataArray)
 
 
@@ -324,16 +324,18 @@ class Dsl2GseTestCase(unittest.TestCase):
 class Dsl2GsmTestCase(unittest.TestCase):
     def test_dsl2gsm_input(self):
         with self.assertRaises(TypeError):
-            mms.dsl2gsm(generate_ts(64.0, 42, "vector"), np.random.random((42, 3)), 1)
+            mms.dsl2gsm(
+                generate_ts(64.0, 42, tensor_order=1), np.random.random((42, 3)), 1
+            )
 
     @data(
         xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
         np.random.random(3),
     )
     def test_dsl2gsm_output(self, value):
-        result = mms.dsl2gsm(generate_ts(64.0, 42, "vector"), value, 1)
+        result = mms.dsl2gsm(generate_ts(64.0, 42, tensor_order=1), value, 1)
         self.assertIsInstance(result, xr.DataArray)
-        result = mms.dsl2gsm(generate_ts(64.0, 42, "vector"), value, -1)
+        result = mms.dsl2gsm(generate_ts(64.0, 42, tensor_order=1), value, -1)
         self.assertIsInstance(result, xr.DataArray)
 
 
@@ -370,7 +372,7 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
         result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt)
         self.assertIsInstance(result, xr.DataArray)
 
-    @data(None, [1, 0, 0], generate_ts(64.0, 10, "vector"))
+    @data(None, [1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
     def test_eis_combine_proton_pad_vec(self, vec):
         phxtof_allt = generate_eis(
             64.0, 100, "brst", "phxtof", "l2", "proton", "flux", 1
@@ -443,7 +445,7 @@ class EisOmniTestCase(unittest.TestCase):
 
 @ddt
 class EisPadTestCase(unittest.TestCase):
-    @data(None, [1, 0, 0], generate_ts(64.0, 10, "vector"))
+    @data(None, [1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
     def test_eis_pad_output(self, vec):
         eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
         result = mms.eis_pad(eis, vec)
@@ -525,11 +527,11 @@ class MakeModelVDFTestCase(unittest.TestCase):
     def test_make_Model_vdf_output(self, vdf, isotropic):
         result = mms.make_model_vdf(
             vdf,
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "tensor"),
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=2),
             isotropic,
         )
         self.assertIsInstance(result, xr.Dataset)
@@ -551,9 +553,9 @@ class MakeModelKappaTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.make_model_kappa(
                 vdf,
-                generate_ts(64.0, 100, "scalar"),
-                generate_ts(64.0, 100, "vector"),
-                generate_ts(64.0, 100, "scalar"),
+                generate_ts(64.0, 100, tensor_order=0),
+                generate_ts(64.0, 100, tensor_order=1),
+                generate_ts(64.0, 100, tensor_order=0),
                 kappa,
             )
 
@@ -566,9 +568,9 @@ class MakeModelKappaTestCase(unittest.TestCase):
     def test_make_model_kappa_output(self, vdf, kappa):
         result = mms.make_model_kappa(
             vdf,
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "vector"),
-            generate_ts(64.0, 100, "scalar"),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=0),
             kappa,
         )
 
@@ -670,13 +672,13 @@ class PsdMomentsTestCase(unittest.TestCase):
         vdf.attrs["delta_phi_minus"] = delta_phi
         vdf.attrs["delta_phi_plus"] = delta_phi
         vdf.data.attrs["FIELDNAM"] = f"MMS1 FPI/DIS {data_rate}SkyMap dist"
-        mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"))
+        mms.psd_moments(vdf, generate_ts(64.0, 100, tensor_order=0))
 
     @data({"energy_range": [1, 1000]}, {"no_sc_pot": True})
     def test_psd_moments_options(self, options):
         vdf = generate_vdf(64.0, 100, (32, 32, 16))
         vdf.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS brstSkyMap dist"
-        mms.psd_moments(vdf, generate_ts(64.0, 100, "scalar"), **options)
+        mms.psd_moments(vdf, generate_ts(64.0, 100, tensor_order=0), **options)
 
     @data(
         (
@@ -797,7 +799,7 @@ class FeepsPadTestCase(unittest.TestCase):
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
-        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
+        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
         self.assertIsInstance(result, xr.DataArray)
 
 
@@ -812,7 +814,7 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
-        feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, "vector"))
+        feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
 
@@ -828,7 +830,9 @@ class FeepsPitchAnglesTestCase(unittest.TestCase):
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
-        result = mms.feeps_pitch_angles(feeps_alle, generate_ts(64.0, 100, "vector"))
+        result = mms.feeps_pitch_angles(
+            feeps_alle, generate_ts(64.0, 100, tensor_order=1)
+        )
         self.assertIsInstance(result[0], xr.DataArray)
 
 
@@ -893,9 +897,9 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
     @data((None, None), (random.random(), None), (None, [0.1, 1]))
     @unpack
     def test_fk_power_spectrum_4sc(self, df, f_range):
-        e_mms = [generate_ts(64.0, 100, "scalar") for _ in range(4)]
-        r_mms = [generate_ts(64.0, 100, "vector") for _ in range(4)]
-        b_mms = [generate_ts(64.0, 100, "vector") for _ in range(4)]
+        e_mms = [generate_ts(64.0, 100, tensor_order=0) for _ in range(4)]
+        r_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
+        b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
 
         result = mms.fk_power_spectrum_4sc(
             e_mms, r_mms, b_mms, TEST_TINT, df=df, f_range=f_range
@@ -917,7 +921,7 @@ class ReduceTestCase(unittest.TestCase):
         (False, "electrons", np.eye(3), "1d", "cart"),
         (True, "ions", np.eye(3), "1d", "cart"),
         (True, "electrons", np.eye(3), "1d", "cart"),
-        (False, "electrons", generate_ts(64.0, 42, "tensor"), "1d", "cart"),
+        (False, "electrons", generate_ts(64.0, 42, tensor_order=2), "1d", "cart"),
         (False, "ions", np.eye(3), "1d", "pol"),
         # (False, "ions", np.eye(3), "2d", "pol"), mc_pol_2d NotImplementedError
     )
@@ -956,22 +960,22 @@ class ReduceTestCase(unittest.TestCase):
 
 @ddt
 class RotateTensorTestCase(unittest.TestCase):
-    @data(("rot", generate_data(100, "vector")), ("gse", None))
+    @data(("rot", generate_data(100, tensor_order=1)), ("gse", None))
     @unpack
     def test_rotate_tensor_input(self, flag, vec):
         with self.assertRaises((TypeError, NotImplementedError)):
-            mms.rotate_tensor(generate_ts(64.0, 100, "tensor"), flag, vec)
+            mms.rotate_tensor(generate_ts(64.0, 100, tensor_order=2), flag, vec)
 
     @data(
-        ("fac", generate_ts(64.0, 100, "vector"), "pp"),
-        ("fac", generate_ts(64.0, 100, "vector"), "qq"),
+        ("fac", generate_ts(64.0, 100, tensor_order=1), "pp"),
+        ("fac", generate_ts(64.0, 100, tensor_order=1), "qq"),
         ("rot", np.random.random(3), "pp"),
         ("rot", np.random.random((3, 3)), "pp"),
     )
     @unpack
     def test_rotate_tensor_output(self, rot_flag, vec, perp):
         result = mms.rotate_tensor(
-            generate_ts(64.0, 100, "tensor"), rot_flag, vec, perp
+            generate_ts(64.0, 100, tensor_order=2), rot_flag, vec, perp
         )
         self.assertIsInstance(result, xr.DataArray)
 
@@ -986,12 +990,12 @@ class SpectrToDatasetTestCase(unittest.TestCase):
 
 @ddt
 class Scpot2NeTestCase(unittest.TestCase):
-    @data(None, generate_ts(64.0, 100, "scalar"))
+    @data(None, generate_ts(64.0, 100, tensor_order=0))
     def test_scpot2ne_output(self, i_aspoc):
         result = mms.scpot2ne(
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "scalar"),
-            generate_ts(64.0, 100, "tensor"),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=2),
             i_aspoc,
         )
         self.assertIsInstance(result[0], xr.DataArray)
