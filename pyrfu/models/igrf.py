@@ -28,12 +28,10 @@ def igrf(time, flag):
     flag : str
         Default is dipole.
 
-
     Returns
     -------
     lambda : ndarray
         latitude
-
     phi : ndarray
         longitude
 
@@ -65,38 +63,39 @@ def igrf(time, flag):
     year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(np.int64) / 1e9
 
     if np.min(year_ref) < np.min(years_igrf):
-        message = (
-            "requested time is earlier than the first available IGRF "
-            "model from extrapolating in past.. "
+        warnings.warn(
+            "requested time is earlier than the first available IGRF model; "
+            "extrapolating in past",
+            category=UserWarning,
         )
-        warnings.warn(message, category=UserWarning)
 
-    assert flag == "dipole", "input flag is not recognized"
+    if flag.lower() == "dipole":
+        tck_g0_igrf = interpolate.interp1d(
+            years_igrf,
+            g_igrf[0, 2:],
+            kind="linear",
+            fill_value="extrapolate",
+        )
+        tck_g1_igrf = interpolate.interp1d(
+            years_igrf,
+            g_igrf[1, 2:],
+            kind="linear",
+            fill_value="extrapolate",
+        )
+        tck_h0_igrf = interpolate.interp1d(
+            years_igrf,
+            h_igrf[0, 2:],
+            kind="linear",
+            fill_value="extrapolate",
+        )
 
-    tck_g0_igrf = interpolate.interp1d(
-        years_igrf,
-        g_igrf[0, 2:],
-        kind="linear",
-        fill_value="extrapolate",
-    )
-    tck_g1_igrf = interpolate.interp1d(
-        years_igrf,
-        g_igrf[1, 2:],
-        kind="linear",
-        fill_value="extrapolate",
-    )
-    tck_h0_igrf = interpolate.interp1d(
-        years_igrf,
-        h_igrf[0, 2:],
-        kind="linear",
-        fill_value="extrapolate",
-    )
-
-    g01 = tck_g0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
-    g11 = tck_g1_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
-    h11 = tck_h0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
-    lambda_ = np.arctan(h11 / g11)
-    phi = np.pi / 2
-    phi -= np.arcsin((g11 * np.cos(lambda_) + h11 * np.sin(lambda_)) / g01)
+        g01 = tck_g0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
+        g11 = tck_g1_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
+        h11 = tck_h0_igrf(year_ref + (time - year_ref_unix) / (365.25 * 86400))
+        lambda_ = np.arctan(h11 / g11)
+        phi = np.pi / 2
+        phi -= np.arcsin((g11 * np.cos(lambda_) + h11 * np.sin(lambda_)) / g01)
+    else:
+        raise NotImplementedError("input flag is not recognized")
 
     return np.rad2deg(lambda_), np.rad2deg(phi)

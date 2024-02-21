@@ -120,6 +120,7 @@ ignore = """
     test_dispersion.py,
     test_solo.py,
     test_mms.py,
+    test_models.py,
 """
 ignored-modules = "scipy,cdflib"
 
