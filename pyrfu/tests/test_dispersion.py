@@ -10,7 +10,8 @@ import numpy as np
 import xarray as xr
 from ddt import data, ddt
 
-from pyrfu import dispersion
+# Local imports
+from .. import dispersion
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"

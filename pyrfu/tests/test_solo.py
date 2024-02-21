@@ -10,7 +10,8 @@ import unittest
 import numpy as np
 from ddt import data, ddt, unpack
 
-from pyrfu import solo
+# Local imports
+from .. import solo
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
