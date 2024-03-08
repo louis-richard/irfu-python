@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import json
 import logging
 
-from ..pyrf.ts_append import ts_append
-from .get_ts import get_ts
-
 # Local imports
-from .list_files import list_files
+from ..pyrf.ts_append import ts_append
+from .db_init import MMS_CFG_PATH
+from .get_data import _check_times, _get_file_content_sources, _list_files_sources
+from .get_ts import get_ts
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -47,6 +48,7 @@ def db_get_ts(
     tint,
     verbose: bool = True,
     data_path: str = "",
+    source: str = "",
 ):
     r"""Get variable time series in the cdf file.
 
@@ -62,6 +64,8 @@ def db_get_ts(
         Status monitoring. Default is verbose = True
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+    source: {"local", "sdc", "aws"}, Optional
+        Ressource to fetch data from. Default uses default in `pyrfu/mms/config.json`
 
     Returns
     -------
@@ -70,15 +74,35 @@ def db_get_ts(
 
     """
 
-    probe, var = _tokenize(dataset_name)
+    mms_id, var = _tokenize(dataset_name)
 
-    files = list_files(tint, probe, var, data_path=data_path)
+    # Read the current version of the MMS configuration file
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        config = json.load(fs)
+
+    source = source if source else config.get("default")
+
+    file_names, sdc_session, headers = _list_files_sources(
+        source, tint, mms_id, var, data_path
+    )
+
+    assert file_names, "No files found. Make sure that the data_path is correct"
 
     if verbose:
         logging.info("Loading %s...", cdf_name)
 
     out = None
-    for file in files:
-        out = ts_append(out, get_ts(file, cdf_name, tint))
+
+    for file_name in file_names:
+        file_content = _get_file_content_sources(
+            source, file_name, sdc_session, headers
+        )
+
+        out = ts_append(out, get_ts(file_content, cdf_name, tint))
+
+    out = _check_times(out)
+
+    if sdc_session:
+        sdc_session.close()
 
     return out

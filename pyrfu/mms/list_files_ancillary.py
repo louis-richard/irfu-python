@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import datetime
 import fnmatch
 import glob
 import json
-
-# Built-in imports
 import os
 import re
 
@@ -18,6 +17,7 @@ import pandas as pd
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime import iso86012datetime
 from ..pyrf.iso86012datetime64 import iso86012datetime64
+from .db_init import MMS_CFG_PATH
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -51,13 +51,11 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
 
     # Check path
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local_data_dir"])
+        data_path = os.path.normpath(config["local"])
     else:
         data_path = os.path.normpath(data_path)
 
@@ -84,6 +82,9 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
             raise TypeError("Values must be in datetime, datetime64, or str!!")
     else:
         raise TypeError("tint must be a DataArray or array_like!!")
+
+    # PAD time interval to handle ancillary file start after midnight
+    tint = [tint[0] - datetime.timedelta(days=1), tint[1]]
 
     # directory and file name search patterns
     # For now

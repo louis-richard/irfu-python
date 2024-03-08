@@ -45,9 +45,7 @@ def _make_urls_ancillaries(lasp_url, files):
     return files
 
 
-def list_files_ancillary_sdc(
-    tint, mms_id, product, login: str = "", password: str = ""
-):
+def list_files_ancillary_sdc(tint, mms_id, product):
     r"""Find available ancillary files from LASP SDC for the target product type.
 
     Parameters
@@ -58,12 +56,6 @@ def list_files_ancillary_sdc(
         Spacecraft index
     product : {"predatt", "predeph", "defatt", "defeph"}
         Ancillary type.
-    login : str, Optional
-        Login to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
-    password : str, Optional
-        Password to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
 
     Returns
     -------
@@ -72,15 +64,15 @@ def list_files_ancillary_sdc(
 
     """
 
-    sdc_session, headers, lasp_url = _login_lasp(login, password)
+    sdc_session, headers, lasp_url = _login_lasp()
 
     url_json_ancillaries = _construct_url_json_list(tint, mms_id, product, lasp_url)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ResourceWarning)
-        http_json = sdc_session.get(
-            url_json_ancillaries, verify=True, headers=headers
-        ).json()
+        response = sdc_session.get(url_json_ancillaries, verify=True, headers=headers)
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        http_json = response.json()
 
     file_names = http_json["files"]
     sdc_session.close()

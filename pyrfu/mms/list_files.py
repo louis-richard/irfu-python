@@ -17,6 +17,7 @@ from dateutil.rrule import DAILY, rrule
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime64 import iso86012datetime64
+from .db_init import MMS_CFG_PATH
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -55,13 +56,11 @@ def list_files(tint, mms_id, var, data_path: str = ""):
 
     # Check path
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local_data_dir"])
+        data_path = os.path.normpath(config["local"])
     else:
         data_path = os.path.normpath(data_path)
 
@@ -86,6 +85,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
 
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)
+
     # directory and file name search patterns:
     # - assume directories are of the form:
     # (srvy, SITL): spacecraft/instrument/rate/level[/datatype]/year/month/

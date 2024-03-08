@@ -1,22 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
-
 # Built-in imports
+import json
+import logging
 import os
 
+# 3rd party imports
+import boto3
 import requests
 
+# Local imports
 from ..pyrf.dist_append import dist_append
 from ..pyrf.ts_append import ts_append
 from ..pyrf.ttns2datetime64 import ttns2datetime64
+from .db_init import MMS_CFG_PATH
 from .get_dist import get_dist
 from .get_ts import get_ts
 from .list_files import list_files
-from .list_files_sdc import list_files_sdc
-
-# Local imports
+from .list_files_aws import list_files_aws
+from .list_files_sdc import _login_lasp, list_files_sdc
 from .tokenize import tokenize
 
 __author__ = "Louis Richard"
@@ -48,13 +51,60 @@ def _check_times(inp):
     return out
 
 
+def _list_files_sources(source, tint, mms_id, var, data_path):
+    if source == "local":
+        file_names = list_files(tint, mms_id, var, data_path)
+        sdc_session, headers = None, {}
+    elif source == "sdc":
+        file_names = [file.get("url") for file in list_files_sdc(tint, mms_id, var)]
+        sdc_session, headers, _ = _login_lasp()
+    elif source == "aws":
+        file_names = [file.get("s3_obj") for file in list_files_aws(tint, mms_id, var)]
+        sdc_session, headers = None, {}
+    else:
+        raise NotImplementedError("AWS is not yet implemented!!")
+
+    return file_names, sdc_session, headers
+
+
+def _get_file_content_sources(source, file_name, sdc_session, headers):
+    if source == "local":
+        file_path = os.path.normpath(file_name)
+        with open(file_path, "rb") as file:
+            file_content = file.read()
+    elif source == "sdc":
+        try:
+            response = sdc_session.get(file_name, timeout=None, headers=headers)
+            response.raise_for_status()  # Raise an HTTPError for bad responses
+            file_content = response.content
+        except requests.RequestException as e:
+            print(f"Error retrieving file from {file_name}: {e}")
+    elif source == "aws":
+        try:
+            response = file_name.get()
+            file_content = response["Body"].read()
+        except boto3.exceptions.ClientError as err:
+            if err.response["Error"]["Code"] == "InternalError":  # Generic error
+                logging.error("Error Message: %s", err.response["Error"]["Message"])
+
+                response_meta = err.response.get("ResponseMetadata")
+                logging.error("Request ID: %s", response_meta.get("RequestId"))
+                logging.error("Http code: %s", response_meta.get("HTTPStatusCode"))
+            else:
+                raise err
+    else:
+        raise NotImplementedError(f"Resource {source} is not yet implemented!!")
+
+    return file_content
+
+
 def get_data(
     var_str,
     tint,
     mms_id,
     verbose: bool = True,
     data_path: str = "",
-    from_sdc: bool = False,
+    source: str = "",
 ):
     r"""Load a variable. var_str must be in var (see below)
 
@@ -69,7 +119,9 @@ def get_data(
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu/mms/config.json`
+        Local path of MMS data. Default uses that provided in `pyrfu/mms/config.json`
+    source: {"local", "sdc", "aws"}, Optional
+        Ressource to fetch data from. Default uses default in `pyrfu/mms/config.json`
 
     Returns
     -------
@@ -104,10 +156,15 @@ def get_data(
 
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 
-    if from_sdc:
-        file_names = [file["url"] for file in list_files_sdc(tint, mms_id, var)]
-    else:
-        file_names = list_files(tint, mms_id, var, data_path)
+    # Read the current version of the MMS configuration file
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        config = json.load(fs)
+
+    source = source if source else config.get("default")
+
+    file_names, sdc_session, headers = _list_files_sources(
+        source, tint, mms_id, var, data_path
+    )
 
     assert file_names, "No files found. Make sure that the data_path is correct"
 
@@ -117,17 +174,19 @@ def get_data(
     out = None
 
     for file_name in file_names:
-        if from_sdc:
-            file = requests.get(file_name, timeout=None).content
-        else:
-            file = os.path.normpath(file_name)
+        file_content = _get_file_content_sources(
+            source, file_name, sdc_session, headers
+        )
 
         if "-dist" in var["dtype"]:
-            out = dist_append(out, get_dist(file, cdf_name, tint))
+            out = dist_append(out, get_dist(file_content, cdf_name, tint))
 
         else:
-            out = ts_append(out, get_ts(file, cdf_name, tint))
+            out = ts_append(out, get_ts(file_content, cdf_name, tint))
 
     out = _check_times(out)
+
+    if sdc_session:
+        sdc_session.close()
 
     return out

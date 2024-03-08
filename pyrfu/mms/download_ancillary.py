@@ -12,9 +12,9 @@ from tempfile import NamedTemporaryFile
 # 3rd party imports
 import tqdm
 
-from .list_files_ancillary_sdc import list_files_ancillary_sdc
-
 # Local imports
+from .db_init import MMS_CFG_PATH
+from .list_files_ancillary_sdc import list_files_ancillary_sdc
 from .list_files_sdc import _login_lasp
 
 __author__ = "Louis Richard"
@@ -39,13 +39,11 @@ def _make_path_local(file, product, mms_id, data_path: str = ""):
     r"""Construct path of the data file using the standard convention."""
 
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local_data_dir"])
+        data_path = os.path.normpath(config["local"])
     else:
         data_path = os.path.normpath(data_path)
 
@@ -64,14 +62,7 @@ def _make_path_local(file, product, mms_id, data_path: str = ""):
     return out_path, out_file
 
 
-def download_ancillary(
-    product,
-    tint,
-    mms_id,
-    login: str = "",
-    password: str = "",
-    data_path: str = "",
-):
+def download_ancillary(product, tint, mms_id, data_path: str = ""):
     r"""Downloads files containing field `var_str` over the time interval
     `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
 
@@ -83,28 +74,20 @@ def download_ancillary(
         Time interval
     mms_id : str or int
         Spacecraft index
-    login : str, Optional
-        Login to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
-    password : str, Optional
-        Password to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
     data_path : str, Optional
         Path of MMS data. If None use `pyrfu/mms/config.json`
 
     """
 
-    sdc_session, headers, _ = _login_lasp(login, password)
+    # List files in MMS SDC that match the request
+    files_in_interval = list_files_ancillary_sdc(tint, mms_id, product)
 
-    files_in_interval = list_files_ancillary_sdc(tint, mms_id, product, login, password)
+    # Start session on MMS SDC ("public" or "sitl")
+    sdc_session, headers, _ = _login_lasp()
 
     for file in files_in_interval:
-        out_path, out_file = _make_path_local(
-            file,
-            product,
-            mms_id,
-            data_path,
-        )
+        # Create local path following tree structure for the CDF files
+        out_path, out_file = _make_path_local(file, product, mms_id, data_path)
 
         logging.info(
             "Downloading %s from %s...", os.path.basename(out_file), file["url"]
@@ -113,10 +96,7 @@ def download_ancillary(
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
             fsrc = sdc_session.get(
-                file["url"],
-                stream=True,
-                verify=True,
-                headers=headers,
+                file["url"], stream=True, verify=True, headers=headers
             )
 
         with NamedTemporaryFile(delete=False) as ftmp:

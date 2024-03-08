@@ -14,6 +14,7 @@ import tqdm
 from dateutil.parser import parse
 
 # Local imports
+from .db_init import MMS_CFG_PATH
 from .get_data import _var_and_cdf_name
 from .list_files_sdc import _login_lasp, list_files_sdc
 
@@ -38,13 +39,11 @@ def _make_path_local(file, var, mms_id, data_path: str = ""):
     file_date = parse(file["timetag"])
 
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local_data_dir"])
+        data_path = os.path.normpath(config["local"])
     else:
         data_path = os.path.normpath(data_path)
 
@@ -69,9 +68,7 @@ def _make_path_local(file, var, mms_id, data_path: str = ""):
     return out_path, out_file
 
 
-def download_data(
-    var_str, tint, mms_id, login: str = "", password: str = "", data_path: str = ""
-):
+def download_data(var_str, tint, mms_id, data_path: str = ""):
     r"""Downloads files containing field `var_str` over the time interval
     `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
 
@@ -83,22 +80,15 @@ def download_data(
         Time interval.
     mms_id : str or int
         Index of the target spacecraft.
-    login : str, Optional
-        Login to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
-    password : str, Optional
-        Password to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
     data_path : str, Optional
         Path of MMS data. If None use `pyrfu/mms/config.json`
 
     """
-
-    sdc_session, headers, _ = _login_lasp(login, password)
-
     var, _ = _var_and_cdf_name(var_str, mms_id)
 
-    files_in_interval = list_files_sdc(tint, mms_id, var, login, password)
+    files_in_interval = list_files_sdc(tint, mms_id, var)
+
+    sdc_session, headers, _ = _login_lasp()
 
     for file in files_in_interval:
         out_path, out_file = _make_path_local(file, var, mms_id, data_path)

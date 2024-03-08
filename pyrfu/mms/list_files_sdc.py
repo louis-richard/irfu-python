@@ -2,15 +2,22 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import json
 import re
+import urllib
 import warnings
 from bisect import bisect_left
 from datetime import datetime, timedelta
 
 # 3rd party imports
+import keyring
 import numpy as np
 import requests
 from dateutil.parser import parse
+
+# Local imports
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from .db_init import MMS_CFG_PATH
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -22,26 +29,49 @@ __status__ = "Prototype"
 LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 
+# Test url from example in https://lasp.colorado.edu/mms/sdc/public/about/how-to/
+TEST_URL = "file_names/science?start_date=2015-04-10&end_date=2015-04-11&sc_id=mms2"
 
-def _login_lasp(user: str = "", password: str = ""):
+
+def _login_lasp():
     r"""Login to LASP colorado."""
 
-    if not user:
-        lasp_url = LASP_PUBL
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        config = json.load(fs)
+
+    # Read credentials for username
+    credential = keyring.get_credential("mms-sdc", config["sdc"]["username"])
+
+    if credential:
+        username, password = credential.username, credential.password
     else:
+        username, password = "", ""
+
+    if config["sdc"]["rights"] == "public":
+        lasp_url = LASP_PUBL
+    elif config["sdc"]["rights"] == "sitl" and username and password:
         lasp_url = LASP_SITL
+    else:
+        raise EnvironmentError(
+            "Incomplete credentials please update using mms.db_init()"
+        )
 
     session = requests.Session()
-    session.auth = (user, password)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ResourceWarning)
-        _ = session.post("https://lasp.colorado.edu", verify=True, timeout=5)
-        testget = session.get(lasp_url, verify=True, timeout=5)
-
-    assert testget != "401", "Login failed!!"
+    session.auth = (username, password)
 
     headers = {"User-Agent": "pyrfu"}
+
+    try:
+        _ = session.post("https://lasp.colorado.edu", verify=True, timeout=5)
+        response = session.get(
+            urllib.parse.urljoin(lasp_url, TEST_URL),
+            verify=True,
+            timeout=5,
+            headers=headers,
+        )
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+    except requests.RequestException as e:
+        print(f"Error login to {lasp_url}: {e}")
 
     return session, headers, lasp_url
 
@@ -52,7 +82,6 @@ def _construct_url_json_list(tint, mms_id, var, lasp_url):
     https://lasp.colorado.edu/mms/sdc/team/about/how-to/
     """
 
-    tint = np.array(tint).astype("<M8[ns]").astype(str)
     tint = [datetime.strptime(t_[:-3], "%Y-%m-%dT%H:%M:%S.%f") for t_ in tint]
     start_date = tint[0].strftime("%Y-%m-%d")
     end_date = (tint[1] - timedelta(seconds=1)).strftime("%Y-%m-%d-%H-%M-%S")
@@ -119,7 +148,7 @@ def _make_urls_cdfs(lasp_url, files):
     return files
 
 
-def list_files_sdc(tint, mms_id, var, login: str = "", password: str = ""):
+def list_files_sdc(tint, mms_id, var):
     r"""Find availables files from the LASP SDC for the target instrument,
     data type, data rate, mms_id and level during the target time interval.
 
@@ -135,11 +164,8 @@ def list_files_sdc(tint, mms_id, var, login: str = "", password: str = ""):
             * var["tmmode"] : data rate
             * var["lev"] : data level
             * var["dtype"] : data type
-    login : str, Optional
+    username : str, Optional
         Login to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
-    password : str, Optional
-        Password to LASP MMS SITL. Default downloads from
         https://lasp.colorado.edu/mms/sdc/public/
 
     Returns
@@ -149,7 +175,13 @@ def list_files_sdc(tint, mms_id, var, login: str = "", password: str = ""):
         interval
 
     """
-    sdc_session, headers, lasp_url = _login_lasp(login, password)
+
+    # Make sure time interval is in iso8601 string format
+    tint = np.array(tint).astype("datetime64[ns]")
+    tint = datetime642iso8601(tint)
+
+    # Start session on MMS's SDC
+    sdc_session, headers, lasp_url = _login_lasp()
 
     url_json_cdfs = _construct_url_json_list(tint, mms_id, var, lasp_url)
 

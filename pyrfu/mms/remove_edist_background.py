@@ -12,9 +12,10 @@ from cdflib import cdfread
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_skymap import ts_skymap
+from .db_get_ts import db_get_ts
 
 # Local imports
-from .db_get_ts import db_get_ts
+from .db_init import MMS_CFG_PATH
 from .get_data import get_data
 
 __author__ = "Louis Richard"
@@ -87,14 +88,11 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     # Load the model internal photoelectrons
     bkg_fname = n_e.attrs["GLOBAL"]["Photoelectron_model_filenames"]
 
-    # Check path
-    pkg_path = os.path.dirname(os.path.abspath(__file__))
-
     # Read the current version of the MMS configuration file
-    with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
-    data_path = os.path.normpath(config["local_data_dir"])
+    data_path = os.path.normpath(config["local"])
 
     bkg_fname = os.path.join(data_path, "models", "fpi", bkg_fname)
 
