@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib.colors as mcolors
-import matplotlib.dates as mdates
-
 # 3rd party imports
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -22,7 +19,7 @@ def plot_spectr(
     yscale: str = "linear",
     cscale: str = "linear",
     clim: list = None,
-    cmap: str = "",
+    cmap: str = None,
     colorbar: str = "right",
     **kwargs,
 ):
@@ -67,17 +64,22 @@ def plot_spectr(
     else:
         fig = plt.gcf()
 
-    if not cmap:
-        cmap = "jet"
+    if not cmap or isinstance(cmap, str):
+        cmap = mpl.cm.get_cmap(cmap)
+    else:
+        raise TypeError(
+            "cmap must be a string. "
+            "To add a custom colormap use mpl.colormaps.register(custom)."
+        )
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
             options = {
-                "norm": mcolors.LogNorm(vmin=clim[0], vmax=clim[1]),
+                "norm": mpl.colors.LogNorm(vmin=clim[0], vmax=clim[1]),
                 "cmap": cmap,
             }
         else:
-            options = {"norm": mcolors.LogNorm(), "cmap": cmap}
+            options = {"norm": mpl.colors.LogNorm(), "cmap": cmap}
     else:
         if clim is not None and isinstance(clim, list):
             options = {"cmap": cmap, "vmin": clim[0], "vmax": clim[1]}
@@ -96,14 +98,14 @@ def plot_spectr(
     )
 
     if x_data.dtype == "<M8[ns]":
-        locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-        formatter = mdates.ConciseDateFormatter(locator)
+        locator = mpl.dates.AutoDateLocator(minticks=3, maxticks=7)
+        formatter = mpl.dates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)
         axis.xaxis.set_major_formatter(formatter)
 
     if yscale == "log":
         axis.set_yscale("log")
-        axis.yaxis.set_major_locator(mticker.LogLocator(base=10.0, numticks=4))
+        axis.yaxis.set_major_locator(mpl.ticker.LogLocator(base=10.0, numticks=4))
 
     axis.set_axisbelow(False)
     axis.set_ylim(inp[inp.dims[1]].data[[0, -1]])
@@ -127,10 +129,10 @@ def plot_spectr(
 
         if cscale == "log":
             cax.yaxis.set_major_locator(
-                mticker.LogLocator(base=10.0, numticks=4),
+                mpl.ticker.LogLocator(base=10.0, numticks=4),
             )
         else:
-            cax.yaxis.set_major_locator(mticker.MaxNLocator(4))
+            cax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
 
         out = (axis, cax)
     elif colorbar.lower() == "top":
@@ -157,10 +159,10 @@ def plot_spectr(
 
         if cscale == "log":
             cax.xaxis.set_major_locator(
-                mticker.LogLocator(base=10.0, numticks=4),
+                mpl.ticker.LogLocator(base=10.0, numticks=4),
             )
         else:
-            cax.xaxis.set_major_locator(mticker.MaxNLocator(4))
+            cax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
 
         out = (axis, cax)
     elif colorbar.lower() == "none":

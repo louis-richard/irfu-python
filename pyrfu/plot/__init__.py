@@ -105,9 +105,9 @@ EXTRA_COLORS = {
 mpl.colors.EXTRA_COLORS = EXTRA_COLORS
 mpl.colors.colorConverter.colors.update(EXTRA_COLORS)
 mpl.colormaps.register(
-    name="bird",
+    name="parula",
     cmap=mpl.colors.LinearSegmentedColormap.from_list(
-        "bird",
+        "parula",
         [
             (0.0592, 0.3599, 0.8684),
             (0.078, 0.5041, 0.8385),
@@ -117,6 +117,42 @@ mpl.colormaps.register(
             (0.8186, 0.7328, 0.3499),
             (0.9956, 0.7862, 0.1968),
             (0.9764, 0.9832, 0.0539),
+        ],
+        N=2560,
+    ),
+)
+mpl.colormaps.register(
+    name="hot_desaturated",
+    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+        "hot_desaturated",
+        [
+            (0.2784, 0.2784, 0.8588),
+            (0.0000, 0.0000, 0.3569),
+            (0.0000, 1.0000, 1.0000),
+            (0.0000, 0.5000, 0.0000),
+            (1.0000, 1.0000, 0.0000),
+            (1.0000, 0.3765, 0.0000),
+            (0.4196, 0.0000, 0.0000),
+            (0.8784, 0.2980, 0.2980),
+        ],
+        N=2560,
+    ),
+)
+
+mpl.colormaps.register(
+    name="hot_white_desaturated",
+    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+        "hot_white_desaturated",
+        [
+            (1.0000, 1.0000, 1.0000),
+            (0.2784, 0.2784, 0.8588),
+            (0.0000, 0.0000, 0.3569),
+            (0.0000, 1.0000, 1.0000),
+            (0.0000, 0.5000, 0.0000),
+            (1.0000, 1.0000, 0.0000),
+            (1.0000, 0.3765, 0.0000),
+            (0.4196, 0.0000, 0.0000),
+            (0.8784, 0.2980, 0.2980),
         ],
         N=2560,
     ),
@@ -145,6 +181,7 @@ def set_color_cycle(pal=None):
             "pyrfu:lightblue",
             "pyrfu:olive",
         ]
+        cmap = "hot_white_desaturated"
     elif pal.lower() == "oceanic":
         colors = [
             "on:green",
@@ -155,6 +192,7 @@ def set_color_cycle(pal=None):
             "on:pink",
             "on:yellow",
         ]
+        cmap = "ocean"
     elif pal.lower() == "tab" or pal.lower() == "tableau" or pal.lower() == "mpl":
         colors = [
             "tab:blue",
@@ -168,6 +206,7 @@ def set_color_cycle(pal=None):
             "tab:olive",
             "tab:cyan",
         ]
+        cmap = "Spectral_r"
     else:
         colors = [
             "series:cyan",
@@ -178,8 +217,10 @@ def set_color_cycle(pal=None):
             "series:green",
             "series:pink",
         ]
+        cmap = "jet"
 
     mpl.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
+    mpl.rcParams["image.cmap"] = cmap
 
 
 def use_pyrfu_style(
