@@ -22,6 +22,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest
         pip install -r requirements.txt
+        pip install keyrings.alt
     - name: Lint with flake8
       run: |
         flake8 $(git ls-files '*.py')
@@ -29,6 +30,7 @@ jobs:
       run: |
         pip install pytest ddt pytest-cov sphinx pandoc
         pip install -r docs/requirements.txt
+        pip install keyrings.alt
         pytest
     - name: Test with pytest (coverage + long tests)
       if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
@@ -36,6 +38,7 @@ jobs:
         sudo apt update && sudo apt install -y texlive pandoc
         pip install pytest ddt pytest-cov sphinx pandoc
         pip install -r docs/requirements.txt
+        pip install keyrings.alt
         pytest --cov=./ --cov-report=xml
     - name: Check that release process is not broken
       if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
