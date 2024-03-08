@@ -27,7 +27,7 @@ repos:
       - id: black
         language_version: python3.11
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.7.1
+    rev: 1.8.4
     hooks:
       - id: nbqa-black
         name: nbqa-black
@@ -42,7 +42,7 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/PyCQA/pylint
-    rev: v3.0.3
+    rev: v3.1.0
     hooks:
       - id: pylint
         args:
