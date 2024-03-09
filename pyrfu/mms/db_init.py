@@ -29,8 +29,8 @@ def db_init(
     default: str = "local",
     local: str = "../data",
     sdc: str = "public",
-    sdc_username: str = "",
-    sdc_password: str = "",
+    sdc_username: str = "username",
+    sdc_password: str = "password",
     aws: str = "",
 ):
     r"""Setup the default resource to access MMS data. MMS SDC username and password
@@ -46,9 +46,9 @@ def db_init(
         Rights to access MMS data from SDC. If "sitl" please make sure to register
         valid SDC credential. Default is public.
     sdc_username : str, Optional
-        MMS SDC credential username. Default is empty.
+        MMS SDC credential username. Default is "username".
     sdc_password : str, Optional
-        MMS SDC credential password. Default is empty.
+        MMS SDC credential password. Default is "password".
     aws : str, Optional
         Bucket name and prefix to MMS data in AWS S3. Default is empty.
 
@@ -82,10 +82,14 @@ def db_init(
     credential_path = str(keyring.util.platform_.config_root())
     credential = keyring.get_credential("mms-sdc", sdc_username)
 
-    if not (credential and credential.username and credential.password):
+    if (
+        not credential
+        or credential.username == "username"
+        or credential.password == "password"
+    ):
         # if credentials are empty overwrite anyway
         username, password = sdc_username, sdc_password
-    elif not sdc_username or not sdc_password:
+    elif sdc_username == "username" or sdc_password == "password":
         # if existing credentials and incomplete arguments do not overwrite
         username, password = credential.username, credential.password
     else:

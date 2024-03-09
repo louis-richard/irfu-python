@@ -7,8 +7,8 @@ import logging
 import os
 
 # 3rd party imports
-import boto3
 import requests
+from botocore.exceptions import ClientError
 
 # Local imports
 from ..pyrf.dist_append import dist_append
@@ -83,7 +83,7 @@ def _get_file_content_sources(source, file_name, sdc_session, headers):
         try:
             response = file_name.get()
             file_content = response["Body"].read()
-        except boto3.exceptions.ClientError as err:
+        except ClientError as err:
             if err.response["Error"]["Code"] == "InternalError":  # Generic error
                 logging.error("Error Message: %s", err.response["Error"]["Message"])
 

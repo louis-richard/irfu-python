@@ -219,7 +219,7 @@ class CalcEpsilonTestCase(unittest.TestCase):
 class DbInitTestCase(unittest.TestCase):
     def test_db_init_inpput(self):
         with self.assertRaises(NotImplementedError):
-            mms.db_init("bazinga!")
+            mms.db_init(local="bazinga!")
 
     def test_db_init_output(self):
         self.assertIsNone(mms.db_init(local=os.getcwd()))
