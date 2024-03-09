@@ -231,21 +231,21 @@ class MvaGui:
             txt.set_visible(False)
 
         val_textstring = (
-            f"$\\lambda_1$ = {np.round(lamb_clip[0] ,2)}\n"
-            f"$\\lambda_2$ = {np.round(lamb_clip[1] ,2)}\n"
-            f"$\\lambda_3$ = {np.round(lamb_clip[2] ,2)}"
+            f"$\\lambda_1$ = {np.round(lamb_clip[0], 2)}\n"
+            f"$\\lambda_2$ = {np.round(lamb_clip[1], 2)}\n"
+            f"$\\lambda_3$ = {np.round(lamb_clip[2], 2)}"
         )
         ratio_textstring = (
             f"\n"
             f"$\\lambda_1 / \\lambda_2$ ="
-            f" {np.round(lamb_clip[0 ] /lamb_clip[1], 1)}\n"
-            f"$\\lambda_2 / \\lambda_3$ = {np.round(lamb_clip[1 ] /lamb_clip[2], 1)}"
+            f" {np.round(lamb_clip[0] / lamb_clip[1], 1)}\n"
+            f"$\\lambda_2 / \\lambda_3$ = {np.round(lamb_clip[1] / lamb_clip[2], 1)}"
         )
         vec_textstring = (
             f"\n"
-            f"$x_1$ = {np.round(v1 ,2)}\n"
-            f"$x_2$ = {np.round(v2 ,2)}\n"
-            f"$x_3$ = {np.round(v3 ,2)}"
+            f"$x_1$ = {np.round(v1, 2)}\n"
+            f"$x_2$ = {np.round(v2, 2)}\n"
+            f"$x_3$ = {np.round(v3, 2)}"
         )
         fontsize = "large"
         ax5.text(

@@ -41,7 +41,7 @@ jobs:
         pip install keyrings.alt
         pytest --cov=./ --cov-report=xml
     - name: Check that release process is not broken
-      if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
+      if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
