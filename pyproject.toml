@@ -30,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -50,7 +51,7 @@ dependencies = [
     "tqdm<4.66.0,>=4.62.3",
     "xarray==2023.9.0",
 ]
-requires-python = ">=3.9,<3.12"
+requires-python = ">=3.9,<=3.12"
 
 [project.optional-dependencies]
 dev = ["black", "pip-tools"]
