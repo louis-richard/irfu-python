@@ -35,6 +35,7 @@ classifiers = [
 ]
 dependencies = [
     "boto3>=1.34.45",
+    "botocore>=1.34.59",
     "cdflib>=1.2.0",
     "keyring>=24.2.0",
     "geopack==1.0.10",

@@ -167,7 +167,7 @@ __all__ = [
     "load_brst_segments",
     "make_model_kappa",
     "make_model_vdf",
-    "make_model_rq",
+    # "make_model_rq",
     "probe_align_times",
     "psd2def",
     "psd2dpf",
