@@ -6,14 +6,27 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 table = {
-    "mms1-top": [14.0, 7.0, 16.0, 14.0, 14.0, 0.0, 0.0, 0.0, 14.0, 14.0, 17.0, 15.0],
+    "mms1-top": [
+        14.0,
+        7.0,
+        16.0,
+        14.0,
+        14.0,
+        0.0,
+        0.0,
+        0.0,
+        14.0,
+        14.0,
+        17.0,
+        15.0,
+    ],
     "mms1-bot": [
         np.nan,
         14.0,
@@ -28,7 +41,20 @@ table = {
         -25.0,
         14.0,
     ],
-    "mms2-top": [-1.0, 6.0, -2.0, -1.0, np.nan, 0.0, np.nan, 0.0, 4.0, -1.0, -1.0, 0.0],
+    "mms2-top": [
+        -1.0,
+        6.0,
+        -2.0,
+        -1.0,
+        np.nan,
+        0.0,
+        np.nan,
+        0.0,
+        4.0,
+        -1.0,
+        -1.0,
+        0.0,
+    ],
     "mms2-bot": [
         -2.0,
         -1.0,
@@ -122,9 +148,8 @@ def feeps_energy_table(mms_id, eye, sensor_id):
 
     Notes
     -----
-    Bad eyes are replaced by NaNs.
-    Different original energy tables are used depending on if the sensor head
-    is 6-8 (ions) or not (electrons) :
+    Bad eyes are replaced by NaNs. Different original energy tables are used
+    depending on if the sensor head is 6-8 (ions) or not (electrons) :
         * Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
         * Ion Eyes: 6, 7, 8
 

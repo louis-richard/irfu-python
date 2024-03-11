@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -58,6 +58,8 @@ def mva(inp, flag: str = "mvar"):
 
     """
 
+    assert flag.lower() in ["mvar", "<bn>=0", "td"], "invalid method!!"
+
     inp_data = inp.data
     n_t = inp_data.shape[0]
 
@@ -67,14 +69,11 @@ def mva(inp, flag: str = "mvar"):
         m_mu_nu_m = np.mean(inp_data[:, idx_1] * inp_data[:, idx_2], 0)
         m_mu_nu_m -= np.mean(inp_data, 0)[idx_1] * np.mean(inp_data, 0)[idx_2]
 
-    elif flag.lower() == "td":
+    else:
         m_mu_nu_m = np.mean(inp_data[:, idx_1] * inp_data[:, idx_2], 0)
 
-    else:
-        raise ValueError("invalid flag")
-
     m_mu_nu = np.array(
-        [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+        [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
     )
 
     # Compute eigenvalues and eigenvectors
@@ -126,7 +125,7 @@ def mva(inp, flag: str = "mvar"):
         m_mu_nu_m -= inp_data_2_m[idx_1] * inp_data_2_m[idx_2]
 
         m_mu_nu = np.array(
-            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
         lamb, lmn = np.linalg.eig(m_mu_nu)
@@ -134,7 +133,7 @@ def mva(inp, flag: str = "mvar"):
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
         # Force the maximum variance direction to be positive
-        #lmn[:, 0] *= np.sign(lmn[np.argmax(lmn[:, 0]), 0])
+        # lmn[:, 0] *= np.sign(lmn[np.argmax(lmn[:, 0]), 0])
         # lamb[2], lmn[:, 2] = [l_min, np.cross(lmn[:, 0], lmn[:, 1])]
 
     elif flag.lower() == "td":
@@ -150,7 +149,7 @@ def mva(inp, flag: str = "mvar"):
         m_mu_nu_m -= inp_data_2_m[idx_1] * inp_data_2_m[idx_2]
 
         m_mu_nu = np.array(
-            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]]
+            [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
         lamb, lmn = np.linalg.eig(m_mu_nu)
@@ -158,6 +157,8 @@ def mva(inp, flag: str = "mvar"):
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
         lamb[2], lmn[:, 2] = [l_min, np.cross(lmn[:, 0], lmn[:, 1])]
+    else:
+        pass
 
     out_data = (lmn.T @ inp_data.T).T
 

@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -38,7 +38,7 @@ def eis_pad_spinavg(inp, spin_nums):
 
     spin_times = np.zeros(len(spin_starts), dtype="<M8[ns]")
     spin_sum_flux = np.zeros(
-        (len(spin_starts), len(inp.theta.data), len(inp.energy.data))
+        (len(spin_starts), len(inp.theta.data), len(inp.energy.data)),
     )
 
     current_start = 0

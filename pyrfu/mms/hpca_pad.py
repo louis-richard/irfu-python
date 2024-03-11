@@ -7,17 +7,19 @@ import warnings
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import interpolate
 
 # Local imports
-from ..pyrf import time_clip, resample, normalize, ts_scalar
+from ..pyrf.normalize import normalize
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -134,7 +136,9 @@ def hpca_pad(vdf, saz, aze, b_xyz, elim=None):
     t0_start = t0_[0]
     t0_ -= t0_start
     tck_ = interpolate.interp1d(
-        np.arange(0, n_en * len(t0_), n_en), t0_, fill_value="extrapolate"
+        np.arange(0, n_en * len(t0_), n_en),
+        t0_,
+        fill_value="extrapolate",
     )
     t1_tt = tck_(np.arange(0, n_en * len(t0_))) + t0_start
     t1_tt = t1_tt.astype("datetime64[ns]")

@@ -10,9 +10,9 @@ from .calc_dt import calc_dt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -56,7 +56,12 @@ def gradient(inp):
 
     d_inp_dt = np.gradient(inp.data, axis=0) / delta_t
 
-    out = xr.DataArray(d_inp_dt, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
+    out = xr.DataArray(
+        d_inp_dt,
+        coords=inp.coords,
+        dims=inp.dims,
+        attrs=inp.attrs,
+    )
 
     if "UNITS" in out.attrs:
         out.attrs["UNITS"] += "/s"

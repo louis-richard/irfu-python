@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 # Local imports
 from .resample import resample
@@ -10,9 +11,9 @@ from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -57,6 +58,14 @@ def cross(inp1, inp2):
     >>> v_xyz_exb = pyrf.cross(e_xyz, b_xyz) / b_mag ** 2
 
     """
+
+    # Check type
+    assert isinstance(inp1, xr.DataArray), "inp1 must be a xarray.DataArray"
+    assert isinstance(inp2, xr.DataArray), "inp2 must be a xarray.DataArray"
+
+    # Check inputs are vectors
+    assert inp1.ndim == 2 and inp1.shape[1] == 3, "inp1 must be a vector"
+    assert inp2.ndim == 2 and inp2.shape[1] == 3, "inp1 must be a vector"
 
     if len(inp1) != len(inp2):
         inp2 = resample(inp2, inp1)

@@ -3,12 +3,16 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
+
+# Local imports
+from .ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -67,9 +71,16 @@ def calc_ag(p_xyz):
 
     """
 
+    # Check input type
+    assert isinstance(p_xyz, xr.DataArray), "p_xyz must be a xarray.DataArray"
+
+    # Check import shape
+    message = "p_xyz must be a time series of a tensor"
+    assert p_xyz.data.ndim == 3 and p_xyz.shape[1] == 3 and p_xyz.shape[2] == 3, message
+
     # Diagonal and off-diagonal terms
-    p_11, p_22, _ = [p_xyz[:, 0, 0], p_xyz[:, 1, 1], p_xyz[:, 2, 2]]
-    p_12, p_13, p_23 = [p_xyz[:, 0, 1], p_xyz[:, 0, 2], p_xyz[:, 1, 2]]
+    p_11, p_22, _ = [p_xyz.data[:, 0, 0], p_xyz.data[:, 1, 1], p_xyz.data[:, 2, 2]]
+    p_12, p_13, p_23 = [p_xyz.data[:, 0, 1], p_xyz.data[:, 0, 2], p_xyz.data[:, 1, 2]]
 
     det_p = p_11 * (p_22**2 - p_23**2)
     det_p -= p_12 * (p_12 * p_22 - p_23 * p_13)
@@ -78,5 +89,6 @@ def calc_ag(p_xyz):
     det_g = p_11 * p_22**2
 
     agyrotropy = np.abs(det_p - det_g) / (det_p + det_g)
+    agyrotropy = ts_scalar(p_xyz.time.data, agyrotropy)
 
     return agyrotropy

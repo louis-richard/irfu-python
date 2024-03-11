@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
-import matplotlib.pyplot as plt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -54,10 +55,22 @@ def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
 
     if cax_pos == "bottom":
         caxis = f.add_axes([pos.x0, pos.y0 - 0.01, pos.width, 0.01])
-        f.colorbar(mappable=mappable, cax=caxis, ax=axis, orientation="horizontal")
+        f.colorbar(
+            mappable=mappable,
+            cax=caxis,
+            ax=axis,
+            orientation="horizontal",
+        )
     elif cax_pos == "top":
-        caxis = f.add_axes([pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01])
-        f.colorbar(mappable=mappable, cax=caxis, ax=axis, orientation="horizontal")
+        caxis = f.add_axes(
+            [pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01],
+        )
+        f.colorbar(
+            mappable=mappable,
+            cax=caxis,
+            ax=axis,
+            orientation="horizontal",
+        )
         caxis.xaxis.set_ticks_position("top")
         caxis.xaxis.set_label_position("top")
 
@@ -68,7 +81,9 @@ def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
         caxis.yaxis.set_label_position("left")
 
     elif cax_pos == "right":
-        caxis = f.add_axes([pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height])
+        caxis = f.add_axes(
+            [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height],
+        )
         f.colorbar(mappable=mappable, cax=caxis, ax=axis)
     else:
         raise ValueError("Invalid caxis position")

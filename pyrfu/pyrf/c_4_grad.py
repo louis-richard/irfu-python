@@ -8,19 +8,20 @@ import itertools
 import numpy as np
 import xarray as xr
 
+from .avg_4sc import avg_4sc
+from .c_4_k import c_4_k
+from .cross import cross
+from .dot import dot
+from .normalize import normalize
+
 # Local imports
 from .resample import resample
-from .c_4_k import c_4_k
-from .normalize import normalize
-from .avg_4sc import avg_4sc
-from .dot import dot
-from .cross import cross
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -30,18 +31,17 @@ def _to_ts(out_data, b_dict):
 
     elif len(out_data.shape) == 2:
         out = xr.DataArray(
-            out_data, coords=[b_dict["1"].time, ["x", "y", "z"]], dims=["time", "comp"]
+            out_data,
+            coords=[b_dict["1"].time, ["x", "y", "z"]],
+            dims=["time", "comp"],
         )
 
-    elif len(out_data.shape) == 3:
+    else:
         out = xr.DataArray(
             out_data,
             coords=[b_dict["1"].time, ["x", "y", "z"], ["x", "y", "z"]],
             dims=["time", "vcomp", "hcomp"],
         )
-
-    else:
-        raise TypeError("Invalid type")
 
     return out
 
@@ -104,6 +104,12 @@ def c_4_grad(r_list, b_list, method: str = "grad"):
 
     """
 
+    assert isinstance(r_list, list) and len(r_list) == 4, "r_list must a list of s/c"
+    assert isinstance(b_list, list) and len(b_list) == 4, "b_list must a list of s/c"
+
+    assert isinstance(method, str), "method must be a string"
+    assert method.lower() in ["grad", "div", "curl", "bdivb", "curv"], "Invalid method"
+
     # Resample with respect to 1st spacecraft
     r_list = [resample(r, b_list[0]) for r in r_list]
     b_list = [resample(b, b_list[0]) for b in b_list]
@@ -158,13 +164,10 @@ def c_4_grad(r_list, b_list, method: str = "grad"):
             out_data[:, i] = np.sum(b_avg.data * grad_b[:, i, :], axis=1)
 
     # Curvature
-    elif method.lower() == "curv":
+    else:
         b_hat_list = [normalize(b) for b in b_list]
 
         out_data = c_4_grad(r_list, b_hat_list, method="bdivb").data
-
-    else:
-        raise ValueError("Invalid method")
 
     out = _to_ts(out_data, b_dict)
 

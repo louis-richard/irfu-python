@@ -6,9 +6,9 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -126,12 +126,15 @@ def feeps_active_eyes(var, tint, mms_id):
         active_table["4-ion"]["top"] = [6, 8]
         active_table["4-ion"]["bottom"] = [6, 7, 8]
 
-        sensors = active_table["{:d}-{}".format(mms_id, var["dtype"].lower())]
+        sensors = active_table[f"{mms_id:d}-{var['dtype'].lower()}"]
 
         if var["lev"].lower() == "sitl":
             sensors["top"] = list(set(sensors["top"]) & {5, 11, 12})
             sensors["bottom"] = []
-            return {"top": list(set(sensors["top"]) & {5, 11, 12}), "bottom": []}
+            return {
+                "top": list(set(sensors["top"]) & {5, 11, 12}),
+                "bottom": [],
+            }
 
     if var["lev"].lower() == "sitl":
         sensors["top"] = [5, 11, 12]

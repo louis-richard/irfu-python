@@ -4,11 +4,14 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from .ts_scalar import ts_scalar
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -47,6 +50,6 @@ def norm(inp):
 
     """
 
-    out = np.sqrt(np.sum(inp**2, axis=1))
+    out = ts_scalar(inp.time.data, np.linalg.norm(inp.data, axis=1), attrs=inp.attrs)
 
     return out

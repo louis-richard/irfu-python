@@ -5,18 +5,11 @@
 import numpy as np
 import xarray as xr
 
-from cdflib import cdfread
-
-# Local imports
-from ..pyrf import datetime642iso8601
-
-from .list_files import list_files
-
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -33,10 +26,14 @@ def _check_time(proton_phxtof, proton_extof):
             phxtof_inds = []
             for i_t in range(data_size[1]):
                 dt_dummy = np.min(
-                    np.abs(proton_extof.time.data[i_t] - proton_extof.time.data)
+                    np.abs(
+                        proton_extof.time.data[i_t] - proton_extof.time.data,
+                    ),
                 )
                 t_ind = np.argmin(
-                    np.abs(proton_extof.time.data[i_t] - proton_extof.time.data)
+                    np.abs(
+                        proton_extof.time.data[i_t] - proton_extof.time.data,
+                    ),
                 )
                 if dt_dummy == 0:
                     extof_inds.append(i_t)
@@ -62,10 +59,14 @@ def _check_time(proton_phxtof, proton_extof):
             phxtof_inds = []
             for i_t in range(data_size[1]):
                 dt_dummy = np.min(
-                    np.abs(proton_extof.time.data[i_t] - proton_phxtof.time.data)
+                    np.abs(
+                        proton_extof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 t_ind = np.argmin(
-                    np.abs(proton_extof.time.data[i_t] - proton_phxtof.time.data)
+                    np.abs(
+                        proton_extof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 if dt_dummy == 0:
                     extof_inds.append(i_t)
@@ -91,10 +92,14 @@ def _check_time(proton_phxtof, proton_extof):
             phxtof_inds = []
             for i_t in range(data_size[0]):
                 dt_dummy = np.min(
-                    np.abs(proton_phxtof.time.data[i_t] - proton_phxtof.time.data)
+                    np.abs(
+                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 t_ind = np.argmin(
-                    np.abs(proton_phxtof.time.data[i_t] - proton_phxtof.time.data)
+                    np.abs(
+                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data,
+                    ),
                 )
                 if dt_dummy == 0:
                     phxtof_inds.append(i_t)
@@ -118,29 +123,20 @@ def _check_time(proton_phxtof, proton_extof):
     return time_data, phxtof_data, extof_data
 
 
-def _get_energy_dplus_dminus(eis_allt, data_path):
-    tint = list(datetime642iso8601(eis_allt.time.data[[0, -1]]))
+def _combine_attrs(attrs1, attrs2):
+    attrs = {}
+    for k in attrs1:
+        if k.lower() == "global":
+            attrs[k] = _combine_attrs(attrs1[k], attrs2[k])
+        elif k not in ["delta_energy_plus", "delta_energy_minus"]:
+            if attrs1[k] == attrs2[k]:
+                attrs[k] = attrs1[k]
+            else:
+                attrs[k] = [attrs1[k], attrs2[k]]
+        else:
+            continue
 
-    name_ = eis_allt.t0.attrs["FIELDNAM"]
-
-    mms_id = int(name_.split("_")[0][-1])
-
-    var = {"inst": "epd-eis", "lev": "l2"}
-
-    if "brst" in name_:
-        var["tmmode"] = "brst"
-    else:
-        var["tmmode"] = "srvy"
-
-    var["dtype"] = name_.split("_")[-5]
-
-    files = list_files(tint, mms_id, var, data_path=data_path)
-
-    with cdfread.CDF(files[0]) as file:
-        d_plus = file.varget(eis_allt.t0.energy.attrs["DELTA_PLUS_VAR"])
-        d_minus = file.varget(eis_allt.t0.energy.attrs["DELTA_MINUS_VAR"])
-
-    return d_plus, d_minus
+    return attrs
 
 
 def eis_combine_proton_spec(phxtof_allt, extof_allt):
@@ -166,35 +162,59 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     scopes_extof = list(filter(lambda x: x[0] == "t", extof_allt))
     assert scopes_extof == scopes_phxtof
 
-    data_path = extof_allt.attrs["data_path"]
-    dp_phxtof, dm_phxtof = _get_energy_dplus_dminus(phxtof_allt, data_path)
-    dp_extof, dm_extof = _get_energy_dplus_dminus(extof_allt, data_path)
+    # Get energy deltas for PHxTOF and ExTOF
+    delta_energy_plus_phxtof = phxtof_allt.attrs["delta_energy_plus"]
+    delta_energy_minus_phxtof = phxtof_allt.attrs["delta_energy_minus"]
+
+    delta_energy_plus_extof = extof_allt.attrs["delta_energy_plus"]
+    delta_energy_minus_extof = extof_allt.attrs["delta_energy_minus"]
 
     out_keys = list(filter(lambda x: x not in scopes_extof, extof_allt))
     out_dict = {k: extof_allt[k] for k in out_keys if k != "sector"}
 
-    comb_en_low, comb_en_hig = [None] * 2
+    energy_combined_low, energy_combined_hig = [None] * 2
 
-    time_sect, _, extof_sect = _check_time(phxtof_allt["sector"], extof_allt["sector"])
-    sect = xr.DataArray(extof_sect, coords=[time_sect], dims=["time"])
+    time_sect, _, extof_sect = _check_time(
+        phxtof_allt["sector"],
+        extof_allt["sector"],
+    )
+    sect = xr.DataArray(
+        extof_sect,
+        coords=[time_sect],
+        dims=["time"],
+        attrs=extof_allt["sector"].attrs,
+    )
 
     _, _, extof_spin = _check_time(phxtof_allt["spin"], extof_allt["spin"])
 
-    spin = xr.DataArray(extof_spin, coords=[time_sect], dims=["time"])
+    spin = xr.DataArray(
+        extof_spin,
+        coords=[time_sect],
+        dims=["time"],
+        attrs=extof_allt["spin"].attrs,
+    )
 
     for scope in scopes_phxtof:
         proton_phxtof = phxtof_allt[scope]
         proton_extof = extof_allt[scope]
 
-        time_data, phxtof_data, extof_data = _check_time(proton_phxtof, proton_extof)
+        time_data, phxtof_data, extof_data = _check_time(
+            proton_phxtof,
+            proton_extof,
+        )
 
-        en_phxtof, en_extof = [proton_phxtof.energy.data, proton_extof.energy.data]
-        idx_phxtof = np.where(en_phxtof < en_extof[0])[0]
-        cond_ = np.logical_and(en_phxtof > en_extof[0], en_phxtof < en_phxtof[-1])
+        energy_phxtof = proton_phxtof.energy.data
+        energy_extof = proton_extof.energy.data
+
+        idx_phxtof = np.where(energy_phxtof < energy_extof[0])[0]
+        cond_ = np.logical_and(
+            energy_phxtof > energy_extof[0],
+            energy_phxtof < energy_phxtof[-1],
+        )
         idx_phxtof_cross = np.where(cond_)[0]
 
-        idx_extof_cross = np.where(en_extof < en_phxtof[-2])[0]
-        idx_extof = np.where(en_extof > en_phxtof[-2])[0]
+        idx_extof_cross = np.where(energy_extof < energy_phxtof[-2])[0]
+        idx_extof = np.where(energy_extof > energy_phxtof[-2])[0]
 
         n_phxtof = idx_phxtof.size
         n_phxtof_cross = idx_phxtof_cross.size
@@ -202,41 +222,85 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
 
         n_en = n_phxtof + n_phxtof_cross + n_extof
 
-        comb_en, comb_en_low, comb_en_hig = [np.zeros(n_en) for _ in range(3)]
+        energy_combined = np.zeros(n_en)
+        energy_combined_low, energy_combined_hig = [np.zeros(n_en) for _ in range(2)]
 
-        comb_array = np.zeros((len(time_data), n_en))
-        comb_array[:, :n_phxtof] = phxtof_data[:, idx_phxtof]
-        comb_en[:n_phxtof] = en_phxtof[idx_phxtof]
-        comb_en_low[:n_phxtof] = comb_en[:n_phxtof] - dm_phxtof[idx_phxtof]
-        comb_en_hig[:n_phxtof] = comb_en[:n_phxtof] + dp_phxtof[idx_phxtof]
+        data_combined = np.zeros((len(time_data), n_en))
+        data_combined[:, :n_phxtof] = phxtof_data[:, idx_phxtof]
+        energy_combined[:n_phxtof] = energy_phxtof[idx_phxtof]
+        energy_combined_low[:n_phxtof] = (
+            energy_combined[:n_phxtof] - delta_energy_minus_phxtof[idx_phxtof]
+        )
+        energy_combined_hig[:n_phxtof] = (
+            energy_combined[:n_phxtof] + delta_energy_plus_phxtof[idx_phxtof]
+        )
 
-        for (i, i_phx), i_ex in zip(enumerate(idx_phxtof_cross), idx_extof_cross):
+        for (i, i_phx), i_ex in zip(
+            enumerate(idx_phxtof_cross),
+            idx_extof_cross,
+        ):
             idx_ = n_phxtof + i
-            comb_array[:, idx_] = np.nanmean(
-                np.vstack([phxtof_data[:, i_phx], extof_data[:, i_ex]]), axis=0
+            data_combined[:, idx_] = np.nanmean(
+                np.vstack([phxtof_data[:, i_phx], extof_data[:, i_ex]]),
+                axis=0,
             )
-            comb_en_low[idx_] = np.nanmin(
-                [en_phxtof[idx_] - dm_phxtof[idx_], en_extof[i] - dm_extof[i]]
+            energy_combined_low[idx_] = np.nanmin(
+                [
+                    energy_phxtof[idx_] - delta_energy_minus_phxtof[idx_],
+                    energy_extof[i] - delta_energy_minus_extof[i],
+                ],
             )
-            comb_en_hig[idx_] = np.nanmax(
-                [en_phxtof[idx_] + dp_phxtof[idx_], en_extof[i] + dp_extof[i]]
+            energy_combined_hig[idx_] = np.nanmax(
+                [
+                    energy_phxtof[idx_] + delta_energy_plus_phxtof[idx_],
+                    energy_extof[i] + delta_energy_plus_extof[i],
+                ],
             )
-            comb_en[idx_] = np.sqrt(comb_en_low[idx_] * comb_en_hig[idx_])
+            energy_combined[idx_] = np.sqrt(
+                energy_combined_low[idx_] * energy_combined_hig[idx_],
+            )
 
-        comb_array[:, -n_extof:] = extof_data[:, idx_extof]
-        comb_en[-n_extof:] = en_extof[idx_extof]
-        comb_en_low[-n_extof:] = en_extof[idx_extof] - dm_extof[idx_extof]
-        comb_en_hig[-n_extof:] = en_extof[idx_extof] + dp_extof[idx_extof]
+        data_combined[:, -n_extof:] = extof_data[:, idx_extof]
+        energy_combined[-n_extof:] = energy_extof[idx_extof]
+        energy_combined_low[-n_extof:] = (
+            energy_extof[idx_extof] - delta_energy_minus_extof[idx_extof]
+        )
+        energy_combined_hig[-n_extof:] = (
+            energy_extof[idx_extof] + delta_energy_plus_extof[idx_extof]
+        )
+
+        attrs = _combine_attrs(
+            phxtof_allt[scope].attrs,
+            extof_allt[scope].attrs,
+        )
 
         out_dict[scope] = xr.DataArray(
-            comb_array, coords=[time_data, comb_en], dims=["time", "energy"]
+            data_combined,
+            coords=[time_data, energy_combined],
+            dims=["time", "energy"],
+            attrs=attrs,
         )
 
     out_dict["sector"] = sect
     out_dict["spin"] = spin
-    out_dict["energy_dminus"] = comb_en_low
-    out_dict["energy_dplus"] = comb_en_hig
 
-    comb_allt = xr.Dataset(out_dict)
+    # Combine attributes for all telescopes and set energy deltas as attributes
+    attrs = _combine_attrs(phxtof_allt.attrs, extof_allt.attrs)
+    attrs = {
+        "delta_energy_minus": energy_combined_low,
+        "delta_energy_plus": energy_combined_hig,
+        **attrs,
+    }
+
+    # Create Dataset
+    comb_allt = xr.Dataset(out_dict, attrs=attrs)
+    comb_allt.time.attrs = _combine_attrs(
+        phxtof_allt.time.attrs,
+        extof_allt.time.attrs,
+    )
+    comb_allt.energy.attrs = _combine_attrs(
+        phxtof_allt.energy.attrs,
+        extof_allt.energy.attrs,
+    )
 
     return comb_allt

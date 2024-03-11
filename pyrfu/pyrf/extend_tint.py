@@ -4,15 +4,16 @@
 # 3rd party imports
 import numpy as np
 
+from .datetime642iso8601 import datetime642iso8601
+
 # Local imports
 from .iso86012datetime64 import iso86012datetime64
-from .datetime642iso8601 import datetime642iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -23,7 +24,7 @@ def extend_tint(tint, ext: list = None):
     ----------
     tint : list of str
         Reference time interval to extend.
-    ext : list of float or list of int
+    ext : list of float or list of float
         Number of seconds to extend time interval
         [left extend, right extend].
 
@@ -46,14 +47,25 @@ def extend_tint(tint, ext: list = None):
 
     """
 
+    # Set default extension
     if ext is None:
-        ext = [-60, 60]
+        ext = [-60.0, 60.0]
 
-    # Convert extension to timedelta64 in s units
-    ext = np.array(ext).astype("timedelta64[s]")
+    # Make sure tint and ext are 2 elements array_like
+    message = "must be array_like with 2 elements"
+    assert isinstance(tint, (np.ndarray, list)) and len(tint) == 2, f"tint {message}"
+    assert isinstance(ext, (np.ndarray, list)) and len(ext) == 2, f"ext {message}"
 
-    # Original time interval to datetime64 format in ns units
-    tint_ori = iso86012datetime64(np.array(tint))
+    # Convert extension to timedelta64[ns]
+    ext = (np.array(ext) * 1e9).astype("timedelta64[ns]")
+
+    # Original time interval to datetime64[ns]
+    if isinstance(tint[0], np.datetime64):
+        tint_ori = tint
+    elif isinstance(tint[0], str):
+        tint_ori = iso86012datetime64(np.array(tint))
+    else:
+        raise TypeError("Invalid time format!! Must be datetime64 or str!!")
 
     # New time interval in iso 8601 format
     tint_new = list(datetime642iso8601(tint_ori + ext))

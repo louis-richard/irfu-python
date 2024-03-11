@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -66,11 +66,17 @@ def median_bins(inp0, inp1, bins: int = 10):
     >>> b_mag = pyrf.norm(b_xyz)
     >>> j_mag = pyrf.norm(j_xyz)
 
-    Median value of |J| for 10 bins of |B|
+    Median value of J for 10 bins of B
 
     >>> med_b_j = pyrf.mean_bins(b_mag, j_mag)
 
     """
+
+    assert isinstance(inp0, xr.DataArray), "inp0 must be xaray.DataArray"
+    assert isinstance(inp1, xr.DataArray), "inp1 must be xaray.DataArray"
+
+    assert inp0.ndim == 1, "inp0 must be a scalar"
+    assert inp1.ndim == 1, "inp1 must be a scalar"
 
     x_sort = np.sort(inp0.data)
     x_edge = np.linspace(x_sort[0], x_sort[-1], bins + 1)
@@ -87,8 +93,12 @@ def median_bins(inp0, inp1, bins: int = 10):
 
     bins = x_edge[:-1] + np.median(np.diff(x_edge)) / 2
 
-    out_dict = {"data": (["bins"], y_med), "sigma": (["bins"], y_std), "bins": bins}
+    out_dict = {
+        "data": (["bins"], y_med),
+        "sigma": (["bins"], y_std),
+        "bins": bins,
+    }
 
     out = xr.Dataset(out_dict)
 
-    return bins, y_med, out
+    return out

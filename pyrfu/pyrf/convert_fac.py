@@ -5,16 +5,17 @@
 import numpy as np
 import xarray as xr
 
+from .calc_fs import calc_fs
+
 # Local imports
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
-from .calc_fs import calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -71,49 +72,66 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
 
     """
 
-    assert r_xyz is None or isinstance(r_xyz, (xr.DataArray, list, np.ndarray))
+    # Check input type
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    assert isinstance(b_bgd, xr.DataArray), "b_xyz must be a xarray.DataArray"
 
-    if r_xyz is None:
-        r_xyz = np.array([1, 0, 0])
+    assert r_xyz is None or isinstance(
+        r_xyz,
+        (xr.DataArray, list, np.ndarray),
+    )
 
     if len(inp) != len(b_bgd):
         b_bgd = resample(b_bgd, inp, f_s=calc_fs(inp))
 
     time, inp_data = [inp.time.data, inp.data]
 
-    # Normalize background magnetic field
-    b_hat = b_bgd / np.linalg.norm(b_bgd, axis=1, keepdims=True)
+    if r_xyz is None:
+        r_xyz = np.array([1, 0, 0])
 
     if isinstance(r_xyz, xr.DataArray):
         r_xyz = resample(r_xyz, b_bgd, f_s=calc_fs(b_bgd))
 
-    elif len(r_xyz) == 3:
+    elif isinstance(r_xyz, (list, np.ndarray)) and len(r_xyz) == 3:
         r_xyz = np.tile(r_xyz, (len(b_bgd), 1))
 
-    # Perpendicular
-    r_perp_y = np.cross(b_hat, r_xyz, axis=1)
-    r_perp_y /= np.linalg.norm(r_perp_y, axis=1, keepdims=True)
-    r_perp_x = np.cross(r_perp_y, b_bgd, axis=1)
-    r_perp_x /= np.linalg.norm(r_perp_x, axis=1, keepdims=True)
+    if b_bgd.ndim == 2 and b_bgd.shape[1] == 3:
+        # Normalize background magnetic field
+        b_hat = b_bgd / np.linalg.norm(b_bgd, axis=1, keepdims=True)
 
-    assert inp_data.shape[1] in [1, 3], "Invalid dimension of inp"
+        # Perpendicular
+        r_perp_y = np.cross(b_hat, r_xyz, axis=1)
+        r_perp_y /= np.linalg.norm(r_perp_y, axis=1, keepdims=True)
+        r_perp_x = np.cross(r_perp_y, b_bgd, axis=1)
+        r_perp_x /= np.linalg.norm(r_perp_x, axis=1, keepdims=True)
+        r_para = b_hat
+    elif b_bgd.ndim == 3 and b_bgd.shape[1] == 3 and b_bgd.shape[2] == 3:
+        r_perp_x = ts_vec_xyz(b_bgd.time.data, b_bgd.data[:, 0])
+        r_perp_y = ts_vec_xyz(b_bgd.time.data, b_bgd.data[:, 1])
+        r_para = ts_vec_xyz(b_bgd.time.data, b_bgd.data[:, 2])
+    else:
+        raise TypeError("b_bgd must be a vector or a tensor time series")
 
-    if inp_data.shape[1] == 3:
-        out_data = np.zeros(inp.shape)
+    if inp_data.ndim == 2 and inp_data.shape[1] == 3:
+        out_data = np.zeros(inp.shape, dtype=inp_data.dtype)
 
         out_data[:, 0] = np.sum(r_perp_x * inp_data, axis=1)
         out_data[:, 1] = np.sum(r_perp_y * inp_data, axis=1)
-        out_data[:, 2] = np.sum(b_hat * inp_data, axis=1)
+        out_data[:, 2] = np.sum(r_para * inp_data, axis=1)
 
-        # xarray
-        out = xr.DataArray(out_data, coords=[time, inp.comp], dims=["time", "comp"])
-
-    else:
-        out_data = np.zeros([3, inp_data.shape[0]])
-
-        out_data[:, 0] = inp[:, 0] * np.sum(r_perp_x * r_xyz, axis=1)
-        out_data[:, 1] = inp[:, 0] * np.sum(b_hat * r_xyz, axis=1)
-
+        # To xarray
         out = ts_vec_xyz(time, out_data, attrs=inp.attrs)
+
+    elif inp_data.ndim == 1:
+        out_data = np.zeros([inp_data.shape[0], 2])
+
+        out_data[:, 0] = inp * np.sum(r_perp_x * r_xyz, axis=1)
+        out_data[:, 1] = inp * np.sum(r_para * r_xyz, axis=1)
+
+        out = xr.DataArray(
+            out_data, coords=[time, ["perp", "para"]], dims=["time", "comp"]
+        )
+    else:
+        raise TypeError("inp must be a vector or scalar")
 
     return out

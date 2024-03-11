@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -37,6 +37,8 @@ def vdf_omni(vdf, method: str = "mean"):
 
     """
 
+    assert method.lower() in ["mean", "sum"], "invalid method!!"
+
     time = vdf.time.data
 
     energy = vdf.energy.data
@@ -46,22 +48,30 @@ def vdf_omni(vdf, method: str = "mean"):
 
     sine_theta = np.ones((np_phi, 1)) * np.sin(np.deg2rad(thetas))
     solid_angles = dangle * dangle * sine_theta
-    all_solid_angles = np.tile(solid_angles, (len(time), energy.shape[1], 1, 1))
+    all_solid_angles = np.tile(
+        solid_angles,
+        (len(time), energy.shape[1], 1, 1),
+    )
 
     if method.lower() == "mean":
         dist = vdf.data.data * all_solid_angles
         omni = np.squeeze(np.nanmean(np.nanmean(dist, axis=3), axis=2))
         omni /= np.mean(np.mean(solid_angles))
-    elif method.lower() == "sum":
+    else:
         dist = vdf.data.data
         omni = np.squeeze(np.nansum(np.nansum(dist, axis=3), axis=2))
-    else:
-        raise ValueError("invalid method!!")
 
     energy = np.mean(energy[:2, :], axis=0)
 
+    # Use global and zVariable attributes
+    attrs = {**vdf.data.attrs, **vdf.attrs}
+    attrs = {k: attrs[k] for k in sorted(attrs)}
+
     out = xr.DataArray(
-        omni, coords=[time, energy], dims=["time", "energy"], attrs=vdf.attrs
+        omni,
+        coords=[time, energy],
+        dims=["time", "energy"],
+        attrs=attrs,
     )
 
     return out

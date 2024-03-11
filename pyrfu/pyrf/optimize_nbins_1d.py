@@ -6,9 +6,9 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -33,10 +33,10 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
 
     References
     ----------
-    _[1]    Rudemo, M. (1982) Empirical Choice of Histograms and Kernel Density
+    .. [1]  Rudemo, M. (1982) Empirical Choice of Histograms and Kernel Density
             Estimators. Scandinavian Journal of Statistics, 9, 65-78.
 
-    _[2]    Shimazaki H. and Shinomoto S., A method for selecting the bin size
+    .. [2]  Shimazaki H. and Shinomoto S., A method for selecting the bin size
             of a time histogram Neural Computation (2007) Vol. 19(6), 1503-1527
     """
 
@@ -48,9 +48,9 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
     # Bin size vector
     ds_x = (x_max - x_min) / ns_x
 
-    cs_x = np.zeros(d_x.shape)
+    cs_x = np.zeros(ds_x.shape)
     # Computation of the cost function to x and y
-    for i, n_x in enumumerate(ns_x):
+    for i, n_x in enumerate(ns_x):
         k_i = np.histogram(x, bins=n_x)
         # The mean and the variance are simply computed from the
         # event counts in all the bins of the 1-dimensional histogram.
@@ -64,6 +64,6 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
     # combination of i and j that produces the minimum cost function
     idx_min = np.argmin(cs_x)  # get the index of the min Cxy
 
-    opt_n_x = ns_x[idx_min]
+    opt_n_x = int(ns_x[idx_min])
 
     return opt_n_x

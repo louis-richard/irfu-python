@@ -2,160 +2,132 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import multiprocessing as mp
+import logging
 
 # 3rd party imports
+import numba
 import numpy as np
 import xarray as xr
-
 from scipy import constants
 
 # Local imports
-from ..pyrf import resample, ts_scalar, ts_vec_xyz, ts_tensor_xyz
+from ..pyrf.resample import resample
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
-# noinspection PyUnboundLocalVariable
-def _moms(time_idx, arguments):
-    if len(arguments) > 13:
-        [
-            is_brst_data,
-            flag_same_e,
-            flag_de,
-            step_table,
-            energy0,
-            delta_v0,
-            energy1,
-            delta_v1,
-            q_e,
-            sc_pot,
-            p_mass,
-            flag_inner_electron,
-            w_inner_electron,
-            phi_tr,
-            theta_k,
-            int_energies,
-            vdf,
-            delta_ang,
-        ] = arguments
-    else:
-        [
-            is_brst_data,
-            flag_same_e,
-            flag_de,
-            energy,
-            delta_v,
-            q_e,
-            sc_pot,
-            p_mass,
-            flag_inner_electron,
-            w_inner_electron,
-            phi_tr,
-            theta_k,
-            int_energies,
-            vdf,
-            delta_ang,
-        ] = arguments
 
-    if is_brst_data:
-        if not flag_same_e or not flag_de:
-            energy = energy0
-            delta_v = delta_v0
+@numba.jit(cache=True, fastmath=True, nogil=True, parallel=True, nopython=True)
+def _moms(
+    energy,
+    delta_v,
+    q_e,
+    sc_pot,
+    p_mass,
+    flag_inner_electron,
+    w_inner_electron,
+    phi,
+    theta,
+    int_energies,
+    vdf,
+    delta_ang,
+):
+    n_psd = np.zeros(vdf.shape[0])
+    v_psd = np.zeros((vdf.shape[0], 3))
+    p_psd = np.zeros((vdf.shape[0], 3, 3))
+    h_psd = np.zeros((vdf.shape[0], 3))
 
-            if step_table[time_idx]:
-                energy = energy1
-                delta_v = delta_v1
+    for i_t in numba.prange(vdf.shape[0]):
+        energy_correct = energy[i_t, :] - sc_pot[i_t]
 
-    velocity = np.real(np.sqrt(2 * q_e * (energy - sc_pot.data[time_idx]) / p_mass))
-    velocity[
-        energy - sc_pot.data[time_idx] - flag_inner_electron * w_inner_electron < 0
-    ] = 0
+        velocity = np.sqrt(2 * q_e * energy_correct / p_mass)
+        velocity[energy_correct < flag_inner_electron * w_inner_electron] = 0
 
-    if is_brst_data:
-        phi_j = phi_tr[time_idx, :]
-    else:
-        phi_j = phi_tr
+        phi_i = np.deg2rad(phi[i_t, :, :])
+        theta_i = np.deg2rad(theta[i_t, :, :])
 
-    phi_j = np.deg2rad(phi_j[:, np.newaxis])
-    the_k = np.deg2rad(theta_k)
-    ones_ = np.ones(phi_j.shape)
+        psd2n_mat = np.ones(theta_i.shape) * np.sin(theta_i)
 
-    n_psd = 0
-    v_psd = np.zeros(3)
-    p_psd = np.zeros((3, 3))
-    h_psd = np.zeros(3)
+        # Particle flux and heat flux vector
+        psd2v_x_mat = -np.cos(phi_i) * np.sin(theta_i) ** 2
+        psd2v_y_mat = -np.sin(phi_i) * np.sin(theta_i) ** 2
+        psd2v_z_mat = -np.ones(theta_i.shape) * np.sin(theta_i) * np.cos(theta_i)
 
-    psd2_n_mat = np.dot(ones_, np.sin(the_k))
-    psd2_v_x_mat = -np.dot(np.cos(phi_j), np.sin(the_k) * np.sin(the_k))
-    psd2_v_y_mat = -np.dot(np.sin(phi_j), np.sin(the_k) * np.sin(the_k))
-    psd2_v_z_mat = -np.dot(ones_, np.sin(the_k) * np.cos(the_k))
-    psd_mf_xx_mat = np.dot(np.cos(phi_j) ** 2, np.sin(the_k) ** 3)
-    psd_mf_yy_mat = np.dot(np.sin(phi_j) ** 2, np.sin(the_k) ** 3)
-    psd_mf_zz_mat = np.dot(ones_, np.sin(the_k) * np.cos(the_k) ** 2)
-    psd_mf_xy_mat = np.dot(np.cos(phi_j) * np.sin(phi_j), np.sin(the_k) ** 3)
-    psd_mf_xz_mat = np.dot(np.cos(phi_j), np.cos(the_k) * np.sin(the_k) ** 2)
-    psd_mf_yz_mat = np.dot(np.sin(phi_j), np.cos(the_k) * np.sin(the_k) ** 2)
+        psd2p_xx_mat = np.cos(phi_i) ** 2.0 * np.sin(theta_i) ** 3
+        psd2p_yy_mat = np.sin(phi_i) ** 2.0 * np.sin(theta_i) ** 3
+        psd2p_zz_mat = np.ones(theta_i.shape) * np.sin(theta_i) * np.cos(theta_i) ** 2
+        psd2p_xy_mat = np.cos(phi_i) * np.sin(phi_i) * np.sin(theta_i) ** 3
+        psd2p_xz_mat = np.cos(phi_i) * np.sin(phi_i) ** 2 * np.cos(theta_i)
+        psd2p_yz_mat = np.sin(phi_i) * np.sin(phi_i) ** 2 * np.cos(theta_i)
 
-    for i in int_energies:
-        tmp = np.squeeze(vdf[time_idx, i, :, :])
-        # n_psd_tmp1 = tmp .* psd2_n_mat * v(ii)^2 * delta_v(ii) * delta_ang;
-        # n_psd_e32_phi_theta(nt, ii, :, :) = n_psd_tmp1;
-        # n_psd_e32(nt, ii) = n_psd_tmp
+        for i_e in int_energies:
+            tmp = vdf[i_t, i_e, :, :]
+            # n_psd_tmp1 = tmp .* psd2_n_mat * v(ii)^2 * delta_v(ii) * delta_ang;
+            # n_psd_e32_phi_theta(nt, ii, :, :) = n_psd_tmp1;
+            # n_psd_e32(nt, ii) = n_psd_tmp
 
-        # number density
-        n_psd_tmp = np.nansum(np.nansum(tmp * psd2_n_mat, axis=0), axis=0)
-        n_psd_tmp *= delta_v[i] * delta_ang * velocity[i] ** 2
-        n_psd += n_psd_tmp
+            # number density
+            n_psd_tmp = np.nansum(tmp * psd2n_mat * delta_ang[i_t])
+            n_psd_tmp *= delta_v[i_t, i_e] * velocity[i_e] ** 2
+            n_psd[i_t] += n_psd_tmp
 
-        # Bulk velocity
-        v_temp_x = np.nansum(np.nansum(tmp * psd2_v_x_mat, axis=0), axis=0)
-        v_temp_x *= delta_v[i] * delta_ang * velocity[i] ** 3
+            # Bulk velocity
+            v_temp_x = np.nansum(tmp * psd2v_x_mat * delta_ang[i_t])
+            v_temp_x *= delta_v[i_t, i_e] * velocity[i_e] ** 3
 
-        v_temp_y = np.nansum(np.nansum(tmp * psd2_v_y_mat, axis=0), axis=0)
-        v_temp_y *= delta_v[i] * delta_ang * velocity[i] ** 3
+            v_temp_y = np.nansum(tmp * psd2v_y_mat * delta_ang[i_t])
+            v_temp_y *= delta_v[i_t, i_e] * velocity[i_e] ** 3
 
-        v_temp_z = np.nansum(np.nansum(tmp * psd2_v_z_mat, axis=0), axis=0)
-        v_temp_z *= delta_v[i] * delta_ang * velocity[i] ** 3
+            v_temp_z = np.nansum(tmp * psd2v_z_mat * delta_ang[i_t])
+            v_temp_z *= delta_v[i_t, i_e] * velocity[i_e] ** 3
 
-        v_psd[0] += v_temp_x
-        v_psd[1] += v_temp_y
-        v_psd[2] += v_temp_z
+            v_psd[i_t, 0] += v_temp_x
+            v_psd[i_t, 1] += v_temp_y
+            v_psd[i_t, 2] += v_temp_z
 
-        # Pressure tensor
-        p_temp_xx = np.nansum(np.nansum(tmp * psd_mf_xx_mat, axis=0), axis=0)
-        p_temp_xx *= delta_v[i] * delta_ang * velocity[i] ** 4
+            # Pressure tensor
+            p_temp_xx = np.nansum(tmp * psd2p_xx_mat * delta_ang[i_t])
+            p_temp_xx *= delta_v[i_t, i_e] * velocity[i_e] ** 4
 
-        p_temp_xy = np.nansum(np.nansum(tmp * psd_mf_xy_mat, axis=0), axis=0)
-        p_temp_xy *= delta_v[i] * delta_ang * velocity[i] ** 4
+            p_temp_xy = np.nansum(tmp * psd2p_xy_mat * delta_ang[i_t])
+            p_temp_xy *= delta_v[i_t, i_e] * velocity[i_e] ** 4
 
-        p_temp_xz = np.nansum(np.nansum(tmp * psd_mf_xz_mat, axis=0), axis=0)
-        p_temp_xz *= delta_v[i] * delta_ang * velocity[i] ** 4
+            p_temp_xz = np.nansum(tmp * psd2p_xz_mat * delta_ang[i_t])
+            p_temp_xz *= delta_v[i_t, i_e] * velocity[i_e] ** 4
 
-        p_temp_yy = np.nansum(np.nansum(tmp * psd_mf_yy_mat, axis=0), axis=0)
-        p_temp_yy *= delta_v[i] * delta_ang * velocity[i] ** 4
+            p_temp_yy = np.nansum(tmp * psd2p_yy_mat * delta_ang[i_t])
+            p_temp_yy *= delta_v[i_t, i_e] * velocity[i_e] ** 4
 
-        p_temp_yz = np.nansum(np.nansum(tmp * psd_mf_yz_mat, axis=0), axis=0)
-        p_temp_yz *= delta_v[i] * delta_ang * velocity[i] ** 4
+            p_temp_yz = np.nansum(tmp * psd2p_yz_mat * delta_ang[i_t])
+            p_temp_yz *= delta_v[i_t, i_e] * velocity[i_e] ** 4
 
-        p_temp_zz = np.nansum(np.nansum(tmp * psd_mf_zz_mat, axis=0), axis=0)
-        p_temp_zz *= delta_v[i] * delta_ang * velocity[i] ** 4
+            p_temp_zz = np.nansum(tmp * psd2p_zz_mat * delta_ang[i_t])
+            p_temp_zz *= delta_v[i_t, i_e] * velocity[i_e] ** 4
 
-        p_psd[0, 0] += p_temp_xx
-        p_psd[0, 1] += p_temp_xy
-        p_psd[0, 2] += p_temp_xz
-        p_psd[1, 1] += p_temp_yy
-        p_psd[1, 2] += p_temp_yz
-        p_psd[2, 2] += p_temp_zz
+            p_psd[i_t, 0, 0] += p_temp_xx
+            p_psd[i_t, 0, 1] += p_temp_xy
+            p_psd[i_t, 0, 2] += p_temp_xz
+            p_psd[i_t, 1, 1] += p_temp_yy
+            p_psd[i_t, 1, 2] += p_temp_yz
+            p_psd[i_t, 2, 2] += p_temp_zz
 
-        h_psd[0] = v_temp_x * velocity[i] ** 2
-        h_psd[1] = v_temp_y * velocity[i] ** 2
-        h_psd[2] = v_temp_z * velocity[i] ** 2
+            h_psd[i_t, 0] = v_temp_x * velocity[i_e] ** 2
+            h_psd[i_t, 1] = v_temp_y * velocity[i_e] ** 2
+            h_psd[i_t, 2] = v_temp_z * velocity[i_e] ** 2
 
     return n_psd, v_psd, p_psd, h_psd
 
@@ -171,7 +143,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         Time series of the spacecraft potential.
 
     Returns
-    --------
+    -------
     n_psd : xarray.DataArray
         Time series of the number density (1rst moment).
     v_psd : xarray.DataArray
@@ -197,11 +169,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
     en_channels : array_like
         Set energy channels to integrate over [min max]; min and max between
         must be between 1 and 32.
-    partial_moments : ndarray or xarray.DataArray
-        Use a binary array (or DataArray) (pmomsarr) to select which psd
-        points are used in the moments calculation. pmomsarr must be a
-        binary array (1s and 0s, 1s correspond to points used). Array (or
-        data of Dataarray) must be the same size as vdf.data.
+    partial_moments : numpy.ndarray or xarray.DataArray
+        Use a binary array to select which psd points are used in the moments
+        calculation. `partial_moments` must be a binary array (1s and 0s,
+        1s correspond to points used). Array (or data of Dataarray) must be the same
+        size as vdf.data.
     inner_electron : {"on", "off"}
         inner_electrontron potential for electron moments.
 
@@ -228,74 +200,58 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     """
 
-    flag_de, flag_same_e, flag_inner_electron = [False] * 3
-
     # [eV] sc_pot + w_inner_electron for electron moments calculation
     w_inner_electron = 3.5
 
-    vdf.data.data *= 1e12
-
     # Check if data is fast or burst resolution
-    field_name = vdf.attrs["FIELDNAM"]
-
-    if "brst" in field_name:
+    if "brst" in vdf.data.attrs["FIELDNAM"].lower():
         is_brst_data = True
-        print("notice : Burst resolution data is used")
-    elif "fast" in field_name:
+        logging.info("Burst resolution data is used")
+    elif "fast" in vdf.data.attrs["FIELDNAM"].lower():
         is_brst_data = False
-        print("notice : Fast resolution data is used")
+        logging.info("Fast resolution data is used")
     else:
         raise TypeError("Could not identify if data is fast or burst.")
 
-    phi = vdf.phi.data
-    theta_k = vdf.theta
+    theta = vdf.theta.data
     particle_type = vdf.attrs["species"]
+    assert particle_type[0].lower() in ["e", "i"], "invalid particle type"
 
-    if is_brst_data:
-        step_table = vdf.attrs["esteptable"]
-        energy = None
-        energy0 = vdf.attrs["energy0"]
-        energy1 = vdf.attrs["energy1"]
-        e_tmp = energy1 - energy0
+    vdf_data = vdf.data.data * 1e12  # In SI units
 
-        if all(e_tmp) == 0:
-            flag_same_e = 1
-    else:
-        step_table = None
-        energy = vdf.energy
-        energy0 = None
-        energy1 = None
-        e_tmp = energy[0, :] - energy[-1, :]
+    step_table = vdf.attrs["esteptable"]
+    energy = vdf.energy.data
+    energy0 = vdf.attrs["energy0"]
+    energy1 = vdf.attrs["energy1"]
+    e_tmp = energy1 - energy0
 
-        if all(e_tmp) == 0:
-            energy = energy[0, :]
-        else:
-            raise TypeError("Could not identify if data is fast or burst.")
+    flag_same_e = all(e_tmp) == 0
 
     # resample sc_pot to same resolution as particle distributions
-    sc_pot = resample(sc_pot, vdf.time)
+    sc_pot = resample(sc_pot, vdf.time).data
 
     if "energy_range" in kwargs:
         if (
             isinstance(kwargs["energy_range"], (list, np.ndarray))
             and len(kwargs["energy_range"]) == 2
         ):
-            if not is_brst_data:
-                energy0 = energy
+            # if not is_brst_data:
+            #    energy0 = energy
 
             # e_min_max = kwargs["energy_range"]
             # start_e = bisect.bisect_left(energy0, e_min_max[0])
             # stop_e = bisect.bisect_left(energy0, e_min_max[1])
 
-            print("notice : Using partial energy range")
+            logging.info("Using partial energy range")
 
-    if "no_sc_pot" in kwargs:
-        if isinstance(kwargs["no_sc_pot"], bool) and not kwargs["no_sc_pot"]:
-            sc_pot.data = np.zeros(sc_pot.shape)
-            print("notice : Setting spacecraft potential to zero")
+    no_sc_pot = kwargs.get("no_sc_pot", False)
+    if no_sc_pot:
+        sc_pot = np.zeros(sc_pot.shape)
+        logging.info("Setting spacecraft potential to zero")
 
     int_energies = np.arange(
-        kwargs.get("en_channels", [0, 32])[0], kwargs.get("en_channels", [0, 32])[1]
+        kwargs.get("en_channels", [0, 32])[0],
+        kwargs.get("en_channels", [0, 32])[1],
     )
 
     if "partial_moments" in kwargs:
@@ -304,31 +260,35 @@ def psd_moments(vdf, sc_pot, **kwargs):
             partial_moments = partial_moments.data
 
         # Check size of partial_moments
-        if partial_moments.shape == vdf.data.shape:
+        if partial_moments.shape == vdf_data.shape:
             sum_ones = np.sum(
-                np.sum(np.sum(np.sum(partial_moments, axis=-1), axis=-1), axis=-1),
+                np.sum(
+                    np.sum(np.sum(partial_moments, axis=-1), axis=-1),
+                    axis=-1,
+                ),
                 axis=-1,
             )
             sum_zeros = np.sum(
-                np.sum(np.sum(np.sum(-partial_moments + 1, axis=-1), axis=-1), axis=-1),
+                np.sum(
+                    np.sum(np.sum(-partial_moments + 1, axis=-1), axis=-1),
+                    axis=-1,
+                ),
                 axis=-1,
             )
 
-            if (sum_ones + sum_zeros) == vdf.data.size:
-                print(
-                    "notice : partial_moments is correct. Partial moments "
-                    "will be calculated"
+            if (sum_ones + sum_zeros) == vdf_data.size:
+                logging.info(
+                    "partial_moments is correct. Partial moments will be calculated"
                 )
-                vdf.data = vdf.data * partial_moments
+                vdf_data = vdf_data * partial_moments
             else:
-                print(
-                    "notice : All values are not ones and zeros in "
-                    "partial_moments. Full " + "moments will be calculated"
+                logging.info(
+                    "All values are not ones and zeros in partial_moments. "
+                    "Full moments will be calculated"
                 )
         else:
-            print(
-                "notice : Size of partial_moments is wrong. Full moments "
-                "will be calculated"
+            logging.info(
+                "Size of partial_moments is wrong. Full moments will be calculated"
             )
 
     tmp_ = kwargs.get("inner_electron", "")
@@ -340,44 +300,63 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     if particle_type[0] == "e":
         p_mass = constants.electron_mass
-        print("notice : Particles are electrons")
-    elif particle_type[0] == "i":
-        p_mass = constants.proton_mass
-        sc_pot.data = -1.0 * sc_pot.data
-        print("notice : Particles are ions")
+        logging.info("Particles are electrons")
     else:
-        raise ValueError("Could not identify the particle type")
+        p_mass = constants.proton_mass
+        sc_pot *= -1.0
+        logging.info("Particles are ions")
 
     # angle between theta and phi points is 360/32 = 11.25 degrees
-    delta_ang = np.deg2rad(11.25) ** 2
+    phi = vdf.phi.data
 
-    if is_brst_data:
-        phi_tr = vdf.phi
+    if "delta_phi_minus" in vdf.attrs and "delta_phi_plus" in vdf.attrs:
+        delta_phi_minus = vdf.attrs["delta_phi_minus"]
+        delta_phi_plus = vdf.attrs["delta_phi_plus"]
+        delta_phi = delta_phi_plus + delta_phi_minus
+        delta_phi = np.tile(delta_phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
     else:
-        phi_tr = phi
-        phi_size = phi_tr.shape
+        delta_phi = np.deg2rad(np.median(np.diff(phi[0, :])))
+        delta_phi = delta_phi * np.ones(
+            (vdf_data.shape[0], vdf_data.shape[2], vdf_data.shape[3])
+        )
 
-        if phi_size[1] > phi_size[0]:
-            phi_tr = phi_tr.T
-
-    if "delta_energy_minus" in vdf.attrs and "delta_energy_plus" in vdf.attrs:
-        energy_minus = vdf.attrs["delta_energy_plus"]
-        energy_plus = vdf.attrs["delta_energy_plus"]
-
-        flag_de = True
+    if "delta_theta_minus" in vdf.attrs and "delta_theta_plus" in vdf.attrs:
+        delta_theta_minus = vdf.attrs["delta_theta_minus"]
+        delta_theta_plus = vdf.attrs["delta_theta_plus"]
+        delta_theta = delta_theta_plus + delta_theta_minus
+        delta_theta = np.tile(
+            delta_theta[np.newaxis, np.newaxis, :],
+            (vdf_data.shape[0], vdf_data.shape[2], 1),
+        )
     else:
-        energy_minus, energy_plus = [None, None]
+        delta_theta = np.deg2rad(np.median(np.diff(theta)))
+        delta_theta = delta_theta * np.ones(
+            (vdf_data.shape[0], vdf_data.shape[2], vdf_data.shape[3])
+        )
+
+    delta_ang = delta_phi * delta_theta
+
+    phi_mat = np.tile(phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
+    theta_mat = np.tile(
+        theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
+    )
+
+    energy_minus = vdf.attrs["delta_energy_plus"]
+    energy_plus = vdf.attrs["delta_energy_plus"]
+
+    energy_correct = energy - sc_pot[:, np.newaxis]
+    velocity = np.sqrt(2 * q_e * energy_correct / p_mass)
+    velocity[energy_correct < flag_inner_electron * w_inner_electron] = 0
 
     # Calculate speed widths associated with each energy channel.
     if is_brst_data:  # Burst mode energy/speed widths
-        if flag_same_e and flag_de:
-            energy = energy0
+        if flag_same_e:
             energy_upper = energy + energy_plus
             energy_lower = energy - energy_minus
             v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
             v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
             delta_v = v_upper - v_lower
-            delta_v0, delta_v1 = [None, None]
+            delta_v = np.tile(delta_v, (vdf_data.shape[0], 1))
         else:
             energy_all = np.hstack([energy0, energy1])
             energy_all = np.log10(np.sort(energy_all))
@@ -406,80 +385,42 @@ def psd_moments(vdf, sc_pot, **kwargs):
             delta_v0 = (v0upper - v0lower) * 2.0
             delta_v1 = (v1upper - v1lower) * 2.0
 
-            delta_v = None
+            delta_v = np.tile(delta_v0, (vdf_data.shape[0], 1))
+            delta_v[step_table == 1, :] = delta_v1
 
     else:  # Fast mode energy/speed widths
-        energy_all = np.log10(energy)
+        energy_all = np.log10(energy[0, :])
         temp0 = 2 * energy_all[0] - energy_all[1]
         temp33 = 2 * energy_all[31] - energy_all[30]
         energy_all = np.hstack([temp0, energy_all, temp33])
         diff_en_all = np.diff(energy_all)
-        energy_upper = 10 ** (np.log10(energy) + diff_en_all[1:33] / 4)
-        energy_lower = 10 ** (np.log10(energy) - diff_en_all[0:32] / 4)
+        energy_upper = 10 ** (np.log10(energy[0, :]) + diff_en_all[1:33] / 4)
+        energy_lower = 10 ** (np.log10(energy[0, :]) - diff_en_all[0:32] / 4)
         v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
         v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
         delta_v = (v_upper - v_lower) * 2.0
         delta_v[0] = delta_v[0] * 2.7
-        delta_v0, delta_v1 = [None, None]
+        delta_v = np.tile(delta_v, (vdf_data.shape[0], 1))
 
-    theta_k = theta_k.data[np.newaxis, :]
-
-    if is_brst_data:
-        args_ = (
-            is_brst_data,
-            flag_same_e,
-            flag_de,
-            step_table,
-            energy0,
-            delta_v0,
-            energy1,
-            delta_v1,
-            q_e,
-            sc_pot.data,
-            p_mass,
-            flag_inner_electron,
-            w_inner_electron,
-            phi_tr.data,
-            theta_k,
-            int_energies,
-            vdf.data.data,
-            delta_ang,
-        )
-    else:
-        args_ = (
-            is_brst_data,
-            flag_same_e,
-            flag_de,
-            energy,
-            delta_v,
-            q_e,
-            sc_pot.data,
-            p_mass,
-            flag_inner_electron,
-            w_inner_electron,
-            phi_tr.data,
-            theta_k,
-            int_energies,
-            vdf.data,
-            delta_ang,
-        )
-
-    pool = mp.Pool(mp.cpu_count())
-    res = pool.starmap(_moms, [(nt, args_) for nt in range(len(vdf.time))])
-    out = np.vstack(res)
-
-    n_psd = np.array(out[:, 0], dtype="float")
-    v_psd = np.vstack(out[:, 1][:])
-    p_psd = np.vstack(out[:, 2][:])
-    p_psd = np.reshape(p_psd, (len(n_psd), 3, 3))
-    h_psd = np.vstack(out[:, 3][:])
-    p2_psd = np.zeros((len(vdf.time), 3, 3))
-
-    pool.close()
+    n_psd, v_psd, p_psd, h_psd = _moms(
+        energy,
+        delta_v,
+        q_e,
+        sc_pot,
+        p_mass,
+        flag_inner_electron,
+        w_inner_electron,
+        phi_mat,
+        theta_mat,
+        int_energies,
+        vdf_data,
+        delta_ang,
+    )
 
     # Compute moments in SI units
     p_psd *= p_mass
     v_psd /= n_psd[:, np.newaxis]
+    p2_psd = np.zeros_like(p_psd)
     p2_psd[:, 0, 0] = p_psd[:, 0, 0]
     p2_psd[:, 0, 1] = p_psd[:, 0, 1]
     p2_psd[:, 0, 2] = p_psd[:, 0, 2]

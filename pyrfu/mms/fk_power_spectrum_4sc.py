@@ -3,21 +3,31 @@
 
 # Built-in imports
 import bisect
-import pdb
+import logging
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import resample, avg_4sc, time_clip, wavelet
+from ..pyrf.avg_4sc import avg_4sc
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.wavelet import wavelet
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.22"
+__version__ = "2.4.2"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def fk_power_spectrum_4sc(
@@ -47,7 +57,8 @@ def fk_power_spectrum_4sc(
         Positions of the four spacecraft.
     b : list of xarray.DataArray
         background magnetic field in the same coordinates as r. Used to
-        determine the parallel and perpendicular wave numbers using 4SC average.
+        determine the parallel and perpendicular wave numbers using 4SC
+        average.
     tints : list of str
         Time interval over which the power spectrum is calculated. To avoid
         boundary effects use a longer time interval for e and b.
@@ -85,8 +96,8 @@ def fk_power_spectrum_4sc(
 
     >>> tint = ["2015-10-16T13:05:24.00", "2015-10-16T13:05:50.000"]
     >>> ic = range(1, 5)
-    >>> b_fgm_mms = [get_data("b_gse_fgm_brst_l2", tint, i) for i in ic]
-    >>> b_scm_mms = [get_data("b_gse_scm_brst_l2", tint, i) for i in ic]
+    >>> b_fgm = [get_data("b_gse_fgm_brst_l2", tint, i) for i in ic]
+    >>> b_scm = [get_data("b_gse_scm_brst_l2", tint, i) for i in ic]
 
     Load spacecraft position
 
@@ -95,14 +106,14 @@ def fk_power_spectrum_4sc(
 
     Convert magnetic field fluctuations to field aligned coordinates
 
-    >>> b_scm_fac = [convert_fac(b_scm, b_fgm) for b_scm, b_fgm in zip(b_scm_mms, b_fgm_mms)]
-    >>> b_scm_par = [b_scm[:, 0] for b_scm in b_scm_fac]
+    >>> b_fac = [convert_fac(b_s, b_f) for b_s, b_f in zip(b_scm, b_fgm)]
+    >>> b_par = [b_s[:, 0] for b_s in b_fac]
 
     Compute dispersion relation
 
     >>> tint = ["2015-10-16T13:05:26.500", "2015-10-16T13:05:27.000"]
-    >>> pwer = fk_power_spectrum_4sc(b_scm_par, r_gse_mms, b_fgm_mms, tint, 4,
-    ...                                 500, 2, 10, 2)
+    >>> pwer = fk_power_spectrum_4sc(b_par, r_gse, b_fgm, tint, 4, 500, 2,
+    ... 10, 2)
 
     """
 
@@ -117,20 +128,26 @@ def fk_power_spectrum_4sc(
     times = e[0].time
     use_linear = df is not None
 
-    idx = time_clip(e[0].time, list(tints))
+    # idx = time_clip(e[0].time, list(tints))
 
     # If odd, remove last data point (as is done in irf_wavelet)
-    if len(idx) % 2:
-        idx = idx[:-1]
+    # if len(idx) % 2:
+    #     idx = idx[:-1]
 
     if use_linear:
-        cwt_options = dict(
-            linear=df, return_power=False, wavelet_width=5.36 * w_width, cut_edge=False
-        )
+        cwt_options = {
+            "linear": df,
+            "return_power": False,
+            "wavelet_width": 5.36 * w_width,
+            "cut_edge": False,
+        }
     else:
-        cwt_options = dict(
-            nf=num_f, return_power=False, wavelet_width=5.36 * w_width, cut_edge=False
-        )
+        cwt_options = {
+            "nf": num_f,
+            "return_power": False,
+            "wavelet_width": 5.36 * w_width,
+            "cut_edge": False,
+        }
 
     w = [wavelet(e[i], **cwt_options) for i in range(4)]
 
@@ -162,22 +179,28 @@ def fk_power_spectrum_4sc(
         lb, ub = [int(pos_avm - cav / 2), int(pos_avm + cav / 2)]
 
         cx12[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]), axis=0
+            w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]),
+            axis=0,
         )
         cx13[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]), axis=0
+            w[0].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]),
+            axis=0,
         )
         cx14[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]), axis=0
+            w[0].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
+            axis=0,
         )
         cx23[m, :] = np.nanmean(
-            w[1].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]), axis=0
+            w[1].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]),
+            axis=0,
         )
         cx24[m, :] = np.nanmean(
-            w[1].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]), axis=0
+            w[1].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
+            axis=0,
         )
         cx34[m, :] = np.nanmean(
-            w[2].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]), axis=0
+            w[2].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
+            axis=0,
         )
 
         power_avg[m, :] = np.nanmean(fk_power[lb:ub, :], axis=0)
@@ -228,7 +251,7 @@ def fk_power_spectrum_4sc(
                 r[1][ii, :] - r[0][ii, :],
                 r[2][ii, :] - r[0][ii, :],
                 r[3][ii, :] - r[0][ii, :],
-            ]
+            ],
         )
         for jj in range(num_f):
             m = np.linalg.solve(dr, [dt2[ii, jj], dt3[ii, jj], dt4[ii, jj]])
@@ -259,7 +282,7 @@ def fk_power_spectrum_4sc(
     dk = 2 * k_max / num_k
 
     # Sort power into frequency and wave vector
-    print("notice : Computing power versus kx,f; ky,f, kz,f")
+    logging.info("Computing power versus kx,f; ky,f, kz,f")
     power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
     power_k_mag_f = np.zeros((num_f, num_k))
 
@@ -288,7 +311,7 @@ def fk_power_spectrum_4sc(
         idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
         idx_f = idx_f[idx_min_freq:idx_max_freq]
 
-    print("notice : Computing power versus kx,ky; kx,kz; ky,kz\n")
+    logging.info("Computing power versus kx,ky; kx,kz; ky,kz")
     power_k_x_k_y = np.zeros((num_k, num_k))
     power_k_x_k_z = np.zeros((num_k, num_k))
     power_k_y_k_z = np.zeros((num_k, num_k))
@@ -306,7 +329,9 @@ def fk_power_spectrum_4sc(
         power_k_x_k_z[k_z_number, k_x_number] += np.real(power_avg[:, nn])
         power_k_y_k_z[k_z_number, k_y_number] += np.real(power_avg[:, nn])
 
-        power_k_perp_k_par[k_par_number, k_perp_number] += np.real(power_avg[:, nn])
+        power_k_perp_k_par[k_par_number, k_perp_number] += np.real(
+            power_avg[:, nn],
+        )
 
     power_k_x_k_y /= np.max(power_k_x_k_y)
     power_k_x_k_z /= np.max(power_k_x_k_z)

@@ -5,16 +5,16 @@
 import numpy as np
 import xarray as xr
 
-# Local imports
-from ..pyrf import resample
+from ..pyrf.resample import resample
 
+# Local imports
 from .feeps_active_eyes import feeps_active_eyes
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 # Rotation matrices for FEEPS coord system (FCS) into body coordinate system
@@ -24,14 +24,14 @@ t_top = np.array(
         [1.0 / np.sqrt(2.0), -1.0 / np.sqrt(2.0), 0],
         [1.0 / np.sqrt(2.0), 1.0 / np.sqrt(2.0), 0],
         [0, 0, 1],
-    ]
+    ],
 )
 t_bot = np.array(
     [
         [-1.0 / np.sqrt(2.0), -1.0 / np.sqrt(2.0), 0],
         [-1.0 / np.sqrt(2.0), 1.0 / np.sqrt(2.0), 0],
         [0, 0, -1],
-    ]
+    ],
 )
 
 # the following 2 hash tables map TOP/BOTTOM telescope #s to index of the
@@ -160,7 +160,10 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     d_rate = inp_dataset.attrs["tmmode"]
     mms_id = inp_dataset.attrs["mmsId"]
 
-    tint = np.datetime_as_string(np.hstack([np.min(times), np.max(times)]), "ns")
+    tint = np.datetime_as_string(
+        np.hstack([np.min(times), np.max(times)]),
+        "ns",
+    )
 
     eyes = feeps_active_eyes(inp_dataset.attrs, list(tint), mms_id)
 

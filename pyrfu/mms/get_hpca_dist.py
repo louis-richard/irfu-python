@@ -6,9 +6,9 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 mass_and_charge = {
@@ -74,7 +74,10 @@ def _get_dphi(azimuth, full, out_phi, inp):
     if out_phi.ndim == 4:
         out_dphi = np.median(np.diff(azimuth.data[full, ...], axis=1), axis=1)
         out_dphi = np.transpose(out_dphi, [0, 2, 1])
-        dphi_reform = np.reshape(out_dphi, [full.size, energy_len, theta_len, 1])
+        dphi_reform = np.reshape(
+            out_dphi,
+            [full.size, energy_len, theta_len, 1],
+        )
         out_dphi = np.repeat(dphi_reform, phi_len, axis=3)
     elif out_phi.ndim == 3:
         out_dphi = np.median(np.diff(azimuth.data[full, ...], axis=1), axis=0)
@@ -91,8 +94,8 @@ def get_hpca_dist(inp, azimuth):
     r"""Returns pseudo-3D particle data structures containing mms hpca data
     for use with spd_slice2d.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     inp : xarray.DataArray
         HPCA ion spec
     azimuth : xarray.DataArray
@@ -105,6 +108,7 @@ def get_hpca_dist(inp, azimuth):
 
 
     """
+
     # check if the time series is monotonic to avoid doing incorrect
     # calculations when there's a problem with the CDF files
     time_data = azimuth.time.data
@@ -174,7 +178,10 @@ def get_hpca_dist(inp, azimuth):
         else:
             continue
 
-        out_data[i, ...] = np.transpose(inp.data[start_idx:end_idx, :, :], [2, 0, 1])
+        out_data[i, ...] = np.transpose(
+            inp.data[start_idx:end_idx, :, :],
+            [2, 0, 1],
+        )
 
     out = {
         "data": out_data,

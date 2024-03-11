@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -54,11 +54,16 @@ def integrate(inp, time_step: float = None):
 
     """
 
-    time_tmp = inp.time.data.astype(np.int64) * 1e-9
-    data_tmp = inp.data
-    unit_tmp = inp.attrs["UNITS"]
+    assert isinstance(inp, xr.DataArray), "inp must be xarray.DataArray"
 
-    data = np.hstack([time_tmp, data_tmp])
+    time_tmp = inp.time.data.astype(np.float64) * 1e-9
+
+    if inp.data.ndim == 1:
+        data_tmp = inp.data[:, np.newaxis]
+    else:
+        data_tmp = inp.data
+
+    data = np.transpose(np.vstack([time_tmp, np.transpose(data_tmp)]))
 
     delta_t = np.hstack([0, np.diff(data[:, 0])])
 
@@ -76,7 +81,6 @@ def integrate(inp, time_step: float = None):
 
         x_int[j_ok, j] = np.cumsum(data[j_ok, j] * delta_t[j_ok])
 
-    out = xr.DataArray(data[:, 1:], coords=inp.coords, dims=inp.dims)
-    out.attrs["UNITS"] = unit_tmp + "*s"
+    out = xr.DataArray(np.squeeze(data[:, 1:]), coords=inp.coords, dims=inp.dims)
 
     return out

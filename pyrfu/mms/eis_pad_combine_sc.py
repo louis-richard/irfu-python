@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -52,7 +52,12 @@ def eis_pad_combine_sc(pads):
     pa_label = 180.0 * np.arange(n_pabins) / n_pabins + size_pabin / 2.0
 
     allmms_pad = np.zeros(
-        (ref_probe.shape[0], ref_probe.shape[1], ref_probe.shape[2], len(pads))
+        (
+            ref_probe.shape[0],
+            ref_probe.shape[1],
+            ref_probe.shape[2],
+            len(pads),
+        ),
     )
 
     for i_pad, pad_ in enumerate(pads):

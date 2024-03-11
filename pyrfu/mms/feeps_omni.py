@@ -10,9 +10,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 energies_ = {
@@ -33,7 +33,7 @@ energies_ = {
             373.2,
             436.0,
             509.2,
-        ]
+        ],
     ),
     "ion": np.array(
         [
@@ -52,7 +52,7 @@ energies_ = {
             419.7,
             484.2,
             558.6,
-        ]
+        ],
     ),
 }
 
@@ -86,7 +86,10 @@ def feeps_omni(inp_dataset):
     energies = energies_[d_type]
 
     # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
-    e_corr = {"electron": [14.0, -1.0, -3.0, -3.0], "ion": [0.0, 0.0, 0.0, 0.0]}
+    e_corr = {
+        "electron": [14.0, -1.0, -3.0, -3.0],
+        "ion": [0.0, 0.0, 0.0, 0.0],
+    }
 
     g_fact = {"electron": [1.0, 1.0, 1.0, 1.0], "ion": [0.84, 1.0, 1.0, 1.0]}
 
@@ -96,7 +99,11 @@ def feeps_omni(inp_dataset):
     bot_sensors = list(filter(lambda x: "bot" in x, inp_dataset))
 
     dalleyes = np.empty(
-        (len(inp_dataset.time), len(energies), len(top_sensors) + len(bot_sensors))
+        (
+            len(inp_dataset.time),
+            len(energies),
+            len(top_sensors) + len(bot_sensors),
+        ),
     )
     dalleyes[:] = np.nan
 
@@ -115,7 +122,9 @@ def feeps_omni(inp_dataset):
     flux_omni *= g_fact[specie][mms_id - 1]
 
     flux_omni = xr.DataArray(
-        flux_omni, coords=[inp_dataset.time.data, energies], dims=["time", "energy"]
+        flux_omni,
+        coords=[inp_dataset.time.data, energies],
+        dims=["time", "energy"],
     )
 
     return flux_omni

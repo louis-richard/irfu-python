@@ -6,9 +6,9 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -37,7 +37,7 @@ def waverage(inp, f_sampl: float = None, n_pts: int = 7):
         f_sampl = 1e9 / (inp.time.data[1] - inp.time.data[0]).view("i8")
 
     n_data = np.round(
-        1e-9 * (inp.time.data[-1] - inp.time.data[0]).view("i8") * f_sampl
+        1e-9 * (inp.time.data[-1] - inp.time.data[0]).view("i8") * f_sampl,
     )
 
     inp_data = inp.data

@@ -6,13 +6,16 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import cotrans, resample, sph2cart, ts_vec_xyz, calc_fs
+from ..pyrf.calc_fs import calc_fs
+from ..pyrf.cotrans import cotrans
+from ..pyrf.resample import resample
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -22,7 +25,7 @@ def _transformation_matrix(spin_axis, direction):
     a = 1.0 / np.sqrt(r_y**2 + r_z**2)
     out = np.zeros((len(a), 3, 3))
     out[:, 0, :] = np.transpose(
-        np.stack([a * (r_y**2 + r_z**2), -a * r_x * r_y, -a * r_x * r_z])
+        np.stack([a * (r_y**2 + r_z**2), -a * r_x * r_y, -a * r_x * r_z]),
     )
 
     out[:, 1, :] = np.transpose(np.stack([0.0 * a, a * r_z, -a * r_y]))
@@ -45,7 +48,8 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     defatt : xarray.Dataset or array_like
         Spacecraft attitude.
     direction : {1, -1}, optional
-        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL. Default is 1.
+        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
+        Default is 1.
 
     Returns
     -------
@@ -75,25 +79,23 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     """
 
     if isinstance(defatt, xr.Dataset):
-        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(np.deg2rad(defatt.z_ra.data))
-        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(np.deg2rad(defatt.z_ra.data))
+        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
+            np.deg2rad(defatt.z_ra.data),
+        )
+        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(
+            np.deg2rad(defatt.z_ra.data),
+        )
         z = np.sin(np.deg2rad(defatt.z_dec))
-        sax_gei = np.transpose(
-            np.vstack([defatt.time.data.astype("int") / 1e9, x, y, z])
-        )
+        sax_gei = ts_vec_xyz(defatt.time.data, np.transpose(np.vstack([x, y, z])))
         sax_gsm = cotrans(sax_gei, "gei>gsm")
-        sax_gsm = ts_vec_xyz(
-            (sax_gsm[:, 0] * 1e9).astype("datetime64[ns]"), sax_gsm[:, 1:]
-        )
-
         spin_ax_gsm = resample(sax_gsm, inp, f_s=calc_fs(inp))
         spin_axis = spin_ax_gsm.data
 
     elif isinstance(defatt, (np.ndarray, list)) and len(defatt) == 3:
-        spin_axis = defatt
+        spin_axis = np.atleast_2d(defatt)
 
     else:
-        raise ValueError("unrecognized DEFATT/SAX input")
+        raise TypeError("DEFATT/SAX input must be xarray.Dataset or vector")
 
     # Compute transformation matrix
     transf_mat = _transformation_matrix(spin_axis, direction)

@@ -2,22 +2,30 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
+from .datetime642unix import datetime642unix
+
 # Local imports
 from .resample import resample
-from .datetime642unix import datetime642unix
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def _spec_mat(half_spec_x, half_spec_y, half_spec_z):
@@ -37,7 +45,12 @@ def _spec_mat(half_spec_x, half_spec_y, half_spec_z):
     return spec_mat
 
 
-def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256):
+def wavepolarize_means(
+    b_wave,
+    b_bgd,
+    min_psd: float = 1e-25,
+    nop_fft: int = 256,
+):
     r"""Analysis the polarization of magnetic wave using "means" method
 
     Parameters
@@ -125,13 +138,13 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
     end_sample_freq = 1 / (ct[-1] - ct[-2])
 
     if sample_freq != end_sample_freq:
-        warnings.warn(
-            f"file sampling frequency changes {sample_freq} Hz to "
-            f"{end_sample_freq} Hz",
-            UserWarning,
+        logging.info(
+            "file sampling frequency changes %(sample_freq)3.2f Hz "
+            "to %(end_sample_freq)3.2f Hz",
+            {"sample_freq": sample_freq, "end_sample_freq": end_sample_freq},
         )
     else:
-        print("ac file sampling frequency {} Hz".format(sample_freq))
+        logging.info("ac file sampling frequency %3.2f Hz", sample_freq)
 
     # FFT calculation
     # Minimum variance direction and wave normal angle
@@ -188,7 +201,7 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
             for ir in range(3):
                 for ic in range(3):
                     e_spec_mat[k, ir, ic] = np.sum(
-                        aa[:n_bin] * spec_mat[(k - off_idx) : (k + off_idx), ir, ic]
+                        aa[:n_bin] * spec_mat[(k - off_idx) : (k + off_idx), ir, ic],
                     )
 
         # Calculation of the minimum variance direction and wave normal angle
@@ -201,7 +214,9 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
         wn_y = -np.abs(np.imag(e_spec_mat[:, 0, 2]) / aaa2)
         wn_z = np.imag(e_spec_mat[:, 0, 1]) / aaa2
 
-        wave_angle[j, :] = np.arctan(np.sqrt(wn_x**2 + wn_y**2) / np.abs(wn_z))
+        wave_angle[j, :] = np.arctan(
+            np.sqrt(wn_x**2 + wn_y**2) / np.abs(wn_z),
+        )
 
         # CALCULATION OF THE DEGREE OF POLARISATION
         # calc of square of smoothed spec matrix
@@ -232,20 +247,44 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
         alpha_y = np.sqrt(e_spec_mat[:, 1, 1])
         alpha_z = np.sqrt(e_spec_mat[:, 2, 2])
 
-        alpha_cos1_x = np.real(e_spec_mat[:, 0, 1]) / np.sqrt(e_spec_mat[:, 0, 0])
-        alpha_sin1_x = -np.imag(e_spec_mat[j, :, 0, 1]) / np.sqrt(e_spec_mat[:, 0, 0])
-        alpha_cos2_x = np.real(e_spec_mat[:, 0, 2]) / np.sqrt(e_spec_mat[:, 0, 0])
-        alpha_sin2_x = -np.imag(e_spec_mat[j, :, 0, 2]) / np.sqrt(e_spec_mat[:, 0, 0])
+        alpha_cos1_x = np.real(e_spec_mat[:, 0, 1]) / np.sqrt(
+            e_spec_mat[:, 0, 0],
+        )
+        alpha_sin1_x = -np.imag(e_spec_mat[j, :, 0, 1]) / np.sqrt(
+            e_spec_mat[:, 0, 0],
+        )
+        alpha_cos2_x = np.real(e_spec_mat[:, 0, 2]) / np.sqrt(
+            e_spec_mat[:, 0, 0],
+        )
+        alpha_sin2_x = -np.imag(e_spec_mat[j, :, 0, 2]) / np.sqrt(
+            e_spec_mat[:, 0, 0],
+        )
 
-        alpha_cos1_y = np.real(e_spec_mat[:, 1, 0]) / np.sqrt(e_spec_mat[:, 1, 1])
-        alpha_sin1_y = -np.imag(e_spec_mat[:, 1, 0]) / np.sqrt(e_spec_mat[:, 1, 1])
-        alpha_cos2_y = np.real(e_spec_mat[:, 1, 2]) / np.sqrt(e_spec_mat[:, 1, 1])
-        alpha_sin2_y = -np.imag(e_spec_mat[:, 1, 2]) / np.sqrt(e_spec_mat[:, 1, 1])
+        alpha_cos1_y = np.real(e_spec_mat[:, 1, 0]) / np.sqrt(
+            e_spec_mat[:, 1, 1],
+        )
+        alpha_sin1_y = -np.imag(e_spec_mat[:, 1, 0]) / np.sqrt(
+            e_spec_mat[:, 1, 1],
+        )
+        alpha_cos2_y = np.real(e_spec_mat[:, 1, 2]) / np.sqrt(
+            e_spec_mat[:, 1, 1],
+        )
+        alpha_sin2_y = -np.imag(e_spec_mat[:, 1, 2]) / np.sqrt(
+            e_spec_mat[:, 1, 1],
+        )
 
-        alpha_cos1_z = np.real(e_spec_mat[:, 2, 0]) / np.sqrt(e_spec_mat[:, 2, 2])
-        alpha_sin1_z = -np.imag(e_spec_mat[:, 2, 0]) / np.sqrt(e_spec_mat[:, 2, 2])
-        alpha_cos2_z = np.real(e_spec_mat[:, 2, 1]) / np.sqrt(e_spec_mat[:, 2, 2])
-        alpha_sin2_z = -np.imag(e_spec_mat[:, 2, 1]) / np.sqrt(e_spec_mat[:, 2, 2])
+        alpha_cos1_z = np.real(e_spec_mat[:, 2, 0]) / np.sqrt(
+            e_spec_mat[:, 2, 2],
+        )
+        alpha_sin1_z = -np.imag(e_spec_mat[:, 2, 0]) / np.sqrt(
+            e_spec_mat[:, 2, 2],
+        )
+        alpha_cos2_z = np.real(e_spec_mat[:, 2, 1]) / np.sqrt(
+            e_spec_mat[:, 2, 2],
+        )
+        alpha_sin2_z = -np.imag(e_spec_mat[:, 2, 1]) / np.sqrt(
+            e_spec_mat[:, 2, 2],
+        )
 
         lambda_u[:, 0, 0] = alpha_x
         lambda_u[:, 1, 0] = alpha_y
@@ -264,11 +303,11 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
             for xyz in range(3):
                 # HELICITY CALCULATION
                 upper = np.sum(
-                    2 * np.real(lambda_u[k, xyz, :3]) * (np.imag(lambda_u[k, xyz, :3]))
+                    2 * np.real(lambda_u[k, xyz, :3]) * (np.imag(lambda_u[k, xyz, :3])),
                 )
                 lower = np.sum(
                     (np.real(lambda_u[k, xyz, :3])) ** 2
-                    - (np.imag(lambda_u[k, xyz, :3])) ** 2
+                    - (np.imag(lambda_u[k, xyz, :3])) ** 2,
                 )
 
                 if upper[j, k] > 0:
@@ -277,16 +316,20 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
                     gamma = np.pi + (np.pi + np.arctan(upper[j, k] / lower[j, k]))
 
                 lambda_u[k, xyz, :] = np.exp(-0.5 * gamma * 1j) * lambda_u[k, xyz, :]
-                helic[j, k, xyz] = np.sqrt(np.sum(np.real(lambda_u[k, xyz, :3]) ** 2))
-                helic[j, k, xyz] /= np.sqrt(np.sum(np.imag(lambda_u[k, xyz, :3]) ** 2))
+                helic[j, k, xyz] = np.sqrt(
+                    np.sum(np.real(lambda_u[k, xyz, :3]) ** 2),
+                )
+                helic[j, k, xyz] /= np.sqrt(
+                    np.sum(np.imag(lambda_u[k, xyz, :3]) ** 2),
+                )
                 helic[j, k, xyz] = np.divide(1, helic[j, k, xyz])
 
                 # ELLIPTICITY CALCULATION
                 upper_e = np.sum(
-                    np.imag(lambda_u[k, xyz, :3]) * np.real(lambda_u[k, xyz, :3])
+                    np.imag(lambda_u[k, xyz, :3]) * np.real(lambda_u[k, xyz, :3]),
                 )
                 lower_e = np.sum(np.real(lambda_u[k, xyz, :2]) ** 2) - np.sum(
-                    np.imag(lambda_u[k, xyz, :2]) ** 2
+                    np.imag(lambda_u[k, xyz, :2]) ** 2,
                 )
 
                 if upper_e > 0:
@@ -298,12 +341,14 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
                 lambda_u_rot = np.exp(-0.5 * gamma_rot * 1j) * lam
 
                 ellip[j, k, xyz] = np.sqrt(np.sum(np.imag(lambda_u_rot) ** 2))
-                ellip[j, k, xyz] /= np.sqrt(np.sum(np.real(lambda_u_rot) ** 2))
+                ellip[j, k, xyz] /= np.sqrt(
+                    np.sum(np.real(lambda_u_rot) ** 2),
+                )
                 ellip[j, k, xyz] *= -(
                     np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k])
                 )
                 ellip[j, k, xyz] /= np.abs(
-                    np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k])
+                    np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k]),
                 )
 
     # AVERAGING HELICITY AND ELLIPTICITY RESULTS
@@ -336,15 +381,31 @@ def wavepolarize_means(b_wave, b_bgd, min_psd: float = 1e-25, nop_fft: int = 256
     helicity[power_spec < min_psd] = np.nan
 
     # Save as DataArrays
-    b_psd = xr.DataArray(power_spec, coords=[time_line, freq_line], dims=["t", "f"])
+    b_psd = xr.DataArray(
+        power_spec,
+        coords=[time_line, freq_line],
+        dims=["t", "f"],
+    )
     wave_angle = xr.DataArray(
-        wave_angle * 180 / np.pi, coords=[time_line, freq_line], dims=["t", "f"]
+        wave_angle * 180 / np.pi,
+        coords=[time_line, freq_line],
+        dims=["t", "f"],
     )
     ellipticity = xr.DataArray(
-        ellipticity, coords=[time_line, freq_line], dims=["t", "f"]
+        ellipticity,
+        coords=[time_line, freq_line],
+        dims=["t", "f"],
     )
-    deg_pol = xr.DataArray(deg_pol, coords=[time_line, freq_line], dims=["t", "f"])
-    helicity = xr.DataArray(helicity, coords=[time_line, freq_line], dims=["t", "f"])
+    deg_pol = xr.DataArray(
+        deg_pol,
+        coords=[time_line, freq_line],
+        dims=["t", "f"],
+    )
+    helicity = xr.DataArray(
+        helicity,
+        coords=[time_line, freq_line],
+        dims=["t", "f"],
+    )
 
     b_psd.f.attrs["units"] = "Hz"
     wave_angle.f.attrs["units"] = "Hz"

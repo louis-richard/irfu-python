@@ -2,19 +2,25 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
-
 from scipy.optimize import fminbound
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.22"
+__version__ = "2.4.2"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def _magnetopause(theta, *args):
@@ -33,31 +39,34 @@ def _magnetopause(theta, *args):
 
 
 def _bow_shock(r_xy, *args):
-    x, y = r_xy
+    x, y = r_xy[:, 0], r_xy[:, 1]
     x0, y0 = args
     out = (x - x0) ** 2 + (y - y0) ** 2
     return out
 
 
 def magnetopause_normal(
-    r_gsm, b_z_imf, p_sw, model: str = "mp_shue1997", m_alfven: float = 4.0
+    r_gsm,
+    b_z_imf,
+    p_sw,
+    model: str = "mp_shue1997",
+    m_alfven: float = 4.0,
 ):
     r"""Computes the distance and normal vector to the magnetopause for
-    Shue et al., 1997 or Shue et al., 1998 model. Or bow shock for
-    Farris & Russell 1994 model.
+    [1]_ or [2]_ model. Or bow shock for [3]_ model.
 
     Parameters
     ----------
     r_gsm : array_like
-        GSM position in Re (if more than 3 values assumes that 1st is time).
+        GSM position in Re.
     b_z_imf : float
         IMF Bz in nT.
     p_sw : float
         Solar wind dynamic pressure in nPa.
     model : {"mp_shue1997", "mp_shue1998", "bs97", "bs98"}, Optional
         Name of model :
-            * 'mp_shue1997' : Shue et al., 1997 (Default)
-            * 'mp_shue1998' : Shue et al., 1998
+            * 'mp_shue97'   : Shue et al., 1997 (Default)
+            * 'mp_shue98'   : Shue et al., 1998
             * 'bs97'        : Bow shock, Farris & Russell 1994
             * 'bs98'        : Bow shock, Farris & Russell 1994
     m_alfven : float, Optional
@@ -93,11 +102,13 @@ def magnetopause_normal(
 
     """
 
-    if model in ["mp_shue1998", "bs98"]:
+    if model.lower() in ["mp_shue98", "bs98"]:
+        logging.info("Shue et al., 1998 model used.")
         alpha = (0.58 - 0.007 * b_z_imf) * (1.0 + 0.024 * np.log(p_sw))
-        r0 = (10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))) * p_sw ** (-1.0 / 6.6)
-        warnings.warn("Shue et al., 1998 model used.", UserWarning)
-    else:
+        r0 = 10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))
+        r0 *= p_sw ** (-1.0 / 6.6)
+    elif model.lower() in ["mp_shue97", "bs97"]:
+        logging.info("Shue et al., 1997 model used.")
         alpha = (0.58 - 0.01 * b_z_imf) * (1.0 + 0.01 * p_sw)
 
         if b_z_imf >= 0:
@@ -105,7 +116,8 @@ def magnetopause_normal(
         else:
             r0 = (11.4 + 0.140 * b_z_imf) * p_sw ** (-1.0 / 6.6)
 
-        warnings.warn("Shue et al., 1997 model used.", UserWarning)
+    else:
+        raise NotImplementedError(f"Invalid model : {model}")
 
     # Spacecraft position
     r1_x, r1_y, r1_z = r_gsm
@@ -114,7 +126,7 @@ def magnetopause_normal(
     if model[:2].lower() == "mp":
         # Magnetopause
 
-        theta_min, min_val, ierr, numfunc = fminbound(
+        theta_min, min_val, _, _ = fminbound(
             _magnetopause,
             x1=-np.pi / 2,
             x2=np.pi / 2,
@@ -141,13 +153,13 @@ def magnetopause_normal(
         n_vec = np.stack([x_n, y_n, z_n]) / min_dist
 
         # if statement to ensure normal is pointing away from Earth
-        if np.sqrt(r0_x**2 + r0_y**2) > r0 * (2 / (1 + np.cos(theta_min))) ** alpha:
-            n_vec *= -1
-            min_dist *= -1
+        fact = r0 * (2 / (1 + np.cos(theta_min))) ** alpha - np.sqrt(r0_x**2 + r0_y**2)
+        n_vec *= np.sign(fact)
+        min_dist *= np.sign(fact)
 
     else:
         # Bow shock
-        warnings.warn("Farris & Russell 1994 bow shock model used.", UserWarning)
+        logging.info("Farris & Russell 1994 bow shock model used.")
 
         gamma = 5 / 3
         mach = m_alfven
@@ -170,7 +182,7 @@ def magnetopause_normal(
         min_val = np.min(_bow_shock(r_xy, *args_bow_shock))
         min_pos = np.argmin(_bow_shock(r_xy, *args_bow_shock))
 
-        d_vec = np.stack([x - r0_x, y - r0_y])
+        d_vec = np.transpose(np.vstack([x - r0_x, y - r0_y]))
         d_min = d_vec[min_pos, :]
 
         x_n = d_min[0] / np.linalg.norm(d_min)
@@ -183,8 +195,7 @@ def magnetopause_normal(
         n_vec = np.stack([x_n, y_n, z_n])
 
         # if statement to ensure normal is pointing away from Earth
-        if n_vec[0] < 0:
-            n_vec *= -1
-            min_dist *= -1
+        min_dist *= np.sign(n_vec[0])
+        n_vec *= np.sign(n_vec[0])
 
     return min_dist, n_vec

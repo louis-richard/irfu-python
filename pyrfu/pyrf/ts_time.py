@@ -7,13 +7,13 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def ts_time(time):
+def ts_time(time, attrs: dict = None):
     r"""Creates time line in DataArray.
 
     Parameters
@@ -30,8 +30,13 @@ def ts_time(time):
 
     assert isinstance(time, np.ndarray)
 
-    time = (time * 1e9).astype("datetime64[ns]")
+    if time.dtype == np.float64:
+        time = (time * 1e9).astype("datetime64[ns]")
+    elif time.dtype == "datetime64[ns]":
+        pass
+    else:
+        raise TypeError("time must be in unix (float64) or numpy.datetime64")
 
-    out = xr.DataArray(time, coords=[time], dims=["time"])
+    out = xr.DataArray(time, coords=[time], dims=["time"], attrs=attrs)
 
     return out

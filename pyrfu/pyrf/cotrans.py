@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
+
 # Built-in imports
 import os
-import json
 
 # 3rd party imports
 import numpy as np
@@ -11,14 +12,15 @@ import xarray as xr
 
 # Local imports
 from ..models import igrf
-
+from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_vec_xyz import ts_vec_xyz
+from .unix2datetime64 import unix2datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -47,11 +49,11 @@ def _dipole_direction_gse(time, flag: str = "dipole"):
             cos_phi * np.cos(np.deg2rad(lambda_)),
             cos_phi * np.sin(np.deg2rad(lambda_)),
             np.sin(np.deg2rad(phi)),
-        ]
+        ],
     ).T
-
     dipole_direction_gse_ = cotrans(
-        np.hstack([time[:, None], dipole_direction_geo_]), "geo>gse"
+        ts_vec_xyz(unix2datetime64(time), dipole_direction_geo_),
+        "geo>gse",
     )
 
     return dipole_direction_gse_
@@ -66,6 +68,8 @@ def _transformation_matrix(t, tind, hapgood, *args):
     transf_mat_out[:, 2, 2] = np.ones(len(t))
 
     for j, t_num in enumerate(tind[::-1]):
+        assert abs(t_num) in list(range(1, 6)), "t_num must be +/- 1, 2, 3, 4, 5"
+
         if t_num in [-1, 1]:
             if hapgood:
                 theta = 100.461 + 36000.770 * t_zero + 15.04107 * ut
@@ -93,7 +97,9 @@ def _transformation_matrix(t, tind, hapgood, *args):
                 # Suns mean longitude
                 m_long = 280.460 + 36000.772 * t_zero + 0.04107 * ut
                 l_sun = m_long
-                l_sun += (1.915 - 0.0048 * t_zero) * np.sin(np.deg2rad(m_anom))
+                l_sun += (1.915 - 0.0048 * t_zero) * np.sin(
+                    np.deg2rad(m_anom),
+                )
                 l_sun += 0.020 * np.sin(np.deg2rad(2 * m_anom))
             else:
                 # Source: United States Naval Observatory, Astronomical
@@ -113,8 +119,8 @@ def _transformation_matrix(t, tind, hapgood, *args):
 
         elif t_num in [-3, 3]:
             dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
-            y_e = dipole_direction_gse_[:, 2]  # 1st col is time
-            z_e = dipole_direction_gse_[:, 3]
+            y_e = dipole_direction_gse_[:, 1]  # 1st col is time
+            z_e = dipole_direction_gse_[:, 2]
             psi = np.rad2deg(np.arctan(y_e / z_e))
 
             transf_mat = _triang(-psi * np.sign(t_num), 0)  # inverse if -3
@@ -123,24 +129,21 @@ def _transformation_matrix(t, tind, hapgood, *args):
             dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
 
             mu = np.arctan(
-                dipole_direction_gse_[:, 1]
-                / np.sqrt(np.sum(dipole_direction_gse_[:, 2:] ** 2, axis=1))
+                dipole_direction_gse_[:, 0]
+                / np.sqrt(np.sum(dipole_direction_gse_[:, 1:] ** 2, axis=1)),
             )
             mu = np.rad2deg(mu)
 
             transf_mat = _triang(-mu * np.sign(t_num), 1)
 
-        elif t_num in [-5, 5]:
+        else:
             lambda_, phi = igrf(t, "dipole")
 
             transf_mat = np.matmul(_triang(phi - 90, 1), _triang(lambda_, 2))
             if t_num == -5:
                 transf_mat = np.transpose(transf_mat, [0, 2, 1])
 
-        else:
-            raise ValueError
-
-        if j == len(tind):
+        if j == 0:
             transf_mat_out = transf_mat
         else:
             transf_mat_out = np.matmul(transf_mat, transf_mat_out)
@@ -149,7 +152,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
 
 
 def cotrans(inp, flag, hapgood: bool = True):
-    r"""Coordinate transformation GE0/GEI/GSE/GSM/SM/MAG
+    r"""Coordinate transformation GE0/GEI/GSE/GSM/SM/MAG as described in [1]_
 
     Parameters
     ----------
@@ -192,40 +195,41 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     Compute the dipole direction in GSE
 
-    >>> dipole = cotrans(b_gse.time,
-    'dipoledirectiongse')
+    >>> dipole = cotrans(b_gse.time, 'dipoledirectiongse')
 
 
     References
     ----------
-    .. [17]     Hapgood 1997 (corrected version of Hapgood 1992) Planet.Space
-                Sci..Vol. 40, No. 5. pp. 71l - 717, 1992
-
-    .. [18]     USNO - AA 2011 & 2012
+    .. [1]  Hapgood 1997 (corrected version of Hapgood 1992) Planet.Space Sci..Vol.
+            40, No. 5. pp. 71l - 717, 1992
 
     """
+
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    assert inp.ndim < 3, "inp must be scalar or vector"
 
     if ">" in flag:
         ref_syst_in, ref_syst_out = flag.split(">")
     else:
         ref_syst_in, ref_syst_out = [None, flag.lower()]
 
-    if isinstance(inp, xr.DataArray):
-        if "COORDINATE_SYSTEM" in inp.attrs:
-            ref_syst_internal = inp.attrs["COORDINATE_SYSTEM"].lower()
-            ref_syst_internal = ref_syst_internal.split(">")[0]
-        else:
-            ref_syst_internal = None
+    if "COORDINATE_SYSTEM" in inp.attrs:
+        ref_syst_internal = inp.attrs["COORDINATE_SYSTEM"].lower()
+        ref_syst_internal = ref_syst_internal.split(">")[0]
+    else:
+        ref_syst_internal = None
 
-        if ref_syst_in is not None and ref_syst_internal is not None:
-            message = "input ref. frame in variable and input flag differs"
-            assert ref_syst_internal == ref_syst_in, message
-        elif ref_syst_in is None and ref_syst_internal is not None:
-            ref_syst_in = ref_syst_internal.lower()
-        elif ref_syst_in is None and ref_syst_internal is None:
-            raise ValueError("input reference frame undefined")
-
+    if ref_syst_in is not None and ref_syst_internal is not None:
+        message = "input ref. frame in variable and input flag differs"
+        assert ref_syst_internal == ref_syst_in, message
         flag = f"{ref_syst_in}>{ref_syst_out}"
+    elif ref_syst_in is None and ref_syst_internal is not None:
+        ref_syst_in = ref_syst_internal.lower()
+        flag = f"{ref_syst_in}>{ref_syst_out}"
+    elif flag.lower() == "dipoledirectiongse":
+        flag = flag.lower()
+    elif ref_syst_in is None and ref_syst_internal is None:
+        raise ValueError(f"Transformation {flag} is unknown!")
 
     if ref_syst_in == ref_syst_out:
         return inp
@@ -234,24 +238,13 @@ def cotrans(inp, flag, hapgood: bool = True):
     j2000 = 946727930.8160001
     # j2000 = Time("J2000", format="jyear_str").unix
 
-    if isinstance(inp, xr.DataArray):
-        time = inp.time.data
-        t = time.view("i8") * 1e-9
+    time = inp.time.data
+    t = (time.astype(np.int64) * 1e-9).astype(np.float64)
 
-        #  Terrestial Time (seconds since J2000)
-        tts = t - j2000
-        inp_ts = inp
-        inp = inp.data
-
-    elif isinstance(inp, np.ndarray):
-        time = (inp[:, 0] * 1e9).astype("datetime64[ns]")
-        t = inp[:, 0]
-        #  Terrestial Time (seconds since J2000)
-        tts = t - j2000
-        inp_ts = None
-        inp = inp[:, 1:]
-    else:
-        raise TypeError("invalid inpu")
+    #  Terrestial Time (seconds since J2000)
+    tts = t - j2000
+    inp_ts = inp
+    inp = inp.data
 
     if hapgood:
         day_start_epoch = time.astype("datetime64[D]")
@@ -297,34 +290,23 @@ def cotrans(inp, flag, hapgood: bool = True):
         root_path = os.path.dirname(os.path.abspath(__file__))
         file_name = "transformation_indices.json"
 
-        with open(os.sep.join([root_path, file_name])) as file:
+        with open(os.sep.join([root_path, file_name]), "r", encoding="utf-8") as file:
             transformation_dict = json.load(file)
 
         tind = transformation_dict[flag]
 
-    elif flag == "dipoledirectiongse":
-        out_data = _dipole_direction_gse(t)
-        return ts_vec_xyz(inp.time.data, out_data)
+        transf_mat = _transformation_matrix(t, tind, hapgood, *args_trans_mat)
+
+        if inp.ndim == 1:
+            out = ts_tensor_xyz(inp_ts.time.data, transf_mat)
+
+        else:
+            out_data = np.einsum("kji,ki->kj", transf_mat, inp)
+            out = inp_ts.copy()
+            out.data = out_data
+            out.attrs["COORDINATE_SYSTEM"] = ref_syst_out.upper()
 
     else:
-        raise ValueError(f"Transformation {flag} is unknown!")
-
-    transf_mat = _transformation_matrix(t, tind, hapgood, *args_trans_mat)
-
-    if inp.ndim == 2:
-        out = np.einsum("kji,ki->kj", transf_mat, inp)
-    elif inp.ndim == 1:
-        out = transf_mat
-    else:
-        raise ValueError
-
-    if inp_ts is not None:
-        out_data = out
-        out = inp_ts.copy()
-        out.data = out_data
-        out.attrs["COORDINATE_SYSTEM"] = ref_syst_out.upper()
-
-    else:
-        out = np.hstack([t[:, None], out])
+        out = _dipole_direction_gse(t)
 
     return out

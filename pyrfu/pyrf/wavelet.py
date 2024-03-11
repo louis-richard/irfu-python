@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import logging
 import os
-import warnings
 
 # 3rd party imports
 import numba
 import numpy as np
 import xarray as xr
-
 from scipy import fft
 
 # Local imports
@@ -17,16 +16,24 @@ from .calc_fs import calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 @numba.jit(nopython=True, fastmath=True)
 def _ww(s_ww, scales_mat, sigma, frequencies_mat, f_nyq):
+    # TODO : use nested for loop and math instead of numpy and test speed!!
     w_w = s_ww * np.exp(
-        -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2
+        -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2,
     )
     w_w = w_w * np.sqrt(1)
     return w_w
@@ -86,11 +93,13 @@ def wavelet(inp, **kwargs):
 
     if kwargs.get("linear"):
         linear_df = True
-        if isinstance(kwargs["linear"], (int, float)):
+        if isinstance(kwargs["linear"], bool) and kwargs["linear"]:
+            delta_f = 100
+            logging.warning("Unknown input for linear delta_f set to 100")
+        elif isinstance(kwargs["linear"], (int, float)):
             delta_f = kwargs["linear"]
         else:
-            delta_f = 100
-            warnings.warn("Unknown input for linear delta_f set to 100", UserWarning)
+            raise TypeError("linear keyword argument must be bool, float or int")
     else:
         delta_f = 100
         linear_df = False
@@ -98,7 +107,8 @@ def wavelet(inp, **kwargs):
     scale_min, scale_max = [0.01, 2]
 
     f_min, f_max = kwargs.get(
-        "f", [0.5 * f_s / 10**scale_max, 0.5 * f_s / 10**scale_min]
+        "f",
+        [0.5 * f_s / 10**scale_max, 0.5 * f_s / 10**scale_min],
     )
 
     f_nyq, scale_number, sigma = [f_s / 2, n_freqs, wavelet_width / (f_s / 2)]
@@ -140,7 +150,7 @@ def wavelet(inp, **kwargs):
     else:
         raise TypeError("Invalid shape of the inp")
 
-    new_freq_mat, temp_freq = np.meshgrid(new_freq, frequencies, sparse=True)
+    new_freq_mat, _ = np.meshgrid(new_freq, frequencies, sparse=True)
 
     _, frequencies_mat = np.meshgrid(scales, frequencies, sparse=True)
 
@@ -180,7 +190,10 @@ def wavelet(inp, **kwargs):
                 power2[len(data_col) - censure[j] : len(data_col), j] = np.nan
 
         if len(inp.shape) == 2:
-            out_dict[inp.comp.data[i]] = (["time", "frequency"], np.fliplr(power2))
+            out_dict[inp.comp.data[i]] = (
+                ["time", "frequency"],
+                np.fliplr(power2),
+            )
 
     if len(inp.shape) == 1:
         out = xr.DataArray(
@@ -188,11 +201,10 @@ def wavelet(inp, **kwargs):
             coords=[time, np.flip(new_freq)],
             dims=["time", "frequency"],
         )
-    elif len(inp.shape) == 2:
-        out = xr.Dataset(
-            out_dict, coords={"time": time, "frequency": np.flip(new_freq)}
-        )
     else:
-        raise TypeError("Invalid shape")
+        out = xr.Dataset(
+            out_dict,
+            coords={"time": time, "frequency": np.flip(new_freq)},
+        )
 
     return out

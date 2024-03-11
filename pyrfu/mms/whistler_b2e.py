@@ -3,17 +3,16 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import constants
 
 # Local imports
-from ..pyrf import plasma_calc
+from ..pyrf.plasma_calc import plasma_calc
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -55,26 +54,26 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
         raise IndexError("B2 and freq lengths do not agree!")
 
     # Calculate cold plasma parameters
-    r = 1 - fpe**2 / (freq * (freq - fce))
-    l = 1 - fpe**2 / (freq * (freq + fce))
-    p = 1 - fpe**2 / freq**2
-    d = 0.5 * (r - l)
-    s = 0.5 * (r + l)
+    rr = 1 - fpe**2 / (freq * (freq - fce))
+    ll = 1 - fpe**2 / (freq * (freq + fce))
+    pp = 1 - fpe**2 / freq**2
+    dd = 0.5 * (rr - ll)
+    ss = 0.5 * (rr + ll)
 
-    n2 = r * l * np.sin(theta_k) ** 2
-    n2 += p * s * (1 + np.cos(theta_k) ** 2)
+    n2 = rr * ll * np.sin(theta_k) ** 2
+    n2 += pp * ss * (1 + np.cos(theta_k) ** 2)
     n2 -= np.sqrt(
-        (r * l - p * s) ** 2 * np.sin(theta_k) ** 4
-        + 4 * (p**2) * (d**2) * np.cos(theta_k) ** 2
+        (rr * ll - pp * ss) ** 2 * np.sin(theta_k) ** 4
+        + 4 * (pp**2) * (dd**2) * np.cos(theta_k) ** 2,
     )
-    n2 /= 2 * (s * np.sin(theta_k) ** 2 + p * np.cos(theta_k) ** 2)
+    n2 /= 2 * (ss * np.sin(theta_k) ** 2 + pp * np.cos(theta_k) ** 2)
 
-    e_temp1 = (p - n2 * np.sin(theta_k) ** 2) ** 2.0 * ((d / (s - n2)) ** 2 + 1) + (
+    e_temp1 = (pp - n2 * np.sin(theta_k) ** 2) ** 2.0 * ((dd / (ss - n2)) ** 2 + 1) + (
         n2 * np.cos(theta_k) * np.sin(theta_k)
     ) ** 2
-    e_temp2 = (d / (s - n2)) ** 2 * (
-        p - n2 * np.sin(theta_k) ** 2
-    ) ** 2 + p**2 * np.cos(theta_k) ** 2
+    e_temp2 = (dd / (ss - n2)) ** 2 * (
+        pp - n2 * np.sin(theta_k) ** 2
+    ) ** 2 + pp**2 * np.cos(theta_k) ** 2
 
     e2 = (constants.speed_of_light**2 / n2) * e_temp1 / e_temp2 * b2.data
     e2 *= 1e-12

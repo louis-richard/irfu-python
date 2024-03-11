@@ -1,22 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import itertools
-
 # 3rd party imports
 import numpy as np
-
 from scipy import constants
 
 # Local imports
-from ..pyrf import resample, ts_scalar
+from ..pyrf.resample import resample
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 q_e = constants.elementary_charge
@@ -57,10 +54,6 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     """
 
-    flag_same_e = 0
-    flag_dphi = 0
-    flag_dtheta = 0
-
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
 
@@ -88,8 +81,7 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     energy_range = kwargs.get("en_channels", [0, vdf.energy.shape[1]])
     int_energies = np.arange(energy_range[0], energy_range[1])
 
-    if np.sum(np.abs(vdf.attrs["energy0"] - vdf.attrs["energy1"])) < 1e-4:
-        flag_same_e = 1
+    flag_same_e = np.sum(np.abs(vdf.attrs["energy0"] - vdf.attrs["energy1"])) < 1e-4
 
     # Calculate angle differences
     delta_phi = np.deg2rad(np.median(np.diff(phi[0, :])))
@@ -97,22 +89,17 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     delta_ang = delta_phi * delta_theta
 
-    if phi.ndim == 2:
-        phi_tr = phi.copy()
-    else:
-        phi_tr = np.tile(phi, (len(vdf.time.data), 1))
-
-    if theta.ndim == 2:
-        theta_tr = theta
-    else:
-        theta_tr = np.tile(theta, (len(vdf.time.data), 1))
+    phi_tr = phi.copy()
+    theta_tr = np.tile(theta, (len(vdf.time.data), 1))
 
     energy_minus = vdf.attrs["delta_energy_minus"]
     energy_plus = vdf.attrs["delta_energy_plus"]
 
     # Calculate speed widths associated with each energy channel.
     energy_scpot = np.transpose(np.tile(sc_pot.data, (energy.shape[1], 1)))
-    energy_corr = energy - np.transpose(np.tile(sc_pot.data, (energy.shape[1], 1)))
+    energy_corr = energy - np.transpose(
+        np.tile(sc_pot.data, (energy.shape[1], 1)),
+    )
     velocity = np.real(np.sqrt(2 * q_e * energy_corr / m_s))
 
     if flag_same_e:
@@ -144,9 +131,6 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
 
     theta_mat = np.tile(theta_tr, (len(int_energies), phi_tr.shape[1], 1, 1))
     theta_mat = np.transpose(theta_mat, [2, 0, 1, 3])
-
-    if flag_dphi and flag_dtheta:
-        delta_ang = np.tile(delta_ang, (len(vdf.time.data), len(int_energies), 1, 1))
 
     m_mat = np.sin(np.deg2rad(theta_mat)) * delta_ang
 

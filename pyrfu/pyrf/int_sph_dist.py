@@ -3,12 +3,18 @@
 
 # Built-in imports
 import random
-
-from math import cos, sin, asin, sqrt
+from math import asin, cos, sin, sqrt
 
 # Third party imports
 import numba
 import numpy as np
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2023"
+__license__ = "MIT"
+__version__ = "2.4.2"
+__status__ = "Prototype"
 
 
 def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
@@ -37,7 +43,8 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
     # Coordinates system transformation matrix
     xyz = kwargs.get("xyz", np.eye(3))
 
-    # Number of Monte Carlo iterations and how number of MC points is weighted to data.
+    # Number of Monte Carlo iterations and how number of MC points is
+    # weighted to data.
     n_mc = kwargs.get("n_mc", 10)
     weight = kwargs.get("weight", None)
 
@@ -53,27 +60,26 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
     speed_edges = kwargs.get("speed_edges", None)
     speed_grid_edges = kwargs.get("speed_grid_edges", None)
 
-    # Azimuthal and elevation angles steps. Assumed to be constant if not provided.
+    # Azimuthal and elevation angles steps. Assumed to be constant
+    # if not provided.
     d_phi = np.abs(np.median(np.diff(phi))) * np.ones_like(phi)
     d_phi = kwargs.get("d_phi", d_phi)
     d_theta = np.abs(np.median(np.diff(theta))) * np.ones_like(theta)
     d_theta = kwargs.get("d_theta", d_theta)
 
     # azimuthal angle of projection plane
-    n_az_g = 32
+    n_az_g = len(phi)
     d_phi_g = 2 * np.pi / n_az_g
     phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, n_az_g) + d_phi_g / 2
     phi_grid = kwargs.get("phi_grid", phi_grid)
 
-    # Overwrite projection dimension if azimuthal angle of projection plane is not
-    # provided. Set the azimuthal angle grid width.
-    if phi_grid is None or projection_dim == "1d":
-        projection_dim = "1d"
-        d_phi_grid = 1.0
-    elif phi_grid is not None and projection_dim.lower() in ["2d", "3d"]:
+    # Overwrite projection dimension if azimuthal angle of projection
+    # plane is not provided. Set the azimuthal angle grid width.
+    if phi_grid is not None and projection_dim.lower() in ["2d", "3d"]:
         d_phi_grid = np.median(np.diff(phi_grid))
     else:
-        raise RuntimeError("1d projection with phi_grid provided doesn't make sense!!")
+        projection_dim = "1d"
+        d_phi_grid = 1.0
 
     # Make sure the transformation matrix is orthonormal.
     x_phat = xyz[:, 0] / np.linalg.norm(xyz[:, 0])  # re-normalize
@@ -106,7 +112,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
         d_v_grid = np.diff(speed_grid_edges)
     else:
         mean_diff = np.mean(np.diff(speed_grid))
-        msg = "For a cartesian grid (default), all velocity bins must be equal!!"
+        msg = "For a cartesian grid, all velocity bins must be equal!!"
         assert (np.diff(speed_grid) / mean_diff - 1 < 1e-2).all(), msg
 
         d_v_grid = mean_diff
@@ -116,41 +122,18 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
     if weight == "lin":
         n_mc_mat = np.ceil(n_sum / np.sum(vdf) * vdf)
     elif weight == "log":
-        n_mc_mat = np.ceil(n_sum / np.sum(np.log10(vdf + 1)) * np.log10(vdf + 1))
+        n_mc_mat = np.ceil(
+            n_sum / np.sum(np.log10(vdf + 1)) * np.log10(vdf + 1),
+        )
     else:
         n_mc_mat = np.zeros_like(vdf)
         n_mc_mat[vdf != 0] = n_mc
 
     n_mc_mat = n_mc_mat.astype(int)
 
-    if projection_base == "pol":
-        # Area or line element (primed)
-        d_a_grid = speed_grid ** (int(projection_dim[0]) - 1) * d_phi_grid * d_v_grid
-        d_a_grid = d_a_grid.astype(np.float64)
-
-        if projection_dim == "1d":
-            f_g = mc_pol_1d(
-                vdf,
-                speed,
-                phi,
-                theta,
-                d_v,
-                d_v_m,
-                d_phi,
-                d_theta,
-                speed_grid_edges,
-                d_a_grid,
-                v_lim,
-                a_lim,
-                n_mc_mat,
-                r_mat,
-            )
-        else:
-            raise NotImplementedError("2d projection on polar grid is not ready yet!!")
-
-    elif projection_base == "cart" and projection_dim == "2d":
+    if projection_base == "cart" and projection_dim == "2d":
         d_a_grid = d_v_grid**2
-        f_g = mc_cart_2d(
+        f_g = _mc_cart_2d(
             vdf,
             speed,
             phi,
@@ -168,7 +151,7 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
         )
     elif projection_base == "cart" and projection_dim == "3d":
         d_a_grid = d_v_grid**3
-        f_g = mc_cart_3d(
+        f_g = _mc_cart_3d(
             vdf,
             speed,
             phi,
@@ -185,11 +168,33 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
             r_mat,
         )
     else:
-        raise ValueError("Invalid base!!")
+        # Area or line element (primed)
+        d_a_grid = speed_grid ** (int(projection_dim[0]) - 1) * d_phi_grid * d_v_grid
+        d_a_grid = d_a_grid.astype(np.float64)
 
-    if projection_dim == "1d":
-        pst = {"f": f_g, "v": speed_grid, "v_edges": speed_grid_edges}
-    elif projection_dim == "2d" and projection_base == "cart":
+        if projection_dim == "1d":
+            f_g = _mc_pol_1d(
+                vdf,
+                speed,
+                phi,
+                theta,
+                d_v,
+                d_v_m,
+                d_phi,
+                d_theta,
+                speed_grid_edges,
+                d_a_grid,
+                v_lim,
+                a_lim,
+                n_mc_mat,
+                r_mat,
+            )
+        else:
+            raise NotImplementedError(
+                "2d projection on polar grid is not ready yet!!",
+            )
+
+    if projection_dim == "2d" and projection_base == "cart":
         pst = {
             "f": f_g,
             "vx": speed_grid,
@@ -208,13 +213,13 @@ def int_sph_dist(vdf, speed, phi, theta, speed_grid, **kwargs):
             "vz_edges": speed_grid_edges,
         }
     else:
-        raise NotImplementedError("2d projection on polar grid is not ready yet!!")
+        pst = {"f": f_g, "vx": speed_grid, "vx_edges": speed_grid_edges}
 
     return pst
 
 
-@numba.jit(fastmath=True)
-def mc_pol_1d(
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
+def _mc_pol_1d(
     vdf,
     v,
     phi,
@@ -253,12 +258,12 @@ def mc_pol_1d(
     vg_egdes : double
         Bin centers of the velocity of the projection grid.
     d_a_grid : double
-        Bin centers of the azimuthal angle of the projection in radians in the span
-        [0,2*pi]. If this input is given, the projection will be 2D. If it is omitted,
-        the projection will be 1D.
+        Bin centers of the azimuthal angle of the projection in radians in
+        the span [0,2*pi]. If this input is given, the projection will be 2D.
+        If it is omitted, the projection will be 1D.
     v_lim : double
-        Limits on the out-of-plane velocity interval in 2D and "transverse" velocity
-        in 1D.
+        Limits on the out-of-plane velocity interval in 2D and "transverse"
+        velocity in 1D.
     a_lim : double
         Angular limit in degrees, can be combined with v_lim.
     n_mc : double
@@ -289,12 +294,10 @@ def mc_pol_1d(
                 c_ijk = dtau_ijk / n_mc_ijk
                 f_ijk = vdf[i, j, k]
 
-                for l in range(n_mc_ijk):
+                for _ in range(n_mc_ijk):
                     d_v_mc = -random.random() * d_v[i] - d_v_m[0]
                     d_phi_mc = (random.random() - 0.5) * d_phi[j]
                     d_the_mc = (random.random() - 0.5) * d_theta[k]
-
-                    # printf("%f, %f\n", d_v_m[0], d_v_mc)
 
                     # convert instrument bin to cartesian velocity
                     v_mc = v[i] + d_v_mc
@@ -326,8 +329,8 @@ def mc_pol_1d(
     return f_g
 
 
-@numba.jit(fastmath=True)
-def mc_cart_3d(
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
+def _mc_cart_3d(
     vdf,
     v,
     phi,
@@ -366,12 +369,12 @@ def mc_cart_3d(
     vg_egdes : double
         Bin centers of the velocity of the projection grid.
     d_a_grid : double
-        Bin centers of the azimuthal angle of the projection in radians in the span
-        [0,2*pi]. If this input is given, the projection will be 2D. If it is omitted,
-        the projection will be 1D.
+        Bin centers of the azimuthal angle of the projection in radians in
+        the span [0,2*pi]. If this input is given, the projection will be 2D.
+        If it is omitted, the projection will be 1D.
     v_lim : double
-        Limits on the out-of-plane velocity interval in 2D and "transverse" velocity
-        in 1D.
+        Limits on the out-of-plane velocity interval in 2D and "transverse"
+        velocity in 1D.
     a_lim : double
         Angular limit in degrees, can be combined with v_lim.
     n_mc : double
@@ -403,7 +406,7 @@ def mc_cart_3d(
                 c_ijk = dtau_ijk / n_mc_ijk
                 f_ijk = vdf[i, j, k]
 
-                for l in range(n_mc_ijk):
+                for _ in range(n_mc_ijk):
                     d_v_mc = -random.random() * d_v[i] - d_v_m[0]
                     d_phi_mc = (random.random() - 0.5) * d_phi[j]
                     d_the_mc = (random.random() - 0.5) * d_theta[k]
@@ -439,8 +442,8 @@ def mc_cart_3d(
     return f_g
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True)
-def mc_cart_2d(
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
+def _mc_cart_2d(
     vdf,
     v,
     phi,
@@ -479,11 +482,12 @@ def mc_cart_2d(
     vg_egdes : double
         Bin centers of the velocity of the projection grid.
     d_a_grid : double
-        Bin centers of the azimuthal angle of the projection in radians in the span
-        [0,2*pi]. If this input is given, the projection will be 2D. If it is omitted,
-        the projection will be 1D.
+        Bin centers of the azimuthal angle of the projection in radians in
+        the span [0,2*pi]. If this input is given, the projection will be 2D.
+        If it is omitted, the projection will be 1D.
     v_lim : double
-        Limits on the out-of-plane velocity interval in 2D and "transverse" velocity
+        Limits on the out-of-plane velocity interval in 2D and "transverse"
+        velocity
         in 1D.
     a_lim : double
         Angular limit in degrees, can be combined with v_lim.
@@ -516,7 +520,7 @@ def mc_cart_2d(
                 c_ijk = dtau_ijk / n_mc_ijk
                 f_ijk = vdf[i, j, k]
 
-                for l in range(n_mc_ijk):
+                for _ in range(n_mc_ijk):
                     d_v_mc = -random.random() * d_v[i] - d_v_m[0]
                     d_phi_mc = (random.random() - 0.5) * d_phi[j]
                     d_the_mc = (random.random() - 0.5) * d_theta[k]

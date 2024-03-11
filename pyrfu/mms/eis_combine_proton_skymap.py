@@ -1,21 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .eis_ang_ang import eis_ang_ang
+
 # Local imports
 from .eis_combine_proton_spec import eis_combine_proton_spec
-from .eis_ang_ang import eis_ang_ang
 from .eis_skymap import eis_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 def eis_combine_proton_skymap(
-    phxtof_allt, extof_allt, en_chan: list = None, to_psd: bool = True
+    phxtof_allt,
+    extof_allt,
+    en_chan: list = None,
+    to_psd: bool = True,
 ):
     r"""Combines ExTOF and PHxTOF proton energy spectra and generate proton
     skymap distribution.

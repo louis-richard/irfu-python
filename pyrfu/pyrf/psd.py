@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import signal
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -81,7 +80,7 @@ def psd(
 
     if n_fft < n_persegs:
         n_fft = n_persegs
-        warnings.warn("nfft < n_persegs. set to n_persegs", UserWarning)
+        logging.warning("nfft < n_persegs. set to n_persegs")
 
     f_samp = 1e9 / np.median(np.diff(inp.time.data)).astype(np.float64)
 

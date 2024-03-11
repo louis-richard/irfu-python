@@ -4,17 +4,16 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
-from scipy import special, constants
+from scipy import constants, special
 
 # Local imports
-from ..pyrf import resample
+from ..pyrf.resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -54,6 +53,11 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
     See also
     --------
     pyrfu.mms.make_model_vdf
+
+    Todo
+    ----
+    Generalize to bi-Kappa distributions.
+
     """
 
     # Unpack azimuthal and elevation angles from the skymap distribution
@@ -71,7 +75,12 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
 
     # Initialize output to zeros
     out_data = np.zeros(
-        [vdf.data.shape[0], vdf.data.shape[3], vdf.data.shape[1], vdf.data.shape[2]]
+        [
+            vdf.data.shape[0],
+            vdf.data.shape[3],
+            vdf.data.shape[1],
+            vdf.data.shape[2],
+        ],
     )
 
     for i in range(len(vdf.time.data)):

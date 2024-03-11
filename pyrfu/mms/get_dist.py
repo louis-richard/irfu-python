@@ -1,117 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in import
-import re
-import pdb
-import warnings
-
 # 3rd party imports
 import numpy as np
-
-from cdflib import CDF, cdfepoch
+from pycdfpp import load
 
 # Local imports
-from ..pyrf import (
-    ts_skymap,
-    iso86012datetime64,
-    datetime642ttns,
-    cdfepoch2datetime64,
-    extend_tint,
-    time_clip,
-)
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_skymap import ts_skymap
+from .get_ts import _get_epochs
+from .get_variable import _pycdfpp_attributes_to_dict
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 # Keys of the global attributes to keep from CDF informations
-Globkeys = ["CDF", "Version", "Encoding", "Checksum", "Compressed", "LeapSecondUpdated"]
+Globkeys = [
+    "CDF",
+    "Version",
+    "Encoding",
+    "Checksum",
+    "Compressed",
+    "LeapSecondUpdated",
+]
 
 
-def _shift_epochs(file, epoch):
-    r"""Shift times for particles."""
-
-    epoch_shifted = epoch["data"].copy()
-
-    try:
-        delta_minus_var = {
-            "data": file.varget(epoch["attrs"]["DELTA_MINUS_VAR"]),
-            "attrs": file.varget(epoch["attrs"]["DELTA_MINUS_VAR"]),
-        }
-        delta_plus_var = {
-            "data": file.varget(epoch["attrs"]["DELTA_PLUS_VAR"]),
-            "attrs": file.varget(epoch["attrs"]["DELTA_PLUS_VAR"]),
-        }
-
-        delta_vars = [delta_minus_var, delta_plus_var]
-        flags_vars = [1e3, 1e3]  # Time scaling conversion flags
-
-        for i, delta_var in enumerate(delta_vars):
-            if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
-                if delta_var["attrs"]["UNITS"].lower() == "s":
-                    flags_vars[i] = 1e3
-                elif delta_var["attrs"]["UNITS"].lower() == "ms":
-                    flags_vars[i] = 1e0
-                else:
-                    message = " units are not clear, assume s"
-                    warnings.warn(message)
-            else:
-                message = "Epoch_plus_var/Epoch_minus_var units are not clear, assume s"
-                warnings.warn(message)
-
-        flag_minus, flag_plus = flags_vars
-        t_offset = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
-        )
-        t_offset = np.timedelta64(int(np.round(t_offset, 1) * 1e6 / 2), "ns")
-        t_diff = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
-        )
-        t_diff = np.timedelta64(int(np.round(t_diff, 1) * 1e6 / 2), "ns")
-        t_diff_data = np.median(np.diff(epoch["data"])) / 2
-
-        if t_diff_data != np.mean(t_diff):
-            t_offset = t_diff_data
-
-        epoch_shifted += t_offset
-
-        return {"data": epoch_shifted, "attrs": epoch["attrs"]}
-
-    except KeyError:
-        return {"data": epoch_shifted, "attrs": epoch["attrs"]}
-
-
-def _get_epochs(file, cdf_name, tint):
-    r"""Get epochs form cdf and shift if needed."""
-
-    depend0_key = file.varattsget(cdf_name)["DEPEND_0"]
-
-    out = {"data": file.varget(depend0_key, starttime=tint[0], endtime=tint[1])}
-
-    if file.varinq(depend0_key)["Data_Type_Description"] == "CDF_TIME_TT2000":
-        try:
-            out["data"] = cdfepoch2datetime64(out["data"])
-        except TypeError:
-            pass
-
-    # Get epoch attributes
-    out["attrs"] = file.varattsget(depend0_key)
-
-    # Shift times if particle data
-    is_part = re.search("^mms[1-4]_d[ei]s_", cdf_name)  # Is it FPI data?
-    is_part = is_part or re.search("^mms[1-4]_hpca_", cdf_name)  # Is it HPCA data?
-
-    if is_part:
-        out = _shift_epochs(file, out)
-
-    return out
-
-
-def get_dist(file_path, cdf_name, tint):
+def get_dist(file_path, cdf_name, tint: list = None):
     r"""Read field named cdf_name in file and convert to velocity distribution
     function.
 
@@ -121,7 +41,7 @@ def get_dist(file_path, cdf_name, tint):
         Path of the cdf file.
     cdf_name : str
         Name of the target variable in the cdf file.
-    tint : list of str
+    tint : list of str, Optional
         Time interval.
 
     Returns
@@ -139,90 +59,93 @@ def get_dist(file_path, cdf_name, tint):
     elif "_des_" in cdf_name:
         specie = "electrons"
     else:
-        raise AttributeError("Couldn't get the particle species from file name!!")
+        raise AttributeError(
+            "Couldn't get the particle species from file name!!",
+        )
 
-    tint_org = tint
-    tint = extend_tint(tint, [-1, 1])
-    tint = list(datetime642ttns(iso86012datetime64(np.array(tint))))
+    # Check time interval type
+    # Check time interval
+    if tint is None:
+        tint = ["1995-10-06T18:50:00.000000000", "2200-10-06T18:50:00.000000000"]
+    elif isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], np.datetime64):
+            tint = datetime642iso8601(np.array(tint))
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(
+                np.array(tint),
+            )  # to make sure it is ISO8601 ok!!
+            tint = datetime642iso8601(np.array(tint))
+        else:
+            raise TypeError("Values must be in datetime64, or str!!")
+    else:
+        raise TypeError("tint must be array_like!!")
 
-    with CDF(file_path) as file:
-        # Get the relevant CDF file information and add the global attributes
-        glob_attrs = {k: file.cdf_info()[k] for k in Globkeys}
-        glob_attrs = {**glob_attrs, **file.globalattsget()}
-        glob_attrs = {**glob_attrs, **{"tmmode": tmmode, "species": specie}}
+    # Load CDF file
+    file = load(file_path)
 
-        # Get VDF zVariable attributes and sort them
-        dist_attrs = file.varattsget(cdf_name)
-        dist_attrs = {k: dist_attrs[k] for k in sorted(dist_attrs)}
+    # with CDF(file_path) as file:
+    # Get the relevant CDF file information (zVariables)
+    z_vars = [z_var[0] for z_var in file.items()]
 
-        # Get CDF keys to Epoch, energy, azimuthal and elevation angle zVariables
-        depends_keys = [dist_attrs[f"DEPEND_{i:d}"] for i in range(4)]
-        depend0_key, depend1_key, depend2_key, depend3_key = depends_keys
+    # Get the global attributes
+    glob_attrs = _pycdfpp_attributes_to_dict(file.attributes)
+    glob_attrs = {**glob_attrs, **{"tmmode": tmmode, "species": specie}}
 
-        # Get coordinates attributes and sort them
-        coords_attrs = [file.varattsget(k) for k in depends_keys]
-        coords_attrs = [{k: attrs[k] for k in sorted(attrs)} for attrs in coords_attrs]
-        coords_names = ["time", "phi", "theta", "energy"]
-        coords_attrs = {k: attrs for k, attrs in zip(coords_names, coords_attrs)}
+    # Get VDF zVariable attributes
+    dist_attrs = _pycdfpp_attributes_to_dict(file[cdf_name].attributes)
 
-        times = _get_epochs(file, cdf_name, tint)
+    # Get CDF keys to Epoch, energy, azimuthal and elevation angle
+    # zVariables
+    depends_keys = [dist_attrs[f"DEPEND_{i:d}"] for i in range(4)]
+
+    # Get coordinates attributes
+    coords_attrs = {}
+
+    for n, k in zip(["time", "phi", "theta", "energy"], depends_keys):
+        coords_attrs[n] = _pycdfpp_attributes_to_dict(file[k].attributes)
+
+    times = _get_epochs(file, cdf_name)
+
+    # If something time is None means that there is nothing interesting
+    # in this file so leave!!
+    if times["data"] is not None:
         times = times["data"]
+    else:
+        return None
 
-        dist = file.varget(cdf_name, starttime=tint[0], endtime=tint[1])
-        dist = np.transpose(dist, [0, 3, 1, 2])
-        phi = file.varget(depend1_key, starttime=tint[0], endtime=tint[1])
-        theta = file.varget(depend2_key)
-        energy = file.varget(depend3_key, starttime=tint[0], endtime=tint[1])
+    dist = np.transpose(file[cdf_name].values, [0, 3, 1, 2])
+    phi, theta, energy = [np.squeeze(file[k].values) for k in depends_keys[1:]]
 
-        if tmmode == "brst":
-            en0_name = "_".join(
-                [
-                    cdf_name.split("_")[0],
-                    cdf_name.split("_")[1],
-                    "energy0",
-                    cdf_name.split("_")[-1],
-                ]
-            )
-            en1_name = "_".join(
-                [
-                    cdf_name.split("_")[0],
-                    cdf_name.split("_")[1],
-                    "energy1",
-                    cdf_name.split("_")[-1],
-                ]
-            )
+    if tmmode == "brst":
+        en0_name = "_".join(
+            [
+                cdf_name.split("_")[0],
+                cdf_name.split("_")[1],
+                "energy0",
+                cdf_name.split("_")[-1],
+            ],
+        )
+        en1_name = "_".join(
+            [
+                cdf_name.split("_")[0],
+                cdf_name.split("_")[1],
+                "energy1",
+                cdf_name.split("_")[-1],
+            ],
+        )
 
-            e_step_table_name = "_".join(
-                [
-                    cdf_name.split("_")[0],
-                    cdf_name.split("_")[1],
-                    "steptable_parity",
-                    cdf_name.split("_")[-1],
-                ]
-            )
+        e_step_table_name = "_".join(
+            [
+                cdf_name.split("_")[0],
+                cdf_name.split("_")[1],
+                "steptable_parity",
+                cdf_name.split("_")[-1],
+            ],
+        )
 
-            step_table = file.varget(
-                e_step_table_name, starttime=tint[0], endtime=tint[1]
-            )
+        step_table = file[e_step_table_name].values
 
-            if en0_name not in file.cdf_info()["zVariables"]:
-                if energy.ndim == 1:
-                    energy0 = energy
-                    energy1 = energy
-                elif energy.shape[0] == 1:
-                    energy0 = energy[0, :]
-                    energy1 = energy[0, :]
-                else:
-                    energy0 = energy[1, :]
-                    energy1 = energy[0, :]
-            else:
-                energy0 = file.varget(en0_name)
-                energy1 = file.varget(en1_name)
-
-            # Overwrite energy to make sure that energy0 and energy1 are used instead
-            energy = None
-
-        elif tmmode == "fast":
+        if en0_name not in z_vars:
             if energy.ndim == 1:
                 energy0 = energy
                 energy1 = energy
@@ -232,49 +155,63 @@ def get_dist(file_path, cdf_name, tint):
             else:
                 energy0 = energy[1, :]
                 energy1 = energy[0, :]
-
-            step_table = np.zeros(len(times))
-
         else:
-            raise ValueError("Invalid sampling mode!!")
+            energy0 = file[en0_name].values
+            energy1 = file[en1_name].values
 
-        d_en_name = "_".join(
-            [
-                cdf_name.split("_")[0],
-                cdf_name.split("_")[1],
-                "energy_delta",
-                cdf_name.split("_")[-1],
-            ]
-        )
+        # Overwrite energy to make sure that energy0 and energy1
+        # are used instead
+        energy = np.tile(energy0, (len(step_table), 1))
+        energy[step_table == 1] = np.tile(energy1, (int(np.sum(step_table)), 1))
 
-        if d_en_name in file.cdf_info()["zVariables"]:
-            glob_attrs["delta_energy_plus"] = file.varget(
-                d_en_name, starttime=tint[0], endtime=tint[1]
-            )
-            glob_attrs["delta_energy_minus"] = file.varget(
-                d_en_name, starttime=tint[0], endtime=tint[1]
-            )
+    elif tmmode == "fast":
+        phi = np.tile(phi, (len(times), 1))
+
+        if energy.ndim == 1:
+            energy0 = energy
+            energy1 = energy
+        elif energy.shape[0] == 1:
+            energy0 = energy[0, :]
+            energy1 = energy[0, :]
         else:
-            glob_attrs["delta_energy_plus"] = None
-            glob_attrs["delta_energy_minus"] = None
+            energy0 = energy[1, :]
+            energy1 = energy[0, :]
 
-        # Sort the global attributes
-        glob_attrs = {k: glob_attrs[k] for k in sorted(glob_attrs)}
+        step_table = np.zeros(len(times))
 
-        out = ts_skymap(
-            times,
-            dist,
-            energy,
-            phi,
-            theta,
-            energy0=energy0,
-            energy1=energy1,
-            esteptable=step_table,
-            attrs=dist_attrs,
-            coords_attrs=coords_attrs,
-            glob_attrs=glob_attrs,
-        )
+    else:
+        raise ValueError("Invalid sampling mode!!")
 
-    out = time_clip(out, tint_org)
+    d_en_name = "_".join(
+        [
+            cdf_name.split("_")[0],
+            cdf_name.split("_")[1],
+            "energy_delta",
+            cdf_name.split("_")[-1],
+        ],
+    )
+
+    if d_en_name in z_vars:
+        glob_attrs["delta_energy_plus"] = file[d_en_name].values
+        glob_attrs["delta_energy_minus"] = file[d_en_name].values
+    else:
+        glob_attrs["delta_energy_plus"] = None
+        glob_attrs["delta_energy_minus"] = None
+
+    out = ts_skymap(
+        times,
+        dist,
+        energy,
+        phi,
+        theta,
+        energy0=energy0,
+        energy1=energy1,
+        esteptable=step_table,
+        attrs=dist_attrs,
+        coords_attrs=coords_attrs,
+        glob_attrs=glob_attrs,
+    )
+
+    out = time_clip(out, tint)
 
     return out

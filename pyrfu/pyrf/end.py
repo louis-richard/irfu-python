@@ -3,12 +3,13 @@
 
 # 3rd party import
 import numpy as np
+import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -17,7 +18,7 @@ def end(inp):
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : xarray.DataArray or xarray.Dataset
         Time series of the input variable.
 
     Returns
@@ -26,6 +27,9 @@ def end(inp):
         Value of the last time in unix format.
 
     """
+
+    message = "inp must be a xarray.DataArray or xarray.Dataset"
+    assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
 
     out = inp.time.data[-1].astype(np.int64) / 1e9
 

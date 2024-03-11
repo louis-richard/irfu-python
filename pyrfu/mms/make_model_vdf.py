@@ -3,23 +3,34 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import constants
 
-# Local imports
-from ..pyrf import resample, dec_par_perp, norm, trace, ts_scalar
+from ..pyrf.dec_par_perp import dec_par_perp
+from ..pyrf.norm import norm
+from ..pyrf.resample import resample
+from ..pyrf.trace import trace
+from ..pyrf.ts_scalar import ts_scalar
 
-from . import rotate_tensor
+# Local imports
+from .rotate_tensor import rotate_tensor
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = False):
+def make_model_vdf(
+    vdf,
+    b_xyz,
+    sc_pot,
+    n_s,
+    v_xyz,
+    t_xyz,
+    isotropic: bool = False,
+):
     r"""Make a general bi-Maxwellian distribution function based on particle
     moment data in the same format as PDist.
 
@@ -47,8 +58,7 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
 
     See also
     --------
-    pyrfu.mms.calculate_epsilon : Calculates epsilon parameter using model
-    distribution.
+    pyrfu.mms.calculate_epsilon : Calculates epsilon parameter using model distribution.
 
     Examples
     --------
@@ -94,7 +104,10 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
 
     if isotropic:
         t_para = trace(t_xyzfac) / 3
-        t_ratio = ts_scalar(t_xyzfac.time.data, np.ones(len(t_xyzfac.time.data)))
+        t_ratio = ts_scalar(
+            t_xyzfac.time.data,
+            np.ones(len(t_xyzfac.time.data)),
+        )
     else:
         t_para = t_xyzfac[:, 0, 0]
         t_ratio = t_xyzfac[:, 0, 0] / t_xyzfac[:, 1, 1]
@@ -136,14 +149,19 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
 
     for i in range(n_ti):
         x_mat[i, ...] = np.outer(
-            -np.cos(np.deg2rad(vdf.phi.data[i, :])), np.sin(np.deg2rad(vdf.theta.data))
+            -np.cos(np.deg2rad(vdf.phi.data[i, :])),
+            np.sin(np.deg2rad(vdf.theta.data)),
         )
         y_mat[i, ...] = np.outer(
-            -np.sin(np.deg2rad(vdf.phi.data[i, :])), np.sin(np.deg2rad(vdf.theta.data))
+            -np.sin(np.deg2rad(vdf.phi.data[i, :])),
+            np.sin(np.deg2rad(vdf.theta.data)),
         )
-        z_mat[i, ...] = np.outer(-np.ones(n_ph), np.cos(np.deg2rad(vdf.theta.data)))
+        z_mat[i, ...] = np.outer(
+            -np.ones(n_ph),
+            np.cos(np.deg2rad(vdf.theta.data)),
+        )
         r_mat[i, ...] = np.real(
-            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass)
+            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass),
         )
 
     r_mat[r_mat == 0] = 0.0
@@ -194,16 +212,16 @@ def make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic: bool = Fals
         bi_max_temp = coeff * np.exp(
             -((x_p[i, ...] * r_mat[i, ...] - v_perp_mag_data[i]) ** 2)
             / (vth_para.data[i] ** 2)
-            * t_ratio.data[i]
+            * t_ratio.data[i],
         )
         bi_max_temp = bi_max_temp * np.exp(
             -((y_p[i, ...] * r_mat[i, ...]) ** 2)
             / (vth_para.data[i] ** 2)
-            * t_ratio.data[i]
+            * t_ratio.data[i],
         )
         bi_max_temp = bi_max_temp * np.exp(
             -((z_p[i, ...] * r_mat[i, ...] - v_para_data[i]) ** 2)
-            / (vth_para.data[i] ** 2)
+            / (vth_para.data[i] ** 2),
         )
 
         bi_max_dist[i, ...] = bi_max_temp

@@ -6,7 +6,15 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import ts_scalar, resample
+from ..pyrf.resample import resample
+from ..pyrf.ts_scalar import ts_scalar
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2023"
+__license__ = "MIT"
+__version__ = "2.4.2"
+__status__ = "Prototype"
 
 
 def correct_edp_probe_timing(sc_pot):
@@ -42,7 +50,9 @@ def correct_edp_probe_timing(sc_pot):
 
     diff_sc_pot = []
     for i, fact in zip([0, 2, 4], e_fact):
-        diff_sc_pot.append(ts_scalar(time, np.diff(sc_pot.data[:, i : i + 2]) / fact))
+        diff_sc_pot.append(
+            ts_scalar(time, np.diff(sc_pot.data[:, i : i + 2]) / fact),
+        )
 
     # Correct the time tags to create individual time series
     tau_vs = [
@@ -81,7 +91,7 @@ def correct_edp_probe_timing(sc_pot):
             sc_pot_corrected.append(item.data)
 
     # Create the new time series with the corrected values
-    options = dict(coords=[time, np.arange(1, 7)], dims=["time", "probe"])
+    options = {"coords": [time, np.arange(1, 7)], "dims": ["time", "probe"]}
     sc_pot_corrected = xr.DataArray(sc_pot_corrected, **options)
 
     return sc_pot_corrected

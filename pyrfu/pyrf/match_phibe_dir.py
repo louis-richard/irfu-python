@@ -3,22 +3,22 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import signal
+
+from .calc_dt import calc_dt
+from .filt import filt
+from .integrate import integrate
+from .norm import norm
 
 # Local imports
 from .resample import resample
-from .filt import filt
-from .norm import norm
-from .integrate import integrate
 from .ts_scalar import ts_scalar
-from .calc_dt import calc_dt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -132,13 +132,16 @@ def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
 
         # Get Phi_E = int(Ek), there's no minus since the field is integrated
         # in the opposite direction of the wave propagation direction.
-        prel_ = integrate(ts_scalar(e_xyz.time.data, de_k[:, k]), calc_dt(e_xyz))
+        prel_ = integrate(
+            ts_scalar(e_xyz.time.data, de_k[:, k]),
+            calc_dt(e_xyz),
+        )
         int_e_dt[:, k] = prel_.data - np.mean(prel_.data)
 
         # Get correlation
         corr_ = signal.correlate(int_e_dt[:, k], b_z[:, 1], mode="valid")
         scale = np.sqrt(
-            np.dot(int_e_dt[:, k], int_e_dt[:, k]) * np.dot(b_z[:, 1], b_z[:, 1])
+            np.dot(int_e_dt[:, k], int_e_dt[:, k]) * np.dot(b_z[:, 1], b_z[:, 1]),
         )
         corr_vec[k] = corr_ / scale
 

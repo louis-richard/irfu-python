@@ -4,24 +4,28 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import constants, optimize
 
 # Local imports
-from ..pyrf import trace, ts_tensor_xyz, ts_scalar, resample
+from ..pyrf.resample import resample
+from ..pyrf.trace import trace
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 def _f_one_pop(x, *args):
     i_e, i_aspoc, sc_pot_r = args
     return np.nansum(
-        np.abs(i_e.data + i_aspoc.data - (x[0] * np.exp(-sc_pot_r.data / x[1])))
+        np.abs(
+            i_e.data + i_aspoc.data - (x[0] * np.exp(-sc_pot_r.data / x[1])),
+        ),
     )
 
 
@@ -32,8 +36,8 @@ def _f_two_pop(x, *args):
             i_e.data
             + i_aspoc.data
             - (x[0] * np.exp(-sc_pot_r.data / x[1]))
-            + (x[2] * np.exp(-sc_pot_r.data / x[3]))
-        )
+            + (x[2] * np.exp(-sc_pot_r.data / x[3])),
+        ),
     )
 
 
@@ -89,11 +93,9 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     else:
         i_aspoc = ts_scalar(n_e.time.data, np.zeros(len(n_e)))
 
-    # Check format of electron temperature
-    if t_e.ndim == 3 and t_e.shape[1:] == (3, 3):
-        t_e = trace(ts_tensor_xyz(t_e.time.data, t_e.data)) / 3
-    else:
-        raise IndexError("Te format not recognized")
+    # Check format of electron temperature (tensor)
+    assert t_e.ndim == 3 and t_e.shape[1:] == (3, 3), "te must be timeseries of tensor"
+    t_e = trace(ts_tensor_xyz(t_e.time.data, t_e.data)) / 3
 
     # Define constants
     m_e = constants.electron_mass
@@ -110,7 +112,10 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
 
     # First a simple fit of Iph to Ie using 1 photoelectron population
     opt_p1 = optimize.fmin(
-        _f_one_pop, x0=[500.0, 3.0], args=(i_e, i_aspoc, sc_pot_r), maxfun=5000
+        _f_one_pop,
+        x0=[500.0, 3.0],
+        args=(i_e, i_aspoc, sc_pot_r),
+        maxfun=5000,
     )
 
     # Fit of Iph to Ie for two photoelectron populations
@@ -123,7 +128,9 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     i_ph0, t_ph0, i_ph1, t_ph1 = opt_p2
 
     v_eth = np.sqrt(2 * q_e * resample(t_e, sc_pot).data / m_e)
-    n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(-sc_pot.data / t_ph1)
+    n_esc = i_ph0 * np.exp(-sc_pot.data / t_ph0) + i_ph1 * np.exp(
+        -sc_pot.data / t_ph1,
+    )
     n_esc /= s_surf * q_e * v_eth * (1 + sc_pot.data / resample(t_e, sc_pot).data)
     n_esc *= 2 * np.sqrt(np.pi) * 1e-12
     n_esc = ts_scalar(sc_pot.time.data, n_esc)

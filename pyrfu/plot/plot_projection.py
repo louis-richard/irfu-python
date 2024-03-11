@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
-import matplotlib.pyplot as plt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -57,7 +58,12 @@ def plot_projection(
         clim = [None, None]
 
     image = axis.pcolormesh(
-        v_x / 1e3, v_y / 1e3, np.log10(f_mat.T), cmap=cmap, vmin=clim[0], vmax=clim[1]
+        v_x / 1e3,
+        v_y / 1e3,
+        np.log10(f_mat.T),
+        cmap=cmap,
+        vmin=clim[0],
+        vmax=clim[1],
     )
     axis.set_xlim([-vlim / 1e3, vlim / 1e3])
     axis.set_ylim([-vlim / 1e3, vlim / 1e3])
@@ -66,12 +72,21 @@ def plot_projection(
     f = plt.gcf()
     pos = axis.get_position()
     if cbar_pos == "top":
-        caxis = f.add_axes([pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01])
-        f.colorbar(mappable=image, cax=caxis, ax=axis, orientation="horizontal")
+        caxis = f.add_axes(
+            [pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01],
+        )
+        f.colorbar(
+            mappable=image,
+            cax=caxis,
+            ax=axis,
+            orientation="horizontal",
+        )
         caxis.xaxis.set_ticks_position("top")
         caxis.xaxis.set_label_position("top")
     elif cbar_pos == "right":
-        caxis = f.add_axes([pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height])
+        caxis = f.add_axes(
+            [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height],
+        )
         f.colorbar(mappable=image, cax=caxis, ax=axis)
     else:
         raise ValueError("invalic position")

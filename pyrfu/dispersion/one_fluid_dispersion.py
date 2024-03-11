@@ -4,21 +4,19 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import constants, optimize
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.11"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 def _disprel(w, *args):
-    k, theta = args[0:2]
-    v_a, c_s = args[2:4]
-    wc_e, wc_p = args[4:6]
+    assert len(args) == 6, "not enougth arguments"
+    k, theta, v_a, c_s, wc_e, wc_p = args
 
     theta = np.deg2rad(theta)
     l_00 = 1

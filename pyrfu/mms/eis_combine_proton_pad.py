@@ -8,16 +8,17 @@ import warnings
 import numpy as np
 import xarray as xr
 
+from .eis_combine_proton_spec import eis_combine_proton_spec
+from .eis_omni import eis_omni
+
 # Local imports
 from .eis_pad import eis_pad
-from .eis_omni import eis_omni
-from .eis_combine_proton_spec import eis_combine_proton_spec
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -32,7 +33,10 @@ def _despin(inp, spin_nums):
     for i, spin_strt in enumerate(spin_starts):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            pad_ds[i, :, :] = np.nanmean(inp.data[c_strt : spin_strt + 1, :, :], axis=0)
+            pad_ds[i, :, :] = np.nanmean(
+                inp.data[c_strt : spin_strt + 1, :, :],
+                axis=0,
+            )
         c_strt = spin_strt + 1
 
     out = xr.DataArray(
@@ -87,7 +91,7 @@ def eis_combine_proton_pad(
     """
 
     if energy is None:
-        energy = [55, 800]
+        energy = [phxtof_allt.energy.data[0], extof_allt.energy.data[-1]]
 
     # set up the number of pa bins to create
     n_pabins = int(180.0 / pa_width)
@@ -101,15 +105,13 @@ def eis_combine_proton_pad(
     extof_pad = eis_pad(extof_allt, vec, energy, pa_width)
 
     # Compute combined PHxTOF and ExTOF omni-directional energy spectrum.
-    proton_combined_spec = eis_omni(eis_combine_proton_spec(phxtof_allt, extof_allt))
+    proton_combined_spec = eis_omni(
+        eis_combine_proton_spec(phxtof_allt, extof_allt),
+    )
 
     data_size = [len(phxtof_pad), len(extof_pad)]
 
-    if data_size[0] == data_size[1]:
-        time_data = phxtof_pad.time.data
-        phxtof_pad_data = phxtof_pad.data
-        extof_pad_data = extof_pad.data
-    elif data_size[0] > data_size[1]:
+    if data_size[0] > data_size[1]:
         time_data = extof_pad.time.data
         phxtof_pad_data = phxtof_pad.data[: data_size[1], ...]
         extof_pad_data = extof_pad.data
@@ -118,7 +120,9 @@ def eis_combine_proton_pad(
         phxtof_pad_data = phxtof_pad.data
         extof_pad_data = extof_pad.data[: data_size[0], ...]
     else:
-        raise ValueError
+        time_data = phxtof_pad.time.data
+        phxtof_pad_data = phxtof_pad.data
+        extof_pad_data = extof_pad.data
 
     cond_ = np.logical_and(
         proton_combined_spec.energy.data > energy[0],
@@ -134,7 +138,8 @@ def eis_combine_proton_pad(
         phxtof_pad.energy.data > energy[0],
     )
     cond_extof = np.logical_and(
-        extof_pad.energy.data > 82, extof_pad.energy.data < energy[1]
+        extof_pad.energy.data > 82,
+        extof_pad.energy.data < energy[1],
     )
 
     phxtof_taren = np.where(cond_phxtof)[0]
@@ -145,10 +150,11 @@ def eis_combine_proton_pad(
     proton_pad[..., : phxtof_taren.size] = phxtof_pad_data[..., phxtof_taren]
 
     for (i, phxtof_en), extof_en in zip(
-        enumerate(phxtof_taren_cross), extof_taren_cross
+        enumerate(phxtof_taren_cross),
+        extof_taren_cross,
     ):
         temp_ = np.stack(
-            [phxtof_pad_data[..., phxtof_en], extof_pad_data[..., extof_en]]
+            [phxtof_pad_data[..., phxtof_en], extof_pad_data[..., extof_en]],
         )
         idx_l, idx_r = [phxtof_taren.size, phxtof_taren.size + i + 1]
         proton_pad[..., idx_l:idx_r] = np.nanmean(temp_, axis=0)[:, :, None]

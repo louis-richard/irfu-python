@@ -10,28 +10,30 @@ import re
 
 # 3rd party imports
 import numpy as np
-
 from cdflib import cdfepoch
 from dateutil import parser
-from dateutil.rrule import rrule, DAILY
+from dateutil.rrule import DAILY, rrule
 
-from ..pyrf import datetime2iso8601, read_cdf, ts_append, ts_scalar
+from ..pyrf import read_cdf, ts_append, ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.22"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
 def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
-    """Find files in the L2 data repo corresponding to the target time interval.
+    """Find files in the L2 data repo corresponding to the target time
+    interval.
 
     Parameters
     ----------
@@ -50,13 +52,20 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
 
     """
 
+    # Check input types
+    assert isinstance(tint, (list, np.ndarray)), "tint must be array_like"
+    assert len(tint) == 2, "tint must contain two elements"
+    assert isinstance(tint[0], str), "tint[0] must be a string"
+    assert isinstance(tint[1], str), "tint[1] must be a string"
+    assert isinstance(tree, bool), "tree must be a boolean"
+
     # Check path
     if not data_path:
         # pkg_path = os.path.dirname(os.path.abspath(__file__))
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -69,7 +78,7 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
     files_out = []
 
     # directory and file name search patterns:
-    # - assume directories are of the form: [data_path]/L3/lfr_density/year/month/
+    # - assume directories are of the form: [path]/L3/lfr_density/year/month/
     # - assume file names are of the form:
     #   solo_L3_rpw-bia-density-cdag_YYYYMMDD_version.cdf
 
@@ -88,13 +97,15 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
                     "lfr_density",
                     date.strftime("%Y"),
                     date.strftime("%m"),
-                ]
+                ],
             )
         else:
             local_dir = data_path
 
         if os.name == "nt":
-            full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
+            full_path = os.sep.join(
+                [re.escape(local_dir) + os.sep, file_name],
+            )
         else:
             full_path = os.sep.join([re.escape(local_dir), file_name])
 
@@ -113,9 +124,9 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
 
     # sort in time
     if len(files_out) > 1:
-        return sorted(files_out)
-    else:
-        return files_out
+        files_out = sorted(files_out)
+
+    return files_out
 
 
 def read_lfr_density(tint, data_path: str = "", tree: bool = False):
@@ -152,7 +163,7 @@ def read_lfr_density(tint, data_path: str = "", tree: bool = False):
 
         # Get time from Epoch
         epoch = data_l3["epoch"].data
-        time = cdfepoch.to_datetime(epoch, to_np=True)
+        time = cdfepoch.to_datetime(epoch)
 
         # Get density data and contruct time series.
         density = data_l3["density"].data

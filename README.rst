@@ -1,232 +1,158 @@
-
-.. |Logo| image:: docs/source/_static/logo-pyrfu.png
-    :target: https://pypi.org/project/pyrfu/
-
-.. |License| image:: https://img.shields.io/pypi/l/pyrfu
-    :target: https://opensource.org/licenses/MIT
-
-.. |Python| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python
-    :target: https://pypi.org/project/pyrfu/
-
-.. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=pypi
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Format| image:: https://img.shields.io/pypi/format/pyrfu?color=blue&logo=pypi
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Wheel| image:: https://img.shields.io/pypi/wheel/pyrfu?logo=pypi&color=blue
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Status| image:: https://img.shields.io/pypi/status/pyrfu?logo=pypi&color=blue
-    :target: https://pypi.org/project/pyrfu/
-
-.. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu?logo=pypi&color=blue
-    :target: https://pypi.org/project/pyrfu/
-
-.. |ScrutinizerBuild| image:: https://img.shields.io/scrutinizer/build/g/louis-richard/irfu-python?logo=scrutinizer-ci
-    :target: https://scrutinizer-ci.com/g/louis-richard/irfu-python/
-
-.. |ScrutinizerQuality| image:: https://img.shields.io/scrutinizer/quality/g/louis-richard/irfu-python?logo=scrutinizer-ci
-    :target: https://scrutinizer-ci.com/g/louis-richard/irfu-python/
-
-.. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
-    :target: https://github.com/louis-richard/irfu-python/issues
-
-.. |Commits| image:: https://img.shields.io/github/last-commit/louis-richard/irfu-python?logo=github&color=9cf
-    :target: https://github.com/louis-richard/irfu-python/commits/master
-
-.. |Readthedocs| image:: https://img.shields.io/readthedocs/pyrfu?logo=read-the-docs&color=blueviolet
-    :target: https://pyrfu.readthedocs.io/en/latest/
-
-.. |Gitter| image:: https://img.shields.io/gitter/room/louis-richard/pyrfu?logo=gitter&color=orange
-    :target: https://gitter.im/pyrfu
-
-.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://github.com/psf/black
-
-
-|Logo|
+.. -*- mode: rst -*-
 
 pyRFU
 =====
+
 .. start-marker-intro-do-not-remove
 
-|License| |Python| |PyPi| |Format| |Wheel| |Status| |Downloads| |ScrutinizerBuild|
-|ScrutinizerQuality| |Commits| |Issues| |Readthedocs| |Gitter| |Black|
+.. |License| image:: https://img.shields.io/pypi/l/pyrfu
+.. _License: https://opensource.org/licenses/MIT
 
-The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the
-Magnetospheric MultiScale (MMS) mission.
+.. |Python| image:: https://img.shields.io/pypi/pyversions/pyrfu.svg?logo=python
+.. _Python: https://pypi.org/project/pyrfu/
+
+.. |PyPi| image:: https://img.shields.io/pypi/v/pyrfu.svg?logo=pypi
+.. _PyPi: https://pypi.org/project/pyrfu/
+
+.. |Format| image:: https://img.shields.io/pypi/format/pyrfu?color=blue&logo=pypi
+.. _Format: https://pypi.org/project/pyrfu/
+
+.. |Wheel| image:: https://img.shields.io/pypi/wheel/pyrfu?logo=pypi&color=blue
+.. _Wheel: https://pypi.org/project/pyrfu/
+
+.. |Status| image:: https://img.shields.io/pypi/status/pyrfu?logo=pypi&color=blue
+.. _Status: https://pypi.org/project/pyrfu/
+
+.. |Downloads| image:: https://img.shields.io/pypi/dm/pyrfu?logo=pypi&color=blue
+.. _Downloads: https://pypi.org/project/pyrfu/
+
+.. |CI| image:: https://github.com/louis-richard/irfu-python/actions/workflows/tests.yml/badge.svg
+.. _CI: https://github.com/louis-richard/irfu-python/actions/workflows/tests.yml
+
+.. |PyLintB| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
+.. _PyLintB: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
+
+.. |CodeQL| image:: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml/badge.svg
+.. _CodeQL: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml
+
+.. |CodeCov| image:: https://codecov.io/gh/louis-richard/irfu-python/coverage.svg?branch=main
+.. _CodeCov: https://codecov.io/gh/louis-richard/irfu-python/branch/main
+
+.. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
+.. _Issues: https://github.com/louis-richard/irfu-python/issues
+
+.. |Commits| image:: https://img.shields.io/github/last-commit/louis-richard/irfu-python?logo=github&color=9cf
+.. _Commits: https://github.com/louis-richard/irfu-python/commits/master
+
+.. |Readthedocs| image:: https://img.shields.io/readthedocs/pyrfu?logo=read-the-docs&color=blueviolet
+.. _Readthedocs: https://pyrfu.readthedocs.io/en/latest/
+
+.. |Matrix| image:: https://matrix.to/img/matrix-badge.svg
+.. _Matrix: https://matrix.to/#/#pyrfu:matrix.org
+
+.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+.. _Black: https://github.com/psf/black
+
+.. |Doi| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10678695.svg
+.. _Doi: https://doi.org/10.5281/zenodo.10678695
+
+|License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |CI|_
+|PyLintB|_ |CodeQL|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Matrix|_
+|Black|_ |Doi|_
+
+The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the Magnetospheric MultiScale (MMS) mission.
 
 It is distributed under the open-source MIT license.
 
-.. end-marker-intro-do-not-remove
+Quickstart
+==========
 
-Full documentation can be found `here <https://pyrfu.readthedocs.io>`_
+Installing pyrfu with pip (`more details here <https://pyrfu.readthedocs.io/en/latest/installation.html>`_):
 
+.. code-block:: console
 
-Installation
-------------
-.. start-marker-install-do-not-remove
+    $ python -m pip install pyrfu
+    # or
+    $ python -m pip install --user pyrfu
 
-The package ``pyrfu`` has been tested only for Mac OS.
-
-Using PyPi
-**********
-
-``pyrfu`` is available for pip.
-
-.. code-block:: bash
-
-        pip install pyrfu
-
-
-From sources
-************
-
-The sources are located on **GitHub**:
-
-    https://github.com/louis-richard/irfu-python
-
-1) Clone the GitHub repo:
-
-Open a terminal and write the below command to clone in your PC the ``pyrfu`` repo:
-
-.. code-block:: bash
-
-    git clone https://github.com/louis-richard/irfu-python.git
-    cd irfu-python
-
-
-2) Create a virtual env
-
-pyrfu needs a significant number of dependencies. The easiest
-way to get everything installed is to use a virtual environment.
-
--  Anaconda
-
-You can create a virtual environment and install all the dependencies using conda_
-with the following commands:
-
-.. code-block:: bash
-
-    pip install conda
-    conda create -n pyrfu
-    source activate pyrfu
-
-.. _conda: http://conda.io/
-
-
-- Virtual Env
-
-Virtualenv_ can also be used:
-
-.. code-block:: bash
-
-    pip install virtualenv
-    virtualenv pyrfu
-    source pyrfu/bin/activate
-
-.. _virtualenv: https://virtualenv.pypa.io/en/latest/#
-
-
-3) Install the package via the commands:
-
-.. code-block:: bash
-
-        python setup.py install
-
-
-5) (Optional) Generate the docs: install the extra dependencies of doc and run
-the `setup.py` file:
-
-.. code-block:: bash
-
-        pip install pyrfu
-        python setup.py build_sphinx
-
-Once installed, the doc can be generated with:
-
-.. code-block:: bash
-
-        cd doc
-        make html
-
-
-Dependencies
-************
-
-The required dependencies are:
-
-- `cdflib <https://cdflib.readthedocs.io/en/latest/?badge=latest>`_ >=0.4.7
-- `geopack <https://github.com/tsssss/geopack>`_ >=1.0.9
-- `matplotlib <https://matplotlib.org>`_ >=3.5.2
-- `numba <http://numba.pydata.org>`_ >=0.54.1
-- `numpy <https://www.numpy.org>`_ >=1.20.3
-- `pandas <https://pandas.pydata.org/>`_ >=1.3.4
-- `python-datetutil <https://dateutil.readthedocs.io/en/stable/>`_ >=2.8.2
-- `requests <https://requests.readthedocs.io/en/latest/>`_ >=2.26.0
-- `scipy <https://scipy.org>`_ >=1.7.3
-- `Sphinx <https://www.sphinx-doc.org/en/master/>`_ >=4.3.0
-- `tqdm <https://tqdm.github.io/>`_ >=4.62.3
-- `xarray <https://xarray.pydata.org/en/stable/>`_ >=0.20.1
-
-
-Testing dependencies are:
-
-- `pytest <https://docs.pytest.org/en/latest/>`_ >= 2.8
-
-Extra testing dependencies:
-
-- `coverage <https://coverage.readthedocs.io>`_ >= 4.4
-- `pylint <https://www.pylint.org>`_ >= 1.6.0
-
-.. end-marker-install-do-not-remove
-
-Usage
------
-To import generic space plasma physics functions
-
-.. code:: python
-
-    from pyrfu import pyrf
-
-
-To import functions specific to Magnetospheric Multi-Scale (MMS)
+Import `pyrfu.mms <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.mms.html>`_ package with routines specific to work with the
+Magnetospheric Multiscale mission (MMS)
 
 .. code:: python
 
     from pyrfu import mms
 
-
-To import functions specific to Solar Orbiter (SolO)
+Setup path to MMS data
 
 .. code:: python
 
-    from pyrfu import solo
+    mms.db_init("/Volumes/mms")
 
 
-To import plotting functions
+Load magnetic field and ion bulk velocity data
+
+.. code:: python
+
+    tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+    b_gsm = mms.get_data("b_gsm_fgm_srvy_l2", tint, 1)
+    v_gse_i = mms.get_data("vi_gse_fpi_fast_l2", tint, 1)
+
+
+Import `pyrfu.pyrf <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.pyrf.html>`_ package with generic routines
+
+.. code:: python
+
+    from pyrfu import pyrf
+
+Transform ion bulk velocity to geocentric solar magnetospheric (GSM) coordinates
+
+.. code:: python
+
+    v_gsm_i = pyrf.cotrans(v_gse_i, "gse>gsm")
+
+Import `pyrfu.plot <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.plot.html>`_ package with plotting routines
 
 .. code:: python
 
     from pyrfu import plot
 
 
-Configuration
--------------
-Default configuration settings for MMS data (i.e data path) are stored in pyrfu/mms/config.json and can be changed at anytime using mms.db_init(local_path_dir).
+Plot time series of magnetic field and ion bulk velocity
+
+.. code:: python
+
+    import matplotlib.pyplot as plt
+
+    f, axs = plt.subplots(2, sharex="all")
+    plot.plot_line(axs[0], b_gsm)
+    axs[0].set_ylabel("$B~[\\mathrm{nT}]$")
+    axs[0].legend(["$B_{x}$", "$B_{y}$", "$B_{z}$"], ncol=4)
+
+    plot.plot_line(axs[1], v_gsm_i)
+    axs[1].set_ylabel("$V_i~[\\mathrm{km}~\\mathrm{s}^{-1}]$")
+    axs[1].legend(["$V_{ix}$", "$V_{iy}$", "$V_{iz}$"], ncol=4)
+
+.. end-marker-intro-do-not-remove
+
+Documentation
+=============
+Full documentation can be found on `pyrfu.readthedocs.io <https://pyrfu.readthedocs.io/en/latest/index.html>`_
+
+Examples
+========
+A list of examples is available `here <https://pyrfu.readthedocs.io/en/latest/examples/index.html>`_
 
 Credits
--------
+=======
 This software was developed by Louis RICHARD (louisr@irfu.se) based on the IRFU-MATLAB library.
 
 Acknowledgement
----------------
+===============
 Please use the following to acknowledge use of pyrfu in your publications:
 Data analysis was performed using the pyrfu analysis package available at https://github.com/louis-richard/irfu-python
 
 Additional Information
-----------------------
+======================
 MMS Science Data Center: https://lasp.colorado.edu/mms/sdc/public/
 
 MMS Datasets: https://lasp.colorado.edu/mms/sdc/public/datasets/

@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .feeps_omni import feeps_omni
+from .feeps_remove_bad_data import feeps_remove_bad_data
+from .feeps_remove_sun import feeps_remove_sun
+from .feeps_spin_avg import feeps_spin_avg
+from .feeps_split_integral_ch import feeps_split_integral_ch
+
 # Local imports
 from .get_feeps_alleyes import get_feeps_alleyes
-from .feeps_remove_bad_data import feeps_remove_bad_data
-from .feeps_split_integral_ch import feeps_split_integral_ch
-from .feeps_remove_sun import feeps_remove_sun
-from .feeps_omni import feeps_omni
-from .feeps_spin_avg import feeps_spin_avg
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -46,7 +47,7 @@ def get_feeps_omni(
         Spin average the omni-directional flux. Default is False.
 
     Returns
-    --------
+    -------
     flux_omni : xarray.DataArray
         Energy spectrum of the target data unit for the target specie in omni
         direction.
@@ -60,7 +61,13 @@ def get_feeps_omni(
     """
 
     # Get all telescopes
-    dataset_feeps = get_feeps_alleyes(tar_var, tint, mms_id, verbose, data_path)
+    dataset_feeps = get_feeps_alleyes(
+        tar_var,
+        tint,
+        mms_id,
+        verbose,
+        data_path,
+    )
 
     # Remove bad eyes and bad energy channels (lowest)
     dataset_feeps_washed = feeps_remove_bad_data(dataset_feeps)
@@ -75,6 +82,9 @@ def get_feeps_omni(
     spec_feeps_omni = feeps_omni(dataset_feeps_clean_sun_removed)
 
     if spin_avg:
-        spec_feeps_omni = feeps_spin_avg(spec_feeps_omni, dataset_feeps.spinsectnum)
+        spec_feeps_omni = feeps_spin_avg(
+            spec_feeps_omni,
+            dataset_feeps.spinsectnum,
+        )
 
     return spec_feeps_omni

@@ -1,37 +1,44 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import os
-import re
-import json
 import bisect
+import json
 import logging
 
-import pdb
+# Built-in imports
+import os
 
 # 3rd party imports
 import pandas as pd
 
-from ..pyrf import iso86012datetime, extend_tint
+from ..pyrf.extend_tint import extend_tint
+from ..pyrf.iso86012datetime import iso86012datetime
 
 # Local imports
 from .list_files_ancillary import list_files_ancillary
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.11"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
-def load_ancillary(product, tint, mms_id, verbose: bool = True, data_path: str = ""):
+def load_ancillary(
+    product,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
+):
     r"""Loads ancillary data.
 
     Parameters
@@ -65,7 +72,7 @@ def load_ancillary(product, tint, mms_id, verbose: bool = True, data_path: str =
     # Root path
     pkg_path = os.path.dirname(os.path.abspath(__file__))
 
-    with open(os.sep.join([pkg_path, "ancillary.json"])) as file:
+    with open(os.sep.join([pkg_path, "ancillary.json"]), "r", encoding="utf-8") as file:
         anc_dict = json.load(file)
 
     if verbose:
@@ -97,7 +104,7 @@ def load_ancillary(product, tint, mms_id, verbose: bool = True, data_path: str =
     data_frame = data_frame_dict[0]
 
     for k in list(data_frame_dict.keys())[1:]:
-        data_frame = data_frame.append(data_frame_dict[k])
+        data_frame = pd.concat([data_frame, data_frame_dict[k]], ignore_index=True)
 
     data_frame = data_frame.sort_values(by="time").set_index(["time"])
 

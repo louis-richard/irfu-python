@@ -2,19 +2,26 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import logging
 from typing import Union
 
 # 3rd party imports
 import numpy as np
-
 from scipy import interpolate
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 surface_materials = [
     "cluster",
@@ -80,9 +87,11 @@ def photo_current(
     if not iluminated_area and not u and not distance_sun:
         for surf in surface_materials:
             j0 = photo_current(1, 0, 1, surf)
-            print(f"{surf}: Io= {j0 * 1e6:3.2f} uA/m2")
+            logging.info(
+                "%(surf)s: Io= %(i0)3.2f uA/m2", {"surf": surf, "i0": j0 * 1e6}
+            )
 
-        return
+        return None
 
     # Assert than u is an array
     u = np.atleast_1d(u)
@@ -101,7 +110,6 @@ def photo_current(
         j_photo[u >= 0] *= a_ + b_
 
     elif flag.lower() == "1ev":
-
         j_photo = np.ones(u.shape)
 
         # initialize to current valid for negative potentials

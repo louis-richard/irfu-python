@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -51,7 +51,10 @@ def feeps_sector_spec(inp_alle):
             # find the sectors for this spin
             spin_sect = sector_data[c_start:spin]
 
-            sector_spec[i, spin_sect] = np.nanmean(sensor_data[c_start:spin, :], axis=1)
+            sector_spec[i, spin_sect] = np.nanmean(
+                sensor_data[c_start:spin, :],
+                axis=1,
+            )
 
             c_start = spin
 

@@ -1,21 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import csv
+
 # Built-in imports
 import os
-import csv
 
 # 3rd party imports
 import numpy as np
 
 # Local imports
-from ..pyrf import datetime642unix, unix2datetime64, iso86012datetime64
+from ..pyrf.datetime642unix import datetime642unix
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.unix2datetime64 import unix2datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -53,24 +56,17 @@ def read_feeps_sector_masks_csv(tint):
     date = datetime642unix(iso86012datetime64(np.array(tint)[0]))
     nearest_date = dates[np.argmin((np.abs(np.array(dates) - date)))]
     nearest_date = unix2datetime64(np.array(nearest_date))
-    str_date = nearest_date.astype("<M8[D]").astype(str).replace("-", "")
+    str_date = str(nearest_date.astype("<M8[D]"))
+    str_date = str_date.replace("-", "")
 
     for mms_sc in np.arange(1, 5):
         file_name = f"MMS{mms_sc:d}_FEEPS_ContaminatedSectors_{str_date}.csv"
         csv_file = os.sep.join(
-            [os.path.dirname(os.path.abspath(__file__)), "sun", file_name]
+            [os.path.dirname(os.path.abspath(__file__)), "sun", file_name],
         )
 
-        csv_file = open(csv_file, "r")
-
-        csv_reader = csv.reader(csv_file)
-
-        csv_data = []
-
-        for line in csv_reader:
-            csv_data.append([float(l) for l in line])
-
-        csv_file.close()
+        with open(csv_file, "r", encoding="utf-8") as csv_file:
+            csv_data = [[float(x) for x in line] for line in csv.reader(csv_file)]
 
         csv_data = np.array(csv_data)
 

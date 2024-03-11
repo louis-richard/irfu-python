@@ -11,29 +11,31 @@ import re
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from cdflib import cdfepoch
 from dateutil import parser
-from dateutil.rrule import rrule, DAILY
+from dateutil.rrule import DAILY, rrule
 from scipy import integrate
 
 from ..pyrf import read_cdf, ts_append
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.22"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
 def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
-    """Find files in the L2 data repo corresponding to the target time interval.
+    """Find files in the L2 data repo corresponding to the target time
+    interval.
 
     Parameters
     ----------
@@ -57,7 +59,7 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
         pkg_path = os.path.dirname(os.path.abspath(__file__))
 
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -76,6 +78,12 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
 
     file_name = r"solo_L2_rpw-tnr-surv.*_([0-9]{8})_V[0-9]{2}.cdf"
 
+    # Check tint
+    assert isinstance(tint, (list, np.ndarray)), "tint must be array_like"
+    assert len(tint) == 2, "tint must contain two elements"
+    assert isinstance(tint[0], str), "tint[0] must be a string"
+    assert isinstance(tint[1], str), "tint[1] must be a string"
+
     d_start = parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d"))
     until_ = parser.parse(tint[1]) - datetime.timedelta(seconds=1)
     days = rrule(DAILY, dtstart=d_start, until=until_)
@@ -83,13 +91,21 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
     for date in days:
         if tree:
             local_dir = os.sep.join(
-                [data_path, "L2", "thr", date.strftime("%Y"), date.strftime("%m")]
+                [
+                    data_path,
+                    "L2",
+                    "thr",
+                    date.strftime("%Y"),
+                    date.strftime("%m"),
+                ],
             )
         else:
             local_dir = data_path
 
         if os.name == "nt":
-            full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
+            full_path = os.sep.join(
+                [re.escape(local_dir) + os.sep, file_name],
+            )
         else:
             full_path = os.sep.join([re.escape(local_dir), file_name])
 
@@ -108,9 +124,9 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
 
     # sort in time
     if len(files_out) > 1:
-        return sorted(files_out)
-    else:
-        return files_out
+        files_out = sorted(files_out)
+
+    return files_out
 
 
 def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
@@ -146,9 +162,10 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
 
     """
 
-    files = _list_files_tnr_l2(tint, data_path, tree)
+    # Check input types
+    assert isinstance(sensor, int), "sensor must integer"
 
-    assert files, "No files found. Make sure that the data_path is correct"
+    files = _list_files_tnr_l2(tint, data_path, tree)
 
     # Initialize spectrum output to None
     out = None
@@ -194,7 +211,7 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
                 idx_l, idx_r = [xdelta_sw[inswn] + 1, xdelta_sw[inswn + 1]]
                 sweep_num[idx_l:idx_r] += sweep_num[xdelta_sw[inswn]]
 
-        timet_ = cdfepoch.to_datetime(epoch_, to_np=True)
+        timet_ = cdfepoch.to_datetime(epoch_)
 
         sens0_, sens1_ = [np.where(confg_[:, i] == sensor)[0] for i in range(2)]
 
@@ -265,6 +282,6 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
             ),
         )
 
-    out = out[np.argsort(out.time.data)]
+        out = out[np.argsort(out.time.data)]
 
     return out

@@ -12,11 +12,11 @@ __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def average_vdf(vdf, n_pts):
+def average_vdf(vdf, n_pts, method: str = "mean"):
     r"""Time averages the velocity distribution functions over `n_pts` in time.
 
     Parameters
@@ -25,6 +25,8 @@ def average_vdf(vdf, n_pts):
         Time series of the velocity distribution function.
     n_pts : int
         Number of points (samples) of the averaging window.
+    method : {'mean', 'sum'}, Optional
+        Method for averaging. Use 'sum' for counts. Default is 'mean'.
 
     Returns
     -------
@@ -33,9 +35,10 @@ def average_vdf(vdf, n_pts):
 
     """
 
-    assert n_pts % 2 != 0, "The number of distributions to be averaged must be an odd"
+    # Check input type
+    assert isinstance(vdf, xr.Dataset), "vdf must be a xarray.Dataset"
 
-    assert np.median(vdf.energy.data[0, :] - vdf.energy.data[0, :]) == 0
+    assert n_pts % 2 != 0, "The number of distributions to be averaged must be an odd"
 
     n_vdf = len(vdf.time.data)
     times = vdf.time.data
@@ -51,9 +54,21 @@ def average_vdf(vdf, n_pts):
     for i, avg_ind in enumerate(avg_inds):
         l_bound = int(avg_ind - pad_value)
         r_bound = int(avg_ind + pad_value)
-        vdf_avg[i, ...] = np.nanmean(vdf.data.data[l_bound:r_bound, ...], axis=0)
-        energy_avg[i, ...] = np.nanmean(vdf.energy.data[l_bound:r_bound, ...], axis=0)
-        phi_avg[i, ...] = np.nanmean(vdf.phi.data[l_bound:r_bound, ...], axis=0)
+        if method == "mean":
+            vdf_avg[i, ...] = np.nanmean(vdf.data.data[l_bound:r_bound, ...], axis=0)
+        elif method == "sum":
+            vdf_avg[i, ...] = np.nansum(vdf.data.data[l_bound:r_bound, ...], axis=0)
+        else:
+            raise NotImplementedError("method not implemented feel free to do it!!")
+
+        energy_avg[i, ...] = np.nanmean(
+            vdf.energy.data[l_bound:r_bound, ...],
+            axis=0,
+        )
+        phi_avg[i, ...] = np.nanmean(
+            vdf.phi.data[l_bound:r_bound, ...],
+            axis=0,
+        )
 
     # Attributes
     glob_attrs = vdf.attrs  # Global attributes
@@ -61,8 +76,11 @@ def average_vdf(vdf, n_pts):
     coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
 
     # Get delta energy in global attributes for selected timestamps
-    glob_attrs["delta_energy_minus"] = glob_attrs["delta_energy_minus"][avg_inds]
-    glob_attrs["delta_energy_plus"] = glob_attrs["delta_energy_plus"][avg_inds]
+    if "delta_energy_minus" in glob_attrs:
+        glob_attrs["delta_energy_minus"] = glob_attrs["delta_energy_minus"][avg_inds, :]
+
+    if "delta_energy_plus" in glob_attrs:
+        glob_attrs["delta_energy_plus"] = glob_attrs["delta_energy_plus"][avg_inds, :]
 
     glob_attrs["esteptable"] = glob_attrs["esteptable"][: len(avg_inds)]
 

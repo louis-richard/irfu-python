@@ -1,1 +1,1 @@
-{"local_data_dir": "/Volumes/mms"}
+{"default": "local", "local": "/Volumes/mms", "sdc": {"rights": "public", "username": "username"}, "aws": ""}

@@ -8,9 +8,9 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -80,7 +80,7 @@ def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
 
     # Optimal Bin Size Selection
     # get the index in x and y that produces the minimum cost function
-    n_x = n_x[np.where(c_xy == np.min(c_xy))[0][0]]
-    n_y = n_y[np.where(c_xy == np.min(c_xy))[1][0]]
+    n_x = int(n_x[np.where(c_xy == np.min(c_xy))[0][0]])
+    n_y = int(n_y[np.where(c_xy == np.min(c_xy))[1][0]])
 
     return n_x, n_y

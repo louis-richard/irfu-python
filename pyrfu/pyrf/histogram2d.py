@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Union
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -13,20 +10,13 @@ from .resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.14"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def histogram2d(
-    inp1,
-    inp2,
-    bins: Union[str, int, tuple] = 100,
-    y_range: tuple = None,
-    weights=None,
-    density: bool = True,
-):
+def histogram2d(inp1, inp2, bins=100, y_range=None, weights=None, density=True):
     r"""Computes 2d histogram of inp2 vs inp1 with nbins number of bins.
 
     Parameters
@@ -84,7 +74,7 @@ def histogram2d(
     >>> b_mag = pyrf.norm(b_xyz)
     >>> j_mag = pyrf.norm(j_xyz)
 
-    Histogram of |J| vs |B|
+    Histogram of J vs B
 
     >>> h2d_b_j = pyrf.histogram2d(b_mag, j_mag)
 
@@ -95,12 +85,21 @@ def histogram2d(
         inp2 = resample(inp2, inp1)
 
     h2d, x_edges, y_edges = np.histogram2d(
-        inp1.data, inp2.data, bins=bins, range=y_range, weights=weights, density=density
+        inp1.data,
+        inp2.data,
+        bins=bins,
+        range=y_range,
+        density=density,
+        weights=weights,
     )
 
     x_bins = x_edges[:-1] + np.median(np.diff(x_edges)) / 2
     y_bins = y_edges[:-1] + np.median(np.diff(y_edges)) / 2
 
-    out = xr.DataArray(h2d, coords=[x_bins, y_bins], dims=["x_bins", "y_bins"])
+    out = xr.DataArray(
+        h2d,
+        coords=[x_bins, y_bins],
+        dims=["x_bins", "y_bins"],
+    )
 
     return out

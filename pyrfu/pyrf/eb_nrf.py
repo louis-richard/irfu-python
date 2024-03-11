@@ -7,15 +7,13 @@ import xarray as xr
 
 # Local imports
 from .resample import resample
-from .dot import dot
-from .normalize import normalize
-from .cross import cross
+from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -30,8 +28,13 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag=0):
         Time series of the magnetic field.
     v_xyz : xarray.DataArray
         Normal vector.
-    flag : int or ndarray
-        to fill.
+    flag : str or ndarray
+        Method flag :
+        * a : L is along b_xyz, N closest to v_xyz and M = NxL
+        * b : N is along v_xyz, L is the mean direction of b_xyz in plane perpendicular
+        to N, and M = NxL
+        * numpy,ndarray : N is along v_xyz , L is closest to the direction specified by
+        L_vector (e.g., maximum variance direction), M = NxL
 
     Returns
     -------
@@ -39,40 +42,49 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag=0):
         to fill.
 
     """
+    # Check inputs
+    assert isinstance(e_xyz, xr.DataArray), "e_xyz must be a xarray.DataArray"
+    assert isinstance(b_xyz, xr.DataArray), "b_xyz must be a xarray.DataArray"
+    assert isinstance(v_xyz, xr.DataArray), "v_xyz must be a xarray.DataArray"
 
-    assert isinstance(flag, (int, np.ndarray)), "Invalid flag type"
+    assert e_xyz.ndim == 2 and e_xyz.shape[1] == 3, "e_xyz must be a vector"
+    assert b_xyz.ndim == 2 and b_xyz.shape[1] == 3, "e_xyz must be a vector"
+    assert v_xyz.ndim == 2 and v_xyz.shape[1] == 3, "e_xyz must be a vector"
 
-    if isinstance(flag, int):
-        flag_cases = ["a", "b"]
-        flag_case = flag_cases[flag]
+    assert isinstance(flag, (str, np.ndarray, list)), "Invalid flag type"
+
+    if isinstance(flag, str):
+        assert flag.lower() in ["a", "b"], "flag must be a or b"
+        flag_case = flag
         l_direction = None
 
     else:
-        assert np.size(flag) == 3
+        flag = np.array(flag)
+        assert flag.ndim == 1 and len(flag) == 3, "array_like flag must be a vector!"
         l_direction = flag
         flag_case = "c"
 
     if flag_case == "a":
-        b_data = resample(b_xyz, e_xyz).data
+        b_xyz = resample(b_xyz, e_xyz)
 
-        n_l = b_data / np.linalg.norm(b_data, axis=0)[:, None]
-        n_n = np.cross(np.cross(b_data, v_xyz), b_data)
-        n_n = n_n / np.linalg.norm(n_n)[:, None]
+        n_l = b_xyz.data / np.linalg.norm(b_xyz.data, axis=1, keepdims=True)
+        n_n = np.cross(np.cross(b_xyz.data, v_xyz.data), b_xyz.data)
+        n_n /= np.linalg.norm(n_n, axis=1, keepdims=True)
         n_m = np.cross(n_n, n_l)  # in (vn x b) direction
-
     elif flag_case == "b":
-        n_n = v_xyz / np.linalg.norm(v_xyz)
-        n_m = normalize(cross(n_n, b_xyz.mean(dim="time")))
-        n_l = cross(n_m, n_n)
+        n_n = v_xyz.data / np.linalg.norm(v_xyz, axis=1, keepdims=True)
+        n_m = np.cross(n_n, np.mean(b_xyz.data, axis=0))
+        n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
+        n_l = np.cross(n_m, n_n)
 
     else:
-        n_n = normalize(v_xyz)
-        n_m = normalize(np.cross(n_n, l_direction))
-        n_l = cross(n_m, n_n)
+        n_n = v_xyz.data / np.linalg.norm(v_xyz, axis=1, keepdims=True)
+        n_m = np.cross(n_n, l_direction)
+        n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
+        n_l = np.cross(n_m, n_n)
 
     # estimate e in new coordinates
-    e_lmn = np.hstack([dot(e_xyz, vec) for vec in [n_l, n_m, n_n]])
-
-    out = xr.DataArray(e_xyz.time.data, e_lmn, e_xyz.attrs)
+    e_lmn = np.vstack([np.sum(e_xyz.data * vec, axis=1) for vec in [n_l, n_m, n_n]])
+    out = ts_vec_xyz(e_xyz.time.data, np.transpose(e_lmn), e_xyz.attrs)
 
     return out

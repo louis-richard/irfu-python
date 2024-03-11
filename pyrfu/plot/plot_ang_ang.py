@@ -5,10 +5,11 @@
 import bisect
 import warnings
 
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
 
 # Local imports
 from ..pyrf import datetime642iso8601, time_clip
@@ -16,9 +17,9 @@ from .plot_spectr import plot_spectr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -44,7 +45,9 @@ def _time_avg(vdf, tint):
         raise TypeError("Invalid time interval format")
 
     vdf_new = xr.DataArray(
-        vdf_data, coords=[vdf_ener, vdf_azim, vdf_thet], dims=["energy", "phi", "theta"]
+        vdf_data,
+        coords=[vdf_ener, vdf_azim, vdf_thet],
+        dims=["energy", "phi", "theta"],
     )
 
     return vdf_new
@@ -59,14 +62,19 @@ def _energy_avg(vdf, en_range):
         en_range[1] = np.max(vdf.energy.data[-1], en_range[-1])
 
     idx = np.where(
-        np.logical_and(vdf.energy.data > en_range[0], vdf.energy.data < en_range[1])
+        np.logical_and(
+            vdf.energy.data > en_range[0],
+            vdf.energy.data < en_range[1],
+        ),
     )[0]
     assert idx, "Energy range is not covered by the instrument"
 
     out_data = np.nanmean(vdf.data[idx, ...], axis=0)
 
     out = xr.DataArray(
-        out_data, coords=[vdf.phi.data, vdf.theta.data], dims=["phi", "theta"]
+        out_data,
+        coords=[vdf.phi.data, vdf.theta.data],
+        dims=["phi", "theta"],
     )
     return out
 

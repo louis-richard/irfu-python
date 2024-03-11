@@ -7,14 +7,13 @@ import warnings
 # #rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import interpolate
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -64,12 +63,17 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
     for i, spin in enumerate(spin_starts):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            spin_avg_flux[i, :] = np.nanmean(data[c_start : spin + 1, :], axis=0)
+            spin_avg_flux[i, :] = np.nanmean(
+                data[c_start : spin + 1, :],
+                axis=0,
+            )
             spin_times[i] = times[c_start]
 
             # rebin and interpolate to new_bins
             spin_avg_interp = interpolate.interp1d(
-                np.arange(n_angs), spin_avg_flux[i, :], fill_value="extrapolate"
+                np.arange(n_angs),
+                spin_avg_flux[i, :],
+                fill_value="extrapolate",
             )
             rebinned_data[i, :] = spin_avg_interp(srx)
 
@@ -80,7 +84,9 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
         c_start = spin + 1
 
     out = xr.DataArray(
-        rebinned_data, coords=[spin_times, new_bins], dims=["time", "theta"]
+        rebinned_data,
+        coords=[spin_times, new_bins],
+        dims=["time", "theta"],
     )
 
     return out

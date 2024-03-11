@@ -6,14 +6,13 @@ import itertools
 
 # 3rd party imports
 import numpy as np
-
 from matplotlib import ticker
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -23,7 +22,7 @@ def annotate_heatmap(
     valfmt: str = "{x:.2f}",
     textcolors: tuple = ("black", "white"),
     threshold: float = None,
-    **textkw
+    **textkw,
 ):
     r"""Annotate a heatmap.
 
@@ -64,7 +63,7 @@ def annotate_heatmap(
 
     # Set default alignment to center, but allow it to be
     # overwritten by textkw.
-    kw = dict(horizontalalignment="center", verticalalignment="center")
+    kw = {"horizontalalignment": "center", "verticalalignment": "center"}
     kw.update(textkw)
 
     # Get the formatter in case a string is supplied

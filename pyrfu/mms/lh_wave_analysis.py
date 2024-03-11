@@ -4,26 +4,23 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import constants
 
 # Local imports
-from ..pyrf import (
-    filt,
-    calc_dt,
-    resample,
-    convert_fac,
-    ts_scalar,
-    extend_tint,
-    time_clip,
-    ts_vec_xyz,
-)
+from ..pyrf.calc_dt import calc_dt
+from ..pyrf.convert_fac import convert_fac
+from ..pyrf.extend_tint import extend_tint
+from ..pyrf.filt import filt
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -181,7 +178,10 @@ def lh_wave_analysis(
     phi_e_best = ts_scalar(phi_bs.time.data, phi_e_best)
     v_best = vph_vec[corr_vpos]
 
-    options = dict(coords=[phi_bs.time, ["Ebest", "Bs"]], dims=["time", "comp"])
-    phi_eb = xr.DataArray(np.vstack([phi_e_best.data, phi_bs.data]).T, **options)
+    options = {"coords": [phi_bs.time, ["Ebest", "Bs"]], "dims": ["time", "comp"]}
+    phi_eb = xr.DataArray(
+        np.vstack([phi_e_best.data, phi_bs.data]).T,
+        **options,
+    )
 
     return phi_eb, v_best, dir_best, thetas, corrs

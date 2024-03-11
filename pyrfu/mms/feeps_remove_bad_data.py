@@ -1,28 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import datetime
+import json
+
 # Built-in imports
 import os
-import json
-import datetime
 
 # 3rd party imports
 import numpy as np
 
 # Local imports
-from ..pyrf import iso86012datetime, datetime642iso8601
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime import iso86012datetime
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 def _bad_vars(bad_data):
     bad_vars_top = list(filter(lambda x: x not in [6, 7, 8], bad_data["top"]))
-    bad_vars_bot = list(filter(lambda x: x not in [6, 7, 8], bad_data["bottom"]))
+    bad_vars_bot = list(
+        filter(lambda x: x not in [6, 7, 8], bad_data["bottom"]),
+    )
 
     bad_vars = [
         *[f"top-{x}" for x in bad_vars_top],
@@ -116,7 +120,9 @@ def feeps_remove_bad_data(inp_dataset):
 
     root_path = os.path.dirname(os.path.abspath(__file__))
 
-    with open(os.path.join(root_path, "feeps_bad_data.json")) as file:
+    with open(
+        os.path.join(root_path, "feeps_bad_data.json"), "r", encoding="utf-8"
+    ) as file:
         feeps_bad_data = json.load(file)
 
     bad_data_table = feeps_bad_data["bad_data_table"]

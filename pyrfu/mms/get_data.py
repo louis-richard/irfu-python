@@ -2,42 +2,44 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import os
 import json
 import logging
+import os
+
+# 3rd party imports
+import requests
+from botocore.exceptions import ClientError
 
 # Local imports
-from ..pyrf import dist_append, ts_append, ttns2datetime64
-
-from .tokenize import tokenize
-from .list_files import list_files
-from .get_ts import get_ts
+from ..pyrf.dist_append import dist_append
+from ..pyrf.ts_append import ts_append
+from ..pyrf.ttns2datetime64 import ttns2datetime64
+from .db_init import MMS_CFG_PATH
 from .get_dist import get_dist
+from .get_ts import get_ts
+from .list_files import list_files
+from .list_files_aws import list_files_aws
+from .list_files_sdc import _login_lasp, list_files_sdc
+from .tokenize import tokenize
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
 def _var_and_cdf_name(var_str, mms_id):
     var = tokenize(var_str)
-
-    root_path = os.path.dirname(os.path.abspath(__file__))
-
-    with open(os.sep.join([root_path, "mms_keys.json"]), "r") as json_file:
-        keys_ = json.load(json_file)
-
-    var["dtype"] = keys_[var["inst"]][var_str.lower()]["dtype"]
-    cdf_name = f"mms{mms_id}_{keys_[var['inst']][var_str.lower()]['cdf_name']}"
-
+    cdf_name = f"mms{mms_id}_{var['cdf_name']}"
     return var, cdf_name
 
 
@@ -49,7 +51,61 @@ def _check_times(inp):
     return out
 
 
-def get_data(var_str, tint, mms_id, verbose: bool = True, data_path: str = ""):
+def _list_files_sources(source, tint, mms_id, var, data_path):
+    if source == "local":
+        file_names = list_files(tint, mms_id, var, data_path)
+        sdc_session, headers = None, {}
+    elif source == "sdc":
+        file_names = [file.get("url") for file in list_files_sdc(tint, mms_id, var)]
+        sdc_session, headers, _ = _login_lasp()
+    elif source == "aws":
+        file_names = [file.get("s3_obj") for file in list_files_aws(tint, mms_id, var)]
+        sdc_session, headers = None, {}
+    else:
+        raise NotImplementedError("AWS is not yet implemented!!")
+
+    return file_names, sdc_session, headers
+
+
+def _get_file_content_sources(source, file_name, sdc_session, headers):
+    if source == "local":
+        file_path = os.path.normpath(file_name)
+        with open(file_path, "rb") as file:
+            file_content = file.read()
+    elif source == "sdc":
+        try:
+            response = sdc_session.get(file_name, timeout=None, headers=headers)
+            response.raise_for_status()  # Raise an HTTPError for bad responses
+            file_content = response.content
+        except requests.RequestException as e:
+            print(f"Error retrieving file from {file_name}: {e}")
+    elif source == "aws":
+        try:
+            response = file_name.get()
+            file_content = response["Body"].read()
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "InternalError":  # Generic error
+                logging.error("Error Message: %s", err.response["Error"]["Message"])
+
+                response_meta = err.response.get("ResponseMetadata")
+                logging.error("Request ID: %s", response_meta.get("RequestId"))
+                logging.error("Http code: %s", response_meta.get("HTTPStatusCode"))
+            else:
+                raise err
+    else:
+        raise NotImplementedError(f"Resource {source} is not yet implemented!!")
+
+    return file_content
+
+
+def get_data(
+    var_str,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
+    source: str = "",
+):
     r"""Load a variable. var_str must be in var (see below)
 
     Parameters
@@ -63,7 +119,9 @@ def get_data(var_str, tint, mms_id, verbose: bool = True, data_path: str = ""):
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu/mms/config.json`
+        Local path of MMS data. Default uses that provided in `pyrfu/mms/config.json`
+    source: {"local", "sdc", "aws"}, Optional
+        Ressource to fetch data from. Default uses default in `pyrfu/mms/config.json`
 
     Returns
     -------
@@ -90,7 +148,7 @@ def get_data(var_str, tint, mms_id, verbose: bool = True, data_path: str = ""):
 
     Load magnetic field from FGM
 
-    >>> b_xyz = mms.get_data("B_gse_fgm_brst_l2", tint_brst, ic)
+    >>> b_xyz = mms.get_data("b_gse_fgm_brst_l2", tint_brst, ic)
 
     """
 
@@ -98,22 +156,37 @@ def get_data(var_str, tint, mms_id, verbose: bool = True, data_path: str = ""):
 
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 
-    files = list_files(tint, mms_id, var, data_path)
+    # Read the current version of the MMS configuration file
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        config = json.load(fs)
 
-    assert files, "No files found. Make sure that the data_path is correct"
+    source = source if source else config.get("default")
+
+    file_names, sdc_session, headers = _list_files_sources(
+        source, tint, mms_id, var, data_path
+    )
+
+    assert file_names, "No files found. Make sure that the data_path is correct"
 
     if verbose:
         logging.info("Loading %s...", cdf_name)
 
     out = None
 
-    for file in files:
+    for file_name in file_names:
+        file_content = _get_file_content_sources(
+            source, file_name, sdc_session, headers
+        )
+
         if "-dist" in var["dtype"]:
-            out = dist_append(out, get_dist(file, cdf_name, tint))
+            out = dist_append(out, get_dist(file_content, cdf_name, tint))
 
         else:
-            out = ts_append(out, get_ts(file, cdf_name, tint))
+            out = ts_append(out, get_ts(file_content, cdf_name, tint))
 
     out = _check_times(out)
+
+    if sdc_session:
+        sdc_session.close()
 
     return out

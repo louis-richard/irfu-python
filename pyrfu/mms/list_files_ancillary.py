@@ -2,31 +2,34 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import os
-import re
+import datetime
+import fnmatch
 import glob
 import json
-import bisect
-import fnmatch
-import datetime
+import os
+import re
 
 # 3rd party imports
+import numpy as np
 import pandas as pd
 
-from dateutil import parser
-from dateutil.rrule import rrule, DAILY
-from ..pyrf import iso86012datetime
+# Local imports
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime import iso86012datetime
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from .db_init import MMS_CFG_PATH
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.11"
 __status__ = "Prototype"
 
 
 def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
-    r"""Loads ancillary data.
+    r"""Find available ancillary files in the data directories for the target product
+    type.
 
     Parameters
     ----------
@@ -41,19 +44,18 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
 
     Returns
     -------
-    files_names : list
+    file_names : list
         Ancillary files in interval.
 
     """
+
     # Check path
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local_data_dir"])
+        data_path = os.path.normpath(config["local"])
     else:
         data_path = os.path.normpath(data_path)
 
@@ -63,7 +65,26 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     if isinstance(mms_id, int):
         mms_id = str(mms_id)
 
-    tint = iso86012datetime(tint)
+    # Check time interval type
+    if isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], np.datetime64):
+            tint = datetime642iso8601(tint)
+            tint = iso86012datetime(tint)
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(
+                np.array(tint),
+            )  # to make sure it is ISO8601 ok!
+            tint = datetime642iso8601(tint)
+            tint = iso86012datetime(tint)
+        elif isinstance(tint[0], datetime.datetime):
+            pass
+        else:
+            raise TypeError("Values must be in datetime, datetime64, or str!!")
+    else:
+        raise TypeError("tint must be a DataArray or array_like!!")
+
+    # PAD time interval to handle ancillary file start after midnight
+    tint = [tint[0] - datetime.timedelta(days=1), tint[1]]
 
     # directory and file name search patterns
     # For now
@@ -76,9 +97,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     #   and start/endDate is YYYYDOY
     #   and version is Vnn (.V00, .V01, etc..)
     dir_pattern = os.sep.join([data_path, "ancillary", f"mms{mms_id}", product])
-    file_pattern = "_".join(
-        ["MMS{}".format(mms_id), product.upper(), "???????_???????.V??"]
-    )
+    file_pattern = "_".join([f"MMS{mms_id}", product.upper(), "???????_???????.V??"])
 
     files_in_tint = []
     out_files = []
@@ -86,9 +105,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
     files = glob.glob(os.sep.join([dir_pattern, file_pattern]))
 
     # find the files within the time interval
-    fname_fmt = (
-        f"MMS{mms_id}_{product.upper()}" + f"_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
-    )
+    fname_fmt = f"MMS{mms_id}_{product.upper()}_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
 
     if os.name == "nt":
         full_path = os.sep.join([re.escape(dir_pattern) + os.sep, fname_fmt])
@@ -115,7 +132,7 @@ def list_files_ancillary(tint, mms_id, product, data_path: str = ""):
         else:
             out_files.append(versions[0])
 
-    files_names = list(set(out_files))
-    files_names.sort()
+    file_names = list(set(out_files))
+    file_names.sort()
 
-    return files_names
+    return file_names

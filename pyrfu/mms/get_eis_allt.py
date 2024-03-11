@@ -4,20 +4,27 @@
 # 3rd party imports
 import xarray as xr
 
-# Local imports
-from .list_files import list_files
 from .db_get_ts import db_get_ts
 from .db_get_variable import db_get_variable
 
+# Local imports
+from .list_files import list_files
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = ""):
+def get_eis_allt(
+    tar_var,
+    tint,
+    mms_id,
+    verbose: bool = True,
+    data_path: str = "",
+):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all telescopes.
 
@@ -79,6 +86,9 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
     # before.
     files = list_files(tint, mms_id, var, data_path=data_path)
 
+    if not files:
+        raise FileNotFoundError("no files for these inputs!!")
+
     file_version = int(files[0].split("_")[-1][1])
     var["version"] = file_version
 
@@ -105,12 +115,12 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
     )
 
     # Names of the energy spectra in the CDF (one for each telescope)
-    cdfnames = ["{}_{}{:d}".format(pref, suf, t) for t in range(6)]
+    cdfnames = [f"{pref}_{suf}{t:d}" for t in range(6)]
 
     spin_nums = db_get_ts(dset_name, f"{pref}_spin", tint, data_path=data_path)
     sectors = db_get_ts(dset_name, f"{pref}_sector", tint, data_path=data_path)
 
-    e_minu = db_get_variable(
+    e_minus = db_get_variable(
         dset_name,
         f"{pref}_{specie}_t0_energy_dminus",
         tint,
@@ -132,10 +142,14 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
         scope_key = f"t{i:d}"
 
         outdict[scope_key] = db_get_ts(
-            dset_name, cdfname, tint, verbose=verbose, data_path=data_path
+            dset_name,
+            cdfname,
+            tint,
+            verbose=verbose,
+            data_path=data_path,
         )
         outdict[scope_key] = outdict[scope_key].rename(
-            {"time": "time", "Energy": "energy"}
+            {"time": "time", "Energy": "energy"},
         )
 
         outdict[f"look_{scope_key}"] = db_get_ts(
@@ -147,14 +161,19 @@ def get_eis_allt(tar_var, tint, mms_id, verbose: bool = True, data_path: str = "
         )
 
     e_plus = e_plus.assign_coords(x=outdict["t0"].energy.data)
-    e_minu = e_minu.assign_coords(x=outdict["t0"].energy.data)
+    e_minus = e_minus.assign_coords(x=outdict["t0"].energy.data)
     e_plus = e_plus.rename({"x": "energy"})
-    e_minu = e_minu.rename({"x": "energy"})
+    e_minus = e_minus.rename({"x": "energy"})
 
-    outdict["energy_dplus"] = e_plus
-    outdict["energy_dminus"] = e_minu
+    # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
+    glob_attrs = {
+        "delta_energy_plus": e_plus.data,
+        "delta_energy_minus": e_minus.data,
+        "species": specie,
+        **outdict["spin"].attrs["GLOBAL"],
+    }
 
     # Build Dataset
-    out = xr.Dataset(outdict, attrs=var)
+    out = xr.Dataset(outdict, attrs=glob_attrs)
 
     return out

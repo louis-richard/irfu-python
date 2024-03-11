@@ -3,12 +3,16 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
+
+# Local imports
+from .ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -58,9 +62,17 @@ def calc_agyro(p_xyz):
 
     """
 
+    # Check input type
+    assert isinstance(p_xyz, xr.DataArray), "p_xyz must be a xarray.DataArray"
+
+    # Check import shape
+    message = "p_xyz must be a time series of a tensor"
+    assert p_xyz.data.ndim == 3 and p_xyz.shape[1] == 3 and p_xyz.shape[2] == 3, message
+
     # Parallel and perpendicular components
-    p_perp_1, p_perp_2 = [p_xyz[:, 1, 1], p_xyz[:, 2, 2]]
+    p_perp_1, p_perp_2 = [p_xyz.data[:, 1, 1], p_xyz.data[:, 2, 2]]
 
-    agyro = np.abs(p_perp_1 - p_perp_2) / (p_perp_1 + p_perp_2)
+    agyrotropy = np.abs(p_perp_1 - p_perp_2) / (p_perp_1 + p_perp_2)
+    agyrotropy = ts_scalar(p_xyz.time.data, agyrotropy)
 
-    return agyro
+    return agyrotropy

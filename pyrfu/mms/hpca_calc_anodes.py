@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 anodes_theta = np.array(
@@ -30,7 +30,7 @@ anodes_theta = np.array(
         348.75000,
         168.75000,
         146.25000,
-    ]
+    ],
 )
 
 
@@ -71,7 +71,9 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
         updated_spectra = inp.data[:, anodes_in_fov, :].sum(axis=1)
 
     out = xr.DataArray(
-        updated_spectra, coords=[times, energies], dims=["time", "energy"]
+        updated_spectra,
+        coords=[times, energies],
+        dims=["time", "energy"],
     )
 
     return out

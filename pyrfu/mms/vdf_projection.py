@@ -2,26 +2,35 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
 import itertools
+import logging
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import constants
 
-# Local imports
-from ..pyrf import iso86012datetime64, time_clip, ts_scalar, ts_skymap
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
+from ..pyrf.ts_skymap import ts_skymap
 
+# Local imports
 from .psd_rebin import psd_rebin
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.10"
+__version__ = "2.4.2"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def _coord_sys(coord_sys):
@@ -35,19 +44,17 @@ def _coord_sys(coord_sys):
 
     for i, vec, comp in zip([0, 1, 2], [x_vec, y_vec, z_vec], ["x", "y", "z"]):
         if abs(np.rad2deg(np.arccos(np.dot(vec, coord_sys[:, i])))) > 1.0:
-            msg = " ".join(
-                [
-                    "In making 'xyz' a right handed orthogonal",
-                    f"coordinate system, {comp} (in-plane {i:d}) was",
-                    "changed from",
-                    np.array2string(coord_sys[:, i]),
-                    "to",
-                    np.array2string(x_vec),
-                    "Please verify that this is according to your",
-                    "intentions.",
-                ]
+            logging.warning(
+                "In making xyz a right handed orthogonal coordinate system, %(comp)s "
+                "(in-plane %(i)d) was changed from %(x_old)s to %(x_new)s. Please "
+                "verify that this is according to your intentions.",
+                {
+                    "comp": comp,
+                    "i": i,
+                    "x_old": np.array2string(coord_sys[:, i]),
+                    "x_new": np.array2string(x_vec),
+                },
             )
-            warnings.warn(msg, UserWarning)
             changed_xyz[i] = True
 
     return x_vec, y_vec, z_vec, changed_xyz
@@ -67,7 +74,7 @@ def _init(vdf, tint):
     else:
         phi = vdf.phi
 
-    theta = vdf.theta
+    theta = vdf.theta.data
     polar = np.deg2rad(theta)
     azimuthal = np.deg2rad(phi)
     step_table = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
@@ -81,22 +88,24 @@ def _init(vdf, tint):
         [
             10 ** (np.log10(energy0) - diff_energ),
             10 ** (np.log10(energy0[-1]) + diff_energ),
-        ]
+        ],
     )
     energy1_edges = np.hstack(
         [
             10 ** (np.log10(energy1) - diff_energ),
             10 ** (np.log10(energy1[-1]) + diff_energ),
-        ]
+        ],
     )
 
     if tint is not None and len(tint) == 1:
-        t_id = np.argmin(np.abs(vdf.time.data - iso86012datetime64(np.array(tint))[0]))
+        t_id = np.argmin(
+            np.abs(vdf.time.data - iso86012datetime64(np.array(tint))[0]),
+        )
 
         dist = vdf.data.data[t_id, ...]
         dist = dist[None, ...]
         step_table = step_table[t_id]
-        azimuthal = azimuthal[t_id, ...]
+        azimuthal = azimuthal[t_id, ...].data
 
         if step_table.data:
             energy_edges = energy1_edges
@@ -110,38 +119,53 @@ def _init(vdf, tint):
         azimuthal = time_clip(azimuthal, tint)
 
         if len(dist.time) > 1 and list(energy0) != list(energy1):
-            print("notice: Rebinning distribution.")
+            logging.info("Rebinning distribution.")
             temp = ts_skymap(
                 dist.time.data,
                 dist.data,
                 time_clip(vdf.energy, tint).data,
                 np.rad2deg(azimuthal.data),
-                theta.data,
+                theta,
             )
-            newt, dist, energy, phi = psd_rebin(temp, phi, energy0, energy1, step_table)
+            newt, dist, energy, phi = psd_rebin(
+                temp,
+                phi,
+                energy0,
+                energy1,
+                step_table,
+            )
             dist = ts_skymap(
-                newt, dist, np.tile(energy, (len(newt), 1)), phi, theta.data
+                newt,
+                dist,
+                np.tile(energy, (len(newt), 1)),
+                phi,
+                theta,
             )
             dist = time_clip(dist.data, tint)
             azimuthal = xr.DataArray(
-                phi, coords=[newt, np.arange(phi.shape[1])], dims=["time", "odx"]
+                phi,
+                coords=[newt, np.arange(phi.shape[1])],
+                dims=["time", "odx"],
             )
             len_e = dist.shape[1]
             energy_edges = np.hstack(
                 [
                     10 ** (np.log10(energy) - diff_energ / 2),
                     10 ** (np.log10(energy[-1]) + diff_energ / 2),
-                ]
+                ],
             )
         else:
             if all(step_table.data):
                 energy_edges = energy1_edges
             else:
                 energy_edges = energy0_edges
+
+        dist = dist.data.data
+        azimuthal = azimuthal.data
     else:
         raise ValueError("Invalid time interval")
 
-    return dist, polar.data, azimuthal.data, energy_edges, len_e
+    return dist, polar, azimuthal, energy_edges, len_e
 
 
 def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
@@ -175,7 +199,7 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
         new_z_mat = np.reshape(new_tmp_z, (x_mat.shape[0], x_mat.shape[1]))
 
         elevation_angle = np.arctan(
-            new_z_mat / np.sqrt(new_x_mat**2 + new_y_mat**2)
+            new_z_mat / np.sqrt(new_x_mat**2 + new_y_mat**2),
         )
         plane_az = np.arctan2(new_y_mat, new_x_mat) + np.pi
 
@@ -191,7 +215,7 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
             geo_factor_bin_size = np.ones(pol_mat.shape)
 
         f_mat[i, ...] = _cotrans_jit(
-            dist.data[i, ...],
+            dist[i, ...],
             elevation_angle,
             e_lim,
             plane_az,
@@ -214,7 +238,10 @@ def _cotrans_jit(
 ):
     out = np.zeros((dist.shape[1], dist.shape[0]))  # azimuthal, energy
 
-    for i_en, i_az in itertools.product(range(dist.shape[0]), range(dist.shape[1])):
+    for i_en, i_az in itertools.product(
+        range(dist.shape[0]),
+        range(dist.shape[1]),
+    ):
         # dist.data has dimensions nT x nE x nAz x nPol
         c_mat = dist[i_en, ...].copy()
         c_mat = c_mat * geo_factor_elev * geo_factor_bin_size
@@ -285,7 +312,14 @@ def vdf_projection(
         azimuthal = np.ones((len(dist), 1)) * azimuthal
 
     f_mat = _cotrans(
-        dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bins_correction
+        dist,
+        polar,
+        azimuthal,
+        x_vec,
+        y_vec,
+        z_vec,
+        e_lim,
+        bins_correction,
     )
     if len(dist) == 1:
         f_mat = np.squeeze(f_mat)

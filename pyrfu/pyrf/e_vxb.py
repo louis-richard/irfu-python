@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 # Local imports
 from .resample import resample
@@ -10,9 +11,9 @@ from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -50,8 +51,8 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
 
     Load magnetic field and electric field
 
-    >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-    >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
+    >>> b_xyz = mms.get_data("b_gse_fgm_srvy_l2", tint, mms_id)
+    >>> e_xyz = mms.get_data("e_gse_edp_fast_l2", tint, mms_id)
 
     Compute ExB drift velocity
 
@@ -59,29 +60,30 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
 
     """
 
-    input_v_cons = v_xyz.size == 3
-    estimate_exb = flag.lower() == "exb"
+    assert isinstance(flag, str) and flag.lower() in ["exb", "vxb"], "Invalid flag"
+    assert isinstance(b_xyz, xr.DataArray), "b_xyz must be a xarray.DataArray"
 
-    if estimate_exb:
+    if isinstance(v_xyz, (list, np.ndarray)) and v_xyz.ndim == 1 and len(v_xyz) == 3:
+        v_xyz = ts_vec_xyz(b_xyz.time.data, np.tile(v_xyz, (len(b_xyz), 1)))
+    elif isinstance(v_xyz, xr.DataArray):
         b_xyz = resample(b_xyz, v_xyz)
+    else:
+        raise TypeError("v_xyz must be xarray.DataArray or array_like constant vector")
 
+    if flag.lower() == "exb":
         res = 1e3 * np.cross(v_xyz.data, b_xyz.data, axis=1)
         res /= np.linalg.norm(b_xyz.data, axis=1)[:, None] ** 2
 
         attrs = {"UNITS": "km/s", "FIELDNAM": "Velocity", "LABLAXIS": "V"}
 
     else:
-        if input_v_cons:
-            res = np.cross(np.tile(v_xyz, (len(b_xyz), 1)), b_xyz.data)
-            res *= (-1) * 1e-3
+        res = -1e-3 * np.cross(v_xyz.data, b_xyz.data)
 
-        else:
-            b_xyz = resample(b_xyz, v_xyz)
-
-            res = np.cross(v_xyz.data, b_xyz.data)
-            res *= (-1) * 1e-3
-
-        attrs = {"UNITS": "mV/s", "FIELDNAM": "Electric field", "LABLAXIS": "E"}
+        attrs = {
+            "UNITS": "mV/s",
+            "FIELDNAM": "Electric field",
+            "LABLAXIS": "E",
+        }
 
     out = ts_vec_xyz(b_xyz.time.data, res, attrs)
 

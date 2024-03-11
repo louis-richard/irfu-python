@@ -6,29 +6,29 @@ import json
 import os
 
 # 3rd party imports
-from cdflib import cdfread
 import numpy as np
+from cdflib import cdfread
 
-
-from scipy import constants
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_skymap import ts_skymap
+from .db_get_ts import db_get_ts
 
 # Local imports
-from ..pyrf import datetime642iso8601, time_clip, ts_skymap
-from .db_get_ts import db_get_ts
+from .db_init import MMS_CFG_PATH
 from .get_data import get_data
-
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
-    r"""Remove secondary photoelectrons from electron distribution function according
-    to [1]_.
+    r"""Remove secondary photoelectrons from electron distribution function
+    according to [1]_.
 
     Parameters
     ----------
@@ -37,8 +37,8 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     n_sec : float, Optional
         Artificial secondary electron density (isotropic). Default is 0.
     n_art : float, Optional
-        Artificial photoelectron density (sun-angle dependant), Default is ephoto_scale
-        from des-emoms GlobalAttributes.
+        Artificial photoelectron density (sun-angle dependant),
+        Default is ephoto_scale from des-emoms GlobalAttributes.
 
     Returns
     -------
@@ -51,11 +51,11 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
 
     References
     ----------
-    .. [1]  Gershman, D. J., Avanov, L. A., Boardsen,S. A., Dorelli, J. C., Gliese, U.,
-            Barrie, A. C.,... Pollock, C. J. (2017). Spacecraft and instrument
-            photoelectrons measured by the dual electron spectrometers on MMS. Journal
-            of Geophysical Research:Space Physics,122, 11,548–11,558.
-            https://doi.org/10.1002/2017JA024518
+    .. [1]  Gershman, D. J., Avanov, L. A., Boardsen,S. A., Dorelli, J. C.,
+            Gliese, U., Barrie, A. C.,... Pollock, C. J. (2017). Spacecraft
+            and instrument photoelectrons measured by the dual electron
+            spectrometers on MMS. Journal of Geophysical Research:Space
+            Physics,122, 11,548–11,558. https://doi.org/10.1002/2017JA024518
 
     """
 
@@ -63,7 +63,7 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     tint = list(datetime642iso8601(vdf.time.data[[0, -1]]))
 
     # Get spacecraft index from VDF metadata
-    mms_id = vdf.attrs["CATDESC"].split(" ")[0].lower()
+    mms_id = vdf.data.attrs["CATDESC"].split(" ")[0].lower()
     mms_id = int(mms_id[-1])
 
     vdf_tmp = time_clip(vdf, tint)
@@ -72,34 +72,27 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
 
     dataset_name = f"mms{mms_id}_fpi_brst_l2_des-dist"
     startdelphi_count = db_get_ts(
-        dataset_name, f"mms{mms_id}_des_startdelphi_count_brst", tint, verbose=False
+        dataset_name,
+        f"mms{mms_id}_des_startdelphi_count_brst",
+        tint,
+        verbose=False,
     )
 
-    # Load the elctron number density to get the name of the photoelectron model file,
-    # and the photoelectron scaling factor
+    # Load the elctron number density to get the name of the photoelectron
+    # model file, and the photoelectron scaling factor
     n_e = get_data("ne_fpi_brst_l2", tint, mms_id, verbose=False)
 
-    photoe_scle = n_e.attrs["Photoelectron_model_scaling_factor"]
+    photoe_scle = n_e.attrs["GLOBAL"]["Photoelectron_model_scaling_factor"]
     photoe_scle = float(photoe_scle)
 
     # Load the model internal photoelectrons
-    bkg_fname = n_e.attrs["Photoelectron_model_filenames"]
+    bkg_fname = n_e.attrs["GLOBAL"]["Photoelectron_model_filenames"]
 
-    # Check path
-    # Guess data path from CDF attributes
-    data_path = str(vdf.attrs["CDF"]).split(f"mms{mms_id}/fpi")[0]
+    # Read the current version of the MMS configuration file
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        config = json.load(fs)
 
-    # Check if path exists if not use the default
-    if not os.path.exists(data_path):
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
-        # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
-            config = json.load(fs)
-
-        data_path = os.path.normpath(config["local_data_dir"])
-    else:
-        data_path = os.path.normpath(data_path)
+    data_path = os.path.normpath(config["local"])
 
     bkg_fname = os.path.join(data_path, "models", "fpi", bkg_fname)
 
@@ -116,7 +109,7 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     else:
         n_photo = photoe_scle
 
-    for i in range(len(vdf.time.data)):
+    for i, _ in enumerate(vdf.time.data):
         istartdelphi_count = startdelphi_count.data[i]
         iebgdist = int(np.fix(istartdelphi_count / 16))
 

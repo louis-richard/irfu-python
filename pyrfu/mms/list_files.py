@@ -1,32 +1,39 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import bisect
+import datetime
+import json
+
 # Built-in imports
 import os
 import re
-import json
-import bisect
-import datetime
 
 # 3rd party imports
+import numpy as np
 from dateutil import parser
-from dateutil.rrule import rrule, DAILY
+from dateutil.rrule import DAILY, rrule
+
+# Local imports
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime64 import iso86012datetime64
+from .db_init import MMS_CFG_PATH
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2022"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.11"
+__version__ = "2.4.11"
 __status__ = "Prototype"
 
 
 def list_files(tint, mms_id, var, data_path: str = ""):
-    """Find files in the data directories of the target instrument, data type,
-    data rate, mms_id and level during the target time interval.
+    r"""Find available files in the data directories of the target instrument,
+    data type, data rate, mms_id and level during the target time interval.
 
     Parameters
     ----------
-    tint : list
+    tint : array_like
         Time interval
     mms_id : str or int
         Index of the spacecraft
@@ -41,7 +48,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
 
     Returns
     -------
-    files : list
+    file_names : list
         List of files corresponding to the parameters in the selected time
         interval
 
@@ -49,23 +56,36 @@ def list_files(tint, mms_id, var, data_path: str = ""):
 
     # Check path
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
         # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r") as fs:
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local_data_dir"])
+        data_path = os.path.normpath(config["local"])
     else:
         data_path = os.path.normpath(data_path)
 
     # Make sure that the data path exists
     assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
 
+    # Check time interval
+    if isinstance(tint, (np.ndarray, list)):
+        if isinstance(tint[0], np.datetime64):
+            tint = datetime642iso8601(np.array(tint))
+        elif isinstance(tint[0], str):
+            tint = iso86012datetime64(
+                np.array(tint),
+            )  # to make sure it is ISO8601 ok!!
+            tint = datetime642iso8601(np.array(tint))
+        else:
+            raise TypeError("Values must be in datetime64, or str!!")
+    else:
+        raise TypeError("tint must be array_like!!")
+
     files_out = []
 
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)
+
     # directory and file name search patterns:
     # - assume directories are of the form:
     # (srvy, SITL): spacecraft/instrument/rate/level[/datatype]/year/month/
@@ -99,7 +119,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                     date.strftime("%Y"),
                     date.strftime("%m"),
                     date.strftime("%d"),
-                ]
+                ],
             )
         else:
             local_dir = os.sep.join(
@@ -111,7 +131,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                     level_and_dtype,
                     date.strftime("%Y"),
                     date.strftime("%m"),
-                ]
+                ],
             )
 
         if os.name == "nt":
@@ -136,7 +156,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                                     "timetag": "",
                                     "full_name": this_file,
                                     "file_size": "",
-                                }
+                                },
                             )
 
     in_files = files_out
@@ -156,7 +176,7 @@ def list_files(tint, mms_id, var, data_path: str = ""):
                     parser.parse(matches.groups()[0]).timestamp(),
                     file["timetag"],
                     file["file_size"],
-                )
+                ),
             )
 
     # sort in time
@@ -173,13 +193,21 @@ def list_files(tint, mms_id, var, data_path: str = ""):
         files_in_interval = []
         for file in sorted_files[idx_min:]:
             files_in_interval.append(
-                {"file_name": file[0], "timetag": file[2], "file_size": file[3]}
+                {
+                    "file_name": file[0],
+                    "timetag": file[2],
+                    "file_size": file[3],
+                },
             )
     else:
         files_in_interval = []
         for file in sorted_files[idx_min - 1 :]:
             files_in_interval.append(
-                {"file_name": file[0], "timetag": file[2], "file_size": file[3]}
+                {
+                    "file_name": file[0],
+                    "timetag": file[2],
+                    "file_size": file[3],
+                },
             )
 
     local_files = []
@@ -190,4 +218,6 @@ def list_files(tint, mms_id, var, data_path: str = ""):
         if file["file_name"] in file_names:
             local_files.append(file["full_name"])
 
-    return sorted(local_files)
+    file_names = sorted(local_files)
+
+    return file_names

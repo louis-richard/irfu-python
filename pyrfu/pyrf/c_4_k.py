@@ -10,9 +10,9 @@ from .dot import dot
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -45,10 +45,14 @@ def c_4_k(r_list):
     mms_list_r3 = np.roll(mms_list, 3)
 
     for i, alpha, beta, gamma in zip(
-        mms_list_r0, mms_list_r1, mms_list_r2, mms_list_r3
+        mms_list_r0,
+        mms_list_r1,
+        mms_list_r2,
+        mms_list_r3,
     ):
         dr_jk_x_dr_jm = cross(
-            r_list[beta] - r_list[alpha], r_list[gamma] - r_list[alpha]
+            r_list[beta] - r_list[alpha],
+            r_list[gamma] - r_list[alpha],
         )
 
         dr12 = r_list[i] - r_list[alpha]

@@ -6,17 +6,20 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import ts_scalar, resample, extend_tint, time_clip
+from ..pyrf.extend_tint import extend_tint
+from ..pyrf.resample import resample
+from ..pyrf.time_clip import time_clip
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
+def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase):
     r"""Returns times when field-aligned electrostatic waves can be
     characterized using interferometry techniques. The same alignment
     conditions as Graham et al., JGR, 2015 are used. Optional figure produced
@@ -45,9 +48,6 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
         L2 Spacecraft potential data. Timing corrections are applied in this
     z_phase : xarray.DataArray
         Spacecraft phase (z_phase). Obtained from ancillary_defatt.
-    plot_fig : bool, Optional
-        Flag to plot fields and potentials which satisfy alignment conditions.
-        Default is False.
 
     Returns
     -------
@@ -67,13 +67,28 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
     """
 
     # Correct for timing in spacecraft potential data.
-    e12 = ts_scalar(sc_pot.time.data, (sc_pot.data[:, 0] - sc_pot.data[:, 1]) / 0.120)
-    e34 = ts_scalar(sc_pot.time.data, (sc_pot.data[:, 2] - sc_pot.data[:, 3]) / 0.120)
-    e56 = ts_scalar(sc_pot.time.data, (sc_pot.data[:, 4] - sc_pot.data[:, 4]) / 0.0292)
+    e12 = ts_scalar(
+        sc_pot.time.data,
+        (sc_pot.data[:, 0] - sc_pot.data[:, 1]) / 0.120,
+    )
+    e34 = ts_scalar(
+        sc_pot.time.data,
+        (sc_pot.data[:, 2] - sc_pot.data[:, 3]) / 0.120,
+    )
+    e56 = ts_scalar(
+        sc_pot.time.data,
+        (sc_pot.data[:, 4] - sc_pot.data[:, 4]) / 0.0292,
+    )
 
     v_1 = ts_scalar(sc_pot.time.data, sc_pot.data[:, 0])
-    v_3 = ts_scalar(sc_pot.time.data + np.timedelta64(7629, "ns"), sc_pot.data[:, 2])
-    v_5 = ts_scalar(sc_pot.time.data + np.timedelta64(15259, "ns"), sc_pot.data[:, 4])
+    v_3 = ts_scalar(
+        sc_pot.time.data + np.timedelta64(7629, "ns"),
+        sc_pot.data[:, 2],
+    )
+    v_5 = ts_scalar(
+        sc_pot.time.data + np.timedelta64(15259, "ns"),
+        sc_pot.data[:, 4],
+    )
 
     e12.time.data += np.timedelta64(26703, "ns")
     e34.time.data += np.timedelta64(30518, "ns")
@@ -86,10 +101,14 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
     v_4 = v_3 - e34 * 0.120
     v_6 = v_5 - e56 * 0.0292
 
-    sc_pot = np.hstack([v_1.data, v_2.data, v_3.data, v_4.data, v_5.data, v_6.data])
+    sc_pot = np.hstack(
+        [v_1.data, v_2.data, v_3.data, v_4.data, v_5.data, v_6.data],
+    )
 
     sc_pot = xr.DataArray(
-        sc_pot, coords=[v_1.time.data, np.arange(1, 7)], dims=["time", "probe"]
+        sc_pot,
+        coords=[v_1.time.data, np.arange(1, 7)],
+        dims=["time", "probe"],
     )
 
     t_limit = [sc_pot.time.data[0], sc_pot.time.data[-1]]
@@ -153,7 +172,7 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
     e34 = (sc_pot.data[:, 2] - sc_pot.data[:, 3]) * 1e3 / 120
 
     idx_b = np.sqrt(b_xyz.data[:, 0] ** 2 + b_xyz.data[:, 1] ** 2) < abs(
-        b_xyz.data[:, 2]
+        b_xyz.data[:, 2],
     )
     thresh_ang = 25.0
 
@@ -166,5 +185,3 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase, plot_fig: bool = False):
 
     sc_v12[idx_b] = np.nan
     sc_v34[idx_b] = np.nan
-
-    return

@@ -9,9 +9,9 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -19,8 +19,8 @@ def iso86012timevec(time):
     r"""Convert ISO 8601 time string into time vector.
 
     Parameters
-    ---------
-    time : str
+    ----------
+    time : ndarray or list or str
         Time in ISO 8601 format YYYY-MM-DDThh:mm:ss.mmmuuunnn.
 
     Returns
@@ -43,6 +43,9 @@ def iso86012timevec(time):
 
     # Define parser
     fmt = re.compile(iso_8601)
+
+    # Make time is a 1d array
+    time = np.atleast_1d(time)
 
     time_vec = [[int(p_) for p_ in fmt.match(t_).groups()] for t_ in time]
     time_vec = np.array(time_vec)

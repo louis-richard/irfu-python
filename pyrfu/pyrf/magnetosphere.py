@@ -9,9 +9,9 @@ from .get_omni_data import get_omni_data
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -85,7 +85,9 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
             rstandoff - np.logspace(np.log10(0.1), np.log10(100 + rstandoff), 300) + 0.1
         )
         # original F/G model adds rstandoff^2=645
-        y_s = np.sqrt(0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff))
+        y_s = np.sqrt(
+            0.04 * (x_s - rstandoff) ** 2 - 45.3 * (x_s - rstandoff),
+        )
 
     else:
         raise NotImplementedError("This model is not implemented yet!!")

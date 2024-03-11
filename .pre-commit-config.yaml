@@ -1,0 +1,55 @@
+repos:
+  # The following code can be uncommented to automatically keep all pre-commit rev's updated
+  - repo: local
+   # First a local check if new "rev" exists...
+    hooks:
+      - id: pre-commit-autoupdate
+        name: Check for new rev with pre-commit autoupdate
+        entry: "pre-commit autoupdate"
+        language: system
+        pass_filenames: false
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.5.0"
+    hooks:
+      - id: check-yaml
+      - id: check-symlinks
+      - id: check-merge-conflict
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 24.2.0
+    hooks:
+      - id: black
+        language_version: python3.11
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.8.4
+    hooks:
+      - id: nbqa-black
+        name: nbqa-black
+        description: "Run 'black' on a Jupyter Notebook"
+        entry: nbqa black
+        language: python
+        require_serial: true
+        types: [ jupyter ]
+        additional_dependencies: [ black ]
+  - repo: https://github.com/pycqa/flake8
+    rev: "7.0.0"
+    hooks:
+      - id: flake8
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.1.0
+    hooks:
+      - id: pylint
+        args:
+          - --rcfile
+          - pyproject.toml
+          - --disable
+          - import-error
+          - --output-format
+          - colorized
+

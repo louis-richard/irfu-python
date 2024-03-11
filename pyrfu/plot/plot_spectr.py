@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.colors as mcolors
-import matplotlib.ticker as ticker
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.11"
+__version__ = "2.4.2"
 __status__ = "Prototype"
-
-plt.style.use("seaborn-ticks")
 
 
 def plot_spectr(
@@ -23,9 +19,9 @@ def plot_spectr(
     yscale: str = "linear",
     cscale: str = "linear",
     clim: list = None,
-    cmap: str = "",
-    colorbar: bool = True,
-    **kwargs
+    cmap: str = None,
+    colorbar: str = "right",
+    **kwargs,
 ):
     r"""Plot a spectrogram using pcolormesh.
 
@@ -43,8 +39,9 @@ def plot_spectr(
         C-axis bounds. Default is None (autolim).
     cmap : str, Optional
         Colormap. Default is "jet".
-    colorbar : bool, Optional
-        Flag for colorbar. Set to False to hide.
+    colorbar : str, Optional
+        Location of the colorbar with respect to the axis.
+        Set to "none" to hide.
 
     Other Parameters
     ----------------
@@ -67,56 +64,110 @@ def plot_spectr(
     else:
         fig = plt.gcf()
 
-    if not cmap:
-        cmap = "jet"
+    if not cmap or isinstance(cmap, str):
+        cmap = mpl.cm.get_cmap(cmap)
+    else:
+        raise TypeError(
+            "cmap must be a string. "
+            "To add a custom colormap use mpl.colormaps.register(custom)."
+        )
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
-            options = dict(norm=mcolors.LogNorm(vmin=clim[0], vmax=clim[1]), cmap=cmap)
+            options = {
+                "norm": mpl.colors.LogNorm(vmin=clim[0], vmax=clim[1]),
+                "cmap": cmap,
+            }
         else:
-            options = dict(norm=mcolors.LogNorm(), cmap=cmap)
+            options = {"norm": mpl.colors.LogNorm(), "cmap": cmap}
     else:
         if clim is not None and isinstance(clim, list):
-            options = dict(cmap=cmap, vmin=clim[0], vmax=clim[1])
+            options = {"cmap": cmap, "vmin": clim[0], "vmax": clim[1]}
         else:
-            options = dict(cmap=cmap, vmin=None, vmax=None)
+            options = {"cmap": cmap, "vmin": None, "vmax": None}
 
     x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 
     image = axis.pcolormesh(
-        x_data.data, y_data.data, inp.data.T, rasterized=True, shading="auto", **options
+        x_data.data,
+        y_data.data,
+        inp.data.T,
+        rasterized=True,
+        shading="auto",
+        **options,
     )
 
     if x_data.dtype == "<M8[ns]":
-        locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-        formatter = mdates.ConciseDateFormatter(locator)
+        locator = mpl.dates.AutoDateLocator(minticks=3, maxticks=7)
+        formatter = mpl.dates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)
         axis.xaxis.set_major_formatter(formatter)
 
     if yscale == "log":
         axis.set_yscale("log")
-        axis.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
+        axis.yaxis.set_major_locator(mpl.ticker.LogLocator(base=10.0, numticks=4))
 
     axis.set_axisbelow(False)
     axis.set_ylim(inp[inp.dims[1]].data[[0, -1]])
 
-    if colorbar:
+    if colorbar.lower() == "right":
         if kwargs.get("pad"):
             pad = kwargs["pad"]
         else:
             pad = 0.01
 
         pos = axis.get_position()
-        cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height])
-        plt.colorbar(mappable=image, cax=cax, ax=axis)
+        cax = fig.add_axes(
+            [pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height],
+        )
+        plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="vertical")
+
+        cax.yaxis.set_ticks_position(colorbar.lower())
+        cax.yaxis.set_label_position(colorbar.lower())
+
         cax.set_axisbelow(False)
+
         if cscale == "log":
-            cax.yaxis.set_major_locator(ticker.LogLocator(base=10.0, numticks=4))
+            cax.yaxis.set_major_locator(
+                mpl.ticker.LogLocator(base=10.0, numticks=4),
+            )
         else:
-            cax.yaxis.set_major_locator(ticker.MaxNLocator(4))
+            cax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
 
         out = (axis, cax)
-    else:
+    elif colorbar.lower() == "top":
+        if kwargs.get("pad"):
+            pad = kwargs["pad"]
+        else:
+            pad = 0.01
+
+        pos = axis.get_position()
+        cax = fig.add_axes(
+            [pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01],
+        )
+        plt.colorbar(
+            mappable=image,
+            cax=cax,
+            ax=axis,
+            orientation="horizontal",
+        )
+
+        cax.xaxis.set_ticks_position(colorbar.lower())
+        cax.xaxis.set_label_position(colorbar.lower())
+
+        cax.set_axisbelow(False)
+
+        if cscale == "log":
+            cax.xaxis.set_major_locator(
+                mpl.ticker.LogLocator(base=10.0, numticks=4),
+            )
+        else:
+            cax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
+
+        out = (axis, cax)
+    elif colorbar.lower() == "none":
         out = axis
+    else:
+        raise NotImplementedError("colorbar must be: 'right', 'top', or 'none'")
 
     return out

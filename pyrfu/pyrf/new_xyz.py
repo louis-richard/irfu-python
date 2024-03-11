@@ -7,9 +7,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -60,6 +60,11 @@ def new_xyz(inp, trans_mat):
     else:
         out_data = (trans_mat.T @ inp.data.T).T
 
-    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
+    out = xr.DataArray(
+        out_data,
+        coords=inp.coords,
+        dims=inp.dims,
+        attrs=inp.attrs,
+    )
 
     return out

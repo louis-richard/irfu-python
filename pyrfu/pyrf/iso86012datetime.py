@@ -9,9 +9,9 @@ import numpy as np
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -20,7 +20,7 @@ def iso86012datetime(time):
 
     Parameters
     ----------
-    time : ndarray or list
+    time : ndarray or list or str
         Time
 
     Returns
@@ -31,7 +31,7 @@ def iso86012datetime(time):
     """
 
     # Make sure that str is in ISO8601 format
-    time = np.array(time).astype("<M8[ns]").astype(str)
+    time = np.atleast_1d(time).astype("datetime64[ns]").astype(str)
 
     # ISO 8601 format with miliseconds precision (max precision for datetime)
     fmt = "%Y-%m-%dT%H:%M:%S.%f"

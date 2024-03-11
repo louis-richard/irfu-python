@@ -9,9 +9,9 @@ from .feeps_energy_table import feeps_energy_table
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -47,9 +47,11 @@ def feeps_correct_energies(feeps_alle):
         new_energy = feeps_energy_table(mms_id, sensor, int(eye))
 
         dim = feeps_alle[sensors_eye].dims[1]
-        out_dict[sensors_eye] = feeps_alle[sensors_eye].assign_coords({dim: new_energy})
+        out_dict[sensors_eye] = feeps_alle[sensors_eye].assign_coords(
+            {dim: new_energy},
+        )
         out_dict[sensors_eye] = out_dict[sensors_eye].rename(
-            {"time": "time", dim: f"energy-{sensors_eye}"}
+            {dim: f"energy-{sensors_eye}"},
         )
 
     out = xr.Dataset(out_dict)

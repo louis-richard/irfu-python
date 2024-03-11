@@ -3,14 +3,13 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import signal
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -55,13 +54,13 @@ def wave_fft(
     n_per_seg = np.round(frame_length * f_sampling).astype(np.int64)
     n_overlap = np.round(frame_overlap * f_sampling).astype(np.int64)
 
-    options = dict(
-        fs=f_sampling,
-        window=window,
-        nperseg=n_per_seg,
-        noverlap=n_overlap,
-        mode="complex",
-    )
+    options = {
+        "fs": f_sampling,
+        "window": window,
+        "nperseg": n_per_seg,
+        "noverlap": n_overlap,
+        "mode": "complex",
+    }
     frequencies, time, spectrogram = signal.spectrogram(inp, **options)
 
     return frequencies, time, spectrogram

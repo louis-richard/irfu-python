@@ -3,16 +3,18 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
+
+from .dot import dot
 
 # Local imports
 from .resample import resample
-from .dot import dot
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -65,24 +67,33 @@ def dec_par_perp(inp, b_bgd, flag_spin_plane: bool = False):
 
     """
 
+    # Check arguments types
+    assert isinstance(inp, xr.DataArray), "inp must be an xarray.DataArray"
+    assert isinstance(b_bgd, xr.DataArray), "b_bgd must be an xarray.DataArray"
+    assert isinstance(flag_spin_plane, bool), "flag_spin_plane must be boolean"
+
+    # Check inp and b_bgd shapes
+    assert inp.ndim == 2 and inp.shape[1], "inp must be a vector"
+    assert b_bgd.ndim == 2 and b_bgd.shape[1], "b_bgd must be a vector"
+
     if not flag_spin_plane:
         b_mag = np.linalg.norm(b_bgd, axis=1, keepdims=True)
 
         indices = np.where(b_mag < 1e-3)[0]
 
         if indices.size > 0:
-            b_mag[indices] = np.ones(len(indices)) * 1e-3
+            b_mag[indices] = np.ones((len(indices), 1)) * 1e-3
 
         b_hat = b_bgd / b_mag
         b_hat = resample(b_hat, inp)
 
         a_para = dot(b_hat, inp)
-        a_perp = inp.data - (b_hat * np.tile(a_para.data, (3, 1)).T)
+        a_perp = inp - (b_hat.data * np.tile(a_para.data[:, np.newaxis], (1, 3)))
         alpha = []
     else:
         b_bgd = resample(b_bgd, inp)
         b_tot = np.sqrt(b_bgd[:, 0] ** 2 + b_bgd[:, 1] ** 2)
-        b_bgd /= b_tot[:, np.newaxis]
+        b_bgd /= b_tot.data[:, np.newaxis]
 
         a_para = inp[:, 0] * b_bgd[:, 0] + inp[:, 1] * b_bgd[:, 1]
         a_perp = inp[:, 0] * b_bgd[:, 1] - inp[:, 1] * b_bgd[:, 0]

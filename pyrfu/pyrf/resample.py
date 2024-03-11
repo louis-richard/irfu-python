@@ -1,24 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pdb
-
 
 # Built-in imports
 import bisect
-import warnings
+import logging
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import interpolate
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def _guess_sampling_frequency(ref_time):
@@ -49,9 +53,7 @@ def _guess_sampling_frequency(ref_time):
         cur += 1
 
     if not_found:
-        raise RuntimeError(
-            "Cannot guess sampling frequency. Tried {:d} times".format(max_try)
-        )
+        raise RuntimeError(f"Cannot guess sampling frequency. Tried {max_try:d} times")
 
     return sfy
 
@@ -85,11 +87,13 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
                 for j, stdd in enumerate(std_):
                     if not np.isnan(stdd):
                         idx_r = bisect.bisect_right(
-                            inp_data[idx, j + 1] - mean_[j], thresh * stdd
+                            inp_data[idx, j + 1] - mean_[j],
+                            thresh * stdd,
                         )
                         if idx_r:
                             out_data[i, j + 1] = np.mean(
-                                inp_data[idx[idx_r], j + 1], axis=0
+                                inp_data[idx[idx_r], j + 1],
+                                axis=0,
                             )
                         else:
                             out_data[i, j + 1] = np.nan
@@ -130,7 +134,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
 
             if len(inp_time) / (inp_time[-1] - inp_time[0]) > 2 * sfy:
                 flag_do = "average"
-                warnings.warn("Using averages in resample", UserWarning)
+                logging.info("Using averages in resample")
             else:
                 flag_do = "interpolation"
         else:
@@ -159,12 +163,21 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
                 for k in list(inp.dims)[1:]:
                     coord.append(inp.coords[k].data)
 
-            out = xr.DataArray(out_data, coords=coord, dims=inp.dims, attrs=inp.attrs)
+            out = xr.DataArray(
+                out_data,
+                coords=coord,
+                dims=inp.dims,
+                attrs=inp.attrs,
+            )
 
             return out
 
         tck = interpolate.interp1d(
-            inp_time, inp.data, kind=method, axis=0, fill_value="extrapolate"
+            inp_time,
+            inp.data,
+            kind=method,
+            axis=0,
+            fill_value="extrapolate",
         )
         out_data = tck(ref_time)
 
@@ -190,7 +203,10 @@ def _resample_dataset(inp, ref, **kwargs):
     out_dict = {**out_dict, **{k: inp[k] for k in ndepnd_zvars}}
 
     # Find array_like attributes
-    arr_attrs = filter(lambda x: isinstance(inp.attrs[x], np.ndarray), inp.attrs)
+    arr_attrs = filter(
+        lambda x: isinstance(inp.attrs[x], np.ndarray),
+        inp.attrs,
+    )
     arr_attrs = list(arr_attrs)
 
     # Initialize attributes dictionary with non array_like attributes
@@ -200,14 +216,17 @@ def _resample_dataset(inp, ref, **kwargs):
     for k in arr_attrs:
         attr = inp.attrs[k]
 
-        # If array_like attributes have one dimension equal to time length assume
-        # time dependent. One option would be move the time dependent array_like
-        # attributes to time series to zVaraibles to avoid confusion
+        # If array_like attributes have one dimension equal to time length
+        # assume time dependent. One option would be move the time dependent
+        # array_like attributes to time series to zVaraibles to avoid
+        # confusion
         if attr.shape[0] == len(inp.time.data):
             coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
             dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
             attr_ts = xr.DataArray(
-                attr, coords=[inp.time.data, *coords], dims=["time", *dims]
+                attr,
+                coords=[inp.time.data, *coords],
+                dims=["time", *dims],
             )
             out_attrs[k] = _resample_dataarray(attr_ts, ref, **kwargs).data
         else:
@@ -222,7 +241,12 @@ def _resample_dataset(inp, ref, **kwargs):
 
 
 def resample(
-    inp, ref, method: str = "", f_s: float = None, window: int = None, thresh: float = 0
+    inp,
+    ref,
+    method: str = "",
+    f_s: float = None,
+    window: int = None,
+    thresh: float = 0,
 ):
     r"""Resample inp to the time line of ref. If sampling of X is more than two
     times higher than Y, we average X, otherwise we interpolate X.
@@ -249,10 +273,6 @@ def resample(
     out : xarray.DataArray
         Resampled input to the reference time line using the selected method.
 
-    TODO
-    ----
-    Make the resampling VDF (xarray.Dataset) compliant.
-
 
     Examples
     --------
@@ -268,8 +288,8 @@ def resample(
 
     Load magnetic field and electric field
 
-    >>> b_xyz = mms.get_data("B_gse_fgm_srvy_l2", tint, mms_id)
-    >>> e_xyz = mms.get_data("E_gse_edp_fast_l2", tint, mms_id)
+    >>> b_xyz = mms.get_data("e_gse_fgm_srvy_l2", tint, mms_id)
+    >>> e_xyz = mms.get_data("e_gse_edp_fast_l2", tint, mms_id)
 
     Resample magnetic field to electric field sampling
 
@@ -277,13 +297,14 @@ def resample(
 
     """
 
-    options = dict(method=method, f_s=f_s, window=window, thresh=thresh)
+    message = "Invalid input type. Input must be xarray.DataArary or xarray.Dataset"
+    assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
+
+    options = {"method": method, "f_s": f_s, "window": window, "thresh": thresh}
 
     if isinstance(inp, xr.DataArray):
         out = _resample_dataarray(inp, ref, **options)
-    elif isinstance(inp, xr.Dataset):
-        out = _resample_dataset(inp, ref, **options)
     else:
-        raise TypeError("Invalid input type. Input must be a xarray!!")
+        out = _resample_dataset(inp, ref, **options)
 
     return out

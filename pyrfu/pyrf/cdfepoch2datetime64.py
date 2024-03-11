@@ -3,14 +3,13 @@
 
 # 3rd party imports
 import numpy as np
-
 from cdflib import cdfepoch
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -51,7 +50,12 @@ def _compose_date(
         nanoseconds,
     ]
 
-    dates = sum([np.asarray(v, dtype=t) for t, v in zip(types, vals) if v is not None])
+    dates_list = []
+    for t, v in zip(types, vals):
+        if v is not None:
+            dates_list.append(np.asarray(v, dtype=t))
+
+    dates = sum(dates_list)
 
     return dates
 
@@ -61,7 +65,7 @@ def cdfepoch2datetime64(epochs):
 
     Parameters
     ----------
-    epochs : array_like
+    epochs : float or int or array_like
         CDF epochs to convert.
 
     Returns
@@ -71,7 +75,8 @@ def cdfepoch2datetime64(epochs):
 
     """
 
-    times = cdfepoch.breakdown(epochs, to_np=True)
+    # Check input type
+    times = cdfepoch.breakdown(epochs)
     times = np.transpose(np.atleast_2d(times))
 
     times = _compose_date(*times).astype("datetime64[ns]")

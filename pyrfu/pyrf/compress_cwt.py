@@ -4,13 +4,24 @@
 # 3rd party import
 import numba
 import numpy as np
+import xarray as xr
+
+__author__ = "Louis Richard"
+__email__ = "louisr@irfu.se"
+__copyright__ = "Copyright 2020-2023"
+__license__ = "MIT"
+__version__ = "2.4.2"
+__status__ = "Prototype"
 
 
-@numba.jit(nopython=True, parallel=True)
+@numba.jit(cache=True, fastmath=True, nopython=True, parallel=True)
 def _compress_cwt_1d(cwt, nc: int = 100):
     nf = cwt.shape[1]
     idxs = np.arange(
-        start=int(nc / 2), stop=len(cwt) - int(nc / 2), step=nc, dtype=np.int64
+        start=int(nc / 2),
+        stop=len(cwt) - int(nc / 2),
+        step=nc,
+        dtype=np.int64,
     )
     cwt_c = np.zeros((len(idxs), nf))
 
@@ -27,7 +38,7 @@ def compress_cwt(cwt, nc: int = 100):
 
     Parameters
     ----------
-    cwt : xarray.DataArray
+    cwt : xarray.Dataset
         Wavelet transform to compress.
     nc : int, Optional
         Number of time steps for averaging. Default is 100.
@@ -45,8 +56,13 @@ def compress_cwt(cwt, nc: int = 100):
 
     """
 
+    assert isinstance(cwt, xr.Dataset), "cwt must be an xarray.Dataset"
+
     indices = np.arange(
-        int(nc / 2), len(cwt.time.data) - int(nc / 2), step=nc, dtype=np.int64
+        int(nc / 2),
+        len(cwt.time.data) - int(nc / 2),
+        step=nc,
+        dtype=np.int64,
     )
 
     cwt_t = cwt.time.data[indices]

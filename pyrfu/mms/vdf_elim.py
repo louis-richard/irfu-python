@@ -8,19 +8,20 @@ import logging
 import numpy as np
 
 # Local imports
-from ..pyrf import ts_skymap
+from ..pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.10"
+__version__ = "2.4.2"
 __status__ = "Prototype"
-
 
 logging.captureWarnings(True)
 logging.basicConfig(
-    format="%(asctime)s: %(message)s", datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
 )
 
 
@@ -47,6 +48,7 @@ def vdf_elim(vdf, e_int):
     n_etables = unique_etables.shape[0]
 
     e_int = list(np.atleast_1d(e_int))
+    e_int.sort()
 
     # energy interval
     if len(e_int) == 2:
@@ -62,7 +64,12 @@ def vdf_elim(vdf, e_int):
         e_levels = list(e_levels.astype(np.int64))
         e_min = np.min(energy.data[:, e_levels])
         e_max = np.max(energy.data[:, e_levels])
-        print(f"Effective eint = [{e_min:5.2f}, {e_max:5.2f}]")
+        logging.info(
+            "Effective eint = [%(e_min)5.2f, %(e_max)5.2f]",
+            {"e_min": e_min, "e_max": e_max},
+        )
+        energies = energy.data[:, e_levels]
+        data = vdf.data.data[:, e_levels, ...]
 
     else:
         # pick closest energy level
@@ -74,25 +81,41 @@ def vdf_elim(vdf, e_int):
             e_diff = e_diff1
 
         e_levels = int(np.where(e_diff == np.min(e_diff))[0][0])
-        print(
-            f"Effective energies alternate in time between "
-            f"{energy.data[0, e_levels]:5.2f} and "
-            f"{energy.data[1, e_levels]:5.2f}"
+        logging.info(
+            "Effective energies alternate in time between %(e0)5.2f and %(e1)5.2f",
+            {"e0": energy.data[0, e_levels], "e1": energy.data[1, e_levels]},
         )
+        energies = energy.data[:, e_levels]
+        energies = energies[:, np.newaxis]
+        data = vdf.data.data[:, e_levels, ...]
+        data = data[:, np.newaxis, ...]
+
+    # Data attributes
+    data_attrs = vdf.data.attrs
+
+    # Coordinates attributes
+    coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
+
+    # Global attributes
+    glob_attrs = vdf.attrs
+
+    # Get energies levels
+    energy_0 = glob_attrs.get("energy0", unique_etables[0, :])[e_levels]
+    energy_1 = glob_attrs.get("energy1", unique_etables[0, :])[e_levels]
+    esteptable = glob_attrs.get("esteptable", np.zeros(len(vdf.time)))
 
     vdf_e_clipped = ts_skymap(
         vdf.time.data,
-        vdf.data.data[:, e_levels, ...],
-        energy=energy.data[:, e_levels],
-        phi=vdf.phi.data,
-        theta=vdf.theta.data,
+        data,
+        energies,
+        vdf.phi.data,
+        vdf.theta.data,
+        energy0=energy_0,
+        energy1=energy_1,
+        esteptable=esteptable,
+        attrs=data_attrs,
+        coords_attrs=coords_attrs,
+        glob_attrs=glob_attrs,
     )
-
-    energy_0 = vdf.attrs.get("energy0", unique_etables[0, :])[e_levels]
-    energy_1 = vdf.attrs.get("energy1", unique_etables[0, :])[e_levels]
-    esteptable = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
-    vdf_e_clipped.attrs["energy0"] = energy_0
-    vdf_e_clipped.attrs["energy1"] = energy_1
-    vdf_e_clipped.attrs["esteptable"] = esteptable
 
     return vdf_e_clipped

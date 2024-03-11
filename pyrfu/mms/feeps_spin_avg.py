@@ -10,9 +10,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -44,7 +44,10 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     for i, spin_start in enumerate(spin_starts[1:-1]):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            spin_avg[i, :] = np.nanmean(data[c_start : spin_start + 1, :], axis=0)
+            spin_avg[i, :] = np.nanmean(
+                data[c_start : spin_start + 1, :],
+                axis=0,
+            )
         c_start = spin_start + 1
 
     spin_avg_flux = xr.DataArray(

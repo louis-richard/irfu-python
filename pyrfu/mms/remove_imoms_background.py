@@ -3,24 +3,24 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import constants
 
 # Local imports
-from ..pyrf import ts_tensor_xyz
+from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
-    r"""Remove the mode background population due to penetrating radiation from the
-    the moments (density `n_i`, bulk velocity `v_gse_i` and pressure tensor `p_gse_i`)
-    of the ion velocity distribution function using the method from [1]_.
+    r"""Remove the mode background population due to penetrating radiation
+    from the the moments (density `n_i`, bulk velocity `v_gse_i` and
+    pressure tensor `p_gse_i`) of the ion velocity distribution function
+    using the method from [1]_.
 
     Parameters
     ----------
@@ -46,11 +46,11 @@ def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
 
     References
     ----------
-    .. [1]  Gershman, D. J., Dorelli, J. C., Avanov,L. A., Gliese, U., Barrie, A.,
-            Schiff, C.,et al. (2019). Systematic uncertainties in plasma parameters
-            reported by the fast plasma investigation on NASA's magnetospheric
-            multiscale mission. Journal of Geophysical Research: Space Physics, 124,
-            https://doi.org/10.1029/2019JA026980
+    .. [1]  Gershman, D. J., Dorelli, J. C., Avanov,L. A., Gliese, U., Barrie,
+            A., Schiff, C.,et al. (2019). Systematic uncertainties in plasma
+            parameters reported by the fast plasma investigation on NASA's
+            magnetospheric multiscale mission. Journal of Geophysical
+            Research: Space Physics, 124, https://doi.org/10.1029/2019JA026980
 
     """
 
@@ -80,7 +80,8 @@ def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     p_bkg_mat *= p_bg_i.data[:, None, None]
     p_gse_i_new -= p_bkg_mat
 
-    # Fill the lower left off diagonal terms using symetry of the pressure tensor
+    # Fill the lower left off diagonal terms using symetry of the
+    # pressure tensor
     p_gse_i_new[:, 1, 0] = p_gse_i_new[:, 0, 1]
     p_gse_i_new[:, 2, 0] = p_gse_i_new[:, 0, 2]
     p_gse_i_new[:, 2, 1] = p_gse_i_new[:, 1, 2]

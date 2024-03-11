@@ -3,14 +3,13 @@
 
 # 3rd party imports
 import numpy as np
-
 from scipy import constants
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -23,15 +22,13 @@ def _estimate_capa_sphe(radius):
 
 
 def _estimate_capa_wire(radius, length):
-    if not radius or radius == 0 or not length:
-        out = None
-    elif length and radius and length >= 10 * radius:
+    if length and radius != 0 and length >= 10 * radius:
         l_ = np.log(length / radius)
         out = length / l_ * (1 + 1 / l_ * (1 - np.log(2)))
         out *= 2 * np.pi * constants.epsilon_0
     else:
         raise ValueError(
-            "capacitance_wire requires length at least 10 times " "the radius!"
+            "capacitance_wire requires length at least 10 times the radius!",
         )
     return out
 

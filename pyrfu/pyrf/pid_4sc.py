@@ -7,18 +7,17 @@ import xarray as xr
 
 # Local imports
 from ..mms.rotate_tensor import rotate_tensor
-
-from .c_4_grad import c_4_grad
 from .avg_4sc import avg_4sc
+from .c_4_grad import c_4_grad
 from .trace import trace
-from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_scalar import ts_scalar
+from .ts_tensor_xyz import ts_tensor_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.26"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 

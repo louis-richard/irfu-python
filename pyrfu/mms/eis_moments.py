@@ -4,22 +4,25 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
 from scipy import constants, integrate
 
 # Local imports
-from ..pyrf import ts_scalar, resample
+from ..pyrf.resample import resample
+from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
 def eis_moments(
-    inp, specie: str = "proton", n_bg: xr.DataArray = None, p_bg: xr.DataArray = None
+    inp,
+    specie: str = "proton",
+    n_bg: xr.DataArray = None,
+    p_bg: xr.DataArray = None,
 ):
     r"""Computes the partial moments given the omni-directional differential
     particle flux and the ion specie under the assumption of angular isotropy
@@ -111,7 +114,8 @@ def eis_moments(
     v_i = ts_scalar(inp.time.data, v_i * 1e-3)  # km s^-1
     p_i = ts_scalar(inp.time.data, p_i * 1e9)  # nPa
     t_i = ts_scalar(
-        inp.time.data, t_i * constants.Boltzmann / constants.elementary_charge
+        inp.time.data,
+        t_i * constants.Boltzmann / constants.elementary_charge,
     )  # eV
 
     if n_bg is not None and p_bg is not None:

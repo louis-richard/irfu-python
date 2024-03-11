@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
-import matplotlib.pyplot as plt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
-plt.style.use("seaborn-ticks")
 colors = ["tab:blue", "tab:green", "tab:red", "k"]
 markers = ["s", "d", "o", "^"]
 
@@ -41,7 +41,15 @@ def mms_pl_config(r_mms):
     delta_r = r_xyz - np.tile(r_xyz, (4, 1))
 
     fig = plt.figure(figsize=(9, 9))
-    gs0 = fig.add_gridspec(3, 3, hspace=0.3, left=0.1, right=0.9, bottom=0.1, top=0.9)
+    gs0 = fig.add_gridspec(
+        3,
+        3,
+        hspace=0.3,
+        left=0.1,
+        right=0.9,
+        bottom=0.1,
+        top=0.9,
+    )
 
     gs00 = gs0[0, :].subgridspec(1, 3, wspace=0.35)
     gs10 = gs0[1:, :].subgridspec(1, 1, wspace=0.35)
@@ -62,7 +70,9 @@ def mms_pl_config(r_mms):
     for ax, idx_, idy_, x_lb, y_lb in zip(axs_, idxs_, idys_, x_lbs, y_lbs):
         for i, marker in enumerate(markers):
             ax.scatter(
-                r_xyz[i, idx_] / r_earth, r_xyz[i, idy_] / r_earth, marker=marker
+                r_xyz[i, idx_] / r_earth,
+                r_xyz[i, idy_] / r_earth,
+                marker=marker,
             )
 
         ax.add_artist(earth)
@@ -75,23 +85,32 @@ def mms_pl_config(r_mms):
     axs3.view_init(elev=13, azim=-20)
 
     for i, marker in enumerate(markers):
-        options = dict(s=50, marker=marker)
+        options = {"s": 50, "marker": marker}
         axs3.scatter(delta_r[i, 0], delta_r[i, 1], delta_r[i, 2], **options)
 
-        options = dict(color=colors[i], marker=marker, zdir="z", zs=-30)
+        options = {"color": colors[i], "marker": marker, "zdir": "z", "zs": -30}
         axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 1]] * 2, **options)
         axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 2]] * 2, **options)
         axs3.plot([delta_r[i, 1]] * 2, [delta_r[i, 2]] * 2, **options)
 
-        options = dict(color="k", linestyle="--", linewidth=0.5)
+        options = {"color": "k", "linestyle": "--", "linewidth": 0.5}
         axs3.plot(
-            [delta_r[i, 0]] * 2, [delta_r[i, 1]] * 2, [-30, delta_r[i, 2]], **options
+            [delta_r[i, 0]] * 2,
+            [delta_r[i, 1]] * 2,
+            [-30, delta_r[i, 2]],
+            **options,
         )
         axs3.plot(
-            [delta_r[i, 0]] * 2, [-30, delta_r[i, 1]], [delta_r[i, 2]] * 2, **options
+            [delta_r[i, 0]] * 2,
+            [-30, delta_r[i, 1]],
+            [delta_r[i, 2]] * 2,
+            **options,
         )
         axs3.plot(
-            [-30, delta_r[i, 0]], [delta_r[i, 1]] * 2, [delta_r[i, 2]] * 2, **options
+            [-30, delta_r[i, 0]],
+            [delta_r[i, 1]] * 2,
+            [delta_r[i, 2]] * 2,
+            **options,
         )
 
     for idx_0, idx_1 in zip([0, 1, 2, 0, 1, 2], [1, 2, 0, 3, 3, 3]):
@@ -105,9 +124,9 @@ def mms_pl_config(r_mms):
     axs3.set_xlim([-30, 30])
     axs3.set_ylim([30, -30])
     axs3.set_zlim([-30, 30])
-    axs3.set_xlabel("$\\Delta X$ [km]")
-    axs3.set_ylabel("$\\Delta Y$ [km]")
-    axs3.set_zlabel("$\\Delta Z$ [km]")
+    axs3.set_xlabel(r"$\Delta X$ [km]")
+    axs3.set_ylabel(r"$\Delta Y$ [km]")
+    axs3.set_zlabel(r"$\Delta Z$ [km]")
 
     axs3.legend(["MMS1", "MMS2", "MMS3", "MMS4"], frameon=False)
 

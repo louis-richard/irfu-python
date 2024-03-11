@@ -2,23 +2,24 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import os
 import json
-import subprocess
+import os
+import shutil
 
 # Local imports
+from .db_init import MMS_CFG_PATH
 from .list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.3.11"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def copy_files(var, tint, mms_id, tar_path: str = "./data/"):
-    r"""Copy files from local_data_dir as defined in config.json to the target
+def copy_files(var, tint, mms_id, tar_path: str, data_path: str = ""):
+    r"""Copy files from local as defined in config.json to the target
     path.
 
     Parameters
@@ -33,8 +34,10 @@ def copy_files(var, tint, mms_id, tar_path: str = "./data/"):
         Time interval.
     mms_id : str or int
         Index of the spacecraft.
-    tar_path : str, Optional
-        Target path. Default is './data/'.
+    tar_path : str
+        Target path to put files.
+    data_path : str, Optional
+        Local path to MMS data. Default uses that provided in pyrfu.mms.config.json
 
     """
 
@@ -42,33 +45,30 @@ def copy_files(var, tint, mms_id, tar_path: str = "./data/"):
     tar_path = os.path.normpath(tar_path)
     assert os.path.exists(tar_path), f"{tar_path} doesn't exist!!"
 
-    # Get the local_data_dir path from config.json.
-    pkg_path = os.path.dirname(os.path.abspath(__file__))
+    if not data_path:
+        # Read the current version of the MMS configuration file
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+            config = json.load(fs)
 
-    # Read the current version of the MMS configuration file
-    with open(os.path.join(pkg_path, "config.json"), "r") as fs:
-        config = json.load(fs)
+        data_path = os.path.normpath(config["local"])
+    else:
+        data_path = os.path.normpath(data_path)
 
-    # Normalize the local_data_dir path and make sure it exists.
-    mms_path = os.path.normpath(config["local_data_dir"]) + "/"
-    assert os.path.exists(mms_path), f"{mms_path} doesn't exist!!"
+    # Make sure the local path exists.
+    assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
 
     # List files that matches the requirements (instrument, date level,
     # data type, data rate) in the time interval for the target spacecraft.
-    files = list_files(tint, mms_id, var)
+    files = list_files(tint, mms_id, var, data_path=data_path)
 
     for file in files:
-        relative_path = os.path.split(file)[0].replace(mms_path, "")
-        path = os.path.join(tar_path, relative_path)
-        target_file = os.path.join(path, os.path.split(file)[1])
+        # Make paths
+        relative_path = os.path.relpath(file, data_path)
+        path = os.path.join(tar_path, os.path.dirname(relative_path))
+        target_file = os.path.join(path, os.path.basename(file))
 
-        if not os.path.exists(path):
-            os.makedirs(path)
+        # Create directories in target path
+        os.makedirs(path, exist_ok=True)
 
-        s_proc = subprocess.Popen(
-            f"cp {file} {target_file}", stdout=subprocess.PIPE, shell=True
-        )
-        (_, _) = s_proc.communicate()
-
-        # This makes the wait possible
-        _ = s_proc.wait()
+        # Copy file
+        shutil.copy2(file, target_file)

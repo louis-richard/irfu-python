@@ -10,9 +10,9 @@ import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -88,16 +88,25 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
 
     # Average omni flux over all spacecraft and define common energy grid
     for i_p, flux_ in enumerate(omni_vars):
-        idx_closest = _idx_closest(flux_.energy.data, ener_refprobe.energy.data)
+        idx_closest = _idx_closest(
+            flux_.energy.data,
+            ener_refprobe.energy.data,
+        )
         # energy_data[:, pp] = flux_.energy.data[0:ne_ref]
         omni_spec_data[0:nt_ref, :, i_p] = flux_.data[0:nt_ref, idx_closest]
 
     # Average omni flux over all spacecraft
     for i_t, i_e in itertools.product(range(nt_ref), range(ne_ref)):
         if method.lower() == "mean":
-            omni_spec[i_t, i_e] = np.nanmean(omni_spec_data[i_t, i_e, :], axis=0)
+            omni_spec[i_t, i_e] = np.nanmean(
+                omni_spec_data[i_t, i_e, :],
+                axis=0,
+            )
         else:
-            omni_spec[i_t, i_e] = np.nansum(omni_spec_data[i_t, i_e, :], axis=0)
+            omni_spec[i_t, i_e] = np.nansum(
+                omni_spec_data[i_t, i_e, :],
+                axis=0,
+            )
 
     omni_spec = xr.DataArray(
         omni_spec,

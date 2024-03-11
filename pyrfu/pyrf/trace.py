@@ -4,11 +4,14 @@
 # 3rd party imports
 import xarray as xr
 
+# Local imports
+from .ts_scalar import ts_scalar
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2021"
+__copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.3.7"
+__version__ = "2.4.2"
 __status__ = "Prototype"
 
 
@@ -52,15 +55,16 @@ def trace(inp):
 
     """
 
-    inp_data = inp.data
-    out_data = inp_data[:, 0, 0] + inp_data[:, 1, 1] + inp_data[:, 2, 2]
+    # Check input type
+    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
 
-    # Attributes
-    attrs = inp.attrs
+    # Check that inp is a tensor
+    message = "inp must be a time series of a tensor"
+    assert inp.ndim == 3 and inp.shape[1] == 3 and inp.shape[1] == 3, message
 
-    # Change tensor order from 2 (matrix) to 0 (scalar)
-    attrs["TENSOR_ORDER"] = 0
+    out_data = inp.data[:, 0, 0] + inp.data[:, 1, 1] + inp.data[:, 2, 2]
 
-    out = xr.DataArray(out_data, coords=[inp.time.data], dims=["time"], attrs=attrs)
+    # Construct time series
+    out = ts_scalar(inp.time.data, out_data, inp.attrs)
 
     return out
