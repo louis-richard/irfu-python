@@ -65,7 +65,7 @@ def plot_spectr(
         fig = plt.gcf()
 
     if not cmap or isinstance(cmap, str):
-        cmap = mpl.cm.get_cmap(cmap)
+        cmap = mpl.colormaps.get_cmap(cmap)
     else:
         raise TypeError(
             "cmap must be a string. "
