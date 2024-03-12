@@ -15,7 +15,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def pl_tx(axis, inp_list, comp, **kwargs):
+def pl_tx(axis, inp_list, comp, colors: str = "mms", **kwargs):
     r"""Line plot of 4 spacecraft time series.
 
     Parameters
@@ -26,6 +26,8 @@ def pl_tx(axis, inp_list, comp, **kwargs):
         Time series to plot
     comp: int
         Index of the column to plot.
+    colors: {'cluster', 'mms'}, Optional
+        Color cycle to use. Default uses MMS
 
     Other Parameters
     ----------------
@@ -37,9 +39,10 @@ def pl_tx(axis, inp_list, comp, **kwargs):
     if axis is None:
         _, axis = plt.subplots(1)
 
-    colors = ["blue", "green", "red", "k"]
+    if colors not in ["cluster", "mms"]:
+        raise NotImplementedError("Unknonw color cycle")
 
-    for inp, color in zip(inp_list, colors):
+    for i, inp in enumerate(inp_list):
         if len(inp.shape) == 3:
             data = np.reshape(
                 inp.data,
@@ -51,7 +54,7 @@ def pl_tx(axis, inp_list, comp, **kwargs):
             data = inp.data
 
         time = inp.time
-        axis.plot(time, data[:, comp], color=color, **kwargs)
+        axis.plot(time, data[:, comp], color=f"{colors}:{colors}{i+1:d}", **kwargs)
 
     locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
     formatter = mdates.ConciseDateFormatter(locator)
