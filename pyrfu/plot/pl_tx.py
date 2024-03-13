@@ -54,7 +54,7 @@ def pl_tx(axis, inp_list, comp, colors: str = "mms", **kwargs):
             data = inp.data
 
         time = inp.time
-        axis.plot(time, data[:, comp], color=f"{colors}:{colors}{i+1:d}", **kwargs)
+        axis.plot(time, data[:, comp], color=f"{colors}:{colors}{i + 1:d}", **kwargs)
 
     locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
     formatter = mdates.ConciseDateFormatter(locator)
