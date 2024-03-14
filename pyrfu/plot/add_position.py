@@ -3,10 +3,12 @@
 
 # 3rd party imports
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.dates import num2date
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from ..pyrf import t_eval
+from ..pyrf.t_eval import t_eval
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -17,8 +19,8 @@ __status__ = "Prototype"
 
 
 def add_position(
-    ax,
-    r_xyz,
+    ax: Axes,
+    r_xyz: DataArray,
     spine: float = 20,
     position: str = "top",
     fontsize: float = 10,
@@ -27,20 +29,20 @@ def add_position(
 
     Parameters
     ----------
-    ax : matplotlib.pyplot.subplotsaxes
-        Reference axis.
+    ax : matplotlib.axes._axes.Axes
+        Axis where to label the spacecraft position.
     r_xyz : xarray.DataArray
         Time series of the spacecraft position.
     spine : float, Optional
-        Relative position of the axes. Default is spines=20.
+        Relative position of the axes. Default is 20.
     position : str, Optional
-        Axis position wtr to the reference axis. Default is position="top".
+        Axis position wtr to the reference axis. Default is "top".
     fontsize : float, Optional
         xticks label font size. Default is 10.
 
     Returns
     -------
-    axr : matplotlib.pyplot.subplotsaxes
+    axr : matplotlib.axes._axes.Axes
         Twin axis with spacecraft position as x-axis label.
 
     """

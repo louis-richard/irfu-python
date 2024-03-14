@@ -6,9 +6,9 @@ import random
 import unittest
 
 # 3rd party imports
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from ddt import data, ddt, unpack
+from matplotlib.axes import Axes
 
 # Local imports
 from .. import plot
@@ -48,7 +48,15 @@ class PlotLineTestCase(unittest.TestCase):
     @unpack
     def test_plot_line_output(self, axis, inp):
         result = plot.plot_line(axis, inp)
-        self.assertIsInstance(result, mpl.axes.Axes)
+        self.assertIsInstance(result, Axes)
+
+
+@ddt
+class AddPositionTestCase(unittest.TestCase):
+    @data(generate_ts(64.0, 100, tensor_order=1))
+    def test_add_position_output(self, value):
+        result = plot.add_position(plt.subplots(1)[1], value)
+        self.assertIsInstance(result, Axes)
 
 
 if __name__ == "__main__":
