@@ -60,6 +60,11 @@ def _make_path_local(
     str
         Full path of the data file.
 
+    Raises
+    ------
+    FileNotFoundError
+        If the local data directory doesn't exist.
+
     """
 
     if not data_path:
@@ -71,7 +76,8 @@ def _make_path_local(
     else:
         data_path = os.path.normpath(data_path)
 
-    assert os.path.exists(data_path), "local data directory doesn't exist!"
+    if not os.path.exists(data_path):
+        raise FileNotFoundError("local data directory doesn't exist!")
 
     path_list = [
         data_path,

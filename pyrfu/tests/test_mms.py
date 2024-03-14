@@ -217,9 +217,15 @@ class CalcEpsilonTestCase(unittest.TestCase):
 
 
 class DbInitTestCase(unittest.TestCase):
-    def test_db_init_inpput(self):
+    def test_db_init_input(self):
         with self.assertRaises(NotImplementedError):
             mms.db_init(default="bazinga!")
+
+        with self.assertRaises(FileNotFoundError):
+            mms.db_init(local="bazinga!")
+
+        with self.assertRaises(ValueError):
+            mms.db_init(sdc="bazinga!")
 
     def test_db_init_output(self):
         self.assertIsNone(mms.db_init(local=os.getcwd()))
@@ -227,14 +233,20 @@ class DbInitTestCase(unittest.TestCase):
 
 @ddt
 class Def2PsdTestCase(unittest.TestCase):
-    @data(
-        ("I AM GROOT!!", "s^3/cm^6"),
-        ("ions", "bazinga"),
-    )
-    @unpack
-    def test_def2psd_input(self, species, units):
+    @data(np.random.random((100, 32, 32, 16)))
+    def test_def2psd_input(self, value):
+        with self.assertRaises(TypeError):
+            mms.def2psd(value)
+
+    @data(generate_vdf(64.0, 100, (32, 32, 16), False, "I AM GROOT!!", "s^3/cm^6"))
+    def test_def2psd_input_mass_ratio(self, value):
         with self.assertRaises(ValueError):
-            mms.def2psd(generate_vdf(64.0, 100, (32, 32, 16), False, species, units))
+            mms.def2psd(value)
+
+    @data(generate_vdf(64.0, 100, (32, 32, 16), False, "ions", "bazinga"))
+    def test_def2psd_input_convert(self, value):
+        with self.assertRaises(ValueError):
+            mms.def2psd(value)
 
     @idata(
         itertools.product(

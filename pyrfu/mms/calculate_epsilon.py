@@ -6,7 +6,8 @@ from typing import Optional
 # 3rd party imports
 import numpy as np
 from scipy import constants
-from xarrary.core import DataArray, Dataset
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
 
 # Local imports
 from ..pyrf.resample import resample
