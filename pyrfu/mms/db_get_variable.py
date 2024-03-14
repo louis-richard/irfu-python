@@ -3,10 +3,13 @@
 
 # Built-in imports
 import logging
+from typing import Optional
 
-from .get_variable import get_variable
+# 3rd party imports
+from xarray.core.dataarray import DataArray
 
 # Local imports
+from .get_variable import get_variable
 from .list_files import list_files
 
 __author__ = "Louis Richard"
@@ -26,12 +29,12 @@ logging.basicConfig(
 
 
 def db_get_variable(
-    dataset_name,
-    cdf_name,
-    tint,
-    verbose: bool = True,
-    data_path: str = "",
-):
+    dataset_name: str,
+    cdf_name: str,
+    tint: list,
+    verbose: Optional[bool] = True,
+    data_path: Optional[str] = "",
+) -> DataArray:
     r"""Get variable in the cdf file.
 
     Parameters
@@ -40,7 +43,7 @@ def db_get_variable(
         Name of the dataset.
     cdf_name : str
         Name of the target field in cdf file.
-    tint : array_like
+    tint : list
         Time interval.
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
@@ -49,8 +52,13 @@ def db_get_variable(
 
     Returns
     -------
-    out : xarray.DataArray
+    out : DataArray
        Variable of the target variable.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no files are found for the dataset.
 
     """
 
@@ -67,6 +75,9 @@ def db_get_variable(
         pass
 
     files = list_files(tint, probe, var, data_path=data_path)
+
+    if not files:
+        raise FileNotFoundError(f"No files found for {cdf_name} in {data_path}")
 
     if verbose:
         logging.info("Loading %s...", cdf_name)

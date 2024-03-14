@@ -5,7 +5,9 @@
 import json
 import logging
 import os
+from typing import Literal, Optional
 
+# Third-party imports
 import keyring
 
 __author__ = "Louis Richard"
@@ -26,12 +28,12 @@ MMS_CFG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.
 
 
 def db_init(
-    default: str = "local",
-    local: str = "../data",
-    sdc: str = "public",
-    sdc_username: str = "username",
-    sdc_password: str = "password",
-    aws: str = "",
+    default: Optional[Literal["local", "sdc", "aws"]] = "local",
+    local: Optional[str] = "../data",
+    sdc: Optional[str] = "public",
+    sdc_username: Optional[str] = "username",
+    sdc_password: Optional[str] = "password",
+    aws: Optional[str] = "",
 ):
     r"""Setup the default resource to access MMS data. MMS SDC username and password
     are stored in secured credentials in encrypted file in your home directory.
@@ -40,7 +42,7 @@ def db_init(
     ----------
     default : {"local", "sdc", "aws"}, Optional
         Name of the default resource to access the MMS data. Default is local.
-    local : str
+    local : str, Optional
         Local path to MMS data. Default is /Volumes/mms.
     sdc : {"public", "sitl"}, Optional
         Rights to access MMS data from SDC. If "sitl" please make sure to register
@@ -52,6 +54,15 @@ def db_init(
     aws : str, Optional
         Bucket name and prefix to MMS data in AWS S3. Default is empty.
 
+    Raises
+    ------
+    NotImplementedError
+        If the default resource is not implemented.
+    FileNotFoundError
+        If the local path doesn't exist.
+    ValueError
+        If the SDC rights are not "public" or "sitl".
+
     """
 
     # Check default
@@ -60,10 +71,13 @@ def db_init(
 
     # Normalize the path and make sure that it exists
     local = os.path.normpath(os.path.abspath(local))
-    assert os.path.exists(local), f"{local} doesn't exists!!"
+
+    if not os.path.exists(local):
+        raise FileNotFoundError(f"{local} doesn't exists!!")
 
     # Check MMS SDC rights
-    assert sdc.lower() in ["public", "sitl"], "sdc must be 'public' or 'sitl'!!"
+    if sdc.lower() not in ["public", "sitl"]:
+        raise ValueError("sdc must be 'public' or 'sitl'!!")
 
     config = {
         "default": default.lower(),

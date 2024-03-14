@@ -4,6 +4,10 @@
 # Built-in imports
 import json
 import logging
+from typing import Literal, Optional
+
+# 3rd party imports
+from xarray.core.dataarray import DataArray
 
 # Local imports
 from ..pyrf.ts_append import ts_append
@@ -43,13 +47,13 @@ def _tokenize(dataset_name):
 
 
 def db_get_ts(
-    dataset_name,
-    cdf_name,
-    tint,
-    verbose: bool = True,
-    data_path: str = "",
-    source: str = "",
-):
+    dataset_name: str,
+    cdf_name: str,
+    tint: list,
+    verbose: Optional[bool] = True,
+    data_path: Optional[str] = "",
+    source: Optional[Literal["default", "local", "sdc", "aws"]] = "default",
+) -> DataArray:
     r"""Get variable time series in the cdf file.
 
     Parameters
@@ -58,19 +62,24 @@ def db_get_ts(
         Name of the dataset.
     cdf_name : str
         Name of the target field in cdf file.
-    tint : array_like
+    tint : list
         Time interval.
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
-    source: {"local", "sdc", "aws"}, Optional
-        Ressource to fetch data from. Default uses default in `pyrfu/mms/config.json`
+    source: {"default", "local", "sdc", "aws"}, Optional
+        Resource to fetch data from. Default uses default in `pyrfu/mms/config.json`
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the target variable.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no files are found for the dataset name.
 
     """
 
@@ -80,13 +89,14 @@ def db_get_ts(
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
-    source = source if source else config.get("default")
+    source = source if source != "default" else config.get(source)
 
     file_names, sdc_session, headers = _list_files_sources(
         source, tint, mms_id, var, data_path
     )
 
-    assert file_names, "No files found. Make sure that the data_path is correct"
+    if not file_names:
+        raise FileNotFoundError(f"No files found for {dataset_name}")
 
     if verbose:
         logging.info("Loading %s...", cdf_name)

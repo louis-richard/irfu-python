@@ -7,6 +7,7 @@ import os
 
 # import subprocess
 import shutil
+from typing import Literal, Optional, Union
 
 # Local imports
 from .db_init import MMS_CFG_PATH
@@ -20,7 +21,13 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def copy_files_ancillary(product, tint, mms_id, tar_path: str, data_path: str = ""):
+def copy_files_ancillary(
+    product: Literal["predatt", "predeph", "defatt", "defeph"],
+    tint: list,
+    mms_id: Union[int, str],
+    tar_path: str,
+    data_path: Optional[str] = "",
+):
     r"""Copy ancillary files from local as defined in config.json to
     the target path.
 
@@ -28,7 +35,7 @@ def copy_files_ancillary(product, tint, mms_id, tar_path: str, data_path: str = 
     ----------
     product : {"predatt", "predeph", "defatt", "defeph"}
         Ancillary type.
-    tint : list of str
+    tint : list
         Time interval.
     mms_id : str or int
         Index of the spacecraft.

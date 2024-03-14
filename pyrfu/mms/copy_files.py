@@ -5,6 +5,7 @@
 import json
 import os
 import shutil
+from typing import Optional, Union
 
 # Local imports
 from .db_init import MMS_CFG_PATH
@@ -18,7 +19,13 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def copy_files(var, tint, mms_id, tar_path: str, data_path: str = ""):
+def copy_files(
+    var: dict,
+    tint: list,
+    mms_id: Union[int, str],
+    tar_path: str,
+    data_path: Optional[str] = "",
+):
     r"""Copy files from local as defined in config.json to the target
     path.
 
@@ -30,9 +37,9 @@ def copy_files(var, tint, mms_id, tar_path: str, data_path: str = ""):
             * var["tmmode"] : data rate.
             * var["lev"] : data level.
             * var["dtype"] : data type.
-    tint : list of str
+    tint : list
         Time interval.
-    mms_id : str or int
+    mms_id : int or str
         Index of the spacecraft.
     tar_path : str
         Target path to put files.
