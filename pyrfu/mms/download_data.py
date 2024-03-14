@@ -8,6 +8,7 @@ import os
 import warnings
 from shutil import copy, copyfileobj
 from tempfile import NamedTemporaryFile
+from typing import Optional, Union
 
 # 3rd party imports
 import tqdm
@@ -33,8 +34,33 @@ logging.basicConfig(
 )
 
 
-def _make_path_local(file, var, mms_id, data_path: str = ""):
-    r"""Construct path of the data file using the standard convention."""
+def _make_path_local(
+    file: dict, var: dict, mms_id: Union[str, int], data_path: Optional[str] = ""
+):
+    r"""Construct path of the data file using the standard convention.
+
+    Parameters
+    ----------
+    file : dict
+        File information.
+    var : dict
+        Variable information.
+    mms_id : str or int
+        Spacecraft index.
+    data_path : str, Optional
+        Path of MMS data. If None use `pyrfu/mms/config.json`.
+
+    Returns
+    -------
+    str
+        Full path of the data file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the local data directory doesn't exist.
+
+    """
 
     file_date = parse(file["timetag"])
 
@@ -47,7 +73,8 @@ def _make_path_local(file, var, mms_id, data_path: str = ""):
     else:
         data_path = os.path.normpath(data_path)
 
-    assert os.path.exists(data_path), "local data directory doesn't exist!"
+    if not os.path.exists(data_path):
+        raise FileNotFoundError("local data directory doesn't exist!")
 
     path_list = [
         data_path,
@@ -62,13 +89,12 @@ def _make_path_local(file, var, mms_id, data_path: str = ""):
     if var["tmmode"].lower() == "brst":
         path_list.append(file_date.strftime("%d"))
 
-    out_path = os.path.join(*path_list)
-    out_file = os.path.join(*path_list, file["file_name"])
-
-    return out_path, out_file
+    return os.path.join(*path_list, file["file_name"])
 
 
-def download_data(var_str, tint, mms_id, data_path: str = ""):
+def download_data(
+    var_str: str, tint: list, mms_id: Union[str, int], data_path: Optional[str] = ""
+):
     r"""Downloads files containing field `var_str` over the time interval
     `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
 
@@ -76,7 +102,7 @@ def download_data(var_str, tint, mms_id, data_path: str = ""):
     ----------
     var_str : str
         Input key of variable.
-    tint : list of str
+    tint : list
         Time interval.
     mms_id : str or int
         Index of the target spacecraft.
@@ -91,7 +117,8 @@ def download_data(var_str, tint, mms_id, data_path: str = ""):
     sdc_session, headers, _ = _login_lasp()
 
     for file in files_in_interval:
-        out_path, out_file = _make_path_local(file, var, mms_id, data_path)
+        out_file = _make_path_local(file, var, mms_id, data_path)
+        out_path = os.path.dirname(out_file)
 
         logging.info(
             "Downloading %s from %s...", os.path.basename(out_file), file["url"]
