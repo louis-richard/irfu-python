@@ -59,5 +59,60 @@ class AddPositionTestCase(unittest.TestCase):
         self.assertIsInstance(result, Axes)
 
 
+@ddt
+class PlTxTestCase(unittest.TestCase):
+    @data(
+        ([generate_ts(64.0, 100, tensor_order=3) for _ in range(4)], "cluster"),
+        ([generate_ts(64.0, 100, tensor_order=0) for _ in range(4)], "bazinga"),
+    )
+    @unpack
+    def test_pl_tx_input(self, value, colors):
+        with self.assertRaises(NotImplementedError):
+            plot.pl_tx(plt.subplots(1)[1], value, colors=colors)
+
+    @data(
+        (
+            None,
+            [
+                generate_ts(64.0, 100, tensor_order=0),
+                generate_ts(64.0, 100, tensor_order=0),
+                generate_ts(64.0, 100, tensor_order=0),
+                generate_ts(64.0, 100, tensor_order=0),
+            ],
+        ),
+        (
+            plt.subplots(1)[1],
+            [
+                generate_ts(64.0, 100, tensor_order=0),
+                generate_ts(64.0, 100, tensor_order=0),
+                generate_ts(64.0, 100, tensor_order=0),
+                generate_ts(64.0, 100, tensor_order=0),
+            ],
+        ),
+        (
+            plt.subplots(1)[1],
+            [
+                generate_ts(64.0, 100, tensor_order=1),
+                generate_ts(64.0, 100, tensor_order=1),
+                generate_ts(64.0, 100, tensor_order=1),
+                generate_ts(64.0, 100, tensor_order=1),
+            ],
+        ),
+        (
+            plt.subplots(1)[1],
+            [
+                generate_ts(64.0, 100, tensor_order=2),
+                generate_ts(64.0, 100, tensor_order=2),
+                generate_ts(64.0, 100, tensor_order=2),
+                generate_ts(64.0, 100, tensor_order=2),
+            ],
+        ),
+    )
+    @unpack
+    def test_pl_tx_output(self, ax, value):
+        result = plot.pl_tx(ax, value, 0)
+        self.assertIsInstance(result, Axes)
+
+
 if __name__ == "__main__":
     unittest.main()
