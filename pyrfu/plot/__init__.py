@@ -167,14 +167,14 @@ mpl.colormaps.register(
 )
 
 
-def set_color_cycle(pal: str = ""):
+def set_color_cycle(pal: str = "") -> (list, str):
     r"""Sets color cycle.
 
     Parameters
     ----------
-    pal : {"Pyrfu", "Oceanic", "Tab", None}. Optional
+    pal : {"Pyrfu", "Oceanic", "Tab", ""}. Optional
       The palette to use. "Tab" provides the default matplotlib palette. Default is
-      None (resets to default palette).
+      "" (resets to default palette).
     """
 
     if pal.lower() == "pyrfu":
@@ -229,6 +229,8 @@ def set_color_cycle(pal: str = ""):
 
     mpl.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
     mpl.rcParams["image.cmap"] = cmap
+
+    return colors, cmap
 
 
 def use_pyrfu_style(

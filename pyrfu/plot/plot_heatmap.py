@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import List, Union
+
+import matplotlib.pyplot as plt
+
 # 3rd party imports
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.colorbar import Colorbar
+from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 __author__ = "Louis Richard"
@@ -14,14 +21,14 @@ __status__ = "Prototype"
 
 
 def plot_heatmap(
-    ax,
-    data,
-    row_labels,
-    col_labels,
+    ax: Axes,
+    data: Union[np.ndarray, List[List[float]]],
+    row_labels: Union[np.ndarray, List[str]],
+    col_labels: Union[np.ndarray, List[str]],
     cbar_kw: dict = None,
     cbarlabel: str = "",
     **kwargs,
-):
+) -> (AxesImage, Colorbar):
     r"""Creates a heatmap from a numpy array and two lists of labels.
 
     Parameters
@@ -49,6 +56,24 @@ def plot_heatmap(
         Colorbar.
 
     """
+
+    if ax is None:
+        _, ax = plt.subplots(1)
+
+    if not isinstance(data, (list, np.ndarray)):
+        raise TypeError("row_labels must be a list or numpy.ndarray")
+
+    if not isinstance(row_labels, (list, np.ndarray)):
+        raise TypeError("row_labels must be a list or numpy.ndarray")
+
+    if not isinstance(col_labels, (list, np.ndarray)):
+        raise TypeError("col_labels must be a list or numpy.ndarray")
+
+    if data.shape[0] != len(row_labels):
+        raise ValueError("row_labels must have the same length as data")
+
+    if data.shape[1] != len(col_labels):
+        raise ValueError("col_labels must have the same length as data")
 
     # Plot the heatmap
     if cbar_kw is None:

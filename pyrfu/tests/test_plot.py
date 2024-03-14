@@ -5,10 +5,14 @@
 import random
 import unittest
 
-# 3rd party imports
 import matplotlib.pyplot as plt
+
+# 3rd party imports
+import numpy as np
 from ddt import data, ddt, unpack
 from matplotlib.axes import Axes
+from matplotlib.colorbar import Colorbar
+from matplotlib.image import AxesImage
 
 # Local imports
 from .. import plot
@@ -129,6 +133,101 @@ class ZoomTestCase(unittest.TestCase):
         self.assertIsInstance(result, tuple)
         self.assertIsInstance(result[0], Axes)
         self.assertIsInstance(result[1], Axes)
+
+
+@ddt
+class SetColorCycleTestCase(unittest.TestCase):
+    @data("pyrfu", "oceanic", "tab", "")
+    def set_color_cycle_input(self, value):
+        result = plot.set_color_cycle(value)
+        self.asssertIsInstance(result[0], list)
+        self.asssertIsInstance(result[1], str)
+
+
+@ddt
+class PlotHeatmapTestCase(unittest.TestCase):
+    @data(
+        (plt.subplots(1)[1], "bazinga", np.random.rand(10), np.random.rand(10)),
+        (plt.subplots(1)[1], np.random.rand(10, 10), "bazinga", np.random.rand(10)),
+        (plt.subplots(1)[1], np.random.rand(10, 10), np.random.rand(10), "bazinga"),
+    )
+    @unpack
+    def test_plot_heatmap_input_types(self, ax, data, x, y):
+        with self.assertRaises(TypeError):
+            plot.plot_heatmap(ax, data, x, y)
+
+    @data(
+        (
+            plt.subplots(1)[1],
+            np.random.rand(10, 10),
+            np.random.rand(9),
+            np.random.rand(10),
+        ),
+        (
+            plt.subplots(1)[1],
+            np.random.rand(10, 10),
+            np.random.rand(10),
+            np.random.rand(9),
+        ),
+    )
+    @unpack
+    def test_plot_heatmap_input_shape(self, ax, data, x, y):
+        with self.assertRaises(ValueError):
+            plot.plot_heatmap(ax, data, x, y)
+
+    @data(
+        (None, np.random.rand(10, 10), np.random.rand(10), np.random.rand(10)),
+        (
+            plt.subplots(1)[1],
+            np.random.rand(10, 10),
+            np.random.rand(10),
+            np.random.rand(10),
+        ),
+    )
+    @unpack
+    def test_plot_heatmap_output(self, ax, data, x, y):
+        result = plot.plot_heatmap(ax, data, x, y)
+        self.assertIsInstance(result[0], AxesImage)
+        self.assertIsInstance(result[1], Colorbar)
+
+
+@ddt
+class AnnotateHeatmapTestCase(unittest.TestCase):
+    def test_annotate_heatmap_input(self):
+        _, ax = plt.subplots(1)
+        # Create image
+        im, _ = plot.plot_heatmap(
+            ax, np.random.rand(10, 10), np.random.rand(10), np.random.rand(10)
+        )
+        with self.assertRaises(TypeError):
+            plot.annotate_heatmap(im, "bazinga")
+
+    @data(
+        (
+            plt.subplots(1)[1],
+            np.random.rand(10, 10),
+            np.random.rand(10),
+            np.random.rand(10),
+            random.random(),
+        ),
+        (
+            plt.subplots(1)[1],
+            np.random.rand(10, 10),
+            np.random.rand(10),
+            np.random.rand(10),
+            None,
+        ),
+    )
+    @unpack
+    def test_annotate_heatmap_output(self, ax, data, x, y, threshold):
+        # Create image
+        im, _ = plot.plot_heatmap(ax, data, x, y)
+
+        # Test with data provided
+        plot.annotate_heatmap(im, data, threshold=threshold)
+
+        # Test with no data provided
+        plot.annotate_heatmap(im)
 
 
 if __name__ == "__main__":
