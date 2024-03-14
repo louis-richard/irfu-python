@@ -114,5 +114,22 @@ class PlTxTestCase(unittest.TestCase):
         self.assertIsInstance(result, Axes)
 
 
+@ddt
+class ZoomTestCase(unittest.TestCase):
+    @data((None, plt.subplots(2)[1][1]), (plt.subplots(2)[1][0], None))
+    @unpack
+    def test_zoom_input(self, ax1, ax2):
+        with self.assertRaises(TypeError):
+            plot.zoom(ax1, ax2)
+
+    @data((plt.subplots(2)[1][0], plt.subplots(2)[1][1]))
+    @unpack
+    def test_zoom_output(self, ax1, ax2):
+        result = plot.zoom(ax1, ax2)
+        self.assertIsInstance(result, tuple)
+        self.assertIsInstance(result[0], Axes)
+        self.assertIsInstance(result[1], Axes)
+
+
 if __name__ == "__main__":
     unittest.main()

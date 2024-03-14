@@ -24,7 +24,7 @@ def add_position(
     spine: float = 20,
     position: str = "top",
     fontsize: float = 10,
-):
+) -> Axes:
     r"""Add extra axes to plot spacecraft position.
 
     Parameters
