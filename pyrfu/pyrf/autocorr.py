@@ -1,27 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Optional
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .calc_dt import calc_dt
+from pyrfu.pyrf.calc_dt import calc_dt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def autocorr(inp, maxlags: int = None, normed: bool = True):
-    r"""Compute the autocorrelation function
+def autocorr(
+    inp: DataArray, maxlags: Optional[int] = None, normed: Optional[bool] = True
+) -> DataArray:
+    r"""Compute the autocorrelation function.
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Input time series (scalar of vector).
     maxlags : int, Optional
         Maximum lag in number of points. Default is None (i.e., len(inp) - 1).
@@ -30,16 +36,26 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Autocorrelation function
 
-    """
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray
+    ValueError
+        If inp is not a scalar or a vector
+    ValueError
+        If maxlags is not None or strictly positive < len(inp)
 
+    """
     # Check input type
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    if not isinstance(inp, DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
 
     # Check input dimension (scalar or vector)
-    assert inp.ndim < 3, "inp must be a scalar or a vector"
+    if inp.ndim > 2:
+        raise ValueError("inp must be a scalar or a vector")
 
     if inp.ndim == 1:
         x = inp.data[:, None]
@@ -69,16 +85,10 @@ def autocorr(inp, maxlags: int = None, normed: bool = True):
         out_data[:, i] = correls[lags >= 0]
 
     if inp.ndim == 1:
-        out = xr.DataArray(
-            np.squeeze(out_data),
-            coords=[lags[lags >= 0]],
-            dims=["lag"],
-        )
+        coords = [lags[lags >= 0]]
+        dims = ["lag"]
     else:
-        out = xr.DataArray(
-            out_data,
-            coords=[lags[lags >= 0], inp[inp.dims[1]].data],
-            dims=["lag", inp.dims[1]],
-        )
+        coords = [lags[lags >= 0], inp[inp.dims[1]].data]
+        dims = ["lag", str(inp.dims[1])]
 
-    return out
+    return xr.DataArray(np.squeeze(out_data), coords=coords, dims=dims)
