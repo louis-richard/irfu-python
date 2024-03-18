@@ -164,7 +164,7 @@ ignored-modules = "scipy,cdflib"
 
 [tool.mypy]
 enable_error_code = "redundant-self"
-files = "xarray"
+files = "pyrfu"
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
