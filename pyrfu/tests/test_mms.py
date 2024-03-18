@@ -719,10 +719,53 @@ class PsdMomentsTestCase(unittest.TestCase):
 @ddt
 class PsdRebinTestCase(unittest.TestCase):
     @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
+    def test_psd_rebin_vdf_type(self, vdf):
+        with self.assertRaises(TypeError):
+            mms.psd_rebin(
+                vdf.data,
+                vdf.phi.data,
+                vdf.attrs["energy0"],
+                vdf.attrs["energy1"],
+                vdf.attrs["esteptable"],
+            )
+
+    @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
+    def test_psd_rebin_phi_type(self, vdf):
+        with self.assertRaises(TypeError):
+            mms.psd_rebin(
+                vdf.data,
+                vdf.phi,
+                vdf.attrs["energy0"],
+                vdf.attrs["energy1"],
+                vdf.attrs["esteptable"],
+            )
+            mms.psd_rebin(
+                vdf.data,
+                vdf.phi.data,
+                vdf.energy[0, :],
+                vdf.attrs["energy1"],
+                vdf.attrs["esteptable"],
+            )
+            mms.psd_rebin(
+                vdf.data,
+                vdf.phi.data,
+                vdf.attrs["energy0"],
+                vdf.energy[1, :],
+                vdf.attrs["esteptable"],
+            )
+            mms.psd_rebin(
+                vdf.data,
+                vdf.phi.data,
+                vdf.attrs["energy0"],
+                vdf.attrs["energy1"],
+                pyrf.ts_scalar(vdf.time.data, vdf.attrs["esteptable"]),
+            )
+
+    @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
     def test_psd_rebin_output(self, vdf):
         result = mms.psd_rebin(
             vdf,
-            vdf.phi,
+            vdf.phi.data,
             vdf.attrs["energy0"],
             vdf.attrs["energy1"],
             vdf.attrs["esteptable"],
@@ -1079,6 +1122,16 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
             mms.list_files_ancillary_sdc(TEST_TINT, random.randint(1, 4), product)
         except requests.exceptions.ReadTimeout:
             pass
+
+
+class VdfProjectionTestCase(unittest.TestCase):
+    def test_vdf_projection_output(self):
+        result = mms.vdf_projection(
+            generate_vdf(64.0, 42, [32, 32, 16], energy01=True), TEST_TINT
+        )
+        self.assertIsInstance(result[0], np.ndarray)
+        self.assertIsInstance(result[1], np.ndarray)
+        self.assertIsInstance(result[2], np.ndarray)
 
 
 if __name__ == "__main__":

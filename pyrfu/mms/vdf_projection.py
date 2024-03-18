@@ -9,14 +9,14 @@ import logging
 import numpy as np
 import xarray as xr
 from scipy import constants
-
-from ..pyrf.iso86012datetime64 import iso86012datetime64
-from ..pyrf.time_clip import time_clip
-from ..pyrf.ts_scalar import ts_scalar
-from ..pyrf.ts_skymap import ts_skymap
+from xarray.core.dataset import Dataset
 
 # Local imports
-from .psd_rebin import psd_rebin
+from pyrfu.mms.psd_rebin import psd_rebin
+from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
+from pyrfu.pyrf.time_clip import time_clip
+from pyrfu.pyrf.ts_scalar import ts_scalar
+from pyrfu.pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -33,7 +33,7 @@ logging.basicConfig(
 )
 
 
-def _coord_sys(coord_sys):
+def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, list):
     x_vec = coord_sys[0, :] / np.linalg.norm(coord_sys[0, :])
     y_vec = coord_sys[1, :] / np.linalg.norm(coord_sys[1, :])
 
@@ -60,8 +60,10 @@ def _coord_sys(coord_sys):
     return x_vec, y_vec, z_vec, changed_xyz
 
 
-def _init(vdf, tint):
-    assert isinstance(vdf, xr.Dataset), "vdf must be a xarray.Dataset"
+def _init(vdf: Dataset, tint: list):
+
+    if not isinstance(vdf, Dataset):
+        raise TypeError("vdf must be a xarray.Dataset")
 
     len_e = 32
 
@@ -105,7 +107,7 @@ def _init(vdf, tint):
         dist = vdf.data.data[t_id, ...]
         dist = dist[None, ...]
         step_table = step_table[t_id]
-        azimuthal = azimuthal[t_id, ...].data
+        azimuthal = azimuthal.data[t_id, ...]
 
         if step_table.data:
             energy_edges = energy1_edges
@@ -114,9 +116,10 @@ def _init(vdf, tint):
 
     elif tint is not None and len(tint) == 2:
         dist = time_clip(vdf.data, tint)
-        step_table = ts_scalar(vdf.time.data, step_table)
-        step_table = time_clip(step_table, tint)
+        step_table = time_clip(ts_scalar(vdf.time.data, step_table), tint)
+        step_table = step_table.data
         azimuthal = time_clip(azimuthal, tint)
+        azimuthal = azimuthal.data
 
         if len(dist.time) > 1 and list(energy0) != list(energy1):
             logging.info("Rebinning distribution.")
@@ -124,12 +127,12 @@ def _init(vdf, tint):
                 dist.time.data,
                 dist.data,
                 time_clip(vdf.energy, tint).data,
-                np.rad2deg(azimuthal.data),
+                np.rad2deg(azimuthal),
                 theta,
             )
             newt, dist, energy, phi = psd_rebin(
                 temp,
-                phi,
+                phi.data,
                 energy0,
                 energy1,
                 step_table,
@@ -145,7 +148,7 @@ def _init(vdf, tint):
             azimuthal = xr.DataArray(
                 phi,
                 coords=[newt, np.arange(phi.shape[1])],
-                dims=["time", "odx"],
+                dims=["time", "idx"],
             )
             len_e = dist.shape[1]
             energy_edges = np.hstack(
@@ -160,7 +163,7 @@ def _init(vdf, tint):
             else:
                 energy_edges = energy0_edges
 
-        dist = dist.data.data
+        dist = dist.data
         azimuthal = azimuthal.data
     else:
         raise ValueError("Invalid time interval")
@@ -264,8 +267,7 @@ def vdf_projection(
     e_lim: float = 20,
     bins_correction: bool = False,
 ):
-    r"""Computes projection of the velocity distribution onto a specified
-    plane.
+    r"""Compute the projection of the velocity distribution onto a specified plane.
 
     Parameters
     ----------
@@ -293,15 +295,14 @@ def vdf_projection(
 
     Returns
     -------
-    v_x : ndarray
+    v_x : numpy.ndarray
         2D grid of the velocities in the x direction.
-    v_y : ndarray
+    v_y : numpy.ndarray
         2D grid of the velocities in the y direction.
-    f_mat : ndarray
+    f_mat : numpy.ndarray
         2D projection of the velocity distribution onto the specified plane
 
     """
-
     specie = vdf.attrs.get("species", "electrons")
     is_des = specie.lower() == "electrons"
 
