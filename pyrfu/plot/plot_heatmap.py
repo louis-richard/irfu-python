@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 
@@ -28,12 +28,12 @@ def plot_heatmap(
     cbar_kw: dict = None,
     cbarlabel: str = "",
     **kwargs,
-) -> (AxesImage, Colorbar):
-    r"""Creates a heatmap from a numpy array and two lists of labels.
+) -> Tuple[AxesImage, Colorbar]:
+    r"""Create a heatmap from a numpy array and two lists of labels.
 
     Parameters
     ----------
-    ax : matplotlib.axes.Axes
+    ax : matplotlib.axes._axes.Axes
         Axis to which the heatmap is plotted.
     data : array_like
         A 2D numpy array of shape (N, M).
@@ -56,7 +56,6 @@ def plot_heatmap(
         Colorbar.
 
     """
-
     if ax is None:
         _, ax = plt.subplots(1)
 
