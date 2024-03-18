@@ -15,15 +15,15 @@ import tqdm
 from dateutil.parser import parse
 
 # Local imports
-from .db_init import MMS_CFG_PATH
-from .get_data import _var_and_cdf_name
-from .list_files_sdc import _login_lasp, list_files_sdc
+from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.get_data import _var_and_cdf_name
+from pyrfu.mms.list_files_sdc import _login_lasp, list_files_sdc
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
@@ -61,7 +61,6 @@ def _make_path_local(
         If the local data directory doesn't exist.
 
     """
-
     file_date = parse(file["timetag"])
 
     if not data_path:
@@ -95,8 +94,10 @@ def _make_path_local(
 def download_data(
     var_str: str, tint: list, mms_id: Union[str, int], data_path: Optional[str] = ""
 ):
-    r"""Downloads files containing field `var_str` over the time interval
-    `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
+    r"""Download files from MMS SDC.
+
+    Download data files containing field `var_str` over the time interval `tint` for
+    the spacecraft `mms_id`. The files are saved to `data_path`.
 
     Parameters
     ----------

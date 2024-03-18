@@ -12,9 +12,9 @@ from xarray.core.dataset import Dataset
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
@@ -43,7 +43,9 @@ def _convert(inp, units, mass_ratio):
 
 
 def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
-    r"""Computes phase space density from differential energy flux as:
+    r"""Compute phase space density from differential energy flux.
+
+    The phase-space density is given by:
 
     .. math:
 
@@ -69,7 +71,6 @@ def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
         If inp is not a xarray.Dataset or xarray.DataArray.
 
     """
-
     if isinstance(inp, Dataset):
         tmp_data = _convert(inp.data.data, inp.data.attrs["UNITS"], _mass_ratio(inp))
         energy = inp.energy.data

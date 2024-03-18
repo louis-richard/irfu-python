@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Literal, Optional
 
-# Third-party imports
+# 3rd party imports
 import keyring
 
 __author__ = "Louis Richard"
@@ -35,8 +35,11 @@ def db_init(
     sdc_password: Optional[str] = "password",
     aws: Optional[str] = "",
 ):
-    r"""Setup the default resource to access MMS data. MMS SDC username and password
-    are stored in secured credentials in encrypted file in your home directory.
+    r"""Manage the MMS data access configuration.
+
+    The default resource to access MMS data, the local path to use, the MMS SDC
+    credentials saved in encrypted file in your home directory, and the Amazon Web
+    Services (AWS) bucket name.
 
     Parameters
     ----------
@@ -64,7 +67,6 @@ def db_init(
         If the SDC rights are not "public" or "sitl".
 
     """
-
     # Check default
     if default.lower() not in ["local", "sdc", "aws"]:
         raise NotImplementedError(f"Resource {default} is not implemented!!")

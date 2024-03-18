@@ -9,17 +9,22 @@ from typing import Literal, Optional
 # 3rd party imports
 from xarray.core.dataarray import DataArray
 
+from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.get_data import (
+    _check_times,
+    _get_file_content_sources,
+    _list_files_sources,
+)
+from pyrfu.mms.get_ts import get_ts
+
 # Local imports
-from ..pyrf.ts_append import ts_append
-from .db_init import MMS_CFG_PATH
-from .get_data import _check_times, _get_file_content_sources, _list_files_sources
-from .get_ts import get_ts
+from pyrfu.pyrf.ts_append import ts_append
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
@@ -82,7 +87,6 @@ def db_get_ts(
         If no files are found for the dataset name.
 
     """
-
     mms_id, var = _tokenize(dataset_name)
 
     # Read the current version of the MMS configuration file

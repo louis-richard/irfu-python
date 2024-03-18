@@ -14,15 +14,15 @@ from typing import Literal, Optional, Union
 import tqdm
 
 # Local imports
-from .db_init import MMS_CFG_PATH
-from .list_files_ancillary_sdc import list_files_ancillary_sdc
-from .list_files_sdc import _login_lasp
+from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
+from pyrfu.mms.list_files_sdc import _login_lasp
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
@@ -66,7 +66,6 @@ def _make_path_local(
         If the local data directory doesn't exist.
 
     """
-
     if not data_path:
         # Read the current version of the MMS configuration file
         with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
@@ -95,8 +94,10 @@ def download_ancillary(
     mms_id: Union[str, int],
     data_path: Optional[str] = "",
 ):
-    r"""Downloads files containing field `var_str` over the time interval
-    `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
+    r"""Download files from MMS SDC.
+
+    Download ancillary files containing field `var_str` over the time interval `tint`
+    for the spacecraft `mms_id` to `data_path`.
 
     Parameters
     ----------
@@ -110,7 +111,6 @@ def download_ancillary(
         Path of MMS data. If None use `pyrfu/mms/config.json`
 
     """
-
     # List files in MMS SDC that match the request
     files_in_interval = list_files_ancillary_sdc(tint, mms_id, product)
 

@@ -9,14 +9,14 @@ from typing import Optional
 from xarray.core.dataarray import DataArray
 
 # Local imports
-from .get_variable import get_variable
-from .list_files import list_files
+from pyrfu.mms.get_variable import get_variable
+from pyrfu.mms.list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
@@ -61,7 +61,6 @@ def db_get_variable(
         If no files are found for the dataset.
 
     """
-
     dataset = dataset_name.split("_")
 
     # Index of the MMS spacecraft
