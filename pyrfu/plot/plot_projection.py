@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
-
 # 3rd party imports
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 
 __author__ = "Louis Richard"
@@ -21,8 +21,8 @@ def plot_projection(
     f_mat,
     vlim: float = 1e3,
     clim: list = None,
-    cbar_pos: str = "top",
-    cmap: str = "jet",
+    cmap: str = None,
+    colorbar: str = "right",
 ):
     r"""Plot the projection of the distribution.
 
@@ -40,7 +40,7 @@ def plot_projection(
         Maximum velocity to limit axis. Default is vlim = 1000 km/s.
     clim : list, Optional
         Caxes limit. Default is clim = [-18, -13] (assume to be in SI units)
-    cbar_pos : str, Optional
+    colorbar : str, Optional
         Location of the colorbar. Default is cbar_pos = "top".
     cmap : str, Optional
         Colormap. Default is cmap = "jet".
@@ -57,6 +57,14 @@ def plot_projection(
     if clim is None:
         clim = [None, None]
 
+    if not cmap or isinstance(cmap, str):
+        cmap = mpl.colormaps.get_cmap(cmap)
+    else:
+        raise TypeError(
+            "cmap must be a string. "
+            "To add a custom colormap use mpl.colormaps.register(custom)."
+        )
+
     image = axis.pcolormesh(
         v_x / 1e3,
         v_y / 1e3,
@@ -71,7 +79,8 @@ def plot_projection(
 
     f = plt.gcf()
     pos = axis.get_position()
-    if cbar_pos == "top":
+
+    if colorbar == "top":
         caxis = f.add_axes(
             [pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01],
         )
@@ -83,12 +92,12 @@ def plot_projection(
         )
         caxis.xaxis.set_ticks_position("top")
         caxis.xaxis.set_label_position("top")
-    elif cbar_pos == "right":
+    elif colorbar == "right":
         caxis = f.add_axes(
             [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height],
         )
         f.colorbar(mappable=image, cax=caxis, ax=axis)
     else:
-        raise ValueError("invalic position")
+        raise NotImplementedError("invalid position")
 
     return axis, caxis

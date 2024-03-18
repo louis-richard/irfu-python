@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from matplotlib.axes import Axes
 from matplotlib.transforms import TransformedBbox, blended_transform_factory
 from mpl_toolkits.axes_grid1.inset_locator import (
     BboxConnector,
@@ -65,15 +66,15 @@ def _connect_bbox(
     return connector_a, connector_b, bbox_patch1, bbox_patch2, connector_patch
 
 
-def zoom(ax1, ax2, **kwargs):
+def zoom(ax1: Axes, ax2: Axes, **kwargs) -> (Axes, Axes):
     r"""Similar to zoom_effect01.  The xmin & xmax will be taken from the
     ax1.viewLim.
 
     Parameters
     ----------
-    ax1 : matplotlib.pyplot.subplotsaxes
+    ax1 : matplotlib.axes._axes.Axes
         Reference axes.
-    ax2 : matplotlib.pyplot.subplotsaxes
+    ax2 : matplotlib.axes._axes.Axes
         Connected axes.
 
     Other Parameters
@@ -83,12 +84,18 @@ def zoom(ax1, ax2, **kwargs):
 
     Returns
     -------
-    ax1 : matplotlib.pyplot.subplotsaxes
+    ax1 : matplotlib.axes._axes.Axes
         Reference axis.
-    ax2 : matplotlib.pyplot.subplotsaxes
+    ax2 : matplotlib.axes._axes.Axes
         Connected axis.
 
     """
+
+    if not isinstance(ax1, Axes):
+        raise TypeError("ax1 must be a matplotlib.axes._axes.Axes")
+
+    if not isinstance(ax2, Axes):
+        raise TypeError("ax2 must be a matplotlib.axes._axes.Axes")
 
     tt = ax1.transScale + (ax1.transLimits + ax2.transAxes)
     trans = blended_transform_factory(ax2.transData, tt)

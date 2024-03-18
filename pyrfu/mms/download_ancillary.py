@@ -8,20 +8,21 @@ import os
 import warnings
 from shutil import copy, copyfileobj
 from tempfile import NamedTemporaryFile
+from typing import Literal, Optional, Union
 
 # 3rd party imports
 import tqdm
 
 # Local imports
-from .db_init import MMS_CFG_PATH
-from .list_files_ancillary_sdc import list_files_ancillary_sdc
-from .list_files_sdc import _login_lasp
+from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
+from pyrfu.mms.list_files_sdc import _login_lasp
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 logging.captureWarnings(True)
@@ -35,9 +36,36 @@ LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 
 
-def _make_path_local(file, product, mms_id, data_path: str = ""):
-    r"""Construct path of the data file using the standard convention."""
+def _make_path_local(
+    file: dict,
+    product: Literal["predatt", "predeph", "defatt", "defeph"],
+    mms_id: Union[str, int],
+    data_path: Optional[str] = "",
+) -> str:
+    r"""Construct path of the data file using the standard convention.
 
+    Parameters
+    ----------
+    file : dict
+        File information.
+    product : {"predatt", "predeph", "defatt", "defeph"}
+        Ancillary type.
+    mms_id : str or int
+        Spacecraft index.
+    data_path : str, Optional
+        Path of MMS data. If None use `pyrfu/mms/config.json`.
+
+    Returns
+    -------
+    str
+        Full path of the data file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the local data directory doesn't exist.
+
+    """
     if not data_path:
         # Read the current version of the MMS configuration file
         with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
@@ -47,7 +75,8 @@ def _make_path_local(file, product, mms_id, data_path: str = ""):
     else:
         data_path = os.path.normpath(data_path)
 
-    assert os.path.exists(data_path), "local data directory doesn't exist!"
+    if not os.path.exists(data_path):
+        raise FileNotFoundError("local data directory doesn't exist!")
 
     path_list = [
         data_path,
@@ -56,21 +85,25 @@ def _make_path_local(file, product, mms_id, data_path: str = ""):
         product,
     ]
 
-    out_path = os.path.join(*path_list)
-    out_file = os.path.join(*path_list, file["file_name"])
-
-    return out_path, out_file
+    return os.path.join(*path_list, file["file_name"])
 
 
-def download_ancillary(product, tint, mms_id, data_path: str = ""):
-    r"""Downloads files containing field `var_str` over the time interval
-    `tint` for the spacecraft `mms_id`. The files are saved to `data_path`.
+def download_ancillary(
+    product: Literal["predatt", "predeph", "defatt", "defeph"],
+    tint: list,
+    mms_id: Union[str, int],
+    data_path: Optional[str] = "",
+):
+    r"""Download files from MMS SDC.
+
+    Download ancillary files containing field `var_str` over the time interval `tint`
+    for the spacecraft `mms_id` to `data_path`.
 
     Parameters
     ----------
     product : {"predatt", "predeph", "defatt", "defeph"}
         Ancillary type.
-    tint : list of str
+    tint : list
         Time interval
     mms_id : str or int
         Spacecraft index
@@ -78,7 +111,6 @@ def download_ancillary(product, tint, mms_id, data_path: str = ""):
         Path of MMS data. If None use `pyrfu/mms/config.json`
 
     """
-
     # List files in MMS SDC that match the request
     files_in_interval = list_files_ancillary_sdc(tint, mms_id, product)
 
@@ -87,7 +119,8 @@ def download_ancillary(product, tint, mms_id, data_path: str = ""):
 
     for file in files_in_interval:
         # Create local path following tree structure for the CDF files
-        out_path, out_file = _make_path_local(file, product, mms_id, data_path)
+        out_file = _make_path_local(file, product, mms_id, data_path)
+        out_path = os.path.dirname(out_file)
 
         logging.info(
             "Downloading %s from %s...", os.path.basename(out_file), file["url"]

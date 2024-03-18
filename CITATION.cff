@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - name: "PyRFU team"
+  - family-names: Richard
+    given-names: Louis
+    affiliation: IRF Uppsala, Sweden
+    orcid: "https://orcid.org/0000-0003-3446-7322"
+  - family-names: Khotyaintsev
+    given-names: Yuri
+    affiliation: IRF Uppsala, Sweden
+    orcid: "https://orcid.org/0000-0001-5550-3113"
+  - family-names: Vaivads
+    given-names: Andris
+    affiliation: KTH, Sweden
+    orcid: "https://orcid.org/0000-0003-1654-841X"
+  - family-names: Graham
+    given-names: Daniel
+    affiliation: IRF Uppsala, Sweden
+    orcid: "https://orcid.org/0000-0002-1046-746X"
+  - family-names: Norgren
+    given-names: Cecilia
+    affiliation: IRF Uppsala, Sweden
+    orcid: "https://orcid.org/0000-0002-6561-2337"
+  - family-names: Johlander
+    given-names: Andreas
+    affiliation: Swedish Defence Research Agency, Sweden
+    orcid: "https://orcid.org/0000-0001-7714-1870"
+title: "pyrfu"
+abstract: "An Open-Source Python Package for Advanced In-Situ Space Plasma Analysis."
+license: MIT
+doi: 10.5281/zenodo.10678695
+url: "https://pyrfu.readthedocs.io/"
+repository-code: 'https://github.com/louis-richard/irfu-python'

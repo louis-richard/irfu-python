@@ -3,6 +3,7 @@
 
 # Built-in imports
 import itertools
+from typing import List, Union
 
 # 3rd party imports
 import numpy as np
@@ -18,7 +19,7 @@ __status__ = "Prototype"
 
 def annotate_heatmap(
     im,
-    data: np.ndarray = None,
+    data: Union[np.ndarray, List[List[float]]] = None,
     valfmt: str = "{x:.2f}",
     textcolors: tuple = ("black", "white"),
     threshold: float = None,
@@ -30,7 +31,7 @@ def annotate_heatmap(
     ----------
     im : matplotlib.image.AxesImage
         The AxesImage to be labeled.
-    data : numpy.ndarray, Optional
+    data : array_like, Optional
         Data used to annotate.  If None, the image's data is used.
     valfmt : str or matplotlib.ticker.Formatter, Optional
         The format of the annotations inside the heatmap..
@@ -52,8 +53,11 @@ def annotate_heatmap(
 
     """
 
-    if not isinstance(data, (list, np.ndarray)):
+    if data is None:
         data = im.get_array()
+
+    if not isinstance(data, (np.ndarray, list)):
+        raise TypeError("data must be a numpy array")
 
     # Normalize the threshold to the images color range.
     if threshold is not None:

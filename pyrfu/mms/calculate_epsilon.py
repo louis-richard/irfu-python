@@ -1,50 +1,64 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Optional
+
 # 3rd party imports
 import numpy as np
 from scipy import constants
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
 
 # Local imports
-from ..pyrf.resample import resample
-from ..pyrf.ts_scalar import ts_scalar
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 q_e = constants.elementary_charge
 
 
-def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
-    r"""Calculates epsilon parameter using model distribution.
+def calculate_epsilon(
+    vdf: Dataset,
+    model_vdf: Dataset,
+    n_s: DataArray,
+    sc_pot: DataArray,
+    en_channels: Optional[list] = None,
+) -> DataArray:
+    r"""Calculate epsilon parameter using model distribution.
 
     Parameters
     ----------
-    vdf : xarray.Dataset
+    vdf : Dataset
         Observed particle distribution (skymap).
-    model_vdf : xarray.Dataset
+    model_vdf : Dataset
         Model particle distribution (skymap).
-    n_s : xarray.DataArray
+    n_s : DataArray
         Time series of the number density.
-    sc_pot : xarray.DataArray
+    sc_pot : DataArray
         Time series of the spacecraft potential.
-    **kwargs : dict
-        Keyword arguments.
+    en_channels : list, Optional
+        Set energy channels to integrate over [min max]; min and max between
+        must be between 1 and 32.
 
     Returns
     -------
-    epsilon : xarray.DataArray
+    DataArray
         Time series of the epsilon parameter.
 
-    Other Parameters
-    ----------------
-    en_channels : array_like
-        Set energy channels to integrate over [min max]; min and max between
-        must be between 1 and 32.
+    Raises
+    ------
+    ValueError
+        If VDF and n_s have different times.
+    TypeError
+        If en_channels is not a list.
+
 
     Examples
     --------
@@ -53,7 +67,6 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
     >>> eps = mms.calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **options)
 
     """
-
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
 
@@ -78,7 +91,13 @@ def calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **kwargs):
         raise ValueError("vdf and moments have different times.")
 
     # Default energy channels used to compute epsilon.
-    energy_range = kwargs.get("en_channels", [0, vdf.energy.shape[1]])
+    if en_channels is None:
+        energy_range = [0, vdf.energy.shape[1]]
+    elif isinstance(en_channels, list):
+        energy_range = en_channels
+    else:
+        raise TypeError("en_channels must be a list.")
+
     int_energies = np.arange(energy_range[0], energy_range[1])
 
     flag_same_e = np.sum(np.abs(vdf.attrs["energy0"] - vdf.attrs["energy1"])) < 1e-4

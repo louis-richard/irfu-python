@@ -106,7 +106,7 @@ filterwarnings = [
 ]
 
 [tool.black]
-py36 = true
+target-version = ["py311"]
 include = '\.pyi?$'
 exclude = '''
 /(

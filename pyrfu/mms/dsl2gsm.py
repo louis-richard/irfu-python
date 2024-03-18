@@ -1,15 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Optional, Union
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
 
 # Local imports
 from ..pyrf.calc_fs import calc_fs
 from ..pyrf.cotrans import cotrans
 from ..pyrf.resample import resample
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
+from .dsl2gse import _transformation_matrix
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -19,42 +25,30 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _transformation_matrix(spin_axis, direction):
-    r_x, r_y, r_z = [spin_axis[:, i] for i in range(3)]
-
-    a = 1.0 / np.sqrt(r_y**2 + r_z**2)
-    out = np.zeros((len(a), 3, 3))
-    out[:, 0, :] = np.transpose(
-        np.stack([a * (r_y**2 + r_z**2), -a * r_x * r_y, -a * r_x * r_z]),
-    )
-
-    out[:, 1, :] = np.transpose(np.stack([0.0 * a, a * r_z, -a * r_y]))
-
-    out[:, 2, :] = np.transpose(np.stack([r_x, r_y, r_z]))
-
-    if direction == 1:
-        out = np.transpose(out, [0, 2, 1])
-
-    return out
-
-
-def dsl2gsm(inp, defatt, direction: int = 1):
+def dsl2gsm(
+    inp: DataArray, defatt: Union[Dataset, np.ndarray], direction: Optional[int] = 1
+) -> DataArray:
     r"""Transform time series from MMS's DSL to GSM.
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Input time series to convert.
-    defatt : xarray.Dataset or array_like
+    defatt : Dataset or numpy.ndarray
         Spacecraft attitude.
-    direction : {1, -1}, optional
+    direction : {1, -1}, Optional
         Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
         Default is 1.
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the input field in the new coordinates systems.
+
+    Raises
+    ------
+    TypeError
+        If defatt is not xarray.Dataset or numpy.ndarray.
 
     Examples
     --------
@@ -77,7 +71,6 @@ def dsl2gsm(inp, defatt, direction: int = 1):
     >>> b_gse = dsl2gse(b_xyz, defatt)
 
     """
-
     if isinstance(defatt, xr.Dataset):
         x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
             np.deg2rad(defatt.z_ra.data),
@@ -91,7 +84,7 @@ def dsl2gsm(inp, defatt, direction: int = 1):
         spin_ax_gsm = resample(sax_gsm, inp, f_s=calc_fs(inp))
         spin_axis = spin_ax_gsm.data
 
-    elif isinstance(defatt, (np.ndarray, list)) and len(defatt) == 3:
+    elif isinstance(defatt, np.ndarray) and len(defatt) == 3:
         spin_axis = np.atleast_2d(defatt)
 
     else:

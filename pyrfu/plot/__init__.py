@@ -100,6 +100,14 @@ EXTRA_COLORS = {
     "series:pink": "#f0a1ca",
     "series:turquoise": "#5fcbaa",
     "transparent": "#ffffff00",
+    "mms:mms1": "#000000",
+    "mms:mms2": "#d55e00",
+    "mms:mms3": "#009e73",
+    "mms:mms4": "#56b4e9",
+    "cluster:cluster1": "#ff0000",
+    "cluster:cluster2": "#008000",
+    "cluster:cluster3": "#0000ff",
+    "cluster:cluster4": "#00ffff",
 }
 
 mpl.colors.EXTRA_COLORS = EXTRA_COLORS
@@ -159,14 +167,14 @@ mpl.colormaps.register(
 )
 
 
-def set_color_cycle(pal=None):
+def set_color_cycle(pal: str = "") -> (list, str):
     r"""Sets color cycle.
 
     Parameters
     ----------
-    pal : {"Pyrfu", "Oceanic", "Tab", None}. Optional
+    pal : {"Pyrfu", "Oceanic", "Tab", ""}. Optional
       The palette to use. "Tab" provides the default matplotlib palette. Default is
-      None (resets to default palette).
+      "" (resets to default palette).
     """
 
     if pal.lower() == "pyrfu":
@@ -222,16 +230,21 @@ def set_color_cycle(pal=None):
     mpl.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
     mpl.rcParams["image.cmap"] = cmap
 
+    return colors, cmap
+
 
 def use_pyrfu_style(
-    name="classic", color_cycle="pyrfu", fancy_legend=False, usetex=False
+    name: str = "default",
+    color_cycle: str = "pyrfu",
+    fancy_legend: bool = False,
+    usetex: bool = False,
 ):
     r"""Setup plot style.
 
     Parameters
     ----------
     name : str, Optional
-       Name of the style sheet. Default is "classic" (see also
+       Name of the style sheet. Default is "default" (see also
        https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html).
     color_cycle : str, Optional
        Name of the color cycle to use. Default is "pyrfu".

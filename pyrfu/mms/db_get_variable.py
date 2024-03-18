@@ -3,17 +3,20 @@
 
 # Built-in imports
 import logging
+from typing import Optional
 
-from .get_variable import get_variable
+# 3rd party imports
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .list_files import list_files
+from pyrfu.mms.get_variable import get_variable
+from pyrfu.mms.list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
@@ -26,12 +29,12 @@ logging.basicConfig(
 
 
 def db_get_variable(
-    dataset_name,
-    cdf_name,
-    tint,
-    verbose: bool = True,
-    data_path: str = "",
-):
+    dataset_name: str,
+    cdf_name: str,
+    tint: list,
+    verbose: Optional[bool] = True,
+    data_path: Optional[str] = "",
+) -> DataArray:
     r"""Get variable in the cdf file.
 
     Parameters
@@ -40,7 +43,7 @@ def db_get_variable(
         Name of the dataset.
     cdf_name : str
         Name of the target field in cdf file.
-    tint : array_like
+    tint : list
         Time interval.
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
@@ -49,11 +52,15 @@ def db_get_variable(
 
     Returns
     -------
-    out : xarray.DataArray
+    out : DataArray
        Variable of the target variable.
 
-    """
+    Raises
+    ------
+    FileNotFoundError
+        If no files are found for the dataset.
 
+    """
     dataset = dataset_name.split("_")
 
     # Index of the MMS spacecraft
@@ -67,6 +74,9 @@ def db_get_variable(
         pass
 
     files = list_files(tint, probe, var, data_path=data_path)
+
+    if not files:
+        raise FileNotFoundError(f"No files found for {cdf_name} in {data_path}")
 
     if verbose:
         logging.info("Loading %s...", cdf_name)

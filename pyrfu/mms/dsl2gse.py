@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import Literal, Optional, Union
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
 
 # Local imports
 from ..pyrf.calc_fs import calc_fs
@@ -19,7 +23,29 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _transformation_matrix(spin_axis, direction):
+def _transformation_matrix(
+    spin_axis: np.ndarray, direction: Literal[-1, 1]
+) -> np.ndarray:
+    r"""Return transformation matrix from DSL to GSE.
+
+    Parameters
+    ----------
+    spin_axis : numpy.ndarray
+        Spin axis.
+    direction : {-1, 1}
+        Direction of the transformation.
+
+    Returns
+    -------
+    numpy.ndarray
+        Transformation matrix.
+
+    Raises
+    ------
+    ValueError
+        If direction is not -1 or 1.
+
+    """
     r_x, r_y, r_z = [spin_axis[:, i] for i in range(3)]
 
     fact = 1.0 / np.sqrt(r_y**2 + r_z**2)
@@ -42,18 +68,24 @@ def _transformation_matrix(spin_axis, direction):
 
     if direction == 1:
         out = np.transpose(out, [0, 2, 1])
+    elif direction == -1:
+        out = np.transpose(out, [0, 1, 2])
+    else:
+        raise ValueError("Direction must be either 1 or -1.")
 
     return out
 
 
-def dsl2gse(inp, defatt, direction: int = 1):
+def dsl2gse(
+    inp: DataArray, defatt: Union[Dataset, np.ndarray], direction: Optional[int] = 1
+):
     r"""Transform time series from MMS's DSL to GSE.
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Input time series to convert.
-    defatt : xarray.Dataset or array_like
+    defatt : Dataset or numpy.ndarray
         Spacecraft attitude.
     direction : {1, -1}, Optional
         Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
@@ -63,6 +95,11 @@ def dsl2gse(inp, defatt, direction: int = 1):
     -------
     out : xarray.DataArray
         Time series of the input field in the new coordinates systems.
+
+    Raises
+    ------
+    TypeError
+        If defatt is not a Dataset or a numpy.ndarray.
 
     Examples
     --------
@@ -85,7 +122,6 @@ def dsl2gse(inp, defatt, direction: int = 1):
     >>> b_gse = dsl2gse(b_xyz, defatt)
 
     """
-
     if isinstance(defatt, xr.Dataset):
         x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
             np.deg2rad(defatt.z_ra.data),
@@ -99,7 +135,7 @@ def dsl2gse(inp, defatt, direction: int = 1):
         spin_ax_gse = resample(sax_gse, inp, f_s=calc_fs(inp))
         spin_axis = spin_ax_gse.data
 
-    elif isinstance(defatt, (np.ndarray, list)) and len(defatt) == 3:
+    elif isinstance(defatt, np.ndarray) and len(defatt) == 3:
         spin_axis = np.atleast_2d(defatt)
 
     else:

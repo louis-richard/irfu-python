@@ -4,31 +4,35 @@
 # Built-in imports
 import json
 import os
-
-# import subprocess
 import shutil
+from typing import Literal, Optional, Union
 
 # Local imports
-from .db_init import MMS_CFG_PATH
-from .list_files_ancillary import list_files_ancillary
+from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.list_files_ancillary import list_files_ancillary
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def copy_files_ancillary(product, tint, mms_id, tar_path: str, data_path: str = ""):
-    r"""Copy ancillary files from local as defined in config.json to
-    the target path.
+def copy_files_ancillary(
+    product: Literal["predatt", "predeph", "defatt", "defeph"],
+    tint: list,
+    mms_id: Union[int, str],
+    tar_path: str,
+    data_path: Optional[str] = "",
+):
+    r"""Copy ancillary files from local as defined in config.json to the target path.
 
     Parameters
     ----------
     product : {"predatt", "predeph", "defatt", "defeph"}
         Ancillary type.
-    tint : list of str
+    tint : list
         Time interval.
     mms_id : str or int
         Index of the spacecraft.
@@ -38,7 +42,6 @@ def copy_files_ancillary(product, tint, mms_id, tar_path: str, data_path: str = 
         Local path to MMS data. Default uses that provided in pyrfu.mms.config.json
 
     """
-
     # Normalize the target path and make sure it exists.
     tar_path = os.path.normpath(tar_path)
     assert os.path.exists(tar_path), f"{tar_path} doesn't exist!!"

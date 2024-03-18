@@ -5,22 +5,28 @@
 import json
 import os
 import shutil
+from typing import Optional, Union
 
 # Local imports
-from .db_init import MMS_CFG_PATH
-from .list_files import list_files
+from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def copy_files(var, tint, mms_id, tar_path: str, data_path: str = ""):
-    r"""Copy files from local as defined in config.json to the target
-    path.
+def copy_files(
+    var: dict,
+    tint: list,
+    mms_id: Union[int, str],
+    tar_path: str,
+    data_path: Optional[str] = "",
+):
+    r"""Copy files from local as defined in config.json to the target path.
 
     Parameters
     ----------
@@ -30,9 +36,9 @@ def copy_files(var, tint, mms_id, tar_path: str, data_path: str = ""):
             * var["tmmode"] : data rate.
             * var["lev"] : data level.
             * var["dtype"] : data type.
-    tint : list of str
+    tint : list
         Time interval.
-    mms_id : str or int
+    mms_id : int or str
         Index of the spacecraft.
     tar_path : str
         Target path to put files.
@@ -40,7 +46,6 @@ def copy_files(var, tint, mms_id, tar_path: str, data_path: str = ""):
         Local path to MMS data. Default uses that provided in pyrfu.mms.config.json
 
     """
-
     # Normalize the target path and make sure it exists.
     tar_path = os.path.normpath(tar_path)
     assert os.path.exists(tar_path), f"{tar_path} doesn't exist!!"
