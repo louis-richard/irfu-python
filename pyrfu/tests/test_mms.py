@@ -219,13 +219,13 @@ class CalcEpsilonTestCase(unittest.TestCase):
 class DbInitTestCase(unittest.TestCase):
     def test_db_init_input(self):
         with self.assertRaises(NotImplementedError):
-            mms.db_init(default="bazinga!")
+            mms.db_init(default="bazinga!", local=os.getcwd(), sdc="public")
 
         with self.assertRaises(FileNotFoundError):
-            mms.db_init(local="bazinga!")
+            mms.db_init(default="local", local="bazinga!", sdc="public")
 
         with self.assertRaises(ValueError):
-            mms.db_init(sdc="bazinga!")
+            mms.db_init(default="sdc", local=os.getcwd(), sdc="bazinga!")
 
     def test_db_init_output(self):
         self.assertIsNone(mms.db_init(local=os.getcwd()))
