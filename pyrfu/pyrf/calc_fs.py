@@ -1,36 +1,38 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Union
+
 # 3rd party imports
 import numpy as np
-import xarray as xr
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def calc_fs(inp):
+def calc_fs(inp: Union[Dataset, DataArray]) -> float:
     r"""Computes the sampling frequency of the input time series.
 
     Parameters
     ----------
-    inp : xarray.DataArray or xarray.Dataset
+    inp : DataArray or Dataset
         Time series of the input variable.
 
     Returns
     -------
-    out : float
+    float
         Sampling frequency in Hz.
 
     """
+    # Check input type
+    if not isinstance(inp, (Dataset, DataArray)):
+        raise TypeError("Input must be a time series")
 
-    message = "Input must be a time series"
-    assert isinstance(inp, (xr.Dataset, xr.DataArray)), message
-
-    out = 1 / (np.median(np.diff(inp.time.data)).astype(np.float64) * 1e-9)
-
-    return out
+    return float(1 / (np.median(np.diff(inp.time.data)).astype(np.float64) * 1e-9))

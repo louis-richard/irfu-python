@@ -1,22 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Literal, Optional
+
 # 3rd party imports
 import numpy as np
-import xarray as xr
+from xarray.core.dataset import Dataset
 
 # Local imports
-from .ts_skymap import ts_skymap
+from pyrfu.pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def average_vdf(vdf, n_pts, method: str = "mean"):
+def average_vdf(
+    vdf: Dataset, n_pts: int, method: Optional[Literal["mean", "sum"]] = "mean"
+) -> Dataset:
     r"""Time averages the velocity distribution functions over `n_pts` in time.
 
     Parameters
@@ -34,11 +39,15 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
         Time series of the time averaged velocity distribution function.
 
     """
-
     # Check input type
-    assert isinstance(vdf, xr.Dataset), "vdf must be a xarray.Dataset"
+    if not isinstance(vdf, Dataset):
+        raise TypeError("vdf must be a xarray.Dataset")
 
-    assert n_pts % 2 != 0, "The number of distributions to be averaged must be an odd"
+    if not isinstance(n_pts, int):
+        raise TypeError("n_pts must be an integer")
+
+    if n_pts % 2 == 0:
+        raise ValueError("The number of distributions to be averaged must be an odd")
 
     n_vdf = len(vdf.time.data)
     times = vdf.time.data
@@ -84,7 +93,7 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
 
     glob_attrs["esteptable"] = glob_attrs["esteptable"][: len(avg_inds)]
 
-    vdf_avg = ts_skymap(
+    out = ts_skymap(
         time_avg,
         vdf_avg,
         energy_avg,
@@ -98,4 +107,4 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
         glob_attrs=glob_attrs,
     )
 
-    return vdf_avg
+    return out

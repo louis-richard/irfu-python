@@ -1,19 +1,31 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Mapping, Optional, TypeVar
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from numpy.typing import NBitBase, NDArray
+from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def ts_scalar(time, data, attrs: dict = None):
+T = TypeVar("T", bound=NBitBase)
+
+
+def ts_scalar(
+    time: NDArray[np.datetime64],
+    data: NDArray[np.floating[T]],
+    attrs: Optional[Mapping[str, object]] = None,
+) -> DataArray:
     r"""Create a time series containing a 0th order tensor
 
     Parameters
@@ -27,23 +39,29 @@ def ts_scalar(time, data, attrs: dict = None):
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         0th order tensor time series.
 
     """
-
     # Check input type
-    assert isinstance(time, np.ndarray), "time must be a numpy.ndarray"
-    assert isinstance(data, np.ndarray), "data must be a numpy.ndarray"
+    if not isinstance(time, np.ndarray):
+        raise TypeError("time must be a numpy.ndarray")
+
+    if not isinstance(data, np.ndarray):
+        raise TypeError("data must be a numpy.ndarray")
 
     # Check input shape must be (n, )
-    assert data.ndim == 1, "Input must be a scalar"
-    assert len(time) == len(data), "Time and data must have the same length"
+    if data.ndim != 1:
+        raise ValueError("Input must be a scalar")
 
-    if attrs is None or not isinstance(attrs, dict):
-        attrs = {}
+    if len(time) != len(data):
+        raise ValueError("Time and data must have the same length")
 
-    out = xr.DataArray(data, coords=[time[:]], dims="time", attrs=attrs)
-    out.attrs["TENSOR_ORDER"] = 0
+    if attrs is None:
+        attrs = {"TENSOR_ORDER": 0}
+    elif isinstance(attrs, dict):
+        attrs["TENSOR_ORDER"] = 0
+    else:
+        raise TypeError("attrs must be a dict")
 
-    return out
+    return xr.DataArray(data, coords=[time[:]], dims="time", attrs=attrs)

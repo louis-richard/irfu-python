@@ -1,84 +1,144 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Any, Iterable, Mapping, Optional
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from numpy.typing import NDArray
+from xarray.core.dataset import Dataset
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def ts_skymap(time, data, energy, phi, theta, **kwargs):
+def ts_skymap(
+    time: NDArray[np.datetime64],
+    data: NDArray[np.float64],
+    energy: NDArray[np.float64],
+    phi: NDArray[np.float64],
+    theta: NDArray[np.float64],
+    energy0: Optional[NDArray[np.float64]] = None,
+    energy1: Optional[NDArray[np.float64]] = None,
+    esteptable: Optional[NDArray[np.float64]] = None,
+    attrs: Optional[Mapping[str, object]] = None,
+    glob_attrs: Optional[Mapping[str, object]] = None,
+    coords_attrs: Optional[Mapping[str, Mapping[str, Iterable[Any]]]] = None,
+) -> Dataset:
     r"""Creates a skymap of the distribution function.
 
     Parameters
     ----------
-    time : array_like
+    time : np.ndarray
         List of times.
-    data : array_like
+    data : np.ndarray
         Values of the distribution function.
-    energy : array_like
+    energy : np.ndarray
         Energy levels.
-    phi : array_like
+    phi : np.ndarray
         Azimuthal angles.
-    theta : array_like
+    theta : np.ndarray
         Elevation angles.
-
-    Other Parameters
-    ---------------
-    **kwargs
-        Hash table of keyword arguments with :
-            * energy0 : array_like
-                Energy table 0 (odd time indices).
-            * energy1 : array_like
-                Energy table 1 (even time indices).
-            * esteptable : array_like
-                Time series of the stepping table between energies (burst).
+    energy0: np.ndarray, Optional
+        Energy table 0 (odd time indices).
+    energy1: np.ndarray, Optional
+        Energy table 1 (even time indices).
+    esteptable: np.ndarray, Optional
+        Time series of the stepping table between energies (burst).
+    attrs : dict, Optional
+        Metadata for the VDF.
+    glob_attrs : dict, Optional
+        Global attributes of the dataset.
+    coords_attrs : dict, Optional
+        Coordinates attributes of the dataset.
 
     Returns
     -------
     out : xarray.Dataset
         Skymap of the distribution function.
 
-    """
+    Raises
+    ------
+    TypeError
+        If time, data, energy, phi, or theta are not numpy.ndarray.
+    TypeError
+        If energy0, energy1, or esteptable are not numpy.ndarray.
+    TypeError
+        If attrs, glob_attrs, or coords_attrs are not dict.
 
+    """
     # Check input type
-    assert isinstance(time, np.ndarray), "time must be numpy.ndarray"
-    assert isinstance(data, np.ndarray), "data must be numpy.ndarray"
-    assert isinstance(energy, np.ndarray), "energy must be numpy.ndarray"
-    assert isinstance(phi, np.ndarray), "phi must be numpy.ndarray"
-    assert isinstance(theta, np.ndarray), "theta must be numpy.ndarray"
+    if not isinstance(time, np.ndarray):
+        raise TypeError("time must be a numpy.ndarray")
+
+    if not isinstance(data, np.ndarray):
+        raise TypeError("data must be a numpy.ndarray")
+
+    if not isinstance(energy, np.ndarray):
+        raise TypeError("energy must be a numpy.ndarray")
+
+    if not isinstance(phi, np.ndarray):
+        raise TypeError("phi must be a numpy.ndarray")
+
+    if not isinstance(theta, np.ndarray):
+        raise TypeError("theta must be a numpy.ndarray")
 
     # Check if even (odd) time step energy channels energy1 (energy0), and
     # energy step table are provided.
-    energy0 = kwargs.get("energy0", energy[0, :])
-    energy1 = kwargs.get("energy1", energy[1, :])
-    esteptable = kwargs.get("esteptable", np.zeros(len(time)))
+    if energy0 is None:
+        energy0 = energy[0, :]
+    else:
+        if not isinstance(energy0, np.ndarray):
+            raise TypeError("energy0 must be a numpy.ndarray")
+
+    if energy1 is None:
+        energy1 = energy[1, :]
+    else:
+        if not isinstance(energy1, np.ndarray):
+            raise TypeError("energy0 must be a numpy.ndarray")
+
+    if esteptable is None:
+        esteptable = np.zeros(len(time))
+    else:
+        if not isinstance(esteptable, np.ndarray):
+            raise TypeError("esteptable must be a numpy.ndarray")
 
     # Check that energy0 and energy1
-    # assert isinstance(energy0, np.ndarray), "energy0 must be 1D numpy.ndarray"
     # assert energy0.ndim == 1, "energy0 must be 1D numpy.ndarray"
     # assert energy0.shape[0] == energy.shape[1], "energy0 is not consistent with time"
-    # assert isinstance(energy1, np.ndarray), "energy1 must be 1D numpy.ndarray"
     # assert energy1.ndim == 1, "energy1 must be 1D numpy.ndarray"
     # assert energy1.shape[0] == energy.shape[1], "energy1 is not consistent with time"
 
     # Check esteptable
-    assert isinstance(esteptable, np.ndarray), "esteptable must be 1D numpy.ndarray"
-    assert esteptable.ndim == 1, "esteptable must be 1D numpy.ndarray"
-    assert esteptable.shape[0] == len(time), "esteptable is not consistent with time"
-
-    attrs = kwargs.get("attrs", {})
-    coords_attrs = kwargs.get("coords_attrs", {})
-    glob_attrs = kwargs.get("glob_attrs", {})
+    # assert esteptable.ndim == 1, "esteptable must be 1D numpy.ndarray"
+    # assert esteptable.shape[0] == len(time), "esteptable is not consistent with time"
 
     # Check attributes are dictionaries
-    assert isinstance(attrs, dict)
+    if attrs is None:
+        attrs = {}
+    else:
+        if not isinstance(attrs, dict):
+            raise TypeError("attrs must be a dictionary")
+
+    # Check coordinates attributes are dictionaries
+    if coords_attrs is None:
+        coords_attrs = {}
+    else:
+        if not isinstance(coords_attrs, dict):
+            raise TypeError("coords_attrs must be a dictionary")
+
+    # Check global attributes are dictionaries
+    if glob_attrs is None:
+        glob_attrs = {}
+    else:
+        if not isinstance(glob_attrs, dict):
+            raise TypeError("glob_attrs must be a dictionary")
 
     out_dict = {
         "data": (["time", "idx0", "idx1", "idx2"], data),

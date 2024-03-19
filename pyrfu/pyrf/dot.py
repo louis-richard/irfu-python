@@ -3,32 +3,33 @@
 
 # 3rd party imports
 import numpy as np
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .resample import resample
-from .ts_scalar import ts_scalar
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def dot(inp1, inp2):
-    r"""Computes dot product of two fields.
+def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
+    r"""Compute dot product of two fields.
 
     Parameters
     ----------
-    inp1 : xarray.DataArray
+    inp1 : DataArray
         Time series of the first field X.
-    inp2 : xarray.DataArray
+    inp2 : DataArray
         Time series of the second field Y.
 
     Returns
     -------
-    out : xarray.DataArray
+    out : DataArray
         Time series of the dot product Z = X.Y.
 
     Examples
