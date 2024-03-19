@@ -32,15 +32,12 @@ __status__ = "Prototype"
 
 class AutoCorrTestCase(unittest.TestCase):
     def test_autocorr_input_type(self):
-        self.assertIsNotNone(pyrf.autocorr(generate_ts(64.0, 100, tensor_order=0)))
-        self.assertIsNotNone(pyrf.autocorr(generate_ts(64.0, 100, tensor_order=0), 25))
-        self.assertIsNotNone(
-            pyrf.autocorr(generate_ts(64.0, 100, tensor_order=0), 25, True)
-        )
+        with self.assertRaises(TypeError):
+            pyrf.autocorr(generate_data(100, 3))
 
     def test_autocorr_input_shape(self):
-        self.assertIsNotNone(pyrf.autocorr(generate_ts(64.0, 100, tensor_order=0)))
-        self.assertIsNotNone(pyrf.autocorr(generate_ts(64.0, 100, tensor_order=1)))
+        with self.assertRaises(ValueError):
+            pyrf.autocorr(generate_ts(64.0, 100, 2))
 
     def test_autocorr_input_values(self):
         with self.assertRaises(ValueError):
@@ -69,21 +66,34 @@ class AutoCorrTestCase(unittest.TestCase):
         self.assertEqual(result.shape[1], 3)
 
 
+@ddt
 class AverageVDFTestCase(unittest.TestCase):
-    def test_average_vdf_input_type(self):
-        with self.assertRaises(AssertionError):
-            pyrf.average_vdf(0, 3)
-            pyrf.average_vdf(np.random.random((100, 32, 32, 16)), 3)
-            pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), [3, 5])
+    @data(
+        (0, 3),
+        (np.random.random((100, 32, 32, 16)), 3),
+        (generate_vdf(64.0, 100, [32, 32, 16]), [3, 5]),
+    )
+    @unpack
+    def test_average_vdf_input_type(self, vdf, n_pts):
+        with self.assertRaises(TypeError):
+            pyrf.average_vdf(vdf, n_pts)
 
     def test_average_vdf_values(self):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 2)
 
-    def test_average_vdf_output_type(self):
-        self.assertIsInstance(
-            pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 3), xr.Dataset
+    def test_average_vdf_method_value(self):
+        with self.assertRaises(NotImplementedError):
+            pyrf.average_vdf(
+                generate_vdf(64.0, 100, [32, 32, 16]), 3, method="bazinga!"
+            )
+
+    @data("mean", "sum")
+    def test_average_vdf_output_type(self, method):
+        result = pyrf.average_vdf(
+            generate_vdf(64.0, 100, [32, 32, 16]), 3, method=method
         )
+        self.assertIsInstance(result, xr.Dataset)
 
     def test_average_vdf_output_meta(self):
         avg_inds = np.arange(1, 99, 3, dtype=int)
@@ -98,61 +108,30 @@ class AverageVDFTestCase(unittest.TestCase):
         self.assertEqual(len(result.attrs["delta_energy_minus"]), len(avg_inds))
 
 
+@ddt
 class Avg4SCTestCase(unittest.TestCase):
-    def test_avg_4sc_input(self):
-        self.assertIsNotNone(
-            pyrf.avg_4sc(
-                [
-                    generate_ts(64.0, 100, tensor_order=0),
-                    generate_ts(64.0, 100, tensor_order=0),
-                    generate_ts(64.0, 100, tensor_order=0),
-                    generate_ts(64.0, 100, tensor_order=0),
-                ]
-            )
-        )
-        self.assertIsNotNone(
-            pyrf.avg_4sc(
-                [
-                    generate_ts(64.0, 100, tensor_order=1),
-                    generate_ts(64.0, 100, tensor_order=1),
-                    generate_ts(64.0, 100, tensor_order=1),
-                    generate_ts(64.0, 100, tensor_order=1),
-                ]
-            )
-        )
-        self.assertIsNotNone(
-            pyrf.avg_4sc(
-                [
-                    generate_ts(64.0, 100, tensor_order=2),
-                    generate_ts(64.0, 100, tensor_order=2),
-                    generate_ts(64.0, 100, tensor_order=2),
-                    generate_ts(64.0, 100, tensor_order=2),
-                ]
-            )
-        )
+    @data(
+        (generate_ts(64.0, 100) for _ in range(4)),
+        [generate_data(100) for _ in range(4)],
+    )
+    def test_avg_4sc_input(self, value):
 
         with self.assertRaises(TypeError):
-            pyrf.avg_4sc(
-                [
-                    generate_data(100, tensor_order=2),
-                    generate_data(100, tensor_order=2),
-                    generate_data(100, tensor_order=2),
-                    generate_data(100, tensor_order=2),
-                ]
-            )
+            pyrf.avg_4sc(value)
 
-    def test_avg_4sc_output(self):
+    @idata(range(3))
+    def test_avg_4sc_output(self, tensor_order):
         result = pyrf.avg_4sc(
             [
-                generate_ts(64.0, 100, tensor_order=2),
-                generate_ts(64.0, 100, tensor_order=2),
-                generate_ts(64.0, 100, tensor_order=2),
-                generate_ts(64.0, 100, tensor_order=2),
+                generate_ts(64.0, 100, tensor_order=tensor_order),
+                generate_ts(64.0, 100, tensor_order=tensor_order),
+                generate_ts(64.0, 100, tensor_order=tensor_order),
+                generate_ts(64.0, 100, tensor_order=tensor_order),
             ]
         )
 
         self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3, 3])
+        self.assertListEqual(list(result.shape), [100, *[3] * tensor_order])
 
 
 class C4GradTestCase(unittest.TestCase):
@@ -336,29 +315,31 @@ class CalcDngTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
+@ddt
 class CalcDtTestCase(unittest.TestCase):
-    def test_calc_dt_input_type(self):
-        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, tensor_order=0)))
-        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, tensor_order=1)))
-        self.assertIsNotNone(pyrf.calc_dt(generate_ts(64.0, 100, tensor_order=2)))
-
-        with self.assertRaises(AssertionError):
+    @data(0, generate_data(100))
+    def test_calc_dt_input_type(self, value):
+        with self.assertRaises(TypeError):
             # Raises error if input is not a xarray
-            pyrf.calc_dt(0)
-            pyrf.calc_dt(generate_data(100))
+            pyrf.calc_dt(value)
 
-    def test_calc_dt_output_type(self):
-        self.assertIsInstance(pyrf.calc_dt(generate_ts(64.0, 100)), float)
+    @data(
+        generate_ts(64.0, 100, tensor_order=0),
+        generate_ts(64.0, 100, tensor_order=1),
+        generate_ts(64.0, 100, tensor_order=2),
+    )
+    def test_calc_dt_output_type(self, value):
+        result = pyrf.calc_dt(value)
+        self.assertIsInstance(result, float)
 
 
+@ddt
 class CalcFsTestCase(unittest.TestCase):
-    def test_calc_fs_input_type(self):
-        self.assertIsNotNone(pyrf.calc_fs(generate_ts(64.0, 100)))
-
-        with self.assertRaises(AssertionError):
+    @data(0, generate_data(100))
+    def test_calc_fs_input_type(self, value):
+        with self.assertRaises(TypeError):
             # Raises error if input is not a xarray
-            pyrf.calc_fs(0)
-            pyrf.calc_fs(generate_data(100))
+            pyrf.calc_fs(value)
 
     def test_calc_fs_output_type(self):
         self.assertIsInstance(pyrf.calc_fs(generate_ts(64.0, 100)), float)
@@ -621,21 +602,35 @@ class CotransTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+@ddt
 class CrossTestCase(unittest.TestCase):
-    def test_cross_input(self):
-        with self.assertRaises(AssertionError):
-            pyrf.cross(
-                generate_ts(64.0, 100, tensor_order=0),
-                generate_ts(64.0, 100, tensor_order=0),
-            )
-            pyrf.cross(
-                generate_ts(64.0, 100, tensor_order=1),
-                generate_ts(64.0, 100, tensor_order=0),
-            )
-            pyrf.cross(
-                generate_ts(64.0, 100, tensor_order=0),
-                generate_ts(64.0, 100, tensor_order=1),
-            )
+    @data(
+        (generate_data(100, tensor_order=1), generate_ts(64.0, 100, tensor_order=1)),
+        (generate_ts(64.0, 100, tensor_order=1), generate_data(100, tensor_order=1)),
+    )
+    @unpack
+    def test_cross_input_type(self, inp0, inp1):
+        with self.assertRaises(TypeError):
+            pyrf.cross(inp0, inp1)
+
+    @data(
+        (
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=0),
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=0),
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=1),
+        ),
+    )
+    @unpack
+    def test_cross_input_shape(self, inp0, inp1):
+        with self.assertRaises(ValueError):
+            pyrf.cross(inp0, inp1)
 
     def test_cross_output(self):
         result = pyrf.cross(
@@ -2086,10 +2081,83 @@ class TsTimeTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+@ddt
 class TsSkymapTestCase(unittest.TestCase):
-    def test_ts_skymap_input_type(self):
-        with self.assertRaises(AssertionError):
-            pyrf.ts_skymap(0, 0, 0, 0, 0)
+    @data(
+        (
+            0,
+            np.random.random((100, 32, 32, 16)),
+            np.random.random((100, 32)),
+            np.random.random((100, 32)),
+            np.random.random(16),
+        ),
+        (
+            generate_timeline(64.0, 100),
+            0,
+            np.random.random((100, 32)),
+            np.random.random((100, 32)),
+            np.random.random(16),
+        ),
+        (
+            generate_timeline(64.0, 100),
+            np.random.random((100, 32, 32, 16)),
+            0,
+            np.random.random((100, 32)),
+            np.random.random(16),
+        ),
+        (
+            generate_timeline(64.0, 100),
+            np.random.random((100, 32, 32, 16)),
+            np.random.random((100, 32)),
+            0,
+            np.random.random(16),
+        ),
+        (
+            generate_timeline(64.0, 100),
+            np.random.random((100, 32, 32, 16)),
+            np.random.random((100, 32)),
+            np.random.random((100, 32)),
+            0,
+        ),
+    )
+    @unpack
+    def test_ts_skymap_input_type(self, time, data, energy, phi, theta):
+        with self.assertRaises(TypeError):
+            pyrf.ts_skymap(time, data, energy, phi, theta)
+
+    @data(
+        (0, np.random.random(32), np.zeros(100)),
+        (np.random.random(32), 0, np.zeros(100)),
+        (np.random.random(32), np.random.random(32), 0),
+    )
+    @unpack
+    def test_ts_skymap_input_optionals(self, energy0, energy1, esteptable):
+        with self.assertRaises(TypeError):
+            pyrf.ts_skymap(
+                generate_timeline(64.0, 100),
+                np.random.random((100, 32, 32, 16)),
+                np.random.random((100, 32)),
+                np.random.random((100, 32)),
+                np.random.random(16),
+                energy0=energy0,
+                energy1=energy1,
+                esteptable=esteptable,
+            )
+
+    @data((0, None, None), (None, 0, None), (None, None, 0))
+    @unpack
+    def test_ts_skymap_input_attrs(self, attrs, glob_attrs, coords_attrs):
+        with self.assertRaises(TypeError):
+            pyrf.ts_skymap(
+                generate_timeline(64.0, 100),
+                np.random.random((100, 32, 32, 16)),
+                np.random.random((100, 32)),
+                np.random.random((100, 32)),
+                np.random.random(16),
+                attrs=attrs,
+                glob_attrs=glob_attrs,
+                coords_attrs=coords_attrs,
+            )
 
     def test_ts_skymap_output_type(self):
         result = pyrf.ts_skymap(
@@ -2152,29 +2220,24 @@ class TsSkymapTestCase(unittest.TestCase):
             self.assertEqual(result[k].attrs, {})
 
 
+@ddt
 class TsScalarTestCase(unittest.TestCase):
-    def test_ts_scalar_input_type(self):
-        with self.assertRaises(AssertionError):
-            pyrf.ts_scalar(0, 0)
-            pyrf.ts_scalar(
-                list(generate_timeline(64.0, 100)),
-                list(generate_data(100, tensor_order=0)),
-            )
+    @data(
+        (0.0, 0.0),
+        (list(generate_timeline(64.0, 100)), list(generate_data(100, tensor_order=0))),
+    )
+    @unpack
+    def test_ts_scalar_input_type(self, time, data):
+        with self.assertRaises(TypeError):
+            pyrf.ts_scalar(time, data)
 
-    def test_ts_scalar_input_shape(self):
-        with self.assertRaises(AssertionError):
-            # Raises error if data and timeline don't have the same size
-            pyrf.ts_scalar(
-                generate_timeline(64.0, 100), generate_data(99, tensor_order=0)
-            )
-            # Raises error if vector as input
-            pyrf.ts_scalar(
-                generate_timeline(64.0, 100), generate_data(100, tensor_order=1)
-            )
-            # Raises error if tensor as input
-            pyrf.ts_scalar(
-                generate_timeline(64.0, 100), generate_data(100, tensor_order=2)
-            )
+    @data(
+        generate_data(99, tensor_order=0),
+        generate_data(100, tensor_order=random.randint(1, 3)),
+    )
+    def test_ts_scalar_input_shape(self, data):
+        with self.assertRaises(ValueError):
+            pyrf.ts_scalar(generate_timeline(64.0, 100), data)
 
     def test_ts_scalar_output_type(self):
         result = pyrf.ts_scalar(
@@ -2237,29 +2300,25 @@ class TsSpectrTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+@ddt
 class TsVecXYZTestCase(unittest.TestCase):
-    def test_ts_vec_xyz_input_type(self):
-        with self.assertRaises(AssertionError):
-            pyrf.ts_vec_xyz(0, 0)
-            pyrf.ts_vec_xyz(
-                list(generate_timeline(64.0, 100)),
-                list(generate_data(100, tensor_order=1)),
-            )
+    @data(
+        (list(generate_timeline(64.0, 100)), generate_data(100, 1), {}),
+        (generate_timeline(64.0, 100), list(generate_data(100, 1)), {}),
+        (generate_timeline(64.0, 100), generate_data(100, 1), "bazinga!"),
+    )
+    @unpack
+    def test_ts_vec_xyz_input_type(self, time, data, attrs):
+        with self.assertRaises(TypeError):
+            pyrf.ts_vec_xyz(time, data, attrs)
 
-    def test_ts_vec_xyz_input_shape(self):
-        with self.assertRaises(AssertionError):
-            # Raises error if data and timeline don't have the same size
-            pyrf.ts_vec_xyz(
-                generate_timeline(64.0, 100), generate_data(99, tensor_order=1)
-            )
-            # Raises error if vector as input
-            pyrf.ts_vec_xyz(
-                generate_timeline(64.0, 100), generate_data(100, tensor_order=0)
-            )
-            # Raises error if tensor as input
-            pyrf.ts_vec_xyz(
-                generate_timeline(64.0, 100), generate_data(100, tensor_order=2)
-            )
+    @data(
+        generate_data(99, tensor_order=1),
+        generate_data(100, tensor_order=random.randint(2, 3)),
+    )
+    def test_ts_vec_xyz_input_shape(self, data):
+        with self.assertRaises(ValueError):
+            pyrf.ts_vec_xyz(generate_timeline(64.0, 100), data)
 
     def test_ts_vec_xyz_output_type(self):
         result = pyrf.ts_vec_xyz(
