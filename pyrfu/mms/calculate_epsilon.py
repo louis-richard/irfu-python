@@ -29,7 +29,7 @@ def calculate_epsilon(
     model_vdf: Dataset,
     n_s: DataArray,
     sc_pot: DataArray,
-    en_channels: Optional[list] = None,
+    en_channels: Optional[list[int]] = None,
 ) -> DataArray:
     r"""Calculate epsilon parameter using model distribution.
 
@@ -165,6 +165,5 @@ def calculate_epsilon(
     )
 
     epsilon /= 1e6 * (n_s.data * 2)
-    epsilon = ts_scalar(vdf.time.data, epsilon)
 
-    return epsilon
+    return ts_scalar(vdf.time.data, epsilon)
