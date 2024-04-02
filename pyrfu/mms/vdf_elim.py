@@ -43,7 +43,7 @@ def vdf_elim(vdf, e_int):
     """
 
     energy = vdf.energy
-    unique_etables = np.unique(vdf.energy, axis=0)
+    unique_etables = np.unique(vdf.energy.data, axis=0)
     # n_etables = 2 for older dta and 1 for newer data
     n_etables = unique_etables.shape[0]
 
@@ -100,8 +100,8 @@ def vdf_elim(vdf, e_int):
     glob_attrs = vdf.attrs
 
     # Get energies levels
-    energy_0 = glob_attrs.get("energy0", unique_etables[0, :])[e_levels]
-    energy_1 = glob_attrs.get("energy1", unique_etables[0, :])[e_levels]
+    energy_0 = np.atleast_1d(glob_attrs.get("energy0", unique_etables[0, :])[e_levels])
+    energy_1 = np.atleast_1d(glob_attrs.get("energy1", unique_etables[0, :])[e_levels])
     esteptable = glob_attrs.get("esteptable", np.zeros(len(vdf.time)))
 
     vdf_e_clipped = ts_skymap(
