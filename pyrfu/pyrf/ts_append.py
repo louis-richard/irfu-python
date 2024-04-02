@@ -19,7 +19,7 @@ __status__ = "Prototype"
 
 def ts_append(
     inp0: Optional[DataArray] = None, inp1: Optional[DataArray] = None
-) -> DataArray | None:
+) -> DataArray:
     r"""Concatenate two time series along the time axis.
 
     Parameters
@@ -31,7 +31,7 @@ def ts_append(
 
     Returns
     -------
-    DataArray or None
+    DataArray
         Concatenated time series.
 
     Notes
@@ -41,63 +41,68 @@ def ts_append(
     """
 
     if inp0 is None:
-        return inp1
+        out = inp1
+    elif inp1 is None:
+        out = inp0
+    elif inp0 is not None and inp1 is not None:
+        out_data = {}
 
-    out_data = {}
-
-    if inp0.data.ndim != 1:
-        out_data["data"] = np.vstack([inp0.data, inp1.data])
-
-    else:
-        out_data["data"] = np.hstack([inp0.data, inp1.data])
-
-    out_data["attrs"] = {}
-
-    for k in inp0.attrs:
-        if isinstance(inp0.attrs[k], np.ndarray):
-            out_data["attrs"][k] = np.hstack([inp0.attrs[k], inp1.attrs[k]])
+        if inp0.data.ndim != 1:
+            out_data["data"] = np.vstack([inp0.data, inp1.data])
 
         else:
-            out_data["attrs"][k] = inp0.attrs[k]
+            out_data["data"] = np.hstack([inp0.data, inp1.data])
 
-    depends: List[Mapping[str, object]] = [{} for _ in range(len(inp0.dims))]
+        out_data["attrs"] = {}
 
-    for i, dim in enumerate(inp0.dims):
-        if i == 0 or dim == "time":
-            depends[i]["data"] = np.hstack([inp0[dim].data, inp1[dim].data])
+        for k in inp0.attrs:
+            if isinstance(inp0.attrs[k], np.ndarray):
+                out_data["attrs"][k] = np.hstack([inp0.attrs[k], inp1.attrs[k]])
 
-            # add attributes
-            depends[i]["attrs"] = {}
+            else:
+                out_data["attrs"][k] = inp0.attrs[k]
 
-            for k in inp0[dim].attrs:
-                # if attrs is array time append
-                if isinstance(inp0[dim].attrs[k], np.ndarray):
-                    depends[i]["attrs"][k] = np.hstack(
-                        [inp0[dim].attrs[k], inp1[dim].attrs[k]],
-                    )
+        depends: List[Mapping[str, object]] = [{} for _ in range(len(inp0.dims))]
 
-                else:
+        for i, dim in enumerate(inp0.dims):
+            if i == 0 or dim == "time":
+                depends[i]["data"] = np.hstack([inp0[dim].data, inp1[dim].data])
+
+                # add attributes
+                depends[i]["attrs"] = {}
+
+                for k in inp0[dim].attrs:
+                    # if attrs is array time append
+                    if isinstance(inp0[dim].attrs[k], np.ndarray):
+                        depends[i]["attrs"][k] = np.hstack(
+                            [inp0[dim].attrs[k], inp1[dim].attrs[k]],
+                        )
+
+                    else:
+                        depends[i]["attrs"][k] = inp0[dim].attrs[k]
+
+            else:
+                # Use values of other coordinates of inp0 assuming equal to inp1
+                depends[i]["data"] = inp0[dim].data
+
+                # add attributes
+                depends[i]["attrs"] = {}
+
+                for k in inp0[dim].attrs:
                     depends[i]["attrs"][k] = inp0[dim].attrs[k]
 
-        else:
-            # Use values of other coordinates of inp0 assuming equal to inp1
-            depends[i]["data"] = inp0[dim].data
+        # Create DataArray
+        out = xr.DataArray(
+            out_data["data"],
+            coords=[depend["data"] for depend in depends],
+            dims=inp0.dims,
+            attrs=out_data["attrs"],
+        )
 
-            # add attributes
-            depends[i]["attrs"] = {}
+        for i, dim in enumerate(out.dims):
+            out[dim].attrs = depends[i]["attrs"]
 
-            for k in inp0[dim].attrs:
-                depends[i]["attrs"][k] = inp0[dim].attrs[k]
-
-    # Create DataArray
-    out = xr.DataArray(
-        out_data["data"],
-        coords=[depend["data"] for depend in depends],
-        dims=inp0.dims,
-        attrs=out_data["attrs"],
-    )
-
-    for i, dim in enumerate(out.dims):
-        out[dim].attrs = depends[i]["attrs"]
+    else:
+        raise ValueError("At least one input must be provided")
 
     return out
