@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -12,18 +13,25 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def normalize(inp):
+def normalize(inp: DataArray) -> DataArray:
     r"""Normalizes the input field.
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Time series of the input field.
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the normalized input field.
+
+    Raises
+    ------
+    TypeError
+        If input is not a DataArray.
+    ValueError
+        If input is not a 2D DataArray.
 
     Examples
     --------
@@ -47,6 +55,13 @@ def normalize(inp):
 
     """
 
-    out = inp / np.linalg.norm(inp, axis=1, keepdims=True)
+    if not isinstance(inp, DataArray):
+        raise TypeError("Input must be a DataArray")
+
+    if inp.data.ndim == 2:
+        out_data = inp.data / np.linalg.norm(inp.data, axis=1, keepdims=True)
+        out = inp.copy(data=out_data)
+    else:
+        raise ValueError("Input must be a 2D DataArray")
 
     return out
