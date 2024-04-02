@@ -4,7 +4,7 @@
 # Built-in imports
 import json
 import logging
-from typing import Literal, Optional
+from typing import Mapping, Optional, Tuple
 
 # 3rd party imports
 from xarray.core.dataarray import DataArray
@@ -35,7 +35,22 @@ logging.basicConfig(
 )
 
 
-def _tokenize(dataset_name):
+def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
+    r"""Tokenize dataset name.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset.
+
+    Returns
+    -------
+    str
+        MMS spacecraft identifier.
+    dict
+        Dictionary containing the instrument, telemetry mode, level, and data type.
+
+    """
     dataset = dataset_name.split("_")
 
     # Index of the MMS spacecraft
@@ -54,10 +69,10 @@ def _tokenize(dataset_name):
 def db_get_ts(
     dataset_name: str,
     cdf_name: str,
-    tint: list,
+    tint: list[str],
     verbose: Optional[bool] = True,
     data_path: Optional[str] = "",
-    source: Optional[Literal["default", "local", "sdc", "aws"]] = "default",
+    source: Optional[str] = "default",
 ) -> DataArray:
     r"""Get variable time series in the cdf file.
 
@@ -73,8 +88,9 @@ def db_get_ts(
         Status monitoring. Default is verbose = True
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
-    source: {"default", "local", "sdc", "aws"}, Optional
-        Resource to fetch data from. Default uses default in `pyrfu/mms/config.json`
+    source: str, Optional
+        Resource to fetch data from: {"default", "local", "sdc", "aws"}. Default uses
+        default in `pyrfu/mms/config.json`
 
     Returns
     -------
@@ -93,30 +109,41 @@ def db_get_ts(
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
-    source = source if source != "default" else config.get(source)
-
-    file_names, sdc_session, headers = _list_files_sources(
-        source, tint, mms_id, var, data_path
-    )
-
-    if not file_names:
-        raise FileNotFoundError(f"No files found for {dataset_name}")
-
-    if verbose:
-        logging.info("Loading %s...", cdf_name)
-
-    out = None
-
-    for file_name in file_names:
-        file_content = _get_file_content_sources(
-            source, file_name, sdc_session, headers
+    if not source or source == "default":
+        resource = config.get("default")
+    elif source.lower() in ["local", "sdc", "aws"]:
+        resource = source
+    else:
+        raise ValueError(
+            "Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'"
         )
 
-        out = ts_append(out, get_ts(file_content, cdf_name, tint))
+    file_names, sdc_session, headers = _list_files_sources(
+        resource, tint, mms_id, var, data_path
+    )
 
-    out = _check_times(out)
+    if file_names:
+        if verbose:
+            logging.info("Loading %s...", cdf_name)
+
+        for i, file_name in enumerate(file_names):
+            file_content = _get_file_content_sources(
+                resource, file_name, sdc_session, headers
+            )
+
+            out = get_ts(file_content, cdf_name, tint)
+
+            if i == 0:
+                out_all = out
+            else:
+                out_all = ts_append(out_all, out)
+
+        out_all = _check_times(out_all)
+
+    else:
+        raise FileNotFoundError(f"No files found for {dataset_name}")
 
     if sdc_session:
         sdc_session.close()
 
-    return out
+    return out_all

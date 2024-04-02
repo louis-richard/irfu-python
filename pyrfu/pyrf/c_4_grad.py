@@ -1,35 +1,52 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 # Built-in imports
 import itertools
+from typing import Any, Mapping, Optional, Sequence
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from numpy.typing import NDArray
+from xarray.core.dataarray import DataArray
 
-from .avg_4sc import avg_4sc
-from .c_4_k import c_4_k
-from .cross import cross
-from .dot import dot
-from .normalize import normalize
+from pyrfu.pyrf.avg_4sc import avg_4sc
+from pyrfu.pyrf.c_4_k import c_4_k
+from pyrfu.pyrf.cross import cross
+from pyrfu.pyrf.dot import dot
+from pyrfu.pyrf.normalize import normalize
 
 # Local imports
 from .resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def _to_ts(out_data, b_dict):
-    if len(out_data.shape) == 1:
+def _to_ts(out_data: NDArray[Any], b_dict: Mapping[str, DataArray]) -> DataArray:
+    r"""Converts output data to xarray.DataArray.
+
+    Parameters
+    ----------
+    out_data : numpy.ndarray
+        Output data.
+    b_dict : dict
+        Dictionary containing the coordinates of the field.
+
+    Returns
+    -------
+    DataArray
+        Time series of the input field.
+
+    """
+    if out_data.ndim == 1:
         out = xr.DataArray(out_data, coords=[b_dict["1"].time], dims=["time"])
 
-    elif len(out_data.shape) == 2:
+    elif out_data.ndim == 2:
         out = xr.DataArray(
             out_data,
             coords=[b_dict["1"].time, ["x", "y", "z"]],
@@ -46,15 +63,18 @@ def _to_ts(out_data, b_dict):
     return out
 
 
-def c_4_grad(r_list, b_list, method: str = "grad"):
-    r"""Calculate gradient of physical field using 4 spacecraft technique
-    in [2]_ [3]_.
+def c_4_grad(
+    r_list: Sequence[DataArray],
+    b_list: Sequence[DataArray],
+    method: Optional[str] = "grad",
+) -> DataArray:
+    r"""Calculate gradient of physical field using 4 spacecraft technique in [2]_ [3]_.
 
     Parameters
     ----------
-    r_list : list of xarray.DataArray
+    r_list : list of DataArray
         Time series of the positions of the spacecraft
-    b_list : list of xarray.DataArray
+    b_list : list of DataArray
         Time series of the magnetic field at the corresponding positions
     method : {"grad", "div", "curl", "bdivb", "curv"}, Optional
         Method flag :
@@ -66,14 +86,12 @@ def c_4_grad(r_list, b_list, method: str = "grad"):
 
     Returns
     -------
-    out : xarray.DataArray
-        Time series of the derivative of the input field corresponding to
-        the method
+    DataArray
+        Time series of the derivative of the input field corresponding to the method
 
     See also
     --------
-    pyrfu.pyrf.c_4_k : Calculates reciprocal vectors in barycentric
-                        coordinates.
+    pyrfu.pyrf.c_4_k : Calculates reciprocal vectors in barycentric coordinates.
 
     References
     ----------

@@ -1,32 +1,35 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+
+# Built-in imports
+from typing import Sequence
 
 # 3rd party imports
 import numpy as np
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .cross import cross
-from .dot import dot
+from pyrfu.pyrf.cross import cross
+from pyrfu.pyrf.dot import dot
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def c_4_k(r_list):
+def c_4_k(r_list: Sequence[DataArray]) -> Sequence[DataArray]:
     r"""Calculates reciprocal vectors in barycentric coordinates.
 
     Parameters
     ----------
-    r_list : list of xarray.DataArray
+    r_list : list of DataArray
         Position of the spacecrafts.
 
     Returns
     -------
-    k_list : list of xarray.DataArray
+    k_list : list of DataArray
         Reciprocal vectors in barycentric coordinates.
 
     Notes

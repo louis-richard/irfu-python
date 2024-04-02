@@ -31,7 +31,7 @@ logging.basicConfig(
 def db_get_variable(
     dataset_name: str,
     cdf_name: str,
-    tint: list,
+    tint: list[str],
     verbose: Optional[bool] = True,
     data_path: Optional[str] = "",
 ) -> DataArray:

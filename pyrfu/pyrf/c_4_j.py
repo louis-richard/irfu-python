@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Sequence
+
 # 3rd party imports
 from scipy import constants
+from xarray.core.dataarray import DataArray
 
 # Local imports
 from .avg_4sc import avg_4sc
@@ -17,7 +21,9 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def c_4_j(r_list, b_list):
+def c_4_j(
+    r_list: Sequence[DataArray], b_list: Sequence[DataArray]
+) -> tuple[DataArray, DataArray, DataArray, DataArray, DataArray, DataArray]:
     r"""Calculate current density :math:`J` from using 4
     spacecraft technique [1]_, the divergence of the magnetic field
     :math:`\nabla . B`, magnetic field at the center of
@@ -41,27 +47,27 @@ def c_4_j(r_list, b_list):
 
     Parameters
     ----------
-    r_list : list of xarray.DataArray
+    r_list : list of DataArray
         Time series of the spacecraft position [km].
-    b_list : list of xarray.DataArray
+    b_list : list of DataArray
         Time series of the magnetic field [nT].
 
     Returns
     -------
-    j : xarray.DataArray
+    j : DataArray
         Time series of the current density [A.m^{-2}].
-    div_b : xarray.DataArray
+    div_b : DataArray
         Time series of the divergence of the magnetic field [A.m^{-2}].
-    b_avg : xarray.DataArray
+    b_avg : DataArray
         Time series of the magnetic field at the center of mass of the
         tetrahedron, sampled at 1st SC time steps [nT].
-    jxb : xarray.DataArray
+    jxb : DataArray
         Time series of the :math:`J\timesB` force
         [T.A].
-    div_t_shear : xarray.DataArray
+    div_t_shear : DataArray
         Time series of the part of the divergence of stress associated
         with curvature units [T A/m^2].
-    div_pb : xarray.DataArray
+    div_pb : DataArray
         Time series of the gradient of the magnetic pressure.
 
     See also
@@ -106,7 +112,7 @@ def c_4_j(r_list, b_list):
     >>> j_xyz, _, b_xyz, _, _, _ = pyrf.c_4_j(r_mms, b_mms)
 
     """
-
+    # Check inputs
     assert isinstance(r_list, list) and len(r_list) == 4, "r_list must a list of s/c"
     assert isinstance(b_list, list) and len(b_list) == 4, "b_list must a list of s/c"
 
