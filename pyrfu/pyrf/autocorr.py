@@ -51,7 +51,7 @@ def autocorr(
     """
     # Check input type
     if not isinstance(inp, DataArray):
-        raise TypeError("inp must be a xarray.DataArray")
+        raise TypeError("inp must be a DataArray")
 
     # Check input dimension (scalar or vector)
     if inp.ndim > 2:
