@@ -5,12 +5,13 @@ import json
 
 # Built-in imports
 import os
+from typing import Mapping
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
@@ -138,6 +139,7 @@ COORDINATE_SYSTEMS = [
     "ssc",
     "bcs",
     "par",
+    "",
 ]
 
 INSTRUMENTS = [
@@ -160,7 +162,20 @@ SAMPLING_RATES = ["brst", "fast", "slow", "srvy"]
 DATA_LVLS = ["ql", "sitl", "l1b", "l2a", "l2pre", "l2", "l3"]
 
 
-def _tensor_order(splitted_key):
+def _tensor_order(splitted_key: list[str]) -> int:
+    r"""Determine the tensor order of the variable.
+
+    Parameters
+    ----------
+    splitted_key : list
+        Variable key splitted by "_".
+
+    Returns
+    -------
+    tensor_order : str
+        Tensor order of the variable.
+
+    """
     param = splitted_key[0].lower()
     assert param in ALL_PARAMETERS, f"invalid PARAM : {param}"
 
@@ -174,8 +189,8 @@ def _tensor_order(splitted_key):
     return tensor_order
 
 
-def tokenize(var_str):
-    r"""Parses the variable keys.
+def tokenize(var_str: str) -> Mapping[str, str]:
+    r"""Parse the variable keys.
 
     Parameters
     ----------
@@ -187,14 +202,14 @@ def tokenize(var_str):
     out : dict
         Hash table containing :
             * param : Variable key.
-            * to : Tensor order.
             * cs : Coordinate system.
             * inst : Instrument.
             * tmmode : Time mode.
             * lev" : Level of data.
+            * dtype: Data type.
+            * cdf_name : variable name in the CDF file.
 
     """
-
     splitted_key = var_str.split("_")
     assert len(splitted_key) == 4 or len(splitted_key) == 5
 
@@ -202,21 +217,29 @@ def tokenize(var_str):
 
     if len(splitted_key) == 5 and tensor_order > 0:
         parameter, coordinates_system, instrument, data_rate, data_level = splitted_key
-        assert coordinates_system in COORDINATE_SYSTEMS, "invalid coord. sys."
     else:
         parameter, instrument, data_rate, data_level = splitted_key
-        coordinates_system = []
+        coordinates_system = ""
 
-    assert parameter in ALL_PARAMETERS, "invalid parameter"
+    # Parameter
+    if parameter not in ALL_PARAMETERS:
+        raise ValueError("invalid parameter")
+
+    # Coordinate system
+    if coordinates_system not in COORDINATE_SYSTEMS:
+        raise ValueError("invalid coord. sys.")
 
     # Instrument
-    assert instrument in INSTRUMENTS, "invalid INSTRUMENT"
+    if instrument not in INSTRUMENTS:
+        raise ValueError("invalid instrument")
 
     # Sampling rate
-    assert data_rate in SAMPLING_RATES, "invalid sampling mode"
+    if data_rate not in SAMPLING_RATES:
+        raise ValueError("invalid sampling mode")
 
     # Data level
-    assert data_level in DATA_LVLS, "invalid DATA_LEVEL level"
+    if data_level not in DATA_LVLS:
+        raise ValueError("invalid data level")
 
     root_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -227,7 +250,6 @@ def tokenize(var_str):
 
     res = {
         "param": splitted_key[0],
-        "to": tensor_order,
         "cs": coordinates_system,
         "inst": instrument,
         "tmmode": data_rate,

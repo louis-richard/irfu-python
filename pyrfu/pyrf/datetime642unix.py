@@ -1,18 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Union
+
 # 3rd party imports
 import numpy as np
+from numpy.typing import NDArray
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def datetime642unix(time):
+def datetime642unix(
+    time: Union[list[np.datetime64], NDArray[np.datetime64]]
+) -> NDArray[np.float64]:
     r"""Converts datetime64 in ns units to unix time.
 
     Parameters
@@ -32,13 +38,10 @@ def datetime642unix(time):
     """
 
     # Make sure that time is in ns format
-    if isinstance(time, np.datetime64):
-        time = np.array([time])
-        time_datetime64 = time.astype("datetime64[ns]")
-    elif isinstance(time, (list, np.ndarray)) and isinstance(time[0], np.datetime64):
-        time_datetime64 = time.astype("datetime64[ns]")
+    if isinstance(time, (list, np.ndarray)) and isinstance(time[0], np.datetime64):
+        time_datetime64 = np.array(time).astype("datetime64[ns]")
     else:
-        raise TypeError("time must be numpy.datetime64 or array_like")
+        raise TypeError("time must be list or numpy.ndarray of datetime64")
 
     # Convert to unix
     time_unix = time_datetime64.astype(np.int64) / 1e9

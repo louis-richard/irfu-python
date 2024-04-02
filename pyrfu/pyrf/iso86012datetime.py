@@ -3,6 +3,7 @@
 
 # Built-in imports
 import datetime
+from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -16,12 +17,14 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def iso86012datetime(time: NDArray[np.str_]) -> list[datetime.datetime]:
+def iso86012datetime(
+    time: Union[list[str], NDArray[np.str_]]
+) -> list[datetime.datetime]:
     r"""Convert ISO 8601 time to datetime.
 
     Parameters
     ----------
-    time : numpy.ndarray
+    time : array_like
         Time
 
     Returns
@@ -30,9 +33,16 @@ def iso86012datetime(time: NDArray[np.str_]) -> list[datetime.datetime]:
         Time in datetime format.
 
     """
+    # Check input type
+    if isinstance(time, list):
+        time_array = np.array(time)
+    elif isinstance(time, np.ndarray):
+        time_array = time
+    else:
+        raise TypeError("time must be list or numpy.ndarray")
 
     # Make sure that str is in ISO8601 format
-    time_datetime64 = time.astype("datetime64[ns]")
+    time_datetime64 = time_array.astype("datetime64[ns]")
     time_iso8601 = time_datetime64.astype(str)
 
     # ISO 8601 format with miliseconds precision (max precision for datetime)
