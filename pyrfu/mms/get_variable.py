@@ -5,12 +5,13 @@
 import numpy as np
 import xarray as xr
 from pycdfpp import _pycdfpp, load, to_datetime64
+from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
@@ -33,8 +34,8 @@ def _pycdfpp_attributes_to_dict(attributes):
     return attributes_dict
 
 
-def get_variable(file_path, cdf_name):
-    r"""Reads field named cdf_name in file and convert to DataArray.
+def get_variable(file_path: str, cdf_name: str) -> DataArray:
+    r"""Read field named cdf_name in file and convert to DataArray.
 
     Parameters
     ----------
@@ -45,11 +46,11 @@ def get_variable(file_path, cdf_name):
 
     Returns
     -------
-    out : xarray.DataArray
+    out : DataArray
         Target variable.
 
     """
-
+    # Load file
     file = load(file_path)
 
     var_data = file[cdf_name].values

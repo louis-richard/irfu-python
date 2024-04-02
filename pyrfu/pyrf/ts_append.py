@@ -1,31 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import List, Mapping, Optional
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def ts_append(inp0, inp1):
+def ts_append(
+    inp0: Optional[DataArray] = None, inp1: Optional[DataArray] = None
+) -> DataArray | None:
     r"""Concatenate two time series along the time axis.
 
     Parameters
     ----------
-    inp0 : xarray.DataArray
+    inp0 : DataArray, Optional
         Time series of the first input (early times).
-    inp1 : xarray.DataArray
+    inp1 : DataArray, Optional
         Time series of the second input (late times).
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray or None
         Concatenated time series.
 
     Notes
@@ -40,10 +46,10 @@ def ts_append(inp0, inp1):
     out_data = {}
 
     if inp0.data.ndim != 1:
-        out_data["data"] = np.vstack([inp0, inp1])
+        out_data["data"] = np.vstack([inp0.data, inp1.data])
 
     else:
-        out_data["data"] = np.hstack([inp0, inp1])
+        out_data["data"] = np.hstack([inp0.data, inp1.data])
 
     out_data["attrs"] = {}
 
@@ -54,7 +60,7 @@ def ts_append(inp0, inp1):
         else:
             out_data["attrs"][k] = inp0.attrs[k]
 
-    depends = [{} for _ in range(len(inp0.dims))]
+    depends: List[Mapping[str, object]] = [{} for _ in range(len(inp0.dims))]
 
     for i, dim in enumerate(inp0.dims):
         if i == 0 or dim == "time":

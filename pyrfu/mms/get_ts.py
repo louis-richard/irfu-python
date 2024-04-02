@@ -4,11 +4,13 @@
 # Built-in import
 import re
 import warnings
+from typing import Optional, Union
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from pycdfpp import DataType, load, to_datetime64
+from xarray.core.dataarray import DataArray
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
@@ -171,7 +173,9 @@ def _get_depend(file, cdf_name, dep_num=1):
     return out
 
 
-def get_ts(file_path, cdf_name, tint: list = None):
+def get_ts(
+    file_path: Union[str, bytes], cdf_name: str, tint: Optional[list] = None
+) -> DataArray:
     r"""Reads field named cdf_name in file and convert to time series.
 
     Parameters
