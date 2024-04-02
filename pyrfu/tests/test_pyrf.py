@@ -724,12 +724,15 @@ class Datetime642UnixTestCase(unittest.TestCase):
     @data(
         datetime.datetime(2019, 1, 1, 0, 0, 0),
         "2019-01-01T00:00:00.000000000",
+        np.datetime64("2019-01-01T00:00:00.000000000"),
     )
     def test_datetime642unix_input(self, value):
         with self.assertRaises(TypeError):
             pyrf.datetime642unix(value)
 
-    @data(np.datetime64("2019-01-01T00:00:00.000000000"), generate_timeline(64.0, 100))
+    @data(
+        [np.datetime64("2019-01-01T00:00:00.000000000")], generate_timeline(64.0, 100)
+    )
     def test_datetime642unix_output(self, value):
         self.assertIsInstance(pyrf.datetime642unix(value), np.ndarray)
 
@@ -1571,7 +1574,6 @@ class IPlasmaCalcTestCase(unittest.TestCase):
 @ddt
 class Iso86012DatetimeTestCase(unittest.TestCase):
     @data(
-        "2019-01-01T00:00:00.000000000",
         ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"],
         np.array(["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]),
     )
@@ -2499,6 +2501,20 @@ class VhtTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], np.ndarray)
         self.assertIsInstance(result[1], xr.DataArray)
         self.assertIsInstance(result[2], np.ndarray)
+
+
+class NormalizeTestCase(unittest.TestCase):
+    def test_normalize_input_type(self):
+        with self.assertRaises(TypeError):
+            pyrf.normalize(np.random.random((100, 3)))
+
+    def test_normalize_input_shape(self):
+        with self.assertRaises(ValueError):
+            pyrf.normalize(generate_ts(64.0, 100, tensor_order=0))
+
+    def test_normalize_output(self):
+        result = pyrf.normalize(generate_ts(64.0, 100, tensor_order=1))
+        self.assertIsInstance(result, xr.DataArray)
 
 
 if __name__ == "__main__":
