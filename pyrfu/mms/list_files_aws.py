@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import datetime
 import json
-
-# Built-in imports
 import os
 import re
+from typing import Any, Mapping, Optional, Union
 
 # 3rd party imports
 import boto3
@@ -14,10 +14,11 @@ import numpy as np
 from dateutil import parser
 from dateutil.rrule import DAILY, rrule
 
+from pyrfu.mms.db_init import MMS_CFG_PATH
+
 # Local imports
-from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.iso86012datetime64 import iso86012datetime64
-from .db_init import MMS_CFG_PATH
+from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
+from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -27,13 +28,20 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def list_files_aws(tint, mms_id, var, bucket_prefix: str = ""):
-    r"""Find available files from the Amazon Wed Services (AWS) for the target
-    instrument, data type, data rate, mms_id and level during the target time interval.
+def list_files_aws(
+    tint: list[str],
+    mms_id: Union[str, int],
+    var: Mapping[str, str],
+    bucket_prefix: Optional[str] = "",
+) -> list[dict[str, Any]]:
+    r"""List files from Amazon Web Services (AWS).
+
+    Find available files from the Amazon Wed Services (AWS) for the target instrument,
+    data type, data rate, mms_id and level during the target time interval.
 
     Parameters
     ----------
-    tint : array_like
+    tint : list of str
         Time interval
     mms_id : str or int
         Index of the spacecraft
@@ -48,9 +56,17 @@ def list_files_aws(tint, mms_id, var, bucket_prefix: str = ""):
 
     Returns
     -------
-    file_names : list
+    file_names : list of str
         List of files corresponding to the parameters in the selected time
         interval
+
+    Raises
+    ------
+    FileNotFoundError
+        If the path doesn't exist in the AWS S3 bucket or if the bucket doesn't exist.
+    TypeError
+        If the time interval is not array_like or if tint values are not in datetime64
+        or str.
 
     """
     # Start S3 session
@@ -62,30 +78,32 @@ def list_files_aws(tint, mms_id, var, bucket_prefix: str = ""):
         with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        bucket_name, prefix = config["aws"].split("/")
+        aws_path_split = config["aws"].split("/")
     else:
-        bucket_name, prefix = bucket_prefix.split("/")
+        aws_path_split = bucket_prefix.split("/")
+
+    bucket_name, prefix = aws_path_split[0], "/".join(aws_path_split[1:])
 
     # Make sure that the data path exists
     bucket = s3.Bucket(bucket_name)
-    assert bucket, f"{bucket_name} doesn't exist!!"
-    assert bucket.objects.filter(
-        Prefix=prefix
-    ), f"{prefix} doesn't exist in {bucket_name}"
+
+    if not bucket:
+        raise FileNotFoundError(f"{bucket_name} doesn't exist!!")
+
+    if bucket.objects.filter(Prefix=prefix):
+        raise FileNotFoundError(f"{prefix} doesn't exist in {bucket_name}")
 
     # Check time interval
-    if isinstance(tint, (np.ndarray, list)):
-        if isinstance(tint[0], np.datetime64):
-            tint = datetime642iso8601(np.array(tint))
-        elif isinstance(tint[0], str):
-            tint = iso86012datetime64(
-                np.array(tint),
-            )  # to make sure it is ISO8601 ok!!
-            tint = datetime642iso8601(np.array(tint))
-        else:
-            raise TypeError("Values must be in datetime64, or str!!")
+    if isinstance(tint, list):
+        tint_array = np.array(tint)
     else:
-        raise TypeError("tint must be array_like!!")
+        raise TypeError("tint must be a list!!")
+
+    # Convert time interval to ISO 8601
+    if isinstance(tint_array[0], str):
+        tint_iso8601 = datetime642iso8601(iso86012datetime64(tint_array))
+    else:
+        raise TypeError("Values must be in str!!")
 
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)
@@ -102,8 +120,8 @@ def list_files_aws(tint, mms_id, var, bucket_prefix: str = ""):
         + r"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
     )
 
-    d_start = parser.parse(parser.parse(tint[0]).strftime("%Y-%m-%d"))
-    until_ = parser.parse(tint[1]) - datetime.timedelta(seconds=1)
+    d_start = parser.parse(parser.parse(tint_iso8601[0]).strftime("%Y-%m-%d"))
+    until_ = parser.parse(tint_iso8601[1]) - datetime.timedelta(seconds=1)
     days = rrule(DAILY, dtstart=d_start, until=until_)
 
     if var["dtype"] == "" or var["dtype"] is None:
@@ -117,6 +135,7 @@ def list_files_aws(tint, mms_id, var, bucket_prefix: str = ""):
         if var["tmmode"] == "brst":
             bucket_prefix = os.sep.join(
                 [
+                    prefix,
                     f"mms{mms_id}",
                     var["inst"],
                     var["tmmode"],
@@ -129,6 +148,7 @@ def list_files_aws(tint, mms_id, var, bucket_prefix: str = ""):
         else:
             bucket_prefix = os.sep.join(
                 [
+                    prefix,
                     f"mms{mms_id}",
                     var["inst"],
                     var["tmmode"],
@@ -159,4 +179,5 @@ def list_files_aws(tint, mms_id, var, bucket_prefix: str = ""):
                                 "file_size": "",
                             },
                         )
+
     return files_out
