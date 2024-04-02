@@ -61,9 +61,9 @@ __all__ = [
     "use_pyrfu_style",
     "zoom",
 ]
-
-stylesheets = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stylesheets")
-style.core.USER_LIBRARY_PATHS.append(stylesheets)
+PKG_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STYLE_SHEETS = os.path.join(PKG_PATH, "stylesheets")
+style.core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
 style.core.reload_library()
 
 EXTRA_COLORS = {
