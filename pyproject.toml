@@ -175,13 +175,28 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-  "matplotlib.*",
-  "mpl_toolkits.*",
-  "pandas.*",
-  "pytest.*",
-  "scipy.*",
-  "setuptools",
+    "boto3.*",
+    "matplotlib.*",
+    "mpl_toolkits.*",
+    "pandas.*",
+    "pytest.*",
+    "scipy.*",
+    "setuptools",
 ]
+
+# This then excludes some modules from the above list. (So ideally we remove
+# from here in time...)
+[[tool.mypy.overrides]]
+check_untyped_defs = false
+module = [
+    "pyrfu.tests.test_dispersion",
+    "pyrfu.tests.test_mms",
+    "pyrfu.tests.test_models",
+    "pyrfu.tests.test_plot",
+    "pyrfu.tests.test_pyrf",
+    "pyrfu.tests.test_solo",
+]
+
 
 [tool.bumpver]
 current_version = "2.4.13"
