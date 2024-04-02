@@ -21,6 +21,7 @@ def plot_spectr(
     clim: list = None,
     cmap: str = None,
     colorbar: str = "right",
+    aspect: str = "auto",
     **kwargs,
 ):
     r"""Plot a spectrogram using pcolormesh.
@@ -109,6 +110,7 @@ def plot_spectr(
 
     axis.set_axisbelow(False)
     axis.set_ylim(inp[inp.dims[1]].data[[0, -1]])
+    axis.set_aspect(aspect)
 
     if colorbar.lower() == "right":
         if kwargs.get("pad"):
