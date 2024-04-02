@@ -1,0 +1,42 @@
+## *************************************************************************************
+## * Matplotlib style sheet for default figures *
+## author : Louis Richard
+## email : louisr@irfu.se
+## *************************************************************************************
+
+## Fonts
+font.family: serif
+font.style: normal
+font.variant: normal
+font.weight: normal
+font.stretch: normal
+
+## LaTeX
+#text.usetex: True
+#text.latex.preamble: \usepackage{bm}
+pgf.texsystem: xelatex
+
+## Axes
+axes.labelsize: 8
+axes.linewidth: .5
+axes.xmargin: 0
+axes.ymargin: 0
+
+## Save
+savefig.dpi: 600
+savefig.format: eps
+# savefig.bbox: tight
+
+## Legend
+legend.loc: best
+legend.frameon: False  # if True, draw the legend on a background patch
+legend.framealpha: 0.8  # legend patch transparency
+legend.facecolor: inherit  # inherit from axes.facecolor; or color spec
+legend.edgecolor: 0.8  # background patch boundary color
+legend.fancybox: False  # if True, use a rectangle box for the legend background
+## Ticks
+xtick.direction: in
+xtick.top: True
+
+ytick.direction : in
+ytick.right: True
