@@ -21,11 +21,11 @@ __status__ = "Prototype"
 
 def copy_files_ancillary(
     product: Literal["predatt", "predeph", "defatt", "defeph"],
-    tint: list,
+    tint: list[str],
     mms_id: Union[int, str],
     tar_path: str,
     data_path: Optional[str] = "",
-):
+) -> None:
     r"""Copy ancillary files from local as defined in config.json to the target path.
 
     Parameters
@@ -51,20 +51,20 @@ def copy_files_ancillary(
         with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local"])
+        root_path = os.path.normpath(config["local"])
     else:
-        data_path = os.path.normpath(data_path)
+        root_path = os.path.normpath(data_path)
 
     # Make sure the local path exists.
-    assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
+    assert os.path.exists(root_path), f"{root_path} doesn't exist!!"
 
     # List files that matches the requirements (instrument, date level,
     # data type, data rate) in the time interval for the target spacecraft.
-    files = list_files_ancillary(tint, mms_id, product, data_path=data_path)
+    files = list_files_ancillary(tint, mms_id, product, data_path=root_path)
 
     for file in files:
         # Make paths
-        relative_path = os.path.relpath(file, data_path)
+        relative_path = os.path.relpath(file, root_path)
         path = os.path.join(tar_path, os.path.dirname(relative_path))
         target_file = os.path.join(path, os.path.basename(file))
 

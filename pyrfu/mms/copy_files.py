@@ -5,7 +5,7 @@
 import json
 import os
 import shutil
-from typing import Optional, Union
+from typing import Mapping, Optional, Union
 
 # Local imports
 from pyrfu.mms.db_init import MMS_CFG_PATH
@@ -20,12 +20,12 @@ __status__ = "Prototype"
 
 
 def copy_files(
-    var: dict,
-    tint: list,
+    var: Mapping[str, str],
+    tint: list[str],
     mms_id: Union[int, str],
     tar_path: str,
     data_path: Optional[str] = "",
-):
+) -> None:
     r"""Copy files from local as defined in config.json to the target path.
 
     Parameters
@@ -55,25 +55,25 @@ def copy_files(
         with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
-        data_path = os.path.normpath(config["local"])
+        normed_path = os.path.normpath(config["local"])
     else:
-        data_path = os.path.normpath(data_path)
+        normed_path = os.path.normpath(data_path)
 
     # Make sure the local path exists.
-    assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
+    assert os.path.exists(normed_path), f"{normed_path} doesn't exist!!"
 
     # List files that matches the requirements (instrument, date level,
     # data type, data rate) in the time interval for the target spacecraft.
-    files = list_files(tint, mms_id, var, data_path=data_path)
+    files = list_files(tint, mms_id, var, data_path=normed_path)
 
     for file in files:
         # Make paths
-        relative_path = os.path.relpath(file, data_path)
-        path = os.path.join(tar_path, os.path.dirname(relative_path))
-        target_file = os.path.join(path, os.path.basename(file))
+        relative_path = os.path.relpath(file, normed_path)
+        directory_path = os.path.join(tar_path, os.path.dirname(relative_path))
+        target_file = os.path.join(directory_path, os.path.basename(file))
 
         # Create directories in target path
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(directory_path, exist_ok=True)
 
         # Copy file
         shutil.copy2(file, target_file)
