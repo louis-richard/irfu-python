@@ -179,6 +179,7 @@ def read_lfr_density(
         out = ts_append(out, ts_scalar(time, density))
 
     # Time clip
-    out = time_clip(out, tint)
+    if out is not None:
+        out = time_clip(out, tint)
 
     return out

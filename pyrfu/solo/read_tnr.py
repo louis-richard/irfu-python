@@ -299,6 +299,7 @@ def read_tnr(
         out = out[np.argsort(out.time.data)]
 
     # Time clip
-    out = time_clip(out, tint)
+    if out is not None:
+        out = time_clip(out, tint)
 
     return out
