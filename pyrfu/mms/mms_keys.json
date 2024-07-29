@@ -434,6 +434,14 @@
             "dtype": "dis-partmoms",
             "cdf_name": "dis_temppara_part_fast"
         },
+        "parttperpe_fpi_fast_l2": {
+            "dtype": "des-partmoms",
+            "cdf_name": "des_tempperp_part_fast"
+        },
+        "parttparae_fpi_fast_l2": {
+            "dtype": "des-partmoms",
+            "cdf_name": "des_temppara_part_fast"
+        },
         "te_dbcs_fpi_fast_l2": {
             "dtype": "des-moms",
             "cdf_name": "des_temptensor_dbcs_fast"
