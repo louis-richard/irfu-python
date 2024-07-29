@@ -4,20 +4,23 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .ts_scalar import ts_scalar
+from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def calc_dng(p_xyz):
-    r"""Computes agyrotropy coefficient as in [15]_
+def calc_dng(p_xyz: DataArray) -> DataArray:
+    r"""Computes Aunai's agyrotropy coefficient.
+
+     Aunai's agyrotropy is [15]_
 
     .. math::
 
@@ -27,13 +30,20 @@ def calc_dng(p_xyz):
 
     Parameters
     ----------
-    p_xyz : xarray.DataArray
+    p_xyz : DataArray
         Time series of the pressure tensor
 
     Returns
     -------
-    d_ng : xarray.DataArray
+    DataArray
         Time series of the agyrotropy coefficient of the specie.
+
+    Raises
+    ------
+    TypeError
+        If input is not a xarray.DataArray.
+    ValueError
+        If input is not a time series of a tensor (n_time, 3, 3).
 
     References
     ----------
@@ -68,23 +78,25 @@ def calc_dng(p_xyz):
     >>> d_ng_e = pyrf.calc_dng(p_fac_e_pp)
 
     """
-
     # Check input type
-    assert isinstance(p_xyz, xr.DataArray), "p_xyz must be a xarray.DataArray"
+    if not isinstance(p_xyz, xr.DataArray):
+        raise TypeError("p_xyz must be a xarray.DataArray")
 
-    # Check import shape
-    message = "p_xyz must be a time series of a tensor"
-    assert p_xyz.data.ndim == 3 and p_xyz.shape[1] == 3 and p_xyz.shape[2] == 3, message
+    # Check input shape
+    if p_xyz.data.ndim != 3 or p_xyz.shape[1] != 3 or p_xyz.shape[2] != 3:
+        raise ValueError("p_xyz must be a time series of a tensor")
 
     # Parallel and perpendicular components
-    p_para = p_xyz.data[:, 0, 0]
-    p_perp = (p_xyz.data[:, 1, 1] + p_xyz.data[:, 2, 2]) / 2
+    p_para: np.ndarray = p_xyz.data[:, 0, 0]
+    p_perp: np.ndarray = (p_xyz.data[:, 1, 1] + p_xyz.data[:, 2, 2]) / 2
 
     # Off-diagonal terms
-    p_12, p_13, p_23 = [p_xyz.data[:, 0, 1], p_xyz.data[:, 0, 2], p_xyz.data[:, 1, 2]]
+    p_12: np.ndarray = p_xyz.data[:, 0, 1]
+    p_13: np.ndarray = p_xyz.data[:, 0, 2]
+    p_23: np.ndarray = p_xyz.data[:, 1, 2]
 
-    d_ng = np.sqrt(8 * (p_12**2 + p_13**2 + p_23**2))
+    d_ng: np.ndarray = np.sqrt(8 * (p_12**2 + p_13**2 + p_23**2))
     d_ng /= p_para + 2 * p_perp
-    d_ng = ts_scalar(p_xyz.time.data, d_ng)
+    d_ng_ts: DataArray = ts_scalar(p_xyz.time.data, d_ng)
 
-    return d_ng
+    return d_ng_ts

@@ -1,34 +1,43 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Optional
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import constants
+from xarray.core.dataarray import DataArray
+
+# Local imports
+from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def dynamic_press(n_s, v_xyz, specie: str = "ions"):
+def dynamic_press(
+    n_s: DataArray, v_xyz: DataArray, specie: Optional[str] = "ions"
+) -> DataArray:
     r"""Computes dynamic pressure.
 
     Parameters
     ----------
-    n_s : xarray.DataArray
+    n_s : DataArray
         Time series of the number density of the specie.
-    v_xyz : xarray.DataArray
+    v_xyz : DataArray
         Time series of the bulk velocity of the specie.
-    specie : {"ions", "electrons"}, Optional
-        Specie. Default "ions".
+    specie : str, Optional
+        Specie 'ions' or 'electrons'. Default 'ions'.
 
     Returns
     -------
-    p_dyn : xarray.DataArray
+    DataArray
         Time series of the dynamic pressure of the specie.
 
     Examples
@@ -60,20 +69,37 @@ def dynamic_press(n_s, v_xyz, specie: str = "ions"):
     """
 
     # Check input
-    assert isinstance(n_s, xr.DataArray), "n_s must be a xarray.DataArray"
-    assert isinstance(v_xyz, xr.DataArray), "v_xyz must be a xarray.DataArray"
-    assert isinstance(specie, str), "specie must be a str"
-    assert specie.lower() in ["ions", "electrons"], "specie must be ions or electrons"
+    if not isinstance(n_s, xr.DataArray):
+        raise TypeError("n_s must be a xarray.DataArray")
+
+    if not isinstance(v_xyz, xr.DataArray):
+        raise TypeError("v_xyz must be a xarray.DataArray")
+
+    if not isinstance(specie, str):
+        raise TypeError("specie must be a string")
 
     # Check n_s and v_xyz shapes
-    assert n_s.ndim == 1, "n_s must be a scalar"
-    assert v_xyz.ndim == 2 and v_xyz.shape[1] == 3, "v_xyz must be a vector"
+    if n_s.ndim != 1:
+        raise ValueError("n_s must be a scalar")
+
+    if v_xyz.ndim != 2 or v_xyz.shape[1] != 3:
+        raise ValueError("v_xyz must be a vector")
+
+    # Check specie
+    if specie.lower() not in ["ions", "electrons"]:
+        raise ValueError("specie must be 'ions' or 'electrons'")
 
     if specie.lower() == "ions":
         mass = constants.proton_mass
     else:
         mass = constants.electron_mass
 
-    p_dyn = n_s * mass * np.linalg.norm(v_xyz, axis=1) ** 2
+    # Get data
+    n_s_data: np.ndarray = n_s.data
+    v_xyz_data: np.ndarray = v_xyz.data
 
-    return p_dyn
+    # Compute dynamic pressure
+    p_dyn: np.ndarray = n_s_data * mass * np.linalg.norm(v_xyz_data, axis=1) ** 2
+    p_dyn_ts: DataArray = ts_scalar(n_s.time.data, p_dyn)
+
+    return p_dyn_ts

@@ -30,18 +30,21 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+@ddt
 class AutoCorrTestCase(unittest.TestCase):
+
     def test_autocorr_input_type(self):
         with self.assertRaises(TypeError):
             pyrf.autocorr(generate_data(100, 3))
 
-    def test_autocorr_input_shape(self):
+    @data(
+        (generate_ts(64.0, 100, tensor_order=2), None, True),
+        (generate_ts(64.0, 100, tensor_order=0), 100, True),
+    )
+    @unpack
+    def test_autocorr_input_value(self, inp, maxlags, normed):
         with self.assertRaises(ValueError):
-            pyrf.autocorr(generate_ts(64.0, 100, 2))
-
-    def test_autocorr_input_values(self):
-        with self.assertRaises(ValueError):
-            pyrf.autocorr(generate_ts(64.0, 100, tensor_order=0), 100)
+            pyrf.autocorr(inp, maxlags, normed)
 
     def test_autocorr_output_type(self):
         self.assertIsInstance(
@@ -51,7 +54,7 @@ class AutoCorrTestCase(unittest.TestCase):
             pyrf.autocorr(generate_ts(64.0, 100, tensor_order=1)), xr.DataArray
         )
 
-    def test_autocorr_output_shape(self):
+    def test_autocorr_output_value(self):
         result = pyrf.autocorr(generate_ts(64.0, 100, tensor_order=0))
         self.assertEqual(result.ndim, 1)
         self.assertEqual(result.shape[0], 100)
@@ -232,7 +235,7 @@ class CalcAgTestCase(unittest.TestCase):
     def test_calc_ag_input_type(self):
         self.assertIsNotNone(pyrf.calc_ag(generate_ts(64.0, 100, tensor_order=2)))
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             # Raises error if input is not a xarray
             pyrf.calc_ag(0.0)
             pyrf.calc_ag(generate_data(100))
@@ -243,17 +246,11 @@ class CalcAgTestCase(unittest.TestCase):
         # Output must be a xarray
         self.assertIsInstance(result, xr.DataArray)
 
-    def test_calc_ag_output_shape(self):
+    def test_calc_ag_output_value(self):
         result = pyrf.calc_ag(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.ndim, 1)
         self.assertEqual(len(result), 100)
-
-    def test_calc_ag_dims(self):
-        result = pyrf.calc_ag(generate_ts(64.0, 100, tensor_order=2))
         self.assertListEqual(list(result.dims), ["time"])
-
-    def test_calc_ag_meta(self):
-        result = pyrf.calc_ag(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
@@ -261,7 +258,7 @@ class CalcAgyroTestCase(unittest.TestCase):
     def test_calc_agyro_input_type(self):
         self.assertIsNotNone(pyrf.calc_agyro(generate_ts(64.0, 100, tensor_order=2)))
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             # Raises error if input is not a xarray
             pyrf.calc_agyro(0.0)
             pyrf.calc_agyro(generate_data(100))
@@ -272,17 +269,11 @@ class CalcAgyroTestCase(unittest.TestCase):
         # Output must be a xarray
         self.assertIsInstance(result, xr.DataArray)
 
-    def test_calc_agyro_output_shape(self):
+    def test_calc_agyro_output_value(self):
         result = pyrf.calc_agyro(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.ndim, 1)
         self.assertEqual(len(result), 100)
-
-    def test_calc_agyro_dims(self):
-        result = pyrf.calc_agyro(generate_ts(64.0, 100, tensor_order=2))
         self.assertListEqual(list(result.dims), ["time"])
-
-    def test_calc_agyro_meta(self):
-        result = pyrf.calc_agyro(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
@@ -290,7 +281,7 @@ class CalcDngTestCase(unittest.TestCase):
     def test_calc_dng_input_type(self):
         self.assertIsNotNone(pyrf.calc_dng(generate_ts(64.0, 100, tensor_order=2)))
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             # Raises error if input is not a xarray
             pyrf.calc_dng(0.0)
             pyrf.calc_dng(generate_data(100))
@@ -301,17 +292,11 @@ class CalcDngTestCase(unittest.TestCase):
         # Output must be a xarray
         self.assertIsInstance(result, xr.DataArray)
 
-    def test_calc_dng_output_shape(self):
+    def test_calc_dng_output_value(self):
         result = pyrf.calc_dng(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.ndim, 1)
         self.assertEqual(len(result), 100)
-
-    def test_calc_dng_dims(self):
-        result = pyrf.calc_dng(generate_ts(64.0, 100, tensor_order=2))
         self.assertListEqual(list(result.dims), ["time"])
-
-    def test_calc_dng_meta(self):
-        result = pyrf.calc_dng(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
@@ -345,32 +330,31 @@ class CalcFsTestCase(unittest.TestCase):
         self.assertIsInstance(pyrf.calc_fs(generate_ts(64.0, 100)), float)
 
 
+@ddt
 class CalcSqrtQTestCase(unittest.TestCase):
-    def test_calc_sqrtq_input_type(self):
-        self.assertIsNotNone(pyrf.calc_sqrtq(generate_ts(64.0, 100, tensor_order=2)))
-
-        with self.assertRaises(AssertionError):
+    @data(0, generate_data(100))
+    def test_calc_sqrtq_input_type(self, inp):
+        with self.assertRaises(TypeError):
             # Raises error if input is not a xarray
-            pyrf.calc_sqrtq(0.0)
-            pyrf.calc_sqrtq(generate_data(100))
+            pyrf.calc_sqrtq(inp)
+
+    @data(
+        generate_ts(64.0, 100, tensor_order=0), generate_ts(64.0, 100, tensor_order=1)
+    )
+    def test_calc_sqrtq_input_value(self, inp):
+        with self.assertRaises(ValueError):
+            # Raises error if input is not a xarray
+            pyrf.calc_sqrtq(inp)
 
     def test_calc_sqrtq_output_type(self):
         result = pyrf.calc_sqrtq(generate_ts(64.0, 100, tensor_order=2))
-
-        # Output must be a xarray
         self.assertIsInstance(result, xr.DataArray)
 
-    def test_calc_sqrtq_output_shape(self):
+    def test_calc_sqrtq_output_value(self):
         result = pyrf.calc_sqrtq(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.ndim, 1)
         self.assertEqual(len(result), 100)
-
-    def test_calc_sqrtq_dims(self):
-        result = pyrf.calc_sqrtq(generate_ts(64.0, 100, tensor_order=2))
         self.assertListEqual(list(result.dims), ["time"])
-
-    def test_calc_sqrtq_meta(self):
-        result = pyrf.calc_sqrtq(generate_ts(64.0, 100, tensor_order=2))
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
 
@@ -482,72 +466,88 @@ class CompressCwtTestCase(unittest.TestCase):
         self.assertIsInstance(result, np.ndarray)
 
 
+@ddt
 class ConvertFACTestCase(unittest.TestCase):
-    def test_convert_fac_input(self):
-        with self.assertRaises(AssertionError):
-            pyrf.convert_fac(0, 0)
-            pyrf.convert_fac(
-                generate_data(100, tensor_order=1), generate_data(100, tensor_order=1)
-            )
-
-        with self.assertRaises(TypeError):
-            pyrf.convert_fac(
-                generate_ts(64.0, 100, tensor_order=2),
-                generate_ts(64.0, 100, tensor_order=1),
-            )
-
-        with self.assertRaises(TypeError):
-            pyrf.convert_fac(
-                generate_ts(64.0, 100, tensor_order=1),
-                generate_ts(64.0, 100, tensor_order=0),
-            )
-
-    def test_convert_fac_output(self):
-        result = pyrf.convert_fac(
+    @data(
+        (
+            generate_data(100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=1),
+            [1, 0, 0],
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_data(100, tensor_order=1),
+            [1, 0, 0],
+        ),
+        (
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 100, tensor_order=1),
-        )
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
+            0,
+        ),
+    )
+    @unpack
+    def test_convert_fac_input_type(self, inp, b_bgd, r_xyz):
+        with self.assertRaises(TypeError):
+            pyrf.convert_fac(inp, b_bgd, r_xyz)
 
-        result = pyrf.convert_fac(
+    @data(
+        (
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=0),
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=1),
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=1),
+        ),
+    )
+    @unpack
+    def test_convert_fac_input_shape(self, inp, b_bgd, r_xyz):
+        with self.assertRaises(ValueError):
+            pyrf.convert_fac(inp, b_bgd, r_xyz)
+
+    @data(
+        (
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=1),
+            None,
+        ),
+        (
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 98, tensor_order=1),
-        )
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
-
-        result = pyrf.convert_fac(
+            None,
+        ),
+        (
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 100, tensor_order=1),
             np.random.random(3),
-        )
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
-
-        result = pyrf.convert_fac(
+        ),
+        (
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 100, tensor_order=1),
-        )
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
-
-        result = pyrf.convert_fac(
+        ),
+        (
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 97, tensor_order=1),
-        )
-        self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 3])
-
-        result = pyrf.convert_fac(
+        ),
+        (
             generate_ts(64.0, 100, tensor_order=0),
             generate_ts(64.0, 100, tensor_order=1),
             generate_ts(64.0, 100, tensor_order=1),
-        )
+        ),
+    )
+    @unpack
+    def test_convert_fac_output(self, inp, b_bgd, r_xyz):
+        result = pyrf.convert_fac(inp, b_bgd, r_xyz)
         self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(list(result.shape), [100, 2])
 
 
 @ddt
@@ -813,17 +813,44 @@ class DynamicPressTestCase(unittest.TestCase):
         (
             generate_data(100, tensor_order=0),
             generate_ts(64.0, 100, tensor_order=1),
-            "ions",
+            random.choice(["ions", "electrons"]),
         ),
         (
             generate_ts(64.0, 100, tensor_order=0),
             generate_data(100, tensor_order=1),
-            "ions",
+            random.choice(["ions", "electrons"]),
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=1),
+            42,
         ),
     )
     @unpack
-    def test_dynamic_press_input(self, n_s, v_xyz, specie):
-        with self.assertRaises(AssertionError):
+    def test_dynamic_press_input_type(self, n_s, v_xyz, specie):
+        with self.assertRaises(TypeError):
+            pyrf.dynamic_press(n_s, v_xyz, specie)
+
+    @data(
+        (
+            generate_ts(64.0, 100, tensor_order=1),
+            generate_ts(64.0, 100, tensor_order=1),
+            random.choice(["ions", "electrons"]),
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=0),
+            random.choice(["ions", "electrons"]),
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=0),
+            generate_ts(64.0, 100, tensor_order=1),
+            "I AM GROOT!!",
+        ),
+    )
+    @unpack
+    def test_dynamic_press_input_value(self, n_s, v_xyz, specie):
+        with self.assertRaises(ValueError):
             pyrf.dynamic_press(n_s, v_xyz, specie)
 
     @data("ions", "electrons")

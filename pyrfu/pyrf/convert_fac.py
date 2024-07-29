@@ -1,26 +1,35 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Optional, Union
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
-from .calc_fs import calc_fs
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .resample import resample
-from .ts_vec_xyz import ts_vec_xyz
+from pyrfu.pyrf.calc_fs import calc_fs
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def convert_fac(inp, b_bgd, r_xyz: list = None):
-    r"""Transforms to a field-aligned coordinate (FAC) system defined as :
+def convert_fac(
+    inp: DataArray,
+    b_bgd: DataArray,
+    r_xyz: Optional[Union[DataArray, np.ndarray, list]] = None,
+) -> DataArray:
+    r"""Transform to a field-aligned coordinate (FAC) system.
+
+    The FAC system is defined as :
         * R_parallel_z aligned with the background magnetic field
         * R_perp_y defined by R_parallel cross the position vector of the
             spacecraft (nominally eastward at the equator)
@@ -31,18 +40,29 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Time series of the input field.
-    b_bgd : xarray.DataArray
+    b_bgd : DataArray
         Time series of the background magnetic field.
     r_xyz : xarray.DataArray or ndarray or list
         Position vector of spacecraft.
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the input field in field aligned coordinates
         system.
+
+    Raises
+    ------
+    TypeError
+        * If inp is not a xarray.DataArray.
+        * If b_bgd is not a xarray.DataArray.
+        * If r_xyz is not a xarray.DataArray or ndarray or list.
+    ValueError
+        * If inp is not a scalar or a vector.
+        * If b_bgd is not a vector or a tensor.
+        * If r_xyz is not a vector.
 
     Notes
     -----
@@ -73,44 +93,48 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
     """
 
     # Check input type
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
-    assert isinstance(b_bgd, xr.DataArray), "b_xyz must be a xarray.DataArray"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
 
-    assert r_xyz is None or isinstance(
-        r_xyz,
-        (xr.DataArray, list, np.ndarray),
-    )
+    if not isinstance(b_bgd, xr.DataArray):
+        raise TypeError("b_xyz must be a xarray.DataArray")
+
+    if r_xyz is None:
+        r_xyz = np.array([1, 0, 0])
+    elif not isinstance(r_xyz, (xr.DataArray, np.ndarray, list)):
+        raise TypeError("r_xyz must be a xarray.DataArray or ndarray or list")
 
     if len(inp) != len(b_bgd):
         b_bgd = resample(b_bgd, inp, f_s=calc_fs(inp))
 
-    time, inp_data = [inp.time.data, inp.data]
+    time: np.ndarray = inp.time.data
+    inp_data: np.ndarray = inp.data
+    b_bgd_data: np.ndarray = b_bgd.data
 
-    if r_xyz is None:
-        r_xyz = np.array([1, 0, 0])
-
-    if isinstance(r_xyz, xr.DataArray):
-        r_xyz = resample(r_xyz, b_bgd, f_s=calc_fs(b_bgd))
-
+    if isinstance(r_xyz, xr.DataArray) and r_xyz.ndim == 2 and r_xyz.shape[1] == 3:
+        r_xyz_ts: DataArray = resample(r_xyz, b_bgd, f_s=calc_fs(b_bgd))
+        r_xyz_data: np.ndarray = r_xyz_ts.data
     elif isinstance(r_xyz, (list, np.ndarray)) and len(r_xyz) == 3:
-        r_xyz = np.tile(r_xyz, (len(b_bgd), 1))
+        r_xyz_data = np.tile(r_xyz, (len(b_bgd), 1))
+    else:
+        raise ValueError("r_xyz must be a vector (time series or time independent)")
 
     if b_bgd.ndim == 2 and b_bgd.shape[1] == 3:
         # Normalize background magnetic field
-        b_hat = b_bgd / np.linalg.norm(b_bgd, axis=1, keepdims=True)
+        b_hat: np.ndarray = b_bgd_data / np.linalg.norm(b_bgd, axis=1, keepdims=True)
 
         # Perpendicular
-        r_perp_y = np.cross(b_hat, r_xyz, axis=1)
+        r_perp_y: np.ndarray = np.cross(b_hat, r_xyz_data, axis=1)
         r_perp_y /= np.linalg.norm(r_perp_y, axis=1, keepdims=True)
-        r_perp_x = np.cross(r_perp_y, b_bgd, axis=1)
+        r_perp_x: np.ndarray = np.cross(r_perp_y, b_bgd, axis=1)
         r_perp_x /= np.linalg.norm(r_perp_x, axis=1, keepdims=True)
-        r_para = b_hat
+        r_para: np.ndarray = b_hat
     elif b_bgd.ndim == 3 and b_bgd.shape[1] == 3 and b_bgd.shape[2] == 3:
-        r_perp_x = ts_vec_xyz(b_bgd.time.data, b_bgd.data[:, 0])
-        r_perp_y = ts_vec_xyz(b_bgd.time.data, b_bgd.data[:, 1])
-        r_para = ts_vec_xyz(b_bgd.time.data, b_bgd.data[:, 2])
+        r_perp_x = b_bgd_data[:, 0]
+        r_perp_y = b_bgd_data[:, 1]
+        r_para = b_bgd_data[:, 2]
     else:
-        raise TypeError("b_bgd must be a vector or a tensor time series")
+        raise ValueError("b_bgd must be a vector or a tensor time series")
 
     if inp_data.ndim == 2 and inp_data.shape[1] == 3:
         out_data = np.zeros(inp.shape, dtype=inp_data.dtype)
@@ -125,13 +149,15 @@ def convert_fac(inp, b_bgd, r_xyz: list = None):
     elif inp_data.ndim == 1:
         out_data = np.zeros([inp_data.shape[0], 2])
 
-        out_data[:, 0] = inp * np.sum(r_perp_x * r_xyz, axis=1)
-        out_data[:, 1] = inp * np.sum(r_para * r_xyz, axis=1)
+        out_data[:, 0] = inp * np.sum(r_perp_x * r_xyz_data, axis=1)
+        out_data[:, 1] = inp * np.sum(r_para * r_xyz_data, axis=1)
 
         out = xr.DataArray(
             out_data, coords=[time, ["perp", "para"]], dims=["time", "comp"]
         )
     else:
-        raise TypeError("inp must be a vector or scalar")
+        raise ValueError(
+            "inp must be a vector or scalar. See pyrfu.mms.rotate_tensor for tensor."
+        )
 
     return out
