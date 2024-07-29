@@ -7,16 +7,18 @@ import json
 import logging
 import os
 import re
+from typing import Optional
 
 # 3rd party imports
 import numpy as np
+import pycdfpp
 import xarray as xr
-from cdflib import cdfepoch
 from dateutil import parser
 from dateutil.rrule import DAILY, rrule
 from scipy import integrate
+from xarray.core.dataarray import DataArray
 
-from ..pyrf import read_cdf, ts_append
+from ..pyrf import read_cdf, time_clip, ts_append
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -33,7 +35,9 @@ logging.basicConfig(
 )
 
 
-def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
+def _list_files_tnr_l2(
+    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
+) -> list:
     """Find files in the L2 data repo corresponding to the target time
     interval.
 
@@ -48,7 +52,7 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
 
     Returns
     -------
-    files : list
+    list
         List of files corresponding to the parameters in the selected time
         interval
 
@@ -129,7 +133,12 @@ def _list_files_tnr_l2(tint, data_path: str = "", tree: bool = False):
     return files_out
 
 
-def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
+def read_tnr(
+    tint: list,
+    sensor: Optional[int] = 4,
+    data_path: Optional[str] = "",
+    tree: Optional[bool] = False,
+) -> DataArray:
     r"""Read L2 data from TNR
 
     Parameters
@@ -152,8 +161,13 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Spectrum of the measured signals.
+
+    Raises
+    ------
+    ValueError
+        If there is no data from the sensor selected.
 
     Notes
     -----
@@ -174,7 +188,7 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
         # Notify user
         logging.info("Loading %s...", os.path.split(file)[-1])
 
-        data_l2 = read_cdf(file, tint)
+        data_l2 = read_cdf(file)
 
         n_freqs = 4 * data_l2["tnr_band_freq"].shape[1]
         freq_tnr = np.reshape(data_l2["tnr_band_freq"].data, n_freqs) / 1000
@@ -211,7 +225,8 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
                 idx_l, idx_r = [xdelta_sw[inswn] + 1, xdelta_sw[inswn + 1]]
                 sweep_num[idx_l:idx_r] += sweep_num[xdelta_sw[inswn]]
 
-        timet_ = cdfepoch.to_datetime(epoch_)
+        # Convert epoch to datetime64
+        timet_ = pycdfpp.to_datetime64(epoch_)
 
         sens0_, sens1_ = [np.where(confg_[:, i] == sensor)[0] for i in range(2)]
 
@@ -227,7 +242,6 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
             auto_calib = auto2_[sens1_, :]
             sens_ = sens1_
             timet_ici = timet_[sens1_]
-
         else:
             raise ValueError("no data at all ?!?")
 
@@ -283,5 +297,8 @@ def read_tnr(tint, sensor: int = 4, data_path: str = "", tree: bool = False):
         )
 
         out = out[np.argsort(out.time.data)]
+
+    # Time clip
+    out = time_clip(out, tint)
 
     return out

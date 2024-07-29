@@ -7,14 +7,16 @@ import json
 import logging
 import os
 import re
+from typing import Optional
 
 # 3rd party imports
 import numpy as np
-from cdflib import cdfepoch
+import pycdfpp
 from dateutil import parser
 from dateutil.rrule import DAILY, rrule
+from xarray.core.dataarray import DataArray
 
-from ..pyrf import read_cdf, ts_append, ts_scalar
+from ..pyrf import read_cdf, time_clip, ts_append, ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -31,7 +33,9 @@ logging.basicConfig(
 )
 
 
-def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
+def _list_files_lfr_density_l3(
+    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
+) -> list:
     """Find files in the L2 data repo corresponding to the target time
     interval.
 
@@ -46,7 +50,7 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
 
     Returns
     -------
-    files : list
+    list
         List of files corresponding to the parameters in the selected time
         interval
 
@@ -129,7 +133,9 @@ def _list_files_lfr_density_l3(tint, data_path: str = "", tree: bool = False):
     return files_out
 
 
-def read_lfr_density(tint, data_path: str = "", tree: bool = False):
+def read_lfr_density(
+    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
+) -> DataArray:
     r"""Read L3 density data from LFR
 
     Parameters
@@ -143,7 +149,7 @@ def read_lfr_density(tint, data_path: str = "", tree: bool = False):
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the density.
 
     """
@@ -159,15 +165,20 @@ def read_lfr_density(tint, data_path: str = "", tree: bool = False):
         logging.info("Loading %s...", os.path.split(file)[-1])
 
         # Read file content
-        data_l3 = read_cdf(file, tint)
+        data_l3 = read_cdf(file)
 
         # Get time from Epoch
         epoch = data_l3["epoch"].data
-        time = cdfepoch.to_datetime(epoch)
+
+        # Convert epoch to datetime64
+        time = pycdfpp.to_datetime64(epoch)
 
         # Get density data and contruct time series.
         density = data_l3["density"].data
         density[density == -1e31] = np.nan
         out = ts_append(out, ts_scalar(time, density))
+
+    # Time clip
+    out = time_clip(out, tint)
 
     return out

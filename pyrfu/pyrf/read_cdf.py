@@ -3,51 +3,48 @@
 
 # 3rd party imports
 import numpy as np
+import pycdfpp
 import xarray as xr
-from cdflib import cdfepoch, cdfread
-from dateutil import parser
-
-# Local imports
-from .datetime2iso8601 import datetime2iso8601
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def read_cdf(path, tint):
-    r"""Reads CDF files.
+def read_cdf(path: str) -> dict:
+    r"""Reads a .cdf file and returns a dictionary with the fields contained in
+    the file.
 
     Parameters
     ----------
     path : str
-        String of the filename in .cdf containing the L2 data
-    tint : list
-        Time interval
+        Path to the .cdf file.
 
     Returns
     -------
-    out_dict : dict
+    dict
         Hash table with fields contained in the .cdf file.
 
     """
 
-    tint = list(map(parser.parse, tint))
-    tint = list(map(datetime2iso8601, tint))
-    tint = list(map(cdfepoch.parse, tint))
-
+    # Initialize output dictionary
     out_dict = {}
 
-    with cdfread.CDF(path) as file:
-        keys_ = file.cdf_info()["zVariables"]
-        for k_ in keys_:
-            temp_ = file.varget(k_, starttime=tint[0], endtime=tint[1])
-            shape_ = temp_.shape
-            coords = [np.arange(lim_) for lim_ in shape_]
+    # Load file
+    file = pycdfpp.load(path)
 
-            out_dict[k_.lower()] = xr.DataArray(temp_, coords=coords)
+    # Get keys (a.k.a zvariables) from file
+    keys = list(map(lambda x: x[0], file.items()))
+
+    for key in keys:
+        # Get data and coordinates
+        data = np.squeeze(file[key].values)
+        coords = [np.arange(dim_size) for dim_size in data.shape]
+
+        # Construct xarray DataArray
+        out_dict[key.lower()] = xr.DataArray(data, coords=coords)
 
     return out_dict
