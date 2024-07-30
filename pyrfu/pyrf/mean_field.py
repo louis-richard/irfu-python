@@ -1,54 +1,76 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Tuple, Union
+
 # 3rd party imports
 import numpy as np
+import xarray as xr
+from numpy.typing import NDArray
+from xarray.core.dataarray import DataArray
+
+# Local imports
+from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
+NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
-def mean_field(inp, deg):
-    r"""Estimates mean field xm and wave field xw using polynomial fit of order
-    `deg` for the number of columns larger than 3 assume that first column
-    is time.
+
+def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
+    r"""Estimate the mean and wave fields.
+
+    The mean field is computed by fitting a polynomial of degree `deg` to the
+    input data. The wave field is then computed as the difference between the
+    input data and the mean field.
 
     Parameters
     ----------
-    inp : array_like
+    inp : DataArray
         Input data.
     deg : int
-        Degree of the fitting polynomial
+        Degree of the polynomial.
 
     Returns
     -------
-    inp_mean : numpy.ndarray
-        Mean field.
-    inp_wave : numpy.ndarray
-        Wave field
+    Tuple
+        Mean field and wave field.
+
+    Raises
+    ------
+    TypeError
+        If input is not a xarray.DataArray.
 
     """
-    inp_mean = inp
-    inp_wave = inp
+    # Checking input
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("Input must be a xarray.DataArray")
 
-    n_rows, n_cols = inp.shape
+    # Extracting time and data
+    time: NDArray[np.datetime64] = inp.time.data
+    data: NDArray[np.float64] = inp.data.astype(np.float64)  # force to double precision
+    time_ints: NDArray[np.uint16] = np.arange(len(time), dtype=np.uint16)
 
-    if n_cols >= 4:
-        time = (inp[:, 0] - inp[0, 0]) / (inp[n_rows, 0] - inp[0, 0])
-        data = inp[:, 1:]
-
-    else:
-        time = np.arange(len(inp))
-        data = inp
+    # Preallocating output
+    inp_mean: NDArray[np.float64] = np.zeros_like(data, dtype=np.float64)
+    inp_wave: NDArray[np.float64] = np.zeros_like(data, dtype=np.float64)
 
     for i in range(data.shape[1]):
-        res = np.polyfit(time, data[:, i], deg)
-        polynomial_coeffs = res[0]
-        inp_mean[:, i] = np.polyval(polynomial_coeffs, time)
+        # Polynomial fit
+        polynomial_coeffs: NDArray[np.float64] = np.polyfit(time_ints, data[:, i], deg)
+
+        # Computing mean and wave field
+        inp_mean[:, i] = np.polyval(polynomial_coeffs, time_ints)
         inp_wave[:, i] = data[:, i] - inp_mean[:, i]
 
-    return inp_mean, inp_wave
+    # Time series
+    inp_mean_ts: DataArray = ts_vec_xyz(inp.time.data, inp_mean)
+    inp_wave_ts: DataArray = ts_vec_xyz(inp.time.data, inp_wave)
+
+    return inp_mean_ts, inp_wave_ts

@@ -1,32 +1,44 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Any, Optional
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from numpy.typing import NDArray
+from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def movmean(inp, n_pts: int = 100):
+def movmean(inp: DataArray, window_size: Optional[int] = None) -> DataArray:
     r"""Computes running average of the inp over npts points.
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Time series of the input variable.
-    n_pts : int, Optional
-        Number of points to average over.
+    window_size : int, Optional
+        Number of points to average over. Default is a 4-point running average.
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the input variable averaged over npts points.
+
+    Raises
+    ------
+    TypeError
+        If inp is not a DataArray.
+    ValueError
+        If window_size is smaller than 2 or larger than the length of the data.
 
     Notes
     -----
@@ -55,25 +67,46 @@ def movmean(inp, n_pts: int = 100):
 
     """
 
-    if isinstance(n_pts, float):
-        n_pts = np.floor(n_pts).astype(np.int64)
+    # Checks if input is a DataArray
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("Input must be a xarray.DataArray")
 
-    if n_pts % 2:
-        n_pts -= 1
+    # Gets input data and time
+    time: NDArray[np.datetime64] = inp.time.data
+    inp_data: NDArray[np.float32] = inp.data
+
+    # Checks if window_size is defined
+    if window_size is None:
+        window_size = 2
+    elif window_size < 2 or window_size > len(time):
+        raise ValueError(
+            "Window size must be larger than 2 and smaller than the length of the data."
+        )
+
+    # Checks if window_size is odd. If not, makes it odd.
+    if window_size % 2:
+        window_size -= 1
+
+    # Preallocates output
+    out_dat: NDArray[np.float32] = np.empty(
+        (len(time) - window_size, *inp_data.shape[1:]), dtype=np.float32
+    )
 
     # Computes moving average
-    cum_sum = np.cumsum(inp.data, axis=0)
-    out_dat = (cum_sum[n_pts:, ...] - cum_sum[:-n_pts, ...]) / n_pts
+    cum_sum: NDArray[np.float32] = np.cumsum(inp_data, axis=0)
+    out_dat[...] = (
+        cum_sum[window_size:, ...] - cum_sum[:-window_size, ...]
+    ) / window_size
 
-    coords = []
-
-    for k in inp.dims:
-        if k == "time":
-            coords.append(inp.coords[k][int(n_pts / 2) : -int(n_pts / 2)])
-        else:
-            coords.append(inp.coords[k].data)
+    # Gets coordinates
+    coords: list[NDArray[Any]] = [
+        time[int(window_size / 2) : -int(window_size / 2)],
+        *[inp.coords[k].data for k in inp.dims[1:]],
+    ]
 
     # Output in DataArray type
-    out = xr.DataArray(out_dat, coords=coords, dims=inp.dims, attrs=inp.attrs)
+    out: DataArray = xr.DataArray(
+        out_dat, coords=coords, dims=inp.dims, attrs=inp.attrs
+    )
 
     return out

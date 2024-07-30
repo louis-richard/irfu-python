@@ -1,34 +1,45 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import numpy as np
+# Built-in imports
+from typing import Optional
 
 # 3rd party imports
+import numpy as np
 import xarray as xr
+from numpy.typing import NDArray
 from scipy import signal
+from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def medfilt(inp, n_pts: int = 11):
+def medfilt(inp: DataArray, kernel_size: Optional[int] = None) -> DataArray:
     r"""Applies a median filter over npts points to inp.
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Time series of the input variable.
-    n_pts : int, Optional
-        Number of points of median filter.
+    kernel_size : int, Optional
+        Number of points of median filter. Default is a 3-point median filter.
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the median filtered input variable.
+
+    Raises
+    ------
+    TypeError
+        If inp is not a DataArray.
+    ValueError
+        If inp is not 1D, 2D or 3D.
 
     Examples
     --------
@@ -65,41 +76,48 @@ def medfilt(inp, n_pts: int = 11):
 
     """
 
-    if isinstance(n_pts, float):
-        n_pts = np.floor(n_pts).astype(np.int64)
+    # Check input
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("Input must be a DataArray")
 
-    if n_pts % 2 == 0:
-        n_pts += 1
+    # Get number of times
+    n_times: int = len(inp)
 
-    n_times = len(inp)
+    # Check kernel size
+    if kernel_size is None:
+        # Set default kernel size to 3
+        kernel_size = 3
+    elif kernel_size % 2 == 0:
+        # If kernel size is even, add 1.
+        kernel_size += 1
 
-    if inp.ndim == 3:
+    # Check if input is 1D, 2D or 3D
+    if inp.ndim == 1:
+        # Add a dimension to the input if it is 1D
+        inp_data: NDArray[np.float32] = inp.data[:, np.newaxis]
+    elif inp.ndim == 2:
+        # Keep input as is if it is 2D
+        inp_data = inp.data
+    elif inp.ndim == 3:
+        # Reshape input if it is 3D to 2D (n_times, 9)
         inp_data = np.reshape(inp.data, [n_times, 9])
     else:
-        inp_data = inp.data
+        raise ValueError("Input must be 1D, 2D or 3D")
 
-    try:
-        n_comp = inp_data.shape[1]
-    except IndexError:
-        n_comp = 1
+    # Preallocate output
+    out_data: NDArray[np.float32] = np.zeros(inp_data.shape, dtype=np.float32)
 
-        inp_data = inp_data[..., None]
+    # Apply median filter
+    for i in range(inp_data.shape[1]):
+        out_data[:, i] = signal.medfilt(inp_data[:, i], kernel_size)
 
-    out_data = np.zeros(inp_data.shape)
-
-    if not n_pts % 2:
-        n_pts += 1
-
-    for i in range(n_comp):
-        out_data[:, i] = signal.medfilt(inp_data[:, i], n_pts)
-
-    if n_comp == 9:
+    # Reshape output if input was 3D
+    if inp_data.shape[1] == 9:
         out_data = np.reshape(out_data, [n_times, 3, 3])
 
-    if out_data.shape[1] == 1:
-        out_data = out_data[:, 0]
-
-    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims)
-    out.attrs = inp.attrs
+    # Create output DataArray
+    out: DataArray = xr.DataArray(
+        np.squeeze(out_data), coords=inp.coords, dims=inp.dims, attrs=inp.attrs
+    )
 
     return out
