@@ -52,4 +52,9 @@ repos:
           - import-error
           - --output-format
           - colorized
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.11.0"
+    hooks:
+      - id: mypy
+        args: [--strict]
 
