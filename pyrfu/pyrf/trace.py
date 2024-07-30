@@ -1,32 +1,47 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Union
+
 # 3rd party imports
+import numpy as np
 import xarray as xr
+from numpy.typing import NDArray
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .ts_scalar import ts_scalar
+from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
+NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
-def trace(inp):
+
+def trace(inp: DataArray) -> DataArray:
     r"""Computes trace of the time series of 2nd order tensors.
 
     Parameters
     ----------
-    inp : xarray.DataArray
+    inp : DataArray
         Time series of the input 2nd order tensor.
 
     Returns
     -------
-    out : xarray.DataArray
+    DataArray
         Time series of the trace of the input tensor.
+
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray.
+    ValueError
+        If inp is not a time series of a tensor.
 
     Examples
     --------
@@ -56,13 +71,20 @@ def trace(inp):
     """
 
     # Check input type
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
 
     # Check that inp is a tensor
-    message = "inp must be a time series of a tensor"
-    assert inp.ndim == 3 and inp.shape[1] == 3 and inp.shape[1] == 3, message
+    if inp.ndim != 3 or inp.shape[1] != 3 or inp.shape[2] != 3:
+        raise ValueError("inp must be a time series of a tensor")
 
-    out_data = inp.data[:, 0, 0] + inp.data[:, 1, 1] + inp.data[:, 2, 2]
+    # Get diagonal elements
+    inp_xx: NDArrayFloats = inp.data[:, 0, 0]
+    inp_yy: NDArrayFloats = inp.data[:, 1, 1]
+    inp_zz: NDArrayFloats = inp.data[:, 2, 2]
+
+    # Compute trace
+    out_data = inp_xx + inp_yy + inp_zz
 
     # Construct time series
     out = ts_scalar(inp.time.data, out_data, inp.attrs)
