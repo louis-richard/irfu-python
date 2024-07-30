@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Mapping, Optional
+from typing import Mapping, Optional, Union
 
 # 3rd party imports
 import numpy as np
@@ -20,7 +20,7 @@ __status__ = "Prototype"
 
 def ts_vec_xyz(
     time: NDArray[np.datetime64],
-    data: NDArray[Any],
+    data: NDArray[Union[np.float32, np.float64]],
     attrs: Optional[Mapping[str, object]] = None,
 ) -> DataArray:
     r"""Create a time series containing a 1st order tensor.
@@ -70,7 +70,7 @@ def ts_vec_xyz(
     else:
         raise TypeError("attrs must be a dict")
 
-    out = xr.DataArray(
+    out: DataArray = xr.DataArray(
         data,
         coords=[time[:], ["x", "y", "z"]],
         dims=["time", "comp"],
