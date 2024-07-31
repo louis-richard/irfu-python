@@ -178,6 +178,7 @@ module = [
     "boto3.*",
     "matplotlib.*",
     "mpl_toolkits.*",
+    "numba.*",
     "pandas.*",
     "pytest.*",
     "scipy.*",
