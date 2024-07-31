@@ -143,7 +143,7 @@ def fk_power_spectrum_4sc(
         }
     else:
         cwt_options = {
-            "nf": num_f,
+            "n_freqs": num_f,
             "return_power": False,
             "wavelet_width": 5.36 * w_width,
             "cut_edge": False,
