@@ -4,21 +4,25 @@
 # Built-on imports
 import os
 import warnings
+from typing import Any, Optional, Tuple
 
 # 3rd party imports
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from scipy import interpolate
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def igrf(time, flag):
+def igrf(
+    time: NDArray[Any], flag: Optional[str] = None
+) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     r"""Returns magnetic dipole latitude and longitude of the IGRF model
 
     Parameters
@@ -30,12 +34,18 @@ def igrf(time, flag):
 
     Returns
     -------
-    lambda : ndarray
-        latitude
-    phi : ndarray
-        longitude
+    tuple
+        Tuple containing latitude and longitude as numpy arrays.
+
+    Raises
+    ------
+    NotImplementedError
+        If flag is not dipole.
 
     """
+
+    if flag is None:
+        flag = "dipole"
 
     # Root path
     # root_path = os.getcwd()
@@ -98,4 +108,5 @@ def igrf(time, flag):
     else:
         raise NotImplementedError("input flag is not recognized")
 
-    return np.rad2deg(lambda_), np.rad2deg(phi)
+    out = (np.rad2deg(lambda_), np.rad2deg(phi))
+    return out
