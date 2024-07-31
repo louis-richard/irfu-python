@@ -1,44 +1,61 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd oarty imports
+# Built-in imports
+from typing import Union
+
+# 3rd party imports
 import numpy as np
+import xarray as xr
+from numpy.typing import NDArray
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from ..pyrf.calc_fs import calc_fs
-from ..pyrf.ts_scalar import ts_scalar
-from ..pyrf.ts_vec_xyz import ts_vec_xyz
+from pyrfu.pyrf.calc_fs import calc_fs
+from pyrfu.pyrf.ts_scalar import ts_scalar
+from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
 
+NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
-def fft_bandpass(inp, f_min, f_max):
+
+def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
     r"""Perform simple bandpass using FFT - returns fields between with
     ``f_min`` < f < ``f_max``.
 
     Parameters
     ----------
-    inp : xarray.DataArray
-        Time series to be bandpassed filtered.
-    f_min : float or int
+    inp : DataArray
+        Time series to be bandpass filtered.
+    f_min : float
         Minimum frequency of filter, f < ``f_min`` are removed.
-    f_max : float or int
+    f_max : float
         Maximum frequency of filter, f > ``f_max`` are removed.
 
     Returns
     -------
-    out : xarray.DataArray
-        Time series of the bandpassed filtered data.
+    DataArray
+        Time series of the bandpass filtered data.
+
+    Raises
+    ------
+    TypeError
+        * If input is not a xarray.DataArray.
+        * If f_min is not a float.
+        * If f_max is not a float.
+    ValueError
+        If f_min is larger than f_max.
 
     Notes
     -----
-    Can be some spurius effects near boundary. Can take longer interval then
-    use tlim to remove.
+    Can be some spurious effects near boundary. Can take longer interval then
+    use pyrfu.pyrf.time_clip to remove.
 
     Examples
     --------
@@ -62,24 +79,38 @@ def fft_bandpass(inp, f_min, f_max):
 
     """
 
-    inp_time, inp_data = [inp.time.data, inp.data]
+    # Make sure input is a DataArray
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("Input must be a xarray.DataArray")
+
+    # Check f_min and f_max
+    if not isinstance(f_min, float):
+        raise TypeError("f_min must be a float")
+
+    if not isinstance(f_max, float):
+        raise TypeError("f_max must be a float")
+
+    # Check that f_min < f_max
+    if f_min >= f_max:
+        raise ValueError("f_min must be smaller than f_max")
+
+    # Get time and data
+    inp_time: NDArray[np.datetime64] = inp.time.data
+    inp_data: NDArrayFloats = inp.data
+    precision = inp_data.dtype
+
+    # Reshape to column vector if input is a scalar
+    if inp_data.ndim == 1:
+        # If scalar, reshape to column vector
+        inp_data = inp_data[:, np.newaxis]
+    elif inp_data.ndim > 2:
+        raise ValueError("Input must be a scalar or a vector")
 
     # Make sure number of elements is an even number, if odd remove last
-    # element to make an even
-    # number
-    n_els = len(inp_data)
-
-    if n_els % 2:
+    # element to make an even number
+    if len(inp_time) % 2:
         inp_time = inp_time[:-1]
         inp_data = inp_data[:-1, :]
-
-        n_els = len(inp_data)
-
-    try:
-        num_fields = inp_data.shape[1]
-    except IndexError:
-        num_fields = 1
-        inp_data = inp_data[:, np.newaxis]
 
     # Set NaN values to zero so FFT works
     idx_nans = np.isnan(inp_data)
@@ -88,28 +119,34 @@ def fft_bandpass(inp, f_min, f_max):
     # Bandpass filter field data
     f_sam = calc_fs(inp)
     f_nyq = f_sam / 2
-    frequencies = np.linspace(-f_nyq, f_nyq, n_els)
+    frequencies = np.linspace(-f_nyq, f_nyq, len(inp_time))
+
+    # Preallocate output
+    out_data_64: NDArray[np.float64] = np.empty_like(inp_data, dtype=np.float64)
 
     # FFT and remove frequencies
-    for i in range(num_fields):
-        inp_temp = np.fft.fft(inp_data[:, i])
-        inp_temp = np.fft.fftshift(inp_temp)
+    for i in range(inp_data.shape[1]):
+        inp_tmp: NDArray[np.float64] = inp_data[:, i].astype(np.float64)
+        inp_fft: NDArray[np.complex128] = np.fft.fft(inp_tmp)
+        inp_fft = np.fft.fftshift(inp_fft)
 
-        inp_temp[np.abs(frequencies) < f_min] = 0
-        inp_temp[np.abs(frequencies) > f_max] = 0
+        inp_fft[np.abs(frequencies) < f_min] = 0.0 + 0.0j
+        inp_fft[np.abs(frequencies) > f_max] = 0.0 + 0.0j
 
-        inp_temp = np.fft.ifftshift(inp_temp)
-        inp_data[:, i] = np.fft.ifft(inp_temp)
+        inp_fft = np.fft.ifftshift(inp_fft)
+        out_tmp = np.fft.ifft(inp_fft)
 
-    # Put back original NaNs
-    inp_data[idx_nans] = np.nan
+        out_data_64[:, i] = np.real(out_tmp)
+
+    # Put back original NaNs and back to original shape and precision
+    out_data_64[idx_nans] = np.nan
+    out_data_64 = np.squeeze(out_data_64)
+    out_data: NDArrayFloats = out_data_64.astype(precision)
 
     # Return data in the same format as input
-    if num_fields == 1:
-        out = ts_scalar(inp_time, inp_data, attrs=inp.attrs)
-    elif num_fields == 3:
-        out = ts_vec_xyz(inp_time, inp_data, attrs=inp.attrs)
+    if out_data.ndim == 1:
+        out: DataArray = ts_scalar(inp_time, out_data, attrs=inp.attrs)
     else:
-        raise ValueError("Invalid shape")
+        out = ts_vec_xyz(inp_time, out_data, attrs=inp.attrs)
 
     return out
