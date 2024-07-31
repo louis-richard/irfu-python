@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Mapping, Optional, TypeVar
+from typing import Mapping, Optional, Union
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from numpy.typing import NBitBase, NDArray
+from numpy.typing import NDArray
 from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
@@ -18,12 +18,9 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-T = TypeVar("T", bound=NBitBase)
-
-
 def ts_scalar(
     time: NDArray[np.datetime64],
-    data: NDArray[np.floating[T]],
+    data: NDArray[Union[np.float32, np.float64]],
     attrs: Optional[Mapping[str, object]] = None,
 ) -> DataArray:
     r"""Create a time series containing a 0th order tensor

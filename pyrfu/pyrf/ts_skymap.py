@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Iterable, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional, Union
 
 # 3rd party imports
 import numpy as np
@@ -17,16 +17,18 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+NDArrayFloats = NDArray[Union[np.float32, np.float64]]
+
 
 def ts_skymap(
     time: NDArray[np.datetime64],
-    data: NDArray[np.float64],
-    energy: NDArray[np.float64],
-    phi: NDArray[np.float64],
-    theta: NDArray[np.float64],
-    energy0: Optional[NDArray[np.float64]] = None,
-    energy1: Optional[NDArray[np.float64]] = None,
-    esteptable: Optional[NDArray[np.float64]] = None,
+    data: NDArrayFloats,
+    energy: NDArrayFloats,
+    phi: NDArrayFloats,
+    theta: NDArrayFloats,
+    energy0: Optional[NDArrayFloats] = None,
+    energy1: Optional[NDArrayFloats] = None,
+    esteptable: Optional[NDArray[np.uint8]] = None,
     attrs: Optional[Mapping[str, object]] = None,
     glob_attrs: Optional[Mapping[str, object]] = None,
     coords_attrs: Optional[Mapping[str, Mapping[str, Iterable[Any]]]] = None,
@@ -104,20 +106,10 @@ def ts_skymap(
             raise TypeError("energy0 must be a numpy.ndarray")
 
     if esteptable is None:
-        esteptable = np.zeros(len(time))
+        esteptable = np.zeros(len(time), dtype=np.uint8)
     else:
         if not isinstance(esteptable, np.ndarray):
             raise TypeError("esteptable must be a numpy.ndarray")
-
-    # Check that energy0 and energy1
-    # assert energy0.ndim == 1, "energy0 must be 1D numpy.ndarray"
-    # assert energy0.shape[0] == energy.shape[1], "energy0 is not consistent with time"
-    # assert energy1.ndim == 1, "energy1 must be 1D numpy.ndarray"
-    # assert energy1.shape[0] == energy.shape[1], "energy1 is not consistent with time"
-
-    # Check esteptable
-    # assert esteptable.ndim == 1, "esteptable must be 1D numpy.ndarray"
-    # assert esteptable.shape[0] == len(time), "esteptable is not consistent with time"
 
     # Check attributes are dictionaries
     if attrs is None:
