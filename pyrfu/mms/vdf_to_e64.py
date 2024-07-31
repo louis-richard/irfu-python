@@ -35,7 +35,7 @@ def vdf_to_e64(vdf_e32):
 
     time_r, vdf_r, energy_r, phi_r = psd_rebin(
         vdf_e32,
-        vdf_e32.phi,
+        vdf_e32.phi.data,
         vdf_e32.attrs.get("energy0"),
         vdf_e32.attrs.get("energy1"),
         vdf_e32.attrs.get("esteptable"),
