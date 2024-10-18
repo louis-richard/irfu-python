@@ -86,6 +86,7 @@ from .remove_repeated_points import remove_repeated_points
 from .resample import resample
 from .shock_normal import shock_normal
 from .shock_parameters import shock_parameters
+from .sliding_derivative import sliding_derivative
 from .solid_angle import solid_angle
 from .sph2cart import sph2cart
 from .start import start
