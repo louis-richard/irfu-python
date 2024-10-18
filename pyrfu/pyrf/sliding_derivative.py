@@ -3,6 +3,8 @@
 
 # 3rd party imports
 import numpy as np
+from .ts_time import ts_time
+from .ts_scalar import ts_scalar
 # import xarray as xr
 
 __author__ = "Apostolos Kolokotronis"
