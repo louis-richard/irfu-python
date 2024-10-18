@@ -204,6 +204,7 @@ __all__ = [
     "resample",
     "shock_normal",
     "shock_parameters",
+    "sliding_derivative",
     "solid_angle",
     "sph2cart",
     "st_diff",
