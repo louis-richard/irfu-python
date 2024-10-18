@@ -72,7 +72,7 @@ def sliding_derivative(time_series, t_units: str = "ns", window_size=3):
         
         # Compute finite differences (central difference for the middle point)
         derivative[i] = (values_window[-1] - values_window[0]) / (time_window[-1] - time_window[0])
-    time_dt64 = ts_time(time).data 
-    out = ts_scalar(time_dt64, derivative, )
+    # time_dt64 = ts_time(time).data 
+    out = ts_scalar(time_series.time.data, derivative, )
     
     return out
