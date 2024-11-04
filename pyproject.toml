@@ -135,6 +135,7 @@ profile = "black"
 [tool.pylint."MESSAGES CONTROL"]
 disable = """
     missing-module-docstring,
+    too-many-positional-arguments,
     too-many-arguments,
     too-many-locals,
     too-many-lines,
