@@ -189,6 +189,6 @@ def get_feeps_alleyes(
 
     out.attrs = var
 
-    out.attrs["specie"] = var["dtype"]
+    out.attrs["species"] = var["dtype"]
 
     return out

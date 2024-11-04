@@ -172,6 +172,7 @@ def feeps_pad(
 
     time = inp_dataset.time.data
     attrs = inp_dataset.attrs
+    attrs["energy_range"] = energy
     mms_id, d_type, d_rate = list(map(attrs.get, ["mmsId", "dtype", "tmmode"]))
 
     assert d_rate in ["srvy", "brst"]
@@ -209,5 +210,7 @@ def feeps_pad(
         dims=["time", "theta"],
         attrs=attrs,
     )
+
+    pad.attrs["UNITS"] = "1/(cm^2 s sr kev)"
 
     return pad

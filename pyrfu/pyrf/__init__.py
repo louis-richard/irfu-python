@@ -109,6 +109,10 @@ from .wavelet import wavelet
 from .wavepolarize_means import wavepolarize_means
 from .waverage import waverage
 
+# @Apostolos Kolokotronis
+from .sliding_derivative import sliding_derivative
+
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -200,6 +204,7 @@ __all__ = [
     "resample",
     "shock_normal",
     "shock_parameters",
+    "sliding_derivative",
     "solid_angle",
     "sph2cart",
     "st_diff",
