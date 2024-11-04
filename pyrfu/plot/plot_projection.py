@@ -97,6 +97,8 @@ def plot_projection(
             [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height],
         )
         f.colorbar(mappable=image, cax=caxis, ax=axis)
+    elif colorbar == "none":
+        caxis = None
     else:
         raise NotImplementedError("invalid position")
 
