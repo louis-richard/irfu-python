@@ -86,6 +86,9 @@ from .remove_repeated_points import remove_repeated_points
 from .resample import resample
 from .shock_normal import shock_normal
 from .shock_parameters import shock_parameters
+
+# @Apostolos Kolokotronis
+from .sliding_derivative import sliding_derivative
 from .solid_angle import solid_angle
 from .sph2cart import sph2cart
 from .start import start
@@ -109,15 +112,11 @@ from .wavelet import wavelet
 from .wavepolarize_means import wavepolarize_means
 from .waverage import waverage
 
-# @Apostolos Kolokotronis
-from .sliding_derivative import sliding_derivative
-
-
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.14"
 __status__ = "Prototype"
 
 __all__ = [
