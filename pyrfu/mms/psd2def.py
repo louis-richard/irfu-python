@@ -87,5 +87,3 @@ def psd2def(inp):
         out.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
 
     return out
-
-

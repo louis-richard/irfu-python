@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-import xarray as xr
 
 # Local imports
 from .ts_skymap import ts_skymap

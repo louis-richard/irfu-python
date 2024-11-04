@@ -212,5 +212,5 @@ def feeps_pad(
     )
 
     pad.attrs["UNITS"] = "1/(cm^2 s sr kev)"
-    
+
     return pad
