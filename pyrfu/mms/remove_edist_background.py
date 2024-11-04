@@ -3,11 +3,12 @@
 
 # Built-in imports
 import json
+import logging
 import os
 
 # 3rd party imports
 import numpy as np
-from cdflib import cdfread
+import pycdfpp
 
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.time_clip import time_clip
@@ -20,10 +21,17 @@ from .get_data import get_data
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.4.13"
 __status__ = "Prototype"
+
+logging.captureWarnings(True)
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%d-%b-%y %H:%M:%S",
+    level=logging.INFO,
+)
 
 
 def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
@@ -66,21 +74,31 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     mms_id = vdf.data.attrs["CATDESC"].split(" ")[0].lower()
     mms_id = int(mms_id[-1])
 
+    # Get data sample rate from VDF metadata
+    if "brst" in vdf.data.attrs["FIELDNAM"].lower():
+        data_rate = "brst"
+        logging.info("Burst resolution data is used")
+    elif "fast" in vdf.data.attrs["FIELDNAM"].lower():
+        data_rate = "fast"
+        logging.info("Fast resolution data is used")
+    else:
+        raise TypeError("Could not identify if data is fast or burst.")
+
     vdf_tmp = time_clip(vdf, tint)
     vdf_new = np.zeros_like(vdf_tmp.data.data)
     vdf_bkg = np.zeros_like(vdf_tmp.data.data)
 
-    dataset_name = f"mms{mms_id}_fpi_brst_l2_des-dist"
+    dataset_name = f"mms{mms_id}_fpi_{data_rate}_l2_des-dist"
     startdelphi_count = db_get_ts(
         dataset_name,
-        f"mms{mms_id}_des_startdelphi_count_brst",
+        f"mms{mms_id}_des_startdelphi_count_{data_rate}",
         tint,
         verbose=False,
     )
 
     # Load the elctron number density to get the name of the photoelectron
     # model file, and the photoelectron scaling factor
-    n_e = get_data("ne_fpi_brst_l2", tint, mms_id, verbose=False)
+    n_e = get_data(f"ne_fpi_{data_rate}_l2", tint, mms_id, verbose=False)
 
     photoe_scle = n_e.attrs["GLOBAL"]["Photoelectron_model_scaling_factor"]
     photoe_scle = float(photoe_scle)
@@ -96,12 +114,17 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
 
     bkg_fname = os.path.join(data_path, "models", "fpi", bkg_fname)
 
-    vdf_bkg01 = [None, None]
-    with cdfread.CDF(bkg_fname) as f:
-        vdf_bkg01[0] = f.varget("mms_des_bgdist_p0_brst")
-        vdf_bkg01[0] = np.transpose(vdf_bkg01[0], [0, 3, 1, 2])
-        vdf_bkg01[1] = f.varget("mms_des_bgdist_p1_brst")
-        vdf_bkg01[1] = np.transpose(vdf_bkg01[1], [0, 3, 1, 2])
+    f = pycdfpp.load(bkg_fname)
+
+    if data_rate.lower() == "brst":
+        prefs = ["mms_des_bgdist_p0", "mms_des_bgdist_p0"]
+    else:
+        prefs = ["mms_des_bgdist", "mms_des_bgdist"]
+
+    vdf_bkg01 = [
+        np.transpose(f[f"{prefs[0]}_{data_rate}"].values, [0, 3, 1, 2]),
+        np.transpose(f[f"{prefs[1]}_{data_rate}"].values, [0, 3, 1, 2]),
+    ]
 
     # Overwrite fraction of photoelectron if provided by user.
     if n_art > 0:
