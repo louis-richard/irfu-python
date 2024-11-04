@@ -20,6 +20,7 @@ from .. import mms, pyrf
 from ..mms.psd_moments import _moms
 from . import (
     generate_data,
+    generate_defatt,
     generate_spectr,
     generate_timeline,
     generate_ts,
@@ -1015,17 +1016,86 @@ class ReduceTestCase(unittest.TestCase):
 
 @ddt
 class RotateTensorTestCase(unittest.TestCase):
-    @data(("rot", generate_data(100, tensor_order=1)), ("gse", None))
+    @data(
+        (
+            generate_data(100, tensor_order=1),
+            "fac",
+            generate_ts(64.0, 100, tensor_order=1),
+            "pp",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            42,
+            generate_ts(64.0, 100, tensor_order=1),
+            "pp",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "fac",
+            "bazinga!!",
+            "pp",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "fac",
+            generate_data(100, tensor_order=1),
+            "pp",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "rot",
+            generate_ts(64.0, 100, tensor_order=2),
+            "pp",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "gse",
+            generate_ts(64.0, 100, tensor_order=2),
+            "pp",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "fac",
+            generate_ts(64.0, 100, tensor_order=1),
+            42,
+        ),
+    )
     @unpack
-    def test_rotate_tensor_input(self, flag, vec):
-        with self.assertRaises((TypeError, NotImplementedError)):
-            mms.rotate_tensor(generate_ts(64.0, 100, tensor_order=2), flag, vec)
+    def test_rotate_tensor_input_type(self, inp, rot_flag, vec, perp):
+        with self.assertRaises(TypeError):
+            mms.rotate_tensor(inp, rot_flag, vec, perp)
+
+    @data(
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "bazinga!!",
+            generate_ts(64.0, 100, tensor_order=1),
+            "pp",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "rot",
+            generate_data(100, tensor_order=2),
+            "",
+        ),
+        (
+            generate_ts(64.0, 100, tensor_order=2),
+            "fac",
+            generate_ts(64.0, 100, tensor_order=1),
+            "bazinga!!",
+        ),
+    )
+    @unpack
+    def test_rotate_tensor_input_method(self, inp, flag, vec, perp):
+        with self.assertRaises(NotImplementedError):
+            mms.rotate_tensor(inp, flag, vec, perp)
 
     @data(
         ("fac", generate_ts(64.0, 100, tensor_order=1), "pp"),
         ("fac", generate_ts(64.0, 100, tensor_order=1), "qq"),
         ("rot", np.random.random(3), "pp"),
         ("rot", np.random.random((3, 3)), "pp"),
+        ("gse", generate_defatt(64.0, 100), "pp"),
     )
     @unpack
     def test_rotate_tensor_output(self, rot_flag, vec, perp):
@@ -1132,6 +1202,37 @@ class VdfProjectionTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], np.ndarray)
         self.assertIsInstance(result[1], np.ndarray)
         self.assertIsInstance(result[2], np.ndarray)
+
+
+@ddt
+class FftBandpassTestCase(unittest.TestCase):
+    @data(
+        (generate_data(100, tensor_order=0), 0.1, 1.0),
+        (generate_ts(64.0, 100, tensor_order=0), "bazinga!!", 1.0),
+        (generate_ts(64.0, 100, tensor_order=0), 0.1, "bazinga!!"),
+    )
+    @unpack
+    def test_fft_bandpass_input_type(self, inp, f_min, f_max):
+        with self.assertRaises(TypeError):
+            mms.fft_bandpass(inp, f_min, f_max)
+
+    @data(
+        (generate_ts(64.0, 100, tensor_order=0), 1.0, 0.1),
+        (generate_ts(64.0, 100, tensor_order=2), 0.1, 1.0),
+    )
+    @unpack
+    def test_fft_bandpass_input_value(self, inp, f_min, f_max):
+        with self.assertRaises(ValueError):
+            mms.fft_bandpass(inp, f_min, f_max)
+
+    @data(
+        (generate_ts(64.0, 101, tensor_order=0), random.random(), random.random()),
+        (generate_ts(64.0, 101, tensor_order=1), random.random(), random.random()),
+    )
+    @unpack
+    def test_fft_bandpass_output(self, inp, f_min, f_max):
+        result = mms.fft_bandpass(inp, *sorted([f_min, f_max]))
+        self.assertIsInstance(result, xr.DataArray)
 
 
 if __name__ == "__main__":

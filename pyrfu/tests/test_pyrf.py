@@ -231,14 +231,19 @@ class C4JTestCase(unittest.TestCase):
         self.assertListEqual(list(div_pb.shape), [100, 3])
 
 
+@ddt
 class CalcAgTestCase(unittest.TestCase):
-    def test_calc_ag_input_type(self):
-        self.assertIsNotNone(pyrf.calc_ag(generate_ts(64.0, 100, tensor_order=2)))
-
+    @data(0.0, generate_data(100))
+    def test_calc_ag_input_type(self, inp):
         with self.assertRaises(TypeError):
-            # Raises error if input is not a xarray
-            pyrf.calc_ag(0.0)
-            pyrf.calc_ag(generate_data(100))
+            pyrf.calc_ag(inp)
+
+    @data(
+        generate_ts(64.0, 100, tensor_order=0), generate_ts(64.0, 100, tensor_order=1)
+    )
+    def test_calc_ag_input_value(self, inp):
+        with self.assertRaises(ValueError):
+            pyrf.calc_ag(inp)
 
     def test_calc_ag_output_type(self):
         result = pyrf.calc_ag(generate_ts(64.0, 100, tensor_order=2))
@@ -1742,23 +1747,18 @@ class StructFuncTestCase(unittest.TestCase):
 
 
 class TraceTestCase(unittest.TestCase):
-    def test_trace_input(self):
-        self.assertIsNotNone(pyrf.trace(generate_ts(64.0, 100, tensor_order=2)))
-
-        with self.assertRaises(AssertionError):
+    def test_trace_input_type(self):
+        with self.assertRaises(TypeError):
             pyrf.trace(generate_data(100, tensor_order=2))
-            pyrf.trace(generate_ts(64.0, 100, tensor_order=0))
-            pyrf.trace(generate_ts(64.0, 100, tensor_order=1))
+
+    def test_trace_input_value(self):
+        with self.assertRaises(ValueError):
+            pyrf.trace(generate_ts(64.0, 100, tensor_order=random.randint(0, 1)))
 
     def test_trace_output(self):
         result = pyrf.trace(generate_ts(64.0, 100, tensor_order=2))
         self.assertIsInstance(result, xr.DataArray)
-        self.assertListEqual(
-            list(result.shape),
-            [
-                100,
-            ],
-        )
+        self.assertListEqual(list(result.shape), [100])
 
 
 class OptimizeNbins1DTestCase(unittest.TestCase):
@@ -2252,13 +2252,18 @@ class TsSkymapTestCase(unittest.TestCase):
 @ddt
 class TsScalarTestCase(unittest.TestCase):
     @data(
-        (0.0, 0.0),
-        (list(generate_timeline(64.0, 100)), list(generate_data(100, tensor_order=0))),
+        (0.0, generate_data(100, tensor_order=0), {}),
+        (generate_data(100, tensor_order=0), 0.0, {}),
+        (
+            generate_data(100, tensor_order=0),
+            generate_data(100, tensor_order=0),
+            "bazinga!!",
+        ),
     )
     @unpack
-    def test_ts_scalar_input_type(self, time, data):
+    def test_ts_scalar_input_type(self, time, data, attrs):
         with self.assertRaises(TypeError):
-            pyrf.ts_scalar(time, data)
+            pyrf.ts_scalar(time, data, attrs=attrs)
 
     @data(
         generate_data(99, tensor_order=0),
@@ -2299,7 +2304,21 @@ class TsSpectrTestCase(unittest.TestCase):
     @data(
         (0, np.random.random(10), np.random.random((100, 10)), "energy", None),
         (generate_timeline(64.0, 100), 0, np.random.random((100, 10)), "energy", None),
-        (generate_timeline(64.0, 100), 0, np.random.random((100, 10)), "energy", None),
+        (generate_timeline(64.0, 100), np.random.random(10), 0, "energy", None),
+    )
+    @unpack
+    def test_ts_spectr_input_type(self, time, ener, data, comp_name, attrs):
+        with self.assertRaises(TypeError):
+            pyrf.ts_spectr(time, ener, data, comp_name, attrs)
+
+    @data(
+        (
+            generate_timeline(64.0, 100),
+            np.random.random(10),
+            np.random.random(100),
+            "energy",
+            None,
+        ),
         (
             generate_timeline(64.0, 100),
             np.random.random(10),
@@ -2316,8 +2335,8 @@ class TsSpectrTestCase(unittest.TestCase):
         ),
     )
     @unpack
-    def test_ts_spectr_input(self, time, ener, data, comp_name, attrs):
-        with self.assertRaises(AssertionError):
+    def test_ts_spectr_input_value(self, time, ener, data, comp_name, attrs):
+        with self.assertRaises(ValueError):
             pyrf.ts_spectr(time, ener, data, comp_name, attrs)
 
     def test_ts_spectr_output(self):
@@ -2376,55 +2395,45 @@ class TsVecXYZTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["TENSOR_ORDER"], 1)
 
 
+@ddt
 class TsTensorXYZTestCase(unittest.TestCase):
-    def test_ts_tensor_xyz_input_type(self):
-        with self.assertRaises(AssertionError):
-            pyrf.ts_tensor_xyz(0, 0)
-            pyrf.ts_tensor_xyz(
-                list(generate_timeline(64.0, 100)),
-                list(generate_data(100, tensor_order=2)),
-            )
+    @data(
+        (0.0, generate_data(100, tensor_order=0)),
+        (generate_timeline(64.0, 100), 0.0),
+    )
+    @unpack
+    def test_ts_tensor_xyz_input_type(self, time, data):
+        with self.assertRaises(TypeError):
+            pyrf.ts_tensor_xyz(time, data)
 
-    def test_ts_tensor_xyz_input_shape(self):
-        with self.assertRaises(AssertionError):
+    @data(
+        (generate_timeline(64.0, 101), generate_data(100, tensor_order=2)),
+        (generate_timeline(64.0, 100), generate_data(100, tensor_order=0)),
+        (generate_timeline(64.0, 100), generate_data(100, tensor_order=1)),
+    )
+    @unpack
+    def test_ts_tensor_xyz_input_value(self, time, data):
+        with self.assertRaises(ValueError):
             # Raises error if data and timeline don't have the same size
-            pyrf.ts_tensor_xyz(
-                generate_timeline(64.0, 100), generate_data(99, tensor_order=2)
-            )
-            # Raises error if vector as input
-            pyrf.ts_tensor_xyz(
-                generate_timeline(64.0, 100), generate_data(100, tensor_order=0)
-            )
-            # Raises error if tensor as input
-            pyrf.ts_tensor_xyz(
-                generate_timeline(64.0, 100), generate_data(100, tensor_order=1)
-            )
+            pyrf.ts_tensor_xyz(time, data)
 
-    def test_ts_tensor_xyz_output_type(self):
+    def test_ts_tensor_xyz_output(self):
         result = pyrf.ts_tensor_xyz(
             generate_timeline(64.0, 100), generate_data(100, tensor_order=2)
         )
+        # Check if the output is a DataArray
         self.assertIsInstance(result, xr.DataArray)
 
-    def test_ts_tensor_xyz_output_shape(self):
-        result = pyrf.ts_tensor_xyz(
-            generate_timeline(64.0, 100), generate_data(100, tensor_order=2)
-        )
+        # Check that the output has the correct shape
         self.assertEqual(result.ndim, 3)
         self.assertEqual(result.shape[0], 100)
         self.assertEqual(result.shape[1], 3)
         self.assertEqual(result.shape[2], 3)
 
-    def test_ts_tensor_xyz_dims(self):
-        result = pyrf.ts_tensor_xyz(
-            generate_timeline(64.0, 100), generate_data(100, tensor_order=2)
-        )
-        self.assertListEqual(list(result.dims), ["time", "comp_h", "comp_v"])
+        # Check that the output has the correct dimensions
+        self.assertListEqual(list(result.dims), ["time", "rcomp", "ccomp"])
 
-    def test_ts_tensor_xyz_meta(self):
-        result = pyrf.ts_tensor_xyz(
-            generate_timeline(64.0, 100), generate_data(100, tensor_order=2)
-        )
+        # Check that the output has the correct metadata
         self.assertEqual(result.attrs["TENSOR_ORDER"], 2)
 
 
@@ -2443,28 +2452,41 @@ class Ttns2Datetime64TestCase(unittest.TestCase):
 @ddt
 class WaveletTestCase(unittest.TestCase):
     @data(
-        (generate_ts(64.0, 100, tensor_order=2), {}),
-        (generate_ts(64, 100, tensor_order=1), {"linear": [random.randint(10, 100)]}),
+        (generate_data(100, tensor_order=1), {}),
+        (generate_ts(64.0, 100, tensor_order=1), {"linear": [random.randint(10, 100)]}),
     )
     @unpack
-    def test_wavelet_input(self, inp, options):
+    def test_wavelet_input_type(self, inp, options):
         with self.assertRaises(TypeError):
             pyrf.wavelet(inp, **options)
 
     @data(
-        (generate_ts(64, 100, tensor_order=0), {}),
-        (generate_ts(64, 99, tensor_order=0), {}),
-        (generate_ts(64, 100, tensor_order=1), {}),
-        (generate_ts(64, 100, tensor_order=1), {"linear": True}),
-        (generate_ts(64, 100, tensor_order=1), {"linear": random.randint(10, 100)}),
-        (
-            generate_ts(64, 100, tensor_order=1),
-            {"linear": random.randint(10, 100), "return_power": False},
-        ),
+        (generate_ts(64.0, 100, tensor_order=2), {}),
     )
     @unpack
-    def test_wavelet_output(self, inp, options):
-        self.assertIsNotNone(pyrf.wavelet(inp, **options))
+    def test_wavelet_input_value(self, inp, options):
+        with self.assertRaises(ValueError):
+            pyrf.wavelet(inp, **options)
+
+    @data(
+        (generate_ts(64.0, 100, tensor_order=0), None, True, None),
+        (generate_ts(64.0, 101, tensor_order=0), None, True, None),
+        (generate_ts(64.0, 100, tensor_order=1), None, True, None),
+        (
+            generate_ts(64.0, 100, tensor_order=0),
+            [random.random(), random.random()],
+            True,
+            None,
+        ),
+        (generate_ts(64.0, 100, tensor_order=0), None, False, None),
+        (generate_ts(64.0, 100, tensor_order=0), None, True, True),
+        (generate_ts(64.0, 100, tensor_order=0), None, True, random.random() * 100.0),
+    )
+    @unpack
+    def test_wavelet_output(self, inp, f, return_power, linear):
+        self.assertIsNotNone(
+            pyrf.wavelet(inp, f=f, return_power=return_power, linear=linear)
+        )
 
     @data(
         (
@@ -2541,6 +2563,85 @@ class NormalizeTestCase(unittest.TestCase):
 
     def test_normalize_output(self):
         result = pyrf.normalize(generate_ts(64.0, 100, tensor_order=1))
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class MeanFieldTestCase(unittest.TestCase):
+    @data((generate_data(100, tensor_order=1), random.randint(0, 5)))
+    @unpack
+    def test_mean_field_input_type(self, inp, deg):
+        with self.assertRaises(TypeError):
+            pyrf.mean_field(inp, deg)
+
+    @data((generate_ts(64.0, 100, tensor_order=1), random.randint(0, 5)))
+    @unpack
+    def test_mean_field_output(self, inp, deg):
+        result = pyrf.mean_field(inp, deg)
+        self.assertIsInstance(result[0], xr.DataArray)
+        self.assertIsInstance(result[1], xr.DataArray)
+
+
+@ddt
+class MedfiltTestCase(unittest.TestCase):
+    @data(
+        (generate_data(100, tensor_order=1), None),
+    )
+    @unpack
+    def test_medfilt_input_type(self, inp, kernel_size):
+        with self.assertRaises(TypeError):
+            pyrf.medfilt(inp, kernel_size)
+
+    @data(
+        (
+            generate_ts(64.0, 100, tensor_order=random.randint(3, 10)),
+            random.randint(0, 99),
+        )
+    )
+    @unpack
+    def test_medfilt_input_value(self, inp, kernel_size):
+        with self.assertRaises(ValueError):
+            pyrf.medfilt(inp, kernel_size)
+
+    @data(
+        (generate_ts(64.0, 100, tensor_order=0), None),
+        (generate_ts(64.0, 100, tensor_order=0), random.randint(0, 99)),
+        (generate_ts(64.0, 100, tensor_order=1), random.randint(0, 99)),
+        (generate_ts(64.0, 100, tensor_order=2), random.randint(0, 99)),
+    )
+    @unpack
+    def test_medfilt_output(self, inp, kernel_size):
+        result = pyrf.medfilt(inp, kernel_size)
+        self.assertIsInstance(result, xr.DataArray)
+
+
+@ddt
+class MovmeanTestCase(unittest.TestCase):
+    @data((generate_data(100, tensor_order=1), random.randint(2, 99)))
+    @unpack
+    def test_movmean_input_type(self, inp, window_size):
+        with self.assertRaises(TypeError):
+            pyrf.movmean(inp, window_size)
+
+    @data(
+        (generate_ts(64.0, 100, tensor_order=1), random.randint(0, 1)),
+        (generate_ts(64.0, 100, tensor_order=1), random.randint(101, 666)),
+    )
+    @unpack
+    def test_movmean_input_value(self, inp, window_size):
+        with self.assertRaises(ValueError):
+            pyrf.movmean(inp, window_size)
+
+    @data(
+        (generate_ts(64.0, 100, tensor_order=0), None),
+        (generate_ts(64.0, 100, tensor_order=0), random.randint(2, 100)),
+        (generate_ts(64.0, 100, tensor_order=1), random.randint(2, 100)),
+        (generate_ts(64.0, 100, tensor_order=2), random.randint(2, 100)),
+        (generate_ts(64.0, 100, tensor_order=3), random.randint(2, 100)),
+    )
+    @unpack
+    def test_movmean_output(self, inp, window_size):
+        result = pyrf.movmean(inp, window_size)
         self.assertIsInstance(result, xr.DataArray)
 
 
