@@ -71,13 +71,13 @@ class AutoCorrTestCase(unittest.TestCase):
 
 class AverageVDFTestCase(unittest.TestCase):
     def test_average_vdf_input_type(self):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             pyrf.average_vdf(0, 3)
             pyrf.average_vdf(np.random.random((100, 32, 32, 16)), 3)
             pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), [3, 5])
 
     def test_average_vdf_values(self):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 2)
 
     def test_average_vdf_output_type(self):

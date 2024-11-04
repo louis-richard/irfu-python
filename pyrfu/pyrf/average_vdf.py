@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 # 3rd party imports
 import numpy as np
+from xarray.core.dataset import Dataset
 
 # Local imports
-from .ts_skymap import ts_skymap
+from pyrfu.pyrf.ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -33,10 +35,15 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
         Time series of the time averaged velocity distribution function.
 
     """
+    # Check input type
+    if not isinstance(vdf, Dataset):
+        raise TypeError("vdf must be a xarray.Dataset")
 
-    assert n_pts % 2 != 0, "The number of distributions to be averaged must be an odd"
+    if not isinstance(n_pts, int):
+        raise TypeError("n_pts must be an integer")
 
-    assert np.median(vdf.energy.data[0, :] - vdf.energy.data[0, :]) == 0
+    if n_pts % 2 == 0:
+        raise ValueError("The number of distributions to be averaged must be an odd")
 
     n_vdf = len(vdf.time.data)
     times = vdf.time.data
