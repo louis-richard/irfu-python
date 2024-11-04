@@ -18,8 +18,8 @@ __status__ = "Prototype"
 def _compress_cwt_1d(cwt, nc: int = 100):
     nf = cwt.shape[1]
     idxs = np.arange(
-        start=int(nc / 2),
-        stop=len(cwt) - int(nc / 2),
+        int(nc / 2),
+        len(cwt) - int(nc / 2),
         step=nc,
         dtype=np.int64,
     )
