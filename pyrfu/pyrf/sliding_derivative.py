@@ -15,7 +15,7 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def sliding_derivative(time_series, t_units: str = "ns", window_size=3):
+def sliding_derivative(time_series, t_units: str = "ns", window_size=3, method: str = "window"):
     """
     Compute the sliding time derivative of a time series using central differences.
 
@@ -61,18 +61,30 @@ def sliding_derivative(time_series, t_units: str = "ns", window_size=3):
         time = time * 1e-9
 
     half_window = window_size // 2
-    derivative = np.full(len(data), np.nan)  # Fill the output with NaN for edge cases
 
-    # Iterate over each window in the time series
-    for i in range(half_window, len(data) - half_window):
-        # Get the window of values and time
-        values_window = data[i - half_window : i + half_window + 1]
-        time_window = time[i - half_window : i + half_window + 1]
+    # Fill the output with NaN for edge cases
+    derivative = np.full(len(data), np.nan)
+    if method == "window":
+        
+        half_window = window_size // 2
+    
+        # Iterate over each window in the time series
+        for i in range(half_window, len(data) - half_window):
+            # Get the window of values and time
+            values_window = data[i - half_window : i + half_window + 1]
+            time_window = time[i - half_window : i + half_window + 1]
+    
+            # Compute finite differences (central difference for the middle point)
+            derivative[i] = (values_window[-1] - values_window[0]) / (
+                time_window[-1] - time_window[0]
+            )
+    elif method == "5ps":
 
-        # Compute finite differences (central difference for the middle point)
-        derivative[i] = (values_window[-1] - values_window[0]) / (
-            time_window[-1] - time_window[0]
-        )
+        for i in range(2, len(data) - 2):
+
+            derivative[i] = (1/12*data[i-2] - 2/3*data[i-1] + 0*data[i] + 2/3*data[i+1] 
+                             - 1/12*data[i+2]) / ((time[i+2] - time[i-2])*0.25)
+        
     # time_dt64 = ts_time(time).data
     out = ts_scalar(
         time_series.time.data,
