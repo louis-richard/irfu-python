@@ -1,1 +1,9 @@
-{"default": "local", "local": "/Volumes/mms", "sdc": {"rights": "public", "username": "username"}, "aws": ""}
+{
+  "aws": "",
+  "default": "local",
+  "local": "/Volumes/mms",
+  "sdc": {
+    "rights": "public",
+    "username": "username"
+  }
+}

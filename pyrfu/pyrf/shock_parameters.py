@@ -242,8 +242,7 @@ def _v_fast(b, n, v, t_i, t_e, theta=None):
     c_s = _v_sound(t_i, t_e)
     c_ms0 = np.sqrt(v_a**2 + c_s**2)
     v_f = np.sqrt(
-        c_ms0**2 / 2
-        + np.sqrt(c_ms0**4 / 4 - v_a**2.0 * c_s**2 * np.cos(theta) ** 2)
+        c_ms0**2 / 2 + np.sqrt(c_ms0**4 / 4 - v_a**2.0 * c_s**2 * np.cos(theta) ** 2)
     )
     return v_f
 
