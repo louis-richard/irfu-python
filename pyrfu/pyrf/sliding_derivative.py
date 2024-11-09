@@ -57,10 +57,12 @@ def sliding_derivative(
     data = time_series.data
     time = time_series.time.astype(np.float64).data
 
-    assert t_units.lower() in ["ns", "s"], "convert time to ns or s"
+    assert t_units.lower() in ["ns", "s"], "convert time to ns or s."
 
     if t_units.lower() == "ns" or time.data.dtype == "<M8[ns]":
         time = time * 1e-9
+
+    assert method.lower() in ["window", "5ps", "9ps"], "this method has not been implemented."
 
     half_window = window_size // 2
 
@@ -91,6 +93,21 @@ def sliding_derivative(
                 + 2 / 3 * data[i + 1]
                 - 1 / 12 * data[i + 2]
             ) / ((time[i + 2] - time[i - 2]) * 0.25)
+    elif method == "9ps":
+
+        for i in range(2, len(data) - 2):
+
+            derivative[i] = (
+                1 / 280 * data[i - 4]
+                - 4 / 105 * data[i - 3]
+                +1 / 5 * data[i - 2]
+                - 4 / 5 * data[i - 1]
+                + 0 * data[i]
+                + 4 / 5 * data[i + 1]
+                - 1 / 5 * data[i + 2]
+                + 4 / 105 * data[i + 3]
+                - 1 / 280 * data[i + 4]
+            ) / ((time[i + 4] - time[i - 4]) * 1 / 8)
 
     # time_dt64 = ts_time(time).data
     out = ts_scalar(
