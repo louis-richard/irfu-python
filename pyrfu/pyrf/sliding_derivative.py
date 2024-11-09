@@ -62,7 +62,11 @@ def sliding_derivative(
     if t_units.lower() == "ns" or time.data.dtype == "<M8[ns]":
         time = time * 1e-9
 
-    assert method.lower() in ["window", "5ps", "9ps"], "this method has not been implemented."
+    assert method.lower() in [
+        "window",
+        "5ps",
+        "9ps",
+    ], "this method has not been implemented."
 
     half_window = window_size // 2
 
@@ -100,7 +104,7 @@ def sliding_derivative(
             derivative[i] = (
                 1 / 280 * data[i - 4]
                 - 4 / 105 * data[i - 3]
-                +1 / 5 * data[i - 2]
+                + 1 / 5 * data[i - 2]
                 - 4 / 5 * data[i - 1]
                 + 0 * data[i]
                 + 4 / 5 * data[i + 1]
