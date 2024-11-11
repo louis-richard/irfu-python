@@ -98,6 +98,7 @@ from .time_clip import time_clip
 from .timevec2iso8601 import timevec2iso8601
 from .trace import trace
 from .ts_append import ts_append
+from .ts_convolve import ts_convolve
 from .ts_scalar import ts_scalar
 from .ts_skymap import ts_skymap
 from .ts_spectr import ts_spectr
@@ -214,6 +215,7 @@ __all__ = [
     "timevec2iso8601",
     "trace",
     "ts_append",
+    "ts_convolve"
     "ts_scalar",
     "ts_spectr",
     "ts_skymap",
