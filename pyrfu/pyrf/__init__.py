@@ -215,7 +215,7 @@ __all__ = [
     "timevec2iso8601",
     "trace",
     "ts_append",
-    "ts_convolve"
+    "ts_convolve",
     "ts_scalar",
     "ts_spectr",
     "ts_skymap",
