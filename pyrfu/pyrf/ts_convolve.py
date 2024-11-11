@@ -15,8 +15,10 @@ __status__ = "Prototype"
 
 def ts_convolve(inp, kernel, mode: str = "nearest"):
     r"""
-    Compute the convolution of a time series of N-dimensional data with a N-dimensional kernel.
-    ***Right now has only been tested for calculating moving averages of 1D time series***
+    Compute the convolution of a time series of N-dimensional data with a N-dimensional 
+    kernel.
+    ***Right now has only been tested for calculating moving averages of 1D time series
+    ***
 
     The convolution is done using scipy.ndimage.convolve, with mode = "nearest"
     (read documentation for scipy.ndimage.convolve for more information).
@@ -32,12 +34,11 @@ def ts_convolve(inp, kernel, mode: str = "nearest"):
     Returns:
     -------
     out : xarray.DataArray
-        An array containing the convolution of inp with kernel. Mode "valid" is applied from
-        numpy.convolve, which does not affect the edges of the time series.
+        An array containing the convolution of inp with kernel. Mode "valid" is applied 
+        from numpy.convolve, which does not affect the edges of the time series.
     """
 
     convolution = scipy.ndimage.convolve(input=inp.data, weights=kernel, mode=mode)
-    coords = []
 
     out = xr.DataArray(convolution, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
 
