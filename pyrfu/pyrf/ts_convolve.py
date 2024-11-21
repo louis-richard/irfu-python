@@ -14,6 +14,7 @@ __status__ = "Prototype"
 
 
 def ts_convolve(inp, kernel, mode: str = "nearest"):
+
     r"""
     Compute the convolution of a time series of N-dimensional data with a N-dimensional
     kernel.
