@@ -83,6 +83,7 @@ def feeps_omni(inp_dataset):
     """
     d_type, specie = [inp_dataset.attrs["dtype"] for _ in range(2)]
     mms_id = inp_dataset.attrs["mmsId"]
+    print(energies_)
     energies = energies_[d_type]
 
     # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
