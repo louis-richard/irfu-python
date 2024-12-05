@@ -66,6 +66,7 @@ from .median_bins import median_bins
 from .movmean import movmean
 from .mva import mva
 from .mva_gui import mva_gui
+from .nanavg_4sc import nanavg_4sc
 from .new_xyz import new_xyz
 from .norm import norm
 from .normalize import normalize
@@ -186,6 +187,7 @@ __all__ = [
     "movmean",
     "mva",
     "mva_gui",
+    "nanavg_4sc",
     "new_xyz",
     "norm",
     "normalize",

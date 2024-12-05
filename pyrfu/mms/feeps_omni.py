@@ -3,11 +3,11 @@
 
 # Built-in imports
 import warnings
+from copy import copy
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from copy import copy
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
