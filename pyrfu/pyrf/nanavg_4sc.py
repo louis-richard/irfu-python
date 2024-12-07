@@ -21,7 +21,20 @@ __status__ = "Prototype"
 
 
 def _nan_count(inp):
+    r"""Counts the number of non-NaN values in the input array at each time step.
 
+    Parameters
+    ----------
+    inp : DataArray or Dataset
+        Input array.
+
+    Returns
+    -------
+    inp_to_counts : DataArray or Dataset
+        Array with the same shape as the input array, where each element
+        is the number of non-NaN values at the corresponding time step.
+
+    """
     inp_to_counts = inp.where(np.isnan(inp) == True, other=1)
     inp_to_counts = inp_to_counts.where(np.isnan(inp) == False, other=0)
 
@@ -29,7 +42,29 @@ def _nan_count(inp):
 
 
 def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
+    r"""Average data from 4 spacecrafts while ignoring NaN values.
+    Computes the input quantity at the center of mass of the MMS
+    tetrahedron. When averaging, NaN values are ignored by counting the number of
+    non-NaN values at each time step.
 
+    Parameters
+    ----------
+    b_list : Sequence of DataArray or Dataset
+        List of the time series of the quantity for each spacecraft.
+
+    Returns
+    -------
+    b_avg : DataArray or Dataset
+        Time series of the input quantity a the enter of mass of the
+        MMS tetrahedron.
+
+    Raises
+    ------
+    TypeError
+        If b_list is not a list of DataArray or Dataset
+
+    """
+    # Check input type
     if not isinstance(b_list, list):
         raise TypeError("b_list must be a list")
 
