@@ -18,3 +18,6 @@ include pyrfu/models/*.csv
 
 # include the PYRF configuration files JSON
 include pyrfu/pyrf/*.json
+
+# include the style sheets
+include pyrfu/stylesheets/*.mplstyle
