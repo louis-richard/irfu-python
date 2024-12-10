@@ -7,7 +7,10 @@ import xarray as xr
 from scipy import constants, interpolate
 
 # Local imports
-from pyrfu.pyrf import cart2sph, resample, sph2cart, time_clip
+from pyrfu.pyrf.cart2sph import cart2sph
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.sph2cart import sph2cart
+from pyrfu.pyrf.time_clip import time_clip
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
