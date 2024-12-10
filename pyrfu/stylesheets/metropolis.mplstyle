@@ -1,0 +1,72 @@
+# Matplotlib style file to create plots that integrate nicely
+# with the metropolis beamer template
+
+# Colours pulled from beamermetropolis.sty
+# Background colour in beamermetropolis.sty is as black!2
+# not very useful for matplotlib. Approximate as FAFAFA
+
+axes.axisbelow: True
+axes.edgecolor: 23373B
+axes.facecolor: EAEAF2
+axes.grid: False
+axes.labelcolor: 23373B
+axes.labelsize: 22
+axes.linewidth: 1.5
+
+# Set up colour cycle from metropolis
+axes.prop_cycle: cycler('color', ['4C72B0', 'EB811B', '14B03D', '604c38'])
+
+# Default size of single figure spanning textwidth of thesis
+figure.figsize: 4.2519699737097, 2.627861962896592
+figure.titlesize: 22
+figure.facecolor: none
+
+figure.dpi: 100
+
+font.family: sans-serif
+font.size: 20
+
+grid.color: white
+grid.linestyle: -
+grid.linewidth: 1
+
+image.cmap: Greys
+
+legend.fontsize: 18
+legend.frameon: False
+legend.numpoints: 1
+legend.scatterpoints: 1
+
+lines.antialiased: True
+lines.linewidth: 1.25
+lines.markeredgewidth: 0
+lines.markersize: 7
+lines.solid_capstyle: round
+
+patch.facecolor: 4C72B0
+patch.linewidth: .3
+
+savefig.facecolor: none
+savefig.format: pdf
+
+text.usetex: True
+text.latex.preamble: \usepackage[T1]{fontenc} \usepackage[lf]{FiraSans} \boldmath
+text.color: 23373B
+
+xtick.color: 23373B
+xtick.labelsize: 20
+xtick.direction: out
+xtick.major.pad: 10
+xtick.major.size: 5
+xtick.major.width: 1.5
+xtick.minor.size: 0
+xtick.minor.width: .5
+
+ytick.color: 23373B
+ytick.labelsize: 20
+ytick.direction: out
+ytick.major.pad: 10
+ytick.major.size: 5
+ytick.major.width: 1.5
+ytick.minor.size: 0
+ytick.minor.width: .5
