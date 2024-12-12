@@ -837,6 +837,30 @@
     "r_gsm_mec_srvy_l2": {
       "cdf_name": "mec_r_gsm",
       "dtype": "epht89d"
+    },
+    "r_gse_mec_brst_l2": {
+      "cdf_name": "mec_r_gse",
+      "dtype": "epht89d"
+    },
+    "r_gsm_mec_brst_l2": {
+      "cdf_name": "mec_r_gsm",
+      "dtype": "epht89d"
+    },
+    "v_gse_mec_srvy_l2": {
+      "cdf_name": "mec_v_gse",
+      "dtype": "epht89d"
+    },
+    "v_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_v_gse",
+      "dtype": "epht89d"
+    },
+    "v_gse_mec_brst_l2": {
+      "cdf_name": "mec_v_gse",
+      "dtype": "epht89d"
+    },
+    "v_gsm_mec_brst_l2": {
+      "cdf_name": "mec_v_gse",
+      "dtype": "epht89d"
     }
   },
   "scm": {
