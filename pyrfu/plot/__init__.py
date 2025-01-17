@@ -21,6 +21,7 @@ from .pl_scatter_matrix import pl_scatter_matrix
 from .pl_tx import pl_tx
 from .plot_ang_ang import plot_ang_ang
 from .plot_clines import plot_clines
+from .plot_contour import plot_contour
 from .plot_heatmap import plot_heatmap
 from .plot_line import plot_line
 from .plot_magnetosphere import plot_magnetosphere
@@ -33,7 +34,7 @@ from .zoom import zoom
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
@@ -49,6 +50,7 @@ __all__ = [
     "pl_tx",
     "plot_ang_ang",
     "plot_clines",
+    "plot_contour",
     "plot_heatmap",
     "plot_line",
     "plot_magnetosphere",
