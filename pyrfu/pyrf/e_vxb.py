@@ -63,9 +63,7 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
     assert isinstance(flag, str) and flag.lower() in ["exb", "vxb"], "Invalid flag"
     assert isinstance(b_xyz, xr.DataArray), "b_xyz must be a xarray.DataArray"
 
-    if isinstance(v_xyz, (list, np.ndarray)) and v_xyz.ndim == 1 and len(v_xyz) == 3:
-        v_xyz = ts_vec_xyz(b_xyz.time.data, np.tile(v_xyz, (len(b_xyz), 1)))
-    elif isinstance(v_xyz, xr.DataArray):
+    if isinstance(v_xyz, xr.DataArray):
         b_xyz = resample(b_xyz, v_xyz)
     else:
         raise TypeError("v_xyz must be xarray.DataArray or array_like constant vector")
