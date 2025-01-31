@@ -63,22 +63,46 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     b_list_r = []
 
     for b in b_list:
-        if isinstance(b, DataArray):
+        if isinstance(b, (xr.DataArray, xr.Dataset)):
             b_list_r.append(resample(b, b_list[0], f_s=calc_fs(b_list[0])))
         else:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
-    b_avg_data = np.zeros(b_list_r[0].shape)
+    b_avg_data = np.zeros(b_list_r[0].data.shape)
 
     for b in b_list_r:
         b_avg_data += b.data
 
     # Average the resamples time series
-    b_avg = xr.DataArray(
-        b_avg_data / len(b_list_r),
-        coords=b_list_r[0].coords,
-        dims=b_list_r[0].dims,
-        attrs=b_list_r[0].attrs,
-    )
+    if isinstance(b_list_r[0], xr.Dataarray):
+
+        for b in b_list_r:
+            b_avg_data += b.data
+
+        b_avg = xr.DataArray(
+            b_avg_data / len(b_list_r),
+            coords=b_list_r[0].coords,
+            dims=b_list_r[0].dims,
+            attrs=b_list_r[0].attrs,
+        )
+    else:
+
+        data_vars_names = [
+            data_var for data_var in b_list_r[0].data_vars if data_var != "data"
+        ]
+
+        for b in b_list_r:
+            b_avg_data += b.data.data
+
+        data_vars_dict = {
+            data_vars_name: b_list_r[0].data_vars[data_vars_name]
+            for data_vars_name in data_vars_names
+        }
+        data_vars_dict[b_list_r[0].data_vars["data"]] = b_avg_data / len(b_list_r)
+        b_avg = xr.Dataset(
+            data_vars_dict,
+            coords=b_list_r[0].coords,
+            attrs=b_list_r[0].attrs,
+        )
 
     return b_avg

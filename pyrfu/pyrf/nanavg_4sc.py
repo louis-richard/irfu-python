@@ -35,8 +35,8 @@ def _nan_count(inp):
         is the number of non-NaN values at the corresponding time step.
 
     """
-    inp_to_counts = inp.where(np.isnan(inp) == True, other=1)
-    inp_to_counts = inp_to_counts.where(np.isnan(inp) == False, other=0)
+    inp_to_counts = inp.where(np.isnan(inp) is True, other=1)
+    inp_to_counts = inp_to_counts.where(np.isnan(inp) is False, other=0)
 
     return inp_to_counts
 
@@ -71,12 +71,12 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     b_list_r = []
 
     for b in b_list:
-        if isinstance(b, DataArray):
+        if isinstance(b, (xr.DataArray, xr.Dataset)):
             b_list_r.append(resample(b, b_list[0], f_s=calc_fs(b_list[0])))
         else:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
-    b_list_r = [b.where(np.isnan(b) == False, other=0) for b in b_list_r]
+    b_list_r = [b.where(np.isnan(b) is False, other=0) for b in b_list_r]
 
     b_avg_data = np.zeros(b_list_r[0].shape)
     b_nan_denom = np.zeros(b_list_r[0].shape)
