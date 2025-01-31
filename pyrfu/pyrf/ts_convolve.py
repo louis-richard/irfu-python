@@ -37,9 +37,37 @@ def ts_convolve(inp, kernel, mode: str = "nearest"):
         An array containing the convolution of inp with kernel. Mode "valid" is applied
         from numpy.convolve, which does not affect the edges of the time series.
     """
+    message = "Invalid input type. Input must be xarray.DataArary or xarray.Dataset"
+    assert isinstance(inp, xr.DataArray), message
 
-    convolution = scipy.ndimage.convolve(input=inp.data, weights=kernel, mode=mode)
+    if "time" not in inp.dims:
+        message = "Invalid input dimensions. Input must have a 'time' dimension"
+        raise ValueError(message)
 
-    out = xr.DataArray(convolution, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
+    if inp.data.ndim == 2:
+
+        if inp.data.shape[1] != 1:
+            convolution = inp.copy()
+            for comp in range(inp.data.shape[1]):
+                convolution[:, comp] = ts_convolve(inp[:, comp], kernel, mode)
+
+            out = convolution
+        else:
+            convolution = scipy.ndimage.convolve(
+                input=inp.data, weights=kernel, mode=mode
+            )
+            convolution = xr.DataArray(
+                convolution, coords=inp.coords, dims=inp.dims, attrs=inp.attrs
+            )
+            out = convolution
+    else:
+
+        raise ValueError(
+            "Invalid dimensions. Not implemented for data with more than 2 dimensions."
+        )
+
+    # convolution = scipy.ndimage.convolve(input=inp.data, weights=kernel, mode=mode)
+
+    # out = xr.DataArray(convolution, coords=inp.coords, dims=inp.dims, attrs=inp.attrs)
 
     return out
