@@ -70,8 +70,8 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
 
     b_avg_data = np.zeros(b_list_r[0].data.shape)
 
-    for b in b_list_r:
-        b_avg_data += b.data
+    # for b in b_list_r:
+    #     b_avg_data += b.data
 
     # Average the resamples time series
     if isinstance(b_list_r[0], xr.DataArray):
