@@ -87,22 +87,31 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         )
     else:
 
-        data_vars_names = [
-            data_var for data_var in b_list_r[0].data_vars if data_var != "data"
+        data_vars_names = list(b_list_r[0].data_vars)
+        data_vars_coords = [
+            list(list(b_list_r[0].data_vars[data_vars_name].coords))
+            for data_vars_name in data_vars_names
         ]
 
         for b in b_list_r:
             b_avg_data += b.data.data
 
         data_vars_dict = {
-            data_vars_name: b_list_r[0].data_vars[data_vars_name]
+            data_vars_name: b_list_r[0].data_vars[data_vars_name].data
             for data_vars_name in data_vars_names
+            if data_vars_name != "data"
         }
-        data_vars_dict[b_list_r[0].data_vars["data"]] = b_avg_data / len(b_list_r)
+        data_vars_dict["data"] = b_avg_data / len(b_list_r)
+        # return data_vars_dict
         b_avg = xr.Dataset(
-            data_vars_dict,
+            data_vars={
+                data_vars_name: (data_vars_coord, data_vars_dict[data_vars_name])
+                for data_vars_name, data_vars_coord in zip(
+                    data_vars_names, data_vars_coords
+                )
+            },
             coords=b_list_r[0].coords,
             attrs=b_list_r[0].attrs,
         )
-
+    # return data_vars_dict
     return b_avg

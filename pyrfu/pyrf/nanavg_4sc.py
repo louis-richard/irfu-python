@@ -78,7 +78,7 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
     # b_list_r = [b.where(np.isnan(b) == False, other=0) for b in b_list_r]
-    b_list_r = [xr.where(np.isnan(b), b, 0) for b in b_list_r]
+    b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
     b_avg_data = np.zeros(b_list_r[0].shape)
     b_nan_denom = np.zeros(b_list_r[0].shape)
 
