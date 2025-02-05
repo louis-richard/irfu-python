@@ -139,7 +139,7 @@ profile = "black"
 [tool.pylint."MESSAGES CONTROL"]
 disable = """
     missing-module-docstring,
-    too-many-positional-arguments,
+    too-many-function-args,
     too-many-arguments,
     too-many-locals,
     too-many-lines,
@@ -181,9 +181,12 @@ warn_unused_ignores = true
 ignore_missing_imports = true
 module = [
     "boto3.*",
+    "ddt.*",
+    "dateutil.*",
     "matplotlib.*",
     "mpl_toolkits.*",
     "numba.*",
+    "pydata_sphinx_theme.*",
     "pandas.*",
     "pytest.*",
     "scipy.*",
