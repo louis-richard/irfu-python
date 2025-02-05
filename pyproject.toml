@@ -140,6 +140,7 @@ profile = "black"
 disable = """
     missing-module-docstring,
     too-many-function-args,
+    too-many-positional-arguments,
     too-many-arguments,
     too-many-locals,
     too-many-lines,
