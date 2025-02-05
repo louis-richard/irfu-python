@@ -55,6 +55,7 @@ ALL_PARAMS_SCALARS = [
     "padhighene",
     "bpsd",
     "epsd",
+    "ionc",
 ]
 
 ALL_PARAMS_VECTORS = [
@@ -154,6 +155,7 @@ INSTRUMENTS = [
     "scm",
     "fsm",
     "dsp",
+    "aspoc",
 ]
 
 

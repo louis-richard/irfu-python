@@ -17,6 +17,12 @@
       "dtype": ""
     }
   },
+  "aspoc": {
+    "ionc_aspoc_srvy_l2": {
+      "cdf_name": "aspoc_ionc",
+      "dtype": ""
+    }
+  },
   "dfg": {
     "b_bcs_dfg_srvy_l2pre": {
       "cdf_name": "dfg_b_bcs_srvy_l2pre",
