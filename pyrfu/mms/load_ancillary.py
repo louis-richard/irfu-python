@@ -83,7 +83,8 @@ def load_ancillary(
     for i, file in enumerate(files_names):
         rows = pd.read_csv(
             file,
-            delim_whitespace=True,
+            # delim_whitespace=True,
+            sep=r"\s+",
             header=None,
             skiprows=anc_dict[product]["header"],
         )

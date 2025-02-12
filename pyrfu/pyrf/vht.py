@@ -6,10 +6,12 @@ import logging
 
 import numpy as np
 
-from .e_vxb import e_vxb
-
 # Local imports
 from .resample import resample
+from .ts_vec_xyz import ts_vec_xyz
+
+# from .e_vxb import e_vxb
+
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -94,7 +96,8 @@ def vht(e, b, no_ez: bool = False):
     )
 
     # Calculate the goodness of the Hoffman Teller frame
-    e_ht = e_vxb(v_ht, b)
+    # e_ht = e_vxb(v_ht, b)
+    e_ht = ts_vec_xyz(b.time.data, -1e-3 * np.cross(v_ht, b.data))
 
     if no_ez:
         e_p, e_ht_p = [e[ind_data], e_ht[ind_data]]

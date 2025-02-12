@@ -17,6 +17,12 @@
       "dtype": ""
     }
   },
+  "aspoc": {
+    "ionc_aspoc_srvy_l2": {
+      "cdf_name": "aspoc_ionc",
+      "dtype": ""
+    }
+  },
   "dfg": {
     "b_bcs_dfg_srvy_l2pre": {
       "cdf_name": "dfg_b_bcs_srvy_l2pre",
@@ -110,6 +116,10 @@
     },
     "hmfe_dsl_edp_brst_l2": {
       "cdf_name": "edp_hmfe_dsl_brst_l2",
+      "dtype": "hmfe"
+    },
+    "hmfe_par_edp_brst_l2": {
+      "cdf_name": "edp_hmfe_par_epar_brst_l2",
       "dtype": "hmfe"
     },
     "phase_edp_fast_l2a": {

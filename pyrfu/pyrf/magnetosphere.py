@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Any, List, Optional
+
 # 3rd party imports
 import numpy as np
 
 # Local imports
-from .get_omni_data import get_omni_data
+from pyrfu.pyrf.get_omni_data import get_omni_data
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -23,7 +26,7 @@ def _alpha(d_p, b_z):
     return (0.58 - 0.007 * b_z) * (1 + 0.024 * np.log(d_p))
 
 
-def magnetosphere(model: str = "mp_shue1998", tint: list = None):
+def magnetosphere(model: str = "mp_shue1998", tint: Optional[List[Any]] = None):
     r"""Returns the location of magnetopause.
 
     Parameters
@@ -53,7 +56,7 @@ def magnetosphere(model: str = "mp_shue1998", tint: list = None):
     if tint is None:
         d_p = 1.7389104
         b_z = 0.012695087
-        m_a = 4
+        m_a = 4.0
     else:
         omni_data = get_omni_data(["p", "bzgsm", "ma"], tint)
         b_z = float(omni_data.bzgsm.mean("time").data)

@@ -247,11 +247,11 @@ def cotrans(inp, flag, hapgood: bool = True):
     inp = inp.data
 
     if hapgood:
-        day_start_epoch = time.astype("datetime64[D]")
-        day_start_epoch = day_start_epoch.astype("datetime64[ns]")
-        day_start_epoch = day_start_epoch.astype(np.int64) / 1e9
-        mjd_ref_epoch = np.datetime64("2000-01-01T12:00:00", "ns")
-        mjd_ref_epoch = mjd_ref_epoch.astype(np.int64) / 1e9
+        day_start_epoch_dt64 = time.astype("datetime64[D]")
+        day_start_epoch_dt64 = day_start_epoch_dt64.astype("datetime64[ns]")
+        day_start_epoch = day_start_epoch_dt64.astype(np.int64) / 1e9
+        mjd_ref_epoch_dt64 = np.datetime64("2000-01-01T12:00:00", "ns")
+        mjd_ref_epoch = mjd_ref_epoch_dt64.astype(np.int64) / 1e9
 
         # t_zero is time measured in Julian centuries from 2000-01-0112:00 UT
         # to the previous midnight

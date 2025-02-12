@@ -1,24 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
+from typing import Tuple
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
-from .dot import dot
+from xarray.core.dataarray import DataArray
 
 # Local imports
-from .resample import resample
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_scalar import ts_scalar
+from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def dec_par_perp(inp, b_bgd, flag_spin_plane: bool = False):
+def dec_par_perp(
+    inp: DataArray, b_bgd: DataArray, flag_spin_plane: bool = False
+) -> Tuple[DataArray, DataArray, DataArray]:
     r"""Decomposes a vector into par/perp to B components. If flagspinplane
     decomposes components to the projection of ``b0`` into the XY plane.
     ``alpha`` gives the angle between ``b0`` and the XY. plane.
@@ -76,27 +82,45 @@ def dec_par_perp(inp, b_bgd, flag_spin_plane: bool = False):
     assert inp.ndim == 2 and inp.shape[1], "inp must be a vector"
     assert b_bgd.ndim == 2 and b_bgd.shape[1], "b_bgd must be a vector"
 
+    # Resample background magnetic field to input
+    b_bgd = resample(b_bgd, inp)
+
+    # Get times and data
+    inp_time = inp.time.data
+    inp_data = inp.data
+    b_bgd_data = b_bgd.data
+
     if not flag_spin_plane:
-        b_mag = np.linalg.norm(b_bgd, axis=1, keepdims=True)
+        b_mag = np.linalg.norm(b_bgd_data, axis=1, keepdims=True)
 
         indices = np.where(b_mag < 1e-3)[0]
 
         if indices.size > 0:
-            b_mag[indices] = np.ones((len(indices), 1)) * 1e-3
+            b_mag[indices] = 1e-3 * np.ones((len(indices), 1))
 
-        b_hat = b_bgd / b_mag
-        b_hat = resample(b_hat, inp)
+        b_hat = b_bgd_data / b_mag
 
-        a_para = dot(b_hat, inp)
-        a_perp = inp - (b_hat.data * np.tile(a_para.data[:, np.newaxis], (1, 3)))
-        alpha = []
+        a_para_arr = np.sum(b_hat * inp_data, axis=-1)
+        a_para = ts_scalar(inp_time, a_para_arr)
+
+        a_perp_arr = inp_data - (
+            b_hat * np.tile(a_para_arr[:, np.newaxis], (1, inp_data.shape[1]))
+        )
+        a_perp = ts_vec_xyz(inp_time, a_perp_arr)
+
+        alpha_arr = np.zeros_like(a_para_arr)
+        alpha = ts_scalar(inp_time, alpha_arr)
     else:
-        b_bgd = resample(b_bgd, inp)
-        b_tot = np.sqrt(b_bgd[:, 0] ** 2 + b_bgd[:, 1] ** 2)
-        b_bgd /= b_tot.data[:, np.newaxis]
+        b_tot = np.sqrt(b_bgd_data[:, 0] ** 2 + b_bgd_data[:, 1] ** 2)
+        b_hat = b_bgd_data / b_tot[:, np.newaxis]
 
-        a_para = inp[:, 0] * b_bgd[:, 0] + inp[:, 1] * b_bgd[:, 1]
-        a_perp = inp[:, 0] * b_bgd[:, 1] - inp[:, 1] * b_bgd[:, 0]
-        alpha = np.arctan2(b_bgd[:, 2], b_tot)
+        a_para_arr = inp_data[:, 0] * b_hat[:, 0] + inp_data[:, 1] * b_hat[:, 1]
+        a_para = ts_scalar(inp_time, a_para_arr)
+
+        a_perp_arr = inp_data[:, 0] * b_hat[:, 1] - inp_data[:, 1] * b_hat[:, 0]
+        a_perp = ts_scalar(inp_time, a_perp_arr)
+
+        alpha_arr = np.arctan2(b_bgd_data[:, 2], b_tot)
+        alpha = ts_scalar(inp_time, alpha_arr)
 
     return a_para, a_perp, alpha

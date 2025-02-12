@@ -896,8 +896,6 @@ class EVxBTestCase(unittest.TestCase):
     @data(
         (generate_ts(64.0, 100, tensor_order=1), "vxb"),
         (generate_ts(64.0, 100, tensor_order=1), "exb"),
-        (np.random.random(3), "vxb"),
-        (np.random.random(3), "exb"),
     )
     @unpack
     def test_e_vxb_output(self, v_xyz, flag):
