@@ -9,6 +9,7 @@ from typing import Literal, Optional
 
 # 3rd party imports
 import keyring
+from keyrings.alt.file import PlaintextKeyring
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -114,4 +115,5 @@ def db_init(
 
     logging.info("Updating MMS SDC credentials in %s...", credential_path)
 
+    keyring.set_keyring(PlaintextKeyring())
     keyring.set_password("mms-sdc", username, password)
