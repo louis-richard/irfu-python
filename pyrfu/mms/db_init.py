@@ -32,7 +32,7 @@ def db_init(
     local: Optional[str] = "../data",
     sdc: Optional[str] = "public",
     sdc_username: Optional[str] = "username",
-    sdc_password: Optional[str] = "password",
+    # sdc_password: Optional[str] = "password",
     aws: Optional[str] = "",
 ) -> None:
     r"""Manage the MMS data access configuration.
@@ -96,22 +96,22 @@ def db_init(
 
     # Read credentials for sdc_username
     credential_path = str(keyring.util.platform_.config_root())
-    credential = keyring.get_credential("mms-sdc", sdc_username)
+    # credential = keyring.get_credential("mms-sdc", sdc_username)
 
-    if (
-        not credential
-        or credential.username == "username"
-        or credential.password == "password"
-    ):
-        # if credentials are empty overwrite anyway
-        username, password = sdc_username, sdc_password
-    elif sdc_username == "username" or sdc_password == "password":
-        # if existing credentials and incomplete arguments do not overwrite
-        username, password = credential.username, credential.password
-    else:
-        # if existing credentials and complete arguments overwrite
-        username, password = sdc_username, sdc_password
+    # if (
+    #     not credential
+    #     or credential.username == "username"
+    #     or credential.password == "password"
+    # ):
+    #     # if credentials are empty overwrite anyway
+    #     username, password = sdc_username, sdc_password
+    # elif sdc_username == "username" or sdc_password == "password":
+    #     # if existing credentials and incomplete arguments do not overwrite
+    #     username, password = credential.username, credential.password
+    # else:
+    #     # if existing credentials and complete arguments overwrite
+    #     username, password = sdc_username, sdc_password
 
     logging.info("Updating MMS SDC credentials in %s...", credential_path)
 
-    keyring.set_password("mms-sdc", username, password)
+    # keyring.set_password("mms-sdc", username, password)
