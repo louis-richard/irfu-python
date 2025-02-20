@@ -68,6 +68,7 @@ def db_init(
         If the SDC rights are not "public" or "sitl".
 
     """
+    keyring.set_keyring(PlaintextKeyring())
     # Check default
     if default.lower() not in ["local", "sdc", "aws"]:
         raise NotImplementedError(f"Resource {default} is not implemented!!")
@@ -115,5 +116,4 @@ def db_init(
 
     logging.info("Updating MMS SDC credentials in %s...", credential_path)
 
-    keyring.set_keyring(PlaintextKeyring())
     keyring.set_password("mms-sdc", username, password)
