@@ -30,5 +30,10 @@
         "header": 14,
         "time_format": "%Y-%j/%H:%M:%S.%f",
         "columns_names": ["time", "epoch_mms_tai", "x", "y", "z", "vx", "vy", "vz"]
+    },
+    "defq": {
+        "header": 11,
+        "time_format": "%Y-%j/%H:%M:%S.%f",
+        "columns_names": ["time", "epoch_mms_tai", "q", "scale"]
     }
 }
