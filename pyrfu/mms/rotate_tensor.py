@@ -41,7 +41,7 @@ def rotate_tensor(
     inp: DataArray,
     rot_flag: str,
     vec: Union[DataArray, NDArrayFloats, Dataset],
-    perp: Optional[str] = "pp",
+    perp: Optional[str] = "pp", verbose: Optional[bool] = False,
 ) -> DataArray:
     r"""Rotates pressure or temperature tensor into another coordinate system.
 
@@ -80,7 +80,9 @@ def rotate_tensor(
             * "pp" : perpendicular diagonal components are equal
             * "qq" : perpendicular diagonal components are most unequal
 
-
+    verbose : bool, Optional
+        Set to True to print additional information.
+        
     Returns
     -------
     DataArray
@@ -256,10 +258,11 @@ def rotate_tensor(
         # maybe also add "rot" here??
         logging.info("No additional rotation applied.")
     elif perp.lower() == "pp":
-        logging.info(
-            "Applying additional rotation to make the perpendicular components "
-            "most equal"
-        )
+        if verbose:
+            logging.info(
+                "Applying additional rotation to make the perpendicular components "
+                "most equal"
+            )
         thetas: NDArrayFloats = 0.5 * np.arctan(
             (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
         )
@@ -280,10 +283,12 @@ def rotate_tensor(
             )
 
     elif perp.lower() == "qq":
-        logging.info(
-            "Applying additional rotation to make the perpendicular components "
-            "most unequal"
-        )
+
+        if verbose:
+            logging.info(
+                "Applying additional rotation to make the perpendicular components "
+                "most unequal"
+            )
 
         thetas = 0.5 * np.arctan(
             (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
