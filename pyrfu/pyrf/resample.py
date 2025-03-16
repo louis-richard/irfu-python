@@ -178,7 +178,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
             inp.data,
             kind=method,
             axis=0,
-            fill_value="extrapolate",
+            fill_value=np.nan,
         )
         out_data = tck(ref_time)
 
