@@ -137,7 +137,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
                 if verbose:
                     logging.info("Using averages in resample")
             else:
-                flag_do = "interpolation"
+                flag_do = "average"
         else:
             flag_do = "interpolation"
 
