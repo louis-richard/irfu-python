@@ -87,11 +87,18 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         b_avg_data += b.data
         b_nan_denom += _nan_count(b).data
 
+    if "probe" in b_list[0].attrs.keys():
+        b_list[0].attrs["probe"] = "4sc_avg"
+    if "mms" in b_list[0].attrs.keys():
+        b_list[0].attrs["mms"] = "4sc_avg"
+    if "MMS" in b_list[0].attrs.keys():
+        b_list[0].attrs["MMS"] = "4sc_avg"
+
     b_avg = xr.DataArray(
         b_avg_data / b_nan_denom,
         coords=b_list_r[0].coords,
         dims=b_list_r[0].dims,
-        attrs=b_list_r[0].attrs,
+        attrs=b_list[0].attrs,
     )
 
     return b_avg
