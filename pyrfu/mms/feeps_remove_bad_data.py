@@ -169,9 +169,9 @@ def feeps_remove_bad_data(inp_dataset):
     #     bad_data_ch1 = bad_ch1["<2019-05-01"][f"mms{mms_id}"]
     #     bad_data_ch2 = bad_ch2["<2019-05-01"][f"mms{mms_id}"]
 
-    # bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
-    # bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
-    # bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]
+    bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
+    bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
+    bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]
 
     bad_vars_ch0 = _bad_vars(bad_data_ch0)
     inp_dataset_clean_ch0 = _bad_ch0(inp_dataset_clean_eye, bad_vars_ch0)
