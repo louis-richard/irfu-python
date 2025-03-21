@@ -160,14 +160,14 @@ def feeps_remove_bad_data(inp_dataset):
     # keV), meaning we'll have to adjust the hard-coded ylim settings in
     # SPEDAS and the SITL software:
 
-    if t_data > iso86012datetime(["2019-05-01T00:00:00.000"])[0]:
-        bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
-        bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
-        bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]
-    else:
-        bad_data_ch0 = bad_ch0["<2019-05-01"][f"mms{mms_id}"]
-        bad_data_ch1 = bad_ch1["<2019-05-01"][f"mms{mms_id}"]
-        bad_data_ch2 = bad_ch2["<2019-05-01"][f"mms{mms_id}"]
+    # if t_data > iso86012datetime(["2019-05-01T00:00:00.000"])[0]:
+    #     bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
+    #     bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
+    #     bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]
+    # else:
+    #     bad_data_ch0 = bad_ch0["<2019-05-01"][f"mms{mms_id}"]
+    #     bad_data_ch1 = bad_ch1["<2019-05-01"][f"mms{mms_id}"]
+    #     bad_data_ch2 = bad_ch2["<2019-05-01"][f"mms{mms_id}"]
 
     # bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
     # bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
