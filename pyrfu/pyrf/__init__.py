@@ -92,6 +92,7 @@ from .shock_parameters import shock_parameters
 from .sliding_derivative import sliding_derivative
 from .solid_angle import solid_angle
 from .sph2cart import sph2cart
+from .st_diff import st_diff
 from .start import start
 from .struct_func import struct_func
 from .t_eval import t_eval
