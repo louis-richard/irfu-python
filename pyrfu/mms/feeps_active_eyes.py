@@ -122,11 +122,11 @@ def feeps_active_eyes(var, tint, mms_id):
         active_table["3-ion"]["top"] = [6, 7, 8]
         active_table["3-ion"]["bottom"] = [6, 7, 8]
 
-        # active_table["4-electron"]["top"] = [3, 4, 5, 9, 10, 11]
-        # active_table["4-electron"]["bottom"] = [3, 5, 9, 10, 12]
-
-        active_table["4-electron"]["top"] = [3, 4, 5, 10, 11]
+        active_table["4-electron"]["top"] = [3, 4, 5, 9, 10, 11]
         active_table["4-electron"]["bottom"] = [3, 5, 9, 10, 12]
+
+        # active_table["4-electron"]["top"] = [3, 4, 5, 10, 11]
+        # active_table["4-electron"]["bottom"] = [3, 5, 9, 10, 12]
 
         active_table["4-ion"]["top"] = [6, 8]
         active_table["4-ion"]["bottom"] = [6, 7, 8]
