@@ -161,13 +161,13 @@ def get_feeps_alleyes(
             dset_name,
             f"mms{mms_id:d}_{pref}_spinsectnum",
             tint,
-            data_path=data_path,
+            data_path=data_path,verbose=verbose,
         ),
         "pitch_angle": db_get_ts(
             dset_name,
             f"mms{mms_id:d}_{pref}_pitch_angle",
             tint,
-            data_path=data_path,
+            data_path=data_path,verbose=verbose,
         ),
     }
 
