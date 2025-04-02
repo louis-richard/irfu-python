@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 
 
-def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose = True, **kwargs):
+def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
     r"""Computes the pitch angle distributions from l1b brst particle data.
 
     Parameters

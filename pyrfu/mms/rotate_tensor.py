@@ -41,7 +41,8 @@ def rotate_tensor(
     inp: DataArray,
     rot_flag: str,
     vec: Union[DataArray, NDArrayFloats, Dataset],
-    perp: Optional[str] = "pp", verbose: Optional[bool] = False,
+    perp: Optional[str] = "pp",
+    verbose: Optional[bool] = False,
 ) -> DataArray:
     r"""Rotates pressure or temperature tensor into another coordinate system.
 
@@ -82,7 +83,7 @@ def rotate_tensor(
 
     verbose : bool, Optional
         Set to True to print additional information.
-        
+
     Returns
     -------
     DataArray

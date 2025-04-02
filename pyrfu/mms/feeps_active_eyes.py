@@ -72,12 +72,12 @@ def feeps_active_eyes(var, tint, mms_id):
         sensors["top"] = [1, 2, 3, 4, 5, 9, 10, 11, 12]
         sensors["bottom"] = [1, 2, 3, 4, 5, 9, 10, 11, 12]
         return sensors
-    
+
     if var["tmmode"].lower() == "brst" and var["dtype"].lower() == "ion":
         sensors["top"] = [6, 7, 8]
         sensors["bottom"] = [6, 7, 8]
         return sensors
-    
+
     # old eyes, srvy mode, prior to 16 August 2017
     if var["dtype"].lower() == "electron":
         sensors["top"] = [3, 4, 5, 11, 12]
