@@ -42,7 +42,7 @@ dependencies = [
     "geopack>=1.0.10",
     "matplotlib>=3.9.0",
     "numba==0.60.0",
-    "numpy>=1.22.0",
+    "numpy>=1.26.4,<2.0",
     "pandas>=2.2.3",
     "pycdfpp>=0.7.0",
     "python-dateutil>=2.9.0",
