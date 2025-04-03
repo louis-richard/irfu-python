@@ -133,19 +133,22 @@ def get_feeps_alleyes(
     """
 
     mms_id = int(mms_id)
-
+    data_unit = tar_var.split("_")[0][:-1].lower()
     specie = tar_var.split("_")[0][-1]
 
     var = {
         "tmmode": tar_var.split("_")[1],
         "lev": tar_var.split("_")[2],
         "mmsId": mms_id,
+        "units_name": tar_var.split("_")[0][:-1].lower(),
     }
 
     if specie == "e":
         var["dtype"] = "electron"
+        var["species"] = "e"
     elif specie == "i":
         var["dtype"] = "ion"
+        var["species"] = "i"
     else:
         raise ValueError("Invalid specie")
 
@@ -190,7 +193,7 @@ def get_feeps_alleyes(
     out = xr.Dataset(out_dict)
 
     out.attrs = var
-
-    out.attrs["species"] = var["dtype"]
+    # out.attrs["data_units"]
+    # out.attrs["species"] = var["dtype"]
 
     return out
