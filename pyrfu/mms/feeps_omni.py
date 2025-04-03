@@ -122,7 +122,7 @@ def feeps_omni(inp_dataset):
 
     flux_omni *= g_fact[specie][mms_id - 1]
 
-    attrs = {"species": inp_dataset.attrs["dtype"]}
+    attrs = {"species": inp_dataset.attrs["dtype"], "UNITS": inp_dataset[top_sensors[0]].attrs["UNITS"]}
     flux_omni = xr.DataArray(
         flux_omni,
         coords=[inp_dataset.time.data, energies],
