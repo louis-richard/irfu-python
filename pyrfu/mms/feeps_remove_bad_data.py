@@ -45,7 +45,7 @@ def _bad_eyes(inp_dataset, bad_vars):
 
         inp_dataset_clean[bad_var].data[:] = np.nan
 
-    return inp_dataset
+    return inp_dataset_clean
 
 
 def _bad_ch0(inp_dataset, bad_vars):
