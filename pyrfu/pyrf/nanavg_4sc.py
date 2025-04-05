@@ -93,6 +93,8 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         b_list[0].attrs["mms"] = "4sc_avg"
     if "MMS" in b_list[0].attrs.keys():
         b_list[0].attrs["MMS"] = "4sc_avg"
+    if "mmsId" in b_list[0].attrs.keys():
+        b_list[0].attrs["mmsId"] = "4sc_avg"
 
     b_avg = xr.DataArray(
         b_avg_data / b_nan_denom,
