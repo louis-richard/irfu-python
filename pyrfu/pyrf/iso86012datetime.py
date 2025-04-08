@@ -18,7 +18,7 @@ __status__ = "Prototype"
 
 
 def iso86012datetime(
-    time: Union[list[str], NDArray[np.str_]]
+    time: Union[list[str], NDArray[np.str_]],
 ) -> list[datetime.datetime]:
     r"""Convert ISO 8601 time to datetime.
 

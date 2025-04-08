@@ -19,7 +19,7 @@ __status__ = "Prototype"
 
 
 def datetime2iso8601(
-    time: Union[list[datetime], NDArray[datetime], datetime]
+    time: Union[list[datetime], NDArray[datetime], datetime],
 ) -> Union[list[str], str]:
     r"""Transforms datetime to TT2000 string format.
 

@@ -17,7 +17,7 @@ __status__ = "Prototype"
 
 
 def datetime642unix(
-    time: Union[list[np.datetime64], NDArray[np.datetime64]]
+    time: Union[list[np.datetime64], NDArray[np.datetime64]],
 ) -> NDArray[np.float64]:
     r"""Converts datetime64 in ns units to unix time.
 

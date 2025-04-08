@@ -17,7 +17,7 @@ __status__ = "Prototype"
 
 
 def iso86012datetime64(
-    time: Union[list[str], NDArray[np.str_]]
+    time: Union[list[str], NDArray[np.str_]],
 ) -> NDArray[np.datetime64]:
     r"""Convert ISO8601 time format to datetime64 in ns units.
 
