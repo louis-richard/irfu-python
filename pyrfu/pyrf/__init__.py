@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .anisotropy_thresholds import anisotropy_thresholds
 from .autocorr import autocorr
 from .average_vdf import average_vdf
 from .avg_4sc import avg_4sc
+from .brazil import brazil
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
 from .c_4_k import c_4_k
@@ -79,15 +81,11 @@ from .pres_anis import pres_anis
 from .psd import psd
 from .pvi import pvi
 from .pvi_4sc import pvi_4sc
-
-# @Louis Richard
 from .read_cdf import read_cdf
 from .remove_repeated_points import remove_repeated_points
 from .resample import resample
 from .shock_normal import shock_normal
 from .shock_parameters import shock_parameters
-
-# @Apostolos Kolokotronis
 from .sliding_derivative import sliding_derivative
 from .solid_angle import solid_angle
 from .sph2cart import sph2cart
@@ -120,9 +118,11 @@ __version__ = "2.4.14"
 __status__ = "Prototype"
 
 __all__ = [
+    "anisotropy_thresholds",
     "autocorr",
     "average_vdf",
     "avg_4sc",
+    "brazil",
     "c_4_grad",
     "c_4_j",
     "c_4_k",
