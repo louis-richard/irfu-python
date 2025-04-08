@@ -17,12 +17,12 @@ __status__ = "Prototype"
 # Coefficients for electron instabilities
 COEFFS_E: Dict[float, Dict[str, tuple]] = {
     0.01: {
-        "whistler": (0.36, 0.55),
         "firehose": (-1.23, 0.88),
+        "whistler": (0.36, 0.55),
     },
     0.1: {
-        "whistler": (0.36, 0.55),
-        "firehose": (-1.23, 0.88),
+        "firehose": (-1.32, 0.61),
+        "whistler": (1.0, 0.49),
     },
 }
 
@@ -88,6 +88,7 @@ def anisotropy_thresholds(
         If specie is not "i" or "e", or if gamma is not supported.
 
     """
+
     if specie == "i":
         if gamma not in COEFFS_I:
             gammas = list(COEFFS_I.keys())
