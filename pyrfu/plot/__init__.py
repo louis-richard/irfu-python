@@ -132,6 +132,21 @@ mpl.colormaps.register(
     ),
 )
 mpl.colormaps.register(
+    name="jet_gray",
+    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+        "jet_gray",
+        [
+            (0.0, "darkblue"),
+            (0.3, "cyan"),
+            (0.5, "gray"),  # Midpoint changed to gray
+            (0.7, "yellow"),
+            (1.0, "red"),
+        ],
+        N=2560,
+    ),
+)
+
+mpl.colormaps.register(
     name="hot_desaturated",
     cmap=mpl.colors.LinearSegmentedColormap.from_list(
         "hot_desaturated",
