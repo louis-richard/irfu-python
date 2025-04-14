@@ -71,8 +71,8 @@ def _construct_url(tint, var, lasp_url):
     if "file_extension" in var:
         url = f"{url}&file_extension={var['file_extension']}"
 
-    if "plan" in var:
-        url = f"{url}&plan={var['plan']}"
+    # if "plan" in var:
+    #     url = f"{url}&plan={var['plan']}"
 
     return url
 
@@ -156,30 +156,32 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
 
     for file in http_json["files"]:
         out_path, out_file, dwl_url = _make_path(file, var, lasp_url, data_path)
+        plan = out_file.split("/")[-1].split("_")[3][7:] 
+        if plan == var["plan"] and out_file[-3:] == "sts": 
 
-        logging.info("Downloading %s from %s...", os.path.basename(out_file), dwl_url)
+            logging.info("Downloading %s from %s...", os.path.basename(out_file), dwl_url)
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=ResourceWarning)
-            with sdc_session.get(
-                dwl_url,
-                stream=True,
-                verify=True,
-                headers=headers,
-            ) as fsrc:
-                with NamedTemporaryFile(delete=False) as ftmp:
-                    with tqdm.tqdm.wrapattr(
-                        fsrc.raw,
-                        "read",
-                        total=file["file_size"],
-                        ncols=60,
-                    ) as fsrc_raw:
-                        with open(ftmp.name, "wb") as fs:
-                            copyfileobj(fsrc_raw, fs)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=ResourceWarning)
+                with sdc_session.get(
+                    dwl_url,
+                    stream=True,
+                    verify=True,
+                    headers=headers,
+                ) as fsrc:
+                    with NamedTemporaryFile(delete=False) as ftmp:
+                        with tqdm.tqdm.wrapattr(
+                            fsrc.raw,
+                            "read",
+                            total=file["file_size"],
+                            ncols=60,
+                        ) as fsrc_raw:
+                            with open(ftmp.name, "wb") as fs:
+                                copyfileobj(fsrc_raw, fs)
 
-                os.makedirs(out_path, exist_ok=True)
+                    os.makedirs(out_path, exist_ok=True)
 
-                # if the download was successful, copy to data directory
-                copy(ftmp.name, out_file)
+                    # if the download was successful, copy to data directory
+                    copy(ftmp.name, out_file)
 
     sdc_session.close()
