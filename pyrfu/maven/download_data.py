@@ -156,10 +156,12 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
 
     for file in http_json["files"]:
         out_path, out_file, dwl_url = _make_path(file, var, lasp_url, data_path)
-        plan = out_file.split("/")[-1].split("_")[3][7:] 
-        if plan == var["plan"] and out_file[-3:] == "sts": 
+        plan = out_file.split("/")[-1].split("_")[3][7:]
+        if plan == var["plan"] and out_file[-3:] == "sts":
 
-            logging.info("Downloading %s from %s...", os.path.basename(out_file), dwl_url)
+            logging.info(
+                "Downloading %s from %s...", os.path.basename(out_file), dwl_url
+            )
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=ResourceWarning)
