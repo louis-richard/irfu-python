@@ -43,6 +43,7 @@ data_units_keys = {
     "mask": "sector_mask",
 }
 
+
 def generate_feeps(f_s, n_pts, data_rate, dtype, lev, units, mms_id):
 
     units_key = data_units_keys[units.lower()]
@@ -816,7 +817,7 @@ class FeepsCorrectEnergiesTestCase(unittest.TestCase):
     def test_feeps_correct_energies_output(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", "flux",random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
 
         result = mms.feeps_correct_energies(feeps_alle)
