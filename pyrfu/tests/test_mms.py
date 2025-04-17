@@ -44,10 +44,13 @@ data_units_keys = {
 }
 
 
-def generate_feeps(f_s, n_pts, data_rate, dtype, lev, units, mms_id):
+def generate_feeps(f_s, n_pts, data_rate, dtype, lev, units_name, mms_id):
 
-    units_key = data_units_keys[units.lower()]
-    var = {"tmmode": data_rate, "dtype": dtype, "lev": lev}
+    units_key = data_units_keys[units_name.lower()]
+
+    var = {"tmmode": data_rate, "dtype": dtype, "lev": lev, "units_name": units_name, 
+           "species": dtype[0], "mmsId": mms_id}
+    
     eyes = mms.feeps_active_eyes(var, TEST_TINT, mms_id)
     keys = [f"{k}-{eyes[k][i]}" for k in eyes for i in range(len(eyes[k]))]
     feeps_dict = {
@@ -60,7 +63,7 @@ def generate_feeps(f_s, n_pts, data_rate, dtype, lev, units, mms_id):
     )
 
     feeps_alle = xr.Dataset(feeps_dict)
-    feeps_alle.attrs = {"mmsId": mms_id, **var}
+    feeps_alle.attrs = {**var}
 
     return feeps_alle
 
