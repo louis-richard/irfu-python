@@ -124,7 +124,7 @@ def feeps_omni(inp_dataset):
 
     attrs = {
         "dtype": inp_dataset.attrs["dtype"],
-        "UNITS": inp_dataset[top_sensors[0]].attrs["UNITS"],
+        # "UNITS": inp_dataset[top_sensors[0]].attrs["UNITS"],
         "species": inp_dataset.attrs["species"],
         "mmsId": inp_dataset.attrs["mmsId"],
         "units_name": inp_dataset.attrs["units_name"],
