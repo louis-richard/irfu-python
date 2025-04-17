@@ -47,9 +47,8 @@ def feeps_corrections(feeps_alle):
 
     split_int_ch = feeps_split_integral_ch(feeps_alle_clean)
     feeps_alle_clean = split_int_ch[0]
-    #feeps_alle_500kev = split_int_ch[1];
+    # feeps_alle_500kev = split_int_ch[1];
 
     feeps_alle_clean = feeps_remove_sun(feeps_alle_clean)
-
 
     return feeps_alle_clean
