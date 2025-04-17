@@ -47,10 +47,13 @@ data_units_keys = {
 def generate_feeps(f_s, n_pts, data_rate, dtype, lev, units, mms_id):
 
     units_key = data_units_keys[units.lower()]
-    var = {"tmmode": data_rate, "dtype": dtype, "lev": lev, "UNITS": units_key}
+    var = {"tmmode": data_rate, "dtype": dtype, "lev": lev}
     eyes = mms.feeps_active_eyes(var, TEST_TINT, mms_id)
     keys = [f"{k}-{eyes[k][i]}" for k in eyes for i in range(len(eyes[k]))]
-    feeps_dict = {k: generate_spectr(f_s, n_pts, 16, f"energy-{k}") for k in keys}
+    feeps_dict = {k: generate_spectr(f_s, n_pts, 16, 
+                                     dict(sensor = f"energy-{k}", UNITS = units_key)) 
+                                     for k in keys}
+    
     feeps_dict["spinsectnum"] = pyrf.ts_scalar(
         generate_timeline(f_s, n_pts), np.tile(np.arange(12), n_pts // 12 + 1)[:n_pts]
     )
