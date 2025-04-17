@@ -32,6 +32,7 @@ from .eis_spin_avg import eis_spin_avg
 from .estimate_phase_speed import estimate_phase_speed
 from .feeps_active_eyes import feeps_active_eyes
 from .feeps_correct_energies import feeps_correct_energies
+from .feeps_corrections import feeps_corrections
 from .feeps_energy_table import feeps_energy_table
 from .feeps_flat_field_corrections import feeps_flat_field_corrections
 from .feeps_omni import feeps_omni
@@ -132,6 +133,7 @@ __all__ = [
     "estimate_phase_speed",
     "feeps_active_eyes",
     "feeps_correct_energies",
+    "feeps_corrections",
     "feeps_energy_table",
     "feeps_flat_field_corrections",
     "feeps_omni",
