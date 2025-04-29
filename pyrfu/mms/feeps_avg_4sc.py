@@ -10,8 +10,8 @@ import xarray as xr
 from xarray.core.dataarray import DataArray
 
 # Local imports
-from .calc_fs import calc_fs
-from .resample import resample
+from ..pyrf.calc_fs import calc_fs
+from ..pyrf.resample import resample
 
 __author__ = "Apostolos Kolokotronis"
 __email__ = "apostolos.kolokotronis@irf.se"
