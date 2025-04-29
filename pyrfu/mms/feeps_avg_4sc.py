@@ -4,6 +4,7 @@
 from typing import Sequence
 
 # 3rd party imports
+from copy import deepcopy
 import numpy as np
 import xarray as xr
 from xarray.core.dataarray import DataArray
@@ -18,7 +19,6 @@ __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
 
 def _nan_count(inp):
     r"""Counts the number of non-NaN values in the input array at each time step.
@@ -42,7 +42,7 @@ def _nan_count(inp):
     return inp_to_counts
 
 
-def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
+def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energies:list = None) -> DataArray:
     r"""Average data from 4 spacecrafts while ignoring NaN values.
     Computes the input quantity at the center of mass of the MMS
     tetrahedron. When averaging, NaN values are ignored by counting the number of
@@ -69,6 +69,8 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     if not isinstance(b_list, list):
         raise TypeError("b_list must be a list")
 
+    assert flag in ["omni", "pad"] 
+
     b_list_r = []
 
     for b in b_list:
@@ -78,15 +80,36 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
     # b_list_r = [b.where(np.isnan(b) == False, other=0) for b in b_list_r]
+    b_list_count_nans = deepcopy(b_list_r)
     b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
     b_avg_data = np.zeros(b_list_r[0].shape)
     b_nan_denom = np.zeros(b_list_r[0].shape)
 
-    for b in b_list_r:
+    if flag == "omni" and combined_energies is not None:
+        if not isinstance(combined_energies, list):
+            raise TypeError("combined_energies must be a list")
+        else:
 
-        b_avg_data += b.data
-        b_nan_denom += _nan_count(b).data
+            energy = np.zeros(len(b_list_r[0].energy.data))
 
+            for ien_bin in range(len(b_list_r[0].energy.data)):
+                non_none_sc_ch = 0
+                for i, b, b_count_nan in zip(range(len(b_list_r)), b_list_r, b_list_count_nans):
+                    if combined_energies[ien_bin][i] == None:
+                        continue
+                    non_none_sc_ch += 1
+                    b_avg_data[:, ien_bin ] += b.data[:, combined_energies[ien_bin ][i] - 1]
+                    b_nan_denom[:, ien_bin ] += _nan_count(b_count_nan.data[:, combined_energies[ien_bin][i] - 1]).data
+                    energy[ien_bin] += b.energy.data[combined_energies[ien_bin][i] - 1]
+                energy[ien_bin] /= non_none_sc_ch
+    else:
+
+        for b, b_count_nan in zip(b_list_r, b_list_count_nans):
+
+            b_avg_data += b.data
+            b_nan_denom += _nan_count(b_count_nan).data
+        
+    # return b_avg_data, b_nan_denom
     if "probe" in b_list[0].attrs.keys():
         b_list[0].attrs["probe"] = "4sc_avg"
     if "mms" in b_list[0].attrs.keys():
@@ -96,9 +119,16 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     if "mmsId" in b_list[0].attrs.keys():
         b_list[0].attrs["mmsId"] = "4sc_avg"
 
+    if flag == "omni":
+        if combined_energies is None:
+            energy = b_list[0].energy.data
+        coords = {"time": b_list_r[0].time, "energy": energy}
+    elif flag == "pad":
+        coords = {"time": b_list_r[0].time}
+
     b_avg = xr.DataArray(
         b_avg_data / b_nan_denom,
-        coords=b_list_r[0].coords,
+        coords=coords,
         dims=b_list_r[0].dims,
         attrs=b_list[0].attrs,
     )
