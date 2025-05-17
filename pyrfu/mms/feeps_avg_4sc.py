@@ -52,11 +52,22 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
     ----------
     b_list : Sequence of DataArray or Dataset
         List of the time series of the quantity for each spacecraft.
+    
+    flag : str, optional
+        type of data to be averaged (omnidirectional or 
+        pitch-angle distribution). The default is "omni".
+    
+    combined_energies : list, optional
+        Used only if flag is "omni".
+        List of energy channel indices from each spacecraft to be combined into a common
+        energy channel. The default is None, which means that the initial channels from 
+        the omnidirectional data are used. This will likely result to averaging fluxes
+        for much different energies. 
 
     Returns
     -------
     b_avg : DataArray or Dataset
-        Time series of the input quantity a the enter of mass of the
+        Time series of the input quantity at the center of mass of the
         MMS tetrahedron.
 
     Raises
@@ -124,7 +135,7 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
             energy = b_list[0].energy.data
         coords = {"time": b_list_r[0].time, "energy": energy}
     elif flag == "pad":
-        coords = {"time": b_list_r[0].time}
+        coords = {"time": b_list_r[0].time, "theta": b_list_r[0].theta}
 
     b_avg = xr.DataArray(
         b_avg_data / b_nan_denom,
