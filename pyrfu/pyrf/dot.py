@@ -66,9 +66,9 @@ def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
     inp2 = resample(inp2, inp1)
 
     # Compute scalar product
-    out_data = np.sum(inp1 * inp2, axis=1)
+    out_data = np.sum(inp1.data * inp2.data, axis=1)
 
     # Output to xarray
-    out = ts_scalar(inp1.time.data, out_data.data)
+    out = ts_scalar(inp1.time.data, out_data)
 
     return out
