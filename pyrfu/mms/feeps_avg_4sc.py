@@ -97,7 +97,7 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
     b_nan_denom = np.zeros(b_list_r[0].shape)
 
     if flag == "omni" and combined_energies is not None:
-        if not isinstance(combined_energies, list):
+        if not isinstance(combined_energies, dict):
             raise TypeError("combined_energies must be a list")
         else:
 
@@ -106,12 +106,13 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
             for ien_bin in range(len(b_list_r[0].energy.data)):
                 non_none_sc_ch = 0
                 for i, b, b_count_nan in zip(range(len(b_list_r)), b_list_r, b_list_count_nans):
-                    if combined_energies[ien_bin][i] == None:
+                    mms_id = b.attrs["mmsId"] - 1
+                    if combined_energies[ien_bin][mms_id] == None:
                         continue
                     non_none_sc_ch += 1
-                    b_avg_data[:, ien_bin ] += b.data[:, combined_energies[ien_bin ][i] - 1]
+                    b_avg_data[:, ien_bin ] += b.data[:, combined_energies[ien_bin ][mms_id] - 1]
                     b_nan_denom[:, ien_bin ] += _nan_count(b_count_nan.data[:, combined_energies[ien_bin][i] - 1]).data
-                    energy[ien_bin] += b.energy.data[combined_energies[ien_bin][i] - 1]
+                    energy[ien_bin] += b.energy.data[combined_energies[ien_bin][mms_id] - 1]
                 energy[ien_bin] /= non_none_sc_ch
     else:
 
@@ -121,14 +122,6 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
             b_nan_denom += _nan_count(b_count_nan).data
         
     # return b_avg_data, b_nan_denom
-    if "probe" in b_list[0].attrs.keys():
-        b_list[0].attrs["probe"] = "4sc_avg"
-    if "mms" in b_list[0].attrs.keys():
-        b_list[0].attrs["mms"] = "4sc_avg"
-    if "MMS" in b_list[0].attrs.keys():
-        b_list[0].attrs["MMS"] = "4sc_avg"
-    if "mmsId" in b_list[0].attrs.keys():
-        b_list[0].attrs["mmsId"] = "4sc_avg"
 
     if flag == "omni":
         if combined_energies is None:
@@ -143,5 +136,14 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
         dims=b_list_r[0].dims,
         attrs=b_list[0].attrs,
     )
+
+    if "probe" in b_avg.attrs.keys():
+        b_avg.attrs["probe"] = "4sc_avg"
+    if "mms" in b_avg.attrs.keys():
+        b_avg.attrs["mms"] = "4sc_avg"
+    if "MMS" in b_avg.attrs.keys():
+        b_avg.attrs["MMS"] = "4sc_avg"
+    if "mmsId" in b_avg.attrs.keys():
+        b_avg.attrs["mmsId"] = "4sc_avg"
 
     return b_avg
