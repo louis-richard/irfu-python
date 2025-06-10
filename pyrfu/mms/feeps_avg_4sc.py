@@ -106,7 +106,7 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
             for ien_bin in range(len(b_list_r[0].energy.data)):
                 non_none_sc_ch = 0
                 for i, b, b_count_nan in zip(range(len(b_list_r)), b_list_r, b_list_count_nans):
-                    mms_id = b.attrs["mmsId"] - 1
+                    mms_id = b_list[i].attrs["mmsId"] - 1
                     if combined_energies[ien_bin][mms_id] == None:
                         continue
                     non_none_sc_ch += 1
