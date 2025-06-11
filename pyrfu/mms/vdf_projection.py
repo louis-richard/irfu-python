@@ -109,7 +109,7 @@ def _init(vdf: Dataset, tint: list):
         step_table = step_table[t_id]
         azimuthal = azimuthal.data[t_id, ...]
 
-        if step_table.data:
+        if step_table:
             energy_edges = energy1_edges
         else:
             energy_edges = energy1_edges
@@ -158,7 +158,7 @@ def _init(vdf: Dataset, tint: list):
                 ],
             )
         else:
-            if all(step_table.data):
+            if all(step_table):
                 energy_edges = energy1_edges
             else:
                 energy_edges = energy0_edges
