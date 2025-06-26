@@ -12,7 +12,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def make_labels(axs, pos, num = False, pad: float = 0, **kwargs):
+def make_labels(axs, pos, num = None, pad: float = 0, **kwargs):
     r"""Add subplots labels to axes
 
     Parameters
@@ -30,9 +30,9 @@ def make_labels(axs, pos, num = False, pad: float = 0, **kwargs):
     """
 
     lbl = string.ascii_lowercase[pad : len(axs) + pad]
-    
-    if num:
-        lbl = [f"{lbl[i]}{i + 1}" for i in range(len(lbl))]
+
+    if num is not None:
+        lbl = [f"{lbl[i]}{num}" for i in range(len(lbl))]
 
     for label, axis in zip(lbl, axs):
         if "proj" in axis.properties():
