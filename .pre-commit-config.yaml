@@ -9,7 +9,7 @@ repos:
         language: system
         pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v5.0.0"
+    rev: "v6.0.0"
     hooks:
       - id: check-yaml
       - id: check-symlinks
@@ -44,11 +44,11 @@ repos:
         types: [ jupyter ]
         additional_dependencies: [ black ]
   - repo: https://github.com/pycqa/flake8
-    rev: "7.2.0"
+    rev: "7.3.0"
     hooks:
       - id: flake8
   - repo: https://github.com/PyCQA/pylint
-    rev: v3.3.7
+    rev: v3.3.8
     hooks:
       - id: pylint
         args:
