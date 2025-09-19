@@ -16,7 +16,13 @@ __version__ = "2.4.14"
 __status__ = "Prototype"
 
 
-def brazil(beta_para: np.ndarray, p_aniso: np.ndarray, bins: list = None):
+def brazil(
+    beta_para: np.ndarray,
+    p_aniso: np.ndarray,
+    bins: list = None,
+    threshold: int = 9,
+    **kwargs,
+):
     """
     Computes 2D histogram and PDF (Brazil plot style) for plasma data.
 
@@ -29,6 +35,8 @@ def brazil(beta_para: np.ndarray, p_aniso: np.ndarray, bins: list = None):
     bins : list, optional
         Bin edges or number of bins for the histogram. If None, optimized
         bin count is used.
+    threshold : int, optional
+        Minimum count threshold for masking low-counts (default is 9).
 
     Returns
     -------
@@ -48,7 +56,7 @@ def brazil(beta_para: np.ndarray, p_aniso: np.ndarray, bins: list = None):
     log_aniso = np.log10(p_aniso)
 
     if bins is None:
-        bins = optimize_nbins_2d(log_beta, log_aniso)
+        bins = optimize_nbins_2d(log_beta, log_aniso, **kwargs)
 
     # Compute histogram edges
     _, x_edges, y_edges = np.histogram2d(log_beta, log_aniso, bins=bins, density=True)
@@ -65,6 +73,6 @@ def brazil(beta_para: np.ndarray, p_aniso: np.ndarray, bins: list = None):
     # Histogram PDF (normalized)
     h = histogram2d(beta_para, p_aniso, bins=[10**x_edges, 10**y_edges], density=True)
     h = h.assign_coords({"x_bins": x_centers, "y_bins": y_centers})
-    h.data[n.data < 9] = np.nan  # apply count threshold mask to PDF
+    h.data[n.data < threshold] = np.nan  # apply count threshold mask to PDF
 
     return n, h
