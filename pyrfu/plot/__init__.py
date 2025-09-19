@@ -15,6 +15,7 @@ from matplotlib import style
 from .add_position import add_position
 from .annotate_heatmap import annotate_heatmap
 from .colorbar import colorbar
+from .ion_brazil_plot_thresh import ion_brazil_plot_thresh
 from .make_labels import make_labels
 from .mms_pl_config import mms_pl_config
 from .pl_scatter_matrix import pl_scatter_matrix
@@ -44,6 +45,7 @@ __all__ = [
     "add_position",
     "annotate_heatmap",
     "colorbar",
+    "ion_brazil_plot_thresh",
     "make_labels",
     "mms_pl_config",
     "pl_scatter_matrix",
