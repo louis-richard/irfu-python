@@ -76,4 +76,4 @@ def copy_files(
         os.makedirs(directory_path, exist_ok=True)
 
         # Copy file
-        shutil.copy2(file, target_file)
+        shutil.copy(file, target_file)
