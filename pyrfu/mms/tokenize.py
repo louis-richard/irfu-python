@@ -90,6 +90,7 @@ ALL_PARAMS_TENSORS = [
     "partti",
     "te",
     "partte",
+    "peerr",
 ]
 
 HPCA_PARAMS_SCALARS = [
