@@ -98,7 +98,7 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
 
     if flag == "omni" and combined_energies is not None:
         if not isinstance(combined_energies, dict):
-            raise TypeError("combined_energies must be a list")
+            raise TypeError("combined_energies must be a dict")
         else:
 
             energy = np.zeros(len(b_list_r[0].energy.data))

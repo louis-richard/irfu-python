@@ -480,6 +480,14 @@
       "cdf_name": "des_prestensor_gse_fast",
       "dtype": "des"
     },
+    "peerr_fpi_brst_l2": {
+      "cdf_name": "des_prestensor_err_brst",
+      "dtype": "des-moms"
+    },
+    "peerr_fpi_fast_l2": {
+      "cdf_name": "des_prestensor_err_fast",
+      "dtype": "des-moms"
+    },
     "pi_dbcs_fpi_brst_l2": {
       "cdf_name": "dis_prestensor_dbcs_brst",
       "dtype": "dis-moms"

@@ -27,7 +27,7 @@ def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q=0.99):
     r"""
     Remove sunlit sectors for each eye in the all eyes FEEPS data product. This is
     needed because the FEEPS contaminated sectors csv files are not updated often enough
-    and their is visible spintone contamination in the data at times between updates.
+    and there is visible spintone contamination in the data at times between updates.
 
     The function removes sunlit sectors from the all FEEPS eyes data product by
     identifying the sectors that are sunlit and replacing them with NaN. The idea is to
