@@ -65,7 +65,7 @@ ALL_PARAMS_VECTORS = [
     "sti",
     "vi",
     "errvi",
-    "erre"
+    "erre",
     "partvi",
     "ste",
     "ve",
