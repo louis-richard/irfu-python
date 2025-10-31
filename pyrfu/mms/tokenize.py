@@ -21,7 +21,7 @@ ALL_PARAMS_SCALARS = [
     "pbgi",
     "partni",
     "ne",
-    "neerr",
+    "errne",
     "pbge",
     "nbge",
     "partne",
@@ -65,10 +65,10 @@ ALL_PARAMS_VECTORS = [
     "sti",
     "vi",
     "errvi",
+    "erre"
     "partvi",
     "ste",
     "ve",
-    "veerr",
     "errve",
     "partve",
     "qi",
@@ -92,7 +92,7 @@ ALL_PARAMS_TENSORS = [
     "partti",
     "te",
     "partte",
-    "peerr",
+    "errpe",
 ]
 
 HPCA_PARAMS_SCALARS = [
