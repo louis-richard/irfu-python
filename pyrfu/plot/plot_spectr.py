@@ -82,11 +82,13 @@ def plot_spectr(
             }
         else:
             options = {"norm": mpl.colors.LogNorm(), "cmap": cmap}
-    else:
+    elif cscale == "linear":
         if clim is not None and isinstance(clim, list):
             options = {"cmap": cmap, "vmin": clim[0], "vmax": clim[1]}
         else:
             options = {"cmap": cmap, "vmin": None, "vmax": None}
+    else:
+        options = {"norm": cscale, "cmap": cmap}
 
     x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
 

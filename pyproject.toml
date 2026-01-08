@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyrfu"
-version = "2.4.16"
+version = "2.4.17"
 description = "Python Space Physics (RymdFysik) Utilities"
 readme = "README.rst"
 authors = [{ name = "Louis RICHARD", email = "louir@irfu.se" }]
@@ -27,10 +27,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -42,8 +42,8 @@ dependencies = [
     "keyrings.alt>=5.0.2",
     "geopack>=1.0.10",
     "matplotlib>=3.9.0",
-    "numba==0.60.0",
-    "numpy>=1.22.0",
+    "numba==0.61.0",
+    "numpy>=1.26.4,<2.0",
     "pandas>=2.2.3",
     "pycdfpp>=0.7.0",
     "python-dateutil>=2.9.0",
@@ -52,7 +52,7 @@ dependencies = [
     "tqdm>=4.66.0",
     "xarray>=2024.10.0",
 ]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.14"
 
 [project.optional-dependencies]
 git = [
@@ -210,7 +210,7 @@ module = [
 
 
 [tool.bumpver]
-current_version = "2.4.16"
+current_version = "2.4.17"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true

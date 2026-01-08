@@ -15,6 +15,7 @@ from matplotlib import style
 from .add_position import add_position
 from .annotate_heatmap import annotate_heatmap
 from .colorbar import colorbar
+from .ion_brazil_plot_thresh import ion_brazil_plot_thresh
 from .make_labels import make_labels
 from .mms_pl_config import mms_pl_config
 from .pl_scatter_matrix import pl_scatter_matrix
@@ -44,6 +45,7 @@ __all__ = [
     "add_position",
     "annotate_heatmap",
     "colorbar",
+    "ion_brazil_plot_thresh",
     "make_labels",
     "mms_pl_config",
     "pl_scatter_matrix",
@@ -131,6 +133,21 @@ mpl.colormaps.register(
         N=2560,
     ),
 )
+mpl.colormaps.register(
+    name="jet_gray",
+    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+        "jet_gray",
+        [
+            (0.0, "darkblue"),
+            (0.3, "cyan"),
+            (0.5, "gray"),  # Midpoint changed to gray
+            (0.7, "yellow"),
+            (1.0, "red"),
+        ],
+        N=2560,
+    ),
+)
+
 mpl.colormaps.register(
     name="hot_desaturated",
     cmap=mpl.colors.LinearSegmentedColormap.from_list(
