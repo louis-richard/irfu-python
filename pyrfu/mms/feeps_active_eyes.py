@@ -71,10 +71,12 @@ def feeps_active_eyes(var, tint, mms_id):
     if var["tmmode"].lower() == "brst" and var["dtype"].lower() == "electron":
         sensors["top"] = [1, 2, 3, 4, 5, 9, 10, 11, 12]
         sensors["bottom"] = [1, 2, 3, 4, 5, 9, 10, 11, 12]
+        return sensors
 
     if var["tmmode"].lower() == "brst" and var["dtype"].lower() == "ion":
         sensors["top"] = [6, 7, 8]
         sensors["bottom"] = [6, 7, 8]
+        return sensors
 
     # old eyes, srvy mode, prior to 16 August 2017
     if var["dtype"].lower() == "electron":
@@ -122,6 +124,9 @@ def feeps_active_eyes(var, tint, mms_id):
 
         active_table["4-electron"]["top"] = [3, 4, 5, 9, 10, 11]
         active_table["4-electron"]["bottom"] = [3, 5, 9, 10, 12]
+
+        # active_table["4-electron"]["top"] = [3, 4, 5, 10, 11]
+        # active_table["4-electron"]["bottom"] = [3, 5, 9, 10, 12]
 
         active_table["4-ion"]["top"] = [6, 8]
         active_table["4-ion"]["bottom"] = [6, 7, 8]

@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 
 
-def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
+def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
     r"""Computes the pitch angle distributions from l1b brst particle data.
 
     Parameters
@@ -88,13 +88,17 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, **kwargs):
             d_angles = 180 / n_angles
             angles_v = np.linspace(d_angles, 180, n_angles)
             d_angles = d_angles * np.ones(n_angles)
-            logging.info("User defined number of pitch angles.")
+
+            if verbose:
+                logging.info("User defined number of pitch angles.")
 
         elif isinstance(kwargs["angles"], (list, np.ndarray)):
             angles_v = kwargs["angles"]
             d_angles = np.diff(angles_v)
             angles_v = angles_v[1:]
-            logging.info("User defined pitch angle limits.")
+
+            if verbose:
+                logging.info("User defined pitch angle limits.")
 
         else:
             raise ValueError("angles parameter not understood.")

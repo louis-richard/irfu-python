@@ -9,6 +9,7 @@ from typing import Literal, Optional
 
 # 3rd party imports
 import keyring
+from keyrings.alt.file import PlaintextKeyring
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -67,6 +68,7 @@ def db_init(
         If the SDC rights are not "public" or "sitl".
 
     """
+    keyring.set_keyring(PlaintextKeyring())
     # Check default
     if default.lower() not in ["local", "sdc", "aws"]:
         raise NotImplementedError(f"Resource {default} is not implemented!!")

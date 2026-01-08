@@ -68,6 +68,7 @@ from .median_bins import median_bins
 from .movmean import movmean
 from .mva import mva
 from .mva_gui import mva_gui
+from .nanavg_4sc import nanavg_4sc
 from .new_xyz import new_xyz
 from .norm import norm
 from .normalize import normalize
@@ -89,6 +90,7 @@ from .shock_parameters import shock_parameters
 from .sliding_derivative import sliding_derivative
 from .solid_angle import solid_angle
 from .sph2cart import sph2cart
+from .st_diff import st_diff
 from .start import start
 from .struct_func import struct_func
 from .t_eval import t_eval
@@ -96,6 +98,7 @@ from .time_clip import time_clip
 from .timevec2iso8601 import timevec2iso8601
 from .trace import trace
 from .ts_append import ts_append
+from .ts_convolve import ts_convolve
 from .ts_scalar import ts_scalar
 from .ts_skymap import ts_skymap
 from .ts_spectr import ts_spectr
@@ -185,6 +188,7 @@ __all__ = [
     "movmean",
     "mva",
     "mva_gui",
+    "nanavg_4sc",
     "new_xyz",
     "norm",
     "normalize",
@@ -214,6 +218,7 @@ __all__ = [
     "timevec2iso8601",
     "trace",
     "ts_append",
+    "ts_convolve",
     "ts_scalar",
     "ts_spectr",
     "ts_skymap",

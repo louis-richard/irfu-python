@@ -59,6 +59,7 @@ ALL_PARAMS_SCALARS = [
 ]
 
 ALL_PARAMS_VECTORS = [
+    "vel",
     "r",
     "sti",
     "vi",

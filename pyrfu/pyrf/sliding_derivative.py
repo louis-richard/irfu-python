@@ -15,7 +15,9 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def sliding_derivative(time_series, t_units: str = "ns", window_size=3):
+def sliding_derivative(
+    time_series, t_units: str = "ns", window_size=3, method: str = "window"
+):
     """
     Compute the sliding time derivative of a time series using central differences.
 
@@ -55,24 +57,62 @@ def sliding_derivative(time_series, t_units: str = "ns", window_size=3):
     data = time_series.data
     time = time_series.time.astype(np.float64).data
 
-    assert t_units.lower() in ["ns", "s"], "convert time to ns or s"
+    assert t_units.lower() in ["ns", "s"], "convert time to ns or s."
 
     if t_units.lower() == "ns" or time.data.dtype == "<M8[ns]":
         time = time * 1e-9
 
+    assert method.lower() in [
+        "window",
+        "5ps",
+        "9ps",
+    ], "this method has not been implemented."
+
     half_window = window_size // 2
-    derivative = np.full(len(data), np.nan)  # Fill the output with NaN for edge cases
 
-    # Iterate over each window in the time series
-    for i in range(half_window, len(data) - half_window):
-        # Get the window of values and time
-        values_window = data[i - half_window : i + half_window + 1]
-        time_window = time[i - half_window : i + half_window + 1]
+    # Fill the output with NaN for edge cases
+    derivative = np.full(len(data), np.nan)
+    if method == "window":
 
-        # Compute finite differences (central difference for the middle point)
-        derivative[i] = (values_window[-1] - values_window[0]) / (
-            time_window[-1] - time_window[0]
-        )
+        half_window = window_size // 2
+
+        # Iterate over each window in the time series
+        for i in range(half_window, len(data) - half_window):
+            # Get the window of values and time
+            values_window = data[i - half_window : i + half_window + 1]
+            time_window = time[i - half_window : i + half_window + 1]
+
+            # Compute finite differences (central difference for the middle point)
+            derivative[i] = (values_window[-1] - values_window[0]) / (
+                time_window[-1] - time_window[0]
+            )
+    elif method == "5ps":
+
+        for i in range(2, len(data) - 2):
+
+            derivative[i] = (
+                1 / 12 * data[i - 2]
+                - 2 / 3 * data[i - 1]
+                + 0 * data[i]
+                + 2 / 3 * data[i + 1]
+                - 1 / 12 * data[i + 2]
+            ) / ((time[i + 2] - time[i - 2]) * 0.25)
+    elif method == "9ps":
+
+        for i in range(4, len(data) - 4):
+
+            derivative[i] = (
+                1 / 280 * data[i - 4]
+                - 4 / 105 * data[i - 3]
+                + 1 / 5 * data[i - 2]
+                - 4 / 5 * data[i - 1]
+                + 0 * data[i]
+                + 4 / 5 * data[i + 1]
+                - 1 / 5 * data[i + 2]
+                + 4 / 105 * data[i + 3]
+                - 1 / 280 * data[i + 4]
+            ) / ((time[i + 4] - time[i - 4]) * 1 / 8)
+
     # time_dt64 = ts_time(time).data
     out = ts_scalar(
         time_series.time.data,
