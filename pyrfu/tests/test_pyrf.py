@@ -1485,30 +1485,32 @@ class IntSphDistTestCase(unittest.TestCase):
         phi = np.arange(32)
         theta = np.arange(16)
         speed_grid = np.linspace(-1, 1, 101)
+        phi_grid = np.arange(-180.0, 180.0, 42)
 
         with self.assertRaises((RuntimeError, NotImplementedError)):
-            pyrf.int_sph_dist(vdf, speed, phi, theta, speed_grid, **value)
+            pyrf.int_sph_dist(vdf, speed, phi, theta, speed_grid, phi_grid, **value)
 
     @data(
         {},
         {"weight": "lin"},
         {"weight": "log"},
-        {"speed_edges": np.linspace(-0.01, 1.01, 52)},
-        {"speed_grid_edges": np.linspace(-1.01, 1.01, 102)},
-        {
-            "phi_grid": np.arange(0, 32),
-            "projection_base": "cart",
-            "projection_dim": "2d",
-        },
+        {"velocity_edges": np.linspace(-0.01, 1.01, 52)},
+        {"velocity_grid_edges": np.linspace(-1.01, 1.01, 102)},
+        {"projection_base": "cart", "projection_dim": "2d"},
         {"projection_base": "cart", "projection_dim": "3d"},
     )
     def test_int_sph_dist_output(self, value):
         vdf = np.random.random((51, 32, 16))
-        speed = np.linspace(0, 1, 51)
+        speed = np.linspace(1, 2, 51)
         phi = np.arange(32)
         theta = np.arange(16)
         speed_grid = np.linspace(-1, 1, 101)
-        result = pyrf.int_sph_dist(vdf, speed, phi, theta, speed_grid, **value)
+        d_phi_g = 2 * np.pi / 32
+        phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, 32) + d_phi_g / 2
+
+        result = pyrf.int_sph_dist(
+            vdf, speed, phi, theta, speed_grid, phi_grid, **value
+        )
         self.assertIsInstance(result, dict)
 
     @data(

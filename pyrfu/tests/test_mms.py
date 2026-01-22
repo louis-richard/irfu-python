@@ -969,15 +969,15 @@ class ReduceTestCase(unittest.TestCase):
     def test_reduce_units(self, value):
         vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=True, species="ions")
         vdf.data.attrs["UNITS"] = value
-        result = mms.reduce(vdf, np.eye(3), "1d", "cart")
+        result = mms.reduce(vdf, np.eye(3), "1d", "pol")
         self.assertIsInstance(result, xr.DataArray)
 
     @data(
-        (False, "ions", np.eye(3), "1d", "cart"),
-        (False, "electrons", np.eye(3), "1d", "cart"),
-        (True, "ions", np.eye(3), "1d", "cart"),
-        (True, "electrons", np.eye(3), "1d", "cart"),
-        (False, "electrons", generate_ts(64.0, 42, tensor_order=2), "1d", "cart"),
+        (False, "ions", np.eye(3), "1d", "pol"),
+        (False, "electrons", np.eye(3), "1d", "pol"),
+        (True, "ions", np.eye(3), "1d", "pol"),
+        (True, "electrons", np.eye(3), "1d", "pol"),
+        (False, "electrons", generate_ts(64.0, 42, tensor_order=2), "1d", "pol"),
         (False, "ions", np.eye(3), "1d", "pol"),
         # (False, "ions", np.eye(3), "2d", "pol"), mc_pol_2d NotImplementedError
     )
@@ -988,9 +988,10 @@ class ReduceTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
     @data(
-        ("1d", "cart", {"vg": np.linspace(-1, 1, 42)}),
-        ("1d", "cart", {"lower_e_lim": generate_ts(64.0, 42)}),
-        ("1d", "cart", {"vg_edges": np.linspace(-1.01, 1.01, 102)}),
+        ("2d", "cart", {}),
+        ("1d", "pol", {"vg": np.linspace(-1, 1, 42)}),
+        ("1d", "pol", {"lower_e_lim": generate_ts(64.0, 42)}),
+        ("1d", "pol", {"vg_edges": np.linspace(-1.01, 1.01, 102)}),
     )
     @unpack
     def test_reduce_options(self, dim, base, options):
