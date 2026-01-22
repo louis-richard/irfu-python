@@ -5,8 +5,8 @@ geopack>=1.0.10
 keyring>=25.5.0
 keyrings.alt==5.0.2
 matplotlib>=3.9.0
-numba==0.61.0
-numpy<2.0,>=1.26.4
+numba>=0.63.0
+numpy>=2.0,<2.4
 pandas>=2.2.3
 pycdfpp>=0.7.0
 python-dateutil>=2.9.0
