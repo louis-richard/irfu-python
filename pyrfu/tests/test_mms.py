@@ -36,18 +36,40 @@ __status__ = "Prototype"
 
 TEST_TINT = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
 
+data_units_keys = {
+    "flux": "1/(cm^2 s sr keV)",
+    "counts": "counts",
+    "cps": "1/s",
+    "mask": "sector_mask",
+}
 
-def generate_feeps(f_s, n_pts, data_rate, dtype, lev, mms_id):
-    var = {"tmmode": data_rate, "dtype": dtype, "lev": lev}
+
+def generate_feeps(f_s, n_pts, data_rate, dtype, lev, units_name, mms_id):
+
+    units_key = data_units_keys[units_name.lower()]
+
+    var = {
+        "tmmode": data_rate,
+        "dtype": dtype,
+        "lev": lev,
+        "units_name": units_name,
+        "species": dtype[0],
+        "mmsId": mms_id,
+    }
+
     eyes = mms.feeps_active_eyes(var, TEST_TINT, mms_id)
     keys = [f"{k}-{eyes[k][i]}" for k in eyes for i in range(len(eyes[k]))]
-    feeps_dict = {k: generate_spectr(f_s, n_pts, 16, f"energy-{k}") for k in keys}
+    feeps_dict = {
+        k: generate_spectr(f_s, n_pts, 16, dict(sensor=f"energy-{k}", UNITS=units_key))
+        for k in keys
+    }
+
     feeps_dict["spinsectnum"] = pyrf.ts_scalar(
         generate_timeline(f_s, n_pts), np.tile(np.arange(12), n_pts // 12 + 1)[:n_pts]
     )
 
     feeps_alle = xr.Dataset(feeps_dict)
-    feeps_alle.attrs = {"mmsId": mms_id, **var}
+    feeps_alle.attrs = {**var}
 
     return feeps_alle
 
@@ -808,7 +830,7 @@ class FeepsCorrectEnergiesTestCase(unittest.TestCase):
     def test_feeps_correct_energies_output(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
 
         result = mms.feeps_correct_energies(feeps_alle)
@@ -822,7 +844,7 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
     def test_feeps_flat_field_corrections_output(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
 
         result = mms.feeps_flat_field_corrections(feeps_alle)
@@ -836,7 +858,7 @@ class FeepsOmniTestCase(unittest.TestCase):
     def test_feeps_omni_output(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
@@ -851,7 +873,7 @@ class FeepsPadTestCase(unittest.TestCase):
     def test_feeps_pad_ouput(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
@@ -866,7 +888,7 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
     def test_feeps_pad_spin_avg(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
@@ -882,7 +904,7 @@ class FeepsPitchAnglesTestCase(unittest.TestCase):
     def test_feeps_pitch_angles_output(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
@@ -899,7 +921,7 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
     def test_feeps_remove_bad_data_output(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
 
         result = mms.feeps_remove_bad_data(feeps_alle)
@@ -913,7 +935,7 @@ class FeepsRemoveSunTestCase(unittest.TestCase):
     def test_feeps_remove_sun(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
 
@@ -928,7 +950,7 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
     def test_feeps_spin_avg(self, data_rate, dtype):
         # Generate fake FEEPS data
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
         feeps_omni = mms.feeps_omni(feeps_alle)
@@ -943,7 +965,7 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
     @unpack
     def test_feeps_split_integral_ch(self, data_rate, dtype):
         feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", random.randint(1, 4)
+            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         mms.feeps_split_integral_ch(feeps_alle)
 

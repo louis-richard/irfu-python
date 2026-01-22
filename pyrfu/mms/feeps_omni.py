@@ -3,6 +3,7 @@
 
 # Built-in imports
 import warnings
+from copy import copy
 
 # 3rd party imports
 import numpy as np
@@ -83,7 +84,7 @@ def feeps_omni(inp_dataset):
     """
     d_type, specie = [inp_dataset.attrs["dtype"] for _ in range(2)]
     mms_id = inp_dataset.attrs["mmsId"]
-    energies = energies_[d_type]
+    energies = copy(energies_[d_type])
 
     # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
     e_corr = {
@@ -121,7 +122,14 @@ def feeps_omni(inp_dataset):
 
     flux_omni *= g_fact[specie][mms_id - 1]
 
-    attrs = {"species": inp_dataset.attrs["dtype"]}
+    attrs = {
+        "dtype": inp_dataset.attrs["dtype"],
+        "UNITS": inp_dataset[top_sensors[0]].attrs["UNITS"],
+        "species": inp_dataset.attrs["species"],
+        "mmsId": inp_dataset.attrs["mmsId"],
+        "units_name": inp_dataset.attrs["units_name"],
+    }
+
     flux_omni = xr.DataArray(
         flux_omni,
         coords=[inp_dataset.time.data, energies],

@@ -117,7 +117,7 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
         range(len(pa_times)),
         range(n_pabins),
     ):
-        if not np.isnan(dpa[pa_idx, :][0]):
+        if not np.isnan(dpa[pa_idx, :]).all():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 ind = np.where(

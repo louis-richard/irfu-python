@@ -32,6 +32,7 @@ from .eis_spin_avg import eis_spin_avg
 from .estimate_phase_speed import estimate_phase_speed
 from .feeps_active_eyes import feeps_active_eyes
 from .feeps_correct_energies import feeps_correct_energies
+from .feeps_corrections import feeps_corrections
 from .feeps_energy_table import feeps_energy_table
 from .feeps_flat_field_corrections import feeps_flat_field_corrections
 from .feeps_omni import feeps_omni
@@ -40,6 +41,7 @@ from .feeps_pad_spinavg import feeps_pad_spinavg
 from .feeps_pitch_angles import feeps_pitch_angles
 from .feeps_remove_bad_data import feeps_remove_bad_data
 from .feeps_remove_sun import feeps_remove_sun
+from .feeps_remove_sunlit_sectors import feeps_remove_sunlit_sectors
 from .feeps_sector_spec import feeps_sector_spec
 from .feeps_spin_avg import feeps_spin_avg
 from .feeps_split_integral_ch import feeps_split_integral_ch
@@ -131,6 +133,7 @@ __all__ = [
     "estimate_phase_speed",
     "feeps_active_eyes",
     "feeps_correct_energies",
+    "feeps_corrections",
     "feeps_energy_table",
     "feeps_flat_field_corrections",
     "feeps_omni",
@@ -139,6 +142,7 @@ __all__ = [
     "feeps_pitch_angles",
     "feeps_remove_bad_data",
     "feeps_remove_sun",
+    "feeps_remove_sunlit_sectors",
     "feeps_sector_spec",
     "feeps_spin_avg",
     "feeps_split_integral_ch",

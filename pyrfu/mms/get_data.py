@@ -230,7 +230,8 @@ def get_data(
     vhplus_gsm_hpca_brst_l2, vhplus_gsm_hpca_srvy_l2, voplus_dbcs_hpca_brst_l2,
     voplus_dbcs_hpca_srvy_l2, voplus_gsm_hpca_brst_l2, voplus_gsm_hpca_srvy_l2
 
-    MEC: r_gse_mec_srvy_l2, r_gsm_mec_srvy_l2
+    MEC: r_gse_mec_srvy_l2, r_gsm_mec_srvy_l2, r_gse_mec_brst_l2, r_gsm_mec_brst_l2,
+    v_gse_mec_srvy_l2, v_gsm_mec_srvy_l2, v_gse_mec_brst_l2, v_gsm_mec_brst_l2
 
     SCM: b_gse_scm_brst_l2
 

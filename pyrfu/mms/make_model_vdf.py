@@ -204,9 +204,7 @@ def make_model_vdf(
 
     for i in range(n_ti):
         coeff = (
-            n_s_data[i]
-            * t_ratio.data[i]
-            / (np.sqrt(np.pi**3) * vth_para.data[i] ** 3)
+            n_s_data[i] * t_ratio.data[i] / (np.sqrt(np.pi**3) * vth_para.data[i] ** 3)
         )
 
         bi_max_temp = coeff * np.exp(

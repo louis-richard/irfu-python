@@ -109,7 +109,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     return out_data
 
 
-def _resample_dataarray(inp, ref, method, f_s, window, thresh):
+def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
     r"""Resample for time series (xarray.DataArray)"""
 
     flag_do = "check"
@@ -134,7 +134,8 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
 
             if len(inp_time) / (inp_time[-1] - inp_time[0]) > 2 * sfy:
                 flag_do = "average"
-                logging.info("Using averages in resample")
+                if verbose:
+                    logging.info("Using averages in resample")
             else:
                 flag_do = "interpolation"
         else:
