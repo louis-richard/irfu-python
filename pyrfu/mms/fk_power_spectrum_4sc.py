@@ -340,11 +340,11 @@ def fk_power_spectrum_4sc(
 
     out_dict = {
         "k_x_f": (["k_x", "f"], power_k_x_f.T),
-        "k_y_f": (["k_x", "f"], power_k_y_f.T),
-        "k_z_f": (["k_x", "f"], power_k_z_f.T),
+        "k_y_f": (["k_y", "f"], power_k_y_f.T),
+        "k_z_f": (["k_z", "f"], power_k_z_f.T),
         "k_mag_f": (["k_mag", "f"], power_k_mag_f.T),
         "k_x_k_y": (["k_x", "k_y"], power_k_x_k_y.T),
-        "k_x_k_z": (["kx", "kz"], power_k_x_k_z.T),
+        "k_x_k_z": (["k_x", "k_z"], power_k_x_k_z.T),
         "k_y_k_z": (["k_y", "k_z"], power_k_y_k_z.T),
         "k_perp_k_par": (["k_perp", "k_par"], power_k_perp_k_par.T),
         "k_x": k_vec,
