@@ -117,4 +117,4 @@ def time_clip(inp, tint):
     for i, k in enumerate(inp.dims):
         out[k].attrs = coords_attrs[i]
 
-    return out
+    return out, [idx_min, idx_max]
