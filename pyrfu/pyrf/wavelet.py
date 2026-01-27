@@ -253,8 +253,8 @@ def wavelet(
             )
 
     if len(inp.shape) == 1:
-        out: Union[DataArray, Dataset] = xr.DataArray(
-            np.fliplr(power2),
+        out: Union[DataArray, Dataset] = xr.DataArray(power2,
+            # np.fliplr(power2),
             coords=[time, np.flip(freqs_cwt)],
             dims=["time", "frequency"],
         )
