@@ -5,7 +5,7 @@
 import logging
 import os
 from typing import Dict, Optional, Union
-import ipdb
+
 # 3rd party imports
 import numba
 import numpy as np
@@ -230,7 +230,7 @@ def wavelet(
 
         # Backward FFT
         power: NDArray[np.complex128] = fft.ifft(w_w, axis=0, workers=os.cpu_count())
-        ipdb.set_trace()
+    
         # Calculate the power spectrum
         if return_power:
             power2 = _power_r(power, np.tile(freqs_cwt_mat, (len(power), 1)))
