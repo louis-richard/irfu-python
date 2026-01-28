@@ -30,7 +30,7 @@ MMS_CFG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.
 
 def db_init(
     default: Optional[Literal["local", "sdc", "aws"]] = "local",
-    local: Optional[str] = "../data",
+    local: Optional[str] = ".",
     sdc: Optional[str] = "public",
     sdc_username: Optional[str] = "username",
     sdc_password: Optional[str] = "password",
@@ -69,6 +69,7 @@ def db_init(
 
     """
     keyring.set_keyring(PlaintextKeyring())
+
     # Check default
     if default.lower() not in ["local", "sdc", "aws"]:
         raise NotImplementedError(f"Resource {default} is not implemented!!")
