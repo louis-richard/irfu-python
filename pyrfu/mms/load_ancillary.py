@@ -107,5 +107,8 @@ def load_ancillary(
         data_frame = pd.concat([data_frame, data_frame_dict[k]], ignore_index=True)
 
     data_frame = data_frame.sort_values(by="time").set_index(["time"])
+    dataset_out = data_frame.to_xarray()
 
-    return data_frame.to_xarray()
+    dataset_out = dataset_out.assign_coords(time=dataset_out.time.astype("<M8[ns]"))
+
+    return dataset_out
