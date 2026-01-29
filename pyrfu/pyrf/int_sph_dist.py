@@ -302,19 +302,33 @@ def _mc_pol_1d(
                 f_ijk = vdf[i, j, k]
 
                 for l_mc in range(n_mc_ijk):
+                    # Generate Monte-Carlo particle speed, phi, and theta
                     if l_mc == 0:
+                        # First Monte-Carlo particle is set at the bin center
                         d_v_mc = 0.0
                         d_phi_mc = 0.0
-                        d_the_mc = 0.0
                     else:
                         d_v_mc = -random.random() * d_v[i] - d_v_m[0]
                         d_phi_mc = (random.random() - 0.5) * d_phi[j]
-                        d_the_mc = (random.random() - 0.5) * d_theta[k]
 
                     # convert instrument bin to cartesian velocity
                     v_mc = v[i] + d_v_mc
                     phi_mc = phi[j] + d_phi_mc
-                    theta_mc = theta[k] + d_the_mc
+
+                    # This is needed to distribute the points evenly in space
+                    # (more points further 'equatorward' since the slice is
+                    # wider there).
+
+                    if l_mc == 0:
+                        theta_mc = theta[k]
+                    else:
+                        theta_1 = theta[k] - 0.5 * d_theta[k]
+                        theta_2 = theta[k] + 0.5 * d_theta[k]
+                        sin_theta_1 = sin(theta_1)
+                        sin_theta_2 = sin(theta_2)
+                        d_sin_theta = sin_theta_2 - sin_theta_1
+                        sin_theta_mc = sin_theta_1 + random.random() * d_sin_theta
+                        theta_mc = asin(sin_theta_mc)
 
                     v_x = v_mc * cos(theta_mc) * cos(phi_mc)
                     v_y = v_mc * cos(theta_mc) * sin(phi_mc)
@@ -433,16 +447,28 @@ def _mc_cart_2d(
                         # First Monte-Carlo particle is set at the bin center
                         d_v_mc = 0.0
                         d_phi_mc = 0.0
-                        d_the_mc = 0.0
                     else:
                         d_v_mc = -random.random() * d_v[i] - d_v_m[0]
                         d_phi_mc = (random.random() - 0.5) * d_phi[j]
-                        d_the_mc = (random.random() - 0.5) * d_theta[k]
 
                     # convert instrument bin to cartesian velocity
                     v_mc = v[i] + d_v_mc
                     phi_mc = phi[j] + d_phi_mc
-                    theta_mc = theta[k] + d_the_mc
+
+                    # This is needed to distribute the points evenly in space
+                    # (more points further 'equatorward' since the slice is
+                    # wider there).
+
+                    if l_mc == 0:
+                        theta_mc = theta[k]
+                    else:
+                        theta_1 = theta[k] - 0.5 * d_theta[k]
+                        theta_2 = theta[k] + 0.5 * d_theta[k]
+                        sin_theta_1 = sin(theta_1)
+                        sin_theta_2 = sin(theta_2)
+                        d_sin_theta = sin_theta_2 - sin_theta_1
+                        sin_theta_mc = sin_theta_1 + random.random() * d_sin_theta
+                        theta_mc = asin(sin_theta_mc)
 
                     # Calculate velocity of the Monte-Carlo particle in
                     # cartesian coordinates
@@ -557,19 +583,33 @@ def _mc_cart_3d(
                 f_ijk = vdf[i, j, k]
 
                 for l_mc in range(n_mc_ijk):
+                    # Generate Monte-Carlo particle speed, phi, and theta
                     if l_mc == 0:
+                        # First Monte-Carlo particle is set at the bin center
                         d_v_mc = 0.0
                         d_phi_mc = 0.0
-                        d_the_mc = 0.0
                     else:
                         d_v_mc = -random.random() * d_v[i] - d_v_m[0]
                         d_phi_mc = (random.random() - 0.5) * d_phi[j]
-                        d_the_mc = (random.random() - 0.5) * d_theta[k]
 
                     # convert instrument bin to cartesian velocity
                     v_mc = v[i] + d_v_mc
                     phi_mc = phi[j] + d_phi_mc
-                    theta_mc = theta[k] + d_the_mc
+
+                    # This is needed to distribute the points evenly in space
+                    # (more points further 'equatorward' since the slice is
+                    # wider there).
+
+                    if l_mc == 0:
+                        theta_mc = theta[k]
+                    else:
+                        theta_1 = theta[k] - 0.5 * d_theta[k]
+                        theta_2 = theta[k] + 0.5 * d_theta[k]
+                        sin_theta_1 = sin(theta_1)
+                        sin_theta_2 = sin(theta_2)
+                        d_sin_theta = sin_theta_2 - sin_theta_1
+                        sin_theta_mc = sin_theta_1 + random.random() * d_sin_theta
+                        theta_mc = asin(sin_theta_mc)
 
                     v_x = v_mc * cos(theta_mc) * cos(phi_mc)
                     v_y = v_mc * cos(theta_mc) * sin(phi_mc)
