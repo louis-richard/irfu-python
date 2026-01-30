@@ -5,3 +5,4 @@ Dispersion relations examples gallery
     :glob:
 
     ./example_dispersion_one_fluid
+    ./example_dispersion_surfaces

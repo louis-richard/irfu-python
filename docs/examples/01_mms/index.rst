@@ -17,6 +17,7 @@ MMS examples gallery
     ./example_mms_particle_distributions
     ./example_mms_particle_pad
     ./example_mms_reduced_ion_dist
+    ./example_mms_reduced_ion_dist_para
     ./example_mms_reduced_electron_dist
     ./example_mms_polarizationanalysis
     ./example_mms_walen_test
