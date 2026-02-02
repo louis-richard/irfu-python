@@ -12,8 +12,9 @@ import xarray as xr
 # Local imports
 from ..pyrf.avg_4sc import avg_4sc
 from ..pyrf.resample import resample
-from ..pyrf.time_clip import time_clip
+# from ..pyrf.time_clip import time_clip
 from ..pyrf.wavelet import wavelet
+from ..pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -28,7 +29,6 @@ logging.basicConfig(
     datefmt="%d-%b-%y %H:%M:%S",
     level=logging.INFO,
 )
-
 
 def fk_power_spectrum_4sc(
     e,
@@ -128,13 +128,32 @@ def fk_power_spectrum_4sc(
     times = e[0].time
     use_linear = df is not None
 
-    # idx = time_clip(e[0].time, list(tints))
+    # outt, idxs = time_clip2(e[0].time, list(tints),)
 
+    if isinstance(tints, xr.DataArray):
+        t_start, t_stop = tints.time.data[[0, -1]]
+    elif isinstance(tints, (np.ndarray, list)):
+        if isinstance(tints[0], np.datetime64):
+            t_start, t_stop = tints
+        elif isinstance(tints[0], str):
+            t_start, t_stop = iso86012datetime64(np.array(tints))
+        else:
+            raise TypeError("Values must be in datetime64, or str!!")
+    else:
+        raise TypeError("tints must be a DataArray or array_like!!")
+
+    idx_min = bisect.bisect_left(e[0].time.data, t_start)
+    idx_max = bisect.bisect_right(e[0].time.data, t_stop)
+    idxs = [idx_min, idx_max]
+
+    idx = np.arange(idxs[0], idxs[1] + 1)
     # If odd, remove last data point (as is done in irf_wavelet)
-    # if len(idx) % 2:
-    #     idx = idx[:-1]
+    
+    if len(idx) % 2:
+        idx = idx[:-1]
 
     if use_linear:
+        # print('yo')
         cwt_options = {
             "linear": df,
             "return_power": False,
@@ -150,17 +169,33 @@ def fk_power_spectrum_4sc(
         }
 
     w = [wavelet(e[i], **cwt_options) for i in range(4)]
-
+    # return w
     num_f = len(w[0].frequency)
-
-    times = time_clip(times, tints)
+    L = len(idx)
+    # return w, num_f
+    # ipdb.set_trace()
+    times = times[idx]
+    # return w
+    # times = pyrf.time_clip(times, tints)
     nt = len(times)
+    # return w, idx
+    w_cut = [w[i].data[idx, :] for i in range(4)]
+    w = [xr.DataArray(w_cut[i], coords={"time": times, "frequency": w[i].frequency}, dims=["time", "frequency"]) for i in range(4)]
+    # return w, times
 
-    w = [time_clip(w[i], tints) for i in range(4)]
-
+    # w = [w[i].sel(time=times,) for i in range(4)]
+    # [w[i].assign_coords(time=times) for i in range(4)];
+    # return w, times
+    # w = [pyrf.time_clip(w[i], tints) for i in range(4)]
+    
     fk_power = 0
+    # return w
+    # ipdb.set_trace()
     for i in range(4):
-        fk_power += (w[i].data * np.conj(w[i].data) / 4).astype(np.float64)
+        # fk_power += (w[i].data * np.conj(w[i].data) / 4).astype(np.float64)
+        fk_power += ((np.real(w[i].data)**2 + np.imag(w[i].data)**2) / 4).astype(np.float64)
+    # ipdb.set_trace()
+    # return fk_power
 
     n = int(np.floor(nt / cav) - 1)
     pos_av = cav / 2 + np.arange(n + 1) * cav
@@ -173,7 +208,8 @@ def fk_power_spectrum_4sc(
     cx12, cx13, cx14 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
     cx23, cx24, cx34 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
 
-    power_avg = np.zeros((n + 1, num_f), dtype="complex128")
+    power_avg = np.zeros((n + 1, num_f),)
+    # w = [w[i].T for i in range(4)]
 
     for m, pos_avm in enumerate(pos_av):
         lb, ub = [int(pos_avm - cav / 2), int(pos_avm + cav / 2)]
@@ -204,7 +240,9 @@ def fk_power_spectrum_4sc(
         )
 
         power_avg[m, :] = np.nanmean(fk_power[lb:ub, :], axis=0)
-
+    # return cx12, cx13, cx14, cx23, cx24, cx34, fk_power, pos_av, w
+    # return power_avg, cx12, cx13, cx14, cx23, cx24, cx34, r, av_times, pos_av, w
+    # return cx12, cx13, cx14, cx23, cx24, cx34, power_avg, b_avg, r, av_times
     # Compute phase differences between each spacecraft pair
     th12 = np.arctan2(np.imag(cx12), np.real(cx12))
     th13 = np.arctan2(np.imag(cx13), np.real(cx13))
@@ -253,12 +291,17 @@ def fk_power_spectrum_4sc(
                 r[3][ii, :] - r[0][ii, :],
             ],
         )
+
+
+
         for jj in range(num_f):
             m = np.linalg.solve(dr, [dt2[ii, jj], dt3[ii, jj], dt4[ii, jj]])
-            k_x[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[0]
-            k_y[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[1]
-            k_z[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[2]
-
+            # print(f'time index: {ii}, frequency index: {jj}, m: {m}')
+            k_x[ii, jj] = 2 * np.pi * w[0].frequency.data[jj] * m[0]
+            k_y[ii, jj] = 2 * np.pi * w[0].frequency.data[jj] * m[1]
+            k_z[ii, jj] = 2 * np.pi * w[0].frequency.data[jj] * m[2]
+    # print(w[0].frequency.data[::-1])
+    # return th12, th13, th14, th23, th24, th34, dt2, dt3, dt4, k_x, k_y, k_z, w_mat, r, dt12, dt13, dt14, dt23, dt24, dt34, dr, m
     k_x, k_y, k_z = [k / 1e3 for k in [k_x, k_y, k_z]]
 
     k_mag = np.linalg.norm(np.array([k_x, k_y, k_z]), axis=0)
@@ -286,58 +329,66 @@ def fk_power_spectrum_4sc(
     power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
     power_k_mag_f = np.zeros((num_f, num_k))
 
-    for nn in range(num_f):
-        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(np.int64)
-        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(np.int64)
-        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(np.int64)
-        k_number = np.floor((k_mag[:, nn]) / dk_mag).astype(np.int64)
+    for mm in range(n + 1):
+        for nn in range(num_f):
+            
+            k_x_number = np.floor((k_x[mm, nn] - k_min) / dk).astype(np.int64)
+            k_y_number = np.floor((k_y[mm, nn] - k_min) / dk).astype(np.int64)
+            k_z_number = np.floor((k_z[mm, nn] - k_min) / dk).astype(np.int64)
+            k_number = np.floor((k_mag[mm, nn]) / dk_mag).astype(np.int64)
 
-        power_k_x_f[nn, k_x_number] += np.real(power_avg[:, nn])
-        power_k_y_f[nn, k_y_number] += np.real(power_avg[:, nn])
-        power_k_z_f[nn, k_z_number] += np.real(power_avg[:, nn])
+            power_k_x_f[nn, k_x_number] += np.real(power_avg[mm, nn])
+            power_k_y_f[nn, k_y_number] += np.real(power_avg[mm, nn])
+            power_k_z_f[nn, k_z_number] += np.real(power_avg[mm, nn])
 
-        power_k_mag_f[nn, k_number] += np.real(power_avg[:, nn])
+            power_k_mag_f[nn, k_number] += np.real(power_avg[mm, nn])
 
     power_k_x_f /= np.max(power_k_x_f)
     power_k_y_f /= np.max(power_k_y_f)
     power_k_z_f /= np.max(power_k_z_f)
     power_k_mag_f /= np.max(power_k_mag_f)
+    # return power_avg,  power_k_mag_f
+    # return k_mag, k_x, k_y, k_z, b_avg_x_mat, b_avg_y_mat, b_avg_z_mat, b_avg_abs_mat, k_par, k_perp, power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f, power_k_x_f_max, power_k_y_f_max, power_k_z_f_max, power_k_mag_f_max, dk, k_x_number, k_y_number, k_z_number, k_number
+
 
     frequencies = w[0].frequency.data
     idx_f = np.arange(num_f)
 
     if f_range is not None:
-        idx_min_freq = bisect.bisect_left(frequencies, np.min(f_range))
-        idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
-        idx_f = idx_f[idx_min_freq:idx_max_freq]
+        idx_f = np.where((frequencies>np.min(f_range)) & (frequencies<np.max(f_range)))[0]
+        # idx_min_freq = bisect.bisect_left(frequencies, np.max(f_range))
+        # idx_max_freq = bisect.bisect_right(frequencies, np.min(f_range))
+        # idx_f = idx_f[idx_min_freq:idx_max_freq]
 
     logging.info("Computing power versus kx,ky; kx,kz; ky,kz")
     power_k_x_k_y = np.zeros((num_k, num_k))
     power_k_x_k_z = np.zeros((num_k, num_k))
     power_k_y_k_z = np.zeros((num_k, num_k))
     power_k_perp_k_par = np.zeros((num_k, num_k))
+    
+    for mm in range(n + 1):
+        for nn in np.flip(idx_f):
 
-    for nn in idx_f:
-        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(np.int64)
-        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(np.int64)
-        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(np.int64)
+            k_x_number = np.floor((k_x[mm, nn] - k_min) / dk).astype(np.int64)
+            k_y_number = np.floor((k_y[mm, nn] - k_min) / dk).astype(np.int64)
+            k_z_number = np.floor((k_z[mm, nn] - k_min) / dk).astype(np.int64)
 
-        k_par_number = np.floor((k_par[:, nn] - k_min) / dk).astype(np.int64)
-        k_perp_number = np.floor((k_perp[:, nn]) / dk_mag).astype(np.int64)
+            k_par_number = np.floor((k_par[mm, nn] - k_min) / dk).astype(np.int64)
+            k_perp_number = np.floor((k_perp[mm, nn]) / dk_mag).astype(np.int64)
 
-        power_k_x_k_y[k_y_number, k_x_number] += np.real(power_avg[:, nn])
-        power_k_x_k_z[k_z_number, k_x_number] += np.real(power_avg[:, nn])
-        power_k_y_k_z[k_z_number, k_y_number] += np.real(power_avg[:, nn])
+            power_k_x_k_y[k_y_number, k_x_number] += np.real(power_avg[mm, nn])
+            power_k_x_k_z[k_z_number, k_x_number] += np.real(power_avg[mm, nn])
+            power_k_y_k_z[k_z_number, k_y_number] += np.real(power_avg[mm, nn])
 
-        power_k_perp_k_par[k_par_number, k_perp_number] += np.real(
-            power_avg[:, nn],
-        )
-
+            power_k_perp_k_par[k_par_number, k_perp_number] += np.real(
+                power_avg[mm, nn],
+            )
+    
     power_k_x_k_y /= np.max(power_k_x_k_y)
     power_k_x_k_z /= np.max(power_k_x_k_z)
     power_k_y_k_z /= np.max(power_k_y_k_z)
     power_k_perp_k_par /= np.max(power_k_perp_k_par)
-
+    # return idx_f, frequencies, power_k_x_k_y, power_k_x_k_z, power_k_y_k_z, power_k_perp_k_par
     out_dict = {
         "k_x_f": (["k_x", "f"], power_k_x_f.T),
         "k_y_f": (["k_y", "f"], power_k_y_f.T),
