@@ -14,6 +14,7 @@ from numpy.typing import NDArray
 from scipy import fft
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from ..pyrf.calc_fs import calc_fs
 
 # Local imports
 __author__ = "Louis Richard"
@@ -120,7 +121,7 @@ def wavelet(
         raise TypeError("Input must be a DataArray")
 
     if f_s is None:
-        f_s = pyrf.calc_fs(inp)
+        f_s = calc_fs(inp)
 
     if n_freqs is None:
         n_freqs = 200
