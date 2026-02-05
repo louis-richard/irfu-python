@@ -35,4 +35,4 @@ def calc_fs(inp: Union[Dataset, DataArray]) -> float:
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
 
-    return float(1 / (np.median(np.diff(inp.time.data)).astype(np.float64) * 1e-9))
+    return float(1 / (np.median(np.diff(inp.time.data.astype(np.float64) * 1e-9))))
