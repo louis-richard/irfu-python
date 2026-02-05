@@ -16,7 +16,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
-from .calc_fs import calc_fs
+from pyrfu.pyrf.calc_fs import calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
