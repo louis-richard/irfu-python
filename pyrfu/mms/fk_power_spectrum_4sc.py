@@ -119,20 +119,17 @@ def fk_power_spectrum_4sc(
 
     ic = np.arange(1, 5)
 
+    # Resample magnetic field to common time base
+    # and compute 4SC average
+    b = [resample(b[i - 1], b[0]) for i in ic]
+    b_avg = avg_4sc(b)
+
+    # Resample e and r to common time base
     e = [resample(e[i - 1], e[0]) for i in ic]
     r = [resample(r[i - 1], e[0]) for i in ic]
-    b = [resample(b[i - 1], e[0]) for i in ic]
-
-    b_avg = avg_4sc(b)
 
     times = e[0].time
     use_linear = df is not None
-
-    # idx = time_clip(e[0].time, list(tints))
-
-    # If odd, remove last data point (as is done in irf_wavelet)
-    # if len(idx) % 2:
-    #     idx = idx[:-1]
 
     if use_linear:
         cwt_options = {
@@ -156,18 +153,28 @@ def fk_power_spectrum_4sc(
     times = time_clip(times, tints)
     nt = len(times)
 
-    w = [time_clip(w[i], tints) for i in range(4)]
+    # Ensure even number of time points
+    if nt % 2:
+        times = times[:-1]
+        nt -= 1
 
-    fk_power = 0
+    # Clip wavelet transforms to time interval
+    w = [w[i].sel(time=times) for i in range(4)]
+
+    # Compute averaged power spectrum from all spacecraft
+    fk_power = np.zeros((nt, num_f), dtype=np.float64)
     for i in range(4):
         fk_power += (w[i].data * np.conj(w[i].data) / 4).astype(np.float64)
 
+    # Find the time positions for averaging
+    cav = int(cav)
     n = int(np.floor(nt / cav) - 1)
-    pos_av = cav / 2 + np.arange(n + 1) * cav
-    av_times = times[pos_av.astype(np.int64)]
+    pos_av = cav // 2 + np.arange(n + 1, dtype=np.int16) * cav - 1
+    av_times = times[pos_av]
 
+    # Resample background magnetic field and spacecraft positions to
+    # averaged time positions
     b_avg = resample(b_avg, av_times)
-
     r = [resample(r[i], av_times) for i in range(4)]
 
     cx12, cx13, cx14 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
