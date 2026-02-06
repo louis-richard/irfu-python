@@ -8,6 +8,7 @@ import logging
 # 3rd party imports
 import numpy as np
 import xarray as xr
+from scipy import linalg
 
 # Local imports
 from pyrfu.pyrf.avg_4sc import avg_4sc
@@ -180,10 +181,10 @@ def fk_power_spectrum_4sc(
     cx12, cx13, cx14 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
     cx23, cx24, cx34 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
 
-    power_avg = np.zeros((n + 1, num_f), dtype="complex128")
+    power_avg = np.zeros((n + 1, num_f), dtype="float64")
 
     for m, pos_avm in enumerate(pos_av):
-        lb, ub = [int(pos_avm - cav / 2), int(pos_avm + cav / 2)]
+        lb, ub = [pos_avm - cav // 2 + 1, pos_avm + cav // 2 + 1]
 
         cx12[m, :] = np.nanmean(
             w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]),
@@ -220,12 +221,15 @@ def fk_power_spectrum_4sc(
     th24 = np.arctan2(np.imag(cx24), np.real(cx24))
     th34 = np.arctan2(np.imag(cx34), np.real(cx34))
 
-    w_mat = 2 * np.pi * np.tile(w[0].frequency.data, (n + 1, 1))
+    w_mat = 2 * np.pi * np.tile(w[0].frequency.data, (n + 1, 1))  # NOT CHECK
 
     # Convert phase difference to time delay
-    dt12, dt13, dt14, dt23, dt24, dt34 = [
-        th / w_mat for th in [th12, th13, th14, th23, th24, th34]
-    ]
+    dt12 = th12 / w_mat
+    dt13 = th13 / w_mat
+    dt14 = th14 / w_mat
+    dt23 = th23 / w_mat
+    dt24 = th24 / w_mat
+    dt34 = th34 / w_mat
 
     # Weighted averaged time delay using all spacecraft pairs
     dt2 = (
@@ -261,7 +265,7 @@ def fk_power_spectrum_4sc(
             ],
         )
         for jj in range(num_f):
-            m = np.linalg.solve(dr, [dt2[ii, jj], dt3[ii, jj], dt4[ii, jj]])
+            m = linalg.solve(dr, np.array([dt2[ii, jj], dt3[ii, jj], dt4[ii, jj]]))
             k_x[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[0]
             k_y[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[1]
             k_z[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[2]
@@ -270,6 +274,8 @@ def fk_power_spectrum_4sc(
 
     k_mag = np.linalg.norm(np.array([k_x, k_y, k_z]), axis=0)
 
+    # Compute the parallel and perpendicular wave numbers using the background magnetic
+    # field averaged over the four spacecraft. This is used to
     b_avg_x_mat = np.tile(b_avg.data[:, 0], (num_f, 1)).T
     b_avg_y_mat = np.tile(b_avg.data[:, 1], (num_f, 1)).T
     b_avg_z_mat = np.tile(b_avg.data[:, 2], (num_f, 1)).T
@@ -280,6 +286,7 @@ def fk_power_spectrum_4sc(
     k_par = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
     k_perp = np.sqrt(k_mag**2 - k_par**2)
 
+    # Determine the maximum and minimum wave numbers
     k_max = np.max(k_mag) * 1.1
     k_min = -k_max
     k_vec = np.linspace(-k_max, k_max, num_k)
@@ -289,22 +296,23 @@ def fk_power_spectrum_4sc(
     dk = 2 * k_max / num_k
 
     # Sort power into frequency and wave vector
-    logging.info("Computing power versus kx,f; ky,f, kz,f")
+    logging.info("Computing power versus (kx,f); (ky,f), (kz,f), (k,f)")
     power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
     power_k_mag_f = np.zeros((num_f, num_k))
 
-    for nn in range(num_f):
-        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(np.int64)
-        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(np.int64)
-        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(np.int64)
-        k_number = np.floor((k_mag[:, nn]) / dk_mag).astype(np.int64)
+    for mm in range(n + 1):
+        for nn in range(num_f):
+            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
+            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
+            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
+            k_number = int(np.floor(k_mag[mm, nn] / dk_mag))
 
-        power_k_x_f[nn, k_x_number] += np.real(power_avg[:, nn])
-        power_k_y_f[nn, k_y_number] += np.real(power_avg[:, nn])
-        power_k_z_f[nn, k_z_number] += np.real(power_avg[:, nn])
+            power_k_x_f[nn, k_x_number] += power_avg[mm, nn]
+            power_k_y_f[nn, k_y_number] += power_avg[mm, nn]
+            power_k_z_f[nn, k_z_number] += power_avg[mm, nn]
+            power_k_mag_f[nn, k_number] += power_avg[mm, nn]
 
-        power_k_mag_f[nn, k_number] += np.real(power_avg[:, nn])
-
+    # Normalize power to maximum value for plotting
     power_k_x_f /= np.max(power_k_x_f)
     power_k_y_f /= np.max(power_k_y_f)
     power_k_z_f /= np.max(power_k_z_f)
@@ -318,32 +326,55 @@ def fk_power_spectrum_4sc(
         idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
         idx_f = idx_f[idx_min_freq:idx_max_freq]
 
-    logging.info("Computing power versus kx,ky; kx,kz; ky,kz")
+    # Sort power into wave vector space for k_x, k_y; k_x, k_z; k_y, k_z
+    logging.info("Computing power versus (kx,ky); (kx,kz); (ky,kz)")
     power_k_x_k_y = np.zeros((num_k, num_k))
     power_k_x_k_z = np.zeros((num_k, num_k))
     power_k_y_k_z = np.zeros((num_k, num_k))
-    power_k_perp_k_par = np.zeros((num_k, num_k))
 
-    for nn in idx_f:
-        k_x_number = np.floor((k_x[:, nn] - k_min) / dk).astype(np.int64)
-        k_y_number = np.floor((k_y[:, nn] - k_min) / dk).astype(np.int64)
-        k_z_number = np.floor((k_z[:, nn] - k_min) / dk).astype(np.int64)
+    for mm in range(n + 1):
+        for nn in idx_f:
+            # Find the position of the power in the
+            # k_x, k_y; k_x, k_z; k_y, k_z space
+            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
+            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
+            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
 
-        k_par_number = np.floor((k_par[:, nn] - k_min) / dk).astype(np.int64)
-        k_perp_number = np.floor((k_perp[:, nn]) / dk_mag).astype(np.int64)
+            # Add the power to the corresponding position in the
+            # k_x, k_y; k_x, k_z; k_y, k_z space
+            power_k_x_k_y[k_y_number, k_x_number] += power_avg[mm, nn]
+            power_k_x_k_z[k_z_number, k_x_number] += power_avg[mm, nn]
+            power_k_y_k_z[k_z_number, k_y_number] += power_avg[mm, nn]
 
-        power_k_x_k_y[k_y_number, k_x_number] += np.real(power_avg[:, nn])
-        power_k_x_k_z[k_z_number, k_x_number] += np.real(power_avg[:, nn])
-        power_k_y_k_z[k_z_number, k_y_number] += np.real(power_avg[:, nn])
-
-        power_k_perp_k_par[k_par_number, k_perp_number] += np.real(
-            power_avg[:, nn],
-        )
-
+    # Normalize power to maximum value for plotting
     power_k_x_k_y /= np.max(power_k_x_k_y)
     power_k_x_k_z /= np.max(power_k_x_k_z)
     power_k_y_k_z /= np.max(power_k_y_k_z)
+
+    # Sort power into wave vector space for k_perp, k_par
+    logging.info("Computing power versus kperp,kpara")
+    power_k_perp_k_par = np.zeros((num_k, num_k))
+    for mm in range(n + 1):
+        for nn in idx_f:
+            # Find the position of the power in the k_par, k_perp space
+            k_par_number = int(np.floor((k_par[mm, nn] - k_min) / dk))
+            k_perp_number = int(np.floor((k_perp[mm, nn]) / dk_mag))
+
+            # Add the power to the corresponding position in the k_par, k_perp space
+            power_k_perp_k_par[k_par_number, k_perp_number] += power_avg[mm, nn]
+
+    # Normalize power to maximum value for plotting
     power_k_perp_k_par /= np.max(power_k_perp_k_par)
+
+    # Set zero power to NaN for plotting purposes
+    power_k_x_f[power_k_x_f == 0] = np.nan
+    power_k_y_f[power_k_y_f == 0] = np.nan
+    power_k_z_f[power_k_z_f == 0] = np.nan
+    power_k_mag_f[power_k_mag_f == 0] = np.nan
+    power_k_x_k_y[power_k_x_k_y == 0] = np.nan
+    power_k_x_k_z[power_k_x_k_z == 0] = np.nan
+    power_k_y_k_z[power_k_y_k_z == 0] = np.nan
+    power_k_perp_k_par[power_k_perp_k_par == 0] = np.nan
 
     out_dict = {
         "k_x_f": (["k_x", "f"], power_k_x_f.T),
@@ -351,7 +382,7 @@ def fk_power_spectrum_4sc(
         "k_z_f": (["k_x", "f"], power_k_z_f.T),
         "k_mag_f": (["k_mag", "f"], power_k_mag_f.T),
         "k_x_k_y": (["k_x", "k_y"], power_k_x_k_y.T),
-        "k_x_k_z": (["kx", "kz"], power_k_x_k_z.T),
+        "k_x_k_z": (["k_x", "k_z"], power_k_x_k_z.T),
         "k_y_k_z": (["k_y", "k_z"], power_k_y_k_z.T),
         "k_perp_k_par": (["k_perp", "k_par"], power_k_perp_k_par.T),
         "k_x": k_vec,
