@@ -153,8 +153,10 @@ def get_dist(file_path, cdf_name, tint: list = None):
                 energy0 = energy[0, :]
                 energy1 = energy[0, :]
             else:
-                energy0 = energy[1, :]
-                energy1 = energy[0, :]
+                idx_energy0 = np.where(step_table == 0)[0]
+                idx_energy1 = np.where(step_table == 1)[0]
+                energy0 = energy[idx_energy0[0], :]
+                energy1 = energy[idx_energy1[0], :]
         else:
             energy0 = file[en0_name].values
             energy1 = file[en1_name].values

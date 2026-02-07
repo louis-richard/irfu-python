@@ -145,21 +145,21 @@ def list_files(
 
         for root, _, files in os.walk(local_dir):
             for file in files:
-                this_file = os.sep.join([root, file])
+                file_path = os.sep.join([root, file])
 
-                matches = regex.match(this_file)
+                matches = regex.match(file_path)
                 if matches:
                     this_time = parser.parse(matches.groups()[1])
                     if d_start <= this_time <= until_:
+                        this_file = {
+                            "file_name": file,
+                            "timetag": "",
+                            "full_name": file_path,
+                            "file_size": "",
+                        }
+
                         if this_file not in files_out:
-                            files_out.append(
-                                {
-                                    "file_name": file,
-                                    "timetag": "",
-                                    "full_name": this_file,
-                                    "file_size": "",
-                                },
-                            )
+                            files_out.append(this_file)
 
     in_files = files_out
 

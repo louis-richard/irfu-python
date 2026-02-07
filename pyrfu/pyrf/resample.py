@@ -124,8 +124,10 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
     else:
         sfy = None
 
-    inp_time = inp.time.data.view("i8") * 1e-9
-    ref_time = ref.time.data.view("i8") * 1e-9
+    inp_time_ttns = inp.time.data.astype("int64")
+    ref_time_ttns = ref.time.data.astype("int64")
+    inp_time = (inp_time_ttns - inp_time_ttns[0]) * 1e-9
+    ref_time = (ref_time_ttns - inp_time_ttns[0]) * 1e-9
 
     if flag_do == "check":
         if len(ref_time) > 1:
@@ -195,6 +197,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
 
 def _resample_dataset(inp, ref, **kwargs):
     r"""Resample for VDFs (xarray.Dataset)"""
+
     # Find time dependent zVariables and resample
     tdepnd_zvars = list(filter(lambda x: "time" in inp[x].dims, inp))
     out_dict = {k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars}
@@ -301,6 +304,11 @@ def resample(
     message = "Invalid input type. Input must be xarray.DataArary or xarray.Dataset"
     assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
 
+    # Fix make sure that the time are in the same precision format
+    inp = inp.assign_coords(time=inp.time.astype("datetime64[ns]"))
+    ref = ref.assign_coords(time=ref.time.astype("datetime64[ns]"))
+
+    # Define options for resampling
     options = {"method": method, "f_s": f_s, "window": window, "thresh": thresh}
 
     if isinstance(inp, xr.DataArray):

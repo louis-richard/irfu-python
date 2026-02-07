@@ -8,7 +8,7 @@ from scipy import signal
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020-2026"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
@@ -18,26 +18,29 @@ __status__ = "Prototype"
 def _ellip_coefficients(f_min, f_max, order):
     num1, den1, num2, den2 = [None] * 4
 
+    # fact defines the width between stopband and passband
+    r_p, r_s, fact = 0.5, 60, 1.1
+
     if f_min == 0:
         if order == -1:
             order, f_max = signal.ellipord(
                 f_max,
-                np.min([f_max * 1.1, 0.9999]),
-                0.5,
-                60,
+                np.min([f_max * fact, 0.9999]),
+                r_p,
+                r_s,
             )
 
-        num1, den1 = signal.ellip(order, 0.5, 60, f_max, btype="lowpass")
+        num1, den1 = signal.ellip(order, r_p, r_s, f_max, btype="lowpass")
     elif f_max == 0:
         if order == -1:
             order, f_min = signal.ellipord(
                 f_min,
-                np.min([f_min * 1.1, 0.9999]),
-                0.5,
-                60,
+                np.min([f_min * fact, 0.9999]),
+                r_p,
+                r_s,
             )
 
-        num1, den1 = signal.ellip(order, 0.5, 60, f_min, btype="highpass")
+        num1, den1 = signal.ellip(order, r_p, r_s, f_min, btype="highpass")
     else:
         if order == -1:
             order1, f_max = signal.ellipord(
@@ -105,16 +108,16 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
 
     assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
 
-    f_samp = 1 / (np.median(np.diff(inp.time)).astype(np.int64) * 1e-9)
+    f_samp = 1 / (np.median(np.diff(inp.time.astype(np.int64) * 1e-9)))
 
     # Data of the input
-    inp_data = inp.data
+    inp_data = inp.data.astype(np.float64)
 
     assert isinstance(f_min, (int, float)), "f_min must be int or float"
     assert isinstance(f_max, (int, float)), "f_max must be int or float"
     assert isinstance(order, (int, float)), "order must be int or float"
 
-    f_min, f_max = [f_min / (f_samp / 2), f_max / (f_samp / 2)]
+    f_min, f_max = [f_min / (f_samp / 2.0), f_max / (f_samp / 2.0)]
 
     f_max = np.min([f_max, 1.0])
 
@@ -127,16 +130,26 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
     if len(inp_data.shape) == 1:
         inp_data = inp_data[:, np.newaxis]
 
-    out_data = np.zeros(inp_data.shape)
+    out_data = np.zeros(inp_data.shape, dtype=inp_data.dtype)
 
     for i_col in range(inp_data.shape[1]):
-        out_data[:, i_col] = signal.filtfilt(num1, den1, inp_data[:, i_col])
+        # use different padtype and padlen for consistency with MATLAB
+        # (and to not drive me crazy trying to figure out the differences)
+        padtype = "odd"
+        padlen = 3 * (max(len(num1), len(den1)) - 1)
+        out_data[:, i_col] = signal.filtfilt(
+            num1, den1, inp_data[:, i_col], padtype=padtype, padlen=padlen
+        )
 
         if num2 is not None and den2 is not None:
+            padtype = "odd"
+            padlen = 3 * (max(len(num2), len(den2)) - 1)
             out_data[:, i_col] = signal.filtfilt(
                 num2,
                 den2,
                 out_data[:, i_col],
+                padtype=padtype,
+                padlen=padlen,
             )
     if inp_data.shape[1] == 1:
         out_data = out_data[:, 0]

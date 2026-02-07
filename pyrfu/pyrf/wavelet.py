@@ -17,6 +17,8 @@ from xarray.core.dataset import Dataset
 from ..pyrf.calc_fs import calc_fs
 
 # Local imports
+from pyrfu.pyrf.calc_fs import calc_fs
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2024"

@@ -10,11 +10,11 @@ import xarray as xr
 from scipy.constants import electron_mass, electron_volt, proton_mass, speed_of_light
 
 # Local imports
-from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.int_sph_dist import int_sph_dist
-from ..pyrf.resample import resample
-from ..pyrf.time_clip import time_clip
-from ..pyrf.ts_scalar import ts_scalar
+from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
+from pyrfu.pyrf.int_sph_dist import int_sph_dist
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.time_clip import time_clip
+from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -48,26 +48,38 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     """
 
     # Make sure the projection dimension amd base are correct
-    assert dim.lower() in ["1d", "2d", "3d"], "Invalid projection dimension!!"
     assert base.lower() in ["cart", "pol"], "Invalid projection base!!"
-
-    # Lower energy bound of instrument bins
-    delta_energy_minu = xr.DataArray(
-        vdf.attrs["delta_energy_minus"],
-        coords=[vdf.time.data, vdf.idx0.data],
-        dims=["time", "idx0"],
-    )
+    assert dim.lower() in ["1d", "2d", "3d"], "Invalid projection dimension!!"
+    ndim = int(dim[0])
 
     # Clip the distribution. If no time interval provided use the entire
     # time series.
+    # Note: irfu-matlab does the rotation matrix first and then time clip but here
+    # we do time clip first to save computation time if the time interval is
+    # smaller than the VDF time series.
     vdf_time = vdf.time
     tint = kwargs.get("tint", list(datetime642iso8601(vdf_time.data[[0, -1]])))
     vdf_time = time_clip(vdf_time, tint)
     vdf_energy = time_clip(vdf.energy, tint).copy()
-    delta_energy_minu = time_clip(delta_energy_minu, tint)
     vdf_phi = time_clip(vdf.phi, tint).copy()
     vdf_theta = vdf.theta.copy()
     vdf_data = time_clip(vdf.data, tint).copy()
+
+    # Lower energy bound of instrument bins. If not provided set to 0 eV.
+    if "delta_energy_minus" in vdf.attrs:
+        delta_energy_minu = xr.DataArray(
+            vdf.attrs["delta_energy_minus"],
+            coords=[vdf.time.data, vdf.idx0.data],
+            dims=["time", "idx0"],
+        )
+    else:
+        delta_energy_minu = xr.DataArray(
+            np.zeros((len(vdf.time.data), len(vdf.idx0.data))),
+            coords=[vdf.time.data, vdf.idx0.data],
+            dims=["time", "idx0"],
+        )
+
+    delta_energy_minu = time_clip(delta_energy_minu, tint)
 
     # make input distribution to SI units, s^3/m^6
     if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
@@ -109,16 +121,29 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         [1, 2, 0],
     )
 
-    # Set azimuthal angle projection grid
+    # This is now done in int_sph_dist
+    # Set azimuthal angle projection grid.
     # d_phi = kwargs.get("d_phi", 2 * np.pi / n_ph)
     # phi_grid = np.linspace(0, 2 * np.pi, n_ph) + d_phi / 2  # centers
 
-    # Number of Monte Carlo iterations and weights
-    n_mc = kwargs.get("n_mc", 100)
-    weight = kwargs.get("weight", None)
+    # Read the keyword arguments
+    # Velocity projection grid and edges
+    velocity_grid = kwargs.get("vg", None)  # TODO : check that for no input!!
+    velocity_grid_edges = kwargs.get("vg_edges", None)
 
-    v_lim = kwargs.get("v_lim", [-np.inf, np.inf])  # Velocity grid limits
-    a_lim = kwargs.get("a_lim", [-180.0, 180.0])  # Azimuthal angle limits
+    # azimuthal angle of projection plane
+    n_phi_grid = len(vdf_phi)
+    d_phi_g = 2 * np.pi / n_phi_grid
+    phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, n_phi_grid) + d_phi_g / 2
+    phi_grid = kwargs.get("phig", phi_grid)
+
+    # Number of Monte Carlo iterations and weights
+    n_mc = kwargs.get("n_mc", 100)  # OK
+    weight = kwargs.get("weight", None)  # OK
+
+    # Velocity and azimuthal angle integration intervals
+    v_int = kwargs.get("v_int", [-np.inf, np.inf])  # OK
+    a_int = kwargs.get("a_int", [-180.0, 180.0])  # OK
 
     # Spacecraft potential to account for photoelectrons. If not provided set
     # to 0 V.
@@ -152,31 +177,30 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     gamma_max = 1 + electron_volt * e_max / (m_p * speed_of_light**2)
     v_max = speed_of_light * np.sqrt(1 - 1 / gamma_max**2)  # m/s
 
-    speed_grid = kwargs.get("vg", None)  # TODO : check that for no input!!
-    speed_grid_edges = kwargs.get("vg_edges", None)
-
     # initiate projected f
-    if speed_grid_edges is not None:
-        n_vg = len(speed_grid_edges) - 1
-        speed_grid_cart = None
-        speed_grid = speed_grid_edges[:-1] + 0.5 * np.diff(speed_grid_edges)
-    elif speed_grid is not None:
-        n_vg = len(speed_grid)
-        speed_grid_cart = None
+    if velocity_grid_edges is not None:
+        n_vg = len(velocity_grid_edges) - 1
+        velocity_grid = velocity_grid_edges[:-1] + 0.5 * np.diff(velocity_grid_edges)
+    elif velocity_grid is not None:
+        n_vg = len(velocity_grid)
     else:
-        n_vg = 2 * n_en
-        speed_grid_cart = np.linspace(-v_max, v_max, n_vg, endpoint=True)
+        n_vg = 100
+        if base == "cart":
+            n_vg = 100
+        elif base == "pol":
+            if ndim == 1:
+                n_vg = 2 * n_en
+            else:
+                n_vg = n_en
 
-    n_pr = int(dim[0])
-    f_g = np.zeros([n_t, *[n_vg] * n_pr])
-    all_v = {f"v{chr(120 + i)}": np.zeros((n_t, n_vg)) for i in range(n_pr)}
+    # Initialize output arrays
+    f_g = np.zeros([n_t, *[n_vg] * ndim])
+    all_v = {f"v{chr(120 + i)}": np.zeros((n_t, n_vg)) for i in range(ndim)}
 
     for i_t in tqdm.tqdm(range(n_t), ncols=60):  # display progress
         # 3d data matrix for time index
         f_3d = np.squeeze(vdf_data.data[i_t, ...])  # s^3/m^6
-        f_3d = f_3d.astype(
-            np.float64,
-        ).copy()  # convert to C contiguous float64
+        f_3d = f_3d.astype(np.float64).copy()  # Convert to float64
 
         # Energies
         energy = vdf_energy.data[i_t, :]
@@ -195,28 +219,35 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
         # Convert energy to velocity (relativistically correct)
         gamma = 1 + electron_volt * energy / (m_p * speed_of_light**2)
-        speed = speed_of_light * np.sqrt(1 - 1 / gamma**2)  # m/s
+        velocity = speed_of_light * np.sqrt(1 - 1 / gamma**2)  # m/s
 
         # azimuthal angle
-        phi = vdf_phi.data[i_t, :].astype(np.float64)  # in degrees
+        if vdf_phi.ndim == 2:
+            phi = vdf_phi.data[i_t, :].astype(np.float64)  # in degrees
+        else:
+            # Fast mode
+            phi = vdf_phi.data.astype(np.float64)  # in degrees
+
+        # Remove 180 deg to convert from instrument to physical frame
         phi = np.deg2rad(phi - 180.0)  # in radians
 
-        # elevation angle
+        # elevation angle and remove 90 deg to convert from instrument to
+        # physical frame.
         theta = vdf_theta.data.astype(np.float64)  # in degrees
         theta = np.deg2rad(theta - 90.0)  # in radians
 
+        # TODO: add delta_phi and delta_theta if needed
+
         # Set velocity projection grid.
-        if speed_grid is None:
-            if base == "pol":
-                if dim == "1d":
-                    speed_grid = np.hstack((-np.flip(speed), speed))
+        if velocity_grid is None:
+            if base == "cart":
+                velocity_grid = np.linspace(-v_max, v_max, 100, endpoint=True)
+            elif base == "pol":
+                if ndim == 1:
+                    velocity_grid = np.hstack((-np.flip(velocity), velocity))
                 else:
-                    # speed_grid = speed
-                    raise NotImplementedError(
-                        "2d projection on polar grid is not ready yet!!",
-                    )
-            else:
-                speed_grid = speed_grid_cart
+                    velocity_grid = velocity
+
         else:
             pass
 
@@ -224,18 +255,20 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
             "xyz": xyz_ts[i_t, ...],
             "n_mc": n_mc,
             "weight": weight,
-            "v_lim": v_lim,
-            "a_lim": a_lim,
+            "v_int": v_int,
+            "a_int": a_int,
             "projection_dim": dim,
             "projection_base": base,
-            "speed_grid_edges": speed_grid_edges,
+            "velocity_grid_edges": velocity_grid_edges,
         }
 
-        tmpst = int_sph_dist(f_3d, speed, phi, theta, speed_grid, **options)
+        tmpst = int_sph_dist(
+            f_3d, velocity, phi, theta, velocity_grid, phi_grid, **options
+        )
 
         f_g[i_t, ...] = tmpst["f"]
 
-        for i in range(n_pr):
+        for i in range(ndim):
             all_v[f"v{chr(120 + i)}"][i_t, :] = tmpst[f"v{chr(120 + i)}"] / 1e3  # km/s
 
     # Build output as a time series with dimensions:
@@ -243,9 +276,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     #   - (time x vx x vy) for 2D reduced distribution
     coords = [
         vdf_time.data,
-        *[all_v[f"v{chr(120 + i)}"][0, :] for i in range(n_pr)],
+        *[all_v[f"v{chr(120 + i)}"][0, :] for i in range(ndim)],
     ]
-    dims = ["time", *[f"v{chr(120 + i)}" for i in range(n_pr)]]
+    dims = ["time", *[f"v{chr(120 + i)}" for i in range(ndim)]]
     out = xr.DataArray(f_g, coords=coords, dims=dims)
 
     return out
