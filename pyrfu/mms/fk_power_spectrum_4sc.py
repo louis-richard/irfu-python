@@ -30,6 +30,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
+
 def fk_power_spectrum_4sc(
     e,
     r,
@@ -132,7 +133,6 @@ def fk_power_spectrum_4sc(
     use_linear = df is not None
 
     if use_linear:
-        # print('yo')
         cwt_options = {
             "linear": df,
             "return_power": False,
@@ -148,19 +148,11 @@ def fk_power_spectrum_4sc(
         }
 
     w = [wavelet(e[i], **cwt_options) for i in range(4)]
-    # return w
+
     num_f = len(w[0].frequency)
-    L = len(idx)
-    # return w, num_f
-    # ipdb.set_trace()
-    times = times[idx]
-    # return w
-    # times = pyrf.time_clip(times, tints)
+
+    times = time_clip(times, tints)
     nt = len(times)
-    # return w, idx
-    w_cut = [w[i].data[idx, :] for i in range(4)]
-    w = [xr.DataArray(w_cut[i], coords={"time": times, "frequency": w[i].frequency}, dims=["time", "frequency"]) for i in range(4)]
-    # return w, times
 
     # Ensure even number of time points
     if nt % 2:
@@ -173,10 +165,7 @@ def fk_power_spectrum_4sc(
     # Compute averaged power spectrum from all spacecraft
     fk_power = np.zeros((nt, num_f), dtype=np.float64)
     for i in range(4):
-        # fk_power += (w[i].data * np.conj(w[i].data) / 4).astype(np.float64)
-        fk_power += ((np.real(w[i].data)**2 + np.imag(w[i].data)**2) / 4).astype(np.float64)
-    # ipdb.set_trace()
-    # return fk_power
+        fk_power += (w[i].data * np.conj(w[i].data) / 4).astype(np.float64)
 
     # Find the time positions for averaging
     cav = int(cav)
@@ -223,9 +212,7 @@ def fk_power_spectrum_4sc(
         )
 
         power_avg[m, :] = np.nanmean(fk_power[lb:ub, :], axis=0)
-    # return cx12, cx13, cx14, cx23, cx24, cx34, fk_power, pos_av, w
-    # return power_avg, cx12, cx13, cx14, cx23, cx24, cx34, r, av_times, pos_av, w
-    # return cx12, cx13, cx14, cx23, cx24, cx34, power_avg, b_avg, r, av_times
+
     # Compute phase differences between each spacecraft pair
     th12 = np.arctan2(np.imag(cx12), np.real(cx12))
     th13 = np.arctan2(np.imag(cx13), np.real(cx13))
@@ -277,9 +264,6 @@ def fk_power_spectrum_4sc(
                 r[3][ii, :] - r[0][ii, :],
             ],
         )
-
-
-
         for jj in range(num_f):
             m = linalg.solve(dr, np.array([dt2[ii, jj], dt3[ii, jj], dt4[ii, jj]]))
             k_x[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[0]
@@ -333,18 +317,14 @@ def fk_power_spectrum_4sc(
     power_k_y_f /= np.max(power_k_y_f)
     power_k_z_f /= np.max(power_k_z_f)
     power_k_mag_f /= np.max(power_k_mag_f)
-    # return power_avg,  power_k_mag_f
-    # return k_mag, k_x, k_y, k_z, b_avg_x_mat, b_avg_y_mat, b_avg_z_mat, b_avg_abs_mat, k_par, k_perp, power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f, power_k_x_f_max, power_k_y_f_max, power_k_z_f_max, power_k_mag_f_max, dk, k_x_number, k_y_number, k_z_number, k_number
-
 
     frequencies = w[0].frequency.data
     idx_f = np.arange(num_f)
 
     if f_range is not None:
-        idx_f = np.where((frequencies>np.min(f_range)) & (frequencies<np.max(f_range)))[0]
-        # idx_min_freq = bisect.bisect_left(frequencies, np.max(f_range))
-        # idx_max_freq = bisect.bisect_right(frequencies, np.min(f_range))
-        # idx_f = idx_f[idx_min_freq:idx_max_freq]
+        idx_min_freq = bisect.bisect_left(frequencies, np.min(f_range))
+        idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
+        idx_f = idx_f[idx_min_freq:idx_max_freq]
 
     # Sort power into wave vector space for k_x, k_y; k_x, k_z; k_y, k_z
     logging.info("Computing power versus (kx,ky); (kx,kz); (ky,kz)")
@@ -398,8 +378,8 @@ def fk_power_spectrum_4sc(
 
     out_dict = {
         "k_x_f": (["k_x", "f"], power_k_x_f.T),
-        "k_y_f": (["k_y", "f"], power_k_y_f.T),
-        "k_z_f": (["k_z", "f"], power_k_z_f.T),
+        "k_y_f": (["k_x", "f"], power_k_y_f.T),
+        "k_z_f": (["k_x", "f"], power_k_z_f.T),
         "k_mag_f": (["k_mag", "f"], power_k_mag_f.T),
         "k_x_k_y": (["k_x", "k_y"], power_k_x_k_y.T),
         "k_x_k_z": (["k_x", "k_z"], power_k_x_k_z.T),

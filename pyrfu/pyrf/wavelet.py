@@ -14,7 +14,6 @@ from numpy.typing import NDArray
 from scipy import fft
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from ..pyrf.calc_fs import calc_fs
 
 # Local imports
 from pyrfu.pyrf.calc_fs import calc_fs
@@ -149,7 +148,6 @@ def wavelet(
     f_nyq: float = f_s / 2
     sigma: float = wavelet_width / f_nyq
 
-
     # Frequency range
     if f is None:
         f_min: float = f_nyq / 10**2
@@ -158,24 +156,19 @@ def wavelet(
         f_min, f_max = sorted(f)
 
     if linear_df:
-        
-        f_min: float = delta_f
-        scale_number: int = int(np.floor(f_nyq / delta_f,))
-        f_max = scale_number * delta_f
+        scale_number: int = int(np.floor(f_nyq / delta_f))
+
         # Scales range
         scale_min: float = delta_f
         scale_max: float = scale_number * delta_f
         scales: NDArray[np.float64] = f_nyq / (
-            np.linspace(f_max, f_min, scale_number, dtype=np.float64)
+            np.linspace(scale_max, scale_min, scale_number, dtype=np.float64)
         )
-        # return f_min, f_max, scale_number, scale_min, scale_max, scales, f_nyq
     else:
         scale_number = n_freqs
         scale_min = np.log10(f_nyq / f_max)
         scale_max = np.log10(f_nyq / f_min)
         scales = np.logspace(scale_min, scale_max, scale_number, dtype=np.float64)
-
-
 
     # Unpack time and data.
     # Remove the last sample if the total number of samples is odd.
@@ -193,7 +186,7 @@ def wavelet(
         )
     else:
         power2 = np.zeros((len(time), n_freqs), dtype=np.complex128)
-    
+
     # Check for NaNs
     scales[np.isnan(scales)] = 0.0
 
@@ -226,7 +219,6 @@ def wavelet(
 
         # Wavelet transform of the data
         # Forward FFT
-        # s_w: NDArray[np.complex128] = np.fft.fft(data_col,)
         s_w: NDArray[np.complex128] = fft.fft(data_col, workers=os.cpu_count())
 
         scales_mat, s_w_mat = np.meshgrid(scales, s_w, sparse=True)
@@ -238,7 +230,7 @@ def wavelet(
 
         # Backward FFT
         power: NDArray[np.complex128] = fft.ifft(w_w, axis=0, workers=os.cpu_count())
-    
+
         # Calculate the power spectrum
         if return_power:
             power2 = _power_r(power, np.tile(freqs_cwt_mat, (len(power), 1)))
@@ -259,19 +251,17 @@ def wavelet(
                 ["time", "frequency"],
                 np.fliplr(power2),
             )
-    # return power2, freqs_cwt
 
     if len(inp.shape) == 1:
         out: Union[DataArray, Dataset] = xr.DataArray(
-            power2,
-            coords=[time, freqs_cwt],
+            np.fliplr(power2),
+            coords=[time, np.flip(freqs_cwt)],
             dims=["time", "frequency"],
         )
-        # return out, power2, freqs_cwt
     else:
         out = xr.Dataset(
             out_dict,
             coords={"time": time, "frequency": np.flip(freqs_cwt)},
         )
-    # return power2, freqs_cwt
+
     return out
