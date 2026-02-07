@@ -102,8 +102,6 @@
       "cdf_name": "edp_dce_gse_slow_l2",
       "dtype": "dce"
     },
-<<<<<<< HEAD
-=======
     "e_par_edp_brst_l2": {
       "cdf_name": "edp_dce_par_epar_brst_l2",
       "dtype": "dce"
@@ -124,7 +122,6 @@
       "cdf_name": "edp_dce_par_epar_slow_l2pre",
       "dtype": "dce"
     },
->>>>>>> 3e912a0 (add electric field prducts)
     "erre_edp_fast_l2": {
       "cdf_name": "edp_dce_err_fast_l2",
       "dtype": "dce"
@@ -145,13 +142,10 @@
       "cdf_name": "edp_hmfe_dsl_brst_l2",
       "dtype": "hmfe"
     },
-<<<<<<< HEAD
-=======
     "hmfe_par_edp_brst_l2": {
       "cdf_name": "edp_hmfe_par_epar_brst_l2",
       "dtype": "hmfe"
     },
->>>>>>> 3e912a0 (add electric field prducts)
     "phase_edp_fast_l2a": {
       "cdf_name": "edp_phase_fast_l2a",
       "dtype": "dce2d"
@@ -894,18 +888,10 @@
     }
   },
   "mec": {
-<<<<<<< HEAD
-    "r_gse_mec_brst_l2": {
-      "cdf_name": "mec_r_gse",
-      "dtype": "epht89d"
-    },
-=======
->>>>>>> 3e912a0 (add electric field prducts)
     "r_gse_mec_srvy_l2": {
       "cdf_name": "mec_r_gse",
       "dtype": "epht89d"
     },
-<<<<<<< HEAD
     "r_gsm_mec_brst_l2": {
       "cdf_name": "mec_r_gsm",
       "dtype": "epht89d"
@@ -929,11 +915,6 @@
     "vel_gsm_mec_srvy_l2": {
       "cdf_name": "mec_v_gse",
       "dtype": "epht89d"
-=======
-    "r_gsm_mec_srvy_l2": {
-      "cdf_name": "mec_r_gsm",
-      "dtype": "epht89d"
->>>>>>> 3e912a0 (add electric field prducts)
     }
   },
   "scm": {
