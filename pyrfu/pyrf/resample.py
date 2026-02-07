@@ -124,7 +124,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
     else:
         sfy = None
 
-    if inp.issubdtype(inp.time.dtype, np.datetime64):
+    if np.issubdtype(inp.time.dtype, np.datetime64):
         inp_time_ttns = inp.time.data.astype("int64")
         ref_time_ttns = ref.time.data.astype("int64")
         inp_time = (inp_time_ttns - inp_time_ttns[0]) * 1e-9
@@ -132,7 +132,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
     else:
         inp_time = inp.time.data.view("i8") * 1e-9
         ref_time = ref.time.data.view("i8") * 1e-9
-        
+
     if flag_do == "check":
         if len(ref_time) > 1:
             if not sfy:
