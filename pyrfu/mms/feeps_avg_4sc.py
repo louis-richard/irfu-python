@@ -36,8 +36,6 @@ def _nan_count(inp):
 
     """
     inp_to_counts = xr.where(np.isnan(inp), 0, 1)
-    # inp_to_counts = inp.where(np.isnan(inp) == True, other=1)
-    # inp_to_counts = inp_to_counts.where(np.isnan(inp) == False, other=0)
 
     return inp_to_counts
 
@@ -90,7 +88,6 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
         else:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
-    # b_list_r = [b.where(np.isnan(b) == False, other=0) for b in b_list_r]
     b_list_count_nans = deepcopy(b_list_r)
     b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
     b_avg_data = np.zeros(b_list_r[0].shape)
@@ -121,7 +118,6 @@ def feeps_avg_4sc(b_list: Sequence[DataArray], flag:str = "omni", combined_energ
             b_avg_data += b.data
             b_nan_denom += _nan_count(b_count_nan).data
         
-    # return b_avg_data, b_nan_denom
 
     if flag == "omni":
         if combined_energies is None:
