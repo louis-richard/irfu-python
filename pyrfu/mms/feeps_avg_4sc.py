@@ -81,7 +81,7 @@ def feeps_avg_4sc(
     if not isinstance(b_list, list):
         raise TypeError("b_list must be a list")
 
-    assert flag in ["omni", "pad"]
+    assert flag in ["omni", "pad"], "flag must be 'omni' or 'pad'"
 
     b_list_r = []
 
