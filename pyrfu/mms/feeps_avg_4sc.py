@@ -117,9 +117,7 @@ def feeps_avg_4sc(
                 b_nan_denom[:, ien_bin] += _nan_count(
                     b_count_nan.data[:, combined_energies[ien_bin][mms_id] - 1]
                 ).data
-                energy[ien_bin] += b.energy.data[
-                    combined_energies[ien_bin][mms_id] - 1
-                ]
+                energy[ien_bin] += b.energy.data[combined_energies[ien_bin][mms_id] - 1]
             energy[ien_bin] /= non_none_sc_ch
     else:
 
