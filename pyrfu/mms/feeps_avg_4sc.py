@@ -99,29 +99,28 @@ def feeps_avg_4sc(
     if flag == "omni" and combined_energies is not None:
         if not isinstance(combined_energies, dict):
             raise TypeError("combined_energies must be a dict")
-        else:
 
-            energy = np.zeros(len(b_list_r[0].energy.data))
+        energy = np.zeros(len(b_list_r[0].energy.data))
 
-            for ien_bin in range(len(b_list_r[0].energy.data)):
-                non_none_sc_ch = 0
-                for i, b, b_count_nan in zip(
-                    range(len(b_list_r)), b_list_r, b_list_count_nans
-                ):
-                    mms_id = b_list[i].attrs["mmsId"] - 1
-                    if combined_energies[ien_bin][mms_id] is None:
-                        continue
-                    non_none_sc_ch += 1
-                    b_avg_data[:, ien_bin] += b.data[
-                        :, combined_energies[ien_bin][mms_id] - 1
-                    ]
-                    b_nan_denom[:, ien_bin] += _nan_count(
-                        b_count_nan.data[:, combined_energies[ien_bin][i] - 1]
-                    ).data
-                    energy[ien_bin] += b.energy.data[
-                        combined_energies[ien_bin][mms_id] - 1
-                    ]
-                energy[ien_bin] /= non_none_sc_ch
+        for ien_bin in range(len(b_list_r[0].energy.data)):
+            non_none_sc_ch = 0
+            for i, b, b_count_nan in zip(
+                range(len(b_list_r)), b_list_r, b_list_count_nans
+            ):
+                mms_id = b_list[i].attrs["mmsId"] - 1
+                if combined_energies[ien_bin][mms_id] is None:
+                    continue
+                non_none_sc_ch += 1
+                b_avg_data[:, ien_bin] += b.data[
+                    :, combined_energies[ien_bin][mms_id] - 1
+                ]
+                b_nan_denom[:, ien_bin] += _nan_count(
+                    b_count_nan.data[:, combined_energies[ien_bin][mms_id] - 1]
+                ).data
+                energy[ien_bin] += b.energy.data[
+                    combined_energies[ien_bin][mms_id] - 1
+                ]
+            energy[ien_bin] /= non_none_sc_ch
     else:
 
         for b, b_count_nan in zip(b_list_r, b_list_count_nans):
