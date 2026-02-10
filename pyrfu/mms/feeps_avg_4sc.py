@@ -125,7 +125,8 @@ def feeps_avg_4sc(
 
             b_avg_data += b.data
             b_nan_denom += _nan_count(b_count_nan).data
-
+            
+    coords = {}
     if flag == "omni":
         if combined_energies is None:
             energy = b_list[0].energy.data
