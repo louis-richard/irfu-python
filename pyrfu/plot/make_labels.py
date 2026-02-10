@@ -12,7 +12,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def make_labels(axs, pos, num = None, pad: float = 0, **kwargs):
+def make_labels(axs, pos, num=None, pad: float = 0, **kwargs):
     r"""Add subplots labels to axes
 
     Parameters
