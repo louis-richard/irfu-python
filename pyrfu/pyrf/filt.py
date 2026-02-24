@@ -129,10 +129,18 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
 
     if len(inp_data.shape) == 1:
         inp_data = inp_data[:, np.newaxis]
+        n_cols = 1
+    elif len(inp_data.shape) == 2:
+        n_cols = inp_data.shape[1]
+    elif len(inp_data.shape) == 3:
+        inp_data = inp_data.reshape(inp_data.shape[0], -1)
+        n_cols = inp_data.shape[1]
+    else:
+        raise ValueError("inp must be 1D, 2D or 3D")
 
     out_data = np.zeros(inp_data.shape, dtype=inp_data.dtype)
 
-    for i_col in range(inp_data.shape[1]):
+    for i_col in range(n_cols):
         # use different padtype and padlen for consistency with MATLAB
         # (and to not drive me crazy trying to figure out the differences)
         padtype = "odd"
@@ -153,6 +161,8 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
             )
     if inp_data.shape[1] == 1:
         out_data = out_data[:, 0]
+    elif len(inp.shape) == 3:
+        out_data = out_data.reshape(inp.shape)
 
     out = xr.DataArray(
         out_data,
