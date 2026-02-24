@@ -38,7 +38,11 @@ def datetime642iso8601(
     """
     if isinstance(time, np.datetime64):
         time_datetime64 = np.atleast_1d(time).astype("datetime64[ns]")
-    elif isinstance(time, np.ndarray) and isinstance(time[0], np.datetime64):
+    elif isinstance(time, np.ndarray) and time.dtype in [
+        "<M8[ns]",
+        "<M8[us]",
+        "<M8[ms]",
+    ]:
         time_datetime64 = time.astype("datetime64[ns]")
     else:
         raise TypeError("time must be numpy.datetime64 or numpy.ndarray")
