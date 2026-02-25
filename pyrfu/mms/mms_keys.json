@@ -262,6 +262,14 @@
       "cdf_name": "des_numberdensity_err_fast",
       "dtype": "des-moms"
     },
+    "errni_fpi_brst_l2": {
+      "cdf_name": "dis_numberdensity_err_brst",
+      "dtype": "dis-moms"
+    },
+    "errni_fpi_fast_l2": {
+      "cdf_name": "dis_numberdensity_err_fast",
+      "dtype": "dis-moms"
+    },
     "errpe_fpi_brst_l2": {
       "cdf_name": "des_prestensor_err_brst",
       "dtype": "des-moms"
@@ -270,6 +278,30 @@
       "cdf_name": "des_prestensor_err_fast",
       "dtype": "des-moms"
     },
+    "errpi_fpi_brst_l2": {
+      "cdf_name": "dis_prestensor_err_brst",
+      "dtype": "dis-moms"
+    },
+    "errpi_fpi_fast_l2": {
+      "cdf_name": "dis_prestensor_err_fast",
+      "dtype": "dis-moms"
+    },
+    "errte_fpi_brst_l2": {
+      "cdf_name": "des_temptensor_err_brst",
+      "dtype": "des-moms"
+    },
+    "errte_fpi_fast_l2": {
+      "cdf_name": "des_temptensor_err_fast",
+      "dtype": "des-moms"
+    },
+    "errti_fpi_brst_l2": {
+      "cdf_name": "dis_temptensor_err_brst",
+      "dtype": "dis-moms"
+    },
+    "errti_fpi_fast_l2": {
+      "cdf_name": "dis_temptensor_err_fast",
+      "dtype": "dis-moms"
+    },
     "errve_fpi_brst_l2": {
       "cdf_name": "des_bulkv_err_brst",
       "dtype": "des-moms"
@@ -277,6 +309,14 @@
     "errve_fpi_fast_l2": {
       "cdf_name": "des_bulkv_err_fast",
       "dtype": "des-moms"
+    },
+    "errvi_fpi_brst_l2": {
+      "cdf_name": "dis_bulkv_err_brst",
+      "dtype": "dis-moms"
+    },
+    "errvi_fpi_fast_l2": {
+      "cdf_name": "dis_bulkv_err_fast",
+      "dtype": "dis-moms"
     },
     "nbgi_fpi_brst_l2": {
       "cdf_name": "dis_numberdensity_bg_brst",

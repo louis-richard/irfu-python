@@ -17,6 +17,7 @@ __status__ = "Prototype"
 
 ALL_PARAMS_SCALARS = [
     "ni",
+    "errni",
     "nbgi",
     "pbgi",
     "partni",
@@ -86,13 +87,16 @@ ALL_PARAMS_VECTORS = [
 ALL_PARAMS_TENSORS = [
     "pi",
     "partpi",
+    "errpi",
     "pe",
     "partpe",
+    "errpe",
     "ti",
     "partti",
+    "errti",
     "te",
     "partte",
-    "errpe",
+    "errte",
 ]
 
 HPCA_PARAMS_SCALARS = [
