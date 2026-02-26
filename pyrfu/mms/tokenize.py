@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
 
 # Built-in imports
+import json
 import os
 from typing import Mapping
 
