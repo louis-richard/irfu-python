@@ -103,10 +103,11 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
 
     # Speed grid bins edges
     if velocity_grid_edges is None:
+        velocity_grid_diff = np.diff(velocity_grid)
         velocity_grid_edges = np.zeros(len(velocity_grid) + 1)
-        velocity_grid_edges[0] = velocity_grid[0] - np.diff(velocity_grid[:2]) / 2.0
-        velocity_grid_edges[1:-1] = velocity_grid[:-1] + np.diff(velocity_grid) / 2.0
-        velocity_grid_edges[-1] = velocity_grid[-1] + np.diff(velocity_grid[-2:]) / 2.0
+        velocity_grid_edges[0] = velocity_grid[0] - velocity_grid_diff[0] / 2.0
+        velocity_grid_edges[1:-1] = velocity_grid[:-1] + velocity_grid_diff / 2.0
+        velocity_grid_edges[-1] = velocity_grid[-1] + velocity_grid_diff[-1] / 2.0
     else:
         velocity_grid = velocity_grid_edges[:-1] + np.diff(velocity_grid_edges) / 2.0
 
