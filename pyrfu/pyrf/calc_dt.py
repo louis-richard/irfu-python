@@ -35,4 +35,10 @@ def calc_dt(inp: Union[Dataset, DataArray]) -> float:
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
 
-    return float(np.median(np.diff(inp.time.data)).astype(np.float64) * 1e-9)
+    # Convert time to nanoseconds
+    time_ns = inp.time.data.astype(np.int64)
+
+    # Calculate the sampling frequency
+    dt_s = 1e-9 * np.diff(time_ns)
+
+    return dt_s

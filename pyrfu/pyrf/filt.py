@@ -6,6 +6,9 @@ import numpy as np
 import xarray as xr
 from scipy import signal
 
+# local imports
+from pyrfu.pyrf.calc_fs import calc_fs
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2026"
@@ -108,8 +111,6 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
 
     assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
 
-    f_samp = 1 / (np.median(np.diff(inp.time.astype(np.int64) * 1e-9)))
-
     # Data of the input
     inp_data = inp.data.astype(np.float64)
 
@@ -117,8 +118,10 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
     assert isinstance(f_max, (int, float)), "f_max must be int or float"
     assert isinstance(order, (int, float)), "order must be int or float"
 
+    # Calculate the sampling frequency and normalize the cutoff frequencies
+    # to the Nyquist frequency
+    f_samp = calc_fs(inp)
     f_min, f_max = [f_min / (f_samp / 2.0), f_max / (f_samp / 2.0)]
-
     f_max = np.min([f_max, 1.0])
 
     # Parameters of the elliptic filter. fact defines the width between

@@ -27,7 +27,7 @@ def calc_fs(inp: Union[Dataset, DataArray]) -> float:
 
     Returns
     -------
-    float
+    f_samp : float
         Sampling frequency in Hz.
 
     """
@@ -35,4 +35,11 @@ def calc_fs(inp: Union[Dataset, DataArray]) -> float:
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
 
-    return float(1 / (np.median(np.diff(inp.time.data.astype(np.float64) * 1e-9))))
+    # Convert time to nanoseconds
+    time_ns = inp.time.data.astype(np.int64)
+
+    # Calculate the sampling frequency
+    dt_ns = np.diff(time_ns)
+    f_samp = 1e9 / np.median(dt_ns)
+
+    return f_samp
