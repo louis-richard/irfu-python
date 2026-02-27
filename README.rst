@@ -86,7 +86,7 @@ Setup path to MMS data
 
 .. code:: python
 
-    mms.db_init("/Volumes/mms")
+    mms.db_init(default="local", local="/Volumes/mms")
 
 
 Load magnetic field and ion bulk velocity data
@@ -114,7 +114,7 @@ Import `pyrfu.plot <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.plot.html>`
 
 .. code:: python
 
-    from pyrfu import plot
+    from pyrfu.plot import plot_line
 
 
 Plot time series of magnetic field and ion bulk velocity
@@ -124,11 +124,11 @@ Plot time series of magnetic field and ion bulk velocity
     import matplotlib.pyplot as plt
 
     f, axs = plt.subplots(2, sharex="all")
-    plot.plot_line(axs[0], b_gsm)
+    plot_line(axs[0], b_gsm)
     axs[0].set_ylabel("$B~[\\mathrm{nT}]$")
     axs[0].legend(["$B_{x}$", "$B_{y}$", "$B_{z}$"], ncol=4)
 
-    plot.plot_line(axs[1], v_gsm_i)
+    plot_line(axs[1], v_gsm_i)
     axs[1].set_ylabel("$V_i~[\\mathrm{km}~\\mathrm{s}^{-1}]$")
     axs[1].legend(["$V_{ix}$", "$V_{iy}$", "$V_{iz}$"], ncol=4)
 
