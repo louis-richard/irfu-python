@@ -108,12 +108,12 @@ def fk_power_spectrum_4sc(
     Convert magnetic field fluctuations to field aligned coordinates
 
     >>> b_fac = [convert_fac(b_s, b_f) for b_s, b_f in zip(b_scm, b_fgm)]
-    >>> b_par = [b_s[:, 0] for b_s in b_fac]
+    >>> b_para = [b_s[:, 0] for b_s in b_fac]
 
     Compute dispersion relation
 
     >>> tint = ["2015-10-16T13:05:26.500", "2015-10-16T13:05:27.000"]
-    >>> pwer = fk_power_spectrum_4sc(b_par, r_gse, b_fgm, tint, 4, 500, 2,
+    >>> pwer = fk_power_spectrum_4sc(b_para, r_gse, b_fgm, tint, 4, 500, 2,
     ... 10, 2)
 
     """
@@ -283,8 +283,8 @@ def fk_power_spectrum_4sc(
     b_avg_abs = np.linalg.norm(b_avg, axis=1)
     b_avg_abs_mat = np.tile(b_avg_abs, (num_f, 1)).T
 
-    k_par = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
-    k_perp = np.sqrt(k_mag**2 - k_par**2)
+    k_para = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
+    k_perp = np.sqrt(k_mag**2 - k_para**2)
 
     # Determine the maximum and minimum wave numbers
     k_max = np.max(k_mag) * 1.1
@@ -351,20 +351,20 @@ def fk_power_spectrum_4sc(
     power_k_x_k_z /= np.max(power_k_x_k_z)
     power_k_y_k_z /= np.max(power_k_y_k_z)
 
-    # Sort power into wave vector space for k_perp, k_par
+    # Sort power into wave vector space for k_perp, k_para
     logging.info("Computing power versus kperp,kpara")
-    power_k_perp_k_par = np.zeros((num_k, num_k))
+    power_k_perp_k_para = np.zeros((num_k, num_k))
     for mm in range(n + 1):
         for nn in idx_f:
-            # Find the position of the power in the k_par, k_perp space
-            k_par_number = int(np.floor((k_par[mm, nn] - k_min) / dk))
+            # Find the position of the power in the k_para, k_perp space
+            k_para_number = int(np.floor((k_para[mm, nn] - k_min) / dk))
             k_perp_number = int(np.floor((k_perp[mm, nn]) / dk_mag))
 
-            # Add the power to the corresponding position in the k_par, k_perp space
-            power_k_perp_k_par[k_par_number, k_perp_number] += power_avg[mm, nn]
+            # Add the power to the corresponding position in the k_para, k_perp space
+            power_k_perp_k_para[k_para_number, k_perp_number] += power_avg[mm, nn]
 
     # Normalize power to maximum value for plotting
-    power_k_perp_k_par /= np.max(power_k_perp_k_par)
+    power_k_perp_k_para /= np.max(power_k_perp_k_para)
 
     # Set zero power to NaN for plotting purposes
     power_k_x_f[power_k_x_f == 0] = np.nan
@@ -374,7 +374,71 @@ def fk_power_spectrum_4sc(
     power_k_x_k_y[power_k_x_k_y == 0] = np.nan
     power_k_x_k_z[power_k_x_k_z == 0] = np.nan
     power_k_y_k_z[power_k_y_k_z == 0] = np.nan
-    power_k_perp_k_par[power_k_perp_k_par == 0] = np.nan
+    power_k_perp_k_para[power_k_perp_k_para == 0] = np.nan
+
+    # Find the wave numbers and frequencies weighted by power
+    # kmag, f
+    k_powers = np.nansum(power_k_mag_f[idx_f, :], axis=0)
+    f_powers = np.nansum(power_k_mag_f[idx_f, :], axis=1)
+
+    f_avg = np.nansum(frequencies[idx_f] * f_powers) / np.nansum(f_powers)
+    f_std = np.sqrt(
+        np.nansum((frequencies[idx_f] - f_avg) ** 2 * f_powers) / np.nansum(f_powers)
+    )
+
+    k_avg = np.nansum(k_mag_vec * k_powers) / np.nansum(k_powers)
+    k_std = np.sqrt(
+        np.nansum((k_mag_vec - k_avg) ** 2 * k_powers) / np.nansum(k_powers)
+    )
+
+    # kpara, kperp
+    kpara_powers = np.nansum(power_k_perp_k_para, axis=1)
+    kperp_powers = np.nansum(power_k_perp_k_para, axis=0)
+
+    kpar_avg = np.nansum(k_vec * kpara_powers) / np.nansum(kpara_powers)
+    kpar_std = np.sqrt(
+        np.nansum((k_vec - kpar_avg) ** 2 * kpara_powers) / np.nansum(kpara_powers)
+    )
+
+    kperp_avg = np.nansum(k_mag_vec * kperp_powers) / np.nansum(kperp_powers)
+    kperp_std = np.sqrt(
+        np.nansum((k_mag_vec - kperp_avg) ** 2 * kperp_powers) / np.nansum(kperp_powers)
+    )
+
+    # kx, ky, kz
+    kx_powers = np.nansum(power_k_x_k_y, axis=0)
+    ky_powers = np.nansum(power_k_x_k_y, axis=1)
+    kz_powers = np.nansum(power_k_x_k_z, axis=1)
+
+    kx_avg = np.nansum(k_vec * kx_powers) / np.nansum(kx_powers)
+    kx_std = np.sqrt(
+        np.nansum((k_vec - kx_avg) ** 2 * kx_powers) / np.nansum(kx_powers)
+    )
+    ky_avg = np.nansum(k_vec * ky_powers) / np.nansum(ky_powers)
+    ky_std = np.sqrt(
+        np.nansum((k_vec - ky_avg) ** 2 * ky_powers) / np.nansum(ky_powers)
+    )
+    kz_avg = np.nansum(k_vec * kz_powers) / np.nansum(kz_powers)
+    kz_std = np.sqrt(
+        np.nansum((k_vec - kz_avg) ** 2 * kz_powers) / np.nansum(kz_powers)
+    )
+
+    attrs = {
+        "f_avg": f_avg,
+        "f_std": f_std,
+        "k_mag_avg": k_avg,
+        "k_mag_std": k_std,
+        "k_para_avg": kpar_avg,
+        "k_para_std": kpar_std,
+        "k_perp_avg": kperp_avg,
+        "k_perp_std": kperp_std,
+        "k_x_avg": kx_avg,
+        "k_x_std": kx_std,
+        "k_y_avg": ky_avg,
+        "k_y_std": ky_std,
+        "k_z_avg": kz_avg,
+        "k_z_std": kz_std,
+    }
 
     out_dict = {
         "k_x_f": (["k_x", "f"], power_k_x_f.T),
@@ -384,16 +448,16 @@ def fk_power_spectrum_4sc(
         "k_x_k_y": (["k_x", "k_y"], power_k_x_k_y.T),
         "k_x_k_z": (["k_x", "k_z"], power_k_x_k_z.T),
         "k_y_k_z": (["k_y", "k_z"], power_k_y_k_z.T),
-        "k_perp_k_par": (["k_perp", "k_par"], power_k_perp_k_par.T),
+        "k_perp_k_para": (["k_perp", "k_para"], power_k_perp_k_para.T),
         "k_x": k_vec,
         "k_y": k_vec,
         "k_z": k_vec,
         "k_mag": k_mag_vec,
         "k_perp": k_mag_vec,
-        "k_par": k_vec,
+        "k_para": k_vec,
         "f": frequencies,
     }
 
-    out = xr.Dataset(out_dict)
+    out = xr.Dataset(out_dict, attrs=attrs)
 
     return out
