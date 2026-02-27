@@ -36,7 +36,8 @@ def calc_fs(inp: Union[Dataset, DataArray]) -> float:
         raise TypeError("Input must be a time series")
 
     # Convert time to nanoseconds
-    time_ns = inp.time.data.astype(np.int64)
+    time_datetime64 = inp.time.data.astype(np.datetime64)
+    time_ns = time_datetime64.astype(np.int64)
 
     # Calculate the sampling frequency
     dt_ns = np.diff(time_ns)
