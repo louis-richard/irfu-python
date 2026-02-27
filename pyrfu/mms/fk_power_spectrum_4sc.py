@@ -221,7 +221,7 @@ def fk_power_spectrum_4sc(
     th24 = np.arctan2(np.imag(cx24), np.real(cx24))
     th34 = np.arctan2(np.imag(cx34), np.real(cx34))
 
-    w_mat = 2 * np.pi * np.tile(w[0].frequency.data, (n + 1, 1))  # NOT CHECK
+    w_mat = 2 * np.pi * np.tile(w[0].frequency.data, (n + 1, 1))
 
     # Convert phase difference to time delay
     dt12 = th12 / w_mat
