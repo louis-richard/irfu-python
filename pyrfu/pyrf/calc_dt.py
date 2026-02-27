@@ -40,6 +40,6 @@ def calc_dt(inp: Union[Dataset, DataArray]) -> float:
     time_ns = time_datetime64.astype(np.int64)
 
     # Calculate the sampling frequency
-    dt_s = 1e-9 * np.diff(time_ns)
+    dt_s = 1e-9 * np.median(np.diff(time_ns))
 
     return dt_s
