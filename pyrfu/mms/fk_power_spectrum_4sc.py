@@ -170,7 +170,7 @@ def fk_power_spectrum_4sc(
     # Find the time positions for averaging
     cav = int(cav)
     n = int(np.floor(nt / cav) - 1)
-    pos_av = cav // 2 + np.arange(n + 1, dtype=np.int16) * cav - 1
+    pos_av = cav // 2 + np.arange(n + 1) * cav - 1
     av_times = times[pos_av]
 
     # Resample background magnetic field and spacecraft positions to
