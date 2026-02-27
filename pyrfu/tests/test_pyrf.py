@@ -1790,7 +1790,6 @@ class Pid4SCTestCase(unittest.TestCase):
             [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)],
             [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)],
             [generate_ts(64.0, 100, tensor_order=2) for _ in range(4)],
-            [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)],
         )
         self.assertIsInstance(result[0], xr.DataArray)
         self.assertIsInstance(result[1], xr.DataArray)
