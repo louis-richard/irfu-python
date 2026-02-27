@@ -344,9 +344,9 @@ def _mc_pol_1d(
                     v_z_p = sqrt(v_y_p**2 + v_z_p**2)
                     alpha = asin(v_z_p / v_mc)
 
-                    # If particle is outside allowed interval, don't use point
-                    use_point = (v_z_p >= v_lim[0]) * (v_z_p < v_lim[1])
-                    use_point = use_point * (alpha >= a_lim[0]) * (alpha < a_lim[1])
+                    # Check if the velocity is within the v_lim and a_lim bounds
+                    use_point = v_lim[0] <= v_z_p < v_lim[1]
+                    use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
 
                     # Find which bin the MC point falls into
                     v_p = v_x_p
@@ -354,7 +354,16 @@ def _mc_pol_1d(
                     if v_p > vg_edges[-1] or v_p < vg_edges[0]:
                         continue
 
+                    # searchsorted returns the index where the element should be
+                    # inserted to maintain order, so we subtract 1 to get the index of
+                    # the bin that contains the element
                     i_vxg = np.searchsorted(vg_edges, v_p) - 1
+
+                    # Special case for the first bin edge, which is the lower limit of
+                    # the first bin and should be included in the first bin
+                    if i_vxg == -1:
+                        i_vxg = 0
+
                     d_a = d_a_grid[i_vxg]
 
                     if use_point * (i_vxg < n_vg):
@@ -484,9 +493,9 @@ def _mc_cart_2d(
                     # Elevation angle from the projection plane
                     alpha = asin(v_z_p / v_mc)
 
-                    # Check if the velocity out of the
-                    use_point = v_z_p >= v_lim[0] * v_z_p < v_lim[1]
-                    use_point = use_point * alpha >= a_lim[0] * alpha < a_lim[1]
+                    # Check if the velocity is within the v_lim and a_lim bounds
+                    use_point = v_lim[0] <= v_z_p < v_lim[1]
+                    use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
 
                     # Check if the velocity along the x direction is outside of the grid
                     if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
@@ -496,8 +505,19 @@ def _mc_cart_2d(
                     if v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]:
                         continue
 
+                    # searchsorted returns the index where the element should be
+                    # inserted to maintain order, so we subtract 1 to get the index of
+                    # the bin that contains the element
                     i_vxg = np.searchsorted(vg_edges, v_x_p) - 1
                     i_vyg = np.searchsorted(vg_edges, v_y_p) - 1
+
+                    # Special case for the first bin edge, which is the lower limit of
+                    # the first bin and should be included in the first bin
+                    if i_vxg == -1:
+                        i_vxg = 0
+
+                    if i_vyg == -1:
+                        i_vyg = 0
 
                     if use_point:
                         f_g[i_vxg, i_vyg] += f_ijk * c_ijk / d_a_grid
@@ -623,8 +643,9 @@ def _mc_cart_3d(
 
                     alpha = asin(v_z_p / v_mc)
 
-                    use_point = v_z_p >= v_lim[0] * v_z_p < v_lim[1]
-                    use_point = use_point * alpha >= a_lim[0] * alpha < a_lim[1]
+                    # Check if the velocity is within the v_lim and a_lim bounds
+                    use_point = v_lim[0] <= v_z_p < v_lim[1]
+                    use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
 
                     if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
                         continue
@@ -635,9 +656,23 @@ def _mc_cart_3d(
                     if v_z_p > vg_edges[-1] or v_z_p < vg_edges[0]:
                         continue
 
+                    # searchsorted returns the index where the element should be
+                    # inserted to maintain order, so we subtract 1 to get the index of
+                    # the bin that contains the element
                     i_vxg = np.searchsorted(vg_edges, v_x_p) - 1
                     i_vyg = np.searchsorted(vg_edges, v_y_p) - 1
                     i_vzg = np.searchsorted(vg_edges, v_z_p) - 1
+
+                    # Special case for the last bin edge, which is the upper limit of
+                    # the last bin and should be included in the last bin
+                    if i_vxg == -1:
+                        i_vxg = 0
+
+                    if i_vyg == -1:
+                        i_vyg = 0
+
+                    if i_vzg == -1:
+                        i_vzg = 0
 
                     if use_point:
                         f_g[i_vxg, i_vyg, i_vzg] += f_ijk * c_ijk / d_a_grid
