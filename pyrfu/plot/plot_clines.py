@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 # 3rd party import
 import numpy as np
-from matplotlib.cm import get_cmap
 from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import LogNorm
 
@@ -52,7 +52,7 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     """
 
     pad = 0.01
-    c_map = get_cmap(name=cmap)
+    c_map = mpl.colormaps.get_cmap(name=cmap)
 
     for i, c in enumerate(c_map(np.linspace(0, 1, len(inp.energy.data)))):
         plot_line(axis, inp[:, i], color=c, **kwargs)
