@@ -61,10 +61,13 @@ def ts_spectr(
     if data.ndim != 2:
         raise ValueError("Input must be a spectrum")
 
+    if energy.ndim > 2:
+        raise ValueError("Energy must be 1D or 2D")
+
     if len(time) != data.shape[0]:
         raise ValueError("Shape mismatch. Time and data must have the same length")
 
-    if len(energy) != data.shape[1]:
+    if energy.shape[-1] != data.shape[1]:
         raise ValueError("Shape mismatch. Energy and data must have the same length")
 
     if comp_name is None:
@@ -73,9 +76,26 @@ def ts_spectr(
     if attrs is None or not isinstance(attrs, dict):
         attrs = {}
 
-    out: DataArray = xr.DataArray(
-        data, coords=[time, energy], dims=["time", comp_name], attrs=attrs
-    )
-    out.attrs["TENSOR_ORDER"] = 0
+    if energy.ndim == 2:
+        is_all_energy_equal = np.all(energy == energy[0, :], axis=0).all()
+        if is_all_energy_equal:
+            energy = energy[0, :]
+    else:
+        is_all_energy_equal = True
+
+    if is_all_energy_equal:
+        out: DataArray = xr.DataArray(
+            data, coords=[time, energy], dims=["time", comp_name], attrs=attrs
+        )
+        out.attrs["TENSOR_ORDER"] = 0
+    else:
+        out = xr.Dataset(
+            {"data": (["time", "idx0"], data)},
+            coords={
+                "time": time,
+                "idx0": np.arange(energy.shape[1]),
+                "energy": (["time", "idx0"], energy),
+            },
+        )
 
     return out

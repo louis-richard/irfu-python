@@ -3,7 +3,9 @@
 
 # 3rd party imports
 import numpy as np
-import xarray as xr
+
+# Local imports
+from pyrfu.pyrf.ts_spectr import ts_spectr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -61,17 +63,12 @@ def vdf_omni(vdf, method: str = "mean"):
         dist = vdf.data.data
         omni = np.squeeze(np.nansum(np.nansum(dist, axis=3), axis=2))
 
-    energy = np.mean(energy[:2, :], axis=0)
+    # energy = np.mean(energy[:2, :], axis=0)
 
     # Use global and zVariable attributes
     attrs = {**vdf.data.attrs, **vdf.attrs}
     attrs = {k: attrs[k] for k in sorted(attrs)}
 
-    out = xr.DataArray(
-        omni,
-        coords=[time, energy],
-        dims=["time", "energy"],
-        attrs=attrs,
-    )
+    out = ts_spectr(time, energy, omni, attrs=attrs)
 
     return out

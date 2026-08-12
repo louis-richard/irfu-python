@@ -4,6 +4,8 @@
 # 3rd party imports
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -30,8 +32,12 @@ def plot_spectr(
     ----------
     axis : matplotlib.pyplot.subplotsaxes
         Target axis to plot. If None create a new figure.
-    inp : xarray.DataArray
-        Input 2D data to plot.
+    inp : xarray.DataArray or xarray.Dataset
+        Input 2D data to plot. If a Dataset, it must contain a "data"
+        data variable (dims: [time, idx]) and either:
+          - a coordinate (e.g. "energy") that depends on time, with the
+            same shape as "data" (dims: [time, idx]), or
+          - a second data variable holding the y-axis values.
     yscale : {"linear", "log"}, Optional
         Y-axis scaling. Default is "" (linear).
     cscale : {"linear", "log"}, Optional
@@ -90,12 +96,39 @@ def plot_spectr(
     else:
         options = {"norm": cscale, "cmap": cmap}
 
-    x_data, y_data = [inp.coords[inp.dims[0]], inp.coords[inp.dims[1]]]
+    if isinstance(inp, xr.DataArray):
+        x_data, y_data = [inp.coords[inp.dims[0]].data, inp.coords[inp.dims[1]].data]
+        inp_data = inp.data.T
+    elif isinstance(inp, xr.Dataset):
+        depend_0_name = inp.data.dims[0]
+
+        # The y-axis quantity (e.g. "energy") can be time-dependent, in
+        # which case it is stored as a non-dimension coordinate on the
+        # Dataset (dims: [time, idx]) rather than as a separate data
+        # variable. Prefer a coordinate named "energy" if present, then
+        # fall back to any other non-dimension coordinate, and finally to
+        # the legacy behaviour of looking for a second data variable.
+        non_dim_coords = [name for name in inp.coords if name not in inp.dims]
+
+        if "energy" in non_dim_coords:
+            depend_1_name = "energy"
+        elif non_dim_coords:
+            depend_1_name = non_dim_coords[0]
+        else:
+            depend_1_name = list(
+                filter(lambda x: x != "data", list(inp.data_vars)),
+            )[0]
+
+        x_data = inp[depend_0_name].data
+        y_data = inp[depend_1_name].data.T
+        inp_data = inp.data.data.T
+    else:
+        raise TypeError("inp must be an xarray.DataArray or xarray.Dataset")
 
     image = axis.pcolormesh(
-        x_data.data,
-        y_data.data,
-        inp.data.T,
+        x_data,
+        y_data,
+        inp_data,
         rasterized=True,
         shading="auto",
         **options,
@@ -112,7 +145,7 @@ def plot_spectr(
         axis.yaxis.set_major_locator(mpl.ticker.LogLocator(base=10.0, numticks=4))
 
     axis.set_axisbelow(False)
-    axis.set_ylim(inp[inp.dims[1]].data[[0, -1]])
+    axis.set_ylim([np.min(y_data), np.max(y_data)])
     axis.set_aspect(aspect)
 
     if colorbar.lower() == "right":
