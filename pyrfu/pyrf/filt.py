@@ -57,7 +57,7 @@ def _ellip_coefficients(f_min, f_max, order):
             order1, order2 = [order, order]
 
         num1, den1 = signal.ellip(order1, 0.5, 60, f_max)
-        num2, den2 = signal.ellip(order2, 0.5, 60, f_min)
+        num2, den2 = signal.ellip(order2, 0.5, 60, f_min, btype="highpass")
 
     return num1, den1, num2, den2
 
