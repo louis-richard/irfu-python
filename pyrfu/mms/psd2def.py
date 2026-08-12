@@ -73,9 +73,8 @@ def psd2def(inp):
         tmp_data = _convert(inp.data.data, inp.data.attrs["UNITS"], _mass_ratio(inp))
         energy = inp.energy.data
         energy_mat = np.tile(energy[:, :, None, None], (1, 1, *tmp_data.shape[2:]))
-
         # energy_mat = np.tile(energy[:, :, None], (1, 1, *tmp_data.shape[2:]))
-        tmp_data *= energy_mat**2
+        tmp_data *= np.squeeze(energy_mat) ** 2
         out = inp.copy()
         out.data.data = np.squeeze(tmp_data)
         out.data.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
