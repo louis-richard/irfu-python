@@ -118,10 +118,17 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
     assert isinstance(f_max, (int, float)), "f_max must be int or float"
     assert isinstance(order, (int, float)), "order must be int or float"
 
+    if f_min == 0.0 and f_max == 0.0:
+        raise ValueError("f_min and f_max cannot both be 0.0!")
+
     # Calculate the sampling frequency and normalize the cutoff frequencies
     # to the Nyquist frequency
     f_samp = calc_fs(inp)
     f_min, f_max = [f_min / (f_samp / 2.0), f_max / (f_samp / 2.0)]
+
+    if f_min >= 1.0:
+        raise ValueError("f_min must be smaller than the Nyquist frequency!")
+
     f_max = np.min([f_max, 1.0])
 
     # Parameters of the elliptic filter. fact defines the width between
