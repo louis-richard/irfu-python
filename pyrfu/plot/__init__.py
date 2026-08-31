@@ -67,8 +67,13 @@ __all__ = [
 ]
 PKG_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STYLE_SHEETS = os.path.join(PKG_PATH, "stylesheets")
-style.core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
-style.core.reload_library()
+_style_core = getattr(
+    style, "core", style
+)  # matplotlib >=3.11 dropped the `core` submodule
+_style_core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
+_style_core.reload_library()
+# style.core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
+# style.core.reload_library()
 
 EXTRA_COLORS = {
     "pyrfu:bg": "#eeeeee",
