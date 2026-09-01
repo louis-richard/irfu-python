@@ -59,9 +59,16 @@ def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     # Correct the ion number density
     n_i_new = n_i - n_bg_i.data
 
+    # Mask the negative values of the corrected ion number density
+    mask = n_i_new.data < 0.0
+    n_i_new.data[mask] = np.nan
+
     # Correct the ion bulk velocity
     v_gse_i_new = v_gse_i.copy()
     v_gse_i_new.data *= n_i.data[:, None] / n_i_new.data[:, None]
+
+    # Mask the ion bulk velocity where the corrected ion number density is negative
+    v_gse_i_new.data[mask, :] = np.nan
 
     # Correct the ion pressure tensor
     p_gse_i_new = np.zeros(p_gse_i.shape)
@@ -70,10 +77,8 @@ def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
 
     for i, j in zip([0, 1, 2, 0, 0, 1], [0, 1, 2, 1, 2, 2]):
         p_gse_i_new[:, i, j] += p_gse_i.data[:, i, j]
-
-        # TODO : use * instead of np.multiply??
-        p_gse_i_new[:, i, j] += m_p * n_old * np.multiply(v_old[:, i], v_old[:, j])
-        p_gse_i_new[:, i, j] -= m_p * n_new * np.multiply(v_new[:, i], v_new[:, j])
+        p_gse_i_new[:, i, j] += m_p * n_old * v_old[:, i] * v_old[:, j]
+        p_gse_i_new[:, i, j] -= m_p * n_new * v_new[:, i] * v_new[:, j]
 
     # Remove isotropic background pressure
     p_bkg_mat = np.tile(np.eye(3, 3), (len(p_bg_i.data), 1, 1))
@@ -85,6 +90,9 @@ def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     p_gse_i_new[:, 1, 0] = p_gse_i_new[:, 0, 1]
     p_gse_i_new[:, 2, 0] = p_gse_i_new[:, 0, 2]
     p_gse_i_new[:, 2, 1] = p_gse_i_new[:, 1, 2]
+
+    # Mask the pressure tensor where the density is negative
+    p_gse_i_new[mask, :, :] = np.nan
 
     # Create time series of the ion pressure tensor
     p_gse_i_new = ts_tensor_xyz(p_gse_i.time.data, p_gse_i_new)
