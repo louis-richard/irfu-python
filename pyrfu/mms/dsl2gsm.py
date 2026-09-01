@@ -66,9 +66,9 @@ def dsl2gsm(
 
     >>> defatt = load_ancillary("defatt", tint, 1)
 
-    Transform magnetic field to GSE
+    Transform magnetic field to GSM coordinates
 
-    >>> b_gse = dsl2gse(b_xyz, defatt)
+    >>> b_gsm = dsl2gsm(b_xyz, defatt)
 
     """
     if isinstance(defatt, xr.Dataset):

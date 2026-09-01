@@ -88,7 +88,7 @@ def dsl2gse(
     defatt : Dataset or numpy.ndarray
         Spacecraft attitude.
     direction : {1, -1}, Optional
-        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
+        Direction of transformation. By convention: +1 DSL -> GSE, -1 GSE -> DSL.
         Default is 1.
 
     Returns
