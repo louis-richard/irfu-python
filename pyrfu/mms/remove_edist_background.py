@@ -74,6 +74,11 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     mms_id = vdf.data.attrs["CATDESC"].split(" ")[0].lower()
     mms_id = int(mms_id[-1])
 
+    if mms_id not in [1, 2, 3, 4]:
+        raise ValueError(
+            f"Invalid MMS spacecraft number {mms_id}. Must be 1, 2, 3 or 4."
+        )
+
     # Get data sample rate from VDF metadata
     if "brst" in vdf.data.attrs["FIELDNAM"].lower():
         data_rate = "brst"
