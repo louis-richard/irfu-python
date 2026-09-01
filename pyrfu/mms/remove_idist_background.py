@@ -60,5 +60,6 @@ def remove_idist_background(vdf, def_bg):
 
     vdf_new = vdf.copy()
     vdf_new.data.data -= vdf_bg.data
+    vdf_new.data.data[vdf_new.data.data < 0] = 0.0
 
     return vdf_new
