@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 # Built-in imports
+import functools
 import json
 import re
 import urllib
@@ -14,6 +16,8 @@ import keyring
 import numpy as np
 import requests
 from dateutil.parser import parse
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
@@ -33,19 +37,18 @@ LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 TEST_URL = "file_names/science?start_date=2015-04-10&end_date=2015-04-11&sc_id=mms2"
 
 
+@functools.lru_cache(maxsize=1)
 def _login_lasp():
-    r"""Login to LASP colorado."""
+    r"""Login to LASP colorado. Cached so the connectivity/credential
+    probe only happens once per process instead of once per call."""
 
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
-    # Read credentials for username
     credential = keyring.get_credential("mms-sdc", config["sdc"]["username"])
-
-    if credential:
-        username, password = credential.username, credential.password
-    else:
-        username, password = "", ""
+    username, password = (
+        (credential.username, credential.password) if credential else ("", "")
+    )
 
     if config["sdc"]["rights"] == "public":
         lasp_url = LASP_PUBL
@@ -59,19 +62,26 @@ def _login_lasp():
     session = requests.Session()
     session.auth = (username, password)
 
+    # Retry with backoff on rate limiting / transient server errors,
+    # honoring the Retry-After header when LASP sends one.
+    retry = Retry(
+        total=5,
+        backoff_factor=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        respect_retry_after_header=True,
+        allowed_methods=["GET", "POST"],
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+
     headers = {"User-Agent": "pyrfu"}
 
-    try:
-        _ = session.post("https://lasp.colorado.edu", verify=True, timeout=5)
-        response = session.get(
-            urllib.parse.urljoin(lasp_url, TEST_URL),
-            verify=True,
-            timeout=5,
-            headers=headers,
-        )
-        response.raise_for_status()  # Raise an HTTPError for bad responses
-    except requests.RequestException as e:
-        print(f"Error login to {lasp_url}: {e}")
+    response = session.get(
+        urllib.parse.urljoin(lasp_url, TEST_URL),
+        verify=True,
+        timeout=5,
+        headers=headers,
+    )
+    response.raise_for_status()
 
     return session, headers, lasp_url
 
