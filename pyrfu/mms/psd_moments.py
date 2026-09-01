@@ -225,7 +225,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     energy1 = vdf.attrs["energy1"]
     e_tmp = energy1 - energy0
 
-    flag_same_e = all(e_tmp) == 0
+    flag_same_e = np.all(e_tmp) == 0
 
     # resample sc_pot to same resolution as particle distributions
     sc_pot = resample(sc_pot, vdf.time).data
@@ -341,7 +341,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
     )
 
-    energy_minus = vdf.attrs["delta_energy_plus"]
+    energy_minus = vdf.attrs["delta_energy_minus"]
     energy_plus = vdf.attrs["delta_energy_plus"]
 
     energy_correct = energy - sc_pot[:, np.newaxis]
@@ -444,9 +444,6 @@ def psd_moments(vdf, sc_pot, **kwargs):
     p_trace = np.trace(p_psd, axis1=1, axis2=2)
     t_psd = np.zeros(p_psd.shape)
     t_psd[...] = p_psd[...] / (k_b * n_psd[:, np.newaxis, np.newaxis])
-    t_psd[:, 1, 0] = t_psd[:, 1, 0]
-    t_psd[:, 2, 0] = t_psd[:, 2, 0]
-    t_psd[:, 2, 1] = t_psd[:, 2, 1]
 
     v_abs2 = np.linalg.norm(v_psd, axis=1) ** 2
     h_psd *= p_mass / 2
