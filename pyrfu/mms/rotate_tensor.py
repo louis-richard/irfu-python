@@ -77,7 +77,8 @@ def rotate_tensor(
         numpy.ndarray rotates to a time independent coordinates system.
 
     perp : str, Optional
-        Flag for perpendicular components of the tensor. Default is pp.
+        Flag for perpendicular components of the tensor. Default is "pp".
+            * "" : no additional rotation applied
             * "pp" : perpendicular diagonal components are equal
             * "qq" : perpendicular diagonal components are most unequal
 
@@ -294,6 +295,7 @@ def rotate_tensor(
         thetas = 0.5 * np.arctan(
             (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
         )
+        thetas[np.isnan(thetas)] = 0.0
 
         for i, theta in enumerate(thetas):
             rot_temp = np.array(
