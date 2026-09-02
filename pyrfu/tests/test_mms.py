@@ -213,8 +213,36 @@ class CalcEpsilonTestCase(unittest.TestCase):
 
     @data(
         (
-            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
-            generate_vdf(64.0, 100, (32, 16, 16), energy01=False, species="ions"),
+            generate_vdf(
+                64.0,
+                100,
+                (32, 16, 16),
+                energy01=False,
+                species="ions",
+                units="s^3/cm^6",
+            ),
+            generate_vdf(
+                64.0,
+                100,
+                (32, 16, 16),
+                energy01=False,
+                species="ions",
+                units="s^3/cm^6",
+            ),
+            {},
+        ),
+        (
+            generate_vdf(
+                64.0, 100, (32, 16, 16), energy01=False, species="ions", units="s^3/m^6"
+            ),
+            generate_vdf(
+                64.0,
+                100,
+                (32, 16, 16),
+                energy01=False,
+                species="ions",
+                units="s^3/km^6",
+            ),
             {},
         ),
         (
