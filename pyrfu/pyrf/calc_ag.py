@@ -24,10 +24,10 @@ def calc_ag(p_xyz: DataArray) -> DataArray:
 
     .. math::
 
-        AG^{1/3} = \frac{|\operatorname[det]{\mathbf{P}}
-        - \operatorname[det]{\mathbf{P}}|}
-        {\operatorname[det]{\mathbf{P}}
-        + \operatorname[det]{\mathbf{P}}}
+        AG^{1/3} = \frac{|\operatorname{det}{\mathbf{P}}
+        - \operatorname{det}{\mathbf{P}}|}
+        {\operatorname{det}{\mathbf{P}}
+        + \operatorname{det}{\mathbf{P}}}
 
 
     Parameters
@@ -89,8 +89,11 @@ def calc_ag(p_xyz: DataArray) -> DataArray:
         raise ValueError("p_xyz must be a time series of a tensor (n_time, 3, 3)")
 
     # Diagonal and off-diagonal terms
-    p_11, p_22, _ = [p_xyz.data[:, 0, 0], p_xyz.data[:, 1, 1], p_xyz.data[:, 2, 2]]
+    p_11, p_22, p_33 = [p_xyz.data[:, 0, 0], p_xyz.data[:, 1, 1], p_xyz.data[:, 2, 2]]
     p_12, p_13, p_23 = [p_xyz.data[:, 0, 1], p_xyz.data[:, 0, 2], p_xyz.data[:, 1, 2]]
+
+    if np.any(p_22 - p_33 > 1e-3 * p_22):
+        raise ValueError("p_22 and p_33 must be equal for agyrotropy calculation")
 
     det_p = p_11 * (p_22**2 - p_23**2)
     det_p -= p_12 * (p_12 * p_22 - p_23 * p_13)
