@@ -57,7 +57,7 @@ def annotate_heatmap(
         data = im.get_array()
 
     if not isinstance(data, (np.ndarray, list)):
-        raise TypeError("data must be a numpy array")
+        raise TypeError("data must be a numpy array or list")
 
     # Normalize the threshold to the images color range.
     if threshold is not None:
