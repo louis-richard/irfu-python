@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import logging
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -92,8 +95,8 @@ def calc_ag(p_xyz: DataArray) -> DataArray:
     p_11, p_22, p_33 = [p_xyz.data[:, 0, 0], p_xyz.data[:, 1, 1], p_xyz.data[:, 2, 2]]
     p_12, p_13, p_23 = [p_xyz.data[:, 0, 1], p_xyz.data[:, 0, 2], p_xyz.data[:, 1, 2]]
 
-    if np.any(p_22 - p_33 > 1e-3 * p_22):
-        raise ValueError("p_22 and p_33 must be equal for agyrotropy calculation")
+    if not np.allclose(p_22, p_33):
+        logging.warning("p_22 and p_33 are not equal, agyrotropy may not be valid.")
 
     det_p = p_11 * (p_22**2 - p_23**2)
     det_p -= p_12 * (p_12 * p_22 - p_23 * p_13)
