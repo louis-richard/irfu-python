@@ -12,7 +12,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def make_labels(axs, pos, num=None, pad: float = 0, **kwargs):
+def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
     r"""Add subplots labels to axes
 
     Parameters
@@ -21,6 +21,12 @@ def make_labels(axs, pos, num=None, pad: float = 0, **kwargs):
         Array of subplots axes.
     pos : array_like
         Position of the text in the axis.
+    pref : str, Optional
+        Prefix to append to the label.
+    suff : str, Optional
+        Suffix to append to the label.
+    pad : int, Optional
+        Number of labels to skip.
 
     Returns
     -------
@@ -29,10 +35,16 @@ def make_labels(axs, pos, num=None, pad: float = 0, **kwargs):
 
     """
 
+    if len(axs) + pad > 26:
+        raise ValueError("Number of subplots exceeds the number of labels available.")
+
     lbl = string.ascii_lowercase[pad : len(axs) + pad]
 
-    if num is not None:
-        lbl = [f"{lbl[i]}{num}" for i in range(len(lbl))]
+    if pref is not None:
+        lbl = [f"{pref}{lbl[i]}" for i in range(len(lbl))]
+
+    if suff is not None:
+        lbl = [f"{lbl[i]}{suff}" for i in range(len(lbl))]
 
     for label, axis in zip(lbl, axs):
         if "proj" in axis.properties():
