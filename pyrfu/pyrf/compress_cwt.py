@@ -15,17 +15,13 @@ __status__ = "Prototype"
 
 
 @numba.jit(cache=True, fastmath=True, nopython=True, parallel=True)
-def _compress_cwt_1d(cwt, nc: int = 100):
+def _compress_cwt_1d(cwt, idxs, nc):
     nf = cwt.shape[1]
-    idxs = np.arange(
-        int(nc / 2),
-        len(cwt) - int(nc / 2),
-        step=nc,
-        dtype=np.int64,
-    )
+
     cwt_c = np.zeros((len(idxs), nf))
 
-    for i, idx in enumerate(idxs):
+    for i in numba.prange(len(idxs)):
+        idx = idxs[i]
         for j in range(nf):
             x_data = cwt[idx - int(nc / 2) : idx + int(nc / 2), j]
             cwt_c[i, j] = np.nanmean(x_data)
@@ -66,8 +62,8 @@ def compress_cwt(cwt, nc: int = 100):
     )
 
     cwt_t = cwt.time.data[indices]
-    cwt_x = _compress_cwt_1d(cwt.x.data, nc=nc)
-    cwt_y = _compress_cwt_1d(cwt.y.data, nc=nc)
-    cwt_z = _compress_cwt_1d(cwt.z.data, nc=nc)
+    cwt_x = _compress_cwt_1d(cwt.x.data, indices, nc=nc)
+    cwt_y = _compress_cwt_1d(cwt.y.data, indices, nc=nc)
+    cwt_z = _compress_cwt_1d(cwt.z.data, indices, nc=nc)
 
     return cwt_t, cwt_x, cwt_y, cwt_z
