@@ -60,7 +60,8 @@ def copy_files(
         normed_path = os.path.normpath(data_path)
 
     # Make sure the local path exists.
-    assert os.path.exists(normed_path), f"{normed_path} doesn't exist!!"
+    if not os.path.exists(normed_path):
+        raise FileNotFoundError(f"{normed_path} doesn't exist!!")
 
     # List files that matches the requirements (instrument, date level,
     # data type, data rate) in the time interval for the target spacecraft.
