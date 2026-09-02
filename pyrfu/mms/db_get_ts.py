@@ -4,6 +4,7 @@
 # Built-in imports
 import json
 import logging
+from functools import lru_cache  # CHANGED: to cache the parsed config file
 from typing import Mapping, Optional, Tuple
 
 # 3rd party imports
@@ -26,13 +27,6 @@ __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
-
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
 
 
 def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
@@ -64,6 +58,13 @@ def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
         pass
 
     return probe, var
+
+
+@lru_cache(maxsize=1)
+def _load_config() -> Mapping[str, str]:
+    r"""Load and cache the MMS configuration file."""
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        return json.load(fs)
 
 
 def db_get_ts(
@@ -105,14 +106,13 @@ def db_get_ts(
     """
     mms_id, var = _tokenize(dataset_name)
 
-    # Read the current version of the MMS configuration file
-    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-        config = json.load(fs)
+    # Load the configuration file
+    config: dict = _load_config()
 
     if not source or source == "default":
-        resource = config.get("default")
+        resource: str = config.get("default")
     elif source.lower() in ["local", "sdc", "aws"]:
-        resource = source
+        resource: str = source
     else:
         raise ValueError(
             "Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'"
@@ -127,11 +127,15 @@ def db_get_ts(
             logging.info("Loading %s...", cdf_name)
 
         for i, file_name in enumerate(file_names):
-            file_content = _get_file_content_sources(
-                resource, file_name, sdc_session, headers
-            )
+            try:
+                file_content = _get_file_content_sources(
+                    resource, file_name, sdc_session, headers
+                )
 
-            out = get_ts(file_content, cdf_name, tint)
+                out = get_ts(file_content, cdf_name, tint)
+            except Exception:
+                logging.error("Failed to load %s from %s", cdf_name, file_name)
+                raise
 
             if i == 0:
                 out_all = out
