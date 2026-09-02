@@ -67,7 +67,7 @@ def c_4_v(r_xyz, time):
     if isinstance(time, np.ndarray) and time.dtype == np.datetime64:
         flag = "v_from_t"
 
-        time = time.view("i8") * 1e-9
+        time = time.astype("datetime64[ns]").view("i8") * 1e-9
     elif time[1] > 299792.458:
         flag = "v_from_t"
     else:
