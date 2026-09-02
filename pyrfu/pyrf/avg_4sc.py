@@ -41,6 +41,13 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     TypeError
         If b_list is not a list of DataArray or Dataset
 
+    Notes
+    -----
+    When averaging a list of Dataset, the function assumes that all
+    datasets have the same data variables and coordinates, and
+    averages only the "data" variable. Other data variables are
+    copied from the first dataset in the list.
+
     Examples
     --------
     >>> from pyrfu.mms import get_data
@@ -61,17 +68,14 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         raise TypeError("b_list must be a list")
 
     b_list_r = []
-
+    f_sb = calc_fs(b_list[0])
     for b in b_list:
         if isinstance(b, (xr.DataArray, xr.Dataset)):
-            b_list_r.append(resample(b, b_list[0], f_s=calc_fs(b_list[0])))
+            b_list_r.append(resample(b, b_list[0], f_s=f_sb))
         else:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
     b_avg_data = np.zeros(b_list_r[0].data.shape)
-
-    # for b in b_list_r:
-    #     b_avg_data += b.data
 
     # Average the resamples time series
     if isinstance(b_list_r[0], xr.DataArray):
