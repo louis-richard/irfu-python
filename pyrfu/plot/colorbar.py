@@ -1,18 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
-import matplotlib.pyplot as plt
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def colorbar(mappable, axis, pad: float = 0.01):
+def colorbar(mappable, axis, pad: float = 0.01, width: float = 0.03):
     r"""Add colorbar to ax corresponding to im.
 
     Parameters
@@ -23,6 +21,8 @@ def colorbar(mappable, axis, pad: float = 0.01):
         Axis of plot.
     pad : float, Optional
         Shift the colorbar with respect to the axis.
+    width : float, Optional
+        Width of the colorbar.
 
     Returns
     -------
@@ -32,8 +32,8 @@ def colorbar(mappable, axis, pad: float = 0.01):
     """
 
     pos = axis.get_position()
-    fig = plt.gcf()
-    cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])
+    fig = axis.get_figure()
+    cax = fig.add_axes([pos.x0 + pos.width + pad, pos.y0, width, pos.height])
     fig.colorbar(mappable, cax)
 
     return cax
