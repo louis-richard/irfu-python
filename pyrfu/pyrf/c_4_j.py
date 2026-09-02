@@ -9,9 +9,9 @@ from scipy import constants
 from xarray.core.dataarray import DataArray
 
 # Local imports
-from .avg_4sc import avg_4sc
-from .c_4_grad import c_4_grad
-from .cross import cross
+from pyrfu.pyrf.avg_4sc import avg_4sc
+from pyrfu.pyrf.c_4_grad import c_4_grad
+from pyrfu.pyrf.cross import cross
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
