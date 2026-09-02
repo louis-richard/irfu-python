@@ -26,7 +26,6 @@ __status__ = "Prototype"
 
 def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
-    Draft do not use!!
 
     Parameters
     ----------
@@ -178,11 +177,11 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     v_max = speed_of_light * np.sqrt(1 - 1 / gamma_max**2)  # m/s
 
     # initiate projected f
-    if velocity_grid_edges is not None:
+    if velocity_grid is not None:
+        n_vg = len(velocity_grid)
+    elif velocity_grid is None and velocity_grid_edges is not None:
         n_vg = len(velocity_grid_edges) - 1
         velocity_grid = velocity_grid_edges[:-1] + 0.5 * np.diff(velocity_grid_edges)
-    elif velocity_grid is not None:
-        n_vg = len(velocity_grid)
     else:
         n_vg = 100
         if base == "cart":
