@@ -139,18 +139,18 @@ class Avg4SCTestCase(unittest.TestCase):
 
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             pyrf.c_4_grad(
                 generate_ts(64.0, 100, tensor_order=1),
                 generate_ts(64.0, 100, tensor_order=1),
             )
-            pyrf.c_4_grad([], [])
+            pyrf.c_4_grad(
+                [generate_data(100, tensor_order=1) for _ in range(4)],
+                [generate_data(100, tensor_order=1) for _ in range(4)],
+            )
 
-            pyrf.c_4_grad(
-                [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)],
-                [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)],
-                0,
-            )
+        with self.assertRaises(ValueError):
+            pyrf.c_4_grad([], [])
 
             pyrf.c_4_grad(
                 [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)],
@@ -466,7 +466,9 @@ class CompressCwtTestCase(unittest.TestCase):
 
     def test_compress_cwt_1d(self):
         result = _compress_cwt_1d.__wrapped__(
-            np.random.random((1000, 100)), random.randint(2, 100)
+            np.random.random((1000, 100)),
+            np.arange(0, 1000, 10),
+            random.randint(2, 100),
         )
         self.assertIsInstance(result, np.ndarray)
 
@@ -2321,6 +2323,13 @@ class TsSpectrTestCase(unittest.TestCase):
         (
             generate_timeline(64.0, 100),
             np.random.random(10),
+            np.random.random((98, 10)),
+            "energy",
+            None,
+        ),
+        (
+            generate_timeline(64.0, 100),
+            np.random.random((98, 10)),
             np.random.random((98, 10)),
             "energy",
             None,
