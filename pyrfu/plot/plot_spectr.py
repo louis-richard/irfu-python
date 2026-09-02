@@ -69,16 +69,10 @@ def plot_spectr(
     if axis is None:
         fig, axis = plt.subplots(1)
     else:
-        fig = plt.gcf()
+        fig = axis.get_figure()
 
     if not cmap or isinstance(cmap, str):
         cmap = mpl.colormaps.get_cmap(cmap)
-
-    # else:
-    #    raise TypeError(
-    #        "cmap must be a string. "
-    #        "To add a custom colormap use mpl.colormaps.register(custom)."
-    #    )
 
     if cscale == "log":
         if clim is not None and isinstance(clim, list):
