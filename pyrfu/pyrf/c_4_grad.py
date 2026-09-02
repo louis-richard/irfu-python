@@ -122,11 +122,22 @@ def c_4_grad(
 
     """
 
-    assert isinstance(r_list, list) and len(r_list) == 4, "r_list must a list of s/c"
-    assert isinstance(b_list, list) and len(b_list) == 4, "b_list must a list of s/c"
+    if not isinstance(r_list, list) or not isinstance(b_list, list):
+        raise TypeError("r_list and b_list must be lists")
 
-    assert isinstance(method, str), "method must be a string"
-    assert method.lower() in ["grad", "div", "curl", "bdivb", "curv"], "Invalid method"
+    if len(r_list) != 4 or len(b_list) != 4:
+        raise ValueError("r_list and b_list must be lists of length 4")
+
+    if not all(isinstance(r, DataArray) for r in r_list):
+        raise TypeError("All elements of r_list must be xarray.DataArray")
+
+    if not all(isinstance(b, DataArray) for b in b_list):
+        raise TypeError("All elements of b_list must be xarray.DataArray")
+
+    if method not in ["grad", "div", "curl", "bdivb", "curv"]:
+        raise ValueError(
+            "Invalid method. Must be one of 'grad', 'div', 'curl', 'bdivb', 'curv'"
+        )
 
     # Resample with respect to 1st spacecraft
     r_list = [resample(r, b_list[0]) for r in r_list]
