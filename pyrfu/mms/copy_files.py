@@ -48,7 +48,9 @@ def copy_files(
     """
     # Normalize the target path and make sure it exists.
     tar_path = os.path.normpath(tar_path)
-    assert os.path.exists(tar_path), f"{tar_path} doesn't exist!!"
+
+    if not os.path.exists(tar_path):
+        raise FileNotFoundError(f"{tar_path} doesn't exist!!")
 
     if not data_path:
         # Read the current version of the MMS configuration file
