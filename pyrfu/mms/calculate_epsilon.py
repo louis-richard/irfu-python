@@ -24,6 +24,43 @@ __status__ = "Prototype"
 q_e = constants.elementary_charge
 
 
+def _get_si_vdf(vdf: Dataset) -> np.ndarray:
+    r"""Convert vdf to SI units (s^3 m^-6).
+
+    Parameters
+    ----------
+    vdf : Dataset
+        Particle distribution (skymap).
+
+    Returns
+    -------
+    np.ndarray
+        Particle distribution in SI units (s^3 m^-6).
+    """
+
+    if vdf.data.attrs["UNITS"] == "s^3/km^6":
+        out = vdf.data.data.copy() * 1e-18
+    elif vdf.data.attrs["UNITS"] == "s^3/m^6":
+        out = vdf.data.data.copy()
+    elif vdf.data.attrs["UNITS"] == "s^3/cm^6":
+        out = vdf.data.data.copy() * 1e12
+    else:
+        raise ValueError("Invalid units for vdf.")
+
+    return out
+
+
+def _energy_bin_edges(energy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    r"""Upper/lower energy-bin edges for a single 1-D energy table."""
+    temp0 = 2 * energy[0] - energy[1]
+    tempend = 2 * energy[-1] - energy[-2]
+    energy_all = np.concatenate(([temp0], energy, [tempend]))
+    diff_en_all = np.diff(energy_all)
+    energy_upper = 10 ** (np.log10(energy + diff_en_all[1:] / 2))
+    energy_lower = 10 ** (np.log10(energy - diff_en_all[:-1] / 2))
+    return energy_upper, energy_lower
+
+
 def calculate_epsilon(
     vdf: Dataset,
     model_vdf: Dataset,
@@ -36,9 +73,9 @@ def calculate_epsilon(
     Parameters
     ----------
     vdf : Dataset
-        Observed particle distribution (skymap).
+        Observed particle distribution (skymap). Must be in s^3 cm^-6.
     model_vdf : Dataset
-        Model particle distribution (skymap).
+        Model particle distribution (skymap). Must be in s^3 km^-6.
     n_s : DataArray
         Time series of the number density.
     sc_pot : DataArray
@@ -70,8 +107,9 @@ def calculate_epsilon(
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
 
-    vdf_data = vdf.data.data.copy() * 1e12
-    model_vdf_data = model_vdf.data.data.copy() * 1e-18
+    # Get vdf and model_vdf in SI units (s^3 m^-6)
+    vdf_data = _get_si_vdf(vdf)
+    model_vdf_data = _get_si_vdf(model_vdf)
 
     energy = vdf.energy.data.copy()
     phi = vdf.phi.data.copy()
@@ -87,7 +125,7 @@ def calculate_epsilon(
     else:
         raise ValueError("Invalid specie")
 
-    if np.abs(np.median(np.diff(vdf.time.data - n_s.time.data))) > 0:
+    if not np.array_equal(vdf.time.data, n_s.time.data):
         raise ValueError("vdf and moments have different times.")
 
     # Default energy channels used to compute epsilon.
@@ -111,8 +149,14 @@ def calculate_epsilon(
     phi_tr = phi.copy()
     theta_tr = np.tile(theta, (len(vdf.time.data), 1))
 
-    energy_minus = vdf.attrs["delta_energy_minus"]
-    energy_plus = vdf.attrs["delta_energy_plus"]
+    if "delta_energy_minus" in vdf.attrs and "delta_energy_plus" in vdf.attrs:
+        flag_delta_e = True
+        energy_minus = vdf.attrs["delta_energy_minus"]
+        energy_plus = vdf.attrs["delta_energy_plus"]
+    else:
+        energy_minus = np.zeros_like(np.unique(energy, axis=0))
+        energy_plus = np.zeros_like(np.unique(energy, axis=0))
+        flag_delta_e = False
 
     # Calculate speed widths associated with each energy channel.
     energy_scpot = np.transpose(np.tile(sc_pot.data, (energy.shape[1], 1)))
@@ -121,17 +165,56 @@ def calculate_epsilon(
     )
     velocity = np.real(np.sqrt(2 * q_e * energy_corr / m_s))
 
-    if flag_same_e:
+    if flag_delta_e:
         energy_upper = energy + energy_plus
         energy_lower = energy - energy_minus
         v_upper = np.sqrt(2 * q_e * (energy_upper - energy_scpot) / m_s)
         v_lower = np.sqrt(2 * q_e * (energy_lower - energy_scpot) / m_s)
+    elif flag_same_e and not flag_delta_e:
+        # extrapolate one bin before the first and after the last energy column
+        temp0 = 2 * energy[:, 0] - energy[:, 1]
+        tempend = 2 * energy[:, -1] - energy[:, -2]
 
+        # [temp0 energy tempend] horzcat -> column_stack
+        energyall = np.column_stack([temp0, energy, tempend])
+
+        # diff(energyall, 1, 2) -> np.diff along columns (axis=1)
+        diffenall = np.diff(energyall, n=1, axis=1)
+
+        # diffenall(:,2:end) -> [:, 1:] ; diffenall(:,1:end-1) -> [:, :-1]
+        energyupper = 10 ** (np.log10(energy + diffenall[:, 1:] / 2))
+        energylower = 10 ** (np.log10(energy - diffenall[:, :-1] / 2))
+
+        # SCpot.data*ones(size(energy(1,:))) is just broadcasting SCpot per row
+        # across all energy columns — numpy does this for free with [:, None]
+        v_upper = np.sqrt(2 * q_e * (energyupper - sc_pot[:, None]) / m_s)
+        v_lower = np.sqrt(2 * q_e * (energylower - sc_pot[:, None]) / m_s)
+    elif not flag_same_e and not flag_delta_e:
+        energy0 = np.ravel(vdf.attrs["energy0"])
+        energy1 = np.ravel(vdf.attrs["energy1"])
+        esteptable = np.ravel(vdf.attrs["esteptable"])
+
+        energyupper0, energylower0 = _energy_bin_edges(energy0)
+        energyupper1, energylower1 = _energy_bin_edges(energy1)
+
+        # esteptable flags which table (0 or 1) applies at each time step;
+        # broadcast it across energy channels to select per row.
+        esteptablemat = esteptable[:, None].astype(float) * np.ones_like(energy0)
+
+        energyupper = (
+            esteptablemat * energyupper1 + np.abs(esteptablemat - 1) * energyupper0
+        )
+        energylower = (
+            esteptablemat * energylower1 + np.abs(esteptablemat - 1) * energylower0
+        )
+
+        v_upper = np.sqrt(2 * q_e * (energyupper - energy_scpot) / m_s)
+        v_lower = np.sqrt(2 * q_e * (energylower - energy_scpot) / m_s)
     else:
-        energy_upper = energy + energy_plus
-        energy_lower = energy - energy_minus
-        v_upper = np.sqrt(2 * q_e * (energy_upper - energy_scpot) / m_s)
-        v_lower = np.sqrt(2 * q_e * (energy_lower - energy_scpot) / m_s)
+        raise NotImplementedError(
+            "Unsupported combination: energy0 != energy1 with no "
+            "delta_energy_minus/delta_energy_plus available."
+        )
 
     v_upper[v_upper < 0] = 0
     v_lower[v_lower < 0] = 0
