@@ -38,9 +38,12 @@ def c_4_k(r_list: Sequence[DataArray]) -> Sequence[DataArray]:
 
     """
 
+    if len(r_list) != 4:
+        raise ValueError("r_list must contain exactly 4 elements.")
+
     mms_list = np.arange(4)
 
-    k_list = [r_list[0].copy()] * 4
+    k_list = [None] * 4
 
     mms_list_r0 = np.roll(mms_list, 0)
     mms_list_r1 = np.roll(mms_list, 1)
