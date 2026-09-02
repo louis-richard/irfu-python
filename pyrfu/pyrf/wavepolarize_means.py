@@ -8,24 +8,16 @@ import logging
 import numpy as np
 import xarray as xr
 
-from .datetime642unix import datetime642unix
-
 # Local imports
-from .resample import resample
+from pyrfu.pyrf.datetime642unix import datetime642unix
+from pyrfu.pyrf.resample import resample
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
 
 
 def _spec_mat(half_spec_x, half_spec_y, half_spec_z):

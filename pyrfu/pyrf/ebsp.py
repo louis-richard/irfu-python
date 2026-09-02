@@ -12,29 +12,21 @@ import numpy as np
 import xarray as xr
 from scipy import fft
 
-from .calc_fs import calc_fs
-from .cart2sph import cart2sph
-from .convert_fac import convert_fac
-from .resample import resample
-
 # Local imports
-from .ts_time import ts_time
-from .ts_vec_xyz import ts_vec_xyz
-from .unix2datetime64 import unix2datetime64
+from pyrfu.pyrf.calc_fs import calc_fs
+from pyrfu.pyrf.cart2sph import cart2sph
+from pyrfu.pyrf.convert_fac import convert_fac
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_time import ts_time
+from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
+from pyrfu.pyrf.unix2datetime64 import unix2datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
 
 
 def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):

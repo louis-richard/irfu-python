@@ -20,17 +20,10 @@ from pyrfu.pyrf.calc_fs import calc_fs
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
-
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
 
 
 @numba.jit(nopython=True, fastmath=True)  # type: ignore
