@@ -11,23 +11,16 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf.normalize import normalize
-from ..pyrf.resample import resample
-from ..pyrf.time_clip import time_clip
+from pyrfu.pyrf.normalize import normalize
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.time_clip import time_clip
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
 
 
 def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
