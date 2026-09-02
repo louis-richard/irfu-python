@@ -52,13 +52,22 @@ COEFFS_I: Dict[float, Dict[str, tuple]] = {
 def _thresh_e(
     beta_para: Union[float, np.ndarray], s: float, alpha: float
 ) -> Union[float, np.ndarray]:
-    return 1 + s * beta_para**-alpha
+    t_aniso = 1 + s * beta_para**-alpha
+    return t_aniso
 
 
 def _thresh_i(
     beta_para: Union[float, np.ndarray], a: float, b: float, beta0: float
 ) -> Union[float, np.ndarray]:
-    return 1 + a / (beta_para - beta0) ** b
+    # Set values below beta0 to NaN to avoid division by zero or negative values
+    mask = beta_para <= beta0
+    beta_para[mask] = np.nan
+
+    t_aniso = 1 + a / (beta_para - beta0) ** b
+
+    # Mask the values below beta0 in the output as well
+    t_aniso[mask] = np.nan
+    return t_aniso
 
 
 def anisotropy_thresholds(
@@ -88,6 +97,10 @@ def anisotropy_thresholds(
         If specie is not "i" or "e", or if gamma is not supported.
 
     """
+
+    # Mask the negative values of beta_para to avoid invalid calculations
+    beta_para = np.asarray(beta_para)
+    beta_para[beta_para < 0] = np.nan
 
     if specie == "i":
         if gamma not in COEFFS_I:
