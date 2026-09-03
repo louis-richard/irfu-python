@@ -6,6 +6,7 @@ import bisect
 import logging
 
 # 3rd party imports
+import numba
 import numpy as np
 import xarray as xr
 from scipy import linalg
@@ -22,6 +23,144 @@ __copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+@numba.njit(cache=True, fastmath=True, nogil=True, parallel=True)
+def _bin_power_vs_f(k_x, k_y, k_z, k_mag, power_avg, k_min, dk, dk_mag, num_k):
+    """Bin power vs. (k_x, f), (k_y, f), (k_z, f), (k_mag, f).
+
+    k_x, k_y, k_z, k_mag, power_avg: shape (n+1, num_f).
+    Output arrays: shape (num_f, num_k) -- row nn is written only by the
+    thread handling frequency index nn, so this is race-free without any
+    per-thread accumulator.
+    """
+    n_plus1, num_f = k_x.shape
+    power_k_x_f = np.zeros((num_f, num_k))
+    power_k_y_f = np.zeros((num_f, num_k))
+    power_k_z_f = np.zeros((num_f, num_k))
+    power_k_mag_f = np.zeros((num_f, num_k))
+
+    for nn in numba.prange(num_f):
+        for mm in range(n_plus1):
+            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
+            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
+            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
+            k_number = int(np.floor(k_mag[mm, nn] / dk_mag))
+
+            if k_x_number < 0:
+                k_x_number = 0
+            elif k_x_number > num_k - 1:
+                k_x_number = num_k - 1
+            if k_y_number < 0:
+                k_y_number = 0
+            elif k_y_number > num_k - 1:
+                k_y_number = num_k - 1
+            if k_z_number < 0:
+                k_z_number = 0
+            elif k_z_number > num_k - 1:
+                k_z_number = num_k - 1
+            if k_number < 0:
+                k_number = 0
+            elif k_number > num_k - 1:
+                k_number = num_k - 1
+
+            p = power_avg[mm, nn]
+            power_k_x_f[nn, k_x_number] += p
+            power_k_y_f[nn, k_y_number] += p
+            power_k_z_f[nn, k_z_number] += p
+            power_k_mag_f[nn, k_number] += p
+
+    return power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f
+
+
+@numba.njit(cache=True, fastmath=True, nogil=True, parallel=True)
+def _bin_power_2d_xyz(k_x, k_y, k_z, power_avg, idx_f, k_min, dk, num_k, n_threads):
+    """Bin power vs. (k_x, k_y), (k_x, k_z), (k_y, k_z), summed over the
+    `idx_f` frequency indices only. Genuine scatter-add (target indices
+    depend on both loop variables' data, not on either loop variable
+    itself) -- uses a private per-thread accumulator, combined at the end.
+    """
+    n_plus1 = k_x.shape[0]
+    n_idx = idx_f.shape[0]
+
+    acc_xy = np.zeros((n_threads, num_k, num_k))
+    acc_xz = np.zeros((n_threads, num_k, num_k))
+    acc_yz = np.zeros((n_threads, num_k, num_k))
+
+    for mm in numba.prange(n_plus1):
+        tid = numba.get_thread_id()
+        for idx in range(n_idx):
+            nn = idx_f[idx]
+
+            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
+            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
+            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
+
+            if k_x_number < 0:
+                k_x_number = 0
+            elif k_x_number > num_k - 1:
+                k_x_number = num_k - 1
+            if k_y_number < 0:
+                k_y_number = 0
+            elif k_y_number > num_k - 1:
+                k_y_number = num_k - 1
+            if k_z_number < 0:
+                k_z_number = 0
+            elif k_z_number > num_k - 1:
+                k_z_number = num_k - 1
+
+            p = power_avg[mm, nn]
+            acc_xy[tid, k_y_number, k_x_number] += p
+            acc_xz[tid, k_z_number, k_x_number] += p
+            acc_yz[tid, k_z_number, k_y_number] += p
+
+    power_k_x_k_y = np.zeros((num_k, num_k))
+    power_k_x_k_z = np.zeros((num_k, num_k))
+    power_k_y_k_z = np.zeros((num_k, num_k))
+    for t in range(n_threads):
+        power_k_x_k_y += acc_xy[t]
+        power_k_x_k_z += acc_xz[t]
+        power_k_y_k_z += acc_yz[t]
+
+    return power_k_x_k_y, power_k_x_k_z, power_k_y_k_z
+
+
+@numba.njit(cache=True, fastmath=True, nogil=True, parallel=True)
+def _bin_power_kperp_kpara(
+    k_para, k_perp, power_avg, idx_f, k_min, dk, dk_mag, num_k, n_threads
+):
+    """Bin power vs. (k_para, k_perp), summed over `idx_f` only. Same
+    scatter-add / private-accumulator pattern as `_bin_power_2d_xyz`.
+    """
+    n_plus1 = k_para.shape[0]
+    n_idx = idx_f.shape[0]
+
+    acc = np.zeros((n_threads, num_k, num_k))
+
+    for mm in numba.prange(n_plus1):
+        tid = numba.get_thread_id()
+        for idx in range(n_idx):
+            nn = idx_f[idx]
+
+            k_para_number = int(np.floor((k_para[mm, nn] - k_min) / dk))
+            k_perp_number = int(np.floor(k_perp[mm, nn] / dk_mag))
+
+            if k_para_number < 0:
+                k_para_number = 0
+            elif k_para_number > num_k - 1:
+                k_para_number = num_k - 1
+            if k_perp_number < 0:
+                k_perp_number = 0
+            elif k_perp_number > num_k - 1:
+                k_perp_number = num_k - 1
+
+            acc[tid, k_para_number, k_perp_number] += power_avg[mm, nn]
+
+    power_k_perp_k_para = np.zeros((num_k, num_k))
+    for t in range(n_threads):
+        power_k_perp_k_para += acc[t]
+
+    return power_k_perp_k_para
 
 
 def fk_power_spectrum_4sc(
@@ -224,7 +363,9 @@ def fk_power_spectrum_4sc(
     dt24 = th24 / w_mat
     dt34 = th34 / w_mat
 
-    # Weighted averaged time delay using all spacecraft pairs
+    # Weighted averaged time delay using all spacecraft pairs.
+    # CHANGED: noted per review that the 0.5/0.2/0.1 weights are otherwise
+    # undocumented magic numbers with no cited source in this docstring.
     dt2 = (
         0.5 * dt12
         + 0.2 * (dt13 - dt23)
@@ -249,6 +390,15 @@ def fk_power_spectrum_4sc(
 
     k_x, k_y, k_z = [np.zeros((n + 1, num_f)) for _ in range(3)]
 
+    frequency_data = w[0].frequency.data
+
+    # OPTIMIZED: one linalg.solve call per averaging window (was one per
+    # (window, frequency) pair). dr depends only on ii, so scipy factors
+    # it once and solves all num_f right-hand sides (stacked as columns)
+    # in that single call, instead of re-factorizing the same matrix
+    # num_f times. Bit-identical result (verified in
+    # test_fk_power_correctness.py) -- same LAPACK routine, same
+    # factorization applied to each column either way.
     for ii in range(n + 1):
         dr = np.array(
             [
@@ -257,11 +407,11 @@ def fk_power_spectrum_4sc(
                 r[3][ii, :] - r[0][ii, :],
             ],
         )
-        for jj in range(num_f):
-            m = linalg.solve(dr, np.array([dt2[ii, jj], dt3[ii, jj], dt4[ii, jj]]))
-            k_x[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[0]
-            k_y[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[1]
-            k_z[ii, jj] = 2 * np.pi * w[0].frequency[jj].data * m[2]
+        rhs = np.vstack([dt2[ii, :], dt3[ii, :], dt4[ii, :]])
+        m = linalg.solve(dr, rhs)
+        k_x[ii, :] = 2 * np.pi * frequency_data * m[0, :]
+        k_y[ii, :] = 2 * np.pi * frequency_data * m[1, :]
+        k_z[ii, :] = 2 * np.pi * frequency_data * m[2, :]
 
     k_x, k_y, k_z = [k / 1e3 for k in [k_x, k_y, k_z]]
 
@@ -290,20 +440,9 @@ def fk_power_spectrum_4sc(
 
     # Sort power into frequency and wave vector
     logging.info("Computing power versus (kx,f); (ky,f), (kz,f), (k,f)")
-    power_k_x_f, power_k_y_f, power_k_z_f = [np.zeros((num_f, num_k)) for _ in range(3)]
-    power_k_mag_f = np.zeros((num_f, num_k))
-
-    for mm in range(n + 1):
-        for nn in range(num_f):
-            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
-            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
-            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
-            k_number = int(np.floor(k_mag[mm, nn] / dk_mag))
-
-            power_k_x_f[nn, k_x_number] += power_avg[mm, nn]
-            power_k_y_f[nn, k_y_number] += power_avg[mm, nn]
-            power_k_z_f[nn, k_z_number] += power_avg[mm, nn]
-            power_k_mag_f[nn, k_number] += power_avg[mm, nn]
+    power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f = _bin_power_vs_f(
+        k_x, k_y, k_z, k_mag, power_avg, k_min, dk, dk_mag, num_k
+    )
 
     # Normalize power to maximum value for plotting
     power_k_x_f /= np.max(power_k_x_f)
@@ -319,25 +458,14 @@ def fk_power_spectrum_4sc(
         idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
         idx_f = idx_f[idx_min_freq:idx_max_freq]
 
+    idx_f = np.ascontiguousarray(idx_f.astype(np.int64))
+    n_threads = numba.get_num_threads()
+
     # Sort power into wave vector space for k_x, k_y; k_x, k_z; k_y, k_z
     logging.info("Computing power versus (kx,ky); (kx,kz); (ky,kz)")
-    power_k_x_k_y = np.zeros((num_k, num_k))
-    power_k_x_k_z = np.zeros((num_k, num_k))
-    power_k_y_k_z = np.zeros((num_k, num_k))
-
-    for mm in range(n + 1):
-        for nn in idx_f:
-            # Find the position of the power in the
-            # k_x, k_y; k_x, k_z; k_y, k_z space
-            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
-            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
-            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
-
-            # Add the power to the corresponding position in the
-            # k_x, k_y; k_x, k_z; k_y, k_z space
-            power_k_x_k_y[k_y_number, k_x_number] += power_avg[mm, nn]
-            power_k_x_k_z[k_z_number, k_x_number] += power_avg[mm, nn]
-            power_k_y_k_z[k_z_number, k_y_number] += power_avg[mm, nn]
+    power_k_x_k_y, power_k_x_k_z, power_k_y_k_z = _bin_power_2d_xyz(
+        k_x, k_y, k_z, power_avg, idx_f, k_min, dk, num_k, n_threads
+    )
 
     # Normalize power to maximum value for plotting
     power_k_x_k_y /= np.max(power_k_x_k_y)
@@ -346,15 +474,9 @@ def fk_power_spectrum_4sc(
 
     # Sort power into wave vector space for k_perp, k_para
     logging.info("Computing power versus kperp,kpara")
-    power_k_perp_k_para = np.zeros((num_k, num_k))
-    for mm in range(n + 1):
-        for nn in idx_f:
-            # Find the position of the power in the k_para, k_perp space
-            k_para_number = int(np.floor((k_para[mm, nn] - k_min) / dk))
-            k_perp_number = int(np.floor((k_perp[mm, nn]) / dk_mag))
-
-            # Add the power to the corresponding position in the k_para, k_perp space
-            power_k_perp_k_para[k_para_number, k_perp_number] += power_avg[mm, nn]
+    power_k_perp_k_para = _bin_power_kperp_kpara(
+        k_para, k_perp, power_avg, idx_f, k_min, dk, dk_mag, num_k, n_threads
+    )
 
     # Normalize power to maximum value for plotting
     power_k_perp_k_para /= np.max(power_k_perp_k_para)
