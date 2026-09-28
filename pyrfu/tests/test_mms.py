@@ -893,6 +893,42 @@ class PsdRebinTestCase(unittest.TestCase):
         self.assertIsInstance(result[3], np.ndarray)
         self.assertListEqual(list(result[3].shape), [50, 32])
 
+    def test_psd_rebin_values(self):
+        # 30 ms DES-like burst with alternating energy tables and f(t) = t + 1,
+        # phi increasing within each pair (no wrap).
+        n_t = 20
+        time = np.datetime64("2020-01-01", "ns") + np.arange(n_t) * np.timedelta64(
+            30, "ms"
+        )
+        vdf = generate_vdf(1.0, n_t, (32, 32, 16), energy01=True)
+        vdf = vdf.assign_coords(time=time)
+        vdf.data.data[...] = (np.arange(n_t) + 1.0)[:, None, None, None]
+        phi = vdf.phi.data.astype(np.float64)
+        phi[1::2] += 5.625
+
+        time_r, vdf_r, _, _ = mms.psd_rebin(
+            vdf,
+            phi,
+            vdf.attrs["energy0"],
+            vdf.attrs["energy1"],
+            vdf.attrs["esteptable"],
+        )
+
+        # Time stamps at the middle of each pair (the time step used to overflow int16)
+        np.testing.assert_array_equal(time_r, time[::2] + np.timedelta64(15, "ms"))
+
+        # Every pair is filled, including the last one (used to be all zeros).
+        # esteptable[2k] = 0 -> energy0 (sample 2k) on even rows, energy1 on odd.
+        expected_even = np.arange(1.0, n_t, 2)[:, None, None, None]
+        expected_odd = np.arange(2.0, n_t + 1, 2)[:, None, None, None]
+        np.testing.assert_array_equal(
+            vdf_r[:, 0:63:2, ...],
+            np.broadcast_to(expected_even, vdf_r[:, 0:63:2].shape),
+        )
+        np.testing.assert_array_equal(
+            vdf_r[:, 1:64:2, ...], np.broadcast_to(expected_odd, vdf_r[:, 1:64:2].shape)
+        )
+
 
 @ddt
 class FeepsActiveEyesTestCase(unittest.TestCase):

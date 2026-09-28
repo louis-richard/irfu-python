@@ -96,9 +96,12 @@ def psd_rebin(
     energy_r: NDArray[np.float32] = np.sort(np.hstack([energy0, energy1]))
 
     # Define new times
-    delta_t: float = np.median(np.diff(vdf_time)).astype(np.int16) / 1e9
+    # Sampling period in ns (kept as int64, int16 overflows for ms time steps)
+    delta_t: float = np.median(
+        np.diff(vdf_time).astype("timedelta64[ns]").astype(np.int64)
+    )
     time_r: NDArray[np.datetime64] = vdf_time[:-1:2] + np.timedelta64(
-        int(delta_t * 1e9 / 2), "ns"
+        int(round(delta_t / 2)), "ns"
     )
 
     # Preallocate output arrays
@@ -114,7 +117,7 @@ def psd_rebin(
 
     time_indices: NDArray[np.int16] = np.arange(0, len(vdf.time) - 1, 2, dtype=np.int16)
 
-    for new_el_num, idx in enumerate(time_indices[:-1]):
+    for new_el_num, idx in enumerate(time_indices):
         if phi[idx, 0] > phi[idx + 1, 0]:
             phi_r[new_el_num, :] = (phi[idx, :] + phi_s[idx + 1, :]) / 2
 
