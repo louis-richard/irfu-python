@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import importlib
 import itertools
 import json
 import os
 import random
 import string
 import unittest
+from unittest import mock
 
 # 3rd party imports
 import numpy as np
@@ -969,6 +971,36 @@ class PsdRebinTestCase(unittest.TestCase):
             vdf_r[:, 1:64:2, ...], np.broadcast_to(expected_odd, vdf_r[:, 1:64:2].shape)
         )
 
+    @idata(itertools.product([False, True], [0, 1]))
+    @unpack
+    def test_psd_rebin_energy_table_order(self, phi_wrap, first_step):
+        # The lower table (energy0) must always go to the even channels, whether
+        # or not phi wraps between the two samples of a pair (the phi-wrap
+        # branch ignored the step table). Each sample holds a constant value,
+        # so the order does not depend on the phi shift.
+        n_t = 8
+        vdf = generate_vdf(64.0, n_t, (32, 32, 16), energy01=True)
+        step_table = (np.arange(n_t) + first_step) % 2
+        vdf.data.data[...] = (np.arange(n_t) + 1.0)[:, None, None, None]
+        phi = vdf.phi.data.astype(np.float64) + 5.625
+        phi[1::2] += -5.625 if phi_wrap else 5.625
+
+        _, vdf_r, energy_r, _ = mms.psd_rebin(
+            vdf, phi, vdf.attrs["energy0"], vdf.attrs["energy1"], step_table
+        )
+
+        # Samples using energy0 (step 0) in the even channels, energy1 (step 1)
+        # in the odd channels
+        samples = np.arange(n_t).reshape(-1, 2)
+        pair_steps = step_table.reshape(-1, 2)
+        from_energy0 = samples[pair_steps == 0] + 1.0
+        from_energy1 = samples[pair_steps == 1] + 1.0
+        np.testing.assert_array_equal(vdf_r[:, 0:63:2, 0, 0].max(axis=1), from_energy0)
+        np.testing.assert_array_equal(vdf_r[:, 0:63:2, 0, 0].min(axis=1), from_energy0)
+        np.testing.assert_array_equal(vdf_r[:, 1:64:2, 0, 0].max(axis=1), from_energy1)
+        np.testing.assert_array_equal(vdf_r[:, 1:64:2, 0, 0].min(axis=1), from_energy1)
+        np.testing.assert_array_equal(energy_r[0:63:2], vdf.attrs["energy0"])
+
 
 @ddt
 class FeepsActiveEyesTestCase(unittest.TestCase):
@@ -1221,6 +1253,21 @@ class ReduceTestCase(unittest.TestCase):
         vdf.data.attrs["UNITS"] = units
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
+
+    def test_reduce_default_phi_grid(self):
+        # Default azimuthal grid has one point per instrument azimuth. phi is
+        # (time, phi), so len(phi) gave one point per time step (5 here).
+        vdf = generate_vdf(64.0, 5, [32, 32, 16], energy01=True, species="ions")
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        reduce_module = importlib.import_module("pyrfu.mms.reduce")
+        with mock.patch.object(
+            reduce_module, "int_sph_dist", wraps=reduce_module.int_sph_dist
+        ) as isd:
+            mms.reduce(vdf, np.eye(3), "2d", "cart", n_mc=1)
+
+        phi_grid = isd.call_args.args[5]
+        np.testing.assert_allclose(phi_grid, np.deg2rad(5.625 + 11.25 * np.arange(32)))
 
     @data(True, False)
     def test_reduce_drifting_maxwellian(self, energy_widths):

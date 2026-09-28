@@ -115,7 +115,8 @@ def psd_rebin(
     phi_s: NDArray[np.float32] = np.roll(phi, 2, axis=1)
     phi_s[:, 0] = phi_s[:, 0] - 360.0
 
-    time_indices: NDArray[np.int16] = np.arange(0, len(vdf.time) - 1, 2, dtype=np.int16)
+    # Default integer type (int16 wraps after 32767 samples)
+    time_indices: NDArray[np.int_] = np.arange(0, len(vdf.time) - 1, 2)
 
     for new_el_num, idx in enumerate(time_indices):
         if phi[idx, 0] > phi[idx + 1, 0]:
@@ -131,8 +132,8 @@ def psd_rebin(
                 vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx, ...]
                 vdf_r[new_el_num, 0:63:2, ...] = vdf_temp
             else:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 0:63:2, ...] = vdf_temp
+                vdf_r[new_el_num, 0:63:2, ...] = vdf_data[idx, ...]
+                vdf_r[new_el_num, 1:64:2, ...] = vdf_temp
 
         else:
             phi_r[new_el_num, :] = phi[idx, :] + phi[idx + 1, :]
