@@ -151,8 +151,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     velocity_grid = kwargs.get("vg", None)  # TODO : check that for no input!!
     velocity_grid_edges = kwargs.get("vg_edges", None)
 
-    # azimuthal angle of projection plane
-    n_phi_grid = len(vdf_phi)
+    # azimuthal angle of projection plane (phi is (time, phi) in burst mode)
+    n_phi_grid = vdf_phi.shape[-1]
     d_phi_g = 2 * np.pi / n_phi_grid
     phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, n_phi_grid) + d_phi_g / 2
     phi_grid = kwargs.get("phig", phi_grid)

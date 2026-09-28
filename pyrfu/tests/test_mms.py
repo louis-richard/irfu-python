@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import importlib
 import itertools
 import json
 import os
 import random
 import string
 import unittest
+from unittest import mock
 
 # 3rd party imports
 import numpy as np
@@ -1221,6 +1223,21 @@ class ReduceTestCase(unittest.TestCase):
         vdf.data.attrs["UNITS"] = units
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
+
+    def test_reduce_default_phi_grid(self):
+        # Default azimuthal grid has one point per instrument azimuth. phi is
+        # (time, phi), so len(phi) gave one point per time step (5 here).
+        vdf = generate_vdf(64.0, 5, [32, 32, 16], energy01=True, species="ions")
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        reduce_module = importlib.import_module("pyrfu.mms.reduce")
+        with mock.patch.object(
+            reduce_module, "int_sph_dist", wraps=reduce_module.int_sph_dist
+        ) as isd:
+            mms.reduce(vdf, np.eye(3), "2d", "cart", n_mc=1)
+
+        phi_grid = isd.call_args.args[5]
+        np.testing.assert_allclose(phi_grid, np.deg2rad(5.625 + 11.25 * np.arange(32)))
 
     @data(True, False)
     def test_reduce_drifting_maxwellian(self, energy_widths):
