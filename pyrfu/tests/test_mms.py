@@ -1218,6 +1218,31 @@ class RotateTensorTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    @data("gse", "gsm")
+    def test_rotate_tensor_dsl_consistent_with_dsl2gse(self, frame):
+        # T = a I + v v^T in DSL must rotate to a I + v' v'^T with v' = dsl2gse(v).
+        # The spin-axis angles were converted from degrees to radians twice.
+        n_t = 50
+        time = generate_timeline(1.0, n_t)
+        defatt = xr.Dataset(
+            {
+                "z_ra": pyrf.ts_scalar(time, np.linspace(268.0, 272.0, n_t)),
+                "z_dec": pyrf.ts_scalar(time, np.linspace(65.0, 67.0, n_t)),
+            }
+        )
+        v_dsl = pyrf.ts_vec_xyz(time, np.random.default_rng(0).normal(size=(n_t, 3)))
+        t_dsl = pyrf.ts_tensor_xyz(
+            time, 2.0 * np.eye(3) + np.einsum("ti,tj->tij", v_dsl.data, v_dsl.data)
+        )
+
+        v_new = mms.dsl2gse(v_dsl, defatt)
+        if frame == "gsm":
+            v_new = pyrf.cotrans(v_new, "gse>gsm")
+
+        expected = 2.0 * np.eye(3) + np.einsum("ti,tj->tij", v_new.data, v_new.data)
+        result = mms.rotate_tensor(t_dsl, frame, defatt)
+        np.testing.assert_allclose(result.data, expected, atol=1e-10)
+
 
 @ddt
 class SpectrToDatasetTestCase(unittest.TestCase):

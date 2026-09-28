@@ -222,9 +222,9 @@ def rotate_tensor(
 
         # Compute the spin axis direction in Geocentric equatorial inertial (GEI)
         # coordinates
-        x: NDArray[np.float64] = np.cos(np.deg2rad(z_dec)) * np.cos(np.deg2rad(z_ra))
-        y: NDArray[np.float64] = np.cos(np.deg2rad(z_dec)) * np.sin(np.deg2rad(z_ra))
-        z: NDArray[np.float64] = np.sin(np.deg2rad(z_dec))
+        x: NDArray[np.float64] = np.cos(z_dec) * np.cos(z_ra)
+        y: NDArray[np.float64] = np.cos(z_dec) * np.sin(z_ra)
+        z: NDArray[np.float64] = np.sin(z_dec)
         sax_gei: DataArray = ts_vec_xyz(
             vec.time.data, np.transpose(np.vstack([x, y, z]))
         )
