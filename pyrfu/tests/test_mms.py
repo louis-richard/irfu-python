@@ -18,6 +18,7 @@ from scipy import constants
 
 # Local imports
 from .. import mms, pyrf
+from ..mms.feeps_flat_field_corrections import g_corr
 from ..mms.psd_moments import _moms
 from . import (
     generate_data,
@@ -1015,6 +1016,25 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
 
         result = mms.feeps_flat_field_corrections(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
+
+    @idata(range(1, 5))
+    def test_feeps_flat_field_corrections_values(self, mms_id):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", mms_id)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_flat_field_corrections(feeps_alle)
+
+        # Each eye is scaled by its gain (1 if not in the table)
+        for k in filter(lambda x: x[:3] in ["top", "bot"], feeps_ref):
+            sensor, eye = k.split("-")
+            gain = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
+            np.testing.assert_array_equal(result[k].data, feeps_ref[k].data * gain)
+            self.assertDictEqual(result[k].attrs, feeps_ref[k].attrs)
+
+        self.assertDictEqual(result.attrs, feeps_ref.attrs)
+
+        # The caller's data must not be changed (they used to be scaled in place)
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
 
 
 @ddt
