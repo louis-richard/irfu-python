@@ -10,6 +10,7 @@ import unittest
 from unittest import mock
 
 # 3rd party imports
+import numba
 import numpy as np
 import xarray as xr
 from ddt import data, ddt, idata, unpack
@@ -18,7 +19,7 @@ from ddt import data, ddt, idata, unpack
 from .. import pyrf
 from ..pyrf.compress_cwt import _compress_cwt_1d
 from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
-from ..pyrf.int_sph_dist import _mc_cart_2d, _mc_cart_3d, _mc_pol_1d
+from ..pyrf.int_sph_dist import _mc_cart_2d, _mc_cart_3d, _mc_pol_1d, _uniform_step
 from ..pyrf.wavelet import _power_c, _power_r, _ww
 from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
@@ -1536,7 +1537,9 @@ class IntSphDistTestCase(unittest.TestCase):
     def test_mc_pol_1d(self, value):
         vdf, *args = value
         vdf[vdf < 1e-2] = 0
-        self.assertIsInstance(_mc_pol_1d.__wrapped__(vdf, *args), np.ndarray)
+        n_threads = numba.get_num_threads()
+        result = _mc_pol_1d.__wrapped__(vdf, *args, n_threads)
+        self.assertIsInstance(result, np.ndarray)
 
     @data(
         (
@@ -1559,7 +1562,9 @@ class IntSphDistTestCase(unittest.TestCase):
     def test_mc_cart_2d(self, value):
         vdf, *args = value
         vdf[vdf < 1e-2] = 0
-        self.assertIsInstance(_mc_cart_2d.__wrapped__(vdf, *args), np.ndarray)
+        v_step, n_threads = _uniform_step(args[7]), numba.get_num_threads()
+        result = _mc_cart_2d.__wrapped__(vdf, *args, v_step, n_threads)
+        self.assertIsInstance(result, np.ndarray)
 
     @data(
         (
@@ -1582,7 +1587,41 @@ class IntSphDistTestCase(unittest.TestCase):
     def test_mc_cart_3d(self, value):
         vdf, *args = value
         vdf[vdf < 1e-2] = 0
-        self.assertIsInstance(_mc_cart_3d.__wrapped__(vdf, *args), np.ndarray)
+        v_step, n_threads = _uniform_step(args[7]), numba.get_num_threads()
+        result = _mc_cart_3d.__wrapped__(vdf, *args, v_step, n_threads)
+        self.assertIsInstance(result, np.ndarray)
+
+    @data(_mc_cart_2d, _mc_cart_3d)
+    def test_mc_cart_fast_index_matches_searchsorted(self, kernel):
+        # v_step > 0 indexes the grid arithmetically, v_step = 0 falls back to
+        # np.searchsorted; with the same random draws both must give the same bins.
+        rng = np.random.default_rng(0)
+        vdf = rng.random((51, 32, 16))
+        vdf[vdf < 1e-2] = 0
+        edges = np.linspace(-1.01, 1.01, 102)
+        args = (
+            np.linspace(0, 1, 51),
+            np.arange(32),
+            np.arange(16),
+            np.ones(51) * 0.02,
+            np.ones(51) * 0.01,
+            np.ones(32),
+            np.ones(16),
+            edges,
+            0.02**2,
+            np.array([-np.inf, np.inf]),
+            np.array([-np.pi, np.pi]),
+            np.ones((51, 32, 16), dtype=int) * 10,
+            np.eye(3),
+        )
+        results = []
+        for v_step in [_uniform_step(edges), 0.0]:
+            random.seed(0)
+            results.append(kernel.__wrapped__(vdf, *args, v_step, 1))
+
+        self.assertGreater(_uniform_step(edges), 0.0)
+        self.assertGreater(np.count_nonzero(results[0]), 0)
+        np.testing.assert_array_equal(results[0], results[1])
 
 
 @ddt
