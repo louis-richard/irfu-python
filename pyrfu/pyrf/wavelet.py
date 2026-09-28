@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import logging
 import os
 from typing import Dict, Optional, Union
 
@@ -123,12 +124,16 @@ def wavelet(
         wavelet_width = 5.36
 
     if linear is not None:
-        if isinstance(linear, (float, int)):
-            delta_f: float = linear
-            linear_df: bool = True
-        elif isinstance(linear, bool):
-            linear_df = linear
-            delta_f = 100.0
+        # bool must be checked first as it is a subclass of int
+        if isinstance(linear, bool):
+            linear_df: bool = linear
+            delta_f: float = 100.0
+        elif isinstance(linear, (float, int)):
+            if linear <= 0:
+                raise ValueError("linear frequency spacing must be positive")
+
+            delta_f = float(linear)
+            linear_df = True
         else:
             raise TypeError("linear keyword argument must be bool or float")
     else:
@@ -142,12 +147,26 @@ def wavelet(
     # Frequency range
     if f is None:
         f_min: float = f_nyq / 10**2
-        f_max: float = f_nyq / 10**-2
+        f_max: float = f_nyq
     else:
         f_min, f_max = sorted(f)
 
+        if f_max > f_nyq:
+            logging.warning(
+                "f_max = %g Hz is above the Nyquist frequency, set to %g Hz",
+                f_max,
+                f_nyq,
+            )
+            f_max = f_nyq
+
     if linear_df:
         scale_number: int = int(np.floor(f_nyq / delta_f))
+
+        if scale_number == 0:
+            raise ValueError(
+                f"linear frequency spacing ({delta_f} Hz) is larger than the "
+                f"Nyquist frequency ({f_nyq} Hz)"
+            )
 
         # Scales range
         scale_min: float = delta_f

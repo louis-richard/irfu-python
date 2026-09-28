@@ -2498,14 +2498,47 @@ class WaveletTestCase(unittest.TestCase):
             None,
         ),
         (generate_ts(64.0, 100, tensor_order=0), None, False, None),
-        (generate_ts(64.0, 100, tensor_order=0), None, True, True),
-        (generate_ts(64.0, 100, tensor_order=0), None, True, random.random() * 100.0),
+        (generate_ts(1024.0, 100, tensor_order=0), None, True, True),
+        (generate_ts(64.0, 100, tensor_order=0), None, True, False),
+        (generate_ts(64.0, 100, tensor_order=0), None, True, random.uniform(1, 30)),
     )
     @unpack
     def test_wavelet_output(self, inp, f, return_power, linear):
         self.assertIsNotNone(
             pyrf.wavelet(inp, f=f, return_power=return_power, linear=linear)
         )
+
+    @staticmethod
+    def _sine(f_s=128.0, n_pts=4096, f_0=20.0):
+        time = generate_timeline(f_s, n_pts)
+        return pyrf.ts_scalar(time, np.sin(2 * np.pi * f_0 * np.arange(n_pts) / f_s))
+
+    def test_wavelet_default_frequencies(self):
+        # Default range used to reach 100x Nyquist (half of the bins above it)
+        result = pyrf.wavelet(self._sine())
+        self.assertAlmostEqual(result.frequency.data.max(), 64.0)
+        self.assertAlmostEqual(result.frequency.data.min(), 0.64)
+        power = np.nanmean(result.data, axis=0)
+        self.assertAlmostEqual(result.frequency.data[np.argmax(power)], 20.0, delta=1.0)
+
+    def test_wavelet_f_max_clipped_to_nyquist(self):
+        result = pyrf.wavelet(self._sine(), f=[1.0, 200.0])
+        self.assertAlmostEqual(result.frequency.data.max(), 64.0)
+
+    def test_wavelet_linear_values(self):
+        # bool is a subclass of int: True used to give 1 Hz spacing, False crashed
+        inp = self._sine(f_s=1024.0)
+        freqs = pyrf.wavelet(inp, linear=True).frequency.data
+        np.testing.assert_allclose(np.abs(np.diff(freqs)), 100.0)
+        self.assertEqual(len(pyrf.wavelet(inp, linear=False).frequency), 200)
+        freqs = pyrf.wavelet(inp, linear=16).frequency.data
+        np.testing.assert_allclose(np.abs(np.diff(freqs)), 16.0)
+
+    @data(True, 100.0, 0, -1.0)
+    def test_wavelet_linear_invalid(self, linear):
+        # 100 Hz spacing is larger than the 64 Hz Nyquist frequency
+        with self.assertRaises(ValueError):
+            pyrf.wavelet(self._sine(), linear=linear)
 
     @data(
         (
