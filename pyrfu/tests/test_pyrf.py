@@ -2697,5 +2697,76 @@ class MovmeanTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+class EbspPhysicsTestCase(unittest.TestCase):
+    """Value-level checks of ebsp against a synthetic circularly polarised
+    wave with known propagation and Poynting directions (theta=40, phi=30)."""
+
+    @staticmethod
+    def _wave(f_s=64.0, duration=128.0, f_0=2.0, noise_n=0.0):
+        rng = np.random.default_rng(0)
+        t = np.arange(int(f_s * duration)) / f_s
+        th, ph = np.deg2rad(40.0), np.deg2rad(30.0)
+        n = np.array([np.sin(th) * np.cos(ph), np.sin(th) * np.sin(ph), np.cos(th)])
+        e1 = np.cross(n, [0.0, 0.0, 1.0])
+        e1 /= np.linalg.norm(e1)
+        e2 = np.cross(n, e1)
+        w = 2 * np.pi * f_0
+        b = np.outer(np.cos(w * t), e1) + np.outer(np.sin(w * t), e2)
+        b += 0.01 * rng.standard_normal(b.shape)
+        b += noise_n * np.outer(rng.standard_normal(len(t)), n)
+        e = 10 * np.cross(b, n)
+        time = np.datetime64("2020-01-01T00:00:00", "ns") + (t * 1e9).astype(
+            "timedelta64[ns]"
+        )
+        b0 = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 50.0], (len(t), 1)))
+        return pyrf.ts_vec_xyz(time, e), pyrf.ts_vec_xyz(time, b), b0
+
+    def test_ebsp_circular_wave(self):
+        e, b, b0 = self._wave()
+        res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)
+        sel = dict(frequency=2.0, method="nearest")
+
+        def med(x):
+            return float(np.nanmedian(x.sel(**sel).data, axis=0).ravel()[0])
+
+        self.assertAlmostEqual(med(res["k_tp"][..., 0]), 40.0, delta=0.5)
+        self.assertAlmostEqual(med(res["k_tp"][..., 1]), 30.0, delta=0.5)
+        self.assertAlmostEqual(med(res["pf_rtp"][..., 1]), 40.0, delta=0.5)
+        self.assertAlmostEqual(med(res["pf_rtp"][..., 2]), 30.0, delta=0.5)
+        self.assertAlmostEqual(med(res["ellipticity"]), 1.0, delta=0.01)
+        self.assertAlmostEqual(med(res["planarity"]), 1.0, delta=0.01)
+        dt = np.diff(res["t"]).astype(np.int64) / 1e9
+        np.testing.assert_allclose(dt, 1 / (8 / 5), rtol=1e-6)
+        # inputs must not be modified
+        self.assertFalse(np.isnan(b.data).any())
+
+    def test_ebsp_dop2d_in_polarisation_plane(self):
+        e, b, b0 = self._wave(noise_n=4.0)  # compressional noise along k only
+        res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)
+        sel = dict(frequency=2.0, method="nearest")
+        dop = float(np.nanmedian(res["dop"].sel(**sel)))
+        dop2d = float(np.nanmedian(res["dop2d"].sel(**sel)))
+        self.assertLess(dop, 0.9)
+        self.assertGreater(dop2d, 0.95)
+
+    def test_ebsp_peak_frequency_short_record(self):
+        e, b, b0 = self._wave(duration=16.0, f_0=0.6)
+        res = pyrf.ebsp(e, b, b0, b0, None, [0.3, 8], fac=False)
+        spec = np.nanmean(res["bb_xxyyzzss"][..., 3].data, axis=0)
+        f = res["f"]
+        # 0.6 Hz lies between the 0.536 and 0.650 Hz bins; with a correct FFT
+        # frequency vector their power ratio is ~1.07 (MATLAB), not ~0.38
+        i_lo, i_hi = np.argsort(np.abs(f - 0.6))[:2][
+            np.argsort(f[np.argsort(np.abs(f - 0.6))[:2]])
+        ]
+        self.assertTrue(0.9 < spec[i_hi] / spec[i_lo] < 1.25)
+
+    def test_ebsp_e_gap_no_fac(self):
+        e, b, b0 = self._wave()
+        e.data[5000:5100] = np.nan
+        res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)
+        self.assertLess(float(np.isnan(res["pf_xyz"].data).mean()), 0.2)
+
+
 if __name__ == "__main__":
     unittest.main()
