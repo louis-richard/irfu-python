@@ -24,6 +24,12 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _energy2speed(energy, mass):
+    r"""Convert energy (eV) to speed (m/s), relativistically correct."""
+    gamma = 1 + electron_volt * energy / (mass * speed_of_light**2)
+    return speed_of_light * np.sqrt(1 - 1 / gamma**2)
+
+
 def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
 
@@ -79,6 +85,21 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         )
 
     delta_energy_minu = time_clip(delta_energy_minu, tint)
+
+    # Upper energy bound of instrument bins. The energy widths define the speed
+    # bins used for the Monte-Carlo integration; if either is missing, the
+    # speed bin edges are inferred from the channel speeds in int_sph_dist.
+    has_energy_widths = all(
+        k in vdf.attrs for k in ["delta_energy_minus", "delta_energy_plus"]
+    )
+
+    if has_energy_widths:
+        delta_energy_plus = xr.DataArray(
+            vdf.attrs["delta_energy_plus"],
+            coords=[vdf.time.data, vdf.idx0.data],
+            dims=["time", "idx0"],
+        )
+        delta_energy_plus = time_clip(delta_energy_plus, tint)
 
     # make input distribution to SI units, s^3/m^6
     if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
@@ -217,8 +238,21 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         energy[energy < 0] = 0.0
 
         # Convert energy to velocity (relativistically correct)
-        gamma = 1 + electron_volt * energy / (m_p * speed_of_light**2)
-        velocity = speed_of_light * np.sqrt(1 - 1 / gamma**2)  # m/s
+        velocity = _energy2speed(energy, m_p)  # m/s
+
+        # Speed widths of the instrument bins from the energy bounds of the
+        # channels (corrected for the spacecraft potential)
+        if has_energy_widths:
+            e_low = vdf_energy.data[i_t, :] - delta_energy_minu.data[i_t, :]
+            e_upp = vdf_energy.data[i_t, :] + delta_energy_plus.data[i_t, :]
+            e_low = np.clip(e_low.astype(np.float64) - sc_pot[i_t], 0.0, None)
+            e_upp = np.clip(e_upp.astype(np.float64) - sc_pot[i_t], 0.0, None)
+            speed_widths = {
+                "d_v_m": velocity - _energy2speed(e_low, m_p),
+                "d_v_p": _energy2speed(e_upp, m_p) - velocity,
+            }
+        else:
+            speed_widths = {}
 
         # azimuthal angle
         if vdf_phi.ndim == 2:
@@ -259,6 +293,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
             "projection_dim": dim,
             "projection_base": base,
             "velocity_grid_edges": velocity_grid_edges,
+            **speed_widths,
         }
 
         tmpst = int_sph_dist(

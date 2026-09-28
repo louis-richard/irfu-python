@@ -43,6 +43,26 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         Dictionary with the projected distribution and
         corresponding velocity grid information.
 
+    Other Parameters
+    ----------------
+    d_v_m, d_v_p : numpy.ndarray
+        Speed widths below and above the speed of each instrument bin, i.e., the
+        bin spans [velocity - d_v_m, velocity + d_v_p]. Both must be given, and
+        take precedence over `velocity_edges`.
+    velocity_edges : numpy.ndarray
+        Edges of the instrument speed bins, shape (len(velocity) + 1,). If
+        neither `d_v_m`/`d_v_p` nor `velocity_edges` is given, the edges are at
+        the geometric mean of neighbouring speeds.
+
+    Notes
+    -----
+    The Monte-Carlo particles are drawn uniformly within each speed bin. This
+    differs from irfu-matlab's irf_int_sph_dist, which draws them in
+    [v - 1.5 dV, v - 0.5 dV] (one bin too low) and uses the spacing to the lower
+    neighbour as the bin width when no edges are given. For a drifting
+    Maxwellian on FPI-like bins, that biases the reduced distribution to lower
+    speeds (bulk speed ~7 % and temperature ~10 % too low, density ~6 % too low).
+
     """
 
     # Coordinates system transformation matrix
@@ -85,13 +105,21 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     d_theta = np.abs(np.median(np.diff(theta))) * np.ones_like(theta)
     d_theta = kwargs.get("d_theta", d_theta)
 
-    if velocity_edges is None:
-        d_v = np.hstack([np.diff(velocity[:2]), np.diff(velocity)])
-        d_v_m, d_v_p = [np.diff(velocity) / 2.0] * 2
+    # Speed widths below (d_v_m) and above (d_v_p) the speed of each instrument
+    # bin. The Monte-Carlo particles are drawn uniformly in [v - d_v_m, v + d_v_p].
+    if "d_v_m" in kwargs and "d_v_p" in kwargs:
+        d_v_m = np.asarray(kwargs["d_v_m"], dtype=np.float64)
+        d_v_p = np.asarray(kwargs["d_v_p"], dtype=np.float64)
     else:
+        if velocity_edges is None:
+            velocity_edges = _speed_bin_edges(velocity)
+
         d_v_m = velocity - velocity_edges[:-1]
         d_v_p = velocity_edges[1:] - velocity
-        d_v = d_v_m + d_v_p
+
+    d_v_m = d_v_m.astype(np.float64)
+    d_v_p = d_v_p.astype(np.float64)
+    d_v = d_v_m + d_v_p
 
     # Overwrite projection dimension if azimuthal angle of projection
     # plane is not provided. Set the azimuthal angle grid width.
@@ -245,6 +273,43 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         pst = {"f": f_g, "vx": velocity_grid, "vx_edges": velocity_grid_edges}
 
     return pst
+
+
+def _speed_bin_edges(velocity):
+    r"""Default edges of the instrument speed bins.
+
+    Instrument channels are log-spaced in energy (hence in speed), so the edges
+    are placed at the geometric mean of neighbouring speeds, and the outer edges
+    are extrapolated symmetrically in log space. If any speed is not strictly
+    positive (e.g., channels below the spacecraft potential set to 0), the
+    arithmetic midpoints are used instead, with the lower edge clipped at 0.
+
+    Parameters
+    ----------
+    velocity : numpy.ndarray
+        Speeds of the instrument bins, in increasing order.
+
+    Returns
+    -------
+    numpy.ndarray
+        Edges of the speed bins, shape (len(velocity) + 1,).
+
+    """
+    velocity = np.asarray(velocity, dtype=np.float64)
+
+    if len(velocity) < 2:
+        raise ValueError("At least two speed bins are needed to infer the edges")
+
+    if np.all(velocity > 0.0):
+        mid = np.sqrt(velocity[:-1] * velocity[1:])
+        low = velocity[0] ** 2 / mid[0]
+        upp = velocity[-1] ** 2 / mid[-1]
+    else:
+        mid = (velocity[:-1] + velocity[1:]) / 2.0
+        low = max(2.0 * velocity[0] - mid[0], 0.0)
+        upp = 2.0 * velocity[-1] - mid[-1]
+
+    return np.hstack([low, mid, upp])
 
 
 def _uniform_step(edges):
@@ -401,7 +466,7 @@ def _mc_pol_1d(
                         d_v_mc = 0.0
                         d_phi_mc = 0.0
                     else:
-                        d_v_mc = -random.random() * d_v[i] - d_v_m[0]
+                        d_v_mc = random.random() * d_v[i] - d_v_m[i]
                         d_phi_mc = (random.random() - 0.5) * d_phi[j]
 
                     # convert instrument bin to cartesian velocity
@@ -603,7 +668,7 @@ def _mc_cart_2d(
                         d_v_mc = 0.0
                         d_phi_mc = 0.0
                     else:
-                        d_v_mc = -random.random() * d_v[i] - d_v_m[0]
+                        d_v_mc = random.random() * d_v[i] - d_v_m[i]
                         d_phi_mc = (random.random() - 0.5) * d_phi[j]
 
                     # convert instrument bin to cartesian velocity
@@ -849,7 +914,7 @@ def _mc_cart_3d(
                         d_v_mc = 0.0
                         d_phi_mc = 0.0
                     else:
-                        d_v_mc = -random.random() * d_v[i] - d_v_m[0]
+                        d_v_mc = random.random() * d_v[i] - d_v_m[i]
                         d_phi_mc = (random.random() - 0.5) * d_phi[j]
 
                     # convert instrument bin to cartesian velocity

@@ -1222,6 +1222,32 @@ class ReduceTestCase(unittest.TestCase):
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
 
+    @data(True, False)
+    def test_reduce_drifting_maxwellian(self, energy_widths):
+        # 1 keV proton Maxwellian (n = 1 cm^-3) drifting at (-300, 200, 100) km/s,
+        # reduced along x. Uses the channel widths from delta_energy_* or, if
+        # missing, the default speed bin edges. The reduced distribution used to
+        # be shifted to lower speeds (n 6 %, V 7 % and T 12 % too low).
+        v_d = [-300.0, 200.0, 100.0]
+        vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_d)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        if not energy_widths:
+            del vdf.attrs["delta_energy_minus"]
+
+        v_grid = np.linspace(-2500.0, 2500.0, 251) * 1e3
+        result = mms.reduce(vdf, np.eye(3), "1d", "pol", vg=v_grid, n_mc=50)
+
+        v_x, f_x = result.vx.data * 1e3, result.data[0]
+        d_v = np.median(np.diff(v_x))
+        n = np.sum(f_x) * d_v
+        v_bulk = np.sum(v_x * f_x) * d_v / n
+        t_x = constants.proton_mass * np.sum((v_x - v_bulk) ** 2 * f_x) * d_v / n
+        t_x /= constants.elementary_charge
+
+        self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
+        self.assertAlmostEqual(v_bulk / 1e3, v_d[0], delta=3.0)
+        self.assertAlmostEqual(t_x, 1000.0, delta=40.0)
+
 
 @ddt
 class RotateTensorTestCase(unittest.TestCase):

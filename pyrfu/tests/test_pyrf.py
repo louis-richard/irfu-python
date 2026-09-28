@@ -19,7 +19,13 @@ from ddt import data, ddt, idata, unpack
 from .. import pyrf
 from ..pyrf.compress_cwt import _compress_cwt_1d
 from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
-from ..pyrf.int_sph_dist import _mc_cart_2d, _mc_cart_3d, _mc_pol_1d, _uniform_step
+from ..pyrf.int_sph_dist import (
+    _mc_cart_2d,
+    _mc_cart_3d,
+    _mc_pol_1d,
+    _speed_bin_edges,
+    _uniform_step,
+)
 from ..pyrf.wavelet import _power_c, _power_r, _ww
 from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
@@ -1643,6 +1649,106 @@ class IntSphDistTestCase(unittest.TestCase):
         self.assertGreater(_uniform_step(edges), 0.0)
         self.assertGreater(np.count_nonzero(results[0]), 0)
         np.testing.assert_array_equal(results[0], results[1])
+
+    @staticmethod
+    def _maxwellian(v_d=(300e3, -200e3, 100e3), t_ev=1000.0):
+        # Drifting proton Maxwellian (n = 1 cm^-3) on FPI-like bins: 32
+        # log-spaced energies (10 eV - 30 keV), 32 azimuths, 16 elevations.
+        q_e, m_p = 1.602176634e-19, 1.67262192369e-27
+        energy = 10.0 * 3000.0 ** (np.arange(32) / 31)
+        speed = np.sqrt(2 * q_e * energy / m_p)
+        phi = np.deg2rad(5.625 + 11.25 * np.arange(32))
+        theta = np.deg2rad(-84.375 + 11.25 * np.arange(16))
+        v_x = speed[:, None, None] * np.cos(theta) * np.cos(phi)[:, None]
+        v_y = speed[:, None, None] * np.cos(theta) * np.sin(phi)[:, None]
+        v_z = speed[:, None, None] * np.sin(theta) * np.ones_like(phi)[:, None]
+        v_th2 = 2 * q_e * t_ev / m_p
+        dv2 = (v_x - v_d[0]) ** 2 + (v_y - v_d[1]) ** 2 + (v_z - v_d[2]) ** 2
+        vdf = 1e6 / (np.pi * v_th2) ** 1.5 * np.exp(-dv2 / v_th2)  # s^3/m^6
+        return vdf, energy, speed, phi, theta
+
+    @staticmethod
+    def _moments(out, n_dim):
+        # Density and bulk velocity of the projected distribution
+        edges = out["vx_edges"]
+        d_v = np.diff(edges)
+        v_c = edges[:-1] + d_v / 2
+        vol = np.prod(np.meshgrid(*[d_v] * n_dim, indexing="ij"), axis=0)
+        n = np.sum(out["f"] * vol)
+        v = []
+        for axis in range(n_dim):
+            shape = [1] * n_dim
+            shape[axis] = -1
+            v.append(np.sum(out["f"] * v_c.reshape(shape) * vol) / n)
+
+        return n, np.array(v)
+
+    @data(("pol", "1d", 20), ("cart", "2d", 20), ("cart", "3d", 5))
+    @unpack
+    def test_int_sph_dist_drifting_maxwellian(self, base, dim, n_mc):
+        # The Monte-Carlo speeds were drawn in [v - 1.5 dv, v - 0.5 dv] and the
+        # speed bin width was the spacing to the lower channel: n was 6 % and
+        # the bulk velocity 7 % too low (as in irfu-matlab's irf_int_sph_dist).
+        v_d = np.array([300e3, -200e3, 100e3])
+        vdf, _, speed, phi, theta = self._maxwellian(v_d)
+        d_phi_g = 2 * np.pi / 32
+        phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, 32) + d_phi_g / 2
+        n_grid = {"1d": 301, "2d": 101, "3d": 31}[dim]
+        edges = np.linspace(-1500e3, 1500e3, n_grid + 1)
+
+        random.seed(0)
+        out = pyrf.int_sph_dist(
+            vdf,
+            speed,
+            phi,
+            theta,
+            None,
+            phi_grid,
+            projection_base=base,
+            projection_dim=dim,
+            velocity_grid_edges=edges,
+            n_mc=n_mc,
+        )
+        n_dim = int(dim[0])
+        n, v = self._moments(out, n_dim)
+        self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
+        np.testing.assert_allclose(v / 1e3, v_d[:n_dim] / 1e3, atol=3.0)
+
+    def test_int_sph_dist_speed_widths(self):
+        # Explicit speed widths from the true (geometric) channel edges give the
+        # same result as the default edges, and as the equivalent velocity_edges.
+        # The jitted kernels' random numbers can't be seeded from Python, so
+        # compare the moments: n is set by the bin volumes, V agrees within noise.
+        v_d = np.array([300e3, -200e3, 100e3])
+        vdf, _, speed, phi, theta = self._maxwellian(v_d)
+        e_edges = 10.0 * 3000.0 ** ((np.arange(33) - 0.5) / 31)
+        v_edges = np.sqrt(2 * 1.602176634e-19 * e_edges / 1.67262192369e-27)
+        np.testing.assert_allclose(_speed_bin_edges(speed), v_edges, rtol=1e-12)
+
+        grid = np.linspace(-1500e3, 1500e3, 301)
+        for options in [
+            {},
+            {"velocity_edges": v_edges},
+            {"d_v_m": speed - v_edges[:-1], "d_v_p": v_edges[1:] - speed},
+        ]:
+            out = pyrf.int_sph_dist(
+                vdf, speed, phi, theta, grid, None, n_mc=20, **options
+            )
+            n, v = self._moments(out, 1)
+            self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
+            self.assertAlmostEqual(v[0] / 1e3, v_d[0] / 1e3, delta=3.0)
+
+    def test_speed_bin_edges(self):
+        # Geometric midpoints for log-spaced speeds
+        edges = _speed_bin_edges(np.array([1.0, 2.0, 4.0]))
+        np.testing.assert_allclose(edges, np.sqrt(2) * np.array([0.5, 1, 2, 4]))
+
+        # Arithmetic midpoints (lower edge clipped at 0) with a zero speed
+        edges = _speed_bin_edges(np.array([0.0, 1.0, 2.0]))
+        np.testing.assert_allclose(edges, [0.0, 0.5, 1.5, 2.5])
+
+        with self.assertRaises(ValueError):
+            _speed_bin_edges(np.array([1.0]))
 
 
 @ddt
