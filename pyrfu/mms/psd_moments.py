@@ -174,9 +174,68 @@ def _moms(
 def psd_moments(vdf, sc_pot, **kwargs):
     r"""Computes moments from the FPI particle phase-space densities.
 
-    See the original pyrfu.mms.psd_moments docstring -- this wrapper is
-    an unmodified copy of the pre/post-processing around the optimized
-    `_moms` kernel above.
+    Parameters
+    ----------
+    vdf : xarray.Dataset
+        3D skymap velocity distribution.
+    sc_pot : xarray.DataArray
+        Time series of the spacecraft potential.
+
+    Returns
+    -------
+    n_psd : xarray.DataArray
+        Time series of the number density (1rst moment).
+    v_psd : xarray.DataArray
+        Time series of the bulk velocity (2nd moment).
+    p_psd : xarray.DataArray
+        Time series of the pressure tensor (3rd moment).
+    p2_psd : xarray.DataArray
+        Time series of the pressure tensor.
+    t_psd : xarray.DataArray
+        Time series of the temperature tensor.
+    h_psd : xarray.DataArray
+        Time series of the heat flux vector
+
+    Other Parameters
+    ----------------
+    energy_range : array_like
+        Set energy range in eV to integrate over [E_min E_max]. Energy range
+        is applied to energy0 and the same elements are used for energy1 to
+        ensure that the same number of points are integrated over.
+    no_sc_pot : bool
+        Set to 1 to set spacecraft potential to zero. Calculates moments
+        without correcting for spacecraft potential.
+    en_channels : array_like
+        Set energy channels to integrate over [min max]; min and max between
+        must be between 1 and 32.
+    partial_moments : numpy.ndarray or xarray.DataArray
+        Use a binary array to select which psd points are used in the moments
+        calculation. `partial_moments` must be a binary array (1s and 0s,
+        1s correspond to points used). Array (or data of Dataarray) must be the same
+        size as vdf.data.
+    inner_electron : {"on", "off"}
+        inner_electrontron potential for electron moments.
+
+    Examples
+    --------
+    >>> from pyrfu import mms
+
+    Define time interval
+
+    >>> tint_brst = ["2015-10-30T05:15:20.000", "2015-10-30T05:16:20.000"]
+
+    Load magnetic field and spacecraft potential
+
+    >>> scpot = mms.get_data("V_edp_brst_l2", tint_brst, 1)
+
+    Load electron velocity distribution function
+
+    >>> vdf_e = mms.get_data("pde_fpi_brst_l2", tint_brst, 1)
+
+    Compute moments
+
+    >>> options = dict(energy_range=[1, 1000])
+    >>> moments_e = mms.psd_moments(vdf_e, scpot, **options)
     """
 
     # [eV] sc_pot + w_inner_electron for electron moments calculation
@@ -313,7 +372,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
     )
 
-    energy_minus = vdf.attrs["delta_energy_plus"]
+    energy_minus = vdf.attrs["delta_energy_minus"]
     energy_plus = vdf.attrs["delta_energy_plus"]
 
     energy_correct = energy - sc_pot[:, np.newaxis]
