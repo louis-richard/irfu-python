@@ -95,8 +95,8 @@ def _moms(
         psd2p_yy_mat = np.sin(phi_i) ** 2.0 * np.sin(theta_i) ** 3
         psd2p_zz_mat = np.ones(theta_i.shape) * np.sin(theta_i) * np.cos(theta_i) ** 2
         psd2p_xy_mat = np.cos(phi_i) * np.sin(phi_i) * np.sin(theta_i) ** 3
-        psd2p_xz_mat = np.cos(phi_i) * np.sin(phi_i) ** 2 * np.cos(theta_i)
-        psd2p_yz_mat = np.sin(phi_i) * np.sin(phi_i) ** 2 * np.cos(theta_i)
+        psd2p_xz_mat = np.cos(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
+        psd2p_yz_mat = np.sin(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
 
         for i_e in int_energies:
             n_acc = 0.0

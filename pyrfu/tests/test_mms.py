@@ -14,6 +14,7 @@ import numpy as np
 import requests
 import xarray as xr
 from ddt import data, ddt, idata, unpack
+from scipy import constants
 
 # Local imports
 from .. import mms, pyrf
@@ -765,6 +766,68 @@ class PsdMomentsTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], np.ndarray)
         self.assertIsInstance(result[2], np.ndarray)
         self.assertIsInstance(result[3], np.ndarray)
+
+    @staticmethod
+    def _drifting_maxwellian(n, t_ev, v_kms, n_t=2):
+        # Isotropic proton Maxwellian on an FPI-like burst skymap (32
+        # log-spaced energies, 32 phi, 16 theta, one energy table).
+        m_p, q_e = constants.proton_mass, constants.elementary_charge
+        ratio = (3e4 / 10.0) ** (1 / 31)
+        energy = 10.0 * ratio ** np.arange(32)
+        phi = 5.625 + 11.25 * np.arange(32)
+        theta = 5.625 + 11.25 * np.arange(16)
+
+        # Particle velocity is minus the FPI look direction
+        speed = np.sqrt(2 * q_e * energy / m_p)[:, None, None]
+        ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
+        v_x = -speed * np.sin(th) * np.cos(ph)
+        v_y = -speed * np.sin(th) * np.sin(ph)
+        v_z = -speed * np.cos(th) * np.ones_like(ph)
+
+        v_d = np.array(v_kms) * 1e3
+        v_th2 = 2 * q_e * t_ev / m_p
+        dv2 = (v_x - v_d[0]) ** 2 + (v_y - v_d[1]) ** 2 + (v_z - v_d[2]) ** 2
+        vdf = n * 1e-6 / (np.pi * v_th2) ** 1.5 * np.exp(-dv2 / v_th2)  # s^3/cm^6
+
+        time = generate_timeline(1 / 0.15, n_t)
+        vdf = pyrf.ts_skymap(
+            time,
+            np.tile(vdf, (n_t, 1, 1, 1)),
+            np.tile(energy, (n_t, 1)),
+            np.tile(phi, (n_t, 1)),
+            theta,
+            energy0=energy,
+            energy1=energy,
+            esteptable=np.zeros(n_t, dtype=np.uint8),
+            attrs={"FIELDNAM": "MMS1 FPI/DIS brstSkyMap dist"},
+            glob_attrs={
+                "species": "ions",
+                "delta_energy_plus": np.tile(energy * (np.sqrt(ratio) - 1), (n_t, 1)),
+                "delta_energy_minus": np.tile(
+                    energy * (1 - 1 / np.sqrt(ratio)), (n_t, 1)
+                ),
+            },
+        )
+        return vdf, pyrf.ts_scalar(time, np.zeros(n_t))
+
+    def test_psd_moments_drifting_maxwellian(self):
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, v_kms)
+        n, v, _, p2, t, _ = mms.psd_moments(vdf, sc_pot)
+
+        self.assertAlmostEqual(float(n.data[0]), 1.0, delta=0.01)
+        np.testing.assert_allclose(v.data[0], v_kms, atol=2.0)
+        np.testing.assert_allclose(np.diag(t.data[0]), 1000.0, rtol=0.01)
+
+        # Off-diagonal elements: T is isotropic (0) and the full second moment
+        # p2 reduces to m n Vi Vj (nPa). Pxz/Pyz used the wrong angular kernel.
+        i_row, i_col = [0, 0, 1], [1, 2, 2]
+        np.testing.assert_allclose(t.data[0][i_row, i_col], 0.0, atol=5.0)
+        v_d = np.array(v_kms) * 1e3
+        p2_expected = constants.proton_mass * 1e6 * np.outer(v_d, v_d) * 1e9
+        np.testing.assert_allclose(
+            p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
+        )
 
 
 @ddt
