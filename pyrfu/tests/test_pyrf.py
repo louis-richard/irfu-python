@@ -1729,6 +1729,17 @@ class PlasmaBetaTestCase(unittest.TestCase):
         result = pyrf.plasma_beta(b_xyz, p_xyz)
         self.assertIsInstance(result, xr.DataArray)
 
+    @data([6.0, 0.0, 8.0], [10.0, 0.0, 0.0])
+    def test_plasma_beta_values(self, b_vec):
+        # |B| = 10 nT -> P_b = 0.0397887 nPa. The trace of P is 3 x 0.0398 nPa, so
+        # beta = 1.000283 (was 1e9 too large with P in nPa and P_b in Pa).
+        time = generate_timeline(1.0, 10)
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile(b_vec, (10, 1)))
+        p_mat = np.array([[0.06, 0.01, 0.0], [0.01, 0.03, 0.0], [0.0, 0.0, 0.0294]])
+        p_xyz = pyrf.ts_tensor_xyz(time, np.tile(p_mat, (10, 1, 1)))
+        result = pyrf.plasma_beta(b_xyz, p_xyz)
+        np.testing.assert_allclose(result.data, 1.000283, rtol=1e-6)
+
 
 @ddt
 class StructFuncTestCase(unittest.TestCase):
