@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import logging
 import os
 from typing import Dict, Optional, Union
 
@@ -124,13 +123,12 @@ def wavelet(
         wavelet_width = 5.36
 
     if linear is not None:
-        if isinstance(linear, float):
+        if isinstance(linear, (float, int)):
             delta_f: float = linear
             linear_df: bool = True
-        elif isinstance(linear, bool) and linear:
+        elif isinstance(linear, bool):
+            linear_df = linear
             delta_f = 100.0
-            linear_df = True
-            logging.warning("Unknown input for linear delta_f set to 100")
         else:
             raise TypeError("linear keyword argument must be bool or float")
     else:
