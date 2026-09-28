@@ -103,6 +103,7 @@ def _freq_int(freq_int, delta_b):
     end_time = delta_b.time.data[-1].astype(np.float64) / 1e9
 
     pc12_range, other_range = [False, False]
+    freq_int_in = freq_int
 
     if isinstance(freq_int, str):
         if freq_int.lower() == "pc35":
@@ -127,7 +128,12 @@ def _freq_int(freq_int, delta_b):
         else:
             raise ValueError("FREQ_INT must be [f_min f_max], f_min<f_max")
 
-    n_steps = int(np.floor((end_time - start_time) / delta_t))
+    if isinstance(freq_int_in, str):
+        # MATLAB: tint = round(dB([1 end],1)) (pc12) or round(.../60)*60 (pc35)
+        start_time = np.round(start_time / delta_t) * delta_t
+        end_time = np.round(end_time / delta_t) * delta_t
+
+    n_steps = int(np.floor((end_time - start_time) / delta_t + 1e-9))
 
     out_time = start_time + delta_t * np.arange(n_steps + 1, dtype=np.float64)
     out_time += delta_t / 2.0
@@ -199,7 +205,7 @@ def _ee_xxyyzzss(power_ex_plot, power_ey_plot, power_ez_plot, power_2e_plot):
     return np.real(ee_xxyyzzss)
 
 
-@numba.jit(cache=True, nogil=True, parallel=True, nopython=True, fastmath=True)
+@numba.jit(cache=True, nogil=True, parallel=True, nopython=True, fastmath=False)
 def _censure_plot(inp, idx_nan, censure, n_data, a_):
     out = inp.copy()
 
@@ -299,6 +305,10 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         Specify rotation matrix to FAC system Default None.
     m_width_coeff : int or float
         Specify coefficient to multiple Morlet wavelet width by. Default 1.
+    matlab_dop2d : bool
+        Compute the 2D degree of polarization as irf_ebsp.m does (V S V^T),
+        which is not the projection onto the polarization plane. Default
+        False, i.e., V^T S V.
 
     See also
     --------
@@ -439,10 +449,10 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         db_xyz = db_xyz[:-1, :]
         b_bgd = b_bgd[:-1, :]
 
-        if fac_matrix is None:
-            xyz = xyz[:-1, :]
-        else:
+        if fac_matrix is not None:
             fac_matrix = fac_matrix[:-1, ...]
+        elif xyz is not None:
+            xyz = xyz[:-1, :]
 
         if want_ee:
             e_xyz = e_xyz[:-1, :]
@@ -454,7 +464,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     idx_b_par_spin_plane = None
 
     if flag_de_dot_b0:
-        b_x, b_y, b_z = [b_xyz[:, i].data for i in range(3)]
+        # MATLAB removes the last sample of fullB if the number of samples is odd
+        n_even = 2 * (len(b_xyz) // 2)
+        b_x, b_y, b_z = [b_xyz[:n_even, i].data for i in range(3)]
 
         _, idx_b_par_spin_plane = _b_elevation(b_x, b_y, b_z, angle_b_elevation_max)
 
@@ -475,7 +487,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
                 e_xyz = convert_fac(e_xyz, fac_matrix)
 
         else:
-            idx_nan_e = np.full((len(in_time), 3), False)
+            idx_nan_e = (
+                np.isnan(e_xyz.data) if want_ee else np.full((len(in_time), 3), False)
+            )
             eisr2 = None
             idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
@@ -484,7 +498,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         else:
             db_xyz = convert_fac(db_xyz, fac_matrix)
     else:
-        idx_nan_e = np.full((len(in_time), 3), False)
+        idx_nan_e = (
+            np.isnan(e_xyz.data) if want_ee else np.full((len(in_time), 3), False)
+        )
         eisr2 = None
         idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
@@ -589,7 +605,8 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         we, w_eisr2 = [None, None]
 
         if want_ee:
-            we = fft.ifft(np.sqrt(1) * sw_e * w_exp_mat, axis=0, workers=os.cpu_count())
+            w_exp_e = w_exp_mat2 if sw_e.shape[1] == 2 else w_exp_mat
+            we = fft.ifft(np.sqrt(1) * sw_e * w_exp_e, axis=0, workers=os.cpu_count())
             we = np.array(we)
             we[idx_nan_e] = np.nan
 
@@ -782,9 +799,18 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
             v_mat_new = np.transpose(v_mat, [2, 0, 1])
 
-            s_mat_avg2dim = np.matmul(
-                v_mat_new, np.matmul(s_mat_avg, np.transpose(v_mat_new, [0, 2, 1]))
-            )
+            if kwargs.get("matlab_dop2d", False):
+                # irf_ebsp.m: V*S*V' (rows of V, not the polarisation plane)
+                s_mat_avg2dim = np.matmul(
+                    v_mat_new,
+                    np.matmul(s_mat_avg, np.transpose(v_mat_new, [0, 2, 1])),
+                )
+            else:
+                # Projection onto the first two singular vectors: V' * S * V
+                s_mat_avg2dim = np.matmul(
+                    np.transpose(v_mat_new, [0, 2, 1]),
+                    np.matmul(s_mat_avg, v_mat_new),
+                )
             s_mat_avg2dim = s_mat_avg2dim[:, :2, :2]
             s_mat_avg = s_mat_avg2dim
 
@@ -916,7 +942,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
         poynting_r_th_ph = np.tile(s_r, (3, 1, 1))
         poynting_r_th_ph = np.transpose(poynting_r_th_ph, [1, 2, 0])
-        poynting_r_th_ph[..., 1] = np.pi / 2 - s_elevation
+        # pyrfu.pyrf.cart2sph returns the polar angle (colatitude), unlike
+        # MATLAB's cart2sph (elevation), so no pi/2 - ... here
+        poynting_r_th_ph[..., 1] = s_elevation
         poynting_r_th_ph[..., 2] = s_azimuth
         poynting_r_th_ph[..., 1:] = poynting_r_th_ph[..., 1:] * 180 / np.pi
         poynting_r_th_ph = poynting_r_th_ph.astype(np.float64)
