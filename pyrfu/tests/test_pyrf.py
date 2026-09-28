@@ -1463,6 +1463,27 @@ class Histogram2DTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    @data(
+        (30, (30, 30)),
+        (np.int64(30), (30, 30)),
+        (np.array(30), (30, 30)),
+        ([20, 50], (20, 50)),
+        ((20, 50), (20, 50)),
+        (np.array([20, 50]), (20, 50)),
+        (np.array([50, 20]), (50, 20)),
+        (np.linspace(0, 1, 11), (10, 10)),
+        ([np.linspace(0, 1, 11), np.linspace(0, 1, 6)], (10, 5)),
+        (np.array([np.linspace(0, 1, 11)] * 2), (10, 10)),
+    )
+    @unpack
+    def test_histogram2d_bins_shape(self, bins, shape):
+        # A numpy array [nx, ny] used to be read as the edges of one bin (1x1
+        # output), or to raise when nx > ny, so the output test was flaky.
+        result = pyrf.histogram2d(
+            generate_ts(64.0, 1000), generate_ts(64.0, 1000), bins
+        )
+        self.assertTupleEqual(result.shape, shape)
+
 
 @ddt
 class IncrementsTestCase(unittest.TestCase):

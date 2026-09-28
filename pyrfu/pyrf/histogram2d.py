@@ -205,8 +205,14 @@ def histogram2d(
     if weights is not None:
         weights = np.asarray(weights)[keep]
 
-    # Split the bins and the ranges between the two dimensions.
-    if isinstance(bins, (list, tuple)) and len(bins) == 2:
+    # A 0-d array is a number of bins
+    if isinstance(bins, np.ndarray) and bins.ndim == 0:
+        bins = bins.item()
+
+    # Split the bins and the ranges between the two dimensions. As in
+    # np.histogram2d, any length-2 bins (including a numpy array) is
+    # [bins_x, bins_y].
+    if isinstance(bins, (list, tuple, np.ndarray)) and len(bins) == 2:
         bins_x, bins_y = bins
     else:
         bins_x, bins_y = bins, bins
