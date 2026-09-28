@@ -263,7 +263,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     energy1 = vdf.attrs["energy1"]
     e_tmp = energy1 - energy0
 
-    flag_same_e = all(e_tmp) == 0
+    flag_same_e = np.all(e_tmp == 0)
 
     # resample sc_pot to same resolution as particle distributions
     sc_pot = resample(sc_pot, vdf.time).data
@@ -292,22 +292,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
         # Check size of partial_moments
         if partial_moments.shape == vdf_data.shape:
-            sum_ones = np.sum(
-                np.sum(
-                    np.sum(np.sum(partial_moments, axis=-1), axis=-1),
-                    axis=-1,
-                ),
-                axis=-1,
-            )
-            sum_zeros = np.sum(
-                np.sum(
-                    np.sum(np.sum(-partial_moments + 1, axis=-1), axis=-1),
-                    axis=-1,
-                ),
-                axis=-1,
-            )
-
-            if (sum_ones + sum_zeros) == vdf_data.size:
+            if np.isin(partial_moments, [0, 1]).all():
                 logging.info(
                     "partial_moments is correct. Partial moments will be calculated"
                 )

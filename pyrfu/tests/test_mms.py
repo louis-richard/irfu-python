@@ -768,17 +768,25 @@ class PsdMomentsTestCase(unittest.TestCase):
         self.assertIsInstance(result[3], np.ndarray)
 
     @staticmethod
-    def _drifting_maxwellian(n, t_ev, v_kms, n_t=2):
+    def _drifting_maxwellian(n, t_ev, v_kms, n_t=2, energy1=None):
         # Isotropic proton Maxwellian on an FPI-like burst skymap (32
-        # log-spaced energies, 32 phi, 16 theta, one energy table).
+        # log-spaced energies, 32 phi, 16 theta). One energy table unless
+        # energy1 is given, in which case samples alternate energy0/energy1.
         m_p, q_e = constants.proton_mass, constants.elementary_charge
         ratio = (3e4 / 10.0) ** (1 / 31)
-        energy = 10.0 * ratio ** np.arange(32)
+        energy0 = 10.0 * ratio ** np.arange(32)
+        energy1 = energy0 if energy1 is None else energy1
         phi = 5.625 + 11.25 * np.arange(32)
         theta = 5.625 + 11.25 * np.arange(16)
 
+        step_table = np.zeros(n_t, dtype=np.uint8)
+        if energy1 is not energy0:
+            step_table = np.arange(n_t, dtype=np.uint8) % 2
+
+        energy = np.where(step_table[:, None] == 1, energy1, energy0)
+
         # Particle velocity is minus the FPI look direction
-        speed = np.sqrt(2 * q_e * energy / m_p)[:, None, None]
+        speed = np.sqrt(2 * q_e * energy / m_p)[..., None, None]
         ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
         v_x = -speed * np.sin(th) * np.cos(ph)
         v_y = -speed * np.sin(th) * np.sin(ph)
@@ -792,20 +800,18 @@ class PsdMomentsTestCase(unittest.TestCase):
         time = generate_timeline(1 / 0.15, n_t)
         vdf = pyrf.ts_skymap(
             time,
-            np.tile(vdf, (n_t, 1, 1, 1)),
-            np.tile(energy, (n_t, 1)),
+            vdf,
+            energy,
             np.tile(phi, (n_t, 1)),
             theta,
-            energy0=energy,
-            energy1=energy,
-            esteptable=np.zeros(n_t, dtype=np.uint8),
+            energy0=energy0,
+            energy1=energy1,
+            esteptable=step_table,
             attrs={"FIELDNAM": "MMS1 FPI/DIS brstSkyMap dist"},
             glob_attrs={
                 "species": "ions",
-                "delta_energy_plus": np.tile(energy * (np.sqrt(ratio) - 1), (n_t, 1)),
-                "delta_energy_minus": np.tile(
-                    energy * (1 - 1 / np.sqrt(ratio)), (n_t, 1)
-                ),
+                "delta_energy_plus": energy * (np.sqrt(ratio) - 1),
+                "delta_energy_minus": energy * (1 - 1 / np.sqrt(ratio)),
             },
         )
         return vdf, pyrf.ts_scalar(time, np.zeros(n_t))
@@ -828,6 +834,39 @@ class PsdMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
         )
+
+    def test_psd_moments_tables_differ_in_some_channels(self):
+        # Tables that differ in all but one channel must use the alternating-table
+        # speed widths (which don't use delta_energy_*). `all(e_tmp) == 0` flagged
+        # them as a single table, so zero delta_energy widths gave n = 0.
+        ratio = (3e4 / 10.0) ** (1 / 31)
+        energy1 = 10.0 * ratio ** (np.arange(32) + 0.5)
+        energy1[0] = 10.0
+        vdf, sc_pot = self._drifting_maxwellian(
+            1.0, 1000.0, [200.0, 150.0, -250.0], n_t=4, energy1=energy1
+        )
+        vdf.attrs["delta_energy_plus"] = np.zeros_like(vdf.attrs["delta_energy_plus"])
+        vdf.attrs["delta_energy_minus"] = np.zeros_like(vdf.attrs["delta_energy_minus"])
+        n, _, _, _, _, _ = mms.psd_moments(vdf, sc_pot)
+        np.testing.assert_allclose(n.data, 1.0, rtol=0.01)
+
+    def test_psd_moments_partial_moments_mask(self):
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        n_full = mms.psd_moments(vdf, sc_pot)[0].data
+
+        # Not a 0/1 mask -> ignored, full moments (it used to be applied as weights)
+        weights = 0.5 * np.ones(vdf.data.shape)
+        n_weights = mms.psd_moments(vdf, sc_pot, partial_moments=weights)[0].data
+        np.testing.assert_allclose(n_weights, n_full)
+
+        # A 0/1 mask is applied: keeping all bins gives n, keeping none gives 0
+        ones = np.ones(vdf.data.shape, dtype=int)
+        n_ones = mms.psd_moments(vdf, sc_pot, partial_moments=ones)[0].data
+        np.testing.assert_allclose(n_ones, n_full)
+        mask = ones.copy()
+        mask[:, :, :16, :] = 0
+        n_half = mms.psd_moments(vdf, sc_pot, partial_moments=mask)[0].data
+        self.assertTrue(np.all(n_half < 0.9 * n_full))
 
 
 @ddt
