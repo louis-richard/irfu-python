@@ -27,6 +27,8 @@ jobs:
       run: |
         flake8 $(git ls-files '*.py')
     - name: Test with pytest
+      # The coverage job below runs the test suite for this matrix entry
+      if: ${{ !(matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest') }}
       run: |
         pip install pytest ddt pytest-cov sphinx pandoc
         pip install -r docs/requirements.txt
@@ -39,7 +41,17 @@ jobs:
         pip install pytest ddt pytest-cov sphinx pandoc
         pip install -r docs/requirements.txt
         pip install keyrings.alt
-        pytest --cov=./ --cov-report=xml
+        pytest --cov=pyrfu --cov-report=xml
+    - name: Upload coverage reports to Codecov
+      # Right after the coverage run, so it doesn't depend on the release check;
+      # fail the job if the upload fails instead of silently passing
+      if: matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        flags: unittests
+        fail_ci_if_error: true
     - name: Check that release process is not broken
       if: matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest'
       env:
@@ -50,10 +62,3 @@ jobs:
         python -m build .
         twine check dist/*
         twine upload --repository testpypi --skip-existing dist/*
-    - name: Upload coverage reports to Codecov
-      if: matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest'
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        flags: unittests

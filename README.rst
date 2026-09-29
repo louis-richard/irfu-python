@@ -35,8 +35,8 @@ pyRFU
 .. |CodeQL| image:: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml/badge.svg
 .. _CodeQL: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml
 
-.. |CodeCov| image:: https://codecov.io/gh/louis-richard/irfu-python/coverage.svg?branch=main
-.. _CodeCov: https://codecov.io/gh/louis-richard/irfu-python/branch/main
+.. |CodeCov| image:: https://codecov.io/gh/louis-richard/irfu-python/coverage.svg?branch=master
+.. _CodeCov: https://codecov.io/gh/louis-richard/irfu-python/branch/master
 
 .. |Issues| image:: https://img.shields.io/github/issues/louis-richard/irfu-python?logo=github&color=9cf
 .. _Issues: https://github.com/louis-richard/irfu-python/issues
