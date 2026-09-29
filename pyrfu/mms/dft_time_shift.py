@@ -33,10 +33,10 @@ def dft_time_shift(inp, tau):
     out : xarray.DataArray
         Time series of the shifted input.
 
-    See also
+    See Also
     --------
-    pyrfu.mms.fk_power_spectrum : Calculates the frequency-wave number
-    power spectrum.
+    pyrfu.mms.fk_power_spectrum_4sc : Calculates the frequency-wave number
+        power spectrum.
 
     """
 

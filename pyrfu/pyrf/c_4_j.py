@@ -24,9 +24,11 @@ __status__ = "Prototype"
 def c_4_j(
     r_list: Sequence[DataArray], b_list: Sequence[DataArray]
 ) -> tuple[DataArray, DataArray, DataArray, DataArray, DataArray, DataArray]:
-    r"""Calculate current density :math:`J` from using 4
-    spacecraft technique [1]_, the divergence of the magnetic field
-    :math:`\nabla . B`, magnetic field at the center of
+    r"""Calculate the current density using the four spacecraft technique.
+
+    Computes the current density :math:`J` using the four spacecraft
+    technique [1]_, the divergence of the magnetic field
+    :math:`\nabla \cdot B`, magnetic field at the center of
     mass of the tetrahedron, :math:`J \times B`
     force, part of the divergence of stress associated with
     curvature :math:`\nabla.T_{shear}` and gradient of
