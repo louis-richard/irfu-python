@@ -407,6 +407,37 @@ class Dsl2GsmTestCase(unittest.TestCase):
 
 
 @ddt
+class DslTransformationValuesTestCase(unittest.TestCase):
+    @data((mms.dsl2gse, "GSE"), (mms.dsl2gsm, "GSM"))
+    @unpack
+    def test_dsl_transformation_values(self, func, frame):
+        b_xyz = pyrf.ts_vec_xyz(
+            generate_timeline(1.0, 5), np.tile([1.0, 2.0, 3.0], (5, 1))
+        )
+
+        # Spin axis along z: DSL and the target frame coincide
+        np.testing.assert_allclose(
+            func(b_xyz, np.array([0.0, 0.0, 1.0])).data, b_xyz.data, atol=1e-12
+        )
+
+        spin_axis = np.array([0.1, -0.2, 0.97])
+        forward = func(b_xyz, spin_axis / np.linalg.norm(spin_axis))
+        backward = func(forward, spin_axis / np.linalg.norm(spin_axis), -1)
+        np.testing.assert_allclose(backward.data, b_xyz.data)
+
+        # The GSE/GSM -> DSL output used to be labelled GSE/GSM
+        self.assertEqual(forward.attrs["COORDINATE_SYSTEM"], frame)
+        self.assertEqual(backward.attrs["COORDINATE_SYSTEM"], "DSL")
+
+        # A spin axis that isn't a unit vector gives the same rotation (it used
+        # to scale and distort the field)
+        np.testing.assert_allclose(func(b_xyz, 3.0 * spin_axis).data, forward.data)
+        np.testing.assert_allclose(
+            np.linalg.norm(forward.data, axis=1), np.linalg.norm(b_xyz.data, axis=1)
+        )
+
+
+@ddt
 class EisCombineProtonPadTestCase(unittest.TestCase):
     @idata(
         itertools.product(
