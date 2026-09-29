@@ -73,6 +73,7 @@ def wavelet(
     return_power: Optional[bool] = True,
 ) -> Union[DataArray, Dataset]:
     """Computes wavelet spectrogram based on fast FFT algorithm.
+
     Parameters
     ----------
     inp : DataArray

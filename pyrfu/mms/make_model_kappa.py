@@ -54,9 +54,9 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
     --------
     pyrfu.mms.make_model_vdf
 
-    Todo
-    ----
-    Generalize to bi-Kappa distributions.
+    Notes
+    -----
+    Not yet generalized to bi-Kappa distributions.
 
     """
 

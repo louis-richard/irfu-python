@@ -56,14 +56,16 @@ def estimate(what_to_estimate: str, radius: float, length: float = None):
     ----------
     what_to_estimate : str
         Value to estimate:
-            * "capacitance_disk" estimates the capacitance of a disk
-            (requires radius of the disk).
-            * "capacitance_sphere" estimates of a sphere
-            (requires radius of the sphere).
-            * "capacitance_wire" estimates the capacitance of a wire
-            (requires radius and length of the wire).
-            * "capacitance_cylinder" estimates the capacitance of a cylinder
-            (requires radius and half length of the cylinder).
+
+        * "capacitance_disk" estimates the capacitance of a disk
+          (requires radius of the disk).
+        * "capacitance_sphere" estimates of a sphere
+          (requires radius of the sphere).
+        * "capacitance_wire" estimates the capacitance of a wire
+          (requires radius and length of the wire).
+        * "capacitance_cylinder" estimates the capacitance of a cylinder
+          (requires radius and half length of the cylinder).
+
     radius :  float
         Radius of the disk, sphere, wire or cylinder
     length : float, Optional

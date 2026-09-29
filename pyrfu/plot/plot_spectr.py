@@ -35,9 +35,11 @@ def plot_spectr(
     inp : xarray.DataArray or xarray.Dataset
         Input 2D data to plot. If a Dataset, it must contain a "data"
         data variable (dims: [time, idx]) and either:
-          - a coordinate (e.g. "energy") that depends on time, with the
-            same shape as "data" (dims: [time, idx]), or
-          - a second data variable holding the y-axis values.
+
+        - a coordinate (e.g. "energy") that depends on time, with the
+          same shape as "data" (dims: [time, idx]), or
+        - a second data variable holding the y-axis values.
+
     yscale : {"linear", "log"}, Optional
         Y-axis scaling. Default is "" (linear).
     cscale : {"linear", "log"}, Optional

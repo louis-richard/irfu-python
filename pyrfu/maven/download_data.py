@@ -111,9 +111,11 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
     ----------
     var : dict
         Hashtable containing:
-            - inst: instrument acronym (acc, euv, iuv, kp, lpw, mag, ngi, pfp, sep, sta,
-             swe, swi)
-            - level: data levels (l1a, l1b, l2, l3, insitu (KP only), iuv (KP only))
+
+        - inst: instrument acronym (acc, euv, iuv, kp, lpw, mag, ngi, pfp, sep,
+          sta, swe, swi)
+        - level: data levels (l1a, l1b, l2, l3, insitu (KP only), iuv (KP only))
+
     tint : list of str
         Time interval.
     login : str, Optional

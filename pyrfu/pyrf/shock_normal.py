@@ -36,17 +36,18 @@ def shock_normal(spec, leq90: bool = True):
     ----------
     spec : dict
         Hash table with:
-            * b_u : Upstream magnetic field (nT).
-            * b_d : Downstream magnetic field.
-            * v_u : Upstream plasma bulk velocity (km/s).
-            * v_d : Downstream plasma bulk velocity.
-            * n_u : Upstream number density (cm^-3).
-            * n_d : Downstream number density.
-            * r_xyz : Spacecraft position in time series format of 1x3 vector. Optional.
-            * d2u : Down-to-up, is 1 or -1. Optional.
-            * dt_f : Time duration of shock foot (s). Optional.
-            * f_cp : Reflected ion gyrofrequency (Hz). Optional.
-            * n : Number of Monte Carlo particles. Optional, default is 100.
+
+        * b_u : Upstream magnetic field (nT).
+        * b_d : Downstream magnetic field.
+        * v_u : Upstream plasma bulk velocity (km/s).
+        * v_d : Downstream plasma bulk velocity.
+        * n_u : Upstream number density (cm^-3).
+        * n_d : Downstream number density.
+        * r_xyz : Spacecraft position in time series format of 1x3 vector. Optional.
+        * d2u : Down-to-up, is 1 or -1. Optional.
+        * dt_f : Time duration of shock foot (s). Optional.
+        * f_cp : Reflected ion gyrofrequency (Hz). Optional.
+        * n : Number of Monte Carlo particles. Optional, default is 100.
 
     leq90 : bool, Optional
         Force angles to be less than 90 (default). For leq90 = 0, angles can be between
@@ -57,35 +58,41 @@ def shock_normal(spec, leq90: bool = True):
     -------
     out : dict
         Hash table with:
-            * n : Hash table containing normal vectors (n always points toward the
-            upstream region).
-            From data:
-                * mc : Magnetic coplanarity (10.14)
-                * vc : Velocity coplanarity (10.18)
-                * mx_1 : Mixed method 1 (10.15), [2]_
-                * mx_2 : Mixed method 2 (10.16), [2]_
-                * mx_3 : Mixed method 3 (10.17), [2]_
-            From models (only if r_xyz is included in spec):
-                * farris : [3]_
-                * slho : [4]_
-                * per : [5]_, (z = 0)
-                * fa4o : [6]_
-                * fan4o : [6]_
-                * foun : [7]_
 
-            * theta_bn : Angle between normal vector and b_u, same fields as n.
-            * theta_vn : Angle between normal vector and v_u, same fields as n.
-            * v_sh : Hash table containing shock velocities:
-                * gt : Using shock foot thickness (10.32). [8]_
-                * mf : Mass flux conservation (10.29).
-                * sb : Using jump conditions (10.33). [9]_
-                * mo : Using shock foot thickness
-            * info : Hash table containing some more info:
-                * msh : Magnetic shear angle.
-                * vsh : Velocity shear angle.
-                * cmat : Constraints matrix with normalized errors.
-                * sig : Scaling factor to fit shock models to sc position. Calculated
-                from (10.9-10.13) in [1]_
+        * n : Hash table containing normal vectors (n always points toward the
+          upstream region). From data:
+
+          * mc : Magnetic coplanarity (10.14)
+          * vc : Velocity coplanarity (10.18)
+          * mx_1 : Mixed method 1 (10.15), [2]_
+          * mx_2 : Mixed method 2 (10.16), [2]_
+          * mx_3 : Mixed method 3 (10.17), [2]_
+
+          From models (only if r_xyz is included in spec):
+
+          * farris : [3]_
+          * slho : [4]_
+          * per : [5]_, (z = 0)
+          * fa4o : [6]_
+          * fan4o : [6]_
+          * foun : [7]_
+
+        * theta_bn : Angle between normal vector and b_u, same fields as n.
+        * theta_vn : Angle between normal vector and v_u, same fields as n.
+        * v_sh : Hash table containing shock velocities:
+
+          * gt : Using shock foot thickness (10.32). [8]_
+          * mf : Mass flux conservation (10.29).
+          * sb : Using jump conditions (10.33). [9]_
+          * mo : Using shock foot thickness
+
+        * info : Hash table containing some more info:
+
+          * msh : Magnetic shear angle.
+          * vsh : Velocity shear angle.
+          * cmat : Constraints matrix with normalized errors.
+          * sig : Scaling factor to fit shock models to sc position. Calculated
+            from (10.9-10.13) in [1]_
 
 
     References

@@ -46,7 +46,7 @@ def wavepolarize_means(
     r"""Analysis the polarization of magnetic wave using "means" method
 
     Parameters
-    -----------
+    ----------
     b_wave : xarray.DataArray
         Time series of the magnetic field from Search Coil Magnetometer (SCM).
     b_bgd : xarray.DataArray
@@ -72,7 +72,7 @@ def wavepolarize_means(
         Spectrogram of the helicity (form -1 to 1)
 
     Notes
-    ------
+    -----
     ``b_wave`` and ``b_bgd`` should be from the same satellite and in the same
     coordinates
 
