@@ -2231,6 +2231,41 @@ class ShockParametersTestCase(unittest.TestCase):
     def test_shock_parameters_output(self, value):
         pyrf.shock_parameters(value)
 
+    def test_shock_parameters_values(self):
+        # Default (spacecraft) frame used to raise KeyError: 'v_sh', and r_cp was
+        # 1000x too small (v in km/s used as m/s)
+        spec = {
+            "b_u": np.array([0.0, 0.0, 5.0]),
+            "b_d": np.array([0.0, 0.0, 15.0]),
+            "n_u": 5.0,
+            "n_d": 15.0,
+            "v_u": np.array([-400.0, 0.0, 0.0]),
+            "v_d": np.array([-133.0, 0.0, 0.0]),
+        }
+        spec_ref = dict(spec)
+        result = pyrf.shock_parameters(spec)
+
+        # r = m_p v / (e B) = 835 km for 400 km/s in 5 nT (in m)
+        self.assertAlmostEqual(result["r_cp_u"], 835.2e3, delta=1e3)
+        # V_A = 48.8 km/s for 5 nT and 5 cm^-3
+        self.assertAlmostEqual(result["m_a_u"], 400e3 / result["v_a_u"], places=6)
+        self.assertAlmostEqual(result["v_a_u"], 48.77e3, delta=0.1e3)
+
+        # The caller's dict is unchanged
+        self.assertListEqual(sorted(spec), sorted(spec_ref))
+
+    def test_shock_parameters_single_region(self):
+        # A single region used to be discarded (KeyError: 'b')
+        spec = {
+            "b_u": np.array([0.0, 0.0, 5.0]),
+            "n_u": 5.0,
+            "v_u": np.array([-400.0, 0.0, 0.0]),
+        }
+        result = pyrf.shock_parameters(spec)
+        self.assertListEqual(
+            sorted(result), ["f_cp_u", "l_i_u", "m_a_u", "r_cp_u", "v_a_u"]
+        )
+
 
 @ddt
 class SolidAngleTestCase(unittest.TestCase):
