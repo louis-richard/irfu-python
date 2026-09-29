@@ -270,6 +270,75 @@ class CalcEpsilonTestCase(unittest.TestCase):
             **kwargs,
         )
 
+    @staticmethod
+    def _maxwellian(widths="attrs", alternating=False):
+        # FPI-like skymap of a drifting proton Maxwellian (n = 1 cm^-3)
+        energy1 = None
+        if alternating:
+            energy1 = 10.0 * 3000.0 ** ((np.arange(32) + 0.5) / 31)
+
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(
+            1.0, 1000.0, [200.0, 0.0, 0.0], n_t=4, energy1=energy1
+        )
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        if widths == "missing":
+            del vdf.attrs["delta_energy_minus"], vdf.attrs["delta_energy_plus"]
+        elif widths == "None":
+            # get_dist sets missing widths to None
+            vdf.attrs["delta_energy_minus"] = vdf.attrs["delta_energy_plus"] = None
+
+        n_s = pyrf.ts_scalar(vdf.time.data, np.ones(4))
+        return vdf, n_s
+
+    @data(
+        ("attrs", False),
+        ("missing", False),
+        ("None", False),
+        ("missing", True),
+    )
+    @unpack
+    def test_calc_epsilon_values(self, widths, alternating):
+        # epsilon = int |f - f_model| d3v / (2 n): 0 for identical distributions
+        # and 1/2 for a zero model. A single energy table without energy widths
+        # (IndexError) and widths set to None (TypeError) used to crash.
+        vdf, n_s = self._maxwellian(widths, alternating)
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
+
+        eps = mms.calculate_epsilon(vdf, vdf.copy(deep=True), n_s, sc_pot)
+        np.testing.assert_allclose(eps.data, 0.0, atol=1e-12)
+
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
+
+    def test_calc_epsilon_straddling_sc_pot(self):
+        # Channels whose lower edge is below the spacecraft potential used to be
+        # dropped (sqrt of a negative energy is NaN); compare with a direct sum
+        vdf, n_s = self._maxwellian()
+        v_sc = -25.0  # ions: the corrected energy is E + V = E - 25 eV
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+        eps = mms.calculate_epsilon(
+            vdf, model, n_s, pyrf.ts_scalar(vdf.time.data, np.full(4, v_sc))
+        )
+
+        energy = vdf.energy.data[0]
+        e_minus = vdf.attrs["delta_energy_minus"][0]
+        e_plus = vdf.attrs["delta_energy_plus"][0]
+        self.assertTrue(np.any((energy - e_minus < 25.0) & (energy + e_plus > 25.0)))
+
+        def speed(e_kin):
+            e_corr = np.clip(e_kin - 25.0, 0.0, None)
+            return np.sqrt(2 * constants.elementary_charge * e_corr / constants.m_p)
+
+        w_v = speed(energy) ** 2 * (speed(energy + e_plus) - speed(energy - e_minus))
+        w_ang = np.sin(np.deg2rad(vdf.theta.data)) * np.deg2rad(11.25) ** 2
+        f_si = vdf.data.data[0] * 1e12
+        expected = np.sum(f_si * w_v[:, None, None] * w_ang[None, None, :]) / 2e6
+        np.testing.assert_allclose(eps.data, expected, rtol=1e-10)
+
 
 class DbInitTestCase(unittest.TestCase):
     def test_db_init_input(self):

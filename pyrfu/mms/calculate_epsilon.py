@@ -73,16 +73,17 @@ def calculate_epsilon(
     Parameters
     ----------
     vdf : Dataset
-        Observed particle distribution (skymap). Must be in s^3 cm^-6.
+        Observed particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6.
     model_vdf : Dataset
-        Model particle distribution (skymap). Must be in s^3 km^-6.
+        Model particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6.
     n_s : DataArray
-        Time series of the number density.
+        Time series of the number density in cm^-3 (same times as vdf).
     sc_pot : DataArray
-        Time series of the spacecraft potential.
+        Time series of the spacecraft potential in V.
     en_channels : list, Optional
-        Set energy channels to integrate over [min max]; min and max between
-        must be between 1 and 32.
+        Energy channels to integrate over, as 0-based indices [start, stop)
+        (stop excluded), e.g., [3, 32] for all but the three lowest of 32
+        channels. Default is all channels.
 
     Returns
     -------
@@ -100,7 +101,7 @@ def calculate_epsilon(
     Examples
     --------
     >>> from pyrfu import mms
-    >>> options = {"en_channel": [4, 32]}
+    >>> options = {"en_channels": [3, 32]}
     >>> eps = mms.calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **options)
 
     """
@@ -111,17 +112,19 @@ def calculate_epsilon(
     vdf_data = _get_si_vdf(vdf)
     model_vdf_data = _get_si_vdf(model_vdf)
 
-    energy = vdf.energy.data.copy()
-    phi = vdf.phi.data.copy()
-    theta = vdf.theta.data.copy()
+    energy = vdf.energy.data.astype(np.float64)
+    phi = vdf.phi.data
+    theta = vdf.theta.data
 
-    vdf_diff = np.abs(vdf_data - model_vdf_data)
+    # NaNs (e.g., fill values) don't contribute to the integral
+    vdf_diff = np.nan_to_num(np.abs(vdf_data - model_vdf_data), nan=0.0)
 
     if vdf.attrs["species"][0].lower() == "e":
         m_s = constants.electron_mass
+        v_sc = sc_pot.data.astype(np.float64)
     elif vdf.attrs["species"][0].lower() == "i":
-        sc_pot.data *= -1
         m_s = constants.proton_mass
+        v_sc = -sc_pot.data.astype(np.float64)
     else:
         raise ValueError("Invalid specie")
 
@@ -140,112 +143,49 @@ def calculate_epsilon(
 
     flag_same_e = np.sum(np.abs(vdf.attrs["energy0"] - vdf.attrs["energy1"])) < 1e-4
 
-    # Calculate angle differences
-    delta_phi = np.deg2rad(np.median(np.diff(phi[0, :])))
-    delta_theta = np.deg2rad(np.median(np.diff(theta)))
+    # Energy widths may be missing, or set to None (e.g., by get_dist)
+    energy_minus = vdf.attrs.get("delta_energy_minus")
+    energy_plus = vdf.attrs.get("delta_energy_plus")
+    flag_delta_e = energy_minus is not None and energy_plus is not None
 
-    delta_ang = delta_phi * delta_theta
-
-    phi_tr = phi.copy()
-    theta_tr = np.tile(theta, (len(vdf.time.data), 1))
-
-    if "delta_energy_minus" in vdf.attrs and "delta_energy_plus" in vdf.attrs:
-        flag_delta_e = True
-        energy_minus = vdf.attrs["delta_energy_minus"]
-        energy_plus = vdf.attrs["delta_energy_plus"]
-    else:
-        energy_minus = np.zeros_like(np.unique(energy, axis=0))
-        energy_plus = np.zeros_like(np.unique(energy, axis=0))
-        flag_delta_e = False
-
-    # Calculate speed widths associated with each energy channel.
-    energy_scpot = np.transpose(np.tile(sc_pot.data, (energy.shape[1], 1)))
-    energy_corr = energy - np.transpose(
-        np.tile(sc_pot.data, (energy.shape[1], 1)),
-    )
-    velocity = np.real(np.sqrt(2 * q_e * energy_corr / m_s))
-
+    # Upper and lower energy edges of the channels
     if flag_delta_e:
         energy_upper = energy + energy_plus
         energy_lower = energy - energy_minus
-        v_upper = np.sqrt(2 * q_e * (energy_upper - energy_scpot) / m_s)
-        v_lower = np.sqrt(2 * q_e * (energy_lower - energy_scpot) / m_s)
-    elif flag_same_e and not flag_delta_e:
+    elif flag_same_e:
         # extrapolate one bin before the first and after the last energy column
         temp0 = 2 * energy[:, 0] - energy[:, 1]
         tempend = 2 * energy[:, -1] - energy[:, -2]
-
-        # [temp0 energy tempend] horzcat -> column_stack
-        energyall = np.column_stack([temp0, energy, tempend])
-
-        # diff(energyall, 1, 2) -> np.diff along columns (axis=1)
-        diffenall = np.diff(energyall, n=1, axis=1)
-
-        # diffenall(:,2:end) -> [:, 1:] ; diffenall(:,1:end-1) -> [:, :-1]
-        energyupper = 10 ** (np.log10(energy + diffenall[:, 1:] / 2))
-        energylower = 10 ** (np.log10(energy - diffenall[:, :-1] / 2))
-
-        # SCpot.data*ones(size(energy(1,:))) is just broadcasting SCpot per row
-        # across all energy columns — numpy does this for free with [:, None]
-        v_upper = np.sqrt(2 * q_e * (energyupper - sc_pot[:, None]) / m_s)
-        v_lower = np.sqrt(2 * q_e * (energylower - sc_pot[:, None]) / m_s)
-    elif not flag_same_e and not flag_delta_e:
-        energy0 = np.ravel(vdf.attrs["energy0"])
-        energy1 = np.ravel(vdf.attrs["energy1"])
-        esteptable = np.ravel(vdf.attrs["esteptable"])
-
-        energyupper0, energylower0 = _energy_bin_edges(energy0)
-        energyupper1, energylower1 = _energy_bin_edges(energy1)
-
-        # esteptable flags which table (0 or 1) applies at each time step;
-        # broadcast it across energy channels to select per row.
-        esteptablemat = esteptable[:, None].astype(float) * np.ones_like(energy0)
-
-        energyupper = (
-            esteptablemat * energyupper1 + np.abs(esteptablemat - 1) * energyupper0
-        )
-        energylower = (
-            esteptablemat * energylower1 + np.abs(esteptablemat - 1) * energylower0
-        )
-
-        v_upper = np.sqrt(2 * q_e * (energyupper - energy_scpot) / m_s)
-        v_lower = np.sqrt(2 * q_e * (energylower - energy_scpot) / m_s)
+        diff_en_all = np.diff(np.column_stack([temp0, energy, tempend]), axis=1)
+        energy_upper = 10 ** (np.log10(energy + diff_en_all[:, 1:] / 2))
+        energy_lower = 10 ** (np.log10(energy - diff_en_all[:, :-1] / 2))
     else:
-        raise NotImplementedError(
-            "Unsupported combination: energy0 != energy1 with no "
-            "delta_energy_minus/delta_energy_plus available."
-        )
+        energy_upper0, energy_lower0 = _energy_bin_edges(np.ravel(vdf.attrs["energy0"]))
+        energy_upper1, energy_lower1 = _energy_bin_edges(np.ravel(vdf.attrs["energy1"]))
 
-    v_upper[v_upper < 0] = 0
-    v_lower[v_lower < 0] = 0
-    v_upper = np.real(v_upper)
-    v_lower = np.real(v_lower)
+        # esteptable flags which table (0 or 1) applies at each time step
+        step_table = np.ravel(vdf.attrs["esteptable"])[:, None] == 1
+        energy_upper = np.where(step_table, energy_upper1, energy_upper0)
+        energy_lower = np.where(step_table, energy_lower1, energy_lower0)
 
-    delta_v = v_upper - v_lower
-    v_mat = np.tile(velocity, (phi_tr.shape[1], theta_tr.shape[1], 1, 1))
-    v_mat = np.transpose(v_mat, [2, 3, 0, 1])
+    def _speed(energy_):
+        # Speed after correction for the spacecraft potential; zero below it
+        # (as MATLAB's real(sqrt(...)); numpy's sqrt would give NaN and drop the
+        # whole channel from the integral)
+        energy_corr = np.clip(energy_ - v_sc[:, None], 0.0, None)
+        return np.sqrt(2 * q_e * energy_corr / m_s)
 
-    delta_v_mat = np.tile(delta_v, (phi_tr.shape[1], theta_tr.shape[1], 1, 1))
-    delta_v_mat = np.transpose(delta_v_mat, [2, 3, 0, 1])
+    velocity = _speed(energy)
+    delta_v = _speed(energy_upper) - _speed(energy_lower)
 
-    v_mat = v_mat[:, int_energies, ...]
-    delta_v_mat = delta_v_mat[:, int_energies, ...]
+    # Weights of the integral over velocity space: v^2 dv (time, energy) and
+    # sin(theta) dphi dtheta (theta), broadcast instead of tiled
+    delta_ang = np.deg2rad(np.median(np.diff(phi[0, :])))
+    delta_ang *= np.deg2rad(np.median(np.diff(theta)))
+    w_v = (velocity**2 * delta_v)[:, int_energies]
+    w_ang = np.sin(np.deg2rad(theta)) * delta_ang
 
-    theta_mat = np.tile(theta_tr, (len(int_energies), phi_tr.shape[1], 1, 1))
-    theta_mat = np.transpose(theta_mat, [2, 0, 1, 3])
-
-    m_mat = np.sin(np.deg2rad(theta_mat)) * delta_ang
-
-    epsilon = np.nansum(
-        np.nansum(
-            np.nansum(
-                m_mat * vdf_diff[:, int_energies, ...] * v_mat**2 * delta_v_mat,
-                axis=-1,
-            ),
-            axis=-1,
-        ),
-        axis=-1,
-    )
+    epsilon = np.einsum("tepk,te,k->t", vdf_diff[:, int_energies, ...], w_v, w_ang)
 
     epsilon /= 1e6 * (n_s.data * 2)
 
