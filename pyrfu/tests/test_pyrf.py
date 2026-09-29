@@ -172,6 +172,39 @@ class NanAvg4SCTestCase(unittest.TestCase):
             pyrf.nanavg_4sc(tuple(generate_ts(64.0, 100) for _ in range(4)))
 
 
+class C4VTestCase(unittest.TestCase):
+    @staticmethod
+    def _plane_crossing():
+        # Plane discontinuity with normal (1, 2, 2) / 3 moving at 50 km/s past a
+        # tetrahedron that is not aligned with the axes (positions in km)
+        time = generate_timeline(1.0, 20)
+        r_0 = np.array([60000.0, 20000.0, 5000.0])
+        offsets = np.array(
+            [[0, 0, 0], [30, 5, 10], [-10, 40, 15], [5, -12, 35]], dtype=float
+        )
+        r_xyz = [pyrf.ts_vec_xyz(time, np.tile(r_0 + o, (20, 1))) for o in offsets]
+        velocity = 50.0 * np.array([1.0, 2.0, 2.0]) / 3.0
+        delta_t = offsets @ velocity / np.linalg.norm(velocity) ** 2
+        t_cross = time[5] + (delta_t * 1e9).astype("timedelta64[ns]")
+        return r_xyz, t_cross, velocity, delta_t
+
+    def test_c_4_v_velocity_from_times(self):
+        # Used to raise for every input, and the separation matrix was transposed
+        r_xyz, t_cross, velocity, _ = self._plane_crossing()
+        np.testing.assert_allclose(pyrf.c_4_v(r_xyz, t_cross), velocity, rtol=1e-6)
+
+        t_sec = t_cross.astype(np.int64) * 1e-9
+        np.testing.assert_allclose(pyrf.c_4_v(r_xyz, list(t_sec)), velocity, rtol=1e-6)
+
+        # The caller's list of positions is unchanged
+        self.assertTrue(all(isinstance(r, xr.DataArray) for r in r_xyz))
+
+    def test_c_4_v_times_from_velocity(self):
+        r_xyz, t_cross, velocity, delta_t = self._plane_crossing()
+        result = pyrf.c_4_v(r_xyz, [t_cross[0], *velocity])
+        np.testing.assert_allclose(result, delta_t, atol=1e-9)
+
+
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
         with self.assertRaises(TypeError):

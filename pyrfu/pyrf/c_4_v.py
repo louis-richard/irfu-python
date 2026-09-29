@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-from scipy import interpolate
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -13,29 +12,30 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _to_seconds(time):
+    r"""Convert datetime64 (or float epoch in seconds) to float seconds."""
+    time = np.asarray(time)
+
+    if np.issubdtype(time.dtype, np.datetime64):
+        return time.astype("datetime64[ns]").astype(np.int64) * 1e-9
+
+    return time.astype(np.float64)
+
+
 def _get_vol_ten(r_xyz, time):
-    if len(time) == 1:
-        time = np.array([time, time, time, time])
+    r"""Separations of MMS2-4 from MMS1 (rows), at time ``time`` (s)."""
+    r_ref = []
 
-    tckr_x, tckr_y, tckr_z = [[], [], []]
-
-    for i in range(4):
-        tckr_x.append(
-            interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 0]),
-        )
-        tckr_y.append(
-            interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 1]),
-        )
-        tckr_z.append(
-            interpolate.interp1d(r_xyz[i].time.data, r_xyz[i].data[:, 2]),
+    for r_sc in r_xyz:
+        r_time = _to_seconds(r_sc.time.data)
+        r_ref.append(
+            [np.interp(time, r_time, r_sc.data[:, j]) for j in range(3)],
         )
 
-        r_xyz[i] = np.array(
-            [tckr_x[i](time[0]), tckr_y[i](time[0]), tckr_z[i](time[0])],
-        )
+    r_ref = np.array(r_ref)
 
-    # Volumetric tensor with SC1 as center.
-    dr_mat = (np.vstack(r_xyz[1:]) - np.tile(r_xyz[0], (3, 1))).T
+    # Volumetric tensor with SC1 as center: dR = [R2 - R1; R3 - R1; R4 - R1]
+    dr_mat = r_ref[1:] - r_ref[0]
 
     return dr_mat
 
@@ -46,14 +46,18 @@ def c_4_v(r_xyz, time):
     Parameters
     ----------
     r_xyz : list
-        Time series of the positions of the 4 spacecraft.
+        Time series of the positions of the 4 spacecraft in km.
     time : list
-        Crossing times or time and velocity.
+        Either the crossing times of the 4 spacecraft (datetime64 or epoch in
+        seconds), or the reference time followed by the velocity of the
+        discontinuity in km/s, [t, v_x, v_y, v_z].
 
     Returns
     -------
-    out : ndarray
-        Discontinuity velocity or time shift with respect to mms1.
+    out : numpy.ndarray
+        Velocity of the discontinuity in km/s (from crossing times), or time
+        shifts in s of the 4 spacecraft with respect to MMS1 (from a velocity).
+        The positions are taken at the first (reference) time.
 
     References
     ----------
@@ -64,36 +68,39 @@ def c_4_v(r_xyz, time):
 
     """
 
-    if isinstance(time, np.ndarray) and time.dtype == np.datetime64:
-        flag = "v_from_t"
+    time = list(time)
 
-        time = time.astype("datetime64[ns]").view("i8") * 1e-9
-    elif time[1] > 299792.458:
+    if np.issubdtype(np.asarray(time[0]).dtype, np.datetime64) and np.issubdtype(
+        np.asarray(time[1]).dtype, np.datetime64
+    ):
+        flag = "v_from_t"
+    elif not np.issubdtype(np.asarray(time[1]).dtype, np.datetime64) and (
+        float(time[1]) > 299792.458
+    ):
+        # Epoch in seconds (larger than the speed of light in km/s)
         flag = "v_from_t"
     else:
         flag = "dt_from_v"
 
-    if flag.lower() == "v_from_t":
+    if flag == "v_from_t":
         # Time input, velocity output
-        dr_mat = _get_vol_ten(r_xyz, time)
-        tau = np.array(time[1:]) - time[0]
+        time = _to_seconds(time)
+        dr_mat = _get_vol_ten(r_xyz, time[0])
+        tau = time[1:] - time[0]
         slowness = np.linalg.solve(dr_mat, tau)
 
         # "1/v vector"
         out = slowness / np.linalg.norm(slowness) ** 2
 
-    elif flag.lower() == "dt_from_v":
+    else:
         # Time and velocity input, time output
-        time_center = time[0]  # center time
-        velocity = np.array(time[1:])  # Input velocity
+        time_center = float(_to_seconds(time[0]))  # center time
+        velocity = np.array(time[1:], dtype=np.float64)  # Input velocity
         slowness = velocity / np.linalg.norm(velocity) ** 2
 
         dr_mat = _get_vol_ten(r_xyz, time_center)
 
         delta_t = np.matmul(dr_mat, slowness)
         out = np.hstack([0, delta_t])
-
-    else:
-        raise ValueError("Invalid flag")
 
     return out
