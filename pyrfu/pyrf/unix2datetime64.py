@@ -45,8 +45,9 @@ def unix2datetime64(time: Union[list[float], NDArray[Any]]) -> NDArray[np.dateti
     else:
         raise TypeError("time must be list or numpy.ndarray")
 
-    # Make sure that time is in ns format
-    time_unix = (time_array * 1e9).astype(np.int64)
+    # Make sure that time is in ns format (round rather than truncate, e.g.,
+    # 6.5e-5 * 1e9 = 64999.99999999999)
+    time_unix = np.round(time_array * 1e9).astype(np.int64)
 
     # Convert to unix
     time_datetime64 = time_unix.astype("datetime64[ns]")

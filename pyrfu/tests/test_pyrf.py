@@ -812,6 +812,24 @@ class Datetime642UnixTestCase(unittest.TestCase):
         self.assertIsInstance(pyrf.datetime642unix(value), np.ndarray)
 
 
+class Unix2Datetime64TestCase(unittest.TestCase):
+    def test_unix2datetime64_input(self):
+        with self.assertRaises(TypeError):
+            pyrf.unix2datetime64(1.0)
+
+    def test_unix2datetime64_values(self):
+        # Rounded to the nearest ns: 65 us * 1e9 = 64999.99999999999 used to be
+        # truncated to 64999 ns
+        result = pyrf.unix2datetime64([6.5e-5, 1.29e-4, 1.5])
+        expected = np.array([65000, 129000, 1500000000], dtype="datetime64[ns]")
+        np.testing.assert_array_equal(result, expected)
+
+        # Round trip at the float64 resolution of Unix seconds (256 ns in 2026)
+        time = np.datetime64("2026-09-29T12:34:56.123456", "ns") + np.arange(10)
+        round_trip = pyrf.unix2datetime64(pyrf.datetime642unix(time))
+        np.testing.assert_array_less(np.abs((round_trip - time).astype(np.int64)), 129)
+
+
 @ddt
 class DecParPerpTestCase(unittest.TestCase):
     @data(
