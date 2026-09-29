@@ -212,7 +212,17 @@ def shock_normal(spec, leq90: bool = True):
             for k in info:
                 info[k][m] = shock_models_params[m][k]
 
-            normal[m], sig[m] = _shock_model(spec, *shock_models_params[m].values())
+            # Pass the model parameters by name (the JSON key order differs from
+            # the argument order of _shock_model)
+            params = shock_models_params[m]
+            normal[m], sig[m] = _shock_model(
+                spec,
+                params["eps"],
+                params["l"],
+                params["x_0"],
+                params["y_0"],
+                params["alpha"],
+            )
 
         info["sig"] = sig
     else:
@@ -268,7 +278,7 @@ def _shock_angle(spec, n, field, leq90):
         tmp = np.rad2deg(np.arccos(np.sum(a * n[fname]) / np.linalg.norm(a)))
 
         if tmp > 90.0 and leq90:
-            theta[fname] = 90.0 - tmp
+            theta[fname] = 180.0 - tmp
         else:
             theta[fname] = tmp
 
@@ -290,7 +300,7 @@ def _shock_model(spec, *args):
         r_sc = np.mean(spec["r_xyz"].data, axis=0) / 6371.0
     elif isinstance(spec["r_xyz"], (np.ndarray, list)) and len(spec["r_xyz"]) == 3:
         # Array like
-        r_sc = spec["r_xyz"] / 6371.0
+        r_sc = np.asarray(spec["r_xyz"], dtype=np.float64) / 6371.0
     else:
         raise TypeError("r_xyz must be a time series or a vector!!")
 

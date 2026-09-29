@@ -26,6 +26,7 @@ from ..pyrf.int_sph_dist import (
     _speed_bin_edges,
     _uniform_step,
 )
+from ..pyrf.shock_normal import _shock_angle
 from ..pyrf.wavelet import _power_c, _power_r, _ww
 from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
@@ -2138,6 +2139,46 @@ class ShockNormalTestCase(unittest.TestCase):
         result = pyrf.shock_normal(value)
         self.assertIsInstance(result, dict)
         self.assertIsInstance(result["v_sh"], dict)
+
+    def test_shock_normal_model_on_bow_shock(self):
+        # Spacecraft at the nose of the Farris et al. (1991) bow shock model
+        # (eps = 0.81, L = 24.8 R_E, aberration 3.8 deg): sigma = 1 and the model
+        # normal is the aberrated x axis. The model parameters used to be
+        # unpacked in the wrong order.
+        eps, l_bs, alpha = 0.81, 24.8, np.deg2rad(3.8)
+        rot = np.array(
+            [
+                [np.cos(alpha), -np.sin(alpha), 0.0],
+                [np.sin(alpha), np.cos(alpha), 0.0],
+                [0.0, 0.0, 1.0],
+            ]
+        )
+        r_xyz = rot.T @ np.array([l_bs / (1 + eps), 0.0, 0.0]) * 6371.0
+        spec = {
+            "b_u": np.array([2.0, 3.0, 1.0]),
+            "b_d": np.array([4.0, 12.0, 3.0]),
+            "v_u": np.array([-400.0, 10.0, 0.0]),
+            "v_d": np.array([-100.0, 5.0, 0.0]),
+            "n_u": 5.0,
+            "n_d": 15.0,
+            "r_xyz": list(r_xyz),
+        }
+        result = pyrf.shock_normal(spec)
+
+        self.assertAlmostEqual(result["info"]["sig"]["farris"], 1.0, delta=1e-3)
+        n_expected = rot.T @ np.array([1.0, 0.0, 0.0])
+        self.assertAlmostEqual(
+            abs(float(np.dot(result["n"]["farris"], n_expected))), 1.0, delta=1e-4
+        )
+
+    def test_shock_normal_leq90(self):
+        # 120 deg folds to 60 deg (used to give 90 - 120 = -30 deg)
+        n_vec = {"x": np.array([1.0, 0.0, 0.0])}
+        b_u = np.array([np.cos(np.deg2rad(120.0)), np.sin(np.deg2rad(120.0)), 0.0])
+        self.assertAlmostEqual(_shock_angle({"b_u": b_u}, n_vec, "b", True)["x"], 60.0)
+        self.assertAlmostEqual(
+            _shock_angle({"b_u": b_u}, n_vec, "b", False)["x"], 120.0
+        )
 
 
 @ddt
