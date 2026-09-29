@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import itertools
 import logging
+import warnings
 
 # 3rd party imports
 import numpy as np
@@ -36,7 +36,10 @@ def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, li
     changed_xyz = [False, False, False]
 
     for i, vec, comp in zip([0, 1, 2], [x_vec, y_vec, z_vec], ["x", "y", "z"]):
-        if abs(np.rad2deg(np.arccos(np.dot(vec, coord_sys[:, i])))) > 1.0:
+        # x, y and z are the rows of coord_sys
+        old_vec = coord_sys[i, :] / np.linalg.norm(coord_sys[i, :])
+        cos_angle = np.clip(np.dot(vec, old_vec), -1.0, 1.0)
+        if np.rad2deg(np.arccos(cos_angle)) > 1.0:
             logging.warning(
                 "In making xyz a right handed orthogonal coordinate system, %(comp)s "
                 "(in-plane %(i)d) was changed from %(x_old)s to %(x_new)s. Please "
@@ -44,8 +47,8 @@ def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, li
                 {
                     "comp": comp,
                     "i": i,
-                    "x_old": np.array2string(coord_sys[:, i]),
-                    "x_new": np.array2string(x_vec),
+                    "x_old": np.array2string(coord_sys[i, :]),
+                    "x_new": np.array2string(vec),
                 },
             )
             changed_xyz[i] = True
@@ -139,11 +142,13 @@ def _init(vdf: Dataset, tint: list):
                 theta,
             )
             dist = time_clip(dist.data, tint)
+            # psd_rebin returns phi in degrees; azimuthal is in radians
             azimuthal = xr.DataArray(
-                phi,
+                np.deg2rad(phi),
                 coords=[newt, np.arange(phi.shape[1])],
                 dims=["time", "idx"],
             )
+            azimuthal = time_clip(azimuthal, tint).data
             len_e = dist.shape[1]
             energy_edges = np.hstack(
                 [
@@ -158,7 +163,6 @@ def _init(vdf: Dataset, tint: list):
                 energy_edges = energy0_edges
 
         dist = dist.data
-        azimuthal = azimuthal.data
     else:
         raise ValueError("Invalid time interval")
 
@@ -233,22 +237,23 @@ def _cotrans_jit(
     geo_factor_elev,
     geo_factor_bin_size,
 ):
-    out = np.zeros((dist.shape[1], dist.shape[0]))  # azimuthal, energy
+    # dist has dimensions nE x nAz x nPol; output is azimuthal bin x energy
+    weighted = dist * (geo_factor_elev * geo_factor_bin_size)[None, ...]
+    in_elevation = np.abs(elevation_angle) <= np.deg2rad(elevation_lim)
 
-    for i_en, i_az in itertools.product(
-        range(dist.shape[0]),
-        range(dist.shape[1]),
-    ):
-        # dist.data has dimensions nT x nE x nAz x nPol
-        c_mat = dist[i_en, ...].copy()
-        c_mat = c_mat * geo_factor_elev * geo_factor_bin_size
-        c_mat[np.abs(elevation_angle) > np.deg2rad(elevation_lim)] = np.nan
-        # use 0.1 deg to fix Az angle edges bug
-        c_mat[plane_az < edges_az[i_az] - np.deg2rad(0.1)] = np.nan
-        # use 0.1 deg to fix Az angle edges bug
-        c_mat[plane_az > edges_az[i_az + 1] + np.deg2rad(0.1)] = np.nan
+    out = np.zeros((len(edges_az) - 1, dist.shape[0]))
 
-        out[i_az, i_en] = np.nanmean(c_mat)
+    for i_az in range(len(edges_az) - 1):
+        # use 0.1 deg to fix Az angle edges bug
+        in_bin = in_elevation & (plane_az >= edges_az[i_az] - np.deg2rad(0.1))
+        in_bin &= plane_az <= edges_az[i_az + 1] + np.deg2rad(0.1)
+
+        with warnings.catch_warnings():
+            # empty bins give NaN, as before
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            out[i_az, :] = np.nanmean(
+                np.where(in_bin[None, ...], weighted, np.nan), axis=(1, 2)
+            )
 
     return out
 
@@ -272,8 +277,8 @@ def vdf_projection(
         len(tint) = 1. For tint includes two or more distributions the
         energies are rebinned into 64 channels.
     coord_sys : ndarray, Optional
-        3x3 matrix with 1st column is x, 2nd column is y and 3rd column is z.
-        z is normal to the projection plane and x and y are made orthogonal to
+        3x3 matrix with x, y and z as rows, e.g., ``np.vstack([x, y, z])``.
+        z is normal to the projection plane, and x and y are made orthogonal to
         z and each other if they are not already. Default is np.eye(3)
         (project onto spacecraft spin plane).
     sc_pot : xarray.DataArray, Optional
@@ -298,7 +303,7 @@ def vdf_projection(
 
     """
     specie = vdf.attrs.get("species", "electrons")
-    is_des = specie.lower() == "electrons"
+    is_des = specie.lower().startswith("e")
 
     dist, polar, azimuthal, energy_edges, _ = _init(vdf, tint)
     x_vec, y_vec, z_vec, _ = _coord_sys(coord_sys)
@@ -340,8 +345,10 @@ def vdf_projection(
 
     q_e = constants.elementary_charge
 
-    speed_table = np.sqrt((energy_edges - sc_pot) * q_e * 2 / mass)
-    speed_table = np.real(speed_table * 1e-3)  # km/s
+    # Speeds of the energy edges after correction for the spacecraft potential
+    # (0 below it, rather than NaN which breaks pcolormesh), in km/s
+    energy_corr = np.clip(energy_edges - sc_pot, 0.0, None)
+    speed_table = np.sqrt(energy_corr * q_e * 2 / mass) * 1e-3
 
     r_en = speed_table
     v_x = np.matmul(

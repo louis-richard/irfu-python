@@ -1659,6 +1659,80 @@ class VdfProjectionTestCase(unittest.TestCase):
             np.sqrt(energy_edges[:-1] * energy_edges[1:]), energy, rtol=1e-6
         )
 
+    @staticmethod
+    def _maxwellian(v_kms, n_t=2, alternating=False):
+        # 100 eV proton Maxwellian on FPI-like bins
+        energy1 = None
+        if alternating:
+            energy1 = 10.0 * 3000.0 ** ((np.arange(32) + 0.5) / 31)
+
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(
+            1.0, 100.0, v_kms, n_t=n_t, energy1=energy1
+        )
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        return vdf
+
+    @staticmethod
+    def _peak(v_x, v_y, f_mat):
+        # Speed (km/s) and angle (deg) of the centre of the maximum bin
+        v_x_c = (v_x[:-1, :-1] + v_x[1:, :-1] + v_x[:-1, 1:] + v_x[1:, 1:]) / 4
+        v_y_c = (v_y[:-1, :-1] + v_y[1:, :-1] + v_y[:-1, 1:] + v_y[1:, 1:]) / 4
+        idx = np.unravel_index(np.nanargmax(f_mat.T), f_mat.T.shape)
+        speed = np.hypot(v_x_c[idx], v_y_c[idx])
+        return speed, np.rad2deg(np.arctan2(v_y_c[idx], v_x_c[idx]))
+
+    @data(
+        # (in-plane angle of the drift, frame with x, y, z as rows)
+        (5.625, np.eye(3)),
+        (5.625, np.vstack([[0, 1, 0], [0, 0, 1], [1, 0, 0]])),
+        (95.625, np.vstack([[0, 1, 0], [0, 0, 1], [1, 0, 0]])),
+    )
+    @unpack
+    def test_vdf_projection_peak(self, angle, coord_sys):
+        # 400 km/s drift in the (x, y) plane of coord_sys, at an azimuthal bin
+        # centre: the projection peaks there. An orthonormal frame gives no
+        # warning (the check compared rows to columns and always warned).
+        coord_sys = coord_sys.astype(float)
+        rad = np.deg2rad(angle)
+        v_d = 400.0 * (np.cos(rad) * coord_sys[0] + np.sin(rad) * coord_sys[1])
+        vdf = self._maxwellian(list(v_d))
+        tint = [pyrf.datetime642iso8601(vdf.time.data[0])]
+
+        with self.assertNoLogs(level="WARNING"):
+            result = mms.vdf_projection(vdf, tint, coord_sys)
+
+        speed, peak_angle = self._peak(*result)
+        self.assertAlmostEqual(peak_angle, angle, delta=0.1)
+        self.assertAlmostEqual(speed, 400.0, delta=30.0)
+
+    @data(False, True)
+    def test_vdf_projection_interval(self, alternating):
+        # Intervals with one energy table used to crash (.data on an array);
+        # with alternating tables (rebinned to 64 energies) phi was used in
+        # degrees as radians, so the peak was misplaced
+        rot = np.deg2rad(5.625)
+        vdf = self._maxwellian(
+            [400.0 * np.cos(rot), 400.0 * np.sin(rot), 0.0], 20, alternating
+        )
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[0, -1]]))
+        v_x, v_y, f_mat = mms.vdf_projection(vdf, tint)
+
+        self.assertEqual(f_mat.shape[1], 64 if alternating else 32)
+        speed, peak_angle = self._peak(v_x, v_y, f_mat)
+        self.assertAlmostEqual(peak_angle, 5.625, delta=0.1)
+        self.assertAlmostEqual(speed, 400.0, delta=30.0)
+
+    def test_vdf_projection_sc_pot(self):
+        # Energy edges below the spacecraft potential gave NaN speeds
+        vdf = self._maxwellian([400.0, 0.0, 0.0])
+        vdf.attrs["species"] = "electrons"
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(2, 20.0))
+        tint = [pyrf.datetime642iso8601(vdf.time.data[0])]
+        v_x, v_y, _ = mms.vdf_projection(vdf, tint, sc_pot=sc_pot)
+
+        self.assertTrue(np.isfinite(v_x).all() and np.isfinite(v_y).all())
+        self.assertEqual(np.hypot(v_x, v_y)[0].max(), 0.0)
+
 
 @ddt
 class FftBandpassTestCase(unittest.TestCase):
