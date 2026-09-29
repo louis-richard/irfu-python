@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Optional
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -13,7 +16,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def new_xyz(inp, trans_mat):
+def new_xyz(inp, trans_mat, coordinate_system: Optional[str] = None):
     r"""Transform the input field to the new frame.
 
     Parameters
@@ -21,7 +24,14 @@ def new_xyz(inp, trans_mat):
     inp : xarray.DataArray
         Time series of the input field in the original coordinate system.
     trans_mat : array_like
-        Transformation matrix.
+        Transformation matrix, with the unit vectors of the new frame as columns.
+    coordinate_system : str, Optional
+        Name of the new coordinate system (e.g., "lmn"), stored in the
+        ``COORDINATE_SYSTEM`` attribute of the output. Default is None, which
+        removes that attribute: the name of an arbitrary frame is unknown, and
+        keeping the original one would let functions relying on it, like
+        :func:`pyrfu.pyrf.cotrans`, treat the output as still being in the
+        original frame.
 
     Returns
     -------
@@ -51,7 +61,7 @@ def new_xyz(inp, trans_mat):
 
     Move electric field to the MVA frame
 
-    >>> e_lmn = pyrf.new_xyz(e_xyz, mva)
+    >>> e_lmn = pyrf.new_xyz(e_xyz, mva, "lmn")
 
     """
 
@@ -60,11 +70,22 @@ def new_xyz(inp, trans_mat):
     else:
         out_data = (trans_mat.T @ inp.data.T).T
 
+    if coordinate_system is not None and not isinstance(coordinate_system, str):
+        raise TypeError("coordinate_system must be a string or None")
+
+    # Copy so that the caller's attributes are unchanged
+    attrs = dict(inp.attrs)
+
+    if coordinate_system is None:
+        attrs.pop("COORDINATE_SYSTEM", None)
+    else:
+        attrs["COORDINATE_SYSTEM"] = coordinate_system
+
     out = xr.DataArray(
         out_data,
         coords=inp.coords,
         dims=inp.dims,
-        attrs=inp.attrs,
+        attrs=attrs,
     )
 
     return out

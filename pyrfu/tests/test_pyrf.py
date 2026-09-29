@@ -1986,6 +1986,31 @@ class NewXyzTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertEqual(result.ndim, inp.ndim)
 
+    def test_new_xyz_coordinate_system(self):
+        # New frame with unit vectors (y, z, x) of the original one as columns
+        time = generate_timeline(1.0, 5)
+        inp = pyrf.ts_vec_xyz(
+            time, np.tile([1.0, 2.0, 3.0], (5, 1)), attrs={"COORDINATE_SYSTEM": "GSE"}
+        )
+        trans_mat = np.eye(3)[:, [1, 2, 0]]
+
+        result = pyrf.new_xyz(inp, trans_mat, "lmn")
+        np.testing.assert_allclose(result.data, np.tile([2.0, 3.0, 1.0], (5, 1)))
+        self.assertEqual(result.attrs["COORDINATE_SYSTEM"], "lmn")
+
+        # Default: the original label is removed (it used to be kept, so that
+        # cotrans treated the rotated data as GSE)
+        result = pyrf.new_xyz(inp, trans_mat)
+        self.assertNotIn("COORDINATE_SYSTEM", result.attrs)
+        with self.assertRaises(ValueError):
+            pyrf.cotrans(result, "gsm")
+
+        # The caller's attributes are unchanged
+        self.assertEqual(inp.attrs["COORDINATE_SYSTEM"], "GSE")
+
+        with self.assertRaises(TypeError):
+            pyrf.new_xyz(inp, trans_mat, 1)
+
 
 class NormTestCase(unittest.TestCase):
     def test_norm_output(self):
