@@ -1501,6 +1501,7 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
             pass
 
 
+@ddt
 class VdfProjectionTestCase(unittest.TestCase):
     def test_vdf_projection_output(self):
         result = mms.vdf_projection(
@@ -1509,6 +1510,54 @@ class VdfProjectionTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], np.ndarray)
         self.assertIsInstance(result[1], np.ndarray)
         self.assertIsInstance(result[2], np.ndarray)
+
+    @staticmethod
+    def _vdf():
+        # Alternating energy tables (positive energies) and a phi table that
+        # changes with time, so that each sample's phi is identifiable
+        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=True)
+        energy0 = 10.0 * 1.3 ** np.arange(32)
+        energy1 = energy0 * np.sqrt(1.3)
+        vdf.attrs["energy0"], vdf.attrs["energy1"] = energy0, energy1
+        vdf["energy"] = (
+            ("time", "idx0"),
+            np.where(vdf.attrs["esteptable"][:, None] == 1, energy1, energy0),
+        )
+        vdf["phi"] = (
+            ("time", "idx1"),
+            (np.arange(32) * 11.25)[None, :] + 0.1 * np.arange(42)[:, None],
+        )
+        return vdf
+
+    def test_vdf_projection_phi_clipped(self):
+        # With a tint that doesn't start at the first sample, psd_rebin used to
+        # get the phi of the first samples instead of those in tint
+        vdf = self._vdf()
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[10, 21]]))
+        module = importlib.import_module("pyrfu.mms.vdf_projection")
+        with mock.patch.object(
+            module, "psd_rebin", wraps=module.psd_rebin
+        ) as psd_rebin:
+            module._init(vdf, tint)
+
+        expected = pyrf.time_clip(vdf.phi, tint).data
+        np.testing.assert_allclose(psd_rebin.call_args.args[1], expected)
+
+    @data(0, 1)
+    def test_vdf_projection_single_time_energy_table(self, step):
+        # A single time used the energy1 edges for both step table values
+        vdf = self._vdf()
+        t_id = int(np.flatnonzero(vdf.attrs["esteptable"] == step)[0])
+        tint = [pyrf.datetime642iso8601(vdf.time.data[t_id])]
+        energy_edges = importlib.import_module("pyrfu.mms.vdf_projection")._init(
+            vdf, tint
+        )[3]
+
+        energy = vdf.attrs[f"energy{step}"]
+        # Log-centred edges: the geometric mean of consecutive edges is the energy
+        np.testing.assert_allclose(
+            np.sqrt(energy_edges[:-1] * energy_edges[1:]), energy, rtol=1e-6
+        )
 
 
 @ddt

@@ -105,7 +105,7 @@ def _init(vdf: Dataset, tint: list):
         if step_table:
             energy_edges = energy1_edges
         else:
-            energy_edges = energy1_edges
+            energy_edges = energy0_edges
 
     elif tint is not None and len(tint) == 2:
         dist = time_clip(vdf.data, tint)
@@ -123,9 +123,10 @@ def _init(vdf: Dataset, tint: list):
                 np.rad2deg(azimuthal),
                 theta,
             )
+            # phi clipped to tint, like the distribution
             newt, dist, energy, phi = psd_rebin(
                 temp,
-                phi.data,
+                temp.phi.data,
                 energy0,
                 energy1,
                 step_table,
