@@ -1479,6 +1479,22 @@ class Gse2GsmTestCase(unittest.TestCase):
     def test_gse2gsm_output(self, inp, flag):
         pyrf.gse2gsm(inp, flag)
 
+    @data("GSE>GSM", "Gse>Gsm")
+    def test_gse2gsm_flag_case(self, flag):
+        # Upper-case flags passed the validation but were rejected by cotrans
+        inp = pyrf.ts_vec_xyz(
+            generate_timeline(1.0, 10),
+            np.tile([1.0, 2.0, 3.0], (10, 1)),
+            attrs={"COORDINATE_SYSTEM": "gse"},
+        )
+        expected = pyrf.gse2gsm(inp, "gse>gsm")
+        np.testing.assert_allclose(pyrf.gse2gsm(inp, flag).data, expected.data)
+
+        # Round trip back to GSE
+        np.testing.assert_allclose(
+            pyrf.gse2gsm(expected, "GSM>GSE").data, inp.data, atol=1e-12
+        )
+
 
 @ddt
 class HistogramTestCase(unittest.TestCase):

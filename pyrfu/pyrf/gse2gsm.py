@@ -20,21 +20,19 @@ def gse2gsm(inp, flag: str = "gse>gsm"):
 
     Parameters
     ----------
-    inp : xarray.DataArray or ndarray
+    inp : xarray.DataArray
         Time series of the input in GSE (GSM) coordinates.
-        If ndarray first column is time in unix format.
     flag : {"gse>gsm", "gsm>gse"}, Optional
-        Flag for conversion direction. Default is "gse>gsm"
+        Flag for conversion direction (case-insensitive). Default is "gse>gsm".
 
     Returns
     -------
-    out : xarray.DataArray or ndarray
+    out : xarray.DataArray
         Time series of the input in GSM (GSE) coordinates.
-        If ndarray first column is time in unix format.
 
-    See also
+    See Also
     --------
-    pyrfu.pyrf.geocentric_coordinate_transformation
+    pyrfu.pyrf.cotrans
 
     """
 
@@ -44,6 +42,6 @@ def gse2gsm(inp, flag: str = "gse>gsm"):
     message = "flag must be a string gse>gsm or gsm>gse"
     assert isinstance(flag, str) and flag.lower() in ["gse>gsm", "gsm>gse"], message
 
-    out = cotrans(inp, flag)
+    out = cotrans(inp, flag.lower())
 
     return out
