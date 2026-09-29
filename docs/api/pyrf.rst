@@ -86,6 +86,8 @@ Vector and tensor operations
    sph2cart
    solid_angle
 
+.. _api-pyrf-coordinates:
+
 Coordinate systems
 ------------------
 
@@ -122,6 +124,8 @@ Filtering and signal processing
    autocorr
    corr_deriv
 
+.. _api-pyrf-waves:
+
 Spectral and wave analysis
 --------------------------
 
@@ -149,6 +153,8 @@ Turbulence and intermittency
    increments
    struct_func
    pvi
+
+.. _api-pyrf-multi-sc:
 
 Multi-spacecraft methods
 ------------------------

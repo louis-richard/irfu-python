@@ -1,0 +1,84 @@
+/* pyrfu brand colours (from the logo) on top of pydata-sphinx-theme */
+html[data-theme="light"] {
+  --pst-color-primary: #333697;
+  --pst-color-secondary: #c2410c;
+  --pyrfu-hero-bg: linear-gradient(135deg, #eef0ff 0%, #ffffff 70%);
+}
+
+html[data-theme="dark"] {
+  --pst-color-primary: #b4b6f5;
+  --pst-color-secondary: #fb923c;
+  --pyrfu-hero-bg: linear-gradient(135deg, #1d1f45 0%, #14161a 70%);
+}
+
+/* Landing page banner */
+.pyrfu-hero {
+  background: var(--pyrfu-hero-bg);
+  border-radius: 0.75rem;
+  padding: 2rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.pyrfu-hero .pyrfu-tagline {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--pst-color-primary);
+  margin-bottom: 0.75rem;
+}
+
+.pyrfu-hero .pyrfu-lead {
+  font-size: 1.1rem;
+}
+
+.pyrfu-hero img {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+  width: 100%;
+}
+
+.pyrfu-hero .sd-btn {
+  margin: 0.25rem 0.5rem 0.25rem 0;
+}
+
+/* Feature and documentation cards */
+.pyrfu-cards .sd-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pyrfu-cards .sd-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12) !important;
+}
+
+.pyrfu-cards .sd-card-title {
+  color: var(--pst-color-primary);
+}
+
+.pyrfu-cards .sd-octicon {
+  color: var(--pst-color-primary);
+  margin-right: 0.4rem;
+}
+
+/* Landing page: the page title duplicates the navbar logo; keep it for
+   screen readers and the browser tab only */
+.pyrfu-landing > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Hero buttons on one row */
+.pyrfu-buttons p {
+  display: inline-block;
+  margin: 0;
+}
+
+/* Readable text on the light primary button in dark mode */
+html[data-theme="dark"] .sd-btn-primary,
+html[data-theme="dark"] .sd-btn-primary:hover {
+  color: #14161a !important;
+}

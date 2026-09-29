@@ -47,6 +47,8 @@ Finding and downloading files
    copy_files_ancillary
    load_brst_segments
 
+.. _api-mms-loading:
+
 Loading data
 ------------
 
@@ -89,6 +91,8 @@ Waves
    lh_wave_analysis
    whistler_b2e
    estimate_phase_speed
+
+.. _api-mms-fpi:
 
 FPI particle distributions
 --------------------------
