@@ -1975,6 +1975,49 @@ class MvaTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], np.ndarray)
         self.assertIsInstance(result[2], np.ndarray)
 
+    @staticmethod
+    def _field(seed=0):
+        # Variances 25, 4 and 1 along a random right-handed frame, plus a mean
+        rng = np.random.default_rng(seed)
+        basis = np.linalg.qr(rng.normal(size=(3, 3)))[0]
+        basis[:, 2] = np.cross(basis[:, 0], basis[:, 1])
+        b_data = (rng.normal(size=(2000, 3)) * [5.0, 2.0, 1.0]) @ basis.T
+        b_data += [3.0, -2.0, 10.0]
+        b_xyz = pyrf.ts_vec_xyz(
+            generate_timeline(16.0, 2000),
+            b_data,
+            attrs={"COORDINATE_SYSTEM": "GSE", "UNITS": "nT"},
+        )
+        return b_xyz, basis
+
+    def test_mva_values(self):
+        b_xyz, basis = self._field()
+        b_lmn, lamb, lmn = pyrf.mva(b_xyz)
+
+        np.testing.assert_allclose(lamb, [25.0, 4.0, 1.0], rtol=0.05)
+        np.testing.assert_allclose(np.abs(np.sum(lmn * basis, axis=0)), 1, atol=1e-3)
+
+        # Output keeps the attributes, in LMN coordinates (they used to be dropped)
+        self.assertEqual(b_lmn.attrs["COORDINATE_SYSTEM"], "lmn")
+        self.assertEqual(b_lmn.attrs["UNITS"], "nT")
+        np.testing.assert_allclose(b_lmn.data, b_xyz.data @ lmn)
+
+    def test_mva_flag_case(self):
+        # "MVAR" passed the validation and was then computed as "td"
+        b_xyz, _ = self._field()
+        for lower, upper in [("mvar", "MVAR"), ("<bn>=0", "<BN>=0"), ("td", "TD")]:
+            np.testing.assert_allclose(
+                pyrf.mva(b_xyz, upper)[1], pyrf.mva(b_xyz, lower)[1]
+            )
+
+    @data("mvar", "<bn>=0", "td")
+    def test_mva_right_handed(self, flag):
+        # The "<bn>=0" frame used to be left-handed about a third of the time
+        for seed in range(10):
+            _, _, lmn = pyrf.mva(self._field(seed)[0], flag)
+            handedness = np.dot(np.cross(lmn[:, 0], lmn[:, 1]), lmn[:, 2])
+            self.assertAlmostEqual(handedness, 1.0, places=6)
+
 
 @ddt
 class NewXyzTestCase(unittest.TestCase):

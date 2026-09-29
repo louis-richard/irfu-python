@@ -3,7 +3,9 @@
 
 # 3rd party imports
 import numpy as np
-import xarray as xr
+
+# Local imports
+from .new_xyz import new_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -21,12 +23,13 @@ def mva(inp, flag: str = "mvar"):
     inp : xarray.DataArray
         Time series of the quantity to find minimum variance frame.
     flag : {"mvar", "<bn>=0", "td"}, Optional
-        Constrain. Default is "mvar".
+        Constrain (case-insensitive). Default is "mvar".
 
     Returns
     -------
     out : xarray.DataArray
-        Time series of the input quantity in LMN coordinates.
+        Time series of the input quantity in LMN coordinates (attributes of the
+        input kept, with ``COORDINATE_SYSTEM`` set to "lmn").
     l : numpy.ndarray
         Eigenvalues l[0] > l[1] > l[2].
     lmn : numpy.ndarray
@@ -59,6 +62,7 @@ def mva(inp, flag: str = "mvar"):
     """
 
     assert flag.lower() in ["mvar", "<bn>=0", "td"], "invalid method!!"
+    flag = flag.lower()
 
     inp_data = inp.data
     n_t = inp_data.shape[0]
@@ -132,9 +136,8 @@ def mva(inp, flag: str = "mvar"):
 
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
-        # Force the maximum variance direction to be positive
-        # lmn[:, 0] *= np.sign(lmn[np.argmax(lmn[:, 0]), 0])
-        # lamb[2], lmn[:, 2] = [l_min, np.cross(lmn[:, 0], lmn[:, 1])]
+        # ensure that the frame is right handed
+        lmn[:, 2] = np.cross(lmn[:, 0], lmn[:, 1])
 
     elif flag.lower() == "td":
         l_min = lamb[2]
@@ -160,8 +163,7 @@ def mva(inp, flag: str = "mvar"):
     else:
         pass
 
-    out_data = (lmn.T @ inp_data.T).T
-
-    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims)
+    # Keep the attributes of the input, in the LMN coordinate system
+    out = new_xyz(inp, lmn, "lmn")
 
     return out, lamb, lmn
