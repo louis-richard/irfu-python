@@ -81,7 +81,7 @@ docs = [
     "sphinx-codeautolink>=0.15.0",
     "sphinx-copybutton>=0.5.0",
     "sphinx-gallery>=0.13.0",
-    "sphinxcontrib-apidoc>=0.3.0",
+    "sphinx-reredirects>=0.1.4",
 ]
 dev = [
     "pyrfu[docs]",

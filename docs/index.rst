@@ -13,7 +13,7 @@ Welcome to pyrfu's documentation!
 
    installation
    examples/index
-   dev/index
+   api/index
    contributing
 
 .. include:: ../README.rst
@@ -27,4 +27,4 @@ Examples
 See :doc:`here <examples/index>` for a complete list of examples.
 
 
-:doc:`Go to developers doc <dev/index>`
+See the :doc:`API reference <api/index>` for the documentation of every function.

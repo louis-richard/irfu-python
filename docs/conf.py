@@ -1,4 +1,5 @@
 # Built-in imports
+import ast
 import os
 import sys
 
@@ -29,7 +30,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_gallery.load_style",
     "sphinx_codeautolink",
-    "sphinxcontrib.apidoc",
+    "sphinx_reredirects",
     "sphinx.ext.todo",
     "nbsphinx",
     "sphinx_copybutton",
@@ -37,11 +38,47 @@ extensions = [
 ]
 
 
-apidoc_module_dir = "../pyrfu"
-apidoc_output_dir = "dev"
-apidoc_excluded_paths = ["tests", "*/tests/", "*/*/tests/", "*/*/*/tests"]
-apidoc_separate_modules = True
-apidoc_module_first = True
+def _api_redirects():
+    r"""Redirect the former sphinx-apidoc pages (dev/...) to the API reference.
+
+    dev/pyrfu.<sub>.<module> goes to the page of the function of the same name
+    if it is public, otherwise to the subpackage page.
+    """
+    pkg_dir = os.path.join(src_path, "pyrfu")
+    out = {f"dev/{name}": "../api/index.html" for name in ["index", "modules", "pyrfu"]}
+
+    for sub in sorted(os.listdir(pkg_dir)):
+        init = os.path.join(pkg_dir, sub, "__init__.py")
+        if sub == "tests" or not os.path.isfile(init):
+            continue
+
+        with open(init, encoding="utf-8") as file:
+            tree = ast.parse(file.read())
+
+        public = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and any(
+                getattr(t, "id", None) == "__all__" for t in node.targets
+            ):
+                public = set(ast.literal_eval(node.value))
+
+        out[f"dev/pyrfu.{sub}"] = f"../api/{sub}.html"
+        for file in os.listdir(os.path.join(pkg_dir, sub)):
+            mod, ext = os.path.splitext(file)
+            if ext != ".py" or mod.startswith("_"):
+                continue
+
+            if mod in public:
+                target = f"../api/generated/pyrfu.{sub}.{mod}.html"
+            else:
+                target = f"../api/{sub}.html"
+
+            out[f"dev/pyrfu.{sub}.{mod}"] = target
+
+    return out
+
+
+redirects = _api_redirects()
 
 # autosectionlabel_prefix_document = True
 codeautolink_custom_blocks = {
@@ -92,6 +129,7 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
+    "**/.virtual_documents",
     "examples/**/README.md",
 ]
 

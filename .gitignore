@@ -170,3 +170,6 @@ pyrfu/.DS_Store
 
 # Claude outputs
 Claude outputs/
+
+# Sphinx autosummary pages (generated at build time)
+docs/api/generated/

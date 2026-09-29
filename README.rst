@@ -75,7 +75,7 @@ Installing pyrfu with pip (`more details here <https://pyrfu.readthedocs.io/en/l
     # or
     $ python -m pip install --user pyrfu
 
-Import `pyrfu.mms <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.mms.html>`_ package with routines specific to work with the
+Import `pyrfu.mms <https://pyrfu.readthedocs.io/en/latest/api/mms.html>`_ package with routines specific to work with the
 Magnetospheric Multiscale mission (MMS)
 
 .. code:: python
@@ -98,7 +98,7 @@ Load magnetic field and ion bulk velocity data
     v_gse_i = mms.get_data("vi_gse_fpi_fast_l2", tint, 1)
 
 
-Import `pyrfu.pyrf <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.pyrf.html>`_ package with generic routines
+Import `pyrfu.pyrf <https://pyrfu.readthedocs.io/en/latest/api/pyrf.html>`_ package with generic routines
 
 .. code:: python
 
@@ -110,7 +110,7 @@ Transform ion bulk velocity to geocentric solar magnetospheric (GSM) coordinates
 
     v_gsm_i = pyrf.cotrans(v_gse_i, "gse>gsm")
 
-Import `pyrfu.plot <https://pyrfu.readthedocs.io/en/latest/dev/pyrfu.plot.html>`_ package with plotting routines
+Import `pyrfu.plot <https://pyrfu.readthedocs.io/en/latest/api/plot.html>`_ package with plotting routines
 
 .. code:: python
 
