@@ -1396,6 +1396,63 @@ class ReduceTestCase(unittest.TestCase):
         self.assertAlmostEqual(t_x, 1000.0, delta=40.0)
 
 
+class RemoveImomsBackgroundTestCase(unittest.TestCase):
+    @staticmethod
+    def _measured(n_t=5):
+        # Moments measured with a background at rest (n_bg = 0.5 cm^-3,
+        # p_bg = 0.01 nPa) added to a known plasma (n = 0.5 cm^-3, V, P)
+        n_true, v_true = 0.5, np.array([-800.0, 50.0, 20.0])
+        p_true = np.array([[0.2, 0.01, 0.02], [0.01, 0.15, 0.03], [0.02, 0.03, 0.1]])
+        n_bg, p_bg = 0.5, 0.01
+
+        n_meas = n_true + n_bg
+        v_meas = n_true * v_true / n_meas
+        fact = constants.proton_mass * 1e21  # m n v v in nPa (cm^-3, km/s)
+        p_meas = p_true + fact * n_true * np.outer(v_true, v_true)
+        p_meas += p_bg * np.eye(3) - fact * n_meas * np.outer(v_meas, v_meas)
+
+        time = generate_timeline(1.0, n_t)
+        measured = (
+            pyrf.ts_scalar(time, np.full(n_t, n_meas)),
+            pyrf.ts_vec_xyz(time, np.tile(v_meas, (n_t, 1))),
+            pyrf.ts_tensor_xyz(
+                time, np.tile(p_meas, (n_t, 1, 1)), attrs={"UNITS": "nPa"}
+            ),
+        )
+        return time, measured, (n_true, v_true, p_true), (n_bg, p_bg)
+
+    def test_remove_imoms_background_values(self):
+        # The dynamic pressure terms lacked a 1e21 unit factor, so only p_bg
+        # was removed from the pressure tensor
+        time, measured, expected, (n_bg, p_bg) = self._measured()
+        n_i, v_i, p_i = mms.remove_imoms_background(
+            *measured,
+            pyrf.ts_scalar(time, np.full(len(time), n_bg)),
+            pyrf.ts_scalar(time, np.full(len(time), p_bg)),
+        )
+
+        np.testing.assert_allclose(n_i.data, expected[0])
+        np.testing.assert_allclose(v_i.data, np.tile(expected[1], (len(time), 1)))
+        np.testing.assert_allclose(
+            p_i.data, np.tile(expected[2], (len(time), 1, 1)), atol=1e-12
+        )
+        self.assertEqual(p_i.attrs["UNITS"], "nPa")
+
+    def test_remove_imoms_background_time_alignment(self):
+        # Background moments on another time line are resampled first (they
+        # used to be subtracted sample by sample, or raise a shape error)
+        time, measured, expected, (n_bg, p_bg) = self._measured(10)
+        time_bg = time[0] + (time[-1] - time[0]) * np.linspace(0, 1, 4)
+        _, _, p_i = mms.remove_imoms_background(
+            *measured,
+            pyrf.ts_scalar(time_bg, np.full(4, n_bg)),
+            pyrf.ts_scalar(time_bg, np.full(4, p_bg)),
+        )
+        np.testing.assert_allclose(
+            p_i.data, np.tile(expected[2], (10, 1, 1)), atol=1e-12
+        )
+
+
 @ddt
 class RotateTensorTestCase(unittest.TestCase):
     @data(
