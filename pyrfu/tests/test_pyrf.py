@@ -973,6 +973,21 @@ class EVxBTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
 
+    def test_e_vxb_values(self):
+        # V = -400 km/s x, B = 5 nT z: E = -V x B = -2 mV/m y, and the E x B
+        # drift of that field gives back V (the units label used to be mV/s)
+        time = generate_timeline(1.0, 10)
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([-400.0, 0.0, 0.0], (10, 1)))
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 5.0], (10, 1)))
+
+        e_xyz = pyrf.e_vxb(v_xyz, b_xyz)
+        np.testing.assert_allclose(e_xyz.data, np.tile([0.0, -2.0, 0.0], (10, 1)))
+        self.assertEqual(e_xyz.attrs["UNITS"], "mV/m")
+
+        v_exb = pyrf.e_vxb(e_xyz, b_xyz, "exb")
+        np.testing.assert_allclose(v_exb.data, v_xyz.data)
+        self.assertEqual(v_exb.attrs["UNITS"], "km/s")
+
 
 @ddt
 class EbNRFTestCase(unittest.TestCase):
