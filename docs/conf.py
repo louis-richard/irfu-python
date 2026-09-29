@@ -80,7 +80,9 @@ def _api_redirects():
 
 redirects = _api_redirects()
 
-# autosectionlabel_prefix_document = True
+# Prefix section labels with the document name, as notebooks share section
+# titles ("Load data", "Plot", ...)
+autosectionlabel_prefix_document = True
 codeautolink_custom_blocks = {
     "python3": None,
     "pycon3": "sphinx_codeautolink.clean_pycon",
@@ -131,6 +133,7 @@ exclude_patterns = [
     "**.ipynb_checkpoints",
     "**/.virtual_documents",
     "examples/**/README.md",
+    "examples/01_mms/example_mms_ressources.ipynb",  # empty, work in progress
 ]
 
 numpydoc_show_class_members = False
