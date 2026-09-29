@@ -144,6 +144,33 @@ class Avg4SCTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [100, *[3] * tensor_order])
 
 
+class NanAvg4SCTestCase(unittest.TestCase):
+    def test_nanavg_4sc_values(self):
+        # MMS1-3 at 2, MMS4 missing: the average is 2 (NaNs used to count as 0,
+        # giving 1.5), and NaN where no spacecraft has data.
+        time = generate_timeline(1.0, 5)
+        b_list = [
+            pyrf.ts_vec_xyz(time, np.full((5, 3), value), attrs={"mmsId": i + 1})
+            for i, value in enumerate([2.0, 2.0, 2.0, np.nan])
+        ]
+        for b_xyz in b_list[:3]:
+            b_xyz.data[2] = np.nan
+
+        result = pyrf.nanavg_4sc(b_list)
+
+        expected = np.full((5, 3), 2.0)
+        expected[2] = np.nan
+        np.testing.assert_array_equal(result.data, expected)
+        self.assertEqual(result.attrs["mmsId"], "4sc_avg")
+
+        # The caller's attributes are unchanged
+        self.assertEqual(b_list[0].attrs["mmsId"], 1)
+
+    def test_nanavg_4sc_input(self):
+        with self.assertRaises(TypeError):
+            pyrf.nanavg_4sc(tuple(generate_ts(64.0, 100) for _ in range(4)))
+
+
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
         with self.assertRaises(TypeError):
