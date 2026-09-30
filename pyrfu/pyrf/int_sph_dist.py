@@ -23,7 +23,8 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     Parameters
     ----------
     vdf : numpy.ndarray
-        Phase-space density skymap.
+        Phase-space density skymap. Non-finite values (NaN) are treated as
+        empty bins.
     velocity : numpy.ndarray
         Velocity of the instrument bins,
     phi : numpy.ndarray
@@ -45,6 +46,16 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
 
     Other Parameters
     ----------------
+    projection_base : {"pol", "cart"}
+        Base of the projection grid (case-insensitive). Default is "pol".
+    projection_dim : {"1d", "2d", "3d"}
+        Dimension of the projection (case-insensitive). Default is "1d". A polar
+        projection is 1d if `phi_grid` is None; `phi_grid` is not used by the
+        cartesian projections.
+    weight : {None, "lin", "log"}
+        Number of Monte-Carlo particles per bin: `n_mc` in every non-empty bin
+        (None), or `n_mc` on average, in proportion to vdf ("lin") or to
+        log(1 + vdf) ("log"). Default is None.
     d_v_m, d_v_p : numpy.ndarray
         Speed widths below and above the speed of each instrument bin, i.e., the
         bin spans [velocity - d_v_m, velocity + d_v_p]. Both must be given, and
@@ -53,6 +64,14 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         Edges of the instrument speed bins, shape (len(velocity) + 1,). If
         neither `d_v_m`/`d_v_p` nor `velocity_edges` is given, the edges are at
         the geometric mean of neighbouring speeds.
+
+    Raises
+    ------
+    ValueError
+        If the speed widths are negative or extend below zero speed, or if a
+        cartesian projection grid is not uniform.
+    NotImplementedError
+        If the projection is not a 1d polar, or a 2d or 3d cartesian one.
 
     Notes
     -----
@@ -64,6 +83,10 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     speeds (bulk speed ~7 % and temperature ~10 % too low, density ~6 % too low).
 
     """
+
+    # Non-finite values are empty bins (otherwise NaNs spread to the projected
+    # bins, and with a weighting make the whole projection 0)
+    vdf = np.where(np.isfinite(vdf), vdf, 0.0)
 
     # Coordinates system transformation matrix
     xyz = kwargs.get("xyz", np.eye(3))
@@ -92,8 +115,8 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     a_lim = np.deg2rad(a_lim)
 
     # Projection dimension and base
-    projection_base = kwargs.get("projection_base", "pol")
-    projection_dim = kwargs.get("projection_dim", "1d")
+    projection_base = str(kwargs.get("projection_base", "pol")).lower()
+    projection_dim = str(kwargs.get("projection_dim", "1d")).lower()
 
     velocity_edges = kwargs.get("velocity_edges", None)
     velocity_grid_edges = kwargs.get("velocity_grid_edges", None)
@@ -113,20 +136,28 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     else:
         if velocity_edges is None:
             velocity_edges = _speed_bin_edges(velocity)
+        elif len(velocity_edges) != len(velocity) + 1:
+            raise ValueError("velocity_edges must have len(velocity) + 1 values")
 
         d_v_m = velocity - velocity_edges[:-1]
         d_v_p = velocity_edges[1:] - velocity
 
     d_v_m = d_v_m.astype(np.float64)
     d_v_p = d_v_p.astype(np.float64)
+    _check_speed_widths(velocity, d_v_m, d_v_p)
     d_v = d_v_m + d_v_p
 
-    # Overwrite projection dimension if azimuthal angle of projection
-    # plane is not provided. Set the azimuthal angle grid width.
-    if phi_grid is not None and projection_dim.lower() in ["2d", "3d"]:
+    # Overwrite projection dimension of a polar projection if azimuthal angle
+    # of projection plane is not provided. Set the azimuthal angle grid width
+    # (not used by the cartesian projections).
+    is_pol = projection_base == "pol"
+
+    if is_pol and phi_grid is not None and projection_dim in ["2d", "3d"]:
         d_phi_grid = np.median(np.diff(phi_grid))
     else:
-        projection_dim = "1d"
+        if is_pol:
+            projection_dim = "1d"
+
         d_phi_grid = 1.0
 
     # Speed grid bins edges
@@ -147,9 +178,12 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
                 "2d projection on polar grid is not ready yet!!",
             )
     else:
-        mean_diff = np.mean(np.diff(velocity_grid))
-        msg = "For a cartesian grid, all velocity bins must be equal!!"
-        assert (np.diff(velocity_grid) / mean_diff - 1 < 1e-2).all(), msg
+        # All bins must have the same width (to 1 %), which is used for all
+        d_v_grid = np.diff(velocity_grid_edges)
+        mean_diff = np.mean(d_v_grid)
+
+        if not np.all(np.abs(d_v_grid / mean_diff - 1) < 1e-2):
+            raise ValueError("For a cartesian grid, all velocity bins must be equal!!")
 
         d_v_grid = mean_diff
 
@@ -158,9 +192,10 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     if weight == "lin":
         n_mc_mat = np.ceil(n_sum / np.sum(vdf) * vdf)
     elif weight == "log":
-        n_mc_mat = np.ceil(
-            n_sum / np.sum(np.log10(vdf + 1.0)) * np.log10(vdf + 1.0),
-        )
+        # log(1 + vdf) with log1p: log10(vdf + 1.0) rounds to 0 for vdf < 1e-16
+        # (e.g., in SI units), which would leave these bins without particles.
+        # The base of the logarithm cancels out.
+        n_mc_mat = np.ceil(n_sum / np.sum(np.log1p(vdf)) * np.log1p(vdf))
     else:
         n_mc_mat = np.zeros_like(vdf)
         n_mc_mat[vdf != 0] = n_mc
@@ -310,6 +345,29 @@ def _speed_bin_edges(velocity):
         upp = 2.0 * velocity[-1] - mid[-1]
 
     return np.hstack([low, mid, upp])
+
+
+def _check_speed_widths(velocity, d_v_m, d_v_p):
+    r"""Check that the speed bins [velocity - d_v_m, velocity + d_v_p] are valid.
+
+    Raises
+    ------
+    ValueError
+        If the widths don't match the speeds, are negative, or extend below
+        zero speed (the Monte-Carlo particles would then have negative speeds,
+        i.e., the opposite direction).
+
+    """
+    n_v = len(velocity)
+
+    if d_v_m.shape != (n_v,) or d_v_p.shape != (n_v,):
+        raise ValueError("d_v_m and d_v_p must have the same length as velocity")
+
+    if np.any(d_v_m < 0.0) or np.any(d_v_p < 0.0):
+        raise ValueError("Speed bin widths must be non-negative")
+
+    if np.any(velocity - d_v_m < 0.0):
+        raise ValueError("Speed bins must not extend below zero speed")
 
 
 def _uniform_step(edges):

@@ -1672,7 +1672,7 @@ class IntSphDistTestCase(unittest.TestCase):
         {},
         {"weight": "lin"},
         {"weight": "log"},
-        {"velocity_edges": np.linspace(-0.01, 1.01, 52)},
+        {"velocity_edges": np.linspace(0.99, 2.01, 52)},  # brackets the speeds
         {"velocity_grid_edges": np.linspace(-1.01, 1.01, 102)},
         {"projection_base": "cart", "projection_dim": "2d"},
         {"projection_base": "cart", "projection_dim": "3d"},
@@ -2060,17 +2060,33 @@ class IntSphDistTestCase(unittest.TestCase):
         self.assertAlmostEqual(np.sum(result), np.cos(theta) if kept else 0.0)
 
     @data(
-        ("pol", "1d", None),
-        ("pol", "1d", "lin"),
-        ("cart", "2d", None),
-        ("cart", "3d", None),
+        ("pol", "1d", None, False),
+        ("pol", "1d", "lin", False),
+        ("pol", "1d", "log", False),
+        ("cart", "2d", None, False),
+        ("cart", "3d", None, False),
+        ("pol", "1d", None, True),
+        ("pol", "1d", "lin", True),
+        ("pol", "1d", "log", True),
+        ("cart", "2d", None, True),
     )
     @unpack
-    def test_int_sph_dist_conservation(self, base, dim, weight):
+    def test_int_sph_dist_conservation(self, base, dim, weight, with_nan):
         # With a grid covering all the Monte-Carlo particles and no limits, the
         # projected distribution integrates to sum(f * dtau) over the instrument
-        # bins, whatever the random draws and the weighting.
+        # bins, whatever the random draws and the weighting. NaNs are empty
+        # bins (they used to give NaN bins, or with a weighting a zero output),
+        # and log weighting gives every bin particles (log10(f + 1) was 0 for
+        # f < 1e-16 s^3/m^6).
         vdf, _, speed, phi, theta = self._maxwellian()
+
+        if with_nan:
+            vdf_nan = vdf.copy()
+            vdf_nan[[5, 12, 20], [3, 10, 30], [2, 8, 15]] = np.nan
+            vdf = np.where(np.isnan(vdf_nan), 0.0, vdf)
+        else:
+            vdf_nan = vdf
+
         v_edges = _speed_bin_edges(speed)
         d_angle = np.deg2rad(11.25)
         dtau = speed[:, None, None] ** 2 * np.diff(v_edges)[:, None, None]
@@ -2081,7 +2097,7 @@ class IntSphDistTestCase(unittest.TestCase):
         phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, 32) + d_phi_g / 2
 
         out = pyrf.int_sph_dist(
-            vdf,
+            vdf_nan,
             speed,
             phi,
             theta,
@@ -2093,8 +2109,69 @@ class IntSphDistTestCase(unittest.TestCase):
             n_mc=5,
             weight=weight,
         )
+        self.assertTrue(np.all(np.isfinite(out["f"])))
         n, _ = self._moments(out, int(dim[0]))
         self.assertAlmostEqual(n / np.sum(vdf * dtau), 1.0, delta=1e-9)
+
+    @data(
+        ("cart", "2d", None),  # phi_grid is not used by cartesian projections
+        ("cart", "3d", None),
+        ("CART", "2D", np.linspace(0, 2 * np.pi, 32, endpoint=False)),
+        ("Pol", "1D", None),
+    )
+    @unpack
+    def test_int_sph_dist_projection_options(self, base, dim, phi_grid):
+        vdf, _, speed, phi, theta = self._maxwellian()
+        grid = np.linspace(-1500e3, 1500e3, 21)
+        out = pyrf.int_sph_dist(
+            vdf,
+            speed,
+            phi,
+            theta,
+            grid,
+            phi_grid,
+            projection_base=base,
+            projection_dim=dim,
+            n_mc=2,
+        )
+        self.assertTupleEqual(out["f"].shape, (21,) * int(dim[0]))
+
+    @data(
+        # 200 bins of 125 km/s, one of them split in two (passed the one-sided
+        # check and was normalised with the mean width)
+        np.sort(np.hstack([np.linspace(-1500e3, 1500e3, 201), 7.5e3])),
+        np.geomspace(1e3, 1500e3, 50),
+    )
+    def test_int_sph_dist_non_uniform_cart_grid(self, grid_edges):
+        vdf, _, speed, phi, theta = self._maxwellian()
+        with self.assertRaises(ValueError):
+            pyrf.int_sph_dist(
+                vdf,
+                speed,
+                phi,
+                theta,
+                None,
+                phi,
+                projection_base="cart",
+                projection_dim="2d",
+                velocity_grid_edges=grid_edges,
+            )
+
+    @data(
+        # below zero speed (Monte-Carlo particles reversed), negative widths,
+        # wrong numbers of values
+        lambda v: {"d_v_m": 2 * v, "d_v_p": 0.1 * v},
+        lambda v: {"d_v_m": 0.1 * v, "d_v_p": -0.1 * v},
+        lambda v: {"d_v_m": 0.1 * v[:-1], "d_v_p": 0.1 * v[:-1]},
+        lambda v: {"velocity_edges": np.hstack([-1.0, v])},
+        lambda v: {"velocity_edges": v},
+    )
+    def test_int_sph_dist_speed_widths_input(self, make_options):
+        vdf, _, speed, phi, theta = self._maxwellian()
+        options = make_options(speed)
+        grid = np.linspace(-1500e3, 1500e3, 21)
+        with self.assertRaises(ValueError):
+            pyrf.int_sph_dist(vdf, speed, phi, theta, grid, None, **options)
 
     def test_int_sph_dist_partial_grid(self):
         # Particles outside the grid are dropped: the density is the fraction of
