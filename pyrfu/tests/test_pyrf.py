@@ -3135,6 +3135,36 @@ class MeanFieldTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], xr.DataArray)
         self.assertIsInstance(result[1], xr.DataArray)
 
+    @staticmethod
+    def _field(t_sec, data):
+        time = np.datetime64("2020-01-01T00:00:00", "ns") + np.round(
+            t_sec * 1e9
+        ).astype("timedelta64[ns]")
+        return pyrf.ts_vec_xyz(time, data)
+
+    def test_mean_field_long_series(self):
+        # More than 65 535 samples (uint16 index overflow)
+        n_pts = 70000
+        t_sec = np.arange(n_pts) / 128.0
+        trend = np.stack([10.0 + 2.0 * t_sec, -t_sec, 0.5 * t_sec**2 / 500.0], 1)
+        wave = np.sin(2 * np.pi * 20.0 * t_sec)[:, None] * np.ones(3)
+        b_mean, b_wave = pyrf.mean_field(self._field(t_sec, trend + wave), 2)
+
+        np.testing.assert_allclose(b_mean.data, trend, atol=1e-3)
+        np.testing.assert_allclose(b_wave.data, wave, atol=1e-3)
+
+    def test_mean_field_nan_and_uneven_sampling(self):
+        # The fit uses the sample times, and ignores NaNs
+        t_sec = np.sort(np.random.default_rng(0).uniform(0.0, 100.0, 1000))
+        trend = np.stack([1.0 + 0.2 * t_sec, 3.0 - 0.1 * t_sec, 0.0 * t_sec], 1)
+        data = trend.copy()
+        data[10, 0] = np.nan
+        b_mean, b_wave = pyrf.mean_field(self._field(t_sec, data), 1)
+
+        np.testing.assert_allclose(b_mean.data, trend, atol=1e-6)
+        self.assertEqual(np.sum(np.isnan(b_wave.data)), 1)
+        self.assertTrue(np.isnan(b_wave.data[10, 0]))
+
 
 @ddt
 class MedfiltTestCase(unittest.TestCase):
