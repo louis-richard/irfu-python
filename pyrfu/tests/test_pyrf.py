@@ -5,6 +5,7 @@
 import builtins
 import datetime
 import itertools
+import math
 import random
 import unittest
 from unittest import mock
@@ -1652,6 +1653,9 @@ class IncrementsTestCase(unittest.TestCase):
 class IntSphDistTestCase(unittest.TestCase):
     @data(
         {"projection_base": "pol", "projection_dim": "2d"},
+        {"projection_base": "pol", "projection_dim": "3d"},
+        {"projection_base": "cart", "projection_dim": "1d"},
+        {"projection_base": "polar", "projection_dim": "1d"},
     )
     def test_int_sph_dist_input(self, value):
         vdf = np.random.random((51, 32, 16))
@@ -1827,9 +1831,15 @@ class IntSphDistTestCase(unittest.TestCase):
 
         return n, np.array(v)
 
-    @data(("pol", "1d", 20), ("cart", "2d", 20), ("cart", "3d", 5))
+    @data(
+        ("pol", "1d", 20, None),
+        ("pol", "1d", 20, "lin"),
+        ("pol", "1d", 20, "log"),
+        ("cart", "2d", 20, None),
+        ("cart", "3d", 5, None),
+    )
     @unpack
-    def test_int_sph_dist_drifting_maxwellian(self, base, dim, n_mc):
+    def test_int_sph_dist_drifting_maxwellian(self, base, dim, n_mc, weight):
         # The Monte-Carlo speeds were drawn in [v - 1.5 dv, v - 0.5 dv] and the
         # speed bin width was the spacing to the lower channel: n was 6 % and
         # the bulk velocity 7 % too low (as in irfu-matlab's irf_int_sph_dist).
@@ -1852,6 +1862,7 @@ class IntSphDistTestCase(unittest.TestCase):
             projection_dim=dim,
             velocity_grid_edges=edges,
             n_mc=n_mc,
+            weight=weight,
         )
         n_dim = int(dim[0])
         n, v = self._moments(out, n_dim)
@@ -1893,6 +1904,239 @@ class IntSphDistTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             _speed_bin_edges(np.array([1.0]))
+
+    def test_uniform_step(self):
+        self.assertAlmostEqual(_uniform_step(np.linspace(-1.0, 1.0, 11)), 0.2)
+        self.assertEqual(_uniform_step(np.array([1.0])), 0.0)  # no bin
+        self.assertEqual(_uniform_step(np.array([0.0, 0.0, 1.0])), 0.0)  # zero step
+        self.assertEqual(_uniform_step(np.array([0.0, 1.0, 3.0])), 0.0)  # non-uniform
+
+    @staticmethod
+    def _mc_kernel_args(kernel, speed, phi, theta, edges, v_lim, a_lim):
+        # f = 1 in every instrument bin, with unit widths and a single
+        # Monte-Carlo particle, which is at the bin centre (no random draws), so
+        # that each bin carries dtau = speed ** 2 * cos(theta) to a known point.
+        n_v, n_ph, n_th = len(speed), len(phi), len(theta)
+        d_a_grid = np.ones(len(edges) - 1) if kernel is _mc_pol_1d else 1.0
+        return (
+            np.ones((n_v, n_ph, n_th)),
+            np.array(speed, dtype=np.float64),
+            np.array(phi, dtype=np.float64),
+            np.array(theta, dtype=np.float64),
+            np.ones(n_v),
+            np.full(n_v, 0.5),
+            np.ones(n_ph),
+            np.ones(n_th),
+            edges,
+            d_a_grid,
+            np.array(v_lim, dtype=np.float64),
+            np.array(a_lim, dtype=np.float64),
+            np.ones((n_v, n_ph, n_th), dtype=np.int64),
+            np.eye(3),
+        )
+
+    def _mc_kernel_runs(self, kernel, *args, v_lim=(-np.inf, np.inf), a_lim=None):
+        # Run the kernel as Python and jitted, and for the cartesian kernels with
+        # both the arithmetic (fast) and the np.searchsorted bin index; with no
+        # random draws, all must be identical.
+        # (one accumulator row per thread, indexed by numba.get_thread_id())
+        a_lim = (-np.pi, np.pi) if a_lim is None else a_lim
+        k_args = self._mc_kernel_args(kernel, *args, v_lim=v_lim, a_lim=a_lim)
+        n_threads = numba.get_num_threads()
+
+        if kernel is _mc_pol_1d:
+            funcs = [kernel.__wrapped__, kernel]
+            results = [func(*k_args, n_threads) for func in funcs]
+        else:
+            v_step = _uniform_step(k_args[8])
+            self.assertGreater(v_step, 0.0)
+            results = [
+                func(*k_args, step, n_threads)
+                for func in [kernel.__wrapped__, kernel]
+                for step in [v_step, 0.0]
+            ]
+
+        # Same bins; jitted values can differ by round-off, as the threads add
+        # the particles landing in the same bin in a different order.
+        for result in results[1:]:
+            np.testing.assert_array_equal(result != 0, results[0] != 0)
+            np.testing.assert_allclose(result, results[0], rtol=1e-12)
+
+        if kernel is not _mc_pol_1d:
+            np.testing.assert_array_equal(results[0], results[1])
+            np.testing.assert_array_equal(results[2], results[3])
+
+        return results[0]
+
+    @data(
+        # speed, phi, theta, bin index (None if outside the grid)
+        (_mc_pol_1d, 0.05, 0.0, 0.0, None),
+        (_mc_pol_1d, 0.1, 0.0, 0.0, (0,)),  # on the first edge
+        (_mc_pol_1d, 0.25, 0.0, 0.0, (1,)),  # on an interior edge: upper bin
+        (_mc_pol_1d, 0.3, 0.0, 0.0, (1,)),
+        (_mc_pol_1d, 1.0, 0.0, 0.0, (2,)),  # on the last edge: last bin
+        (_mc_pol_1d, 1.5, 0.0, 0.0, None),
+        (_mc_cart_2d, 1.0, 0.0, 0.0, (7, 4)),
+        (_mc_cart_2d, 1.0, np.pi, 0.0, (0, 4)),
+        (_mc_cart_2d, 0.25, 0.0, 0.0, (5, 4)),
+        (_mc_cart_2d, 0.25, np.pi, 0.0, (3, 4)),
+        (_mc_cart_2d, 0.1, 0.0, 0.0, (4, 4)),
+        (_mc_cart_2d, 1.0, np.pi / 2, 0.0, (4, 7)),
+        (_mc_cart_2d, 1.5, 0.0, 0.0, None),  # vx outside
+        (_mc_cart_2d, 1.5, np.pi / 2, 0.0, None),  # vy outside
+        (_mc_cart_3d, 1.0, 0.0, 0.0, (7, 4, 4)),
+        (_mc_cart_3d, 1.0, np.pi, 0.0, (0, 4, 4)),
+        (_mc_cart_3d, 0.25, np.pi, 0.0, (3, 4, 4)),
+        (_mc_cart_3d, 1.0, np.pi / 2, 0.0, (4, 7, 4)),
+        (_mc_cart_3d, 1.0, 0.0, np.pi / 2, (4, 4, 7)),
+        (_mc_cart_3d, 1.5, 0.0, 0.0, None),  # vx outside
+        (_mc_cart_3d, 1.5, np.pi / 2, 0.0, None),  # vy outside
+        (_mc_cart_3d, 1.5, 0.0, np.pi / 2, None),  # vz outside
+    )
+    @unpack
+    def test_mc_kernels_bin_edges(self, kernel, speed, phi, theta, expected):
+        # Bins are closed on the left and open on the right (MATLAB discretize),
+        # except the last one, which is closed on both ends.
+        if kernel is _mc_pol_1d:
+            edges = np.array([0.1, 0.25, 0.5, 1.0])
+        else:
+            edges = np.arange(-1.0, 1.01, 0.25)  # exact, with an edge at 0
+
+        result = self._mc_kernel_runs(kernel, [speed], [phi], [theta], edges)
+
+        if expected is None:
+            np.testing.assert_array_equal(result, 0.0)
+        else:
+            self.assertListEqual(np.argwhere(result).tolist(), [list(expected)])
+            self.assertAlmostEqual(result[expected], speed**2 * np.cos(theta))
+
+    @data(
+        (_mc_cart_2d, np.linspace(-1.01, 1.01, 102)),
+        (_mc_cart_2d, np.linspace(-1.0, 1.0, 11)),
+        (_mc_cart_3d, np.linspace(-1.01, 1.01, 102)),
+        (_mc_cart_3d, np.linspace(-1.0, 1.0, 11)),
+    )
+    @unpack
+    def test_mc_cart_fast_index_on_edges(self, kernel, edges):
+        # (edge - edges[0]) / step truncates to one bin too low or too high for
+        # many edges of these grids: the fast index must still match
+        # np.searchsorted for points on and next to every edge, in each direction.
+        v_abs = np.unique(np.abs(edges[edges != 0]))
+        speed = np.hstack([v_abs, np.nextafter(v_abs, 0), np.nextafter(v_abs, 2)])
+        speed = np.sort(speed)
+        phi = [0.0, np.pi / 2, np.pi, 3 * np.pi / 2]
+        theta = [0.0, np.pi / 2] if kernel is _mc_cart_3d else [0.0]
+
+        result = self._mc_kernel_runs(kernel, speed, phi, theta, edges)
+
+        # Every particle within the grid is kept (none past the outer edges)
+        v_in = speed[speed <= edges[-1]]
+        expected = np.sum(v_in**2) * len(phi) * np.sum(np.cos(theta))
+        np.testing.assert_allclose(np.sum(result), expected, rtol=1e-12)
+
+    @data(
+        # phi, theta, v_lim, a_lim, kept
+        (_mc_pol_1d, np.pi / 2, 0.0, (-np.inf, 0.5), None, False),
+        (_mc_pol_1d, np.pi / 2, 0.0, (0.5, np.inf), None, True),
+        (_mc_pol_1d, np.pi / 2, 0.0, None, (0.0, np.pi / 4), False),
+        (_mc_pol_1d, np.pi / 2, 0.0, None, (np.pi / 4, np.pi), True),
+        (_mc_cart_2d, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
+        (_mc_cart_2d, 0.0, np.pi / 6, (0.25, 1.0), None, True),
+        (_mc_cart_2d, 0.0, np.pi / 6, None, (-np.pi / 12, np.pi / 12), False),
+        (_mc_cart_2d, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
+        (_mc_cart_3d, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
+        (_mc_cart_3d, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
+    )
+    @unpack
+    def test_mc_kernels_limits(self, kernel, phi, theta, v_lim, a_lim, kept):
+        # v_lim/a_lim bound the transverse speed and its angle (1d), or the
+        # out-of-plane speed and elevation (2d, 3d). Particle of unit speed.
+        edges = np.arange(-1.0, 1.01, 0.25)
+        v_lim = (-np.inf, np.inf) if v_lim is None else v_lim
+        result = self._mc_kernel_runs(
+            kernel, [1.0], [phi], [theta], edges, v_lim=v_lim, a_lim=a_lim
+        )
+
+        self.assertAlmostEqual(np.sum(result), np.cos(theta) if kept else 0.0)
+
+    @data(
+        ("pol", "1d", None),
+        ("pol", "1d", "lin"),
+        ("cart", "2d", None),
+        ("cart", "3d", None),
+    )
+    @unpack
+    def test_int_sph_dist_conservation(self, base, dim, weight):
+        # With a grid covering all the Monte-Carlo particles and no limits, the
+        # projected distribution integrates to sum(f * dtau) over the instrument
+        # bins, whatever the random draws and the weighting.
+        vdf, _, speed, phi, theta = self._maxwellian()
+        v_edges = _speed_bin_edges(speed)
+        d_angle = np.deg2rad(11.25)
+        dtau = speed[:, None, None] ** 2 * np.diff(v_edges)[:, None, None]
+        dtau = dtau * np.cos(theta) * d_angle**2
+        v_max = 1.01 * v_edges[-1]
+        n_grid = {"1d": 200, "2d": 50, "3d": 20}[dim]
+        d_phi_g = 2 * np.pi / 32
+        phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, 32) + d_phi_g / 2
+
+        out = pyrf.int_sph_dist(
+            vdf,
+            speed,
+            phi,
+            theta,
+            None,
+            phi_grid,
+            projection_base=base,
+            projection_dim=dim,
+            velocity_grid_edges=np.linspace(-v_max, v_max, n_grid + 1),
+            n_mc=5,
+            weight=weight,
+        )
+        n, _ = self._moments(out, int(dim[0]))
+        self.assertAlmostEqual(n / np.sum(vdf * dtau), 1.0, delta=1e-9)
+
+    def test_int_sph_dist_partial_grid(self):
+        # Particles outside the grid are dropped: the density is the fraction of
+        # the Maxwellian with |vx| < 500 km/s.
+        v_d = np.array([300e3, -200e3, 100e3])
+        vdf, _, speed, phi, theta = self._maxwellian(v_d)
+        v_th = np.sqrt(2 * 1.602176634e-19 * 1000.0 / 1.67262192369e-27)
+        edges = np.linspace(-500e3, 500e3, 101)
+
+        out = pyrf.int_sph_dist(
+            vdf, speed, phi, theta, None, None, velocity_grid_edges=edges, n_mc=20
+        )
+        n, _ = self._moments(out, 1)
+        fraction = 0.5 * (
+            math.erf((500e3 - v_d[0]) / v_th) - math.erf((-500e3 - v_d[0]) / v_th)
+        )
+        self.assertAlmostEqual(n / 1e6, fraction, delta=0.01)
+
+    def test_int_sph_dist_rotation(self):
+        # Projection plane (x', y') = (y, z): the bulk velocity is (Vy, Vz)
+        v_d = np.array([300e3, -200e3, 100e3])
+        vdf, _, speed, phi, theta = self._maxwellian(v_d)
+        d_phi_g = 2 * np.pi / 32
+        phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, 32) + d_phi_g / 2
+        xyz = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+
+        out = pyrf.int_sph_dist(
+            vdf,
+            speed,
+            phi,
+            theta,
+            None,
+            phi_grid,
+            projection_base="cart",
+            projection_dim="2d",
+            velocity_grid_edges=np.linspace(-1500e3, 1500e3, 102),
+            n_mc=20,
+            xyz=xyz,
+        )
+        n, v = self._moments(out, 2)
+        self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
+        np.testing.assert_allclose(v / 1e3, v_d[[1, 2]] / 1e3, atol=3.0)
 
 
 @ddt
