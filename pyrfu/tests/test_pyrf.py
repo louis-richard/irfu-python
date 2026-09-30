@@ -2209,6 +2209,55 @@ class PoyntingFluxTestCase(unittest.TestCase):
         self.assertIsInstance(result[2], xr.DataArray)
 
 
+class PsdTestCase(unittest.TestCase):
+    F_S = 64.0
+
+    def _sines(self, amplitudes, freqs, n_pts=8192):
+        # Sum of sines, one column per component (bin-centred frequencies)
+        t = np.arange(n_pts) / self.F_S
+        data = np.stack(
+            [a * np.sin(2 * np.pi * f * t) for a, f in zip(amplitudes, freqs)],
+            axis=1,
+        )
+        return generate_timeline(self.F_S, n_pts), data
+
+    def test_psd_scalar(self):
+        # Peak at the sine frequency, and Parseval: int PSD df = variance
+        time, data = self._sines([2.0], [5.0])
+        result = pyrf.psd(pyrf.ts_scalar(time, data[:, 0]))
+
+        self.assertTupleEqual(result.dims, ("f",))
+        self.assertAlmostEqual(float(result.f[np.argmax(result.data)]), 5.0)
+        power = np.sum(result.data) * float(result.f[1] - result.f[0])
+        self.assertAlmostEqual(power, 2.0**2 / 2, delta=0.02)
+
+    def test_psd_vector(self):
+        # One spectrum per component (the spectrum was taken over the
+        # component axis of the rectified signal and raised a ValueError)
+        amplitudes, freqs = [1.0, 2.0, 3.0], [2.5, 5.0, 10.0]
+        time, data = self._sines(amplitudes, freqs)
+        result = pyrf.psd(pyrf.ts_vec_xyz(time, data))
+
+        self.assertTupleEqual(result.dims, ("f", "comp"))
+        self.assertListEqual(list(result.comp.data), ["x", "y", "z"])
+        d_f = float(result.f[1] - result.f[0])
+        for i, (amplitude, freq) in enumerate(zip(amplitudes, freqs)):
+            spectrum = result.data[:, i]
+            self.assertAlmostEqual(float(result.f[np.argmax(spectrum)]), freq)
+            self.assertAlmostEqual(
+                np.sum(spectrum) * d_f, amplitude**2 / 2, delta=0.02 * amplitude**2
+            )
+
+    def test_psd_tensor_and_options(self):
+        time, data = self._sines([1.0] * 9, [5.0] * 9, n_pts=2048)
+        result = pyrf.psd(pyrf.ts_tensor_xyz(time, data.reshape(-1, 3, 3)))
+        self.assertEqual(result.shape[1:], (3, 3))
+
+        # n_overlap=None: 256-point segments (used to raise with a float)
+        result = pyrf.psd(pyrf.ts_scalar(time, data[:, 0]), n_overlap=None)
+        self.assertEqual(len(result.f), 129)
+
+
 class PresAnisTestCase(unittest.TestCase):
     def test_pres_anis_output(self):
         result = pyrf.pres_anis(

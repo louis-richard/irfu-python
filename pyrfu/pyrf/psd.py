@@ -35,17 +35,20 @@ def psd(
     Parameters
     ----------
     inp : xarray.DataArray
-        Time series of measurement values.
+        Time series of measurement values (scalar, vector or tensor). The
+        spectrum is computed along time for each component.
     n_fft : int, Optional
         Length of the FFT used, if a zero padded FFT is desired.
         Default to 256.
     n_overlap : int, Optional
-        Number of points to overlap between segments. Default to 128.
+        Number of points to overlap between segments. The segments are
+        2 * n_overlap long. Default to 128 (None gives 256-point segments with
+        a 128-point overlap).
     window : str, Optional
         Desired window to use. It is passed to `get_window` to generate
         the window values, which are DFT-even by default.
         See "get_window" or a list of windows and required parameters.
-        Default Hanning
+        Default is "hamming".
     d_flag : str, Optional
         Specifies how to detrend each segment. It is passed as the
         "type" argument to the"detrend" function. Default to "constant".
@@ -58,7 +61,9 @@ def psd(
     Returns
     -------
     out : xarray.DataArray
-        Power spectral density or power spectrum of inp.
+        Power spectral density or power spectrum of inp, with frequency ``f``
+        as first dimension followed by the other dimensions of inp (e.g.,
+        ``("f", "comp")`` for a vector). NaNs in inp propagate to the spectra.
 
     References
     ----------
@@ -69,12 +74,9 @@ def psd(
 
     """
 
-    if inp.ndim == 2 and inp.shape[-1] == 3:
-        inp = np.abs(inp)
-
     if n_overlap is None:
         n_persegs = 256
-        n_overlap = n_persegs / 2
+        n_overlap = n_persegs // 2
     else:
         n_persegs = 2 * n_overlap
 
@@ -94,9 +96,11 @@ def psd(
         nperseg=n_persegs,
         scaling=scaling,
         return_onesided=True,
-        axis=-1,
+        axis=0,
     )
 
-    out = xr.DataArray(p_xx, coords=[freqs], dims=["f"])
+    # Frequency first, then the other dimensions (components) of the input
+    coords = [freqs, *[inp.coords[dim].data for dim in inp.dims[1:]]]
+    out = xr.DataArray(p_xx, coords=coords, dims=["f", *inp.dims[1:]])
 
     return out
