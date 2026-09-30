@@ -533,12 +533,46 @@ class CompressCwtTestCase(unittest.TestCase):
         self.assertIsInstance(result[2], np.ndarray)
 
     def test_compress_cwt_1d(self):
+        n_c = random.randint(2, 100)
         result = _compress_cwt_1d.__wrapped__(
             np.random.random((1000, 100)),
-            np.arange(0, 1000, 10),
-            random.randint(2, 100),
+            np.arange(1000 // n_c) * n_c,
+            n_c,
         )
         self.assertIsInstance(result, np.ndarray)
+        self.assertEqual(result.shape, (1000 // n_c, 100))
+
+    @staticmethod
+    def _cwt(data):
+        times = generate_timeline(1.0, len(data))
+        coords = {"time": times, "f": np.arange(data.shape[1], dtype=float)}
+        return xr.Dataset({c: (["time", "f"], data.copy()) for c in "xyz"}, coords)
+
+    def test_compress_cwt_nan(self):
+        data = np.ones((100, 2))
+        data[3, 0] = np.nan
+        data[10:20, 1] = np.nan
+        _, cwt_x, _, _ = pyrf.compress_cwt(self._cwt(data), 10)
+
+        # NaNs are ignored in the averages; only all-NaN blocks are NaN
+        self.assertEqual(cwt_x[0, 0], 1.0)
+        self.assertTrue(np.isnan(cwt_x[1, 1]))
+        self.assertEqual(np.sum(np.isnan(cwt_x)), 1)
+
+    @data(5, 10, 7)
+    def test_compress_cwt_blocks(self, n_c):
+        data = np.tile(np.arange(100, dtype=float)[:, None], (1, 2))
+        cwt = self._cwt(data)
+        cwt_t, cwt_x, _, _ = pyrf.compress_cwt(cwt, n_c)
+
+        # All the full blocks of nc points, stamped at their centre
+        n_b = 100 // n_c
+        expected = np.arange(n_b) * n_c + (n_c - 1) / 2
+        self.assertEqual(cwt_x.shape, (n_b, 2))
+        np.testing.assert_array_almost_equal(cwt_x[:, 0], expected)
+
+        d_t = (cwt_t - cwt.time.data[0]) / np.timedelta64(1, "s")
+        np.testing.assert_array_almost_equal(d_t, expected)
 
 
 @ddt
