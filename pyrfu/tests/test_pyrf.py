@@ -3228,6 +3228,37 @@ class MovmeanTestCase(unittest.TestCase):
         result = pyrf.movmean(inp, window_size)
         self.assertIsInstance(result, xr.DataArray)
 
+    @data(2, 5, 10, 11)
+    def test_movmean_values(self, window_size):
+        inp = generate_ts(64.0, 100, tensor_order=1)
+        result = pyrf.movmean(inp, window_size)
+        data = inp.data.astype(np.float64)
+
+        # Window of window_size points around each time (one more after than
+        # before for even windows), at the times with a full window
+        i_start = (window_size - 1) // 2
+        expected = [
+            np.mean(data[i - i_start : i - i_start + window_size], axis=0)
+            for i in range(i_start, 100 - window_size // 2)
+        ]
+        np.testing.assert_allclose(result.data, expected, rtol=1e-12)
+        np.testing.assert_array_equal(
+            result.time.data, inp.time.data[i_start : 100 - window_size // 2]
+        )
+        self.assertEqual(result.dtype, np.float64)
+
+    def test_movmean_nan(self):
+        inp = pyrf.ts_scalar(generate_timeline(64.0, 100), np.ones(100))
+        inp.data[10] = np.nan
+        inp.data[20:30] = np.nan
+        result = pyrf.movmean(inp, 5)
+
+        # NaNs are ignored; only the windows with no finite value are NaN
+        self.assertEqual(np.sum(np.isnan(result.data)), 6)
+        self.assertTrue(np.all(np.isnan(result.data[20:26])))
+        np.testing.assert_array_equal(result.data[:20], 1.0)
+        np.testing.assert_array_equal(result.data[26:], 1.0)
+
 
 class EbspPhysicsTestCase(unittest.TestCase):
     """Value-level checks of ebsp against a synthetic circularly polarised
