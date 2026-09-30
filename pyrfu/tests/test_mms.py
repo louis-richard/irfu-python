@@ -1446,23 +1446,33 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
             "https://lasp.colorado.edu/mms/sdc/sitl/data/models/fpi/",
         )
 
-    def test_remove_edist_background_source(self):
-        # source is passed to get_data, db_get_ts and the model loader
-        vdf = generate_vdf(64.0, 4, [32, 32, 16], energy01=True, species="electrons")
+    def _inputs(self, n_t=4):
+        # Burst DES skymap with alternating energy tables (parity 0, 1, 0, ...),
+        # at spin phases of model records 0, 1, 2, ... Model record k is k for
+        # parity 0 and 1000 + k for parity 1, so the subtracted background
+        # shows which record and table were used.
+        vdf = generate_vdf(64.0, n_t, [32, 32, 16], energy01=True, species="electrons")
+        vdf.data.data[...] = 1e6
         vdf.data.attrs["CATDESC"] = "MMS1 DES burst distribution"
         vdf.data.attrs["FIELDNAM"] = "mms1_des_dist_brst"
 
-        n_e = pyrf.ts_scalar(vdf.time.data, np.ones(4))
+        n_e = pyrf.ts_scalar(vdf.time.data, np.ones(n_t))
         n_e.attrs["GLOBAL"] = {
             "Photoelectron_model_scaling_factor": "0.5",
             "Photoelectron_model_filenames": self.MODEL,
         }
-        startdelphi = pyrf.ts_scalar(vdf.time.data, np.array([8, 24, 40, 56]))
+        startdelphi = pyrf.ts_scalar(vdf.time.data, 16 * np.arange(n_t) + 3)
+        records = np.arange(360.0)[:, None, None, None] * np.ones((1, 32, 16, 32))
         model = {
-            f"mms_des_bgdist_{p}_brst": mock.Mock(values=np.zeros((360, 32, 16, 32)))
-            for p in ["p0", "p1"]
+            "mms_des_bgdist_p0_brst": mock.Mock(values=records),
+            "mms_des_bgdist_p1_brst": mock.Mock(values=records + 1000.0),
+            "mms_des_startdelphi_counts_brst": mock.Mock(
+                values=16 * np.arange(360) + 8
+            ),
         }
+        return vdf, n_e, startdelphi, model
 
+    def _run(self, vdf, n_e, startdelphi, model, **kwargs):
         with (
             mock.patch.object(self.module, "get_data", return_value=n_e) as get_data,
             mock.patch.object(
@@ -1472,16 +1482,62 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
                 self.module, "_load_bgdist_model", return_value=model
             ) as load_model,
         ):
-            vdf_new, _, scale = mms.remove_edist_background(vdf, source="SDC")
+            result = mms.remove_edist_background(vdf, **kwargs)
+
+        return result, (get_data, db_get_ts, load_model)
+
+    def test_remove_edist_background_source(self):
+        # source is passed to get_data, db_get_ts and the model loader
+        vdf, n_e, startdelphi, model = self._inputs()
+        (_, _, scale), (get_data, db_get_ts, load_model) = self._run(
+            vdf, n_e, startdelphi, model, source="SDC"
+        )
 
         self.assertEqual(get_data.call_args.kwargs["source"], "sdc")
         self.assertEqual(db_get_ts.call_args.kwargs["source"], "sdc")
         self.assertEqual(load_model.call_args.args[:2], (self.MODEL, "sdc"))
         self.assertEqual(scale, 0.5)
-        np.testing.assert_allclose(vdf_new.data.data, vdf.data.data)
 
         with self.assertRaises(ValueError):
             mms.remove_edist_background(vdf, source="bazinga")
+
+    def test_remove_edist_background_model(self):
+        # Parity 1 samples used the parity 0 model; each sample uses the model
+        # record of its spin phase, scaled by the photoelectron factor
+        vdf, n_e, startdelphi, model = self._inputs()
+        (vdf_new, vdf_bkg, _), _ = self._run(vdf, n_e, startdelphi, model)
+
+        expected = 0.5 * np.array([0.0, 1001.0, 2.0, 1003.0])
+        np.testing.assert_allclose(vdf_bkg.data.data[:, 0, 0, 0], expected)
+        np.testing.assert_allclose(vdf_new.data.data[:, 0, 0, 0], 1e6 - expected)
+
+    def test_remove_edist_background_spin_phase_time(self):
+        # startdelphi_count is read separately: an extra sample before the
+        # distributions used to shift every sample to the next spin phase
+        vdf, n_e, startdelphi, model = self._inputs()
+        dt = vdf.time.data[1] - vdf.time.data[0]
+        extra = pyrf.ts_scalar(
+            np.hstack([vdf.time.data[0] - dt, vdf.time.data]),
+            np.hstack([16 * 100 + 3, startdelphi.data]),
+        )
+        (_, vdf_bkg, _), _ = self._run(vdf, n_e, extra, model)
+
+        expected = 0.5 * np.array([0.0, 1001.0, 2.0, 1003.0])
+        np.testing.assert_allclose(vdf_bkg.data.data[:, 0, 0, 0], expected)
+
+    def test_remove_edist_background_n_art(self):
+        # n_art = 0 removes no photoelectrons (it used to mean "default")
+        vdf, n_e, startdelphi, model = self._inputs()
+        (vdf_new, vdf_bkg, _), _ = self._run(vdf, n_e, startdelphi, model, n_art=0.0)
+
+        np.testing.assert_allclose(vdf_bkg.data.data, 0.0)
+        np.testing.assert_allclose(vdf_new.data.data, vdf.data.data)
+
+        # The attributes of the outputs and of the input are independent
+        (vdf_new, vdf_bkg, _), _ = self._run(vdf, n_e, startdelphi, model)
+        vdf_new.attrs["test"] = 1
+        self.assertNotIn("test", vdf.attrs)
+        self.assertNotIn("test", vdf_bkg.attrs)
 
 
 class RemoveImomsBackgroundTestCase(unittest.TestCase):
