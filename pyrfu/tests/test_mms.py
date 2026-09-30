@@ -8,6 +8,7 @@ import json
 import os
 import random
 import string
+import tempfile
 import unittest
 from unittest import mock
 
@@ -1394,6 +1395,93 @@ class ReduceTestCase(unittest.TestCase):
         self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
         self.assertAlmostEqual(v_bulk / 1e3, v_d[0], delta=3.0)
         self.assertAlmostEqual(t_x, 1000.0, delta=40.0)
+
+
+@ddt
+class RemoveEdistBackgroundTestCase(unittest.TestCase):
+    MODEL = "mms_fpi_brst_l2_des-bgdist_v1.1.0_p0-2.cdf"
+
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.remove_edist_background")
+
+    def test_load_bgdist_model_local(self):
+        with tempfile.TemporaryDirectory() as data_path:
+            os.makedirs(os.path.join(data_path, "models", "fpi"))
+            file_path = os.path.join(data_path, "models", "fpi", self.MODEL)
+            open(file_path, "wb").close()
+
+            with mock.patch.object(self.module.pycdfpp, "load") as load:
+                self.module._load_bgdist_model(self.MODEL, "local", data_path)
+
+            load.assert_called_once_with(file_path)
+
+            # Missing model file: clear error with the SDC URL
+            with self.assertRaises(FileNotFoundError) as context:
+                self.module._load_bgdist_model("missing.cdf", "local", data_path)
+
+            url = "https://lasp.colorado.edu/mms/sdc/public/data/models/fpi/missing.cdf"
+            self.assertIn(url, str(context.exception))
+
+    @data("sdc", "aws")
+    def test_load_bgdist_model_sdc(self, source):
+        # Read from the SDC into memory (also for "aws")
+        session = mock.MagicMock()
+        session.get.return_value.content = b"cdf bytes"
+        login = (session, {"User-Agent": "pyrfu"}, self.module.LASP_PUBL)
+
+        with mock.patch.object(self.module, "_login_lasp", return_value=login):
+            with mock.patch.object(self.module.pycdfpp, "load") as load:
+                self.module._load_bgdist_model(self.MODEL, source, "")
+
+        url = f"https://lasp.colorado.edu/mms/sdc/public/data/models/fpi/{self.MODEL}"
+        self.assertEqual(session.get.call_args.args[0], url)
+        load.assert_called_once_with(b"cdf bytes")
+        session.close.assert_called_once()
+
+    def test_models_url(self):
+        self.assertEqual(
+            self.module._models_url(
+                "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
+            ),
+            "https://lasp.colorado.edu/mms/sdc/sitl/data/models/fpi/",
+        )
+
+    def test_remove_edist_background_source(self):
+        # source is passed to get_data, db_get_ts and the model loader
+        vdf = generate_vdf(64.0, 4, [32, 32, 16], energy01=True, species="electrons")
+        vdf.data.attrs["CATDESC"] = "MMS1 DES burst distribution"
+        vdf.data.attrs["FIELDNAM"] = "mms1_des_dist_brst"
+
+        n_e = pyrf.ts_scalar(vdf.time.data, np.ones(4))
+        n_e.attrs["GLOBAL"] = {
+            "Photoelectron_model_scaling_factor": "0.5",
+            "Photoelectron_model_filenames": self.MODEL,
+        }
+        startdelphi = pyrf.ts_scalar(vdf.time.data, np.array([8, 24, 40, 56]))
+        model = {
+            f"mms_des_bgdist_{p}_brst": mock.Mock(values=np.zeros((360, 32, 16, 32)))
+            for p in ["p0", "p1"]
+        }
+
+        with (
+            mock.patch.object(self.module, "get_data", return_value=n_e) as get_data,
+            mock.patch.object(
+                self.module, "db_get_ts", return_value=startdelphi
+            ) as db_get_ts,
+            mock.patch.object(
+                self.module, "_load_bgdist_model", return_value=model
+            ) as load_model,
+        ):
+            vdf_new, _, scale = mms.remove_edist_background(vdf, source="SDC")
+
+        self.assertEqual(get_data.call_args.kwargs["source"], "sdc")
+        self.assertEqual(db_get_ts.call_args.kwargs["source"], "sdc")
+        self.assertEqual(load_model.call_args.args[:2], (self.MODEL, "sdc"))
+        self.assertEqual(scale, 0.5)
+        np.testing.assert_allclose(vdf_new.data.data, vdf.data.data)
+
+        with self.assertRaises(ValueError):
+            mms.remove_edist_background(vdf, source="bazinga")
 
 
 class RemoveImomsBackgroundTestCase(unittest.TestCase):

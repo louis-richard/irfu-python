@@ -10,14 +10,14 @@ import os
 import numpy as np
 import pycdfpp
 
+# Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_skymap import ts_skymap
 from .db_get_ts import db_get_ts
-
-# Local imports
 from .db_init import MMS_CFG_PATH
 from .get_data import get_data
+from .list_files_sdc import LASP_PUBL, _login_lasp
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -27,7 +27,66 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 
-def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
+def _models_url(lasp_url: str) -> str:
+    r"""URL of the FPI model files for the SDC access level of `lasp_url`."""
+    return lasp_url.replace("files/api/v1/", "data/models/fpi/")
+
+
+def _load_bgdist_model(file_name: str, source: str, data_path: str):
+    r"""Load the FPI photoelectron model file `file_name`.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the model file (Photoelectron_model_filenames).
+    source : {"local", "sdc", "aws"}
+        Resource to read the model from. For "aws", the model is read from the
+        SDC.
+    data_path : str
+        Path of the local MMS data (model in ``<data_path>/models/fpi/``).
+
+    Returns
+    -------
+    pycdfpp.CDF
+        Content of the model file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the local model file doesn't exist.
+
+    """
+    if source == "local":
+        file_path = os.path.join(data_path, "models", "fpi", file_name)
+
+        if not os.path.isfile(file_path):
+            raise FileNotFoundError(
+                f"FPI model file {file_path} not found. Download it from "
+                f"{_models_url(LASP_PUBL)}{file_name} or use source='sdc'."
+            )
+
+        return pycdfpp.load(file_path)
+
+    if source == "aws":
+        logging.info("FPI model files are read from the SDC")
+
+    # Read the file from the SDC into memory
+    sdc_session, headers, lasp_url = _login_lasp()
+
+    try:
+        response = sdc_session.get(
+            _models_url(lasp_url) + file_name, headers=headers, timeout=None
+        )
+        response.raise_for_status()
+    finally:
+        sdc_session.close()
+
+    return pycdfpp.load(response.content)
+
+
+def remove_edist_background(
+    vdf, n_sec: float = 0.0, n_art: float = -1.0, source: str = ""
+):
     r"""Remove secondary photoelectrons from electron distribution function
     according to [1]_.
 
@@ -40,6 +99,11 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     n_art : float, Optional
         Artificial photoelectron density (sun-angle dependant),
         Default is ephoto_scale from des-emoms GlobalAttributes.
+    source : {"local", "sdc", "aws"}, Optional
+        Resource to fetch the data (spin phase, moments) and the photoelectron
+        model from. The model is read from ``<local>/models/fpi/`` for "local",
+        and from the SDC otherwise. Default uses default in
+        `pyrfu/mms/config.json`.
 
     Returns
     -------
@@ -82,6 +146,16 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
     else:
         raise TypeError("Could not identify if data is fast or burst.")
 
+    # Read the current version of the MMS configuration file
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        config = json.load(fs)
+
+    # Resource to read the data and the photoelectron model from
+    source = source.lower() if source else config.get("default")
+
+    if source not in ["local", "sdc", "aws"]:
+        raise ValueError("source must be 'local', 'sdc' or 'aws'")
+
     vdf_tmp = time_clip(vdf, tint)
     vdf_new = np.zeros_like(vdf_tmp.data.data)
     vdf_bkg = np.zeros_like(vdf_tmp.data.data)
@@ -92,27 +166,20 @@ def remove_edist_background(vdf, n_sec: float = 0.0, n_art: float = -1.0):
         f"mms{mms_id}_des_startdelphi_count_{data_rate}",
         tint,
         verbose=False,
+        source=source,
     )
 
     # Load the elctron number density to get the name of the photoelectron
     # model file, and the photoelectron scaling factor
-    n_e = get_data(f"ne_fpi_{data_rate}_l2", tint, mms_id, verbose=False)
+    n_e = get_data(f"ne_fpi_{data_rate}_l2", tint, mms_id, verbose=False, source=source)
 
     photoe_scle = n_e.attrs["GLOBAL"]["Photoelectron_model_scaling_factor"]
     photoe_scle = float(photoe_scle)
 
     # Load the model internal photoelectrons
     bkg_fname = n_e.attrs["GLOBAL"]["Photoelectron_model_filenames"]
-
-    # Read the current version of the MMS configuration file
-    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-        config = json.load(fs)
-
     data_path = os.path.normpath(config["local"])
-
-    bkg_fname = os.path.join(data_path, "models", "fpi", bkg_fname)
-
-    f = pycdfpp.load(bkg_fname)
+    f = _load_bgdist_model(bkg_fname, source, data_path)
 
     if data_rate.lower() == "brst":
         prefs = ["mms_des_bgdist_p0", "mms_des_bgdist_p0"]
