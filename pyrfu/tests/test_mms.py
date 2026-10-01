@@ -16,6 +16,8 @@ from unittest import mock
 import numpy as np
 import requests
 import xarray as xr
+from botocore import UNSIGNED
+from botocore.exceptions import ClientError
 from ddt import data, ddt, idata, unpack
 from scipy import constants
 
@@ -38,6 +40,9 @@ __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+# Module (pyrfu.mms.list_files_aws is also the name of the function)
+list_files_aws_module = importlib.import_module("..mms.list_files_aws", __package__)
 
 TEST_TINT = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
 
@@ -1302,6 +1307,170 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
             e_mms, r_mms, b_mms, TEST_TINT, df=df, f_range=f_range
         )
         self.assertIsInstance(result, xr.Dataset)
+
+
+class _FakeS3Bucket:
+    # Bucket listing the given keys with bucket.objects.filter(Prefix=...), and
+    # recording the prefixes it was asked for.
+    def __init__(self, keys, error=None):
+        self.keys, self.error, self.prefixes = keys, error, []
+        self.objects = self
+
+    def filter(self, Prefix):  # pylint: disable=invalid-name
+        self.prefixes.append(Prefix)
+
+        if self.error is not None:
+            raise self.error
+
+        return [
+            mock.Mock(key=key, size=len(key))
+            for key in self.keys
+            if key.startswith(Prefix)
+        ]
+
+
+@ddt
+class ListFilesAwsTestCase(unittest.TestCase):
+    BUCKET = "gov-nasa-hdrl-data1"
+    HELIO = "spdf/cdaweb/data/mms"  # key prefix in the bucket
+    FGM_BRST = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
+    FPI_FAST = {"inst": "fpi", "tmmode": "fast", "lev": "l2", "dtype": "des-moms"}
+
+    def _list(self, keys, tint, var, bucket_prefix="", error=None):
+        bucket = _FakeS3Bucket(keys, error)
+        resource = mock.Mock()
+        resource.Bucket.return_value = bucket
+
+        with mock.patch.object(
+            list_files_aws_module, "_s3_resource", return_value=resource
+        ):
+            out = mms.list_files_aws(tint, 1, var, bucket_prefix=bucket_prefix)
+
+        return out, resource, bucket
+
+    def test_list_files_aws_brst_month_directory(self):
+        # HelioCloud: burst files directly in the month directory. The file
+        # starting before the time interval covers its start; earlier ones and
+        # those starting at or after its end are not needed.
+        directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
+        times = ["051233", "075043", "075403", "080703", "081100", "090000"]
+        keys = [f"{directory}/mms1_fgm_brst_l2_20190914{t}_v5.207.0.cdf" for t in times]
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+
+        bucket_prefix = f"{self.BUCKET}/{self.HELIO}"
+        out, resource, _ = self._list(keys, tint, self.FGM_BRST, bucket_prefix)
+
+        resource.Bucket.assert_called_once_with(self.BUCKET)
+        self.assertListEqual([f["full_name"] for f in out], [keys[1], keys[2], keys[3]])
+        self.assertEqual(out[0]["timetag"], "2019-09-14T07:50:43")
+        self.assertEqual(out[0]["file_size"], len(keys[1]))
+
+    def test_list_files_aws_brst_day_directory(self):
+        # SDC layout: burst files in a day directory, looked at only if there is
+        # no file in the month directory. Keys are built with "/" on all systems.
+        prefix = "my-bucket/mms"
+        directory = "mms/mms1/fgm/brst/l2/2019/09/14"
+        keys = [f"{directory}/mms1_fgm_brst_l2_20190914075403_v5.207.0.cdf"]
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+
+        out, resource, bucket = self._list(keys, tint, self.FGM_BRST, prefix)
+
+        resource.Bucket.assert_called_once_with("my-bucket")
+        self.assertListEqual([f["full_name"] for f in out], keys)
+        self.assertIn(
+            "mms/mms1/fgm/brst/l2/2019/09/14/mms1_fgm_brst_l2_20190914", bucket.prefixes
+        )
+        self.assertTrue(all("\\" not in p for p in bucket.prefixes))
+
+    def test_list_files_aws_latest_version_and_previous_day(self):
+        # Only the latest version of each file; a file of the previous day covers
+        # the start of the time interval.
+        directory = f"{self.HELIO}/mms1/fpi/fast/l2/des-moms/2019/09"
+        stem = "mms1_fpi_fast_l2_des-moms"
+        keys = [
+            f"{directory}/{stem}_20190913220000_v3.4.0.cdf",
+            f"{directory}/{stem}_20190914000000_v3.3.0.cdf",
+            f"{directory}/{stem}_20190914000000_v3.4.0.cdf",
+            f"{directory}/{stem}_20190914000000_v3.10.0.cdf",
+            f"{directory}/{stem}_20190914020000_v3.4.0.cdf",
+            f"{directory}/mms1_fpi_fast_l2_dis-moms_20190914000000_v3.4.0.cdf",
+        ]
+        tint = ["2019-09-13T23:30:00", "2019-09-14T01:00:00"]
+
+        out, _, _ = self._list(keys, tint, self.FPI_FAST, f"{self.BUCKET}/{self.HELIO}")
+
+        self.assertListEqual([f["full_name"] for f in out], [keys[0], keys[3]])
+
+    def test_list_files_aws_listing_error(self):
+        error = ClientError({"Error": {"Code": "NoSuchBucket"}}, "ListObjectsV2")
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+
+        with self.assertRaises(FileNotFoundError):
+            self._list([], tint, self.FGM_BRST, "missing/mms", error=error)
+
+    @data(
+        (["2019-09-14T07:54:00", "2019-09-14T08:11:00"], FGM_BRST),
+    )
+    @unpack
+    def test_list_files_aws_input(self, tint, var):
+        with self.assertRaises(TypeError):
+            mms.list_files_aws(tuple(tint), 1, var)
+
+        with self.assertRaises(TypeError):
+            mms.list_files_aws(list(pyrf.iso86012datetime64(np.array(tint))), 1, var)
+
+    @data(
+        ("s3://my-bucket/data/mms/", ("my-bucket", "data/mms")),
+        ("my-bucket", ("my-bucket", "")),
+        ("", ("gov-nasa-hdrl-data1", "spdf/cdaweb/data/mms")),  # "aws" not set
+    )
+    @unpack
+    def test_bucket_and_prefix(self, config_aws, expected):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            config_path = os.path.join(tmp_dir, "config.json")
+
+            with open(config_path, "w", encoding="utf-8") as fs:
+                json.dump({"aws": config_aws}, fs)
+
+            with mock.patch.object(list_files_aws_module, "MMS_CFG_PATH", config_path):
+                result = list_files_aws_module._bucket_and_prefix()
+
+        self.assertTupleEqual(result, expected)
+        self.assertTupleEqual(
+            list_files_aws_module._bucket_and_prefix("s3://other/x"), ("other", "x")
+        )
+
+    @data(True, False)
+    def test_s3_resource_credentials(self, has_credentials):
+        # Anonymous requests if there are no AWS credentials (public buckets)
+        credentials = mock.Mock() if has_credentials else None
+
+        with mock.patch(
+            "boto3.session.Session.get_credentials", return_value=credentials
+        ):
+            resource = list_files_aws_module._s3_resource()
+
+        signature = resource.meta.client.meta.config.signature_version
+        self.assertEqual(signature is UNSIGNED, not has_credentials)
+
+    @unittest.skipUnless(
+        os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
+    )
+    def test_list_files_aws_heliocloud(self):
+        # Real listing of the public HelioCloud bucket
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        out = mms.list_files_aws(tint, 1, self.FGM_BRST, bucket_prefix="")
+        times = [f["full_name"].rsplit("_", 2)[-2] for f in out]
+        self.assertListEqual(
+            times,
+            [
+                "20190914075043",
+                "20190914075403",
+                "20190914075823",
+                "20190914080243",
+                "20190914080703",
+            ],
+        )
 
 
 @ddt

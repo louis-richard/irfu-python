@@ -49,7 +49,9 @@ def db_init(
     sdc_password : str, Optional
         MMS SDC credential password. Default is "password".
     aws : str, Optional
-        Bucket name and prefix to MMS data in AWS S3. Default is empty.
+        Bucket name and prefix to MMS data in AWS S3, as "bucket/prefix". Default
+        is empty, which uses the public MMS archive on NASA HelioCloud
+        ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms", no AWS credentials needed).
 
     Raises
     ------
