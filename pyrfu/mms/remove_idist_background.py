@@ -58,7 +58,7 @@ def remove_idist_background(vdf, def_bg):
         (1, 1, vdf.phi.shape[1], vdf.theta.shape[0]),
     )
 
-    vdf_new = vdf.copy()
+    vdf_new = vdf.copy(deep=True)  # deep: the caller's VDF is unchanged
     vdf_new.data.data -= vdf_bg.data
     vdf_new.data.data[vdf_new.data.data < 0] = 0.0
 

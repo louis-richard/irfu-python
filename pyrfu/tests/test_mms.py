@@ -2184,6 +2184,31 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
         self.assertNotIn("test", vdf_bkg.attrs)
 
 
+class RemoveIdistBackgroundTestCase(unittest.TestCase):
+    def test_remove_idist_background(self):
+        # The background (omni differential energy flux, 1/(cm^2 s sr)) converted
+        # to phase-space density is removed (negative values set to 0), and the
+        # caller's VDF is unchanged (it was a shallow copy)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], species="ions")
+        vdf.data.data[...] = 1e-23
+        vdf_in = vdf.data.data.copy()
+        def_bg = pyrf.ts_scalar(vdf.time.data, np.full(10, 1e3))
+
+        result = mms.remove_idist_background(vdf, def_bg)
+
+        with np.errstate(divide="ignore"):  # the first energy channel is 0
+            coeff = constants.proton_mass / (
+                constants.elementary_charge * vdf.energy.data.astype(np.float64)
+            )
+        psd_bg = 1e3 * 1e4 / 2 * coeff**2 / 1e12  # (time, energy)
+        expected = np.clip(1e-23 - psd_bg[:, :, None, None], 0.0, None)
+        expected = np.broadcast_to(expected, vdf_in.shape)
+
+        self.assertTrue(np.any(expected > 0) and np.any(expected == 0))
+        np.testing.assert_allclose(result.data.data, expected, rtol=1e-5, atol=1e-30)
+        np.testing.assert_array_equal(vdf.data.data, vdf_in)
+
+
 class RemoveImomsBackgroundTestCase(unittest.TestCase):
     @staticmethod
     def _measured(n_t=5):
