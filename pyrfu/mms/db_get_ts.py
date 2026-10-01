@@ -122,7 +122,10 @@ def db_get_ts(
         resource, tint, mms_id, var, data_path
     )
 
-    if file_names:
+    try:
+        if not file_names:
+            raise FileNotFoundError(f"No files found for {dataset_name}")
+
         if verbose:
             logging.info("Loading %s...", cdf_name)
 
@@ -141,13 +144,10 @@ def db_get_ts(
                 out_all = out
             else:
                 out_all = ts_append(out_all, out)
+    finally:
+        if sdc_session:
+            sdc_session.close()
 
-        out_all = _check_times(out_all)
-
-    else:
-        raise FileNotFoundError(f"No files found for {dataset_name}")
-
-    if sdc_session:
-        sdc_session.close()
+    out_all = _check_times(out_all)
 
     return out_all

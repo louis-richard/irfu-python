@@ -5,11 +5,13 @@
 import json
 import logging
 import os
+import posixpath
 from typing import Optional
 
 # 3rd party imports
 import numpy as np
 import pycdfpp
+from botocore.exceptions import ClientError
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
@@ -17,6 +19,7 @@ from ..pyrf.ts_skymap import ts_skymap
 from .db_get_ts import db_get_ts
 from .db_init import MMS_CFG_PATH
 from .get_data import get_data
+from .list_files_aws import _bucket_and_prefix, _s3_resource
 from .list_files_sdc import LASP_PUBL, _login_lasp
 
 __author__ = "Louis Richard"
@@ -40,8 +43,9 @@ def _load_bgdist_model(file_name: str, source: str, data_path: str):
     file_name : str
         Name of the model file (Photoelectron_model_filenames).
     source : {"local", "sdc", "aws"}
-        Resource to read the model from. For "aws", the model is read from the
-        SDC.
+        Resource to read the model from. For "aws", the model is read from
+        ``models/fpi/`` in the MMS bucket (HelioCloud by default), or from the
+        SDC if it is not there.
     data_path : str
         Path of the local MMS data (model in ``<data_path>/models/fpi/``).
 
@@ -68,7 +72,19 @@ def _load_bgdist_model(file_name: str, source: str, data_path: str):
         return pycdfpp.load(file_path)
 
     if source == "aws":
-        logging.info("FPI model files are read from the SDC")
+        bucket_name, prefix = _bucket_and_prefix()
+        key = posixpath.join(prefix, "models", "fpi", file_name)
+
+        try:
+            response = _s3_resource().Object(bucket_name, key).get()
+            return pycdfpp.load(response["Body"].read())
+        except ClientError as err:
+            logging.warning(
+                "FPI model file s3://%s/%s not available (%s), reading it from the SDC",
+                bucket_name,
+                key,
+                err.response.get("Error", {}).get("Code"),
+            )
 
     # Read the file from the SDC into memory
     sdc_session, headers, lasp_url = _login_lasp()
@@ -103,7 +119,8 @@ def remove_edist_background(
     source : {"local", "sdc", "aws"}, Optional
         Resource to fetch the data (spin phase, moments) and the photoelectron
         model from. The model is read from ``<local>/models/fpi/`` for "local",
-        and from the SDC otherwise. Default uses default in
+        from the SDC for "sdc", and from ``models/fpi/`` in the MMS bucket
+        (HelioCloud by default) for "aws". Default uses default in
         `pyrfu/mms/config.json`.
 
     Returns

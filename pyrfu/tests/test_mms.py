@@ -10,6 +10,7 @@ import random
 import string
 import tempfile
 import unittest
+from contextlib import nullcontext
 from unittest import mock
 
 # 3rd party imports
@@ -1309,6 +1310,50 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
 
 
+@ddt
+class GetDataDownloadTestCase(unittest.TestCase):
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.get_data")
+
+    def test_get_file_content_aws_error(self):
+        # S3 errors are raised (they were logged, then gave UnboundLocalError)
+        s3_object = mock.Mock(key="mms1/file.cdf")
+        s3_object.get.side_effect = ClientError(
+            {"Error": {"Code": "InternalError", "Message": "We encountered an error"}},
+            "GetObject",
+        )
+
+        with self.assertLogs(level="ERROR"), self.assertRaises(ClientError):
+            self.module._get_file_content_sources("aws", s3_object)
+
+    def test_get_file_content_sdc_error(self):
+        session = mock.Mock()
+        session.get.side_effect = requests.ConnectionError("connection reset")
+
+        with self.assertLogs(level="ERROR"):
+            with self.assertRaises(requests.ConnectionError):
+                self.module._get_file_content_sources("sdc", "url", session, {})
+
+    @data(
+        [],  # no file
+        ["url"],  # download error
+    )
+    def test_get_data_closes_sdc_session(self, file_names):
+        session = mock.Mock()
+        session.get.side_effect = requests.ConnectionError("connection reset")
+        sources = (file_names, session, {})
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ):
+            with self.assertRaises((FileNotFoundError, requests.ConnectionError)):
+                with self.assertLogs(level="ERROR") if file_names else nullcontext():
+                    mms.get_data("b_gse_fgm_srvy_l2", tint, 1, source="sdc")
+
+        session.close.assert_called_once()
+
+
 class _FakeS3Bucket:
     # Bucket listing the given keys with bucket.objects.filter(Prefix=...), and
     # recording the prefixes it was asked for.
@@ -1591,20 +1636,59 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
             url = "https://lasp.colorado.edu/mms/sdc/public/data/models/fpi/missing.cdf"
             self.assertIn(url, str(context.exception))
 
-    @data("sdc", "aws")
-    def test_load_bgdist_model_sdc(self, source):
-        # Read from the SDC into memory (also for "aws")
+    def _load_from_sdc(self, source, s3_resource=None):
+        # Load the model with the SDC (and S3) mocked; returns the SDC session
         session = mock.MagicMock()
-        session.get.return_value.content = b"cdf bytes"
+        session.get.return_value.content = b"sdc cdf bytes"
         login = (session, {"User-Agent": "pyrfu"}, self.module.LASP_PUBL)
+        bucket = ("gov-nasa-hdrl-data1", "spdf/cdaweb/data/mms")
 
         with mock.patch.object(self.module, "_login_lasp", return_value=login):
-            with mock.patch.object(self.module.pycdfpp, "load") as load:
-                self.module._load_bgdist_model(self.MODEL, source, "")
+            with mock.patch.object(
+                self.module, "_s3_resource", return_value=s3_resource
+            ):
+                with mock.patch.object(
+                    self.module, "_bucket_and_prefix", return_value=bucket
+                ):
+                    with mock.patch.object(self.module.pycdfpp, "load") as load:
+                        self.module._load_bgdist_model(self.MODEL, source, "")
+
+        return session, load
+
+    def test_load_bgdist_model_sdc(self):
+        # Read from the SDC into memory
+        session, load = self._load_from_sdc("sdc")
 
         url = f"https://lasp.colorado.edu/mms/sdc/public/data/models/fpi/{self.MODEL}"
         self.assertEqual(session.get.call_args.args[0], url)
-        load.assert_called_once_with(b"cdf bytes")
+        load.assert_called_once_with(b"sdc cdf bytes")
+        session.close.assert_called_once()
+
+    def test_load_bgdist_model_aws(self):
+        # Read from models/fpi/ in the MMS bucket, without the SDC
+        s3_resource = mock.MagicMock()
+        s3_object = s3_resource.Object.return_value
+        s3_object.get.return_value = {"Body": mock.Mock(read=lambda: b"s3 cdf bytes")}
+
+        session, load = self._load_from_sdc("aws", s3_resource)
+
+        s3_resource.Object.assert_called_once_with(
+            "gov-nasa-hdrl-data1", f"spdf/cdaweb/data/mms/models/fpi/{self.MODEL}"
+        )
+        load.assert_called_once_with(b"s3 cdf bytes")
+        session.get.assert_not_called()
+
+    def test_load_bgdist_model_aws_fallback(self):
+        # Not in the bucket: read from the SDC
+        s3_resource = mock.MagicMock()
+        s3_resource.Object.return_value.get.side_effect = ClientError(
+            {"Error": {"Code": "NoSuchKey"}}, "GetObject"
+        )
+
+        with self.assertLogs(level="WARNING"):
+            session, load = self._load_from_sdc("aws", s3_resource)
+
+        load.assert_called_once_with(b"sdc cdf bytes")
         session.close.assert_called_once()
 
     def test_models_url(self):

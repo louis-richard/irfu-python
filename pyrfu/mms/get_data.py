@@ -125,19 +125,23 @@ def _get_file_content_sources(
             file_content = response.content
         except requests.RequestException:
             logging.error("Error retrieving file from %s", file_name)
+            raise
     elif source == "aws":
         try:
             response = file_name.get()
             file_content = response["Body"].read()
         except ClientError as err:
-            if err.response["Error"]["Code"] == "InternalError":  # Generic error
-                logging.error("Error Message: %s", err.response["Error"]["Message"])
-
-                response_meta = err.response.get("ResponseMetadata")
-                logging.error("Request ID: %s", response_meta.get("RequestId"))
-                logging.error("Http code: %s", response_meta.get("HTTPStatusCode"))
-            else:
-                raise err
+            error = err.response.get("Error", {})
+            response_meta = err.response.get("ResponseMetadata", {})
+            logging.error(
+                "Error retrieving %s from S3: %s (%s, request ID %s, HTTP code %s)",
+                getattr(file_name, "key", file_name),
+                error.get("Message"),
+                error.get("Code"),
+                response_meta.get("RequestId"),
+                response_meta.get("HTTPStatusCode"),
+            )
+            raise
     else:
         raise NotImplementedError(f"Resource {source} is not yet implemented!!")
 
@@ -286,28 +290,29 @@ def get_data(
         source, tint, mms_id, var, data_path
     )
 
-    if not file_names:
-        raise FileNotFoundError(f"No files found for {var_str} in {source}")
-
-    if verbose:
-        logging.info("Loading %s...", cdf_name)
-
     out = None
 
-    for file_name in file_names:
-        file_content = _get_file_content_sources(
-            source, file_name, sdc_session, headers
-        )
+    try:
+        if not file_names:
+            raise FileNotFoundError(f"No files found for {var_str} in {source}")
 
-        if "-dist" in var["dtype"]:
-            out = dist_append(out, get_dist(file_content, cdf_name, tint))
+        if verbose:
+            logging.info("Loading %s...", cdf_name)
 
-        else:
-            out = ts_append(out, get_ts(file_content, cdf_name, tint))
+        for file_name in file_names:
+            file_content = _get_file_content_sources(
+                source, file_name, sdc_session, headers
+            )
+
+            if "-dist" in var["dtype"]:
+                out = dist_append(out, get_dist(file_content, cdf_name, tint))
+
+            else:
+                out = ts_append(out, get_ts(file_content, cdf_name, tint))
+    finally:
+        if sdc_session:
+            sdc_session.close()
 
     out = _check_times(out)
-
-    if sdc_session:
-        sdc_session.close()
 
     return out
