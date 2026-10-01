@@ -30,15 +30,17 @@ def eis_moments(
 
     .. math::
 
-        n \\left [ m^{-3} \\right ] = 4 \\pi \\sqrt{\\frac{m_i}{2}} \\sum_{i}
-        \\left ( E_i^{1/2} \\right)^0 \\left ( \\frac{J_i}{E_i}\\right)
-        \\left ( E_i^{1/2} \\textrm{d} E_i\\right)
+        n = 4 \pi \sqrt{\frac{m_i}{2}} \int J E^{-1/2} \textrm{d}E
 
-        P \\left [ Pa \\right ] = 4 \\pi \\sqrt{\\frac{m_i}{2}} \\sum_{i}
-        \\left ( E_i^{1/2} \\right)^2 \\left ( \\frac{J_i}{E_i}\\right)
-        \\left ( E_i^{1/2} \\textrm{d} E_i\\right)
+        \langle |v| \rangle = \frac{4 \pi}{n} \int J \textrm{d}E
 
-        T \\left [ K \\right ] = \\frac{P}{n k_b}
+        P = \frac{2}{3} 4 \pi \sqrt{\frac{m_i}{2}} \int J E^{1/2}
+        \textrm{d}E
+
+        T = \frac{P}{n k_B}
+
+    where :math:`J` is the differential particle flux and :math:`E` the energy
+    (the integral in :math:`P` is the energy density).
 
     Parameters
     ----------
@@ -57,28 +59,41 @@ def eis_moments(
     -------
     n : xarray.DataArray
         Time series of the number density in [cm^{-3}]
+    v : xarray.DataArray
+        Time series of the mean speed :math:`\langle |v| \rangle` in [km/s]
+        (not the bulk velocity, which is zero for an isotropic distribution).
     p : xarray.DataArray
         Time series of the pressure in [nPa]
     t : xarray.DataArray
         Time series of the temperature in [eV]
 
+    Raises
+    ------
+    ValueError
+        If the specie is not supported.
+
     Notes
     -----
     The input omni-directional differential particle flux must be given in
-    [(1/cm^2 s sr keV)^{-1}], and the energy must be in [keV].
-    The integration is performed using the composite Simpson’s rule.
+    [1/(cm^2 s sr keV)], and the energy must be in [keV]. The integration is
+    performed over the energy channels using the composite Simpson's rule, so
+    these are partial moments, and an energy channel with NaN flux gives NaN
+    moments at that time.
 
     References
     ----------
     .. [1]  Mauk, B. H., D. G. Mitchell, R. W. McEntire, C. P. Paranicas,
             E. C. Roelof, D. J. Williams, S. M. Krimigis, and A. Lagg (2004),
             Energetic ion characteristics and neutral gas interactions in
-            Jupiter’s magnetosphere, J. Geophys. Res., 109, A09S12,
+            Jupiter's magnetosphere, J. Geophys. Res., 109, A09S12,
             doi:10.1029/2003JA010270.
 
     """
 
-    assert specie in ["proton", "alpha", "oxygen"]
+    if specie not in ["proton", "alpha", "oxygen"]:
+        raise ValueError(
+            f"Invalid specie {specie}. Must be 'proton', 'alpha' or 'oxygen'"
+        )
 
     if specie == "proton":
         mass = constants.proton_mass
@@ -100,18 +115,21 @@ def eis_moments(
         return np.sqrt(energy_c) ** order * (flux_c / energy_c) * np.sqrt(energy_c)
 
     # Zeroth order moment number density m^-3
-    n_i = fact * integrate.simps(_int(intensity, energy, 0), energy, axis=1)
+    n_i = fact * integrate.simpson(_int(intensity, energy, 0), x=energy, axis=1)
 
-    # First order moment bulk velocity m s^-1
-    v_i = fact * integrate.simps(_int(intensity, energy, 1), energy, axis=1)
+    # First order moment: mean speed <|v|> in m s^-1 (not the bulk velocity)
+    v_i = fact * integrate.simpson(_int(intensity, energy, 1), x=energy, axis=1)
     v_i /= n_i * np.sqrt(mass / 2)
-    # Second order moment pressure in N m^-2 (Pa)
-    p_i = fact * integrate.simps(_int(intensity, energy, 2), energy, axis=1)
+
+    # Second order moment: the integral is the energy density u, and the pressure
+    # of an isotropic distribution is P = 2 u / 3, in N m^-2 (Pa)
+    u_i = fact * integrate.simpson(_int(intensity, energy, 2), x=energy, axis=1)
+    p_i = 2.0 * u_i / 3.0
     t_i = p_i / (n_i * constants.Boltzmann)  # K
 
     # Convert to usual units
     n_i = ts_scalar(inp.time.data, n_i * 1e-6)  # cm^-3
-    v_i = ts_scalar(inp.time.data, v_i * 1e-3)  # km s^-1
+    v_i = ts_scalar(inp.time.data, v_i * 1e-3)  # mean speed, km s^-1
     p_i = ts_scalar(inp.time.data, p_i * 1e9)  # nPa
     t_i = ts_scalar(
         inp.time.data,

@@ -599,6 +599,50 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
 
 
 @ddt
+class EisMomentsTestCase(unittest.TestCase):
+    @staticmethod
+    def _maxwellian_flux(mass, n_cc=1.0, kt_kev=10.0, n_t=3):
+        # Omni-directional differential flux (1/(cm^2 s sr keV)) of an isotropic
+        # Maxwellian, on a wide energy grid (keV) so the partial moments are full
+        energy = np.geomspace(0.01, 2000.0, 400)
+        k_t = kt_kev * 1e3 * constants.e
+        e_j = energy * 1e3 * constants.e
+        vdf = n_cc * 1e6 * (mass / (2 * np.pi * k_t)) ** 1.5 * np.exp(-e_j / k_t)
+        flux = 2 * e_j / mass**2 * vdf * 1e3 * constants.e / 1e4
+        times = generate_timeline(1.0, n_t)
+        flux = np.tile(flux, (n_t, 1))
+        return xr.DataArray(flux, coords=[times, energy], dims=["time", "energy"])
+
+    @data(("proton", 1), ("alpha", 4), ("oxygen", 16))
+    @unpack
+    def test_eis_moments_maxwellian(self, specie, mass_number):
+        # n = 1 cm^-3, kT = 10 keV: P = n kT = 1.602 nPa (the 2nd order integral
+        # is the energy density, 1.5 times larger), <|v|> = sqrt(8 kT / (pi m))
+        mass = mass_number * constants.proton_mass
+        n_i, v_i, p_i, t_i = mms.eis_moments(self._maxwellian_flux(mass), specie)
+        k_t = 1e4 * constants.e
+
+        np.testing.assert_allclose(n_i.data, 1.0, rtol=1e-4)
+        np.testing.assert_allclose(p_i.data, 1e15 * k_t, rtol=1e-4)
+        np.testing.assert_allclose(t_i.data, 1e4, rtol=1e-4)
+        np.testing.assert_allclose(
+            v_i.data, np.sqrt(8 * k_t / (np.pi * mass)) / 1e3, rtol=1e-4
+        )
+
+    def test_eis_moments_nan_channel(self):
+        flux = self._maxwellian_flux(constants.proton_mass)
+        flux.data[1, 10] = np.nan
+        n_i, _, p_i, _ = mms.eis_moments(flux)
+
+        self.assertTrue(np.isnan(n_i.data[1]) and np.isnan(p_i.data[1]))
+        np.testing.assert_allclose(n_i.data[[0, 2]], 1.0, rtol=1e-4)
+
+    def test_eis_moments_input(self):
+        with self.assertRaises(ValueError):
+            mms.eis_moments(self._maxwellian_flux(constants.proton_mass), "helium")
+
+
+@ddt
 class EisOmniTestCase(unittest.TestCase):
     @idata(
         itertools.product(
