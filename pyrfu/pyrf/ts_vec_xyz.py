@@ -66,7 +66,7 @@ def ts_vec_xyz(
     if attrs is None:
         attrs = {"TENSOR_ORDER": 1}
     elif isinstance(attrs, dict):
-        attrs["TENSOR_ORDER"] = 1
+        attrs = {**attrs, "TENSOR_ORDER": 1}  # copy: the caller's dict is unchanged
     else:
         raise TypeError("attrs must be a dict")
 

@@ -2695,6 +2695,15 @@ class TraceTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100])
 
+    def test_trace_input_unchanged(self):
+        # The output got the input's attrs dict, so the input became TENSOR_ORDER 0
+        inp = generate_ts(64.0, 100, tensor_order=2)
+        attrs = dict(inp.attrs)
+        result = pyrf.trace(inp)
+
+        self.assertDictEqual(inp.attrs, attrs)
+        self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
+
 
 class OptimizeNbins1DTestCase(unittest.TestCase):
     def test_optimize_nbins_1d(self):
@@ -3421,6 +3430,14 @@ class TsScalarTestCase(unittest.TestCase):
         )
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
+    def test_ts_scalar_attrs_unchanged(self):
+        # TENSOR_ORDER is set in a copy of attrs: the caller's dict is unchanged
+        attrs = {"UNITS": "nT"}
+        out = pyrf.ts_scalar(generate_timeline(64.0, 100), np.ones((100,)), attrs=attrs)
+
+        self.assertDictEqual(attrs, {"UNITS": "nT"})
+        self.assertDictEqual(out.attrs, {"UNITS": "nT", "TENSOR_ORDER": 0})
+
 
 @ddt
 class TsSpectrTestCase(unittest.TestCase):
@@ -3523,6 +3540,16 @@ class TsVecXYZTestCase(unittest.TestCase):
             generate_timeline(64.0, 100), generate_data(100, tensor_order=1)
         )
         self.assertEqual(result.attrs["TENSOR_ORDER"], 1)
+
+    def test_ts_vec_xyz_attrs_unchanged(self):
+        # TENSOR_ORDER is set in a copy of attrs: the caller's dict is unchanged
+        attrs = {"UNITS": "nT"}
+        out = pyrf.ts_vec_xyz(
+            generate_timeline(64.0, 100), np.ones((100, 3)), attrs=attrs
+        )
+
+        self.assertDictEqual(attrs, {"UNITS": "nT"})
+        self.assertDictEqual(out.attrs, {"UNITS": "nT", "TENSOR_ORDER": 1})
 
 
 @ddt
