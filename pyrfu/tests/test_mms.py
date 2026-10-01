@@ -10,6 +10,7 @@ import random
 import string
 import tempfile
 import unittest
+import warnings
 from contextlib import nullcontext
 from unittest import mock
 
@@ -2427,6 +2428,29 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
             mms.vdf_reduce(self.vdf, tint, "1d", [1, 0, 0], n_vpt=10)
 
         self.assertEqual(context.filename, __file__)
+
+
+class VdfToE64TestCase(unittest.TestCase):
+    def test_vdf_to_e64_delta_energy(self):
+        # The input attrs are unchanged; the 64-channel widths are the same at
+        # every time, the top/bottom edges from the 32-channel widths (they were
+        # written into the last/first time step)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        attrs = {k: np.array(v, copy=True) for k, v in vdf.attrs.items()}
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # zero energy channel
+            result = mms.vdf_to_e64(vdf)
+
+        for key, value in attrs.items():
+            np.testing.assert_array_equal(vdf.attrs[key], value)
+
+        d_plus = result.attrs["delta_energy_plus"]
+        d_minus = result.attrs["delta_energy_minus"]
+        for d_e in [d_plus, d_minus]:
+            np.testing.assert_array_equal(d_e, np.broadcast_to(d_e[0], d_e.shape))
+        self.assertEqual(d_plus[0, -1], np.max(attrs["delta_energy_plus"][:, -1]))
+        self.assertEqual(d_minus[0, 0], np.min(attrs["delta_energy_minus"][:, 0]))
 
 
 @ddt
