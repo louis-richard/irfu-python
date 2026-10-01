@@ -2778,6 +2778,95 @@ class ResampleTestCase(unittest.TestCase):
         result = pyrf.resample(inp, ref)
         self.assertIsInstance(result, type(inp))
 
+    T_0 = np.datetime64("2019-09-14T07:54:00", "ns")
+
+    def _ts(self, t_s, data):
+        times = self.T_0 + np.round(np.asarray(t_s) * 1e9).astype("timedelta64[ns]")
+        return pyrf.ts_scalar(times, np.asarray(data, dtype=np.float64))
+
+    @staticmethod
+    def _matlab_average(data, centres, half, thresh=0.0):
+        # irf_resamp: samples in (t - dt/2, t + dt/2], points farther than
+        # thresh * std (N - 1) from the mean disregarded
+        idx = np.arange(len(data))
+        out = []
+        for i in centres:
+            window = data[(idx > i - half) & (idx <= i + half)]
+            if thresh:
+                keep = np.abs(window - window.mean()) <= thresh * window.std(ddof=1)
+                window = window[keep]
+            out.append(window.mean())
+        return np.array(out)
+
+    def test_resample_average_window(self):
+        # 128 Hz ramp to 32 Hz with samples on the window edges: each sample is in
+        # one window (they were in two, or one, depending on round-off)
+        inp = self._ts(np.arange(1280) / 128.0, np.arange(1280.0))
+        ref = self._ts(np.arange(4, 316) / 32.0, np.zeros(312))
+        result = pyrf.resample(inp, ref)
+
+        expected = self._matlab_average(np.arange(1280.0), np.arange(4, 316) * 4, 2)
+        np.testing.assert_allclose(result.data, expected)
+
+    def test_resample_average_nan(self):
+        # A NaN only affects its window; windows without samples are NaN
+        data = np.arange(1280.0)
+        data[400] = np.nan
+        inp = self._ts(np.arange(1280) / 128.0, data)
+        ref = self._ts(np.arange(4, 330) / 32.0, np.zeros(326))
+        result = pyrf.resample(inp, ref)
+
+        # window j holds samples 4 (j + 4) - 1 .. 4 (j + 4) + 2; the last sample
+        # (1279) is in window 316
+        self.assertTrue(np.isnan(result.data[96]))  # window of sample 400
+        self.assertTrue(np.all(np.isnan(result.data[317:])))  # after the data
+        self.assertEqual(int(np.isnan(result.data[:317]).sum()), 1)
+
+    def test_resample_thresh(self):
+        # thresh always raised AssertionError; points farther than thresh * std
+        # are disregarded as in irf_resamp (32 samples per window)
+        data = np.random.default_rng(1).standard_normal(1280)
+        data[[10, 500, 501]] = [50.0, -40.0, 60.0]
+        inp = self._ts(np.arange(1280) / 128.0, data)
+        ref = self._ts(np.arange(1, 39) / 4.0, np.zeros(38))
+        result = pyrf.resample(inp, ref, thresh=2.0)
+
+        expected = self._matlab_average(data, np.arange(1, 39) * 32, 16, thresh=2.0)
+        np.testing.assert_allclose(result.data, expected)
+        self.assertLess(abs(result.data[0]), 1.0)  # the 50 outlier is removed
+
+    def test_resample_irregular_first_interval(self):
+        # The sampling frequency was guessed from the first interval
+        inp = self._ts(np.arange(1280) / 128.0, np.arange(1280.0))
+        ref = self._ts(np.r_[0.0, 0.0375 + np.arange(1, 300) / 32.0], np.zeros(300))
+        result = pyrf.resample(inp, ref)
+
+        np.testing.assert_allclose(result.data[1:4], [8.5, 12.5, 16.5])
+
+    def test_resample_float_time(self):
+        # Numeric times are seconds (their bits were read as integers)
+        inp = xr.DataArray(
+            np.arange(1280.0), coords=[np.arange(1280) / 128.0], dims=["time"]
+        )
+        ref = xr.DataArray(
+            np.zeros(312), coords=[np.arange(4, 316) / 32.0], dims=["time"]
+        )
+        result = pyrf.resample(inp, ref)
+
+        expected = self._matlab_average(np.arange(1280.0), np.arange(4, 316) * 4, 2)
+        np.testing.assert_allclose(result.data, expected)
+
+        with self.assertRaises(TypeError):
+            pyrf.resample(inp, self._ts(np.arange(10) / 32.0, np.zeros(10)))
+
+    def test_resample_extrapolation(self):
+        # Linear extrapolation outside the time range of inp (as irf_resamp)
+        inp = self._ts(np.arange(10.0), np.arange(10.0))
+        ref = self._ts(np.arange(-2.0, 12.0, 0.5), np.zeros(28))
+        result = pyrf.resample(inp, ref)
+
+        np.testing.assert_allclose(result.data, np.arange(-2.0, 12.0, 0.5))
+
 
 @ddt
 class PoyntingFluxTestCase(unittest.TestCase):

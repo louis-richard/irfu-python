@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import bisect
 import logging
+import warnings
 
 # 3rd party imports
 import numpy as np
@@ -19,87 +19,70 @@ __status__ = "Prototype"
 
 
 def _guess_sampling_frequency(ref_time):
-    r"""Compute sampling frequency of the time line."""
+    r"""Sampling frequency of the time line (in seconds), from the median time
+    step (robust to an irregular first interval)."""
+    d_t = np.median(np.diff(ref_time))
 
-    n_data = len(ref_time)
+    if not np.isfinite(d_t) or d_t <= 0:
+        raise RuntimeError("Cannot guess the sampling frequency of the reference")
 
-    sfy1 = 1 / (ref_time[1] - ref_time[0])
-    sfy = None
-    not_found = True
-
-    if n_data == 2:
-        sfy = sfy1
-        not_found = False
-
-    cur, max_try = [2, 10]
-
-    while not_found and cur < n_data and cur - 3 < max_try:
-        sfy = 1 / (ref_time[cur] - ref_time[cur - 1])
-
-        if np.absolute(sfy - sfy1) < sfy * 0.001:
-            not_found = False
-
-            sfy = (sfy + sfy1) / 2
-            break
-
-        sfy = sfy1
-        cur += 1
-
-    if not_found:
-        raise RuntimeError(f"Cannot guess sampling frequency. Tried {max_try:d} times")
-
-    return sfy
+    return 1 / d_t
 
 
 def _average(inp_time, inp_data, ref_time, thresh, dt2):
-    r"""Resample inp_data to timeline of ref_time, using half-window of dt2.
-    Points above std*tresh are excluded. thresh=0 turns off this option.
+    r"""Average inp_data in the windows (ref_time - dt2, ref_time + dt2] (as in
+    irf_resamp), with inp_time, ref_time and dt2 in the same units. A window
+    without samples, or with a NaN, gives NaN. With thresh, the points farther
+    than thresh * std from the mean of the window are disregarded.
     """
+    inp_data = np.asarray(inp_data, dtype=np.float64)
+    shape = inp_data.shape[1:]
+    data = inp_data.reshape(len(inp_data), -1)
 
-    try:
-        out_data = np.zeros([len(ref_time), *inp_data.shape[1:]])
-    except IndexError:
-        inp_data = inp_data[:, None]
-        out_data = np.zeros((len(ref_time), inp_data.shape[1]))
+    # Samples of each window: inp_time[idx_l:idx_r]
+    idx_l = np.searchsorted(inp_time, ref_time - dt2, side="right")
+    idx_r = np.searchsorted(inp_time, ref_time + dt2, side="right")
+    n_pts = idx_r - idx_l
 
-    for i, ref_t in enumerate(ref_time):
-        idx_l = bisect.bisect_left(inp_time, ref_t - dt2)
-        idx_r = bisect.bisect_right(inp_time, ref_t + dt2)
+    if not thresh:
+        # Sums of the windows from cumulative sums (offset by the mean to limit
+        # round-off), with NaNs counted separately so they only affect their
+        # own windows
+        is_nan = np.isnan(data)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            offset = np.nan_to_num(np.nanmean(data, axis=0))
+        values = np.where(is_nan, 0.0, data - offset)
+        zeros = np.zeros((1, data.shape[1]))
+        cum_sum = np.concatenate([zeros, np.cumsum(values, axis=0)])
+        cum_nan = np.concatenate([zeros, np.cumsum(is_nan, axis=0)])
 
-        idx = np.arange(idx_l, idx_r)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            out_data = (cum_sum[idx_r] - cum_sum[idx_l]) / n_pts[:, None] + offset
 
-        if idx.size == 0:
-            out_data[i, ...] = np.nan
-        else:
-            if thresh:
-                std_ = np.std(inp_data[idx, ...], axis=0)
-                mean_ = np.mean(inp_data[idx, ...], axis=0)
+        out_data[(n_pts == 0) | np.any(cum_nan[idx_r] - cum_nan[idx_l] > 0, axis=1)] = (
+            np.nan
+        )
+    else:
+        out_data = np.full((len(ref_time), data.shape[1]), np.nan)
 
-                assert any(np.isnan(std_))
+        for i, (i_l, i_r) in enumerate(zip(idx_l, idx_r)):
+            if i_r == i_l:
+                continue
 
-                for j, stdd in enumerate(std_):
-                    if not np.isnan(stdd):
-                        idx_r = bisect.bisect_right(
-                            inp_data[idx, j + 1] - mean_[j],
-                            thresh * stdd,
-                        )
-                        if idx_r:
-                            out_data[i, j + 1] = np.mean(
-                                inp_data[idx[idx_r], j + 1],
-                                axis=0,
-                            )
-                        else:
-                            out_data[i, j + 1] = np.nan
-                    else:
-                        out_data[i, ...] = np.nan
+            window = data[i_l:i_r]
 
-            else:
-                out_data[i, ...] = np.mean(inp_data[idx, ...], axis=0)
+            # Standard deviation as MATLAB's std (N - 1; 0 for one sample); NaN
+            # if the window contains a NaN
+            std_ = np.std(window, axis=0, ddof=1) if len(window) > 1 else 0 * window[0]
+            mean_ = np.mean(window, axis=0)
+            keep = np.abs(window - mean_) <= thresh * std_
 
-    if out_data.ndim > 1 and out_data.shape[1] == 1:
-        out_data = out_data[:, 0]
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                out_data[i] = np.nanmean(np.where(keep, window, np.nan), axis=0)
 
-    return out_data
+    return out_data.reshape(len(ref_time), *shape)
 
 
 def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
@@ -118,13 +101,22 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
         sfy = None
 
     if np.issubdtype(inp.time.dtype, np.datetime64):
-        inp_time_ttns = inp.time.data.astype("int64")
-        ref_time_ttns = ref.time.data.astype("int64")
-        inp_time = (inp_time_ttns - inp_time_ttns[0]) * 1e-9
-        ref_time = (ref_time_ttns - inp_time_ttns[0]) * 1e-9
+        if not np.issubdtype(ref.time.dtype, np.datetime64):
+            raise TypeError("inp and ref must both have datetime64 or numeric times")
+
+        # Integer nanoseconds for the averaging windows, float seconds otherwise
+        inp_time_ns = inp.time.data.astype("datetime64[ns]").astype(np.int64)
+        ref_time_ns = ref.time.data.astype("datetime64[ns]").astype(np.int64)
+        inp_time = (inp_time_ns - inp_time_ns[0]) * 1e-9
+        ref_time = (ref_time_ns - inp_time_ns[0]) * 1e-9
+    elif np.issubdtype(inp.time.dtype, np.number) and np.issubdtype(
+        ref.time.dtype, np.number
+    ):
+        # Numeric times are in seconds
+        inp_time = inp_time_ns = np.asarray(inp.time.data, dtype=np.float64)
+        ref_time = ref_time_ns = np.asarray(ref.time.data, dtype=np.float64)
     else:
-        inp_time = inp.time.data.view("i8") * 1e-9
-        ref_time = ref.time.data.view("i8") * 1e-9
+        raise TypeError("inp and ref must both have datetime64 or numeric times")
 
     if flag_do == "check":
         if len(ref_time) > 1:
@@ -148,14 +140,21 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
         if not sfy:
             sfy = _guess_sampling_frequency(ref_time)
 
-        out_data = _average(inp_time, inp.data, ref_time, thresh, 0.5 / sfy)
+        if np.issubdtype(inp.time.dtype, np.datetime64):
+            dt2 = int(np.round(0.5e9 / sfy))  # half window in ns
+        else:
+            dt2 = 0.5 / sfy
+
+        out_data = _average(inp_time_ns, inp.data, ref_time_ns, thresh, dt2)
 
     else:
         if not method:
             method = "linear"
 
         # If time series agree, no interpolation is necessary.
-        if len(inp_time) == len(ref_time) and all(inp_time == ref_time):
+        if len(inp_time_ns) == len(ref_time_ns) and np.array_equal(
+            inp_time_ns, ref_time_ns
+        ):
             out_data = inp.data.copy()
             coord = [ref.coords["time"].data]
 
@@ -172,6 +171,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
 
             return out
 
+        # Linear extrapolation outside the time range of inp, as irf_resamp
         tck = interpolate.interp1d(
             inp_time,
             inp.data,
@@ -263,17 +263,34 @@ def resample(
         (default "linear") if method is given then interpolate
         independent of sampling.
     f_s : float, Optional
-        Sampling frequency of the Y signal, 1/window.
-    window : int or float or ndarray, Optional
-        Length of the averaging window, 1/fsample.
+        Sampling frequency of the Y signal, 1/window. Default is guessed from
+        the median time step of ref.
+    window : float, Optional
+        Length of the averaging window in seconds, 1/fsample.
     thresh : float, Optional
-        Points above STD*THRESH are disregarded for averaging
+        Points farther than thresh * STD from the mean of an averaging window are
+        disregarded (per component). Default is 0 (all points are used).
 
     Returns
     -------
     out : xarray.DataArray
         Resampled input to the reference time line using the selected method.
 
+    Raises
+    ------
+    TypeError
+        If the times of inp and ref are not both datetime64 or both numeric
+        (seconds).
+
+    Notes
+    -----
+    As in irf_resamp:
+
+    * Averaging uses the windows (t - 1/(2 f_s), t + 1/(2 f_s)] around each
+      reference time t, so that each sample belongs to one window. A window
+      without samples gives NaN, and a NaN in a window gives NaN.
+    * Interpolation extrapolates linearly outside the time range of inp: clip
+      ref to the time range of inp (e.g., with time_clip) if this is not wanted.
 
     Examples
     --------
@@ -289,7 +306,7 @@ def resample(
 
     Load magnetic field and electric field
 
-    >>> b_xyz = mms.get_data("e_gse_fgm_srvy_l2", tint, mms_id)
+    >>> b_xyz = mms.get_data("b_gse_fgm_srvy_l2", tint, mms_id)
     >>> e_xyz = mms.get_data("e_gse_edp_fast_l2", tint, mms_id)
 
     Resample magnetic field to electric field sampling
