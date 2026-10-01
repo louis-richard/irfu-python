@@ -19,7 +19,7 @@ from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import _login_lasp
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"

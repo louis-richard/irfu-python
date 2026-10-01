@@ -16,7 +16,7 @@ from .feeps_active_eyes import feeps_active_eyes
 from .feeps_pitch_angles import feeps_pitch_angles
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"

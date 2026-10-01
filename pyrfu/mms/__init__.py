@@ -95,7 +95,7 @@ from .vdf_to_e64 import vdf_to_e64
 from .whistler_b2e import whistler_b2e
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"

@@ -14,7 +14,7 @@ from pyrfu.pyrf.c_4_grad import c_4_grad
 from pyrfu.pyrf.cross import cross
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"

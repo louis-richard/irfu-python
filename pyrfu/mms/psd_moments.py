@@ -17,7 +17,7 @@ from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"

@@ -20,7 +20,7 @@ from pyrfu.mms.get_data import _var_and_cdf_name
 from pyrfu.mms.list_files_sdc import _login_lasp, list_files_sdc
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"

@@ -10,7 +10,7 @@ from .db_get_ts import _db_get_ts_dict
 from .feeps_active_eyes import feeps_active_eyes
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"

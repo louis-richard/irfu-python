@@ -14,7 +14,7 @@ from pyrfu.mms.get_data import _get_file_content_sources, _list_files_sources
 from pyrfu.mms.get_variable import get_variable
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"
