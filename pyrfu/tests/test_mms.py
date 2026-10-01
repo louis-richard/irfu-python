@@ -897,6 +897,128 @@ class HpcaEnergiesTestCase(unittest.TestCase):
 
 
 @ddt
+class HpcaPadTestCase(unittest.TestCase):
+    N_AZ, N_PO, N_EN, D_T = 16, 16, 4, 0.625
+
+    def _inputs(self, aze_deg, n_spins=2, centred=True, b_dir=None):
+        # vdf = 1 at 16 samples per half-spin (start azimuths 0..15), all anodes
+        # at 90 deg (equatorial), and aze records at the start or centre of the
+        # half-spins (pyrfu.mms.get_data centres the times: 7.5 samples later)
+        n_ti = n_spins * self.N_AZ
+        t_0 = np.datetime64("2019-09-14T07:54:00", "ns")
+        times = t_0 + (np.arange(n_ti) * self.D_T * 1e9).astype("timedelta64[ns]")
+        energy = np.arange(1.0, self.N_EN + 1)
+        vdf = xr.DataArray(
+            np.ones((n_ti, self.N_PO, self.N_EN)),
+            coords=[times, np.arange(self.N_PO), energy],
+            dims=["time", "rcomp", "ccomp"],
+        )
+        saz = xr.DataArray(np.arange(n_ti) % self.N_AZ, coords=[times], dims=["time"])
+        offset = 7.5 * self.D_T * 1e9 if centred else 0.0
+        t_aze = times[:: self.N_AZ] + np.timedelta64(int(offset), "ns")
+        aze = xr.DataArray(
+            np.broadcast_to(
+                aze_deg[..., None, None], (n_spins, self.N_AZ, self.N_PO, self.N_EN)
+            ).copy(),
+            coords=[t_aze, np.arange(self.N_AZ), np.arange(self.N_PO), energy],
+            dims=["time", "az", "po", "en"],
+        )
+
+        # B at 128 Hz, along b_dir(t) (default +x)
+        t_b = generate_timeline(
+            128.0, int(n_ti * self.D_T * 128) + 256, ref_time="2019-09-14T07:53:59"
+        )
+        t_s = (t_b - t_0) / np.timedelta64(1, "s")
+        b_data = (
+            b_dir(t_s) if b_dir is not None else np.tile([1.0, 0.0, 0.0], (len(t_b), 1))
+        )
+        b_xyz = pyrf.ts_vec_xyz(t_b, b_data)
+
+        return vdf, saz, aze, b_xyz
+
+    def _pad(self, *args, **kwargs):
+        return mms.hpca_pad(*args, elevation=np.full(self.N_PO, 90.0), **kwargs)
+
+    @data(True, False)
+    def test_hpca_pad_look_direction_and_pairing(self, centred):
+        # Looking along -x (azimuth 180) with B along +x: particles along B,
+        # pitch angle 0; looking along +x (azimuth 0): 180. The look direction
+        # alternates with the azimuth step in half-spin 0 and is 0 in half-spin 1,
+        # so each sample must get the azimuths of its own half-spin and step.
+        aze_deg = np.zeros((2, self.N_AZ))
+        aze_deg[0, ::2] = 180.0
+        pad = self._pad(*self._inputs(aze_deg, centred=centred))
+
+        is_par = np.zeros(32, dtype=bool)
+        is_par[0:16:2] = True
+        np.testing.assert_array_equal(pad.data[is_par, 0], 1.0)
+        self.assertTrue(np.all(np.isnan(pad.data[is_par, 1:])))
+        np.testing.assert_array_equal(pad.data[~is_par, -1], 1.0)
+        self.assertTrue(np.all(np.isnan(pad.data[~is_par, :-1])))
+
+    def test_hpca_pad_b_time(self):
+        # B along +x in half-spin 0 and along -x in half-spin 1, looking along -x:
+        # pitch angle 0 then 180 (B was paired with the wrong samples)
+        def b_dir(t_s):
+            sign = np.where(t_s < 16 * self.D_T, 1.0, -1.0)
+            return np.stack([sign, np.zeros_like(t_s), np.zeros_like(t_s)], axis=1)
+
+        aze_deg = np.full((2, self.N_AZ), 180.0)
+        pad = self._pad(*self._inputs(aze_deg, b_dir=b_dir))
+
+        np.testing.assert_array_equal(pad.data[1:15, 0], 1.0)
+        np.testing.assert_array_equal(pad.data[17:31, -1], 1.0)
+        self.assertTrue(np.all(np.isnan(pad.data[1:15, -1])))
+
+    def test_hpca_pad_energy_range(self):
+        # Both ends of elim are included (the top channel was dropped)
+        vdf, saz, aze, b_xyz = self._inputs(np.full((2, self.N_AZ), 180.0))
+        vdf.data[...] = vdf.ccomp.data  # value = energy
+        pad = self._pad(vdf, saz, aze, b_xyz, elim=[2.0, 3.0])
+
+        np.testing.assert_allclose(pad.data[:, 0], 2.5)
+
+    def test_hpca_pad_mismatch(self):
+        vdf, saz, aze, b_xyz = self._inputs(np.full((2, self.N_AZ), 180.0))
+
+        # aze shifted by 3 samples: not the start nor the centre of a half-spin
+        aze_shifted = aze.assign_coords(
+            time=aze.time.data + np.timedelta64(int(3 * self.D_T * 1e9), "ns")
+        )
+        with self.assertRaises(ValueError):
+            self._pad(vdf, saz, aze_shifted, b_xyz)
+
+        # start azimuths of a half-spin not 0..15
+        saz_bad = saz.copy()
+        saz_bad.data[20] = 7
+        with self.assertRaises(ValueError):
+            self._pad(vdf, saz_bad, aze, b_xyz)
+
+    def test_hpca_pad_elevation_from_file(self):
+        # mms?_hpca_centroid_elevation_angle read from the dataset of vdf
+        module = importlib.import_module("pyrfu.mms.hpca_pad")
+        vdf, saz, aze, b_xyz = self._inputs(np.full((2, self.N_AZ), 180.0))
+        vdf.attrs["GLOBAL"] = {"Logical_source": "mms1_hpca_brst_l2_ion"}
+        elevation = xr.DataArray(np.full((1, self.N_PO), 90.0), dims=["x", "y"])
+
+        with mock.patch.object(
+            module, "db_get_variable", return_value=elevation
+        ) as read:
+            pad = mms.hpca_pad(vdf, saz, aze, b_xyz, source="aws")
+
+        self.assertEqual(
+            read.call_args.args[:2],
+            ("mms1_hpca_brst_l2_ion", "mms1_hpca_centroid_elevation_angle"),
+        )
+        self.assertEqual(read.call_args.kwargs["source"], "aws")
+        np.testing.assert_array_equal(pad.data[:, 0], 1.0)
+
+        del vdf.attrs["GLOBAL"]
+        with self.assertRaises(ValueError):
+            mms.hpca_pad(vdf, saz, aze, b_xyz)
+
+
+@ddt
 class MakeModelKappaTestCase(unittest.TestCase):
     @data(
         (generate_vdf(64.0, 100, (32, 16, 16), species="bazinga"), random.random()),
