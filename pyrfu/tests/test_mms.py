@@ -1423,6 +1423,24 @@ class PsdRebinTestCase(unittest.TestCase):
         np.testing.assert_array_equal(energy_r[0:63:2], vdf.attrs["energy0"])
 
 
+class EstimatePhaseSpeedTestCase(unittest.TestCase):
+    def test_estimate_phase_speed(self):
+        # Power ridge along f = v k / (2 pi), v = 20 km/s: the speed is recovered
+        # and the caller's power spectrum is unchanged (parts were set to 0)
+        k = np.linspace(-0.3, 0.3, 121)
+        freq = np.linspace(0.0, 1000.0, 201)
+        k_mat, f_mat = np.meshgrid(k, freq)
+        power = np.exp(-(((f_mat - 2e4 * k_mat / (2 * np.pi)) / 20.0) ** 2))
+        power *= k_mat > 0
+        power[50, 60] = np.nan
+        power_in = power.copy()
+
+        vph = mms.estimate_phase_speed(power, freq, k, 100.0)
+
+        self.assertAlmostEqual(vph / 2e4, 1.0, delta=0.01)
+        np.testing.assert_array_equal(power, power_in)
+
+
 @ddt
 class FeepsActiveEyesTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"], ["sitl", "l2"]))
