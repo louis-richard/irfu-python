@@ -2649,6 +2649,71 @@ class PoyntingFluxTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], xr.DataArray)
         self.assertIsInstance(result[2], xr.DataArray)
 
+    # S for E = 1 mV/m and B = 1 nT (E perpendicular to B), in mW/m^2
+    S_UNIT = 1e-9 / (4 * np.pi * 1e-7)
+
+    @staticmethod
+    def _fields(n_pts=100, f_s=10.0):
+        # Constant E = (0, 0, 1) mV/m and B = (1, 1, 0) nT: S = (-1, 1, 0) S_UNIT
+        times = pyrf.unix2datetime64(np.arange(n_pts) / f_s)
+        e_xyz = pyrf.ts_vec_xyz(times, np.tile([0.0, 0.0, 1.0], (n_pts, 1)))
+        b_xyz = pyrf.ts_vec_xyz(times, np.tile([1.0, 1.0, 0.0], (n_pts, 1)))
+        return e_xyz, b_xyz
+
+    def test_poynting_flux_integral(self):
+        # Integral of each component (np.cumsum used to mix the components):
+        # S * (k + 1) / f_s after k + 1 samples
+        e_xyz, b_xyz = self._fields()
+        s_xyz, int_s = pyrf.poynting_flux(e_xyz, b_xyz)
+
+        np.testing.assert_allclose(
+            s_xyz.data, np.tile([-1, 1, 0], (100, 1)) * self.S_UNIT
+        )
+        self.assertTupleEqual(int_s.dims, ("time", "comp"))
+        np.testing.assert_array_equal(int_s.time.data, e_xyz.time.data)
+        expected = np.arange(1, 101)[:, None] / 10.0 * np.array([-1, 1, 0])
+        np.testing.assert_allclose(int_s.data, expected * self.S_UNIT, atol=1e-15)
+        self.assertEqual(int_s.attrs["UNITS"], "mW s/m^2")
+
+    def test_poynting_flux_nan(self):
+        # NaNs count as zero in the integrals only; the returned S and S_z keep
+        # them, and the valid components of S at that time
+        e_xyz, b_xyz = self._fields()
+        e_xyz.data[10, 0] = np.nan  # S = (-1, nan, nan)
+        b_hat = pyrf.ts_vec_xyz(e_xyz.time.data, np.tile([-1.0, 1.0, 0.0], (100, 1)))
+
+        s_xyz, int_s = pyrf.poynting_flux(e_xyz, b_xyz)
+        np.testing.assert_allclose(s_xyz.data[10], [-self.S_UNIT, np.nan, np.nan])
+        np.testing.assert_allclose(
+            int_s.data[-1], np.array([-10.0, 9.9, 0.0]) * self.S_UNIT, atol=1e-15
+        )
+
+        s_xyz, s_z, int_s_z = pyrf.poynting_flux(e_xyz, b_xyz, b_hat)
+        self.assertTrue(np.isnan(s_z.data[10]))
+        np.testing.assert_allclose(s_z.data[11], np.sqrt(2) * self.S_UNIT)
+        self.assertAlmostEqual(
+            float(int_s_z.data[-1]) / (np.sqrt(2) * self.S_UNIT), 9.9, places=10
+        )
+
+    def test_poynting_flux_same_length_shifted(self):
+        # Same number of samples but times shifted by half a sample: B is
+        # resampled to the times of E. With Bx = 1 + t, Sy = (1 + t) S_UNIT at
+        # the times t of E (the samples of B are 50 ms later).
+        n_pts, f_s = 100, 10.0
+        t_e = np.arange(n_pts) / f_s
+        t_b = t_e + 0.05
+        e_xyz = pyrf.ts_vec_xyz(
+            pyrf.unix2datetime64(t_e), np.tile([0.0, 0.0, 1.0], (n_pts, 1))
+        )
+        b_data = np.stack([1 + t_b, np.ones(n_pts), np.zeros(n_pts)], axis=1)
+        b_xyz = pyrf.ts_vec_xyz(pyrf.unix2datetime64(t_b), b_data)
+
+        s_xyz, _ = pyrf.poynting_flux(e_xyz, b_xyz)
+
+        t_s = (s_xyz.time.data - e_xyz.time.data[0]) / np.timedelta64(1, "s")
+        self.assertTrue(np.all(np.isin(s_xyz.time.data, e_xyz.time.data)))
+        np.testing.assert_allclose(s_xyz.data[:, 1], (1 + t_s) * self.S_UNIT)
+
 
 class PsdTestCase(unittest.TestCase):
     F_S = 64.0
