@@ -204,8 +204,10 @@ Zenodo page also lists the DOI of each release):
       url       = {https://doi.org/10.5281/zenodo.10678695}
     }
 
-``pyrfu`` is developed at the Swedish Institute of Space Physics (IRF) in
-Uppsala and distributed under the MIT license.
+``pyrfu`` was developed at the Swedish Institute of Space Physics (IRF) in
+Uppsala, building on the IRFU-MATLAB library, and is now maintained at the
+Rudolf Peierls Centre for Theoretical Physics, University of Oxford. It is
+distributed under the MIT license.
 
 .. toctree::
    :hidden:

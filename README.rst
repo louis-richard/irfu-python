@@ -144,17 +144,43 @@ A list of examples is available `here <https://pyrfu.readthedocs.io/en/latest/ex
 
 Credits
 =======
-This software was developed by Louis RICHARD (louisr@irfu.se) based on the IRFU-MATLAB library.
+This software was developed by Louis RICHARD at the Swedish Institute of Space Physics (IRF) in Uppsala,
+based on the IRFU-MATLAB library, and is now maintained by Louis RICHARD at the Rudolf Peierls Centre
+for Theoretical Physics, University of Oxford (louis.richard@physics.ox.ac.uk).
 
 Acknowledgement
 ===============
-Please use the following to acknowledge use of pyrfu in your publications:
-Data analysis was performed using the pyrfu analysis package available at https://github.com/louis-richard/irfu-python
+If ``pyrfu`` contributes to work leading to a publication, please cite it and give
+the version you used (``pyrfu.__version__``), for example in the acknowledgements
+or the methods section:
 
-Additional Information
-======================
-MMS Science Data Center: https://lasp.colorado.edu/mms/sdc/public/
+    Data analysis was performed using the open-source pyrfu package (Richard et al.,
+    2024), version X.Y.Z.
 
-MMS Datasets: https://lasp.colorado.edu/mms/sdc/public/datasets/
+Reference:
 
-MMS - Goddard Space Flight Center: http://mms.gsfc.nasa.gov/
+    Richard, L., Khotyaintsev, Y. V., Vaivads, A., Graham, D. B., Norgren, C., &
+    Johlander, A. (2024). *Python RymdFysik Utilities (PyRFU): An open-source
+    Python package for advanced in-situ space plasma analysis* [Software]. Zenodo.
+    https://doi.org/10.5281/zenodo.10678695
+
+BibTeX:
+
+.. code-block:: bibtex
+
+    @software{richard2024pyrfu,
+      author    = {Richard, Louis and Khotyaintsev, Yuri V. and Vaivads, Andris and
+                   Graham, Daniel B. and Norgren, Cecilia and Johlander, Andreas},
+      title     = {Python RymdFysik Utilities (PyRFU): An Open-Source Python Package
+                   for Advanced In-Situ Space Plasma Analysis},
+      year      = {2024},
+      publisher = {Zenodo},
+      doi       = {10.5281/zenodo.10678695},
+      url       = {https://doi.org/10.5281/zenodo.10678695}
+    }
+
+The same metadata is in ``CITATION.cff`` (GitHub's "Cite this repository").
+Many routines implement published methods, given in the References section of
+their documentation: please cite those as well, and acknowledge the data you use
+following the policy of each mission (for MMS, the instrument teams and the MMS
+Science Data Center).
