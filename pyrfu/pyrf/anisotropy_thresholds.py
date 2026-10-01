@@ -6,6 +6,7 @@ from typing import Dict, Union
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -49,37 +50,34 @@ COEFFS_I: Dict[float, Dict[str, tuple]] = {
 }
 
 
-def _thresh_e(
-    beta_para: Union[float, np.ndarray], s: float, alpha: float
-) -> Union[float, np.ndarray]:
-    t_aniso = 1 + s * beta_para**-alpha
+def _thresh_e(beta_para: np.ndarray, s: float, alpha: float) -> np.ndarray:
+    # 1 + s * beta_para ** -alpha, NaN for beta_para <= 0 (undefined). The input
+    # is not modified, as it is shared by all the instabilities.
+    beta_pos = np.where(beta_para > 0, beta_para, np.nan)
+    t_aniso = 1 + s * beta_pos**-alpha
     return t_aniso
 
 
-def _thresh_i(
-    beta_para: Union[float, np.ndarray], a: float, b: float, beta0: float
-) -> Union[float, np.ndarray]:
-    # Set values below beta0 to NaN to avoid division by zero or negative values
-    mask = beta_para <= beta0
-    beta_para[mask] = np.nan
-
-    t_aniso = 1 + a / (beta_para - beta0) ** b
-
-    # Mask the values below beta0 in the output as well
-    t_aniso[mask] = np.nan
+def _thresh_i(beta_para: np.ndarray, a: float, b: float, beta0: float) -> np.ndarray:
+    # 1 + a / (beta_para - beta0) ** b, NaN for beta_para <= beta0 (undefined).
+    # The input is not modified, as it is shared by all the instabilities.
+    d_beta = np.where(beta_para > beta0, beta_para - beta0, np.nan)
+    t_aniso = 1 + a / d_beta**b
     return t_aniso
 
 
 def anisotropy_thresholds(
-    beta_para: Union[float, np.ndarray], specie: str = "i", gamma: float = 0.01
-) -> Dict[str, Union[float, np.ndarray]]:
+    beta_para: Union[float, np.ndarray, xr.DataArray],
+    specie: str = "i",
+    gamma: float = 0.01,
+) -> Dict[str, Union[float, np.ndarray, xr.DataArray]]:
     r"""Compute the thresholds for temperature anisotropy instabilities based on
     plasma species and growth rate.
 
     Parameters
     ----------
-    beta_para : float or array_like
-        Parallel beta.
+    beta_para : float or array_like or xarray.DataArray
+        Parallel beta. It is not modified.
     specie : str, optional
         Plasma species, "i" for ions or "e" for electrons. Default is "i".
     gamma : float, optional
@@ -89,18 +87,30 @@ def anisotropy_thresholds(
     Returns
     -------
     dict
-        Dictionary of thresholds with instability names as keys.
+        Thresholds of the temperature anisotropy T_perp / T_para, with the
+        instability names as keys, of the same type as `beta_para` (float,
+        numpy.ndarray, or xarray.DataArray with the same coordinates). NaN where
+        the fit is undefined (beta_para <= beta0 for ions, beta_para <= 0 for
+        electrons) and for negative beta_para.
 
     Raises
     ------
     ValueError
         If specie is not "i" or "e", or if gamma is not supported.
 
+    Notes
+    -----
+    The thresholds are fits of the form T_perp / T_para = 1 + a / (beta_para -
+    beta0) ** b for ions, and 1 + s / beta_para ** alpha for electrons. The
+    firehose thresholds become negative at low beta_para, where the fits don't
+    apply.
+
     """
 
-    # Mask the negative values of beta_para to avoid invalid calculations
-    beta_para = np.asarray(beta_para)
-    beta_para[beta_para < 0] = np.nan
+    # Copy as floats, so that the input is not modified, and mask the negative
+    # values to avoid invalid calculations
+    beta = np.array(beta_para, dtype=np.float64)
+    beta = np.where(beta < 0, np.nan, beta)
 
     if specie == "i":
         if gamma not in COEFFS_I:
@@ -109,7 +119,7 @@ def anisotropy_thresholds(
                 f"Unsupported gamma value {gamma} for ions. Available: {gammas}"
             )
         coeffs = COEFFS_I[gamma]
-        out = {name: _thresh_i(beta_para, *params) for name, params in coeffs.items()}
+        out = {name: _thresh_i(beta, *params) for name, params in coeffs.items()}
 
     elif specie == "e":
         if gamma not in COEFFS_E:
@@ -118,9 +128,20 @@ def anisotropy_thresholds(
                 f"Unsupported gamma value {gamma} for electrons. Available: {gammas}"
             )
         coeffs = COEFFS_E[gamma]
-        out = {name: _thresh_e(beta_para, *params) for name, params in coeffs.items()}
+        out = {name: _thresh_e(beta, *params) for name, params in coeffs.items()}
 
     else:
         raise ValueError(f"Unknown specie '{specie}'. Expected 'i' or 'e'.")
+
+    # Same type as the input
+    if isinstance(beta_para, xr.DataArray):
+        out = {
+            name: xr.DataArray(
+                value, coords=beta_para.coords, dims=beta_para.dims, name=name
+            )
+            for name, value in out.items()
+        }
+    elif np.ndim(beta_para) == 0:
+        out = {name: float(value) for name, value in out.items()}
 
     return out

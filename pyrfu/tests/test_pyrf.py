@@ -8,6 +8,7 @@ import itertools
 import math
 import random
 import unittest
+import warnings
 from unittest import mock
 
 # 3rd party imports
@@ -37,6 +38,91 @@ __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+@ddt
+class AnisotropyThresholdsTestCase(unittest.TestCase):
+    # Ion coefficients for gamma = 0.01 (a, b, beta0)
+    COEFFS_I = {
+        "proton cyclotron": (0.649, 0.400, 0.0),
+        "mirror mode": (1.040, 0.633, -0.012),
+        "parallel firehose": (-0.647, 0.583, 0.713),
+        "oblique firehose": (-1.447, 1.000, -0.148),
+    }
+
+    def test_anisotropy_thresholds_ions(self):
+        # Each threshold depends only on beta_para: the oblique firehose was NaN
+        # below the parallel firehose beta0 (0.713), set to NaN in the shared
+        # input by the parallel firehose computed before it.
+        beta = np.array([0.1, 0.5, 1.0, 2.0])
+        result = pyrf.anisotropy_thresholds(beta)
+
+        self.assertListEqual(list(result), list(self.COEFFS_I))
+
+        for name, (a, b, beta0) in self.COEFFS_I.items():
+            expected = [1 + a / (x - beta0) ** b if x > beta0 else np.nan for x in beta]
+            np.testing.assert_allclose(result[name], expected, rtol=1e-12)
+
+        np.testing.assert_allclose(
+            result["oblique firehose"], [-4.835, -1.233, -0.260, 0.326], atol=1e-3
+        )
+
+    def test_anisotropy_thresholds_electrons(self):
+        # NaN where beta_para ** -alpha is undefined (beta_para <= 0)
+        beta = np.array([-1.0, 0.0, 0.5, 2.0])
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.anisotropy_thresholds(beta, specie="e", gamma=0.1)
+
+        expected = {"firehose": (-1.32, 0.61), "whistler": (1.0, 0.49)}
+
+        for name, (s_coeff, alpha) in expected.items():
+            values = 1 + s_coeff * beta[2:] ** -alpha
+            np.testing.assert_allclose(result[name], [np.nan, np.nan, *values])
+
+    @data(np.array, xr.DataArray)
+    def test_anisotropy_thresholds_input_unchanged(self, wrap):
+        beta = np.array([-0.5, 0.1, 0.5, 1.0, 2.0])
+        inp = wrap(beta.copy())
+        pyrf.anisotropy_thresholds(inp)
+        pyrf.anisotropy_thresholds(inp, specie="e")
+
+        np.testing.assert_array_equal(np.asarray(inp), beta)
+
+    @data(
+        (1.0, float),
+        (np.array([1, 2, 3]), np.ndarray),  # integers
+        ([0.5, 1.0], np.ndarray),
+    )
+    @unpack
+    def test_anisotropy_thresholds_input_types(self, inp, out_type):
+        result = pyrf.anisotropy_thresholds(inp)
+        expected = pyrf.anisotropy_thresholds(np.atleast_1d(inp).astype(float))
+
+        for name, value in result.items():
+            self.assertIsInstance(value, out_type)
+            np.testing.assert_allclose(np.atleast_1d(value), expected[name])
+
+    def test_anisotropy_thresholds_dataarray(self):
+        # Time series in, time series out (with the same coordinates)
+        beta = generate_ts(64.0, 100, tensor_order=0)
+        beta.data = np.abs(beta.data) + 0.1
+        result = pyrf.anisotropy_thresholds(beta)
+
+        for name, value in result.items():
+            self.assertIsInstance(value, xr.DataArray)
+            self.assertEqual(value.name, name)
+            np.testing.assert_array_equal(value.time.data, beta.time.data)
+            np.testing.assert_allclose(
+                value.data, pyrf.anisotropy_thresholds(beta.data)[name]
+            )
+
+    @data(("p", 0.01), ("i", 0.5), ("e", 0.001))
+    @unpack
+    def test_anisotropy_thresholds_input_values(self, specie, gamma):
+        with self.assertRaises(ValueError):
+            pyrf.anisotropy_thresholds(1.0, specie=specie, gamma=gamma)
 
 
 @ddt
