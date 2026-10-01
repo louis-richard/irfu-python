@@ -2566,6 +2566,16 @@ class MvaTestCase(unittest.TestCase):
             )
 
     @data("mvar", "<bn>=0", "td")
+    def test_mva_real_output(self, flag):
+        # np.linalg.eig returns complex arrays with NumPy >= 2.5: the frame, the
+        # eigenvalues and the rotated field must stay real
+        b_xyz = generate_ts(64.0, 100, tensor_order=1)
+        b_lmn, lamb, lmn = pyrf.mva(b_xyz, flag)
+
+        for value in [b_lmn.data, lamb, lmn]:
+            self.assertTrue(np.isrealobj(value))
+
+    @data("mvar", "<bn>=0", "td")
     def test_mva_right_handed(self, flag):
         # The "<bn>=0" frame used to be left-handed about a third of the time
         for seed in range(10):

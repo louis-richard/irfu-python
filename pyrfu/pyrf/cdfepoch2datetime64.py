@@ -55,7 +55,9 @@ def _compose_date(
         if v is not None:
             dates_list.append(np.asarray(v, dtype=t))
 
-    dates = sum(dates_list)
+    # Start from the first term (sum starts from the integer 0, which NumPy >= 2.5
+    # deprecates adding to datetime64)
+    dates = sum(dates_list[1:], dates_list[0])
 
     return dates
 

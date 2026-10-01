@@ -132,7 +132,9 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
                             axis=0,
                         )
                     else:
-                        pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0]]
+                        # Single telescope (assigning a 1-element array to an
+                        # element fails with NumPy >= 2.5)
+                        pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0][0]]
 
     pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
 

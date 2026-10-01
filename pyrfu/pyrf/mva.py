@@ -15,6 +15,18 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _eig(m_mu_nu):
+    r"""Eigenvalues and eigenvectors of the (real, symmetric) variance matrix.
+
+    NumPy >= 2.5 returns complex arrays from np.linalg.eig; the imaginary parts
+    are zero here, so the real parts are the values given by older versions.
+
+    """
+    lamb, lmn = np.linalg.eig(m_mu_nu)
+
+    return np.real(lamb), np.real(lmn)
+
+
 def mva(inp, flag: str = "mvar"):
     r"""Compute the minimum variance frame.
 
@@ -81,7 +93,7 @@ def mva(inp, flag: str = "mvar"):
     )
 
     # Compute eigenvalues and eigenvectors
-    [lamb, lmn] = np.linalg.eig(m_mu_nu)
+    lamb, lmn = _eig(m_mu_nu)
 
     # Sort eigenvalues
     lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
@@ -132,7 +144,7 @@ def mva(inp, flag: str = "mvar"):
             [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
-        lamb, lmn = np.linalg.eig(m_mu_nu)
+        lamb, lmn = _eig(m_mu_nu)
 
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
@@ -155,7 +167,7 @@ def mva(inp, flag: str = "mvar"):
             [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
-        lamb, lmn = np.linalg.eig(m_mu_nu)
+        lamb, lmn = _eig(m_mu_nu)
 
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
