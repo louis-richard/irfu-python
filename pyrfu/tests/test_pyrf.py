@@ -1153,6 +1153,19 @@ class EdbTestCase(unittest.TestCase):
             value,
         )
 
+    @data("e.b=0", "e_perp+nan", "e_par")
+    def test_edb_input_unchanged(self, value):
+        # Ez is recomputed in a copy: the caller's E (data and attrs) is unchanged
+        e_xyz = generate_ts(64.0, 100, tensor_order=1)
+        e_data, e_attrs = e_xyz.data.copy(), dict(e_xyz.attrs)
+        b_bgd = generate_ts(64.0, 100, tensor_order=1)
+
+        e_out, _ = pyrf.edb(e_xyz, b_bgd, 0.0 if value == "e.b=0" else 90.0, value)
+
+        np.testing.assert_array_equal(e_xyz.data, e_data)
+        self.assertDictEqual(e_xyz.attrs, e_attrs)
+        self.assertFalse(np.array_equal(e_out.data[:, 2], e_data[:, 2], equal_nan=True))
+
 
 @ddt
 class EbspTestCase(unittest.TestCase):

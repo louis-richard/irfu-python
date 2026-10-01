@@ -91,7 +91,7 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
     b_bgd = resample(b_bgd, e_xyz)
 
     b_data = b_bgd.data
-    e_data = e_xyz.data
+    e_data = e_xyz.data.copy()  # Ez is overwritten: don't change the caller's E
     e_data[:, -1] *= default_value
 
     if flag_method.lower() == "e.b=0":
@@ -129,7 +129,7 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
     e_data = ts_vec_xyz(
         e_xyz.time.data,
         e_data,
-        e_xyz.attrs,
+        dict(e_xyz.attrs),
     )
 
     return e_data, b_angle
