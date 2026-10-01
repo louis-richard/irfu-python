@@ -6,6 +6,7 @@ import builtins
 import datetime
 import itertools
 import math
+import os
 import random
 import unittest
 import warnings
@@ -1597,6 +1598,119 @@ class FiltTestCase(unittest.TestCase):
     def test_filt_output(self, inp, f_min, f_max, order):
         result = pyrf.filt(inp, f_min, f_max, order)
         self.assertIsInstance(result, xr.DataArray)
+
+
+def _omni_response(header, rows, n_vars):
+    # OMNIWeb listing (as returned by nx1.cgi), mocked for urllib.request.urlopen
+    params = "".join(f" {i + 1} variable {i + 1}\n" for i in range(n_vars))
+    lines = "\n".join(rows)
+    text = (
+        "<B>Listing for omni data</B><hr><pre>Selected parameters:\n"
+        f"{params}\n{header}\n{lines}\n</pre><hr><HR>"
+    )
+    response = mock.MagicMock()
+    response.__enter__.return_value.read.return_value = text.encode()
+    return response
+
+
+@ddt
+class GetOmniDataTestCase(unittest.TestCase):
+    # 2019-09-14 (day 257) and 2019-09-15 (day 258), hourly: b, v, ae; with fill
+    # values for b (999.9) and v (9999.) at 05:00, and a valid AE of 999 nT
+    HOURS = [
+        f"2019 {257 + h // 24} {h % 24:2d}"
+        + (
+            "  999.9  9999.   999"
+            if h == 5
+            else f"   {3 + h / 10:.1f}  {500 - h}.    {h}"
+        )
+        for h in range(48)
+    ]
+
+    def _get(self, rows, variables, tint, database="omni_hour", n_vars=None):
+        header = "YYYY DOY HR MN" if database == "omni_min" else "YEAR DOY HR"
+        n_vars = len(variables) if n_vars is None else n_vars
+        response = _omni_response(f"{header} 1 2 3", rows, n_vars)
+
+        with mock.patch("urllib.request.urlopen", return_value=response) as urlopen:
+            out = pyrf.get_omni_data(variables, tint, database=database)
+
+        return out, urlopen.call_args.args[0]
+
+    @data(
+        # Hours overlapping tint (each one averages [t, t + 1 h))
+        (["2019-09-14T07:30:00", "2019-09-14T10:30:00"], [7, 8, 9, 10]),
+        (["2019-09-14T00:00:00", "2019-09-15T00:00:00"], list(range(25))),
+        (["2019-09-14T07:54:00", "2019-09-14T08:11:00"], [7, 8]),
+    )
+    @unpack
+    def test_get_omni_data_hourly_times(self, tint, hours):
+        tint_in = list(tint)
+        out, url = self._get(self.HOURS, ["b", "v", "ae"], tint)
+
+        expected = np.datetime64("2019-09-14T00:00", "ns") + np.array(
+            hours, dtype="timedelta64[h]"
+        )
+        np.testing.assert_array_equal(out.time.data, expected)
+        self.assertListEqual(tint, tint_in)  # not modified
+        self.assertIn("spacecraft=omni2&start_date=20190914&end_date=2019091", url)
+        self.assertTrue(url.endswith("&vars=8&vars=24&vars=41"))
+
+    def test_get_omni_data_fill_values(self):
+        tint = ["2019-09-14T00:00:00", "2019-09-14T23:00:00"]
+        out, _ = self._get(self.HOURS, ["b", "v", "ae"], tint)
+
+        self.assertTrue(np.isnan(out.b.data[5]) and np.isnan(out.v.data[5]))
+        self.assertEqual(out.ae.data[5], 999.0)  # AE fill value is 9999
+        self.assertEqual(int(np.isnan(out.to_array()).sum()), 2)
+        self.assertAlmostEqual(float(out.b.data[4]), 3.4)
+
+    def test_get_omni_data_minute(self):
+        # 1-minute data: minute codes, "YYYY DOY HR MN" header, minute times
+        rows = [
+            f"2019 257  {7 + m // 60} {m % 60:2d}   -1.{m:02d}   1.5"
+            for m in range(120)
+        ]
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        out, url = self._get(rows, ["bzgsm", "bx", "bxgse"], tint, "omni_min", n_vars=2)
+
+        self.assertEqual(out.sizes["time"], 18)
+        self.assertEqual(out.time.data[0], np.datetime64("2019-09-14T07:54", "ns"))
+        self.assertIn(
+            "spacecraft=omni_min&start_date=2019091407&end_date=2019091408", url
+        )
+        self.assertTrue(url.endswith("&vars=18&vars=14"))  # bx and bxgse: same code
+        np.testing.assert_array_equal(out.bx.data, out.bxgse.data)
+        self.assertAlmostEqual(float(out.bzgsm.data[0]), -1.54)
+
+    @data(
+        (["b"], "omni_sec"),  # database
+        (["vx"], "omni_hour"),  # not available hourly
+        (["dst"], "omni_min"),  # not available in 1-minute data
+        (["bmag"], "omni_hour"),  # unknown
+    )
+    @unpack
+    def test_get_omni_data_input(self, variables, database):
+        with self.assertRaises(ValueError):
+            pyrf.get_omni_data(variables, ["2019-09-14", "2019-09-15"], database)
+
+    def test_get_omni_data_no_data(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = b"<html>Error: no data"
+
+        with mock.patch("urllib.request.urlopen", return_value=response):
+            with self.assertRaises(ValueError):
+                pyrf.get_omni_data(["b"], ["2019-09-14", "2019-09-15"])
+
+    @unittest.skipUnless(
+        os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
+    )
+    def test_get_omni_data_omniweb(self):
+        out = pyrf.get_omni_data(
+            ["b", "bzgsm", "v"], ["2019-09-14T00:00:00", "2019-09-15T00:00:00"]
+        )
+        self.assertEqual(out.sizes["time"], 25)
+        np.testing.assert_allclose(out.to_array().data[:, 0], [3.4, 1.6, 506.0])
 
 
 @ddt

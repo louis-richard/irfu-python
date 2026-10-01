@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import datetime
-
 # Built-in imports
-import urllib
+import datetime
+import urllib.request
 
 # 3rd party imports
 import numpy as np
@@ -96,7 +95,7 @@ var_omni_2 = {
     "bsnx": -1,
     "bsny": -1,
     "bsnz": -1,
-    "ms": 56,
+    "ms": 54,
     "ssn": 39,
     "dst": 40,
     "ae": 41,
@@ -105,36 +104,102 @@ var_omni_2 = {
     "kp": 38,
     "pc": 51,
     "f10.7": 50,
-    "imfid": -1,
-    "swid": -1,
+    "imfid": 4,
+    "swid": 5,
     "ts": -1,
     "rmsts": -1,
 }
 
 
-def _omni_url(tint, omni_database):
-    if omni_database == "omni_hour":
-        data_source = "omni2"
-        date_format = "%Y%m%d"
-        delta_t_min = 24 * 3600
-    elif omni_database == "omni_min":
-        data_source = "omni_min"
-        date_format = "%Y%m%d%H"
-        delta_t_min = 3600
-    else:
-        raise ValueError("Invalid database")
+# Fill values of the variables (by code) for the 1-minute (HRO) and hourly (OMNI2)
+# data, from https://omniweb.gsfc.nasa.gov/html/omni_min_data.html and
+# https://omniweb.gsfc.nasa.gov/html/ow_data.html (word number = code + 1)
+fill_omni_1 = {
+    **dict.fromkeys([4, 5], 99.0),
+    **dict.fromkeys([9, 10], 999999.0),
+    **dict.fromkeys([13, 14, 15, 16, 17, 18, 34, 35, 36], 9999.99),
+    **dict.fromkeys([21, 22, 23, 24], 99999.9),
+    25: 999.99,
+    26: 9999999.0,
+    27: 99.99,
+    **dict.fromkeys([28, 29, 44], 999.99),
+    30: 999.9,
+    **dict.fromkeys([37, 38, 39], 99999.0),
+    45: 99.9,
+}
 
-    url_ = "omniweb.gsfc.nasa.gov/cgi/nx1.cgi?activity=retrieve&spacecraft="
-    url_ = f"https://{url_}{data_source}"
+fill_omni_2 = {
+    **dict.fromkeys([4, 5, 38], 99.0),
+    **dict.fromkeys([8, 9, 10, 11, 12, 13, 14, 15, 16, 23, 25, 26, 37], 999.9),
+    22: 9999999.0,
+    24: 9999.0,
+    27: 9.999,
+    28: 99.99,
+    **dict.fromkeys([35, 36], 999.99),
+    39: 999.0,
+    **dict.fromkeys([40, 52, 53], 99999.0),
+    41: 9999.0,
+    **dict.fromkeys([50, 51], 999.9),
+    54: 99.9,
+}
 
-    tint[0] += np.timedelta64(0, "[s]")
-    tint[1] += np.timedelta64(delta_t_min, "[s]")
-    tint = [t_.astype(datetime.datetime) for t_ in tint]
-    start_date, end_date = [t_.strftime(date_format) for t_ in tint]
+# Variable codes, fill values and time resolution of each database
+_DATABASES = {
+    "omni_hour": ("omni2", var_omni_2, fill_omni_2, "%Y%m%d", np.timedelta64(1, "h")),
+    "omni_min": (
+        "omni_min",
+        var_omni_1,
+        fill_omni_1,
+        "%Y%m%d%H",
+        np.timedelta64(1, "m"),
+    ),
+}
 
-    url_ = f"{url_}&start_date={start_date}&end_date={end_date}"
+
+def _omni_url(tint, omni_database, codes):
+    # OMNIWeb returns whole days (hourly data) or hours (1-minute data), up to and
+    # including the end date
+    data_source, _, _, date_format, _ = _DATABASES[omni_database]
+
+    url_ = "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi?activity=retrieve"
+    start_date, end_date = [
+        t_.astype("datetime64[s]").astype(datetime.datetime).strftime(date_format)
+        for t_ in tint
+    ]
+    url_ = f"{url_}&spacecraft={data_source}&start_date={start_date}"
+    url_ = f"{url_}&end_date={end_date}"
+    url_ += "".join(f"&vars={code:d}" for code in codes)
 
     return url_
+
+
+def _parse_omni(text, n_codes):
+    # Table between <pre> and </pre>: header "YEAR DOY HR" (hourly) or
+    # "YYYY DOY HR MN" (1-minute), then one line per time
+    table = text.split("<pre>", 1)[-1].split("</pre>", 1)[0]
+    lines = table.splitlines()
+    i_header = next(
+        (i for i, line in enumerate(lines) if line.split()[:1] in (["YEAR"], ["YYYY"])),
+        None,
+    )
+
+    if i_header is None:
+        raise ValueError(f"OMNIWeb returned no data: {' '.join(table.split())[:200]}")
+
+    n_time = 4 if lines[i_header].split()[0] == "YYYY" else 3
+    rows = [line.split() for line in lines[i_header + 1 :] if line.strip()]
+    rows = np.array([row for row in rows if len(row) == n_time + n_codes], dtype=float)
+    rows = rows.reshape(-1, n_time + n_codes)
+
+    times = pd.to_datetime(
+        [f"{int(y):04d}{int(d):03d}" for y, d in rows[:, :2]], format="%Y%j"
+    )
+    times += pd.to_timedelta(rows[:, 2], unit="h")
+
+    if n_time == 4:
+        times += pd.to_timedelta(rows[:, 3], unit="m")
+
+    return times, rows[:, n_time:]
 
 
 def get_omni_data(variables, tint, database: str = "omni_hour"):
@@ -152,32 +217,57 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     Returns
     -------
     data : xarray.Dataset
-        OMNI data.
+        OMNI data, at the times whose averaging interval (hour or minute,
+        starting at the time) overlaps `tint`. Fill values are replaced by NaN.
+
+    Raises
+    ------
+    ValueError
+        If the database or a variable is not supported, or if OMNIWeb returns no
+        data.
 
     """
 
-    tint = iso86012datetime64(np.array(tint)).astype("datetime64[s]")
+    if database not in _DATABASES:
+        raise ValueError(f"Invalid database {database}. Use 'omni_hour' or 'omni_min'")
 
-    url_ = _omni_url(tint, database)
+    _, var_codes, fill_values, _, resolution = _DATABASES[database]
 
-    vars_ = ""
+    codes = []
+
     for variable in variables:
-        vars_ = f"{vars_}&vars={var_omni_2[variable]:d}"
+        if var_codes.get(variable, -1) < 0:
+            available = [k for k, v in var_codes.items() if v >= 0]
+            raise ValueError(
+                f"{variable} is not available in {database}. Available: {available}"
+            )
 
-    with urllib.request.urlopen(f"{url_}{vars_}") as file:
-        out = str(file.read())
+        codes.append(var_codes[variable])
 
-    idx_start, idx_end = [out.find("YEAR"), out.find("</pre>")]
+    # Each code is requested once (e.g., "bx" and "bxgse" are the same variable)
+    codes_unique = list(dict.fromkeys(codes))
 
-    lines = out[idx_start:idx_end].split("\\n")[:-1]
-    lines = [list(filter(lambda x: x != "", l_.split(" "))) for l_ in lines]
-    lines = [[f"{l_[0]}-{l_[1]}/{l_[2]}", *l_[3:]] for l_ in lines[1:]]
-    data = pd.DataFrame(lines, columns=["time", *variables])
-    data["time"] = pd.to_datetime(data["time"], format="%Y-%j/%H")
+    tint = iso86012datetime64(np.array(tint)).astype("datetime64[ns]")
+    url_ = _omni_url(tint, database, codes_unique)
 
-    data = data.set_index("time").astype(np.float64)
-    fmt_ = f"datetime64[{database[5].lower()}]"
-    data = data.loc[data.index.isin(tint.astype(fmt_).astype("datetime64[ns]"))]
-    data = data.to_xarray()
+    with urllib.request.urlopen(url_, timeout=60) as file:
+        text = file.read().decode("utf-8", errors="replace")
+
+    times, values = _parse_omni(text, len(codes_unique))
+
+    # Fill values to NaN
+    for i, code in enumerate(codes_unique):
+        if code in fill_values:
+            values[np.isclose(values[:, i], fill_values[code]), i] = np.nan
+
+    columns = {
+        var: values[:, codes_unique.index(code)] for var, code in zip(variables, codes)
+    }
+    data = pd.DataFrame(columns, index=pd.DatetimeIndex(times, name="time"))
+
+    # Times whose averaging interval [t, t + resolution) overlaps tint
+    t_start, t_end = [pd.Timestamp(t_) for t_ in tint]
+    in_tint = (data.index > t_start - resolution) & (data.index <= t_end)
+    data = data.loc[in_tint].to_xarray()
 
     return data
