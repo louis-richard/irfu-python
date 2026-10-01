@@ -1021,6 +1021,19 @@ class DistAppendTestCase(unittest.TestCase):
         result = pyrf.dist_append(inp0, inp1)
         self.assertIsInstance(result, xr.Dataset)
 
+    def test_dist_append_attrs_unchanged(self):
+        # The stacked delta energies were written into the first VDF's attrs
+        inp0 = generate_vdf(64.0, 10, [32, 32, 16])
+        inp1 = generate_vdf(64.0, 10, [32, 32, 16])
+        attrs = {k: np.array(v, copy=True) for k, v in inp0.attrs.items()}
+
+        result = pyrf.dist_append(inp0, inp1)
+
+        self.assertListEqual(list(inp0.attrs), list(attrs))
+        for key, value in attrs.items():
+            np.testing.assert_array_equal(inp0.attrs[key], value)
+        self.assertTupleEqual(result.attrs["delta_energy_plus"].shape, (20, 32))
+
 
 @ddt
 class DynamicPressTestCase(unittest.TestCase):
