@@ -956,6 +956,19 @@ class HpcaPadTestCase(unittest.TestCase):
         np.testing.assert_array_equal(pad.data[~is_par, -1], 1.0)
         self.assertTrue(np.all(np.isnan(pad.data[~is_par, :-1])))
 
+    @data((0.0, 1.0, 0), (180.0, 1.0, -1), (0.0, -1.0, -1))
+    @unpack
+    def test_hpca_pad_polar_angle(self, polar, b_z, pa_bin):
+        # The elevations are the polar angles of the particle velocities (not
+        # flipped as the azimuths): polar 0 with B along +z is pitch angle 0
+        def b_dir(t_s):
+            return np.stack([0 * t_s, 0 * t_s, b_z + 0 * t_s], axis=1)
+
+        inputs = self._inputs(np.full((2, self.N_AZ), 37.0), b_dir=b_dir)
+        pad = mms.hpca_pad(*inputs, elevation=np.full(self.N_PO, polar))
+
+        np.testing.assert_array_equal(pad.data[:, pa_bin], 1.0)
+
     def test_hpca_pad_b_time(self):
         # B along +x in half-spin 0 and along -x in half-spin 1, looking along -x:
         # pitch angle 0 then 180 (B was paired with the wrong samples)

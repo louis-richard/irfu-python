@@ -99,8 +99,7 @@ def hpca_pad(
     Parameters
     ----------
     vdf : xarray.DataArray
-        Ion PSD or flux; [nt, npo16, ner63], in the look directions of the
-        anodes.
+        Ion PSD or flux; [nt, npo16, ner63].
     saz : xarray.DataArray
         Start index of azimuthal angle; [nt], (0 - 15), at the times of `vdf`.
     aze : xarray.DataArray
@@ -132,10 +131,13 @@ def hpca_pad(
 
     Notes
     -----
-    The azimuths and elevations are the look directions of the anodes: the
-    particles move in the opposite direction, so the pitch angle is the angle
-    between B and minus the look direction. B is resampled to the time of each
-    energy step.
+    The azimuths of `aze` are those of the look directions of the anodes, and the
+    elevations the polar angles of the particle velocities: the particles move at
+    azimuth + 180 deg and polar angle elevation. With this convention, the
+    flux-weighted direction of the H+ distributions matches the direction of the
+    official HPCA bulk velocity (to 3 deg in the spin plane on 2017-07-06, MMS1,
+    22:36-22:47 UT), and the pitch angle asymmetry that of FPI. B is resampled to
+    the time of each energy step.
 
     Examples
     --------
@@ -178,14 +180,16 @@ def hpca_pad(
     n_po, n_en, n_ti = len(elevation), len(ien), len(vdf)
     tt_ = vdf.time.data
 
-    # 3.3. look directions [nt, npo, ner]: sample k is the azimuth step k % 16 of
-    # the half-spin k // 16, so aze [nT, naz, npo, ner] reshapes in this order
+    # 3.3. particle velocity directions [nt, npo, ner]: sample k is the azimuth
+    # step k % 16 of the half-spin k // 16, so aze [nT, naz, npo, ner] reshapes in
+    # this order. The azimuths are those of the look directions (velocity at
+    # azimuth + 180 deg), the elevations the polar angles of the velocities.
     phi = np.deg2rad(aze_data.reshape(n_ti, n_po, n_en))
     theta = np.deg2rad(elevation)[None, :, None]
-    look = np.stack(
+    v_dir = np.stack(
         [
-            np.sin(theta) * np.cos(phi),
-            np.sin(theta) * np.sin(phi),
+            -np.sin(theta) * np.cos(phi),
+            -np.sin(theta) * np.sin(phi),
             np.cos(theta) * np.ones_like(phi),
         ],
         axis=-1,
@@ -199,8 +203,8 @@ def hpca_pad(
     b_xyz_r = resample(b_xyz, ts_scalar(t1_tt, np.zeros(len(t1_tt))))
     b_hat = normalize(b_xyz_r).data.reshape(n_ti, n_en, 3)[:, None, :, :]
 
-    # Pitch angle of the particles, which move opposite to the look direction
-    cos_pa = -np.sum(look * b_hat, axis=-1)
+    # Pitch angle of the particles
+    cos_pa = np.sum(v_dir * b_hat, axis=-1)
     theta_b = np.rad2deg(np.arccos(np.clip(cos_pa, -1.0, 1.0)))
 
     # 3.5. select dist for PAD
