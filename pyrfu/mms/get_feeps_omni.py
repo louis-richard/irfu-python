@@ -25,6 +25,7 @@ def get_feeps_omni(
     verbose: bool = True,
     data_path: str = "",
     spin_avg: bool = False,
+    source: str = "default",
 ):
     r"""Computes the omni-directional energy spectrum of the target data unit
     for the target specie over the target energy range. The data are washed,
@@ -45,6 +46,9 @@ def get_feeps_omni(
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
     spin_avg : bool, Optional
         Spin average the omni-directional flux. Default is False.
+    source : {"default", "local", "sdc", "aws"}, Optional
+        Resource to fetch the data from. Default uses default in
+        `pyrfu/mms/config.json`.
 
     Returns
     -------
@@ -67,6 +71,7 @@ def get_feeps_omni(
         mms_id,
         verbose,
         data_path,
+        source=source,
     )
 
     # Remove bad eyes and bad energy channels (lowest)

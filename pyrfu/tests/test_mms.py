@@ -347,6 +347,141 @@ class CalcEpsilonTestCase(unittest.TestCase):
         np.testing.assert_allclose(eps.data, expected, rtol=1e-10)
 
 
+class DbGetTsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.db_get_ts")
+
+    def _ts(self, i_file, value):
+        # 3 samples per file, 1 s apart, starting 10 s after each other
+        times = generate_timeline(
+            1.0, 3, ref_time=f"2019-01-01T00:00:{10 * i_file:02d}"
+        )
+        return pyrf.ts_scalar(times, np.full(3, value, dtype=float))
+
+    def test_db_get_ts_dict_one_read_per_file(self):
+        # All the variables are read from each file once (one download from the
+        # SDC or AWS), and appended in time
+        session = mock.Mock()
+        sources = (["file0", "file1"], session, {})
+        names = ["var_a", "var_b", "var_c"]
+
+        def get_ts(content, cdf_name, tint):
+            return self._ts(int(content[-1:]), names.index(cdf_name))
+
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ):
+            with mock.patch.object(
+                self.module,
+                "_get_file_content_sources",
+                side_effect=lambda r, f, *_: f.encode(),
+            ) as download:
+                with mock.patch.object(self.module, "get_ts", side_effect=get_ts):
+                    out = self.module._db_get_ts_dict(
+                        "mms1_feeps_brst_l2_electron",
+                        names,
+                        ["a", "b"],
+                        False,
+                        "",
+                        "SDC",
+                    )
+
+        self.assertEqual(download.call_count, 2)
+        self.assertEqual(download.call_args_list[0].args[:2], ("sdc", "file0"))
+        session.close.assert_called_once()
+
+        for value, name in enumerate(names):
+            self.assertEqual(len(out[name]), 6)
+            np.testing.assert_array_equal(out[name].data, value)
+
+    def test_db_get_ts_no_file(self):
+        session = mock.Mock()
+
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=([], session, {})
+        ):
+            with self.assertRaises(FileNotFoundError):
+                mms.db_get_ts("mms1_fgm_srvy_l2", "b", ["a", "b"], source="sdc")
+
+        session.close.assert_called_once()
+
+    def test_resolve_source(self):
+        with mock.patch.object(
+            self.module, "_load_config", return_value={"default": "local"}
+        ):
+            self.assertEqual(self.module._resolve_source(""), "local")
+            self.assertEqual(self.module._resolve_source(None), "local")
+            self.assertEqual(self.module._resolve_source("Default"), "local")
+
+        self.assertEqual(self.module._resolve_source("AWS"), "aws")
+
+        with self.assertRaises(ValueError):
+            self.module._resolve_source("cdaweb")
+
+    def test_tokenize_no_dtype(self):
+        mms_id, var = self.module._tokenize("mms1_fgm_srvy_l2")
+        self.assertEqual(mms_id, "1")
+        self.assertDictEqual(
+            var, {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        )
+
+
+class DbGetVariableTestCase(unittest.TestCase):
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.db_get_variable")
+
+    def test_db_get_variable_source(self):
+        # Read from the first file of the resource, then the session is closed
+        session = mock.Mock()
+        sources = (["file0", "file1"], session, {})
+
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ) as list_files:
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=b"cdf"
+            ) as download:
+                with mock.patch.object(self.module, "get_variable") as get_variable:
+                    mms.db_get_variable(
+                        "mms2_feeps_brst_l2_electron",
+                        "sensor_ids",
+                        ["a", "b"],
+                        verbose=False,
+                        source="aws",
+                    )
+
+        self.assertEqual(list_files.call_args.args[0], "aws")
+        self.assertEqual(list_files.call_args.args[3]["dtype"], "electron")
+        download.assert_called_once()
+        self.assertEqual(download.call_args.args[:2], ("aws", "file0"))
+        get_variable.assert_called_once_with(b"cdf", "sensor_ids")
+        session.close.assert_called_once()
+
+    def test_db_get_variable_no_file(self):
+        session = mock.Mock()
+
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=([], session, {})
+        ):
+            with self.assertRaises(FileNotFoundError):
+                mms.db_get_variable(
+                    "mms1_fgm_srvy_l2", "label", ["a", "b"], source="sdc"
+                )
+
+        session.close.assert_called_once()
+
+    def test_get_variable_ndim(self):
+        # N-D variables (only 1-D variables were supported): dims x, y, ...
+        module = importlib.import_module("pyrfu.mms.get_variable")
+        variable = mock.Mock(values=np.arange(12).reshape(1, 12), attributes={})
+
+        with mock.patch.object(module, "load", return_value={"ids": variable}):
+            out = module.get_variable(b"cdf", "ids")
+
+        self.assertTupleEqual(out.dims, ("x", "y"))
+        np.testing.assert_array_equal(out.data, variable.values)
+
+
 class DbInitTestCase(unittest.TestCase):
     def test_db_init_input(self):
         with self.assertRaises(NotImplementedError):
@@ -1396,6 +1531,65 @@ class GetDataDownloadTestCase(unittest.TestCase):
                     mms.get_data("b_gse_fgm_srvy_l2", tint, 1, source="sdc")
 
         session.close.assert_called_once()
+
+
+class GetFeepsTestCase(unittest.TestCase):
+    TINT = ["2017-07-23T16:54:24.000", "2017-07-23T17:00:00.000"]
+
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.get_feeps_alleyes")
+
+    def _fake_read(self, dset_name, cdf_names, tint, verbose, data_path, source):
+        # (time, energy) time series for every variable
+        times = generate_timeline(1.0, 5)
+        energy = np.arange(1, 4, dtype=float)
+        return {
+            name: xr.DataArray(
+                np.ones((5, 3)), coords=[times, energy], dims=["time", "Epoch_E"]
+            )
+            for name in cdf_names
+        }
+
+    def test_get_feeps_alleyes_source(self):
+        # All the eyes are read at once (one download per file), from the source
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2, source="aws")
+
+        read.assert_called_once()
+        dset_name, cdf_names = read.call_args.args[:2]
+        self.assertEqual(dset_name, "mms2_feeps_brst_l2_electron")
+        self.assertEqual(read.call_args.args[5], "aws")
+
+        eyes = [k for k in out.data_vars if k not in ["spinsectnum", "pitch_angle"]]
+        self.assertEqual(len(cdf_names), len(eyes) + 2)
+        self.assertIn(
+            "mms2_epd_feeps_brst_l2_electron_top_intensity_sensorid_3", cdf_names
+        )
+        self.assertIn("energy_top-3", out["top-3"].dims)
+        self.assertEqual(out["top-3"].attrs["species"], "electrons")
+
+    def test_get_feeps_omni_source(self):
+        module = importlib.import_module("pyrfu.mms.get_feeps_omni")
+
+        with mock.patch.object(
+            module, "get_feeps_alleyes", side_effect=RuntimeError("stop")
+        ) as alleyes:
+            with self.assertRaises(RuntimeError):
+                mms.get_feeps_omni("fluxe_brst_l2", self.TINT, 2, source="sdc")
+
+        self.assertEqual(alleyes.call_args.kwargs["source"], "sdc")
+
+    @unittest.skipUnless(
+        os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
+    )
+    def test_get_feeps_alleyes_aws(self):
+        out = mms.get_feeps_alleyes(
+            "fluxe_brst_l2", self.TINT, 2, verbose=False, source="aws"
+        )
+        self.assertEqual(len(out.data_vars), 20)
+        self.assertGreater(out.sizes["time"], 1000)
 
 
 class _FakeS3Bucket:

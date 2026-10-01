@@ -9,8 +9,9 @@ from typing import Optional
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.mms.db_get_ts import _resolve_source, _tokenize
+from pyrfu.mms.get_data import _get_file_content_sources, _list_files_sources
 from pyrfu.mms.get_variable import get_variable
-from pyrfu.mms.list_files import list_files
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -26,6 +27,7 @@ def db_get_variable(
     tint: list[str],
     verbose: Optional[bool] = True,
     data_path: Optional[str] = "",
+    source: Optional[str] = "default",
 ) -> DataArray:
     r"""Get variable in the cdf file.
 
@@ -41,38 +43,45 @@ def db_get_variable(
         Status monitoring. Default is verbose = True
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+    source: str, Optional
+        Resource to fetch data from: {"default", "local", "sdc", "aws"}. Default uses
+        default in `pyrfu/mms/config.json`
 
     Returns
     -------
     out : DataArray
-       Variable of the target variable.
+       Variable of the target variable (from the first file of the time
+       interval).
 
     Raises
     ------
     FileNotFoundError
         If no files are found for the dataset.
+    ValueError
+        If the source is not supported.
 
     """
-    dataset = dataset_name.split("_")
+    mms_id, var = _tokenize(dataset_name)
+    resource = _resolve_source(source)
 
-    # Index of the MMS spacecraft
-    probe = dataset[0][-1]
-
-    var = {"inst": dataset[1], "tmmode": dataset[2], "lev": dataset[3]}
+    file_names, sdc_session, headers = _list_files_sources(
+        resource, tint, mms_id, var, data_path
+    )
 
     try:
-        var["dtype"] = dataset[4]
-    except IndexError:
-        pass
+        if not file_names:
+            raise FileNotFoundError(f"No files found for {cdf_name} in {resource}")
 
-    files = list_files(tint, probe, var, data_path=data_path)
+        if verbose:
+            logging.info("Loading %s...", cdf_name)
 
-    if not files:
-        raise FileNotFoundError(f"No files found for {cdf_name} in {data_path}")
+        file_content = _get_file_content_sources(
+            resource, file_names[0], sdc_session, headers
+        )
+    finally:
+        if sdc_session:
+            sdc_session.close()
 
-    if verbose:
-        logging.info("Loading %s...", cdf_name)
-
-    out = get_variable(files[0], cdf_name)
+    out = get_variable(file_content, cdf_name)
 
     return out

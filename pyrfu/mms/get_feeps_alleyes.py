@@ -4,7 +4,7 @@
 # 3rd party imports
 import xarray as xr
 
-from .db_get_ts import db_get_ts
+from .db_get_ts import _db_get_ts_dict
 
 # Local imports
 from .feeps_active_eyes import feeps_active_eyes
@@ -44,48 +44,20 @@ def _tokenize(tar_var):
     return var, data_units
 
 
-def _get_oneeye(
-    tar_var,
-    e_id,
-    tint,
-    mms_id,
-    verbose: bool = True,
-    data_path: str = "",
-):
-    mms_id = int(mms_id)
-
+def _eye_cdf_name(tar_var, e_id, mms_id, active_eyes):
+    # Name of the variable of the eye e_id ("top-1", "bottom-12", ...)
     var, data_units = _tokenize(tar_var)
-
-    dset_name = f"mms{mms_id:d}_feeps_{var['tmmode']}_l2_{var['dtype']}"
     pref = f"epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
 
-    active_eyes = feeps_active_eyes(var, tint, mms_id)
-
-    if e_id.split("-")[0] in ["top", "bottom"]:
-        suf = e_id.split("-")[0]
-        e_id = int(e_id.split("-")[1])
-
-        assert e_id in active_eyes[suf], "Unactive eye"
-
-        suf = f"{suf}_{data_units}_sensorid_{e_id:d}"
-
-    else:
+    if e_id.split("-")[0] not in ["top", "bottom"]:
         raise ValueError("Invalid format of eye id")
 
-    out = db_get_ts(
-        dset_name,
-        f"mms{mms_id:d}_{pref}_{suf}",
-        tint,
-        verbose,
-        data_path=data_path,
-    )
+    suf, sensor_id = e_id.split("-")[0], int(e_id.split("-")[1])
 
-    out.attrs["tmmode"] = var["tmmode"]
-    out.attrs["lev"] = var["lev"]
-    out.attrs["mms_id"] = mms_id
-    out.attrs["dtype"] = var["dtype"]
-    out.attrs["species"] = f"{var['dtype']}s"
-    return out
+    if sensor_id not in active_eyes[suf]:
+        raise ValueError(f"Unactive eye {e_id}")
+
+    return f"mms{mms_id:d}_{pref}_{suf}_{data_units}_sensorid_{sensor_id:d}"
 
 
 def get_feeps_alleyes(
@@ -94,6 +66,7 @@ def get_feeps_alleyes(
     mms_id,
     verbose: bool = True,
     data_path: str = "",
+    source: str = "default",
 ):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all FEEPS eyes.
@@ -111,6 +84,10 @@ def get_feeps_alleyes(
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+    source : {"default", "local", "sdc", "aws"}, Optional
+        Resource to fetch the data from. Default uses default in
+        `pyrfu/mms/config.json`. Each file is read (downloaded) once for all the
+        eyes.
 
     Returns
     -------
@@ -159,36 +136,25 @@ def get_feeps_alleyes(
 
     e_ids = [f"{k}-{s:d}" for k in active_eyes for s in active_eyes[k]]
 
-    out_dict = {
-        "spinsectnum": db_get_ts(
-            dset_name,
-            f"mms{mms_id:d}_{pref}_spinsectnum",
-            tint,
-            data_path=data_path,
-            verbose=verbose,
-        ),
-        "pitch_angle": db_get_ts(
-            dset_name,
-            f"mms{mms_id:d}_{pref}_pitch_angle",
-            tint,
-            data_path=data_path,
-            verbose=verbose,
-        ),
+    # Read all the variables at once (one download per file from the SDC or AWS)
+    cdf_names = {
+        "spinsectnum": f"mms{mms_id:d}_{pref}_spinsectnum",
+        "pitch_angle": f"mms{mms_id:d}_{pref}_pitch_angle",
+        **{e_id: _eye_cdf_name(tar_var, e_id, mms_id, active_eyes) for e_id in e_ids},
     }
+    data = _db_get_ts_dict(
+        dset_name, list(cdf_names.values()), tint, verbose, data_path, source
+    )
+    out_dict = {key: data[cdf_name] for key, cdf_name in cdf_names.items()}
 
     for e_id in e_ids:
-        out_dict[e_id] = _get_oneeye(
-            tar_var,
-            e_id,
-            tint,
-            mms_id,
-            verbose,
-            data_path=data_path,
-        )
-
-        out_dict[e_id] = out_dict[e_id].rename(
-            {out_dict[e_id].dims[1]: f"energy_{e_id}"}
-        )
+        eye = out_dict[e_id]
+        eye.attrs["tmmode"] = var["tmmode"]
+        eye.attrs["lev"] = var["lev"]
+        eye.attrs["mms_id"] = mms_id
+        eye.attrs["dtype"] = var["dtype"]
+        eye.attrs["species"] = f"{var['dtype']}s"
+        out_dict[e_id] = eye.rename({eye.dims[1]: f"energy_{e_id}"})
 
     out = xr.Dataset(out_dict)
 
