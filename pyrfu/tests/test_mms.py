@@ -2656,6 +2656,29 @@ class FftBandpassTestCase(unittest.TestCase):
         result = mms.fft_bandpass(inp, *sorted([f_min, f_max]))
         self.assertIsInstance(result, xr.DataArray)
 
+    @data(0, 1)
+    def test_fft_bandpass_nan_input_unchanged(self, tensor_order):
+        # NaNs are set to 0 for the FFT in a copy: the caller's data keep them, and
+        # the output is NaN there. 5 and 20 Hz sines, band 10-30 Hz.
+        times = generate_timeline(128.0, 1024)
+        t_s = np.arange(1024) / 128.0
+        sig = np.sin(2 * np.pi * 5 * t_s) + np.sin(2 * np.pi * 20 * t_s)
+        if tensor_order:
+            inp = pyrf.ts_vec_xyz(times, np.tile(sig[:, None], (1, 3)))
+        else:
+            inp = pyrf.ts_scalar(times, sig)
+        inp.data[100] = np.nan
+        inp_data = inp.data.copy()
+
+        out = mms.fft_bandpass(inp, 10.0, 30.0)
+
+        np.testing.assert_array_equal(inp.data, inp_data)
+        self.assertTrue(np.all(np.isnan(out.data[100])))
+        expected = np.sin(2 * np.pi * 20 * t_s)
+        if tensor_order:
+            expected = np.tile(expected[:, None], (1, 3))
+        np.testing.assert_allclose(out.data[300:700], expected[300:700], atol=0.05)
+
 
 if __name__ == "__main__":
     unittest.main()
