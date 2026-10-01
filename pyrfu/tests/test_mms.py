@@ -1991,6 +1991,28 @@ class Scpot2NeTestCase(unittest.TestCase):
         self.assertIsInstance(result[4], float)
 
 
+class VdfReduceDeprecationTestCase(unittest.TestCase):
+    # Deprecated in 2.5.0: FutureWarning (shown to users), pointing at the caller
+    def setUp(self):
+        self.vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=True, species="ions")
+
+    def test_vdf_frame_transformation_deprecated(self):
+        v_gse = generate_ts(64.0, 42, tensor_order=1)
+
+        with self.assertWarnsRegex(FutureWarning, "deprecated") as context:
+            mms.vdf_frame_transformation(self.vdf, v_gse)
+
+        self.assertEqual(context.filename, __file__)
+
+    def test_vdf_reduce_deprecated(self):
+        tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[0, -1]]))
+
+        with self.assertWarnsRegex(FutureWarning, "pyrfu.mms.reduce") as context:
+            mms.vdf_reduce(self.vdf, tint, "1d", [1, 0, 0], n_vpt=10)
+
+        self.assertEqual(context.filename, __file__)
+
+
 @ddt
 class VdfElimTestCase(unittest.TestCase):
     @data(

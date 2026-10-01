@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import warnings
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -143,6 +146,13 @@ def vdf_frame_transformation(vdf, v_gse):
     r"""Move the skymap into the desired frame associated with the bulk
     velocity `v_gse`.
 
+    .. deprecated:: 2.5.0
+        `vdf_frame_transformation` will be removed or replaced in a future
+        version. It always uses the proton mass, and the transformed skymap is
+        rotated by 180 degrees in azimuth. Only the omni-directional spectra of
+        proton skymaps in the angle convention of :func:`pyrfu.mms.eis_skymap`
+        are correct; the results are wrong for FPI skymaps.
+
     Parameters
     ----------
     vdf : xarray.Dataset
@@ -166,6 +176,16 @@ def vdf_frame_transformation(vdf, v_gse):
     _interp_skymap_cart.py, _interp_skymap_sphe.py
 
     """
+
+    warnings.warn(
+        "vdf_frame_transformation is deprecated and will be removed or replaced in "
+        "a future version. It always uses the proton mass, and the transformed "
+        "skymap is rotated by 180 degrees in azimuth: only the omni-directional "
+        "spectra of proton skymaps from pyrfu.mms.eis_skymap are correct, and the "
+        "results are wrong for FPI skymaps.",
+        FutureWarning,
+        stacklevel=2,
+    )
 
     v_gse = resample(v_gse, vdf.time)
     theta = vdf.theta.data
@@ -219,6 +239,12 @@ def vdf_reduce(
     and reduce (integrate) it along 1 (if `dim` is "2d") or 2 (if `dim` is
     "1d").
 
+    .. deprecated:: 2.5.0
+        `vdf_reduce` will be removed in a future version; use
+        :func:`pyrfu.mms.reduce` instead. It always uses the proton mass, its
+        "1d" and "2d" outputs have the vx and vy axes swapped, and it is wrong
+        for axes other than the coordinate axes.
+
     Parameters
     ----------
     vdf : xarray.Dataset
@@ -246,6 +272,15 @@ def vdf_reduce(
         Reduced distribution.
 
     """
+
+    warnings.warn(
+        "vdf_reduce is deprecated and will be removed in a future version; use "
+        "pyrfu.mms.reduce instead. It always uses the proton mass, its outputs have "
+        "the vx and vy axes swapped, and it is wrong for axes other than the "
+        "coordinate axes.",
+        FutureWarning,
+        stacklevel=2,
+    )
 
     if v_int is None:
         v_int = [-1e6, 1e6]
