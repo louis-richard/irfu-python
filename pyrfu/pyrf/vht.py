@@ -63,7 +63,10 @@ def vht(e, b, no_ez: bool = False):
 
     # assume only Ex and Ey
     if no_ez:
-        e[:, 2] *= 0  # put z component to 0 when using only Ex and Ey
+        # put z component to 0 when using only Ex and Ey (in a copy, so that the
+        # caller's E is unchanged; NaNs stay NaN)
+        e = e.copy(deep=True)
+        e[:, 2] *= 0
 
         k_mat = np.array(
             [[p[5], 0, -p[2]], [0, p[5], -p[4]], [-p[2], -p[4], p[0] + p[3]]],

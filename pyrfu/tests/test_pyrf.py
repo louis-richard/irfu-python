@@ -3714,6 +3714,23 @@ class VhtTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], xr.DataArray)
         self.assertIsInstance(result[2], np.ndarray)
 
+    @data(True, False)
+    def test_vht_input_unchanged(self, no_ez):
+        # Ez is set to 0 in a copy with no_ez: the caller's E is unchanged, and the
+        # result equals that of E with Ez = 0 given explicitly
+        e = generate_ts(64.0, 100, tensor_order=1)
+        b = generate_ts(64.0, 100, tensor_order=1)
+        e_data = e.data.copy()
+
+        v_ht, _, _ = pyrf.vht(e, b, no_ez)
+
+        np.testing.assert_array_equal(e.data, e_data)
+
+        if no_ez:
+            e_0 = e.copy(deep=True)
+            e_0.data[:, 2] = 0.0
+            np.testing.assert_allclose(v_ht, pyrf.vht(e_0, b, True)[0])
+
 
 class NormalizeTestCase(unittest.TestCase):
     def test_normalize_input_type(self):
