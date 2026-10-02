@@ -45,7 +45,7 @@ def ts_convolve(inp, kernel, mode: str = "nearest"):
         message = "Invalid input dimensions. Input must have a 'time' dimension"
         raise ValueError(message)
 
-    if inp.data.ndim <= 2 and inp.data.ndim > 0:
+    if 0 < inp.data.ndim <= 2:
         if inp.data.ndim == 2:
             convolution = inp.copy()
             for comp in range(inp.data.shape[1]):

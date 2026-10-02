@@ -169,6 +169,7 @@ ignore = """
     test_plot.py,
 """
 ignored-modules = "scipy,cdflib"
+extension-pkg-allow-list = "pycdfpp"
 
 [tool.mypy]
 enable_error_code = "redundant-self"
