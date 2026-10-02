@@ -27,8 +27,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -53,7 +51,7 @@ dependencies = [
     "tqdm>=4.66.0",
     "xarray>=2024.10.0",
 ]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.12,<3.15"
 
 [project.optional-dependencies]
 git = [
@@ -118,7 +116,7 @@ filterwarnings = [
 ]
 
 [tool.black]
-target-version = ["py310", "py311", "py312", "py313", "py314"]
+target-version = ["py312", "py313", "py314"]
 include = '\.pyi?$'
 exclude = '''
 /(
