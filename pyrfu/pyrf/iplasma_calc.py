@@ -6,7 +6,7 @@ import numpy as np
 from scipy import constants
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -79,8 +79,21 @@ def _print_dimensionless(beta, gamma_e):
     print(f"{'gamma_e':>20} = {gamma_e:>6.2E} # 1/sqrt(1-(V_te/c)^2)")
 
 
-def iplasma_calc(output: bool = False, verbose: bool = True):
+def _ask(prompt: str, default: str) -> float:
+    return float(input(f"{prompt + ' [' + default + '] ':<34}: ") or default)
+
+
+def iplasma_calc(
+    output: bool = False,
+    verbose: bool = True,
+    b_0: float = None,
+    n_i: float = None,
+    t_e: float = None,
+    t_i: float = None,
+):
     r"""Interactive function to calcute plasma paramters.
+
+    The plasma parameters that are not given are asked on the command line.
 
     Parameters
     ----------
@@ -88,6 +101,14 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
         Flag to return dict with output. Default is False.
     verbose : bool, Optional
         Flag to print the results function. Default is True.
+    b_0 : float, Optional
+        Magnetic field [nT]. Asked if not given, with default 10 nT.
+    n_i : float, Optional
+        H+ density [cm^-3]. Asked if not given, with default 1 cm^-3.
+    t_e : float, Optional
+        Electron temperature [eV]. Asked if not given, with default 100 eV.
+    t_i : float, Optional
+        Ion temperature [eV]. Asked if not given, with default 1000 eV.
 
     Returns
     -------
@@ -96,12 +117,21 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
 
     """
 
-    b_0 = float(input(f"{'Magnetic field in nT [10] ':<34}: ") or "10") * 1e-9
-    n_hplus = float(input(f"{'H+ desity in cc [1] ':<34}: ") or "1") * 1e6
-    t_e = float(
-        input(f"{'Electron  temperature in eV [100] ':<34}: ") or "10",
-    )
-    t_i = float(input(f"{'Ion  temperature in eV [1000] ':<34}: ") or "1000")
+    if b_0 is None:
+        b_0 = _ask("Magnetic field in nT", "10")
+
+    if n_i is None:
+        n_i = _ask("H+ desity in cc", "1")
+
+    if t_e is None:
+        t_e = _ask("Electron  temperature in eV", "100")
+
+    if t_i is None:
+        t_i = _ask("Ion  temperature in eV", "1000")
+
+    b_0 = float(b_0) * 1e-9
+    n_hplus = float(n_i) * 1e6
+    t_e, t_i = float(t_e), float(t_i)
 
     n_i, n_e = [n_hplus] * 2
 
@@ -151,7 +181,7 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
 
     # Collision stuff
     # collision frequency e-/ions
-    f_col = (n_e * q_e**4) / 16 * np.pi * ep0**2 * m_e**2 * v_te**3
+    f_col = (n_e * q_e**4) / (16 * np.pi * ep0**2 * m_e**2 * v_te**3)
     # Spitzer resistivity
     eta = np.pi * q_e**2 * np.sqrt(m_e)
     eta /= (4 * np.pi * ep0) ** 2 * (q_e * t_e) ** (3 / 2)
@@ -194,6 +224,11 @@ def iplasma_calc(output: bool = False, verbose: bool = True):
             "rho_e": rho_e,
             "rho_p": rho_p,
             "rho_s": rho_s,
+            "f_col": f_col,
+            "eta": eta,
+            "r_col": r_col,
+            "p_mag": p_mag,
+            "beta": beta,
         }
     else:
         out = None

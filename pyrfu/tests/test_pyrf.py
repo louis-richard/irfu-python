@@ -2703,6 +2703,43 @@ class IPlasmaCalcTestCase(unittest.TestCase):
             result = pyrf.iplasma_calc(False, False)
             self.assertIsNone(result)
 
+    def test_iplasma_calc_defaults(self):
+        # Empty answers use the defaults in the prompts: 10 nT, 1 cc, 100 eV, 1000 eV
+        with mock.patch.object(builtins, "input", lambda _: ""):
+            result = pyrf.iplasma_calc(True, False)
+
+        gamma = 100.0 * constants.e / (constants.m_e * constants.c**2) + 1
+        v_te = constants.c * np.sqrt(1 - 1 / gamma**2)
+        self.assertAlmostEqual(result["v_te"] / v_te, 1.0, places=12)
+        self.assertAlmostEqual(result["w_ce"], constants.e * 1e-8 / constants.m_e)
+        self.assertAlmostEqual(
+            result["w_pp"] ** 2 / (1e6 * constants.e**2),
+            1 / (constants.m_p * constants.epsilon_0),
+        )
+
+        expected = pyrf.iplasma_calc(True, False, 10.0, 1.0, 100.0, 1000.0)
+        for key, value in expected.items():
+            self.assertAlmostEqual(result[key] / value, 1.0, places=12, msg=key)
+
+    def test_iplasma_calc_values(self):
+        def fail_input(_):
+            raise AssertionError("input must not be called")
+
+        with mock.patch.object(builtins, "input", fail_input):
+            result = pyrf.iplasma_calc(True, False, 10.0, 1.0, 100.0, 1000.0)
+
+        q_e, m_e, ep0 = constants.e, constants.m_e, constants.epsilon_0
+        gamma = 100.0 * q_e / (m_e * constants.c**2) + 1
+        v_te = constants.c * np.sqrt(1 - 1 / gamma**2)
+        self.assertAlmostEqual(result["v_te"] / v_te, 1.0, places=12)
+
+        # e-/ion collision frequency n e^4 / (16 pi eps0^2 me^2 Vte^3)
+        f_col = 1e6 * q_e**4 / (16 * np.pi * ep0**2 * m_e**2 * v_te**3)
+        self.assertAlmostEqual(result["f_col"] / f_col, 1.0, places=12)
+        self.assertAlmostEqual(f_col, 9.66e-10, delta=1e-12)
+
+        self.assertAlmostEqual(result["p_mag"], 1e-18 / (2 * constants.mu_0))
+
 
 @ddt
 class Iso86012DatetimeTestCase(unittest.TestCase):
