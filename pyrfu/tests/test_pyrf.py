@@ -2758,6 +2758,27 @@ class LShellTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_l_shell_values(self):
+        # 3 R_E on the SM equator -> L = 3; 2 R_E at 60 deg latitude -> L = 8
+        r_e = 6371.2
+        lat = np.deg2rad(60.0)
+        r_sm = np.array(
+            [
+                [3 * r_e, 0.0, 0.0],
+                [0.0, -3 * r_e, 0.0],
+                [2 * r_e * np.cos(lat), 0.0, 2 * r_e * np.sin(lat)],
+                [0.0, -2 * r_e * np.cos(lat), -2 * r_e * np.sin(lat)],
+            ]
+        )
+        r_xyz = pyrf.ts_vec_xyz(
+            generate_timeline(1.0, 4), r_sm, {"COORDINATE_SYSTEM": "sm"}
+        )
+        result = pyrf.l_shell(r_xyz)
+        np.testing.assert_allclose(result.data, [3.0, 3.0, 8.0, 8.0], rtol=1e-12)
+        self.assertTupleEqual(result.dims, ("time",))
+        self.assertListEqual(list(result.coords), ["time"])
+        self.assertEqual(result.attrs["UNITS"], "R_E")
+
 
 @ddt
 class MeanTestCase(unittest.TestCase):
