@@ -2822,5 +2822,47 @@ class FftBandpassTestCase(unittest.TestCase):
         np.testing.assert_allclose(out.data[300:700], expected[300:700], atol=0.05)
 
 
+class WhistlerB2ETestCase(unittest.TestCase):
+    b_mag, n_e = 50.0, 5.0  # nT, cm^-3
+    f_ce = constants.e * 1e-9 * b_mag / constants.m_e / (2 * np.pi)
+    f_pe = np.sqrt(1e6 * n_e * constants.e**2 / (constants.m_e * constants.epsilon_0))
+    f_pe /= 2 * np.pi
+
+    def test_whistler_b2e_parallel(self):
+        # theta_k = 0: n^2 = R and E^2 = (c^2 / R) B^2, with 1e-12 from nT^2 to
+        # T^2 (1e-18) and from (V/m)^2 to (mV/m)^2 (1e6)
+        freq = np.array([0.1, 0.3, 0.5]) * self.f_ce
+        b2 = np.array([1.0, 2.0, 3.0])
+        result = mms.whistler_b2e(b2, freq, 0.0, self.b_mag, self.n_e)
+
+        r_cold = 1 - self.f_pe**2 / (freq * (freq - self.f_ce))
+        expected = constants.c**2 / r_cold * b2 * 1e-12
+        np.testing.assert_allclose(result, expected, rtol=1e-10)
+
+    def test_whistler_b2e_spectrogram(self):
+        # A spectrogram gives, at each time, the spectrum for the local B and n
+        time = generate_timeline(1.0, 3)
+        freq = np.array([0.1, 0.3, 0.5]) * self.f_ce
+        b2_data = np.array([[1.0, 2.0, 3.0], [2.0, 1.0, 0.5], [1.0, 1.0, 1.0]])
+        b2 = xr.DataArray(b2_data, coords=[time, freq], dims=["time", "frequency"])
+        b_mag = pyrf.ts_scalar(time, np.array([50.0, 60.0, 70.0]))
+        n_e = pyrf.ts_scalar(time, np.array([5.0, 4.0, 6.0]))
+        theta_k = np.deg2rad(30.0)
+
+        result = mms.whistler_b2e(b2, freq, theta_k, b_mag, n_e)
+
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertTupleEqual(result.dims, ("time", "frequency"))
+        for i in range(3):
+            expected = mms.whistler_b2e(
+                b2_data[i], freq, theta_k, b_mag.data[i], n_e.data[i]
+            )
+            np.testing.assert_allclose(result.data[i], expected, rtol=1e-12)
+
+    def test_whistler_b2e_length(self):
+        with self.assertRaises(IndexError):
+            mms.whistler_b2e(np.ones(3), np.ones(4), 0.0, 50.0, 5.0)
+
+
 if __name__ == "__main__":
     unittest.main()
