@@ -14,7 +14,7 @@ from .ts_vec_xyz import ts_vec_xyz
 
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -49,7 +49,7 @@ def vht(e, b, no_ez: bool = False):
 
     # Resample magnetic field to electric field sampling (usually higher)
 
-    if n_samples != len(b):
+    if not np.array_equal(e.time.data, b.time.data):
         b = resample(b, e)
 
     p = np.zeros(6)

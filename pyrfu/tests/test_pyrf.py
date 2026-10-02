@@ -754,6 +754,29 @@ class ConvertFACTestCase(unittest.TestCase):
         result = pyrf.convert_fac(inp, b_bgd, r_xyz)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_convert_fac_values(self):
+        time = generate_timeline(100.0, 10)
+        k = np.arange(10.0)
+        b_xyz = np.stack([0 * k + 1.0, 0.1 * k, 0 * k + 2.0], axis=1)
+        b_bgd = pyrf.ts_vec_xyz(time, b_xyz)
+
+        # Integer input was truncated
+        inp = pyrf.ts_vec_xyz(time, np.tile([1, 2, 3], (10, 1)))
+        result = pyrf.convert_fac(inp, b_bgd)
+        self.assertTrue(np.issubdtype(result.dtype, np.floating))
+        expected = pyrf.convert_fac(inp.astype(np.float64), b_bgd)
+        np.testing.assert_allclose(result.data, expected.data)
+        b_hat = b_xyz / np.linalg.norm(b_xyz, axis=1, keepdims=True)
+        np.testing.assert_allclose(result.data[:, 2], b_hat @ [1.0, 2.0, 3.0])
+
+        # Same length on grids offset by 5 ms: the samples were paired by index
+        b_off = pyrf.ts_vec_xyz(
+            time + np.timedelta64(5, "ms"),
+            np.stack([0 * k + 1.0, 0.1 * (k + 0.5), 0 * k + 2.0], axis=1),
+        )
+        result = pyrf.convert_fac(inp, b_off)
+        np.testing.assert_allclose(result.data, expected.data, atol=1e-9)
+
 
 @ddt
 class CotransTestCase(unittest.TestCase):
@@ -921,6 +944,23 @@ class CrossTestCase(unittest.TestCase):
     def test_cross_input_shape(self, inp0, inp1):
         with self.assertRaises(ValueError):
             pyrf.cross(inp0, inp1)
+
+    def test_cross_time_alignment(self):
+        # Same length on grids offset by 5 ms: the samples were paired by index
+        time = generate_timeline(100.0, 10)
+        k = np.arange(10.0)
+        e_xyz = pyrf.ts_vec_xyz(time, np.tile([1.0, 0.0, 0.0], (10, 1)))
+        b_xyz = pyrf.ts_vec_xyz(
+            time + np.timedelta64(5, "ms"), np.stack([0 * k, 0 * k, k], axis=1)
+        )
+
+        result = pyrf.cross(e_xyz, b_xyz)
+        np.testing.assert_array_equal(result.time.data, time)
+        np.testing.assert_allclose(result.data[:, 1], -(k - 0.5), atol=1e-9)
+
+        # Same times: no resampling
+        result = pyrf.cross(e_xyz, pyrf.ts_vec_xyz(time, b_xyz.data))
+        np.testing.assert_array_equal(result.data[:, 1], -k)
 
     def test_cross_output(self):
         result = pyrf.cross(
@@ -3994,6 +4034,23 @@ class VhtTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], np.ndarray)
         self.assertIsInstance(result[1], xr.DataArray)
         self.assertIsInstance(result[2], np.ndarray)
+
+    @data(True, False)
+    def test_vht_time_alignment(self, no_ez):
+        # Same length on grids offset by 5 ms: the samples were paired by index
+        time = generate_timeline(100.0, 50)
+        k = np.arange(50.0)
+        e = pyrf.ts_vec_xyz(time, np.stack([np.sin(k), np.cos(k), 0.1 * k], axis=1))
+        b_xyz = np.stack([0 * k + 10.0, 0.2 * k, 5.0 - 0.1 * k], axis=1)
+        b_on_e = pyrf.ts_vec_xyz(time, b_xyz)
+        b_off = pyrf.ts_vec_xyz(
+            time + np.timedelta64(5, "ms"), b_xyz + 0.5 * np.array([0, 0.2, -0.1])
+        )
+
+        expected = pyrf.vht(e, b_on_e, no_ez)
+        result = pyrf.vht(e, b_off, no_ez)
+        np.testing.assert_allclose(result[0], expected[0], rtol=1e-9)
+        np.testing.assert_allclose(result[1].data, expected[1].data, atol=1e-9)
 
     @data(True, False)
     def test_vht_input_unchanged(self, no_ez):
