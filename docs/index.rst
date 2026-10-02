@@ -194,11 +194,12 @@ Zenodo page also lists the DOI of each release):
 
 .. code-block:: bibtex
 
-    @software{pyrfu,
-      author    = {Richard, Louis and Khotyaintsev, Yuri and Vaivads, Andris
-                   and Graham, Daniel and Norgren, Cecilia and Johlander, Andreas},
-      title     = {pyrfu: An Open-Source Python Package for Advanced In-Situ
-                   Space Plasma Analysis},
+    @software{richard2024pyrfu,
+      author    = {Richard, Louis and Khotyaintsev, Yuri V. and Vaivads, Andris and
+                   Graham, Daniel B. and Norgren, Cecilia and Johlander, Andreas},
+      title     = {Python RymdFysik Utilities (PyRFU): An Open-Source Python Package
+                   for Advanced In-Situ Space Plasma Analysis},
+      year      = {2024},
       publisher = {Zenodo},
       doi       = {10.5281/zenodo.10678695},
       url       = {https://doi.org/10.5281/zenodo.10678695}
