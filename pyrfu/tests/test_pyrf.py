@@ -17,6 +17,7 @@ import numba
 import numpy as np
 import xarray as xr
 from ddt import data, ddt, idata, unpack
+from scipy import constants
 
 # Local imports
 from .. import pyrf
@@ -385,6 +386,52 @@ class C4JTestCase(unittest.TestCase):
 
         self.assertIsInstance(div_pb, xr.DataArray)
         self.assertListEqual(list(div_pb.shape), [100, 3])
+
+    def test_c_4_j_linear_field(self):
+        # B = (c z, 0, b_0 + a x) nT with x, z in km is reproduced exactly
+        a, b_0, c = 1.0, 20.0, 0.5
+        r_sc = 10.0 * np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.5, np.sqrt(3) / 2, 0.0],
+                [0.5, np.sqrt(3) / 6, np.sqrt(2 / 3)],
+            ]
+        )
+        time = generate_timeline(1.0, 3)
+        r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (3, 1))) for r in r_sc]
+        b_mms = [
+            pyrf.ts_vec_xyz(time, np.tile([c * r[2], 0.0, b_0 + a * r[0]], (3, 1)))
+            for r in r_sc
+        ]
+        j, div_b, b_avg, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
+
+        # B at the center of the tetrahedron [nT]
+        b_x, b_z = c * np.mean(r_sc[:, 2]), b_0 + a * np.mean(r_sc[:, 0])
+        # nT/km -> T/m and nT^2/km -> T^2/m
+        j_y = (c - a) * 1e-12 / constants.mu_0
+
+        np.testing.assert_allclose(b_avg.data, [[b_x, 0.0, b_z]] * 3, rtol=1e-12)
+        np.testing.assert_allclose(j.data, [[0.0, j_y, 0.0]] * 3, rtol=1e-9)
+        np.testing.assert_allclose(div_b.data, 0.0, atol=1e-18)
+        np.testing.assert_allclose(
+            jxb.data, [[j_y * b_z * 1e-9, 0.0, -j_y * b_x * 1e-9]] * 3, rtol=1e-9
+        )
+        np.testing.assert_allclose(
+            div_t_shear.data,
+            [[b_z * c * 1e-21 / constants.mu_0, 0.0, b_x * a * 1e-21 / constants.mu_0]]
+            * 3,
+            rtol=1e-9,
+            atol=1e-30,
+        )
+        # grad(B^2 / 2) / mu_0 = (b_z a, 0, b_x c) and J x B = div T - grad Pb
+        np.testing.assert_allclose(
+            div_pb.data,
+            [[b_z * a * 1e-21 / constants.mu_0, 0.0, b_x * c * 1e-21 / constants.mu_0]]
+            * 3,
+            rtol=1e-9,
+            atol=1e-30,
+        )
 
 
 @ddt

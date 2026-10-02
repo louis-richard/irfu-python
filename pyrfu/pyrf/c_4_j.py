@@ -38,7 +38,7 @@ def c_4_j(
 
         J = \frac{\nabla \times B}{\mu_0}
 
-        J \times B = \nabla.T_{shear} + \nabla P_b
+        J \times B = \nabla.T_{shear} - \nabla P_b
 
         \nabla.T_{shear} = \frac{(B.\nabla) B}{\mu_0}
 
@@ -64,13 +64,12 @@ def c_4_j(
         Time series of the magnetic field at the center of mass of the
         tetrahedron, sampled at 1st SC time steps [nT].
     jxb : DataArray
-        Time series of the :math:`J\timesB` force
-        [T.A].
+        Time series of the :math:`J \times B` force [T A m^{-2}] = [N m^{-3}].
     div_t_shear : DataArray
         Time series of the part of the divergence of stress associated
-        with curvature units [T A/m^2].
+        with curvature [T A m^{-2}].
     div_pb : DataArray
-        Time series of the gradient of the magnetic pressure.
+        Time series of the gradient of the magnetic pressure [T A m^{-2}].
 
     See also
     --------
@@ -118,7 +117,8 @@ def c_4_j(
     assert isinstance(r_list, list) and len(r_list) == 4, "r_list must a list of s/c"
     assert isinstance(b_list, list) and len(b_list) == 4, "b_list must a list of s/c"
 
-    b_avg = 1e-9 * avg_4sc(b_list)
+    # Magnetic field at the center of the tetrahedron [nT]
+    b_avg = avg_4sc(b_list)
 
     # Estimate divB/mu0. unit is A/m2
     div_b = c_4_grad(r_list, b_list, "div")
@@ -132,6 +132,7 @@ def c_4_j(
 
     # estimate jxB force [T A/m2]
     jxb = cross(j, b_avg)
+    jxb.data *= 1e-9
 
     # estimate divTshear = (1/muo) (B*div)B [T A/m2]
     div_t_shear = c_4_grad(r_list, b_list, "bdivb")
