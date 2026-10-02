@@ -1764,6 +1764,30 @@ class EstimateTestCase(unittest.TestCase):
         result = pyrf.estimate(what_to_estimate, radius, length)
         self.assertIsInstance(result, float)
 
+    @data(
+        # half length / radius, C / (4 pi eps0 radius) from a boundary element
+        # solution (converged to 5 digits), relative tolerance
+        (0.51, 0.9689, 0.03),
+        (1.0, 1.1915, 0.03),
+        (2.0, 1.5730, 0.03),
+        (3.99, 2.2137, 0.03),
+        (4.0, 2.2166, 0.08),
+        (6.0, 2.7857, 0.03),
+        (10.0, 3.8128, 0.03),
+        (50.0, 11.8727, 0.03),
+    )
+    @unpack
+    def test_estimate_capacitance_cylinder(self, h_a, c_bem, rtol):
+        radius = 0.2
+        result = pyrf.estimate("capacitance_cylinder", radius, h_a * radius)
+        c_ref = 4 * np.pi * constants.epsilon_0 * radius * c_bem
+        np.testing.assert_allclose(result, c_ref, rtol=rtol)
+
+        # Bounded below by the inscribed disk and sphere
+        self.assertGreater(result, pyrf.estimate("capacitance_disk", radius))
+        if h_a >= 1:
+            self.assertGreater(result, pyrf.estimate("capacitance_sphere", radius))
+
 
 @ddt
 class ExtendTintTestCase(unittest.TestCase):

@@ -34,17 +34,21 @@ def _estimate_capa_wire(radius, length):
 
 
 def _estimate_capa_cyli(a, h):
+    # Verolino (1995), Eqs. 21-22, as in irf_estimate.m with h the half length,
+    # corrected against a boundary element solution: irf_estimate.m has
+    # pi * h / (2 * a) instead of pi * h / a and (4 - pi**2) instead of
+    # (4 - pi**2 / 3), which are 51 % and 10-46 % too low.
     coef = 4 * np.pi**2 * a * constants.epsilon_0
 
     if 0.5 < h / a < 4:
-        c_1 = h / (2.0 * a * (np.log(16 * h / a) ** 2 + np.pi**2 / 12))
-        out = coef * np.pi * c_1
+        c_1 = np.pi * h / (a * (np.log(16 * h / a) ** 2 + np.pi**2 / 12))
+        out = coef * c_1
     elif h / a >= 4:
         o_m = 2 * (np.log(4 * h / a) - 1)
-        c_1 = 2 * h / (np.pi * a) * (1.0 / o_m + (4 - np.pi**2) / o_m**3)
+        c_1 = 2 * h / (np.pi * a) * (1.0 / o_m + (4 - np.pi**2 / 3) / o_m**3)
         out = coef * c_1
     else:
-        raise ValueError("length less than diameter, do not have formula yet")
+        raise ValueError("half length must be larger than radius / 2")
 
     return out
 
@@ -63,18 +67,33 @@ def estimate(what_to_estimate: str, radius: float, length: float = None):
           (requires radius of the sphere).
         * "capacitance_wire" estimates the capacitance of a wire
           (requires radius and length of the wire).
-        * "capacitance_cylinder" estimates the capacitance of a cylinder
-          (requires radius and half length of the cylinder).
+        * "capacitance_cylinder" estimates the capacitance of a solid
+          cylinder (requires radius and half length of the cylinder, with
+          half length larger than radius / 2), from [1]_. Compared with a
+          boundary element solution, the error is less than 3 % for
+          half length / radius < 4 or > 6, and up to +8 % in between, just
+          above the switch between the two formulas at 4, which is kept from
+          irf_estimate.m. Unlike irf_estimate.m, length is the half length.
 
     radius :  float
         Radius of the disk, sphere, wire or cylinder
     length : float, Optional
-        Length of the wire or half lenght of the cylinder.
+        Length of the wire or half length of the cylinder.
 
     Returns
     -------
     out : float
         Estimated value.
+
+    Raises
+    ------
+    NotImplementedError
+        If what_to_estimate is not one of the above.
+
+    References
+    ----------
+    .. [1]  Verolino, L. (1995), Electrical Engineering, 78, 201-207,
+            Eqs. 21-22.
 
     Examples
     --------
@@ -99,6 +118,6 @@ def estimate(what_to_estimate: str, radius: float, length: float = None):
     elif what_to_estimate.lower() == "capacitance_cylinder":
         out = _estimate_capa_cyli(radius, length)
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f"unknown estimate {what_to_estimate!r}")
 
     return out
