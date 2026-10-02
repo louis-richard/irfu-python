@@ -3213,6 +3213,59 @@ class PlasmaCalcTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
 
 
+def _repeated_times():
+    # Samples 1 and 2 are identical, sample 4 is 50 ns after sample 3 and
+    # sample 6 is exactly 100 ns after sample 5 (not a repeat)
+    t_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+    offsets = np.array([0, 10**9, 10**9, 2 * 10**9, 2 * 10**9 + 50, 3 * 10**9])
+    offsets = np.r_[offsets, offsets[-1] + 100]
+    return t_0 + offsets.astype("timedelta64[ns]")
+
+
+@ddt
+class RemoveRepeatedPointsTestCase(unittest.TestCase):
+    @data(0, 1, 2)
+    def test_remove_repeated_points_dataarray(self, tensor_order):
+        time = _repeated_times()
+        data_ = np.arange(len(time) * 3**tensor_order, dtype=float)
+        data_ = data_.reshape([len(time)] + [3] * tensor_order)
+        inp = generate_ts(1.0, len(time), tensor_order=tensor_order)
+        inp = inp.copy(data=data_).assign_coords(time=time)
+        inp.attrs["UNITS"] = "nT"
+
+        result = pyrf.remove_repeated_points(inp)
+
+        # The later point of each repeated pair is kept
+        keep = [0, 2, 4, 5, 6]
+        np.testing.assert_array_equal(result.time.data, time[keep])
+        np.testing.assert_array_equal(result.data, data_[keep])
+        self.assertTupleEqual(result.dims, inp.dims)
+        self.assertEqual(result.attrs["UNITS"], "nT")
+
+    def test_remove_repeated_points_dataset(self):
+        time = _repeated_times()
+        inp = xr.Dataset(
+            {"z_ra": ("time", np.arange(7.0)), "z_dec": ("time", -np.arange(7.0))},
+            coords={"time": time},
+        )
+        result = pyrf.remove_repeated_points(inp)
+        np.testing.assert_array_equal(result.z_ra.data, [0.0, 2.0, 4.0, 5.0, 6.0])
+        np.testing.assert_array_equal(result.time.data, time[[0, 2, 4, 5, 6]])
+
+    def test_remove_repeated_points_dict(self):
+        time = _repeated_times()
+        inp = {"time": time, "data": np.arange(14.0).reshape(7, 2)}
+        result = pyrf.remove_repeated_points(inp)
+        np.testing.assert_array_equal(result["time"], time[[0, 2, 4, 5, 6]])
+        np.testing.assert_array_equal(result["data"][:, 0], [0, 4, 8, 10, 12])
+
+        # int64 time in ns, and the caller's dict is unchanged
+        inp = {"time": time.astype(np.int64), "data": np.arange(7.0)}
+        result = pyrf.remove_repeated_points(inp)
+        np.testing.assert_array_equal(result["data"], [0.0, 2.0, 4.0, 5.0, 6.0])
+        self.assertEqual(len(inp["data"]), 7)
+
+
 @ddt
 class ResampleTestCase(unittest.TestCase):
     @data(
