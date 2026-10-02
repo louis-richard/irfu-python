@@ -9,9 +9,11 @@ import matplotlib.pyplot as plt
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 from ddt import data, ddt, unpack
 from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
+from matplotlib.colors import LogNorm, to_rgba
 from matplotlib.image import AxesImage
 
 # Local imports
@@ -53,6 +55,42 @@ class PlotLineTestCase(unittest.TestCase):
     def test_plot_line_output(self, axis, inp):
         result = plot.plot_line(axis, inp)
         self.assertIsInstance(result, Axes)
+
+
+@ddt
+class PlotClinesTestCase(unittest.TestCase):
+    @data("jet", plt.get_cmap("viridis"))
+    def test_plot_clines_output(self, cmap):
+        # get_cmap(name=cmap) raised a TypeError on every call
+        energy = np.array([10.0, 30.0, 100.0, 1000.0, 3000.0])
+        inp = xr.DataArray(
+            np.random.rand(100, len(energy)),
+            coords=[generate_ts(64.0, 100).time.data, energy],
+            dims=["time", "energy"],
+        )
+        _, axis = plt.subplots(1)
+        result = plot.plot_clines(axis, inp, cmap=cmap)
+        self.assertIs(result[0], axis)
+        self.assertIsInstance(result[1], Axes)
+        self.assertEqual(len(axis.lines), len(energy))
+        self.assertEqual(axis.get_yscale(), "log")
+
+        # The colors follow the energies on the log colorbar (not the index)
+        c_map = plt.get_cmap(cmap) if isinstance(cmap, str) else cmap
+        expected = c_map(LogNorm(vmin=10.0, vmax=3000.0)(energy))
+        colors = [to_rgba(line.get_color()) for line in axis.lines]
+        np.testing.assert_allclose(colors, expected)
+        plt.close("all")
+
+    def test_plot_clines_cscale(self):
+        inp = xr.DataArray(
+            np.random.rand(10, 3),
+            coords=[generate_ts(64.0, 10).time.data, [1.0, 10.0, 100.0]],
+            dims=["time", "energy"],
+        )
+        with self.assertRaises(NotImplementedError):
+            plot.plot_clines(plt.subplots(1)[1], inp, cscale="lin")
+        plt.close("all")
 
 
 @ddt
