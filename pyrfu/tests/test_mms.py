@@ -1184,6 +1184,54 @@ class MakeModelKappaTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
 
 
+class ProbeAlignTimesTestCase(unittest.TestCase):
+    def test_probe_align_times_values(self):
+        # 20 s spin (18 deg/s), B along x in the spin plane except for
+        # 30 s <= t < 40 s where B is along z. Probe 1 (phase + 30 deg) is
+        # within 25 deg of +-B for phase mod 180 in [125, 175] deg, i.e.
+        # t mod 10 s in [6.94, 9.72] s, probe 3 (phase + 120 deg) for phase
+        # mod 180 in [35, 85] deg, i.e. t mod 10 s in [1.94, 4.72] s.
+        t_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+
+        def timeline(f_s, duration=60.0):
+            t_sec = np.arange(0.0, duration, 1.0 / f_s)
+            return t_sec, t_0 + (t_sec * 1e9).astype("timedelta64[ns]")
+
+        t_pot, time_pot = timeline(32.0)
+        sc_pot = xr.DataArray(
+            np.tile([5.0, 4.0, 5.5, 4.5, 6.0, 6.5], (len(t_pot), 1)),
+            coords=[time_pot, np.arange(1, 7)],
+            dims=["time", "probe"],
+        )
+        t_b, time_b = timeline(16.0, 80.0)
+        time_b = time_b - np.timedelta64(10, "s")
+        b_data = np.tile([30.0, 0.0, 2.0], (len(t_b), 1))
+        b_data[(t_b - 10 >= 30) & (t_b - 10 < 40)] = [2.0, 0.0, 30.0]
+        b_xyz = pyrf.ts_vec_xyz(time_b, b_data)
+        t_ph, time_ph = timeline(4.0, 80.0)
+        z_phase = pyrf.ts_scalar(
+            time_ph - np.timedelta64(10, "s"), np.mod(18.0 * (t_ph - 10), 360.0)
+        )
+        inputs = [inp.data.copy() for inp in [sc_pot, b_xyz, z_phase]]
+
+        start1, end1, start3, end3 = mms.probe_align_times(None, b_xyz, sc_pot, z_phase)
+
+        def seconds(times):
+            return (times - t_0) / np.timedelta64(1, "s")
+
+        spins = np.array([0, 1, 2, 4, 5]) * 10.0
+        dt_pot = 1.0 / 32.0
+        for start, end, (t_l, t_r) in [
+            (start1, end1, (125 / 18, 175 / 18)),
+            (start3, end3, (35 / 18, 85 / 18)),
+        ]:
+            np.testing.assert_allclose(seconds(start), spins + t_l, atol=dt_pot)
+            np.testing.assert_allclose(seconds(end), spins + t_r, atol=dt_pot)
+
+        for inp, data_ in zip([sc_pot, b_xyz, z_phase], inputs):
+            np.testing.assert_array_equal(inp.data, data_)
+
+
 @ddt
 class Psd2DefTestCase(unittest.TestCase):
     @data(
