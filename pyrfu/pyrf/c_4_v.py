@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+from scipy import constants
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -75,7 +76,7 @@ def c_4_v(r_xyz, time):
     ):
         flag = "v_from_t"
     elif not np.issubdtype(np.asarray(time[1]).dtype, np.datetime64) and (
-        float(time[1]) > 299792.458
+        float(time[1]) > constants.c / 1e3
     ):
         # Epoch in seconds (larger than the speed of light in km/s)
         flag = "v_from_t"

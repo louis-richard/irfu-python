@@ -12,6 +12,9 @@ import xarray as xr
 from scipy import constants, interpolate, optimize
 from scipy.spatial.transform import Rotation as R
 
+# Local imports
+from ..constants import R_E
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -297,10 +300,10 @@ def _shock_model(spec, *args):
     # sc position in GSE (or GSM or whatever) in Earth radii
     if isinstance(spec["r_xyz"], xr.DataArray):
         # Time series
-        r_sc = np.mean(spec["r_xyz"].data, axis=0) / 6371.0
+        r_sc = np.mean(spec["r_xyz"].data, axis=0) / R_E
     elif isinstance(spec["r_xyz"], (np.ndarray, list)) and len(spec["r_xyz"]) == 3:
         # Array like
-        r_sc = np.asarray(spec["r_xyz"], dtype=np.float64) / 6371.0
+        r_sc = np.asarray(spec["r_xyz"], dtype=np.float64) / R_E
     else:
         raise TypeError("r_xyz must be a time series or a vector!!")
 

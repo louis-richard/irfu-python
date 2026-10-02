@@ -5,6 +5,7 @@
 import numpy as np
 
 # Local imports
+from ..constants import R_E
 from .cotrans import cotrans
 from .ts_scalar import ts_scalar
 
@@ -14,9 +15,6 @@ __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
-# IGRF reference radius of the Earth [km]
-R_E = 6371.2
 
 
 def l_shell(r_xyz):
@@ -29,7 +27,8 @@ def l_shell(r_xyz):
 
     where :math:`r` is the radial distance, :math:`\lambda` the magnetic
     latitude in the solar magnetic (SM) system, which uses the IGRF dipole
-    axis, and :math:`R_E` = 6371.2 km the IGRF reference radius.
+    axis, and :math:`R_E` = 6371.2 km the IGRF reference radius
+    (:data:`pyrfu.constants.R_E`).
 
     Parameters
     ----------

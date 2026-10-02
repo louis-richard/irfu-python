@@ -27,6 +27,9 @@ documentation of each function.
      - Solar Orbiter RPW data.
    * - :doc:`pyrfu.maven <maven>`
      - MAVEN data access.
+   * - :doc:`pyrfu.constants <constants>`
+     - Physical constants not in :mod:`scipy.constants`, such as the Earth
+       radius.
 
 .. toctree::
    :hidden:
@@ -40,3 +43,4 @@ documentation of each function.
    lp
    solo
    maven
+   constants

@@ -21,6 +21,7 @@ from scipy import constants
 
 # Local imports
 from .. import pyrf
+from ..constants import R_E
 from ..pyrf.compress_cwt import _compress_cwt_1d
 from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
 from ..pyrf.int_sph_dist import (
@@ -2760,14 +2761,13 @@ class LShellTestCase(unittest.TestCase):
 
     def test_l_shell_values(self):
         # 3 R_E on the SM equator -> L = 3; 2 R_E at 60 deg latitude -> L = 8
-        r_e = 6371.2
         lat = np.deg2rad(60.0)
         r_sm = np.array(
             [
-                [3 * r_e, 0.0, 0.0],
-                [0.0, -3 * r_e, 0.0],
-                [2 * r_e * np.cos(lat), 0.0, 2 * r_e * np.sin(lat)],
-                [0.0, -2 * r_e * np.cos(lat), -2 * r_e * np.sin(lat)],
+                [3 * R_E, 0.0, 0.0],
+                [0.0, -3 * R_E, 0.0],
+                [2 * R_E * np.cos(lat), 0.0, 2 * R_E * np.sin(lat)],
+                [0.0, -2 * R_E * np.cos(lat), -2 * R_E * np.sin(lat)],
             ]
         )
         r_xyz = pyrf.ts_vec_xyz(
@@ -3422,7 +3422,7 @@ class ShockNormalTestCase(unittest.TestCase):
                 [0.0, 0.0, 1.0],
             ]
         )
-        r_xyz = rot.T @ np.array([l_bs / (1 + eps), 0.0, 0.0]) * 6371.0
+        r_xyz = rot.T @ np.array([l_bs / (1 + eps), 0.0, 0.0]) * R_E
         spec = {
             "b_u": np.array([2.0, 3.0, 1.0]),
             "b_d": np.array([4.0, 12.0, 3.0]),

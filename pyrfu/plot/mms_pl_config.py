@@ -6,8 +6,11 @@ import matplotlib.pyplot as plt
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from ..constants import R_E
+
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -35,7 +38,6 @@ def mms_pl_config(r_mms):
 
     """
 
-    r_earth = 6378.136
     r_xyz = np.vstack([np.mean(r_xyz, 0) for r_xyz in r_mms])
     r_xyz = np.mean(r_xyz, 0)
     delta_r = r_xyz - np.tile(r_xyz, (4, 1))
@@ -61,8 +63,8 @@ def mms_pl_config(r_mms):
 
     earth = plt.Circle((0, 0), 1, color="k", clip_on=False)
 
-    x_lbs = ["$X$ [$r_earth$]", "$Y$ [$r_earth$]", "$X$ [$r_earth$]"]
-    y_lbs = ["$Z$ [$r_earth$]", "$Z$ [$r_earth$]", "$Y$ [$r_earth$]"]
+    x_lbs = ["$X$ [$R_E$]", "$Y$ [$R_E$]", "$X$ [$R_E$]"]
+    y_lbs = ["$Z$ [$R_E$]", "$Z$ [$R_E$]", "$Y$ [$R_E$]"]
 
     axs_ = [axs0, axs1, axs2]
     idxs_, idys_ = [[0, 1, 0], [2, 1, 1]]
@@ -70,8 +72,8 @@ def mms_pl_config(r_mms):
     for ax, idx_, idy_, x_lb, y_lb in zip(axs_, idxs_, idys_, x_lbs, y_lbs):
         for i, marker in enumerate(markers):
             ax.scatter(
-                r_xyz[i, idx_] / r_earth,
-                r_xyz[i, idy_] / r_earth,
+                r_xyz[i, idx_] / R_E,
+                r_xyz[i, idy_] / R_E,
                 marker=marker,
             )
 

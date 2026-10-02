@@ -4,7 +4,7 @@
 # Built-in imports
 import logging
 
-from pyrfu import dispersion, lp, maven, mms, models, plot, pyrf
+from pyrfu import constants, dispersion, lp, maven, mms, models, plot, pyrf
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -13,7 +13,16 @@ __license__ = "MIT"
 __version__ = "2.4.21"
 __status__ = "Prototype"
 
-__all__ = ["dispersion", "lp", "maven", "mms", "models", "plot", "pyrf"]
+__all__ = [
+    "constants",
+    "dispersion",
+    "lp",
+    "maven",
+    "mms",
+    "models",
+    "plot",
+    "pyrf",
+]
 
 logging.captureWarnings(True)
 logging.basicConfig(
