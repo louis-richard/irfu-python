@@ -2,93 +2,126 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
-import os
+import csv
+import io
+import warnings
 
 # Third party imports
 import numpy as np
+import pycdfpp
 import requests
-from scipy.io import readsav
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.extend_tint import extend_tint
-from ..pyrf.time_clip import time_clip
-from ..pyrf.ts_time import ts_time
+from ..pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
-URL = "http://www.spedas.org/mms/mms_brst_intervals.sav"
+URL = (
+    "https://lasp.colorado.edu/mms/sdc/public/service/latis/"
+    "mms_burst_data_segment.csv"
+)
+
+# TAI nanoseconds since 1958-01-01 at J2000 TT (TT2000 = 0)
+TAI_J2000_NS = 1325419167816000000
+
+# There appears to be an extra 10 seconds of data, consistently, not included
+# in the segment end times (as pyspedas mms_load_brst_segments)
+END_OFFSET = 10
 
 
-def load_brst_segments(tint, data_path: str = None, download: bool = True):
+def _datetime642tai(time):
+    tt2000 = pycdfpp.to_tt2000(time.astype("datetime64[ns]"))["nseconds"]
+    return (tt2000.astype(np.int64) + TAI_J2000_NS) // 10**9
+
+
+def _tai2datetime64(tai):
+    tt2000 = np.asarray(tai, dtype=np.int64) * 10**9 - TAI_J2000_NS
+    return pycdfpp.to_datetime64(tt2000.view([("nseconds", "<i8")]))
+
+
+def load_brst_segments(
+    tint, data_path: str = None, download: bool = None, timeout: float = 60.0
+):
     r"""Load burst segment time intervals associated with the input time
     interval `tint`.
+
+    The burst segments are read from the MMS SDC burst data segment service
+    (as pyspedas mms_load_brst_segments). Only the complete segments are kept,
+    and 10 s are added to their end times.
 
     Parameters
     ----------
     tint : list
         Time interval to look for burst segments.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu/mms/config.json`
+        Deprecated and ignored: the segments are not cached any more.
+    download : bool, Optional
+        Deprecated and ignored: the segments are always downloaded.
+    timeout : float, Optional
+        Timeout of the request in seconds. Default is 60.
 
     Returns
     -------
     brst_segments : list
-        Segments of burst mode data.
+        Segments of burst mode data overlapping `tint`, as [start, end] in
+        ISO 8601 format, sorted by start time.
+
+    Raises
+    ------
+    requests.HTTPError
+        If the request to the MMS SDC fails.
 
     """
 
-    # Check path
-    if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
+    if data_path is not None or download is not None:
+        warnings.warn(
+            "data_path and download are deprecated and ignored, and will be removed "
+            "in a future version: the burst segments are read from the MMS SDC.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
-        # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
-            config = json.load(fs)
+    l_bound, r_bound = iso86012datetime64(np.array(tint))
 
-        data_path = os.path.normpath(config["local_data_dir"])
-    else:
-        data_path = os.path.normpath(data_path)
+    # Segments overlapping tint (with the end offset)
+    tai_l = _datetime642tai(np.array([l_bound]))[0] - END_OFFSET
+    tai_r = _datetime642tai(np.array([r_bound]))[0]
+    query = f"?TAISTARTTIME<={tai_r}&TAIENDTIME>={tai_l}"
 
-    # Define path of the brst segment file to save
-    file_path = os.path.join(data_path, URL.split("/", maxsplit=100)[-1])
+    response = requests.get(URL + query, timeout=timeout)
+    response.raise_for_status()
 
-    if download:
-        # Get url content
-        response = requests.get(URL, timeout=10)
+    reader = csv.reader(io.StringIO(response.text))
+    header = next(reader)
+    i_start, i_end, i_status = [
+        [i for i, name in enumerate(header) if name.startswith(key)][0]
+        for key in ["TAISTARTTIME", "TAIENDTIME", "STATUS"]
+    ]
 
-        # Write content of the brst segment file to the local file
-        with open(file_path, "wb", encoding="utf-8") as fs:
-            fs.write(response.content)
+    rows = [row for row in reader if row and row[i_status] == "COMPLETE+FINISHED"]
 
-    # Read brst segment content
-    intervals = readsav(file_path)
+    if not rows:
+        return []
 
-    unix_start = ts_time(intervals["brst_intervals"].start_times[0])
-    unix_end = ts_time(intervals["brst_intervals"].end_times[0])
+    tai_start = np.array([int(row[i_start]) for row in rows], dtype=np.int64)
+    tai_end = np.array([int(row[i_end]) for row in rows], dtype=np.int64)
 
-    unix_start = time_clip(unix_start, extend_tint(tint, [-300, 300]))
-    unix_end = time_clip(unix_end, extend_tint(tint, [-300, 300]))
+    idx = np.argsort(tai_start, kind="stable")
+    start = _tai2datetime64(tai_start[idx])
+    end = _tai2datetime64(tai_end[idx] + END_OFFSET)
 
-    # +10 second offset added; there appears to be an extra 10
-    # seconds of data, consistently, not included in the range here
-    offset = np.timedelta64(10, "s")
-    unix_end = unix_end.assign_coords(time=unix_end.time.data + offset)
-    unix_end.data += np.timedelta64(10, "s")
+    # Select the pairs together so that starts and ends stay matched
+    in_tint = (end >= l_bound) & (start <= r_bound)
 
-    brst_segments = []
-    l_bound, r_bound = [np.datetime64(t_) for t_ in tint]
-
-    for start_time, end_time in zip(unix_start, unix_end):
-        if end_time >= l_bound and start_time <= r_bound:
-            segment = np.array([start_time.data, end_time.data])
-            segment = list(datetime642iso8601(segment))
-            brst_segments.append(segment)
+    brst_segments = [
+        [str(t_) for t_ in datetime642iso8601(np.array([t_s, t_e]))]
+        for t_s, t_e in zip(start[in_tint], end[in_tint])
+    ]
 
     return brst_segments

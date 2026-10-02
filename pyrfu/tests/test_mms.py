@@ -921,6 +921,73 @@ class LhWaveAnalysisTestCase(unittest.TestCase):
         self.assertEqual(v_best, 500.0)
 
 
+def _brst_segments_response(rows, status_code=200):
+    header = (
+        "DATASEGMENTID,TAISTARTTIME (TAI seconds since 1958-01-01),"
+        "TAIENDTIME (TAI seconds since 1958-01-01),PARAMETERSETID,FOM,ISPENDING,"
+        "INPLAYLIST,STATUS,NUMEVALCYCLES,SOURCEID,CREATETIME,FINISHTIME,DISCUSSION"
+    )
+    lines = [
+        f'{i},{start},{end},p,1.0,0,0,{status},1,eva,t,t,"Bow shock, maybe"'
+        for i, (start, end, status) in enumerate(rows)
+    ]
+    response = mock.MagicMock(status_code=status_code)
+    response.text = "\n".join([header, *lines]) + "\n"
+    if status_code != 200:
+        response.raise_for_status.side_effect = requests.HTTPError("404")
+    return response
+
+
+class LoadBrstSegmentsTestCase(unittest.TestCase):
+    # TAI 1829005990 s is 2015-12-17T01:12:34 UTC (36 leap seconds)
+    tint = ["2015-12-17T01:13:00", "2015-12-17T01:20:00"]
+
+    def test_load_brst_segments_values(self):
+        rows = [
+            (1829006400, 1829006500, "COMPLETE+FINISHED"),  # unsorted, kept
+            (1829005990, 1829006120, "COMPLETE+FINISHED"),  # straddles tint[0]
+            (1829006200, 1829006300, "DERELICT+FINISHED"),  # incomplete
+            (1829005800, 1829005900, "COMPLETE+FINISHED"),  # ends before tint
+            (1829006700, 1829006800, "COMPLETE+FINISHED"),  # starts after tint
+        ]
+        with mock.patch.object(
+            requests, "get", return_value=_brst_segments_response(rows)
+        ) as get:
+            result = mms.load_brst_segments(self.tint)
+
+        # End times get 10 s more
+        expected = [
+            ["2015-12-17T01:12:34.000000000", "2015-12-17T01:14:54.000000000"],
+            ["2015-12-17T01:19:24.000000000", "2015-12-17T01:21:14.000000000"],
+        ]
+        self.assertListEqual(result, expected)
+
+        # Server-side selection of the segments overlapping tint
+        url = get.call_args.args[0]
+        self.assertTrue(url.startswith("https://lasp.colorado.edu/mms/sdc/"))
+        self.assertIn("TAISTARTTIME<=1829006436", url)
+        self.assertIn("TAIENDTIME>=1829006006", url)
+
+    def test_load_brst_segments_empty(self):
+        with mock.patch.object(
+            requests, "get", return_value=_brst_segments_response([])
+        ):
+            self.assertListEqual(mms.load_brst_segments(self.tint), [])
+
+    def test_load_brst_segments_http_error(self):
+        response = _brst_segments_response([], status_code=404)
+        with mock.patch.object(requests, "get", return_value=response):
+            with self.assertRaises(requests.HTTPError):
+                mms.load_brst_segments(self.tint)
+
+    def test_load_brst_segments_deprecated_args(self):
+        with mock.patch.object(
+            requests, "get", return_value=_brst_segments_response([])
+        ):
+            with self.assertWarns(FutureWarning):
+                mms.load_brst_segments(self.tint, data_path="/tmp", download=True)
+
+
 @ddt
 class MakeModelVDFTestCase(unittest.TestCase):
     @data(
