@@ -1397,6 +1397,48 @@ class EbNRFTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_eb_nrf_values(self):
+        time = generate_timeline(1.0, 4)
+        e_xyz = pyrf.ts_vec_xyz(time, np.tile([1.0, 2.0, 3.0], (4, 1)))
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([1.0, 0.0, 0.0], (4, 1)))
+
+        # "a": L along B = y, N closest to v = x, M = N x L = z
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 2.0, 0.0], (4, 1)))
+        for flag in ["a", "A"]:
+            result = pyrf.eb_nrf(e_xyz, b_xyz, v_xyz, flag)
+            np.testing.assert_allclose(result.data, [[2.0, 3.0, 1.0]] * 4, atol=1e-12)
+
+        # Default flag is "a", constant normal vector
+        result = pyrf.eb_nrf(e_xyz, b_xyz, [2.0, 0.0, 0.0])
+        np.testing.assert_allclose(result.data, [[2.0, 3.0, 1.0]] * 4, atol=1e-12)
+
+        # "b": N along v, L along the mean B (y) perpendicular to N
+        b_xyz = pyrf.ts_vec_xyz(
+            time, np.column_stack([np.zeros(4), np.ones(4), [0.5, -0.5, 0.5, -0.5]])
+        )
+        result = pyrf.eb_nrf(e_xyz, b_xyz, v_xyz, "b")
+        np.testing.assert_allclose(result.data, [[2.0, 3.0, 1.0]] * 4, atol=1e-12)
+
+        # L closest to (0, 1, 1): M = (0, -1, 1) / sqrt(2), L = (0, 1, 1) / sqrt(2)
+        result = pyrf.eb_nrf(e_xyz, b_xyz, v_xyz, np.array([0.0, 1.0, 1.0]))
+        h = 1.0 / np.sqrt(2.0)
+        np.testing.assert_allclose(result.data, [[5 * h, h, 1.0]] * 4, atol=1e-12)
+
+    def test_eb_nrf_v_resampled(self):
+        # v on a coarser grid is resampled to the times of e
+        e_xyz = pyrf.ts_vec_xyz(
+            generate_timeline(4.0, 16), np.tile([1.0, 2.0, 3.0], (16, 1))
+        )
+        b_xyz = pyrf.ts_vec_xyz(
+            generate_timeline(4.0, 16), np.tile([0.0, 1.0, 0.0], (16, 1))
+        )
+        v_xyz = pyrf.ts_vec_xyz(
+            generate_timeline(1.0, 4), np.tile([1.0, 0.0, 0.0], (4, 1))
+        )
+        result = pyrf.eb_nrf(e_xyz, b_xyz, v_xyz, "a")
+        np.testing.assert_allclose(result.data, [[2.0, 3.0, 1.0]] * 16, atol=1e-12)
+        np.testing.assert_array_equal(result.time.data, e_xyz.time.data)
+
 
 @ddt
 class EdbTestCase(unittest.TestCase):

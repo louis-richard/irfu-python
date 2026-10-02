@@ -10,14 +10,14 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def eb_nrf(e_xyz, b_xyz, v_xyz, flag=0):
+def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
     """Find E and B in MP system given B and MP normal vector.
 
     Parameters
@@ -26,36 +26,47 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag=0):
         Time series of the electric field.
     b_xyz : xarray.DataArray
         Time series of the magnetic field.
-    v_xyz : xarray.DataArray
-        Normal vector.
-    flag : str or ndarray
-        Method flag :
+    v_xyz : xarray.DataArray or array_like
+        Time series of the normal vector, or constant normal vector [vx, vy, vz].
+    flag : str or array_like, Optional
+        Method flag. Default is "a".
         * a : L is along b_xyz, N closest to v_xyz and M = NxL
         * b : N is along v_xyz, L is the mean direction of b_xyz in plane perpendicular
         to N, and M = NxL
-        * numpy,ndarray : N is along v_xyz , L is closest to the direction specified by
+        * array_like : N is along v_xyz , L is closest to the direction specified by
         L_vector (e.g., maximum variance direction), M = NxL
 
     Returns
     -------
     out : xarray.DataArray
-        to fill.
+        Time series of the electric field in the (L, M, N) coordinates, in this
+        order, at the times of e_xyz.
 
     """
     # Check inputs
     assert isinstance(e_xyz, xr.DataArray), "e_xyz must be a xarray.DataArray"
     assert isinstance(b_xyz, xr.DataArray), "b_xyz must be a xarray.DataArray"
-    assert isinstance(v_xyz, xr.DataArray), "v_xyz must be a xarray.DataArray"
 
     assert e_xyz.ndim == 2 and e_xyz.shape[1] == 3, "e_xyz must be a vector"
-    assert b_xyz.ndim == 2 and b_xyz.shape[1] == 3, "e_xyz must be a vector"
-    assert v_xyz.ndim == 2 and v_xyz.shape[1] == 3, "e_xyz must be a vector"
+    assert b_xyz.ndim == 2 and b_xyz.shape[1] == 3, "b_xyz must be a vector"
 
-    assert isinstance(flag, (str, np.ndarray, list)), "Invalid flag type"
+    if isinstance(v_xyz, xr.DataArray):
+        assert v_xyz.ndim == 2 and v_xyz.shape[1] == 3, "v_xyz must be a vector"
+
+        if not np.array_equal(v_xyz.time.data, e_xyz.time.data):
+            v_xyz = resample(v_xyz, e_xyz)
+
+        v_data = v_xyz.data
+    else:
+        v_data = np.array(v_xyz, dtype=float)
+        assert v_data.shape == (3,), "constant v_xyz must be a 3 components vector"
+        v_data = np.tile(v_data, (len(e_xyz), 1))
+
+    assert isinstance(flag, (str, np.ndarray, list, tuple)), "Invalid flag type"
 
     if isinstance(flag, str):
         assert flag.lower() in ["a", "b"], "flag must be a or b"
-        flag_case = flag
+        flag_case = flag.lower()
         l_direction = None
 
     else:
@@ -68,17 +79,17 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag=0):
         b_xyz = resample(b_xyz, e_xyz)
 
         n_l = b_xyz.data / np.linalg.norm(b_xyz.data, axis=1, keepdims=True)
-        n_n = np.cross(np.cross(b_xyz.data, v_xyz.data), b_xyz.data)
+        n_n = np.cross(np.cross(b_xyz.data, v_data), b_xyz.data)
         n_n /= np.linalg.norm(n_n, axis=1, keepdims=True)
         n_m = np.cross(n_n, n_l)  # in (vn x b) direction
     elif flag_case == "b":
-        n_n = v_xyz.data / np.linalg.norm(v_xyz, axis=1, keepdims=True)
+        n_n = v_data / np.linalg.norm(v_data, axis=1, keepdims=True)
         n_m = np.cross(n_n, np.mean(b_xyz.data, axis=0))
         n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
         n_l = np.cross(n_m, n_n)
 
     else:
-        n_n = v_xyz.data / np.linalg.norm(v_xyz, axis=1, keepdims=True)
+        n_n = v_data / np.linalg.norm(v_data, axis=1, keepdims=True)
         n_m = np.cross(n_n, l_direction)
         n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
         n_l = np.cross(n_m, n_n)
