@@ -1935,6 +1935,42 @@ class FiltTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+class FindClosestTestCase(unittest.TestCase):
+    def test_find_closest_drop_t1(self):
+        t_1, t_2, ind_1, ind_2 = pyrf.find_closest(
+            np.arange(10.0), np.arange(0.0, 10.0, 3.0) + 0.1
+        )
+        np.testing.assert_array_equal(t_1, [0.0, 3.0, 6.0, 9.0])
+        np.testing.assert_array_equal(t_2, [0.1, 3.1, 6.1, 9.1])
+        np.testing.assert_array_equal(ind_1, [0, 3, 6, 9])
+        np.testing.assert_array_equal(ind_2, [0, 1, 2, 3])
+        self.assertTrue(np.issubdtype(ind_1.dtype, np.integer))
+
+    def test_find_closest_drop_t2(self):
+        # Every t1 is the nearest of some t2, but t2 = 1 is nobody's nearest
+        t_1, t_2, ind_1, ind_2 = pyrf.find_closest(
+            np.array([0.0, 10.0]), np.array([0.2, 1.0, 9.5])
+        )
+        np.testing.assert_array_equal(t_1, [0.0, 10.0])
+        np.testing.assert_array_equal(t_2, [0.2, 9.5])
+        np.testing.assert_array_equal(ind_1, [0, 1])
+        np.testing.assert_array_equal(ind_2, [0, 2])
+
+    def test_find_closest_datetime64(self):
+        t_1 = np.datetime64("2020-01-01", "ns") + np.arange(5) * np.timedelta64(1, "s")
+        t_2 = t_1[[1, 3]] + np.timedelta64(100, "ms")
+        t_1_new, t_2_new, ind_1, ind_2 = pyrf.find_closest(t_1, t_2)
+        np.testing.assert_array_equal(t_1_new, t_1[[1, 3]])
+        np.testing.assert_array_equal(t_2_new, t_2)
+        np.testing.assert_array_equal(ind_1, [1, 3])
+        np.testing.assert_array_equal(ind_2, [0, 1])
+
+    def test_find_closest_empty(self):
+        t_1, t_2, ind_1, ind_2 = pyrf.find_closest(np.arange(3.0), np.array([]))
+        for result in [t_1, t_2, ind_1, ind_2]:
+            self.assertEqual(len(result), 0)
+
+
 def _omni_response(header, rows, n_vars):
     # OMNIWeb listing (as returned by nx1.cgi), mocked for urllib.request.urlopen
     params = "".join(f" {i + 1} variable {i + 1}\n" for i in range(n_vars))
