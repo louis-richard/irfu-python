@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.12', '3.13', '3.14']
+        python-version: ['3.12', '3.13', '3.14', '3.15']
         os: [ macos-latest, windows-latest, ubuntu-latest ]
 
     steps:
@@ -17,6 +17,8 @@ jobs:
       uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
+        # Release candidate until Python 3.15.0 final is out
+        allow-prereleases: true
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
