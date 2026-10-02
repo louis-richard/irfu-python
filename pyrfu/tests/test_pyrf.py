@@ -1302,6 +1302,38 @@ class DynamicPressTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertEqual(result.ndim, 1)
 
+    def test_dynamic_press_values(self):
+        # 5 cm^-3 at 400 km/s: 5e6 * m_p * (4e5) ** 2 = 1.338 nPa
+        time = generate_timeline(1.0, 4)
+        n_s = pyrf.ts_scalar(time, np.full(4, 5.0))
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, -400.0, 0.0], (4, 1)))
+
+        result = pyrf.dynamic_press(n_s, v_xyz, "ions")
+        p_ion = 5e6 * constants.m_p * 4e5**2 * 1e9
+        np.testing.assert_allclose(result.data, p_ion, rtol=1e-12)
+        self.assertAlmostEqual(p_ion, 1.338, places=3)
+        self.assertEqual(result.attrs["UNITS"], "nPa")
+
+        result = pyrf.dynamic_press(n_s, v_xyz, "electrons")
+        p_ele = p_ion * constants.m_e / constants.m_p
+        np.testing.assert_allclose(result.data, p_ele, rtol=1e-12)
+
+    def test_dynamic_press_time_alignment(self):
+        # V_x = 400 + 10 t km/s sampled half a second later than n
+        time = generate_timeline(1.0, 6)
+        n_s = pyrf.ts_scalar(time, np.full(6, 2.0))
+        t_v = np.arange(6) + 0.5
+        v_xyz = pyrf.ts_vec_xyz(
+            time + np.timedelta64(500, "ms"),
+            np.column_stack([400.0 + 10 * t_v, np.zeros(6), np.zeros(6)]),
+        )
+
+        result = pyrf.dynamic_press(n_s, v_xyz)
+        v_x = 400.0 + 10 * np.arange(6)
+        expected = 2e6 * constants.m_p * (1e3 * v_x) ** 2 * 1e9
+        np.testing.assert_allclose(result.data, expected, rtol=1e-9)
+        np.testing.assert_array_equal(result.time.data, time)
+
 
 @ddt
 class EVxBTestCase(unittest.TestCase):
