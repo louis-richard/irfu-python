@@ -870,6 +870,57 @@ class EisSpinAvgTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
 
 
+def _lh_wave(v_ph, theta, f_s=1024.0, f_w=40.0):
+    # Potential phi(x - v t) along d (perpendicular to B = 40 nT z): at the
+    # spacecraft E.d = (dphi / dt) / v and dB_par = phi n e mu0 / B, so that
+    # phi_E = v int(E.d) dt = phi_B = phi. An unrelated E along z x d picks
+    # out the direction.
+    n_t = int(4 * f_s)
+    t_sec = np.arange(n_t) / f_s
+    time = np.datetime64("2019-01-01T00:00:00", "ns")
+    time = time + (t_sec * 1e9).astype("timedelta64[ns]")
+    b_0, n_0, window = 40.0, 10.0, np.hanning(n_t)
+
+    phi = 50.0 * np.sin(2 * np.pi * f_w * t_sec) * window  # V
+    e_d = np.gradient(phi, t_sec) / v_ph  # mV/m
+    e_p = np.max(np.abs(e_d)) * np.sin(2 * np.pi * 25.0 * t_sec) * window
+    d_vec = np.array([np.cos(theta), np.sin(theta), 0.0])
+    d_perp = np.array([-np.sin(theta), np.cos(theta), 0.0])
+    d_b = phi * n_0 * 1e6 * constants.e * constants.mu_0 / (b_0 * 1e-18)  # nT
+
+    e_xyz = pyrf.ts_vec_xyz(time, np.outer(e_d, d_vec) + np.outer(e_p, d_perp))
+    b_scm = pyrf.ts_vec_xyz(time, np.outer(d_b, [0.0, 0.0, 1.0]))
+    b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, b_0], (n_t, 1)))
+    n_e = pyrf.ts_scalar(time, np.full(n_t, n_0))
+    tints = ["2019-01-01T00:00:01.300", "2019-01-01T00:00:02.700"]
+
+    return tints, e_xyz, b_scm, b_xyz, n_e, d_vec
+
+
+@ddt
+class LhWaveAnalysisTestCase(unittest.TestCase):
+    @data(300.0, 1200.0)
+    def test_lh_wave_analysis_values(self, v_ph):
+        tints, e_xyz, b_scm, b_xyz, n_e, d_vec = _lh_wave(v_ph, np.deg2rad(30.0))
+        phi_eb, v_best, dir_best, thetas, corrs = mms.lh_wave_analysis(
+            tints, e_xyz, b_scm, b_xyz, n_e, min_freq=10.0
+        )
+
+        self.assertAlmostEqual(np.rad2deg(thetas[np.argmax(corrs)]), 30.0)
+        np.testing.assert_allclose(dir_best, d_vec, atol=1e-6)
+        self.assertAlmostEqual(v_best, v_ph, delta=1.0)
+        self.assertGreater(np.max(corrs), 0.99)
+        self.assertListEqual(list(phi_eb.comp.data), ["Ebest", "Bs"])
+
+    def test_lh_wave_analysis_vmax(self):
+        tints, e_xyz, b_scm, b_xyz, n_e, _ = _lh_wave(1200.0, np.deg2rad(30.0))
+        with self.assertLogs(level="WARNING"):
+            _, v_best, _, _, _ = mms.lh_wave_analysis(
+                tints, e_xyz, b_scm, b_xyz, n_e, min_freq=10.0, vmax=500.0
+            )
+        self.assertEqual(v_best, 500.0)
+
+
 @ddt
 class MakeModelVDFTestCase(unittest.TestCase):
     @data(

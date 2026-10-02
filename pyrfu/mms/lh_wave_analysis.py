@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import logging
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -17,7 +20,7 @@ from ..pyrf.ts_scalar import ts_scalar
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -33,6 +36,7 @@ def lh_wave_analysis(
     min_freq: float = 10.0,
     max_freq: float = 0.0,
     lowpass_b_xyz: float = 2.0,
+    vmax: float = 2e3,
 ):
     r"""Calculates lower-hybrid wave properties from MMS data
 
@@ -41,13 +45,13 @@ def lh_wave_analysis(
     tints : list of str
         Time interval
     e_xyz : xarray.DataArray
-        Time series pf the electric field
+        Time series pf the electric field [mV/m].
     b_scm : xarray.DataArray
-        Time series of the fluctuations of the magnetic field
+        Time series of the fluctuations of the magnetic field [nT].
     b_xyz : xarray.DataArray
-        Time series of the background magnetic field
+        Time series of the background magnetic field [nT].
     n_e : xarray.DataArray
-        Time series of the number density
+        Time series of the number density [cm^{-3}].
     min_freq : float, Optional
         Minimum frequency in the highpass filter for LH fluctuations.
         Default is 10.
@@ -57,19 +61,25 @@ def lh_wave_analysis(
     lowpass_b_xyz : float, Optional
          Maximum frequency for low-pass filter of background magnetic
          field (FGM)
+    vmax : float, Optional
+        Maximum phase speed [km/s] of the search. Default is 2000. A warning
+        is logged if v_best = vmax, in which case vmax should be increased.
 
     Returns
     -------
     phi_eb : xarray.DataArray
-        to fill
-    v_best : ndarray
-        to fill
+        Time series of the potentials [V] from the electric field in the
+        best direction at the best speed ("Ebest") and from the magnetic
+        field fluctuations parallel to B ("Bs").
+    v_best : float
+        Best phase speed [km/s].
     dir_best : ndarray
-        to fill
+        Best propagation direction (unit vector perpendicular to B).
     thetas : ndarray
-        to fill
+        Angles [rad] of the trial directions in the plane perpendicular to B.
     corrs : ndarray
-        to fill
+        Normalised zero-lag cross-correlation of the potentials for each
+        trial direction.
 
     Examples
     --------
@@ -89,8 +99,8 @@ def lh_wave_analysis(
 
     Lower Hybrid Waves Analysis
 
-    >>> opt = dict(lhfilt=[5, 100])
-    >>> res = lh_wave_analysis(tint, e_xyz, b_scm, b_xyz, n_e, **opt)
+    >>> opt = dict(min_freq=5, max_freq=100, lowpass_b_xyz=5)
+    >>> res = lh_wave_analysis(tint_zoom, e_gse, b_scm, b_gse, n_e, **opt)
 
     """
 
@@ -152,12 +162,13 @@ def lh_wave_analysis(
         phi_temp = time_clip(phi_temp, tints)
         phi_temp -= np.mean(phi_temp)
 
-        corrs[i] = np.corrcoef(phi_bs.data, phi_temp.data)
+        # Normalised zero-lag cross-correlation (xcorr(x, y, 0, "coeff"))
+        corrs[i] = np.sum(phi_bs.data * phi_temp.data)
+        corrs[i] /= np.sqrt(np.sum(phi_bs.data**2) * np.sum(phi_temp.data**2))
 
     corrpos = np.argmax(corrs)
     e_best = np.cos(thetas[corrpos]) * e_fac.data[:, 0]
     e_best += np.sin(thetas[corrpos]) * e_fac.data[:, 1]
-    e_best = ts_scalar(e_xyz.time.data, e_best)
     phi_best = ts_scalar(e_xyz.time.data, np.cumsum(e_best) * dt_e_fac)
     phi_best = time_clip(phi_best, tints)
     phi_best -= np.mean(phi_best)
@@ -166,14 +177,20 @@ def lh_wave_analysis(
 
     # Find best speed
     # Maximum velocity may need to be increased in rare cases
-    vph_vec = np.linspace(1e1, 5e2, 491)
-    corr_v = np.zeros(len(vph_vec))
-
-    for i, vph in enumerate(vph_vec):
-        phi_e_temp = phi_best.data * vph
-        corr_v[i] = np.sum(np.abs(phi_e_temp - phi_bs.data) ** 2)
+    vph_vec = np.arange(1e1, vmax + 1.0, 1.0)
+    # sum(|phi_best * vph - phi_bs|^2) for every vph, expanded
+    corr_v = vph_vec**2 * np.sum(phi_best.data**2)
+    corr_v -= 2 * vph_vec * np.sum(phi_best.data * phi_bs.data)
+    corr_v += np.sum(phi_bs.data**2)
 
     corr_vpos = np.argmin(corr_v)
+
+    if corr_vpos == len(vph_vec) - 1:
+        logging.warning(
+            "Wave speed > vmax = %g km/s. Increase search interval using vmax.",
+            vmax,
+        )
+
     phi_e_best = phi_best.data * vph_vec[corr_vpos]
     phi_e_best = ts_scalar(phi_bs.time.data, phi_e_best)
     v_best = vph_vec[corr_vpos]
