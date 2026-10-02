@@ -3416,6 +3416,65 @@ class TimeClipTestCase(unittest.TestCase):
         result = pyrf.time_clip(value, generate_ts(64.0, 20))
         self.assertIsInstance(result, type(value))
 
+    def test_time_clip_values(self):
+        time = generate_timeline(10.0, 20)
+        data_ = np.arange(60.0).reshape(20, 3)
+        tint = time[[5, 12]]
+
+        # Dimension without coordinate (raised a ValueError)
+        inp = xr.DataArray(data_, coords={"time": time}, dims=["time", "comp"])
+        result = pyrf.time_clip(inp, tint)
+        np.testing.assert_array_equal(result.data, data_[5:13])
+        np.testing.assert_array_equal(result.time.data, time[5:13])
+
+        # Non-dimension coordinates are kept (they were dropped) and clipped
+        inp = inp.assign_coords(
+            comp=["x", "y", "z"],
+            r_xyz=(("time", "comp"), -data_),
+            label=("comp", ["a", "b", "c"]),
+        )
+        inp.time.attrs["UNITS"] = "ns"
+        result = pyrf.time_clip(inp, tint)
+        np.testing.assert_array_equal(result.r_xyz.data, -data_[5:13])
+        np.testing.assert_array_equal(result.label.data, ["a", "b", "c"])
+        np.testing.assert_array_equal(result.comp.data, ["x", "y", "z"])
+        self.assertEqual(result.time.attrs["UNITS"], "ns")
+
+        # Time is not the first dimension (the first dimension was clipped)
+        result = pyrf.time_clip(inp.transpose("comp", "time"), tint)
+        np.testing.assert_array_equal(result.data, data_[5:13].T)
+
+        # Strings and time series intervals
+        result = pyrf.time_clip(inp, [str(t) for t in tint])
+        np.testing.assert_array_equal(result.data, data_[5:13])
+        result = pyrf.time_clip(inp, inp[5:13])
+        np.testing.assert_array_equal(result.data, data_[5:13])
+
+    def test_time_clip_dataset(self):
+        time = generate_timeline(10.0, 20)
+        energy = np.arange(4.0)
+        data_ = np.arange(80.0).reshape(20, 4)
+        delta = np.arange(40.0).reshape(20, 2)
+
+        # A non-dimension coordinate (raised an IndexError)
+        inp = xr.Dataset(
+            {"x": (("time", "energy"), data_), "y": ("energy", -energy)},
+            coords={"energy": energy, "time": time, "r": ("time", -data_[:, 0])},
+            attrs={"delta": delta, "scalar": np.array(1.0), "name": "test"},
+        )
+        result = pyrf.time_clip(inp, time[[5, 12]])
+        np.testing.assert_array_equal(result.time.data, time[5:13])
+        np.testing.assert_array_equal(result.energy.data, energy)
+        np.testing.assert_array_equal(result.r.data, -data_[5:13, 0])
+        np.testing.assert_array_equal(result.x.data, data_[5:13])
+        np.testing.assert_array_equal(result.y.data, -energy)
+
+        # Time dependent attributes are clipped, the caller's are unchanged
+        np.testing.assert_array_equal(result.attrs["delta"], delta[5:13])
+        self.assertEqual(result.attrs["scalar"], 1.0)
+        self.assertEqual(result.attrs["name"], "test")
+        self.assertEqual(inp.attrs["delta"].shape, (20, 2))
+
 
 @ddt
 class TsTimeTestCase(unittest.TestCase):
