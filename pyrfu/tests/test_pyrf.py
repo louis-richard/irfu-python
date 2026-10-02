@@ -2084,6 +2084,37 @@ class IncrementsTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], np.ndarray)
         self.assertIsInstance(result[1], xr.DataArray)
 
+    def test_increments_values(self):
+        # Increments 1, -1, 1, -1, 2, -2: m2 = 2, m4 = 6, Pearson kurtosis 1.5
+        time = generate_timeline(1.0, 8)
+        inp = pyrf.ts_scalar(time, np.array([0, 1, 0, 1, 0, 2, 0, np.nan]))
+        kurt, result = pyrf.increments(inp, 1)
+        np.testing.assert_allclose(kurt, [1.5])
+        np.testing.assert_array_equal(result.data, [1, -1, 1, -1, 2, -2, np.nan])
+        np.testing.assert_array_equal(result.time.data, time[:7])
+
+    def test_increments_vector(self):
+        time = generate_timeline(1.0, 7)
+        x_inp = np.array([0, 1, 0, 1, 0, 2, 0], dtype=float)
+        inp = pyrf.ts_vec_xyz(time, np.column_stack([x_inp, 2 * x_inp, -x_inp]))
+        kurt, result = pyrf.increments(inp, 1)
+        np.testing.assert_allclose(kurt, [1.5, 1.5, 1.5])
+        self.assertListEqual(list(result.shape), [6, 3])
+        self.assertTupleEqual(result.dims, inp.dims)
+
+    def test_increments_single(self):
+        # One increment left: the time dimension must be kept
+        inp = pyrf.ts_scalar(generate_timeline(1.0, 3), np.array([0.0, 1.0, 3.0]))
+        _, result = pyrf.increments(inp, 2)
+        np.testing.assert_array_equal(result.data, [3.0])
+        self.assertTupleEqual(result.dims, ("time",))
+
+    def test_increments_scale(self):
+        inp = pyrf.ts_scalar(generate_timeline(1.0, 5), np.arange(5.0))
+        for scale in [0, -1, 1.5]:
+            with self.assertRaises(ValueError):
+                pyrf.increments(inp, scale)
+
 
 @ddt
 class IntSphDistTestCase(unittest.TestCase):
