@@ -490,6 +490,14 @@ class CalcFsTestCase(unittest.TestCase):
     def test_calc_fs_output_type(self):
         self.assertIsInstance(pyrf.calc_fs(generate_ts(64.0, 100)), float)
 
+    @data("datetime64[ns]", "datetime64[us]", "datetime64[ms]")
+    def test_calc_fs_time_unit(self, dtype):
+        # The time was assumed in ns, so us times gave 1000 times f_s
+        time = generate_timeline(100.0, 50).astype(dtype)
+        inp = xr.DataArray(np.zeros(len(time)), coords=[time], dims=["time"])
+        self.assertAlmostEqual(pyrf.calc_fs(inp), 100.0, places=9)
+        self.assertAlmostEqual(pyrf.calc_fs(inp.to_dataset(name="x")), 100.0)
+
 
 @ddt
 class CalcSqrtQTestCase(unittest.TestCase):

@@ -10,7 +10,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -35,12 +35,11 @@ def calc_fs(inp: Union[Dataset, DataArray]) -> float:
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
 
-    # Convert time to nanoseconds
-    time_datetime64 = inp.time.data.astype(np.datetime64)
-    time_ns = time_datetime64.astype(np.int64)
+    # Time steps in seconds, whatever the unit of the time coordinate
+    time = inp.time.data.astype(np.datetime64)
+    d_t = np.diff(time) / np.timedelta64(1, "s")
 
     # Calculate the sampling frequency
-    dt_ns = np.diff(time_ns)
-    f_samp = 1e9 / np.median(dt_ns)
+    f_samp = 1 / np.median(d_t)
 
     return f_samp
