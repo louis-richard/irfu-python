@@ -798,6 +798,91 @@ class CotransTestCase(unittest.TestCase):
         result = pyrf.cotrans(inp, "dipoledirectiongse", hapgood=True)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_cotrans_flag_case(self):
+        time = generate_timeline(1.0, 10)
+        data_ = np.tile([1.0, 2.0, 3.0], (10, 1))
+        inp = pyrf.ts_vec_xyz(time, data_)
+        expected = pyrf.cotrans(inp, "gse>gsm")
+
+        # Upper-case flags raised a KeyError
+        result = pyrf.cotrans(inp, "GSE>GSM")
+        np.testing.assert_allclose(result.data, expected.data)
+        self.assertEqual(result.attrs["COORDINATE_SYSTEM"], "GSM")
+
+        # ... or an AssertionError if inp has a COORDINATE_SYSTEM attribute
+        inp = pyrf.ts_vec_xyz(time, data_, attrs={"COORDINATE_SYSTEM": "GSE"})
+        np.testing.assert_allclose(pyrf.cotrans(inp, "GSE>GSM").data, expected.data)
+        np.testing.assert_allclose(pyrf.cotrans(inp, "Gsm").data, expected.data)
+
+        # The dipole direction failed if inp has a COORDINATE_SYSTEM attribute
+        expected = pyrf.cotrans(pyrf.ts_vec_xyz(time, data_), "dipoledirectiongse")
+        result = pyrf.cotrans(inp, "DipoleDirectionGSE")
+        np.testing.assert_allclose(result.data, expected.data)
+
+    def test_cotrans_errors(self):
+        inp = pyrf.ts_vec_xyz(
+            generate_timeline(1.0, 10),
+            np.tile([1.0, 2.0, 3.0], (10, 1)),
+            attrs={"COORDINATE_SYSTEM": "gse"},
+        )
+
+        # Input frame in flag and in the attributes differ (was an assert)
+        with self.assertRaises(ValueError):
+            pyrf.cotrans(inp, "gsm>sm")
+
+        # Unknown transformation (was a KeyError)
+        with self.assertRaises(ValueError):
+            pyrf.cotrans(inp, "gse>lmn")
+
+        # No input frame
+        with self.assertRaises(ValueError):
+            pyrf.cotrans(pyrf.ts_vec_xyz(inp.time.data, inp.data), "gsm")
+
+    @data(True, False)
+    def test_cotrans_time_unit(self, hapgood):
+        # The time was assumed in ns, so a time coordinate in us rotated by the
+        # angles of 1970
+        time = generate_timeline(1.0, 10)
+        data_ = np.tile([1.0, 2.0, 3.0], (10, 1))
+        expected = pyrf.cotrans(pyrf.ts_vec_xyz(time, data_), "gei>gsm", hapgood)
+
+        inp = xr.DataArray(
+            data_,
+            coords=[time.astype("datetime64[us]"), ["x", "y", "z"]],
+            dims=["time", "comp"],
+        )
+        result = pyrf.cotrans(inp, "gei>gsm", hapgood)
+        np.testing.assert_allclose(result.data, expected.data, rtol=1e-12)
+
+    @data(True, False)
+    def test_cotrans_sidereal_time(self, hapgood):
+        # GEI to GEO is a rotation by the Greenwich mean sidereal time (IAU 1982)
+        time = np.array(
+            [
+                "2000-01-01T12:00:00",
+                "2008-06-01T03:00:00",
+                "2019-09-14T07:54:00",
+                "2026-10-02T23:30:00",
+            ],
+            dtype="datetime64[ns]",
+        )
+        du = (time - np.datetime64("2000-01-01T12:00:00", "ns")) / np.timedelta64(
+            1, "D"
+        )
+        du0 = np.floor(du - 0.5) + 0.5
+        tu = du0 / 36525
+        gmst = 24110.54841 + 8640184.812866 * tu + 0.093104 * tu**2 - 6.2e-6 * tu**3
+        gmst = (gmst + 1.002737909350795 * (du - du0) * 86400) / 240
+
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 0.0, 0.0], (len(time), 1)))
+        result = pyrf.cotrans(inp, "gei>geo", hapgood=hapgood)
+        theta = np.rad2deg(np.arctan2(-result.data[:, 1], result.data[:, 0]))
+
+        # USNO formula was given TT instead of UT, so GEO was off by 0.29 deg
+        # with hapgood=False
+        np.testing.assert_allclose((theta - gmst + 180) % 360 - 180, 0, atol=1e-3)
+        self.assertAlmostEqual(theta[0] % 360, 280.46061837, delta=1e-3)
+
 
 @ddt
 class CrossTestCase(unittest.TestCase):
