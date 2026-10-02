@@ -3247,6 +3247,44 @@ class PresAnisTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+class PviTestCase(unittest.TestCase):
+    def test_pvi_scalar(self):
+        # Increments 1, 2, 3, 4 and <|dx|^2> = 7.5
+        time = generate_timeline(1.0, 5)
+        inp = pyrf.ts_scalar(time, np.array([0.0, 1.0, 3.0, 6.0, 10.0]))
+        result = pyrf.pvi(inp, 1)
+        np.testing.assert_allclose(result.data, np.arange(1, 5) / np.sqrt(7.5))
+        np.testing.assert_array_equal(result.time.data, time[:4])
+
+    def test_pvi_vector(self):
+        # Constant increments give PVI = 1, labelled at the first sample
+        time = generate_timeline(1.0, 6)
+        steps = np.arange(6.0)
+        inp = pyrf.ts_vec_xyz(
+            time, np.column_stack([steps, 2 * steps, 0 * steps]), {"UNITS": "nT"}
+        )
+        result = pyrf.pvi(inp, 2)
+        np.testing.assert_allclose(result.data, np.ones(4))
+        np.testing.assert_array_equal(result.time.data, time[:4])
+        self.assertNotIn("UNITS", result.attrs)
+        self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
+        self.assertEqual(inp.attrs["UNITS"], "nT")
+
+    def test_pvi_nan(self):
+        # Increments 1, 2, NaN, NaN, 5 and <|dx|^2> = 10 over the valid ones
+        time = generate_timeline(1.0, 6)
+        inp = pyrf.ts_scalar(time, np.array([0.0, 1.0, 3.0, np.nan, 10.0, 15.0]))
+        result = pyrf.pvi(inp, 1)
+        expected = np.array([1.0, 2.0, np.nan, np.nan, 5.0]) / np.sqrt(10.0)
+        np.testing.assert_allclose(result.data, expected)
+
+    def test_pvi_scale(self):
+        inp = pyrf.ts_scalar(generate_timeline(1.0, 5), np.arange(5.0))
+        for scale in [0, -1, 1.5]:
+            with self.assertRaises(ValueError):
+                pyrf.pvi(inp, scale)
+
+
 @ddt
 class ShockNormalTestCase(unittest.TestCase):
     def test_shock_normal_input(self):
