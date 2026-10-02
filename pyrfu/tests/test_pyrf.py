@@ -2663,6 +2663,22 @@ class MeanTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_mean_dipole_sign_per_sample(self):
+        # B.r > 0 for the first three samples and < 0 for the last three, so
+        # the sign of Y = (z x b) sign(b.r) must flip in the middle.
+        time = generate_timeline(1.0, 6)
+        r_xyz = pyrf.ts_vec_xyz(time, np.tile([1.0, 0.0, 0.0], (6, 1)))
+        b_x = np.array([1.0, 1.0, 1.0, -1.0, -1.0, -1.0])
+        b_xyz = pyrf.ts_vec_xyz(time, np.column_stack([b_x, np.ones(6), np.zeros(6)]))
+        z_dip = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 1.0], (6, 1)))
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 0.0, 1.0], (6, 1)))
+
+        result = pyrf.mean(inp, r_xyz, b_xyz, z_dip)
+
+        h = 1.0 / np.sqrt(2.0)
+        expected = np.array([[-1.0, -h, h]] * 3 + [[1.0, h, -h]] * 3)
+        np.testing.assert_allclose(result.data, expected, atol=1e-12)
+
 
 class MeanBinsTestCase(unittest.TestCase):
     def test_mean_bins_output(self):
