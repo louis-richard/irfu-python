@@ -414,6 +414,36 @@ class CalcAgTestCase(unittest.TestCase):
         self.assertListEqual(list(result.dims), ["time"])
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
 
+    def test_calc_ag_unequal_perp(self):
+        # det P = 0.472 and det G = 1 * ((0.8 + 0.6) / 2) ** 2 = 0.49
+        p_fac = np.array([[1.0, 0.1, 0.05], [0.1, 0.8, 0.0], [0.05, 0.0, 0.6]])
+        result = pyrf.calc_ag(
+            pyrf.ts_tensor_xyz(generate_timeline(1.0, 1), p_fac[None])
+        )
+        self.assertAlmostEqual(result.data[0], 0.018 / 0.962, places=12)
+
+    def test_calc_ag_perp_rotation_invariant(self):
+        # Rotating the perpendicular axes about B (first axis) must not change AG
+        p_fac = np.array([[1.0, 0.1, 0.05], [0.1, 0.8, 0.0], [0.05, 0.0, 0.6]])
+        angles = np.linspace(0.0, np.pi, 7)
+        rot = np.zeros((len(angles), 3, 3))
+        rot[:, 0, 0] = 1.0
+        rot[:, 1, 1], rot[:, 1, 2] = np.cos(angles), -np.sin(angles)
+        rot[:, 2, 1], rot[:, 2, 2] = np.sin(angles), np.cos(angles)
+        p_rot = np.einsum("nij,jk,nlk->nil", rot, p_fac, rot)
+        result = pyrf.calc_ag(
+            pyrf.ts_tensor_xyz(generate_timeline(1.0, len(angles)), p_rot)
+        )
+        np.testing.assert_allclose(result.data, 0.018 / 0.962, rtol=1e-12)
+
+    def test_calc_ag_nan(self):
+        p_fac = np.tile(np.eye(3), (3, 1, 1))
+        p_fac[1, 0, 1] = np.nan
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.calc_ag(pyrf.ts_tensor_xyz(generate_timeline(1.0, 3), p_fac))
+        np.testing.assert_array_equal(result.data, [0.0, np.nan, 0.0])
+
 
 class CalcAgyroTestCase(unittest.TestCase):
     def test_calc_agyro_input_type(self):

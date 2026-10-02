@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import logging
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -23,15 +20,22 @@ __status__ = "Prototype"
 def calc_ag(p_xyz: DataArray) -> DataArray:
     r"""Compute Che's agyrotropy coefficient.
 
-     Che's agyrotropy is [16]_
+    Che's agyrotropy is [16]_
 
     .. math::
 
-        AG^{1/3} = \frac{|\operatorname{det}{\mathbf{P}}
-        - \operatorname{det}{\mathbf{P}}|}
+        AG = \frac{|\operatorname{det}{\mathbf{P}}
+        - \operatorname{det}{\mathbf{G}}|}
         {\operatorname{det}{\mathbf{P}}
-        + \operatorname{det}{\mathbf{P}}}
+        + \operatorname{det}{\mathbf{G}}}
 
+    where :math:`\mathbf{G} = \operatorname{diag}(P_{\parallel}, P_{\perp},
+    P_{\perp})` is the gyrotropic tensor, with :math:`P_{\parallel} = P_{11}`
+    and :math:`P_{\perp} = (P_{22} + P_{33}) / 2`. The pressure tensor must be
+    in field-aligned coordinates with the first axis along the magnetic field
+    (see :func:`pyrfu.mms.rotate_tensor`). The result does not depend on the
+    choice of the perpendicular axes. The function returns :math:`AG`; use
+    ``calc_ag(p_xyz) ** (1 / 3)`` for :math:`AG^{1/3}`.
 
     Parameters
     ----------
@@ -78,9 +82,10 @@ def calc_ag(p_xyz: DataArray) -> DataArray:
 
     >>> p_fac_e_pp = mms.rotate_tensor(p_xyz_e, "fac", b_xyz, "pp")
 
-    Compute agyrotropy coefficient
+    Compute agyrotropy coefficient and its cube root
 
-    >>> ag_e, ag_cr_e = pyrf.calc_ag(p_fac_e_pp)
+    >>> ag_e = pyrf.calc_ag(p_fac_e_pp)
+    >>> ag_cr_e = ag_e ** (1 / 3)
 
     """
     # Check input type
@@ -91,18 +96,14 @@ def calc_ag(p_xyz: DataArray) -> DataArray:
     if p_xyz.data.ndim != 3 or p_xyz.shape[1] != 3 or p_xyz.shape[2] != 3:
         raise ValueError("p_xyz must be a time series of a tensor (n_time, 3, 3)")
 
-    # Diagonal and off-diagonal terms
+    # Determinant of the pressure tensor and of its gyrotropic part
     p_11, p_22, p_33 = [p_xyz.data[:, 0, 0], p_xyz.data[:, 1, 1], p_xyz.data[:, 2, 2]]
-    p_12, p_13, p_23 = [p_xyz.data[:, 0, 1], p_xyz.data[:, 0, 2], p_xyz.data[:, 1, 2]]
 
-    if not np.allclose(p_22, p_33):
-        logging.warning("p_22 and p_33 are not equal, agyrotropy may not be valid.")
+    # Time steps with NaNs give NaN without a warning
+    with np.errstate(invalid="ignore"):
+        det_p = np.linalg.det(p_xyz.data)
 
-    det_p = p_11 * (p_22**2 - p_23**2)
-    det_p -= p_12 * (p_12 * p_22 - p_23 * p_13)
-    det_p += p_13 * (p_12 * p_23 - p_22 * p_13)
-
-    det_g = p_11 * p_22**2
+    det_g = p_11 * ((p_22 + p_33) / 2) ** 2
 
     agyrotropy = np.abs(det_p - det_g) / (det_p + det_g)
     agyrotropy = ts_scalar(p_xyz.time.data, agyrotropy)
