@@ -33,6 +33,10 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+# Timeouts of the SDC downloads [s]: to connect, and between bytes (not for the whole
+# file, so that large files can be downloaded)
+SDC_TIMEOUT = (30, 300)
+
 
 def _var_and_cdf_name(
     var_str: str, mms_id: str
@@ -120,7 +124,7 @@ def _get_file_content_sources(
             file_content = file.read()
     elif source == "sdc":
         try:
-            response = sdc_session.get(file_name, timeout=None, headers=headers)
+            response = sdc_session.get(file_name, timeout=SDC_TIMEOUT, headers=headers)
             response.raise_for_status()  # Raise an HTTPError for bad responses
             file_content = response.content
         except requests.RequestException:

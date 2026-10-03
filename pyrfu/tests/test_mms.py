@@ -1874,6 +1874,18 @@ class GetDataDownloadTestCase(unittest.TestCase):
             with self.assertRaises(requests.ConnectionError):
                 self.module._get_file_content_sources("sdc", "url", session, {})
 
+    def test_get_file_content_sdc_timeout(self):
+        # SDC downloads time out instead of hanging on a stalled connection
+        session = mock.Mock()
+        session.get.return_value = mock.Mock(content=b"cdf")
+
+        content = self.module._get_file_content_sources("sdc", "url", session, {})
+
+        self.assertEqual(content, b"cdf")
+        timeout = session.get.call_args.kwargs["timeout"]
+        self.assertIsNotNone(timeout)
+        self.assertTrue(all(0 < t_ < np.inf for t_ in np.atleast_1d(timeout)))
+
     @data(
         [],  # no file
         ["url"],  # download error
