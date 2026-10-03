@@ -2977,6 +2977,69 @@ class LShellTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["UNITS"], "R_E")
 
 
+class MatchPhibeTestCase(unittest.TestCase):
+    # Potential phi(x - v t) along k perpendicular to B = 40 nT z, with
+    # E.k = (dphi / dt) / v, dB_par = phi n e mu0 / B and an unrelated E along
+    # z x k. For B along z, k = cos(theta) (-y) + sin(theta) x.
+    b_0, n_0, v_ph, theta = 40.0, 10.0, 300.0, np.deg2rad(31.0)
+
+    def setUp(self):
+        t_sec = np.arange(4096) / 1024.0
+        time = generate_timeline(1024.0, 4096)
+        window = np.hanning(len(t_sec))
+        phi = 50.0 * np.sin(2 * np.pi * 40.0 * t_sec) * window
+        e_k = np.gradient(phi, t_sec) / self.v_ph
+        e_n = np.max(np.abs(e_k)) * np.sin(2 * np.pi * 25.0 * t_sec) * window
+        self.k_vec = np.array([np.sin(self.theta), -np.cos(self.theta), 0.0])
+        n_vec = np.cross([0.0, 0.0, 1.0], self.k_vec)
+        d_b = phi * self.n_0 * 1e6 * constants.e * constants.mu_0 / self.b_0 * 1e18
+        self.e_xyz = pyrf.ts_vec_xyz(
+            time, np.outer(e_k, self.k_vec) + np.outer(e_n, n_vec)
+        )
+        self.b_xyz = pyrf.ts_vec_xyz(
+            time, np.outer(d_b, [0.0, 0.0, 1.0]) + [0, 0, self.b_0]
+        )
+
+    def test_match_phibe_dir_values(self):
+        b_data = self.b_xyz.data.copy()
+        x_, _, z_, corr_vec, int_e_dt, b_z, b_0, *_ = pyrf.match_phibe_dir(
+            self.b_xyz, self.e_xyz, f=10.0
+        )
+        k_best = np.argmax(corr_vec)
+        self.assertEqual(np.arange(1, 360, 3)[k_best], 31)
+        np.testing.assert_allclose(x_[k_best], self.k_vec, atol=1e-6)
+        np.testing.assert_allclose(z_[0], [0.0, 0.0, 1.0], atol=1e-6)
+        self.assertGreater(corr_vec[k_best], 0.99)
+        self.assertAlmostEqual(b_0, self.b_0, places=6)
+        self.assertListEqual(list(int_e_dt.shape), [4096, 120])
+        self.assertListEqual(list(b_z.shape), [4096])
+        np.testing.assert_array_equal(self.b_xyz.data, b_data)
+
+        # Given angles are used
+        x_, *_ = pyrf.match_phibe_dir(self.b_xyz, self.e_xyz, [31.0], 10.0)
+        np.testing.assert_allclose(x_[0], self.k_vec, atol=1e-6)
+
+    def test_match_phibe_v_values(self):
+        _, _, _, corr_vec, int_e_dt, b_z, b_0, *_ = pyrf.match_phibe_dir(
+            self.b_xyz, self.e_xyz, f=10.0
+        )
+        k_best, sl_ = np.argmax(corr_vec), slice(1024, 3072)
+        n_e = np.array([5.0, 10.0, 20.0])
+        v_ph = np.array([100.0, 300.0, 1000.0])
+
+        corr_mat, phi_b, phi_e = pyrf.match_phibe_v(
+            b_0, b_z[sl_], int_e_dt[sl_, k_best], n_e, v_ph
+        )
+
+        # Best amplitude match at the true density and speed, n unchanged
+        self.assertTupleEqual(
+            np.unravel_index(np.argmin(np.abs(corr_mat)), (3, 3)), (1, 1)
+        )
+        self.assertListEqual(list(phi_b.shape), [2048, 3])
+        self.assertListEqual(list(phi_e.shape), [2048, 3])
+        np.testing.assert_array_equal(n_e, [5.0, 10.0, 20.0])
+
+
 @ddt
 class MeanTestCase(unittest.TestCase):
     @data(None, generate_ts(64.0, 100, tensor_order=1))
