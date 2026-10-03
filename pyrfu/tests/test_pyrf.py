@@ -4396,6 +4396,60 @@ class Ttns2Datetime64TestCase(unittest.TestCase):
         self.assertIsInstance(result, np.ndarray)
 
 
+def _waverage_loops(t_sec, data, n_pts):
+    # Literal port of the irf_waverage.m loops (one column)
+    weights = {
+        5: np.array([0.1, 0.25, 0.3, 0.25, 0.1]),
+        7: np.array([0.07, 0.15, 0.18, 0.2, 0.18, 0.15, 0.07]),
+    }[n_pts]
+    f_s = 1 / (t_sec[1] - t_sec[0])
+    n_data = int(round((t_sec[-1] - t_sec[0]) * f_s))
+    d_t = (t_sec[-1] - t_sec[0]) / n_data
+    out = np.zeros(n_data + 1)
+    ind = np.round((t_sec - t_sec[0]) / d_t).astype(int)
+    out[ind] = data
+    out[np.isnan(out)] = 0
+    pad = np.r_[np.zeros(n_pts // 2), out, np.zeros(n_pts // 2)]
+    for j in range(n_data + 1):
+        x_ = pad[j : j + n_pts]
+        cor = np.sum(weights[x_ == 0])
+        out[j] = 0 if np.isclose(cor, 1) else np.sum(x_ * weights) / (1 - cor)
+    return out[ind]
+
+
+@ddt
+class WaverageTestCase(unittest.TestCase):
+    @data(5, 7)
+    def test_waverage_loops(self, n_pts):
+        # Random data with a gap (samples 20-22 missing) and a NaN
+        rng = np.random.default_rng(0)
+        keep = np.r_[0:20, 23:60]
+        t_sec = np.arange(60)[keep] / 16.0
+        time = np.datetime64("2019-01-01", "ns") + (t_sec * 1e9).astype(
+            "timedelta64[ns]"
+        )
+        data_ = rng.normal(size=(len(t_sec), 3))
+        data_[30, 1] = np.nan
+        inp = pyrf.ts_vec_xyz(time, data_)
+
+        result = pyrf.waverage(inp, n_pts=n_pts)
+
+        self.assertTupleEqual(result.shape, inp.shape)
+        np.testing.assert_array_equal(result.time.data, time)
+        for col in range(3):
+            expected = _waverage_loops(t_sec, data_[:, col], n_pts)
+            np.testing.assert_allclose(result.data[:, col], expected, atol=1e-12)
+
+    def test_waverage_constant(self):
+        # A constant is unchanged, including at the edges and around a gap
+        time = generate_timeline(32.0, 50)
+        time = np.delete(time, [10, 11])
+        inp = pyrf.ts_scalar(time, np.full(len(time), 2.5))
+        result = pyrf.waverage(inp, 32.0, 5)
+        np.testing.assert_allclose(result.data, 2.5)
+        self.assertTupleEqual(result.dims, ("time",))
+
+
 @ddt
 class WaveletTestCase(unittest.TestCase):
     @data(
