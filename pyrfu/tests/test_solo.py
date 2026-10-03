@@ -22,6 +22,18 @@ __status__ = "Prototype"
 
 
 class DbInitTestCase(unittest.TestCase):
+    # db_init rewrites the SolO configuration file of the package: restore it
+    def setUp(self):
+        self.config_path = os.path.join(os.path.dirname(solo.__file__), "config.json")
+        with open(self.config_path, "rb") as file:
+            config = file.read()
+
+        def restore():
+            with open(self.config_path, "wb") as file:
+                file.write(config)
+
+        self.addCleanup(restore)
+
     def test_db_init_inpput(self):
         with self.assertRaises(AssertionError):
             solo.db_init("/Volumes/solo/remote/data")

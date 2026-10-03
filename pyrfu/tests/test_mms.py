@@ -15,6 +15,9 @@ from contextlib import nullcontext
 from unittest import mock
 
 # 3rd party imports
+import keyring
+import keyring.credentials
+import keyring.errors
 import numpy as np
 import pycdfpp
 import requests
@@ -442,6 +445,29 @@ class ConfigCacheTestCase(unittest.TestCase):
                 module._login_lasp_cached.cache_clear()
 
 
+class _MemoryKeyring:
+    # In-memory keyring backend with a given priority (>= 1: system keyring)
+    def __init__(self, priority):
+        self.priority = priority
+        self.passwords = {}
+        self.file_path = "/nowhere/keyring_pass.cfg"
+
+    def get_credential(self, service, username):
+        password = self.passwords.get((service, username))
+        return (
+            keyring.credentials.SimpleCredential(username, password)
+            if password
+            else None
+        )
+
+    def set_password(self, service, username, password):
+        self.passwords[(service, username)] = password
+
+    def delete_password(self, service, username):
+        if self.passwords.pop((service, username), None) is None:
+            raise keyring.errors.PasswordDeleteError("not found")
+
+
 class DbGetTsTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.db_get_ts")
@@ -578,6 +604,30 @@ class DbGetVariableTestCase(unittest.TestCase):
 
 
 class DbInitTestCase(unittest.TestCase):
+    # db_init writes to a temporary configuration file and in-memory keyrings,
+    # never to the user's configuration or keyring
+    def setUp(self):
+        module = importlib.import_module("pyrfu.mms.db_init")
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        patches = [
+            mock.patch.object(
+                module, "MMS_CFG_PATH", os.path.join(self.tmp_dir.name, "c.json")
+            ),
+            mock.patch.object(
+                module.keyring, "get_keyring", return_value=_MemoryKeyring(5)
+            ),
+            mock.patch.object(
+                module, "PlaintextKeyring", return_value=_MemoryKeyring(0.5)
+            ),
+            mock.patch.object(module.keyring, "set_keyring"),
+            mock.patch.object(module.keyring, "get_credential", return_value=None),
+            mock.patch.object(module.keyring, "set_password"),
+        ]
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+        self.addCleanup(self.tmp_dir.cleanup)
+
     def test_db_init_input(self):
         with self.assertRaises(NotImplementedError):
             mms.db_init(default="bazinga!", local=os.getcwd(), sdc="public")
