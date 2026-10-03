@@ -5,9 +5,6 @@
 import json
 import logging
 import os
-import warnings
-from shutil import copy, copyfileobj
-from tempfile import NamedTemporaryFile
 from typing import Optional, Union
 
 # 3rd party imports
@@ -17,7 +14,7 @@ from dateutil.parser import parse
 # Local imports
 from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.mms.get_data import _var_and_cdf_name
-from pyrfu.mms.list_files_sdc import _login_lasp, list_files_sdc
+from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -84,6 +81,34 @@ def _make_path_local(
     return os.path.join(*path_list, file["file_name"])
 
 
+def _download_file(
+    session, url: str, headers: dict, out_file: str, size: Optional[int] = None
+):
+    r"""Download url to out_file, through a temporary file next to it so that a
+    failed or interrupted download never leaves a partial file."""
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)
+    part_file = f"{out_file}.part"
+
+    try:
+        with session.get(
+            url, stream=True, verify=True, headers=headers, timeout=SDC_TIMEOUT
+        ) as response:
+            response.raise_for_status()
+
+            with (
+                open(part_file, "wb") as fs,
+                tqdm.tqdm(total=size, unit="B", unit_scale=True, ncols=60) as progress,
+            ):
+                for chunk in response.iter_content(chunk_size=1 << 20):
+                    fs.write(chunk)
+                    progress.update(len(chunk))
+
+        os.replace(part_file, out_file)
+    finally:
+        if os.path.exists(part_file):
+            os.remove(part_file)
+
+
 def download_data(
     var_str: str, tint: list, mms_id: Union[str, int], data_path: Optional[str] = ""
 ):
@@ -112,33 +137,11 @@ def download_data(
 
     for file in files_in_interval:
         out_file = _make_path_local(file, var, mms_id, data_path)
-        out_path = os.path.dirname(out_file)
 
         logging.info(
             "Downloading %s from %s...", os.path.basename(out_file), file["url"]
         )
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=ResourceWarning)
-            with sdc_session.get(
-                file["url"],
-                stream=True,
-                verify=True,
-                headers=headers,
-            ) as fsrc:
-                with NamedTemporaryFile(delete=False) as ftmp:
-                    with tqdm.tqdm.wrapattr(
-                        fsrc.raw,
-                        "read",
-                        total=file["size"],
-                        ncols=60,
-                    ) as fsrc_raw:
-                        with open(ftmp.name, "wb") as fs:
-                            copyfileobj(fsrc_raw, fs)
-
-                os.makedirs(out_path, exist_ok=True)
-
-                # if the download was successful, copy to data directory
-                copy(ftmp.name, out_file)
+        _download_file(sdc_session, file["url"], headers, out_file, file.get("size"))
 
     sdc_session.close()

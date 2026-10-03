@@ -37,6 +37,11 @@ LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 TEST_URL = "file_names/science?start_date=2015-04-10&end_date=2015-04-11&sc_id=mms2"
 
 
+# Timeouts of the SDC requests [s]: to connect, and between bytes (not for the
+# whole download, so that large files can be downloaded)
+SDC_TIMEOUT = (30, 300)
+
+
 @functools.lru_cache(maxsize=1)
 def _login_lasp():
     r"""Login to LASP colorado. Cached so the connectivity/credential
@@ -197,7 +202,11 @@ def list_files_sdc(tint, mms_id, var):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ResourceWarning)
-        http_json = sdc_session.get(url_json_cdfs, verify=True, headers=headers).json()
+        response = sdc_session.get(
+            url_json_cdfs, verify=True, headers=headers, timeout=SDC_TIMEOUT
+        )
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        http_json = response.json()
 
     file_names = _files_in_interval(http_json["files"], tint)
     sdc_session.close()

@@ -20,7 +20,7 @@ from pyrfu.mms.get_dist import get_dist
 from pyrfu.mms.get_ts import get_ts
 from pyrfu.mms.list_files import list_files
 from pyrfu.mms.list_files_aws import list_files_aws
-from pyrfu.mms.list_files_sdc import _login_lasp, list_files_sdc
+from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 from pyrfu.mms.tokenize import tokenize
 from pyrfu.pyrf.dist_append import dist_append
 from pyrfu.pyrf.ts_append import ts_append
@@ -32,10 +32,6 @@ __copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
-
-# Timeouts of the SDC downloads [s]: to connect, and between bytes (not for the whole
-# file, so that large files can be downloaded)
-SDC_TIMEOUT = (30, 300)
 
 
 def _var_and_cdf_name(

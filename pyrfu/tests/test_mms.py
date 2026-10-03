@@ -1906,6 +1906,107 @@ class GetDataDownloadTestCase(unittest.TestCase):
         session.close.assert_called_once()
 
 
+def _sdc_session(chunks=(b"cdf", b"data"), status_error=None, stream_error=None):
+    # Mocked SDC session whose get() returns a streamed response
+    response = mock.MagicMock()
+    if status_error:
+        response.raise_for_status.side_effect = status_error
+
+    def iter_content(chunk_size=1):
+        for chunk in chunks:
+            yield chunk
+        if stream_error:
+            raise stream_error
+
+    response.iter_content.side_effect = iter_content
+    response.json.return_value = {"files": []}
+    session = mock.MagicMock()
+    session.get.return_value = response
+    response.__enter__.return_value = response
+    return session
+
+
+class DownloadDataTestCase(unittest.TestCase):
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.download_data")
+
+    def test_download_file(self):
+        with tempfile.TemporaryDirectory() as root:
+            out_file = os.path.join(root, "mms1", "file.cdf")
+            session = _sdc_session()
+            self.module._download_file(session, "url", {}, out_file, 7)
+
+            with open(out_file, "rb") as file:
+                self.assertEqual(file.read(), b"cdfdata")
+            self.assertListEqual(os.listdir(os.path.dirname(out_file)), ["file.cdf"])
+
+        timeout = session.get.call_args.kwargs["timeout"]
+        self.assertTrue(all(0 < t_ < np.inf for t_ in np.atleast_1d(timeout)))
+
+    def test_download_file_errors(self):
+        # Neither an HTTP error page nor an interrupted download leaves a file
+        errors = [
+            {"status_error": requests.HTTPError("404")},
+            {"stream_error": requests.ConnectionError("connection reset")},
+        ]
+        for error in errors:
+            with tempfile.TemporaryDirectory() as root:
+                out_file = os.path.join(root, "file.cdf")
+                with self.assertRaises(requests.RequestException):
+                    self.module._download_file(
+                        _sdc_session(**error), "url", {}, out_file
+                    )
+                self.assertListEqual(os.listdir(root), [])
+
+    def test_download_data(self):
+        files = [
+            {
+                "url": "url",
+                "file_name": "mms1_fgm_srvy_l2_20190914_v5.211.0.cdf",
+                "timetag": "2019-09-14T00:00:00",
+                "size": 7,
+            }
+        ]
+        with tempfile.TemporaryDirectory() as root:
+            with mock.patch.object(self.module, "list_files_sdc", return_value=files):
+                with mock.patch.object(
+                    self.module, "_login_lasp", return_value=(_sdc_session(), {}, "")
+                ):
+                    self.module.download_data(
+                        "b_gse_fgm_srvy_l2",
+                        ["2019-09-14T07:54:00", "2019-09-14T08:11:00"],
+                        1,
+                        root,
+                    )
+
+            out_file = os.path.join(
+                root,
+                "mms1",
+                "fgm",
+                "srvy",
+                "l2",
+                "",
+                "2019",
+                "09",
+                files[0]["file_name"],
+            )
+            with open(out_file, "rb") as file:
+                self.assertEqual(file.read(), b"cdfdata")
+
+    def test_list_files_sdc_request(self):
+        # The SDC listing has a timeout and raises on HTTP errors
+        module = importlib.import_module("pyrfu.mms.list_files_sdc")
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+
+        session = _sdc_session(status_error=requests.HTTPError("500"))
+        with mock.patch.object(module, "_login_lasp", return_value=(session, {}, "x/")):
+            with self.assertRaises(requests.HTTPError):
+                module.list_files_sdc(tint, 1, var)
+
+        self.assertIsNotNone(session.get.call_args.kwargs.get("timeout"))
+
+
 class GetFeepsTestCase(unittest.TestCase):
     TINT = ["2017-07-23T16:54:24.000", "2017-07-23T17:00:00.000"]
 
