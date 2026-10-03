@@ -1965,12 +1965,11 @@ class GetFeepsTestCase(unittest.TestCase):
         self.assertGreater(out.sizes["time"], 1000)
 
 
-def _cdf_four_columns():
+def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
     # In-memory CDF with (N, 4) variables labelled as in the MMS files: FGM
     # (x, y, z, r representation), MEC quaternions (qx, qy, qz, qw) and MEC
     # B fields (labels only, last one the magnitude), with padded labels
-    time = np.datetime64("2019-09-14T07:54:00", "ns")
-    time = time + np.arange(5) * np.timedelta64(1, "s")
+    time = np.datetime64(t_start, "ns") + np.arange(5) * np.timedelta64(1, "s")
     data = np.tile([1.0, 2.0, 3.0, 4.0], (5, 1))
 
     cdf = pycdfpp.CDF()
@@ -2052,6 +2051,89 @@ class GetTsTestCase(unittest.TestCase):
         np.testing.assert_array_equal(
             result.time.data, time + np.timedelta64(shift, "ms")
         )
+
+
+def _cdf_fpi_brst_dist(n_records, t_start):
+    # In-memory FPI burst ion distribution laid out as in the L2 files: record
+    # varying phi, energy, steptable parity and energy deltas, with alternating
+    # energy tables (no energy0 and energy1 variables)
+    time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
+        150, "ms"
+    )
+    parity = np.arange(n_records) % 2
+    energies = np.array(
+        [[10.0, 20.0, 40.0, 80.0, 160.0], [12.0, 24.0, 48.0, 96.0, 192.0]]
+    )
+
+    cdf = pycdfpp.CDF()
+    cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    cdf.add_variable(
+        "mms1_dis_phi_brst", values=np.tile(np.arange(4.0), (n_records, 1))
+    )
+    cdf.add_variable("mms1_dis_theta_brst", values=np.arange(3.0)[None], is_nrv=True)
+    cdf.add_variable("mms1_dis_energy_brst", values=energies[parity].reshape(-1, 5))
+    cdf.add_variable("mms1_dis_steptable_parity_brst", values=parity.astype(np.uint8))
+    cdf.add_variable("mms1_dis_energy_delta_brst", values=np.ones((n_records, 5)))
+    cdf.add_variable(
+        "mms1_dis_dist_brst",
+        values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
+    )
+    for i, dep in enumerate(["Epoch", "mms1_dis_phi_brst", "mms1_dis_theta_brst"]):
+        cdf["mms1_dis_dist_brst"].add_attribute(f"DEPEND_{i:d}", dep)
+    cdf["mms1_dis_dist_brst"].add_attribute("DEPEND_3", "mms1_dis_energy_brst")
+
+    return bytes(pycdfpp.save(cdf))
+
+
+@ddt
+class GetDataEmptyFilesTestCase(unittest.TestCase):
+    # Files with no record, or no record in tint, do not change the result
+    tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.get_data")
+
+    def _get_data(self, var_str, contents):
+        sources = ([f"file_{i:d}" for i in range(len(contents))], None, {})
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ):
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", side_effect=contents
+            ):
+                return mms.get_data(var_str, self.tint, 1, verbose=False, source="sdc")
+
+    @data((0, 3), (3, 0), (0, 0))
+    @unpack
+    def test_get_data_dist_empty_files(self, n_first, n_second):
+        empty = _cdf_fpi_brst_dist(0, "2019-09-14T07:54:00")
+        full = _cdf_fpi_brst_dist(3, "2019-09-14T07:54:10")
+        outside = _cdf_fpi_brst_dist(2, "2019-09-14T08:30:00")
+        contents = [full if n_first else empty, full if n_second else empty, outside]
+
+        result = self._get_data("pdi_fpi_brst_l2", contents)
+
+        n_records = 3 if n_first or n_second else 0
+        self.assertEqual(result.sizes["time"], n_records)
+        self.assertEqual(len(result.attrs["esteptable"]), n_records)
+        if n_records:
+            expected = self._get_data("pdi_fpi_brst_l2", [full])
+            np.testing.assert_array_equal(result.data.data, expected.data.data)
+            np.testing.assert_array_equal(
+                result.energy0, [10.0, 20.0, 40.0, 80.0, 160.0]
+            )
+            np.testing.assert_array_equal(
+                result.energy1, [12.0, 24.0, 48.0, 96.0, 192.0]
+            )
+
+    def test_get_data_ts_empty_files(self):
+        contents = [
+            _cdf_four_columns("2019-09-14T08:30:00"),
+            _cdf_four_columns("2019-09-14T07:54:10"),
+        ]
+        result = self._get_data("b_gse_fgm_srvy_l2", contents)
+        self.assertEqual(result.sizes["time"], 5)
+        self.assertListEqual(list(result.shape), [5, 3])
 
 
 class _FakeS3Bucket:

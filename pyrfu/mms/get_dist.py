@@ -14,7 +14,7 @@ from .get_ts import _get_epochs
 from .get_variable import _pycdfpp_attributes_to_dict
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -104,19 +104,20 @@ def get_dist(file_path, cdf_name, tint: list = None):
     for n, k in zip(["time", "phi", "theta", "energy"], depends_keys):
         coords_attrs[n] = _pycdfpp_attributes_to_dict(file[k].attributes)
 
-    times = _get_epochs(file, cdf_name)
-
-    # If something time is None means that there is nothing interesting
-    # in this file so leave!!
-    if times["data"] is not None:
-        times = times["data"]
-    else:
-        return None
+    times = _get_epochs(file, cdf_name)["data"]
 
     dist = np.transpose(file[cdf_name].values, [0, 3, 1, 2])
     phi, theta, energy = [np.squeeze(file[k].values) for k in depends_keys[1:]]
 
-    if tmmode == "brst":
+    if times.size == 0:
+        # File without records: empty skymap, without energy tables
+        phi = np.zeros((0, phi.shape[-1]))
+        energy = np.zeros((0, energy.shape[-1]))
+        energy0 = np.full(energy.shape[-1], np.nan)
+        energy1 = np.full(energy.shape[-1], np.nan)
+        step_table = np.zeros(0)
+
+    elif tmmode == "brst":
         en0_name = "_".join(
             [
                 cdf_name.split("_")[0],

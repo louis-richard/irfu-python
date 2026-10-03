@@ -268,9 +268,6 @@ def get_ts(
 
     time = _get_epochs(file, cdf_name)
 
-    if time["data"] is None:
-        return None
-
     if "DEPEND_1" in var_attrs or "REPRESENTATION_1" in var_attrs:
         depend_1 = _get_depend(file, cdf_name, 1)
 
