@@ -2879,6 +2879,68 @@ class ListFilesTestCase(unittest.TestCase):
     def test_list_files(self, var_str):
         mms.list_files(TEST_TINT, random.randint(1, 4), mms.tokenize(var_str))
 
+    @staticmethod
+    def _touch(root, rel_dir, names):
+        path = os.path.join(root, *rel_dir.split("/"))
+        os.makedirs(path, exist_ok=True)
+        for name in names:
+            with open(os.path.join(path, name), "wb"):
+                pass
+
+    @data("2019-09-14T07:54:00", "2019-09-14T00:00:00")
+    def test_list_files_latest_version_srvy(self, t_start):
+        # One file per day, several versions of one of them: only the latest
+        # (the old code kept the last listed one, or all from midnight)
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fgm/srvy/l2/2019/09",
+                [
+                    "mms1_fgm_srvy_l2_20190913_v5.211.0.cdf",
+                    "mms1_fgm_srvy_l2_20190914_v5.86.0.cdf",
+                    "mms1_fgm_srvy_l2_20190914_v5.211.0.cdf",
+                    "mms1_fgm_srvy_l2_20190914_v5.9.0.cdf",
+                    "mms1_fgm_srvy_l2_20190915_v5.211.0.cdf",
+                ],
+            )
+            var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+            tint = [t_start, "2019-09-14T08:11:00"]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["mms1_fgm_srvy_l2_20190914_v5.211.0.cdf"],
+        )
+
+    def test_list_files_brst_segments(self):
+        # Segments starting in the interval and the one covering its start,
+        # latest versions only, in time order
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fpi/brst/l2/des-moms/2019/09/14",
+                [
+                    "mms1_fpi_brst_l2_des-moms_20190914074923_v3.4.0.cdf",
+                    "mms1_fpi_brst_l2_des-moms_20190914075223_v3.3.0.cdf",
+                    "mms1_fpi_brst_l2_des-moms_20190914075223_v3.4.0.cdf",
+                    "mms1_fpi_brst_l2_des-moms_20190914075523_v3.4.0.cdf",
+                    "mms1_fpi_brst_l2_des-moms_20190914080023_v3.4.0.cdf",
+                    "mms1_fpi_brst_l2_des-moms_20190914081223_v3.4.0.cdf",
+                ],
+            )
+            var = {"inst": "fpi", "tmmode": "brst", "lev": "l2", "dtype": "des-moms"}
+            tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            [
+                "mms1_fpi_brst_l2_des-moms_20190914075223_v3.4.0.cdf",
+                "mms1_fpi_brst_l2_des-moms_20190914075523_v3.4.0.cdf",
+                "mms1_fpi_brst_l2_des-moms_20190914080023_v3.4.0.cdf",
+            ],
+        )
+
 
 @ddt
 class ListFilesSdcTestCase(unittest.TestCase):
