@@ -10,9 +10,6 @@ import numpy as np
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
-# from .e_vxb import e_vxb
-
-
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -25,12 +22,21 @@ def vht(e, b, no_ez: bool = False):
     r"""Estimate velocity of the De Hoffman-Teller frame from the velocity
     estimate the electric field eht=-vht x b
 
+    The velocity minimises D = <|E + v_ht x B|^2>, i.e., solves
+    K v_ht = <E x B> with K = <B^2 I - B B^T> [1]_, using the samples where E
+    and B are finite. The uncertainty is estimated from
+    S = D / (2M - 3) K^{-1} for M samples [1]_, which assumes that the
+    noise in E is perpendicular to B.
+
+    Unlike irf_vht.m, K and <E x B> are averaged over the same samples, so
+    that data gaps do not bias v_ht.
+
     Parameters
     ----------
     e : xarray.DataArray
-        Time series of the electric field.
+        Time series of the electric field [mV/m].
     b : xarray.DataArray
-        Time series of the magnetic field.
+        Time series of the magnetic field [nT].
     no_ez : boolean, Optional
         If True assumed no Ez. Default is False.
 
@@ -38,58 +44,54 @@ def vht(e, b, no_ez: bool = False):
     -------
     vht : numpy.ndarray
         De Hoffman Teller frame velocity [km/s].
-    vht : xarray.DataArray
-        Time series of the electric field in the De Hoffman frame.
+    e_ht : xarray.DataArray
+        Time series of the electric field in the De Hoffman frame,
+        -v_ht x B [mV/m].
     dv_ht : numpy.ndarray
-        Error of De Hoffman Teller frame.
+        Error of De Hoffman Teller frame [km/s].
+
+    References
+    ----------
+    .. [1]  Khrabrov, A. V., and B. U. O. Sonnerup (1998), DeHoffmann-Teller
+            analysis, in Analysis Methods for Multi-Spacecraft Data, edited by
+            G. Paschmann and P. W. Daly, pp. 221-248, Int. Space Sci. Inst.,
+            Bern.
 
     """
 
-    n_samples = len(e)
-
     # Resample magnetic field to electric field sampling (usually higher)
-
     if not np.array_equal(e.time.data, b.time.data):
         b = resample(b, e)
 
-    p = np.zeros(6)
+    # assume only Ex and Ey: put z component to 0 when using only Ex and Ey
+    n_comp = 2 if no_ez else 3
 
-    p[0] = np.sum(b[:, 0].data * b[:, 0].data) / n_samples  # Bx*Bx
-    p[1] = np.sum(b[:, 0].data * b[:, 1].data) / n_samples  # Bx*By
-    p[2] = np.sum(b[:, 0].data * b[:, 2].data) / n_samples  # Bx*Bz
-    p[3] = np.sum(b[:, 1].data * b[:, 1].data) / n_samples  # By*By
-    p[4] = np.sum(b[:, 1].data * b[:, 2].data) / n_samples  # By*Bz
-    p[5] = np.sum(b[:, 2].data * b[:, 2].data) / n_samples  # Bz*Bz
+    # Samples where E and B are finite, used for all the averages
+    valid = np.all(np.isfinite(b.data), axis=1)
+    valid &= np.all(np.isfinite(e.data[:, :n_comp]), axis=1)
+    n_valid = int(np.sum(valid))
 
-    # assume only Ex and Ey
+    b_v = b.data[valid].astype(np.float64)
+    e_v = e.data[valid].astype(np.float64)
+    e_v[:, n_comp:] = 0.0
+
+    # <Bi Bj>
+    b_ij = np.einsum("ti,tj->ij", b_v, b_v) / n_valid
+
     if no_ez:
-        # put z component to 0 when using only Ex and Ey (in a copy, so that the
-        # caller's E is unchanged; NaNs stay NaN)
-        e = e.copy(deep=True)
-        e[:, 2] *= 0
-
-        k_mat = np.array(
-            [[p[5], 0, -p[2]], [0, p[5], -p[4]], [-p[2], -p[4], p[0] + p[3]]],
-        )
-    else:
         k_mat = np.array(
             [
-                [p[3] + p[5], -p[1], -p[2]],
-                [-p[1], p[0] + p[5], -p[4]],
-                [-p[2], -p[4], p[0] + p[3]],
+                [b_ij[2, 2], 0, -b_ij[0, 2]],
+                [0, b_ij[2, 2], -b_ij[1, 2]],
+                [-b_ij[0, 2], -b_ij[1, 2], b_ij[0, 0] + b_ij[1, 1]],
             ],
         )
+    else:
+        k_mat = np.trace(b_ij) * np.eye(3) - b_ij
 
-    exb = np.cross(e, b)
+    exb_avg = np.mean(np.cross(e_v, b_v), axis=0)
 
-    ind_data = np.where(~np.isnan(exb[:, 0].data))[0]
-
-    # revised by Wenya LI; 2015-11-21, wyli @ irfu
-    exb_avg = np.sum(exb[ind_data, :], axis=0) / n_samples
-
-    # averExB=sum(ExB(indData).data,1)/nSamples;
-    # end revise.
-    v_ht = np.linalg.solve(k_mat, exb_avg.T) * 1e3  # 9.12 in ISSI book
+    v_ht = np.linalg.solve(k_mat, exb_avg) * 1e3  # 9.12 in ISSI book
 
     v_ht_hat = v_ht / np.linalg.norm(v_ht, keepdims=True)
 
@@ -102,31 +104,21 @@ def vht(e, b, no_ez: bool = False):
     # e_ht = e_vxb(v_ht, b)
     e_ht = ts_vec_xyz(b.time.data, -1e-3 * np.cross(v_ht, b.data))
 
-    if no_ez:
-        e_p, e_ht_p = [e[ind_data], e_ht[ind_data]]
-        e_p.data[:, 2], e_ht_p.data[:, 2] = [0, 0]
-    else:
-        e_p, e_ht_p = [e[ind_data], e_ht[ind_data]]
+    e_ht_p = e_ht.data[valid]
+    e_ht_p[:, n_comp:] = 0.0
 
-    delta_e = e_p.data - e_ht_p.data
+    delta_e = e_v - e_ht_p
 
-    poly_fit = np.polyfit(
-        e_ht_p.data.reshape([len(e_ht_p) * 3]),
-        e_p.data.reshape([len(e_p) * 3]),
-        1,
-    )
-    corr_coeff = np.corrcoef(
-        e_ht_p.data.reshape([len(e_ht_p) * 3]),
-        e_p.data.reshape([len(e_p) * 3]),
-    )
+    poly_fit = np.polyfit(e_ht_p.ravel(), e_v.ravel(), 1)
+    corr_coeff = np.corrcoef(e_ht_p.ravel(), e_v.ravel())
 
     logging.info(
         "slope = %(slope)6.4f, offs = %(offset)6.4f, cc = %(cc)6.4f",
         {"slope": poly_fit[0], "offset": poly_fit[1], "cc": corr_coeff[0, 1]},
     )
 
-    dv_ht = np.sum(np.sum(delta_e**2)) / len(ind_data)
-    s_mat = (dv_ht / (2 * len(ind_data) - 3)) / k_mat
+    d_ht = np.sum(delta_e**2) / n_valid
+    s_mat = d_ht / (2 * n_valid - 3) * np.linalg.inv(k_mat)
     dv_ht = np.sqrt(np.diag(s_mat)) * 1e3
 
     dv_ht_hat = dv_ht / np.linalg.norm(dv_ht)

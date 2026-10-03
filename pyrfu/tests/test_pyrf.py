@@ -4713,6 +4713,76 @@ class VhtTestCase(unittest.TestCase):
             np.testing.assert_allclose(v_ht, pyrf.vht(e_0, b, True)[0])
 
 
+def _ht_frame(n_pts=1000):
+    # B mostly along (1, 1, 1) with smaller variations, as in a typical
+    # de Hoffmann-Teller interval, so that K has large off-diagonal terms
+    # (the error estimate then differs from dividing element-wise by K by a
+    # factor 2.4), and E = -v_ht x B
+    time = generate_timeline(32.0, n_pts)
+    phase = 2 * np.pi * np.arange(n_pts) / n_pts
+    e_par = np.array([1.0, 1.0, 1.0]) / np.sqrt(3)
+    e_1 = np.array([1.0, -1.0, 0.0]) / np.sqrt(2)
+    e_2 = np.cross(e_par, e_1)
+    b_xyz = np.outer(40 + 5 * np.sin(2 * phase), e_par)
+    b_xyz += np.outer(8 * np.cos(phase), e_1)
+    b_xyz += np.outer(8 * np.sin(phase) + 3 * np.sin(3 * phase), e_2)
+    v_ht = np.array([-300.0, 100.0, 50.0])
+    return time, b_xyz, v_ht, -1e-3 * np.cross(v_ht, b_xyz)
+
+
+@ddt
+class VhtValuesTestCase(unittest.TestCase):
+    @data(False, True)
+    def test_vht_exact(self, no_ez):
+        time, b_xyz, v_ht, e_xyz = _ht_frame()
+        result, e_ht, dv_ht = pyrf.vht(
+            pyrf.ts_vec_xyz(time, e_xyz), pyrf.ts_vec_xyz(time, b_xyz), no_ez
+        )
+        np.testing.assert_allclose(result, v_ht, rtol=1e-12)
+        np.testing.assert_allclose(e_ht.data, e_xyz, atol=1e-12)
+        np.testing.assert_allclose(dv_ht, 0.0, atol=1e-9)
+
+    def test_vht_gaps(self):
+        # Gaps in E or B do not bias v_ht
+        time, b_xyz, v_ht, e_xyz = _ht_frame()
+        e_gap, b_gap = e_xyz.copy(), b_xyz.copy()
+        e_gap[100:200] = np.nan
+        b_gap[500:520] = np.nan
+
+        for e_, b_ in [(e_gap, b_xyz), (e_xyz, b_gap)]:
+            result, _, _ = pyrf.vht(
+                pyrf.ts_vec_xyz(time, e_), pyrf.ts_vec_xyz(time, b_)
+            )
+            np.testing.assert_allclose(result, v_ht, rtol=1e-12)
+
+    def test_vht_error_estimate(self):
+        # With white noise of variance sigma^2 in each component perpendicular to
+        # B, v_ht = K^-1 <E x B> has covariance sigma^2 / M K^-1, which the
+        # error estimate D / (2M - 3) K^-1 reproduces (Khrabrov and Sonnerup,
+        # 1998), and which matches the scatter of v_ht over noise realisations
+        time, b_xyz, _, e_xyz = _ht_frame()
+        b_hat = b_xyz / np.linalg.norm(b_xyz, axis=1, keepdims=True)
+        b_ij = b_xyz.T @ b_xyz / len(b_xyz)
+        k_mat = np.trace(b_ij) * np.eye(3) - b_ij
+        sigma = 0.5
+        expected = 1e3 * sigma * np.sqrt(np.diag(np.linalg.inv(k_mat)) / len(b_xyz))
+
+        rng = np.random.default_rng(0)
+        v_hts, dv_hts = [], []
+
+        for _ in range(500):
+            noise = rng.normal(scale=sigma, size=b_xyz.shape)
+            noise -= np.sum(noise * b_hat, axis=1, keepdims=True) * b_hat
+            v_ht, _, dv_ht = pyrf.vht(
+                pyrf.ts_vec_xyz(time, e_xyz + noise), pyrf.ts_vec_xyz(time, b_xyz)
+            )
+            v_hts.append(v_ht)
+            dv_hts.append(dv_ht)
+
+        np.testing.assert_allclose(np.mean(dv_hts, axis=0), expected, rtol=0.05)
+        np.testing.assert_allclose(np.std(v_hts, axis=0), expected, rtol=0.15)
+
+
 class NormalizeTestCase(unittest.TestCase):
     def test_normalize_input_type(self):
         with self.assertRaises(TypeError):
