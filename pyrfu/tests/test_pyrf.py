@@ -857,6 +857,32 @@ class ConvertFACTestCase(unittest.TestCase):
 
 
 @ddt
+class CorrDerivTestCase(unittest.TestCase):
+    @data(False, True)
+    def test_corr_deriv_values(self, flag):
+        # 1 Hz sines, the second 30 ms later, with no sample on a zero:
+        # extrema at 0.25 + k / 2 s, inflections and zero crossings at k / 2 s
+        t_sec = 0.0037 + np.arange(300) / 100
+        t_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+        time = t_0 + (t_sec * 1e9).astype("timedelta64[ns]")
+        inp0 = pyrf.ts_scalar(time, np.sin(2 * np.pi * t_sec))
+        inp1 = pyrf.ts_scalar(time, np.sin(2 * np.pi * (t_sec - 0.03)))
+
+        t1_d, t2_d, t1_dd, t2_dd = pyrf.corr_deriv(inp0, inp1, flag)
+
+        def seconds(times):
+            return (times - t_0) / np.timedelta64(1, "s")
+
+        extrema = 0.25 + np.arange(6) / 2
+        zeros = 0.5 + np.arange(5) / 2
+        np.testing.assert_allclose(seconds(t1_d), extrema, atol=1e-3)
+        np.testing.assert_allclose(seconds(t2_d), extrema + 0.03, atol=1e-3)
+        np.testing.assert_allclose(seconds(t1_dd), zeros, atol=1e-3)
+        np.testing.assert_allclose(seconds(t2_dd), zeros + 0.03, atol=1e-3)
+        self.assertEqual(t1_d.dtype, np.dtype("datetime64[ns]"))
+
+
+@ddt
 class CotransTestCase(unittest.TestCase):
     @data(
         (0.0, "gse>gsm", True),
