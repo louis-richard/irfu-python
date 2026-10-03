@@ -68,19 +68,15 @@ def db_get_variable(
         resource, tint, mms_id, var, data_path
     )
 
-    try:
-        if not file_names:
-            raise FileNotFoundError(f"No files found for {cdf_name} in {resource}")
+    if not file_names:
+        raise FileNotFoundError(f"No files found for {cdf_name} in {resource}")
 
-        if verbose:
-            logging.info("Loading %s...", cdf_name)
+    if verbose:
+        logging.info("Loading %s...", cdf_name)
 
-        file_content = _get_file_content_sources(
-            resource, file_names[0], sdc_session, headers
-        )
-    finally:
-        if sdc_session:
-            sdc_session.close()
+    file_content = _get_file_content_sources(
+        resource, file_names[0], sdc_session, headers
+    )
 
     out = get_variable(file_content, cdf_name)
 

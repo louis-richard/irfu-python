@@ -120,5 +120,3 @@ def download_ancillary(
         _download_file(
             sdc_session, file["url"], headers, out_file, file.get("file_size")
         )
-
-    sdc_session.close()

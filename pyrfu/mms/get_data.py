@@ -292,26 +292,22 @@ def get_data(
 
     out = None
 
-    try:
-        if not file_names:
-            raise FileNotFoundError(f"No files found for {var_str} in {source}")
+    if not file_names:
+        raise FileNotFoundError(f"No files found for {var_str} in {source}")
 
-        if verbose:
-            logging.info("Loading %s...", cdf_name)
+    if verbose:
+        logging.info("Loading %s...", cdf_name)
 
-        for file_name in file_names:
-            file_content = _get_file_content_sources(
-                source, file_name, sdc_session, headers
-            )
+    for file_name in file_names:
+        file_content = _get_file_content_sources(
+            source, file_name, sdc_session, headers
+        )
 
-            if "-dist" in var["dtype"]:
-                out = dist_append(out, get_dist(file_content, cdf_name, tint))
+        if "-dist" in var["dtype"]:
+            out = dist_append(out, get_dist(file_content, cdf_name, tint))
 
-            else:
-                out = ts_append(out, get_ts(file_content, cdf_name, tint))
-    finally:
-        if sdc_session:
-            sdc_session.close()
+        else:
+            out = ts_append(out, get_ts(file_content, cdf_name, tint))
 
     out = _check_times(out)
 

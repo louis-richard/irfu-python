@@ -389,6 +389,59 @@ class CorrectEdpProbeTimingTestCase(unittest.TestCase):
         np.testing.assert_array_equal(sc_pot.data, sc_pot_data)
 
 
+class ConfigCacheTestCase(unittest.TestCase):
+    # The configuration and the SDC session are cached until the configuration
+    # file changes (e.g., mms.db_init)
+
+    @staticmethod
+    def _write_config(path, default, rights="public", mtime_ns=None):
+        config = {
+            "default": default,
+            "local": ".",
+            "sdc": {"rights": rights, "username": "u"},
+            "aws": "",
+        }
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(config, file)
+        if mtime_ns is not None:
+            os.utime(path, ns=(mtime_ns, mtime_ns))
+
+    def test_load_config_refresh(self):
+        module = importlib.import_module("pyrfu.mms.db_get_ts")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "config.json")
+            self._write_config(path, "local", mtime_ns=10**18)
+            with mock.patch.object(module, "MMS_CFG_PATH", path):
+                module._load_config_cached.cache_clear()
+                config = module._load_config()
+                config["default"] = "changed by the caller"
+                self.assertEqual(module._load_config()["default"], "local")
+
+                self._write_config(path, "aws", mtime_ns=10**18 + 10**9)
+                self.assertEqual(module._load_config()["default"], "aws")
+                module._load_config_cached.cache_clear()
+
+    def test_login_lasp_refresh(self):
+        module = importlib.import_module("pyrfu.mms.list_files_sdc")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "config.json")
+            self._write_config(path, "sdc", mtime_ns=10**18)
+            with (
+                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(module.requests, "Session") as session_cls,
+                mock.patch.object(module.keyring, "get_credential", return_value=None),
+            ):
+                module._login_lasp_cached.cache_clear()
+                first = module._login_lasp()
+                self.assertIs(module._login_lasp()[0], first[0])
+                self.assertEqual(session_cls.call_count, 1)
+
+                self._write_config(path, "sdc", mtime_ns=10**18 + 10**9)
+                module._login_lasp()
+                self.assertEqual(session_cls.call_count, 2)
+                module._login_lasp_cached.cache_clear()
+
+
 class DbGetTsTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.db_get_ts")
@@ -430,7 +483,7 @@ class DbGetTsTestCase(unittest.TestCase):
 
         self.assertEqual(download.call_count, 2)
         self.assertEqual(download.call_args_list[0].args[:2], ("sdc", "file0"))
-        session.close.assert_called_once()
+        session.close.assert_not_called()  # shared, cached session
 
         for value, name in enumerate(names):
             self.assertEqual(len(out[name]), 6)
@@ -445,7 +498,7 @@ class DbGetTsTestCase(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 mms.db_get_ts("mms1_fgm_srvy_l2", "b", ["a", "b"], source="sdc")
 
-        session.close.assert_called_once()
+        session.close.assert_not_called()  # shared, cached session
 
     def test_resolve_source(self):
         with mock.patch.object(
@@ -473,7 +526,7 @@ class DbGetVariableTestCase(unittest.TestCase):
         self.module = importlib.import_module("pyrfu.mms.db_get_variable")
 
     def test_db_get_variable_source(self):
-        # Read from the first file of the resource, then the session is closed
+        # Read from the first file of the resource, the session is kept
         session = mock.Mock()
         sources = (["file0", "file1"], session, {})
 
@@ -497,7 +550,7 @@ class DbGetVariableTestCase(unittest.TestCase):
         download.assert_called_once()
         self.assertEqual(download.call_args.args[:2], ("aws", "file0"))
         get_variable.assert_called_once_with(b"cdf", "sensor_ids")
-        session.close.assert_called_once()
+        session.close.assert_not_called()  # shared, cached session
 
     def test_db_get_variable_no_file(self):
         session = mock.Mock()
@@ -510,7 +563,7 @@ class DbGetVariableTestCase(unittest.TestCase):
                     "mms1_fgm_srvy_l2", "label", ["a", "b"], source="sdc"
                 )
 
-        session.close.assert_called_once()
+        session.close.assert_not_called()  # shared, cached session
 
     def test_get_variable_ndim(self):
         # N-D variables (only 1-D variables were supported): dims x, y, ...
@@ -1890,7 +1943,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
         [],  # no file
         ["url"],  # download error
     )
-    def test_get_data_closes_sdc_session(self, file_names):
+    def test_get_data_keeps_sdc_session(self, file_names):
         session = mock.Mock()
         session.get.side_effect = requests.ConnectionError("connection reset")
         sources = (file_names, session, {})
@@ -1903,7 +1956,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
                 with self.assertLogs(level="ERROR") if file_names else nullcontext():
                     mms.get_data("b_gse_fgm_srvy_l2", tint, 1, source="sdc")
 
-        session.close.assert_called_once()
+        session.close.assert_not_called()  # shared, cached session
 
 
 def _sdc_session(chunks=(b"cdf", b"data"), status_error=None, stream_error=None):
@@ -2545,7 +2598,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
         url = f"https://lasp.colorado.edu/mms/sdc/public/data/models/fpi/{self.MODEL}"
         self.assertEqual(session.get.call_args.args[0], url)
         load.assert_called_once_with(b"sdc cdf bytes")
-        session.close.assert_called_once()
+        session.close.assert_not_called()  # shared, cached session
 
     def test_load_bgdist_model_aws(self):
         # Read from models/fpi/ in the MMS bucket, without the SDC
@@ -2572,7 +2625,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
             session, load = self._load_from_sdc("aws", s3_resource)
 
         load.assert_called_once_with(b"sdc cdf bytes")
-        session.close.assert_called_once()
+        session.close.assert_not_called()  # shared, cached session
 
     def test_models_url(self):
         self.assertEqual(

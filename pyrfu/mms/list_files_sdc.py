@@ -5,6 +5,7 @@
 # Built-in imports
 import functools
 import json
+import os
 import re
 import urllib
 import warnings
@@ -42,10 +43,19 @@ TEST_URL = "file_names/science?start_date=2015-04-10&end_date=2015-04-11&sc_id=m
 SDC_TIMEOUT = (30, 300)
 
 
-@functools.lru_cache(maxsize=1)
 def _login_lasp():
-    r"""Login to LASP colorado. Cached so the connectivity/credential
-    probe only happens once per process instead of once per call."""
+    r"""Login to LASP colorado. The session is cached, so that the
+    connectivity/credential probe only happens once, until the MMS configuration
+    file changes (e.g., after mms.db_init). The session is shared: do not close it.
+    """
+    return _login_lasp_cached(os.stat(MMS_CFG_PATH).st_mtime_ns)
+
+
+@functools.lru_cache(maxsize=1)
+def _login_lasp_cached(config_mtime_ns: int):
+    r"""Login to LASP colorado (cached by modification time of the configuration
+    file)."""
+    del config_mtime_ns  # cache key only
 
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
@@ -209,7 +219,6 @@ def list_files_sdc(tint, mms_id, var):
         http_json = response.json()
 
     file_names = _files_in_interval(http_json["files"], tint)
-    sdc_session.close()
 
     file_names = _make_urls_cdfs(lasp_url, file_names)
 

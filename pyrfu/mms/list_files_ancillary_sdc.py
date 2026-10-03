@@ -77,7 +77,6 @@ def list_files_ancillary_sdc(tint, mms_id, product):
         http_json = response.json()
 
     file_names = http_json["files"]
-    sdc_session.close()
 
     file_names = _make_urls_ancillaries(lasp_url, file_names)
 

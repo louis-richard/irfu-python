@@ -4,7 +4,8 @@
 # Built-in imports
 import json
 import logging
-from functools import lru_cache  # CHANGED: to cache the parsed config file
+import os
+from functools import lru_cache
 from typing import Mapping, Optional, Tuple
 
 # 3rd party imports
@@ -58,9 +59,16 @@ def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
     return probe, var
 
 
-@lru_cache(maxsize=1)
 def _load_config() -> Mapping[str, str]:
-    r"""Load and cache the MMS configuration file."""
+    r"""Load the MMS configuration file (cached until it changes, e.g., after
+    mms.db_init). Returns a copy, so that callers cannot change the cache."""
+    return dict(_load_config_cached(os.stat(MMS_CFG_PATH).st_mtime_ns))
+
+
+@lru_cache(maxsize=1)
+def _load_config_cached(config_mtime_ns: int) -> Mapping[str, str]:
+    r"""Load the MMS configuration file (cached by modification time)."""
+    del config_mtime_ns  # cache key only
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         return json.load(fs)
 
@@ -102,30 +110,26 @@ def _db_get_ts_dict(
 
     out = {}
 
-    try:
-        if not file_names:
-            raise FileNotFoundError(f"No files found for {dataset_name}")
+    if not file_names:
+        raise FileNotFoundError(f"No files found for {dataset_name}")
 
-        if verbose:
-            for cdf_name in cdf_names:
-                logging.info("Loading %s...", cdf_name)
+    if verbose:
+        for cdf_name in cdf_names:
+            logging.info("Loading %s...", cdf_name)
 
-        for file_name in file_names:
-            file_content = _get_file_content_sources(
-                resource, file_name, sdc_session, headers
-            )
+    for file_name in file_names:
+        file_content = _get_file_content_sources(
+            resource, file_name, sdc_session, headers
+        )
 
-            for cdf_name in cdf_names:
-                try:
-                    ts = get_ts(file_content, cdf_name, tint)
-                except Exception:
-                    logging.error("Failed to load %s from %s", cdf_name, file_name)
-                    raise
+        for cdf_name in cdf_names:
+            try:
+                ts = get_ts(file_content, cdf_name, tint)
+            except Exception:
+                logging.error("Failed to load %s from %s", cdf_name, file_name)
+                raise
 
-                out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
-    finally:
-        if sdc_session:
-            sdc_session.close()
+            out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
 
     return {cdf_name: _check_times(ts) for cdf_name, ts in out.items()}
 

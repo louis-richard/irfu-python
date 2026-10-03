@@ -20,7 +20,7 @@ from .db_get_ts import db_get_ts
 from .db_init import MMS_CFG_PATH
 from .get_data import get_data
 from .list_files_aws import _bucket_and_prefix, _s3_resource
-from .list_files_sdc import LASP_PUBL, _login_lasp
+from .list_files_sdc import LASP_PUBL, SDC_TIMEOUT, _login_lasp
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -89,13 +89,10 @@ def _load_bgdist_model(file_name: str, source: str, data_path: str):
     # Read the file from the SDC into memory
     sdc_session, headers, lasp_url = _login_lasp()
 
-    try:
-        response = sdc_session.get(
-            _models_url(lasp_url) + file_name, headers=headers, timeout=None
-        )
-        response.raise_for_status()
-    finally:
-        sdc_session.close()
+    response = sdc_session.get(
+        _models_url(lasp_url) + file_name, headers=headers, timeout=SDC_TIMEOUT
+    )
+    response.raise_for_status()
 
     return pycdfpp.load(response.content)
 

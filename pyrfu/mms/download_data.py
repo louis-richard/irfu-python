@@ -143,5 +143,3 @@ def download_data(
         )
 
         _download_file(sdc_session, file["url"], headers, out_file, file.get("size"))
-
-    sdc_session.close()
