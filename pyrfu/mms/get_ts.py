@@ -19,7 +19,7 @@ from ..pyrf.time_clip import time_clip
 from .get_variable import _pycdfpp_attributes_to_dict
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -118,6 +118,30 @@ def _get_epochs(file, cdf_name):
     return out
 
 
+def _decode_labels(labels):
+    r"""Labels as stripped str (CDF character variables are padded bytes)."""
+    labels = np.asarray(labels)
+
+    if labels.dtype.kind == "S":
+        labels = np.char.decode(labels, "utf-8")
+
+    if labels.dtype.kind == "U":
+        labels = np.char.strip(labels)
+
+    return labels
+
+
+def _last_label_is_magnitude(file, cdf_name):
+    r"""True if the last label of LABL_PTR_1 is a magnitude (e.g. MEC B fields)."""
+    if "LABL_PTR_1" not in file[cdf_name].attributes:
+        return False
+
+    labels = _decode_labels(file[file[cdf_name].attributes["LABL_PTR_1"][0]].values)
+    labels = labels.ravel()
+
+    return len(labels) == 4 and str(labels[-1]).lower().endswith("mag")
+
+
 def _get_depend_attributes(file, depend_key):
     attributes = _pycdfpp_attributes_to_dict(file[depend_key].attributes)
 
@@ -149,11 +173,12 @@ def _get_depend(file, cdf_name, dep_num=1):
 
         out["attrs"] = {"LABLAXIS": "comp"}
     else:
-        out["data"] = file[depend_key].values
+        out["data"] = _decode_labels(file[depend_key].values)
 
         if len(out["data"]) == 1:
             out["data"] = out["data"][0]
 
+        # Vector and magnitude (e.g. FGM): the magnitude is removed from the data
         if len(out["data"]) == 4 and all(
             out["data"].astype(str) == ["x", "y", "z", "r"]
         ):
@@ -270,9 +295,16 @@ def get_ts(
 
     out_dict["data"] = file[cdf_name].values
 
+    # Remove the magnitude of (x, y, z, magnitude) variables only (not e.g. the
+    # scalar part of quaternions)
     if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
-        out_dict["data"] = out_dict["data"][:, :-1]
-        # depend_1["data"] = depend_1["data"][:-1]
+        if depend_1:
+            is_magnitude = len(depend_1["data"]) == 3
+        else:
+            is_magnitude = _last_label_is_magnitude(file, cdf_name)
+
+        if is_magnitude:
+            out_dict["data"] = out_dict["data"][:, :-1]
 
     if out_dict["data"].ndim == 2 and not depend_1:
         depend_1["data"] = np.arange(out_dict["data"].shape[1])

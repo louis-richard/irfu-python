@@ -16,6 +16,7 @@ from unittest import mock
 
 # 3rd party imports
 import numpy as np
+import pycdfpp
 import requests
 import xarray as xr
 from botocore import UNSIGNED
@@ -26,6 +27,7 @@ from scipy import constants
 # Local imports
 from .. import mms, pyrf
 from ..mms.feeps_flat_field_corrections import g_corr
+from ..mms.get_ts import get_ts
 from ..mms.psd_moments import _moms
 from . import (
     generate_data,
@@ -1949,6 +1951,57 @@ class GetFeepsTestCase(unittest.TestCase):
         )
         self.assertEqual(len(out.data_vars), 20)
         self.assertGreater(out.sizes["time"], 1000)
+
+
+def _cdf_four_columns():
+    # In-memory CDF with (N, 4) variables labelled as in the MMS files: FGM
+    # (x, y, z, r representation), MEC quaternions (qx, qy, qz, qw) and MEC
+    # B fields (labels only, last one the magnitude), with padded labels
+    time = np.datetime64("2019-09-14T07:54:00", "ns")
+    time = time + np.arange(5) * np.timedelta64(1, "s")
+    data = np.tile([1.0, 2.0, 3.0, 4.0], (5, 1))
+
+    cdf = pycdfpp.CDF()
+    cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    labels = {
+        "rep_vec_tot": ["x", "y", "z", "r"],
+        "rep_quat": ["qx  ", "qy  ", "qz  ", "qw  "],
+        "label_b_gsm": ["b_gsm_x ", "b_gsm_y ", "b_gsm_z ", "b_gsm_mag"],
+        "label_other": ["a", "b", "c", "d"],
+    }
+    for name, values in labels.items():
+        cdf.add_variable(name, values=np.array([values]))
+
+    for name, attrs in {
+        "mms1_fgm_b_gse_srvy_l2": {"REPRESENTATION_1": "rep_vec_tot"},
+        "mms1_mec_quat_eci_to_gse": {"REPRESENTATION_1": "rep_quat"},
+        "mms1_mec_bsc_gsm": {"LABL_PTR_1": "label_b_gsm"},
+        "mms1_mec_other": {"LABL_PTR_1": "label_other"},
+    }.items():
+        cdf.add_variable(name, values=data)
+        cdf[name].add_attribute("DEPEND_0", "Epoch")
+        for key, value in attrs.items():
+            cdf[name].add_attribute(key, value)
+
+    return bytes(pycdfpp.save(cdf))
+
+
+@ddt
+class GetTsTestCase(unittest.TestCase):
+    @data(
+        ("mms1_fgm_b_gse_srvy_l2", ["x", "y", "z"]),
+        ("mms1_mec_quat_eci_to_gse", ["qx", "qy", "qz", "qw"]),
+        ("mms1_mec_bsc_gsm", [0, 1, 2]),
+        ("mms1_mec_other", [0, 1, 2, 3]),
+    )
+    @unpack
+    def test_get_ts_four_columns(self, cdf_name, comps):
+        # Only the magnitude of (x, y, z, magnitude) variables is removed
+        result = get_ts(_cdf_four_columns(), cdf_name)
+        np.testing.assert_array_equal(
+            result.data[0], [1.0, 2.0, 3.0, 4.0][: len(comps)]
+        )
+        self.assertListEqual(list(result[result.dims[1]].data), comps)
 
 
 class _FakeS3Bucket:
