@@ -4396,6 +4396,99 @@ class Ttns2Datetime64TestCase(unittest.TestCase):
         self.assertIsInstance(result, np.ndarray)
 
 
+def _polarized_wave(n_t, handedness, noise, seed=1):
+    # 10 Hz wave sampled at 128 Hz, k at 30 deg from B0 = 50 nT z, with
+    # magnetic field along e1 (cos) and handedness * e2 (sin), e1, e2 and k
+    # orthogonal
+    t_sec = np.arange(n_t) / 128.0
+    time = np.datetime64("2019-01-01", "ns") + (t_sec * 1e9).astype("timedelta64[ns]")
+    k_vec = np.array([np.sin(np.pi / 6), 0.0, np.cos(np.pi / 6)])
+    e_1 = np.array([0.0, 1.0, 0.0])
+    e_2 = np.cross(k_vec, e_1)
+    b_wave = np.outer(np.cos(2 * np.pi * 10 * t_sec), e_1)
+    b_wave += handedness * np.outer(np.sin(2 * np.pi * 10 * t_sec), e_2)
+    b_wave += noise * np.random.default_rng(seed).normal(size=b_wave.shape)
+    b_bgd = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 50.0], (n_t, 1)))
+    return t_sec, time, pyrf.ts_vec_xyz(time, b_wave), b_bgd
+
+
+class WavepolarizeMeansTestCase(unittest.TestCase):
+    def test_wavepolarize_means_reference(self):
+        # Elliptical 10 Hz wave, a linear 23 Hz wave and noise. Reference
+        # values from pyspedas wavpol on the same field-aligned data
+        t_sec, time, b_wave, b_bgd = _polarized_wave(2048, 0.6, 0.0)
+        b_data = b_wave.data + np.outer(
+            0.5 * np.cos(2 * np.pi * 23 * t_sec + 0.3), [0.2, 0.9, -0.4]
+        )
+        b_data += 0.2 * np.random.default_rng(3).normal(size=b_data.shape)
+        b_wave = pyrf.ts_vec_xyz(time, b_data)
+
+        b_psd, w_angle, d_pol, ellip, helic = pyrf.wavepolarize_means(b_wave, b_bgd)
+
+        # (window, frequency bin): psd, degree of polarisation, angle,
+        # ellipticity, helicity
+        reference = {
+            (0, 20): [
+                0.4066767055037068,
+                0.9927861043082531,
+                28.48805546728425,
+                0.3533645228094897,
+                0.5725592206977934,
+            ],
+            (5, 20): [
+                0.38490466666872014,
+                0.9955906827006095,
+                33.70314235711083,
+                0.38439650244607604,
+                0.6488630214422174,
+            ],
+            (7, 46): [
+                0.06892592570024066,
+                0.9341075803742708,
+                46.39664243767692,
+                -0.0816395614664542,
+                0.08619929362653933,
+            ],
+            (10, 60): [
+                0.002195843273374672,
+                0.7149421118520578,
+                85.42127758864247,
+                -0.1584516456325216,
+                0.30051531111223917,
+            ],
+        }
+        for (j, i), expected in reference.items():
+            result = [out.data[j, i] for out in [b_psd, d_pol, w_angle, ellip, helic]]
+            np.testing.assert_allclose(result, expected, rtol=1e-9)
+
+        # 15 windows of 256 points every 128 points, centred, FFT frequencies
+        self.assertTupleEqual(b_psd.dims, ("time", "frequency"))
+        self.assertListEqual(list(b_psd.shape), [15, 128])
+        np.testing.assert_allclose(b_psd.frequency.data, 0.5 * np.arange(128))
+        np.testing.assert_array_equal(
+            b_psd.time.data, time[0] + np.arange(1, 16) * np.timedelta64(1, "s")
+        )
+
+    def test_wavepolarize_means_circular(self):
+        ellipticities = []
+        for handedness in [1.0, -1.0]:
+            _, _, b_wave, b_bgd = _polarized_wave(4096, handedness, 1e-3)
+            _, w_angle, d_pol, ellip, helic = pyrf.wavepolarize_means(b_wave, b_bgd)
+            np.testing.assert_allclose(w_angle.data[:, 20], 30.0, atol=0.1)
+            np.testing.assert_allclose(d_pol.data[:, 20], 1.0, atol=1e-3)
+            np.testing.assert_allclose(helic.data[:, 20], 1.0, atol=1e-3)
+            ellipticities.append(ellip.data[:, 20])
+
+        self.assertTrue(np.all(ellipticities[0] > 0.5))
+        self.assertTrue(np.all(ellipticities[1] < -0.5))
+
+    def test_wavepolarize_means_linear(self):
+        _, _, b_wave, b_bgd = _polarized_wave(4096, 0.0, 1e-3)
+        _, _, d_pol, _, helic = pyrf.wavepolarize_means(b_wave, b_bgd)
+        np.testing.assert_allclose(d_pol.data[:, 20], 1.0, atol=1e-3)
+        np.testing.assert_allclose(helic.data[:, 20], 0.0, atol=1e-2)
+
+
 def _waverage_loops(t_sec, data, n_pts):
     # Literal port of the irf_waverage.m loops (one column)
     weights = {

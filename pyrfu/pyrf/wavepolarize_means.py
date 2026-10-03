@@ -6,11 +6,11 @@ import logging
 
 # 3rd party imports
 import numpy as np
-import xarray as xr
+from scipy import ndimage
 
 # Local imports
-from pyrfu.pyrf.datetime642unix import datetime642unix
-from pyrfu.pyrf.resample import resample
+from .resample import resample
+from .ts_spectr import ts_spectr
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -19,22 +19,68 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+# Smoothing profile of the spectral matrix in frequency: normalised 7 points
+# Hamming window, of which irfu-matlab uses the values rounded to 3 decimals
+# (0.024, 0.093, 0.232, 0.301, ...), as pyspedas wavpol
+SMOOTH_FREQ = np.hamming(7) / np.sum(np.hamming(7))
 
-def _spec_mat(half_spec_x, half_spec_y, half_spec_z):
-    r"""CALCULATION OF THE SPECTRAL MATRIX"""
 
-    spec_mat = np.zeros([len(half_spec_x), 3, 3])
-    spec_mat[:, 0, 0] = half_spec_x * np.conj(half_spec_x)
-    spec_mat[:, 1, 0] = half_spec_x * np.conj(half_spec_y)
-    spec_mat[:, 2, 0] = half_spec_x * np.conj(half_spec_z)
-    spec_mat[:, 0, 1] = half_spec_y * np.conj(half_spec_x)
-    spec_mat[:, 1, 1] = half_spec_y * np.conj(half_spec_y)
-    spec_mat[:, 2, 1] = half_spec_y * np.conj(half_spec_z)
-    spec_mat[:, 0, 2] = half_spec_z * np.conj(half_spec_x)
-    spec_mat[:, 1, 2] = half_spec_z * np.conj(half_spec_y)
-    spec_mat[:, 2, 2] = half_spec_z * np.conj(half_spec_z)
+def _mfa(b_wave, b_bgd):
+    # Wave magnetic field in mean field aligned coordinates (perp1, perp2, par)
+    n_b = b_bgd / np.linalg.norm(b_bgd, axis=1, keepdims=True)
+    n_perp1 = np.cross(n_b, [0.0, 1.0, 0.0])
+    n_perp1 /= np.linalg.norm(n_perp1, axis=1, keepdims=True)
+    n_perp2 = np.cross(n_b, n_perp1)
+    return np.stack(
+        [np.sum(b_wave * vec, axis=1) for vec in [n_perp1, n_perp2, n_b]], axis=1
+    )
 
-    return spec_mat
+
+def _rotation_angle(upper, lower):
+    # Angle of the rotation that makes the state vector real. ATAN(upper,
+    # lower) in the original IDL wavpol is a two-argument arctangent; irfu-matlab
+    # uses atan(upper / lower), which is wrong when lower < 0.
+    angle = np.arctan2(upper, lower)
+    return np.where(upper > 0, angle, 2 * np.pi + angle)
+
+
+def _helicity_ellipticity(e_spec, wave_angle):
+    # Helicity and ellipticity from the wave state vectors built from each
+    # row of the smoothed spectral matrix, averaged over the three rows
+    sqrt_diag = [np.sqrt(np.real(e_spec[..., i, i])) for i in range(3)]
+    rows = [(0, 1, 2), (1, 0, 2), (2, 0, 1)]
+    helicity, ellipticity = [np.zeros(e_spec.shape[:2]) for _ in range(2)]
+    sign = -np.sign(np.imag(e_spec[..., 0, 1]) * np.sin(wave_angle))
+
+    for i, (i_d, i_1, i_2) in enumerate(rows):
+        lambda_u = np.stack(
+            [
+                sqrt_diag[i_d] + 0j,
+                np.conj(e_spec[..., i_d, i_1]) / sqrt_diag[i_d],
+                np.conj(e_spec[..., i_d, i_2]) / sqrt_diag[i_d],
+            ],
+            axis=-1,
+        )
+
+        # Helicity
+        upper = np.sum(2 * np.real(lambda_u) * np.imag(lambda_u), axis=-1)
+        lower = np.sum(np.real(lambda_u) ** 2 - np.imag(lambda_u) ** 2, axis=-1)
+        gamma = _rotation_angle(upper, lower)
+        lambda_u = np.exp(-0.5j * gamma)[..., None] * lambda_u
+        helicity += np.linalg.norm(np.imag(lambda_u), axis=-1) / np.linalg.norm(
+            np.real(lambda_u), axis=-1
+        )
+
+        # Ellipticity
+        lam = lambda_u[..., :2]
+        upper = np.sum(np.imag(lam) * np.real(lam), axis=-1)
+        lower = np.sum(np.real(lam) ** 2 - np.imag(lam) ** 2, axis=-1)
+        gamma_rot = _rotation_angle(upper, lower)
+        lam = np.exp(-0.5j * gamma_rot)[..., None] * lam
+        ellip = np.linalg.norm(np.imag(lam), axis=-1)
+        ellipticity += sign * ellip / np.linalg.norm(np.real(lam), axis=-1)
+
+    return helicity / 3, ellipticity / 3
 
 
 def wavepolarize_means(
@@ -61,18 +107,31 @@ def wavepolarize_means(
     Returns
     -------
     b_psd : xarray.DataArray
-        Power spectrum density of magnetic filed wave.
+        Power spectrum density of magnetic filed wave [nT^2 Hz^-1 for B in
+        nT].
     wave_angle : xarray.DataArray
-        (form 0 to 90)
+        Spectrogram of the wave normal angle in degrees (form 0 to 90)
     deg_pol : xarray.DataArray
         Spectrogram of the degree of polarization (form 0 to 1).
-    elliptict : xarray.DataArray
+    ellipticity : xarray.DataArray
         Spectrogram of the ellipticity (form -1 to 1)
-    helict : xarray.DataArray
+    helicity : xarray.DataArray
         Spectrogram of the helicity (form -1 to 1)
 
     Notes
     -----
+    Port of irf_wavepolarize_means.m (H. Fu), with the following differences:
+    the FFT windows advance by half a window (irfu-matlab shifts the data and
+    the window start, so that the windows advance by a full window and wrap
+    around the end of the data), all the full windows are used, the time
+    tags are at the window centres, and the frequencies are those of the FFT
+    bins (irfu-matlab labels bin k with frequency k instead of k - 1 times
+    the bin width). The rotation angles of the state vectors use a two-argument
+    arctangent, as in the original IDL wavpol (irfu-matlab uses a one-argument
+    arctangent, which is wrong when the denominator is negative), and the
+    window and frequency smoothing are those of IDL and pyspedas wavpol, with
+    which the results agree to rounding.
+
     ``b_wave`` and ``b_bgd`` should be from the same satellite and in the same
     coordinates
 
@@ -97,312 +156,89 @@ def wavepolarize_means(
 
     """
 
-    step_length = int(nop_fft / 2)
+    step_length = nop_fft // 2
+    n_half = nop_fft // 2
     n_pts = len(b_wave)
     # total number of FFTs
-    n_stp = int((n_pts - nop_fft) / step_length)
-    # No. of bins in frequency domain
-    n_bin = 7
-    # Smoothing profile based on Hanning
-    aa = np.array([0.024, 0.093, 0.232, 0.301, 0.232, 0.093, 0.024])
+    n_stp = (n_pts - nop_fft) // step_length + 1
+
+    if n_stp < 1:
+        raise ValueError("b_wave must be longer than nop_fft")
 
     # change wave to MFA coordinates
     b_bgd = resample(b_bgd, b_wave)
+    b_mfa = _mfa(b_wave.data, b_bgd.data)
 
-    b_x, b_y, b_z = [np.zeros(len(b_wave)) for _ in range(3)]
+    time = b_wave.time.data.astype("datetime64[ns]")
+    d_t = np.diff(time) / np.timedelta64(1, "s")
+    samp_freq = 1 / d_t[0]
 
-    for ii in range(len(b_wave)):
-        nb = b_bgd[ii, :] / np.linalg.norm(b_bgd[ii, :])
-        n_perp1 = np.cross(nb, [0, 1, 0])
-        n_perp1 = n_perp1 / np.linalg.norm(n_perp1)
-        n_perp2 = np.cross(nb, n_perp1)
-
-        b_z[ii] = np.sum(b_wave[ii, :] * nb)
-        b_x[ii] = np.sum(b_wave[ii, :] * n_perp1)
-        b_y[ii] = np.sum(b_wave[ii, :] * n_perp2)
-
-    ct = datetime642unix(b_wave.time.data)
-
-    # DEFINE ARRAYS
-    xs, ys, zs = [b_x, b_y, b_z]
-
-    sample_freq = 1 / (ct[1] - ct[0])
-    end_sample_freq = 1 / (ct[-1] - ct[-2])
-
-    if sample_freq != end_sample_freq:
-        logging.info(
-            "file sampling frequency changes %(sample_freq)3.2f Hz "
-            "to %(end_sample_freq)3.2f Hz",
-            {"sample_freq": sample_freq, "end_sample_freq": end_sample_freq},
-        )
-    else:
-        logging.info("ac file sampling frequency %3.2f Hz", sample_freq)
-
-    # FFT calculation
-    # Minimum variance direction and wave normal angle
-    wave_angle = np.zeros([n_stp, int(nop_fft / 2)])
-
-    # Degree of Polarization
-    sqrd_mat = np.zeros([n_stp, int(nop_fft / 2), 3, 3])
-    deg_pol = np.zeros([n_stp, int(nop_fft / 2)])
-    trace_spec_mat = np.zeros([n_stp, int(nop_fft / 2)])
-
-    # HELICITY, ELLIPTICITY AND THE WAVE STATE VECTOR
-    lambda_u = np.zeros([n_stp, int(nop_fft / 2), 3, 3])
-
-    helic, ellip = [np.zeros([n_stp, int(nop_fft / 2), 3]) for _ in range(2)]
-
-    smooth = np.zeros(nop_fft)
-
-    for j in range(n_stp):
-        # FFT CALCULATION
-        smooth = 0.08 + 0.46 * (
-            1 - np.cos(2 * np.pi * np.arange(1, nop_fft + 1) / nop_fft)
-        )
-        temp_x = (
-            smooth * xs[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
-        )
-        temp_y = (
-            smooth * ys[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
-        )
-        temp_z = (
-            smooth * zs[((j - 1) * step_length + 1) : ((j - 1) * step_length + nop_fft)]
+    if not np.isclose(d_t[0], d_t[-1]):
+        logging.warning(
+            "file sampling frequency changes %g Hz to %g Hz", samp_freq, 1 / d_t[-1]
         )
 
-        spec_x = np.fft.fft(temp_x)
-        spec_y = np.fft.fft(temp_y)
-        spec_z = np.fft.fft(temp_z)
+    # FFT CALCULATION
+    # Hamming window over samples 0 to nop_fft - 1, as in IDL/pyspedas wavpol
+    # (irfu-matlab uses samples 1 to nop_fft)
+    smooth = 0.08 + 0.46 * (1 - np.cos(2 * np.pi * np.arange(nop_fft) / nop_fft))
+    idx = step_length * np.arange(n_stp)[:, None] + np.arange(nop_fft)[None, :]
+    half_spec = np.fft.fft(smooth[None, :, None] * b_mfa[idx], axis=1)[:, :n_half]
 
-        half_spec_x = spec_x[: (nop_fft / 2)]
-        half_spec_y = spec_y[: (nop_fft / 2)]
-        half_spec_z = spec_z[: (nop_fft / 2)]
+    # CALCULATION OF THE SPECTRAL MATRIX, m[r, c] = conj(spec_r) * spec_c
+    spec_mat = np.conj(half_spec)[..., :, None] * half_spec[..., None, :]
 
-        xs = np.roll(xs, -step_length)
-        ys = np.roll(ys, -step_length)
-        zs = np.roll(zs, -step_length)
+    # CALCULATION OF SMOOTHED SPECTRAL MATRIX (NaN within 3 bins of the edges)
+    n_side = len(SMOOTH_FREQ) // 2
+    inner = slice(n_side, n_half - n_side)
+    e_spec = np.full(spec_mat.shape, np.nan + 0j)
+    e_spec[:, inner] = ndimage.correlate1d(np.real(spec_mat), SMOOTH_FREQ, axis=1)[
+        :, inner
+    ]
+    e_spec[:, inner] += (
+        1j * ndimage.correlate1d(np.imag(spec_mat), SMOOTH_FREQ, axis=1)[:, inner]
+    )
 
-        # CALCULATION OF THE SPECTRAL MATRIX
-        spec_mat = _spec_mat(half_spec_x, half_spec_y, half_spec_z)
-
-        # Calculation of smoothed spectral matrix
-        e_spec_mat = np.nan * np.ones(spec_mat.shape)
-
-        off_idx = int((n_bin - 1) / 2)
-
-        for k in range(off_idx, int(nop_fft / 2) - off_idx):
-            for ir in range(3):
-                for ic in range(3):
-                    e_spec_mat[k, ir, ic] = np.sum(
-                        aa[:n_bin] * spec_mat[(k - off_idx) : (k + off_idx), ir, ic],
-                    )
-
-        # Calculation of the minimum variance direction and wave normal angle
-        aaa2 = np.imag(e_spec_mat[:, 0, 1]) ** 2
-        aaa2 += np.imag(e_spec_mat[:, 0, 2]) ** 2
-        aaa2 += np.imag(e_spec_mat[:, 1, 2]) ** 2
-        aaa2 = np.sqrt(aaa2[j, :])
-
-        wn_x = -np.abs(np.imag(e_spec_mat[:, 1, 2]) / aaa2)
-        wn_y = -np.abs(np.imag(e_spec_mat[:, 0, 2]) / aaa2)
-        wn_z = np.imag(e_spec_mat[:, 0, 1]) / aaa2
-
-        wave_angle[j, :] = np.arctan(
-            np.sqrt(wn_x**2 + wn_y**2) / np.abs(wn_z),
-        )
+    with np.errstate(divide="ignore", invalid="ignore"):
+        # CALCULATION OF THE MINIMUM VARIANCE DIRECTION AND WAVENORMAL ANGLE
+        im_12, im_13, im_23 = [
+            np.imag(e_spec[..., i, j]) for i, j in [(0, 1), (0, 2), (1, 2)]
+        ]
+        wave_angle = np.arctan(np.hypot(im_23, im_13) / np.abs(im_12))
 
         # CALCULATION OF THE DEGREE OF POLARISATION
-        # calc of square of smoothed spec matrix
-        for ir in range(3):
-            for ic in range(3):
-                sqrd_mat[:, ir, ic] = e_spec_mat[:, ir, 0] * e_spec_mat[:, 0, ic]
-                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 1] * e_spec_mat[:, 1, ic]
-                sqrd_mat[:, ir, ic] += e_spec_mat[:, ir, 2] * e_spec_mat[:, 2, ic]
+        trace_sqrd = np.real(np.einsum("...ij,...ji->...", e_spec, e_spec))
+        trace_spec = np.real(np.einsum("...ii->...", e_spec))
+        deg_pol = (3 * trace_sqrd - trace_spec**2) / (2 * trace_spec**2)
 
-        trace_sqrd_mat = sqrd_mat[:, 0, 0] + sqrd_mat[:, 1, 1] + sqrd_mat[:, 2, 2]
-        trace_spec_mat[j, :] = (
-            e_spec_mat[:, 0, 0] + e_spec_mat[:, 1, 1] + e_spec_mat[:, 2, 2]
-        )
-
-        deg_pol[j, :] = trace_spec_mat[j, :] * np.nan
-        deg_pol[j, off_idx : int(nop_fft / 2) - off_idx] = (
-            3 * trace_sqrd_mat[off_idx : int(nop_fft / 2) - off_idx]
-        )
-        deg_pol[j, off_idx : int(nop_fft / 2) - off_idx] -= (
-            trace_spec_mat[j, off_idx : int(nop_fft / 2) - off_idx] ** 2
-        )
-        deg_pol[j, off_idx : int(nop_fft / 2) - off_idx] /= (
-            2 * trace_spec_mat[j, off_idx : int(nop_fft / 2) - off_idx] ** 2
-        )
-
-        # Calculation of helicity, ellipticity and the wave state vector
-        alpha_x = np.sqrt(e_spec_mat[:, 0, 0])
-        alpha_y = np.sqrt(e_spec_mat[:, 1, 1])
-        alpha_z = np.sqrt(e_spec_mat[:, 2, 2])
-
-        alpha_cos1_x = np.real(e_spec_mat[:, 0, 1]) / np.sqrt(
-            e_spec_mat[:, 0, 0],
-        )
-        alpha_sin1_x = -np.imag(e_spec_mat[j, :, 0, 1]) / np.sqrt(
-            e_spec_mat[:, 0, 0],
-        )
-        alpha_cos2_x = np.real(e_spec_mat[:, 0, 2]) / np.sqrt(
-            e_spec_mat[:, 0, 0],
-        )
-        alpha_sin2_x = -np.imag(e_spec_mat[j, :, 0, 2]) / np.sqrt(
-            e_spec_mat[:, 0, 0],
-        )
-
-        alpha_cos1_y = np.real(e_spec_mat[:, 1, 0]) / np.sqrt(
-            e_spec_mat[:, 1, 1],
-        )
-        alpha_sin1_y = -np.imag(e_spec_mat[:, 1, 0]) / np.sqrt(
-            e_spec_mat[:, 1, 1],
-        )
-        alpha_cos2_y = np.real(e_spec_mat[:, 1, 2]) / np.sqrt(
-            e_spec_mat[:, 1, 1],
-        )
-        alpha_sin2_y = -np.imag(e_spec_mat[:, 1, 2]) / np.sqrt(
-            e_spec_mat[:, 1, 1],
-        )
-
-        alpha_cos1_z = np.real(e_spec_mat[:, 2, 0]) / np.sqrt(
-            e_spec_mat[:, 2, 2],
-        )
-        alpha_sin1_z = -np.imag(e_spec_mat[:, 2, 0]) / np.sqrt(
-            e_spec_mat[:, 2, 2],
-        )
-        alpha_cos2_z = np.real(e_spec_mat[:, 2, 1]) / np.sqrt(
-            e_spec_mat[:, 2, 2],
-        )
-        alpha_sin2_z = -np.imag(e_spec_mat[:, 2, 1]) / np.sqrt(
-            e_spec_mat[:, 2, 2],
-        )
-
-        lambda_u[:, 0, 0] = alpha_x
-        lambda_u[:, 1, 0] = alpha_y
-        lambda_u[:, 2, 0] = alpha_z
-
-        lambda_u[:, 0, 1] = alpha_cos1_x + alpha_sin1_x * 1j
-        lambda_u[:, 0, 2] = alpha_cos2_x + alpha_sin2_x * 1j
-
-        lambda_u[:, 1, 1] = alpha_cos1_y + alpha_sin1_y * 1j
-        lambda_u[:, 1, 2] = alpha_cos2_y + alpha_sin2_y * 1j
-
-        lambda_u[:, 2, 1] = alpha_cos1_z + alpha_sin1_z * 1j
-        lambda_u[:, 2, 2] = alpha_cos2_z + alpha_sin2_z * 1j
-
-        for k in range(int(nop_fft / 2)):
-            for xyz in range(3):
-                # HELICITY CALCULATION
-                upper = np.sum(
-                    2 * np.real(lambda_u[k, xyz, :3]) * (np.imag(lambda_u[k, xyz, :3])),
-                )
-                lower = np.sum(
-                    (np.real(lambda_u[k, xyz, :3])) ** 2
-                    - (np.imag(lambda_u[k, xyz, :3])) ** 2,
-                )
-
-                if upper[j, k] > 0:
-                    gamma = np.arctan(upper[j, k] / lower[j, k])
-                else:
-                    gamma = np.pi + (np.pi + np.arctan(upper[j, k] / lower[j, k]))
-
-                lambda_u[k, xyz, :] = np.exp(-0.5 * gamma * 1j) * lambda_u[k, xyz, :]
-                helic[j, k, xyz] = np.sqrt(
-                    np.sum(np.real(lambda_u[k, xyz, :3]) ** 2),
-                )
-                helic[j, k, xyz] /= np.sqrt(
-                    np.sum(np.imag(lambda_u[k, xyz, :3]) ** 2),
-                )
-                helic[j, k, xyz] = np.divide(1, helic[j, k, xyz])
-
-                # ELLIPTICITY CALCULATION
-                upper_e = np.sum(
-                    np.imag(lambda_u[k, xyz, :3]) * np.real(lambda_u[k, xyz, :3]),
-                )
-                lower_e = np.sum(np.real(lambda_u[k, xyz, :2]) ** 2) - np.sum(
-                    np.imag(lambda_u[k, xyz, :2]) ** 2,
-                )
-
-                if upper_e > 0:
-                    gamma_rot = np.arctan(upper_e / lower_e)
-                else:
-                    gamma_rot = np.pi + np.pi + np.arctan(upper_e / lower_e)
-
-                lam = lambda_u[k, xyz, :2]
-                lambda_u_rot = np.exp(-0.5 * gamma_rot * 1j) * lam
-
-                ellip[j, k, xyz] = np.sqrt(np.sum(np.imag(lambda_u_rot) ** 2))
-                ellip[j, k, xyz] /= np.sqrt(
-                    np.sum(np.real(lambda_u_rot) ** 2),
-                )
-                ellip[j, k, xyz] *= -(
-                    np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k])
-                )
-                ellip[j, k, xyz] /= np.abs(
-                    np.imag(e_spec_mat[k, 0, 1]) * np.sin(wave_angle[j, k]),
-                )
-
-    # AVERAGING HELICITY AND ELLIPTICITY RESULTS
-    ellipticity = np.mean(ellip, axis=-1)
-    helicity = np.mean(helic, axis=-1)
+        # CALCULATION OF HELICITY, ELLIPTICITY AND THE WAVE STATE VECTOR
+        helicity, ellipticity = _helicity_ellipticity(e_spec, wave_angle)
 
     # CREATING OUTPUT PARAMETER
-    time_line = (
-        ct[0]
-        + np.abs(nop_fft / 2) / sample_freq
-        + np.arange(1, n_stp + 1) * step_length / sample_freq
-    )
-    bin_width = sample_freq / nop_fft
-    freq_line = bin_width * np.arange(1, nop_fft / 2 + 1)
+    centres = step_length * np.arange(n_stp) + n_half
+    time_line = time[0] + np.round(centres / samp_freq * 1e9).astype("timedelta64[ns]")
+    bin_width = samp_freq / nop_fft
+    freq_line = bin_width * np.arange(n_half)
 
     # scaling power results to units with meaning
-    W = nop_fft * np.sum(smooth**2)
-
-    power_spec = np.zeros([n_stp, int(nop_fft / 2)])
-    power_spec[:, 1 : nop_fft / 2 - 1] = (
-        1 / W * 2 * trace_spec_mat[:, 1 : nop_fft / 2 - 1] / bin_width
-    )
-    power_spec[:, 1] = 1 / W * trace_spec_mat[:, 0] / bin_width
-    power_spec[:, nop_fft / 2] = 1 / W * trace_spec_mat[:, nop_fft / 2] / bin_width
+    power_spec = 2 * trace_spec / (nop_fft * np.sum(smooth**2) * bin_width)
+    power_spec[:, [0, -1]] /= 2
 
     # KICK OUT THE ANALYSIS OF THE WEAK SIGNALS
-    wave_angle[power_spec < min_psd] = np.nan
-    deg_pol[power_spec < min_psd] = np.nan
-    ellipticity[power_spec < min_psd] = np.nan
-    helicity[power_spec < min_psd] = np.nan
+    weak = power_spec < min_psd
+    for out in [wave_angle, deg_pol, ellipticity, helicity]:
+        out[weak] = np.nan
 
     # Save as DataArrays
-    b_psd = xr.DataArray(
-        power_spec,
-        coords=[time_line, freq_line],
-        dims=["t", "f"],
-    )
-    wave_angle = xr.DataArray(
-        wave_angle * 180 / np.pi,
-        coords=[time_line, freq_line],
-        dims=["t", "f"],
-    )
-    ellipticity = xr.DataArray(
-        ellipticity,
-        coords=[time_line, freq_line],
-        dims=["t", "f"],
-    )
-    deg_pol = xr.DataArray(
-        deg_pol,
-        coords=[time_line, freq_line],
-        dims=["t", "f"],
-    )
-    helicity = xr.DataArray(
-        helicity,
-        coords=[time_line, freq_line],
-        dims=["t", "f"],
-    )
-
-    b_psd.f.attrs["units"] = "Hz"
-    wave_angle.f.attrs["units"] = "Hz"
-    deg_pol.f.attrs["units"] = "Hz"
-    ellipticity.f.attrs["units"] = "Hz"
-    helicity.f.attrs["units"] = "Hz"
+    b_psd, wave_angle, deg_pol, ellipticity, helicity = [
+        ts_spectr(time_line, freq_line, out, "frequency")
+        for out in [
+            power_spec,
+            np.rad2deg(wave_angle),
+            deg_pol,
+            ellipticity,
+            helicity,
+        ]
+    ]
 
     return b_psd, wave_angle, deg_pol, ellipticity, helicity
