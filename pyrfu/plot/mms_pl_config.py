@@ -21,26 +21,28 @@ markers = ["s", "d", "o", "^"]
 
 
 def mms_pl_config(r_mms):
-    r"""Plot spacecraft configuaration with three 2d plots of the position in
-    Re and one 3d plot of the relative position of the spacecraft:
+    r"""Plot spacecraft configuration with three 2d plots of the position in
+    Re and one 3d plot of the relative position of the spacecraft.
 
     Parameters
     ----------
     r_mms : list of xarray.DataArray
-        Time series of the spacecraft position
+        Time series of the spacecraft position [km], one per spacecraft. The
+        positions are averaged over time.
 
     Returns
     -------
-    fig : matplotlib.pyplot.figure
+    fig : matplotlib.figure.Figure
         Figure with MMS configuration plot.
-    axs : matplotlib.pyplot.subplotsaxes
-        Axes in the figure.
+    axs : list of matplotlib.axes.Axes
+        Axes in the figure: X-Z, Y-Z and X-Y positions [R_E] and 3d position
+        relative to the center of the tetrahedron [km].
 
     """
 
-    r_xyz = np.vstack([np.mean(r_xyz, 0) for r_xyz in r_mms])
-    r_xyz = np.mean(r_xyz, 0)
-    delta_r = r_xyz - np.tile(r_xyz, (4, 1))
+    # Mean position of each spacecraft and relative to the center [km]
+    r_xyz = np.vstack([np.mean(r_xyz.data, axis=0) for r_xyz in r_mms])
+    delta_r = r_xyz - np.mean(r_xyz, axis=0)
 
     fig = plt.figure(figsize=(9, 9))
     gs0 = fig.add_gridspec(
@@ -61,55 +63,61 @@ def mms_pl_config(r_mms):
     axs2 = fig.add_subplot(gs00[2])
     axs3 = fig.add_subplot(gs10[0], projection="3d")
 
-    earth = plt.Circle((0, 0), 1, color="k", clip_on=False)
-
     x_lbs = ["$X$ [$R_E$]", "$Y$ [$R_E$]", "$X$ [$R_E$]"]
     y_lbs = ["$Z$ [$R_E$]", "$Z$ [$R_E$]", "$Y$ [$R_E$]"]
 
     axs_ = [axs0, axs1, axs2]
-    idxs_, idys_ = [[0, 1, 0], [2, 1, 1]]
+    idxs_, idys_ = [[0, 1, 0], [2, 2, 1]]
+
+    # Keep +-20 R_E unless a spacecraft is further out
+    lim_re = max(20.0, 1.1 * np.max(np.abs(r_xyz)) / R_E)
 
     for ax, idx_, idy_, x_lb, y_lb in zip(axs_, idxs_, idys_, x_lbs, y_lbs):
         for i, marker in enumerate(markers):
             ax.scatter(
                 r_xyz[i, idx_] / R_E,
                 r_xyz[i, idy_] / R_E,
+                color=colors[i],
                 marker=marker,
             )
 
-        ax.add_artist(earth)
-        ax.set_xlim([20, -20])
-        ax.set_ylim([-20, 20])
+        ax.add_artist(plt.Circle((0, 0), 1, color="k", clip_on=False))
+        ax.set_xlim([lim_re, -lim_re])
+        ax.set_ylim([-lim_re, lim_re])
         ax.set_aspect("equal")
         ax.set_xlabel(x_lb)
         ax.set_ylabel(y_lb)
 
     axs3.view_init(elev=13, azim=-20)
 
+    lim_km = 1.2 * np.max(np.abs(delta_r))
+    lim_km = lim_km if lim_km > 0 else 1.0
+
     for i, marker in enumerate(markers):
-        options = {"s": 50, "marker": marker}
+        options = {"s": 50, "marker": marker, "color": colors[i]}
         axs3.scatter(delta_r[i, 0], delta_r[i, 1], delta_r[i, 2], **options)
 
-        options = {"color": colors[i], "marker": marker, "zdir": "z", "zs": -30}
-        axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 1]] * 2, **options)
-        axs3.plot([delta_r[i, 0]] * 2, [delta_r[i, 2]] * 2, **options)
-        axs3.plot([delta_r[i, 1]] * 2, [delta_r[i, 2]] * 2, **options)
+        # Projections on the walls where the dashed lines end
+        options = {"color": colors[i], "marker": marker, "linestyle": ""}
+        axs3.plot([delta_r[i, 0]], [delta_r[i, 1]], [-lim_km], **options)
+        axs3.plot([delta_r[i, 0]], [lim_km], [delta_r[i, 2]], **options)
+        axs3.plot([-lim_km], [delta_r[i, 1]], [delta_r[i, 2]], **options)
 
         options = {"color": "k", "linestyle": "--", "linewidth": 0.5}
         axs3.plot(
             [delta_r[i, 0]] * 2,
             [delta_r[i, 1]] * 2,
-            [-30, delta_r[i, 2]],
+            [-lim_km, delta_r[i, 2]],
             **options,
         )
         axs3.plot(
             [delta_r[i, 0]] * 2,
-            [-30, delta_r[i, 1]],
+            [lim_km, delta_r[i, 1]],
             [delta_r[i, 2]] * 2,
             **options,
         )
         axs3.plot(
-            [-30, delta_r[i, 0]],
+            [-lim_km, delta_r[i, 0]],
             [delta_r[i, 1]] * 2,
             [delta_r[i, 2]] * 2,
             **options,
@@ -123,14 +131,14 @@ def mms_pl_config(r_mms):
             "k-",
         )
 
-    axs3.set_xlim([-30, 30])
-    axs3.set_ylim([30, -30])
-    axs3.set_zlim([-30, 30])
+    axs3.set_xlim([-lim_km, lim_km])
+    axs3.set_ylim([lim_km, -lim_km])
+    axs3.set_zlim([-lim_km, lim_km])
     axs3.set_xlabel(r"$\Delta X$ [km]")
     axs3.set_ylabel(r"$\Delta Y$ [km]")
     axs3.set_zlabel(r"$\Delta Z$ [km]")
 
-    axs3.legend(["MMS1", "MMS2", "MMS3", "MMS4"], frameon=False)
+    axs3.legend(axs3.collections[:4], ["MMS1", "MMS2", "MMS3", "MMS4"], frameon=False)
 
     axs = [axs0, axs1, axs2, axs3]
 

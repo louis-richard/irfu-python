@@ -17,8 +17,9 @@ from matplotlib.colors import LogNorm, to_rgba
 from matplotlib.image import AxesImage
 
 # Local imports
-from .. import plot
-from . import generate_data, generate_ts
+from .. import plot, pyrf
+from ..constants import R_E
+from . import generate_data, generate_timeline, generate_ts
 
 
 @ddt
@@ -266,6 +267,47 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
 
         # Test with no data provided
         plot.annotate_heatmap(im)
+
+
+class MmsPlConfigTestCase(unittest.TestCase):
+    def setUp(self):
+        # Tetrahedron of ~20 km around (60000, 10000, 5000) km, with a small
+        # motion averaged out
+        time = generate_timeline(1.0, 5)
+        self.r_mean = np.array([60000.0, 10000.0, 5000.0]) + np.array(
+            [[0, 0, 0], [20, 0, 0], [10, 17, 0], [10, 6, 16]], dtype=float
+        )
+        motion = np.outer(np.arange(5) - 2.0, [1.0, -1.0, 0.5])
+        self.r_mms = [pyrf.ts_vec_xyz(time, r + motion) for r in self.r_mean]
+
+    def tearDown(self):
+        plt.close("all")
+
+    def test_mms_pl_config_positions(self):
+        fig, axs = plot.mms_pl_config(self.r_mms)
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertEqual(len(axs), 4)
+
+        # X-Z, Y-Z and X-Y panels in Earth radii
+        for ax, (i_x, i_y) in zip(axs[:3], [(0, 2), (1, 2), (0, 1)]):
+            offsets = np.vstack([c.get_offsets()[0] for c in ax.collections])
+            expected = self.r_mean[:, [i_x, i_y]] / R_E
+            np.testing.assert_allclose(offsets, expected, rtol=1e-12)
+
+        # Relative positions in km, inside the axis limits
+        delta_r = self.r_mean - np.mean(self.r_mean, axis=0)
+        points = np.array(
+            [np.ravel(c._offsets3d) for c in axs[3].collections[:4]]  # noqa
+        )
+        np.testing.assert_allclose(points, delta_r, atol=1e-9)
+        for lim in [axs[3].get_xlim(), axs[3].get_zlim()]:
+            self.assertGreaterEqual(lim[1], np.max(np.abs(delta_r)))
+
+    def test_mms_pl_config_far(self):
+        # Positions beyond 20 R_E widen the 2d panels
+        r_mms = [r + 30 * R_E for r in self.r_mms]
+        _, axs = plot.mms_pl_config(r_mms)
+        self.assertGreater(axs[0].get_xlim()[0], 30 + np.max(self.r_mean) / R_E)
 
 
 if __name__ == "__main__":
