@@ -2003,6 +2003,44 @@ class GetTsTestCase(unittest.TestCase):
         )
         self.assertListEqual(list(result[result.dims[1]].data), comps)
 
+    @data(
+        (1, 0.0, 30.0, 15),  # start times, single record (used to be NaT)
+        (3, 0.0, 30.0, 15),  # start times
+        (1, 15.0, 15.0, 0),  # centred times, single record
+        (3, 15.0, 15.0, 0),  # centred times
+        (3, 0.0, 20.0, 15),  # deltas do not match the 30 ms sampling period
+    )
+    @unpack
+    def test_get_ts_fpi_epoch_shift(self, n_records, d_minus, d_plus, shift):
+        # FPI epochs are moved to the centre of [t - delta_minus, t + delta_plus]
+        # (in ms), or by half the sampling period if the accumulation does not
+        # match it, as mms.variable2ts in irfu-matlab
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(n_records) * np.timedelta64(30, "ms")
+
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", d_minus), ("Epoch_plus_var", d_plus)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            cdf[name].add_attribute("UNITS", "ms")
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(n_records))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+        content = bytes(pycdfpp.save(cdf))
+
+        if d_minus + d_plus == 30.0 or n_records == 1:
+            result = get_ts(content, "mms1_des_numberdensity_brst")
+        else:
+            with self.assertLogs(level="WARNING"):
+                result = get_ts(content, "mms1_des_numberdensity_brst")
+
+        np.testing.assert_array_equal(
+            result.time.data, time + np.timedelta64(shift, "ms")
+        )
+
 
 class _FakeS3Bucket:
     # Bucket listing the given keys with bucket.objects.filter(Prefix=...), and

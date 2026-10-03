@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in import
+# Built-in imports
+import logging
 import re
 import warnings
 from typing import Optional, Union
@@ -61,19 +62,35 @@ def _shift_epochs(file, epoch):
 
         flag_minus, flag_plus = flags_vars
 
-        t_offset = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
-        )
+        # Shift to the centre of [epoch - delta_minus, epoch + delta_plus] and half
+        # width of the accumulation, as mms.variable2ts in irfu-matlab
+        t_offset, t_diff = [
+            (np.round(delta, 1) * 1e6 / 2).astype("timedelta64[ns]")
+            for delta in [
+                delta_plus_var["data"] * flag_plus
+                - delta_minus_var["data"] * flag_minus,
+                delta_plus_var["data"] * flag_plus
+                + delta_minus_var["data"] * flag_minus,
+            ]
+        ]
 
-        t_offset = (np.round(t_offset, 1) * 1e6 / 2).astype("timedelta64[ns]")
-        t_diff = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
-        )
-        t_diff = (np.round(t_diff, 1) * 1e6 / 2).astype("timedelta64[ns]")
-        t_diff_data = np.median(np.diff(epoch["data"])) / 2
+        # If the accumulation does not match the sampling period, assume that the
+        # epochs are start times and use half the sampling period (needs at least
+        # two records, otherwise keep the delta variables)
+        if len(epoch["data"]) > 1:
+            t_diff_data = np.median(np.diff(epoch["data"])) / 2
 
-        if t_diff_data != np.mean(t_diff):
-            t_offset = t_diff_data
+            if not np.isnat(t_diff_data) and t_diff_data != np.mean(t_diff):
+                mismatch = np.abs(t_diff_data - np.mean(t_diff)) / t_diff_data
+                if mismatch > 0.01:
+                    logging.warning(
+                        "Epoch delta variables (half width %s) do not match the "
+                        "sampling time (half %s), assume the latter",
+                        np.mean(t_diff),
+                        t_diff_data,
+                    )
+
+                t_offset = t_diff_data
 
         epoch_shifted += t_offset
 
