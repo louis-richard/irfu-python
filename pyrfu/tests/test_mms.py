@@ -348,6 +348,45 @@ class CalcEpsilonTestCase(unittest.TestCase):
         np.testing.assert_allclose(eps.data, expected, rtol=1e-10)
 
 
+class CorrectEdpProbeTimingTestCase(unittest.TestCase):
+    def test_correct_edp_probe_timing_values(self):
+        # Probe potentials linear in time, sampled as in the EDP processing:
+        # V3 and V5 7.629 and 15.259 us late, V2, V4, V6 reconstructed from
+        # E12, E34, E56 sampled 26.703, 30.518 and 34.332 us late
+        time = generate_timeline(8192.0, 100)
+        t_sec = (time - time[0]) / np.timedelta64(1, "s")
+        offset = np.array([1.0, 1.5, -2.0, 0.5, 3.0, 2.5])
+        rate = np.array([1e3, -2e3, 3e3, 1e3, -1e3, 4e3])
+
+        def pot(i, delay=0.0):
+            return offset[i] + rate[i] * (t_sec + delay)
+
+        v_odd = [pot(0), pot(2, 7.629e-6), pot(4, 15.259e-6)]
+        v_l2 = []
+        for i, (delay, length) in enumerate(
+            zip([26.703e-6, 30.518e-6, 34.332e-6], [0.120, 0.120, 0.0292])
+        ):
+            e_meas = (pot(2 * i, delay) - pot(2 * i + 1, delay)) / length
+            v_l2 += [v_odd[i], v_odd[i] - e_meas * length]
+
+        sc_pot = xr.DataArray(
+            np.column_stack(v_l2),
+            coords=[time, np.arange(1, 7)],
+            dims=["time", "probe"],
+            attrs={"UNITS": "V"},
+        )
+        sc_pot_data = sc_pot.data.copy()
+
+        result = mms.correct_edp_probe_timing(sc_pot)
+
+        expected = np.column_stack([pot(i) for i in range(6)])
+        np.testing.assert_allclose(result.data, expected, atol=1e-9)
+        self.assertTupleEqual(result.dims, ("time", "probe"))
+        np.testing.assert_array_equal(result.probe.data, np.arange(1, 7))
+        self.assertEqual(result.attrs["UNITS"], "V")
+        np.testing.assert_array_equal(sc_pot.data, sc_pot_data)
+
+
 class DbGetTsTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.db_get_ts")

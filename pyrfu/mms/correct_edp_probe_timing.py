@@ -10,7 +10,7 @@ from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -43,55 +43,40 @@ def correct_edp_probe_timing(sc_pot):
 
     """
 
-    e_fact = [0.1200, 0.1200, 0.0292]
+    time, pot = [sc_pot.time.data, sc_pot.data]
+    ref = ts_scalar(time, pot[:, 0])
 
-    # Reconstruct E12, E34, E56 as computed in MMS processing
-    time = sc_pot.time.data
+    def _shifted(data, shift_ns):
+        # Time series with the time tags shifted, resampled to those of V1
+        out = ts_scalar(time + np.timedelta64(shift_ns, "ns"), data)
+        return resample(out, ref).data
 
-    diff_sc_pot = []
-    for i, fact in zip([0, 2, 4], e_fact):
-        diff_sc_pot.append(
-            ts_scalar(time, np.diff(sc_pot.data[:, i : i + 2]) / fact),
-        )
-
-    # Correct the time tags to create individual time series
-    tau_vs = [
-        np.timedelta64(0, "ns"),
-        np.timedelta64(7629, "ns"),
-        np.timedelta64(15259, "ns"),
-    ]
-    tau_es = [
-        np.timedelta64(26703, "ns"),
-        np.timedelta64(30518, "ns"),
-        np.timedelta64(34332, "ns"),
-    ]
-
-    # Odds probes potential 1, 3, 5
-    sc_pot_odds = []
-    for tau, i in zip(tau_vs, [0, 2, 4]):
-        sc_pot_odds.append(ts_scalar(time + tau, sc_pot.data[:, i]))
-
-    # Electric field
-    diff_sc_pot = []
-    for e_, tau in zip(diff_sc_pot, tau_es):
-        diff_sc_pot.append(ts_scalar(e_.time.data + tau, e_.data))
-
-    # Resample all data to time tags of V1 (i.e. timeOrig).
-    sc_pot_odds = [resample(v, sc_pot) for v in sc_pot_odds]
-    diff_sc_pot = [resample(e, sc_pot) for e in diff_sc_pot]
+    # Correct the time tags of V3, V5 and of E12, E34, E56 as computed in MMS
+    # processing, and resample all data to time tags of V1 (i.e. timeOrig).
+    v_3 = _shifted(pot[:, 2], 7629)
+    v_5 = _shifted(pot[:, 4], 15259)
+    e12 = _shifted((pot[:, 0] - pot[:, 1]) / 0.120, 26703)
+    e34 = _shifted((pot[:, 2] - pot[:, 3]) / 0.120, 30518)
+    e56 = _shifted((pot[:, 4] - pot[:, 5]) / 0.0292, 34332)
 
     # Recompute individual even probe potentials 2, 4, 6
-    sc_pot_even = []
-    for v_, e_, fact in zip(sc_pot_odds, diff_sc_pot, e_fact):
-        sc_pot_even.append(v_ - e_ * fact)
-
-    sc_pot_corrected = []
-    for tup in zip(sc_pot_even, sc_pot_odds):
-        for item in tup:
-            sc_pot_corrected.append(item.data)
+    sc_pot_corrected = np.column_stack(
+        [
+            pot[:, 0],
+            pot[:, 0] - e12 * 0.120,
+            v_3,
+            v_3 - e34 * 0.120,
+            v_5,
+            v_5 - e56 * 0.0292,
+        ]
+    )
 
     # Create the new time series with the corrected values
-    options = {"coords": [time, np.arange(1, 7)], "dims": ["time", "probe"]}
-    sc_pot_corrected = xr.DataArray(sc_pot_corrected, **options)
+    sc_pot_corrected = xr.DataArray(
+        sc_pot_corrected,
+        coords=[time, np.arange(1, 7)],
+        dims=["time", "probe"],
+        attrs=dict(sc_pot.attrs),
+    )
 
     return sc_pot_corrected

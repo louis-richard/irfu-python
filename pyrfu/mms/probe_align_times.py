@@ -8,6 +8,7 @@ import numpy as np
 from ..pyrf.resample import resample
 from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_scalar import ts_scalar
+from .correct_edp_probe_timing import correct_edp_probe_timing
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -15,12 +16,6 @@ __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
-
-def _shifted(time, data, shift_ns, ref=None):
-    # Time series with the time tags shifted, resampled to the reference
-    out = ts_scalar(time + np.timedelta64(shift_ns, "ns"), data)
-    return out if ref is None else resample(out, ref)
 
 
 def _valid_runs(time, data):
@@ -74,24 +69,9 @@ def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase):
     del e_xyz  # only used for the figure in irfu-matlab
 
     # Correct for timing in spacecraft potential data.
-    time, pot = [sc_pot.time.data, sc_pot.data]
-    v_1 = ts_scalar(time, pot[:, 0])
-    v_3 = _shifted(time, pot[:, 2], 7629, v_1)
-    v_5 = _shifted(time, pot[:, 4], 15259, v_1)
-    e12 = _shifted(time, (pot[:, 0] - pot[:, 1]) / 0.120, 26703, v_1)
-    e34 = _shifted(time, (pot[:, 2] - pot[:, 3]) / 0.120, 30518, v_1)
-    e56 = _shifted(time, (pot[:, 4] - pot[:, 5]) / 0.0292, 34332, v_1)
-
-    v_all = np.column_stack(
-        [
-            v_1.data,
-            v_1.data - e12.data * 0.120,
-            v_3.data,
-            v_3.data - e34.data * 0.120,
-            v_5.data,
-            v_5.data - e56.data * 0.0292,
-        ]
-    )
+    sc_pot = correct_edp_probe_timing(sc_pot)
+    time, v_all = [sc_pot.time.data, sc_pot.data]
+    v_1 = ts_scalar(time, v_all[:, 0])
 
     t_limit_long = np.array([time[0], time[-1]]) + np.array(
         [-10, 10], dtype="timedelta64[s]"
