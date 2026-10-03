@@ -9,6 +9,8 @@ from typing import Literal, Optional
 
 # 3rd party imports
 import keyring
+import keyring.errors
+from keyring.backends.chainer import ChainerBackend
 from keyrings.alt.file import PlaintextKeyring
 
 __author__ = "Louis Richard"
@@ -19,6 +21,58 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 MMS_CFG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+
+# Service name of the MMS SDC credentials in the keyring
+SDC_SERVICE = "mms-sdc"
+
+
+def _secure_keyring():
+    r"""System keyring (e.g. macOS Keychain, Windows Credential Locker, Secret
+    Service) if one is available, None otherwise."""
+    backend = keyring.get_keyring()
+    backends = backend.backends if isinstance(backend, ChainerBackend) else [backend]
+
+    if any(b.priority >= 1 for b in backends):
+        return backend
+
+    return None
+
+
+def _get_credential(username: str):
+    r"""MMS SDC credential of username, from the system keyring or, for the
+    credentials saved by previous versions or without system keyring, from the
+    plaintext keyring file."""
+    secure = _secure_keyring()
+    credential = secure.get_credential(SDC_SERVICE, username) if secure else None
+
+    if credential is None:
+        credential = PlaintextKeyring().get_credential(SDC_SERVICE, username)
+
+    return credential
+
+
+def _set_password(username: str, password: str) -> None:
+    r"""Save the MMS SDC credential in the system keyring, or in the plaintext
+    keyring file (with a warning) if there is no system keyring."""
+    secure = _secure_keyring()
+    plaintext = PlaintextKeyring()
+
+    if secure is not None:
+        logging.info("Updating MMS SDC credentials in the system keyring...")
+        secure.set_password(SDC_SERVICE, username, password)
+
+        # Remove the copy saved in plain text by previous versions
+        try:
+            plaintext.delete_password(SDC_SERVICE, username)
+        except keyring.errors.PasswordDeleteError:
+            pass
+    else:
+        logging.warning(
+            "No system keyring available: MMS SDC credentials saved in plain text "
+            "in %s",
+            plaintext.file_path,
+        )
+        plaintext.set_password(SDC_SERVICE, username, password)
 
 
 def db_init(
@@ -32,15 +86,17 @@ def db_init(
     r"""Manage the MMS data access configuration.
 
     The default resource to access MMS data, the local path to use, the MMS SDC
-    credentials saved in encrypted file in your home directory, and the Amazon Web
-    Services (AWS) bucket name.
+    credentials, saved in the system keyring (macOS Keychain, Windows Credential
+    Locker, Secret Service on Linux) or, if there is none, in plain text in the
+    keyring file in your home directory, and the Amazon Web Services (AWS) bucket
+    name.
 
     Parameters
     ----------
     default : {"local", "sdc", "aws"}, Optional
         Name of the default resource to access the MMS data. Default is local.
     local : str, Optional
-        Local path to MMS data. Default is /Volumes/mms.
+        Local path to MMS data. Default is the current directory.
     sdc : {"public", "sitl"}, Optional
         Rights to access MMS data from SDC. If "sitl" please make sure to register
         valid SDC credential. Default is public.
@@ -63,8 +119,6 @@ def db_init(
         If the SDC rights are not "public" or "sitl".
 
     """
-    keyring.set_keyring(PlaintextKeyring())
-
     # Check default
     if default.lower() not in ["local", "sdc", "aws"]:
         raise NotImplementedError(f"Resource {default} is not implemented!!")
@@ -93,8 +147,7 @@ def db_init(
         json.dump(config, fs)
 
     # Read credentials for sdc_username
-    credential_path = str(keyring.util.platform_.config_root())
-    credential = keyring.get_credential("mms-sdc", sdc_username)
+    credential = _get_credential(sdc_username)
 
     if (
         not credential
@@ -110,6 +163,4 @@ def db_init(
         # if existing credentials and complete arguments overwrite
         username, password = sdc_username, sdc_password
 
-    logging.info("Updating MMS SDC credentials in %s...", credential_path)
-
-    keyring.set_password("mms-sdc", username, password)
+    _set_password(username, password)

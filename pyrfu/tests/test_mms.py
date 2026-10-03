@@ -432,7 +432,7 @@ class ConfigCacheTestCase(unittest.TestCase):
             with (
                 mock.patch.object(module, "MMS_CFG_PATH", path),
                 mock.patch.object(module.requests, "Session") as session_cls,
-                mock.patch.object(module.keyring, "get_credential", return_value=None),
+                mock.patch.object(module, "_get_credential", return_value=None),
             ):
                 module._login_lasp_cached.cache_clear()
                 first = module._login_lasp()
@@ -466,6 +466,66 @@ class _MemoryKeyring:
     def delete_password(self, service, username):
         if self.passwords.pop((service, username), None) is None:
             raise keyring.errors.PasswordDeleteError("not found")
+
+
+class DbInitCredentialsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.db_init")
+        self.plaintext = _MemoryKeyring(0.5)
+
+    def _db_init(self, system, **kwargs):
+        with tempfile.TemporaryDirectory() as root:
+            with (
+                mock.patch.object(
+                    self.module, "MMS_CFG_PATH", os.path.join(root, "c.json")
+                ),
+                mock.patch.object(
+                    self.module.keyring, "get_keyring", return_value=system
+                ),
+                mock.patch.object(
+                    self.module, "PlaintextKeyring", return_value=self.plaintext
+                ),
+                mock.patch.object(self.module.keyring, "set_keyring") as set_keyring,
+            ):
+                self.module.db_init(local=root, sdc="sitl", **kwargs)
+                credential = self.module._get_credential(kwargs["sdc_username"])
+
+        set_keyring.assert_not_called()  # the process keyring is not changed
+        return credential
+
+    def test_db_init_system_keyring(self):
+        # Saved in the system keyring, and the old plaintext copy is removed
+        system = _MemoryKeyring(5)
+        self.plaintext.set_password("mms-sdc", "louis", "old")
+
+        credential = self._db_init(system, sdc_username="louis", sdc_password="new")
+
+        self.assertEqual(credential.password, "new")
+        self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "new"})
+        self.assertDictEqual(self.plaintext.passwords, {})
+
+    def test_db_init_no_system_keyring(self):
+        # Without system keyring, saved in plain text with a warning
+        system = _MemoryKeyring(0)
+        with self.assertLogs(level="WARNING"):
+            credential = self._db_init(system, sdc_username="louis", sdc_password="pw")
+
+        self.assertEqual(credential.password, "pw")
+        self.assertDictEqual(system.passwords, {})
+        self.assertDictEqual(self.plaintext.passwords, {("mms-sdc", "louis"): "pw"})
+
+    def test_get_credential_previous_versions(self):
+        # Credentials saved in plain text by previous versions are still found
+        self.plaintext.set_password("mms-sdc", "louis", "old")
+        with (
+            mock.patch.object(
+                self.module.keyring, "get_keyring", return_value=_MemoryKeyring(5)
+            ),
+            mock.patch.object(
+                self.module, "PlaintextKeyring", return_value=self.plaintext
+            ),
+        ):
+            self.assertEqual(self.module._get_credential("louis").password, "old")
 
 
 class DbGetTsTestCase(unittest.TestCase):

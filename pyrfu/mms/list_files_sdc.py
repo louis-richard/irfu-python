@@ -13,7 +13,6 @@ from bisect import bisect_left
 from datetime import datetime, timedelta
 
 # 3rd party imports
-import keyring
 import numpy as np
 import requests
 from dateutil.parser import parse
@@ -22,7 +21,7 @@ from urllib3.util.retry import Retry
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from .db_init import MMS_CFG_PATH
+from .db_init import MMS_CFG_PATH, _get_credential
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -60,7 +59,7 @@ def _login_lasp_cached(config_mtime_ns: int):
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
-    credential = keyring.get_credential("mms-sdc", config["sdc"]["username"])
+    credential = _get_credential(config["sdc"]["username"])
     username, password = (
         (credential.username, credential.password) if credential else ("", "")
     )
