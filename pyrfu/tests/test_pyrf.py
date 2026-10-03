@@ -678,6 +678,77 @@ class CdfEpoch2Datetime64TestCase(unittest.TestCase):
         self.assertEqual(len(pyrf.cdfepoch2datetime64(time_line)), 100)
         self.assertEqual(len(pyrf.cdfepoch2datetime64(list(time_line))), 100)
 
+    def test_cdfepoch2datetime64_tt2000_values(self):
+        result = pyrf.cdfepoch2datetime64([0, 631108869184000000])
+        expected = np.array(
+            ["2000-01-01T11:58:55.816", "2020-01-01T00:00:00"], dtype="datetime64[ns]"
+        )
+        np.testing.assert_array_equal(result, expected)
+
+    def test_cdfepoch2datetime64_epoch_values(self):
+        # CDF_EPOCH: milliseconds since 0000-01-01, sub-millisecond part kept
+        result = pyrf.cdfepoch2datetime64(
+            np.array([63745056000123.0, 63745056000123.5, 62167219200000.0])
+        )
+        expected = np.array(
+            [
+                "2020-01-01T00:00:00.123",
+                "2020-01-01T00:00:00.1235",
+                "1970-01-01T00:00:00",
+            ],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result, expected)
+        self.assertEqual(result.dtype, np.dtype("datetime64[ns]"))
+
+    def test_cdfepoch2datetime64_epoch16_values(self):
+        # CDF_EPOCH16: seconds since 0000-01-01 and picoseconds
+        result = pyrf.cdfepoch2datetime64(
+            np.array([63745056000 + 1002003004j, 62167219200 + 999j])
+        )
+        expected = np.array(
+            ["2020-01-01T00:00:00.001002003", "1970-01-01T00:00:00"],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result, expected)
+
+    def test_cdfepoch2datetime64_invalid_type(self):
+        with self.assertRaises(TypeError):
+            pyrf.cdfepoch2datetime64(["2020-01-01"])
+
+    def test_cdfepoch2datetime64_epoch_nat(self):
+        # Fill (-1e31), pad (0.0, year 0), NaN and year 3000 are outside the
+        # datetime64[ns] range and used to wrap around (pad gave 1753)
+        epochs = np.array([-1e31, 0.0, np.nan, 95649120000000.0, 63745056000123.0])
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.cdfepoch2datetime64(epochs)
+        expected = np.array(
+            ["NaT", "NaT", "NaT", "NaT", "2020-01-01T00:00:00.123"],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result, expected)
+
+    def test_cdfepoch2datetime64_epoch16_nat(self):
+        # Fill, pad, and picoseconds outside [0, 1e12)
+        epochs = np.array(
+            [
+                -1e31 - 1e31j,
+                0j,
+                63745056000 - 1j,
+                63745056000 + 1e12j,
+                63745056000 + 1002003004j,
+            ]
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.cdfepoch2datetime64(epochs)
+        expected = np.array(
+            ["NaT", "NaT", "NaT", "NaT", "2020-01-01T00:00:00.001002003"],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result, expected)
+
 
 @ddt
 class CompressCwtTestCase(unittest.TestCase):
@@ -1151,6 +1222,71 @@ class Datetime642TtnsTestCase(unittest.TestCase):
     @data(np.datetime64("2019-01-01T00:00:00.000000000"), generate_timeline(64.0, 100))
     def test_datetime642ttns_output(self, value):
         self.assertIsInstance(pyrf.datetime642ttns(value), np.ndarray)
+
+    def test_datetime642ttns_values(self):
+        time = np.array(
+            [
+                "2000-01-01T11:58:55.816",
+                "2016-12-31T23:59:59",
+                "2017-01-01T00:00:00",
+                "2020-01-01T00:00:00",
+                "NaT",
+            ],
+            dtype="datetime64[ns]",
+        )
+        time_copy = time.copy()
+        result = pyrf.datetime642ttns(time)
+        # The 2016-12-31 leap second makes the last day of 2016 one second
+        # longer, and NaT maps to the CDF_TT2000 fill value
+        expected = [
+            0,
+            536500867184000000,
+            536500869184000000,
+            631108869184000000,
+            np.iinfo(np.int64).min,
+        ]
+        np.testing.assert_array_equal(result, expected)
+        self.assertEqual(result.dtype, np.int64)
+        np.testing.assert_array_equal(time, time_copy)
+
+    def test_datetime642ttns_units(self):
+        time = np.datetime64("2020-01-01T00:00:00.123456", "us")
+        np.testing.assert_array_equal(pyrf.datetime642ttns(time), [631108869307456000])
+
+    def test_datetime642ttns_round_trip(self):
+        time = generate_timeline(64.0, 100)
+        np.testing.assert_array_equal(
+            pyrf.ttns2datetime64(pyrf.datetime642ttns(time)), time
+        )
+
+    def test_datetime642ttns_range(self):
+        # First and last times that both datetime64[ns] and CDF_TT2000 hold,
+        # and NaT in a coarse unit
+        time = np.array(
+            ["1707-09-22T12:12:10.961224194", "2262-04-11T23:47:16.854775807"],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(
+            pyrf.datetime642ttns(time),
+            [np.iinfo(np.int64).min + 2, 8276644106038775807],
+        )
+        np.testing.assert_array_equal(
+            pyrf.datetime642ttns(
+                np.array(["2020-01-01", "NaT"], dtype="datetime64[D]")
+            ),
+            [631108869184000000, np.iinfo(np.int64).min],
+        )
+
+    @data(
+        np.datetime64("3000-01-01", "us"),
+        np.datetime64("1600-01-01", "s"),
+        np.datetime64("1700-01-01", "ns"),
+        np.array(["2020-01-01", "2262-04-12"], dtype="datetime64[D]"),
+    )
+    def test_datetime642ttns_out_of_range(self, value):
+        # These used to wrap around silently in datetime64[ns] or in pycdfpp
+        with self.assertRaises(ValueError):
+            pyrf.datetime642ttns(value)
 
 
 @ddt
@@ -4394,6 +4530,76 @@ class Ttns2Datetime64TestCase(unittest.TestCase):
     def test_ttns2datetime64_output(self, value):
         result = pyrf.ttns2datetime64(value)
         self.assertIsInstance(result, np.ndarray)
+
+    def test_ttns2datetime64_values(self):
+        time = np.array(
+            [
+                0,
+                631108869184000000,
+                # cdflib's breakdown gave minute = 60 here, and the old
+                # conversion raised ValueError on the whole array
+                -6098335069357537,
+                np.iinfo(np.int64).min,
+                np.iinfo(np.int64).min + 1,
+            ]
+        )
+        result = pyrf.ttns2datetime64(time)
+        expected = np.array(
+            [
+                "2000-01-01T11:58:55.816",
+                "2020-01-01T00:00:00",
+                "1999-10-22T22:00:00.746642463",
+                "NaT",
+                "NaT",
+            ],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result, expected)
+        self.assertEqual(result.dtype, np.dtype("datetime64[ns]"))
+
+    def test_ttns2datetime64_leap_second(self):
+        # 2016-12-31T23:59:59, 23:59:60, 23:59:60.5 and 2017-01-01T00:00:00:
+        # datetime64 has no 60th second, so the leap second maps to the next
+        # day
+        time = 536500867184000000 + np.array([0, 1, 1.5, 2]) * 10**9
+        result = pyrf.ttns2datetime64(time.astype(np.int64))
+        expected = np.array(
+            [
+                "2016-12-31T23:59:59",
+                "2017-01-01T00:00:00",
+                "2017-01-01T00:00:00.5",
+                "2017-01-01T00:00:00",
+            ],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result, expected)
+
+    def test_ttns2datetime64_invalid_type(self):
+        with self.assertRaises(TypeError):
+            pyrf.ttns2datetime64("2020-01-01")
+
+    def test_ttns2datetime64_range(self):
+        # CDF_TT2000 runs to 2292, beyond the end of datetime64[ns] in 2262;
+        # the largest value used to wrap around to 1707
+        time = np.array(
+            [
+                8276644106038775807,
+                8276644106038775808,
+                np.iinfo(np.int64).max,
+                np.iinfo(np.int64).min + 2,
+            ]
+        )
+        result = pyrf.ttns2datetime64(time)
+        expected = np.array(
+            [
+                "2262-04-11T23:47:16.854775807",
+                "NaT",
+                "NaT",
+                "1707-09-22T12:12:10.961224194",
+            ],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result, expected)
 
 
 def _polarized_wave(n_t, handedness, noise, seed=1):
