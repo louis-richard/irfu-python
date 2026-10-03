@@ -528,6 +528,46 @@ class DbInitCredentialsTestCase(unittest.TestCase):
             self.assertEqual(self.module._get_credential("louis").password, "old")
 
 
+class MmsConfigPathTestCase(unittest.TestCase):
+    # The MMS configuration lives in the user configuration directory, created
+    # from the package configuration the first time
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.db_init")
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp_dir.cleanup)
+        self.package = os.path.join(self.tmp_dir.name, "package_config.json")
+        with open(self.package, "w", encoding="utf-8") as file:
+            json.dump({"default": "aws"}, file)
+        self.user_dir = os.path.join(self.tmp_dir.name, "user", "pyrfu")
+
+        for patch in [
+            mock.patch.object(self.module, "_PACKAGE_CFG_PATH", self.package),
+            mock.patch.object(
+                self.module.platformdirs, "user_config_dir", return_value=self.user_dir
+            ),
+        ]:
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def test_config_path_migration(self):
+        # Created from the package configuration the first time, then kept
+        path = self.module._user_config_path()
+        self.assertEqual(path, os.path.join(self.user_dir, "mms_config.json"))
+        with open(path, encoding="utf-8") as file:
+            self.assertDictEqual(json.load(file), {"default": "aws"})
+
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump({"default": "sdc"}, file)
+        self.assertEqual(self.module._user_config_path(), path)
+        with open(path, encoding="utf-8") as file:
+            self.assertDictEqual(json.load(file), {"default": "sdc"})
+
+    def test_config_path_not_writable(self):
+        # The package configuration is used if the user directory is not writable
+        with mock.patch.object(self.module.shutil, "copyfile", side_effect=OSError):
+            self.assertEqual(self.module._user_config_path(), self.package)
+
+
 class DbGetTsTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.db_get_ts")

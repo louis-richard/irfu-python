@@ -5,11 +5,13 @@
 import json
 import logging
 import os
+import shutil
 from typing import Literal, Optional
 
 # 3rd party imports
 import keyring
 import keyring.errors
+import platformdirs
 from keyring.backends.chainer import ChainerBackend
 from keyrings.alt.file import PlaintextKeyring
 
@@ -20,7 +22,30 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
-MMS_CFG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+# Default configuration distributed with the package
+_PACKAGE_CFG_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "config.json"
+)
+
+
+def _user_config_path() -> str:
+    r"""Path of the MMS configuration file in the user configuration directory
+    (e.g. ~/Library/Application Support/pyrfu on macOS, ~/.config/pyrfu on Linux).
+    It is created from the package configuration file the first time, and the
+    package file is used if the user directory cannot be written."""
+    path = os.path.join(platformdirs.user_config_dir("pyrfu"), "mms_config.json")
+
+    if not os.path.exists(path):
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            shutil.copyfile(_PACKAGE_CFG_PATH, path)
+        except OSError:
+            return _PACKAGE_CFG_PATH
+
+    return path
+
+
+MMS_CFG_PATH = _user_config_path()
 
 # Service name of the MMS SDC credentials in the keyring
 SDC_SERVICE = "mms-sdc"
@@ -85,11 +110,12 @@ def db_init(
 ) -> None:
     r"""Manage the MMS data access configuration.
 
-    The default resource to access MMS data, the local path to use, the MMS SDC
-    credentials, saved in the system keyring (macOS Keychain, Windows Credential
+    The default resource to access MMS data, the local path to use and the Amazon
+    Web Services (AWS) bucket name are saved in the MMS configuration file of the
+    user configuration directory (`pyrfu.mms.MMS_CFG_PATH`), and the MMS SDC
+    credentials in the system keyring (macOS Keychain, Windows Credential
     Locker, Secret Service on Linux) or, if there is none, in plain text in the
-    keyring file in your home directory, and the Amazon Web Services (AWS) bucket
-    name.
+    keyring file in your home directory.
 
     Parameters
     ----------
