@@ -4,6 +4,8 @@
 # Built-in imports
 import os
 import random
+import subprocess
+import sys
 import unittest
 
 # 3rd party imports
@@ -14,11 +16,25 @@ from ddt import data, ddt, unpack
 from .. import solo
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.4"
 __status__ = "Prototype"
+
+
+class SoloImportTestCase(unittest.TestCase):
+    def test_import_pyrfu_solo(self):
+        # In a fresh interpreter, as this module already imports pyrfu.solo
+        code = "import pyrfu; print(pyrfu.solo.read_tnr.__name__)"
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            check=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            text=True,
+        )
+        self.assertEqual(result.stdout, "read_tnr\n")
 
 
 class DbInitTestCase(unittest.TestCase):

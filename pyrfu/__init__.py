@@ -4,7 +4,7 @@
 # Built-in imports
 import logging
 
-from pyrfu import constants, dispersion, lp, maven, mms, models, plot, pyrf
+from pyrfu import constants, dispersion, lp, maven, mms, models, plot, pyrf, solo
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -22,6 +22,7 @@ __all__ = [
     "models",
     "plot",
     "pyrf",
+    "solo",
 ]
 
 # Show the messages of pyrfu (INFO and above) without configuring the root
