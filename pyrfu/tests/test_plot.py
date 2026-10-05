@@ -116,12 +116,38 @@ class AddPositionTestCase(unittest.TestCase):
         ax.set_xticks(date2num(t_ticks))
         ax.set_xlim(date2num(t_ticks[[0, -1]]))
 
-        result = plot.add_position(ax, r_xyz)
+        result = plot.add_position(ax, r_xyz, units="km")
         labels = [label.get_text() for label in result.get_xticklabels()]
-        self.assertEqual(labels[0], "15.00\n30.00\n-15.00")
-        self.assertEqual(labels[1], "75.00\n150.00\n-75.00")
-        self.assertEqual(labels[8], "495.00\n990.00\n-495.00")
+        self.assertEqual(labels[0], "15.00\n30.00\n-15.00\n36.74")
+        self.assertEqual(labels[1], "75.00\n150.00\n-75.00\n183.71")
+        self.assertEqual(labels[8], "495.00\n990.00\n-495.00\n1212.50")
         self.assertListEqual(labels[9:], ["", ""])
+        texts = [text_.get_text() for text_ in result.texts]
+        self.assertListEqual(texts, ["X [km]\nY [km]\nZ [km]\nR [km]"])
+        plt.close("all")
+
+    @data("top", "bottom")
+    def test_add_position_earth_radii(self, position):
+        # Position at (3, 4, 12) R_E, |R| = 13 R_E
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(10) * np.timedelta64(60, "s")
+        r_xyz = pyrf.ts_vec_xyz(time, np.tile([3.0, 4.0, 12.0], (10, 1)) * R_E)
+
+        _, ax = plt.subplots(1)
+        ax.plot(time, np.arange(10))
+        ax.set_xticks(date2num(time[2:8]))
+        result = plot.add_position(ax, r_xyz, position=position)
+        labels = [label.get_text() for label in result.get_xticklabels()]
+        self.assertListEqual(labels, ["3.00\n4.00\n12.00\n13.00"] * 6)
+        texts = [text_.get_text() for text_ in result.texts]
+        self.assertListEqual(texts, ["\n".join(f"{c} [$R_E$]" for c in "XYZR")])
+        plt.close("all")
+
+    def test_add_position_units(self):
+        with self.assertRaises(ValueError):
+            plot.add_position(
+                plt.subplots(1)[1], generate_ts(64.0, 100, tensor_order=1), units="m"
+            )
         plt.close("all")
 
 
