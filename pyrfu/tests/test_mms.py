@@ -3185,7 +3185,13 @@ class TokenizeTestCase(unittest.TestCase):
 class ListFilesTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_list_files(self, var_str):
-        mms.list_files(TEST_TINT, random.randint(1, 4), mms.tokenize(var_str))
+        # Empty data directory, independent of the user's configuration
+        with tempfile.TemporaryDirectory() as root:
+            result = mms.list_files(
+                TEST_TINT, random.randint(1, 4), mms.tokenize(var_str), root
+            )
+
+        self.assertListEqual(result, [])
 
     @staticmethod
     def _touch(root, rel_dir, names):
@@ -3264,7 +3270,13 @@ class ListFilesSdcTestCase(unittest.TestCase):
 class ListFilesAncillaryTestCase(unittest.TestCase):
     @data("predatt", "predeph", "defatt", "defeph")
     def test_list_files_ancillary(self, product):
-        mms.list_files_ancillary(TEST_TINT, random.randint(1, 4), product)
+        # Empty data directory, independent of the user's configuration
+        with tempfile.TemporaryDirectory() as root:
+            result = mms.list_files_ancillary(
+                TEST_TINT, random.randint(1, 4), product, root
+            )
+
+        self.assertListEqual(result, [])
 
 
 @ddt
