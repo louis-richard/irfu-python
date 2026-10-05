@@ -3180,6 +3180,23 @@ class TokenizeTestCase(unittest.TestCase):
         result = mms.tokenize(var_str)
         self.assertIsInstance(result, dict)
 
+    def test_tokenize_values(self):
+        result = mms.tokenize("b_gse_fgm_brst_l2")
+        self.assertEqual(result["inst"], "fgm")
+        self.assertEqual(result["cdf_name"], "fgm_b_gse_brst_l2")
+
+    @data(
+        "tsi_fpi_brst_l2",
+        "qe_gse_fpi_brst_l2",
+        "phplus_dbcs_hpca_brst_l2",
+        "e_dsl_edi_srvy_l2",
+        "energye_fpi_fast_ql",
+    )
+    def test_tokenize_unsupported(self, var_str):
+        # Valid parts, but not in mms_keys.json: a clear ValueError, not KeyError
+        with self.assertRaisesRegex(ValueError, "not supported"):
+            mms.tokenize(var_str)
+
 
 @ddt
 class ListFilesTestCase(unittest.TestCase):
