@@ -8,11 +8,12 @@ import unittest
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from ddt import data, ddt
+from ddt import data, ddt, unpack
 
 # Local imports
 from .. import dispersion
 from ..dispersion.disp_surf_calc import _calc_b, _calc_diel, _calc_e, _calc_vei
+from ..dispersion.one_fluid_dispersion import _disprel
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -87,6 +88,55 @@ class OneFluidDispersionTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], xr.DataArray)
         self.assertIsInstance(result[1], xr.DataArray)
         self.assertIsInstance(result[2], xr.DataArray)
+
+    @data(
+        ({"n": 10e6, "t": 10.0, "gamma": 1.0}, {"n": 10e6, "t": 10.0, "gamma": 1.0}),
+        (
+            {"n": 10e6, "t": 1e3, "gamma": 5 / 3},
+            {"n": 10e6, "t": 200.0, "gamma": 5 / 3},
+        ),
+    )
+    @unpack
+    def test_one_fluid_dispersion_branches(self, ions, electrons):
+        for theta in [5.0, 30.0, 55.0, 85.0]:
+            wc_1, wc_2, wc_3 = dispersion.one_fluid_dispersion(
+                10e-9, theta, ions, electrons
+            )
+            k, (v_a, c_s, wc_e, wc_p) = [
+                wc_1.k.data,
+                [wc_1.attrs[key] for key in ["v_a", "c_s", "wc_e", "wc_p"]],
+            ]
+
+            # Three distinct branches, sorted
+            self.assertTrue(np.all(wc_1.data > wc_2.data))
+            self.assertTrue(np.all(wc_2.data > wc_3.data))
+
+            # Roots of the dispersion relation (relative to its terms)
+            for w_c in [wc_1.data, wc_2.data, wc_3.data]:
+                res = _disprel(w_c, k, theta, v_a, c_s, wc_e, wc_p)
+                scale = (1 + w_c**2 / (k * v_a) ** 2 + w_c**2 / (wc_e * wc_p)) ** 2
+                np.testing.assert_array_less(np.abs(res) / scale, 1e-9)
+
+            # Fast, Alfven and slow ideal MHD phase speeds at small k
+            cos2 = np.cos(np.deg2rad(theta)) ** 2
+            v_2, d_v2 = [v_a**2 + c_s**2, 4 * v_a**2 * c_s**2 * cos2]
+            v_mhd = [
+                np.sqrt((v_2 + np.sqrt(v_2**2 - d_v2)) / 2),
+                v_a * np.sqrt(cos2),
+                np.sqrt((v_2 - np.sqrt(v_2**2 - d_v2)) / 2),
+            ]
+            for w_c, v_ph in zip([wc_1, wc_2, wc_3], v_mhd):
+                self.assertAlmostEqual(float(w_c[0]) / k[0] / v_ph, 1.0, delta=1e-2)
+
+    def test_one_fluid_dispersion_parallel(self):
+        # At theta = 0, the sound wave decouples from the two circularly
+        # polarized waves
+        ions = {"n": 10e6, "t": 10.0, "gamma": 1.0}
+        result = dispersion.one_fluid_dispersion(10e-9, 0.0, ions, ions)
+        w_c = np.stack([wc_.data for wc_ in result])
+        k, c_s = [result[0].k.data, result[0].attrs["c_s"]]
+        is_sound = np.isclose(w_c, k * c_s, rtol=1e-8)
+        np.testing.assert_array_equal(np.sum(is_sound, axis=0), 1)
 
 
 if __name__ == "__main__":
