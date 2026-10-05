@@ -174,6 +174,38 @@ class OneFluidDispersionTestCase(unittest.TestCase):
             for w_c, v_ph in zip([wc_1, wc_2, wc_3], v_mhd):
                 self.assertAlmostEqual(float(w_c[0]) / k[0] / v_ph, 1.0, delta=1e-2)
 
+    @data(
+        (10e-9, {"n": 10e6, "t": 10.0, "gamma": 1.0}),
+        (50e-9, {"n": 1e6, "t": 100.0, "gamma": 5 / 3}),
+    )
+    @unpack
+    def test_one_fluid_dispersion_k_range(self, b_0, ions):
+        # Default range in units of the ion inertial length V_A / wc_p
+        wc_1 = dispersion.one_fluid_dispersion(b_0, 30.0, ions, ions, 50)[0]
+        k_vec, v_a, wc_p = [wc_1.k.data, wc_1.attrs["v_a"], wc_1.attrs["wc_p"]]
+        self.assertEqual(len(k_vec), 50)
+        self.assertAlmostEqual(k_vec[0] * v_a / wc_p, 0.0144, places=12)
+        self.assertAlmostEqual(k_vec[-1] * v_a / wc_p, 7.2, places=12)
+
+        # Given wavenumbers, same roots as the default range
+        result = dispersion.one_fluid_dispersion(
+            b_0, 30.0, ions, ions, k_vec=k_vec[[0, 10, -1]]
+        )
+        np.testing.assert_array_equal(result[0].k.data, k_vec[[0, 10, -1]])
+        np.testing.assert_allclose(result[0].data, wc_1.data[[0, 10, -1]])
+
+    def test_one_fluid_dispersion_k_vec_notebook(self):
+        # The default range is 2e-7 to 1e-4 m^-1 for 10 nT and 10 cm^-3
+        ions = {"n": 10e6, "t": 10.0, "gamma": 1.0}
+        wc_1 = dispersion.one_fluid_dispersion(10e-9, 30.0, ions, ions)[0]
+        np.testing.assert_allclose(wc_1.k.data[[0, -1]], [2e-7, 1e-4], rtol=2e-4)
+
+    @data([0.0, 1e-5], [-1e-5], 0.0)
+    def test_one_fluid_dispersion_k_vec_input(self, k_vec):
+        ions = {"n": 10e6, "t": 10.0, "gamma": 1.0}
+        with self.assertRaises(ValueError):
+            dispersion.one_fluid_dispersion(10e-9, 30.0, ions, ions, k_vec=k_vec)
+
     def test_one_fluid_dispersion_parallel(self):
         # At theta = 0, the sound wave decouples from the two circularly
         # polarized waves

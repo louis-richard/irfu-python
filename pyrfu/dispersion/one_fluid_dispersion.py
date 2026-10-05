@@ -59,33 +59,40 @@ def _disprel_roots(k, theta, v_a, c_s, wc_e, wc_p):
     return w_roots
 
 
-def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100):
+def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100, k_vec=None):
     r"""Solves the one fluid dispersion relation.
 
     Parameters
     ----------
     b_0 : float
-        Magnetic field
+        Magnetic field in T.
 
     theta : float
         The angle of propagation of the wave with respect to the magnetic
         field, :math:`\cos^{-1}(k_z / k)`, in degrees.
 
     ions : dict
-        Hash table with n : number density, t: temperature, gamma:
-        polytropic index.
+        Hash table with n : number density in m^-3, t: temperature in eV,
+        gamma: polytropic index.
 
     electrons : dict
-        Hash table with n : number density, t: temperature, gamma:
-        polytropic index.
+        Hash table with n : number density in m^-3, t: temperature in eV,
+        gamma: polytropic index.
 
     n_k : int, optional
-        Number of wavenumbers.
+        Number of wavenumbers, from :math:`0.0144 \Omega_{p} / V_A` to
+        :math:`7.2 \Omega_{p} / V_A`. Default is 100. Not used if `k_vec` is
+        given.
+
+    k_vec : array_like, optional
+        Wavenumbers in m^-1, all positive. Default is `n_k` wavenumbers from
+        :math:`0.0144 \Omega_{p} / V_A` to :math:`7.2 \Omega_{p} / V_A`.
 
     Returns
     -------
     wc_1 : xarray.DataArray
-        Largest root (fast/whistler branch).
+        Largest root (fast/whistler branch), angular frequency in rad/s as a
+        function of the wavenumber k in m^-1.
 
     wc_2 : xarray.DataArray
         Intermediate root (Alfven/ion cyclotron branch).
@@ -99,6 +106,11 @@ def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100):
     :math:`\omega^2`, sorted so that wc_1 >= wc_2 >= wc_3 at every k. At
     small angles, the sound wave crosses the other branches, so it changes
     from one output to another at the crossings.
+
+    Raises
+    ------
+    ValueError
+        If `k_vec` has non-positive values.
 
     """
 
@@ -124,7 +136,15 @@ def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100):
     v_a = b_0 / np.sqrt(mu_0 * n_p * m_p)
     c_s = np.sqrt((gamma_e * q_e * t_e + gamma_p * q_e * t_p) / (m_e + m_p))
 
-    k_vec = np.linspace(2e-7, 1.0e-4, n_k)
+    if k_vec is None:
+        # k V_A / wc_p from 0.0144 to 7.2 (2e-7 to 1e-4 m^-1 for 10 nT and
+        # 10 cm^-3)
+        k_vec = np.linspace(0.002, 1.0, n_k) * 7.2 * wc_p / v_a
+    else:
+        k_vec = np.atleast_1d(np.asarray(k_vec, dtype=np.float64))
+
+        if np.any(k_vec <= 0):
+            raise ValueError("k_vec must be positive")
 
     w_roots = np.stack(
         [_disprel_roots(k, theta, v_a, c_s, wc_e, wc_p) for k in k_vec],
