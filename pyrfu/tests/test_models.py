@@ -104,6 +104,24 @@ class MagnetopauseNormalTestCase(unittest.TestCase):
         self.assertEqual(result_bs[0], result_bs97[0])
         np.testing.assert_array_equal(result_bs[1], result_bs97[1])
 
+    def test_magnetopause_normal_bow_shock_values(self):
+        # The normal is rotated about the x axis with the position, including
+        # in the z = 0 plane and on the x axis.
+        n_vec_0 = [0.99479552, 0.10189149]
+        for r_gsm, n_vec in [
+            ([20.0, 0.0, 3.0], [n_vec_0[0], 0.0, n_vec_0[1]]),
+            ([20.0, 3.0, 0.0], [n_vec_0[0], n_vec_0[1], 0.0]),
+            ([20.0, 0.0, -3.0], [n_vec_0[0], 0.0, -n_vec_0[1]]),
+            ([20.0, -1.8, 2.4], [n_vec_0[0], -0.6 * n_vec_0[1], 0.8 * n_vec_0[1]]),
+        ]:
+            result = models.magnetopause_normal(np.array(r_gsm), -2.0, 2.0, "bs")
+            self.assertAlmostEqual(result[0], -6.654952, places=5)
+            np.testing.assert_allclose(result[1], n_vec, atol=1e-7)
+
+        result = models.magnetopause_normal(np.array([20.0, 0.0, 0.0]), -2.0, 2.0, "bs")
+        self.assertAlmostEqual(result[0], -6.501315, places=5)
+        np.testing.assert_allclose(result[1], [1.0, 0.0, 0.0], atol=1e-7)
+
 
 if __name__ == "__main__":
     unittest.main()

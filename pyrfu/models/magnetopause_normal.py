@@ -186,9 +186,10 @@ def magnetopause_normal(
         x_n = d_min[0] / np.linalg.norm(d_min)
         min_dist = np.sqrt(min_val)
 
-        qyz = r1_y / r1_z
-        z_n = np.sign(r1_z) * np.sign(x_n) * np.sqrt((1 - x_n**2) / (1 + qyz**2))
-        y_n = z_n * qyz
+        # irfu-matlab uses y / z here, which is NaN for z = 0
+        phi = np.arctan2(r1_z, r1_y)
+        rho_n = np.sign(x_n) * np.sqrt(1 - x_n**2)
+        y_n, z_n = [np.cos(phi) * rho_n, np.sin(phi) * rho_n]
 
         n_vec = np.stack([x_n, y_n, z_n])
 
