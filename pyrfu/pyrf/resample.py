@@ -17,6 +17,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _guess_sampling_frequency(ref_time):
     r"""Sampling frequency of the time line (in seconds), from the median time
@@ -126,7 +128,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
             if len(inp_time) / (inp_time[-1] - inp_time[0]) > 2 * sfy:
                 flag_do = "average"
                 if verbose:
-                    logging.info("Using averages in resample")
+                    logger.info("Using averages in resample")
             else:
                 flag_do = "interpolation"
         else:

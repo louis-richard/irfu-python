@@ -26,6 +26,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def lh_wave_analysis(
     tints,
@@ -186,7 +188,7 @@ def lh_wave_analysis(
     corr_vpos = np.argmin(corr_v)
 
     if corr_vpos == len(vph_vec) - 1:
-        logging.warning(
+        logger.warning(
             "Wave speed > vmax = %g km/s. Increase search interval using vmax.",
             vmax,
         )

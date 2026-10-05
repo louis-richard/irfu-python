@@ -22,6 +22,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 # Default configuration distributed with the package
 _PACKAGE_CFG_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "config.json"
@@ -83,7 +85,7 @@ def _set_password(username: str, password: str) -> None:
     plaintext = PlaintextKeyring()
 
     if secure is not None:
-        logging.info("Updating MMS SDC credentials in the system keyring...")
+        logger.info("Updating MMS SDC credentials in the system keyring...")
         secure.set_password(SDC_SERVICE, username, password)
 
         # Remove the copy saved in plain text by previous versions
@@ -92,7 +94,7 @@ def _set_password(username: str, password: str) -> None:
         except keyring.errors.PasswordDeleteError:
             pass
     else:
-        logging.warning(
+        logger.warning(
             "No system keyring available: MMS SDC credentials saved in plain text "
             "in %s",
             plaintext.file_path,
@@ -166,7 +168,7 @@ def db_init(
         "aws": aws,
     }
 
-    logging.info("Updating MMS data access configuration in %s...", MMS_CFG_PATH)
+    logger.info("Updating MMS data access configuration in %s...", MMS_CFG_PATH)
 
     # Overwrite the configuration file with the new path
     with open(MMS_CFG_PATH, "w", encoding="utf-8") as fs:

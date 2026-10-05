@@ -23,6 +23,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _make_path_local(
     file: dict, var: dict, mms_id: Union[str, int], data_path: Optional[str] = ""
@@ -138,7 +140,7 @@ def download_data(
     for file in files_in_interval:
         out_file = _make_path_local(file, var, mms_id, data_path)
 
-        logging.info(
+        logger.info(
             "Downloading %s from %s...", os.path.basename(out_file), file["url"]
         )
 

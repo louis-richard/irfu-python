@@ -27,6 +27,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 
@@ -197,7 +199,7 @@ def rotate_tensor(
                 abs(np.rad2deg(np.arccos(np.dot(r_y, vec[:, 0])))) > 1.0
                 or abs(np.rad2deg(np.arccos(np.dot(r_z, vec[:, 2])))) > 1.0
             ):
-                logging.warning(
+                logger.warning(
                     "The new coordinate system has been changed to be right handed "
                     "orthogonal.",
                 )
@@ -251,10 +253,10 @@ def rotate_tensor(
 
     if perp.lower() == "" or rot_flag.lower() in ["gse", "gsm"]:
         # maybe also add "rot" here??
-        logging.info("No additional rotation applied.")
+        logger.info("No additional rotation applied.")
     elif perp.lower() == "pp":
         if verbose:
-            logging.info(
+            logger.info(
                 "Applying additional rotation to make the perpendicular components "
                 "most equal"
             )
@@ -280,7 +282,7 @@ def rotate_tensor(
     elif perp.lower() == "qq":
 
         if verbose:
-            logging.info(
+            logger.info(
                 "Applying additional rotation to make the perpendicular components "
                 "most unequal"
             )

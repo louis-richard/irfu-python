@@ -16,6 +16,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 surface_materials = [
     "cluster",
@@ -81,9 +83,7 @@ def photo_current(
     if not iluminated_area and not u and not distance_sun:
         for surf in surface_materials:
             j0 = photo_current(1, 0, 1, surf)
-            logging.info(
-                "%(surf)s: Io= %(i0)3.2f uA/m2", {"surf": surf, "i0": j0 * 1e6}
-            )
+            logger.info("%(surf)s: Io= %(i0)3.2f uA/m2", {"surf": surf, "i0": j0 * 1e6})
 
         return None
 

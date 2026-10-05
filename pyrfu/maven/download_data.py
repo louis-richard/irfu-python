@@ -22,6 +22,8 @@ __license__ = "MIT"
 __version__ = "2.4.10"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 LASP_PUBL = "https://lasp.colorado.edu/maven/sdc/public/files/api/v1/"
 
 
@@ -133,7 +135,7 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         lasp_url = LASP_PUBL
     else:
         lasp_url = LASP_PUBL
-        logging.info("login not impleted. Use public instead")
+        logger.info("login not impleted. Use public instead")
 
     sdc_session = _login_lasp(login, password)
 
@@ -153,7 +155,7 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         plan = out_file.split("/")[-1].split("_")[3][7:]
         if plan == var["plan"] and out_file[-3:] == "sts":
 
-            logging.info(
+            logger.info(
                 "Downloading %s from %s...", os.path.basename(out_file), dwl_url
             )
 

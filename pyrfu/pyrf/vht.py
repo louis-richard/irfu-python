@@ -17,6 +17,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def vht(e, b, no_ez: bool = False):
     r"""Estimate velocity of the De Hoffman-Teller frame from the velocity
@@ -95,7 +97,7 @@ def vht(e, b, no_ez: bool = False):
 
     v_ht_hat = v_ht / np.linalg.norm(v_ht, keepdims=True)
 
-    logging.info(
+    logger.info(
         "v_ht =%(v_mag)7.4f * %(v_vec)s km/s",
         {"v_mag": np.linalg.norm(v_ht), "v_vec": np.array_str(v_ht_hat)},
     )
@@ -112,7 +114,7 @@ def vht(e, b, no_ez: bool = False):
     poly_fit = np.polyfit(e_ht_p.ravel(), e_v.ravel(), 1)
     corr_coeff = np.corrcoef(e_ht_p.ravel(), e_v.ravel())
 
-    logging.info(
+    logger.info(
         "slope = %(slope)6.4f, offs = %(offset)6.4f, cc = %(cc)6.4f",
         {"slope": poly_fit[0], "offset": poly_fit[1], "cc": corr_coeff[0, 1]},
     )
@@ -123,7 +125,7 @@ def vht(e, b, no_ez: bool = False):
 
     dv_ht_hat = dv_ht / np.linalg.norm(dv_ht)
 
-    logging.info(
+    logger.info(
         "dv_ht =%(dv_mag)7.4f * %(dv_vec)s km/s",
         {"dv_mag": np.linalg.norm(dv_ht), "dv_vec": np.array_str(dv_ht_hat)},
     )

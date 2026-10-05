@@ -28,6 +28,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
     assert e_xyz is not None
@@ -45,13 +47,13 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             b_bgd = resample(b_bgd, db_xyz, **resample_b_options)
 
             fs_ = fs_b
-            logging.info("Interpolating e to b")
+            logger.info("Interpolating e to b")
         elif fs_e > 1.5 * fs_b:
             db_xyz = resample(db_xyz, e_xyz)
             b_bgd = resample(b_bgd, e_xyz)
 
             fs_ = fs_e
-            logging.info("Interpolating b to e")
+            logger.info("Interpolating b to e")
         elif fs_e == fs_b and len(e_xyz) == len(db_xyz):
             fs_ = fs_e
         else:
@@ -80,7 +82,7 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             b_xyz = resample(b_xyz, t)
             db_xyz = resample(db_xyz, t)
 
-            logging.info("Interpolating b and e to 2x e sampling")
+            logger.info("Interpolating b and e to 2x e sampling")
 
     return e_xyz, db_xyz, b_xyz, b_bgd, fs_
 
@@ -407,7 +409,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     if flag_want_fac and fac_matrix is None:
         if xyz is None:
-            logging.info(
+            logger.info(
                 "convert_fac : assuming s/c position [1 0 0] for estimating FAC"
             )
             xyz = [1, 0, 0]
@@ -543,7 +545,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     sw_e, sw_eisr2 = [None, None]
 
     if want_ee:
-        logging.info("ebsp ... calculate E and B wavelet transform ... ")
+        logger.info("ebsp ... calculate E and B wavelet transform ... ")
         e_data = np.where(idx_nan_e, 0.0, e_xyz.data)
 
         sw_e = fft.fft(e_data, axis=0, workers=os.cpu_count())
@@ -553,7 +555,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
             sw_eisr2 = fft.fft(eisr2_data, axis=0, workers=os.cpu_count())
     else:
-        logging.info("ebsp ... calculate B wavelet transform ....")
+        logger.info("ebsp ... calculate B wavelet transform ....")
 
     # Loop through all frequencies
     n_data, n_freq, n_data_out = [len(in_time), len(a_), len(out_time)]

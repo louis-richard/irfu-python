@@ -17,6 +17,8 @@ __status__ = "Prototype"
 
 __all__ = ["shock_parameters"]
 
+logger = logging.getLogger(__name__)
+
 
 def shock_parameters(spec):
     r"""Calculate shock related plasma parameters.
@@ -48,11 +50,11 @@ def shock_parameters(spec):
 
     if spec["ref_sys"].lower() == "nif":
         if "nvec" not in spec:
-            logging.warning("Setting shock speed, nvec to [1, 0, 0]")
+            logger.warning("Setting shock speed, nvec to [1, 0, 0]")
             spec["nvec"] = np.array([1, 0, 0])
 
         if "v_sh" not in spec:
-            logging.warning("Setting shock speed, Vsh, to 0.")
+            logger.warning("Setting shock speed, Vsh, to 0.")
             spec["v_sh"] = 0.0
 
     dspec = {}

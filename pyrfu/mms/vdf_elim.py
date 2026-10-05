@@ -17,6 +17,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def vdf_elim(vdf, e_int):
     r"""Limits the skymap distribution to the selected energy range.
@@ -57,7 +59,7 @@ def vdf_elim(vdf, e_int):
         e_levels = list(e_levels.astype(np.int64))
         e_min = np.min(energy.data[:, e_levels])
         e_max = np.max(energy.data[:, e_levels])
-        logging.info(
+        logger.info(
             "Effective eint = [%(e_min)5.2f, %(e_max)5.2f]",
             {"e_min": e_min, "e_max": e_max},
         )
@@ -74,7 +76,7 @@ def vdf_elim(vdf, e_int):
             e_diff = e_diff1
 
         e_levels = int(np.where(e_diff == np.min(e_diff))[0][0])
-        logging.info(
+        logger.info(
             "Effective energies alternate in time between %(e0)5.2f and %(e1)5.2f",
             {"e0": energy.data[0, e_levels], "e1": energy.data[1, e_levels]},
         )

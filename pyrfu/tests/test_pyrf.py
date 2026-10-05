@@ -5,9 +5,12 @@
 import builtins
 import datetime
 import itertools
+import logging
 import math
 import os
 import random
+import subprocess
+import sys
 import unittest
 import warnings
 from unittest import mock
@@ -4996,6 +4999,16 @@ class VhtValuesTestCase(unittest.TestCase):
             )
             np.testing.assert_allclose(result, v_ht, rtol=1e-12)
 
+    def test_vht_logs(self):
+        # The summary goes to the module logger, under the pyrfu logger
+        time, b_xyz, _, e_xyz = _ht_frame()
+
+        with self.assertLogs("pyrfu.pyrf.vht", level="INFO") as logs:
+            pyrf.vht(pyrf.ts_vec_xyz(time, e_xyz), pyrf.ts_vec_xyz(time, b_xyz))
+
+        self.assertEqual(len(logs.records), 3)
+        self.assertTrue(logs.records[1].getMessage().startswith("slope = "))
+
     def test_vht_error_estimate(self):
         # With white noise of variance sigma^2 in each component perpendicular to
         # B, v_ht = K^-1 <E x B> has covariance sigma^2 / M K^-1, which the
@@ -5022,6 +5035,34 @@ class VhtValuesTestCase(unittest.TestCase):
 
         np.testing.assert_allclose(np.mean(dv_hts, axis=0), expected, rtol=0.05)
         np.testing.assert_allclose(np.std(v_hts, axis=0), expected, rtol=0.15)
+
+
+class PyrfuLoggingTestCase(unittest.TestCase):
+    def test_import_leaves_root_logger_and_warnings(self):
+        # In a fresh interpreter, as the test runner configures logging itself
+        code = "\n".join(
+            [
+                "import logging, warnings",
+                "show_warning = warnings.showwarning",
+                "import pyrfu",
+                "root, logger = logging.getLogger(), logging.getLogger('pyrfu')",
+                "print(len(root.handlers), root.level)",
+                "print(warnings.showwarning is show_warning)",
+                "print(len(logger.handlers), logger.level, logger.propagate)",
+            ],
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            check=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            text=True,
+        )
+        lines = result.stdout.splitlines()[-3:]
+
+        self.assertEqual(lines[0], f"0 {logging.WARNING}")
+        self.assertEqual(lines[1], "True")
+        self.assertEqual(lines[2], f"1 {logging.INFO} False")
 
 
 class NormalizeTestCase(unittest.TestCase):

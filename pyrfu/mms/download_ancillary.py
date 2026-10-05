@@ -23,6 +23,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
@@ -113,7 +115,7 @@ def download_ancillary(
         # Create local path following tree structure for the CDF files
         out_file = _make_path_local(file, product, mms_id, data_path)
 
-        logging.info(
+        logger.info(
             "Downloading %s from %s...", os.path.basename(out_file), file["url"]
         )
 

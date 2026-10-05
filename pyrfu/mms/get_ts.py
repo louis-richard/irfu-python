@@ -26,6 +26,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _shift_epochs(file, epoch):
     r"""Shift times for particles."""
@@ -83,7 +85,7 @@ def _shift_epochs(file, epoch):
             if not np.isnat(t_diff_data) and t_diff_data != np.mean(t_diff):
                 mismatch = np.abs(t_diff_data - np.mean(t_diff)) / t_diff_data
                 if mismatch > 0.01:
-                    logging.warning(
+                    logger.warning(
                         "Epoch delta variables (half width %s) do not match the "
                         "sampling time (half %s), assume the latter",
                         np.mean(t_diff),

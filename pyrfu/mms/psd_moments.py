@@ -23,6 +23,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 @numba.njit(cache=True, fastmath=False, nogil=True, parallel=True)
 def _sanitize_nan_inplace(vdf):
@@ -244,10 +246,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # Check if data is fast or burst resolution
     if "brst" in vdf.data.attrs["FIELDNAM"].lower():
         is_brst_data = True
-        logging.info("Burst resolution data is used")
+        logger.info("Burst resolution data is used")
     elif "fast" in vdf.data.attrs["FIELDNAM"].lower():
         is_brst_data = False
-        logging.info("Fast resolution data is used")
+        logger.info("Fast resolution data is used")
     else:
         raise TypeError("Could not identify if data is fast or burst.")
 
@@ -273,12 +275,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
             isinstance(kwargs["energy_range"], (list, np.ndarray))
             and len(kwargs["energy_range"]) == 2
         ):
-            logging.info("Using partial energy range")
+            logger.info("Using partial energy range")
 
     no_sc_pot = kwargs.get("no_sc_pot", False)
     if no_sc_pot:
         sc_pot = np.zeros(sc_pot.shape)
-        logging.info("Setting spacecraft potential to zero")
+        logger.info("Setting spacecraft potential to zero")
 
     int_energies = np.arange(
         kwargs.get("en_channels", [0, 32])[0],
@@ -293,17 +295,17 @@ def psd_moments(vdf, sc_pot, **kwargs):
         # Check size of partial_moments
         if partial_moments.shape == vdf_data.shape:
             if np.isin(partial_moments, [0, 1]).all():
-                logging.info(
+                logger.info(
                     "partial_moments is correct. Partial moments will be calculated"
                 )
                 vdf_data = vdf_data * partial_moments
             else:
-                logging.info(
+                logger.info(
                     "All values are not ones and zeros in partial_moments. "
                     "Full moments will be calculated"
                 )
         else:
-            logging.info(
+            logger.info(
                 "Size of partial_moments is wrong. Full moments will be calculated"
             )
 
@@ -316,11 +318,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     if particle_type[0] == "e":
         p_mass = constants.electron_mass
-        logging.info("Particles are electrons")
+        logger.info("Particles are electrons")
     else:
         p_mass = constants.proton_mass
         sc_pot *= -1.0
-        logging.info("Particles are ions")
+        logger.info("Particles are ions")
 
     # angle between theta and phi points is 360/32 = 11.25 degrees
     phi = vdf.phi.data

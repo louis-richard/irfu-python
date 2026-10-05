@@ -20,6 +20,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def db_get_variable(
     dataset_name: str,
@@ -72,7 +74,7 @@ def db_get_variable(
         raise FileNotFoundError(f"No files found for {cdf_name} in {resource}")
 
     if verbose:
-        logging.info("Loading %s...", cdf_name)
+        logger.info("Loading %s...", cdf_name)
 
     file_content = _get_file_content_sources(
         resource, file_names[0], sdc_session, headers

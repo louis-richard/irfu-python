@@ -24,9 +24,19 @@ __all__ = [
     "pyrf",
 ]
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+# Show the messages of pyrfu (INFO and above) without configuring the root
+# logger, which belongs to the application. Silence them with
+# logging.getLogger("pyrfu").setLevel(logging.WARNING).
+_logger = logging.getLogger(__name__)
+
+if not _logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(
+        logging.Formatter(
+            fmt="[%(asctime)s] %(levelname)s: %(message)s",
+            datefmt="%d-%b-%y %H:%M:%S",
+        ),
+    )
+    _logger.addHandler(_handler)
+    _logger.setLevel(logging.INFO)
+    _logger.propagate = False

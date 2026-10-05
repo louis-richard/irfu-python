@@ -25,6 +25,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, list):
     x_vec = coord_sys[0, :] / np.linalg.norm(coord_sys[0, :])
@@ -40,7 +42,7 @@ def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, li
         old_vec = coord_sys[i, :] / np.linalg.norm(coord_sys[i, :])
         cos_angle = np.clip(np.dot(vec, old_vec), -1.0, 1.0)
         if np.rad2deg(np.arccos(cos_angle)) > 1.0:
-            logging.warning(
+            logger.warning(
                 "In making xyz a right handed orthogonal coordinate system, %(comp)s "
                 "(in-plane %(i)d) was changed from %(x_old)s to %(x_new)s. Please "
                 "verify that this is according to your intentions.",
@@ -118,7 +120,7 @@ def _init(vdf: Dataset, tint: list):
         azimuthal = azimuthal.data
 
         if len(dist.time) > 1 and list(energy0) != list(energy1):
-            logging.info("Rebinning distribution.")
+            logger.info("Rebinning distribution.")
             temp = ts_skymap(
                 dist.time.data,
                 dist.data,

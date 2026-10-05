@@ -29,6 +29,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _models_url(lasp_url: str) -> str:
     r"""URL of the FPI model files for the SDC access level of `lasp_url`."""
@@ -79,7 +81,7 @@ def _load_bgdist_model(file_name: str, source: str, data_path: str):
             response = _s3_resource().Object(bucket_name, key).get()
             return pycdfpp.load(response["Body"].read())
         except ClientError as err:
-            logging.warning(
+            logger.warning(
                 "FPI model file s3://%s/%s not available (%s), reading it from the SDC",
                 bucket_name,
                 key,
@@ -154,10 +156,10 @@ def remove_edist_background(
     # Get data sample rate from VDF metadata
     if "brst" in vdf.data.attrs["FIELDNAM"].lower():
         data_rate = "brst"
-        logging.info("Burst resolution data is used")
+        logger.info("Burst resolution data is used")
     elif "fast" in vdf.data.attrs["FIELDNAM"].lower():
         data_rate = "fast"
-        logging.info("Fast resolution data is used")
+        logger.info("Fast resolution data is used")
     else:
         raise TypeError("Could not identify if data is fast or burst.")
 

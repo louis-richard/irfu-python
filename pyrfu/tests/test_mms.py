@@ -507,7 +507,7 @@ class DbInitCredentialsTestCase(unittest.TestCase):
     def test_db_init_no_system_keyring(self):
         # Without system keyring, saved in plain text with a warning
         system = _MemoryKeyring(0)
-        with self.assertLogs(level="WARNING"):
+        with self.assertLogs("pyrfu", level="WARNING"):
             credential = self._db_init(system, sdc_username="louis", sdc_password="pw")
 
         self.assertEqual(credential.password, "pw")
@@ -1158,7 +1158,7 @@ class LhWaveAnalysisTestCase(unittest.TestCase):
 
     def test_lh_wave_analysis_vmax(self):
         tints, e_xyz, b_scm, b_xyz, n_e, _ = _lh_wave(1200.0, np.deg2rad(30.0))
-        with self.assertLogs(level="WARNING"):
+        with self.assertLogs("pyrfu", level="WARNING"):
             _, v_best, _, _, _ = mms.lh_wave_analysis(
                 tints, e_xyz, b_scm, b_xyz, n_e, min_freq=10.0, vmax=500.0
             )
@@ -2066,14 +2066,14 @@ class GetDataDownloadTestCase(unittest.TestCase):
             "GetObject",
         )
 
-        with self.assertLogs(level="ERROR"), self.assertRaises(ClientError):
+        with self.assertLogs("pyrfu", level="ERROR"), self.assertRaises(ClientError):
             self.module._get_file_content_sources("aws", s3_object)
 
     def test_get_file_content_sdc_error(self):
         session = mock.Mock()
         session.get.side_effect = requests.ConnectionError("connection reset")
 
-        with self.assertLogs(level="ERROR"):
+        with self.assertLogs("pyrfu", level="ERROR"):
             with self.assertRaises(requests.ConnectionError):
                 self.module._get_file_content_sources("sdc", "url", session, {})
 
@@ -2103,7 +2103,11 @@ class GetDataDownloadTestCase(unittest.TestCase):
             self.module, "_list_files_sources", return_value=sources
         ):
             with self.assertRaises((FileNotFoundError, requests.ConnectionError)):
-                with self.assertLogs(level="ERROR") if file_names else nullcontext():
+                with (
+                    self.assertLogs("pyrfu", level="ERROR")
+                    if file_names
+                    else nullcontext()
+                ):
                     mms.get_data("b_gse_fgm_srvy_l2", tint, 1, source="sdc")
 
         session.close.assert_not_called()  # shared, cached session
@@ -2349,7 +2353,7 @@ class GetTsTestCase(unittest.TestCase):
         if d_minus + d_plus == 30.0 or n_records == 1:
             result = get_ts(content, "mms1_des_numberdensity_brst")
         else:
-            with self.assertLogs(level="WARNING"):
+            with self.assertLogs("pyrfu", level="WARNING"):
                 result = get_ts(content, "mms1_des_numberdensity_brst")
 
         np.testing.assert_array_equal(
@@ -2771,7 +2775,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
             {"Error": {"Code": "NoSuchKey"}}, "GetObject"
         )
 
-        with self.assertLogs(level="WARNING"):
+        with self.assertLogs("pyrfu", level="WARNING"):
             session, load = self._load_from_sdc("aws", s3_resource)
 
         load.assert_called_once_with(b"sdc cdf bytes")

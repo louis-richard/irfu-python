@@ -19,6 +19,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 # Smoothing profile of the spectral matrix in frequency: normalised 7 points
 # Hamming window, of which irfu-matlab uses the values rounded to 3 decimals
 # (0.024, 0.093, 0.232, 0.301, ...), as pyspedas wavpol
@@ -174,7 +176,7 @@ def wavepolarize_means(
     samp_freq = 1 / d_t[0]
 
     if not np.isclose(d_t[0], d_t[-1]):
-        logging.warning(
+        logger.warning(
             "file sampling frequency changes %g Hz to %g Hz", samp_freq, 1 / d_t[-1]
         )
 

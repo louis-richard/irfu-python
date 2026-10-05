@@ -16,6 +16,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def psd(
     inp,
@@ -82,7 +84,7 @@ def psd(
 
     if n_fft < n_persegs:
         n_fft = n_persegs
-        logging.warning("nfft < n_persegs. set to n_persegs")
+        logger.warning("nfft < n_persegs. set to n_persegs")
 
     f_samp = 1e9 / np.median(np.diff(inp.time.data)).astype(np.float64)
 

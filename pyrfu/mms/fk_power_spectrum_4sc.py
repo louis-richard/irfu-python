@@ -24,6 +24,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 @numba.njit(cache=True, fastmath=True, nogil=True, parallel=True)
 def _bin_power_vs_f(k_x, k_y, k_z, k_mag, power_avg, k_min, dk, dk_mag, num_k):
@@ -439,7 +441,7 @@ def fk_power_spectrum_4sc(
     dk = 2 * k_max / num_k
 
     # Sort power into frequency and wave vector
-    logging.info("Computing power versus (kx,f); (ky,f), (kz,f), (k,f)")
+    logger.info("Computing power versus (kx,f); (ky,f), (kz,f), (k,f)")
     power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f = _bin_power_vs_f(
         k_x, k_y, k_z, k_mag, power_avg, k_min, dk, dk_mag, num_k
     )
@@ -462,7 +464,7 @@ def fk_power_spectrum_4sc(
     n_threads = numba.get_num_threads()
 
     # Sort power into wave vector space for k_x, k_y; k_x, k_z; k_y, k_z
-    logging.info("Computing power versus (kx,ky); (kx,kz); (ky,kz)")
+    logger.info("Computing power versus (kx,ky); (kx,kz); (ky,kz)")
     power_k_x_k_y, power_k_x_k_z, power_k_y_k_z = _bin_power_2d_xyz(
         k_x, k_y, k_z, power_avg, idx_f, k_min, dk, num_k, n_threads
     )
@@ -473,7 +475,7 @@ def fk_power_spectrum_4sc(
     power_k_y_k_z /= np.max(power_k_y_k_z)
 
     # Sort power into wave vector space for k_perp, k_para
-    logging.info("Computing power versus kperp,kpara")
+    logger.info("Computing power versus kperp,kpara")
     power_k_perp_k_para = _bin_power_kperp_kpara(
         k_para, k_perp, power_avg, idx_f, k_min, dk, dk_mag, num_k, n_threads
     )

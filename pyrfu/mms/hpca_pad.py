@@ -23,6 +23,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _hpca_elevations(vdf, source: str = "default", data_path: str = ""):
     r"""Polar angles (colatitudes) of the 16 HPCA anodes, read from
@@ -228,7 +230,7 @@ def hpca_pad(
     e_min = ien.data[i_elim]
     j_elim = np.argmin(abs(ien.data - elim[1]))
     e_max = ien.data[j_elim]
-    logging.info("PSD/pflux pitch angle dist. from %s [eV] to %s [eV]", e_min, e_max)
+    logger.info("PSD/pflux pitch angle dist. from %s [eV] to %s [eV]", e_min, e_max)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)

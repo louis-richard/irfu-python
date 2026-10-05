@@ -19,6 +19,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _add_earth(ax=None, **kwargs):
     theta1, theta2 = 90.0, 270.0
@@ -150,7 +152,7 @@ def plot_magnetosphere(
     _add_earth(ax)
 
     if field_lines:
-        logging.info("Computing field lines using T89 model...")
+        logger.info("Computing field lines using T89 model...")
         _add_field_lines(ax, tint)
 
     return ax

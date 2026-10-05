@@ -18,6 +18,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 SCALES = ["linlin", "loglin", "linlog", "loglog"]
 
@@ -194,7 +196,7 @@ def histogram2d(
         keep = np.logical_and(keep, y_data > 0)
 
     if not np.all(keep):
-        logging.info(
+        logger.info(
             "Discarding %d/%d samples in histogram2d",
             np.sum(~keep),
             len(keep),

@@ -29,6 +29,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
     r"""Tokenize dataset name.
@@ -115,7 +117,7 @@ def _db_get_ts_dict(
 
     if verbose:
         for cdf_name in cdf_names:
-            logging.info("Loading %s...", cdf_name)
+            logger.info("Loading %s...", cdf_name)
 
     for file_name in file_names:
         file_content = _get_file_content_sources(
@@ -126,7 +128,7 @@ def _db_get_ts_dict(
             try:
                 ts = get_ts(file_content, cdf_name, tint)
             except Exception:
-                logging.error("Failed to load %s from %s", cdf_name, file_name)
+                logger.error("Failed to load %s from %s", cdf_name, file_name)
                 raise
 
             out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts

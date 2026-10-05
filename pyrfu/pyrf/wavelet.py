@@ -25,6 +25,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 @numba.jit(nopython=True, fastmath=True)  # type: ignore
 def _ww(
@@ -153,7 +155,7 @@ def wavelet(
         f_min, f_max = sorted(f)
 
         if f_max > f_nyq:
-            logging.warning(
+            logger.warning(
                 "f_max = %g Hz is above the Nyquist frequency, set to %g Hz",
                 f_max,
                 f_nyq,

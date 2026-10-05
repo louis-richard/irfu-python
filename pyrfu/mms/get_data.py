@@ -33,6 +33,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _var_and_cdf_name(
     var_str: str, mms_id: str
@@ -124,7 +126,7 @@ def _get_file_content_sources(
             response.raise_for_status()  # Raise an HTTPError for bad responses
             file_content = response.content
         except requests.RequestException:
-            logging.error("Error retrieving file from %s", file_name)
+            logger.error("Error retrieving file from %s", file_name)
             raise
     elif source == "aws":
         try:
@@ -133,7 +135,7 @@ def _get_file_content_sources(
         except ClientError as err:
             error = err.response.get("Error", {})
             response_meta = err.response.get("ResponseMetadata", {})
-            logging.error(
+            logger.error(
                 "Error retrieving %s from S3: %s (%s, request ID %s, HTTP code %s)",
                 getattr(file_name, "key", file_name),
                 error.get("Message"),
@@ -296,7 +298,7 @@ def get_data(
         raise FileNotFoundError(f"No files found for {var_str} in {source}")
 
     if verbose:
-        logging.info("Loading %s...", cdf_name)
+        logger.info("Loading %s...", cdf_name)
 
     for file_name in file_names:
         file_content = _get_file_content_sources(

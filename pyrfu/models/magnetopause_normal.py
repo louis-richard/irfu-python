@@ -15,6 +15,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _magnetopause(theta, *args):
     r0, alpha, x0, y0 = args
@@ -100,12 +102,12 @@ def magnetopause_normal(
     model = model.lower()
 
     if model in ["mp_shue1998", "mp_shue98", "bs98"]:
-        logging.info("Shue et al., 1998 model used.")
+        logger.info("Shue et al., 1998 model used.")
         alpha = (0.58 - 0.007 * b_z_imf) * (1.0 + 0.024 * np.log(p_sw))
         r0 = 10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))
         r0 *= p_sw ** (-1.0 / 6.6)
     elif model in ["mp_shue1997", "mp_shue97", "bs97", "bs"]:
-        logging.info("Shue et al., 1997 model used.")
+        logger.info("Shue et al., 1997 model used.")
         alpha = (0.58 - 0.01 * b_z_imf) * (1.0 + 0.01 * p_sw)
 
         if b_z_imf >= 0:
@@ -157,7 +159,7 @@ def magnetopause_normal(
 
     else:
         # Bow shock
-        logging.info("Farris & Russell 1994 bow shock model used.")
+        logger.info("Farris & Russell 1994 bow shock model used.")
 
         gamma = 5 / 3
         mach = m_alfven

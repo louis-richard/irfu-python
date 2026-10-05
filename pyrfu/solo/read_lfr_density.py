@@ -25,6 +25,8 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def _list_files_lfr_density_l3(
     tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
@@ -155,7 +157,7 @@ def read_lfr_density(
 
     for file in files:
         # Notify user
-        logging.info("Loading %s...", os.path.split(file)[-1])
+        logger.info("Loading %s...", os.path.split(file)[-1])
 
         # Read file content
         data_l3 = read_cdf(file)

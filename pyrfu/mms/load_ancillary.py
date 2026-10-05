@@ -23,6 +23,8 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
 
 def load_ancillary(
     product,
@@ -68,7 +70,7 @@ def load_ancillary(
         anc_dict = json.load(file)
 
     if verbose:
-        logging.info("Loading ancillary %s files...", product)
+        logger.info("Loading ancillary %s files...", product)
 
     data_frame_dict = {}
 
