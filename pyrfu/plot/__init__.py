@@ -281,7 +281,7 @@ def use_pyrfu_style(
 
     if usetex:
         if (
-            shutil.which("pdflatex") is None
+            shutil.which("latex") is None
             or shutil.which("dvipng") is None
             or shutil.which("gs") is None
         ):
@@ -299,6 +299,7 @@ def use_pyrfu_style(
         mpl.rcParams["mathtext.sf"] = "sans"
         mpl.rcParams["mathtext.fontset"] = "dejavusans"
     else:
+        mpl.rcParams["text.usetex"] = True
         mpl.rcParams["text.latex.preamble"] = "\n".join(
             [
                 r"\usepackage{amsmath}",

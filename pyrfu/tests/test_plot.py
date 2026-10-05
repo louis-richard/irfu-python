@@ -4,7 +4,9 @@
 # Built-in imports
 import random
 import unittest
+from unittest import mock
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 # 3rd party imports
@@ -230,6 +232,36 @@ class SetColorCycleTestCase(unittest.TestCase):
         result = plot.set_color_cycle(value)
         self.asssertIsInstance(result[0], list)
         self.asssertIsInstance(result[1], str)
+
+
+class UsePyrfuStyleTestCase(unittest.TestCase):
+    @staticmethod
+    def _which(missing=()):
+        return lambda cmd: None if cmd in missing else f"/usr/bin/{cmd}"
+
+    def test_use_pyrfu_style_usetex(self):
+        with mpl.rc_context(), mock.patch("pyrfu.plot.shutil.which", self._which()):
+            plot.use_pyrfu_style(usetex=True)
+            self.assertTrue(mpl.rcParams["text.usetex"])
+            self.assertIn(r"\usepackage{amsmath}", mpl.rcParams["text.latex.preamble"])
+
+    def test_use_pyrfu_style_no_usetex(self):
+        with mpl.rc_context():
+            mpl.rcParams["text.usetex"] = True
+            plot.use_pyrfu_style(usetex=False)
+            self.assertFalse(mpl.rcParams["text.usetex"])
+
+    def test_use_pyrfu_style_usetex_fallback(self):
+        # matplotlib runs latex (not pdflatex), dvipng and gs
+        for missing in ["latex", "dvipng", "gs"]:
+            with (
+                mpl.rc_context(),
+                mock.patch("pyrfu.plot.shutil.which", self._which([missing])),
+            ):
+                with self.assertWarns(UserWarning):
+                    plot.use_pyrfu_style(usetex=True)
+
+                self.assertFalse(mpl.rcParams["text.usetex"])
 
 
 @ddt
