@@ -218,3 +218,4 @@ distributed under the MIT license.
    examples/index
    api/index
    contributing
+   changelog
