@@ -78,12 +78,16 @@ def photo_current(
 
     """
 
-    assert isinstance(flag, (str, float))
+    if not isinstance(flag, (str, float, int)):
+        raise TypeError("flag must be a surface material or a photoemission")
 
     if not iluminated_area and not u and not distance_sun:
         for surf in surface_materials:
             j0 = photo_current(1, 0, 1, surf)
-            logger.info("%(surf)s: Io= %(i0)3.2f uA/m2", {"surf": surf, "i0": j0 * 1e6})
+            logger.info(
+                "%(surf)s: Io= %(i0)3.2f uA/m2",
+                {"surf": surf, "i0": float(j0[0]) * 1e6},
+            )
 
         return None
 
@@ -129,7 +133,7 @@ def photo_current(
 
     elif flag.lower() in j_zeros:
         j_photo = photo_current(iluminated_area, u, distance_sun, "themis")
-        j_photo *= j_zeros[flag] / photo_current(1.0, 0.0, 1.0, "themis")
+        j_photo *= j_zeros[flag.lower()] / photo_current(1.0, 0.0, 1.0, "themis")
 
     else:
         raise ValueError("Unknown surface material.")
