@@ -7,6 +7,7 @@ import unittest
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 from ddt import data, ddt, unpack
 
 # Local imports
@@ -121,6 +122,56 @@ class MagnetopauseNormalTestCase(unittest.TestCase):
         result = models.magnetopause_normal(np.array([20.0, 0.0, 0.0]), -2.0, 2.0, "bs")
         self.assertAlmostEqual(result[0], -6.501315, places=5)
         np.testing.assert_allclose(result[1], [1.0, 0.0, 0.0], atol=1e-7)
+
+
+@ddt
+class IonAnisotropyThreshTestCase(unittest.TestCase):
+    @data(
+        ("proton-cyclotron", "10^-2", 1.0, 1.649),
+        ("mirror", "10^-2", 1.0, 1.0 + 1.040 / 1.012**0.633),
+        ("parallel-firehose", "10^-2", 1.0, 1.0 - 0.647 / 0.287**0.583),
+        ("oblique-firehose", "10^-2", 1.0, 1.0 - 1.447 / 1.148),
+        ("proton-cyclotron", "10^-3", 1.0, 1.0 + 0.437 / 1.003**0.428),
+        ("mirror", "10^-4", 1.0, 1.0 + 0.702 / 1.009**0.674),
+    )
+    @unpack
+    def test_ion_anisotropy_thresh_values(self, instability, growth, beta, ref):
+        result = models.ion_anisotropy_thresh(beta, instability, growth)
+        self.assertIsInstance(result, float)
+        self.assertAlmostEqual(result, ref, places=12)
+
+    def test_ion_anisotropy_thresh_input_unchanged(self):
+        beta = np.array([0.1, 0.5, 1.0, 10.0])
+        result = models.ion_anisotropy_thresh(beta, "parallel-firehose")
+        np.testing.assert_array_equal(beta, [0.1, 0.5, 1.0, 10.0])
+        self.assertTrue(np.all(np.isnan(result[:2])))
+        self.assertTrue(np.all(np.isfinite(result[2:])))
+
+    def test_ion_anisotropy_thresh_undefined(self):
+        # NaN (not inf) where beta <= beta0
+        result = models.ion_anisotropy_thresh(
+            np.array([0.0, 0.713]), "proton-cyclotron"
+        )
+        self.assertTrue(np.isnan(result[0]))
+        result = models.ion_anisotropy_thresh(0.713, "parallel-firehose")
+        self.assertTrue(np.isnan(result))
+
+    def test_ion_anisotropy_thresh_types(self):
+        result = models.ion_anisotropy_thresh(np.array([1, 2]), "proton-cyclotron")
+        np.testing.assert_allclose(result, [1.649, 1.0 + 0.649 / 2**0.4])
+
+        time = generate_timeline(1.0, 4)
+        beta = xr.DataArray([0.5, 1.0, 2.0, 4.0], coords=[time], dims=["time"])
+        result = models.ion_anisotropy_thresh(beta, "proton-cyclotron")
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_array_equal(result.time.data, time)
+        self.assertAlmostEqual(float(result[1]), 1.649, places=12)
+
+    @data(("mirror", "10^-5"), ("bazinga!", "10^-2"))
+    @unpack
+    def test_ion_anisotropy_thresh_input(self, instability, growth):
+        with self.assertRaises(ValueError):
+            models.ion_anisotropy_thresh(1.0, instability, growth)
 
 
 if __name__ == "__main__":
