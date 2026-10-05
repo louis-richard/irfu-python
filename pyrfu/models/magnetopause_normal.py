@@ -57,11 +57,13 @@ def magnetopause_normal(
     p_sw : float
         Solar wind dynamic pressure in nPa.
     model : {"mp_shue1997", "mp_shue1998", "bs97", "bs98"}, Optional
-        Name of model :
-            * 'mp_shue97'   : Shue et al., 1997 (Default)
-            * 'mp_shue98'   : Shue et al., 1998
-            * 'bs97'        : Bow shock, Farris & Russell 1994
-            * 'bs98'        : Bow shock, Farris & Russell 1994
+        Name of model (case insensitive):
+            * 'mp_shue1997' or 'mp_shue97' : Shue et al., 1997 (Default)
+            * 'mp_shue1998' or 'mp_shue98' : Shue et al., 1998
+            * 'bs97' or 'bs' : Bow shock, Farris & Russell 1994, based on
+              'mp_shue1997'
+            * 'bs98' : Bow shock, Farris & Russell 1994, based on
+              'mp_shue1998'
     m_alfven : float, Optional
         Alfvenic Mach number, only needed if bow shock model is used.
 
@@ -95,12 +97,14 @@ def magnetopause_normal(
 
     """
 
-    if model.lower() in ["mp_shue98", "bs98"]:
+    model = model.lower()
+
+    if model in ["mp_shue1998", "mp_shue98", "bs98"]:
         logging.info("Shue et al., 1998 model used.")
         alpha = (0.58 - 0.007 * b_z_imf) * (1.0 + 0.024 * np.log(p_sw))
         r0 = 10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))
         r0 *= p_sw ** (-1.0 / 6.6)
-    elif model.lower() in ["mp_shue97", "bs97"]:
+    elif model in ["mp_shue1997", "mp_shue97", "bs97", "bs"]:
         logging.info("Shue et al., 1997 model used.")
         alpha = (0.58 - 0.01 * b_z_imf) * (1.0 + 0.01 * p_sw)
 
@@ -116,14 +120,15 @@ def magnetopause_normal(
     r1_x, r1_y, r1_z = r_gsm
     r0_x, r0_y = [r1_x, np.sqrt(r1_y**2 + r1_z**2)]
 
-    if model[:2].lower() == "mp":
-        # Magnetopause
-
+    if model[:2] == "mp":
+        # Magnetopause. The search range is wider than irfu-matlab's
+        # (-pi/1.2, pi/1.2), which misses the magnetopause behind x ~ -46 Re.
         theta_min, min_val, _, _ = fminbound(
             _magnetopause,
-            x1=-np.pi / 2,
-            x2=np.pi / 2,
-            args=(r0, alpha, r0_x, r1_y),
+            x1=-np.pi + 1e-6,
+            x2=np.pi - 1e-6,
+            args=(r0, alpha, r0_x, r0_y),
+            xtol=1e-10,
             full_output=True,
         )
 
