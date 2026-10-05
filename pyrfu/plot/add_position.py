@@ -7,11 +7,8 @@ from matplotlib.axes import Axes
 from matplotlib.dates import num2date
 from xarray.core.dataarray import DataArray
 
-# Local imports
-from ..pyrf.t_eval import t_eval
-
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -25,7 +22,9 @@ def add_position(
     position: str = "top",
     fontsize: float = 10,
 ) -> Axes:
-    r"""Add extra axes to plot spacecraft position.
+    r"""Add extra axes to plot spacecraft position. The position is
+    interpolated linearly at the ticks of `ax`, and the ticks outside the time
+    series are left without label.
 
     Parameters
     ----------
@@ -51,13 +50,28 @@ def add_position(
 
     t_ticks = [t_.replace(tzinfo=None) for t_ in num2date(ax.get_xticks())]
     t_ticks = np.array(t_ticks).astype("<M8[ns]")
-    r_ticks = t_eval(r_xyz, t_ticks).data
+
+    # Position interpolated at the ticks (seconds since the first sample), NaN
+    # outside the time series
+    t_data = r_xyz.time.data.astype("<M8[ns]")
+    s_data = (t_data - t_data[0]) / np.timedelta64(1, "s")
+    s_ticks = (t_ticks - t_data[0]) / np.timedelta64(1, "s")
+    r_ticks = np.stack(
+        [
+            np.interp(s_ticks, s_data, r_xyz.data[:, i], left=np.nan, right=np.nan)
+            for i in range(3)
+        ],
+        axis=1,
+    )
 
     ticks_labels = []
     for ticks_ in r_ticks:
-        ticks_labels.append(
-            f"{ticks_[0]:3.2f}\n{ticks_[1]:3.2f}\n{ticks_[2]:3.2f}",
-        )
+        if np.any(np.isnan(ticks_)):
+            ticks_labels.append("")
+        else:
+            ticks_labels.append(
+                f"{ticks_[0]:3.2f}\n{ticks_[1]:3.2f}\n{ticks_[2]:3.2f}",
+            )
 
     axr = ax.twiny()
     axr.spines[position].set_position(("outward", spine))

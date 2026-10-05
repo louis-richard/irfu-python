@@ -14,6 +14,7 @@ from ddt import data, ddt, unpack
 from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
 from matplotlib.colors import LogNorm, to_rgba
+from matplotlib.dates import date2num
 from matplotlib.image import AxesImage
 
 # Local imports
@@ -100,6 +101,28 @@ class AddPositionTestCase(unittest.TestCase):
     def test_add_position_output(self, value):
         result = plot.add_position(plt.subplots(1)[1], value)
         self.assertIsInstance(result, Axes)
+
+    def test_add_position_values(self):
+        # Position every minute, x = seconds since the first sample
+        t_0 = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = t_0 + np.arange(10) * np.timedelta64(60, "s")
+        x_pos = np.arange(10) * 60.0
+        r_xyz = pyrf.ts_vec_xyz(time, np.stack([x_pos, 2 * x_pos, -x_pos], axis=1))
+
+        # Ticks between the samples, the last two after the time series
+        t_ticks = t_0 + np.arange(15, 660, 60) * np.timedelta64(1, "s")
+        _, ax = plt.subplots(1)
+        ax.plot(time, x_pos)
+        ax.set_xticks(date2num(t_ticks))
+        ax.set_xlim(date2num(t_ticks[[0, -1]]))
+
+        result = plot.add_position(ax, r_xyz)
+        labels = [label.get_text() for label in result.get_xticklabels()]
+        self.assertEqual(labels[0], "15.00\n30.00\n-15.00")
+        self.assertEqual(labels[1], "75.00\n150.00\n-75.00")
+        self.assertEqual(labels[8], "495.00\n990.00\n-495.00")
+        self.assertListEqual(labels[9:], ["", ""])
+        plt.close("all")
 
 
 @ddt
