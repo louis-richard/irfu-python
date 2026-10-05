@@ -3283,6 +3283,99 @@ class ListFilesSdcTestCase(unittest.TestCase):
             pass
 
 
+# DEFEPH layout (MMS1_DEFEPH_2019257_2019258.V01): 14 header lines, no footer
+_DEFEPH_HEADER = [
+    "Definitive Orbit Ephemeris",
+    "Spacecraft = MMS1",
+    "StartTime = 2019-257/00:05:52.907 UTC  (MMS TAI: 22536.004512812)",
+    "StopTime = 2019-258/00:14:22.907 UTC  (MMS TAI: 22537.010415590)",
+    "MMS TAI Reference Epoch = 1958-001/00:00:00 UTC",
+    "CentralBody = Earth",
+    "ReferenceFrame = Mean of J2000",
+    "PrincipalPlane = Equatorial",
+    "Project = DefEphemReFormat.m",
+    "Source = FDGSS OPS",
+    "FileCreationDate = Sep 16 2019 09:45:07.912 UTC",
+    "",
+    "Epoch (UTC)   Epoch MMS TAI   X   Y   Z   VX   VY   VZ   Mass",
+    "                              Km  Km  Km  Km/Sec  Km/Sec  Km/Sec  Kg",
+]
+
+_DEFEPH_ROWS = [
+    "2019-257/00:05:52.907   22536.004512812   -10539.488308885   2267.641774990"
+    "   2762.979162558   -3.379702093   -7.150985755   2.233656130",
+    "2019-257/00:06:22.907   22536.004860035   -10639.511569375   2052.828069429"
+    "   2829.628149301   -3.288657503   -7.169561589   2.209589514",
+    "2019-257/00:06:52.907   22536.005207257   -10736.816612409   1837.489793072"
+    "   2895.553467478   -3.198497883   -7.185972813   2.185417405",
+]
+
+# DEFATT layout (MMS1_DEFATT_2019257_2019258.V00): 49 header lines (up to the
+# COMMENT line with the column names) and a DATA_STOP footer
+_DEFATT_ROWS = [
+    "2019-257T00:00:00.012 1947110437.012  0.09800 -0.18260  0.80379  0.55765 "
+    "-0.026  0.026 18.302 300.435 263.470  66.080 300.430 263.384  65.97 "
+    "300.435 263.384 65.970 300.435 0.005  EKF",
+    "2019-257T00:00:00.562 1947110437.562  0.08149 -0.19048  0.84953  0.48516 "
+    "-0.025  0.027 18.301 310.481 263.431  66.086 310.476 263.386  65.97 "
+    "310.481 263.386 65.970 310.481 0.005  EKF",
+]
+
+
+class LoadAncillaryTestCase(unittest.TestCase):
+    def setUp(self):
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        self.root = root.name
+        self.tint = ["2019-09-14T00:00:00", "2019-09-14T01:00:00"]
+
+    def _write(self, product, file_name, lines):
+        path = os.path.join(self.root, "ancillary", "mms1", product)
+        os.makedirs(path, exist_ok=True)
+
+        with open(os.path.join(path, file_name), "w", encoding="utf-8") as file:
+            file.write("\n".join(lines) + "\n")
+
+    def test_load_ancillary_defeph(self):
+        # Without footer, the last sample is data (it was dropped)
+        self._write(
+            "defeph",
+            "MMS1_DEFEPH_2019257_2019258.V01",
+            _DEFEPH_HEADER + _DEFEPH_ROWS,
+        )
+        result = mms.load_ancillary("defeph", self.tint, 1, False, self.root)
+
+        self.assertEqual(len(result.time), 3)
+        self.assertEqual(
+            result.time.data[-1], np.datetime64("2019-09-14T00:06:52.907", "ns")
+        )
+        np.testing.assert_allclose(
+            result.x.data, [-10539.488308885, -10639.511569375, -10736.816612409]
+        )
+
+    def test_load_ancillary_defatt(self):
+        # The DATA_STOP footer is not data
+        header = ["META_START"] * 48 + ["COMMENT   Time (UTC)    Elapsed Sec"]
+        self._write(
+            "defatt",
+            "MMS1_DEFATT_2019257_2019258.V00",
+            header + _DEFATT_ROWS + ["DATA_STOP"],
+        )
+        result = mms.load_ancillary("defatt", self.tint, 1, False, self.root)
+
+        self.assertEqual(len(result.time), 2)
+        np.testing.assert_allclose(result.z_dec.data, [66.080, 66.086])
+
+    def test_load_ancillary_no_file(self):
+        with self.assertRaises(FileNotFoundError):
+            mms.load_ancillary("defeph", self.tint, 1, False, self.root)
+
+    def test_load_ancillary_unsupported(self):
+        for product in ["predatt", "predeph", "bazinga"]:
+            with self.assertRaisesRegex(ValueError, "not supported"):
+                mms.load_ancillary(product, self.tint, 1, False, self.root)
+
+
 @ddt
 class ListFilesAncillaryTestCase(unittest.TestCase):
     @data("predatt", "predeph", "defatt", "defeph")
