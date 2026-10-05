@@ -6,7 +6,6 @@ import logging
 
 # 3rd party imports
 import numpy as np
-from geopack import geopack
 from matplotlib.patches import Wedge
 
 # Local imports
@@ -49,6 +48,10 @@ def _add_earth(ax=None, **kwargs):
 
 
 def _add_field_lines(ax, tint):
+    # geopack prints and requests the latest IGRF coefficients online when
+    # imported, so it is only imported when the field lines are needed
+    from geopack import geopack  # pylint: disable=import-outside-toplevel
+
     # Get dipole axis at begin of the time interval
     ut = datetime642unix(iso86012datetime64(np.array(tint)))[0]
     _ = geopack.recalc(ut)

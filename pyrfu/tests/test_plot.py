@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import os
 import random
+import subprocess
+import sys
 import unittest
 from unittest import mock
 
@@ -262,6 +265,59 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
                     plot.use_pyrfu_style(usetex=True)
 
                 self.assertFalse(mpl.rcParams["text.usetex"])
+
+
+class PlotMagnetosphereTestCase(unittest.TestCase):
+    def setUp(self):
+        # Offline: fake geopack, and models without OMNI data
+        trace = mock.Mock(return_value=(0, 0, 0, np.zeros(3), 0, np.zeros(3)))
+        self.geopack = mock.Mock(recalc=mock.Mock(), trace=trace)
+        self.module = sys.modules["pyrfu.plot.plot_magnetosphere"]
+        self.tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+
+        patches = [
+            mock.patch.dict(sys.modules, {"geopack": mock.Mock(geopack=self.geopack)}),
+            mock.patch.object(
+                self.module,
+                "magnetosphere",
+                lambda model, tint: pyrf.magnetosphere(model),
+            ),
+        ]
+
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def test_import_pyrfu_skips_geopack(self):
+        # geopack prints and requests the IGRF coefficients online when imported
+        code = "import sys, pyrfu; print('geopack' in sys.modules)"
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            check=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            text=True,
+        )
+        self.assertEqual(result.stdout, "False\n")
+
+    def test_plot_magnetosphere_field_lines(self):
+        _, ax = plt.subplots(1)
+        result = plot.plot_magnetosphere(ax, self.tint)
+        plt.close("all")
+
+        self.assertIs(result, ax)
+        # Magnetopause, bow shock and 2 x 190 field lines
+        self.assertEqual(len(ax.lines), 2 + 2 * 190)
+        self.geopack.recalc.assert_called_once()
+        self.assertEqual(self.geopack.trace.call_count, 2 * 190)
+
+    def test_plot_magnetosphere_no_field_lines(self):
+        _, ax = plt.subplots(1)
+        plot.plot_magnetosphere(ax, self.tint, field_lines=False)
+        plt.close("all")
+
+        self.assertEqual(len(ax.lines), 2)
+        self.geopack.trace.assert_not_called()
 
 
 @ddt
