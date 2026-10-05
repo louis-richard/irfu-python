@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import itertools
 import os
 import random
 import subprocess
@@ -265,6 +266,43 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
                     plot.use_pyrfu_style(usetex=True)
 
                 self.assertFalse(mpl.rcParams["text.usetex"])
+
+
+class PlScatterMatrixTestCase(unittest.TestCase):
+    def setUp(self):
+        # Components linear in time, so that resampling to another grid is exact
+        time = generate_timeline(100.0, 200)
+        t_sec = np.arange(200) / 100.0
+        self.inp1 = pyrf.ts_vec_xyz(time, np.outer(t_sec, [1.0, 2.0, 3.0]))
+        self.inp2 = pyrf.ts_vec_xyz(
+            time + np.timedelta64(3, "ms"), np.outer(t_sec, [-1.0, 4.0, 0.5]) + 1.0
+        )
+        # inp2 at the times of inp1
+        self.inp2_1 = np.outer(t_sec - 0.003, [-1.0, 4.0, 0.5]) + 1.0
+        self.addCleanup(plt.close, "all")
+
+    def test_pl_scatter_matrix_scatter(self):
+        fig, axs = plot.pl_scatter_matrix(self.inp1, self.inp2)
+
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertEqual(axs.shape, (3, 3))
+
+        for i, j in itertools.product(range(3), range(3)):
+            offsets = axs[j, i].collections[0].get_offsets()
+            np.testing.assert_allclose(offsets[:, 0], self.inp1.data[:, i])
+            np.testing.assert_allclose(offsets[:, 1], self.inp2_1[:, j], atol=1e-12)
+
+    def test_pl_scatter_matrix_pdf(self):
+        _, axs, caxs = plot.pl_scatter_matrix(self.inp1, self.inp2, pdf=True)
+
+        self.assertEqual(axs.shape, (3, 3))
+        caxs = [cax for row in caxs for cax in row]
+        self.assertTrue(all(isinstance(cax, Axes) for cax in caxs))
+        self.assertEqual(len({id(cax) for cax in caxs}), 9)
+
+    def test_pl_scatter_matrix_input_type(self):
+        with self.assertRaises(TypeError):
+            plot.pl_scatter_matrix(self.inp1.data, self.inp2)
 
 
 class PlotMagnetosphereTestCase(unittest.TestCase):
