@@ -3425,6 +3425,41 @@ class Pid4SCTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], xr.DataArray)
         self.assertIsInstance(result[1], xr.DataArray)
 
+    def test_pid_4sc_values(self):
+        # u = (S z, C y, 0) and P = diag(p + a, p - a, p) with P_xz = P_zx = pi,
+        # measured by a regular tetrahedron (positions in km, u in km/s, P in nPa)
+        s_shear, c_comp, p_iso, a_anis, pi_xz = 0.5, 0.2, 0.5, 0.1, 0.05
+        time = generate_timeline(64.0, 10)
+        dr_mms = 20.0 * np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+
+        p_data = np.diag([p_iso + a_anis, p_iso - a_anis, p_iso])
+        p_data[0, 2] = p_data[2, 0] = pi_xz
+
+        r_mms, v_mms, p_mms = [], [], []
+
+        for dr in dr_mms:
+            r_mms.append(pyrf.ts_vec_xyz(time, np.tile(dr + [6.4e4, 0, 0], (10, 1))))
+            v_data = [s_shear * dr[2], c_comp * dr[1], 0.0]
+            v_mms.append(pyrf.ts_vec_xyz(time, np.tile(v_data, (10, 1))))
+            p_mms.append(pyrf.ts_tensor_xyz(time, np.tile(p_data, (10, 1, 1))))
+
+        d_xyz, pi_xyz, ptheta, pid = pyrf.pid_4sc(r_mms, v_mms, p_mms)
+
+        d_true = np.diag([-c_comp / 3, 2 * c_comp / 3, -c_comp / 3])
+        d_true[0, 2] = d_true[2, 0] = s_shear / 2
+        pi_true = p_data - p_iso * np.eye(3)
+
+        np.testing.assert_allclose(d_xyz.data, np.tile(d_true, (10, 1, 1)), atol=1e-12)
+        np.testing.assert_allclose(
+            pi_xyz.data, np.tile(pi_true, (10, 1, 1)), atol=1e-12
+        )
+        np.testing.assert_allclose(ptheta.data, p_iso * c_comp)
+        np.testing.assert_allclose(pid.data, a_anis * c_comp - pi_xz * s_shear)
+
+        # Pressure-strain interaction -(P.grad).u = -p theta + Pi-D
+        p_strain = -(pi_xz * s_shear + (p_iso - a_anis) * c_comp)
+        np.testing.assert_allclose(-ptheta.data + pid.data, p_strain)
+
 
 class PlasmaCalcTestCase(unittest.TestCase):
     def test_plasma_calc_output(self):
