@@ -3,6 +3,7 @@
 
 # Built-in imports
 import itertools
+import warnings
 
 # 3rd party imports
 import numpy as np
@@ -13,6 +14,37 @@ __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+class _ExtraParam(dict):
+    # Output dictionary of disp_surf_calc. The old names of the keys (with
+    # stray spaces) still work, with a FutureWarning, but are not listed.
+    _old_keys = {
+        "(dn_e/n)/ (dB/B)": "(dn_e/n)/(dB/B)",
+        "(dn_e/n)/(dBpar /B)": "(dn_e/n)/(dBpar/B)",
+        " Spar/Stot": "Spar/Stot",
+    }
+
+    def _new_key(self, key):
+        if key in self._old_keys:
+            warnings.warn(
+                f"key {key!r} is deprecated and will be removed in 3.0, use "
+                f"{self._old_keys[key]!r}",
+                FutureWarning,
+                stacklevel=3,
+            )
+            key = self._old_keys[key]
+
+        return key
+
+    def __getitem__(self, key):
+        return super().__getitem__(self._new_key(key))
+
+    def __contains__(self, key):
+        return super().__contains__(self._new_key(key))
+
+    def get(self, key, default=None):
+        return super().get(self._new_key(key), default)
 
 
 def _calc_diel(kc_, w_final, theta_, wp_e, wp_i, wc_i):
@@ -139,7 +171,41 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     wf_ : numpy.ndarray
         Dispersion surfaces.
     extra_param : dict
-        Extra parameters to plot.
+        Extra parameters to plot, with the same shape as `wf_`:
+            * "Degree of electromagnetism" : log10(cB / E).
+            * "Degree of longitudinality" : abs(E . k) / (k E).
+            * "Degree of parallelity E" : E_par / E.
+            * "Degree of parallelity B" : abs(B_par) / B.
+            * "W_E/W_B" : log10(E^2 / (cB)^2).
+            * "Ellipticity E" : ellipticity of the electric field.
+            * "Ellipticity B" : ellipticity of the magnetic field.
+            * "E_part/E_field" : log10 of the ratio of the particle (electrons
+              and ions) to the field energy densities.
+            * "W_e/W_field" : log10 of the ratio of the electron to the field
+              energy densities.
+            * "v_g" : group velocity, in units of c, from forward differences
+              (zero on the last row and column).
+            * "v_ph/v_a" : log10 of the phase speed to the Alfven speed.
+            * "E_e/E_i" : log10 of the ratio of the electron to ion energies.
+            * "v_e/v_i" : log10 of the ratio of the electron to ion velocity
+              fluctuations.
+            * "v_epara/v_eperp", "v_ipara/v_iperp" : log10 of the ratio of the
+              squared parallel to perpendicular electron (ion) velocities.
+            * "dn_e/dn_i" : log10 of the ratio of the electron to ion density
+              fluctuations.
+            * "(dn_e/n)/(dB/B)", "(dn_i/n)/(dB/B)", "(dn_e/n)/(dBpar/B)",
+              "(dn_i/n)/(dBpar/B)" : log10 of the ratio of the relative density
+              fluctuations to the (parallel) magnetic field fluctuations.
+            * "dn_e/(k E eps0/e)" : log10 of the ratio of the electron density
+              fluctuations to k . E eps0 / e.
+            * "Spar/Stot" : ratio of the parallel to total Poynting flux.
+
+    Notes
+    -----
+    The keys "(dn_e/n)/ (dB/B)", "(dn_e/n)/(dBpar /B)" and " Spar/Stot" of
+    pyrfu < 2.5 are deprecated, use the keys without the extra spaces. In
+    pyrfu < 2.5, "(dn_e/n)/(dB/B)" was "dn_e/(k E eps0/e)".
+
     """
 
     # Make vectors of the wave numbers
@@ -251,8 +317,10 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     en_e = 0.5 * m_e * v_e2
     en_i = 0.5 * m_i * v_i2
 
-    # Ratio of particle and field energy densities
+    # Ratio of particle and field energy densities, and of electron and field
+    # energy densities
     ratio_part_field = _calc_part2fields(wp_e, en_e, en_i, e_tot, b_tot)
+    ratio_e_field = _calc_part2fields(wp_e, en_e, 0.0, e_tot, b_tot)
 
     # Continuity equation
     dn_e_n, dn_i_n, dne_dni = _calc_continuity(
@@ -285,6 +353,7 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
         "Ellipticity E": e_pol,
         "Ellipticity B": b_pol,
         "E_part/E_field": np.log10(ratio_part_field),
+        "W_e/W_field": np.log10(ratio_e_field),
         "v_g": np.sqrt(v_x**2 + v_z**2),
         "v_ph/v_a": np.log10(v_ph_va),
         "E_e/E_i": np.log10(en_e / en_i),
@@ -292,16 +361,17 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
         "v_epara/v_eperp": np.log10(vepar_perp),
         "v_ipara/v_iperp": np.log10(vipar_perp),
         "dn_e/dn_i": np.log10(dne_dni),
-        "(dn_e/n)/ (dB/B)": np.log10(dn_e_n_db_b),
+        "(dn_e/n)/(dB/B)": np.log10(dn_e_n_db_b),
         "(dn_i/n)/(dB/B)": np.log10(dn_i_n_db_b),
+        "(dn_e/n)/(dBpar/B)": np.log10(dn_e_n_dbpar_b),
         "(dn_i/n)/(dBpar/B)": np.log10(dn_i_n_dbpar_b),
-        "(dn_e/n)/(dB/B)": np.log10(dn_e / k_dot_e),
-        "(dn_e/n)/(dBpar /B)": np.log10(dn_e_n_dbpar_b),
-        " Spar/Stot": s_par / s_tot,
+        "dn_e/(k E eps0/e)": np.log10(dn_e / k_dot_e),
+        "Spar/Stot": s_par / s_tot,
     }
 
-    for k, v in zip(extra_param.keys(), extra_param.values()):
-        extra_param[k] = np.transpose(np.real(v), [0, 2, 1])
+    extra_param = _ExtraParam(
+        {k: np.transpose(np.real(v), [0, 2, 1]) for k, v in extra_param.items()},
+    )
 
     kx_ = np.transpose(kc_x_mat)
     kz_ = np.transpose(kc_z_mat)

@@ -70,6 +70,52 @@ class DispSurfCalcTestCase(unittest.TestCase):
             extra_param["E_part/E_field"][wf > 0], ref[wf > 0], atol=1e-10
         )
 
+    def test_disp_surf_calc_extra_param_keys(self):
+        m_i, wp_e = [25.0, 2.0]
+        kx, kz, wf, extra_param = dispersion.disp_surf_calc(1.0, 1.0, m_i, wp_e)
+        pos = wf > 0
+
+        # (dn_e/n)/(dB/B) - (dn_i/n)/(dB/B) = log10(dn_e/dn_i)
+        diff_dn = extra_param["(dn_e/n)/(dB/B)"] - extra_param["(dn_i/n)/(dB/B)"]
+        np.testing.assert_allclose(
+            diff_dn[pos], extra_param["dn_e/dn_i"][pos], atol=1e-10
+        )
+
+        # (W_e + W_i) / W_field = W_e / W_field * (1 + W_i / W_e)
+        ratio_part = 10 ** extra_param["W_e/W_field"]
+        ratio_part *= 1 + 10 ** -extra_param["E_e/E_i"]
+        np.testing.assert_allclose(
+            ratio_part[pos], 10 ** extra_param["E_part/E_field"][pos], rtol=1e-10
+        )
+
+        # dn_e / (k . E eps0 / e) = (dn_e/n) / (dB/B) * wp_e^2 * dB / |k . E|
+        w_f, kc_x, kc_z = [np.transpose(wf, [0, 2, 1]), kx.T, kz.T]
+        kc_, theta = [np.hypot(kc_x, kc_z), np.arctan2(kc_x, kc_z)]
+        diel = _calc_diel(kc_, w_f, theta, wp_e, wp_e / np.sqrt(m_i), 1 / m_i)
+        e_x, e_y, e_z = _calc_e(diel)[:3]
+        b_tot = np.real(_calc_b(kc_x, kc_z, w_f, e_x, e_y, e_z)[-1])
+        k_dot_e = np.abs(kc_x * e_x + kc_z * e_z)
+        ref = extra_param["(dn_e/n)/(dB/B)"]
+        ref = ref + np.log10(np.transpose(wp_e**2 * b_tot / k_dot_e, [0, 2, 1]))
+        np.testing.assert_allclose(
+            extra_param["dn_e/(k E eps0/e)"][pos], ref[pos], atol=1e-10
+        )
+
+    def test_disp_surf_calc_extra_param_old_keys(self):
+        _, _, _, extra_param = dispersion.disp_surf_calc(1.0, 1.0, 25.0, 2.0)
+        for old_key, new_key in [
+            ("(dn_e/n)/ (dB/B)", "(dn_e/n)/(dB/B)"),
+            ("(dn_e/n)/(dBpar /B)", "(dn_e/n)/(dBpar/B)"),
+            (" Spar/Stot", "Spar/Stot"),
+        ]:
+            self.assertNotIn(old_key, list(extra_param))
+            with self.assertWarns(FutureWarning):
+                self.assertIs(extra_param[old_key], extra_param[new_key])
+            with self.assertWarns(FutureWarning):
+                self.assertIs(extra_param.get(old_key), extra_param[new_key])
+            with self.assertWarns(FutureWarning):
+                self.assertIn(old_key, extra_param)
+
 
 @ddt
 class OneFluidDispersionTestCase(unittest.TestCase):
