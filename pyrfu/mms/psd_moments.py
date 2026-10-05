@@ -65,7 +65,7 @@ def _moms(
     w_inner_electron,
     phi,
     theta,
-    int_energies,
+    use_energy,
     vdf,
     delta_ang,
 ):
@@ -100,7 +100,11 @@ def _moms(
         psd2p_xz_mat = np.cos(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
         psd2p_yz_mat = np.sin(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
 
-        for i_e in int_energies:
+        for i_e in range(vdf.shape[1]):
+            # Energy channels selected for this time step
+            if not use_energy[i_t, i_e]:
+                continue
+
             n_acc = 0.0
             vx_acc = 0.0
             vy_acc = 0.0
@@ -173,6 +177,62 @@ def _moms(
     return n_psd, v_psd, p_psd, h_psd
 
 
+def _energy_mask(vdf, energy, kwargs):
+    r"""Energy channels to integrate over at each time step, as a boolean
+    (time, energy) array, from the energy_range or en_channels options."""
+    n_t, n_e = energy.shape
+
+    if "energy_range" in kwargs and "en_channels" in kwargs:
+        raise ValueError("Use either energy_range or en_channels, not both")
+
+    if "energy_range" not in kwargs:
+        start, stop = kwargs.get("en_channels", [0, n_e])
+        use_energy = np.zeros((n_t, n_e), dtype=np.bool_)
+        use_energy[:, start:stop] = True
+        return use_energy
+
+    e_range = kwargs["energy_range"]
+
+    if isinstance(e_range, xr.DataArray):
+        # Time dependent energy range on its own time line
+        if not np.array_equal(e_range.time.data, vdf.time.data):
+            e_range = resample(e_range, vdf.time)
+
+        e_range = e_range.data
+
+    e_range = np.asarray(e_range, dtype=np.float64)
+
+    if e_range.shape == (2,):
+        # Channels of the first energy table within the range, and the same
+        # channels for the other table (as irfu-matlab)
+        channels = np.where((energy[0] > e_range[0]) & (energy[0] < e_range[1]))[0]
+
+        if channels.size == 0:
+            raise ValueError(f"No energy channel in energy_range {e_range}")
+
+        use_energy = np.zeros((n_t, n_e), dtype=np.bool_)
+        use_energy[:, channels[0] : channels[-1] + 1] = True
+        logger.info("Using partial energy range")
+
+    elif e_range.shape == (n_t, 2):
+        # Time dependent: the channels of each time step within its range
+        use_energy = (energy > e_range[:, :1]) & (energy < e_range[:, 1:])
+        n_empty = int(np.sum(~np.any(use_energy, axis=1)))
+
+        if n_empty:
+            logger.warning(
+                "No energy channel in energy_range at %(n)d time steps (NaN moments)",
+                {"n": n_empty},
+            )
+    else:
+        raise ValueError(
+            "energy_range must be [E_min, E_max], or (E_min, E_max) at each time "
+            "(array of shape (n_t, 2) or DataArray with a time coordinate)"
+        )
+
+    return use_energy
+
+
 def psd_moments(vdf, sc_pot, **kwargs):
     r"""Computes moments from the FPI particle phase-space densities.
 
@@ -200,16 +260,27 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     Other Parameters
     ----------------
-    energy_range : array_like
-        Set energy range in eV to integrate over [E_min E_max]. Energy range
-        is applied to energy0 and the same elements are used for energy1 to
-        ensure that the same number of points are integrated over.
+    energy_range : array_like or xarray.DataArray
+        Energy range in eV to integrate over, strictly within (instrument
+        energies, before the spacecraft potential correction):
+
+        * [E_min, E_max]: applied to the energy table of the first time step,
+          and the same channels are used at all times, to ensure that the same
+          number of points are integrated over with alternating tables.
+        * time dependent (E_min, E_max): an array of shape (n_t, 2) at the
+          times of vdf, or a DataArray with a time coordinate and 2 columns,
+          resampled to the times of vdf. At each time step, the channels of
+          its energy table within its range are integrated over; time steps
+          without channel get NaN moments.
+
+        Can't be used with en_channels.
     no_sc_pot : bool
         Set to 1 to set spacecraft potential to zero. Calculates moments
         without correcting for spacecraft potential.
     en_channels : array_like
-        Set energy channels to integrate over [min max]; min and max between
-        must be between 1 and 32.
+        Energy channels to integrate over, [start, stop) 0-based indices as a
+        Python slice (default [0, 32], all the channels; unlike irfu-matlab's
+        1-based inclusive [min max]). Can't be used with energy_range.
     partial_moments : numpy.ndarray or xarray.DataArray
         Use a binary array to select which psd points are used in the moments
         calculation. `partial_moments` must be a binary array (1s and 0s,
@@ -217,6 +288,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
         size as vdf.data.
     inner_electron : {"on", "off"}
         inner_electrontron potential for electron moments.
+
+    Raises
+    ------
+    ValueError
+        If energy_range has no channel (fixed range) or a wrong shape, or if
+        both energy_range and en_channels are given.
 
     Examples
     --------
@@ -270,22 +347,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # resample sc_pot to same resolution as particle distributions
     sc_pot = resample(sc_pot, vdf.time).data
 
-    if "energy_range" in kwargs:
-        if (
-            isinstance(kwargs["energy_range"], (list, np.ndarray))
-            and len(kwargs["energy_range"]) == 2
-        ):
-            logger.info("Using partial energy range")
-
     no_sc_pot = kwargs.get("no_sc_pot", False)
     if no_sc_pot:
         sc_pot = np.zeros(sc_pot.shape)
         logger.info("Setting spacecraft potential to zero")
 
-    int_energies = np.arange(
-        kwargs.get("en_channels", [0, 32])[0],
-        kwargs.get("en_channels", [0, 32])[1],
-    )
+    use_energy = _energy_mask(vdf, energy, kwargs)
 
     if "partial_moments" in kwargs:
         partial_moments = kwargs["partial_moments"]
@@ -374,7 +441,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
             v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
             v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
             delta_v = v_upper - v_lower
-            delta_v = np.tile(delta_v, (vdf_data.shape[0], 1))
+            # (time, energy) already: tiling made (n_t^2, energy)
+            delta_v = np.ascontiguousarray(np.broadcast_to(delta_v, energy.shape))
         else:
             energy_all = np.hstack([energy0, energy1])
             energy_all = np.log10(np.sort(energy_all))
@@ -436,10 +504,17 @@ def psd_moments(vdf, sc_pot, **kwargs):
         w_inner_electron,
         phi_mat,
         theta_mat,
-        int_energies,
+        use_energy,
         vdf_data,
         delta_ang,
     )
+
+    # No energy channel at these time steps (time dependent energy_range)
+    no_energy = ~np.any(use_energy, axis=1)
+    n_psd[no_energy] = np.nan
+    v_psd[no_energy] = np.nan
+    p_psd[no_energy] = np.nan
+    h_psd[no_energy] = np.nan
 
     # Compute moments in SI units
     p_psd *= p_mass

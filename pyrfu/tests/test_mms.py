@@ -8,6 +8,7 @@ import json
 import os
 import random
 import string
+import sys
 import tempfile
 import unittest
 import warnings
@@ -1582,7 +1583,7 @@ class PsdMomentsTestCase(unittest.TestCase):
     @data(
         (
             np.random.random((100, 32)),  # energy
-            np.random.random((10000, 32)),  # delta_v
+            np.random.random((100, 32)),  # delta_v
             random.random(),  # q_e
             np.random.random(100),  # sc_pot
             random.random(),  # p_mass
@@ -1590,7 +1591,7 @@ class PsdMomentsTestCase(unittest.TestCase):
             random.random(),  # w_inner_electron
             np.random.random((100, 32, 16)),  # phi
             np.random.random((100, 32, 16)),  # theta
-            np.arange(32),  # int_energies
+            np.ones((100, 32), dtype=bool),  # use_energy
             np.random.random((100, 32, 32, 16)),  # vdf
             np.random.random((100, 32, 16)),  # delta_ang
         )
@@ -1684,6 +1685,92 @@ class PsdMomentsTestCase(unittest.TestCase):
         vdf.attrs["delta_energy_minus"] = np.zeros_like(vdf.attrs["delta_energy_minus"])
         n, _, _, _, _, _ = mms.psd_moments(vdf, sc_pot)
         np.testing.assert_allclose(n.data, 1.0, rtol=0.01)
+
+    def _moments(self, vdf, sc_pot, **kwargs):
+        # n, V, P and q at all times
+        n, v, p, _, _, h = mms.psd_moments(vdf, sc_pot, **kwargs)
+        return [n.data, v.data, p.data, h.data]
+
+    def _assert_moments_equal(self, result, expected):
+        for res, exp in zip(result, expected):
+            np.testing.assert_allclose(res, exp, rtol=1e-12)
+
+    def test_psd_moments_energy_range(self):
+        # The channels strictly within the range, as with en_channels
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
+        energy = vdf.energy.data[0]
+        channels = np.where((energy > 100.0) & (energy < 3000.0))[0]
+
+        result = self._moments(vdf, sc_pot, energy_range=[100.0, 3000.0])
+        expected = self._moments(
+            vdf, sc_pot, en_channels=[channels[0], channels[-1] + 1]
+        )
+        self._assert_moments_equal(result, expected)
+
+        # It was ignored: full moments
+        n_full = self._moments(vdf, sc_pot)[0]
+        self.assertTrue(np.all(result[0] < 0.9 * n_full))
+
+    def test_psd_moments_energy_range_time_dependent(self):
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0], n_t=4)
+        fixed_1 = self._moments(vdf, sc_pot, energy_range=[100.0, 3000.0])
+        fixed_2 = self._moments(vdf, sc_pot, energy_range=[50.0, 1e4])
+
+        # Same range at all times, as an array and as a DataArray on another
+        # time line, gives the fixed range
+        e_range = np.tile([100.0, 3000.0], (4, 1))
+        result = self._moments(vdf, sc_pot, energy_range=e_range)
+        self._assert_moments_equal(result, fixed_1)
+        n_full = self._moments(vdf, sc_pot)[0]
+        self.assertTrue(np.all(result[0] < 0.9 * n_full))
+
+        time = vdf.time.data + np.timedelta64(1, "ms")
+        e_range_ts = xr.DataArray(e_range, coords=[time, [0, 1]], dims=["time", "comp"])
+        result = self._moments(vdf, sc_pot, energy_range=e_range_ts)
+        self._assert_moments_equal(result, fixed_1)
+
+        # Range changing halfway: each half has the moments of its range
+        e_range[2:] = [50.0, 1e4]
+        result = self._moments(vdf, sc_pot, energy_range=e_range)
+        self._assert_moments_equal(
+            [res[:2] for res in result], [exp[:2] for exp in fixed_1]
+        )
+        self._assert_moments_equal(
+            [res[2:] for res in result], [exp[2:] for exp in fixed_2]
+        )
+
+    def test_psd_moments_energy_range_no_channel(self):
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0], n_t=4)
+
+        # Time steps without channel get NaN moments, with a warning
+        e_range = np.tile([100.0, 3000.0], (4, 1))
+        e_range[1] = [1e5, 2e5]
+        with self.assertLogs("pyrfu", level="WARNING"):
+            n = self._moments(vdf, sc_pot, energy_range=e_range)[0]
+
+        self.assertTrue(np.isnan(n[1]))
+        self.assertTrue(np.all(np.isfinite(n[[0, 2, 3]])))
+
+        # Fixed range without channel, wrong shape, or both options
+        for kwargs in [
+            {"energy_range": [1e5, 2e5]},
+            {"energy_range": [1.0, 2.0, 3.0]},
+            {"energy_range": [100.0, 3000.0], "en_channels": [0, 32]},
+        ]:
+            with self.assertRaises(ValueError):
+                mms.psd_moments(vdf, sc_pot, **kwargs)
+
+    def test_psd_moments_burst_speed_widths(self):
+        # One energy table in burst mode: (time, energy) widths, not tiled to
+        # (time^2, energy)
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0], n_t=6)
+        module = sys.modules["pyrfu.mms.psd_moments"]
+        moms = module._moms
+
+        with mock.patch.object(module, "_moms", side_effect=moms) as mocked:
+            mms.psd_moments(vdf, sc_pot)
+
+        self.assertEqual(mocked.call_args.args[1].shape, (6, 32))
 
     def test_psd_moments_partial_moments_mask(self):
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
