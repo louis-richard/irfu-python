@@ -8,7 +8,7 @@ import itertools
 import numpy as np
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -216,10 +216,12 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
         e_z,
     )
 
-    dk_x, dk_z = [kc_x_mat[1], kc_z_mat[1]]
+    # Group velocity from forward differences (zero on the last row and
+    # column), as irfu-matlab
+    dk_x, dk_z = [kc_x[1] - kc_x[0], kc_z[1] - kc_z[0]]
     dw_x, dw_z = [np.zeros(w_final.shape) for _ in range(2)]
-    dw_x[:, :, 1:] = np.diff(w_final, axis=2)
-    dw_z[:, 1:, :] = np.diff(w_final, axis=1)
+    dw_x[:, :, :-1] = np.diff(w_final, axis=2)
+    dw_z[:, :-1, :] = np.diff(w_final, axis=1)
     v_x, v_z = [dw_ / dk for dw_, dk in zip([dw_x, dw_z], [dk_x, dk_z])]
 
     s_par, s_tot = _calc_s(e_x, e_y, e_z, b_x, b_y, b_z)
@@ -245,7 +247,7 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     v_i2 = v_ix * np.conj(v_ix) + v_iy * np.conj(v_iy) + v_iz * np.conj(v_iz)
 
     # Ion and electron energies
-    m_e = -1
+    m_e = 1
     en_e = 0.5 * m_e * v_e2
     en_i = 0.5 * m_i * v_i2
 
