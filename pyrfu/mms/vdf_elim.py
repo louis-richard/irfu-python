@@ -28,62 +28,68 @@ def vdf_elim(vdf, e_int):
     vdf : xarray.Dataset
         Skymap velocity distribution to clip.
     e_int : list or float
-        Energy interval boundaries (list) or energy to slice.
+        Energy interval boundaries (list), keeping the channels strictly
+        within, or energy to slice (the closest channel).
 
     Returns
     -------
     vdf_e_clipped : xarray.Dataset
-        Skymap of the clipped velocity distribution.
+        Skymap of the clipped velocity distribution. The energy tables and the
+        delta_energy_plus/minus attributes are clipped to the same channels.
+
+    Raises
+    ------
+    ValueError
+        If no energy channel is within the interval, or if e_int has more than
+        two elements.
 
     """
 
     energy = vdf.energy
     unique_etables = np.unique(vdf.energy.data, axis=0)
-    # n_etables = 2 for older dta and 1 for newer data
-    n_etables = unique_etables.shape[0]
 
-    e_int = list(np.atleast_1d(e_int))
-    e_int.sort()
+    e_int = sorted(np.atleast_1d(e_int).tolist())
 
     # energy interval
     if len(e_int) == 2:
-        e_levels = []
+        # saves all the unique indices over the 1 (newer data) or 2 (older
+        # data) energy tables, i.e. max range
+        e_levels = np.unique(
+            np.hstack(
+                [
+                    np.where((e_int[0] < table) & (table < e_int[1]))[0]
+                    for table in unique_etables
+                ]
+            )
+        )
 
-        for i_etable in range(n_etables):
-            # loop over 1 or 2 and saves all the unique indices, i.e. max range
-            lower_ = e_int[0] < unique_etables[i_etable, :]
-            upper_ = unique_etables[i_etable, :] < e_int[1]
-            tmp_elevels = np.where(np.logical_and(lower_, upper_))[0]
-            e_levels = np.unique(np.hstack([e_levels, tmp_elevels]))
+        if e_levels.size == 0:
+            raise ValueError(f"No energy channel between {e_int[0]} and {e_int[1]}")
 
         e_levels = list(e_levels.astype(np.int64))
-        e_min = np.min(energy.data[:, e_levels])
-        e_max = np.max(energy.data[:, e_levels])
         logger.info(
             "Effective eint = [%(e_min)5.2f, %(e_max)5.2f]",
-            {"e_min": e_min, "e_max": e_max},
+            {
+                "e_min": np.min(energy.data[:, e_levels]),
+                "e_max": np.max(energy.data[:, e_levels]),
+            },
         )
-        energies = energy.data[:, e_levels]
-        data = vdf.data.data[:, e_levels, ...]
+
+    elif len(e_int) == 1:
+        # pick closest energy level, in the energy table closest to e_int
+        e_diff = np.abs(unique_etables - e_int[0])
+        i_table = np.argmin(np.min(e_diff, axis=1))
+        e_levels = [int(np.argmin(e_diff[i_table]))]
+        logger.info(
+            "Effective energies alternate in time between %(energies)s",
+            {"energies": unique_etables[:, e_levels[0]]},
+        )
 
     else:
-        # pick closest energy level
-        e_diff0 = np.abs(energy[0, :] - e_int)
-        e_diff1 = np.abs(energy[1, :] - e_int)
-        if np.min(e_diff0) < np.min(e_diff1):
-            e_diff = e_diff0
-        else:
-            e_diff = e_diff1
+        raise ValueError("e_int must be an energy or an interval of two energies")
 
-        e_levels = int(np.where(e_diff == np.min(e_diff))[0][0])
-        logger.info(
-            "Effective energies alternate in time between %(e0)5.2f and %(e1)5.2f",
-            {"e0": energy.data[0, e_levels], "e1": energy.data[1, e_levels]},
-        )
-        energies = energy.data[:, e_levels]
-        energies = energies[:, np.newaxis]
-        data = vdf.data.data[:, e_levels, ...]
-        data = data[:, np.newaxis, ...]
+    energies = energy.data[:, e_levels]
+    data = vdf.data.data[:, e_levels, ...]
 
     # Data attributes
     data_attrs = vdf.data.attrs
@@ -91,12 +97,16 @@ def vdf_elim(vdf, e_int):
     # Coordinates attributes
     coords_attrs = {k: vdf[k].attrs for k in ["time", "energy", "phi", "theta"]}
 
-    # Global attributes
-    glob_attrs = vdf.attrs
+    # Global attributes, with the energy widths clipped as the energies
+    glob_attrs = dict(vdf.attrs)
+
+    for key in ["delta_energy_minus", "delta_energy_plus"]:
+        if glob_attrs.get(key) is not None:
+            glob_attrs[key] = np.asarray(glob_attrs[key])[..., e_levels]
 
     # Get energies levels
     energy_0 = np.atleast_1d(glob_attrs.get("energy0", unique_etables[0, :])[e_levels])
-    energy_1 = np.atleast_1d(glob_attrs.get("energy1", unique_etables[0, :])[e_levels])
+    energy_1 = np.atleast_1d(glob_attrs.get("energy1", unique_etables[-1, :])[e_levels])
     esteptable = glob_attrs.get("esteptable", np.zeros(len(vdf.time)))
 
     vdf_e_clipped = ts_skymap(

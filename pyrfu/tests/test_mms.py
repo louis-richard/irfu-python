@@ -3164,6 +3164,46 @@ class VdfElimTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.Dataset)
 
+    def setUp(self):
+        # Energies 0, ..., 31 and distinct widths for each channel
+        self.vdf = generate_vdf(64.0, 10, [32, 32, 16])
+        self.vdf.attrs["delta_energy_plus"] = np.tile(np.arange(32) * 0.1, (10, 1))
+        self.vdf.attrs["delta_energy_minus"] = np.arange(32) * 0.2
+
+    def test_vdf_elim_interval(self):
+        result = mms.vdf_elim(self.vdf, [5.0, 10.0])
+
+        # Channels strictly within the interval, energy widths clipped too
+        np.testing.assert_array_equal(result.energy.data[0], [6.0, 7.0, 8.0, 9.0])
+        np.testing.assert_array_equal(result.data.data, self.vdf.data.data[:, 6:10])
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_plus"],
+            self.vdf.attrs["delta_energy_plus"][:, 6:10],
+        )
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_minus"], [1.2, 1.4, 1.6, 1.8]
+        )
+
+        # The caller's attributes are unchanged
+        self.assertEqual(self.vdf.attrs["delta_energy_plus"].shape, (10, 32))
+
+    def test_vdf_elim_two_tables(self):
+        # Union of the channels of the two tables (0, 1, ... and 0.5, 1.5, ...)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        result = mms.vdf_elim(vdf, [5.0, 10.0])
+        self.assertEqual(result.energy.shape, (10, 5))
+        self.assertEqual(result.attrs["delta_energy_plus"].shape, (10, 5))
+
+    def test_vdf_elim_single_energy(self):
+        # One time step: the closest channel of the energy table
+        result = mms.vdf_elim(self.vdf.isel(time=[0]), 5.2)
+        np.testing.assert_array_equal(result.energy.data, [[5.0]])
+        np.testing.assert_allclose(result.attrs["delta_energy_minus"], [1.0])
+
+    def test_vdf_elim_empty(self):
+        with self.assertRaisesRegex(ValueError, "No energy channel"):
+            mms.vdf_elim(self.vdf, [100.0, 200.0])
+
 
 @ddt
 class VdfOmniTestCase(unittest.TestCase):
