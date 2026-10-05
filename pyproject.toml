@@ -159,7 +159,7 @@ ignore = """
     ancillary.json,
     config.json,
     feeps_bad_data.json,
-    igrf13coeffs.csv,
+    igrf14coeffs.csv,
     mms_keys.json,
     transformation_indices.json,
     test_pyrf.py,

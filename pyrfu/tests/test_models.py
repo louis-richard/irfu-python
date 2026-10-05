@@ -50,6 +50,31 @@ class IgrfTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], np.ndarray)
         self.assertListEqual(list(result[1].shape), list(timeline.shape))
 
+    @data(
+        ("2020-01-01", -29403.41, -1451.37, 4653.35),
+        ("2025-01-01", -29350.0, -1410.3, 4545.5),
+    )
+    @unpack
+    def test_igrf_epochs(self, epoch, g10, g11, h11):
+        # At the IGRF-14 epochs, longitude = arctan(h11 / g11) and
+        # tan(90 - latitude) = sqrt(g11**2 + h11**2) / |g10| (Hapgood 1997)
+        time = np.array([np.datetime64(epoch, "ns").astype(np.int64) / 1e9])
+        lambda_, phi = models.igrf(time, "dipole")
+        self.assertAlmostEqual(lambda_[0], np.rad2deg(np.arctan(h11 / g11)), 10)
+        tan_tilt = np.hypot(g11, h11) / np.abs(g10)
+        self.assertAlmostEqual(phi[0], 90.0 - np.rad2deg(np.arctan(tan_tilt)), 10)
+
+    def test_igrf_secular_variation(self):
+        time = np.datetime64("2026-07-01T00:00:00", "ns").astype(np.int64) / 1e9
+        lambda_, phi = models.igrf(np.array([time]), "dipole")
+        self.assertAlmostEqual(lambda_[0], -72.820500, 5)
+        self.assertAlmostEqual(phi[0], 80.850439, 5)
+
+    def test_igrf_extrapolation_future(self):
+        timeline = generate_timeline(1.0, 10, ref_time="2031-01-01T00:00:00")
+        with self.assertWarns(UserWarning):
+            models.igrf(timeline.astype(np.int64) / 1e9, "dipole")
+
 
 @ddt
 class MagnetopauseNormalTestCase(unittest.TestCase):
