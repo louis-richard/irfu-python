@@ -26,7 +26,7 @@ from matplotlib.image import AxesImage
 # Local imports
 from .. import plot, pyrf
 from ..constants import R_E
-from . import generate_data, generate_timeline, generate_ts
+from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
 
 @ddt
@@ -266,6 +266,65 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
                     plot.use_pyrfu_style(usetex=True)
 
                 self.assertFalse(mpl.rcParams["text.usetex"])
+
+
+class PlotAngAngTestCase(unittest.TestCase):
+    def setUp(self):
+        # Energies 0, 1, ..., 31 and data (E + 1) (phi + 1) (theta + 1), constant
+        # in time, so the averaged map is <E + 1> (phi + 1) (theta + 1)
+        self.vdf = generate_vdf(64.0, 10, [32, 32, 16], units="s^3/m^6")
+        e_idx, p_idx, t_idx = np.meshgrid(
+            np.arange(32), np.arange(32), np.arange(16), indexing="ij"
+        )
+        self.vdf.data.data[:] = (e_idx + 1.0) * (p_idx + 1.0) * (t_idx + 1.0)
+        self.angles = np.outer(np.arange(1.0, 33.0), np.arange(1.0, 17.0))
+        self.tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[2, 7]]))
+        self.addCleanup(plt.close, "all")
+
+    @staticmethod
+    def _map(ax):
+        # Plotted (phi, theta) map
+        return np.asarray(ax.collections[0].get_array()).reshape(16, 32).T
+
+    def test_plot_ang_ang_tint(self):
+        for tint in [self.tint, self.tint[:1]]:
+            f, ax, cax = plot.plot_ang_ang(self.vdf, tint, [5.0, 10.0])
+
+            self.assertIsInstance(f, plt.Figure)
+            self.assertIsInstance(cax, Axes)
+            np.testing.assert_allclose(self._map(ax), 8.5 * self.angles)
+            self.assertEqual(cax.get_ylabel(), "PSD [s$^3$ m$^{-6}$]")
+            self.assertEqual(ax.get_title(), "5 keV $\\leq E \\leq$ 10 keV")
+
+    def test_plot_ang_ang_defaults(self):
+        # Whole interval and all the energies, including the end channels
+        with self.assertWarns(UserWarning):
+            _, ax, _ = plot.plot_ang_ang(self.vdf)
+
+        np.testing.assert_allclose(self._map(ax), 16.5 * self.angles)
+        self.assertEqual(ax.get_title(), "0 keV $\\leq E \\leq$ 31 keV")
+
+    def test_plot_ang_ang_en_range(self):
+        # Clamped to the instrument range, without changing the caller's list
+        en_range = [-10.0, 1e3]
+        _, ax, _ = plot.plot_ang_ang(self.vdf, self.tint, en_range)
+
+        np.testing.assert_allclose(self._map(ax), 16.5 * self.angles)
+        self.assertListEqual(en_range, [-10.0, 1e3])
+
+        with self.assertRaises(ValueError):
+            plot.plot_ang_ang(self.vdf, self.tint, [100.0, 200.0])
+
+    def test_plot_ang_ang_units(self):
+        for units, label in [
+            ("s^3/cm^6", "PSD [s$^3$ cm$^{-6}$]"),
+            ("1/(cm^2 s sr keV)", "Intensity [(cm$^2$ s sr keV)$^{-1}$]"),
+            ("keV/(cm^2 s sr keV)", "DEF [keV (cm$^2$ s sr keV)$^{-1}$]"),
+            ("counts", "counts"),
+        ]:
+            self.vdf.data.attrs["UNITS"] = units
+            _, _, cax = plot.plot_ang_ang(self.vdf, self.tint, [5.0, 10.0])
+            self.assertEqual(cax.get_ylabel(), label)
 
 
 class PlScatterMatrixTestCase(unittest.TestCase):
