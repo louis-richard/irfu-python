@@ -787,6 +787,99 @@ class Def2PsdTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+class UnitConversionsTestCase(unittest.TestCase):
+    def setUp(self):
+        # Energies 10 to 41 eV (generate_vdf starts at 0 eV)
+        vdf = generate_vdf(64.0, 5, [32, 32, 16], species="ions", units="s^3/m^6")
+        self.vdf = vdf.assign(energy=vdf.energy + 10.0)
+        self.energy = self.vdf.energy.data
+
+    def _inputs(self):
+        # Skymap with one time step, spectrum with (time, energy) energies and
+        # pitch-angle distribution (time, energy, angle)
+        attrs = {"species": "ions", "UNITS": "s^3/m^6"}
+        spectr = xr.DataArray(
+            np.random.random((5, 32)),
+            coords={
+                "time": self.vdf.time.data,
+                "energy": (("time", "idx"), self.energy),
+            },
+            dims=["time", "idx"],
+            attrs=attrs,
+        )
+        pad = xr.Dataset(
+            {
+                "data": (
+                    ("time", "idx0", "idx1"),
+                    np.random.random((5, 32, 12)),
+                    {"UNITS": "s^3/m^6"},
+                ),
+                "energy": (("time", "idx0"), self.energy),
+            },
+            coords={"time": self.vdf.time.data},
+            attrs={"species": "ions"},
+        )
+        return [self.vdf.isel(time=[0]), spectr, pad]
+
+    @staticmethod
+    def _values(inp):
+        return inp.data.data if isinstance(inp, xr.Dataset) else inp.data
+
+    def test_unit_conversions_round_trip(self):
+        for inp in self._inputs():
+            for forward, backward in [
+                (mms.psd2def, mms.def2psd),
+                (mms.psd2dpf, mms.dpf2psd),
+            ]:
+                result = backward(forward(inp))
+                self.assertEqual(self._values(result).shape, self._values(inp).shape)
+                np.testing.assert_allclose(self._values(result), self._values(inp))
+
+    def test_unit_conversions_values(self):
+        # 1 s^3/km^6 of protons at E: DEF = E^2 / (1e6 * 0.53707) and
+        # DPF = 1e3 E / (1e6 * 0.53707)
+        vdf = self.vdf.copy()
+        vdf["data"] = vdf.data.copy(data=np.ones(vdf.data.shape))
+        vdf.data.attrs = {"UNITS": "s^3/km^6"}
+        e_mat = self.energy[:, :, None, None]
+        np.testing.assert_allclose(
+            mms.psd2def(vdf).data.data,
+            np.broadcast_to(e_mat**2 / 5.3707e5, vdf.data.shape),
+        )
+        np.testing.assert_allclose(
+            mms.psd2dpf(vdf).data.data,
+            np.broadcast_to(1e3 * e_mat / 5.3707e5, vdf.data.shape),
+        )
+
+    def test_unit_conversions_species(self):
+        # DEF scales as 1 / m^2, for any spelling of the species
+        def_p = mms.psd2def(self.vdf).data.data
+        m_e = constants.electron_mass / constants.proton_mass
+
+        for species, mass in [
+            ("electron", m_e),
+            ("Electrons", m_e),
+            ("ion", 1.0),
+            ("alpha", 4.0),
+        ]:
+            vdf = self.vdf.copy()
+            vdf.attrs = {**self.vdf.attrs, "species": species}
+
+            for func in [mms.psd2def, mms.psd2dpf]:
+                func(vdf)
+
+            np.testing.assert_allclose(mms.psd2def(vdf).data.data, def_p / mass**2)
+
+    def test_unit_conversions_input_unchanged(self):
+        values = self.vdf.data.data.copy()
+
+        for func in [mms.psd2def, mms.psd2dpf]:
+            func(self.vdf)
+
+        np.testing.assert_array_equal(self.vdf.data.data, values)
+        self.assertEqual(self.vdf.data.attrs["UNITS"], "s^3/m^6")
+
+
 @ddt
 class Dpf2PsdTestCase(unittest.TestCase):
     @data(
