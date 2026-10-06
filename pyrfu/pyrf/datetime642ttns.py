@@ -26,6 +26,11 @@ _DATETIME64_TT2000_MIN = ttns2datetime64(TT2000_FILL + 2)[0]
 # Units that can overflow when converted to datetime64[ns]
 _COARSE_UNITS = ["generic", "Y", "M", "W", "D", "h", "m", "s", "ms", "us"]
 
+_OUT_OF_RANGE = (
+    "time must be between 1707-09-22T12:12:10.961224194 and "
+    "2262-04-11T23:47:16.854775807"
+)
+
 
 def datetime642ttns(
     time: Union[np.datetime64, NDArray[np.datetime64]],
@@ -64,8 +69,12 @@ def datetime642ttns(
     is_nat = np.isnat(time)
 
     # pycdfpp only converts datetime64 in ns units. Times outside the ns range
-    # wrap around silently, and do not convert back to their own unit.
-    time_datetime64 = time.astype("datetime64[ns]")
+    # raise OverflowError (recent NumPy, e.g. 2.5), or wrap around silently and
+    # do not convert back to their own unit (older NumPy, e.g. 2.3).
+    try:
+        time_datetime64 = time.astype("datetime64[ns]")
+    except OverflowError as err:
+        raise ValueError(_OUT_OF_RANGE) from err
 
     is_out = time_datetime64 < _DATETIME64_TT2000_MIN
 
@@ -75,10 +84,7 @@ def datetime642ttns(
     is_out &= ~is_nat
 
     if np.any(is_out):
-        raise ValueError(
-            "time must be between 1707-09-22T12:12:10.961224194 and "
-            "2262-04-11T23:47:16.854775807",
-        )
+        raise ValueError(_OUT_OF_RANGE)
 
     time_datetime64[is_nat] = np.datetime64("2000-01-01", "ns")
 
