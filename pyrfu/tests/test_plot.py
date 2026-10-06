@@ -29,6 +29,19 @@ from ..constants import R_E
 from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
 
+def _close_new_figures(test_case):
+    r"""Close the figures created during the test, and only those: closing the
+    figures created at import by @data (e.g., plt.subplots in the decorators)
+    breaks the tests using them with interactive backends (Tk on Windows)."""
+    before = set(plt.get_fignums())
+
+    def close():
+        for num in set(plt.get_fignums()) - before:
+            plt.close(num)
+
+    test_case.addCleanup(close)
+
+
 @ddt
 class PlotLineTestCase(unittest.TestCase):
     @data((0.0, generate_ts(64.0, 100)), (plt.subplots(3)[1], generate_ts(64.0, 100)))
@@ -67,6 +80,9 @@ class PlotLineTestCase(unittest.TestCase):
 
 @ddt
 class PlotClinesTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     @data("jet", plt.get_cmap("viridis"))
     def test_plot_clines_output(self, cmap):
         # get_cmap(name=cmap) raised a TypeError on every call
@@ -88,7 +104,6 @@ class PlotClinesTestCase(unittest.TestCase):
         expected = c_map(LogNorm(vmin=10.0, vmax=3000.0)(energy))
         colors = [to_rgba(line.get_color()) for line in axis.lines]
         np.testing.assert_allclose(colors, expected)
-        plt.close("all")
 
     def test_plot_clines_cscale(self):
         inp = xr.DataArray(
@@ -98,11 +113,13 @@ class PlotClinesTestCase(unittest.TestCase):
         )
         with self.assertRaises(NotImplementedError):
             plot.plot_clines(plt.subplots(1)[1], inp, cscale="lin")
-        plt.close("all")
 
 
 @ddt
 class AddPositionTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     @data(generate_ts(64.0, 100, tensor_order=1))
     def test_add_position_output(self, value):
         result = plot.add_position(plt.subplots(1)[1], value)
@@ -130,7 +147,6 @@ class AddPositionTestCase(unittest.TestCase):
         self.assertListEqual(labels[9:], ["", ""])
         texts = [text_.get_text() for text_ in result.texts]
         self.assertListEqual(texts, ["X [km]\nY [km]\nZ [km]\nR [km]"])
-        plt.close("all")
 
     @data("top", "bottom")
     def test_add_position_earth_radii(self, position):
@@ -147,14 +163,12 @@ class AddPositionTestCase(unittest.TestCase):
         self.assertListEqual(labels, ["3.00\n4.00\n12.00\n13.00"] * 6)
         texts = [text_.get_text() for text_ in result.texts]
         self.assertListEqual(texts, ["\n".join(f"{c} [$R_E$]" for c in "XYZR")])
-        plt.close("all")
 
     def test_add_position_units(self):
         with self.assertRaises(ValueError):
             plot.add_position(
                 plt.subplots(1)[1], generate_ts(64.0, 100, tensor_order=1), units="m"
             )
-        plt.close("all")
 
 
 @ddt
@@ -270,6 +284,7 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
 
 class PlotAngAngTestCase(unittest.TestCase):
     def setUp(self):
+        _close_new_figures(self)
         # Energies 0, 1, ..., 31 and data (E + 1) (phi + 1) (theta + 1), constant
         # in time, so the averaged map is <E + 1> (phi + 1) (theta + 1)
         self.vdf = generate_vdf(64.0, 10, [32, 32, 16], units="s^3/m^6")
@@ -279,7 +294,6 @@ class PlotAngAngTestCase(unittest.TestCase):
         self.vdf.data.data[:] = (e_idx + 1.0) * (p_idx + 1.0) * (t_idx + 1.0)
         self.angles = np.outer(np.arange(1.0, 33.0), np.arange(1.0, 17.0))
         self.tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[2, 7]]))
-        self.addCleanup(plt.close, "all")
 
     @staticmethod
     def _map(ax):
@@ -329,6 +343,7 @@ class PlotAngAngTestCase(unittest.TestCase):
 
 class PlScatterMatrixTestCase(unittest.TestCase):
     def setUp(self):
+        _close_new_figures(self)
         # Components linear in time, so that resampling to another grid is exact
         time = generate_timeline(100.0, 200)
         t_sec = np.arange(200) / 100.0
@@ -338,7 +353,6 @@ class PlScatterMatrixTestCase(unittest.TestCase):
         )
         # inp2 at the times of inp1
         self.inp2_1 = np.outer(t_sec - 0.003, [-1.0, 4.0, 0.5]) + 1.0
-        self.addCleanup(plt.close, "all")
 
     def test_pl_scatter_matrix_scatter(self):
         fig, axs = plot.pl_scatter_matrix(self.inp1, self.inp2)
@@ -366,6 +380,7 @@ class PlScatterMatrixTestCase(unittest.TestCase):
 
 class PlotMagnetosphereTestCase(unittest.TestCase):
     def setUp(self):
+        _close_new_figures(self)
         # Offline: fake geopack, and models without OMNI data
         trace = mock.Mock(return_value=(0, 0, 0, np.zeros(3), 0, np.zeros(3)))
         self.geopack = mock.Mock(recalc=mock.Mock(), trace=trace)
@@ -400,7 +415,6 @@ class PlotMagnetosphereTestCase(unittest.TestCase):
     def test_plot_magnetosphere_field_lines(self):
         _, ax = plt.subplots(1)
         result = plot.plot_magnetosphere(ax, self.tint)
-        plt.close("all")
 
         self.assertIs(result, ax)
         # Magnetopause, bow shock and 2 x 190 field lines
@@ -411,7 +425,6 @@ class PlotMagnetosphereTestCase(unittest.TestCase):
     def test_plot_magnetosphere_no_field_lines(self):
         _, ax = plt.subplots(1)
         plot.plot_magnetosphere(ax, self.tint, field_lines=False)
-        plt.close("all")
 
         self.assertEqual(len(ax.lines), 2)
         self.geopack.trace.assert_not_called()
@@ -505,6 +518,7 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
 
 class MmsPlConfigTestCase(unittest.TestCase):
     def setUp(self):
+        _close_new_figures(self)
         # Tetrahedron of ~20 km around (60000, 10000, 5000) km, with a small
         # motion averaged out
         time = generate_timeline(1.0, 5)
@@ -513,9 +527,6 @@ class MmsPlConfigTestCase(unittest.TestCase):
         )
         motion = np.outer(np.arange(5) - 2.0, [1.0, -1.0, 0.5])
         self.r_mms = [pyrf.ts_vec_xyz(time, r + motion) for r in self.r_mean]
-
-    def tearDown(self):
-        plt.close("all")
 
     def test_mms_pl_config_positions(self):
         fig, axs = plot.mms_pl_config(self.r_mms)
