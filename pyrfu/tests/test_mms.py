@@ -1346,6 +1346,171 @@ class MakeModelVDFTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.Dataset)
 
+    @staticmethod
+    def _skymap(species, e_min, e_max, n_t=3):
+        # FPI-like skymap: 32 log-spaced energies, 32 phi, 16 theta
+        energy = np.tile(np.geomspace(e_min, e_max, 32), (n_t, 1))
+        phi = np.tile(5.625 + 11.25 * np.arange(32), (n_t, 1))
+        theta = 5.625 + 11.25 * np.arange(16)
+        time = generate_timeline(1 / 0.15, n_t)
+        return pyrf.ts_skymap(
+            time,
+            np.ones((n_t, 32, 32, 16)),
+            energy,
+            phi,
+            theta,
+            energy0=energy[0],
+            energy1=energy[0],
+            esteptable=np.zeros(n_t),
+            attrs={"UNITS": "s^3/cm^6"},
+            glob_attrs={"species": species},
+        )
+
+    @staticmethod
+    def _moments(time, n_cc, v_kms, t_par, t_perp):
+        # B along z, so that T = diag(T_perp, T_perp, T_par) in xyz
+        n_t = len(time)
+        t_xyz = np.zeros((n_t, 3, 3))
+        t_xyz[:, 0, 0], t_xyz[:, 1, 1], t_xyz[:, 2, 2] = t_perp, t_perp, t_par
+        return (
+            pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (n_t, 1))),
+            pyrf.ts_scalar(time, np.full(n_t, n_cc)),
+            pyrf.ts_vec_xyz(time, np.tile(v_kms, (n_t, 1))),
+            pyrf.ts_tensor_xyz(time, t_xyz),
+        )
+
+    @staticmethod
+    def _analytic(vdf, mass, sc_pot, n_cc, v_kms, t_par, t_perp):
+        # Bi-Maxwellian (s^3/km^6) at the particle velocities (minus the look
+        # directions) with B along z
+        q_e = constants.elementary_charge
+        speed = np.sqrt(2 * q_e * (vdf.energy.data - sc_pot) / mass)[..., None, None]
+        phi = np.deg2rad(vdf.phi.data)[:, None, :, None]
+        theta = np.deg2rad(vdf.theta.data)[None, None, None, :]
+        v_x = -speed * np.sin(theta) * np.cos(phi)
+        v_y = -speed * np.sin(theta) * np.sin(phi)
+        v_z = -speed * np.cos(theta)
+        v_d = np.array(v_kms) * 1e3
+        vth_par2, vth_perp2 = [2 * q_e * t_ / mass for t_ in [t_par, t_perp]]
+        f_ = n_cc * 1e6 / (np.pi**1.5 * np.sqrt(vth_par2) * vth_perp2)
+        f_ = f_ * np.exp(
+            -((v_x - v_d[0]) ** 2 + (v_y - v_d[1]) ** 2) / vth_perp2
+            - (v_z - v_d[2]) ** 2 / vth_par2
+        )
+        return f_ * 1e18
+
+    def _check(self, species, mass, e_range, sc_pot, v_kms, t_par, t_perp, isotropic):
+        vdf = self._skymap(species, *e_range)
+        b_xyz, n_s, v_xyz, t_xyz = self._moments(
+            vdf.time.data, 2.0, v_kms, t_par, t_perp
+        )
+        sc_pot_ts = pyrf.ts_scalar(vdf.time.data, np.full(len(vdf.time), sc_pot))
+
+        # No warning (sqrt of negative energies), except the harmless
+        # rotate_tensor "pp" 0/0 warning for a gyrotropic tensor
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            warnings.filterwarnings(
+                "ignore", category=RuntimeWarning, module="pyrfu.mms.rotate_tensor"
+            )
+            result = mms.make_model_vdf(
+                vdf, b_xyz, sc_pot_ts, n_s, v_xyz, t_xyz, isotropic
+            )
+
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/km^6")
+        self.assertEqual(vdf.data.attrs["UNITS"], "s^3/cm^6")
+
+        if isotropic:
+            t_par = t_perp = (t_par + 2 * t_perp) / 3
+
+        # Ions: the potential is subtracted with the opposite sign
+        sc_pot = sc_pot if species == "electrons" else -sc_pot
+        expected = self._analytic(vdf, mass, sc_pot, 2.0, v_kms, t_par, t_perp)
+        above = (vdf.energy.data - sc_pot) >= 0
+        np.testing.assert_allclose(result.data.data[above], expected[above], rtol=1e-10)
+
+        return result, above
+
+    def test_make_model_vdf_maxwellian(self):
+        self._check(
+            "ions",
+            constants.proton_mass,
+            (10.0, 3e4),
+            0.0,
+            [200.0, -100.0, 300.0],
+            1000.0,
+            1000.0,
+            False,
+        )
+
+    def test_make_model_vdf_bi_maxwellian(self):
+        for isotropic in [False, True]:
+            self._check(
+                "ions",
+                constants.proton_mass,
+                (10.0, 3e4),
+                0.0,
+                [200.0, -100.0, 300.0],
+                2000.0,
+                500.0,
+                isotropic,
+            )
+
+    def test_make_model_vdf_velocity_along_b(self):
+        # v_perp = 0 gave 0 / 0 and an all-NaN model
+        for v_kms in [[0.0, 0.0, 300.0], [0.0, 0.0, 0.0]]:
+            result, _ = self._check(
+                "ions",
+                constants.proton_mass,
+                (10.0, 3e4),
+                0.0,
+                v_kms,
+                2000.0,
+                500.0,
+                False,
+            )
+            self.assertTrue(np.all(np.isfinite(result.data.data)))
+
+    def test_make_model_vdf_below_sc_pot(self):
+        # Electrons with a 5 V potential: NaN below 5 eV (no velocity), without
+        # warnings, and no effect on epsilon (zero weight in v^2 dv)
+        result, above = self._check(
+            "electrons",
+            constants.electron_mass,
+            (1.0, 1e3),
+            5.0,
+            [100.0, 0.0, 50.0],
+            100.0,
+            100.0,
+            False,
+        )
+        self.assertTrue(np.all(np.isnan(result.data.data[~above])))
+        self.assertTrue(np.any(~above))
+
+        # Data equal to the model above the potential, anything below it
+        vdf = result.copy()
+        data = result.data.data.copy()
+        data[~above] = 1e3 * np.nanmax(data)
+        vdf["data"] = result.data.copy(data=data)
+        n_s = pyrf.ts_scalar(vdf.time.data, np.full(len(vdf.time), 2.0))
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(len(vdf.time), 5.0))
+        eps = mms.calculate_epsilon(vdf, result, n_s, sc_pot)
+        np.testing.assert_allclose(eps.data, 0.0, atol=1e-12)
+
+    def test_make_model_vdf_invalid(self):
+        vdf = self._skymap("bazinga", 10.0, 3e4)
+        b_xyz, n_s, v_xyz, t_xyz = self._moments(
+            vdf.time.data, 2.0, [0.0] * 3, 1e3, 1e3
+        )
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(len(vdf.time)))
+
+        with self.assertRaises(ValueError):
+            mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+
+        vdf.attrs["species"] = "ions"
+        with self.assertRaises(ValueError):
+            mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s[:2], v_xyz, t_xyz)
+
 
 class HpcaEnergiesTestCase(unittest.TestCase):
     def test_hpca_energies_output(self):
