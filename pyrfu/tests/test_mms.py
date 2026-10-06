@@ -1512,6 +1512,82 @@ class MakeModelVDFTestCase(unittest.TestCase):
             mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s[:2], v_xyz, t_xyz)
 
 
+class GetPitchAngleDistTestCase(unittest.TestCase):
+    def setUp(self):
+        # f = (i_energy + 1) (i_theta + 1) on FPI-like angles with B along z:
+        # the velocity (minus the look direction) has pitch angle 180 - theta
+        self.vdf = generate_vdf(64.0, 4, [32, 32, 16], units="s^3/cm^6")
+        self.vdf["phi"] = 5.625 + 11.25 * self.vdf.phi
+        self.vdf["theta"] = 5.625 + 11.25 * self.vdf.theta
+        e_idx, t_idx = np.arange(32.0)[:, None, None], np.arange(16.0)[None, None, :]
+        self.vdf.data.data[:] = (e_idx + 1) * (t_idx + 1) * np.ones((32, 32, 16))
+        self.b_xyz = pyrf.ts_vec_xyz(
+            self.vdf.time.data, np.tile([0.0, 0.0, 10.0], (4, 1))
+        )
+
+        # Default bins: [0, 15], [15, 30], ..., [165, 180] degrees
+        self.pitch = 180.0 - self.vdf.theta.data
+        self.in_bin = [
+            (self.pitch >= lo) & (self.pitch <= lo + 15) for lo in range(0, 180, 15)
+        ]
+
+    def _expected(self, method):
+        g_theta = np.arange(16.0) + 1
+        sin_t = np.sin(np.deg2rad(self.vdf.theta.data))
+        per_bin = {
+            "mean": [np.mean(g_theta[m]) for m in self.in_bin],
+            "sum": [32 * np.sum(g_theta[m]) for m in self.in_bin],
+            "sum_weighted": [
+                np.sum(g_theta[m] * sin_t[m]) / np.sum(sin_t[m]) for m in self.in_bin
+            ],
+        }[method]
+        return (np.arange(32.0) + 1)[:, None] * np.array(per_bin)[None, :]
+
+    def test_get_pitch_angle_dist_values(self):
+        for method in ["mean", "sum", "sum_weighted"]:
+            pad = mms.get_pitch_angle_dist(
+                self.vdf, self.b_xyz, verbose=False, meanorsum=method
+            )
+
+            self.assertEqual(pad.data.shape, (4, 32, 12))
+            np.testing.assert_allclose(
+                pad.data.data, np.broadcast_to(self._expected(method), (4, 32, 12))
+            )
+            np.testing.assert_allclose(pad.theta.data[0], np.arange(7.5, 180, 15))
+            self.assertEqual(pad.attrs["mean_or_sum"], method)
+
+        self.assertNotIn("mean_or_sum", self.vdf.attrs)
+
+    def test_get_pitch_angle_dist_1d_phi(self):
+        # 1-D phi gave a coordinate with the length of time
+        vdf = self.vdf.copy()
+        vdf["phi"] = xr.DataArray(self.vdf.phi.data[0], dims=["idx1"])
+        pad = mms.get_pitch_angle_dist(vdf, self.b_xyz, verbose=False)
+        np.testing.assert_allclose(pad.data.data[0], self._expected("mean"))
+
+    def test_get_pitch_angle_dist_one_time(self):
+        # np.squeeze dropped the time dimension
+        tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[1, 1]]))
+        for vdf, tint_ in [(self.vdf.isel(time=[0]), None), (self.vdf, tint)]:
+            pad = mms.get_pitch_angle_dist(vdf, self.b_xyz, tint_, verbose=False)
+            self.assertEqual(pad.data.shape, (1, 32, 12))
+            np.testing.assert_allclose(pad.data.data[0], self._expected("mean"))
+
+    def test_get_pitch_angle_dist_energy_tables(self):
+        # Each time step keeps its energy table (they were averaged)
+        vdf = generate_vdf(64.0, 4, [32, 32, 16], energy01=True, units="s^3/cm^6")
+        vdf["phi"], vdf["theta"] = self.vdf.phi, self.vdf.theta
+        pad = mms.get_pitch_angle_dist(vdf, self.b_xyz, verbose=False)
+        np.testing.assert_array_equal(pad.energy.data, vdf.energy.data)
+
+    def test_get_pitch_angle_dist_invalid(self):
+        with self.assertRaises(ValueError):
+            mms.get_pitch_angle_dist(self.vdf, self.b_xyz, meanorsum="bazinga")
+
+        with self.assertRaises(ValueError):
+            mms.get_pitch_angle_dist(self.vdf, self.b_xyz, angles="bazinga")
+
+
 class HpcaEnergiesTestCase(unittest.TestCase):
     def test_hpca_energies_output(self):
         result = mms.hpca_energies()
