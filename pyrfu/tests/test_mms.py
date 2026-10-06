@@ -2041,6 +2041,39 @@ class PsdMomentsTestCase(unittest.TestCase):
         # The caller's data is left unchanged
         np.testing.assert_array_equal(vdf_t.data.data, data)
 
+    def test_psd_moments_clipped_tables(self):
+        # Fewer than 32 channels (vdf_elim output) raised IndexError in the
+        # alternating-table and fast-mode speed widths. On log-uniform tables
+        # the clipped VDF gives the same moments as the same channels of the
+        # full one.
+        ratio = (3e4 / 10.0) ** (1 / 31)
+        energy1 = 10.0 * ratio ** (np.arange(32) + 0.5)
+        vdf_alt, sc_pot_alt = self._drifting_maxwellian(
+            1.0, 1000.0, [200.0, 150.0, 0.0], n_t=4, energy1=energy1
+        )
+        vdf_fast, sc_pot_fast = self._drifting_maxwellian(
+            1.0, 1000.0, [200.0, 150.0, 0.0]
+        )
+        vdf_fast.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS fastSkyMap dist"
+
+        # Alternating tables: both ends clipped. Fast: only the top (the first
+        # channel has a specific width)
+        for vdf, sc_pot, e_int in [
+            (vdf_alt, sc_pot_alt, [120.0, 7000.0]),
+            (vdf_fast, sc_pot_fast, [1.0, 1500.0]),
+        ]:
+            tables = np.vstack([vdf.attrs["energy0"], vdf.attrs["energy1"]])
+            kept = np.where(np.any((tables > e_int[0]) & (tables < e_int[1]), 0))[0]
+            channels = [kept[0], kept[-1] + 1]
+            self.assertLess(len(kept), 32)
+
+            vdf_clip = mms.vdf_elim(vdf, e_int)
+            self.assertEqual(vdf_clip.energy.shape[1], len(kept))
+            result = self._moments(vdf_clip, sc_pot)
+            expected = self._moments(vdf, sc_pot, en_channels=channels)
+            for res, exp in zip(result, expected):
+                np.testing.assert_allclose(res, exp, rtol=1e-10)
+
     def _moments(self, vdf, sc_pot, **kwargs):
         # n, V, P and q at all times
         n, v, p, _, _, h = mms.psd_moments(vdf, sc_pot, **kwargs)

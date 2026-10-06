@@ -446,25 +446,32 @@ def psd_moments(vdf, sc_pot, **kwargs):
             # (time, energy) already: tiling made (n_t^2, energy)
             delta_v = np.ascontiguousarray(np.broadcast_to(delta_v, energy.shape))
         else:
+            # The two tables interleaved (2 * n_e energies; n_e = 32 unless
+            # clipped, e.g. by vdf_elim)
             energy_all = np.hstack([energy0, energy1])
             energy_all = np.log10(np.sort(energy_all))
+            n_all = len(energy_all)
 
             if np.abs(energy_all[1] - energy_all[0]) > 1e-4:
                 temp0 = 2 * energy_all[0] - energy_all[1]
             else:
                 temp0 = 2 * energy_all[1] - energy_all[2]
 
-            if np.abs(energy_all[63] - energy_all[62]) > 1e-4:
-                temp65 = 2 * energy_all[63] - energy_all[62]
+            if np.abs(energy_all[-1] - energy_all[-2]) > 1e-4:
+                temp_end = 2 * energy_all[-1] - energy_all[-2]
             else:
-                temp65 = 2 * energy_all[63] - energy_all[61]
+                temp_end = 2 * energy_all[-1] - energy_all[-3]
 
-            energy_all = np.hstack([temp0, energy_all, temp65])
+            energy_all = np.hstack([temp0, energy_all, temp_end])
             diff_en_all = np.diff(energy_all)
-            energy0upper = 10 ** (np.log10(energy0) + diff_en_all[1:64:2] / 2)
-            energy0lower = 10 ** (np.log10(energy0) - diff_en_all[0:63:2] / 2)
-            energy1upper = 10 ** (np.log10(energy1) + diff_en_all[2:65:2] / 2)
-            energy1lower = 10 ** (np.log10(energy1) - diff_en_all[1:64:2] / 2)
+            energy0upper = 10 ** (np.log10(energy0) + diff_en_all[1:n_all:2] / 2)
+            energy0lower = 10 ** (
+                np.log10(energy0) - diff_en_all[0 : n_all - 1 : 2] / 2
+            )
+            energy1upper = 10 ** (
+                np.log10(energy1) + diff_en_all[2 : n_all + 1 : 2] / 2
+            )
+            energy1lower = 10 ** (np.log10(energy1) - diff_en_all[1:n_all:2] / 2)
 
             v0upper = np.sqrt(2 * q_e * energy0upper / p_mass)
             v0lower = np.sqrt(2 * q_e * energy0lower / p_mass)
@@ -479,11 +486,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
     else:  # Fast mode energy/speed widths
         energy_all = np.log10(energy[0, :])
         temp0 = 2 * energy_all[0] - energy_all[1]
-        temp33 = 2 * energy_all[31] - energy_all[30]
-        energy_all = np.hstack([temp0, energy_all, temp33])
+        temp_end = 2 * energy_all[-1] - energy_all[-2]
+        energy_all = np.hstack([temp0, energy_all, temp_end])
         diff_en_all = np.diff(energy_all)
-        energy_upper = 10 ** (np.log10(energy[0, :]) + diff_en_all[1:33] / 4)
-        energy_lower = 10 ** (np.log10(energy[0, :]) - diff_en_all[0:32] / 4)
+        energy_upper = 10 ** (np.log10(energy[0, :]) + diff_en_all[1:] / 4)
+        energy_lower = 10 ** (np.log10(energy[0, :]) - diff_en_all[:-1] / 4)
         v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
         v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
         delta_v = (v_upper - v_lower) * 2.0
