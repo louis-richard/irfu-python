@@ -4,6 +4,7 @@ MMS examples gallery
 .. nbgallery::
     :glob:
 
+    ./example_mms_data_access
     ./example_mms_b_e_j
     ./example_mms_ebfields
     ./example_mms_edr_signatures

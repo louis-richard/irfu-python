@@ -148,7 +148,6 @@ exclude_patterns = [
     "**.ipynb_checkpoints",
     "**/.virtual_documents",
     "examples/**/README.md",
-    "examples/01_mms/example_mms_ressources.ipynb",  # empty, work in progress
 ]
 
 numpydoc_show_class_members = False
