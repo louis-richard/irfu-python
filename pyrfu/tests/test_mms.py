@@ -2020,6 +2020,27 @@ class PsdMomentsTestCase(unittest.TestCase):
         n, _, _, _, _, _ = mms.psd_moments(vdf, sc_pot)
         np.testing.assert_allclose(n.data, 1.0, rtol=0.01)
 
+    def test_psd_moments_non_contiguous(self):
+        # get_dist returns the data as a transposed float32 view (not
+        # C-contiguous), which made the numba kernels fail on every call
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
+        data = vdf.data.data.astype(np.float32)
+        data_t = np.ascontiguousarray(data.transpose(0, 3, 2, 1)).transpose(0, 3, 2, 1)
+        self.assertFalse(data_t.flags["C_CONTIGUOUS"])
+
+        vdf_c = vdf.copy()
+        vdf_c["data"] = vdf.data.copy(data=data)
+        vdf_t = vdf.copy()
+        vdf_t["data"] = vdf.data.copy(data=data_t)
+        self.assertFalse(vdf_t.data.data.flags["C_CONTIGUOUS"])
+
+        result = self._moments(vdf_t, sc_pot)
+        self._assert_moments_equal(result, self._moments(vdf_c, sc_pot))
+        self.assertAlmostEqual(float(result[0][0]), 1.0, delta=0.01)
+
+        # The caller's data is left unchanged
+        np.testing.assert_array_equal(vdf_t.data.data, data)
+
     def _moments(self, vdf, sc_pot, **kwargs):
         # n, V, P and q at all times
         n, v, p, _, _, h = mms.psd_moments(vdf, sc_pot, **kwargs)

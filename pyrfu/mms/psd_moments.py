@@ -42,9 +42,9 @@ def _sanitize_nan_inplace(vdf):
     a realistic (512, 32, 32, 16) array in this sandbox, since it's one
     read+write pass over the array instead of two. Safe to call on
     `vdf_data` in the wrapper below because that array was already
-    freshly allocated by the `* 1e12` unit conversion a few lines
-    earlier -- mutating it doesn't touch the caller's original
-    `vdf.data`.
+    freshly allocated (C-contiguous, as `reshape` requires) by the unit
+    conversion a few lines earlier -- mutating it doesn't touch the
+    caller's original `vdf.data`.
     """
     flat = vdf.reshape(-1)
     n = flat.shape[0]
@@ -334,7 +334,9 @@ def psd_moments(vdf, sc_pot, **kwargs):
     particle_type = vdf.attrs["species"]
     assert particle_type[0].lower() in ["e", "i"], "invalid particle type"
 
-    vdf_data = vdf.data.data * 1e12  # In SI units
+    # In SI units, as a new C-contiguous float64 array: get_dist returns a
+    # transposed (non-contiguous) view, which the numba kernels can't reshape
+    vdf_data = np.multiply(vdf.data.data, 1e12, dtype=np.float64, order="C")
 
     step_table = vdf.attrs["esteptable"]
     energy = vdf.energy.data
