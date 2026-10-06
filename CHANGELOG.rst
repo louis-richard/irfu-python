@@ -73,6 +73,18 @@ These changes can require updating your code.
 - pyrfu logs to its own ``"pyrfu"`` logger and no longer configures the root
   logger or redirects all warnings at import. Silence it with
   ``logging.getLogger("pyrfu").setLevel(logging.WARNING)``.
+- ``mms.get_data`` and ``mms.tokenize``: a variable name made of valid parts
+  but not supported (not in ``mms_keys.json``, e.g. ``tsi_fpi_brst_l2``)
+  raises ``ValueError`` (it was a bare ``KeyError``).
+- ``mms.load_ancillary`` supports ``defatt``, ``defeph`` and ``defq`` and
+  raises ``ValueError`` for the predicted products, which were documented but
+  raised ``KeyError``; no file in the interval raises ``FileNotFoundError``.
+- ``mms.psd_moments``: ``energy_range`` now restricts the integration (it was
+  ignored). ``en_channels`` is documented as it works: 0-based
+  ``[start, stop)`` indices, unlike irfu-matlab's 1-based ``[min max]``.
+- ``mms.get_pitch_angle_dist``: each time step keeps its energy table (the
+  energies were the mean of the first two time steps, mislabelling the
+  alternating tables of early burst data).
 - Invalid inputs raise ``ValueError``, ``TypeError`` or
   ``FileNotFoundError`` instead of ``AssertionError`` in many functions.
 
@@ -107,6 +119,10 @@ New features
   takes spectrograms.
 - ``plot.plot_spectr`` and ``pyrf.ts_spectr``: spectrograms with
   time-varying energies; ``plot.colorbar``: ``width``.
+- ``mms.psd_moments``: time-dependent ``energy_range``, as an ``(n_t, 2)``
+  array or a ``DataArray`` resampled to the distribution times.
+- ``mms.get_pitch_angle_dist``: ``meanorsum="sum_weighted"`` (solid-angle
+  weighted mean, as irfu-matlab), which was documented but rejected.
 - ``dispersion.one_fluid_dispersion``: ``k_vec``; ``mms.lh_wave_analysis``:
   ``vmax``; ``plot.add_position``: ``units``.
 
@@ -166,8 +182,13 @@ Each of these returned wrong values before.
   ``partial_moments`` checks.
 - ``mms.reduce``: Monte-Carlo speed bias (n, V and T 6-12 % low) and speed
   bin widths.
-- ``mms.psd_rebin``: time-step overflow (half a sample early), empty last
-  sample and energy-table order.
+- ``mms.psd_rebin`` (and ``mms.vdf_to_e64``, ``mms.vdf_projection`` and
+  ``mms.reduce`` on burst data with alternating energy tables): when the
+  azimuth labels restart between the two samples of a pair (20 % of DIS and
+  5 % of DES pairs in 2015), the two energy tables at an azimuth came from
+  directions 31° apart (20° in irfu-matlab, which also shifts the wrong way);
+  also the time-step overflow (half a sample early), the empty last sample and
+  the energy-table order.
 - ``mms.vdf_projection``: rebinned angles in degrees used as radians, and phi
   from the wrong times.
 - ``mms.hpca_pad``: sample pairing and directions.
@@ -175,6 +196,10 @@ Each of these returned wrong values before.
   ``mms.remove_imoms_background`` (dynamic pressure units) and
   ``mms.eis_moments`` (P and T 1.5 times too large).
 - ``mms.calculate_epsilon``: channels straddling the spacecraft potential.
+- ``mms.make_model_vdf``: NaN at every point when the bulk velocity is along
+  B (or zero). Channels below the spacecraft potential stay NaN, now
+  documented (irfu-matlab gives f(v=0)); they have no weight in
+  ``calculate_epsilon`` or moments.
 - ``mms.average_vdf`` (window length) and ``mms.vdf_to_e64`` (energy widths).
 
 *Data access*
@@ -184,8 +209,16 @@ Each of these returned wrong values before.
 - ``mms.get_ts``: dropped the 4th column of every (N, 4) variable (MEC
   quaternions) and gave NaT times for single records.
 - ``mms.get_dist``: files without records.
+- ``mms.load_ancillary``: the last sample of every DEFEPH file was dropped
+  (only DEFATT files end with a ``DATA_STOP`` footer).
 - SDC downloads have timeouts, check the HTTP status and no longer leave
   temporary files; ``mms.db_init`` changes apply without restarting Python.
+
+*Plots*
+
+- ``plot.pl_scatter_matrix`` paired the samples by index when the two time
+  series have different time grids; they are now paired in time, as for the
+  histograms.
 
 Other fixes
 ^^^^^^^^^^^
@@ -196,7 +229,26 @@ Other fixes
   ``pyrf.match_phibe_v``, ``pyrf.eb_nrf``, ``mms.correct_edp_probe_timing``,
   ``mms.probe_align_times``, ``mms.whistler_b2e``, ``mms.lh_wave_analysis``,
   ``mms.load_brst_segments``, ``mms.feeps_flat_field_corrections``,
-  ``plot.mms_pl_config`` and ``plot.plot_clines``.
+  ``plot.mms_pl_config``, ``plot.plot_clines``, ``plot.plot_ang_ang`` and
+  ``plot.pl_scatter_matrix`` with ``pdf=True``.
+- Functions that failed on common inputs:
+
+  - ``mms.def2psd``, ``mms.dpf2psd``, ``mms.psd2def`` and ``mms.psd2dpf`` on
+    one time step, spectra with (time, energy) energies and pitch-angle
+    distributions; the species are no longer case-sensitive and accept the
+    singular (``"electron"``);
+  - ``mms.vdf_elim`` on one time step, and its energy widths are now clipped
+    with the energies;
+  - ``mms.get_pitch_angle_dist`` and ``mms.vdf_omni`` with 1-D azimuths or one
+    time step; the ``vdf_omni`` output for alternating energy tables now keeps
+    the units and species, so that the unit conversions work on it;
+  - ``lp.photo_current`` with upper-case materials (``"TiN"``) and its listing
+    of the materials.
+
+- ``pyrfu.solo`` is available after ``import pyrfu``.
+- Memory: ``mms.psd_moments`` (burst speed widths of size n\ :sub:`t`\ :sup:`2`,
+  1 GB for 2000 samples), ``mms.make_model_vdf`` and
+  ``mms.get_pitch_angle_dist`` no longer tile 4-D arrays.
 - The caller's data is no longer modified by ``pyrf.edb``, ``pyrf.vht``,
   ``pyrf.ts_scalar``, ``pyrf.ts_vec_xyz``, ``mms.fft_bandpass``,
   ``mms.estimate_phase_speed``, ``mms.remove_idist_background``,
