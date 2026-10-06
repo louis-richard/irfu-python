@@ -239,7 +239,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
     Parameters
     ----------
     vdf : xarray.Dataset
-        3D skymap velocity distribution.
+        3D skymap velocity distribution. The angular widths are taken from the
+        optional attributes `delta_phi_minus`/`delta_phi_plus` (time, phi) and
+        `delta_theta_minus`/`delta_theta_plus` (theta), in degrees, or else
+        from the spacing of the phi and theta grids.
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
 
@@ -399,7 +402,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
     if "delta_phi_minus" in vdf.attrs and "delta_phi_plus" in vdf.attrs:
         delta_phi_minus = vdf.attrs["delta_phi_minus"]
         delta_phi_plus = vdf.attrs["delta_phi_plus"]
-        delta_phi = delta_phi_plus + delta_phi_minus
+        # Widths in degrees, as in the FPI files (irfu-matlab converts too)
+        delta_phi = np.deg2rad(delta_phi_plus + delta_phi_minus)
         delta_phi = np.tile(delta_phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
     else:
         delta_phi = np.deg2rad(np.median(np.diff(phi[0, :])))
@@ -410,7 +414,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     if "delta_theta_minus" in vdf.attrs and "delta_theta_plus" in vdf.attrs:
         delta_theta_minus = vdf.attrs["delta_theta_minus"]
         delta_theta_plus = vdf.attrs["delta_theta_plus"]
-        delta_theta = delta_theta_plus + delta_theta_minus
+        delta_theta = np.deg2rad(delta_theta_plus + delta_theta_minus)
         delta_theta = np.tile(
             delta_theta[np.newaxis, np.newaxis, :],
             (vdf_data.shape[0], vdf_data.shape[2], 1),

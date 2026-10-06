@@ -2074,6 +2074,22 @@ class PsdMomentsTestCase(unittest.TestCase):
             for res, exp in zip(result, expected):
                 np.testing.assert_allclose(res, exp, rtol=1e-10)
 
+    def test_psd_moments_angular_widths_attrs(self):
+        # delta_phi_* and delta_theta_* attrs are in degrees (FPI files); they
+        # were used as radians (n x 3283). Half-widths of 5.625 deg give the
+        # same moments as the 11.25 deg grid spacing used without them.
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
+        expected = self._moments(vdf, sc_pot)
+
+        n_t, _, n_phi, n_theta = vdf.data.shape
+        vdf.attrs["delta_phi_minus"] = np.full((n_t, n_phi), 5.625)
+        vdf.attrs["delta_phi_plus"] = np.full((n_t, n_phi), 5.625)
+        vdf.attrs["delta_theta_minus"] = np.full(n_theta, 5.625)
+        vdf.attrs["delta_theta_plus"] = np.full(n_theta, 5.625)
+        result = self._moments(vdf, sc_pot)
+        self._assert_moments_equal(result, expected)
+        self.assertAlmostEqual(float(result[0][0]), 1.0, delta=0.01)
+
     def _moments(self, vdf, sc_pot, **kwargs):
         # n, V, P and q at all times
         n, v, p, _, _, h = mms.psd_moments(vdf, sc_pot, **kwargs)
