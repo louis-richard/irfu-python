@@ -3633,6 +3633,79 @@ class VdfOmniTestCase(unittest.TestCase):
         result = mms.vdf_omni(generate_vdf(64.0, 100, (32, 32, 16)), method)
         self.assertIsInstance(result, xr.DataArray)
 
+    @staticmethod
+    def _vdf(energy01=False):
+        # f = (i_energy + 1) (i_theta + 1) on FPI-like theta (centres of 16 bins)
+        vdf = generate_vdf(
+            64.0, 4, [32, 32, 16], energy01=energy01, species="ions", units="s^3/cm^6"
+        )
+        vdf["theta"] = 5.625 + 11.25 * vdf.theta
+        vdf["energy"] = vdf.energy + 10.0
+        e_idx, t_idx = np.arange(32.0)[:, None, None], np.arange(16.0)[None, None, :]
+        vdf.data.data[:] = (e_idx + 1) * (t_idx + 1) * np.ones((32, 32, 16))
+        return vdf
+
+    @staticmethod
+    def _expected(method):
+        g_theta = np.arange(16.0) + 1
+        sin_t = np.sin(np.deg2rad(5.625 + 11.25 * np.arange(16)))
+        if method == "mean":
+            per_e = np.sum(g_theta * sin_t) / np.sum(sin_t)
+        else:
+            per_e = 32 * np.sum(g_theta)
+        return (np.arange(32.0) + 1) * per_e
+
+    def test_vdf_omni_values(self):
+        for method in ["mean", "sum", "MEAN"]:
+            result = mms.vdf_omni(self._vdf(), method)
+            np.testing.assert_allclose(
+                result.data, np.broadcast_to(self._expected(method.lower()), (4, 32))
+            )
+            self.assertEqual(result.attrs["UNITS"], "s^3/cm^6")
+
+    def test_vdf_omni_energy_tables(self):
+        # Alternating tables: Dataset with the units and attributes of vdf, so
+        # that the unit conversions work on it
+        vdf = self._vdf(energy01=True)
+        result = mms.vdf_omni(vdf)
+
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.energy.data, vdf.energy.data)
+        np.testing.assert_allclose(result.data.data[0], self._expected("mean"))
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        self.assertEqual(result.attrs["species"], "ions")
+
+        dpf = mms.psd2dpf(result)
+        self.assertEqual(dpf.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
+
+    def test_vdf_omni_shapes(self):
+        vdf = self._vdf()
+
+        # One time step
+        result = mms.vdf_omni(vdf.isel(time=[0]))
+        self.assertEqual(result.shape, (1, 32))
+
+        # 1-D phi
+        vdf["phi"] = xr.DataArray(vdf.phi.data[0], dims=["idx1"])
+        np.testing.assert_allclose(mms.vdf_omni(vdf).data[0], self._expected("mean"))
+
+    def test_vdf_omni_nan_channel(self):
+        # A channel without data: NaN (mean) or 0 (sum), without warnings
+        vdf = self._vdf()
+        vdf.data.data[:, 3] = np.nan
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            mean = mms.vdf_omni(vdf, "mean").data
+            total = mms.vdf_omni(vdf, "sum").data
+
+        self.assertTrue(np.all(np.isnan(mean[:, 3])))
+        np.testing.assert_array_equal(total[:, 3], 0.0)
+
+    def test_vdf_omni_invalid_method(self):
+        with self.assertRaises(ValueError):
+            mms.vdf_omni(self._vdf(), "bazinga")
+
 
 @ddt
 class TokenizeTestCase(unittest.TestCase):
