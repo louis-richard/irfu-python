@@ -2224,6 +2224,37 @@ class PsdRebinTestCase(unittest.TestCase):
             vdf_r[:, 1:64:2, ...], np.broadcast_to(expected_odd, vdf_r[:, 1:64:2].shape)
         )
 
+    def test_psd_rebin_phi_relabelling(self):
+        # Azimuths as in FPI burst data: the spin advances them by 2.8 deg per
+        # sample, and they are labelled from one bin lower when the first one
+        # would pass 11.25 deg (2015-10-30 DIS: 9.13, 20.38, ... then 0.63,
+        # 11.88, ...). The rebinned samples must pair the same directions.
+        n_t, d_phi, advance = 40, 11.25, 2.8
+        vdf = generate_vdf(64.0, n_t, [32, 32, 16], energy01=True, species="ions")
+        phi0 = (3.5 + advance * np.arange(n_t)) % d_phi
+        phi = phi0[:, None] + d_phi * np.arange(32)[None, :]
+        vdf.data.data[:] = (2.0 + np.cos(np.deg2rad(phi)))[:, None, :, None]
+
+        wrap = phi[0:-1:2, 0] > phi[1::2, 0]
+        self.assertTrue(np.any(wrap) and not np.all(wrap))
+
+        _, vdf_r, _, phi_r = mms.psd_rebin(
+            vdf,
+            phi,
+            vdf.attrs["energy0"],
+            vdf.attrs["energy1"],
+            vdf.attrs["esteptable"],
+        )
+
+        # Midpoint of the matching directions of the two samples
+        np.testing.assert_allclose(phi_r, phi[0:-1:2] + advance / 2, atol=1e-4)
+
+        # Both energy tables at a column see the same direction (to the spin
+        # advance): it was 31 deg apart (shift by 2 bins) for relabelled pairs
+        np.testing.assert_array_less(
+            np.abs(vdf_r[:, 0::2] - vdf_r[:, 1::2]), np.deg2rad(advance) * 1.01
+        )
+
     @idata(itertools.product([False, True], [0, 1]))
     @unpack
     def test_psd_rebin_energy_table_order(self, phi_wrap, first_step):

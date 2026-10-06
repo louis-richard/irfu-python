@@ -72,6 +72,15 @@ def psd_rebin(
     I'm assuming no gaps in the burst data interval. If there is a gap use
     time_clip before running. To be updated later.
 
+    Between two samples, the spin advances the azimuths (2.8 deg for DIS,
+    0.56 deg for DES burst), and when the first azimuth would pass one bin
+    (11.25 deg) the azimuths are labelled from one bin lower: column j + 1 of
+    the second sample then looks in the direction of column j of the first.
+    The second sample is shifted by -1 bin to pair the same directions (with
+    360 deg added to its last azimuth). This differs from irfu-matlab
+    mms.psd_rebin, which shifts by +1 bin and pairs directions 20 deg apart
+    (checked on MMS3 DIS and DES burst data, 2015-10-30).
+
     """
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
@@ -112,8 +121,10 @@ def psd_rebin(
         (len(time_r), vdf.data.shape[2]), dtype=np.float32
     )
 
-    phi_s: NDArray[np.float32] = np.roll(phi, 2, axis=1)
-    phi_s[:, 0] = phi_s[:, 0] - 360.0
+    # Azimuths of the next bin, for the pairs where the azimuths are labelled
+    # from one bin lower in the second sample (see Notes)
+    phi_s: NDArray[np.float64] = np.roll(phi.astype(np.float64), -1, axis=1)
+    phi_s[:, -1] = phi_s[:, -1] + 360.0
 
     # Default integer type (int16 wraps after 32767 samples)
     time_indices: NDArray[np.int_] = np.arange(0, len(vdf.time) - 1, 2)
@@ -122,11 +133,7 @@ def psd_rebin(
         if phi[idx, 0] > phi[idx + 1, 0]:
             phi_r[new_el_num, :] = (phi[idx, :] + phi_s[idx + 1, :]) / 2
 
-            vdf_temp: NDArray[np.float32] = np.roll(
-                np.squeeze(vdf_data[idx + 1, ...]),
-                2,
-                axis=1,
-            )
+            vdf_temp: NDArray[np.float64] = np.roll(vdf_data[idx + 1, ...], -1, axis=1)
 
             if esteptable[idx]:
                 vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx, ...]
@@ -141,7 +148,7 @@ def psd_rebin(
 
             if esteptable[idx]:
                 vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 0:63:2, ...] = vdf.data.data[idx + 1, ...]
+                vdf_r[new_el_num, 0:63:2, ...] = vdf_data[idx + 1, ...]
             else:
                 vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx + 1, ...]
                 vdf_r[new_el_num, 0:63:2, ...] = vdf_data[idx, ...]
