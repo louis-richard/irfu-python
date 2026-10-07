@@ -2940,6 +2940,59 @@ class GetTsTestCase(unittest.TestCase):
         )
 
 
+def _cdf_fpi_brst_spectr(n_records, t_start="2019-09-14T07:54:00", offset=0.0):
+    # In-memory FPI burst electron omni spectrogram as in the L2 moments files:
+    # record varying energy table (DEPEND_1), start times with deltas
+    time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
+        30, "ms"
+    )
+    energy = np.tile(10.0 * 1.3 ** np.arange(32) + offset, (n_records, 1))
+
+    cdf = pycdfpp.CDF()
+    cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+    cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+    for name, value in [("Epoch_minus_var", 0.0), ("Epoch_plus_var", 30.0)]:
+        cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+        cdf[name].add_attribute("UNITS", "ms")
+    cdf.add_variable("mms1_des_energy_brst", values=energy.reshape(-1, 32))
+    cdf["mms1_des_energy_brst"].add_attribute("LABLAXIS", "energy")
+    cdf.add_variable(
+        "mms1_des_energyspectr_omni_brst",
+        values=np.arange(n_records * 32, dtype=float).reshape(-1, 32),
+    )
+    cdf["mms1_des_energyspectr_omni_brst"].add_attribute("DEPEND_0", "Epoch")
+    cdf["mms1_des_energyspectr_omni_brst"].add_attribute(
+        "DEPEND_1", "mms1_des_energy_brst"
+    )
+    return bytes(pycdfpp.save(cdf))
+
+
+@ddt
+class GetTsRecordVaryingTableTestCase(unittest.TestCase):
+    cdf_name = "mms1_des_energyspectr_omni_brst"
+
+    @data(0, 1, 4, 5)
+    def test_get_ts_record_varying_table(self, n_records):
+        # 0 records raised MissingDimensionsError (the empty 2-D table was used
+        # as the coordinate), 4 records ValueError (compared with x, y, z, r)
+        result = get_ts(_cdf_fpi_brst_spectr(n_records), self.cdf_name)
+        self.assertTupleEqual(result.shape, (n_records, 32))
+        self.assertTupleEqual(result.energy.shape, (32,))
+        if n_records:
+            np.testing.assert_allclose(result.energy.data, 10.0 * 1.3 ** np.arange(32))
+        else:
+            self.assertTrue(np.all(np.isnan(result.energy.data)))
+
+    def test_get_ts_append_empty_file(self):
+        # As get_data: a file without records, before or after a file with
+        # data, gives the data and the energies of the latter
+        empty = get_ts(_cdf_fpi_brst_spectr(0), self.cdf_name)
+        full = get_ts(_cdf_fpi_brst_spectr(5, offset=1.0), self.cdf_name)
+        for result in [pyrf.ts_append(empty, full), pyrf.ts_append(full, empty)]:
+            xr.testing.assert_identical(result, full)
+
+
 def _cdf_fpi_brst_dist(n_records, t_start):
     # In-memory FPI burst ion distribution laid out as in the L2 files: record
     # varying phi, energy, steptable parity and energy deltas, with alternating

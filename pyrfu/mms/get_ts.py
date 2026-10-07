@@ -198,19 +198,22 @@ def _get_depend(file, cdf_name, dep_num=1):
             out["data"] = out["data"][0]
 
         # Vector and magnitude (e.g. FGM): the magnitude is removed from the data
-        if len(out["data"]) == 4 and all(
-            out["data"].astype(str) == ["x", "y", "z", "r"]
+        if (
+            out["data"].ndim == 1
+            and len(out["data"]) == 4
+            and all(out["data"].astype(str) == ["x", "y", "z", "r"])
         ):
             out["data"] = out["data"].astype(str)[:-1]
 
         elif out["data"].ndim == 2:
             if len(out["data"].flatten()) == 3:
                 out["data"] = out["data"].flatten()
+            elif out["data"].shape[0] == 0:
+                # Record varying table of a file without records: NaN values
+                out["data"] = np.full(out["data"].shape[1], np.nan)
             else:
-                try:
-                    out["data"] = out["data"][0, :]
-                except IndexError:
-                    pass
+                # Record varying table (e.g. FPI energies): first record
+                out["data"] = out["data"][0, :]
 
         out["attrs"] = _get_depend_attributes(file, depend_key)
 
