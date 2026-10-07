@@ -163,6 +163,12 @@ def read_tnr(
     ValueError
         If there is no data from the sensor selected.
 
+    Warnings
+    --------
+    Known issue in 2.5.0: fails on every file with data, because it calls
+    ``scipy.integrate.trapz``, which was removed in SciPy 1.14 (the minimum
+    supported version). It will be fixed in 2.6.
+
     Notes
     -----
     The script check if there are data from the two channel and put them

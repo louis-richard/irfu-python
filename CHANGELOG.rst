@@ -265,3 +265,10 @@ Documentation
   new landing page, and a build without warnings.
 - New ``pyrf`` examples: time series, four-spacecraft methods, and minimum
   variance and de Hoffmann-Teller analysis.
+
+Known issues
+^^^^^^^^^^^^
+
+- ``solo.read_tnr`` fails on every file with data: it calls
+  ``scipy.integrate.trapz``, which was removed in SciPy 1.14 (the minimum
+  supported version). It will be fixed in 2.6.
