@@ -6,6 +6,7 @@ import unittest
 
 # 3rd party imports
 import numpy as np
+from scipy import constants
 
 # Local imports
 from .. import lp
@@ -17,6 +18,19 @@ __copyright__ = "Copyright 2020-2026"
 __license__ = "MIT"
 __version__ = "2.4.21"
 __status__ = "Prototype"
+
+
+class ThermalCurrentTestCase(unittest.TestCase):
+    def test_thermal_current_probe_type_case(self):
+        # "Sphere" passed the check but gave the cylinder current (up to 25 %
+        # different at 10 V)
+        u = np.array([-10.0, 0.0, 10.0])
+        args = (1e7, 1e5, constants.electron_mass, 0.0, -1, u, 1.0)
+        sphere = lp.thermal_current(*args, "sphere")
+        cylinder = lp.thermal_current(*args, "cylinder")
+        self.assertFalse(np.allclose(sphere, cylinder))
+        for p_type, expected in [("Sphere", sphere), ("CYLINDER", cylinder)]:
+            np.testing.assert_array_equal(lp.thermal_current(*args, p_type), expected)
 
 
 class PhotoCurrentTestCase(unittest.TestCase):
