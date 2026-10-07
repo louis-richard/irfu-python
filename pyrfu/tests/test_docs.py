@@ -46,6 +46,18 @@ class DocsNotebooksTestCase(unittest.TestCase):
             with self.subTest(notebook=os.path.basename(path)):
                 self.assertListEqual(widgets, [])
 
+    def test_docs_notebooks_no_error_outputs(self):
+        # A notebook saved after a failed cell shows the traceback in the docs
+        for path in NOTEBOOKS:
+            errors = [
+                f"cell {i}: {o.get('ename')}"
+                for i, c in enumerate(self._load(path)["cells"])
+                for o in c.get("outputs", [])
+                if o["output_type"] == "error"
+            ]
+            with self.subTest(notebook=os.path.basename(path)):
+                self.assertListEqual(errors, [])
+
     def test_docs_notebooks_inline_backend(self):
         # The notebooks that plot set the inline backend, so that they are not
         # saved with widget outputs from a Jupyter configured for ipympl
