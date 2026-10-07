@@ -1,5 +1,5 @@
-Pyrfu examples
-==============
+Examples
+========
 
 In this section, we provide simple and practical examples on how to use
 the different subpackages of the ``pyrfu`` package.
@@ -10,3 +10,4 @@ the different subpackages of the ``pyrfu`` package.
     ./00_overview/index
     ./01_mms/index
     ./02_dispersion/index
+    ./03_pyrf/index

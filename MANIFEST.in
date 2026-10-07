@@ -1,8 +1,9 @@
 # Include the README
 include README.rst
+include CHANGELOG.rst
 
 # Include the license file
-include LICENCE.txt
+include LICENSE.txt
 
 # include IRF logo
 include pyrfu/plot/logo/IRF_logo_blue_on_white.jpg

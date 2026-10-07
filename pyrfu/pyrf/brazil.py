@@ -3,13 +3,13 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 # Local imports
-from pyrfu.pyrf.histogram2d import histogram2d
 from pyrfu.pyrf.optimize_nbins_2d import optimize_nbins_2d
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2025"
 __license__ = "MIT"
 __version__ = "2.4.14"
@@ -28,51 +28,85 @@ def brazil(
 
     Parameters
     ----------
-    beta_para : np.ndarray
-        Parallel beta values (must be positive and finite).
-    p_aniso : np.ndarray
-        Temperature anisotropy values (must be positive and finite).
-    bins : list, optional
-        Bin edges or number of bins for the histogram. If None, optimized
-        bin count is used.
+    beta_para : array_like or xarray.DataArray
+        Parallel beta values. Only the samples where both inputs are positive
+        and finite are used.
+    p_aniso : array_like or xarray.DataArray
+        Temperature anisotropy values, paired sample by sample with
+        `beta_para` (same length).
+    bins : int or list, optional
+        Number of bins, or bin edges, of log10(beta_para) and log10(p_aniso),
+        as `bins` in numpy.histogram2d. If None, the number of bins is
+        optimized with :func:`pyrfu.pyrf.optimize_nbins_2d`.
     threshold : int, optional
-        Minimum count threshold for masking low-counts (default is 9).
+        Bins with fewer counts are masked in the PDF (default is 9).
+    **kwargs
+        Keyword arguments passed to :func:`pyrfu.pyrf.optimize_nbins_2d`.
 
     Returns
     -------
     n : xarray.DataArray
-        2D histogram counts with low-counts masked (NaN for <9).
+        2D histogram counts, NaN in the empty bins.
     h : xarray.DataArray
-        2D probability density function with low-counts masked.
+        2D probability density function per unit beta_para and p_aniso, NaN
+        in the bins with fewer than `threshold` counts (and in the empty
+        ones).
+
+    Raises
+    ------
+    ValueError
+        If `beta_para` and `p_aniso` have different lengths.
+
+    Notes
+    -----
+    The bins are logarithmically spaced; the coordinates ``x_bins`` and
+    ``y_bins`` are their geometric centers, and the edges are in the
+    attributes ``x_edges`` and ``y_edges``.
+
     """
+    beta_para = np.asarray(beta_para, dtype=np.float64)
+    p_aniso = np.asarray(p_aniso, dtype=np.float64)
+
+    if beta_para.shape != p_aniso.shape:
+        raise ValueError(
+            f"beta_para and p_aniso must have the same shape, got "
+            f"{beta_para.shape} and {p_aniso.shape}"
+        )
+
     # Valid data mask
     valid = (
         np.isfinite(beta_para) & (beta_para > 0) & np.isfinite(p_aniso) & (p_aniso > 0)
     )
-    beta_para = beta_para[valid]
-    p_aniso = p_aniso[valid]
-
-    log_beta = np.log10(beta_para)
-    log_aniso = np.log10(p_aniso)
+    log_beta = np.log10(beta_para[valid])
+    log_aniso = np.log10(p_aniso[valid])
 
     if bins is None:
         bins = optimize_nbins_2d(log_beta, log_aniso, **kwargs)
 
-    # Compute histogram edges
-    _, x_edges, y_edges = np.histogram2d(log_beta, log_aniso, bins=bins, density=True)
+    # Counts in logarithmic bins
+    counts, x_edges, y_edges = np.histogram2d(log_beta, log_aniso, bins=bins)
+    x_edges, y_edges = [10**x_edges, 10**y_edges]
 
-    # Compute bin centers in linear space
-    x_centers = 10 ** (x_edges[:-1] + np.diff(x_edges) / 2)
-    y_centers = 10 ** (y_edges[:-1] + np.diff(y_edges) / 2)
+    # Geometric bin centers
+    x_centers = np.sqrt(x_edges[:-1] * x_edges[1:])
+    y_centers = np.sqrt(y_edges[:-1] * y_edges[1:])
 
-    # Histogram counts (not normalized)
-    n = histogram2d(beta_para, p_aniso, bins=[10**x_edges, 10**y_edges], density=False)
-    n = n.assign_coords({"x_bins": x_centers, "y_bins": y_centers})
-    n.data[n.data == 0] = np.nan  # mask zero counts
+    # Probability density per unit beta_para and p_aniso
+    bin_area = np.outer(np.diff(x_edges), np.diff(y_edges))
+    pdf = counts / np.sum(counts) / bin_area
 
-    # Histogram PDF (normalized)
-    h = histogram2d(beta_para, p_aniso, bins=[10**x_edges, 10**y_edges], density=True)
-    h = h.assign_coords({"x_bins": x_centers, "y_bins": y_centers})
-    h.data[n.data < threshold] = np.nan  # apply count threshold mask to PDF
+    attrs = {"x_edges": x_edges, "y_edges": y_edges, "n_samples": int(np.sum(valid))}
+    n = xr.DataArray(
+        np.where(counts > 0, counts, np.nan),
+        coords=[x_centers, y_centers],
+        dims=["x_bins", "y_bins"],
+        attrs=attrs,
+    )
+    h = xr.DataArray(
+        np.where((counts >= threshold) & (counts > 0), pdf, np.nan),
+        coords=[x_centers, y_centers],
+        dims=["x_bins", "y_bins"],
+        attrs=dict(attrs),
+    )
 
     return n, h

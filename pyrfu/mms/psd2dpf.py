@@ -1,30 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
-import numpy as np
-import xarray as xr
-from scipy import constants
+# Local imports
+from pyrfu.mms._psd_units import _data_and_units, _energy, _mass_ratio, _output
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
-
-def _mass_ratio(inp):
-    if inp.attrs["species"] in ["ions", "ion", "protons", "proton"]:
-        mass_ratio = 1
-    elif inp.attrs["species"] in ["alphas", "alpha", "helium"]:
-        mass_ratio = 4
-    elif inp.attrs["species"] in ["electrons", "e"]:
-        mass_ratio = constants.electron_mass / constants.proton_mass
-    else:
-        raise ValueError("Invalid specie")
-
-    return mass_ratio
 
 
 def _convert(inp, units, mass_ratio):
@@ -47,43 +32,28 @@ def psd2dpf(inp):
 
     Parameters
     ----------
-    vdf : xarray.Dataset
-        Time series of the velocity distribution function with :
-            * time : Time samples.
-            * data : 3D velocity distribution.
-            * energy : Energy levels.
-            * phi : Azimuthal angles.
-            * theta : Elevation angle.
+    inp : xarray.Dataset or xarray.DataArray
+        Phase-space density in s^3/cm^6, s^3/m^6 or s^3/km^6: a distribution
+        (Dataset with a data variable, e.g. a skymap or a pitch-angle
+        distribution) or a spectrum (DataArray), with (energy,) or
+        (time, energy) energies in eV.
 
     Returns
     -------
-    dpf : xarray.Dataset
-        Time series of the 3D differential particle flux in 1/(cm^2 s sr keV) with :
-            * time : Time samples.
-            * data : 3D density particle flux.
-            * energy : Energy levels.
-            * phi : Azimuthal angles.
-            * theta : Elevation angle.
+    dpf : xarray.Dataset or xarray.DataArray
+        Differential particle flux in 1/(cm^2 s sr keV), with the shape of
+        inp.
+
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.Dataset or xarray.DataArray.
+    ValueError
+        If the species or the units are not supported.
 
     """
 
-    assert isinstance(inp, (xr.DataArray, xr.Dataset)), "inp must be a xarray"
+    data, units = _data_and_units(inp)
+    data = _convert(data, units, _mass_ratio(inp)) * _energy(inp, data) * 1e3
 
-    if isinstance(inp, xr.Dataset):
-        tmp_data = _convert(inp.data.data, inp.data.attrs["UNITS"], _mass_ratio(inp))
-        energy = inp.energy.data
-        energy_mat = np.tile(energy[:, :, None, None], (1, 1, *tmp_data.shape[2:]))
-        tmp_data *= energy_mat
-        out = inp.copy()
-        out.data.data = np.squeeze(tmp_data) * 1e3
-        out.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
-    else:
-        tmp_data = _convert(inp.data, inp.attrs["UNITS"], _mass_ratio(inp))
-        energy = inp.energy.data
-        energy_mat = np.tile(energy, (tmp_data.shape[0], 1))
-        tmp_data *= energy_mat
-        out = inp.copy()
-        out.data = np.squeeze(tmp_data) * 1e3
-        out.attrs["UNITS"] = "1/(cm^2 s sr keV)"
-
-    return out
+    return _output(inp, data, "1/(cm^2 s sr keV)")

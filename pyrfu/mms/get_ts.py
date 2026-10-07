@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in import
+# Built-in imports
+import logging
 import re
 import warnings
 from typing import Optional, Union
@@ -19,11 +20,13 @@ from ..pyrf.time_clip import time_clip
 from .get_variable import _pycdfpp_attributes_to_dict
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+logger = logging.getLogger(__name__)
 
 
 def _shift_epochs(file, epoch):
@@ -61,19 +64,35 @@ def _shift_epochs(file, epoch):
 
         flag_minus, flag_plus = flags_vars
 
-        t_offset = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
-        )
+        # Shift to the centre of [epoch - delta_minus, epoch + delta_plus] and half
+        # width of the accumulation, as mms.variable2ts in irfu-matlab
+        t_offset, t_diff = [
+            (np.round(delta, 1) * 1e6 / 2).astype("timedelta64[ns]")
+            for delta in [
+                delta_plus_var["data"] * flag_plus
+                - delta_minus_var["data"] * flag_minus,
+                delta_plus_var["data"] * flag_plus
+                + delta_minus_var["data"] * flag_minus,
+            ]
+        ]
 
-        t_offset = (np.round(t_offset, 1) * 1e6 / 2).astype("timedelta64[ns]")
-        t_diff = (
-            delta_plus_var["data"] * flag_plus - delta_minus_var["data"] * flag_minus
-        )
-        t_diff = (np.round(t_diff, 1) * 1e6 / 2).astype("timedelta64[ns]")
-        t_diff_data = np.median(np.diff(epoch["data"])) / 2
+        # If the accumulation does not match the sampling period, assume that the
+        # epochs are start times and use half the sampling period (needs at least
+        # two records, otherwise keep the delta variables)
+        if len(epoch["data"]) > 1:
+            t_diff_data = np.median(np.diff(epoch["data"])) / 2
 
-        if t_diff_data != np.mean(t_diff):
-            t_offset = t_diff_data
+            if not np.isnat(t_diff_data) and t_diff_data != np.mean(t_diff):
+                mismatch = np.abs(t_diff_data - np.mean(t_diff)) / t_diff_data
+                if mismatch > 0.01:
+                    logger.warning(
+                        "Epoch delta variables (half width %s) do not match the "
+                        "sampling time (half %s), assume the latter",
+                        np.mean(t_diff),
+                        t_diff_data,
+                    )
+
+                t_offset = t_diff_data
 
         epoch_shifted += t_offset
 
@@ -118,6 +137,30 @@ def _get_epochs(file, cdf_name):
     return out
 
 
+def _decode_labels(labels):
+    r"""Labels as stripped str (CDF character variables are padded bytes)."""
+    labels = np.asarray(labels)
+
+    if labels.dtype.kind == "S":
+        labels = np.char.decode(labels, "utf-8")
+
+    if labels.dtype.kind == "U":
+        labels = np.char.strip(labels)
+
+    return labels
+
+
+def _last_label_is_magnitude(file, cdf_name):
+    r"""True if the last label of LABL_PTR_1 is a magnitude (e.g. MEC B fields)."""
+    if "LABL_PTR_1" not in file[cdf_name].attributes:
+        return False
+
+    labels = _decode_labels(file[file[cdf_name].attributes["LABL_PTR_1"][0]].values)
+    labels = labels.ravel()
+
+    return len(labels) == 4 and str(labels[-1]).lower().endswith("mag")
+
+
 def _get_depend_attributes(file, depend_key):
     attributes = _pycdfpp_attributes_to_dict(file[depend_key].attributes)
 
@@ -149,24 +192,28 @@ def _get_depend(file, cdf_name, dep_num=1):
 
         out["attrs"] = {"LABLAXIS": "comp"}
     else:
-        out["data"] = file[depend_key].values
+        out["data"] = _decode_labels(file[depend_key].values)
 
         if len(out["data"]) == 1:
             out["data"] = out["data"][0]
 
-        if len(out["data"]) == 4 and all(
-            out["data"].astype(str) == ["x", "y", "z", "r"]
+        # Vector and magnitude (e.g. FGM): the magnitude is removed from the data
+        if (
+            out["data"].ndim == 1
+            and len(out["data"]) == 4
+            and all(out["data"].astype(str) == ["x", "y", "z", "r"])
         ):
             out["data"] = out["data"].astype(str)[:-1]
 
         elif out["data"].ndim == 2:
             if len(out["data"].flatten()) == 3:
                 out["data"] = out["data"].flatten()
+            elif out["data"].shape[0] == 0:
+                # Record varying table of a file without records: NaN values
+                out["data"] = np.full(out["data"].shape[1], np.nan)
             else:
-                try:
-                    out["data"] = out["data"][0, :]
-                except IndexError:
-                    pass
+                # Record varying table (e.g. FPI energies): first record
+                out["data"] = out["data"][0, :]
 
         out["attrs"] = _get_depend_attributes(file, depend_key)
 
@@ -226,9 +273,6 @@ def get_ts(
 
     time = _get_epochs(file, cdf_name)
 
-    if time["data"] is None:
-        return None
-
     if "DEPEND_1" in var_attrs or "REPRESENTATION_1" in var_attrs:
         depend_1 = _get_depend(file, cdf_name, 1)
 
@@ -270,9 +314,16 @@ def get_ts(
 
     out_dict["data"] = file[cdf_name].values
 
+    # Remove the magnitude of (x, y, z, magnitude) variables only (not e.g. the
+    # scalar part of quaternions)
     if out_dict["data"].ndim == 2 and out_dict["data"].shape[1] == 4:
-        out_dict["data"] = out_dict["data"][:, :-1]
-        # depend_1["data"] = depend_1["data"][:-1]
+        if depend_1:
+            is_magnitude = len(depend_1["data"]) == 3
+        else:
+            is_magnitude = _last_label_is_magnitude(file, cdf_name)
+
+        if is_magnitude:
+            out_dict["data"] = out_dict["data"][:, :-1]
 
     if out_dict["data"].ndim == 2 and not depend_1:
         depend_1["data"] = np.arange(out_dict["data"].shape[1])

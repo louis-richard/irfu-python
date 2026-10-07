@@ -8,15 +8,51 @@ import numpy as np
 from .find_closest import find_closest
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _derivative(time, inp):
+    # Derivative at the middle of the time steps
+    return time[:-1] + 0.5 * np.diff(time), np.diff(inp)
+
+
+def _zero_crossings(time, inp):
+    # Interpolated times of the downward (from positive to negative) and upward
+    # zero crossings of inp, as in irf_corr_deriv.m
+    ind = np.where(np.sign(inp[:-1] * inp[1:]) < 0)[0]
+    ind = ind[ind > 0]
+
+    out = []
+
+    for ind_ in [ind[inp[ind - 1] - inp[ind] > 0], ind[inp[ind - 1] - inp[ind] < 0]]:
+        frac = 1 / (1 + np.abs(inp[ind_ + 1]) / np.abs(inp[ind_]))
+        out.append(np.unique(time[ind_] + (time[ind_ + 1] - time[ind_]) * frac))
+
+    return out
+
+
+def _common(zeros1, zeros2):
+    # Pairs of closest crossings of the same kind, sorted in time
+    t_1, t_2 = [[], []]
+
+    for z_1, z_2 in zip(zeros1, zeros2):
+        t1_, t2_, _, _ = find_closest(z_1, z_2)
+        t_1.append(t1_)
+        t_2.append(t2_)
+
+    return np.sort(np.hstack(t_1)), np.sort(np.hstack(t_2))
+
+
 def corr_deriv(inp0, inp1, flag: bool = False):
     r"""Correlate the derivatives of two time series
+
+    Finds the time instants of common maxima and minima (zeros of the first
+    derivative), and of common steepest gradients (zeros of the second
+    derivative) or zero crossings, as irf_corr_deriv.m.
 
     Parameters
     ----------
@@ -25,160 +61,47 @@ def corr_deriv(inp0, inp1, flag: bool = False):
     inp1 : xarray.DataArray
         Time series of the second to variable to correlate with.
     flag : bool, Optional
-        Flag if False (default) returns time instants of common highest first
-        and second derivatives. If True returns time instants of common
-        highest first derivative and zeros crossings.
+        Flag if False (default) returns time instants of common steepest
+        gradients as t1_dd, t2_dd. If True returns time instants of common
+        zeros crossings.
 
     Returns
     -------
     t1_d, t2_d : ndarray
-        Time instants of common highest first derivatives.
+        Time instants of common maxima and minima of inp0 and inp1.
     t1_dd, t2_dd : ndarray
-        Time instants of common highest second derivatives or zero crossings.
+        Time instants of common steepest gradients (or zero crossings) of
+        inp0 and inp1.
 
     """
 
+    # Times in seconds relative to the first time of inp0
+    t_ref = inp0.time.data[0].astype("datetime64[ns]")
+    tx1, tx2 = [
+        (inp.time.data.astype("datetime64[ns]") - t_ref) / np.timedelta64(1, "s")
+        for inp in [inp0, inp1]
+    ]
+    x_1, x_2 = [inp.data.astype(np.float64) for inp in [inp0, inp1]]
+
     # 1st derivative
-    tx1 = inp0.time.data.astype(np.int64) * 1e-9
-    inp0 = inp0.data
-    dtx1 = tx1[:-1] + 0.5 * np.diff(tx1)
-    dx1 = np.diff(inp0)
+    dtx1, dx1 = _derivative(tx1, x_1)
+    dtx2, dx2 = _derivative(tx2, x_2)
 
-    tx2 = inp1.time.data.astype(np.int64) * 1e-9
-    inp1 = inp1.data
-    dtx2 = tx2[:-1] + 0.5 * np.diff(tx2)
-    dx2 = np.diff(inp1)
-
-    ind_zeros1 = np.where(np.sign(dx1[:-1] * dx1[1:]) < 0)[0]
-    if ind_zeros1 == 0:
-        ind_zeros1 = ind_zeros1[1:]
-
-    ind_zeros2 = np.where(np.sign(dx2[:-1] * dx2[1:]) < 0)[0]
-    if ind_zeros2 == 0:
-        ind_zeros2 = ind_zeros2[1:]
-
-    ind_zeros1_p = np.where(dx1[ind_zeros1 - 1] - dx1[ind_zeros1] > 0)[0]
-    ind_zeros2_p = np.where(dx2[ind_zeros2 - 1] - dx2[ind_zeros2] > 0)[0]
-
-    ind_zeros1_m = np.where(dx1[ind_zeros1 - 1] - dx1[ind_zeros1] < 0)[0]
-    ind_zeros2_m = np.where(dx2[ind_zeros2 - 1] - dx2[ind_zeros2] < 0)[0]
-
-    ind1_p = ind_zeros1[ind_zeros1_p]
-    ind1_m = ind_zeros1[ind_zeros1_m]
-
-    t_zeros1_p = dtx1[ind1_p] + (dtx1[ind1_p + 1] - dtx1[ind1_p]) / (
-        1 + np.abs(dx1[ind1_p + 1]) / np.abs(dx1[ind1_p])
-    )
-    t_zeros1_m = dtx1[ind1_m] + (dtx1[ind1_m + 1] - dtx1[ind1_m]) / (
-        1 + np.abs(dx1[ind1_m + 1]) / np.abs(dx1[ind1_m])
-    )
-
-    ind2_p = ind_zeros2[ind_zeros2_p]
-    ind2_m = ind_zeros2[ind_zeros2_m]
-
-    t_zeros2_p = dtx2[ind2_p] + (dtx2[ind2_p + 1] - dtx2[ind2_p]) / (
-        1 + np.abs(dx2[ind2_p + 1]) / np.abs(dx2[ind2_p])
-    )
-    t_zeros2_m = dtx2[ind2_m] + (dtx2[ind2_m + 1] - dtx2[ind2_m]) / (
-        1 + np.abs(dx2[ind2_m + 1]) / np.abs(dx2[ind2_m])
-    )
-
-    # Remove repeating points
-    t_zeros1_p = np.delete(t_zeros1_p, np.where(np.diff(t_zeros1_p) == 0)[0])
-    t_zeros2_p = np.delete(t_zeros2_p, np.where(np.diff(t_zeros2_p) == 0)[0])
-
-    # Define identical pairs of two time axis
-    t1_d_p, t2_d_p, _, _ = find_closest(t_zeros1_p, t_zeros2_p)
-    t1_d_m, t2_d_m, _, _ = find_closest(t_zeros1_m, t_zeros2_m)
-
-    t1_d = np.vstack([t1_d_p, t1_d_m])
-    t1_d = t1_d[t1_d[:, 0].argsort(), 0]
-
-    t2_d = np.vstack([t2_d_p, t2_d_m])
-    t2_d = t2_d[t2_d[:, 0].argsort(), 0]
+    t1_d, t2_d = _common(_zero_crossings(dtx1, dx1), _zero_crossings(dtx2, dx2))
 
     if flag:
         # zero crossings
-        ind_zeros1 = np.where(np.sign(inp0[:-1] * inp0[1:]) < 0)[0]
-        ind_zeros2 = np.where(np.sign(inp1[:-1] * inp1[1:]) < 0)[0]
-
-        ind_zeros1 = np.delete(ind_zeros1, np.where(ind_zeros1 == 1)[0])
-        ind_zeros2 = np.delete(ind_zeros2, np.where(ind_zeros2 == 1)[0])
-
-        ind_zeros1_p = np.where(inp0[ind_zeros1 - 1] - inp0[ind_zeros1] > 0)[0]
-        ind_zeros2_p = np.where(inp1[ind_zeros2 - 1] - inp1[ind_zeros2] > 0)[0]
-
-        ind_zeros1_m = np.where(inp0[ind_zeros1 - 1] - inp0[ind_zeros1] < 0)[0]
-        ind_zeros2_m = np.where(inp1[ind_zeros2 - 1] - inp1[ind_zeros2] < 0)[0]
-
-        ind1_p = ind_zeros1[ind_zeros1_p]
-        ind1_m = ind_zeros1[ind_zeros1_m]
-
-        t_zeros1_p = tx1[ind1_p] + (tx1[ind1_p + 1] - tx1[ind1_p]) / (
-            1 + np.abs(inp0[ind1_p + 1]) / np.abs(inp0[ind1_p])
-        )
-        t_zeros1_m = tx1[ind1_m] + (tx1[ind1_m + 1] - tx1[ind1_m]) / (
-            1 + np.abs(inp0[ind1_m + 1]) / np.abs(inp0[ind1_m])
-        )
-
-        ind2_p = ind_zeros2[ind_zeros2_p]
-        ind2_m = ind_zeros2[ind_zeros2_m]
-
-        t_zeros2_p = tx2[ind2_p] + (tx2[ind2_p + 1] - tx2[ind2_p]) / (
-            1 + np.abs(inp1[ind2_p + 1]) / np.abs(inp1[ind2_p])
-        )
-        t_zeros2_m = tx2[ind2_m] + (tx2[ind2_m + 1] - tx2[ind2_m]) / (
-            1 + np.abs(inp1[ind2_m + 1]) / np.abs(inp1[ind2_m])
-        )
-
+        zeros1, zeros2 = [_zero_crossings(tx1, x_1), _zero_crossings(tx2, x_2)]
     else:
         # 2nd derivative
-        dd_tx1 = dtx1[:-1] + 0.5 * np.diff(dtx1)
-        ddx1 = np.diff(dx1)
+        zeros1 = _zero_crossings(*_derivative(dtx1, dx1))
+        zeros2 = _zero_crossings(*_derivative(dtx2, dx2))
 
-        dd_tx2 = dtx2[:-1] + 0.5 * np.diff(dtx2)
-        ddx2 = np.diff(dx2)
+    t1_dd, t2_dd = _common(zeros1, zeros2)
 
-        ind_zeros1 = np.where(np.sign(ddx1[:-1] * ddx1[1:]) < 0)[0]
-        ind_zeros2 = np.where(np.sign(ddx2[:-1] * ddx2[1:]) < 0)[0]
-
-        ind_zeros1 = np.delete(ind_zeros1, np.where(ind_zeros1 == 1)[0])
-        ind_zeros2 = np.delete(ind_zeros2, np.where(ind_zeros2 == 1)[0])
-
-        ind_zeros1_p = np.where(ddx1[ind_zeros1 - 1] - ddx1[ind_zeros1] > 0)[0]
-        ind_zeros2_p = np.where(ddx2[ind_zeros2 - 1] - ddx2[ind_zeros2] > 0)[0]
-
-        ind_zeros1_m = np.where(ddx1[ind_zeros1 - 1] - ddx1[ind_zeros1] < 0)[0]
-        ind_zeros2_m = np.where(ddx2[ind_zeros2 - 1] - ddx2[ind_zeros2] < 0)[0]
-
-        ind1_p = ind_zeros1[ind_zeros1_p]
-        ind1_m = ind_zeros1[ind_zeros1_m]
-
-        t_zeros1_p = dd_tx1[ind1_p] + (dd_tx1[ind1_p + 1] - dd_tx1[ind1_p]) / (
-            1 + np.abs(ddx1[ind1_p + 1]) / np.abs(ddx1[ind1_p])
-        )
-        t_zeros1_m = dd_tx1[ind1_m] + (dd_tx1[ind1_m + 1] - dd_tx1[ind1_m]) / (
-            1 + np.abs(ddx1[ind1_m + 1]) / np.abs(ddx1[ind1_m])
-        )
-
-        ind2_p = ind_zeros2[ind_zeros2_p]
-        ind2_m = ind_zeros2[ind_zeros2_m]
-
-        t_zeros2_p = dd_tx2[ind2_p] + (dd_tx2[ind2_p + 1] - dd_tx2[ind2_p]) / (
-            1 + np.abs(ddx2[ind2_p + 1]) / np.abs(ddx2[ind2_p])
-        )
-        t_zeros2_m = dd_tx2[ind2_m] + (dd_tx2[ind2_m + 1] - dd_tx2[ind2_m]) / (
-            1 + np.abs(ddx2[ind2_m + 1]) / np.abs(ddx2[ind2_m])
-        )
-
-    # Define identical pairs of two time axis
-    t1_dd_p, t2_dd_p, _, _ = find_closest(t_zeros1_p, t_zeros2_p)
-    t1_dd_m, t2_dd_m, _, _ = find_closest(t_zeros1_m, t_zeros2_m)
-
-    t1_dd = np.vstack([t1_dd_p, t1_dd_m])
-    t1_dd = t1_dd[t1_dd[:, 0].argsort(), 0]
-
-    t2_dd = np.vstack([t2_dd_p, t2_dd_m])
-    t2_dd = t2_dd[t2_dd[:, 0].argsort(), 0]
+    t1_d, t2_d, t1_dd, t2_dd = [
+        t_ref + np.round(t_ * 1e9).astype("timedelta64[ns]")
+        for t_ in [t1_d, t2_d, t1_dd, t2_dd]
+    ]
 
     return t1_d, t2_d, t1_dd, t2_dd

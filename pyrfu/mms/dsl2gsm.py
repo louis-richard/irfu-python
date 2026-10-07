@@ -18,7 +18,7 @@ from ..pyrf.ts_vec_xyz import ts_vec_xyz
 from .dsl2gse import _transformation_matrix
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -35,7 +35,8 @@ def dsl2gsm(
     inp : DataArray
         Input time series to convert.
     defatt : Dataset or numpy.ndarray
-        Spacecraft attitude.
+        Spacecraft attitude (DEFATT), or the spin axis in GSM as a 3-vector
+        (normalised internally).
     direction : {1, -1}, Optional
         Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
         Default is 1.
@@ -44,6 +45,8 @@ def dsl2gsm(
     -------
     DataArray
         Time series of the input field in the new coordinates systems.
+        ``COORDINATE_SYSTEM`` is set to "GSM" (direction 1) or "DSL"
+        (direction -1).
 
     Raises
     ------
@@ -66,9 +69,9 @@ def dsl2gsm(
 
     >>> defatt = load_ancillary("defatt", tint, 1)
 
-    Transform magnetic field to GSE
+    Transform magnetic field to GSM coordinates
 
-    >>> b_gse = dsl2gse(b_xyz, defatt)
+    >>> b_gsm = dsl2gsm(b_xyz, defatt)
 
     """
     if isinstance(defatt, xr.Dataset):
@@ -97,6 +100,6 @@ def dsl2gsm(
 
     out = inp.copy()
     out.data = out_data
-    out.attrs["COORDINATE_SYSTEM"] = "GSM"
+    out.attrs["COORDINATE_SYSTEM"] = "GSM" if direction == 1 else "DSL"
 
     return out

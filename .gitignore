@@ -167,3 +167,9 @@ pyrfu/.DS_Store
 
 # VSCode
 .vscode
+
+# Claude outputs
+Claude outputs/
+
+# Sphinx autosummary pages (generated at build time)
+docs/api/generated/

@@ -6,25 +6,19 @@ import logging
 
 # 3rd party imports
 import numpy as np
-from geopack import geopack
 from matplotlib.patches import Wedge
 
 # Local imports
 from ..pyrf import datetime642unix, iso86012datetime64, magnetosphere
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 
 def _add_earth(ax=None, **kwargs):
@@ -54,6 +48,10 @@ def _add_earth(ax=None, **kwargs):
 
 
 def _add_field_lines(ax, tint):
+    # geopack prints and requests the latest IGRF coefficients online when
+    # imported, so it is only imported when the field lines are needed
+    from geopack import geopack  # pylint: disable=import-outside-toplevel
+
     # Get dipole axis at begin of the time interval
     ut = datetime642unix(iso86012datetime64(np.array(tint)))[0]
     _ = geopack.recalc(ut)
@@ -157,7 +155,7 @@ def plot_magnetosphere(
     _add_earth(ax)
 
     if field_lines:
-        logging.info("Computing field lines using T89 model...")
+        logger.info("Computing field lines using T89 model...")
         _add_field_lines(ax, tint)
 
     return ax

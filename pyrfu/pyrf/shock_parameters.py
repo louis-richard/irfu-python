@@ -9,20 +9,15 @@ import numpy as np
 from scipy import constants
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 __all__ = ["shock_parameters"]
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 
 def shock_parameters(spec):
@@ -43,20 +38,23 @@ def shock_parameters(spec):
 
     """
 
+    # Copy so that the defaults set below don't change the caller's dict
+    spec = dict(spec)
+
     id_b = list(filter(lambda x: x[0].lower() == "b", spec))
     regions = [id_[1:] for id_ in id_b if len(id_) > 1]
-    regions = regions if len(regions) > 1 else [""]
+    regions = regions or [""]
 
     spec["ref_sys"] = spec.get("ref_sys", "sc")
     assert spec["ref_sys"].lower() in ["sc", "nif"], "Invalid reference frame"
 
     if spec["ref_sys"].lower() == "nif":
         if "nvec" not in spec:
-            logging.warning("Setting shock speed, nvec to [1, 0, 0]")
+            logger.warning("Setting shock speed, nvec to [1, 0, 0]")
             spec["nvec"] = np.array([1, 0, 0])
 
         if "v_sh" not in spec:
-            logging.warning("Setting shock speed, Vsh, to 0.")
+            logger.warning("Setting shock speed, Vsh, to 0.")
             spec["v_sh"] = 0.0
 
     dspec = {}
@@ -112,7 +110,7 @@ def shock_parameters(spec):
         for region in regions:
             dspec[f"l_i{region}"] = _ion_in_len(spec[f"n{region}"])
 
-    if f"n{regions[0]}" in spec:
+    if f"v{regions[0]}" in spec:
         for region in regions:
             dspec[f"r_cp{region}"] = _ion_gyro_rad(
                 spec[f"b{region}"], spec[f"v{region}"]
@@ -126,8 +124,8 @@ def shock_parameters(spec):
                 spec[f"n{region}"],
                 spec[f"v{region}"],
                 spec["ref_sys"],
-                spec["v_sh"],
-                spec["nvec"],
+                spec.get("v_sh", 0.0),
+                spec.get("nvec"),
             )
 
     # Sonic Mach number
@@ -142,8 +140,8 @@ def shock_parameters(spec):
                 spec[f"t_i{region}"],
                 spec[f"t_e{region}"],
                 spec["ref_sys"],
-                spec["v_sh"],
-                spec["nvec"],
+                spec.get("v_sh", 0.0),
+                spec.get("nvec"),
             )
 
     if (
@@ -160,8 +158,8 @@ def shock_parameters(spec):
                 spec[f"t_i{region}"],
                 spec[f"t_e{region}"],
                 spec["ref_sys"],
-                spec["v_sh"],
-                spec["nvec"],
+                spec.get("v_sh", 0.0),
+                spec.get("nvec"),
             )
 
     if f"n{regions[0]}" in spec and f"t_i{regions[0]}" in spec:
@@ -198,7 +196,13 @@ def _ion_in_len(n):
 
 def _ion_gyro_rad(b, v):
     b_si = 1e-9 * np.linalg.norm(b)
-    e_i = 0.5 * constants.proton_mass * np.linalg.norm(v) ** 2 / constants.electron_volt
+    # v in km/s
+    e_i = (
+        0.5
+        * constants.proton_mass
+        * (1e3 * np.linalg.norm(v)) ** 2
+        / constants.electron_volt
+    )
     v_tp = constants.speed_of_light * np.sqrt(
         1
         - 1

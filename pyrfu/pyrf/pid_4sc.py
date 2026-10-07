@@ -14,7 +14,7 @@ from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -49,20 +49,35 @@ def pid_4sc(r_mms, v_mms, p_mms):
 
         \theta = \nabla . u
 
+    The pressure-strain interaction is then
+    :math:`-(P \cdot \nabla) \cdot u = -p\theta + Pi-D`.
 
     Parameters
     ----------
     r_mms : list of xarray.DataArray
-        Time series of the position of the 4 spacecraft.
+        Time series of the position of the 4 spacecraft [km].
     v_mms : list of xarray.DataArray
-        Time series of the bulk velocities of the 4 spacecraft.
+        Time series of the bulk velocities of the 4 spacecraft [km/s].
     p_mms : list of xarray.DataArray
-        Time series of the pressure tensor of the 4 spacecraft.
+        Time series of the pressure tensor of the 4 spacecraft [nPa].
 
     Returns
     -------
+    d_xyz : xarray.DataArray
+        Time series of the deviatoric part of the strain tensor
+        :math:`D_{ij}` [s^-1].
+    pi_xyz : xarray.DataArray
+        Time series of the deviatoric part of the pressure tensor
+        :math:`\Pi_{ij}` [nPa].
+    ptheta : xarray.DataArray
+        Time series of the pressure dilatation :math:`p\theta` [nW/m^3].
     pid : xarray.DataArray
-        Time series of the Pi-D.
+        Time series of the Pi-D [nW/m^3].
+
+    Notes
+    -----
+    The units are given for positions in km, velocities in km/s and pressures
+    in nPa. No conversion is applied: other input units carry through.
 
     References
     ----------

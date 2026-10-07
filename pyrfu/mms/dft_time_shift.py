@@ -9,7 +9,7 @@ from ..pyrf.calc_fs import calc_fs
 from ..pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -33,10 +33,10 @@ def dft_time_shift(inp, tau):
     out : xarray.DataArray
         Time series of the shifted input.
 
-    See also
+    See Also
     --------
-    pyrfu.mms.fk_power_spectrum : Calculates the frequency-wave number
-    power spectrum.
+    pyrfu.mms.fk_power_spectrum_4sc : Calculates the frequency-wave number
+        power spectrum.
 
     """
 

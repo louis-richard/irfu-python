@@ -2,13 +2,12 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 authors:
-  - name: "PyRFU team"
   - family-names: Richard
     given-names: Louis
-    affiliation: IRF Uppsala, Sweden
+    affiliation: Rudolf Peierls Centre for Theoretical Physics, University of Oxford, UK
     orcid: "https://orcid.org/0000-0003-3446-7322"
   - family-names: Khotyaintsev
-    given-names: Yuri
+    given-names: Yuri V.
     affiliation: IRF Uppsala, Sweden
     orcid: "https://orcid.org/0000-0001-5550-3113"
   - family-names: Vaivads
@@ -16,7 +15,7 @@ authors:
     affiliation: KTH, Sweden
     orcid: "https://orcid.org/0000-0003-1654-841X"
   - family-names: Graham
-    given-names: Daniel
+    given-names: Daniel B.
     affiliation: IRF Uppsala, Sweden
     orcid: "https://orcid.org/0000-0002-1046-746X"
   - family-names: Norgren
@@ -27,9 +26,11 @@ authors:
     given-names: Andreas
     affiliation: Swedish Defence Research Agency, Sweden
     orcid: "https://orcid.org/0000-0001-7714-1870"
-title: "pyrfu"
-abstract: "An Open-Source Python Package for Advanced In-Situ Space Plasma Analysis."
+title: "Python RymdFysik Utilities (PyRFU): An Open-Source Python Package for Advanced In-Situ Space Plasma Analysis"
+abstract: "pyrfu is an open-source Python package, based on the IRFU-MATLAB library, for advanced in-situ space plasma analysis, particularly of the Magnetospheric Multiscale (MMS) mission."
 license: MIT
+version: "2.5.0"
+date-released: 2026-10-07
 doi: 10.5281/zenodo.10678695
 url: "https://pyrfu.readthedocs.io/"
 repository-code: 'https://github.com/louis-richard/irfu-python'

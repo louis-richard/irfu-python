@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 # Built-in imports
+import functools
 import json
+import os
 import re
 import urllib
 import warnings
@@ -10,17 +13,18 @@ from bisect import bisect_left
 from datetime import datetime, timedelta
 
 # 3rd party imports
-import keyring
 import numpy as np
 import requests
 from dateutil.parser import parse
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from .db_init import MMS_CFG_PATH
+from .db_init import MMS_CFG_PATH, _get_credential
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -33,45 +37,69 @@ LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 TEST_URL = "file_names/science?start_date=2015-04-10&end_date=2015-04-11&sc_id=mms2"
 
 
+# Timeouts of the SDC requests [s]: to connect, and between bytes (not for the
+# whole download, so that large files can be downloaded)
+SDC_TIMEOUT = (30, 300)
+
+
 def _login_lasp():
-    r"""Login to LASP colorado."""
+    r"""Login to LASP colorado. The session is cached, so that the
+    connectivity/credential probe only happens once, until the MMS configuration
+    file changes (e.g., after mms.db_init). The session is shared: do not close it.
+    """
+    return _login_lasp_cached(os.stat(MMS_CFG_PATH).st_mtime_ns)
+
+
+@functools.lru_cache(maxsize=1)
+def _login_lasp_cached(config_mtime_ns: int):
+    r"""Login to LASP colorado (cached by modification time of the configuration
+    file)."""
+    del config_mtime_ns  # cache key only
 
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
-    # Read credentials for username
-    credential = keyring.get_credential("mms-sdc", config["sdc"]["username"])
+    session = requests.Session()
 
-    if credential:
-        username, password = credential.username, credential.password
-    else:
-        username, password = "", ""
-
+    # The credentials are only read and sent for the SITL (team) access, never
+    # to the public SDC
     if config["sdc"]["rights"] == "public":
         lasp_url = LASP_PUBL
-    elif config["sdc"]["rights"] == "sitl" and username and password:
+    elif config["sdc"]["rights"] == "sitl":
+        credential = _get_credential(config["sdc"]["username"])
+
+        if not credential or not credential.username or not credential.password:
+            raise EnvironmentError(
+                "Incomplete credentials please update using mms.db_init()"
+            )
+
         lasp_url = LASP_SITL
+        session.auth = (credential.username, credential.password)
     else:
         raise EnvironmentError(
-            "Incomplete credentials please update using mms.db_init()"
+            "Invalid MMS SDC rights, please update using mms.db_init()"
         )
 
-    session = requests.Session()
-    session.auth = (username, password)
+    # Retry with backoff on rate limiting / transient server errors,
+    # honoring the Retry-After header when LASP sends one.
+    retry = Retry(
+        total=5,
+        backoff_factor=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        respect_retry_after_header=True,
+        allowed_methods=["GET", "POST"],
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry))
 
     headers = {"User-Agent": "pyrfu"}
 
-    try:
-        _ = session.post("https://lasp.colorado.edu", verify=True, timeout=5)
-        response = session.get(
-            urllib.parse.urljoin(lasp_url, TEST_URL),
-            verify=True,
-            timeout=5,
-            headers=headers,
-        )
-        response.raise_for_status()  # Raise an HTTPError for bad responses
-    except requests.RequestException as e:
-        print(f"Error login to {lasp_url}: {e}")
+    response = session.get(
+        urllib.parse.urljoin(lasp_url, TEST_URL),
+        verify=True,
+        timeout=5,
+        headers=headers,
+    )
+    response.raise_for_status()
 
     return session, headers, lasp_url
 
@@ -187,10 +215,13 @@ def list_files_sdc(tint, mms_id, var):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ResourceWarning)
-        http_json = sdc_session.get(url_json_cdfs, verify=True, headers=headers).json()
+        response = sdc_session.get(
+            url_json_cdfs, verify=True, headers=headers, timeout=SDC_TIMEOUT
+        )
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        http_json = response.json()
 
     file_names = _files_in_interval(http_json["files"], tint)
-    sdc_session.close()
 
     file_names = _make_urls_cdfs(lasp_url, file_names)
 

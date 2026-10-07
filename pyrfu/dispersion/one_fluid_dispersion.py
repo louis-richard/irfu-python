@@ -4,10 +4,11 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from scipy import constants, optimize
+from numpy.polynomial import polynomial
+from scipy import constants
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -37,39 +38,79 @@ def _disprel(w, *args):
     return disprel
 
 
-def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100):
+def _disprel_roots(k, theta, v_a, c_s, wc_e, wc_p):
+    # Multiplied by D = w^2 / c_s^2 - k^2, the dispersion relation is a cubic
+    # in x = w^2, solved here in x / wc_p^2 for a better conditioning:
+    # [(1 - a x) D + k^2 sin^2(theta)] (cos^2(theta) - a x) - x cos^2(theta) D
+    # / wc_p^2 = 0, with a = 1 / (k^2 v_a^2) + 1 / (wc_e wc_p)
+    cos2, sin2 = [np.cos(np.deg2rad(theta)) ** 2, np.sin(np.deg2rad(theta)) ** 2]
+    a_ = (1 / (k**2 * v_a**2) + 1 / (wc_e * wc_p)) * wc_p**2
+    d_ = [-(k**2), wc_p**2 / c_s**2]
+
+    l_0 = polynomial.polyadd(polynomial.polymul([1, -a_], d_), [k**2 * sin2])
+    l_1 = [cos2, -a_]
+    r_0 = polynomial.polymul([0, cos2], d_)
+    coeffs = polynomial.polysub(polynomial.polymul(l_0, l_1), r_0)
+
+    # Real roots, up to round-off imaginary parts
+    x_roots = np.real(polynomial.polyroots(coeffs)) * wc_p**2
+    w_roots = np.sort(np.sqrt(x_roots))[::-1]
+
+    return w_roots
+
+
+def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100, k_vec=None):
     r"""Solves the one fluid dispersion relation.
 
     Parameters
     ----------
     b_0 : float
-        Magnetic field
+        Magnetic field in T.
 
     theta : float
         The angle of propagation of the wave with respect to the magnetic
-        field, :math:`\cos^{-1}(k_z / k)`
+        field, :math:`\cos^{-1}(k_z / k)`, in degrees.
 
     ions : dict
-        Hash table with n : number density, t: temperature, gamma:
-        polytropic index.
+        Hash table with n : number density in m^-3, t: temperature in eV,
+        gamma: polytropic index.
 
     electrons : dict
-        Hash table with n : number density, t: temperature, gamma:
-        polytropic index.
+        Hash table with n : number density in m^-3, t: temperature in eV,
+        gamma: polytropic index.
 
     n_k : int, optional
-        Number of wavenumbers.
+        Number of wavenumbers, from :math:`0.0144 \Omega_{p} / V_A` to
+        :math:`7.2 \Omega_{p} / V_A`. Default is 100. Not used if `k_vec` is
+        given.
+
+    k_vec : array_like, optional
+        Wavenumbers in m^-1, all positive. Default is `n_k` wavenumbers from
+        :math:`0.0144 \Omega_{p} / V_A` to :math:`7.2 \Omega_{p} / V_A`.
 
     Returns
     -------
     wc_1 : xarray.DataArray
-        1st root
+        Largest root (fast/whistler branch), angular frequency in rad/s as a
+        function of the wavenumber k in m^-1.
 
     wc_2 : xarray.DataArray
-        2nd root
+        Intermediate root (Alfven/ion cyclotron branch).
 
     wc_3 : xarray.DataArray
-        3rd root
+        Smallest root (slow branch).
+
+    Notes
+    -----
+    The three branches are the roots of a cubic polynomial in
+    :math:`\omega^2`, sorted so that wc_1 >= wc_2 >= wc_3 at every k. At
+    small angles, the sound wave crosses the other branches, so it changes
+    from one output to another at the crossings.
+
+    Raises
+    ------
+    ValueError
+        If `k_vec` has non-positive values.
 
     """
 
@@ -95,24 +136,20 @@ def one_fluid_dispersion(b_0, theta, ions, electrons, n_k: int = 100):
     v_a = b_0 / np.sqrt(mu_0 * n_p * m_p)
     c_s = np.sqrt((gamma_e * q_e * t_e + gamma_p * q_e * t_p) / (m_e + m_p))
 
-    k_vec = np.linspace(2e-7, 1.0e-4, n_k)
+    if k_vec is None:
+        # k V_A / wc_p from 0.0144 to 7.2 (2e-7 to 1e-4 m^-1 for 10 nT and
+        # 10 cm^-3)
+        k_vec = np.linspace(0.002, 1.0, n_k) * 7.2 * wc_p / v_a
+    else:
+        k_vec = np.atleast_1d(np.asarray(k_vec, dtype=np.float64))
 
-    wc_1, wc_2, wc_3 = [np.zeros(len(k_vec)) for _ in range(3)]
+        if np.any(k_vec <= 0):
+            raise ValueError("k_vec must be positive")
 
-    for i, k in enumerate(k_vec):
-        if i < 10:
-            guess_w1 = v_a * k * 1.50
-            guess_w2 = v_a * k * 0.70
-            guess_w3 = c_s * k * 0.99
-        else:
-            guess_w1 = wc_1[i - 1] + (wc_1[i - 1] - wc_1[i - 2])
-            guess_w2 = wc_2[i - 1] + (wc_2[i - 1] - wc_2[i - 2])
-            guess_w3 = wc_3[i - 1] + (wc_3[i - 1] - wc_3[i - 2])
-
-        arguments = (k, theta, v_a, c_s, wc_e, wc_p)
-        wc_1[i] = optimize.fsolve(_disprel, guess_w1, args=arguments)[0]
-        wc_2[i] = optimize.fsolve(_disprel, guess_w2, args=arguments)[0]
-        wc_3[i] = optimize.fsolve(_disprel, guess_w3, args=arguments)[0]
+    w_roots = np.stack(
+        [_disprel_roots(k, theta, v_a, c_s, wc_e, wc_p) for k in k_vec],
+    )
+    wc_1, wc_2, wc_3 = w_roots.T
 
     attrs = {
         "wc_e": wc_e,

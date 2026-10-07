@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 # 3rd party import
 import numpy as np
-from matplotlib.cm import get_cmap
 from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import LogNorm
 
@@ -13,7 +13,7 @@ from matplotlib.colors import LogNorm
 from .plot_line import plot_line
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -33,7 +33,7 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
         Scale of the yaxis. Default is "log"
     cscale : str, Optional
         Scale of the colormap. Default is "log".
-    cmap : str, Optional
+    cmap : str or matplotlib.colors.Colormap, Optional
         Colormap. Default is "jet"
     kwargs : dict
         Plot options.
@@ -42,8 +42,13 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     -------
     axis :
         Updated axis
-    cbl :
-        Colorbar associated
+    cax :
+        Axis of the associated colorbar
+
+    Raises
+    ------
+    NotImplementedError
+        If cscale is not "log".
 
     Other Parameters
     ----------------
@@ -52,19 +57,21 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     """
 
     pad = 0.01
-    c_map = get_cmap(name=cmap)
+    c_map = mpl.colormaps.get_cmap(cmap)
+    energy = inp.energy.data
 
-    for i, c in enumerate(c_map(np.linspace(0, 1, len(inp.energy.data)))):
+    if cscale == "log":
+        norm = LogNorm(vmin=np.min(energy), vmax=np.max(energy))
+    else:
+        raise NotImplementedError
+
+    # Color of each line from its energy, as on the colorbar (was from the index)
+    for i, c in enumerate(c_map(norm(energy))):
         plot_line(axis, inp[:, i], color=c, **kwargs)
 
     pos = axis.get_position()
     f = plt.gcf()
     cax = f.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])
-
-    if cscale == "log":
-        norm = LogNorm(vmin=inp.energy.data[0], vmax=inp.energy.data[-1])
-    else:
-        raise NotImplementedError
 
     ColorbarBase(cax, cmap=c_map, norm=norm, orientation="vertical")
 

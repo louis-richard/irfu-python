@@ -9,7 +9,7 @@ import xarray as xr
 from .ts_skymap import ts_skymap
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -45,8 +45,16 @@ def dist_append(inp0, inp1):
 
     assert isinstance(inp0, xr.Dataset), "inp0 must be a xarray.Dataset"
 
-    # Global attributes
-    glob_attrs = inp0.attrs
+    # A skymap without records has no data nor energy tables: keep the other one
+    if inp0.sizes["time"] == 0:
+        return inp1
+
+    if inp1.sizes["time"] == 0:
+        return inp0
+
+    # Global attributes (copy: the stacked delta energies must not overwrite the
+    # caller's)
+    glob_attrs = dict(inp0.attrs)
 
     # Stack coordinates
     # time
@@ -63,11 +71,11 @@ def dist_append(inp0, inp1):
     theta = inp0.theta.data
 
     # Coordinates attributes
-    coords_attrs = {k: inp0[k].attrs for k in ["time", "energy", "phi", "theta"]}
+    coords_attrs = {k: dict(inp0[k].attrs) for k in ["time", "energy", "phi", "theta"]}
 
     # distribution
     data = np.vstack([inp0.data, inp1.data])
-    data_attrs = inp0.data.attrs
+    data_attrs = dict(inp0.data.attrs)
 
     if "delta_energy_plus" in glob_attrs:
         delta_energy_plus = np.vstack(

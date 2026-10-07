@@ -9,7 +9,7 @@ import numpy as np
 from scipy import constants, special
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -82,7 +82,7 @@ def thermal_current(
     a : float
         Area of body [m^2].
     p_type : {"sphere", "cylinder"}
-        Probe type.
+        Probe type (case insensitive).
 
     Returns
     -------
@@ -90,7 +90,8 @@ def thermal_current(
 
     """
 
-    assert p_type.lower() in ["sphere", "cylinder"]
+    p_type = p_type.lower()
+    assert p_type in ["sphere", "cylinder"]
 
     u = np.atleast_1d(u)
 

@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
-import xarray as xr
-
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -68,15 +65,13 @@ def feeps_flat_field_corrections(inp_alle):
     # List of sensors and eyes
     sensors_eyes = list(filter(lambda x: x[:3] in ["top", "bot"], inp_alle))
 
-    out_dict = inp_alle.copy()
+    # Deep copy so that the caller's data are not scaled in place
+    out = inp_alle.copy(deep=True)
 
     for sensors_eye in sensors_eyes:
         sensor, eye = sensors_eye.split("-")
         correction = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
 
-        out_dict[sensors_eye].data *= correction
-
-    out = xr.Dataset(out_dict)
-    out.attrs = inp_alle.attrs
+        out[sensors_eye].data = out[sensors_eye].data * correction
 
     return out

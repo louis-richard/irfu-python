@@ -1,5 +1,5 @@
-Contributing to pyrfu
-========================
+Contributing
+============
 
 All contributions are welcome. For detailed information about the code style please
 read the following instructions. All the code must have a adequate number of tests

@@ -15,7 +15,7 @@ from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -104,7 +104,8 @@ def convert_fac(
     elif not isinstance(r_xyz, (xr.DataArray, np.ndarray, list)):
         raise TypeError("r_xyz must be a xarray.DataArray or ndarray or list")
 
-    if len(inp) != len(b_bgd):
+    # Resample if the times differ (same length is not enough)
+    if not np.array_equal(inp.time.data, b_bgd.time.data):
         b_bgd = resample(b_bgd, inp, f_s=calc_fs(inp))
 
     time: np.ndarray = inp.time.data
@@ -137,7 +138,8 @@ def convert_fac(
         raise ValueError("b_bgd must be a vector or a tensor time series")
 
     if inp_data.ndim == 2 and inp_data.shape[1] == 3:
-        out_data = np.zeros(inp.shape, dtype=inp_data.dtype)
+        # Floating point output (integer input was truncated)
+        out_data = np.zeros(inp.shape, dtype=np.result_type(inp_data, np.float32))
 
         out_data[:, 0] = np.sum(r_perp_x * inp_data, axis=1)
         out_data[:, 1] = np.sum(r_perp_y * inp_data, axis=1)

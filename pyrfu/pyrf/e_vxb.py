@@ -10,7 +10,7 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -66,7 +66,7 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
     if isinstance(v_xyz, xr.DataArray):
         b_xyz = resample(b_xyz, v_xyz)
     else:
-        raise TypeError("v_xyz must be xarray.DataArray or array_like constant vector")
+        raise TypeError("v_xyz must be a xarray.DataArray")
 
     if flag.lower() == "exb":
         res = 1e3 * np.cross(v_xyz.data, b_xyz.data, axis=1)
@@ -78,7 +78,7 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
         res = -1e-3 * np.cross(v_xyz.data, b_xyz.data)
 
         attrs = {
-            "UNITS": "mV/s",
+            "UNITS": "mV/m",
             "FIELDNAM": "Electric field",
             "LABLAXIS": "E",
         }

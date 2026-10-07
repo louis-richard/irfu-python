@@ -12,7 +12,7 @@ from pyrfu.pyrf.cross import cross
 from pyrfu.pyrf.dot import dot
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -38,9 +38,12 @@ def c_4_k(r_list: Sequence[DataArray]) -> Sequence[DataArray]:
 
     """
 
+    if len(r_list) != 4:
+        raise ValueError("r_list must contain exactly 4 elements.")
+
     mms_list = np.arange(4)
 
-    k_list = [r_list[0].copy()] * 4
+    k_list = [None] * 4
 
     mms_list_r0 = np.roll(mms_list, 0)
     mms_list_r1 = np.roll(mms_list, 1)

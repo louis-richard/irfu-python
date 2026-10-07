@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
-
 # Built-in imports
+import json
 import os
+from functools import lru_cache
 
 # 3rd party imports
 import numpy as np
@@ -17,11 +17,26 @@ from .ts_vec_xyz import ts_vec_xyz
 from .unix2datetime64 import unix2datetime64
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+# Unix times of J2000 (2000-01-01T12:00:00 TT) and of 2000-01-01T12:00:00 UT. The
+# first one gives TT seconds since J2000 after 2017 (TT - UTC = 69.184 s).
+J2000_TT_UNIX = 946727930.8160001
+J2000_UT_UNIX = 946728000.0
+
+
+@lru_cache(maxsize=1)
+def _transformation_indices():
+    root_path = os.path.dirname(os.path.abspath(__file__))
+    file_name = "transformation_indices.json"
+
+    with open(os.path.join(root_path, file_name), "r", encoding="utf-8") as file:
+        return json.load(file)
 
 
 def _triang(angle, axis):
@@ -156,15 +171,39 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     Parameters
     ----------
-    inp : xarray.DataArray or ndarray
+    inp : xarray.DataArray
         Time series of the input field.
     flag : str
         Coordinates transformation "{coord1}>{coord2}", where coord1 and
-        coord2 can be geo/gei/gse/gsm/sm/mag.
+        coord2 can be geo/gei/gse/gsm/sm/mag (case-insensitive). If only
+        "{coord2}" is given, coord1 is read from the COORDINATE_SYSTEM attribute
+        of inp. "dipoledirectiongse" returns the dipole direction in GSE at the
+        times of inp.
     hapgood : bool, Optional
         Indicator if original Hapgood sources should be used for angle
         computations or if updated USNO-AA sources should be used.
         Default = true, meaning original Hapgood sources.
+
+    Returns
+    -------
+    out : xarray.DataArray
+        Time series of the field in coord2. If inp is a scalar time series, the
+        transformation matrices.
+
+    Raises
+    ------
+    ValueError
+        If the input frame is neither in flag nor in the COORDINATE_SYSTEM
+        attribute of inp, if they differ, or if the transformation is unknown.
+
+    Notes
+    -----
+    With hapgood=False, the Greenwich mean sidereal time is computed from UT, as
+    the USNO formula requires. irfu-matlab computes it from TT, which rotates
+    GEO by 0.29 deg about the z-axis, so the transformations between GEO or MAG
+    and GEI, GSE, GSM or SM differ from irfu-matlab by up to 0.29 deg. The
+    dipole direction (used for GSM and SM) is always computed with the Hapgood
+    sidereal time.
 
 
     Examples
@@ -208,10 +247,19 @@ def cotrans(inp, flag, hapgood: bool = True):
     assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
     assert inp.ndim < 3, "inp must be scalar or vector"
 
+    flag = flag.lower()
+
+    # Unix time in seconds (whatever the unit of the time coordinate)
+    time = inp.time.data.astype("datetime64[ns]")
+    t = (time.astype(np.int64) * 1e-9).astype(np.float64)
+
+    if flag == "dipoledirectiongse":
+        return _dipole_direction_gse(t)
+
     if ">" in flag:
         ref_syst_in, ref_syst_out = flag.split(">")
     else:
-        ref_syst_in, ref_syst_out = [None, flag.lower()]
+        ref_syst_in, ref_syst_out = [None, flag]
 
     if "COORDINATE_SYSTEM" in inp.attrs:
         ref_syst_internal = inp.attrs["COORDINATE_SYSTEM"].lower()
@@ -219,30 +267,34 @@ def cotrans(inp, flag, hapgood: bool = True):
     else:
         ref_syst_internal = None
 
-    if ref_syst_in is not None and ref_syst_internal is not None:
-        message = "input ref. frame in variable and input flag differs"
-        assert ref_syst_internal == ref_syst_in, message
-        flag = f"{ref_syst_in}>{ref_syst_out}"
-    elif ref_syst_in is None and ref_syst_internal is not None:
-        ref_syst_in = ref_syst_internal.lower()
-        flag = f"{ref_syst_in}>{ref_syst_out}"
-    elif flag.lower() == "dipoledirectiongse":
-        flag = flag.lower()
-    elif ref_syst_in is None and ref_syst_internal is None:
-        raise ValueError(f"Transformation {flag} is unknown!")
+    if ref_syst_in is None:
+        if ref_syst_internal is None:
+            raise ValueError(
+                f"Transformation {flag} is unknown! Give the input frame in flag "
+                "({coord1}>{coord2}) or in the COORDINATE_SYSTEM attribute of inp"
+            )
+
+        ref_syst_in = ref_syst_internal
+    elif ref_syst_internal is not None and ref_syst_internal != ref_syst_in:
+        raise ValueError(
+            f"input frame in flag ({ref_syst_in}) and in the COORDINATE_SYSTEM "
+            f"attribute of inp ({ref_syst_internal}) differ"
+        )
 
     if ref_syst_in == ref_syst_out:
-        return inp
+        # A copy: editing the output must not change the caller's data
+        return inp.copy()
 
-    # J2000 reference time
-    j2000 = 946727930.8160001
-    # j2000 = Time("J2000", format="jyear_str").unix
+    flag = f"{ref_syst_in}>{ref_syst_out}"
+    transformation_indices = _transformation_indices()
 
-    time = inp.time.data
-    t = (time.astype(np.int64) * 1e-9).astype(np.float64)
+    if flag not in transformation_indices:
+        raise ValueError(f"Transformation {flag} is unknown!")
+
+    tind = transformation_indices[flag]
 
     #  Terrestial Time (seconds since J2000)
-    tts = t - j2000
+    tts = t - J2000_TT_UNIX
     inp_ts = inp
     inp = inp.data
 
@@ -250,12 +302,10 @@ def cotrans(inp, flag, hapgood: bool = True):
         day_start_epoch_dt64 = time.astype("datetime64[D]")
         day_start_epoch_dt64 = day_start_epoch_dt64.astype("datetime64[ns]")
         day_start_epoch = day_start_epoch_dt64.astype(np.int64) / 1e9
-        mjd_ref_epoch_dt64 = np.datetime64("2000-01-01T12:00:00", "ns")
-        mjd_ref_epoch = mjd_ref_epoch_dt64.astype(np.int64) / 1e9
 
         # t_zero is time measured in Julian centuries from 2000-01-0112:00 UT
         # to the previous midnight
-        t_zero = day_start_epoch - mjd_ref_epoch
+        t_zero = day_start_epoch - J2000_UT_UNIX
         t_zero /= 3600 * 24 * 36525.0
 
         hours = (time.astype("datetime64[h]") - time.astype("datetime64[D]")).astype(
@@ -264,49 +314,39 @@ def cotrans(inp, flag, hapgood: bool = True):
         minutes = (time.astype("datetime64[m]") - time.astype("datetime64[h]")).astype(
             float
         )
-        seconds = 1e-9 * (
-            time.astype("datetime64[ns]") - time.astype("datetime64[m]")
-        ).astype(np.float64)
+        seconds = 1e-9 * (time - time.astype("datetime64[m]")).astype(np.float64)
         ut = hours + minutes / 60 + seconds / 3600
 
         args_trans_mat = (t_zero, ut, None, None, None, None)
 
     else:
-        # Julian date(of req.time) from J2000
+        # Julian date (of req. time) from J2000, for the Sun's position
         d_j2000 = tts / 86400
 
-        # Julian date(of preceeding midnight of req.time) from J2000
-        d0_j2000 = np.floor(tts / 86400) - 0.5
+        # The sidereal time formula takes UT days since 2000-01-01T12:00 UT. TT is
+        # 69.184 s ahead, which would rotate GEO by 0.29 deg.
+        d_ut = (t - J2000_UT_UNIX) / 86400
 
-        # Julian centuries(of req.time) since J2000
-        t_j2000 = d_j2000 / 36525
+        # Julian date (of preceding midnight of req. time) from J2000
+        d0_j2000 = np.floor(d_ut - 0.5) + 0.5
 
-        # Hours in the of req.time(since midnight).
-        h_j2000 = 24 * (d_j2000 - d0_j2000)
+        # Julian centuries (of req. time) since J2000
+        t_j2000 = d_ut / 36525
+
+        # Hours in the of req. time (since midnight).
+        h_j2000 = 24 * (d_ut - d0_j2000)
 
         args_trans_mat = (None, None, d0_j2000, d_j2000, h_j2000, t_j2000)
 
-    if ">" in flag:
-        root_path = os.path.dirname(os.path.abspath(__file__))
-        file_name = "transformation_indices.json"
+    transf_mat = _transformation_matrix(t, tind, hapgood, *args_trans_mat)
 
-        with open(os.sep.join([root_path, file_name]), "r", encoding="utf-8") as file:
-            transformation_dict = json.load(file)
-
-        tind = transformation_dict[flag]
-
-        transf_mat = _transformation_matrix(t, tind, hapgood, *args_trans_mat)
-
-        if inp.ndim == 1:
-            out = ts_tensor_xyz(inp_ts.time.data, transf_mat)
-
-        else:
-            out_data = np.einsum("kji,ki->kj", transf_mat, inp)
-            out = inp_ts.copy()
-            out.data = out_data
-            out.attrs["COORDINATE_SYSTEM"] = ref_syst_out.upper()
+    if inp.ndim == 1:
+        out = ts_tensor_xyz(inp_ts.time.data, transf_mat)
 
     else:
-        out = _dipole_direction_gse(t)
+        out_data = np.einsum("kji,ki->kj", transf_mat, inp)
+        out = inp_ts.copy()
+        out.data = out_data
+        out.attrs["COORDINATE_SYSTEM"] = ref_syst_out.upper()
 
     return out

@@ -16,7 +16,7 @@ from .feeps_active_eyes import feeps_active_eyes
 from .feeps_pitch_angles import feeps_pitch_angles
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -132,7 +132,9 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
                             axis=0,
                         )
                     else:
-                        pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0]]
+                        # Single telescope (assigning a 1-element array to an
+                        # element fails with NumPy >= 2.5)
+                        pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0][0]]
 
     pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
 

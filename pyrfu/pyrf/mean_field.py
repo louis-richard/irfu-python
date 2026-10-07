@@ -14,7 +14,7 @@ from xarray.core.dataarray import DataArray
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -26,9 +26,10 @@ NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
     r"""Estimate the mean and wave fields.
 
-    The mean field is computed by fitting a polynomial of degree `deg` to the
-    input data. The wave field is then computed as the difference between the
-    input data and the mean field.
+    The mean field is computed by fitting a polynomial of degree `deg` in time
+    to each component of the input data (NaNs are ignored in the fit). The wave
+    field is then computed as the difference between the input data and the
+    mean field.
 
     Parameters
     ----------
@@ -52,22 +53,29 @@ def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
     if not isinstance(inp, xr.DataArray):
         raise TypeError("Input must be a xarray.DataArray")
 
-    # Extracting time and data
+    # Extracting time (in seconds since the first sample) and data
     time: NDArray[np.datetime64] = inp.time.data
     data: NDArray[np.float64] = inp.data.astype(np.float64)  # force to double precision
-    time_ints: NDArray[np.uint16] = np.arange(len(time), dtype=np.uint16)
+    time_sec: NDArray[np.float64] = (time - time[0]) / np.timedelta64(1, "s")
 
     # Preallocating output
-    inp_mean: NDArray[np.float64] = np.zeros_like(data, dtype=np.float64)
-    inp_wave: NDArray[np.float64] = np.zeros_like(data, dtype=np.float64)
+    inp_mean: NDArray[np.float64] = np.full_like(data, np.nan, dtype=np.float64)
 
     for i in range(data.shape[1]):
-        # Polynomial fit
-        polynomial_coeffs: NDArray[np.float64] = np.polyfit(time_ints, data[:, i], deg)
+        # Polynomial fit (the time is mapped onto [-1, 1], so that the fit stays
+        # well-conditioned for long time series and high degrees)
+        idx = np.isfinite(data[:, i])
 
-        # Computing mean and wave field
-        inp_mean[:, i] = np.polyval(polynomial_coeffs, time_ints)
-        inp_wave[:, i] = data[:, i] - inp_mean[:, i]
+        if np.sum(idx) <= deg:
+            continue
+
+        polynomial = np.polynomial.Polynomial.fit(time_sec[idx], data[idx, i], deg)
+
+        # Computing mean field
+        inp_mean[:, i] = polynomial(time_sec)
+
+    # Wave field
+    inp_wave: NDArray[np.float64] = data - inp_mean
 
     # Time series
     inp_mean_ts: DataArray = ts_vec_xyz(inp.time.data, inp_mean)

@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -18,6 +18,10 @@ __status__ = "Prototype"
 
 def t_eval(inp, times):
     r"""Evaluates the input time series at the target time.
+
+    There is no interpolation: each target time takes the first sample of the
+    input at or after it (the first sample for the times before the input).
+    Use :func:`pyrfu.pyrf.resample` to interpolate.
 
     Parameters
     ----------
@@ -30,6 +34,11 @@ def t_eval(inp, times):
     -------
     out : xarray.DataArray
         Time series of the input at times t.
+
+    Raises
+    ------
+    IndexError
+        If a target time is after the last sample of the input.
 
     """
 

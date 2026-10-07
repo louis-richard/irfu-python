@@ -1,7 +1,7 @@
 {
   "aws": "",
   "default": "local",
-  "local": "/Volumes/mms",
+  "local": ".",
   "sdc": {
     "rights": "public",
     "username": "username"

@@ -165,7 +165,7 @@ class MvaGui:
 
         # Keep frame right-handed
         frame[:, 2] = np.cross(frame[:, 0], frame[:, 1])
-        b_lmn = new_xyz(b_xyz, frame)
+        b_lmn = new_xyz(b_xyz, frame, "lmn")
         return b_lmn, mva_frame[1], frame
 
     def update_fig(self, b_xyz_clip):
@@ -206,7 +206,7 @@ class MvaGui:
         ax4.clear()
 
         # Plot b in MVA frame given by frame_clip
-        b_new = new_xyz(self.b, frame_clip)
+        b_new = new_xyz(self.b, frame_clip, "lmn")
         plot_line(ax2, b_new)
         plot_line(ax2, norm(b_new), color="black")
         b2_labels = ["max", "interm", "min", "abs"]

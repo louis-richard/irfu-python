@@ -19,18 +19,13 @@ from xarray.core.dataset import Dataset
 from pyrfu.pyrf.calc_fs import calc_fs
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 
 @numba.jit(nopython=True, fastmath=True)  # type: ignore
@@ -80,6 +75,7 @@ def wavelet(
     return_power: Optional[bool] = True,
 ) -> Union[DataArray, Dataset]:
     """Computes wavelet spectrogram based on fast FFT algorithm.
+
     Parameters
     ----------
     inp : DataArray
@@ -92,7 +88,10 @@ def wavelet(
     n_freqs : int, Optional
         Number of frequency bins.
     linear : float or bool, Optional
-        Linear spacing between frequencies of df.
+        Linear spacing between frequencies of df: the frequencies are df,
+        2 df, ... up to the highest frequency of `f` (the Nyquist frequency if
+        `f` is not given); the lowest frequency of `f` is not used. True uses
+        df = 100 Hz, as irf_wavelet.
     wavelet_width : float, Optional
         Width of the Morlet wavelet. Default 5.36.
     cut_edge : bool, Optional
@@ -131,13 +130,16 @@ def wavelet(
         wavelet_width = 5.36
 
     if linear is not None:
-        if isinstance(linear, float):
-            delta_f: float = linear
-            linear_df: bool = True
-        elif isinstance(linear, bool) and linear:
-            delta_f = 100.0
+        # bool must be checked first as it is a subclass of int
+        if isinstance(linear, bool):
+            linear_df: bool = linear
+            delta_f: float = 100.0
+        elif isinstance(linear, (float, int)):
+            if linear <= 0:
+                raise ValueError("linear frequency spacing must be positive")
+
+            delta_f = float(linear)
             linear_df = True
-            logging.warning("Unknown input for linear delta_f set to 100")
         else:
             raise TypeError("linear keyword argument must be bool or float")
     else:
@@ -151,12 +153,28 @@ def wavelet(
     # Frequency range
     if f is None:
         f_min: float = f_nyq / 10**2
-        f_max: float = f_nyq / 10**-2
+        f_max: float = f_nyq
     else:
         f_min, f_max = sorted(f)
 
+        if f_max > f_nyq:
+            logger.warning(
+                "f_max = %g Hz is above the Nyquist frequency, set to %g Hz",
+                f_max,
+                f_nyq,
+            )
+            f_max = f_nyq
+
     if linear_df:
-        scale_number: int = int(np.floor(f_nyq / delta_f))
+        # Frequencies delta_f, 2 delta_f, ... up to f_max (the Nyquist
+        # frequency if f is not given), as irf_wavelet
+        scale_number: int = int(np.floor(f_max / delta_f))
+
+        if scale_number == 0:
+            raise ValueError(
+                f"linear frequency spacing ({delta_f} Hz) is larger than the "
+                f"highest frequency ({f_max} Hz)"
+            )
 
         # Scales range
         scale_min: float = delta_f

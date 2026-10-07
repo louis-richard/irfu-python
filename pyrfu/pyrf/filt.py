@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import numbers
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -10,7 +13,7 @@ from scipy import signal
 from pyrfu.pyrf.calc_fs import calc_fs
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2026"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -19,7 +22,10 @@ __status__ = "Prototype"
 
 # noinspection PyTupleAssignmentBalance
 def _ellip_coefficients(f_min, f_max, order):
-    num1, den1, num2, den2 = [None] * 4
+    # Filters are designed as second-order sections (sos) rather than
+    # transfer-function polynomials (b, a), which are numerically unstable
+    # for high orders and low normalised cutoffs.
+    sos1, sos2 = [None] * 2
 
     # fact defines the width between stopband and passband
     r_p, r_s, fact = 0.5, 60, 1.1
@@ -33,7 +39,7 @@ def _ellip_coefficients(f_min, f_max, order):
                 r_s,
             )
 
-        num1, den1 = signal.ellip(order, r_p, r_s, f_max, btype="lowpass")
+        sos1 = signal.ellip(order, r_p, r_s, f_max, btype="lowpass", output="sos")
     elif f_max == 0:
         if order == -1:
             order, f_min = signal.ellipord(
@@ -43,7 +49,7 @@ def _ellip_coefficients(f_min, f_max, order):
                 r_s,
             )
 
-        num1, den1 = signal.ellip(order, r_p, r_s, f_min, btype="highpass")
+        sos1 = signal.ellip(order, r_p, r_s, f_min, btype="highpass", output="sos")
     else:
         if order == -1:
             order1, f_max = signal.ellipord(
@@ -56,10 +62,17 @@ def _ellip_coefficients(f_min, f_max, order):
         else:
             order1, order2 = [order, order]
 
-        num1, den1 = signal.ellip(order1, 0.5, 60, f_max)
-        num2, den2 = signal.ellip(order2, 0.5, 60, f_min)
+        sos1 = signal.ellip(order1, 0.5, 60, f_max, btype="lowpass", output="sos")
+        sos2 = signal.ellip(order2, 0.5, 60, f_min, btype="highpass", output="sos")
 
-    return num1, den1, num2, den2
+    return sos1, sos2
+
+
+def _sos_padlen(sos):
+    # Same padding as MATLAB's filtfilt (and the former (b, a) implementation):
+    # 3 * filter order. Odd orders have one section with b2 = a2 = 0.
+    n_trailing = min(np.sum(sos[:, 2] == 0), np.sum(sos[:, 5] == 0))
+    return 3 * (2 * len(sos) - n_trailing)
 
 
 def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
@@ -114,55 +127,54 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
     # Data of the input
     inp_data = inp.data.astype(np.float64)
 
-    assert isinstance(f_min, (int, float)), "f_min must be int or float"
-    assert isinstance(f_max, (int, float)), "f_max must be int or float"
-    assert isinstance(order, (int, float)), "order must be int or float"
+    # Any real number, including numpy scalars (np.int64, np.float32)
+    assert isinstance(f_min, numbers.Real), "f_min must be a real number"
+    assert isinstance(f_max, numbers.Real), "f_max must be a real number"
+    assert isinstance(order, numbers.Real), "order must be a real number"
+
+    if f_min == 0.0 and f_max == 0.0:
+        raise ValueError("f_min and f_max cannot both be 0.0!")
 
     # Calculate the sampling frequency and normalize the cutoff frequencies
     # to the Nyquist frequency
     f_samp = calc_fs(inp)
     f_min, f_max = [f_min / (f_samp / 2.0), f_max / (f_samp / 2.0)]
-    f_max = np.min([f_max, 1.0])
+
+    if f_min >= 1.0:
+        raise ValueError("f_min must be smaller than the Nyquist frequency!")
+
+    # An upper cutoff at or above the Nyquist frequency is no cutoff at all
+    # (and Wn = 1 is invalid for the elliptic filter design) -> highpass.
+    if f_max >= 1.0:
+        f_max = 0.0
+
+        if f_min == 0.0:
+            raise ValueError("f_max >= Nyquist frequency with f_min = 0 does nothing!")
 
     # Parameters of the elliptic filter. fact defines the width between
     # stopband and passband
     # r_pass, r_stop, fact = [0.5, 60, 1.1]
 
-    num1, den1, num2, den2 = _ellip_coefficients(f_min, f_max, order)
+    sos1, sos2 = _ellip_coefficients(f_min, f_max, int(order))
 
     if len(inp_data.shape) == 1:
         inp_data = inp_data[:, np.newaxis]
-        n_cols = 1
-    elif len(inp_data.shape) == 2:
-        n_cols = inp_data.shape[1]
     elif len(inp_data.shape) == 3:
         inp_data = inp_data.reshape(inp_data.shape[0], -1)
-        n_cols = inp_data.shape[1]
-    else:
+    elif len(inp_data.shape) != 2:
         raise ValueError("inp must be 1D, 2D or 3D")
 
-    out_data = np.zeros(inp_data.shape, dtype=inp_data.dtype)
+    # use odd padding with padlen = 3 * order for consistency with MATLAB
+    out_data = signal.sosfiltfilt(
+        sos1, inp_data, axis=0, padtype="odd", padlen=_sos_padlen(sos1)
+    )
 
-    for i_col in range(n_cols):
-        # use different padtype and padlen for consistency with MATLAB
-        # (and to not drive me crazy trying to figure out the differences)
-        padtype = "odd"
-        padlen = 3 * (max(len(num1), len(den1)) - 1)
-        out_data[:, i_col] = signal.filtfilt(
-            num1, den1, inp_data[:, i_col], padtype=padtype, padlen=padlen
+    if sos2 is not None:
+        out_data = signal.sosfiltfilt(
+            sos2, out_data, axis=0, padtype="odd", padlen=_sos_padlen(sos2)
         )
 
-        if num2 is not None and den2 is not None:
-            padtype = "odd"
-            padlen = 3 * (max(len(num2), len(den2)) - 1)
-            out_data[:, i_col] = signal.filtfilt(
-                num2,
-                den2,
-                out_data[:, i_col],
-                padtype=padtype,
-                padlen=padlen,
-            )
-    if inp_data.shape[1] == 1:
+    if inp.ndim == 1:
         out_data = out_data[:, 0]
     elif len(inp.shape) == 3:
         out_data = out_data.reshape(inp.shape)

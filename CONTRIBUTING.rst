@@ -34,9 +34,9 @@ standards:
 
 - `pylint <http://pylint.pycqa.org/en/latest/user_guide/output.html>`__ is one of the oldest linters and tracks various problems such as good practice violation, coding standard violation, or programming issues. Pylint may be seen as slow, too verbose and complex to configure to get it working properly. You can run a complete static analysis with the following command:
 
-.. code:: python
+.. code:: console
 
-    pylint pyrfu --rcfile=setup.cfg
+    $ pylint pyrfu
 
 All these linters can be simply installed with pip. Further details
 on the functionnalities can be found

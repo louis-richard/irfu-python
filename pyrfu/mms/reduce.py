@@ -17,16 +17,21 @@ from pyrfu.pyrf.time_clip import time_clip
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _energy2speed(energy, mass):
+    r"""Convert energy (eV) to speed (m/s), relativistically correct."""
+    gamma = 1 + electron_volt * energy / (mass * speed_of_light**2)
+    return speed_of_light * np.sqrt(1 - 1 / gamma**2)
+
+
 def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
-    Draft do not use!!
 
     Parameters
     ----------
@@ -81,6 +86,21 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     delta_energy_minu = time_clip(delta_energy_minu, tint)
 
+    # Upper energy bound of instrument bins. The energy widths define the speed
+    # bins used for the Monte-Carlo integration; if either is missing, the
+    # speed bin edges are inferred from the channel speeds in int_sph_dist.
+    has_energy_widths = all(
+        k in vdf.attrs for k in ["delta_energy_minus", "delta_energy_plus"]
+    )
+
+    if has_energy_widths:
+        delta_energy_plus = xr.DataArray(
+            vdf.attrs["delta_energy_plus"],
+            coords=[vdf.time.data, vdf.idx0.data],
+            dims=["time", "idx0"],
+        )
+        delta_energy_plus = time_clip(delta_energy_plus, tint)
+
     # make input distribution to SI units, s^3/m^6
     if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
         vdf_data *= 1e12
@@ -131,8 +151,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     velocity_grid = kwargs.get("vg", None)  # TODO : check that for no input!!
     velocity_grid_edges = kwargs.get("vg_edges", None)
 
-    # azimuthal angle of projection plane
-    n_phi_grid = len(vdf_phi)
+    # azimuthal angle of projection plane (phi is (time, phi) in burst mode)
+    n_phi_grid = vdf_phi.shape[-1]
     d_phi_g = 2 * np.pi / n_phi_grid
     phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, n_phi_grid) + d_phi_g / 2
     phi_grid = kwargs.get("phig", phi_grid)
@@ -178,11 +198,11 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     v_max = speed_of_light * np.sqrt(1 - 1 / gamma_max**2)  # m/s
 
     # initiate projected f
-    if velocity_grid_edges is not None:
+    if velocity_grid is not None:
+        n_vg = len(velocity_grid)
+    elif velocity_grid is None and velocity_grid_edges is not None:
         n_vg = len(velocity_grid_edges) - 1
         velocity_grid = velocity_grid_edges[:-1] + 0.5 * np.diff(velocity_grid_edges)
-    elif velocity_grid is not None:
-        n_vg = len(velocity_grid)
     else:
         n_vg = 100
         if base == "cart":
@@ -218,8 +238,21 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         energy[energy < 0] = 0.0
 
         # Convert energy to velocity (relativistically correct)
-        gamma = 1 + electron_volt * energy / (m_p * speed_of_light**2)
-        velocity = speed_of_light * np.sqrt(1 - 1 / gamma**2)  # m/s
+        velocity = _energy2speed(energy, m_p)  # m/s
+
+        # Speed widths of the instrument bins from the energy bounds of the
+        # channels (corrected for the spacecraft potential)
+        if has_energy_widths:
+            e_low = vdf_energy.data[i_t, :] - delta_energy_minu.data[i_t, :]
+            e_upp = vdf_energy.data[i_t, :] + delta_energy_plus.data[i_t, :]
+            e_low = np.clip(e_low.astype(np.float64) - sc_pot[i_t], 0.0, None)
+            e_upp = np.clip(e_upp.astype(np.float64) - sc_pot[i_t], 0.0, None)
+            speed_widths = {
+                "d_v_m": velocity - _energy2speed(e_low, m_p),
+                "d_v_p": _energy2speed(e_upp, m_p) - velocity,
+            }
+        else:
+            speed_widths = {}
 
         # azimuthal angle
         if vdf_phi.ndim == 2:
@@ -260,6 +293,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
             "projection_dim": dim,
             "projection_base": base,
             "velocity_grid_edges": velocity_grid_edges,
+            **speed_widths,
         }
 
         tmpst = int_sph_dist(

@@ -9,18 +9,13 @@ import numpy as np
 from scipy.optimize import fminbound
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 
 def _magnetopause(theta, *args):
@@ -64,11 +59,13 @@ def magnetopause_normal(
     p_sw : float
         Solar wind dynamic pressure in nPa.
     model : {"mp_shue1997", "mp_shue1998", "bs97", "bs98"}, Optional
-        Name of model :
-            * 'mp_shue97'   : Shue et al., 1997 (Default)
-            * 'mp_shue98'   : Shue et al., 1998
-            * 'bs97'        : Bow shock, Farris & Russell 1994
-            * 'bs98'        : Bow shock, Farris & Russell 1994
+        Name of model (case insensitive):
+            * 'mp_shue1997' or 'mp_shue97' : Shue et al., 1997 (Default)
+            * 'mp_shue1998' or 'mp_shue98' : Shue et al., 1998
+            * 'bs97' or 'bs' : Bow shock, Farris & Russell 1994, based on
+              'mp_shue1997'
+            * 'bs98' : Bow shock, Farris & Russell 1994, based on
+              'mp_shue1998'
     m_alfven : float, Optional
         Alfvenic Mach number, only needed if bow shock model is used.
 
@@ -102,13 +99,15 @@ def magnetopause_normal(
 
     """
 
-    if model.lower() in ["mp_shue98", "bs98"]:
-        logging.info("Shue et al., 1998 model used.")
+    model = model.lower()
+
+    if model in ["mp_shue1998", "mp_shue98", "bs98"]:
+        logger.info("Shue et al., 1998 model used.")
         alpha = (0.58 - 0.007 * b_z_imf) * (1.0 + 0.024 * np.log(p_sw))
         r0 = 10.22 + 1.29 * np.tanh(0.184 * (b_z_imf + 8.14))
         r0 *= p_sw ** (-1.0 / 6.6)
-    elif model.lower() in ["mp_shue97", "bs97"]:
-        logging.info("Shue et al., 1997 model used.")
+    elif model in ["mp_shue1997", "mp_shue97", "bs97", "bs"]:
+        logger.info("Shue et al., 1997 model used.")
         alpha = (0.58 - 0.01 * b_z_imf) * (1.0 + 0.01 * p_sw)
 
         if b_z_imf >= 0:
@@ -123,14 +122,15 @@ def magnetopause_normal(
     r1_x, r1_y, r1_z = r_gsm
     r0_x, r0_y = [r1_x, np.sqrt(r1_y**2 + r1_z**2)]
 
-    if model[:2].lower() == "mp":
-        # Magnetopause
-
+    if model[:2] == "mp":
+        # Magnetopause. The search range is wider than irfu-matlab's
+        # (-pi/1.2, pi/1.2), which misses the magnetopause behind x ~ -46 Re.
         theta_min, min_val, _, _ = fminbound(
             _magnetopause,
-            x1=-np.pi / 2,
-            x2=np.pi / 2,
-            args=(r0, alpha, r0_x, r1_y),
+            x1=-np.pi + 1e-6,
+            x2=np.pi - 1e-6,
+            args=(r0, alpha, r0_x, r0_y),
+            xtol=1e-10,
             full_output=True,
         )
 
@@ -159,7 +159,7 @@ def magnetopause_normal(
 
     else:
         # Bow shock
-        logging.info("Farris & Russell 1994 bow shock model used.")
+        logger.info("Farris & Russell 1994 bow shock model used.")
 
         gamma = 5 / 3
         mach = m_alfven
@@ -188,9 +188,10 @@ def magnetopause_normal(
         x_n = d_min[0] / np.linalg.norm(d_min)
         min_dist = np.sqrt(min_val)
 
-        qyz = r1_y / r1_z
-        z_n = np.sign(r1_z) * np.sign(x_n) * np.sqrt((1 - x_n**2) / (1 + qyz**2))
-        y_n = z_n * qyz
+        # irfu-matlab uses y / z here, which is NaN for z = 0
+        phi = np.arctan2(r1_z, r1_y)
+        rho_n = np.sign(x_n) * np.sqrt(1 - x_n**2)
+        y_n, z_n = [np.cos(phi) * rho_n, np.sin(phi) * rho_n]
 
         n_vec = np.stack([x_n, y_n, z_n])
 

@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
-
 # Built-in imports
+import logging
 import warnings
 
 # 3rd party imports
@@ -11,48 +10,86 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf.normalize import normalize
-from ..pyrf.resample import resample
-from ..pyrf.time_clip import time_clip
+from pyrfu.pyrf.normalize import normalize
+from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.time_clip import time_clip
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
+
+
+def _bin_reduce(data0, finite, in_bin, method, weights):
+    r"""Mean (over theta, then phi, as irfu-matlab), sum, or solid-angle
+    weighted mean of the samples in one pitch-angle bin, (time, energy)."""
+    in_bin = in_bin.astype(np.float64)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+
+        if method == "mean":
+            row_sum = np.einsum("tepk,tpk->tep", data0, in_bin)
+            row_num = np.einsum("tepk,tpk->tep", finite, in_bin)
+            out = np.nanmean(row_sum / row_num, axis=2)
+        elif method == "sum":
+            out = np.einsum("tepk,tpk->te", data0, in_bin)
+        else:
+            sum_w = np.einsum("tepk,tpk,k->te", data0, in_bin, weights)
+            out = sum_w / np.einsum("tepk,tpk,k->te", finite, in_bin, weights)
+
+    return out
 
 
 def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
-    r"""Computes the pitch angle distributions from l1b brst particle data.
+    r"""Computes the pitch angle distributions from particle data, as
+    irfu-matlab mms.get_pitchangledist.
 
     Parameters
     ----------
     vdf : xarray.Dataset
-        to fill
+        Skymap distribution, with (time, energy) energies, phi as (time, phi)
+        or (phi,) and theta as (theta,), in degrees.
     b_xyz : xarray.DataArray
-        to fill
+        Time series of the magnetic field in the same coordinate system as
+        vdf (e.g., DMPA for FPI), resampled to the times of vdf.
     tint : list of str, Optional
         Time interval for closeup.
+    verbose : bool, Optional
+        Log the choice of pitch angles. Default is True.
 
     Returns
     -------
-    pad : xarray.DataArray
-        Particle pitch angle distribution
+    pad : xarray.Dataset
+        Particle pitch angle distribution, with data (time, energy, pitch
+        angle), energy (time, energy) (each time step keeps its energy table)
+        and theta (time, pitch angle) the centres of the pitch angle bins.
 
     Other Parameters
     ----------------
-    angles : int or float or list of ndarray
-        User defined angles.
-    meanorsum : {'mean', 'sum', 'sum_weighted'}
-        Method.
+    angles : int or float or array_like
+        Number of pitch angle bins of equal width, or the bin edges in
+        degrees. Default is 12 bins of 15 degrees.
+    meanorsum : {"mean", "sum", "sum_weighted"}
+        Method in each bin: "mean" averages over theta, then over phi (as
+        irfu-matlab); "sum" sums the samples (0 for an empty bin); and
+        "sum_weighted" is the mean weighted by the solid angle of the
+        samples (sin theta for the uniform FPI angular grids). Default is
+        "mean".
+
+    Raises
+    ------
+    ValueError
+        If angles or meanorsum is not understood.
+
+    Notes
+    -----
+    A sample is in a bin if its pitch angle is between the bin edges,
+    inclusive (as irfu-matlab), so a sample on an edge is in both bins.
 
     Examples
     --------
@@ -90,163 +127,98 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
             d_angles = d_angles * np.ones(n_angles)
 
             if verbose:
-                logging.info("User defined number of pitch angles.")
+                logger.info("User defined number of pitch angles.")
 
         elif isinstance(kwargs["angles"], (list, np.ndarray)):
-            angles_v = kwargs["angles"]
+            angles_v = np.asarray(kwargs["angles"], dtype=np.float64)
             d_angles = np.diff(angles_v)
             angles_v = angles_v[1:]
 
             if verbose:
-                logging.info("User defined pitch angle limits.")
+                logger.info("User defined pitch angle limits.")
 
         else:
             raise ValueError("angles parameter not understood.")
 
     # Method
     mean_or_sum = kwargs.get("meanorsum", "mean")
-    assert mean_or_sum in ["mean", "sum"], "meanorsum param. not understood."
+
+    if mean_or_sum not in ["mean", "sum", "sum_weighted"]:
+        raise ValueError(f"meanorsum {mean_or_sum!r} not understood.")
 
     pitch_angles = angles_v - d_angles / 2
-    n_angles = len(angles_v)
 
-    time = vdf.time.data
+    vdf_data = vdf.data
+    energy = vdf.energy.data
 
-    vdf0 = vdf.data.copy()
-
-    if vdf.phi.data.ndim == 1:
-        phi = np.tile(vdf.phi.data, (len(time), 1))
-        phi = xr.DataArray(
-            phi,
-            coords=[time, np.arange(len(phi))],
-            dims=["time", "idx1"],
-        )
-    else:
-        phi = vdf.phi
-
-    theta = vdf.theta
-
-    if "energy0" in vdf.attrs.keys() and "energy1" in vdf.attrs.keys():
-        energy0, _ = [vdf.attrs[f"energy{i}"] for i in range(2)]
-    else:
-        energy0, _ = vdf.energy.data[:2, :]
+    # Azimuths as (time, phi)
+    phi = vdf.phi.data
+    if phi.ndim == 1:
+        phi = np.broadcast_to(phi, (len(vdf.time), len(phi)))
 
     if tint is not None:
         b_xyz = time_clip(b_xyz, tint)
-        vdf0 = time_clip(vdf0, tint)
-        phi = time_clip(phi, tint)
+        vdf_data = time_clip(vdf_data, tint)
+        in_tint = np.isin(vdf.time.data, vdf_data.time.data)
+        energy, phi = energy[in_tint], phi[in_tint]
 
-    time = vdf0.time.data
+    time = vdf_data.time.data
+    data = vdf_data.data
+    theta = np.deg2rad(vdf.theta.data)
 
-    # Check size of energy
-    n_en, n_phi, n_theta = [len(energy0), len(phi.data[0, :]), len(theta)]
+    b_hat = normalize(resample(b_xyz, vdf_data)).data
 
-    b_xyz = resample(b_xyz, vdf0)
-    b_vec = normalize(b_xyz)
+    # Cosine of the pitch angles of the particle velocities (minus the look
+    # directions), (time, phi, theta): independent of energy
+    phi = np.deg2rad(phi)[:, :, None]
+    cos_pa = -np.cos(phi) * np.sin(theta) * b_hat[:, 0, None, None]
+    cos_pa -= np.sin(phi) * np.sin(theta) * b_hat[:, 1, None, None]
+    cos_pa -= np.cos(theta) * b_hat[:, 2, None, None]
+    theta_b = np.rad2deg(np.arccos(np.clip(cos_pa, -1.0, 1.0)))
 
-    b_vec_x = np.transpose(
-        np.tile(b_vec.data[:, 0], [n_en, n_phi, n_theta, 1]),
-        [3, 0, 1, 2],
+    # Samples with data, and the data with zeros elsewhere, for the bin sums
+    finite = np.isfinite(data)
+    data0 = np.where(finite, data, 0.0)
+    finite = finite.astype(np.float64)
+    weights = np.sin(theta)
+
+    pad_arr = np.stack(
+        [
+            _bin_reduce(
+                data0,
+                finite,
+                (theta_b >= angle - d_angle) & (theta_b <= angle),
+                mean_or_sum,
+                weights,
+            )
+            for angle, d_angle in zip(angles_v, d_angles)
+        ],
+        axis=-1,
     )
-    b_vec_y = np.transpose(
-        np.tile(b_vec.data[:, 1], [n_en, n_phi, n_theta, 1]),
-        [3, 0, 1, 2],
-    )
-    b_vec_z = np.transpose(
-        np.tile(b_vec.data[:, 2], [n_en, n_phi, n_theta, 1]),
-        [3, 0, 1, 2],
-    )
-
-    x_vec = np.zeros((len(time), n_phi, n_theta))
-    y_vec = np.zeros((len(time), n_phi, n_theta))
-    z_vec = np.zeros((len(time), n_phi, n_theta))
-
-    for i in range(len(time)):
-        x_vec[i, ...] = np.dot(
-            -np.cos(np.deg2rad(phi.data[i, None])).T,
-            np.sin(np.deg2rad(theta.data[:, None])).T,
-        )
-        y_vec[i, ...] = np.dot(
-            -np.sin(np.deg2rad(phi.data[i, None])).T,
-            np.sin(np.deg2rad(theta.data[:, None])).T,
-        )
-        z_vec[i, ...] = np.dot(
-            -np.ones((n_phi, 1)),
-            np.cos(np.deg2rad(theta.data[:, None])).T,
-        )
-
-    if tint is not None:
-        energy = time_clip(vdf.energy, tint).data
-    else:
-        energy = vdf.energy.data
-
-    x_mat = np.squeeze(
-        np.transpose(np.tile(x_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]),
-    )
-    y_mat = np.squeeze(
-        np.transpose(np.tile(y_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]),
-    )
-    z_mat = np.squeeze(
-        np.transpose(np.tile(z_vec, [n_en, 1, 1, 1]), [1, 0, 2, 3]),
-    )
-
-    theta_b = np.rad2deg(
-        np.arccos(
-            x_mat * np.squeeze(b_vec_x)
-            + y_mat * np.squeeze(b_vec_y)
-            + z_mat * np.squeeze(b_vec_z),
-        ),
-    )
-
-    dists = [vdf0.data.copy() for _ in range(n_angles)]
-
-    pad_arr = [None] * n_angles
-
-    for i in range(n_angles):
-        dists[i][theta_b < angles_v[i] - d_angles[i]] = np.nan
-        dists[i][theta_b > angles_v[i]] = np.nan
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            if mean_or_sum == "mean":
-                pad_arr[i] = np.squeeze(
-                    np.nanmean(np.nanmean(dists[i], axis=3), axis=2),
-                )
-            elif mean_or_sum == "sum":
-                pad_arr[i] = np.squeeze(
-                    np.nansum(np.nansum(dists[i], axis=3), axis=2),
-                )
-            else:
-                raise ValueError("Invalid method")
-
-    pad_arr = np.transpose(np.stack(pad_arr), [1, 0, 2])
-
-    energy = np.mean(energy[:2, :], axis=0)
 
     pad = xr.Dataset(
         {
-            "data": (
-                ["time", "idx0", "idx1"],
-                np.transpose(pad_arr, [0, 2, 1]),
-            ),
-            "energy": (["time", "idx0"], np.tile(energy, (len(pad_arr), 1))),
+            "data": (["time", "idx0", "idx1"], pad_arr),
+            "energy": (["time", "idx0"], energy),
             "theta": (
                 ["time", "idx1"],
-                np.tile(pitch_angles, (len(pad_arr), 1)),
+                np.tile(pitch_angles, (len(time), 1)),
             ),
             "time": time,
-            "idx0": np.arange(len(energy)),
+            "idx0": np.arange(energy.shape[1]),
             "idx1": np.arange(len(pitch_angles)),
         },
     )
 
-    pad.attrs = vdf.attrs
-    pad.attrs["mean_or_sum"] = mean_or_sum
-    pad.attrs["delta_pitchangle_minus"] = d_angles * 0.5
-    pad.attrs["delta_pitchangle_plus"] = d_angles * 0.5
+    pad.attrs = {
+        **vdf.attrs,
+        "mean_or_sum": mean_or_sum,
+        "delta_pitchangle_minus": d_angles * 0.5,
+        "delta_pitchangle_plus": d_angles * 0.5,
+    }
 
-    pad.time.attrs = vdf.time.attrs
-    pad.energy.attrs = vdf.energy.attrs
+    pad.time.attrs = dict(vdf.time.attrs)
+    pad.energy.attrs = dict(vdf.energy.attrs)
     pad.data.attrs["UNITS"] = vdf.data.attrs["UNITS"]
 
     return pad
