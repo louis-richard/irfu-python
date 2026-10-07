@@ -12,6 +12,7 @@ import string
 import sys
 import tempfile
 import unittest
+import urllib.parse
 import warnings
 from contextlib import nullcontext
 from unittest import mock
@@ -3339,11 +3340,19 @@ class ListFilesAwsTestCase(unittest.TestCase):
 
     @data(True, False)
     def test_s3_resource_credentials(self, has_credentials):
-        # Anonymous requests if there are no AWS credentials (public buckets)
+        # Anonymous requests if there are no AWS credentials (public buckets).
+        # No region lookup on the EC2 instance metadata service (network)
         credentials = mock.Mock() if has_credentials else None
+        environ = {
+            "AWS_EC2_METADATA_DISABLED": "true",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        }
 
-        with mock.patch(
-            "boto3.session.Session.get_credentials", return_value=credentials
+        with (
+            mock.patch(
+                "boto3.session.Session.get_credentials", return_value=credentials
+            ),
+            mock.patch.dict(os.environ, environ),
         ):
             resource = list_files_aws_module._s3_resource()
 
@@ -4169,14 +4178,168 @@ class ListFilesTestCase(unittest.TestCase):
         )
 
 
-@ddt
+class _FakeSdcResponse:
+    def __init__(self, files, error=None):
+        self.files, self.error = files, error
+
+    def raise_for_status(self):
+        if self.error is not None:
+            raise self.error
+
+    def json(self):
+        return {"files": self.files}
+
+
+class _FakeSdcSession:
+    # Records the requests and answers with a canned SDC file listing
+    def __init__(self, files, error=None):
+        self.response = _FakeSdcResponse(files, error)
+        self.urls = []
+
+    def get(self, url, **kwargs):
+        self.urls.append(url)
+        return self.response
+
+
+def _sdc_query(url):
+    parsed = urllib.parse.urlparse(url)
+    return parsed.path, {
+        k: v[0] for k, v in urllib.parse.parse_qs(parsed.query).items()
+    }
+
+
+def _sdc_science_file(file_name):
+    return {"file_name": file_name, "timetag": "2019-09-15T00:00:00", "file_size": 1}
+
+
+_SDC_URL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
+
+
 class ListFilesSdcTestCase(unittest.TestCase):
-    @data(*random.choices(_mms_keys(), k=10))
-    def test_list_files_sdc(self, var_str):
-        try:
-            mms.list_files_sdc(TEST_TINT, random.randint(1, 4), mms.tokenize(var_str))
-        except requests.exceptions.ReadTimeout:
-            pass
+    # Offline: the SDC session is replaced by a fake one (the tests used to
+    # query lasp.colorado.edu with the user's configuration and keyring)
+
+    def _list(self, tint, mms_id, var_str, files, error=None):
+        module = importlib.import_module("pyrfu.mms.list_files_sdc")
+        session = _FakeSdcSession(files, error)
+        with mock.patch.object(
+            module, "_login_lasp", return_value=(session, {}, _SDC_URL)
+        ):
+            result = module.list_files_sdc(tint, mms_id, mms.tokenize(var_str))
+        return result, session
+
+    def test_list_files_sdc_request(self):
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        for var_str, descriptor in [
+            ("b_gse_fgm_brst_l2", None),
+            ("pdi_fpi_brst_l2", "dis-dist"),
+        ]:
+            _, session = self._list(tint, 2, var_str, [])
+            path, query = _sdc_query(session.urls[0])
+            self.assertTrue(path.endswith("file_info/science"))
+            self.assertEqual(query.get("descriptor"), descriptor)
+            expected = {
+                "start_date": "2019-09-14",
+                "end_date": "2019-09-14-08-10-59",
+                "sc_id": "mms2",
+                "instrument_id": var_str.split("_")[-3],
+                "data_rate_mode": "brst",
+                "data_level": "l2",
+            }
+            self.assertDictEqual({k: query[k] for k in expected}, expected)
+
+    def test_list_files_sdc_files(self):
+        # From the file starting before the interval, sorted in time, with
+        # their download URLs; other file names are ignored
+        names = [
+            f"mms2_fgm_brst_l2_20190914{t}_v5.215.0.cdf"
+            for t in ["080023", "074523", "075523", "075223"]
+        ]
+        files = [_sdc_science_file(n) for n in names + ["readme.txt"]]
+        result, _ = self._list(
+            ["2019-09-14T07:54:00", "2019-09-14T08:11:00"],
+            2,
+            "b_gse_fgm_brst_l2",
+            files,
+        )
+
+        expected = [names[3], names[2], names[0]]
+        self.assertListEqual([file["file_name"] for file in result], expected)
+        self.assertListEqual(
+            [file["url"] for file in result],
+            [f"{_SDC_URL}download/science?file={name}" for name in expected],
+        )
+
+    def test_list_files_sdc_http_error(self):
+        with self.assertRaises(requests.exceptions.HTTPError):
+            self._list(
+                TEST_TINT,
+                1,
+                "b_gse_fgm_srvy_l2",
+                [],
+                requests.exceptions.HTTPError("500"),
+            )
+
+
+class ListFilesAncillarySdcTestCase(unittest.TestCase):
+    # Offline, as ListFilesSdcTestCase
+
+    def test_list_files_ancillary_sdc(self):
+        module = importlib.import_module("pyrfu.mms.list_files_ancillary_sdc")
+        name = "MMS3_DEFEPH_2019257_2019258.V01"
+        session = _FakeSdcSession([{"file_name": name}])
+        with mock.patch.object(
+            module, "_login_lasp", return_value=(session, {}, _SDC_URL)
+        ):
+            result = module.list_files_ancillary_sdc(
+                ["2019-09-14T07:54:00", "2019-09-14T08:11:00"], 3, "defeph"
+            )
+
+        path, query = _sdc_query(session.urls[0])
+        self.assertTrue(path.endswith("file_info/ancillary"))
+        self.assertDictEqual(
+            {k: query[k] for k in ["start_date", "end_date", "sc_id", "product"]},
+            {
+                "start_date": "2019-09-13",
+                "end_date": "2019-09-15",
+                "sc_id": "mms3",
+                "product": "defeph",
+            },
+        )
+        self.assertListEqual(
+            result,
+            [{"file_name": name, "url": f"{_SDC_URL}download/ancillary?file={name}"}],
+        )
+
+
+@unittest.skipUnless(
+    os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
+)
+class SdcNetworkTestCase(unittest.TestCase):
+    # Real queries to the public MMS SDC, with a temporary public
+    # configuration (never the user's configuration or keyring)
+
+    def setUp(self):
+        module = importlib.import_module("pyrfu.mms.list_files_sdc")
+        config_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(config_dir.cleanup)
+        path = os.path.join(config_dir.name, "config.json")
+        ConfigCacheTestCase._write_config(path, "sdc", rights="public")
+        patch = mock.patch.object(module, "MMS_CFG_PATH", path)
+        patch.start()
+        self.addCleanup(patch.stop)
+        module._login_lasp_cached.cache_clear()
+        self.addCleanup(module._login_lasp_cached.cache_clear)
+
+    def test_list_files_sdc_public(self):
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        for var_str in ["b_gse_fgm_srvy_l2", "pdi_fpi_brst_l2"]:
+            result = mms.list_files_sdc(tint, 1, mms.tokenize(var_str))
+            self.assertGreater(len(result), 0)
+            self.assertTrue(all("url" in file for file in result))
+
+        result = mms.list_files_ancillary_sdc(tint, 1, "defeph")
+        self.assertGreater(len(result), 0)
 
 
 # DEFEPH layout (MMS1_DEFEPH_2019257_2019258.V01): 14 header lines, no footer
@@ -4283,16 +4446,6 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
             )
 
         self.assertListEqual(result, [])
-
-
-@ddt
-class ListFilesAncillarySdcTestCase(unittest.TestCase):
-    @data("predatt", "predeph", "defatt", "defeph")
-    def test_list_files_ancillary_sdc(self, product):
-        try:
-            mms.list_files_ancillary_sdc(TEST_TINT, random.randint(1, 4), product)
-        except requests.exceptions.ReadTimeout:
-            pass
 
 
 @ddt
