@@ -949,11 +949,11 @@
       "dtype": "epht89d"
     },
     "vel_gsm_mec_brst_l2": {
-      "cdf_name": "mec_v_gse",
+      "cdf_name": "mec_v_gsm",
       "dtype": "epht89d"
     },
     "vel_gsm_mec_srvy_l2": {
-      "cdf_name": "mec_v_gse",
+      "cdf_name": "mec_v_gsm",
       "dtype": "epht89d"
     }
   },

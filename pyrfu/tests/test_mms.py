@@ -3877,6 +3877,27 @@ class TokenizeTestCase(unittest.TestCase):
         self.assertEqual(result["inst"], "fgm")
         self.assertEqual(result["cdf_name"], "fgm_b_gse_brst_l2")
 
+    @data("vel_gsm_mec_srvy_l2", "vel_gsm_mec_brst_l2")
+    def test_tokenize_mec_velocity_gsm(self, var_str):
+        # The GSM velocity keys read the GSE velocity (mec_v_gse)
+        self.assertEqual(mms.tokenize(var_str)["cdf_name"], "mec_v_gsm")
+
+    def test_mms_keys_coordinate_systems(self):
+        # When the CDF variable name has a coordinate system, it is the one of
+        # the key (some products, e.g. HPCA DBCS moments, have none in the name)
+        coordinates = {"gse", "gsm", "dbcs", "dmpa", "bcs", "dsl", "ssc", "gei"}
+        keys_path = os.path.join(os.path.dirname(mms.__file__), "mms_keys.json")
+        with open(keys_path, "r", encoding="utf-8") as file:
+            keys = json.load(file)
+
+        for instrument in keys.values():
+            for key, value in instrument.items():
+                key_coords = coordinates & set(key.lower().split("_"))
+                cdf_coords = coordinates & set(value["cdf_name"].lower().split("_"))
+                if cdf_coords:
+                    with self.subTest(key=key):
+                        self.assertSetEqual(cdf_coords, key_coords)
+
     @data(
         "tsi_fpi_brst_l2",
         "qe_gse_fpi_brst_l2",
