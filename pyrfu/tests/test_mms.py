@@ -2043,9 +2043,11 @@ class PsdMomentsTestCase(unittest.TestCase):
 
     def test_psd_moments_clipped_tables(self):
         # Fewer than 32 channels (vdf_elim output) raised IndexError in the
-        # alternating-table and fast-mode speed widths. On log-uniform tables
-        # the clipped VDF gives the same moments as the same channels of the
-        # full one.
+        # alternating-table and fast-mode speed widths. The clipped VDF gives
+        # the same moments as the same channels of the full one: exactly with
+        # one table (delta_energy widths), to 1 % with alternating tables
+        # (the widths of the end channels are extrapolated linearly, as in
+        # irfu-matlab).
         ratio = (3e4 / 10.0) ** (1 / 31)
         energy1 = 10.0 * ratio ** (np.arange(32) + 0.5)
         vdf_alt, sc_pot_alt = self._drifting_maxwellian(
@@ -2056,11 +2058,9 @@ class PsdMomentsTestCase(unittest.TestCase):
         )
         vdf_fast.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS fastSkyMap dist"
 
-        # Alternating tables: both ends clipped. Fast: only the top (the first
-        # channel has a specific width)
-        for vdf, sc_pot, e_int in [
-            (vdf_alt, sc_pot_alt, [120.0, 7000.0]),
-            (vdf_fast, sc_pot_fast, [1.0, 1500.0]),
+        for vdf, sc_pot, e_int, rtol in [
+            (vdf_alt, sc_pot_alt, [120.0, 7000.0], 1e-2),
+            (vdf_fast, sc_pot_fast, [120.0, 1500.0], 1e-10),
         ]:
             tables = np.vstack([vdf.attrs["energy0"], vdf.attrs["energy1"]])
             kept = np.where(np.any((tables > e_int[0]) & (tables < e_int[1]), 0))[0]
@@ -2071,8 +2071,65 @@ class PsdMomentsTestCase(unittest.TestCase):
             self.assertEqual(vdf_clip.energy.shape[1], len(kept))
             result = self._moments(vdf_clip, sc_pot)
             expected = self._moments(vdf, sc_pot, en_channels=channels)
+            if rtol > 1e-10:
+                # n, V and the diagonal of P (the other elements are ~0)
+                result = [result[0], result[1], np.diagonal(result[2], 0, 1, 2)]
+                expected = [expected[0], expected[1], np.diagonal(expected[2], 0, 1, 2)]
             for res, exp in zip(result, expected):
-                np.testing.assert_allclose(res, exp, rtol=1e-10)
+                np.testing.assert_allclose(res, exp, rtol=rtol)
+
+    @staticmethod
+    def _electrons_through_potential(t_ev, sc_pot, energy01=False, rate="brst"):
+        # Isotropic electron Maxwellian (1 cm^-3, t_ev) seen through a positive
+        # spacecraft potential: a channel at energy E samples the ambient
+        # distribution at E - sc_pot (Liouville), nothing below sc_pot
+        m_e, q_e = constants.electron_mass, constants.elementary_charge
+        ratio = (3e4 / 6.5) ** (1 / 31)
+        energy0 = 6.5 * ratio ** np.arange(32)
+        energy1 = 6.5 * ratio ** (np.arange(32) + 0.5) if energy01 else energy0
+        step_table = np.arange(4, dtype=np.uint8) % 2 if energy01 else np.zeros(4)
+        energy = np.where(step_table[:, None] == 1, energy1, energy0)
+
+        v_th2 = 2 * q_e * t_ev / m_e
+        e_amb = np.clip(energy - sc_pot, 0.0, None)
+        vdf = 1e-6 / (np.pi * v_th2) ** 1.5 * np.exp(-2 * q_e * e_amb / m_e / v_th2)
+        vdf[energy <= sc_pot] = 0.0
+        vdf = np.tile(vdf[:, :, None, None], (1, 1, 32, 16))
+
+        time = generate_timeline(1 / 0.03, 4)
+        vdf = pyrf.ts_skymap(
+            time,
+            vdf,
+            energy,
+            np.tile(5.625 + 11.25 * np.arange(32), (4, 1)),
+            5.625 + 11.25 * np.arange(16),
+            energy0=energy0,
+            energy1=energy1,
+            esteptable=step_table.astype(np.uint8),
+            attrs={"FIELDNAM": f"MMS1 FPI/DES {rate}SkyMap dist"},
+            glob_attrs={
+                "species": "electrons",
+                "delta_energy_plus": energy * (np.sqrt(ratio) - 1),
+                "delta_energy_minus": energy * (1 - 1 / np.sqrt(ratio)),
+            },
+        )
+        return vdf, pyrf.ts_scalar(time, sc_pot * np.ones(4))
+
+    @data(
+        (20.0, 5.0, False, "brst"),
+        (20.0, 10.0, False, "brst"),
+        (50.0, 15.0, False, "brst"),
+        (20.0, 10.0, True, "brst"),
+        (20.0, 10.0, False, "fast"),
+    )
+    @unpack
+    def test_psd_moments_sc_pot_widths(self, t_ev, sc_pot, energy01, rate):
+        # The speed widths come from the channel edges corrected for the
+        # spacecraft potential (irfu-matlab); the uncorrected edges gave
+        # n = 0.87, 0.80, 0.86 for these cold electrons
+        vdf, scpot = self._electrons_through_potential(t_ev, sc_pot, energy01, rate)
+        n_psd = mms.psd_moments(vdf, scpot)[0]
+        np.testing.assert_allclose(n_psd.data, 1.0, rtol=0.02)
 
     def test_psd_moments_angular_widths_attrs(self):
         # delta_phi_* and delta_theta_* attrs are in degrees (FPI files); they

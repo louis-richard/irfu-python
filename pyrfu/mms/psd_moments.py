@@ -177,6 +177,43 @@ def _moms(
     return n_psd, v_psd, p_psd, h_psd
 
 
+def _energy_edges(vdf, energy, energy0, energy1, step_table, flag_same_e):
+    # Upper and lower energy edges of the channels (time, energy), as in
+    # irfu-matlab mms.psd_moments: the delta_energy_plus/minus attributes
+    # when there is one table, the linear midpoints between the channels of
+    # each table otherwise (extrapolated linearly at both ends).
+    energy_plus = vdf.attrs.get("delta_energy_plus")
+    energy_minus = vdf.attrs.get("delta_energy_minus")
+
+    if flag_same_e and energy_plus is not None and energy_minus is not None:
+        energy_upper = np.broadcast_to(energy + energy_plus, energy.shape)
+        energy_lower = np.broadcast_to(energy - energy_minus, energy.shape)
+        return energy_upper, energy_lower
+
+    def _midpoints(table):
+        table = np.asarray(table, dtype=np.float64)
+        table_all = np.concatenate(
+            [
+                2 * table[..., :1] - table[..., 1:2],
+                table,
+                2 * table[..., -1:] - table[..., -2:-1],
+            ],
+            axis=-1,
+        )
+        diff_table = np.diff(table_all, axis=-1)
+        return table + diff_table[..., 1:] / 2, table - diff_table[..., :-1] / 2
+
+    if flag_same_e:
+        return _midpoints(energy)
+
+    energy0_upper, energy0_lower = _midpoints(energy0)
+    energy1_upper, energy1_lower = _midpoints(energy1)
+    is_table1 = np.asarray(step_table)[:, np.newaxis] == 1
+    energy_upper = np.where(is_table1, energy1_upper, energy0_upper)
+    energy_lower = np.where(is_table1, energy1_lower, energy0_lower)
+    return energy_upper, energy_lower
+
+
 def _energy_mask(vdf, energy, kwargs):
     r"""Energy channels to integrate over at each time step, as a boolean
     (time, energy) array, from the energy_range or en_channels options."""
@@ -298,6 +335,19 @@ def psd_moments(vdf, sc_pot, **kwargs):
         If energy_range has no channel (fixed range) or a wrong shape, or if
         both energy_range and en_channels are given.
 
+    Notes
+    -----
+    The speed widths of the energy channels follow irfu-matlab
+    `mms.psd_moments`: the channel edges are E + delta_energy_plus and
+    E - delta_energy_minus (attributes) when there is one energy table, and
+    the midpoints between the channels of each table otherwise. The
+    spacecraft potential is subtracted from the edges (pyrfu < 2.5 used the
+    uncorrected edges, which underestimates the density of cold electrons, by
+    10-30 % for 10-20 eV and 10 V). The phase-space density is not corrected
+    for spacecraft photoelectrons, unlike the FPI moments: use
+    ``inner_electron="on"`` or an energy range above the spacecraft potential
+    to compare the electron moments with them.
+
     Examples
     --------
     >>> from pyrfu import mms
@@ -325,10 +375,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     # Check if data is fast or burst resolution
     if "brst" in vdf.data.attrs["FIELDNAM"].lower():
-        is_brst_data = True
         logger.info("Burst resolution data is used")
     elif "fast" in vdf.data.attrs["FIELDNAM"].lower():
-        is_brst_data = False
         logger.info("Fast resolution data is used")
     else:
         raise TypeError("Could not identify if data is fast or burst.")
@@ -432,74 +480,21 @@ def psd_moments(vdf, sc_pot, **kwargs):
         theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
     )
 
-    energy_minus = vdf.attrs["delta_energy_minus"]
-    energy_plus = vdf.attrs["delta_energy_plus"]
-
     energy_correct = energy - sc_pot[:, np.newaxis]
     velocity = np.sqrt(2 * q_e * energy_correct / p_mass)
     velocity[energy_correct < flag_inner_electron * w_inner_electron] = 0
 
-    # Calculate speed widths associated with each energy channel.
-    if is_brst_data:  # Burst mode energy/speed widths
-        if flag_same_e:
-            energy_upper = energy + energy_plus
-            energy_lower = energy - energy_minus
-            v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
-            v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
-            delta_v = v_upper - v_lower
-            # (time, energy) already: tiling made (n_t^2, energy)
-            delta_v = np.ascontiguousarray(np.broadcast_to(delta_v, energy.shape))
-        else:
-            # The two tables interleaved (2 * n_e energies; n_e = 32 unless
-            # clipped, e.g. by vdf_elim)
-            energy_all = np.hstack([energy0, energy1])
-            energy_all = np.log10(np.sort(energy_all))
-            n_all = len(energy_all)
-
-            if np.abs(energy_all[1] - energy_all[0]) > 1e-4:
-                temp0 = 2 * energy_all[0] - energy_all[1]
-            else:
-                temp0 = 2 * energy_all[1] - energy_all[2]
-
-            if np.abs(energy_all[-1] - energy_all[-2]) > 1e-4:
-                temp_end = 2 * energy_all[-1] - energy_all[-2]
-            else:
-                temp_end = 2 * energy_all[-1] - energy_all[-3]
-
-            energy_all = np.hstack([temp0, energy_all, temp_end])
-            diff_en_all = np.diff(energy_all)
-            energy0upper = 10 ** (np.log10(energy0) + diff_en_all[1:n_all:2] / 2)
-            energy0lower = 10 ** (
-                np.log10(energy0) - diff_en_all[0 : n_all - 1 : 2] / 2
-            )
-            energy1upper = 10 ** (
-                np.log10(energy1) + diff_en_all[2 : n_all + 1 : 2] / 2
-            )
-            energy1lower = 10 ** (np.log10(energy1) - diff_en_all[1:n_all:2] / 2)
-
-            v0upper = np.sqrt(2 * q_e * energy0upper / p_mass)
-            v0lower = np.sqrt(2 * q_e * energy0lower / p_mass)
-            v1upper = np.sqrt(2 * q_e * energy1upper / p_mass)
-            v1lower = np.sqrt(2 * q_e * energy1lower / p_mass)
-            delta_v0 = (v0upper - v0lower) * 2.0
-            delta_v1 = (v1upper - v1lower) * 2.0
-
-            delta_v = np.tile(delta_v0, (vdf_data.shape[0], 1))
-            delta_v[step_table == 1, :] = delta_v1
-
-    else:  # Fast mode energy/speed widths
-        energy_all = np.log10(energy[0, :])
-        temp0 = 2 * energy_all[0] - energy_all[1]
-        temp_end = 2 * energy_all[-1] - energy_all[-2]
-        energy_all = np.hstack([temp0, energy_all, temp_end])
-        diff_en_all = np.diff(energy_all)
-        energy_upper = 10 ** (np.log10(energy[0, :]) + diff_en_all[1:] / 4)
-        energy_lower = 10 ** (np.log10(energy[0, :]) - diff_en_all[:-1] / 4)
-        v_upper = np.sqrt(2 * q_e * energy_upper / p_mass)
-        v_lower = np.sqrt(2 * q_e * energy_lower / p_mass)
-        delta_v = (v_upper - v_lower) * 2.0
-        delta_v[0] = delta_v[0] * 2.7
-        delta_v = np.tile(delta_v, (vdf_data.shape[0], 1))
+    # Speed widths of the energy channels, as in irfu-matlab mms.psd_moments:
+    # the edges of each channel, corrected for the spacecraft potential
+    energy_upper, energy_lower = _energy_edges(
+        vdf, energy, energy0, energy1, step_table, flag_same_e
+    )
+    sc_pot_2d = sc_pot[:, np.newaxis]
+    e_upper = np.clip(energy_upper - sc_pot_2d, 0.0, None)
+    e_lower = np.clip(energy_lower - sc_pot_2d, 0.0, None)
+    v_upper = np.sqrt(2 * q_e * e_upper / p_mass)
+    v_lower = np.sqrt(2 * q_e * e_lower / p_mass)
+    delta_v = np.ascontiguousarray(v_upper - v_lower)
 
     # Clean up NaN values in the input VDF data before passing to the numba kernel.
     # This is done in place to avoid extra memory allocation and to ensure that the
