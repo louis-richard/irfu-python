@@ -2045,6 +2045,17 @@ class ExtendTintTestCase(unittest.TestCase):
 
 @ddt
 class FiltTestCase(unittest.TestCase):
+    def test_filt_numpy_scalars(self):
+        # numpy scalar cut-offs (e.g. taken from arrays) were rejected
+        inp = generate_ts(64.0, 1000)
+        expected = pyrf.filt(inp, 4, 10, 3)
+        for f_min, f_max, order in [
+            (np.int64(4), np.float32(10.0), np.int64(3)),
+            (np.float64(4.0), np.int32(10), 3),
+        ]:
+            result = pyrf.filt(inp, f_min, f_max, order)
+            np.testing.assert_allclose(result.data, expected.data)
+
     @data(
         (generate_data(100), 0, random.randint(1, 22), random.choice(range(1, 10, 2))),
         (

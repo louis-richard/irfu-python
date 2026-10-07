@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import numbers
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -124,9 +127,10 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
     # Data of the input
     inp_data = inp.data.astype(np.float64)
 
-    assert isinstance(f_min, (int, float)), "f_min must be int or float"
-    assert isinstance(f_max, (int, float)), "f_max must be int or float"
-    assert isinstance(order, (int, float)), "order must be int or float"
+    # Any real number, including numpy scalars (np.int64, np.float32)
+    assert isinstance(f_min, numbers.Real), "f_min must be a real number"
+    assert isinstance(f_max, numbers.Real), "f_max must be a real number"
+    assert isinstance(order, numbers.Real), "order must be a real number"
 
     if f_min == 0.0 and f_max == 0.0:
         raise ValueError("f_min and f_max cannot both be 0.0!")
