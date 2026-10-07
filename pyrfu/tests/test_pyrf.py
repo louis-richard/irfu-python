@@ -2372,6 +2372,63 @@ class Histogram2DTestCase(unittest.TestCase):
         self.assertTupleEqual(result.shape, shape)
 
 
+class BrazilTestCase(unittest.TestCase):
+    @staticmethod
+    def _samples():
+        rng = np.random.default_rng(0)
+        beta_para = 10 ** rng.normal(0.0, 0.6, 5000)
+        p_aniso = 10 ** rng.normal(0.0, 0.2, 5000)
+        beta_para[:20] = np.nan  # invalid samples are discarded
+        p_aniso[20:30] = -1.0
+        return beta_para, p_aniso
+
+    def test_brazil_counts_and_pdf(self):
+        # Failed on every call (histogram2d paired its inputs by time)
+        beta_para, p_aniso = self._samples()
+        beta_para_0, p_aniso_0 = beta_para.copy(), p_aniso.copy()
+        n, h = pyrf.brazil(beta_para, p_aniso, bins=[20, 25], threshold=9)
+
+        self.assertIsInstance(n, xr.DataArray)
+        self.assertTupleEqual(n.shape, (20, 25))
+        self.assertTupleEqual(h.shape, (20, 25))
+        self.assertEqual(np.nansum(n.data), 4970)
+        np.testing.assert_array_equal(beta_para, beta_para_0)
+        np.testing.assert_array_equal(p_aniso, p_aniso_0)
+
+        # Counts in log bins, empty bins NaN
+        counts, x_edges, y_edges = np.histogram2d(
+            np.log10(beta_para[30:]), np.log10(p_aniso[30:]), bins=[20, 25]
+        )
+        np.testing.assert_array_equal(np.nan_to_num(n.data), counts)
+        self.assertTrue(np.all(np.isnan(n.data[counts == 0])))
+        np.testing.assert_allclose(n.x_bins, 10 ** ((x_edges[:-1] + x_edges[1:]) / 2))
+
+        # PDF per unit beta and anisotropy, NaN below the threshold (and in
+        # the empty bins, which were 0)
+        area = np.outer(np.diff(10**x_edges), np.diff(10**y_edges))
+        kept = counts >= 9
+        np.testing.assert_allclose(h.data[kept], counts[kept] / 4970 / area[kept])
+        self.assertTrue(np.all(np.isnan(h.data[~kept])))
+
+        _, h_1 = pyrf.brazil(beta_para, p_aniso, bins=[20, 25], threshold=1)
+        self.assertAlmostEqual(float(np.nansum(h_1.data * area)), 1.0, places=12)
+
+    def test_brazil_input_types(self):
+        beta_para, p_aniso = self._samples()
+        n_ref, h_ref = pyrf.brazil(beta_para, p_aniso, bins=15)
+        time = generate_timeline(1.0, len(beta_para))
+        for inp1, inp2 in [
+            (list(beta_para), list(p_aniso)),
+            (pyrf.ts_scalar(time, beta_para), pyrf.ts_scalar(time, p_aniso)),
+        ]:
+            n, h = pyrf.brazil(inp1, inp2, bins=15)
+            xr.testing.assert_identical(n, n_ref)
+            xr.testing.assert_identical(h, h_ref)
+
+        with self.assertRaises(ValueError):
+            pyrf.brazil(beta_para, p_aniso[:-1], bins=15)
+
+
 @ddt
 class IncrementsTestCase(unittest.TestCase):
     @data(
