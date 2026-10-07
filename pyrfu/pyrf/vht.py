@@ -24,14 +24,17 @@ def vht(e, b, no_ez: bool = False):
     r"""Estimate velocity of the De Hoffman-Teller frame from the velocity
     estimate the electric field eht=-vht x b
 
-    The velocity minimises D = <|E + v_ht x B|^2>, i.e., solves
-    K v_ht = <E x B> with K = <B^2 I - B B^T> [1]_, using the samples where E
-    and B are finite. The uncertainty is estimated from
-    S = D / (2M - 3) K^{-1} for M samples [1]_, which assumes that the
-    noise in E is perpendicular to B.
+    The velocity minimises
+    :math:`D = \langle |\mathbf{E} + \mathbf{v}_{HT} \times \mathbf{B}|^2
+    \rangle`, i.e., solves :math:`K \mathbf{v}_{HT} = \langle \mathbf{E}
+    \times \mathbf{B} \rangle` with :math:`K = \langle B^2 I - \mathbf{B}
+    \mathbf{B}^T \rangle` [1]_, using the samples where E and B are finite.
+    The uncertainty is estimated from :math:`S = D K^{-1} / (2M - 3)` for M
+    samples [1]_, which assumes that the noise in E is perpendicular to B.
 
-    Unlike irf_vht.m, K and <E x B> are averaged over the same samples, so
-    that data gaps do not bias v_ht.
+    Unlike irf_vht.m, K and :math:`\langle \mathbf{E} \times \mathbf{B}
+    \rangle` are averaged over the same samples, so that data gaps do not
+    bias the velocity.
 
     Parameters
     ----------

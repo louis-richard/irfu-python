@@ -21,10 +21,11 @@ def match_phibe_v(b_0, b_z, int_e_dt, n, v):
     correlated.
 
     As irf_match_phibe_v.m, the "correlation" is the sum over time of
-    log10(|phi_E / phi_B|), i.e., the number of samples times the mean
-    logarithmic ratio of the potentials: the best match in amplitude is where
-    it is closest to zero. Since phi_E / phi_B is proportional to n v, only the
-    product of the density and the velocity is determined.
+    :math:`\log_{10} |\phi_E / \phi_B|`, i.e., the number of samples times
+    the mean logarithmic ratio of the potentials: the best match in amplitude
+    is where it is closest to zero. Since :math:`\phi_E / \phi_B` is
+    proportional to :math:`n v`, only the product of the density and the
+    velocity is determined.
 
     Parameters
     ----------
