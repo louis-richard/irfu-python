@@ -2371,6 +2371,47 @@ class Histogram2DTestCase(unittest.TestCase):
         )
         self.assertTupleEqual(result.shape, shape)
 
+    @data("linlin", "loglog")
+    def test_histogram2d_constant_data(self, scale):
+        # Constant data along x gave zero-width bins and an infinite density
+        # (regression of the rewrite); now one unit (decade) around the value
+        time = generate_timeline(1.0, 1000)
+        y_data = np.random.default_rng(0).random(1000) + 0.1
+        result = pyrf.histogram2d(
+            pyrf.ts_scalar(time, 2.0 * np.ones(1000)),
+            pyrf.ts_scalar(time, y_data),
+            bins=10,
+            scale=scale,
+        )
+
+        x_edges, y_edges = [result.attrs["x_edges"], result.attrs["y_edges"]]
+        if scale == "linlin":
+            np.testing.assert_allclose(x_edges[[0, -1]], [1.5, 2.5])
+        else:
+            np.testing.assert_allclose(
+                x_edges[[0, -1]], [2 / np.sqrt(10), 2 * np.sqrt(10)]
+            )
+
+        self.assertEqual(len(np.unique(result.x_bins.data)), 10)
+        self.assertTrue(np.all(np.isfinite(result.data)))
+        area = np.outer(np.diff(x_edges), np.diff(y_edges))
+        self.assertAlmostEqual(float(np.sum(result.data * area)), 1.0, places=12)
+
+    def test_histogram2d_errors(self):
+        time = generate_timeline(1.0, 100)
+        x_neg = pyrf.ts_scalar(time, -np.ones(100))
+        y_data = pyrf.ts_scalar(time, np.random.default_rng(0).random(100) + 0.1)
+
+        # No positive sample along a log dimension (was a zero-size error)
+        with self.assertRaises(ValueError):
+            pyrf.histogram2d(x_neg, y_data, bins=10, scale="loglin")
+
+        # Non-positive log range (was an AssertionError)
+        with self.assertRaises(ValueError):
+            pyrf.histogram2d(
+                y_data, y_data, bins=10, y_range=[[0, 5], [0.1, 2]], scale="loglin"
+            )
+
 
 class BrazilTestCase(unittest.TestCase):
     @staticmethod

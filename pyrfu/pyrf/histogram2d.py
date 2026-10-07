@@ -43,18 +43,41 @@ def _bin_edges(data, bins, bin_range, log):
     edges : numpy.ndarray
         Bin edges, shape (bins + 1,).
 
+    Raises
+    ------
+    ValueError
+        If there is no sample to compute the range from, or if a logarithmic
+        range is not strictly positive.
+
     """
     # Explicit bin edges are used as they are.
     if not isinstance(bins, (int, np.integer)):
         return np.asarray(bins, dtype=float)
 
     if bin_range is None:
+        if np.size(data) == 0:
+            raise ValueError(
+                "no sample left to compute the range of the bins (all the samples "
+                "are non-finite, or not positive along a logarithmic dimension)"
+            )
+
         low, upp = np.min(data), np.max(data)
+
+        # Constant data: a range one unit (one decade) wide around the value,
+        # as numpy.histogram, instead of zero-width bins
+        if low == upp:
+            low, upp = (
+                (low / np.sqrt(10), upp * np.sqrt(10))
+                if log
+                else (low - 0.5, upp + 0.5)
+            )
     else:
         low, upp = bin_range
 
     if log:
-        assert low > 0, "logarithmic bins require a strictly positive range"
+        if low <= 0:
+            raise ValueError("logarithmic bins require a strictly positive range")
+
         return np.geomspace(low, upp, bins + 1)
 
     return np.linspace(low, upp, bins + 1)
@@ -123,11 +146,21 @@ def histogram2d(
         2D map of the density of ``inp2`` vs ``inp1``. The bin edges, the
         scale and the normalization are stored in the attributes.
 
+    Raises
+    ------
+    ValueError
+        If no sample is left to compute the range of the bins, or if a range
+        along a logarithmic dimension is not strictly positive.
+
     Notes
     -----
     Samples for which either coordinate is not finite (or is not strictly
     positive along a logarithmic dimension) are discarded, as is the
     corresponding weight.
+
+    When the data along a dimension are constant (and no range or edges are
+    given), the bins span one unit around the value (one decade along a
+    logarithmic dimension), as in numpy.histogram.
 
     The bin centers are the arithmetic means of the bin edges along a linear
     dimension and their geometric means along a logarithmic one, so that they
