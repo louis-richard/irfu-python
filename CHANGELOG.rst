@@ -1,7 +1,7 @@
 Changelog
 =========
 
-2.5.0 (unreleased)
+2.5.0 (2026-10-07)
 ------------------
 
 This release follows a function-by-function review of ``pyrf`` and ``mms``
