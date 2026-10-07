@@ -1586,6 +1586,17 @@ class EVxBTestCase(unittest.TestCase):
 
 @ddt
 class EbNRFTestCase(unittest.TestCase):
+    def test_eb_nrf_coordinate_system(self):
+        # The output in LMN kept COORDINATE_SYSTEM="GSE": a later cotrans
+        # would rotate it as GSE. The caller's attributes are unchanged
+        e_xyz = generate_ts(64.0, 100, tensor_order=1)
+        e_xyz.attrs.update({"COORDINATE_SYSTEM": "GSE", "UNITS": "mV/m"})
+        b_xyz = generate_ts(64.0, 100, tensor_order=1)
+        result = pyrf.eb_nrf(e_xyz, b_xyz, np.array([0.0, 0.0, 1.0]))
+        self.assertEqual(result.attrs["COORDINATE_SYSTEM"], "lmn")
+        self.assertEqual(result.attrs["UNITS"], "mV/m")
+        self.assertEqual(e_xyz.attrs["COORDINATE_SYSTEM"], "GSE")
+
     @data("a", "b", np.random.random(3))
     def test_eb_nrf_output(self, value):
         result = pyrf.eb_nrf(

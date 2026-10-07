@@ -40,7 +40,8 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
     -------
     out : xarray.DataArray
         Time series of the electric field in the (L, M, N) coordinates, in this
-        order, at the times of e_xyz.
+        order, at the times of e_xyz, with the attributes of e_xyz and
+        ``COORDINATE_SYSTEM`` set to "lmn".
 
     """
     # Check inputs
@@ -96,6 +97,9 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
 
     # estimate e in new coordinates
     e_lmn = np.vstack([np.sum(e_xyz.data * vec, axis=1) for vec in [n_l, n_m, n_n]])
-    out = ts_vec_xyz(e_xyz.time.data, np.transpose(e_lmn), e_xyz.attrs)
+
+    # Attributes of e_xyz, in the new frame (as mva)
+    attrs = {**e_xyz.attrs, "COORDINATE_SYSTEM": "lmn"}
+    out = ts_vec_xyz(e_xyz.time.data, np.transpose(e_lmn), attrs)
 
     return out
