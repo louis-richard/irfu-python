@@ -15,6 +15,9 @@ import numpy as np
 import requests
 import tqdm
 
+# Local imports
+from .db_init import config_path
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020"
@@ -75,10 +78,8 @@ def _make_path(file, var, lasp_url, data_path: str = ""):
     r"""Construct path of the data file using the standard convention."""
 
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
-        # Read the current version of the MAVEN configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        # Read the configuration file (user directory)
+        with open(config_path(), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])

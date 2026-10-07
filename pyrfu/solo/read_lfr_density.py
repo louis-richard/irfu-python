@@ -17,6 +17,7 @@ from dateutil.rrule import DAILY, rrule
 from xarray.core.dataarray import DataArray
 
 from ..pyrf import read_cdf, time_clip, ts_append, ts_scalar
+from .db_init import config_path
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -60,11 +61,8 @@ def _list_files_lfr_density_l3(
 
     # Check path
     if not data_path:
-        # pkg_path = os.path.dirname(os.path.abspath(__file__))
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
-        # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        # Read the configuration file (user directory)
+        with open(config_path(), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])

@@ -19,6 +19,7 @@ from scipy import integrate
 from xarray.core.dataarray import DataArray
 
 from ..pyrf import read_cdf, time_clip, ts_append
+from .db_init import config_path
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -55,10 +56,8 @@ def _list_files_tnr_l2(
 
     # Check path
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
-        # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        # Read the configuration file (user directory)
+        with open(config_path(), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])

@@ -167,6 +167,7 @@ ignore = """
     test_dispersion.py,
     test_docs.py,
     test_lp.py,
+    test_maven.py,
     test_solo.py,
     test_mms.py,
     test_models.py,
