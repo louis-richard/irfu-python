@@ -102,22 +102,59 @@ def _set_password(username: str, password: str) -> None:
         plaintext.set_password(SDC_SERVICE, username, password)
 
 
+# Settings used when there is no configuration yet, or with reset=True
+_DEFAULT_CONFIG = {
+    "default": "local",
+    "local": ".",
+    "sdc": {"rights": "public", "username": "username"},
+    "aws": "",
+}
+
+
+def _read_config() -> dict:
+    r"""Current MMS configuration, completed with the default settings."""
+    config = json.loads(json.dumps(_DEFAULT_CONFIG))
+
+    try:
+        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+            current = json.load(fs)
+    except (OSError, ValueError):
+        return config
+
+    for key in ["default", "local", "aws"]:
+        if key in current:
+            config[key] = current[key]
+
+    if isinstance(current.get("sdc"), dict):
+        config["sdc"].update(
+            {k: v for k, v in current["sdc"].items() if k in ["rights", "username"]}
+        )
+
+    return config
+
+
 def db_init(
-    default: Optional[Literal["local", "sdc", "aws"]] = "local",
-    local: Optional[str] = ".",
-    sdc: Optional[str] = "public",
-    sdc_username: Optional[str] = "username",
-    sdc_password: Optional[str] = "password",
-    aws: Optional[str] = "",
+    default: Optional[Literal["local", "sdc", "aws"]] = None,
+    local: Optional[str] = None,
+    sdc: Optional[Literal["public", "sitl"]] = None,
+    sdc_username: Optional[str] = None,
+    sdc_password: Optional[str] = None,
+    aws: Optional[str] = None,
+    reset: bool = False,
 ) -> None:
     r"""Manage the MMS data access configuration.
 
-    The default resource to access MMS data, the local path to use and the Amazon
-    Web Services (AWS) bucket name are saved in the MMS configuration file of the
-    user configuration directory (`pyrfu.mms.MMS_CFG_PATH`), and the MMS SDC
-    credentials in the system keyring (macOS Keychain, Windows Credential
-    Locker, Secret Service on Linux) or, if there is none, in plain text in the
-    keyring file in your home directory.
+    The default resource to access MMS data, the local path to use, the MMS SDC
+    rights and username, and the Amazon Web Services (AWS) bucket name are
+    saved in the MMS configuration file of the user configuration directory
+    (`pyrfu.mms.MMS_CFG_PATH`). The MMS SDC password is saved in the system
+    keyring (macOS Keychain, Windows Credential Locker, Secret Service on
+    Linux) or, if there is none, in plain text in the keyring file in your
+    home directory. It is never written in the configuration file.
+
+    Only the settings that are given are changed; the others keep their
+    current value (or the default one if there is no configuration yet, or
+    with `reset=True`).
 
     Parameters
     ----------
@@ -126,16 +163,21 @@ def db_init(
     local : str, Optional
         Local path to MMS data. Default is the current directory.
     sdc : {"public", "sitl"}, Optional
-        Rights to access MMS data from SDC. If "sitl" please make sure to register
-        valid SDC credential. Default is public.
+        Rights to access MMS data from SDC. Default is public. "sitl" needs the
+        credentials of `sdc_username` in the keyring.
     sdc_username : str, Optional
-        MMS SDC credential username. Default is "username".
+        MMS SDC username. Given alone, the configuration uses this user, whose
+        password must already be in the keyring.
     sdc_password : str, Optional
-        MMS SDC credential password. Default is "password".
+        MMS SDC password of `sdc_username`, saved in the keyring. It needs
+        `sdc_username`.
     aws : str, Optional
-        Bucket name and prefix to MMS data in AWS S3, as "bucket/prefix". Default
-        is empty, which uses the public MMS archive on NASA HelioCloud
+        Bucket name and prefix to MMS data in AWS S3, as "bucket/prefix". Empty
+        (the default) uses the public MMS archive on NASA HelioCloud
         ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms", no AWS credentials needed).
+    reset : bool, Optional
+        Start from the default settings instead of the current ones. The
+        keyring is not changed. Default is False.
 
     Raises
     ------
@@ -144,51 +186,75 @@ def db_init(
     FileNotFoundError
         If the local path doesn't exist.
     ValueError
-        If the SDC rights are not "public" or "sitl".
+        If the SDC rights are not "public" or "sitl", or if `sdc_password` is
+        given without `sdc_username`.
+
+    Examples
+    --------
+    >>> from pyrfu import mms
+
+    Use the local data in /data/mms by default (the other settings are kept)
+
+    >>> mms.db_init(default="local", local="/data/mms")
+
+    Save the MMS SDC team credentials and use them
+
+    >>> mms.db_init(sdc="sitl", sdc_username="user", sdc_password="password")
 
     """
-    # Check default
-    if default.lower() not in ["local", "sdc", "aws"]:
-        raise NotImplementedError(f"Resource {default} is not implemented!!")
+    config = json.loads(json.dumps(_DEFAULT_CONFIG)) if reset else _read_config()
 
-    # Normalize the path and make sure that it exists
-    local = os.path.normpath(os.path.abspath(local))
+    # Check and set the given settings only
+    if default is not None:
+        if default.lower() not in ["local", "sdc", "aws"]:
+            raise NotImplementedError(f"Resource {default} is not implemented!!")
 
-    if not os.path.exists(local):
-        raise FileNotFoundError(f"{local} doesn't exists!!")
+        config["default"] = default.lower()
 
-    # Check MMS SDC rights
-    if sdc.lower() not in ["public", "sitl"]:
-        raise ValueError("sdc must be 'public' or 'sitl'!!")
+    if local is not None or reset:
+        # Normalize the path and make sure that it exists
+        local = os.path.normpath(
+            os.path.abspath(config["local"] if local is None else local)
+        )
 
-    config = {
-        "default": default.lower(),
-        "local": local,
-        "sdc": {"rights": sdc.lower(), "username": sdc_username},
-        "aws": aws,
-    }
+        if not os.path.exists(local):
+            raise FileNotFoundError(f"{local} doesn't exists!!")
+
+        config["local"] = local
+
+    if sdc is not None:
+        if sdc.lower() not in ["public", "sitl"]:
+            raise ValueError("sdc must be 'public' or 'sitl'!!")
+
+        config["sdc"]["rights"] = sdc.lower()
+
+    if sdc_password is not None and sdc_username is None:
+        raise ValueError("sdc_password needs sdc_username")
+
+    if sdc_username is not None:
+        config["sdc"]["username"] = sdc_username
+
+    if aws is not None:
+        config["aws"] = aws
+
+    # First configuration: the current directory, as an absolute path
+    if not os.path.isabs(config["local"]):
+        config["local"] = os.path.normpath(os.path.abspath(config["local"]))
+
+    # Save the password in the keyring only if given (never a placeholder)
+    if sdc_password is not None:
+        _set_password(sdc_username, sdc_password)
+
+    if config["sdc"]["rights"] == "sitl" and not _get_credential(
+        config["sdc"]["username"]
+    ):
+        logger.warning(
+            "No MMS SDC credentials for %s in the keyring: use "
+            "mms.db_init(sdc_username=..., sdc_password=...)",
+            config["sdc"]["username"],
+        )
 
     logger.info("Updating MMS data access configuration in %s...", MMS_CFG_PATH)
 
-    # Overwrite the configuration file with the new path
     with open(MMS_CFG_PATH, "w", encoding="utf-8") as fs:
         json.dump(config, fs)
-
-    # Read credentials for sdc_username
-    credential = _get_credential(sdc_username)
-
-    if (
-        not credential
-        or credential.username == "username"
-        or credential.password == "password"
-    ):
-        # if credentials are empty overwrite anyway
-        username, password = sdc_username, sdc_password
-    elif sdc_username == "username" or sdc_password == "password":
-        # if existing credentials and incomplete arguments do not overwrite
-        username, password = credential.username, credential.password
-    else:
-        # if existing credentials and complete arguments overwrite
-        username, password = sdc_username, sdc_password
-
-    _set_password(username, password)

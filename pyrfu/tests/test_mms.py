@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import contextlib
 import importlib
 import itertools
 import json
@@ -514,6 +515,93 @@ class DbInitCredentialsTestCase(unittest.TestCase):
         self.assertEqual(credential.password, "pw")
         self.assertDictEqual(system.passwords, {})
         self.assertDictEqual(self.plaintext.passwords, {("mms-sdc", "louis"): "pw"})
+
+    def _patched(self, root, system):
+        # Temporary configuration file and in-memory keyrings
+        return [
+            mock.patch.object(
+                self.module, "MMS_CFG_PATH", os.path.join(root, "c.json")
+            ),
+            mock.patch.object(self.module.keyring, "get_keyring", return_value=system),
+            mock.patch.object(
+                self.module, "PlaintextKeyring", return_value=self.plaintext
+            ),
+        ]
+
+    def _config(self, root):
+        with open(os.path.join(root, "c.json"), encoding="utf-8") as file:
+            return json.load(file)
+
+    def test_db_init_keeps_other_settings(self):
+        # Only the given settings change; the others used to be reset (rights
+        # to public, username to "username", local to ".", aws to "")
+        system = _MemoryKeyring(5)
+        system.set_password("mms-sdc", "louis", "secret")
+        with tempfile.TemporaryDirectory() as root:
+            other = os.path.join(root, "other")
+            os.makedirs(other)
+            with contextlib.ExitStack() as stack:
+                for patch in self._patched(root, system):
+                    stack.enter_context(patch)
+                self.module.db_init("aws", root, "sitl", "louis", aws="b/p")
+                self.module.db_init(local=other)
+                self.module.db_init(default="local")
+                config = self._config(root)
+
+        self.assertDictEqual(
+            config,
+            {
+                "default": "local",
+                "local": other,
+                "sdc": {"rights": "sitl", "username": "louis"},
+                "aws": "b/p",
+            },
+        )
+
+    def test_db_init_keyring_untouched_without_password(self):
+        # No placeholder is stored (used to store "username"/"password"), and
+        # an existing credential is kept
+        system = _MemoryKeyring(5)
+        system.set_password("mms-sdc", "louis", "secret")
+        with tempfile.TemporaryDirectory() as root:
+            with contextlib.ExitStack() as stack:
+                for patch in self._patched(root, system):
+                    stack.enter_context(patch)
+                self.module.db_init(local=root)
+                self.module.db_init(sdc_username="louis")
+                self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "secret"})
+                self.assertDictEqual(self.plaintext.passwords, {})
+
+                # SITL rights without credentials: a warning
+                with self.assertLogs("pyrfu", level="WARNING"):
+                    self.module.db_init(sdc="sitl", sdc_username="nobody")
+                with self.assertRaises(ValueError):
+                    self.module.db_init(sdc_password="pw")
+
+        self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "secret"})
+        self.assertDictEqual(self.plaintext.passwords, {})
+
+    def test_db_init_reset(self):
+        system = _MemoryKeyring(5)
+        system.set_password("mms-sdc", "louis", "secret")
+        with tempfile.TemporaryDirectory() as root:
+            with contextlib.ExitStack() as stack:
+                for patch in self._patched(root, system):
+                    stack.enter_context(patch)
+                self.module.db_init("aws", root, "sitl", "louis", aws="b/p")
+                self.module.db_init(local=root, reset=True)
+                config = self._config(root)
+
+        self.assertDictEqual(
+            config,
+            {
+                "default": "local",
+                "local": root,
+                "sdc": {"rights": "public", "username": "username"},
+                "aws": "",
+            },
+        )
+        self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "secret"})
 
     def test_get_credential_previous_versions(self):
         # Credentials saved in plain text by previous versions are still found
