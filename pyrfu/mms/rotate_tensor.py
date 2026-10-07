@@ -159,6 +159,11 @@ def rotate_tensor(
         r_y: NDArray[np.float64] = np.array([1.0, 0.0, 0.0], dtype=np.float64)
         # Perp2 with correction
         r_z: NDArray[np.float64] = np.cross(r_x, r_y)
+        # B exactly along x (B x x = 0 gave NaN): y as the reference instead,
+        # the perpendicular directions being arbitrary
+        along_x = np.linalg.norm(r_z, axis=1) < 1e-12
+        if np.any(along_x):
+            r_z[along_x] = np.cross(r_x[along_x], [0.0, 1.0, 0.0])
         r_z /= np.linalg.norm(r_z, axis=1, keepdims=True)
         r_y = np.cross(r_z, r_x)  # Corrected perp1 direction
         r_y /= np.linalg.norm(r_y, axis=1, keepdims=True)
@@ -178,8 +183,11 @@ def rotate_tensor(
             r_x /= np.linalg.norm(r_x, keepdims=True)
             # Second direction arbitrarily chosen along y
             r_y = np.array([0.0, 1.0, 0.0], dtype=np.float64)
-            # Third direction orthogonal to x and y directions
+            # Third direction orthogonal to x and y directions (z as the
+            # reference if the vector is exactly along y)
             r_z = np.cross(r_x, r_y)
+            if np.linalg.norm(r_z) < 1e-12:
+                r_z = np.cross(r_x, [0.0, 0.0, 1.0])
             r_z /= np.linalg.norm(r_z, keepdims=True)
             # Corrected y direction
             r_y = np.cross(r_z, r_x)
@@ -260,9 +268,11 @@ def rotate_tensor(
                 "Applying additional rotation to make the perpendicular components "
                 "most equal"
             )
-        thetas: NDArrayFloats = 0.5 * np.arctan(
-            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
-        )
+        # P23 = 0 (e.g. diagonal tensor): +-inf gives +-pi/4, 0/0 is set to 0
+        with np.errstate(divide="ignore", invalid="ignore"):
+            thetas: NDArrayFloats = 0.5 * np.arctan(
+                (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
+            )
         thetas[np.isnan(thetas)] = 0.0
 
         for i, theta in enumerate(thetas):
@@ -287,9 +297,10 @@ def rotate_tensor(
                 "most unequal"
             )
 
-        thetas = 0.5 * np.arctan(
-            (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
-        )
+        with np.errstate(divide="ignore", invalid="ignore"):
+            thetas = 0.5 * np.arctan(
+                (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
+            )
         thetas[np.isnan(thetas)] = 0.0
 
         for i, theta in enumerate(thetas):

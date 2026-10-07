@@ -1531,6 +1531,20 @@ class MakeModelVDFTestCase(unittest.TestCase):
         )
         return f_ * 1e18
 
+    def test_make_model_vdf_b_along_x(self):
+        # B exactly along x gave an all-NaN model (through rotate_tensor). An
+        # isotropic Maxwellian doesn't depend on the direction of B
+        vdf = self._skymap("ions", 10.0, 3e4)
+        b_z, n_s, v_xyz, t_xyz = self._moments(
+            vdf.time.data, 2.0, [100.0, 0.0, 0.0], 1000.0, 1000.0
+        )
+        b_x = pyrf.ts_vec_xyz(vdf.time.data, np.tile([10.0, 0.0, 0.0], (3, 1)))
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(3))
+        result = mms.make_model_vdf(vdf, b_x, sc_pot, n_s, v_xyz, t_xyz)
+        expected = mms.make_model_vdf(vdf, b_z, sc_pot, n_s, v_xyz, t_xyz)
+        self.assertTrue(np.any(np.isfinite(result.data.data)))
+        np.testing.assert_allclose(result.data.data, expected.data.data, rtol=1e-10)
+
     def _check(self, species, mass, e_range, sc_pot, v_kms, t_par, t_perp, isotropic):
         vdf = self._skymap(species, *e_range)
         b_xyz, n_s, v_xyz, t_xyz = self._moments(
@@ -1538,13 +1552,10 @@ class MakeModelVDFTestCase(unittest.TestCase):
         )
         sc_pot_ts = pyrf.ts_scalar(vdf.time.data, np.full(len(vdf.time), sc_pot))
 
-        # No warning (sqrt of negative energies), except the harmless
-        # rotate_tensor "pp" 0/0 warning for a gyrotropic tensor
+        # No warning (sqrt of negative energies, rotate_tensor "pp" 0/0 for a
+        # gyrotropic tensor)
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            warnings.filterwarnings(
-                "ignore", category=RuntimeWarning, module="pyrfu.mms.rotate_tensor"
-            )
             result = mms.make_model_vdf(
                 vdf, b_xyz, sc_pot_ts, n_s, v_xyz, t_xyz, isotropic
             )
@@ -3739,6 +3750,59 @@ class RemoveImomsBackgroundTestCase(unittest.TestCase):
 
 @ddt
 class RotateTensorTestCase(unittest.TestCase):
+    @staticmethod
+    def _tensor(time):
+        p_xyz = np.array([[2.0, 0.3, -0.2], [0.3, 1.0, 0.1], [-0.2, 0.1, 1.5]])
+        return pyrf.ts_tensor_xyz(time, np.tile(p_xyz, (len(time), 1, 1)))
+
+    @staticmethod
+    def _invariants(p_fac):
+        # Rotation-invariant quantities about the parallel direction
+        p_fac = p_fac.data[0]
+        return [
+            p_fac[0, 0],
+            p_fac[1, 1] + p_fac[2, 2],
+            p_fac[0, 1] ** 2 + p_fac[0, 2] ** 2,
+        ]
+
+    def test_rotate_tensor_fac_b_along_x(self):
+        # B exactly along x gave NaN (B x x = 0); now y is the reference
+        time = generate_timeline(1.0, 3)
+        p_xyz = self._tensor(time)
+        for perp in ["pp", ""]:
+            result = mms.rotate_tensor(
+                p_xyz, "fac", pyrf.ts_vec_xyz(time, np.tile([10.0, 0, 0], (3, 1))), perp
+            )
+            near_x = mms.rotate_tensor(
+                p_xyz,
+                "fac",
+                pyrf.ts_vec_xyz(time, np.tile([10.0, 1e-9, 0], (3, 1))),
+                perp,
+            )
+            self.assertTrue(np.all(np.isfinite(result.data)))
+            self.assertAlmostEqual(float(result.data[0, 0, 0]), 2.0)
+            np.testing.assert_allclose(
+                self._invariants(result), self._invariants(near_x), rtol=1e-7
+            )
+
+    def test_rotate_tensor_rot_along_y(self):
+        # A single vector exactly along y gave NaN (reference axis y)
+        time = generate_timeline(1.0, 3)
+        result = mms.rotate_tensor(self._tensor(time), "rot", np.array([0.0, 5.0, 0.0]))
+        self.assertTrue(np.all(np.isfinite(result.data)))
+        self.assertAlmostEqual(float(result.data[0, 0, 0]), 1.0)
+        self.assertAlmostEqual(float(np.trace(result.data[0])), 4.5)
+
+    def test_rotate_tensor_pp_no_warning(self):
+        # P23 = 0 (diagonal tensor) gave divide-by-zero warnings in "pp"
+        time = generate_timeline(1.0, 3)
+        p_xyz = pyrf.ts_tensor_xyz(time, np.tile(np.diag([2.0, 1.0, 3.0]), (3, 1, 1)))
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (3, 1)))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            result = mms.rotate_tensor(p_xyz, "fac", b_xyz, "pp")
+        np.testing.assert_allclose(np.diag(result.data[0]), [3.0, 1.5, 1.5])
+
     @data(
         (
             generate_data(100, tensor_order=1),
