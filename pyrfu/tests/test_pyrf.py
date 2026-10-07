@@ -260,6 +260,28 @@ class NanAvg4SCTestCase(unittest.TestCase):
         # The caller's attributes are unchanged
         self.assertEqual(b_list[0].attrs["mmsId"], 1)
 
+    def test_nanavg_4sc_skymaps(self):
+        # Datasets (skymaps), documented and type checked, raised AttributeError
+        # ('Dataset' object has no attribute 'shape'): the "data" variable is
+        # averaged ignoring NaN, the others are those of the first spacecraft
+        vdfs = [generate_vdf(64.0, 10, [32, 32, 16]) for _ in range(4)]
+        for i, vdf in enumerate(vdfs):
+            vdf["data"] = vdf.data.copy(data=np.full(vdf.data.shape, float(i + 1)))
+            vdf.attrs["mmsId"] = i + 1
+        vdfs[3]["data"].data[0] = np.nan  # MMS4 missing in the first sample
+        data_0 = vdfs[0].data.data.copy()
+
+        result = pyrf.nanavg_4sc(vdfs)
+
+        self.assertIsInstance(result, xr.Dataset)
+        expected = np.full(vdfs[0].data.shape, 2.5)
+        expected[0] = 2.0
+        np.testing.assert_allclose(result.data.data, expected)
+        xr.testing.assert_identical(result.energy, vdfs[0].energy)
+        self.assertEqual(result.attrs["mmsId"], "4sc_avg")
+        self.assertEqual(vdfs[0].attrs["mmsId"], 1)
+        np.testing.assert_array_equal(vdfs[0].data.data, data_0)
+
     def test_nanavg_4sc_input(self):
         with self.assertRaises(TypeError):
             pyrf.nanavg_4sc(tuple(generate_ts(64.0, 100) for _ in range(4)))
