@@ -48,7 +48,7 @@ These changes can require updating your code.
 - ``pyrf.new_xyz``: the output no longer keeps the input's
   ``COORDINATE_SYSTEM``, which made ``cotrans`` treat rotated data as still in
   the old frame. Pass ``coordinate_system`` to set it (``mva`` sets
-  ``"lmn"``).
+  ``"lmn"``). ``pyrf.eb_nrf`` also sets ``"lmn"``.
 - ``models.igrf`` uses IGRF-14 and the Hapgood (1997) dipole latitude, as
   irfu-matlab. ``pyrf.cotrans`` GSE↔GSM, GSM↔SM and GEO↔MAG change by up to
   0.2°.
@@ -69,7 +69,15 @@ These changes can require updating your code.
 - ``mms.db_init`` saves the configuration in the user configuration directory
   (``pyrfu.mms.MMS_CFG_PATH``) instead of inside the package, and the SDC
   credentials in the system keyring. The existing configuration is copied the
-  first time.
+  first time. Only the settings given change (each call used to reset the
+  others to their defaults, e.g. the SDC rights to public); ``reset=True``
+  restores the defaults. The credentials are stored only when both
+  ``sdc_username`` and ``sdc_password`` are given (a placeholder
+  "username"/"password" was stored otherwise).
+- ``solo.db_init`` and ``maven.db_init`` also save their data path in the user
+  configuration directory (``solo_config.json``, ``maven_config.json``)
+  instead of the package ``config.json``. The package files no longer hold a
+  local path: set yours again with ``db_init`` after updating.
 - pyrfu logs to its own ``"pyrfu"`` logger and no longer configures the root
   logger or redirects all warnings at import. Silence it with
   ``logging.getLogger("pyrfu").setLevel(logging.WARNING)``.
@@ -123,6 +131,7 @@ New features
   array or a ``DataArray`` resampled to the distribution times.
 - ``mms.get_pitch_angle_dist``: ``meanorsum="sum_weighted"`` (solid-angle
   weighted mean, as irfu-matlab), which was documented but rejected.
+- ``mms.get_data``: ``r_gse_mec_brst_l2``; the docstring lists all the keys.
 - ``dispersion.one_fluid_dispersion``: ``k_vec``; ``mms.lh_wave_analysis``:
   ``vmax``; ``plot.add_position``: ``units``.
 
@@ -138,6 +147,9 @@ Each of these returned wrong values before.
 - ``pyrf.vht``: error estimate (about 2.4 times too small) and bias from gaps.
 - ``pyrf.poynting_flux``: the integral mixed the components.
 - ``pyrf.filt``: high-order elliptic filters were unstable; high-pass filters.
+- ``pyrf.wavelet``: with linear spacing, the frequencies ignored the requested
+  range (``f=[1, 10]`` gave 1 to 64 Hz); they are now ``df``, ``2 df``, ...
+  up to the highest frequency of ``f``, as irfu-matlab.
 - ``pyrf.ebsp``, ``pyrf.compress_cwt`` (NaN averages, off-centre blocks),
   ``pyrf.movmean`` (NaNs spread to later samples), ``pyrf.mean_field``
   (overflow above 65535 samples), ``pyrf.mean`` (dipole sign per sample).
@@ -168,6 +180,8 @@ Each of these returned wrong values before.
 - ``pyrf.anisotropy_thresholds`` wrote NaN into the shared beta array.
 - ``pyrf.iplasma_calc``: Te default and collision frequency.
 - ``pyrf.estimate``: cylinder capacitance about 2 times too low.
+- ``lp.thermal_current``: ``"Sphere"`` (not lower case) gave the cylinder
+  current, up to 25 % different.
 - ``models.magnetopause_normal``: distance and normal for z ≠ 0 and x < 0,
   and the bow-shock normal for z = 0.
 - ``pyrf.shock_normal`` (model parameters, angle folding) and
@@ -178,8 +192,13 @@ Each of these returned wrong values before.
 
 *MMS particles*
 
-- ``mms.psd_moments``: Pxz and Pyz kernels, and the energy-table and
-  ``partial_moments`` checks.
+- ``mms.psd_moments``: the speed widths of the energy channels now subtract
+  the spacecraft potential from the channel edges, as irfu-matlab: electron
+  densities increase by 4-20 % for large potentials on FPI data (cold
+  electrons were 10-30 % low at 20 eV and 5-10 V); ion densities stay within
+  0.5 % of the FPI moments. Also the Pxz and Pyz kernels, the energy-table and
+  ``partial_moments`` checks, and the ``delta_phi``/``delta_theta``
+  attributes, used in degrees as radians (nothing in pyrfu sets them yet).
 - ``mms.reduce``: Monte-Carlo speed bias (n, V and T 6-12 % low) and speed
   bin widths.
 - ``mms.psd_rebin`` (and ``mms.vdf_to_e64``, ``mms.vdf_projection`` and
@@ -193,17 +212,25 @@ Each of these returned wrong values before.
   from the wrong times.
 - ``mms.hpca_pad``: sample pairing and directions.
 - ``mms.remove_edist_background`` (parity 1 model, spin-phase alignment),
-  ``mms.remove_imoms_background`` (dynamic pressure units) and
+  ``mms.remove_imoms_background`` (dynamic pressure units; samples with a
+  negative corrected density are NaN) and
   ``mms.eis_moments`` (P and T 1.5 times too large).
 - ``mms.calculate_epsilon``: channels straddling the spacecraft potential.
 - ``mms.make_model_vdf``: NaN at every point when the bulk velocity is along
-  B (or zero). Channels below the spacecraft potential stay NaN, now
+  B (or zero), or when B is exactly along x (through ``mms.rotate_tensor``,
+  which also gave NaN for a ``"rot"`` vector along y); ``mms.calculate_epsilon``
+  was then 0. Channels below the spacecraft potential stay NaN, now
   documented (irfu-matlab gives f(v=0)); they have no weight in
   ``calculate_epsilon`` or moments.
 - ``mms.average_vdf`` (window length) and ``mms.vdf_to_e64`` (energy widths).
+- ``pyrf.int_sph_dist``: NaN values gave NaN bins (an all-zero projection with
+  ``weight="lin"`` or ``"log"``), and the log weighting left values below
+  10\ :sup:`-16` (SI units) without Monte-Carlo particles.
 
 *Data access*
 
+- ``mms.get_data``: ``vel_gsm_mec_srvy_l2`` and ``vel_gsm_mec_brst_l2``
+  returned the GSE velocity.
 - ``mms.list_files_aws`` always raised; ``mms.list_files`` returned several
   versions of a file.
 - ``mms.get_ts``: dropped the 4th column of every (N, 4) variable (MEC
@@ -211,8 +238,15 @@ Each of these returned wrong values before.
 - ``mms.get_dist``: files without records.
 - ``mms.load_ancillary``: the last sample of every DEFEPH file was dropped
   (only DEFATT files end with a ``DATA_STOP`` footer).
+- ``mms.get_data`` failed for the whole interval when a file had no records
+  for a variable with a time-varying table (FPI omnidirectional spectra), or
+  had exactly 4 records.
+- The SDC session sent the SITL username and password with every public
+  request; they are now only read and sent for the SITL access.
 - SDC downloads have timeouts, check the HTTP status and no longer leave
-  temporary files; ``mms.db_init`` changes apply without restarting Python.
+  temporary files; the SDC login happens once per session and retries on
+  rate limiting and server errors; ``mms.db_init`` changes apply without
+  restarting Python.
 
 *Plots*
 
@@ -229,10 +263,20 @@ Other fixes
   ``pyrf.match_phibe_v``, ``pyrf.eb_nrf``, ``mms.correct_edp_probe_timing``,
   ``mms.probe_align_times``, ``mms.whistler_b2e``, ``mms.lh_wave_analysis``,
   ``mms.load_brst_segments``, ``mms.feeps_flat_field_corrections``,
-  ``plot.mms_pl_config``, ``plot.plot_clines``, ``plot.plot_ang_ang`` and
-  ``plot.pl_scatter_matrix`` with ``pdf=True``.
+  ``pyrf.brazil``, ``plot.mms_pl_config``, ``plot.plot_clines``,
+  ``plot.plot_ang_ang`` and ``plot.pl_scatter_matrix`` with ``pdf=True``.
 - Functions that failed on common inputs:
 
+  - ``mms.psd_moments`` on every ``mms.get_dist`` output (also after
+    ``pyrf.time_clip`` or ``mms.dist_append``), on energy tables with fewer
+    than 32 channels (``mms.vdf_elim`` output), and without
+    ``delta_energy`` attributes;
+  - ``pyrf.histogram2d`` with a NumPy ``bins=[nx, ny]``, and constant data
+    (zero-width bins); it raises a clear ``ValueError`` when no sample is
+    left;
+  - ``pyrf.shock_normal`` with lists, ``pyrf.nanavg_4sc`` with skymaps
+    (``Dataset``), ``pyrf.filt`` with NumPy scalar cut-offs and orders, and
+    ``pyrf.gse2gsm`` with upper-case flags;
   - ``mms.def2psd``, ``mms.dpf2psd``, ``mms.psd2def`` and ``mms.psd2dpf`` on
     one time step, spectra with (time, energy) energies and pitch-angle
     distributions; the species are no longer case-sensitive and accept the
@@ -249,7 +293,9 @@ Other fixes
 - Memory: ``mms.psd_moments`` (burst speed widths of size n\ :sub:`t`\ :sup:`2`,
   1 GB for 2000 samples), ``mms.make_model_vdf`` and
   ``mms.get_pitch_angle_dist`` no longer tile 4-D arrays.
-- The caller's data is no longer modified by ``pyrf.edb``, ``pyrf.vht``,
+- The caller's data is no longer modified by ``pyrf.cotrans`` (a same-frame
+  transformation returned the input), ``pyrf.shock_normal``, ``pyrf.edb``,
+  ``pyrf.vht``,
   ``pyrf.ts_scalar``, ``pyrf.ts_vec_xyz``, ``mms.fft_bandpass``,
   ``mms.estimate_phase_speed``, ``mms.remove_idist_background``,
   ``mms.dist_append``, ``mms.vdf_to_e64`` and
@@ -257,14 +303,28 @@ Other fixes
 - ``import pyrfu`` no longer imports ``geopack``, which printed
   "Load IGRF coefficients ..." and queried NOAA at every import.
 - ``plot.use_pyrfu_style(usetex=True)`` now renders text with LaTeX.
+- ``pyrf.e_vxb``: the units are "mV/m" (they were labelled "mV/s").
+- The wheel contains only ``pyrfu`` (it also shipped the documentation
+  sources as a top-level ``docs`` package).
 
 Documentation
 ^^^^^^^^^^^^^
 
 - Topic-organised API reference (the former ``dev/`` pages redirect to it), a
-  new landing page, and a build without warnings.
-- New ``pyrf`` examples: time series, four-spacecraft methods, and minimum
-  variance and de Hoffmann-Teller analysis.
+  new landing page, and a build without warnings (now checked in CI).
+- New examples: MMS data access (local, SDC and AWS, and downloads), time
+  series, four-spacecraft methods, and minimum variance and de
+  Hoffmann-Teller analysis.
+- Explicit titles and a description for every example. The images of the
+  HPCA and FEEPS four-spacecraft examples show again, and the polarization
+  analysis example runs again.
+
+Development
+^^^^^^^^^^^
+
+- The test suite runs offline (about 40 s): the SDC tests use a fake
+  session, and one real query of the public SDC runs with
+  ``PYRFU_NETWORK_TESTS=1``.
 
 Known issues
 ^^^^^^^^^^^^
