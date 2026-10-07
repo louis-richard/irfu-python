@@ -163,23 +163,31 @@ def get_data(
     AFG: b_bcs_afg_srvy_l2pre, b_dmpa_afg_srvy_l2pre, b_gse_afg_srvy_l2pre,
     b_gsm_afg_srvy_l2pre
 
+    ASPOC: ionc_aspoc_srvy_l2
+
     DFG: b_bcs_dfg_srvy_l2pre, b_dmpa_dfg_srvy_l2pre, b_gse_dfg_srvy_l2pre,
-     b_gsm_dfg_srvy_l2pre
+    b_gsm_dfg_srvy_l2pre
 
     EDP: e2d_dsl_edp_brst_l2pre, e2d_dsl_edp_brst_ql, e2d_dsl_edp_fast_l2pre,
     e2d_dsl_edp_fast_ql, e_dsl_edp_brst_l2, e_dsl_edp_brst_l2pre, e_dsl_edp_brst_ql,
     e_dsl_edp_fast_l2, e_dsl_edp_fast_l2pre, e_dsl_edp_fast_ql, e_dsl_edp_slow_l2,
     e_dsl_edp_slow_l2pre, e_gse_edp_brst_l2, e_gse_edp_fast_l2, e_gse_edp_slow_l2,
-    e_ssc_edp_brst_l2a, e_ssc_edp_fast_l2a, e_ssc_edp_slow_l2a, hmfe_dsl_edp_brst_l2,
-    phase_edp_fast_l2a, phase_edp_slow_l2a, sdev12_edp_fast_l2a, sdev12_edp_slow_l2a,
-    sdev34_edp_fast_l2a, sdev34_edp_slow_l2a, v_edp_brst_l2, v_edp_fast_l2,
-    v_edp_fast_sitl, v_edp_slow_l2, v_edp_slow_sitl
+    e_par_edp_brst_l2, e_par_edp_brst_l2pre, e_par_edp_fast_l2, e_par_edp_fast_l2pre,
+    e_par_edp_slow_l2pre, e_ssc_edp_brst_l2a, e_ssc_edp_fast_l2a, e_ssc_edp_slow_l2a,
+    erre_edp_fast_l2, hmfe_dsl_edp_brst_l2, hmfe_par_edp_brst_l2, phase_edp_fast_l2a,
+    phase_edp_slow_l2a, sdev12_edp_fast_l2a, sdev12_edp_slow_l2a, sdev34_edp_fast_l2a,
+    sdev34_edp_slow_l2a, v_edp_brst_l2, v_edp_fast_l2, v_edp_fast_sitl, v_edp_slow_l2,
+    v_edp_slow_sitl
 
     FGM: b_bcs_fgm_brst_l2, b_bcs_fgm_srvy_l2, b_dmpa_fgm_brst_l2, b_dmpa_fgm_srvy_l2,
     b_gse_fgm_brst_l2, b_gse_fgm_srvy_l2, b_gsm_fgm_brst_l2, b_gsm_fgm_srvy_l2
 
     FPI: defbgi_fpi_brst_l2, defbgi_fpi_fast_l2, defe_fpi_brst_l2, defe_fpi_fast_l2,
-    defe_fpi_fast_ql, defi_fpi_brst_l2, defi_fpi_fast_l2, nbgi_fpi_brst_l2,
+    defe_fpi_fast_ql, defi_fpi_brst_l2, defi_fpi_fast_l2, errne_fpi_brst_l2,
+    errne_fpi_fast_l2, errni_fpi_brst_l2, errni_fpi_fast_l2, errpe_fpi_brst_l2,
+    errpe_fpi_fast_l2, errpi_fpi_brst_l2, errpi_fpi_fast_l2, errte_fpi_brst_l2,
+    errte_fpi_fast_l2, errti_fpi_brst_l2, errti_fpi_fast_l2, errve_fpi_brst_l2,
+    errve_fpi_fast_l2, errvi_fpi_brst_l2, errvi_fpi_fast_l2, nbgi_fpi_brst_l2,
     nbgi_fpi_fast_l2, ne_fpi_brst_l2, ne_fpi_fast_l2, ne_fpi_fast_ql, ni_fpi_brst_l2,
     ni_fpi_fast_l2, ni_fpi_fast_ql, partne_fpi_brst_l2, partne_fpi_fast_l2,
     partni_fpi_brst_l2, partni_fpi_fast_l2, partpe_gse_fpi_brst_l2,
@@ -187,25 +195,25 @@ def get_data(
     partte_dbcs_fpi_brst_l2, partte_dbcs_fpi_fast_l2, partte_gse_fpi_brst_l2,
     partte_gse_fpi_fast_l2, partti_dbcs_fpi_brst_l2, partti_dbcs_fpi_fast_l2,
     partti_gse_fpi_brst_l2, partti_gse_fpi_fast_l2, parttparae_fpi_brst_l2,
-    parttparai_fpi_brst_l2, parttparai_fpi_fast_l2, parttperpe_fpi_brst_l2,
-    parttperpi_fpi_brst_l2, parttperpi_fpi_fast_l2, partve_dbcs_fpi_brst_l2,
-    partve_dbcs_fpi_fast_l2, partve_gse_fpi_brst_l2, partve_gse_fpi_fast_l2,
-    partvi_dbcs_fpi_brst_l2, partvi_dbcs_fpi_fast_l2, partvi_gse_fpi_brst_l2,
-    partvi_gse_fpi_fast_l2, pbgi_fpi_brst_l2, pbgi_fpi_fast_l2, pde_fpi_brst_l2,
-    pde_fpi_fast_l2, pderre_fpi_brst_l2, pderre_fpi_fast_l2, pderri_fpi_brst_l2,
-    pderri_fpi_fast_l2, pdi_fpi_brst_l2, pdi_fpi_fast_l2, pe_dbcs_fpi_brst_l2,
-    pe_dbcs_fpi_fast_l2, pe_dbcs_fpi_fast_ql, pe_gse_fpi_brst_l2, pe_gse_fpi_fast_l2,
-    pe_gse_fpi_fast_ql, pi_dbcs_fpi_brst_l2, pi_dbcs_fpi_fast_l2, pi_dbcs_fpi_fast_ql,
-    pi_gse_fpi_brst_l2, pi_gse_fpi_fast_l2, pi_gse_fpi_fast_ql, ste_dbcs_fpi_brst_l2,
-    ste_dbcs_fpi_fast_l2, ste_gse_fpi_brst_l2, ste_gse_fpi_fast_l2,
-    sti_dbcs_fpi_brst_l2, sti_dbcs_fpi_fast_l2, sti_gse_fpi_brst_l2,
-    sti_gse_fpi_fast_l2, te_dbcs_fpi_brst_l2, te_dbcs_fpi_fast_l2,
-    te_dbcs_fpi_fast_ql, te_gse_fpi_brst_l2, te_gse_fpi_fast_l2, te_gse_fpi_fast_ql,
-    ti_dbcs_fpi_brst_l2, ti_dbcs_fpi_fast_l2, ti_gse_fpi_brst_l2, ti_gse_fpi_fast_l2,
-    tparae_fpi_brst_l2, tparai_fpi_brst_l2, tparai_fpi_fast_l2, tperpe_fpi_brst_l2,
-    tperpi_fpi_brst_l2, tperpi_fpi_fast_l2, ve_dbcs_fpi_brst_l2, ve_dbcs_fpi_fast_l2,
-    ve_dbcs_fpi_fast_ql, ve_gse_fpi_brst_l2, ve_gse_fpi_fast_l2, ve_gse_fpi_fast_ql,
-    vi_dbcs_fpi_brst_l2, vi_dbcs_fpi_fast_l2, vi_dbcs_fpi_fast_ql,
+    parttparae_fpi_fast_l2, parttparai_fpi_brst_l2, parttparai_fpi_fast_l2,
+    parttperpe_fpi_brst_l2, parttperpe_fpi_fast_l2, parttperpi_fpi_brst_l2,
+    parttperpi_fpi_fast_l2, partve_dbcs_fpi_brst_l2, partve_dbcs_fpi_fast_l2,
+    partve_gse_fpi_brst_l2, partve_gse_fpi_fast_l2, partvi_dbcs_fpi_brst_l2,
+    partvi_dbcs_fpi_fast_l2, partvi_gse_fpi_brst_l2, partvi_gse_fpi_fast_l2,
+    pbgi_fpi_brst_l2, pbgi_fpi_fast_l2, pde_fpi_brst_l2, pde_fpi_fast_l2,
+    pderre_fpi_brst_l2, pderre_fpi_fast_l2, pderri_fpi_brst_l2, pderri_fpi_fast_l2,
+    pdi_fpi_brst_l2, pdi_fpi_fast_l2, pe_dbcs_fpi_brst_l2, pe_dbcs_fpi_fast_l2,
+    pe_dbcs_fpi_fast_ql, pe_gse_fpi_brst_l2, pe_gse_fpi_fast_l2, pe_gse_fpi_fast_ql,
+    pi_dbcs_fpi_brst_l2, pi_dbcs_fpi_fast_l2, pi_dbcs_fpi_fast_ql, pi_gse_fpi_brst_l2,
+    pi_gse_fpi_fast_l2, pi_gse_fpi_fast_ql, ste_dbcs_fpi_brst_l2, ste_dbcs_fpi_fast_l2,
+    ste_gse_fpi_brst_l2, ste_gse_fpi_fast_l2, sti_dbcs_fpi_brst_l2,
+    sti_dbcs_fpi_fast_l2, sti_gse_fpi_brst_l2, sti_gse_fpi_fast_l2, te_dbcs_fpi_brst_l2,
+    te_dbcs_fpi_fast_l2, te_dbcs_fpi_fast_ql, te_gse_fpi_brst_l2, te_gse_fpi_fast_l2,
+    te_gse_fpi_fast_ql, ti_dbcs_fpi_brst_l2, ti_dbcs_fpi_fast_l2, ti_gse_fpi_brst_l2,
+    ti_gse_fpi_fast_l2, tparae_fpi_brst_l2, tparai_fpi_brst_l2, tparai_fpi_fast_l2,
+    tperpe_fpi_brst_l2, tperpi_fpi_brst_l2, tperpi_fpi_fast_l2, ve_dbcs_fpi_brst_l2,
+    ve_dbcs_fpi_fast_l2, ve_dbcs_fpi_fast_ql, ve_gse_fpi_brst_l2, ve_gse_fpi_fast_l2,
+    ve_gse_fpi_fast_ql, vi_dbcs_fpi_brst_l2, vi_dbcs_fpi_fast_l2, vi_dbcs_fpi_fast_ql,
     vi_gse_fpi_brst_l2, vi_gse_fpi_fast_l2, vi_gse_fpi_fast_ql
 
     FSM: b_gse_fsm_brst_l3
@@ -229,8 +237,8 @@ def get_data(
     vhplus_gsm_hpca_brst_l2, vhplus_gsm_hpca_srvy_l2, voplus_dbcs_hpca_brst_l2,
     voplus_dbcs_hpca_srvy_l2, voplus_gsm_hpca_brst_l2, voplus_gsm_hpca_srvy_l2
 
-    MEC: r_gse_mec_srvy_l2, r_gsm_mec_srvy_l2, r_gse_mec_brst_l2, r_gsm_mec_brst_l2,
-    v_gse_mec_srvy_l2, v_gsm_mec_srvy_l2, v_gse_mec_brst_l2, v_gsm_mec_brst_l2
+    MEC: r_gse_mec_brst_l2, r_gse_mec_srvy_l2, r_gsm_mec_brst_l2, r_gsm_mec_srvy_l2,
+    vel_gse_mec_brst_l2, vel_gse_mec_srvy_l2, vel_gsm_mec_brst_l2, vel_gsm_mec_srvy_l2
 
     SCM: b_gse_scm_brst_l2
 
@@ -245,9 +253,11 @@ def get_data(
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
-        Local path of MMS data. Default uses that provided in `pyrfu/mms/config.json`
+        Local path of MMS data. Default uses the local path of the MMS
+        configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
     source: {"local", "sdc", "aws"}, Optional
-        Ressource to fetch data from. Default uses default in `pyrfu/mms/config.json`
+        Resource to fetch data from. Default uses the default resource of the
+        MMS configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     Returns
     -------

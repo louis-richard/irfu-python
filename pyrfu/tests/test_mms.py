@@ -8,6 +8,7 @@ import itertools
 import json
 import os
 import random
+import re
 import string
 import sys
 import tempfile
@@ -4073,6 +4074,22 @@ class TokenizeTestCase(unittest.TestCase):
     def test_tokenize_mec_velocity_gsm(self, var_str):
         # The GSM velocity keys read the GSE velocity (mec_v_gse)
         self.assertEqual(mms.tokenize(var_str)["cdf_name"], "mec_v_gsm")
+
+    def test_get_data_docstring_keys(self):
+        # The keys listed in the get_data docstring are those of mms_keys.json
+        # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
+        keys_path = os.path.join(os.path.dirname(mms.__file__), "mms_keys.json")
+        with open(keys_path, "r", encoding="utf-8") as file:
+            keys = {k for inst in json.load(file).values() for k in inst}
+
+        get_data_module = importlib.import_module("pyrfu.mms.get_data")
+        doc = get_data_module.get_data.__doc__.split("Parameters")[0]
+        listed = set(
+            re.findall(
+                r"\b[a-z0-9+-]+_[a-z0-9_+-]*_(?:l2pre|l2a|l2|l3|ql|sitl|l1b)\b", doc
+            )
+        )
+        self.assertSetEqual(listed, keys)
 
     def test_mms_keys_coordinate_systems(self):
         # When the CDF variable name has a coordinate system, it is the one of

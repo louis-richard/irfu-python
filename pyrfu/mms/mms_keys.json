@@ -928,6 +928,10 @@
     }
   },
   "mec": {
+    "r_gse_mec_brst_l2": {
+      "cdf_name": "mec_r_gse",
+      "dtype": "epht89d"
+    },
     "r_gse_mec_srvy_l2": {
       "cdf_name": "mec_r_gse",
       "dtype": "epht89d"
