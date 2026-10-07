@@ -447,6 +447,48 @@ class ConfigCacheTestCase(unittest.TestCase):
                 module._login_lasp_cached.cache_clear()
 
 
+class LoginLaspCredentialsTestCase(unittest.TestCase):
+    # The SDC credentials are only read and sent for the SITL access
+
+    def _login(self, rights, credential):
+        module = importlib.import_module("pyrfu.mms.list_files_sdc")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "config.json")
+            ConfigCacheTestCase._write_config(path, "sdc", rights=rights)
+            with (
+                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(module.requests, "Session") as session_cls,
+                mock.patch.object(
+                    module, "_get_credential", return_value=credential
+                ) as get_credential,
+            ):
+                module._login_lasp_cached.cache_clear()
+                try:
+                    _, _, lasp_url = module._login_lasp()
+                finally:
+                    module._login_lasp_cached.cache_clear()
+
+        return session_cls.return_value, get_credential, lasp_url
+
+    def test_login_lasp_public(self):
+        # The SITL password was sent with every public request
+        credential = keyring.credentials.SimpleCredential("u", "secret")
+        session, get_credential, lasp_url = self._login("public", credential)
+        get_credential.assert_not_called()
+        self.assertNotIsInstance(session.auth, tuple)
+        self.assertIn("/public/", lasp_url)
+
+    def test_login_lasp_sitl(self):
+        credential = keyring.credentials.SimpleCredential("u", "secret")
+        session, get_credential, lasp_url = self._login("sitl", credential)
+        get_credential.assert_called_once_with("u")
+        self.assertTupleEqual(session.auth, ("u", "secret"))
+        self.assertIn("/sitl/", lasp_url)
+
+        with self.assertRaises(EnvironmentError):
+            self._login("sitl", None)
+
+
 class _MemoryKeyring:
     # In-memory keyring backend with a given priority (>= 1: system keyring)
     def __init__(self, priority):

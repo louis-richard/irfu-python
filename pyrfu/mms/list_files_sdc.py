@@ -59,22 +59,26 @@ def _login_lasp_cached(config_mtime_ns: int):
     with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
-    credential = _get_credential(config["sdc"]["username"])
-    username, password = (
-        (credential.username, credential.password) if credential else ("", "")
-    )
+    session = requests.Session()
 
+    # The credentials are only read and sent for the SITL (team) access, never
+    # to the public SDC
     if config["sdc"]["rights"] == "public":
         lasp_url = LASP_PUBL
-    elif config["sdc"]["rights"] == "sitl" and username and password:
+    elif config["sdc"]["rights"] == "sitl":
+        credential = _get_credential(config["sdc"]["username"])
+
+        if not credential or not credential.username or not credential.password:
+            raise EnvironmentError(
+                "Incomplete credentials please update using mms.db_init()"
+            )
+
         lasp_url = LASP_SITL
+        session.auth = (credential.username, credential.password)
     else:
         raise EnvironmentError(
-            "Incomplete credentials please update using mms.db_init()"
+            "Invalid MMS SDC rights, please update using mms.db_init()"
         )
-
-    session = requests.Session()
-    session.auth = (username, password)
 
     # Retry with backoff on rate limiting / transient server errors,
     # honoring the Retry-After header when LASP sends one.
