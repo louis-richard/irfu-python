@@ -4932,6 +4932,21 @@ class WaverageTestCase(unittest.TestCase):
 
 @ddt
 class WaveletTestCase(unittest.TestCase):
+    def test_wavelet_linear_frequencies(self):
+        # The linear spacing ignored f: f=[1, 10] with 1 Hz gave 1 to 64 Hz
+        time = generate_timeline(128.0, 1024)
+        inp = pyrf.ts_scalar(time, np.sin(2 * np.pi * 5.0 * np.arange(1024) / 128))
+        for f, linear, expected in [
+            ([1.0, 10.0], 1.0, np.arange(1.0, 11.0)),
+            ([2.0, 10.0], 0.5, np.arange(0.5, 10.5, 0.5)),
+            (None, 4.0, np.arange(4.0, 68.0, 4.0)),
+        ]:
+            result = pyrf.wavelet(inp, f=f, linear=linear)
+            np.testing.assert_allclose(np.sort(result.frequency.data), expected)
+
+        with self.assertRaisesRegex(ValueError, "highest frequency"):
+            pyrf.wavelet(inp, f=[1.0, 10.0], linear=20.0)
+
     @data(
         (generate_data(100, tensor_order=1), {}),
         (generate_ts(64.0, 100, tensor_order=1), {"linear": [random.randint(10, 100)]}),

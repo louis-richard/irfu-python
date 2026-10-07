@@ -88,7 +88,10 @@ def wavelet(
     n_freqs : int, Optional
         Number of frequency bins.
     linear : float or bool, Optional
-        Linear spacing between frequencies of df.
+        Linear spacing between frequencies of df: the frequencies are df,
+        2 df, ... up to the highest frequency of `f` (the Nyquist frequency if
+        `f` is not given); the lowest frequency of `f` is not used. True uses
+        df = 100 Hz, as irf_wavelet.
     wavelet_width : float, Optional
         Width of the Morlet wavelet. Default 5.36.
     cut_edge : bool, Optional
@@ -163,12 +166,14 @@ def wavelet(
             f_max = f_nyq
 
     if linear_df:
-        scale_number: int = int(np.floor(f_nyq / delta_f))
+        # Frequencies delta_f, 2 delta_f, ... up to f_max (the Nyquist
+        # frequency if f is not given), as irf_wavelet
+        scale_number: int = int(np.floor(f_max / delta_f))
 
         if scale_number == 0:
             raise ValueError(
                 f"linear frequency spacing ({delta_f} Hz) is larger than the "
-                f"Nyquist frequency ({f_nyq} Hz)"
+                f"highest frequency ({f_max} Hz)"
             )
 
         # Scales range
