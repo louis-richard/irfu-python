@@ -138,6 +138,18 @@ def shock_normal(spec, leq90: bool = True):
     # Check input
     assert isinstance(spec, dict), "spec must be a dictionary"
 
+    # Work on a copy, with the fields and plasma parameters as arrays: lists
+    # are accepted, and the caller's dict is not modified (delta_b and delta_v
+    # are added below)
+    spec = {
+        k: (
+            np.asarray(v, dtype=np.float64)
+            if k in ["b_u", "b_d", "v_u", "v_d", "n_u", "n_d"]
+            else v
+        )
+        for k, v in spec.items()
+    }
+
     if spec["b_u"].ndim > 1 or spec["b_d"].ndim > 1:
         n_bu = len(spec["b_u"])
         n_bd = len(spec["b_d"])

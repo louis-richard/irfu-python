@@ -3924,6 +3924,29 @@ class PviTestCase(unittest.TestCase):
 
 @ddt
 class ShockNormalTestCase(unittest.TestCase):
+    def test_shock_normal_lists(self):
+        # Lists raised AttributeError ('list' has no attribute 'ndim'), and the
+        # caller's dict got delta_b and delta_v
+        spec = {
+            "b_u": [5.0, 3.0, -2.0],
+            "b_d": [12.0, 15.0, -8.0],
+            "v_u": [-450.0, 20.0, 10.0],
+            "v_d": [-180.0, 40.0, 25.0],
+            "n_u": 5.0,
+            "n_d": 18.0,
+        }
+        spec_arrays = {k: np.array(v) for k, v in spec.items()}
+        keys = list(spec)
+
+        result = pyrf.shock_normal(spec)
+        expected = pyrf.shock_normal(spec_arrays)
+
+        self.assertListEqual(list(spec), keys)
+        self.assertListEqual(list(spec_arrays), keys)
+        for method in ["mc", "vc", "mx_1", "mx_2", "mx_3"]:
+            np.testing.assert_array_equal(result["n"][method], expected["n"][method])
+            self.assertAlmostEqual(np.linalg.norm(result["n"][method]), 1.0)
+
     def test_shock_normal_input(self):
         with self.assertRaises(AssertionError):
             pyrf.shock_normal([])
