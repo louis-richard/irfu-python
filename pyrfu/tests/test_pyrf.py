@@ -980,6 +980,18 @@ class CorrDerivTestCase(unittest.TestCase):
 
 @ddt
 class CotransTestCase(unittest.TestCase):
+    def test_cotrans_same_frame_copy(self):
+        # The input object itself was returned: editing the output edited the
+        # caller's data
+        b_xyz = generate_ts(64.0, 10, tensor_order=1)
+        b_xyz.attrs["COORDINATE_SYSTEM"] = "GSE"
+        data = b_xyz.data.copy()
+        for flag in ["gse>gse", "gse"]:
+            result = pyrf.cotrans(b_xyz, flag)
+            xr.testing.assert_identical(result, b_xyz)
+            result.data[0, 0] = 999.0
+            np.testing.assert_array_equal(b_xyz.data, data)
+
     @data(
         (0.0, "gse>gsm", True),
         (generate_data(100), "gse>gsm", True),

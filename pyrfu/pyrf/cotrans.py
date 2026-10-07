@@ -282,7 +282,8 @@ def cotrans(inp, flag, hapgood: bool = True):
         )
 
     if ref_syst_in == ref_syst_out:
-        return inp
+        # A copy: editing the output must not change the caller's data
+        return inp.copy()
 
     flag = f"{ref_syst_in}>{ref_syst_out}"
     transformation_indices = _transformation_indices()
