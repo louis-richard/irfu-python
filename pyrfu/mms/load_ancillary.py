@@ -17,18 +17,13 @@ from pyrfu.pyrf.extend_tint import extend_tint
 from pyrfu.pyrf.iso86012datetime import iso86012datetime
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 
 def load_ancillary(
@@ -42,8 +37,9 @@ def load_ancillary(
 
     Parameters
     ----------
-    product : {"predatt", "predeph", "defatt", "defeph"}
-        Ancillary type.
+    product : {"defatt", "defeph", "defq"}
+        Ancillary type. The predicted products (predatt, predeph, predq) are
+        not supported.
     tint : list of str
         Time interval
     mms_id : str or int
@@ -58,14 +54,14 @@ def load_ancillary(
     out : xarray.Dataset
         Time series of the ancillary data
 
+    Raises
+    ------
+    ValueError
+        If the product is not supported.
+    FileNotFoundError
+        If no file of the product covers the time interval.
+
     """
-
-    # Get path of files in interval
-    tint_long = extend_tint(tint, [-86400, 86400])
-    files_names = list_files_ancillary(tint_long, mms_id, product, data_path)
-
-    # Convert time interval to datetime
-    tint = iso86012datetime(tint)
 
     # Read length of header and columns names from .json file
     # Root path
@@ -74,8 +70,24 @@ def load_ancillary(
     with open(os.sep.join([pkg_path, "ancillary.json"]), "r", encoding="utf-8") as file:
         anc_dict = json.load(file)
 
+    if product not in anc_dict:
+        raise ValueError(
+            f"Ancillary product {product!r} is not supported, use one of "
+            f"{', '.join(anc_dict)}"
+        )
+
+    # Get path of files in interval
+    tint_long = extend_tint(tint, [-86400, 86400])
+    files_names = list_files_ancillary(tint_long, mms_id, product, data_path)
+
+    if not files_names:
+        raise FileNotFoundError(f"No {product} file found for MMS{mms_id} in {tint}")
+
+    # Convert time interval to datetime
+    tint = iso86012datetime(tint)
+
     if verbose:
-        logging.info("Loading ancillary %s files...", product)
+        logger.info("Loading ancillary %s files...", product)
 
     data_frame_dict = {}
 
@@ -88,12 +100,11 @@ def load_ancillary(
             skiprows=anc_dict[product]["header"],
         )
 
-        # Remove footer
-        rows = rows[:][:-1]
-
-        # Convert time
+        # Convert time, and remove the rows that are not data, such as the
+        # DATA_STOP footer of DEFATT files (DEFEPH files have no footer)
         fmt = anc_dict[product]["time_format"]
-        rows[0] = pd.to_datetime(rows[0], format=fmt)
+        rows[0] = pd.to_datetime(rows[0], format=fmt, errors="coerce")
+        rows = rows[rows[0].notna()].reset_index(drop=True)
 
         start_idx = bisect.bisect_left(rows[0][:], tint[0])
         end_idx = bisect.bisect_left(rows[0][:], tint[1])

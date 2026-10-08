@@ -77,30 +77,41 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         else:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
-    # b_list_r = [b.where(np.isnan(b) == False, other=0) for b in b_list_r]
-    b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
-    b_avg_data = np.zeros(b_list_r[0].shape)
-    b_nan_denom = np.zeros(b_list_r[0].shape)
+    # Values to average: the data of a DataArray, or the "data" variable of a
+    # Dataset (e.g. a skymap, whose other variables are taken from the first)
+    values = [
+        np.asarray(b.data if isinstance(b, xr.DataArray) else b["data"].data)
+        for b in b_list_r
+    ]
 
-    for b in b_list_r:
+    b_avg_data = np.zeros(values[0].shape)
+    b_nan_denom = np.zeros(values[0].shape)
 
-        b_avg_data += b.data
-        b_nan_denom += _nan_count(b).data
+    for value in values:
+        # Count the valid samples before replacing NaNs by zeros in the sum
+        b_nan_denom += _nan_count(value)
+        b_avg_data += np.nan_to_num(value, nan=0.0)
 
-    if "probe" in b_list[0].attrs.keys():
-        b_list[0].attrs["probe"] = "4sc_avg"
-    if "mms" in b_list[0].attrs.keys():
-        b_list[0].attrs["mms"] = "4sc_avg"
-    if "MMS" in b_list[0].attrs.keys():
-        b_list[0].attrs["MMS"] = "4sc_avg"
-    if "mmsId" in b_list[0].attrs.keys():
-        b_list[0].attrs["mmsId"] = "4sc_avg"
+    # Copy so that the attributes of the caller's first time series are unchanged
+    attrs = dict(b_list[0].attrs)
 
-    b_avg = xr.DataArray(
-        b_avg_data / b_nan_denom,
-        coords=b_list_r[0].coords,
-        dims=b_list_r[0].dims,
-        attrs=b_list[0].attrs,
-    )
+    for key in ["probe", "mms", "MMS", "mmsId"]:
+        if key in attrs:
+            attrs[key] = "4sc_avg"
+
+    # NaN where no spacecraft has data
+    with np.errstate(invalid="ignore", divide="ignore"):
+        b_avg_data = b_avg_data / b_nan_denom
+
+    if isinstance(b_list_r[0], xr.DataArray):
+        b_avg = xr.DataArray(
+            b_avg_data,
+            coords=b_list_r[0].coords,
+            dims=b_list_r[0].dims,
+            attrs=attrs,
+        )
+    else:
+        b_avg = b_list_r[0].assign(data=b_list_r[0]["data"].copy(data=b_avg_data))
+        b_avg.attrs = attrs
 
     return b_avg

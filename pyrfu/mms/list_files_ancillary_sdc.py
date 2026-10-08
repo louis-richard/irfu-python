@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 # Local imports
-from .list_files_sdc import _login_lasp
+from .list_files_sdc import SDC_TIMEOUT, _login_lasp
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -70,12 +70,13 @@ def list_files_ancillary_sdc(tint, mms_id, product):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ResourceWarning)
-        response = sdc_session.get(url_json_ancillaries, verify=True, headers=headers)
+        response = sdc_session.get(
+            url_json_ancillaries, verify=True, headers=headers, timeout=SDC_TIMEOUT
+        )
         response.raise_for_status()  # Raise an HTTPError for bad responses
         http_json = response.json()
 
     file_names = http_json["files"]
-    sdc_session.close()
 
     file_names = _make_urls_ancillaries(lasp_url, file_names)
 

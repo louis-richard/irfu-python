@@ -112,9 +112,10 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
         inp_time = inp_time[:-1]
         inp_data = inp_data[:-1, :]
 
-    # Set NaN values to zero so FFT works
+    # Set NaN values to zero so FFT works (in a new array: inp_data is a view of
+    # the caller's data)
     idx_nans = np.isnan(inp_data)
-    inp_data[idx_nans] = 0.0
+    inp_data = np.where(idx_nans, 0.0, inp_data)
 
     # Bandpass filter field data
     f_sam = calc_fs(inp)

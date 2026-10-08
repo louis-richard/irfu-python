@@ -5,7 +5,7 @@
 import numpy as np
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -149,9 +149,10 @@ def feeps_energy_table(mms_id, eye, sensor_id):
     Notes
     -----
     Bad eyes are replaced by NaNs. Different original energy tables are used
-    depending on if the sensor head is 6-8 (ions) or not (electrons) :
-        * Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
-        * Ion Eyes: 6, 7, 8
+    depending on if the sensor head is 6-8 (ions) or not (electrons):
+
+    * Electron Eyes: 1, 2, 3, 4, 5, 9, 10, 11, 12
+    * Ion Eyes: 6, 7, 8
 
     """
 

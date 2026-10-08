@@ -5,32 +5,26 @@
 import json
 import logging
 import os
-import warnings
-from shutil import copy, copyfileobj
-from tempfile import NamedTemporaryFile
 from typing import Literal, Optional, Union
-
-# 3rd party imports
-import tqdm
 
 # Local imports
 from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.download_data import _download_file
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import _login_lasp
 
+# 3rd party imports
+
+
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
+
 
 LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
@@ -120,29 +114,11 @@ def download_ancillary(
     for file in files_in_interval:
         # Create local path following tree structure for the CDF files
         out_file = _make_path_local(file, product, mms_id, data_path)
-        out_path = os.path.dirname(out_file)
 
-        logging.info(
+        logger.info(
             "Downloading %s from %s...", os.path.basename(out_file), file["url"]
         )
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=ResourceWarning)
-            fsrc = sdc_session.get(
-                file["url"], stream=True, verify=True, headers=headers
-            )
-
-        with NamedTemporaryFile(delete=False) as ftmp:
-            with tqdm.tqdm.wrapattr(
-                fsrc.raw, "read", total=file["file_size"], ncols=60
-            ) as fsrc_raw:
-                with open(ftmp.name, "wb") as fs:
-                    copyfileobj(fsrc_raw, fs)
-
-        os.makedirs(out_path, exist_ok=True)
-
-        # if the download was successful, copy to data directory
-        copy(ftmp.name, out_file)
-        fsrc.close()
-
-    sdc_session.close()
+        _download_file(
+            sdc_session, file["url"], headers, out_file, file.get("file_size")
+        )

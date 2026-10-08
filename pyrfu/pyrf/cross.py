@@ -10,7 +10,7 @@ from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -79,7 +79,8 @@ def cross(inp1: DataArray, inp2: DataArray) -> DataArray:
     if inp2.ndim != 2 or inp2.shape[1] != 3:
         raise ValueError("inp2 must be a vector")
 
-    if len(inp1) != len(inp2):
+    # Resample if the times differ (same length is not enough)
+    if not np.array_equal(inp1.time.data, inp2.time.data):
         inp2 = resample(inp2, inp1)
 
     out_data = np.cross(inp1.data, inp2.data, axis=1)

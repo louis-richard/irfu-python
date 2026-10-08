@@ -34,7 +34,7 @@ from .span_tint import span_tint
 from .zoom import zoom
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -67,8 +67,13 @@ __all__ = [
 ]
 PKG_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STYLE_SHEETS = os.path.join(PKG_PATH, "stylesheets")
-style.core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
-style.core.reload_library()
+_style_core = getattr(
+    style, "core", style
+)  # matplotlib >=3.11 dropped the `core` submodule
+_style_core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
+_style_core.reload_library()
+# style.core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
+# style.core.reload_library()
 
 EXTRA_COLORS = {
     "pyrfu:bg": "#eeeeee",
@@ -276,7 +281,7 @@ def use_pyrfu_style(
 
     if usetex:
         if (
-            shutil.which("pdflatex") is None
+            shutil.which("latex") is None
             or shutil.which("dvipng") is None
             or shutil.which("gs") is None
         ):
@@ -294,6 +299,7 @@ def use_pyrfu_style(
         mpl.rcParams["mathtext.sf"] = "sans"
         mpl.rcParams["mathtext.fontset"] = "dejavusans"
     else:
+        mpl.rcParams["text.usetex"] = True
         mpl.rcParams["text.latex.preamble"] = "\n".join(
             [
                 r"\usepackage{amsmath}",

@@ -15,20 +15,17 @@ import numpy as np
 import requests
 import tqdm
 
+# Local imports
+from .db_init import config_path
+
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.10"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
-
+logger = logging.getLogger(__name__)
 
 LASP_PUBL = "https://lasp.colorado.edu/maven/sdc/public/files/api/v1/"
 
@@ -81,10 +78,8 @@ def _make_path(file, var, lasp_url, data_path: str = ""):
     r"""Construct path of the data file using the standard convention."""
 
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
-        # Read the current version of the MAVEN configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        # Read the configuration file (user directory)
+        with open(config_path(), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -119,9 +114,11 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
     ----------
     var : dict
         Hashtable containing:
-            - inst: instrument acronym (acc, euv, iuv, kp, lpw, mag, ngi, pfp, sep, sta,
-             swe, swi)
-            - level: data levels (l1a, l1b, l2, l3, insitu (KP only), iuv (KP only))
+
+        - inst: instrument acronym (acc, euv, iuv, kp, lpw, mag, ngi, pfp, sep,
+          sta, swe, swi)
+        - level: data levels (l1a, l1b, l2, l3, insitu (KP only), iuv (KP only))
+
     tint : list of str
         Time interval.
     login : str, Optional
@@ -139,7 +136,7 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         lasp_url = LASP_PUBL
     else:
         lasp_url = LASP_PUBL
-        logging.info("login not impleted. Use public instead")
+        logger.info("login not impleted. Use public instead")
 
     sdc_session = _login_lasp(login, password)
 
@@ -159,7 +156,7 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         plan = out_file.split("/")[-1].split("_")[3][7:]
         if plan == var["plan"] and out_file[-3:] == "sts":
 
-            logging.info(
+            logger.info(
                 "Downloading %s from %s...", os.path.basename(out_file), dwl_url
             )
 

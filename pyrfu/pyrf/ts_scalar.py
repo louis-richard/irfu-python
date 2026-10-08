@@ -57,7 +57,7 @@ def ts_scalar(
     if attrs is None:
         attrs = {"TENSOR_ORDER": 0}
     elif isinstance(attrs, dict):
-        attrs["TENSOR_ORDER"] = 0
+        attrs = {**attrs, "TENSOR_ORDER": 0}  # copy: the caller's dict is unchanged
     else:
         raise TypeError("attrs must be a dict")
 

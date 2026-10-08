@@ -4,6 +4,8 @@
 # Built-in imports
 import json
 import logging
+import os
+from functools import lru_cache
 from typing import Mapping, Optional, Tuple
 
 # 3rd party imports
@@ -21,18 +23,13 @@ from pyrfu.mms.get_ts import get_ts
 from pyrfu.pyrf.ts_append import ts_append
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 
 def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
@@ -58,12 +55,85 @@ def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
 
     var = {"inst": dataset[1], "tmmode": dataset[2], "lev": dataset[3]}
 
-    try:
-        var["dtype"] = dataset[4]
-    except IndexError:
-        pass
+    # Data type (empty for datasets without one, e.g., mms1_fgm_srvy_l2)
+    var["dtype"] = dataset[4] if len(dataset) > 4 else ""
 
     return probe, var
+
+
+def _load_config() -> Mapping[str, str]:
+    r"""Load the MMS configuration file (cached until it changes, e.g., after
+    mms.db_init). Returns a copy, so that callers cannot change the cache."""
+    return dict(_load_config_cached(os.stat(MMS_CFG_PATH).st_mtime_ns))
+
+
+@lru_cache(maxsize=1)
+def _load_config_cached(config_mtime_ns: int) -> Mapping[str, str]:
+    r"""Load the MMS configuration file (cached by modification time)."""
+    del config_mtime_ns  # cache key only
+    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+        return json.load(fs)
+
+
+def _resolve_source(source: Optional[str] = "default") -> str:
+    r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
+    case), or the default resource of `pyrfu/mms/config.json` if it is empty or
+    "default"."""
+    if not source or source.lower() == "default":
+        return _load_config().get("default")
+
+    if source.lower() in ["local", "sdc", "aws"]:
+        return source.lower()
+
+    raise ValueError("Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'")
+
+
+def _db_get_ts_dict(
+    dataset_name: str,
+    cdf_names: list[str],
+    tint: list[str],
+    verbose: Optional[bool] = True,
+    data_path: Optional[str] = "",
+    source: Optional[str] = "default",
+) -> dict[str, DataArray]:
+    r"""Time series of several variables of a dataset, reading each file once
+    (i.e., one download per file from the SDC or AWS for all the variables).
+
+    See :func:`db_get_ts` for the parameters; returns a dictionary of the time
+    series with `cdf_names` as keys.
+
+    """
+    mms_id, var = _tokenize(dataset_name)
+    resource = _resolve_source(source)
+
+    file_names, sdc_session, headers = _list_files_sources(
+        resource, tint, mms_id, var, data_path
+    )
+
+    out = {}
+
+    if not file_names:
+        raise FileNotFoundError(f"No files found for {dataset_name}")
+
+    if verbose:
+        for cdf_name in cdf_names:
+            logger.info("Loading %s...", cdf_name)
+
+    for file_name in file_names:
+        file_content = _get_file_content_sources(
+            resource, file_name, sdc_session, headers
+        )
+
+        for cdf_name in cdf_names:
+            try:
+                ts = get_ts(file_content, cdf_name, tint)
+            except Exception:
+                logger.error("Failed to load %s from %s", cdf_name, file_name)
+                raise
+
+            out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
+
+    return {cdf_name: _check_times(ts) for cdf_name, ts in out.items()}
 
 
 def db_get_ts(
@@ -101,49 +171,10 @@ def db_get_ts(
     ------
     FileNotFoundError
         If no files are found for the dataset name.
+    ValueError
+        If the source is not supported.
 
     """
-    mms_id, var = _tokenize(dataset_name)
+    out = _db_get_ts_dict(dataset_name, [cdf_name], tint, verbose, data_path, source)
 
-    # Read the current version of the MMS configuration file
-    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-        config = json.load(fs)
-
-    if not source or source == "default":
-        resource = config.get("default")
-    elif source.lower() in ["local", "sdc", "aws"]:
-        resource = source
-    else:
-        raise ValueError(
-            "Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'"
-        )
-
-    file_names, sdc_session, headers = _list_files_sources(
-        resource, tint, mms_id, var, data_path
-    )
-
-    if file_names:
-        if verbose:
-            logging.info("Loading %s...", cdf_name)
-
-        for i, file_name in enumerate(file_names):
-            file_content = _get_file_content_sources(
-                resource, file_name, sdc_session, headers
-            )
-
-            out = get_ts(file_content, cdf_name, tint)
-
-            if i == 0:
-                out_all = out
-            else:
-                out_all = ts_append(out_all, out)
-
-        out_all = _check_times(out_all)
-
-    else:
-        raise FileNotFoundError(f"No files found for {dataset_name}")
-
-    if sdc_session:
-        sdc_session.close()
-
-    return out_all
+    return out[cdf_name]

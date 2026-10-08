@@ -10,7 +10,7 @@ import xarray as xr
 from xarray.core.dataarray import DataArray
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -36,13 +36,17 @@ def ts_append(
 
     Notes
     -----
-    The time series must be in the correct time order.
+    The time series must be in the correct time order. The other coordinates
+    are those of `inp0`, except if it has no time samples: an empty input is
+    skipped.
 
     """
 
-    if inp0 is None:
+    # An input without time samples (e.g. from a file without records) is
+    # skipped, so that the coordinates of the other one are kept
+    if inp0 is None or (inp1 is not None and inp0.shape[0] == 0):
         out = inp1
-    elif inp1 is None:
+    elif inp1 is None or inp1.shape[0] == 0:
         out = inp0
     elif inp0 is not None and inp1 is not None:
         out_data = {}

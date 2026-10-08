@@ -16,7 +16,7 @@ from ..pyrf.resample import resample
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -39,6 +39,8 @@ def _transformation_matrix(
     -------
     numpy.ndarray
         Transformation matrix.
+        ``COORDINATE_SYSTEM`` is set to "GSE" (direction 1) or "DSL"
+        (direction -1).
 
     Raises
     ------
@@ -46,6 +48,8 @@ def _transformation_matrix(
         If direction is not -1 or 1.
 
     """
+    # The rotation assumes a unit spin axis
+    spin_axis = spin_axis / np.linalg.norm(spin_axis, axis=1, keepdims=True)
     r_x, r_y, r_z = [spin_axis[:, i] for i in range(3)]
 
     fact = 1.0 / np.sqrt(r_y**2 + r_z**2)
@@ -86,9 +90,10 @@ def dsl2gse(
     inp : DataArray
         Input time series to convert.
     defatt : Dataset or numpy.ndarray
-        Spacecraft attitude.
+        Spacecraft attitude (DEFATT), or the spin axis in GSE as a 3-vector
+        (normalised internally).
     direction : {1, -1}, Optional
-        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
+        Direction of transformation. By convention: +1 DSL -> GSE, -1 GSE -> DSL.
         Default is 1.
 
     Returns
@@ -148,6 +153,6 @@ def dsl2gse(
 
     out = inp.copy()
     out.data = out_data
-    out.attrs["COORDINATE_SYSTEM"] = "GSE"
+    out.attrs["COORDINATE_SYSTEM"] = "GSE" if direction == 1 else "DSL"
 
     return out

@@ -21,18 +21,13 @@ from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
@@ -77,7 +72,8 @@ def rotate_tensor(
         numpy.ndarray rotates to a time independent coordinates system.
 
     perp : str, Optional
-        Flag for perpendicular components of the tensor. Default is pp.
+        Flag for perpendicular components of the tensor. Default is "pp".
+            * "" : no additional rotation applied
             * "pp" : perpendicular diagonal components are equal
             * "qq" : perpendicular diagonal components are most unequal
 
@@ -163,6 +159,11 @@ def rotate_tensor(
         r_y: NDArray[np.float64] = np.array([1.0, 0.0, 0.0], dtype=np.float64)
         # Perp2 with correction
         r_z: NDArray[np.float64] = np.cross(r_x, r_y)
+        # B exactly along x (B x x = 0 gave NaN): y as the reference instead,
+        # the perpendicular directions being arbitrary
+        along_x = np.linalg.norm(r_z, axis=1) < 1e-12
+        if np.any(along_x):
+            r_z[along_x] = np.cross(r_x[along_x], [0.0, 1.0, 0.0])
         r_z /= np.linalg.norm(r_z, axis=1, keepdims=True)
         r_y = np.cross(r_z, r_x)  # Corrected perp1 direction
         r_y /= np.linalg.norm(r_y, axis=1, keepdims=True)
@@ -182,8 +183,11 @@ def rotate_tensor(
             r_x /= np.linalg.norm(r_x, keepdims=True)
             # Second direction arbitrarily chosen along y
             r_y = np.array([0.0, 1.0, 0.0], dtype=np.float64)
-            # Third direction orthogonal to x and y directions
+            # Third direction orthogonal to x and y directions (z as the
+            # reference if the vector is exactly along y)
             r_z = np.cross(r_x, r_y)
+            if np.linalg.norm(r_z) < 1e-12:
+                r_z = np.cross(r_x, [0.0, 0.0, 1.0])
             r_z /= np.linalg.norm(r_z, keepdims=True)
             # Corrected y direction
             r_y = np.cross(r_z, r_x)
@@ -203,7 +207,7 @@ def rotate_tensor(
                 abs(np.rad2deg(np.arccos(np.dot(r_y, vec[:, 0])))) > 1.0
                 or abs(np.rad2deg(np.arccos(np.dot(r_z, vec[:, 2])))) > 1.0
             ):
-                logging.warning(
+                logger.warning(
                     "The new coordinate system has been changed to be right handed "
                     "orthogonal.",
                 )
@@ -228,9 +232,9 @@ def rotate_tensor(
 
         # Compute the spin axis direction in Geocentric equatorial inertial (GEI)
         # coordinates
-        x: NDArray[np.float64] = np.cos(np.deg2rad(z_dec)) * np.cos(np.deg2rad(z_ra))
-        y: NDArray[np.float64] = np.cos(np.deg2rad(z_dec)) * np.sin(np.deg2rad(z_ra))
-        z: NDArray[np.float64] = np.sin(np.deg2rad(z_dec))
+        x: NDArray[np.float64] = np.cos(z_dec) * np.cos(z_ra)
+        y: NDArray[np.float64] = np.cos(z_dec) * np.sin(z_ra)
+        z: NDArray[np.float64] = np.sin(z_dec)
         sax_gei: DataArray = ts_vec_xyz(
             vec.time.data, np.transpose(np.vstack([x, y, z]))
         )
@@ -257,16 +261,18 @@ def rotate_tensor(
 
     if perp.lower() == "" or rot_flag.lower() in ["gse", "gsm"]:
         # maybe also add "rot" here??
-        logging.info("No additional rotation applied.")
+        logger.info("No additional rotation applied.")
     elif perp.lower() == "pp":
         if verbose:
-            logging.info(
+            logger.info(
                 "Applying additional rotation to make the perpendicular components "
                 "most equal"
             )
-        thetas: NDArrayFloats = 0.5 * np.arctan(
-            (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
-        )
+        # P23 = 0 (e.g. diagonal tensor): +-inf gives +-pi/4, 0/0 is set to 0
+        with np.errstate(divide="ignore", invalid="ignore"):
+            thetas: NDArrayFloats = 0.5 * np.arctan(
+                (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
+            )
         thetas[np.isnan(thetas)] = 0.0
 
         for i, theta in enumerate(thetas):
@@ -286,14 +292,16 @@ def rotate_tensor(
     elif perp.lower() == "qq":
 
         if verbose:
-            logging.info(
+            logger.info(
                 "Applying additional rotation to make the perpendicular components "
                 "most unequal"
             )
 
-        thetas = 0.5 * np.arctan(
-            (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
-        )
+        with np.errstate(divide="ignore", invalid="ignore"):
+            thetas = 0.5 * np.arctan(
+                (2 * p_tensor_p[:, 1, 2]) / (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]),
+            )
+        thetas[np.isnan(thetas)] = 0.0
 
         for i, theta in enumerate(thetas):
             rot_temp = np.array(

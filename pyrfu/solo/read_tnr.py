@@ -19,20 +19,16 @@ from scipy import integrate
 from xarray.core.dataarray import DataArray
 
 from ..pyrf import read_cdf, time_clip, ts_append
+from .db_init import config_path
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
 
 
 def _list_files_tnr_l2(
@@ -60,10 +56,8 @@ def _list_files_tnr_l2(
 
     # Check path
     if not data_path:
-        pkg_path = os.path.dirname(os.path.abspath(__file__))
-
-        # Read the current version of the MMS configuration file
-        with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+        # Read the configuration file (user directory)
+        with open(config_path(), "r", encoding="utf-8") as fs:
             config = json.load(fs)
 
         data_path = os.path.normpath(config["local_data_dir"])
@@ -169,6 +163,12 @@ def read_tnr(
     ValueError
         If there is no data from the sensor selected.
 
+    Warnings
+    --------
+    Known issue in 2.5.0: fails on every file with data, because it calls
+    ``scipy.integrate.trapz``, which was removed in SciPy 1.14 (the minimum
+    supported version). It will be fixed in 2.6.
+
     Notes
     -----
     The script check if there are data from the two channel and put them
@@ -186,7 +186,7 @@ def read_tnr(
 
     for file in files:
         # Notify user
-        logging.info("Loading %s...", os.path.split(file)[-1])
+        logger.info("Loading %s...", os.path.split(file)[-1])
 
         data_l2 = read_cdf(file)
 

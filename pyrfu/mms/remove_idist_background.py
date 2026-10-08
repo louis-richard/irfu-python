@@ -6,7 +6,7 @@ import numpy as np
 from scipy import constants
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -58,7 +58,8 @@ def remove_idist_background(vdf, def_bg):
         (1, 1, vdf.phi.shape[1], vdf.theta.shape[0]),
     )
 
-    vdf_new = vdf.copy()
+    vdf_new = vdf.copy(deep=True)  # deep: the caller's VDF is unchanged
     vdf_new.data.data -= vdf_bg.data
+    vdf_new.data.data[vdf_new.data.data < 0] = 0.0
 
     return vdf_new

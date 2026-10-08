@@ -2,21 +2,44 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import itertools
+import os
 import random
+import subprocess
+import sys
 import unittest
+from unittest import mock
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 from ddt import data, ddt, unpack
 from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
+from matplotlib.colors import LogNorm, to_rgba
+from matplotlib.dates import date2num
 from matplotlib.image import AxesImage
 
 # Local imports
-from .. import plot
-from . import generate_data, generate_ts
+from .. import plot, pyrf
+from ..constants import R_E
+from . import generate_data, generate_timeline, generate_ts, generate_vdf
+
+
+def _close_new_figures(test_case):
+    r"""Close the figures created during the test, and only those: closing the
+    figures created at import by @data (e.g., plt.subplots in the decorators)
+    breaks the tests using them with interactive backends (Tk on Windows)."""
+    before = set(plt.get_fignums())
+
+    def close():
+        for num in set(plt.get_fignums()) - before:
+            plt.close(num)
+
+    test_case.addCleanup(close)
 
 
 @ddt
@@ -56,11 +79,96 @@ class PlotLineTestCase(unittest.TestCase):
 
 
 @ddt
+class PlotClinesTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
+    @data("jet", plt.get_cmap("viridis"))
+    def test_plot_clines_output(self, cmap):
+        # get_cmap(name=cmap) raised a TypeError on every call
+        energy = np.array([10.0, 30.0, 100.0, 1000.0, 3000.0])
+        inp = xr.DataArray(
+            np.random.rand(100, len(energy)),
+            coords=[generate_ts(64.0, 100).time.data, energy],
+            dims=["time", "energy"],
+        )
+        _, axis = plt.subplots(1)
+        result = plot.plot_clines(axis, inp, cmap=cmap)
+        self.assertIs(result[0], axis)
+        self.assertIsInstance(result[1], Axes)
+        self.assertEqual(len(axis.lines), len(energy))
+        self.assertEqual(axis.get_yscale(), "log")
+
+        # The colors follow the energies on the log colorbar (not the index)
+        c_map = plt.get_cmap(cmap) if isinstance(cmap, str) else cmap
+        expected = c_map(LogNorm(vmin=10.0, vmax=3000.0)(energy))
+        colors = [to_rgba(line.get_color()) for line in axis.lines]
+        np.testing.assert_allclose(colors, expected)
+
+    def test_plot_clines_cscale(self):
+        inp = xr.DataArray(
+            np.random.rand(10, 3),
+            coords=[generate_ts(64.0, 10).time.data, [1.0, 10.0, 100.0]],
+            dims=["time", "energy"],
+        )
+        with self.assertRaises(NotImplementedError):
+            plot.plot_clines(plt.subplots(1)[1], inp, cscale="lin")
+
+
+@ddt
 class AddPositionTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     @data(generate_ts(64.0, 100, tensor_order=1))
     def test_add_position_output(self, value):
         result = plot.add_position(plt.subplots(1)[1], value)
         self.assertIsInstance(result, Axes)
+
+    def test_add_position_values(self):
+        # Position every minute, x = seconds since the first sample
+        t_0 = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = t_0 + np.arange(10) * np.timedelta64(60, "s")
+        x_pos = np.arange(10) * 60.0
+        r_xyz = pyrf.ts_vec_xyz(time, np.stack([x_pos, 2 * x_pos, -x_pos], axis=1))
+
+        # Ticks between the samples, the last two after the time series
+        t_ticks = t_0 + np.arange(15, 660, 60) * np.timedelta64(1, "s")
+        _, ax = plt.subplots(1)
+        ax.plot(time, x_pos)
+        ax.set_xticks(date2num(t_ticks))
+        ax.set_xlim(date2num(t_ticks[[0, -1]]))
+
+        result = plot.add_position(ax, r_xyz, units="km")
+        labels = [label.get_text() for label in result.get_xticklabels()]
+        self.assertEqual(labels[0], "15.00\n30.00\n-15.00\n36.74")
+        self.assertEqual(labels[1], "75.00\n150.00\n-75.00\n183.71")
+        self.assertEqual(labels[8], "495.00\n990.00\n-495.00\n1212.50")
+        self.assertListEqual(labels[9:], ["", ""])
+        texts = [text_.get_text() for text_ in result.texts]
+        self.assertListEqual(texts, ["X [km]\nY [km]\nZ [km]\nR [km]"])
+
+    @data("top", "bottom")
+    def test_add_position_earth_radii(self, position):
+        # Position at (3, 4, 12) R_E, |R| = 13 R_E
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(10) * np.timedelta64(60, "s")
+        r_xyz = pyrf.ts_vec_xyz(time, np.tile([3.0, 4.0, 12.0], (10, 1)) * R_E)
+
+        _, ax = plt.subplots(1)
+        ax.plot(time, np.arange(10))
+        ax.set_xticks(date2num(time[2:8]))
+        result = plot.add_position(ax, r_xyz, position=position)
+        labels = [label.get_text() for label in result.get_xticklabels()]
+        self.assertListEqual(labels, ["3.00\n4.00\n12.00\n13.00"] * 6)
+        texts = [text_.get_text() for text_ in result.texts]
+        self.assertListEqual(texts, ["\n".join(f"{c} [$R_E$]" for c in "XYZR")])
+
+    def test_add_position_units(self):
+        with self.assertRaises(ValueError):
+            plot.add_position(
+                plt.subplots(1)[1], generate_ts(64.0, 100, tensor_order=1), units="m"
+            )
 
 
 @ddt
@@ -142,6 +250,184 @@ class SetColorCycleTestCase(unittest.TestCase):
         result = plot.set_color_cycle(value)
         self.asssertIsInstance(result[0], list)
         self.asssertIsInstance(result[1], str)
+
+
+class UsePyrfuStyleTestCase(unittest.TestCase):
+    @staticmethod
+    def _which(missing=()):
+        return lambda cmd: None if cmd in missing else f"/usr/bin/{cmd}"
+
+    def test_use_pyrfu_style_usetex(self):
+        with mpl.rc_context(), mock.patch("pyrfu.plot.shutil.which", self._which()):
+            plot.use_pyrfu_style(usetex=True)
+            self.assertTrue(mpl.rcParams["text.usetex"])
+            self.assertIn(r"\usepackage{amsmath}", mpl.rcParams["text.latex.preamble"])
+
+    def test_use_pyrfu_style_no_usetex(self):
+        with mpl.rc_context():
+            mpl.rcParams["text.usetex"] = True
+            plot.use_pyrfu_style(usetex=False)
+            self.assertFalse(mpl.rcParams["text.usetex"])
+
+    def test_use_pyrfu_style_usetex_fallback(self):
+        # matplotlib runs latex (not pdflatex), dvipng and gs
+        for missing in ["latex", "dvipng", "gs"]:
+            with (
+                mpl.rc_context(),
+                mock.patch("pyrfu.plot.shutil.which", self._which([missing])),
+            ):
+                with self.assertWarns(UserWarning):
+                    plot.use_pyrfu_style(usetex=True)
+
+                self.assertFalse(mpl.rcParams["text.usetex"])
+
+
+class PlotAngAngTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        # Energies 0, 1, ..., 31 and data (E + 1) (phi + 1) (theta + 1), constant
+        # in time, so the averaged map is <E + 1> (phi + 1) (theta + 1)
+        self.vdf = generate_vdf(64.0, 10, [32, 32, 16], units="s^3/m^6")
+        e_idx, p_idx, t_idx = np.meshgrid(
+            np.arange(32), np.arange(32), np.arange(16), indexing="ij"
+        )
+        self.vdf.data.data[:] = (e_idx + 1.0) * (p_idx + 1.0) * (t_idx + 1.0)
+        self.angles = np.outer(np.arange(1.0, 33.0), np.arange(1.0, 17.0))
+        self.tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[2, 7]]))
+
+    @staticmethod
+    def _map(ax):
+        # Plotted (phi, theta) map
+        return np.asarray(ax.collections[0].get_array()).reshape(16, 32).T
+
+    def test_plot_ang_ang_tint(self):
+        for tint in [self.tint, self.tint[:1]]:
+            f, ax, cax = plot.plot_ang_ang(self.vdf, tint, [5.0, 10.0])
+
+            self.assertIsInstance(f, plt.Figure)
+            self.assertIsInstance(cax, Axes)
+            np.testing.assert_allclose(self._map(ax), 8.5 * self.angles)
+            self.assertEqual(cax.get_ylabel(), "PSD [s$^3$ m$^{-6}$]")
+            self.assertEqual(ax.get_title(), "5 keV $\\leq E \\leq$ 10 keV")
+
+    def test_plot_ang_ang_defaults(self):
+        # Whole interval and all the energies, including the end channels
+        with self.assertWarns(UserWarning):
+            _, ax, _ = plot.plot_ang_ang(self.vdf)
+
+        np.testing.assert_allclose(self._map(ax), 16.5 * self.angles)
+        self.assertEqual(ax.get_title(), "0 keV $\\leq E \\leq$ 31 keV")
+
+    def test_plot_ang_ang_en_range(self):
+        # Clamped to the instrument range, without changing the caller's list
+        en_range = [-10.0, 1e3]
+        _, ax, _ = plot.plot_ang_ang(self.vdf, self.tint, en_range)
+
+        np.testing.assert_allclose(self._map(ax), 16.5 * self.angles)
+        self.assertListEqual(en_range, [-10.0, 1e3])
+
+        with self.assertRaises(ValueError):
+            plot.plot_ang_ang(self.vdf, self.tint, [100.0, 200.0])
+
+    def test_plot_ang_ang_units(self):
+        for units, label in [
+            ("s^3/cm^6", "PSD [s$^3$ cm$^{-6}$]"),
+            ("1/(cm^2 s sr keV)", "Intensity [(cm$^2$ s sr keV)$^{-1}$]"),
+            ("keV/(cm^2 s sr keV)", "DEF [keV (cm$^2$ s sr keV)$^{-1}$]"),
+            ("counts", "counts"),
+        ]:
+            self.vdf.data.attrs["UNITS"] = units
+            _, _, cax = plot.plot_ang_ang(self.vdf, self.tint, [5.0, 10.0])
+            self.assertEqual(cax.get_ylabel(), label)
+
+
+class PlScatterMatrixTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        # Components linear in time, so that resampling to another grid is exact
+        time = generate_timeline(100.0, 200)
+        t_sec = np.arange(200) / 100.0
+        self.inp1 = pyrf.ts_vec_xyz(time, np.outer(t_sec, [1.0, 2.0, 3.0]))
+        self.inp2 = pyrf.ts_vec_xyz(
+            time + np.timedelta64(3, "ms"), np.outer(t_sec, [-1.0, 4.0, 0.5]) + 1.0
+        )
+        # inp2 at the times of inp1
+        self.inp2_1 = np.outer(t_sec - 0.003, [-1.0, 4.0, 0.5]) + 1.0
+
+    def test_pl_scatter_matrix_scatter(self):
+        fig, axs = plot.pl_scatter_matrix(self.inp1, self.inp2)
+
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertEqual(axs.shape, (3, 3))
+
+        for i, j in itertools.product(range(3), range(3)):
+            offsets = axs[j, i].collections[0].get_offsets()
+            np.testing.assert_allclose(offsets[:, 0], self.inp1.data[:, i])
+            np.testing.assert_allclose(offsets[:, 1], self.inp2_1[:, j], atol=1e-12)
+
+    def test_pl_scatter_matrix_pdf(self):
+        _, axs, caxs = plot.pl_scatter_matrix(self.inp1, self.inp2, pdf=True)
+
+        self.assertEqual(axs.shape, (3, 3))
+        caxs = [cax for row in caxs for cax in row]
+        self.assertTrue(all(isinstance(cax, Axes) for cax in caxs))
+        self.assertEqual(len({id(cax) for cax in caxs}), 9)
+
+    def test_pl_scatter_matrix_input_type(self):
+        with self.assertRaises(TypeError):
+            plot.pl_scatter_matrix(self.inp1.data, self.inp2)
+
+
+class PlotMagnetosphereTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        # Offline: fake geopack, and models without OMNI data
+        trace = mock.Mock(return_value=(0, 0, 0, np.zeros(3), 0, np.zeros(3)))
+        self.geopack = mock.Mock(recalc=mock.Mock(), trace=trace)
+        self.module = sys.modules["pyrfu.plot.plot_magnetosphere"]
+        self.tint = ["2019-09-14T07:54:00.000", "2019-09-14T08:11:00.000"]
+
+        patches = [
+            mock.patch.dict(sys.modules, {"geopack": mock.Mock(geopack=self.geopack)}),
+            mock.patch.object(
+                self.module,
+                "magnetosphere",
+                lambda model, tint: pyrf.magnetosphere(model),
+            ),
+        ]
+
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def test_import_pyrfu_skips_geopack(self):
+        # geopack prints and requests the IGRF coefficients online when imported
+        code = "import sys, pyrfu; print('geopack' in sys.modules)"
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            check=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            text=True,
+        )
+        self.assertEqual(result.stdout, "False\n")
+
+    def test_plot_magnetosphere_field_lines(self):
+        _, ax = plt.subplots(1)
+        result = plot.plot_magnetosphere(ax, self.tint)
+
+        self.assertIs(result, ax)
+        # Magnetopause, bow shock and 2 x 190 field lines
+        self.assertEqual(len(ax.lines), 2 + 2 * 190)
+        self.geopack.recalc.assert_called_once()
+        self.assertEqual(self.geopack.trace.call_count, 2 * 190)
+
+    def test_plot_magnetosphere_no_field_lines(self):
+        _, ax = plt.subplots(1)
+        plot.plot_magnetosphere(ax, self.tint, field_lines=False)
+
+        self.assertEqual(len(ax.lines), 2)
+        self.geopack.trace.assert_not_called()
 
 
 @ddt
@@ -228,6 +514,45 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
 
         # Test with no data provided
         plot.annotate_heatmap(im)
+
+
+class MmsPlConfigTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        # Tetrahedron of ~20 km around (60000, 10000, 5000) km, with a small
+        # motion averaged out
+        time = generate_timeline(1.0, 5)
+        self.r_mean = np.array([60000.0, 10000.0, 5000.0]) + np.array(
+            [[0, 0, 0], [20, 0, 0], [10, 17, 0], [10, 6, 16]], dtype=float
+        )
+        motion = np.outer(np.arange(5) - 2.0, [1.0, -1.0, 0.5])
+        self.r_mms = [pyrf.ts_vec_xyz(time, r + motion) for r in self.r_mean]
+
+    def test_mms_pl_config_positions(self):
+        fig, axs = plot.mms_pl_config(self.r_mms)
+        self.assertIsInstance(fig, plt.Figure)
+        self.assertEqual(len(axs), 4)
+
+        # X-Z, Y-Z and X-Y panels in Earth radii
+        for ax, (i_x, i_y) in zip(axs[:3], [(0, 2), (1, 2), (0, 1)]):
+            offsets = np.vstack([c.get_offsets()[0] for c in ax.collections])
+            expected = self.r_mean[:, [i_x, i_y]] / R_E
+            np.testing.assert_allclose(offsets, expected, rtol=1e-12)
+
+        # Relative positions in km, inside the axis limits
+        delta_r = self.r_mean - np.mean(self.r_mean, axis=0)
+        points = np.array(
+            [np.ravel(c._offsets3d) for c in axs[3].collections[:4]]  # noqa
+        )
+        np.testing.assert_allclose(points, delta_r, atol=1e-9)
+        for lim in [axs[3].get_xlim(), axs[3].get_zlim()]:
+            self.assertGreaterEqual(lim[1], np.max(np.abs(delta_r)))
+
+    def test_mms_pl_config_far(self):
+        # Positions beyond 20 R_E widen the 2d panels
+        r_mms = [r + 30 * R_E for r in self.r_mms]
+        _, axs = plot.mms_pl_config(r_mms)
+        self.assertGreater(axs[0].get_xlim()[0], 30 + np.max(self.r_mean) / R_E)
 
 
 if __name__ == "__main__":

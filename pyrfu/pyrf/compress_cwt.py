@@ -7,46 +7,47 @@ import numpy as np
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-@numba.jit(cache=True, fastmath=True, nopython=True, parallel=True)
-def _compress_cwt_1d(cwt, nc: int = 100):
+# No fastmath: it lets LLVM assume there are no NaNs, so np.nanmean would not
+# skip them (NaN windows at data gaps and in the cone of influence)
+@numba.jit(cache=True, fastmath=False, nopython=True, parallel=True)
+def _compress_cwt_1d(cwt, idxs, nc):
     nf = cwt.shape[1]
-    idxs = np.arange(
-        int(nc / 2),
-        len(cwt) - int(nc / 2),
-        step=nc,
-        dtype=np.int64,
-    )
+
     cwt_c = np.zeros((len(idxs), nf))
 
-    for i, idx in enumerate(idxs):
+    for i in numba.prange(len(idxs)):
+        idx = idxs[i]
         for j in range(nf):
-            x_data = cwt[idx - int(nc / 2) : idx + int(nc / 2), j]
+            # Block of nc time steps starting at idx
+            x_data = cwt[idx : idx + nc, j]
             cwt_c[i, j] = np.nanmean(x_data)
 
     return cwt_c
 
 
 def compress_cwt(cwt, nc: int = 100):
-    r"""Compress the wavelet transform averaging of nc time steps.
+    r"""Compress the wavelet transform averaging over blocks of nc time steps.
 
     Parameters
     ----------
     cwt : xarray.Dataset
         Wavelet transform to compress.
     nc : int, Optional
-        Number of time steps for averaging. Default is 100.
+        Number of time steps for averaging. The time series is split into
+        len(time) // nc consecutive blocks; the remaining samples at the end are
+        dropped. NaNs are ignored in the averages. Default is 100.
 
     Returns
     -------
-    cwt_t : xarray.DataArray
-        Sampling times.
+    cwt_t : numpy.ndarray
+        Times of the centres of the blocks.
     cwt_x : ndarray
         Compressed wavelet transform of the first component of the field.
     cwt_y : ndarray
@@ -58,16 +59,15 @@ def compress_cwt(cwt, nc: int = 100):
 
     assert isinstance(cwt, xr.Dataset), "cwt must be an xarray.Dataset"
 
-    indices = np.arange(
-        int(nc / 2),
-        len(cwt.time.data) - int(nc / 2),
-        step=nc,
-        dtype=np.int64,
-    )
+    # First time step of each block
+    indices = np.arange(len(cwt.time.data) // nc, dtype=np.int64) * nc
 
-    cwt_t = cwt.time.data[indices]
-    cwt_x = _compress_cwt_1d(cwt.x.data, nc=nc)
-    cwt_y = _compress_cwt_1d(cwt.y.data, nc=nc)
-    cwt_z = _compress_cwt_1d(cwt.z.data, nc=nc)
+    # Time at the centre of each block
+    times = cwt.time.data
+    cwt_t = times[indices] + (times[indices + nc - 1] - times[indices]) / 2
+
+    cwt_x = _compress_cwt_1d(cwt.x.data, indices, nc=nc)
+    cwt_y = _compress_cwt_1d(cwt.y.data, indices, nc=nc)
+    cwt_z = _compress_cwt_1d(cwt.z.data, indices, nc=nc)
 
     return cwt_t, cwt_x, cwt_y, cwt_z

@@ -7,14 +7,16 @@ import warnings
 import matplotlib.pyplot as plt
 
 # 3rd party imports
+import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf import histogram2d
-from . import plot_spectr
+from ..pyrf.histogram2d import histogram2d
+from ..pyrf.resample import resample
+from .plot_spectr import plot_spectr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -49,8 +51,8 @@ def pl_scatter_matrix(
         Figure with time series plots.
     axs : matplotlib.axes._subplots.AxesSubplot
         Axes.
-    caxs : matplotlib.pyplot.colorbar
-        Only if pdf is True
+    caxs : list of list of matplotlib.axes.Axes
+        Colorbar axes, in the same layout as axs. Only if pdf is True.
 
     """
 
@@ -58,7 +60,12 @@ def pl_scatter_matrix(
         inp2 = inp1
         warnings.warn("inp2 is empty assuming that inp2=inp1", UserWarning)
 
-    assert isinstance(inp1, xr.DataArray) and isinstance(inp2, xr.DataArray)
+    if not isinstance(inp1, xr.DataArray) or not isinstance(inp2, xr.DataArray):
+        raise TypeError("inp1 and inp2 must be xarray.DataArray")
+
+    # Pair the samples at the same times (as histogram2d does)
+    if not np.array_equal(inp1.time.data, inp2.time.data):
+        inp2 = resample(inp2, inp1)
 
     if not pdf:
         fig, axs = plt.subplots(
@@ -103,7 +110,7 @@ def pl_scatter_matrix(
             wspace=0.3,
         )
 
-        caxs = [[None] * 3] * 3
+        caxs = [[None] * 3 for _ in range(3)]
 
         for i in range(3):
             for j in range(3):

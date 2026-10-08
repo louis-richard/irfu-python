@@ -8,7 +8,7 @@ import os
 from typing import Mapping
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -47,7 +47,7 @@ ALL_PARAMS_SCALARS = [
     "defe",
     "defbge",
     "energyi",
-    "bnergye",
+    "energye",
     "epar",
     "sdev12",
     "sdev34",
@@ -219,6 +219,12 @@ def tokenize(var_str: str) -> Mapping[str, str]:
             * dtype: Data type.
             * cdf_name : variable name in the CDF file.
 
+    Raises
+    ------
+    ValueError
+        If a part of the key is invalid, or if the variable is not supported
+        (not listed in mms_keys.json).
+
     """
     splitted_key = var_str.split("_")
     assert len(splitted_key) == 4 or len(splitted_key) == 5
@@ -257,6 +263,13 @@ def tokenize(var_str: str) -> Mapping[str, str]:
         os.sep.join([root_path, "mms_keys.json"]), "r", encoding="utf-8"
     ) as json_file:
         keys_ = json.load(json_file)
+
+    # Valid parts do not make a supported variable: only the combinations
+    # listed in mms_keys.json can be loaded
+    if var_str.lower() not in keys_.get(instrument, {}):
+        raise ValueError(
+            f"{var_str} is not supported by pyrfu.mms.get_data (not in mms_keys.json)"
+        )
 
     res = {
         "param": splitted_key[0],

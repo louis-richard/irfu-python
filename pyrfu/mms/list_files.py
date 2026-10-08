@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import bisect
 import datetime
 import json
 import os
@@ -11,17 +10,16 @@ from typing import Mapping, Optional, Union
 
 # 3rd party imports
 import numpy as np
-from dateutil import parser
-from dateutil.rrule import DAILY, rrule
 
 from pyrfu.mms.db_init import MMS_CFG_PATH
 
 # Local imports
+from pyrfu.mms.list_files_aws import _file_time
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -83,10 +81,10 @@ def list_files(
     else:
         raise TypeError("Values must be in str!!")
 
-    files_out = []
-
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)
+
+    t_start, t_end = [_file_time(re.sub(r"\D", "", t)[:14]) for t in tint_iso8601]
 
     # directory and file name search patterns:
     # - assume directories are of the form:
@@ -94,132 +92,59 @@ def list_files(
     # (brst): spacecraft/instrument/rate/level[/datatype]/year/month/day/
     # - assume file names are of the form:
     # spacecraft_instrument_rate_level[_datatype]_YYYYMMDD[hhmmss]_version.cdf
-
-    file_name = (
-        f"mms{mms_id}_{var['inst']}_{var['tmmode']}_{var['lev']}"
-        + r"(_)?.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+    file_regex = re.compile(
+        rf"^mms{mms_id}_{var['inst']}_{var['tmmode']}_{var['lev']}"
+        + r"(?:_.*)?_([0-9]{8,14})_v(\d+)\.(\d+)\.(\d+)\.cdf$"
     )
 
-    d_start = parser.parse(parser.parse(tint_iso8601[0]).strftime("%Y-%m-%d"))
-    until_ = parser.parse(tint_iso8601[1]) - datetime.timedelta(seconds=1)
-    days = rrule(DAILY, dtstart=d_start, until=until_)
-
     if var["dtype"] == "" or var["dtype"] is None:
-        level_and_dtype = var["lev"]
+        level_and_dtype = [var["lev"]]
     else:
-        level_and_dtype = os.sep.join([var["lev"], var["dtype"]])
+        level_and_dtype = [var["lev"], var["dtype"]]
 
-    for date in days:
+    # Latest version of each file, by time tag
+    files = {}
+    day = datetime.datetime.combine(t_start.date(), datetime.time())
+
+    while day < t_end:
+        local_dir = os.path.join(
+            root_path,
+            f"mms{mms_id}",
+            var["inst"],
+            var["tmmode"],
+            *level_and_dtype,
+            day.strftime("%Y"),
+            day.strftime("%m"),
+        )
+
         if var["tmmode"] == "brst":
-            local_dir = os.sep.join(
-                [
-                    root_path,
-                    f"mms{mms_id}",
-                    var["inst"],
-                    var["tmmode"],
-                    level_and_dtype,
-                    date.strftime("%Y"),
-                    date.strftime("%m"),
-                    date.strftime("%d"),
-                ],
-            )
-        else:
-            local_dir = os.sep.join(
-                [
-                    root_path,
-                    f"mms{mms_id}",
-                    var["inst"],
-                    var["tmmode"],
-                    level_and_dtype,
-                    date.strftime("%Y"),
-                    date.strftime("%m"),
-                ],
-            )
+            local_dir = os.path.join(local_dir, day.strftime("%d"))
 
-        if os.name == "nt":
-            full_path = os.sep.join([re.escape(local_dir) + os.sep, file_name])
-        else:
-            full_path = os.sep.join([re.escape(local_dir), file_name])
+        for root, _, file_names in os.walk(local_dir):
+            for file_name in file_names:
+                matches = file_regex.match(file_name)
 
-        regex = re.compile(full_path)
+                if not matches:
+                    continue
 
-        for root, _, files in os.walk(local_dir):
-            for file in files:
-                file_path = os.sep.join([root, file])
+                time_tag, *version = matches.groups()
+                version = tuple(map(int, version))
 
-                matches = regex.match(file_path)
-                if matches:
-                    this_time = parser.parse(matches.groups()[1])
-                    if d_start <= this_time <= until_:
-                        this_file = {
-                            "file_name": file,
-                            "timetag": "",
-                            "full_name": file_path,
-                            "file_size": "",
-                        }
+                if time_tag not in files or version > files[time_tag][0]:
+                    files[time_tag] = (version, os.path.join(root, file_name))
 
-                        if this_file not in files_out:
-                            files_out.append(this_file)
+        day += datetime.timedelta(days=1)
 
-    in_files = files_out
+    # Files starting within the time interval, and the last one starting before
+    # (or at) its start, which covers it (as list_files_aws)
+    times = sorted(files, key=_file_time)
+    starts = [_file_time(time_tag) for time_tag in times]
+    i_first = max([i for i, start in enumerate(starts) if start <= t_start] or [0])
 
-    file_name = r"mms.*_([0-9]{8,14})_v(\d+).(\d+).(\d+).cdf"
+    file_paths = [
+        files[time_tag][1]
+        for time_tag, start in zip(times[i_first:], starts[i_first:])
+        if start < t_end
+    ]
 
-    file_times = []
-
-    regex = re.compile(file_name)
-
-    for in_file in in_files:
-        matches = regex.match(in_file["file_name"])
-        if matches:
-            file_times.append(
-                (
-                    in_file["file_name"],
-                    parser.parse(matches.groups()[0]).timestamp(),
-                    in_file["timetag"],
-                    in_file["file_size"],
-                ),
-            )
-
-    # sort in time
-    sorted_files = sorted(file_times, key=lambda x: x[1])
-
-    times = [t[1] for t in sorted_files]
-
-    idx_min = bisect.bisect_left(times, parser.parse(tint_iso8601[0]).timestamp())
-
-    # note: purposefully liberal here; include one extra file so that we
-    # always get the burst mode
-    # data
-    if idx_min == 0:
-        files_in_interval = []
-        for sorted_file in sorted_files[idx_min:]:
-            files_in_interval.append(
-                {
-                    "file_name": sorted_file[0],
-                    "timetag": sorted_file[2],
-                    "file_size": sorted_file[3],
-                },
-            )
-    else:
-        files_in_interval = []
-        for sorted_file in sorted_files[idx_min - 1 :]:
-            files_in_interval.append(
-                {
-                    "file_name": sorted_file[0],
-                    "timetag": sorted_file[2],
-                    "file_size": sorted_file[3],
-                },
-            )
-
-    local_files = []
-
-    file_names = [f["file_name"] for f in files_in_interval]
-
-    for file_out in files_out:
-        if file_out["file_name"] in file_names:
-            local_files.append(file_out["full_name"])
-
-    file_names = sorted(local_files)
-
-    return file_names
+    return file_paths

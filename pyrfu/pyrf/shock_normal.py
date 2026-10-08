@@ -12,8 +12,11 @@ import xarray as xr
 from scipy import constants, interpolate, optimize
 from scipy.spatial.transform import Rotation as R
 
+# Local imports
+from ..constants import R_E
+
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -36,17 +39,18 @@ def shock_normal(spec, leq90: bool = True):
     ----------
     spec : dict
         Hash table with:
-            * b_u : Upstream magnetic field (nT).
-            * b_d : Downstream magnetic field.
-            * v_u : Upstream plasma bulk velocity (km/s).
-            * v_d : Downstream plasma bulk velocity.
-            * n_u : Upstream number density (cm^-3).
-            * n_d : Downstream number density.
-            * r_xyz : Spacecraft position in time series format of 1x3 vector. Optional.
-            * d2u : Down-to-up, is 1 or -1. Optional.
-            * dt_f : Time duration of shock foot (s). Optional.
-            * f_cp : Reflected ion gyrofrequency (Hz). Optional.
-            * n : Number of Monte Carlo particles. Optional, default is 100.
+
+        * b_u : Upstream magnetic field (nT).
+        * b_d : Downstream magnetic field.
+        * v_u : Upstream plasma bulk velocity (km/s).
+        * v_d : Downstream plasma bulk velocity.
+        * n_u : Upstream number density (cm^-3).
+        * n_d : Downstream number density.
+        * r_xyz : Spacecraft position in time series format of 1x3 vector. Optional.
+        * d2u : Down-to-up, is 1 or -1. Optional.
+        * dt_f : Time duration of shock foot (s). Optional.
+        * f_cp : Reflected ion gyrofrequency (Hz). Optional.
+        * n : Number of Monte Carlo particles. Optional, default is 100.
 
     leq90 : bool, Optional
         Force angles to be less than 90 (default). For leq90 = 0, angles can be between
@@ -57,35 +61,41 @@ def shock_normal(spec, leq90: bool = True):
     -------
     out : dict
         Hash table with:
-            * n : Hash table containing normal vectors (n always points toward the
-            upstream region).
-            From data:
-                * mc : Magnetic coplanarity (10.14)
-                * vc : Velocity coplanarity (10.18)
-                * mx_1 : Mixed method 1 (10.15), [2]_
-                * mx_2 : Mixed method 2 (10.16), [2]_
-                * mx_3 : Mixed method 3 (10.17), [2]_
-            From models (only if r_xyz is included in spec):
-                * farris : [3]_
-                * slho : [4]_
-                * per : [5]_, (z = 0)
-                * fa4o : [6]_
-                * fan4o : [6]_
-                * foun : [7]_
 
-            * theta_bn : Angle between normal vector and b_u, same fields as n.
-            * theta_vn : Angle between normal vector and v_u, same fields as n.
-            * v_sh : Hash table containing shock velocities:
-                * gt : Using shock foot thickness (10.32). [8]_
-                * mf : Mass flux conservation (10.29).
-                * sb : Using jump conditions (10.33). [9]_
-                * mo : Using shock foot thickness
-            * info : Hash table containing some more info:
-                * msh : Magnetic shear angle.
-                * vsh : Velocity shear angle.
-                * cmat : Constraints matrix with normalized errors.
-                * sig : Scaling factor to fit shock models to sc position. Calculated
-                from (10.9-10.13) in [1]_
+        * n : Hash table containing normal vectors (n always points toward the
+          upstream region). From data:
+
+          * mc : Magnetic coplanarity (10.14)
+          * vc : Velocity coplanarity (10.18)
+          * mx_1 : Mixed method 1 (10.15), [2]_
+          * mx_2 : Mixed method 2 (10.16), [2]_
+          * mx_3 : Mixed method 3 (10.17), [2]_
+
+          From models (only if r_xyz is included in spec):
+
+          * farris : [3]_
+          * slho : [4]_
+          * per : [5]_, (z = 0)
+          * fa4o : [6]_
+          * fan4o : [6]_
+          * foun : [7]_
+
+        * theta_bn : Angle between normal vector and b_u, same fields as n.
+        * theta_vn : Angle between normal vector and v_u, same fields as n.
+        * v_sh : Hash table containing shock velocities:
+
+          * gt : Using shock foot thickness (10.32). [8]_
+          * mf : Mass flux conservation (10.29).
+          * sb : Using jump conditions (10.33). [9]_
+          * mo : Using shock foot thickness
+
+        * info : Hash table containing some more info:
+
+          * msh : Magnetic shear angle.
+          * vsh : Velocity shear angle.
+          * cmat : Constraints matrix with normalized errors.
+          * sig : Scaling factor to fit shock models to sc position. Calculated
+            from (10.9-10.13) in [1]_
 
 
     References
@@ -127,6 +137,18 @@ def shock_normal(spec, leq90: bool = True):
 
     # Check input
     assert isinstance(spec, dict), "spec must be a dictionary"
+
+    # Work on a copy, with the fields and plasma parameters as arrays: lists
+    # are accepted, and the caller's dict is not modified (delta_b and delta_v
+    # are added below)
+    spec = {
+        k: (
+            np.asarray(v, dtype=np.float64)
+            if k in ["b_u", "b_d", "v_u", "v_d", "n_u", "n_d"]
+            else v
+        )
+        for k, v in spec.items()
+    }
 
     if spec["b_u"].ndim > 1 or spec["b_d"].ndim > 1:
         n_bu = len(spec["b_u"])
@@ -205,7 +227,17 @@ def shock_normal(spec, leq90: bool = True):
             for k in info:
                 info[k][m] = shock_models_params[m][k]
 
-            normal[m], sig[m] = _shock_model(spec, *shock_models_params[m].values())
+            # Pass the model parameters by name (the JSON key order differs from
+            # the argument order of _shock_model)
+            params = shock_models_params[m]
+            normal[m], sig[m] = _shock_model(
+                spec,
+                params["eps"],
+                params["l"],
+                params["x_0"],
+                params["y_0"],
+                params["alpha"],
+            )
 
         info["sig"] = sig
     else:
@@ -261,7 +293,7 @@ def _shock_angle(spec, n, field, leq90):
         tmp = np.rad2deg(np.arccos(np.sum(a * n[fname]) / np.linalg.norm(a)))
 
         if tmp > 90.0 and leq90:
-            theta[fname] = 90.0 - tmp
+            theta[fname] = 180.0 - tmp
         else:
             theta[fname] = tmp
 
@@ -280,10 +312,10 @@ def _shock_model(spec, *args):
     # sc position in GSE (or GSM or whatever) in Earth radii
     if isinstance(spec["r_xyz"], xr.DataArray):
         # Time series
-        r_sc = np.mean(spec["r_xyz"].data, axis=0) / 6371.0
+        r_sc = np.mean(spec["r_xyz"].data, axis=0) / R_E
     elif isinstance(spec["r_xyz"], (np.ndarray, list)) and len(spec["r_xyz"]) == 3:
         # Array like
-        r_sc = spec["r_xyz"] / 6371.0
+        r_sc = np.asarray(spec["r_xyz"], dtype=np.float64) / R_E
     else:
         raise TypeError("r_xyz must be a time series or a vector!!")
 

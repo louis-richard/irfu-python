@@ -44,13 +44,16 @@ def vdf_to_e64(vdf_e32):
     energy_r = np.tile(energy_r, (len(vdf_r), 1))
 
     # Data attributes
-    data_attrs = vdf_e32.data.attrs
+    data_attrs = dict(vdf_e32.data.attrs)
 
     # Coordinates attributes
-    coords_attrs = {k: vdf_e32[k].attrs for k in ["time", "energy", "phi", "theta"]}
+    coords_attrs = {
+        k: dict(vdf_e32[k].attrs) for k in ["time", "energy", "phi", "theta"]
+    }
 
-    # Global attributes
-    glob_attrs = vdf_e32.attrs
+    # Global attributes (copy: the 64-channel delta energies must not overwrite the
+    # caller's)
+    glob_attrs = dict(vdf_e32.attrs)
 
     # update delta_energy
     if "delta_energy_plus" in glob_attrs and "delta_energy_minus" in glob_attrs:
@@ -67,8 +70,14 @@ def vdf_to_e64(vdf_e32):
         energy_minus = 10**log10_energy_minus
         delta_energy_plus = energy_plus - energy_r
         delta_energy_minus = abs(energy_minus - energy_r)
-        delta_energy_plus[-1] = np.max(vdf_e32.attrs["delta_energy_minus"][:, -1])
-        delta_energy_minus[0] = np.min(vdf_e32.attrs["delta_energy_minus"][:, 0])
+        # Outer edges (top and bottom channels) from the 32-channel widths. The
+        # arrays are (time, energy): [-1] and [0] overwrote time steps.
+        delta_energy_plus[:, -1] = np.max(
+            np.asarray(vdf_e32.attrs["delta_energy_plus"])[:, -1]
+        )
+        delta_energy_minus[:, 0] = np.min(
+            np.asarray(vdf_e32.attrs["delta_energy_minus"])[:, 0]
+        )
 
         glob_attrs["delta_energy_plus"] = delta_energy_plus
         glob_attrs["delta_energy_minus"] = delta_energy_minus

@@ -6,6 +6,7 @@ import string
 from typing import Dict, Optional
 
 # 3rd party imports
+import matplotlib
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
@@ -16,12 +17,16 @@ from xarray.core.dataset import Dataset
 from .. import pyrf
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+
+# Non-interactive backend for the tests, so that they behave the same on every
+# platform (Windows CI otherwise uses Tk, where closed figures can't be used)
+matplotlib.use("Agg")
 
 __all__ = [
     "generate_timeline",

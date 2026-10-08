@@ -9,17 +9,32 @@ from ..pyrf.dec_par_perp import dec_par_perp
 from ..pyrf.norm import norm
 from ..pyrf.resample import resample
 from ..pyrf.trace import trace
-from ..pyrf.ts_scalar import ts_scalar
 
 # Local imports
 from .rotate_tensor import rotate_tensor
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+def _perp_direction(v_perp, b_hat):
+    r"""Unit vectors along v_perp, or any direction perpendicular to b_hat
+    where v_perp is zero (the model is gyrotropic)."""
+    v_perp_mag = np.linalg.norm(v_perp, axis=1, keepdims=True)
+
+    # Perpendicular to B from x (or y if B is along x)
+    ref = np.where(np.abs(b_hat[:, :1]) < 0.9, [[1.0, 0.0, 0.0]], [[0.0, 1.0, 0.0]])
+    any_perp = np.cross(b_hat, ref)
+    any_perp /= np.linalg.norm(any_perp, axis=1, keepdims=True)
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out = np.where(v_perp_mag > 0, v_perp / v_perp_mag, any_perp)
+
+    return out
 
 
 def make_model_vdf(
@@ -54,11 +69,27 @@ def make_model_vdf(
     Returns
     -------
     model_vdf : xarray.Dataset
-        Distribution function in the same format as vdf.
+        Distribution function in the same format as vdf, in s^3/km^6. The
+        channels whose energy is below the spacecraft potential correspond to
+        no particle velocity and are NaN (irfu-matlab gives the value at
+        v = 0). Their weight is zero in velocity-space integrals (v^2 dv), so
+        :func:`pyrfu.mms.calculate_epsilon` and moments are unaffected.
+
+    Raises
+    ------
+    ValueError
+        If the species is not ions or electrons, or if vdf and the moments
+        have different times.
 
     See also
     --------
     pyrfu.mms.calculate_epsilon : Calculates epsilon parameter using model distribution.
+
+    Notes
+    -----
+    The model is gyrotropic: when the bulk velocity is parallel to the
+    magnetic field (or zero), any direction perpendicular to it is used for
+    the perpendicular axis.
 
     Examples
     --------
@@ -89,11 +120,18 @@ def make_model_vdf(
 
     """
 
-    assert vdf.attrs["species"][0].lower() in ["i", "e"], "Invalid specie"
+    species = str(vdf.attrs["species"]).lower()
+
+    if species[:1] not in ["i", "e"]:
+        raise ValueError(f"Invalid species {vdf.attrs['species']!r}")
 
     # Check that VDF and moments have the same timeline
-    message = "VDF and moments have different times."
-    assert np.abs(np.median(np.diff(vdf.time.data - n_s.time.data))) == 0, message
+    d_times = vdf.time.data - n_s.time.data if len(vdf.time) == len(n_s.time) else None
+
+    if d_times is None or (
+        len(d_times) > 1 and np.median(np.diff(d_times)) != np.timedelta64(0, "ns")
+    ):
+        raise ValueError("VDF and moments have different times.")
 
     # Resample b_xyz and sc_pot to particle data resolution
     b_xyz, sc_pot = [resample(b_xyz, n_s), resample(sc_pot, n_s)]
@@ -103,131 +141,72 @@ def make_model_vdf(
     t_xyzfac = rotate_tensor(t_xyz, "fac", b_xyz, "pp")
 
     if isotropic:
-        t_para = trace(t_xyzfac) / 3
-        t_ratio = ts_scalar(
-            t_xyzfac.time.data,
-            np.ones(len(t_xyzfac.time.data)),
-        )
+        t_para = trace(t_xyzfac).data / 3
+        t_ratio = np.ones(len(t_xyzfac.time.data))
     else:
-        t_para = t_xyzfac[:, 0, 0]
-        t_ratio = t_xyzfac[:, 0, 0] / t_xyzfac[:, 1, 1]
+        t_para = t_xyzfac.data[:, 0, 0]
+        t_ratio = t_xyzfac.data[:, 0, 0] / t_xyzfac.data[:, 1, 1]
 
     v_para, v_perp, _ = dec_par_perp(v_xyz, b_xyz)
 
-    v_perp_mag, b_xyz_mag = [norm(v_perp), norm(b_xyz)]
-    v_perp_dir, b_xyz_dir = [v_perp / v_perp_mag, b_xyz / b_xyz_mag]
-
-    # Define constants
-    q_e = constants.elementary_charge
+    # Rotation vectors based on B and the perpendicular bulk velocity
+    r_z = (b_xyz / norm(b_xyz)).data
+    r_x = _perp_direction(v_perp.data, r_z)
+    r_y = np.cross(r_z, r_x)
 
     # Check whether particles are electrons or ions
-    if vdf.attrs["species"][0].lower() == "e":
+    q_e = constants.elementary_charge
+
+    if species[0] == "e":
         p_mass = constants.electron_mass
+        sc_pot = sc_pot.data
     else:
         p_mass = constants.proton_mass
-        sc_pot.data = -1.0 * sc_pot.data
+        sc_pot = -sc_pot.data
 
     # Convert moments to SI units
-    vth_para = np.sqrt(2 * t_para.data * q_e / p_mass)
+    vth_para = np.sqrt(2 * t_para * q_e / p_mass)
+    v_perp_mag = 1e3 * norm(v_perp).data
+    v_para = 1e3 * v_para.data
+    n_s = 1e6 * n_s.data
 
-    v_perp_mag_data = 1e3 * v_perp_mag.data
-    v_para_data = 1e3 * v_para.data
-    n_s_data = 1e6 * n_s.data
+    # Directions of the particle velocities (minus the look directions),
+    # (time, phi, theta)
+    phi = np.deg2rad(vdf.phi.data)[:, :, None]
+    theta = np.deg2rad(vdf.theta.data)[None, None, :]
+    dirs = [
+        -np.cos(phi) * np.sin(theta),
+        -np.sin(phi) * np.sin(theta),
+        -np.cos(theta) * np.ones_like(phi),
+    ]
 
-    # Defines dimensions of array below
-    n_ti = len(vdf.time)
-    n_en = len(vdf.energy.data[0, :])
-    n_ph, n_th = [len(angle) for angle in [vdf.phi[0, :], vdf.theta]]
+    # Components in the (v_perp, B x v_perp, B) frame, (time, 1, phi, theta)
+    x_p, y_p, z_p = [
+        sum(d * r_[:, i, None, None] for i, d in enumerate(dirs))[:, None, ...]
+        for r_ in [r_x, r_y, r_z]
+    ]
 
-    # Get energy array
-    energy = vdf.energy
+    # Speeds corrected for the spacecraft potential, (time, energy, 1, 1)
+    energy = vdf.energy.data.astype(np.float64) - sc_pot[:, None]
+    below = energy < 0
+    speed = np.sqrt(2 * np.clip(energy, 0.0, None) * q_e / p_mass)[..., None, None]
 
-    # Define Cartesian coordinates
-    x_mat, y_mat, z_mat = [np.zeros((n_ti, n_ph, n_th)) for _ in range(3)]
+    # Bi-Maxwellian distribution function
+    def _col(x):
+        return x[:, None, None, None]
 
-    r_mat = np.zeros((n_ti, n_en))
+    coeff = n_s * t_ratio / (np.sqrt(np.pi**3) * vth_para**3)
+    exponent = (x_p * speed - _col(v_perp_mag)) ** 2 + (y_p * speed) ** 2
+    exponent *= _col(t_ratio)
+    exponent += (z_p * speed - _col(v_para)) ** 2
+    bi_max_dist = _col(coeff) * np.exp(-exponent / _col(vth_para**2))
 
-    for i in range(n_ti):
-        x_mat[i, ...] = np.outer(
-            -np.cos(np.deg2rad(vdf.phi.data[i, :])),
-            np.sin(np.deg2rad(vdf.theta.data)),
-        )
-        y_mat[i, ...] = np.outer(
-            -np.sin(np.deg2rad(vdf.phi.data[i, :])),
-            np.sin(np.deg2rad(vdf.theta.data)),
-        )
-        z_mat[i, ...] = np.outer(
-            -np.ones(n_ph),
-            np.cos(np.deg2rad(vdf.theta.data)),
-        )
-        r_mat[i, ...] = np.real(
-            np.sqrt(2 * (energy[i, :] - sc_pot.data[i]) * q_e / p_mass),
-        )
+    # No particle velocity below the spacecraft potential
+    bi_max_dist[below] = np.nan
 
-    r_mat[r_mat == 0] = 0.0
-
-    # Define rotation vectors based on B and Ve directions
-    r_x = v_perp_dir.data
-    r_y = np.cross(b_xyz_dir.data, v_perp_dir.data)
-    r_z = b_xyz_dir.data
-
-    # Rotated coordinate system for computing bi-Maxwellian distribution
-    x_p, y_p, z_p = [np.zeros((n_ti, n_ph, n_th)) for _ in range(3)]
-
-    for i in range(n_ti):
-        x_p[i, ...] = (
-            x_mat[i, ...] * r_x[i, 0]
-            + y_mat[i, ...] * r_x[i, 1]
-            + z_mat[i, ...] * r_x[i, 2]
-        )
-
-        y_p[i, ...] = (
-            x_mat[i, ...] * r_y[i, 0]
-            + y_mat[i, ...] * r_y[i, 1]
-            + z_mat[i, ...] * r_y[i, 2]
-        )
-
-        z_p[i, ...] = (
-            x_mat[i, ...] * r_z[i, 0]
-            + y_mat[i, ...] * r_z[i, 1]
-            + z_mat[i, ...] * r_z[i, 2]
-        )
-
-    # Make 4D position matrix
-    x_p = np.transpose(np.tile(x_p, [n_en, 1, 1, 1]), [1, 0, 2, 3])
-    y_p = np.transpose(np.tile(y_p, [n_en, 1, 1, 1]), [1, 0, 2, 3])
-    z_p = np.transpose(np.tile(z_p, [n_en, 1, 1, 1]), [1, 0, 2, 3])
-    r_mat = np.transpose(np.tile(r_mat, [n_ph, n_th, 1, 1]), [2, 3, 0, 1])
-
-    # Construct bi-Maxwellian distribution function
-    bi_max_dist = np.zeros(r_mat.shape)
-
-    for i in range(n_ti):
-        coeff = (
-            n_s_data[i] * t_ratio.data[i] / (np.sqrt(np.pi**3) * vth_para.data[i] ** 3)
-        )
-
-        bi_max_temp = coeff * np.exp(
-            -((x_p[i, ...] * r_mat[i, ...] - v_perp_mag_data[i]) ** 2)
-            / (vth_para.data[i] ** 2)
-            * t_ratio.data[i],
-        )
-        bi_max_temp = bi_max_temp * np.exp(
-            -((y_p[i, ...] * r_mat[i, ...]) ** 2)
-            / (vth_para.data[i] ** 2)
-            * t_ratio.data[i],
-        )
-        bi_max_temp = bi_max_temp * np.exp(
-            -((z_p[i, ...] * r_mat[i, ...] - v_para_data[i]) ** 2)
-            / (vth_para.data[i] ** 2),
-        )
-
-        bi_max_dist[i, ...] = bi_max_temp
-
-    # Make modelPDist file for output
+    # Make modelPDist file for output, in s^3/km^6
     model_vdf = vdf.copy()
-    model_vdf.data.data = bi_max_dist
-    model_vdf.data.data *= 1e18
-    model_vdf.attrs["UNITS"] = "s^3/km^6"
+    model_vdf["data"] = vdf.data.copy(data=bi_max_dist * 1e18)
+    model_vdf.data.attrs = {**vdf.data.attrs, "UNITS": "s^3/km^6"}
 
     return model_vdf

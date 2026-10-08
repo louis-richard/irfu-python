@@ -3,14 +3,28 @@
 
 # 3rd party imports
 import numpy as np
-import xarray as xr
+
+# Local imports
+from .new_xyz import new_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+def _eig(m_mu_nu):
+    r"""Eigenvalues and eigenvectors of the (real, symmetric) variance matrix.
+
+    NumPy >= 2.5 returns complex arrays from np.linalg.eig; the imaginary parts
+    are zero here, so the real parts are the values given by older versions.
+
+    """
+    lamb, lmn = np.linalg.eig(m_mu_nu)
+
+    return np.real(lamb), np.real(lmn)
 
 
 def mva(inp, flag: str = "mvar"):
@@ -21,12 +35,13 @@ def mva(inp, flag: str = "mvar"):
     inp : xarray.DataArray
         Time series of the quantity to find minimum variance frame.
     flag : {"mvar", "<bn>=0", "td"}, Optional
-        Constrain. Default is "mvar".
+        Constrain (case-insensitive). Default is "mvar".
 
     Returns
     -------
     out : xarray.DataArray
-        Time series of the input quantity in LMN coordinates.
+        Time series of the input quantity in LMN coordinates (attributes of the
+        input kept, with ``COORDINATE_SYSTEM`` set to "lmn").
     l : numpy.ndarray
         Eigenvalues l[0] > l[1] > l[2].
     lmn : numpy.ndarray
@@ -59,6 +74,7 @@ def mva(inp, flag: str = "mvar"):
     """
 
     assert flag.lower() in ["mvar", "<bn>=0", "td"], "invalid method!!"
+    flag = flag.lower()
 
     inp_data = inp.data
     n_t = inp_data.shape[0]
@@ -77,7 +93,7 @@ def mva(inp, flag: str = "mvar"):
     )
 
     # Compute eigenvalues and eigenvectors
-    [lamb, lmn] = np.linalg.eig(m_mu_nu)
+    lamb, lmn = _eig(m_mu_nu)
 
     # Sort eigenvalues
     lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
@@ -128,13 +144,12 @@ def mva(inp, flag: str = "mvar"):
             [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
-        lamb, lmn = np.linalg.eig(m_mu_nu)
+        lamb, lmn = _eig(m_mu_nu)
 
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
-        # Force the maximum variance direction to be positive
-        # lmn[:, 0] *= np.sign(lmn[np.argmax(lmn[:, 0]), 0])
-        # lamb[2], lmn[:, 2] = [l_min, np.cross(lmn[:, 0], lmn[:, 1])]
+        # ensure that the frame is right handed
+        lmn[:, 2] = np.cross(lmn[:, 0], lmn[:, 1])
 
     elif flag.lower() == "td":
         l_min = lamb[2]
@@ -152,7 +167,7 @@ def mva(inp, flag: str = "mvar"):
             [m_mu_nu_m[[0, 3, 4]], m_mu_nu_m[[3, 1, 5]], m_mu_nu_m[[4, 5, 2]]],
         )
 
-        lamb, lmn = np.linalg.eig(m_mu_nu)
+        lamb, lmn = _eig(m_mu_nu)
 
         lamb, lmn = [lamb[lamb.argsort()[::-1]], lmn[:, lamb.argsort()[::-1]]]
 
@@ -160,8 +175,7 @@ def mva(inp, flag: str = "mvar"):
     else:
         pass
 
-    out_data = (lmn.T @ inp_data.T).T
-
-    out = xr.DataArray(out_data, coords=inp.coords, dims=inp.dims)
+    # Keep the attributes of the input, in the LMN coordinate system
+    out = new_xyz(inp, lmn, "lmn")
 
     return out, lamb, lmn

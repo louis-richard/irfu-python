@@ -10,7 +10,7 @@ from scipy import constants, special
 from ..pyrf.resample import resample
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -54,9 +54,9 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
     --------
     pyrfu.mms.make_model_vdf
 
-    Todo
-    ----
-    Generalize to bi-Kappa distributions.
+    Notes
+    -----
+    Not yet generalized to bi-Kappa distributions.
 
     """
 

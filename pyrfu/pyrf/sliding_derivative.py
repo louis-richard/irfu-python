@@ -26,7 +26,7 @@ def sliding_derivative(
     at each point is estimated using the first and last points in the window (central
     difference).
 
-    Parameters:
+    Parameters
     ----------
     time_series : xarray.DataArray
         The time series data for which the derivative is to be calculated.
@@ -37,20 +37,20 @@ def sliding_derivative(
         The number of data points in each sliding window. It should be an odd integer
         to ensure a symmetric window around the central point for central differences.
 
-    Returns:
+    Returns
     -------
     derivative : xarray.DataArray
         An array containing the sliding derivative for each point in the time series.
         The length of this array matches the length of `time_series`. For points near
         the boundaries (where a full window cannot be formed), the result will be NaN.
 
-    Notes:
-    ------
+    Notes
+    -----
     - The derivative is approximated using central differences for points that can
-    accommodate the window size. For edge points, the output will contain NaN.
+      accommodate the window size. For edge points, the output will contain NaN.
     - The function assumes `time_steps` are evenly spaced but works for irregular time
-    steps as well by calculating the actual time difference between the start and end
-    of the window.
+      steps as well by calculating the actual time difference between the start and
+      end of the window.
 
     """
 

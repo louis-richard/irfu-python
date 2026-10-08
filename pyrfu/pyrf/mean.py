@@ -13,7 +13,7 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -23,7 +23,11 @@ __status__ = "Prototype"
 def mean(inp, r_xyz, b_xyz, dipole_axis: xr.DataArray = None):
     r"""Put inp into mean field coordinates defined by position vector r and
     magnetic field b if earth magnetic dipole axis z is given then  uses
-    another algorithm (good for auroral passages)
+    another algorithm (good for auroral passages).
+
+    The Z axis is along b and X = Y x Z. Without `dipole_axis`, Y is along
+    Z x r. With `dipole_axis`, Y is along (z x b) sign(b.r), with the sign
+    taken at each time step.
 
     Parameters
     ----------
@@ -63,8 +67,8 @@ def mean(inp, r_xyz, b_xyz, dipole_axis: xr.DataArray = None):
         bxr = cross(b_hat, r_xyz)
         bxr /= np.linalg.norm(bxr, axis=1)[:, None]
     else:
-        fact = -1 * np.ones(len(b_xyz))
-        fact[np.sum(b_xyz * r_xyz) > 0] = 1
+        b_dot_r = np.sum(b_xyz.data * r_xyz.data, axis=1)
+        fact = np.where(b_dot_r > 0, 1.0, -1.0)
         bxr = np.cross(dipole_axis, b_xyz) * fact[:, None]
         bxr /= np.linalg.norm(bxr, axis=1)[:, None]
 

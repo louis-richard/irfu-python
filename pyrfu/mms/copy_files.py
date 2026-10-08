@@ -12,7 +12,7 @@ from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.mms.list_files import list_files
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -48,7 +48,9 @@ def copy_files(
     """
     # Normalize the target path and make sure it exists.
     tar_path = os.path.normpath(tar_path)
-    assert os.path.exists(tar_path), f"{tar_path} doesn't exist!!"
+
+    if not os.path.exists(tar_path):
+        raise FileNotFoundError(f"{tar_path} doesn't exist!!")
 
     if not data_path:
         # Read the current version of the MMS configuration file
@@ -60,7 +62,8 @@ def copy_files(
         normed_path = os.path.normpath(data_path)
 
     # Make sure the local path exists.
-    assert os.path.exists(normed_path), f"{normed_path} doesn't exist!!"
+    if not os.path.exists(normed_path):
+        raise FileNotFoundError(f"{normed_path} doesn't exist!!")
 
     # List files that matches the requirements (instrument, date level,
     # data type, data rate) in the time interval for the target spacecraft.

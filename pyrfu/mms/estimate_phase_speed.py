@@ -52,7 +52,7 @@ def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.0):
 
     # Remove spurious points; specifically at large k.
     k_max = 2.0 * np.max(k) / 3.0
-    power_temp = f_k_power
+    power_temp = np.array(f_k_power, dtype=np.float64)  # copy: input unchanged
     rm_k = np.where(abs(k) > k_max)
     rm_f = np.where(freq < f_min)
 

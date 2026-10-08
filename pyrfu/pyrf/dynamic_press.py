@@ -11,10 +11,11 @@ from scipy import constants
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -26,19 +27,26 @@ def dynamic_press(
 ) -> DataArray:
     r"""Computes dynamic pressure.
 
+    .. math::
+
+        P_{dyn} = n_s m_s |\mathbf{V}_s|^2
+
+    The bulk velocity is resampled to the times of the number density if
+    they differ.
+
     Parameters
     ----------
     n_s : DataArray
-        Time series of the number density of the specie.
+        Time series of the number density of the specie [cm^{-3}].
     v_xyz : DataArray
-        Time series of the bulk velocity of the specie.
+        Time series of the bulk velocity of the specie [km/s].
     specie : str, Optional
-        Specie 'ions' or 'electrons'. Default 'ions'.
+        Specie 'ions' (protons) or 'electrons'. Default 'ions'.
 
     Returns
     -------
     DataArray
-        Time series of the dynamic pressure of the specie.
+        Time series of the dynamic pressure of the specie [nPa].
 
     Examples
     --------
@@ -94,12 +102,16 @@ def dynamic_press(
     else:
         mass = constants.electron_mass
 
-    # Get data
-    n_s_data: np.ndarray = n_s.data
-    v_xyz_data: np.ndarray = v_xyz.data
+    # Bulk velocity at the times of the number density
+    if not np.array_equal(n_s.time.data, v_xyz.time.data):
+        v_xyz = resample(v_xyz, n_s)
 
-    # Compute dynamic pressure
+    # Get data in SI units
+    n_s_data: np.ndarray = 1e6 * n_s.data
+    v_xyz_data: np.ndarray = 1e3 * v_xyz.data
+
+    # Compute dynamic pressure in nPa
     p_dyn: np.ndarray = n_s_data * mass * np.linalg.norm(v_xyz_data, axis=1) ** 2
-    p_dyn_ts: DataArray = ts_scalar(n_s.time.data, p_dyn)
+    p_dyn_ts: DataArray = ts_scalar(n_s.time.data, 1e9 * p_dyn, {"UNITS": "nPa"})
 
     return p_dyn_ts

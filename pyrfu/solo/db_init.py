@@ -1,17 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
-
 # Built-in imports
+import json
 import os
 
+# Local imports
+from .._user_config import user_config_path
+
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+# Default configuration distributed with the package
+_PACKAGE_CFG_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "config.json"
+)
+
+
+def config_path() -> str:
+    r"""Path of the SolO configuration file, in the user configuration
+    directory (created from the package configuration the first time)."""
+    return user_config_path("solo_config.json", _PACKAGE_CFG_PATH)
 
 
 def db_init(local_data_dir):
@@ -30,14 +43,11 @@ def db_init(local_data_dir):
         local_data_dir,
     ), f"{local_data_dir} doesn't exists!!"
 
-    # Path to the configuration file.
-    pkg_path = os.path.dirname(os.path.abspath(__file__))
-
-    # Read the current version of the configuration
-    with open(os.path.join(pkg_path, "config.json"), "r", encoding="utf-8") as fs:
+    # Read the current version of the configuration (user directory)
+    with open(config_path(), "r", encoding="utf-8") as fs:
         config = json.load(fs)
 
     # Overwrite the configuration file with the new path
-    with open(os.path.join(pkg_path, "config.json"), "w", encoding="utf-8") as fs:
+    with open(config_path(), "w", encoding="utf-8") as fs:
         config["local_data_dir"] = local_data_dir
         json.dump(config, fs)

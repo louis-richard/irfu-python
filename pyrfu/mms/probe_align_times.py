@@ -3,185 +3,112 @@
 
 # 3rd party imports
 import numpy as np
-import xarray as xr
 
 # Local imports
-from ..pyrf.extend_tint import extend_tint
 from ..pyrf.resample import resample
 from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_scalar import ts_scalar
+from .correct_edp_probe_timing import correct_edp_probe_timing
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _valid_runs(time, data):
+    # Start and end times of the runs of non-NaN samples
+    edges = np.diff(np.r_[0, (~np.isnan(data)).astype(int), 0])
+    return time[edges[:-1] == 1], time[np.where(edges == -1)[0] - 1]
+
+
 def probe_align_times(e_xyz, b_xyz, sc_pot, z_phase):
     r"""Returns times when field-aligned electrostatic waves can be
     characterized using interferometry techniques. The same alignment
-    conditions as Graham et al., JGR, 2015 are used. Optional figure produced
-    showing E_FAC, probe fields, and probe potentials to view time delays
-    between electric fields aligned with B.  Currently p5-p6 are not used in
+    conditions as Graham et al., JGR, 2015 are used: the angle between B and
+    the probes in the spin plane is less than 25 degrees, and B is closer to
+    the spin plane than to the spin axis. Currently p5-p6 are not used in
     this routine; the analysis is the same as the one used for Cluster.
 
-    For the figure the panels are :
-        * (a) B in DMPA Coordinates
-        * (b) Magnitude of B in and out of the spin plane
-        * (c) Angles between B and probes 1 and 3 in the spin plane
-              (angle between 0 and 90 degrees)
-        * (d) Spacecraft potential from probes perpendicular to B
-        * (e) E fields from p1-p4 and SC for probes closely aligned with B
-        * (f) E in field-aligned coordinates
-        * (g) E from probes p1-p2 and p3-p4.
-
+    Port of mms.probe_align_times in irfu-matlab (without the figure). The
+    intervals start at their first valid sample, one sample later than in
+    irfu-matlab.
 
     Parameters
     ----------
     e_xyz : xarray.DataArray
-        Electric field in DSL coordinates, brst mode.
+        Electric field in DSL coordinates, brst mode. Not used: only needed
+        for the figure in irfu-matlab.
     b_xyz : xarray.DataArray
         Magnetic field in DMPA coordinates.
     sc_pot : xarray.DataArray
-        L2 Spacecraft potential data. Timing corrections are applied in this
+        L2 probe potentials (6 probes). Timing corrections are applied in
+        this function.
     z_phase : xarray.DataArray
-        Spacecraft phase (z_phase). Obtained from ancillary_defatt.
+        Spacecraft phase (z_phase) in degrees. Obtained from ancillary_defatt.
 
     Returns
     -------
-    start_time1 : to fill
+    start_time1 : ndarray
         Start times of intervals which satisfy the probe alignment conditions
         for probe combinates p1-p2.
-    end_time1 : to fill
+    end_time1 : ndarray
         End times of intervals which satisfy the probe alignment conditions
         for probe combinates p1-p2.
-    start_time3 : to fill
+    start_time3 : ndarray
         Start times of intervals which satisfy the probe alignment conditions
         for probe combinates p3-p4.
-    end_time3 : to fill
+    end_time3 : ndarray
         End times of intervals which satisfy the probe alignment conditions
         for probe combinates p3-p4.
 
     """
 
+    del e_xyz  # only used for the figure in irfu-matlab
+
     # Correct for timing in spacecraft potential data.
-    e12 = ts_scalar(
-        sc_pot.time.data,
-        (sc_pot.data[:, 0] - sc_pot.data[:, 1]) / 0.120,
-    )
-    e34 = ts_scalar(
-        sc_pot.time.data,
-        (sc_pot.data[:, 2] - sc_pot.data[:, 3]) / 0.120,
-    )
-    e56 = ts_scalar(
-        sc_pot.time.data,
-        (sc_pot.data[:, 4] - sc_pot.data[:, 4]) / 0.0292,
+    sc_pot = correct_edp_probe_timing(sc_pot)
+    time, v_all = [sc_pot.time.data, sc_pot.data]
+    v_1 = ts_scalar(time, v_all[:, 0])
+
+    t_limit_long = np.array([time[0], time[-1]]) + np.array(
+        [-10, 10], dtype="timedelta64[s]"
     )
 
-    v_1 = ts_scalar(sc_pot.time.data, sc_pot.data[:, 0])
-    v_3 = ts_scalar(
-        sc_pot.time.data + np.timedelta64(7629, "ns"),
-        sc_pot.data[:, 2],
-    )
-    v_5 = ts_scalar(
-        sc_pot.time.data + np.timedelta64(15259, "ns"),
-        sc_pot.data[:, 4],
-    )
+    b_xyz = resample(time_clip(b_xyz, t_limit_long), v_1).data
 
-    e12.time.data += np.timedelta64(26703, "ns")
-    e34.time.data += np.timedelta64(30518, "ns")
-    e56.time.data += np.timedelta64(34332, "ns")
-
-    v_1, v_3, v_5 = [resample(v, v_1) for v in [v_1, v_3, v_5]]
-    e12, e34, e56 = [resample(e, v_1) for e in [e12, e34, e56]]
-
-    v_2 = v_1 - e12 * 0.120
-    v_4 = v_3 - e34 * 0.120
-    v_6 = v_5 - e56 * 0.0292
-
-    sc_pot = np.hstack(
-        [v_1.data, v_2.data, v_3.data, v_4.data, v_5.data, v_6.data],
-    )
-
-    sc_pot = xr.DataArray(
-        sc_pot,
-        coords=[v_1.time.data, np.arange(1, 7)],
-        dims=["time", "probe"],
-    )
-
-    t_limit = [sc_pot.time.data[0], sc_pot.time.data[-1]]
-    t_limit = [np.datetime_as_string(time, "ns") for time in t_limit]
-
-    t_limit_long = extend_tint(t_limit, [-10, 10])
-
-    b_xyz = time_clip(b_xyz, t_limit_long)
-    b_xyz = resample(b_xyz, sc_pot)
-    e_xyz = resample(e_xyz, sc_pot)
-
+    # Remove repeated z_phase elements and unwrap the phase
     z_phase = time_clip(z_phase, t_limit_long)
+    no_repeat = np.r_[True, np.diff(z_phase.time.data) > np.timedelta64(0, "ns")]
+    z_phase_data = z_phase.data[no_repeat].astype(np.float64)
+    z_phase_data += 360.0 * np.r_[0, np.cumsum(np.diff(z_phase_data) < 0)]
+    z_phase = ts_scalar(z_phase.time.data[no_repeat], z_phase_data)
+    z_phase = resample(z_phase, v_1).data
 
-    # Remove repeated z_phase elements
-    n_ph = len(z_phase)
-    no_repeat = np.ones(n_ph)
+    # Angles between probes 1 and 3 and the direction of B in the spin plane
+    b_plane = np.sqrt(b_xyz[:, 0] ** 2 + b_xyz[:, 1] ** 2)
+    theta_pb = []
+    for offset in [np.pi / 6, 2 * np.pi / 3]:
+        phase = np.deg2rad(z_phase) + offset
+        cos_pb = np.cos(phase) * b_xyz[:, 0] + np.sin(phase) * b_xyz[:, 1]
+        theta_pb.append(np.rad2deg(np.arccos(np.abs(cos_pb / b_plane))))
 
-    for i in range(1, n_ph):
-        if z_phase.time.data[i] > z_phase.time.data[i - 1]:
-            if z_phase.data[i] < z_phase.data[i - 1]:
-                z_phase.data[i:] += 360.0
-        else:
-            no_repeat[i] = 0
+    sc_v12 = (v_all[:, 0] + v_all[:, 1]) / 2
+    sc_v34 = (v_all[:, 2] + v_all[:, 3]) / 2
 
-    z_phase_time = z_phase.time[no_repeat == 1]
-    z_phase_data = z_phase.data[no_repeat == 1]
+    # Fields between the single probes and the spacecraft
+    e_1 = (v_all[:, 0] - sc_v34) * 1e3 / 60
+    e_3 = (v_all[:, 2] - sc_v12) * 1e3 / 60
 
-    z_phase = ts_scalar(z_phase_time, z_phase_data)
-    z_phase = resample(z_phase, sc_pot)
-
-    # Probe angles in DSL or whatever
-    phase_p = []
-    for i, j in zip([1, 7, 2, 5], [6, 6, 3, 3]):
-        phase_p.append(np.deg2rad(z_phase.data) + i * np.pi / j)
-
-    r_p = [60 * np.array([np.cos(phase), np.sin(phase)]) for phase in phase_p]
-
-    # Calculate angles between probes and direction of B in the spin plane.
-    theta_pb = [None] * 4
-
-    for i in [0, 2]:
-        theta_pb[i] = r_p[i][:, 0] * b_xyz.data[:, 0] + r_p[i][:, 1] * b_xyz.data[:, 1]
-        theta_pb[i] /= np.sqrt(r_p[i][:, 0] ** 2 + r_p[i][:, 1] ** 2)
-        theta_pb[i] /= np.sqrt(b_xyz[:, 0] ** 2 + b_xyz[:, 1] ** 2)
-        theta_pb[i] = np.arccos(abs(theta_pb[i])) * 180 / np.pi
-
-    theta_pb[1] = theta_pb[0]
-    theta_pb[3] = theta_pb[2]
-
-    sc_v12 = (sc_pot.data[:, 0] + sc_pot.data[:, 1]) / 2
-    sc_v34 = (sc_pot.data[:, 2] + sc_pot.data[:, 3]) / 2
-
-    e_s = [None] * 4
-
-    e_s[0] = (sc_pot.data[:, 0] - sc_v34) * 1e3 / 60
-    e_s[1] = (sc_v34 - sc_pot.data[:, 0]) * 1e3 / 60
-    e_s[2] = (sc_pot.data[:, 2] - sc_v12) * 1e3 / 60
-    e_s[3] = (sc_v12 - sc_pot.data[:, 2]) * 1e3 / 60
-
-    e12 = (sc_pot.data[:, 0] - sc_pot.data[:, 1]) * 1e3 / 120
-    e34 = (sc_pot.data[:, 2] - sc_pot.data[:, 3]) * 1e3 / 120
-
-    idx_b = np.sqrt(b_xyz.data[:, 0] ** 2 + b_xyz.data[:, 1] ** 2) < abs(
-        b_xyz.data[:, 2],
-    )
     thresh_ang = 25.0
+    idx_b = b_plane < np.abs(b_xyz[:, 2])
 
-    for e_, theta in zip(e_s, theta_pb):
-        e_[theta > thresh_ang] = np.nan
-        e_[idx_b] = np.nan
+    e_1[(theta_pb[0] > thresh_ang) | idx_b] = np.nan
+    e_3[(theta_pb[1] > thresh_ang) | idx_b] = np.nan
 
-    sc_v12[theta_pb[2] > thresh_ang] = np.nan
-    sc_v34[theta_pb[0] > thresh_ang] = np.nan
+    start_time1, end_time1 = _valid_runs(v_1.time.data, e_1)
+    start_time3, end_time3 = _valid_runs(v_1.time.data, e_3)
 
-    sc_v12[idx_b] = np.nan
-    sc_v34[idx_b] = np.nan
+    return start_time1, end_time1, start_time3, end_time3

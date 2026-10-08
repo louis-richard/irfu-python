@@ -10,18 +10,14 @@ import numpy as np
 from scipy import interpolate
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
+__email__ = "louis.richard@physics.ox.ac.uk"
+__copyright__ = "Copyright 2020"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
-logging.captureWarnings(True)
-logging.basicConfig(
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    level=logging.INFO,
-)
+logger = logging.getLogger(__name__)
+
 
 surface_materials = [
     "cluster",
@@ -82,13 +78,15 @@ def photo_current(
 
     """
 
-    assert isinstance(flag, (str, float))
+    if not isinstance(flag, (str, float, int)):
+        raise TypeError("flag must be a surface material or a photoemission")
 
     if not iluminated_area and not u and not distance_sun:
         for surf in surface_materials:
             j0 = photo_current(1, 0, 1, surf)
-            logging.info(
-                "%(surf)s: Io= %(i0)3.2f uA/m2", {"surf": surf, "i0": j0 * 1e6}
+            logger.info(
+                "%(surf)s: Io= %(i0)3.2f uA/m2",
+                {"surf": surf, "i0": float(j0[0]) * 1e6},
             )
 
         return None
@@ -135,7 +133,7 @@ def photo_current(
 
     elif flag.lower() in j_zeros:
         j_photo = photo_current(iluminated_area, u, distance_sun, "themis")
-        j_photo *= j_zeros[flag] / photo_current(1.0, 0.0, 1.0, "themis")
+        j_photo *= j_zeros[flag.lower()] / photo_current(1.0, 0.0, 1.0, "themis")
 
     else:
         raise ValueError("Unknown surface material.")
