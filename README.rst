@@ -32,9 +32,6 @@ pyRFU
 .. |PyLintB| image:: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml/badge.svg
 .. _PyLintB: https://github.com/louis-richard/irfu-python/actions/workflows/pylint.yml
 
-.. |CodeQL| image:: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml/badge.svg
-.. _CodeQL: https://github.com/louis-richard/irfu-python/actions/workflows/codeql.yml
-
 .. |CodeCov| image:: https://codecov.io/gh/louis-richard/irfu-python/coverage.svg?branch=master
 .. _CodeCov: https://codecov.io/gh/louis-richard/irfu-python/branch/master
 
@@ -57,7 +54,7 @@ pyRFU
 .. _Doi: https://doi.org/10.5281/zenodo.10678695
 
 |License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |CI|_
-|PyLintB|_ |CodeQL|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Matrix|_
+|PyLintB|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Matrix|_
 |Black|_ |Doi|_
 
 The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the Magnetospheric MultiScale (MMS) mission.
