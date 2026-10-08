@@ -27,7 +27,7 @@ authors:
     affiliation: Swedish Defence Research Agency, Sweden
     orcid: "https://orcid.org/0000-0001-7714-1870"
 title: "Python RymdFysik Utilities (PyRFU): An Open-Source Python Package for Advanced In-Situ Space Plasma Analysis"
-abstract: "pyrfu is an open-source Python package, based on the IRFU-MATLAB library, for advanced in-situ space plasma analysis, particularly of the Magnetospheric Multiscale (MMS) mission."
+abstract: "pyrfu is an open-source Python package for advanced in-situ space plasma analysis, particularly of the Magnetospheric Multiscale (MMS) mission."
 license: MIT
 version: "2.5.0"
 date-released: 2026-10-07

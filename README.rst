@@ -57,7 +57,7 @@ pyRFU
 |PyLintB|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Matrix|_
 |Black|_ |Doi|_
 
-The Python package ``pyrfu`` is a software based on the IRFU-MATLAB library to work with space data, particularly the Magnetospheric MultiScale (MMS) mission.
+``pyrfu`` is an open-source Python package for in-situ space plasma data analysis, particularly of the Magnetospheric Multiscale (MMS) mission.
 
 It is distributed under the open-source MIT license.
 
@@ -142,7 +142,7 @@ A list of examples is available `here <https://pyrfu.readthedocs.io/en/latest/ex
 Credits
 =======
 This software was developed by Louis RICHARD at the Swedish Institute of Space Physics (IRF) in Uppsala,
-based on the IRFU-MATLAB library, and is now maintained by Louis RICHARD at the Rudolf Peierls Centre
+where it started from the IRFU-MATLAB library, and is now maintained by Louis RICHARD at the Rudolf Peierls Centre
 for Theoretical Physics, University of Oxford (louis.richard@physics.ox.ac.uk).
 
 Acknowledgement
