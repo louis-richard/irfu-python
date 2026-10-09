@@ -3238,16 +3238,23 @@ class GetFeepsTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.get_feeps_alleyes")
 
+    # quality indicator of every eye at the 5 times
+    quality = np.array([0, 1, 2, 3, 4])
+
     def _fake_read(self, dset_name, cdf_names, tint, verbose, data_path, source):
-        # (time, energy) time series for every variable
+        # (time, energy) time series for every variable, (time,) for the
+        # quality indicators
         times = generate_timeline(1.0, 5)
         energy = np.arange(1, 4, dtype=float)
-        return {
-            name: xr.DataArray(
-                np.ones((5, 3)), coords=[times, energy], dims=["time", "Epoch_E"]
-            )
-            for name in cdf_names
-        }
+        out = {}
+        for name in cdf_names:
+            if "quality_indicator" in name:
+                out[name] = xr.DataArray(self.quality, coords=[times], dims=["time"])
+            else:
+                out[name] = xr.DataArray(
+                    np.ones((5, 3)), coords=[times, energy], dims=["time", "Epoch_E"]
+                )
+        return out
 
     def test_get_feeps_alleyes_source(self):
         # All the eyes are read at once (one download per file), from the source
@@ -3262,12 +3269,42 @@ class GetFeepsTestCase(unittest.TestCase):
         self.assertEqual(read.call_args.args[5], "aws")
 
         eyes = [k for k in out.data_vars if k not in ["spinsectnum", "pitch_angle"]]
-        self.assertEqual(len(cdf_names), len(eyes) + 2)
+        self.assertEqual(len(cdf_names), 2 * len(eyes) + 2)
         self.assertIn(
             "mms2_epd_feeps_brst_l2_electron_top_intensity_sensorid_3", cdf_names
         )
         self.assertIn("energy_top-3", out["top-3"].dims)
         self.assertEqual(out["top-3"].attrs["species"], "electrons")
+
+    def test_get_feeps_alleyes_quality(self):
+        # Samples with a quality indicator >= quality_flag are NaN (they used
+        # to be kept, the indicators weren't read)
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2)
+            out_2 = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2, quality_flag=2)
+            out_none = mms.get_feeps_alleyes(
+                "fluxe_brst_l2", self.TINT, 2, quality_flag=None
+            )
+
+        self.assertIn(
+            "mms2_epd_feeps_brst_l2_electron_top_quality_indicator_sensorid_3",
+            read.call_args_list[0].args[1],
+        )
+        self.assertFalse(
+            any("quality" in name for name in read.call_args_list[2].args[1])
+        )
+
+        eyes = [k for k in out.data_vars if k not in ["spinsectnum", "pitch_angle"]]
+        self.assertEqual(len(eyes), 18)
+
+        for k in eyes:
+            finite = np.isfinite(out[k].data).all(axis=1)
+            np.testing.assert_array_equal(finite, [True, True, True, False, False])
+            finite = np.isfinite(out_2[k].data).all(axis=1)
+            np.testing.assert_array_equal(finite, [True, True, False, False, False])
+            self.assertTrue(np.isfinite(out_none[k].data).all())
 
     def test_get_feeps_omni_source(self):
         module = importlib.import_module("pyrfu.mms.get_feeps_omni")

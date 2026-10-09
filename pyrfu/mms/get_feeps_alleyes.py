@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+import numpy as np
 import xarray as xr
 
 from .db_get_ts import _db_get_ts_dict
@@ -67,6 +68,7 @@ def get_feeps_alleyes(
     verbose: bool = True,
     data_path: str = "",
     source: str = "default",
+    quality_flag: int = 3,
 ):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all FEEPS eyes.
@@ -88,12 +90,26 @@ def get_feeps_alleyes(
         Resource to fetch the data from. Default uses default in
         `pyrfu/mms/config.json`. Each file is read (downloaded) once for all the
         eyes.
+    quality_flag : int or None, Optional
+        The samples of an eye whose quality indicator is greater than or equal
+        to `quality_flag` are set to NaN (L2 data only). Default is 3, which
+        removes the samples not valid for science (3) and the calibration data
+        (4), as in pyspedas. None keeps all the samples.
 
     Returns
     -------
     out : xarray.Dataset
         Dataset containing the energy spectrum of the available eyes of the
         Fly's Eye Energetic Particle Spectrometer (FEEPS).
+
+    Notes
+    -----
+    The FEEPS quality indicators are, for each eye and sample, 0 (valid for
+    science), 1 (caution: survey sector partly masked onboard), 2 (problematic:
+    less than 50 % of the survey sector contaminated), 3 (not valid for
+    science: contaminated, or survey sector fully masked onboard, with zero
+    counts) and 4 (calibration). The MMS CMAD (section 6.4.3) recommends not
+    to use 3 and 4 for science. IDL SPEDAS doesn't use the quality indicators.
 
     Examples
     --------
@@ -142,6 +158,16 @@ def get_feeps_alleyes(
         "pitch_angle": f"mms{mms_id:d}_{pref}_pitch_angle",
         **{e_id: _eye_cdf_name(tar_var, e_id, mms_id, active_eyes) for e_id in e_ids},
     }
+
+    # Quality indicators of the eyes (L2 only)
+    quality_cut = quality_flag is not None and var["lev"] == "l2"
+
+    if quality_cut:
+        for e_id in e_ids:
+            suf, sensor_id = e_id.split("-")
+            cdf_names[f"quality_{e_id}"] = (
+                f"mms{mms_id:d}_{pref}_{suf}_quality_indicator_sensorid_{sensor_id}"
+            )
     data = _db_get_ts_dict(
         dset_name, list(cdf_names.values()), tint, verbose, data_path, source
     )
@@ -149,6 +175,13 @@ def get_feeps_alleyes(
 
     for e_id in e_ids:
         eye = out_dict[e_id]
+
+        if quality_cut:
+            # samples not to be used for science set to NaN
+            bad = out_dict.pop(f"quality_{e_id}").data >= quality_flag
+            eye_data = eye.data.astype(np.promote_types(eye.dtype, np.float32))
+            eye = eye.copy(data=np.where(bad[:, None], np.nan, eye_data))
+
         eye.attrs["tmmode"] = var["tmmode"]
         eye.attrs["lev"] = var["lev"]
         eye.attrs["mms_id"] = mms_id
