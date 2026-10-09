@@ -58,9 +58,36 @@ def get_feeps_omni(
 
     See Also
     --------
-    pyrfu.mms.get_feeps_alleyes, pyrfu.mms.feeps_remove_bad_data,
-    pyrfu.mms.feeps_split_integral_ch, pyrfu.mms.feeps_remove_sun,
-    pyrfu.mms.feeps_omni, pyrfu.mms.feeps_spin_avg
+    pyrfu.mms.get_feeps_alleyes, pyrfu.mms.feeps_corrections,
+    pyrfu.mms.feeps_remove_bad_data, pyrfu.mms.feeps_split_integral_ch,
+    pyrfu.mms.feeps_remove_sun, pyrfu.mms.feeps_omni, pyrfu.mms.feeps_spin_avg
+
+    Notes
+    -----
+    This function does not correct the energies (`feeps_correct_energies`)
+    nor apply the flat-field correction (`feeps_flat_field_corrections`).
+    To compute the omni-directional spectrum with the same corrections as
+    IDL SPEDAS (`mms_load_feeps`) and pyspedas, load all the eyes, apply
+    `feeps_corrections` and then `feeps_omni` (see Examples).
+
+    Examples
+    --------
+    >>> from pyrfu import mms
+
+    Time interval and spacecraft
+
+    >>> tint = ["2017-07-11T22:00:00", "2017-07-11T23:00:00"]
+    >>> mms_id = 1
+
+    Omni-directional electron intensity with all the corrections
+
+    >>> feeps_alle = mms.get_feeps_alleyes("fluxe_srvy_l2", tint, mms_id)
+    >>> feeps_clean = mms.feeps_corrections(feeps_alle)
+    >>> flux_omni = mms.feeps_omni(feeps_clean)
+
+    Spin average
+
+    >>> flux_omni_spin = mms.feeps_spin_avg(flux_omni, feeps_alle.spinsectnum.data)
 
     """
 
