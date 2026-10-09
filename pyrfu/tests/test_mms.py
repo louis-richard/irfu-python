@@ -3045,6 +3045,53 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
             mms.feeps_spin_avg(flux, spin_sectors[:-1])
 
 
+class FeepsSectorSpecTestCase(unittest.TestCase):
+    def test_feeps_sector_spec(self):
+        # Partial spin (sectors 62-63), 2 spins of 64 sectors, partial spin (0-2),
+        # with the data equal to 100 * spin + sector
+        spin_sectors = np.hstack([[62, 63], np.tile(np.arange(64), 2), [0, 1, 2]])
+        spin = np.hstack([[0, 0], np.repeat([1, 2], 64), [3, 3, 3]])
+        value = 100.0 * spin + spin_sectors
+        time = generate_timeline(64.0 / 20.0, len(spin))
+
+        # 3 energy channels around the value, and one sample without data
+        top = np.stack([value - 1.0, value, value + 1.0], axis=1)
+        bottom = top.copy()
+        bottom[10] = np.nan
+        feeps_alle = xr.Dataset(
+            {
+                "top-1": (["time", "energy-top-1"], top),
+                "bottom-1": (["time", "energy-bottom-1"], bottom),
+                "spinsectnum": (["time"], spin_sectors),
+            },
+            coords={"time": time},
+            attrs={"mmsId": 1},
+        )
+
+        result = mms.feeps_sector_spec(feeps_alle)
+
+        # One row per spin at its first sample (the spectra used to be padded
+        # with NaN to every sample, row 0 empty and spins one row late)
+        self.assertListEqual(sorted(result.data_vars), ["bottom-1", "top-1"])
+        np.testing.assert_array_equal(result.time.data, time[[0, 2, 66, 130]])
+        self.assertEqual(result.sizes["sectornum"], 64)
+
+        expected = np.full((4, 64), np.nan)
+        expected[0, 62:] = [62.0, 63.0]
+        expected[1] = 100.0 + np.arange(64)
+        expected[2] = 200.0 + np.arange(64)
+        expected[3, :3] = 300.0 + np.arange(3)
+        np.testing.assert_array_equal(result["top-1"].data, expected)
+
+        expected[1, 8] = np.nan
+        np.testing.assert_array_equal(result["bottom-1"].data, expected)
+        self.assertDictEqual(result.attrs, feeps_alle.attrs)
+
+        # Float spin sectors (used to raise IndexError)
+        feeps_alle["spinsectnum"] = feeps_alle["spinsectnum"].astype(float)
+        xr.testing.assert_identical(mms.feeps_sector_spec(feeps_alle), result)
+
+
 @ddt
 class FeepsSplitIntegralChTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
