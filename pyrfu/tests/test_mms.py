@@ -2781,8 +2781,32 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         result_np = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum.data)
 
-        self.assertEqual(len(result.time), 8)
+        self.assertEqual(len(result.time), 9)
         xr.testing.assert_identical(result, result_np)
+
+    def test_feeps_pad_spin_avg_windows(self):
+        # Partial spin (3 samples), 5 spins of 8 sectors, partial spin (4)
+        theta = 8.1818 + 16.3636 * np.arange(11)
+        spin_sectors, pad = _spin_avg_case("theta", theta)
+        pad.data[3:11, 4] = np.nan  # spin 1 without data in one bin
+
+        result = mms.feeps_pad_spinavg(pad, spin_sectors)
+
+        # One row per spin, at its first sample, on the PAD bins: the windows
+        # used to be shifted by one sample and interpolated onto 12 bin edges
+        expected = np.tile(np.arange(7.0)[:, None], (1, 11))
+        expected[1, 4] = np.nan
+        np.testing.assert_array_equal(result.data, expected)
+        np.testing.assert_array_equal(result.theta.data, theta)
+        np.testing.assert_array_equal(
+            result.time.data, pad.time.data[[0, 3, 11, 19, 27, 35, 43]]
+        )
+
+        with self.assertWarns(FutureWarning):
+            mms.feeps_pad_spinavg(pad, spin_sectors, 16.3636)
+
+        with self.assertRaises(ValueError):
+            mms.feeps_pad_spinavg(pad, spin_sectors[:-1])
 
 
 @ddt

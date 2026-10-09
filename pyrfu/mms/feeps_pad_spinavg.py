@@ -4,10 +4,9 @@
 # Built-in imports
 import warnings
 
-# #rd party imports
+# 3rd party imports
 import numpy as np
 import xarray as xr
-from scipy import interpolate
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -17,7 +16,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
+def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     r"""Spin-average the FEEPS pitch angle distributions.
 
     Parameters
@@ -25,68 +24,68 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
     pad : xarray.DataArray
         Pitch angle distribution.
     spin_sectors : xarray.DataArray or numpy.ndarray
-        Time series of the spin sectors.
+        Time series of the spin sectors, on the times of `pad`.
     bin_size : float, Optional
-        Size of the pitch angle bins
+        Ignored, the spin average is on the pitch angle bins of `pad`.
+
+        .. deprecated:: 2.6.0
+            `bin_size` will be removed in a future version.
 
     Returns
     -------
     out : xarray.DataArray
         Spin averaged pitch angle distribution.
 
+    Raises
+    ------
+    ValueError
+        If `spin_sectors` and `pad` don't have the same number of times.
+
+    Notes
+    -----
+    The spins are the same as in :func:`feeps_spin_avg`: each spin is averaged
+    from its first sample up to (not including) the first sample of the next
+    spin and is time stamped at its first sample, the partial spins at the
+    start and end of the interval are kept, and a spin without data is NaN.
+
+    IDL SPEDAS and pyspedas instead average from the second sample of a spin
+    to the first sample of the next one, and interpolate the result from the
+    bin centres onto the bin edges.
+
     """
 
-    n_pabins = int(180.0 / bin_size)
-    new_bins = 180.0 * np.arange(int(n_pabins + 1)) / n_pabins
+    if bin_size is not None:
+        warnings.warn(
+            "bin_size is deprecated and ignored, and will be removed in a future "
+            "version: the spin average is on the pitch angle bins of pad.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
-    # get the spin sectors
-    # v5.5+ = mms1_epd_feeps_srvy_l1b_electron_spinsectnum
+    # NumPy array, a DataArray would be aligned on time in the comparison
     spin_sectors = np.asarray(spin_sectors)
+
+    if len(spin_sectors) != len(pad.time):
+        raise ValueError("spin_sectors must have one value per time of pad")
 
     spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
 
-    times = pad.time.data
+    # spins [s_k, s_k+1), with the partial spins at both ends
+    bounds = np.unique(np.hstack([0, spin_starts, len(spin_sectors)]))
+
     data = pad.data
-    angles = pad.theta.data
+    spin_avg_flux = np.full([len(bounds) - 1, len(pad.theta)], np.nan)
 
-    n_spin = len(spin_starts)
-    n_angs = len(angles)
-
-    spin_avg_flux = np.zeros([n_spin, n_angs])
-    rebinned_data = np.zeros([n_spin, int(n_pabins + 1)])
-    spin_times = np.zeros(n_spin, dtype="<M8[ns]")
-
-    # the following is for rebinning and interpolating to new_bins
-    srx = n_angs / (n_pabins + 1) * (np.arange(int(n_pabins + 1)) + 0.5) - 0.5
-
-    c_start = 0
-    for i, spin in enumerate(spin_starts):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            spin_avg_flux[i, :] = np.nanmean(
-                data[c_start : spin + 1, :],
-                axis=0,
-            )
-            spin_times[i] = times[c_start]
-
-            # rebin and interpolate to new_bins
-            spin_avg_interp = interpolate.interp1d(
-                np.arange(n_angs),
-                spin_avg_flux[i, :],
-                fill_value="extrapolate",
-            )
-            rebinned_data[i, :] = spin_avg_interp(srx)
-
-            # we want to take the end values instead of extrapolating
-            rebinned_data[i, 0] = spin_avg_flux[i, 0]
-            rebinned_data[i, -1] = spin_avg_flux[i, -1]
-
-        c_start = spin + 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        for i, (i_start, i_stop) in enumerate(zip(bounds[:-1], bounds[1:])):
+            spin_avg_flux[i, :] = np.nanmean(data[i_start:i_stop, :], axis=0)
 
     out = xr.DataArray(
-        rebinned_data,
-        coords=[spin_times, new_bins],
+        spin_avg_flux,
+        coords=[pad.time.data[bounds[:-1]], pad.theta.data],
         dims=["time", "theta"],
+        attrs={**pad.attrs},
     )
 
     return out
