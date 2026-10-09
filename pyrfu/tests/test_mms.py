@@ -2752,6 +2752,28 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
         self.assertTrue(np.isnan(result["top-2"].data[:, 0]).all())
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    @data(
+        ("2017-07-11T22:00:00", ["top-12", "top-5"]),
+        ("2018-04-01T11:00:00", ["top-12", "top-5"]),
+        ("2018-04-01T13:00:00", ["bottom-12", "bottom-2", "top-12"]),
+        ("2018-10-01T00:00:00", ["bottom-12", "bottom-2", "top-12"]),
+        ("2024-03-15T10:00:00", ["bottom-12", "bottom-2", "top-12"]),
+    )
+    @unpack
+    def test_feeps_remove_bad_data_table(self, t_start, bad_eyes):
+        # mms2 bad eyes: 2017-10-01 table before 2018-04-01 12:00 UTC (half way
+        # to the next table), 2018-10-01 table after, as in pyspedas
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 2)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64(t_start, "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        eyes = [k for k in result if k.startswith(("top", "bottom"))]
+        all_nan = sorted(k for k in eyes if np.isnan(result[k].data).all())
+        self.assertListEqual(all_nan, bad_eyes)
+
 
 @ddt
 class FeepsRemoveSunTestCase(unittest.TestCase):

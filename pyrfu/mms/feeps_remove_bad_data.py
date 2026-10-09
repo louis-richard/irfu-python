@@ -1,18 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import datetime
-import json
-
 # Built-in imports
+import json
 import os
 
 # 3rd party imports
 import numpy as np
-
-# Local imports
-from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.iso86012datetime import iso86012datetime
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -114,6 +108,12 @@ def feeps_remove_bad_data(inp_dataset):
         Dataset with all active telescopes data where bad eyes and lab lowest
         energy channels are set to NaN.
 
+    Notes
+    -----
+    The bad eyes are taken from the table (2017-10-01 or 2018-10-01) nearest
+    in time to the start of the data, as in pyspedas. Data starting after
+    2018-04-01 12:00 UTC therefore use the 2018-10-01 table.
+
     """
 
     # Work on a copy, the NaNs are written through .data
@@ -138,13 +138,10 @@ def feeps_remove_bad_data(inp_dataset):
     # these data are not usable (i.e., make all of the counts/rate/flux data
     # from these eyes NAN). These are for all modes, burst and survey:
 
-    dates = [
-        datetime.datetime.strptime(t_, "%Y-%m-%d").timestamp()
-        for t_ in bad_data_table.keys()
-    ]
-
-    t_data = iso86012datetime(datetime642iso8601(inp_dataset.time.data[0]))[0]
-    closest_table_tm = np.argmin([t_ - t_data.timestamp() for t_ in dates])
+    # Table nearest in time to the data start (UTC), as in pyspedas
+    dates = np.array(list(bad_data_table), dtype="datetime64[ns]")
+    t_data = inp_dataset.time.data[0].astype("datetime64[ns]")
+    closest_table_tm = np.argmin(np.abs(dates - t_data))
 
     closest_table = list(bad_data_table.keys())[closest_table_tm]
     bad_data = bad_data_table[closest_table][f"mms{mms_id:d}"]
