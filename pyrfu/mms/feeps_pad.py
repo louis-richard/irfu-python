@@ -165,7 +165,25 @@ def feeps_pad(
     pad : xarray.DataArray
         Time series of the pitch angle distribution.
 
+    Raises
+    ------
+    ValueError
+        If the integral channel of the eyes is not split (16 channels).
+
+    Notes
+    -----
+    The integral channel must be split before (`feeps_split_integral_ch`),
+    otherwise the electron integral channel (about 580 keV) would be averaged
+    as a spectrum channel.
+
     """
+
+    for k in filter(lambda x: x.startswith(("top", "bottom")), inp_dataset):
+        if inp_dataset[k].shape[1] == 16:
+            raise ValueError(
+                f"{k} has 16 energy channels: split the integral channel first "
+                "with feeps_split_integral_ch (or use feeps_corrections)"
+            )
 
     if energy is None:
         energy = [70.0, 600.0]

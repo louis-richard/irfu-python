@@ -2752,6 +2752,13 @@ class FeepsPadTestCase(unittest.TestCase):
         # energy_range added to the caller's attrs
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_pad_unsplit(self):
+        # Unsplit eyes (16 channels) used to average the integral channel
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
+
 
 def _spin_avg_case(dim, values):
     # 3 samples of a partial spin, 5 spins of 8 sectors, 4 samples of a partial
