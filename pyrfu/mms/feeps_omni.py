@@ -71,10 +71,16 @@ def feeps_omni(inp_dataset):
     flux_omni : xarray.DataArray
         Omni-directional FEEPS spectrogram.
 
+    Raises
+    ------
+    ValueError
+        If the integral channel of the eyes is not split (16 channels).
+
     Notes
     -----
-    The dataset can be raw data, but it is better to remove bad datas,
-    sunlight contamination and split before.
+    The integral channel must be split before (`feeps_split_integral_ch`). It
+    is better to also remove the bad data and the sunlight contamination, as
+    `feeps_corrections` does.
 
     As in IDL SPEDAS and pyspedas, the channels of an eye whose energy is more
     than 10 % away from the omni-directional energy are not averaged (except
@@ -116,6 +122,13 @@ def feeps_omni(inp_dataset):
     en_chk = 0.10
 
     for idx, sensor in enumerate(top_sensors + bot_sensors):
+        if inp_dataset[sensor].shape[1] != len(energies):
+            raise ValueError(
+                f"{sensor} has {inp_dataset[sensor].shape[1]} energy channels: "
+                "split the integral channel first with feeps_split_integral_ch "
+                "(or use feeps_corrections)"
+            )
+
         dalleyes[:, :, idx] = inp_dataset[sensor].data
 
         if inp_dataset.attrs.get("lev") == "sitl":

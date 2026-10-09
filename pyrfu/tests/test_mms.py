@@ -2706,6 +2706,13 @@ class FeepsOmniTestCase(unittest.TestCase):
 
         np.testing.assert_allclose(result.data, np.tile(expected, (len(time), 1)))
 
+    def test_feeps_omni_unsplit(self):
+        # Unsplit eyes (16 channels) used to fail with a broadcasting error
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_omni(feeps_alle)
+
 
 @ddt
 class FeepsPadTestCase(unittest.TestCase):
