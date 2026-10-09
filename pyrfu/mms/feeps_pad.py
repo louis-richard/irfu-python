@@ -77,8 +77,8 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
             data = inp_dataset[var_name].data
             energies = inp_dataset[inp_dataset[var_name].dims[1]].data
 
-            # remove any 0s before averaging
-            data[data == 0] = "nan"
+            # remove any 0s before averaging (on a float copy, not the input)
+            data = np.where(data == 0, np.nan, data.astype(float))
 
             # assumes all energies are NaNs if the first is
             if np.isnan(energies[0]):
@@ -173,8 +173,7 @@ def feeps_pad(
     assert energy[0] > 32.0, "Please use a starting energy of 32 keV or above"
 
     time = inp_dataset.time.data
-    attrs = inp_dataset.attrs
-    attrs["energy_range"] = energy
+    attrs = {**inp_dataset.attrs, "energy_range": energy}
     mms_id, d_type, d_rate = list(map(attrs.get, ["mmsId", "dtype", "tmmode"]))
 
     assert d_rate in ["srvy", "brst"]

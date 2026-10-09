@@ -2670,6 +2670,30 @@ class FeepsPadTestCase(unittest.TestCase):
         result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_feeps_pad_input_unchanged(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        # Integer counts with a whole eye at zero
+        for k in feeps_alle:
+            if k.startswith(("top", "bottom")):
+                counts = np.round(100 * feeps_alle[k].data).astype(np.int64)
+                feeps_alle[k] = feeps_alle[k].copy(data=counts)
+
+        feeps_alle["top-2"].data[:] = 0
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
+        self.assertEqual(result.dtype, np.float64)
+        self.assertTrue(np.isfinite(result.data).all())
+        self.assertEqual(result.attrs["energy_range"], [70.0, 600.0])
+
+        # The zeros used to be set to NaN in the caller's data, and
+        # energy_range added to the caller's attrs
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
 
 @ddt
 class FeepsPadSpinAvgTestCase(unittest.TestCase):
