@@ -2913,6 +2913,24 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_feeps_spin_avg_input_types(self):
+        feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_omni = mms.feeps_omni(feeps_alle)
+
+        # Spin sectors 0..11 repeated: spins start at 12, 24, ..., 96
+        spin_starts = np.arange(12, 100, 12)
+
+        # A DataArray used to give one row per sample (aligned on time)
+        result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
+        result_np = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum.data)
+
+        self.assertEqual(len(result.time), len(spin_starts))
+        np.testing.assert_array_equal(
+            result.time.data, feeps_omni.time.data[spin_starts]
+        )
+        xr.testing.assert_identical(result, result_np)
+
 
 @ddt
 class FeepsSplitIntegralChTestCase(unittest.TestCase):

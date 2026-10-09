@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -23,7 +23,7 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     ----------
     flux_omni : xarray.DataArray
         Omni-direction flux.
-    spin_sectors : xarray.DataArray
+    spin_sectors : xarray.DataArray or numpy.ndarray
         Time series of the spin sectors.
 
     Returns
@@ -33,6 +33,8 @@ def feeps_spin_avg(flux_omni, spin_sectors):
 
     """
 
+    # NumPy array, a DataArray would be aligned on time in the comparison
+    spin_sectors = np.asarray(spin_sectors)
     spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
 
     energies = flux_omni.energy.data
