@@ -17,14 +17,10 @@ __status__ = "Prototype"
 
 
 def _bad_vars(bad_data):
-    bad_vars_top = list(filter(lambda x: x not in [6, 7, 8], bad_data["top"]))
-    bad_vars_bot = list(
-        filter(lambda x: x not in [6, 7, 8], bad_data["bottom"]),
-    )
-
+    # electron (1-5, 9-12) and ion (6-8) eyes, only those in the data are used
     bad_vars = [
-        *[f"top-{x}" for x in bad_vars_top],
-        *[f"bottom-{x}" for x in bad_vars_bot],
+        *[f"top-{x}" for x in bad_data["top"]],
+        *[f"bottom-{x}" for x in bad_data["bottom"]],
     ]
 
     return bad_vars
@@ -48,10 +44,6 @@ def _bad_ch0(inp_dataset, bad_vars):
     for bad_var in bad_vars:
         if bad_var not in list(inp_dataset.keys()):
             continue
-        # check if the energy table contains all nans
-        energy = inp_dataset[inp_dataset[bad_var].dims[1]]
-        if np.isnan(np.sum(energy.data)):
-            continue
 
         inp_dataset_clean[bad_var].data[:, 0] = np.nan
 
@@ -63,10 +55,6 @@ def _bad_ch1(inp_dataset, bad_vars):
 
     for bad_var in bad_vars:
         if bad_var not in list(inp_dataset.keys()):
-            continue
-        # check if the energy table contains all nans
-        energy = inp_dataset[inp_dataset[bad_var].dims[1]]
-        if np.isnan(np.sum(energy.data)):
             continue
 
         inp_dataset_clean[bad_var].data[:, 0] = np.nan
@@ -80,10 +68,6 @@ def _bad_ch2(inp_dataset, bad_vars):
 
     for bad_var in bad_vars:
         if bad_var not in list(inp_dataset.keys()):
-            continue
-        # check if the energy table contains all nans
-        energy = inp_dataset[inp_dataset[bad_var].dims[1]]
-        if np.isnan(np.sum(energy.data)):
             continue
 
         inp_dataset_clean[bad_var].data[:, 0] = np.nan
@@ -113,6 +97,11 @@ def feeps_remove_bad_data(inp_dataset):
     The bad eyes are taken from the table (2017-10-01 or 2018-10-01) nearest
     in time to the start of the data, as in pyspedas. Data starting after
     2018-04-01 12:00 UTC therefore use the 2018-10-01 table.
+
+    As in IDL SPEDAS, the bad eyes and channels are removed for both the
+    electron (1-5, 9-12) and the ion (6-8) eyes, and the bad lowest channels
+    are removed even when the eye has no energy calibration (NaN energies).
+    pyspedas keeps the lowest channels of such eyes.
 
     """
 

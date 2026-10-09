@@ -2851,6 +2851,48 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
     @data(
+        (1, "2019-01-01T00:00:00", {"top-6": 2, "bottom-6": 2, "bottom-8": 1}),
+        (
+            2,
+            "2017-07-11T22:00:00",
+            {"top-6": 1, "top-7": 15, "top-8": 2, "bottom-7": 15},
+        ),
+        (
+            2,
+            "2019-01-01T00:00:00",
+            {"top-6": 1, "top-7": 15, "top-8": 2, "bottom-7": 2},
+        ),
+    )
+    @unpack
+    def test_feeps_remove_bad_data_ions(self, mms_id, t_start, n_bad):
+        # Ion eyes (6-8) used to be skipped: bad eyes and channels kept
+        feeps_alle = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", mms_id)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64(t_start, "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        # Number of lowest channels set to NaN in each eye (15: bad eye)
+        for k in filter(lambda x: x[:3] in ["top", "bot"], result):
+            n_nan = int(np.isnan(result[k].data).all(axis=0).sum())
+            self.assertEqual(n_nan, n_bad.get(k, 0), k)
+
+    def test_feeps_remove_bad_data_nan_energies(self):
+        # mms2 top-5 is a good eye in the 2018-10-01 table, without energy
+        # calibration: its bad lowest channel used to be kept
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 2)
+        eye = feeps_alle["top-5"].rename(energy="energy-top-5")
+        eye = eye.assign_coords({"energy-top-5": np.full(eye.shape[1], np.nan)})
+        feeps_alle = feeps_alle.drop_vars("top-5").assign({"top-5": eye})
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        self.assertTrue(np.isnan(result["top-5"].data[:, 0]).all())
+        self.assertTrue(np.isfinite(result["top-5"].data[:, 1:]).all())
+
+    @data(
         ("2017-07-11T22:00:00", ["top-12", "top-5"]),
         ("2018-04-01T11:00:00", ["top-12", "top-5"]),
         ("2018-04-01T13:00:00", ["bottom-12", "bottom-2", "top-12"]),
