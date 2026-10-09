@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 3rd party imports
+import numpy as np
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -57,6 +60,12 @@ def feeps_flat_field_corrections(inp_alle):
         Fly's Eye Energetic Particle Spectrometer (FEEPS) with corrected
         data.
 
+    Notes
+    -----
+    The eyes with a gain factor of 0 (mms2 top-7 and bottom-7, mms4 top-7)
+    are set to NaN, so that they are not averaged as zeros. IDL SPEDAS
+    multiplies them by 0, and pyspedas leaves them uncorrected.
+
     """
 
     # Spacecraft index
@@ -71,6 +80,10 @@ def feeps_flat_field_corrections(inp_alle):
     for sensors_eye in sensors_eyes:
         sensor, eye = sensors_eye.split("-")
         correction = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
+
+        # a gain of 0 means no calibration: NaN rather than zeros
+        if correction == 0:
+            correction = np.nan
 
         out[sensors_eye].data = out[sensors_eye].data * correction
 

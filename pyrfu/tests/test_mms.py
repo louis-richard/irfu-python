@@ -2628,10 +2628,12 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
 
         result = mms.feeps_flat_field_corrections(feeps_alle)
 
-        # Each eye is scaled by its gain (1 if not in the table)
+        # Each eye is scaled by its gain (1 if not in the table), and the eyes
+        # with a gain of 0 are NaN (they used to be zeros)
         for k in filter(lambda x: x[:3] in ["top", "bot"], feeps_ref):
             sensor, eye = k.split("-")
             gain = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
+            gain = np.nan if gain == 0 else gain
             np.testing.assert_array_equal(result[k].data, feeps_ref[k].data * gain)
             self.assertDictEqual(result[k].attrs, feeps_ref[k].attrs)
 
