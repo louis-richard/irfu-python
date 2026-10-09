@@ -2776,6 +2776,54 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
 
 
 @ddt
+class ReadFeepsSectorMasksCsvTestCase(unittest.TestCase):
+    sun_path = os.path.join(os.path.dirname(mms.__file__), "sun")
+
+    def _table(self, mms_id, file_date):
+        file_name = f"MMS{mms_id:d}_FEEPS_ContaminatedSectors_{file_date}.csv"
+        file_path = os.path.join(self.sun_path, file_name)
+        return np.loadtxt(file_path, delimiter=",", encoding="utf-8-sig")
+
+    @data(
+        ("2017-07-11T22:00:00", "20170531"),
+        ("2020-01-01T00:00:00", "20181005"),
+        ("2024-03-15T10:00:00", "20240202"),
+        ("2025-06-01T00:00:00", "20250814"),
+        ("2026-06-01T00:00:00", "20251226"),
+    )
+    @unpack
+    def test_read_feeps_sector_masks_csv_date(self, t_start, file_date):
+        # Masks from the file nearest to the start time; the list used to
+        # stop at 20181005
+        masks = mms.read_feeps_sector_masks_csv([t_start, t_start])
+
+        for mms_id in range(1, 5):
+            table = self._table(mms_id, file_date)
+            for i in range(12):
+                top = list(np.where(table[:, i] == 1)[0])
+                bottom = list(np.where(table[:, i + 12] == 1)[0])
+                self.assertListEqual(masks[f"mms{mms_id:d}_imask_top-{i + 1:d}"], top)
+                self.assertListEqual(
+                    masks[f"mms{mms_id:d}_imask_bottom-{i + 1:d}"], bottom
+                )
+
+    def test_read_feeps_sector_masks_csv_files(self):
+        files = os.listdir(self.sun_path)
+        file_dates = sorted({f[-12:-4] for f in files if f.endswith(".csv")})
+        self.assertEqual(file_dates[-1], "20251226")
+
+        # 64 sectors x 24 eyes of 0/1 for each spacecraft and date
+        for file_date in file_dates:
+            for mms_id in range(1, 5):
+                table = self._table(mms_id, file_date)
+                self.assertTupleEqual(table.shape, (64, 24))
+                self.assertTrue(np.isin(table, [0, 1]).all())
+
+        # MMS4 20250216 table as updated upstream in April 2025
+        self.assertEqual(int(self._table(4, "20250216").sum()), 564)
+
+
+@ddt
 class FeepsRemoveSunTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
     @unpack

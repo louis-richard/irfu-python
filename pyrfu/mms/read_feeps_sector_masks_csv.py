@@ -1,21 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import csv
-
 # Built-in imports
+import csv
+import glob
 import os
 
 # 3rd party imports
 import numpy as np
 
 # Local imports
-from ..pyrf.datetime642unix import datetime642unix
 from ..pyrf.iso86012datetime64 import iso86012datetime64
-from ..pyrf.unix2datetime64 import unix2datetime64
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -39,34 +37,37 @@ def read_feeps_sector_masks_csv(tint):
         Hash table containing the sectors to mask for each spacecraft and
         sensor ID
 
+    Notes
+    -----
+    The masks are read from the files in the ``sun`` folder dated nearest to
+    the start time (UTC), as in IDL SPEDAS and pyspedas.
+
     """
 
     masks = {}
 
-    dates = [
-        1447200000.0000000,  # 11/11/2015
-        1468022400.0000000,  # 7/9/2016
-        1477612800.0000000,  # 10/28/2016
-        1496188800.0000000,  # 5/31/2017
-        1506988800.0000000,  # 10/3/2017
-        1538697600.0000000,
-    ]  # 10/5/2018
+    # dates of the mask files shipped with pyrfu
+    sun_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sun")
+    files = glob.glob(os.path.join(sun_path, "MMS1_FEEPS_ContaminatedSectors_*.csv"))
+    str_dates = sorted(os.path.basename(file)[-12:-4] for file in files)
+    dates = np.array(
+        [f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in str_dates],
+        dtype="datetime64[ns]",
+    )
 
     # find the file closest to the start time
-    date = datetime642unix(iso86012datetime64(np.atleast_1d(tint[0])))
-    nearest_date = dates[np.argmin((np.abs(np.array(dates) - date)))]
-    nearest_date = unix2datetime64(np.array(nearest_date))
-    str_date = str(nearest_date.astype("<M8[D]"))
-    str_date = str_date.replace("-", "")
+    t_start = iso86012datetime64(np.atleast_1d(tint[0]))[0]
+    str_date = str_dates[np.argmin(np.abs(dates - t_start))]
 
     for mms_sc in np.arange(1, 5):
         file_name = f"MMS{mms_sc:d}_FEEPS_ContaminatedSectors_{str_date}.csv"
-        csv_file = os.sep.join(
-            [os.path.dirname(os.path.abspath(__file__)), "sun", file_name],
-        )
+        csv_file = os.path.join(sun_path, file_name)
 
-        with open(csv_file, "r", encoding="utf-8") as csv_file:
-            csv_data = [[float(x) for x in line] for line in csv.reader(csv_file)]
+        # some files start with a byte order mark or end rows with a comma
+        with open(csv_file, "r", encoding="utf-8-sig") as file:
+            csv_data = [
+                [float(x) for x in line if x.strip()] for line in csv.reader(file)
+            ]
 
         csv_data = np.array(csv_data)
 
