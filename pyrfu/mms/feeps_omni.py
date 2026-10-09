@@ -10,7 +10,7 @@ import numpy as np
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -76,6 +76,10 @@ def feeps_omni(inp_dataset):
     The dataset can be raw data, but it is better to remove bad datas,
     sunlight contamination and split before.
 
+    As in IDL SPEDAS and pyspedas, the channels of an eye whose energy is more
+    than 10 % away from the omni-directional energy are not averaged (except
+    for SITL data). Eyes with NaN energies are kept, as in IDL and pyspedas.
+
     See Also
     --------
     pyrfu.mms.get_feeps_alleyes, pyrfu.mms.feeps_remove_bad_data,
@@ -108,13 +112,19 @@ def feeps_omni(inp_dataset):
     )
     dalleyes[:] = np.nan
 
-    for idx, sensor in enumerate(top_sensors):
-        data = inp_dataset[sensor].data
-        dalleyes[:, :, idx] = data
+    # percent error around the energy bin centres to accept data for averaging
+    en_chk = 0.10
 
-    for idx, sensor in enumerate(bot_sensors):
-        data = inp_dataset[sensor].data
-        dalleyes[:, :, idx + len(top_sensors)] = data
+    for idx, sensor in enumerate(top_sensors + bot_sensors):
+        dalleyes[:, :, idx] = inp_dataset[sensor].data
+
+        if inp_dataset.attrs.get("lev") == "sitl":
+            continue
+
+        # channels outside energies +/- en_chk * energies are not averaged
+        eye_energies = inp_dataset[inp_dataset[sensor].dims[1]].data
+        bad_energies = np.abs(energies - eye_energies) > en_chk * energies
+        dalleyes[:, bad_energies, idx] = np.nan
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)

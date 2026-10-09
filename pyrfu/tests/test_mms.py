@@ -2655,6 +2655,55 @@ class FeepsOmniTestCase(unittest.TestCase):
         result = mms.feeps_omni(feeps_alle)
         self.assertIsInstance(result, xr.DataArray)
 
+    @data("l2", "sitl")
+    def test_feeps_omni_energy_check(self, lev):
+        # mms1 electron omni energies
+        energies = np.array(
+            [33.2, 51.9, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3]
+            + [200.2, 234.0, 273.4, 319.4, 373.2, 436.0, 509.2]
+        )
+        energies += 14.0
+        time = generate_timeline(64.0, 10)
+
+        # 4 eyes at 1, top-2 at 3 with channel 3 20 % off and channel 4 5 % off,
+        # bottom-1 with NaN energies
+        eye_energies = {k: energies.copy() for k in ["top-1", "top-2", "bottom-1"]}
+        eye_energies["top-2"][3] *= 1.2
+        eye_energies["top-2"][4] *= 1.05
+        eye_energies["bottom-1"][:] = np.nan
+        eye_energies["bottom-2"] = energies.copy()
+
+        feeps_dict = {}
+        for k, e_eye in eye_energies.items():
+            value = 3.0 if k == "top-2" else 1.0
+            feeps_dict[k] = xr.DataArray(
+                np.full((len(time), len(energies)), value),
+                coords=[time, e_eye],
+                dims=["time", f"energy-{k}"],
+                attrs={"UNITS": "1/(cm^2 s sr keV)"},
+            )
+
+        feeps_alle = xr.Dataset(feeps_dict)
+        feeps_alle.attrs = {
+            "tmmode": "brst",
+            "dtype": "electron",
+            "lev": lev,
+            "units_name": "flux",
+            "species": "e",
+            "mmsId": 1,
+        }
+
+        result = mms.feeps_omni(feeps_alle)
+        np.testing.assert_allclose(result.energy.data, energies)
+
+        # Channel 3 of top-2 is averaged only without the check (SITL), the
+        # other channels of top-2 and the NaN-energy eye are always averaged
+        expected = np.full(len(energies), 1.5)
+        if lev != "sitl":
+            expected[3] = 1.0
+
+        np.testing.assert_allclose(result.data, np.tile(expected, (len(time), 1)))
+
 
 @ddt
 class FeepsPadTestCase(unittest.TestCase):
