@@ -2744,6 +2744,19 @@ class FeepsPadTestCase(unittest.TestCase):
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
 
+def _spin_avg_case(dim, values):
+    # 3 samples of a partial spin, 5 spins of 8 sectors, 4 samples of a partial
+    # spin, with the data equal to the spin number (0 to 6)
+    spin_sectors = np.hstack([[5, 6, 7], np.tile(np.arange(8), 5), [0, 1, 2, 3]])
+    spin = np.hstack([[0] * 3, np.repeat(np.arange(1, 6), 8), [6] * 4]).astype(float)
+    time = generate_timeline(0.4, len(spin))
+    data = np.tile(spin[:, None], (1, len(values)))
+    out = xr.DataArray(
+        data, coords=[time, values], dims=["time", dim], attrs={"mmsId": 1}
+    )
+    return spin_sectors, out
+
+
 @ddt
 class FeepsPadSpinAvgTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
@@ -2930,8 +2943,8 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
         feeps_omni = mms.feeps_omni(feeps_alle)
 
-        # Spin sectors 0..11 repeated: spins start at 12, 24, ..., 96
-        spin_starts = np.arange(12, 100, 12)
+        # Spin sectors 0..11 repeated: spins start at 0, 12, ..., 96
+        spin_starts = np.arange(0, 100, 12)
 
         # A DataArray used to give one row per sample (aligned on time)
         result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
@@ -2942,6 +2955,26 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
             result.time.data, feeps_omni.time.data[spin_starts]
         )
         xr.testing.assert_identical(result, result_np)
+
+    def test_feeps_spin_avg_windows(self):
+        # Partial spin (3 samples), 5 spins of 8 sectors, partial spin (4)
+        spin_sectors, flux = _spin_avg_case("energy", [100.0, 200.0])
+        flux[3:11] = np.nan  # spin 1 without data
+
+        result = mms.feeps_spin_avg(flux, spin_sectors)
+
+        # One row per spin, at its first sample: the windows used to be
+        # shifted by one sample and the last two spins set to 0
+        expected = np.array([0.0, np.nan, 2.0, 3.0, 4.0, 5.0, 6.0])
+        np.testing.assert_array_equal(result.data[:, 0], expected)
+        np.testing.assert_array_equal(result.data[:, 1], expected)
+        np.testing.assert_array_equal(
+            result.time.data, flux.time.data[[0, 3, 11, 19, 27, 35, 43]]
+        )
+        self.assertDictEqual(result.attrs, flux.attrs)
+
+        with self.assertRaises(ValueError):
+            mms.feeps_spin_avg(flux, spin_sectors[:-1])
 
 
 @ddt
