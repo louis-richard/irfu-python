@@ -9,7 +9,7 @@ import xarray as xr
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -52,6 +52,9 @@ def feeps_remove_sun(inp_dataset):
     >>> cps_i_clean_sun_removed = mms.feeps_remove_sun(cps_i_clean)
 
     """
+
+    # Work on a copy, the NaNs are written through .data
+    inp_dataset = inp_dataset.copy(deep=True)
 
     var = inp_dataset.attrs
 

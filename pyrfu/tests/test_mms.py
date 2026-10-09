@@ -2743,6 +2743,17 @@ class FeepsRemoveSunTestCase(unittest.TestCase):
         result = mms.feeps_remove_sun(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
 
+    def test_feeps_remove_sun_input_unchanged(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_remove_sun(feeps_alle)
+
+        # Masked sectors are NaN in the output only
+        self.assertTrue(np.isnan(result["top-5"].data).any())
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
 
 @ddt
 class FeepsSpinAvgTestCase(unittest.TestCase):
