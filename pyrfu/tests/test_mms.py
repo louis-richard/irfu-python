@@ -2759,6 +2759,18 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_feeps_pad_spin_avg_input_types(self):
+        feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
+
+        # A NumPy array used to raise TypeError
+        result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
+        result_np = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum.data)
+
+        self.assertEqual(len(result.time), 8)
+        xr.testing.assert_identical(result, result_np)
+
 
 @ddt
 class FeepsPitchAnglesTestCase(unittest.TestCase):

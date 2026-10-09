@@ -10,7 +10,7 @@ import xarray as xr
 from scipy import interpolate
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -24,7 +24,7 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
     ----------
     pad : xarray.DataArray
         Pitch angle distribution.
-    spin_sectors : xarray.DataArray
+    spin_sectors : xarray.DataArray or numpy.ndarray
         Time series of the spin sectors.
     bin_size : float, Optional
         Size of the pitch angle bins
@@ -41,7 +41,7 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = 16.3636):
 
     # get the spin sectors
     # v5.5+ = mms1_epd_feeps_srvy_l1b_electron_spinsectnum
-    spin_sectors = spin_sectors.data
+    spin_sectors = np.asarray(spin_sectors)
 
     spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
 
