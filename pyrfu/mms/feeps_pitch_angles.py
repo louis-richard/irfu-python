@@ -5,13 +5,11 @@
 import numpy as np
 import xarray as xr
 
-from ..pyrf.resample import resample
-
 # Local imports
 from .feeps_active_eyes import feeps_active_eyes
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -142,7 +140,8 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         Dataset of the time series of the energy spectrum for each eye of
         FEEPS telescopes.
     b_bcs : xarray.DataArray
-        Time series of the magnetic in spacecraft coordinates system.
+        Time series of the magnetic field in body coordinates (BCS), e.g. the
+        FGM survey L2 field as in IDL SPEDAS.
 
     Returns
     -------
@@ -150,6 +149,12 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         Time series of the pitch angles.
     idx_maps : dict
         to fill.
+
+    Notes
+    -----
+    The pitch angles are computed at the times of `b_bcs` and linearly
+    interpolated onto the FEEPS times, as in IDL SPEDAS and pyspedas. The FEEPS
+    times outside `b_bcs` are NaN.
 
     """
 
@@ -185,6 +190,8 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         coords=[b_bcs.time.data, np.arange(new_pas.shape[1])],
         dims=["time", "idx"],
     )
-    out = resample(out, inp_dataset.time)
+
+    # interpolate the instantaneous angles (not averaged over the accumulation)
+    out = out.interp(time=times)
 
     return out, idx_maps

@@ -2841,6 +2841,24 @@ class FeepsPitchAnglesTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result[0], xr.DataArray)
 
+    def test_feeps_pitch_angles_interpolation(self):
+        # B turning by 45 degrees per FEEPS sample, at 10 times the FEEPS rate
+        feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
+        time = generate_timeline(640.0, 1000)
+        phi = np.deg2rad(4.5) * np.arange(1000)
+        b_xyz = np.stack([np.cos(phi), np.sin(phi), 0.5 * np.ones(1000)], axis=1)
+        b_fast = xr.DataArray(
+            b_xyz, coords=[time, ["x", "y", "z"]], dims=["time", "comp"]
+        )
+
+        # The angles at the FEEPS times are those of B at these times (they
+        # used to be averaged over the sample, while B turns)
+        result, _ = mms.feeps_pitch_angles(feeps_alle, b_fast)
+        expected, _ = mms.feeps_pitch_angles(feeps_alle, b_fast[::10])
+
+        np.testing.assert_array_equal(result.time.data, feeps_alle.time.data)
+        np.testing.assert_allclose(result.data, expected.data, atol=1e-10)
+
 
 @ddt
 class FeepsRemoveBadDataTestCase(unittest.TestCase):
