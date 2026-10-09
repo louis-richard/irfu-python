@@ -15,7 +15,7 @@ from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime import iso86012datetime
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -115,6 +115,9 @@ def feeps_remove_bad_data(inp_dataset):
         energy channels are set to NaN.
 
     """
+
+    # Work on a copy, the NaNs are written through .data
+    inp_dataset = inp_dataset.copy(deep=True)
 
     mms_id = inp_dataset.attrs["mmsId"]
 

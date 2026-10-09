@@ -2717,6 +2717,17 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
         result = mms.feeps_remove_bad_data(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
 
+    def test_feeps_remove_bad_data_input_unchanged(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        # Bad eye and bad lowest channel are NaN in the output only
+        self.assertTrue(np.isnan(result["top-1"].data).all())
+        self.assertTrue(np.isnan(result["top-2"].data[:, 0]).all())
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
 
 @ddt
 class FeepsRemoveSunTestCase(unittest.TestCase):
