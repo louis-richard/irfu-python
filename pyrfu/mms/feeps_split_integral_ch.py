@@ -5,7 +5,7 @@
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -25,24 +25,33 @@ def feeps_split_integral_ch(inp_dataset):
     -------
     out : xarray.Dataset
         Energetic particles energy spectra with the integral channel removed.
+        The other variables (spin sectors, pitch angles, ...) are unchanged.
     out_500kev : xarray.Dataset
-        Integral channel that was removed.
+        Integral channel that was removed, with the spin sectors.
+
+    Notes
+    -----
+    Only the eyes (``top-*`` and ``bottom-*`` variables) are split, as in IDL
+    SPEDAS.
 
     """
 
+    eyes = [k for k in inp_dataset if k.startswith(("top", "bottom"))]
+
     out_dict, out_dict_500kev = [{}, {}]
 
-    out_dict["spinsectnum"] = inp_dataset["spinsectnum"]
+    if "spinsectnum" in inp_dataset:
+        out_dict_500kev["spinsectnum"] = inp_dataset["spinsectnum"]
 
     for k in inp_dataset:
-        try:
+        if k in eyes:
             # Energy spectra with the integral channel removed
             out_dict[k] = inp_dataset[k][:, :-1]
 
             # Integral channel that was removed
             out_dict_500kev[k] = inp_dataset[k][:, -1]
-        except IndexError:
-            pass
+        else:
+            out_dict[k] = inp_dataset[k]
 
     out = xr.Dataset(out_dict, attrs=inp_dataset.attrs)
 

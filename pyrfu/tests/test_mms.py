@@ -3102,6 +3102,30 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
         )
         mms.feeps_split_integral_ch(feeps_alle)
 
+    def test_feeps_split_integral_ch_other_variables(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        eyes = [k for k in feeps_alle if k.startswith(("top", "bottom"))]
+
+        # Pitch angles (one column per eye) and a 1-D variable
+        time = feeps_alle.time.data
+        feeps_alle["pitch_angle"] = (["time", "eye"], np.ones((len(time), 18)))
+        feeps_alle["other"] = (["time"], np.arange(len(time), dtype=float))
+
+        out, out_500kev = mms.feeps_split_integral_ch(feeps_alle)
+
+        # Only the eyes are split: pitch_angle used to lose its last column
+        # and the 1-D variables other than spinsectnum used to be dropped
+        for k in eyes:
+            np.testing.assert_array_equal(out[k].data, feeps_alle[k].data[:, :-1])
+            np.testing.assert_array_equal(out_500kev[k].data, feeps_alle[k].data[:, -1])
+
+        for k in ["spinsectnum", "pitch_angle", "other"]:
+            xr.testing.assert_identical(out[k], feeps_alle[k])
+
+        self.assertListEqual(
+            sorted(out_500kev.data_vars), sorted([*eyes, "spinsectnum"])
+        )
+
 
 @ddt
 class FkPowerSpectrum4scTestCase(unittest.TestCase):
