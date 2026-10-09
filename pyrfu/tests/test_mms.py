@@ -2752,6 +2752,33 @@ class FeepsPadTestCase(unittest.TestCase):
         # energy_range added to the caller's attrs
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_pad_cdf_angles(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        # CDF pitch angles at 10 degrees, one eye with the fill value
+        pitch_angle = np.full((feeps_alle.sizes["time"], 18), 10.0)
+        pitch_angle[:, 0] = -2147483648
+        feeps_alle["pitch_angle"] = (["time", "eye"], pitch_angle)
+
+        b_bcs = generate_ts(64.0, 100, tensor_order=1)
+        result = mms.feeps_pad(feeps_alle, b_bcs)
+
+        # Burst: the CDF angles are used (they used to be computed from B),
+        # 10 +/- 21.4 degrees covers the first two bins only
+        self.assertTrue(np.isfinite(result.data[:, :2]).all())
+        self.assertTrue(np.isnan(result.data[:, 2:]).all())
+
+        # Angles from B on request, and always in survey
+        result_b = mms.feeps_pad(feeps_alle, b_bcs, angles_from_bfield=True)
+        feeps_alle.attrs["tmmode"] = "srvy"
+        result_srvy = mms.feeps_pad(feeps_alle, b_bcs)
+        expected = mms.feeps_pad(feeps_alle.drop_vars("pitch_angle"), b_bcs)
+        xr.testing.assert_allclose(result_srvy, expected)
+        self.assertFalse(np.isnan(result_b.data[:, 2:]).all())
+
     def test_feeps_pad_unsplit(self):
         # Unsplit eyes (16 channels) used to average the integral channel
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)

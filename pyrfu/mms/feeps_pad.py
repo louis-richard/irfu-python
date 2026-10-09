@@ -146,6 +146,7 @@ def feeps_pad(
     b_bcs,
     bin_size: float = 16.3636,
     energy: list = None,
+    angles_from_bfield: bool = False,
 ):
     r"""Compute pitch angle distribution using FEEPS data.
 
@@ -154,11 +155,16 @@ def feeps_pad(
     inp_dataset : xarray.Dataset
         Energy spectrum of all eyes.
     b_bcs : xarray.DataArray
-        Time series of the magnetic field in spacecraft coordinates.
+        Time series of the magnetic field in body coordinates (BCS), e.g. the
+        FGM survey L2 field as in IDL SPEDAS. Not used for burst data, unless
+        `angles_from_bfield` is True.
     bin_size : float, Optional
         Width of the pitch angles bins. Default is 16.3636.
     energy : array_like, Optional
         Energy range of particles. Default is [70., 600.]
+    angles_from_bfield : bool, Optional
+        For burst data, compute the pitch angles from `b_bcs` instead of using
+        the pitch angles of the CDF (``pitch_angle``). Default is False.
 
     Returns
     -------
@@ -175,6 +181,10 @@ def feeps_pad(
     The integral channel must be split before (`feeps_split_integral_ch`),
     otherwise the electron integral channel (about 580 keV) would be averaged
     as a spectrum channel.
+
+    As in IDL SPEDAS and pyspedas, burst data use the pitch angles of the CDF
+    by default, and survey data the pitch angles computed from `b_bcs`
+    (`feeps_pitch_angles`).
 
     """
 
@@ -201,7 +211,15 @@ def feeps_pad(
     pa_bins = [180.0 * pa_bin / n_pabins for pa_bin in range(n_pabins + 1)]
     pa_labels = [pa_bin + bin_size / 2.0 for pa_bin in pa_bins[:-1]]
 
-    pitch_angles, idx_maps = feeps_pitch_angles(inp_dataset, b_bcs)
+    if d_rate == "brst" and not angles_from_bfield and "pitch_angle" in inp_dataset:
+        # pitch angles of the CDF, fill values (inactive eyes) to NaN
+        pitch_angles = inp_dataset["pitch_angle"].astype(float)
+        pitch_angles = pitch_angles.where(
+            (pitch_angles >= 0.0) & (pitch_angles <= 180.0)
+        )
+        idx_maps = None
+    else:
+        pitch_angles, idx_maps = feeps_pitch_angles(inp_dataset, b_bcs)
 
     pa_data_map = _pa_data_map(idx_maps, d_type, d_rate)
 
