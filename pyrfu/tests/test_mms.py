@@ -3105,6 +3105,13 @@ class FeepsSectorSpecTestCase(unittest.TestCase):
         feeps_alle["spinsectnum"] = feeps_alle["spinsectnum"].astype(float)
         xr.testing.assert_identical(mms.feeps_sector_spec(feeps_alle), result)
 
+    def test_feeps_sector_spec_unsplit(self):
+        # Unsplit eyes (16 channels) used to average the integral channel
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_sector_spec(feeps_alle)
+
 
 @ddt
 class FeepsSplitIntegralChTestCase(unittest.TestCase):

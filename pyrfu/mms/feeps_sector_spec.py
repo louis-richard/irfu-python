@@ -32,6 +32,11 @@ def feeps_sector_spec(inp_alle):
         Sector-spectrograms with FEEPS data for all eyes: one row per spin and
         one column per spin sector (64).
 
+    Raises
+    ------
+    ValueError
+        If the integral channel of the eyes is not split (16 channels).
+
     Notes
     -----
     A spin starts at the first sample after the spin sector number wraps
@@ -47,6 +52,13 @@ def feeps_sector_spec(inp_alle):
     """
 
     sensors_eyes = list(filter(lambda x: x.startswith(("top", "bottom")), inp_alle))
+
+    for sensors_eye in sensors_eyes:
+        if inp_alle[sensors_eye].shape[1] == 16:
+            raise ValueError(
+                f"{sensors_eye} has 16 energy channels: split the integral channel "
+                "first with feeps_split_integral_ch (or use feeps_corrections)"
+            )
 
     sector_time = inp_alle["spinsectnum"].time.data
     sector_data = np.asarray(inp_alle["spinsectnum"].data).astype(int)
