@@ -51,7 +51,7 @@ def feeps_avg_4sc(
 
     Parameters
     ----------
-    b_list : Sequence of DataArray or Dataset
+    b_list : Sequence of DataArray
         List of the time series of the quantity for each spacecraft.
 
     flag : str, optional
@@ -70,15 +70,17 @@ def feeps_avg_4sc(
 
     Returns
     -------
-    b_avg : DataArray or Dataset
+    b_avg : DataArray
         Time series of the input quantity at the center of mass of the
         MMS tetrahedron.
 
     Raises
     ------
     TypeError
-        If b_list is not a list (or tuple) of DataArray or Dataset, or
-        combined_energies is not a dict.
+        If b_list is not a list (or tuple) of DataArray, or combined_energies
+        is not a dict.
+    ValueError
+        If flag is not "omni" or "pad".
 
     Notes
     -----
@@ -89,15 +91,16 @@ def feeps_avg_4sc(
     if not isinstance(b_list, (list, tuple)):
         raise TypeError("b_list must be a list or a tuple")
 
-    assert flag in ["omni", "pad"], "flag must be 'omni' or 'pad'"
+    if flag not in ["omni", "pad"]:
+        raise ValueError("flag must be 'omni' or 'pad'")
 
     b_list_r = []
 
     for b in b_list:
-        if isinstance(b, (xr.DataArray, xr.Dataset)):
+        if isinstance(b, xr.DataArray):
             b_list_r.append(resample(b, b_list[0], f_s=calc_fs(b_list[0])))
         else:
-            raise TypeError("elements of b_list must be DataArray or Dataset")
+            raise TypeError("elements of b_list must be DataArray")
 
     b_list_count_nans = deepcopy(b_list_r)
     b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]

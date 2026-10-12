@@ -2683,12 +2683,41 @@ class FeepsAvg4scTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[0], [1.5, 15.0 / 4.0, 15.0 / 4.0])
         np.testing.assert_allclose(result.energy.data, [52.0, 75.0, 90.0])
 
+    def test_feeps_avg_4sc_pad(self):
+        # PADs (time, theta) of the 4 spacecraft, one without data
+        time = generate_timeline(1.0, 4)
+        theta = 8.18 + 16.36 * np.arange(11)
+        pads = [
+            xr.DataArray(
+                np.full((4, 11), value),
+                coords=[time, theta],
+                dims=["time", "theta"],
+                attrs={"mmsId": i + 1, "probe": i + 1, "mms": i + 1, "MMS": i + 1},
+            )
+            for i, value in enumerate([1.0, 2.0, 4.0, np.nan])
+        ]
+
+        result = mms.feeps_avg_4sc(pads, flag="pad")
+
+        np.testing.assert_allclose(result.data, np.full((4, 11), 7.0 / 3.0))
+        np.testing.assert_array_equal(result.theta.data, theta)
+        for key in ["mmsId", "probe", "mms", "MMS"]:
+            self.assertEqual(result.attrs[key], "4sc_avg")
+
     def test_feeps_avg_4sc_input(self):
         with self.assertRaises(TypeError):
             mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0])[0])
 
         with self.assertRaises(TypeError):
             mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), combined_energies=[[1, 1]])
+
+        # Datasets were documented but failed with AttributeError
+        omni = [b.to_dataset(name="omni") for b in _feeps_omni_4sc([1.0, 2.0])]
+        with self.assertRaisesRegex(TypeError, "DataArray"):
+            mms.feeps_avg_4sc(omni)
+
+        with self.assertRaises(ValueError):
+            mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), flag="gpd")
 
 
 @ddt
