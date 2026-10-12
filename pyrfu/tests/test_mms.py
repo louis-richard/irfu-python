@@ -2754,6 +2754,33 @@ class FeepsCorrectEnergiesTestCase(unittest.TestCase):
             mms.feeps_correct_energies(split)
 
 
+class FeepsCorrectionsTestCase(unittest.TestCase):
+    def test_feeps_corrections(self):
+        # MMS2 ions in 2017: zero-gain and bad eye bottom-7, bad channels
+        feeps_alle = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", 2)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64("2017-07-11T22:00:00", "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+        feeps_alle["spinsectnum"].data = np.arange(100) % 64
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_corrections(feeps_alle)
+
+        # The chain of IDL SPEDAS mms_load_feeps
+        expected = mms.feeps_correct_energies(feeps_ref)
+        expected = mms.feeps_flat_field_corrections(expected)
+        expected = mms.feeps_remove_bad_data(expected)
+        expected, _ = mms.feeps_split_integral_ch(expected)
+        expected = mms.feeps_remove_sun(expected)
+        xr.testing.assert_identical(result, expected)
+
+        self.assertEqual(result["top-6"].shape, (100, 15))
+        self.assertIn("energy_top-6", result["top-6"].dims)
+        self.assertTrue(np.isnan(result["bottom-7"].data).all())
+        self.assertTrue(np.isfinite(result["top-6"].data[:, 1:]).any())
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+
 @ddt
 class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
