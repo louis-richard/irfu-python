@@ -5867,6 +5867,81 @@ class VdfOmniTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfConvertTestCase(unittest.TestCase):
+    def test_vdf_convert_round_trips(self):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+        units = [
+            "s^3/m^6",
+            "s^3/km^6",
+            "keV/(cm^2 s sr keV)",
+            "eV/(cm^2 s sr eV)",
+            "1/(cm^2 s sr keV)",
+            "1/(cm^2 s sr eV)",
+        ]
+
+        for unit in units:
+            result = mms.vdf_convert(vdf, unit)
+            self.assertEqual(result.data.attrs["UNITS"], unit)
+            back = mms.vdf_convert(result, "s^3/cm^6")
+            np.testing.assert_allclose(back.data.data, vdf.data.data, rtol=1e-12)
+
+        # The existing converters, and the per eV flux is 1e-3 the per keV one
+        np.testing.assert_allclose(
+            mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)").data.data,
+            mms.psd2def(vdf).data.data,
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data,
+            1e-3 * mms.psd2dpf(vdf).data.data,
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            mms.vdf_convert(vdf, "s^3/km^6").data.data, 1e30 * vdf.data.data
+        )
+
+        # Same units: a copy
+        result = mms.vdf_convert(vdf, "S^3/CM^6")
+        np.testing.assert_array_equal(result.data.data, vdf.data.data)
+        self.assertIsNot(result.data.data, vdf.data.data)
+
+    def test_vdf_convert_relativistic(self):
+        # Electrons at 100 keV: the relativistic attribute is used by default
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "electrons")
+        vdf.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 1e4)
+        vdf.attrs["relativistic"] = True
+
+        psd = mms.vdf_convert(vdf, "s^3/m^6")
+        expected = mms.dpf2psd(vdf, relativistic=True)
+        np.testing.assert_allclose(psd.data.data, expected.data.data, rtol=1e-12)
+        non_rel = mms.vdf_convert(vdf, "s^3/m^6", relativistic=False)
+        np.testing.assert_allclose(
+            non_rel.data.data, mms.dpf2psd(vdf).data.data, rtol=1e-12
+        )
+
+        # Energy fluxes: J = DEF / E, so the same factor
+        def_e = mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)")
+        np.testing.assert_allclose(
+            mms.vdf_convert(def_e, "s^3/m^6").data.data, psd.data.data, rtol=1e-12
+        )
+        back = mms.vdf_convert(psd, "keV/(cm^2 s sr keV)")
+        np.testing.assert_allclose(back.data.data, def_e.data.data, rtol=1e-12)
+
+    def test_vdf_convert_input(self):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_convert(vdf, "counts")
+
+        vdf.data.attrs["UNITS"] = "counts"
+
+        with self.assertRaises(ValueError):
+            mms.vdf_convert(vdf, "s^3/m^6")
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):

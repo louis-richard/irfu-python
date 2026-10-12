@@ -137,6 +137,7 @@ Unit conversions
    dpf2psd
    psd2def
    psd2dpf
+   vdf_convert
    spectr_to_dataset
 
 Energetic Ion Spectrometer (EIS)
