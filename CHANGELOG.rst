@@ -63,9 +63,9 @@ New features
 ^^^^^^^^^^^^
 
 - ``mms.feeps_skymap``: FEEPS skymaps, one per spin (time, energy, phi,
-  theta), in DMPA and in phase-space density (s\ :sup:`3` cm\ :sup:`-6`), as
-  the FPI distributions, for ``mms.psd_moments``, ``mms.reduce`` and
-  ``mms.vdf_projection``. The look directions are despun with the spin
+  theta), in DMPA and in relativistic phase-space density (s\ :sup:`3`
+  cm\ :sup:`-6`), as the FPI distributions, for ``mms.psd_moments``,
+  ``mms.reduce`` and ``mms.vdf_projection``. The look directions are despun with the spin
   sectors (a constant per spacecraft, measured on 2015-2024 FGM data), or with
   FGM (``b_bcs`` and ``b_dmpa``). The 4 polar rings of the eyes give coarse
   partial moments above about 30 keV; ``coverage`` gives the fraction of the
@@ -74,6 +74,20 @@ New features
 - ``mms.reduce`` uses the angular widths of the skymap (``delta_theta_*`` and
   ``delta_phi_*``) when they are given, as for the FEEPS skymaps, whose 4
   polar bins have different widths; FPI and EIS skymaps are unchanged.
+- ``mms.dpf2psd`` and ``mms.psd2dpf``: ``relativistic=True`` converts to
+  and from the relativistic phase-space density, f = γ\ :sup:`3` m J /
+  v\ :sup:`2` with the relativistic speed v, whose integral over the
+  velocities is the density. For electrons, it is larger than the
+  non-relativistic f = m J / v\ :sup:`2` (v\ :sup:`2` = 2E/m, the default, as
+  FPI) by 4.5 % at 5 keV, 52 % at 50 keV and a factor 2.2 at 100 keV. The
+  FEEPS skymaps use it.
+- ``mms.psd_moments``: ``relativistic=True`` uses the relativistic speeds,
+  momentum (pressure) and kinetic energy (heat flux), for the relativistic
+  phase-space density; the default is the ``relativistic`` attribute of the
+  distribution (True for the FEEPS skymaps), else False, as before. The
+  density is then the integral of the intensity over the energy and the solid
+  angle; the non-relativistic moments underestimate the FEEPS electron density
+  by about 10 % (more for harder spectra).
 - ``mms.get_gyrophase_dist``: gyrophase distributions of a skymap (FPI, EIS,
   FEEPS), optionally in a range of pitch angles. The gyrophase is measured
   right-handed about B from the component of a reference direction
@@ -177,7 +191,8 @@ Documentation
   Li et al. (2022) with ``mms.get_gyrophase_dist``.
 - New example: FEEPS skymaps (``mms.feeps_skymap``) at the dipolarization
   front of Kolokotronis et al. (2026), with angle-angle maps, coverage, partial
-  moments and the pitch-angle and gyrophase distributions.
+  moments, the pitch-angle and gyrophase distributions and the reduced
+  distributions.
 
 2.5.0 (2026-10-07)
 ------------------
