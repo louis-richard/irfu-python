@@ -90,6 +90,7 @@ from .scpot2ne import scpot2ne
 from .spectr_to_dataset import spectr_to_dataset
 from .tokenize import tokenize
 from .vdf_convert import vdf_convert
+from .vdf_d3v import vdf_d3v
 from .vdf_elim import vdf_elim
 from .vdf_omni import vdf_omni
 from .vdf_projection import vdf_projection
@@ -195,6 +196,7 @@ __all__ = [
     "spectr_to_dataset",
     "tokenize",
     "vdf_convert",
+    "vdf_d3v",
     "vdf_elim",
     "vdf_frame_transformation",
     "vdf_omni",

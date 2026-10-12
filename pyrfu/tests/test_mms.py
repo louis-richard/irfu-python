@@ -6082,6 +6082,69 @@ class VdfSolidAngleTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfD3vTestCase(unittest.TestCase):
+    def test_vdf_d3v_sphere(self):
+        # The bins of the sphere: 4 pi / 3 (v_2^3 - v_1^3) per energy channel
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        lower = vdf.energy.data - vdf.attrs["delta_energy_minus"]
+        upper = vdf.energy.data + vdf.attrs["delta_energy_plus"]
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * e / constants.m_p) for e in [lower, upper]
+        )
+        expected = 4 * np.pi / 3 * (v_2**3 - v_1**3)
+
+        result = mms.vdf_d3v(vdf)
+        self.assertEqual(result.data.attrs["UNITS"], "cm^3/s^3")
+        np.testing.assert_allclose(
+            result.data.data.sum(axis=(2, 3)), 1e6 * expected, rtol=1e-12
+        )
+
+        for units, unit_volume, factor in [
+            ("s^3/km^6", "km^3/s^3", 1e-9),
+            ("s^3/m^6", "m^3/s^3", 1.0),
+            ("1/(cm^2 s sr keV)", "m^3/s^3", 1.0),
+        ]:
+            vdf.data.attrs["UNITS"] = units
+            result = mms.vdf_d3v(vdf)
+            self.assertEqual(result.data.attrs["UNITS"], unit_volume)
+            np.testing.assert_allclose(
+                result.data.data.sum(axis=(2, 3)), factor * expected, rtol=1e-12
+            )
+
+        # Without the energy widths: midpoints between the channels
+        del vdf.attrs["delta_energy_minus"], vdf.attrs["delta_energy_plus"]
+        energy = vdf.energy.data[0]
+        result = mms.vdf_d3v(vdf).data.data[0, 5].sum()
+        e_1, e_2 = (energy[4] + energy[5]) / 2, (energy[5] + energy[6]) / 2
+        v_1, v_2 = (np.sqrt(2 * constants.e * e / constants.m_p) for e in [e_1, e_2])
+        np.testing.assert_allclose(result, 4 * np.pi / 3 * (v_2**3 - v_1**3))
+
+    def test_vdf_d3v_sc_pot_pad(self):
+        # Ions gain e V (irfu-matlab PDist.d3v subtracts V for all species)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/m^6"
+        result = mms.vdf_d3v(vdf, sc_pot=20.0).data.data[0, 3].sum()
+        lower = vdf.energy.data[0, 3] - vdf.attrs["delta_energy_minus"][0, 3] + 20.0
+        upper = vdf.energy.data[0, 3] + vdf.attrs["delta_energy_plus"][0, 3] + 20.0
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * e / constants.m_p) for e in [lower, upper]
+        )
+        np.testing.assert_allclose(result, 4 * np.pi / 3 * (v_2**3 - v_1**3))
+
+        pad = _pad_case(np.ones((3, 2, 12)))
+        result = mms.vdf_d3v(pad)
+        self.assertEqual(result.data.attrs["UNITS"], "cm^3/s^3")
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * f * pad.energy.data / constants.m_p)
+            for f in [0.75, 1.25]
+        )
+        np.testing.assert_allclose(
+            result.data.data.sum(axis=2), 1e6 * 4 * np.pi / 3 * (v_2**3 - v_1**3)
+        )
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):
