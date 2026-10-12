@@ -141,8 +141,10 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         Dataset of the time series of the energy spectrum for each eye of
         FEEPS telescopes.
     b_bcs : xarray.DataArray
-        Time series of the magnetic field in body coordinates (BCS), e.g. the
-        FGM survey L2 field as in IDL SPEDAS.
+        Time series of the magnetic field in body coordinates (BCS), covering
+        the FEEPS times. IDL SPEDAS uses the FGM survey L2 field at all data
+        rates (``mms.get_data("b_bcs_fgm_srvy_l2", tint, mms_id)``), and
+        pyspedas the FGM field at the FEEPS data rate.
 
     Returns
     -------

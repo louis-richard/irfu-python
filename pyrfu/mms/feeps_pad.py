@@ -139,9 +139,11 @@ def feeps_pad(
     inp_dataset : xarray.Dataset
         Energy spectrum of all eyes.
     b_bcs : xarray.DataArray
-        Time series of the magnetic field in body coordinates (BCS), e.g. the
-        FGM survey L2 field as in IDL SPEDAS. Not used for burst data, unless
-        `angles_from_bfield` is True.
+        Time series of the magnetic field in body coordinates (BCS), covering
+        the FEEPS times. IDL SPEDAS uses the FGM survey L2 field at all data
+        rates (``mms.get_data("b_bcs_fgm_srvy_l2", tint, mms_id)``), and
+        pyspedas the FGM field at the FEEPS data rate. Not used for burst data,
+        unless `angles_from_bfield` is True.
     bin_size : float, Optional
         Width of the pitch angles bins in degrees. Default is 16.3636. As in
         IDL SPEDAS and pyspedas, there are floor(180 / bin_size) bins of
