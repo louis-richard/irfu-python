@@ -68,6 +68,8 @@ def _moms(
     use_energy,
     vdf,
     delta_ang,
+    exact_kernels,
+    use_exact,
 ):
     n_psd = np.zeros(vdf.shape[0])
     v_psd = np.zeros((vdf.shape[0], 3))
@@ -99,6 +101,19 @@ def _moms(
         psd2p_xy_mat = np.cos(phi_i) * np.sin(phi_i) * np.sin(theta_i) ** 3
         psd2p_xz_mat = np.cos(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
         psd2p_yz_mat = np.sin(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
+
+        # Kernels integrated exactly over each angular bin (delta_ang is 1)
+        if use_exact:
+            psd2n_mat = exact_kernels[i_t, 0].copy()
+            psd2v_x_mat = exact_kernels[i_t, 1].copy()
+            psd2v_y_mat = exact_kernels[i_t, 2].copy()
+            psd2v_z_mat = exact_kernels[i_t, 3].copy()
+            psd2p_xx_mat = exact_kernels[i_t, 4].copy()
+            psd2p_yy_mat = exact_kernels[i_t, 5].copy()
+            psd2p_zz_mat = exact_kernels[i_t, 6].copy()
+            psd2p_xy_mat = exact_kernels[i_t, 7].copy()
+            psd2p_xz_mat = exact_kernels[i_t, 8].copy()
+            psd2p_yz_mat = exact_kernels[i_t, 9].copy()
 
         for i_e in range(vdf.shape[1]):
             # Energy channels selected for this time step
@@ -175,6 +190,54 @@ def _moms(
             h_psd[i_t, 2] += vz_acc * delta_v[i_t, i_e] * velocity[i_e] ** 5
 
     return n_psd, v_psd, p_psd, h_psd
+
+
+def _exact_kernels(
+    phi, theta, delta_phi_minus, delta_phi_plus, delta_theta_minus, delta_theta_plus
+):
+    # Angular kernels of the moments integrated over each (phi, theta) bin,
+    # assuming a constant phase-space density in the bin: (time, kernel, phi,
+    # theta), kernels in the order of _moms. Angles and widths in degrees, phi
+    # (time, phi), theta (theta,).
+    phi_a = np.deg2rad(phi - delta_phi_minus)[:, :, np.newaxis]
+    phi_b = np.deg2rad(phi + delta_phi_plus)[:, :, np.newaxis]
+    theta_a = np.deg2rad(theta - delta_theta_minus)[np.newaxis, np.newaxis, :]
+    theta_b = np.deg2rad(theta + delta_theta_plus)[np.newaxis, np.newaxis, :]
+
+    # integrals over phi of 1, cos, sin, cos^2, sin^2 and cos sin
+    d_phi = phi_b - phi_a
+    sin2_phi = (np.sin(2 * phi_b) - np.sin(2 * phi_a)) / 4
+    i_1 = d_phi
+    i_c = np.sin(phi_b) - np.sin(phi_a)
+    i_s = np.cos(phi_a) - np.cos(phi_b)
+    i_cc = d_phi / 2 + sin2_phi
+    i_ss = d_phi / 2 - sin2_phi
+    i_cs = (np.sin(phi_b) ** 2 - np.sin(phi_a) ** 2) / 2
+
+    # integrals over theta of sin, sin^2, sin cos, sin^3, sin cos^2, sin^2 cos
+    c_a, c_b = np.cos(theta_a), np.cos(theta_b)
+    s_a, s_b = np.sin(theta_a), np.sin(theta_b)
+    j_s = c_a - c_b
+    j_ss = (theta_b - theta_a) / 2 - (np.sin(2 * theta_b) - np.sin(2 * theta_a)) / 4
+    j_sc = (s_b**2 - s_a**2) / 2
+    j_sss = (c_a - c_b) - (c_a**3 - c_b**3) / 3
+    j_scc = (c_a**3 - c_b**3) / 3
+    j_ssc = (s_b**3 - s_a**3) / 3
+
+    kernels = [
+        i_1 * j_s,
+        -i_c * j_ss,
+        -i_s * j_ss,
+        -i_1 * j_sc,
+        i_cc * j_sss,
+        i_ss * j_sss,
+        i_1 * j_scc,
+        i_cs * j_sss,
+        i_c * j_ssc,
+        i_s * j_ssc,
+    ]
+
+    return np.ascontiguousarray(np.stack(kernels, axis=1), dtype=np.float64)
 
 
 def _energy_edges(vdf, energy, energy0, energy1, step_table, flag_same_e):
@@ -328,6 +391,15 @@ def psd_moments(vdf, sc_pot, **kwargs):
         size as vdf.data.
     inner_electron : {"on", "off"}
         inner_electrontron potential for electron moments.
+    angle_integration : {"midpoint", "exact"}
+        Integration of the angular kernels over each (phi, theta) bin:
+        "midpoint", the kernels at the bin centres times the bin widths, as
+        irfu-matlab, or "exact", the kernels integrated over each bin for a
+        phase-space density constant in the bin. Default is the
+        ``angle_integration`` attribute of `vdf` if any (e.g. "exact" for the
+        FEEPS skymaps), else "midpoint". On the 11.25 degree FPI grid, "exact"
+        changes the moments by less than 1 %; on wide bins "midpoint"
+        underestimates the density (8 % on the FEEPS polar bins).
 
     Raises
     ------
@@ -373,13 +445,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # [eV] sc_pot + w_inner_electron for electron moments calculation
     w_inner_electron = 3.5
 
-    # Check if data is fast or burst resolution
-    if "brst" in vdf.data.attrs["FIELDNAM"].lower():
-        logger.info("Burst resolution data is used")
-    elif "fast" in vdf.data.attrs["FIELDNAM"].lower():
-        logger.info("Fast resolution data is used")
-    else:
-        raise TypeError("Could not identify if data is fast or burst.")
+    # Data rate, for information only (e.g. FEEPS survey skymaps)
+    field_name = str(vdf.data.attrs.get("FIELDNAM", "")).lower()
+    for rate in ["brst", "fast", "srvy"]:
+        if rate in field_name:
+            logger.info("%s resolution data is used", rate)
 
     theta = vdf.theta.data
     particle_type = vdf.attrs["species"]
@@ -475,6 +545,33 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     delta_ang = delta_phi * delta_theta
 
+    angle_integration = kwargs.get(
+        "angle_integration", vdf.attrs.get("angle_integration", "midpoint")
+    )
+
+    if angle_integration not in ["midpoint", "exact"]:
+        raise ValueError(
+            f"Invalid angle_integration {angle_integration}: must be midpoint or "
+            "exact"
+        )
+
+    use_exact = angle_integration == "exact"
+
+    if use_exact:
+        half_phi = np.rad2deg(delta_phi[:, :, 0]) / 2
+        half_theta = np.rad2deg(delta_theta[0, 0, :]) / 2
+        exact_kernels = _exact_kernels(
+            phi,
+            theta,
+            vdf.attrs.get("delta_phi_minus", half_phi),
+            vdf.attrs.get("delta_phi_plus", half_phi),
+            vdf.attrs.get("delta_theta_minus", half_theta),
+            vdf.attrs.get("delta_theta_plus", half_theta),
+        )
+        delta_ang = np.ones(delta_ang.shape)
+    else:
+        exact_kernels = np.zeros((1, 10, 1, 1))
+
     phi_mat = np.tile(phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
     theta_mat = np.tile(
         theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
@@ -515,6 +612,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
         use_energy,
         vdf_data,
         delta_ang,
+        exact_kernels,
+        use_exact,
     )
 
     # No energy channel at these time steps (time dependent energy_range)

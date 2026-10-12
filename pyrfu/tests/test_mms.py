@@ -2113,6 +2113,8 @@ class PsdMomentsTestCase(unittest.TestCase):
             np.ones((100, 32), dtype=bool),  # use_energy
             np.random.random((100, 32, 32, 16)),  # vdf
             np.random.random((100, 32, 16)),  # delta_ang
+            np.zeros((1, 10, 1, 1)),  # exact_kernels
+            False,  # use_exact
         )
     )
     def test_moms(self, value):
@@ -2331,6 +2333,66 @@ class PsdMomentsTestCase(unittest.TestCase):
         result = self._moments(vdf, sc_pot)
         self._assert_moments_equal(result, expected)
         self.assertAlmostEqual(float(result[0][0]), 1.0, delta=0.01)
+
+    def test_psd_moments_exact_angles(self):
+        # FPI grid: the exact angular integrals change the moments by < 1 %
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        n_m, v_m, *_ = mms.psd_moments(vdf, sc_pot)
+        n_e, v_e, *_ = mms.psd_moments(vdf, sc_pot, angle_integration="exact")
+        np.testing.assert_allclose(n_e.data, n_m.data, rtol=0.01)
+        np.testing.assert_allclose(v_e.data, v_m.data, rtol=0.01)
+        self.assertAlmostEqual(float(n_e.data[0]), 1.0, delta=0.01)
+
+        # 4 rings of 8 phi bins (FEEPS electrons): the midpoint rule
+        # underestimates the density by 8 %, the exact integrals don't
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        n_t = vdf.data.shape[0]
+        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
+            [0, 35, 90, 145, 180]
+        )
+        coarse = pyrf.ts_skymap(
+            vdf.time.data,
+            vdf.data.data[:, :, ::4, [0, 5, 10, 15]].copy(),
+            vdf.energy.data,
+            np.tile(22.5 + 45.0 * np.arange(8), (n_t, 1)),
+            theta,
+            energy0=vdf.attrs["energy0"],
+            energy1=vdf.attrs["energy1"],
+            esteptable=vdf.attrs["esteptable"],
+            attrs=dict(vdf.data.attrs),
+            glob_attrs={
+                "species": "ions",
+                "delta_phi_minus": np.full((n_t, 8), 22.5),
+                "delta_phi_plus": np.full((n_t, 8), 22.5),
+                "delta_theta_minus": theta - edges[:-1],
+                "delta_theta_plus": edges[1:] - theta,
+            },
+        )
+        n_m = mms.psd_moments(coarse, sc_pot)[0].data
+        n_e = mms.psd_moments(coarse, sc_pot, angle_integration="exact")[0].data
+        np.testing.assert_allclose(n_m / n_e, 11.6017 / (4 * np.pi), rtol=1e-4)
+        self.assertAlmostEqual(float(n_e[0]), 1.0, delta=0.01)
+
+        # The attribute sets the default, the argument has precedence
+        coarse.attrs["angle_integration"] = "exact"
+        np.testing.assert_array_equal(mms.psd_moments(coarse, sc_pot)[0].data, n_e)
+        n_kw = mms.psd_moments(coarse, sc_pot, angle_integration="midpoint")[0].data
+        np.testing.assert_array_equal(n_kw, n_m)
+
+        with self.assertRaises(ValueError):
+            mms.psd_moments(coarse, sc_pot, angle_integration="trapezoid")
+
+    def test_psd_moments_any_data_rate(self):
+        # The data rate in FIELDNAM is for information only: survey skymaps
+        # (FEEPS) and skymaps without FIELDNAM used to raise
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        expected = self._moments(vdf, sc_pot)
+
+        vdf.data.attrs["FIELDNAM"] = "mms1_feeps_srvy_ion_skymap"
+        self._assert_moments_equal(self._moments(vdf, sc_pot), expected)
+
+        del vdf.data.attrs["FIELDNAM"]
+        self._assert_moments_equal(self._moments(vdf, sc_pot), expected)
 
     def _moments(self, vdf, sc_pot, **kwargs):
         # n, V, P and q at all times
