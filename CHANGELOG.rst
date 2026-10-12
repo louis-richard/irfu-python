@@ -172,6 +172,9 @@ Documentation
 - The FEEPS examples are updated for these changes.
 - New example: ion gyrophase bunching by EMIC waves, reproducing Fig. 1 of
   Li et al. (2022) with ``mms.get_gyrophase_dist``.
+- New example: FEEPS skymaps (``mms.feeps_skymap``) at the dipolarization
+  front of Kolokotronis et al. (2026), with angle-angle maps, coverage, partial
+  moments and the pitch-angle and gyrophase distributions.
 
 2.5.0 (2026-10-07)
 ------------------
