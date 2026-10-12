@@ -70,6 +70,9 @@ def get_feeps_omni(
     IDL SPEDAS (`mms_load_feeps`) and pyspedas, load all the eyes, apply
     `feeps_corrections` and then `feeps_omni` (see Examples).
 
+    The data are clipped to `tint` when they are read, so with `spin_avg` the
+    first and last spins can be partial (see `get_feeps_alleyes`).
+
     Examples
     --------
     >>> from pyrfu import mms

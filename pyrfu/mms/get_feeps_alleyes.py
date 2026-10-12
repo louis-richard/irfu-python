@@ -120,6 +120,14 @@ def get_feeps_alleyes(
     counts) and 4 (calibration). The MMS CMAD (section 6.4.3) recommends not
     to use 3 and 4 for science. IDL SPEDAS doesn't use the quality indicators.
 
+    The data are clipped to `tint` when they are read, so the spin averages
+    (`feeps_spin_avg`, `feeps_pad_spinavg`) and the sector spectrograms
+    (`feeps_sector_spec`) start and end with partial spins. IDL SPEDAS and
+    pyspedas make their products from the whole files and clip them only when
+    asked (``time_clip``). To get whole spins at the edges, read an interval
+    longer by one spin (about 20 s) on each side and clip the products with
+    `pyrfu.pyrf.time_clip`.
+
     Examples
     --------
     >>> from pyrfu import mms
