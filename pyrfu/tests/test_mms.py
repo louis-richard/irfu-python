@@ -3787,12 +3787,16 @@ class GetFeepsTestCase(unittest.TestCase):
     # quality indicator of every eye at the 5 times
     quality = np.array([0, 1, 2, 3, 4])
 
-    def _fake_read(self, dset_name, cdf_names, tint, verbose, data_path, source):
+    def _fake_read(
+        self, dset_name, cdf_names, tint, verbose, data_path, source, **kwargs
+    ):
         # (time, energy) time series for every variable, (time,) for the
-        # quality indicators
+        # quality indicators, the energy bounds without time
         times = generate_timeline(1.0, 5)
         energy = np.arange(1, 4, dtype=float)
         out = {}
+        for name in kwargs.get("support_names") or []:
+            out[name] = energy + (0.4 if "upper" in name else -0.4)
         for name in cdf_names:
             if "quality_indicator" in name:
                 out[name] = xr.DataArray(self.quality, coords=[times], dims=["time"])
@@ -3879,6 +3883,30 @@ class GetFeepsTestCase(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "l1b"):
             mms.get_feeps_alleyes("countse_brst_l2", self.TINT, 2)
+
+    def test_get_feeps_alleyes_energy_bounds(self):
+        # Channel bounds read once (not per time), along the eye energies
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2)
+            mask = mms.get_feeps_alleyes("maske_brst_l2", self.TINT, 2)
+
+        support = read.call_args_list[0].kwargs["support_names"]
+        self.assertIn(
+            "mms2_epd_feeps_brst_l2_electron_top_energy_lower_bound_sensorid_3",
+            support,
+        )
+        self.assertEqual(len(support), 36)
+        self.assertListEqual(read.call_args_list[1].kwargs["support_names"], [])
+
+        lower = out["top-3"]["energy_lower_bound_top-3"]
+        self.assertTupleEqual(lower.dims, ("energy_top-3",))
+        np.testing.assert_allclose(lower.data, [0.6, 1.6, 2.6])
+        np.testing.assert_allclose(
+            out["top-3"]["energy_upper_bound_top-3"].data, [1.4, 2.4, 3.4]
+        )
+        self.assertNotIn("energy_lower_bound_top-3", mask["top-3"].coords)
 
     def test_get_feeps_alleyes_ions(self):
         # Survey ions before 2017-08-16: eyes 6-8, from the ion dataset

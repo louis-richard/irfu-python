@@ -170,8 +170,26 @@ def get_feeps_alleyes(
             cdf_names[f"quality_{e_id}"] = (
                 f"mms{mms_id:d}_{pref}_{suf}_quality_indicator_sensorid_{sensor_id}"
             )
+    # Lower and upper bounds of the energy channels of the eyes (one record)
+    bounds = {}
+
+    if data_units != "sector_mask":
+        for e_id in e_ids:
+            suf, sensor_id = e_id.split("-")
+            for bound in ["lower", "upper"]:
+                bounds[f"energy_{bound}_bound_{e_id}"] = (
+                    f"mms{mms_id:d}_{pref}_{suf}_energy_{bound}_bound_sensorid_"
+                    f"{sensor_id}"
+                )
+
     data = _db_get_ts_dict(
-        dset_name, list(cdf_names.values()), tint, verbose, data_path, source
+        dset_name,
+        list(cdf_names.values()),
+        tint,
+        verbose,
+        data_path,
+        source,
+        support_names=list(bounds.values()),
     )
     out_dict = {key: data[cdf_name] for key, cdf_name in cdf_names.items()}
 
@@ -193,7 +211,16 @@ def get_feeps_alleyes(
         if data_units == "sector_mask":
             out_dict[e_id] = eye.rename({eye.dims[1]: "sectornum"})
         else:
-            out_dict[e_id] = eye.rename({eye.dims[1]: f"energy_{e_id}"})
+            eye = eye.rename({eye.dims[1]: f"energy_{e_id}"})
+
+            # channel bounds along the energies, when the files have them
+            for bound in ["lower", "upper"]:
+                name = f"energy_{bound}_bound_{e_id}"
+                if bounds.get(name) in data:
+                    coord = (f"energy_{e_id}", data[bounds[name]])
+                    eye = eye.assign_coords({name: coord})
+
+            out_dict[e_id] = eye
 
     out = xr.Dataset(out_dict)
 
