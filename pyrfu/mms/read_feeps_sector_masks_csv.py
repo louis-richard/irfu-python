@@ -22,7 +22,7 @@ __status__ = "Prototype"
 
 def read_feeps_sector_masks_csv(tint):
     r"""Reads the FEEPS sectors to mask due to sunlight contamination from
-    csv files.x
+    csv files.
 
     Parameters
     ----------
@@ -71,21 +71,12 @@ def read_feeps_sector_masks_csv(tint):
 
         csv_data = np.array(csv_data)
 
-        for i in range(0, 12):
-            mask_vals = []
-            for val_idx in range(len(csv_data[:, i])):
-                if csv_data[val_idx, i] == 1:
-                    mask_vals.append(val_idx)
-
-            masks[f"mms{mms_sc:d}_imask_top-{i + 1:d}"] = mask_vals
-
-        for i in range(0, 12):
-            mask_vals = []
-
-            for val_idx in range(len(csv_data[:, i + 12])):
-                if csv_data[val_idx, i + 12] == 1:
-                    mask_vals.append(val_idx)
-
-            masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = mask_vals
+        # sectors (rows) masked for each eye (columns: top 1-12, bottom 1-12)
+        for i in range(12):
+            top, bottom = csv_data[:, i] == 1, csv_data[:, i + 12] == 1
+            masks[f"mms{mms_sc:d}_imask_top-{i + 1:d}"] = np.flatnonzero(top).tolist()
+            masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = np.flatnonzero(
+                bottom
+            ).tolist()
 
     return masks
