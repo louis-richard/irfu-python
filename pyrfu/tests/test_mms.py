@@ -2614,6 +2614,26 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
                 result = mms.feeps_active_eyes(var, [t_start, t_start], 1)
                 self.assertDictEqual(result, expected)
 
+    def test_feeps_active_eyes_sitl(self):
+        # SITL: top eyes 5, 11 and 12 only, as IDL SPEDAS; after 2017-08-16 in
+        # survey, those of them that are active
+        for dtype in ["electron", "ion"]:
+            var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
+            result = mms.feeps_active_eyes(var, ["2017-08-01", "2017-08-02"], 1)
+            self.assertDictEqual(result, {"top": [5, 11, 12], "bottom": []})
+
+        tint = ["2019-01-01", "2019-01-02"]
+        for mms_id, dtype, top in [
+            (1, "electron", [5, 12]),
+            (2, "electron", [5, 11]),
+            (4, "electron", [5, 11]),
+            (1, "ion", []),
+        ]:
+            var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
+            result = mms.feeps_active_eyes(var, tint, mms_id)
+            self.assertListEqual(sorted(result["top"]), top)
+            self.assertListEqual(result["bottom"], [])
+
 
 def _feeps_omni_4sc(values, energies=None):
     # Omni spectra of the 4 spacecraft (3 channels, 4 times), one constant per
