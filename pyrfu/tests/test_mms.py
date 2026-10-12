@@ -5942,6 +5942,78 @@ class VdfConvertTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfVelocityTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf(species):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, species, "s^3/cm^6")
+        return vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+
+    def test_vdf_velocity_values(self):
+        vdf = self._vdf("ions")
+        result = mms.vdf_velocity(vdf)
+        self.assertEqual(result.vx.attrs["UNITS"], "km/s")
+
+        # Speed of the energy, along minus the look direction
+        speed = np.sqrt(result.vx**2 + result.vy**2 + result.vz**2).data
+        expected = np.sqrt(2 * constants.e * vdf.energy.data / constants.m_p) / 1e3
+        np.testing.assert_allclose(
+            speed, np.broadcast_to(expected[..., None, None], speed.shape)
+        )
+        phi, theta = np.deg2rad(vdf.phi.data[1, 7]), np.deg2rad(vdf.theta.data[3])
+        look = np.array(
+            [np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)]
+        )
+        v_bin = [result[name].data[1, 5, 7, 3] for name in ["vx", "vy", "vz"]]
+        np.testing.assert_allclose(v_bin, -expected[1, 5] * look)
+
+        # Rotation: rows are the new unit vectors
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        rotated = mms.vdf_velocity(vdf, rotation=rotation)
+        np.testing.assert_allclose(rotated.vx.data, result.vz.data)
+        np.testing.assert_allclose(rotated.vy.data, result.vx.data)
+        rotated = mms.vdf_velocity(vdf, rotation=np.tile(rotation, (4, 1, 1)))
+        np.testing.assert_allclose(rotated.vz.data, result.vy.data)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_velocity(vdf, rotation=np.eye(2))
+
+    def test_vdf_velocity_sc_pot(self):
+        # Ions gain and electrons lose e V, as irfu-matlab PDist.v
+        for species, sign in [("ions", 1.0), ("electrons", -1.0)]:
+            vdf = self._vdf(species)
+            mass = constants.m_p if species == "ions" else constants.m_e
+            sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, 150.0))
+            speed = mms.vdf_velocity(vdf, sc_pot=sc_pot).vx.data
+            speed = np.abs(speed[:, :, 0, 8]) / np.sin(np.deg2rad(vdf.theta.data[8]))
+            speed /= np.abs(np.cos(np.deg2rad(vdf.phi.data[:, :1])))
+            energy = np.clip(vdf.energy.data + sign * 150.0, 0.0, None)
+            np.testing.assert_allclose(
+                speed, np.sqrt(2 * constants.e * energy / mass) / 1e3, rtol=1e-6
+            )
+            for other in [150.0, np.full(4, 150.0)]:
+                np.testing.assert_array_equal(
+                    mms.vdf_velocity(vdf, sc_pot=other).vx.data,
+                    mms.vdf_velocity(vdf, sc_pot=sc_pot).vx.data,
+                )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_velocity(vdf, sc_pot=np.ones(3))
+
+    def test_vdf_velocity_relativistic(self):
+        vdf = self._vdf("electrons")
+        vdf = vdf.assign(energy=vdf.energy * 100.0)
+        speed = np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0])
+        rel = np.abs(mms.vdf_velocity(vdf, relativistic=True).vz.data[:, -1, 0, 0])
+        self.assertTrue(np.all(speed > constants.c / 1e3))
+        self.assertTrue(np.all(rel < constants.c / 1e3))
+
+        vdf.attrs["relativistic"] = True
+        np.testing.assert_array_equal(
+            np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0]), rel
+        )
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):
