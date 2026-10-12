@@ -3140,6 +3140,19 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
             "2019-01-01T00:00:00",
             {"top-6": 1, "top-7": 15, "top-8": 2, "bottom-7": 2},
         ),
+        # MMS4 bottom-6 and bottom-7: the 3 lowest channels are bad
+        (
+            4,
+            "2019-01-01T00:00:00",
+            {
+                "top-6": 2,
+                "top-7": 15,
+                "top-8": 1,
+                "bottom-6": 3,
+                "bottom-7": 3,
+                "bottom-8": 2,
+            },
+        ),
     )
     @unpack
     def test_feeps_remove_bad_data_ions(self, mms_id, t_start, n_bad):
@@ -3156,6 +3169,23 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
         for k in filter(lambda x: x[:3] in ["top", "bot"], result):
             n_nan = int(np.isnan(result[k].data).all(axis=0).sum())
             self.assertEqual(n_nan, n_bad.get(k, 0), k)
+
+    def test_feeps_remove_bad_data_electrons(self):
+        # MMS4 electrons in 2019 (2018-10-01 table): bad eyes top-1, bottom-4
+        # and bottom-11, bad channel 0 of the other eyes but bottom-9 (0-1);
+        # the bad ion channels 0-2 are skipped
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 4)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64("2019-01-01T00:00:00", "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        n_bad = {"top-1": 15, "bottom-4": 15, "bottom-11": 15, "bottom-9": 2}
+        for k in filter(lambda x: x[:3] in ["top", "bot"], result):
+            n_nan = int(np.isnan(result[k].data).all(axis=0).sum())
+            self.assertEqual(n_nan, n_bad.get(k, 1), k)
 
     def test_feeps_remove_bad_data_nan_energies(self):
         # mms2 top-5 is a good eye in the 2018-10-01 table, without energy
