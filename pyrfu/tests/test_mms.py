@@ -4248,6 +4248,191 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [5, 3])
 
 
+def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120.0)):
+    # In-memory EIS L2 file named as the reprocessed (v*.100) files, e.g.
+    # mms1_epd_eis_brst_l2_extof_proton_P5_flux_t0, with the non-record-varying
+    # energy tables (one record) of the 6 telescopes
+    time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
+        2500, "ms"
+    )
+    energy = np.array(energy)
+
+    cdf = pycdfpp.CDF()
+    cdf.add_attribute("Data_type", ["synthetic"])
+    cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    for name, values in [
+        ("spin", np.arange(n_records, dtype=np.uint16) // 2),
+        ("sector", np.arange(n_records, dtype=np.int8)),
+    ]:
+        cdf.add_variable(f"{pref}_{name}", values=values)
+        cdf[f"{pref}_{name}"].add_attribute("DEPEND_0", "Epoch")
+
+    for i in range(6):
+        cdf.add_variable(f"{pref}_look_t{i:d}", values=np.ones((n_records, 3)) * i)
+        cdf[f"{pref}_look_t{i:d}"].add_attribute("DEPEND_0", "Epoch")
+
+        for j, specie in enumerate(species):
+            energy_name = f"{pref}_{specie}_t{i:d}_energy"
+            for suffix, values in [("", energy), ("_dminus", 0.1 * energy)]:
+                cdf.add_variable(
+                    f"{energy_name}{suffix}", values=values[None], is_nrv=True
+                )
+            cdf.add_variable(
+                f"{energy_name}_dplus", values=0.2 * energy[None], is_nrv=True
+            )
+            cdf[energy_name].add_attribute("LABLAXIS", "Energy")
+
+            for unit in ["counts", "cps", "flux"]:
+                flux = np.arange(n_records * len(energy), dtype=float)
+                flux = flux.reshape(n_records, -1) + 100.0 * i + 1000.0 * j
+                name = f"{pref}_{specie}_P{p_num:d}_{unit}_t{i:d}"
+                cdf.add_variable(name, values=flux)
+                cdf[name].add_attribute("DEPEND_0", "Epoch")
+                cdf[name].add_attribute("DEPEND_1", energy_name)
+
+    return bytes(pycdfpp.save(cdf))
+
+
+@ddt
+class GetEisAlltTestCase(unittest.TestCase):
+    tint = ["2021-07-11T00:00:00", "2021-07-11T01:00:00"]
+
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.get_eis_allt")
+
+    def _get_eis_allt(self, tar_var, contents, tint=None):
+        sources = ([f"file_{i:d}" for i in range(len(contents))], None, {})
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ) as list_files:
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", side_effect=contents
+            ) as get_content:
+                result = mms.get_eis_allt(
+                    tar_var, tint or self.tint, 1, verbose=False, source="sdc"
+                )
+        # one listing, and each file read (downloaded) once
+        self.assertEqual(list_files.call_count, 1)
+        self.assertEqual(get_content.call_count, len(contents))
+        return result
+
+    @data(
+        # minor version 0 (all files since late 2019) and burst
+        ("flux_extof_proton_brst_l2", "brst", "extof", ["proton"], 5, "proton"),
+        # P# is not the major version of the file (v2.1.100 has P3)
+        (
+            "cps_phxtof_oxygen_srvy_l2",
+            "srvy",
+            "phxtof",
+            ["proton", "oxygen"],
+            3,
+            "oxygen",
+        ),
+        (
+            "counts_extof_alpha_srvy_l2",
+            "srvy",
+            "extof",
+            ["proton", "helium"],
+            4,
+            "helium",
+        ),
+        (
+            "Flux_electronenergy_electron_srvy_l2",
+            "srvy",
+            "electronenergy",
+            ["electron"],
+            4,
+            "electron",
+        ),
+    )
+    @unpack
+    def test_get_eis_allt_names(self, tar_var, rate, dtype, species, p_num, specie):
+        pref = f"mms1_epd_eis_{rate}_l2_{dtype}"
+        content = _cdf_eis(pref, species, p_num, "2021-07-11T00:10:00")
+        result = self._get_eis_allt(tar_var, [content])
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertListEqual(
+            sorted(result),
+            sorted(
+                [
+                    "spin",
+                    "sector",
+                    *[f"{k}t{i:d}" for k in ["", "look_"] for i in range(6)],
+                ]
+            ),
+        )
+        self.assertEqual(result.attrs["species"], specie)
+        self.assertEqual(result.attrs["Data_type"], "synthetic")
+        np.testing.assert_array_equal(result.energy.data, [50.0, 80.0, 120.0])
+        np.testing.assert_allclose(result.attrs["delta_energy_minus"], [5.0, 8.0, 12.0])
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_plus"], [10.0, 16.0, 24.0]
+        )
+
+        j = species.index(specie)
+        for i in range(6):
+            self.assertTupleEqual(result[f"t{i:d}"].dims, ("time", "energy"))
+            np.testing.assert_array_equal(
+                result[f"t{i:d}"].data[:, 0], np.arange(0, 12, 3) + 100 * i + 1000 * j
+            )
+            np.testing.assert_array_equal(result[f"look_t{i:d}"].data, i)
+
+    def test_get_eis_allt_files(self):
+        # two files appended in time and clipped to tint, P# changes but not
+        # the energy table
+        pref = "mms1_epd_eis_srvy_l2_extof"
+        contents = [
+            _cdf_eis(pref, ["proton"], 4, "2021-07-11T00:59:50"),
+            _cdf_eis(pref, ["proton"], 5, "2021-07-11T01:00:00"),
+        ]
+        tint = ["2021-07-11T00:59:52", "2021-07-11T01:00:04"]
+        result = self._get_eis_allt("flux_extof_proton_srvy_l2", contents, tint)
+
+        expected = np.datetime64("2021-07-11T00:59:52.500", "ns") + np.arange(
+            5
+        ) * np.timedelta64(2500, "ms")
+        np.testing.assert_array_equal(result.time.data, expected)
+        np.testing.assert_array_equal(result.t0.data[:, 0], [3, 6, 9, 0, 3])
+        np.testing.assert_array_equal(result.sector.data, [1, 2, 3, 0, 1])
+
+    def test_get_eis_allt_energy_change(self):
+        pref = "mms1_epd_eis_srvy_l2_extof"
+        contents = [
+            _cdf_eis(pref, ["proton"], 4, "2021-07-11T00:10:00"),
+            _cdf_eis(
+                pref, ["proton"], 5, "2021-07-11T00:20:00", energy=(55.0, 80.0, 120.0)
+            ),
+        ]
+        with self.assertRaisesRegex(ValueError, "split the time interval"):
+            self._get_eis_allt("flux_extof_proton_srvy_l2", contents)
+
+    def test_get_eis_allt_old_naming(self):
+        # not reprocessed v3.0.0 files: mms1_epd_eis_extof_alpha_P2_flux_t0
+        content = _cdf_eis(
+            "mms1_epd_eis_extof", ["proton", "alpha"], 2, "2021-07-11T00:10:00"
+        )
+        with self.assertRaisesRegex(ValueError, r"reprocessed \(v\*\.100\)"):
+            self._get_eis_allt("flux_extof_proton_srvy_l2", [content])
+
+    def test_get_eis_allt_species(self):
+        # no helium in PHxTOF
+        content = _cdf_eis(
+            "mms1_epd_eis_srvy_l2_phxtof",
+            ["proton", "oxygen"],
+            4,
+            "2021-07-11T00:10:00",
+        )
+        with self.assertRaisesRegex(
+            ValueError, "species in the file are oxygen, proton"
+        ):
+            self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
+
+    def test_get_eis_allt_unit(self):
+        with self.assertRaisesRegex(ValueError, "Invalid data unit"):
+            mms.get_eis_allt("dpf_extof_proton_srvy_l2", self.tint, 1, source="sdc")
+
+
 class _FakeS3Bucket:
     # Bucket listing the given keys with bucket.objects.filter(Prefix=...), and
     # recording the prefixes it was asked for.

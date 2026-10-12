@@ -1,14 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
-import xarray as xr
+# Built-in imports
+import logging
+import re
 
-from .db_get_ts import db_get_ts
-from .db_get_variable import db_get_variable
+# 3rd party imports
+import numpy as np
+import xarray as xr
+from pycdfpp import load
 
 # Local imports
-from .list_files import list_files
+from ..pyrf.ts_append import ts_append
+from .db_get_ts import _resolve_source
+from .get_data import _check_times, _get_file_content_sources, _list_files_sources
+from .get_ts import get_ts
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -17,6 +23,54 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+logger = logging.getLogger(__name__)
+
+
+def _eis_names(cdf, pref, specie, data_unit, file_name):
+    r"""Names of the variables of `specie` in a file (the P# of the look-up
+    table changes with the file version), and its energy table."""
+    names = [name for name, _ in cdf.items()]
+
+    # Files not reprocessed (v3.0.0, 2015-2016) name the variables without the
+    # data rate and level (e.g., mms1_epd_eis_extof_proton_P2_flux_t0)
+    if not any(name.startswith(f"{pref}_") for name in names):
+        raise ValueError(
+            f"{file_name} uses the old EIS variable names: use the reprocessed "
+            "(v*.100) files"
+        )
+
+    pattern = re.compile(rf"^{pref}_{specie}_P(\d+)_{data_unit}_t0$")
+    p_nums = [match.group(1) for match in map(pattern.match, names) if match]
+
+    if not p_nums:
+        species = {
+            match.group(1)
+            for match in map(re.compile(rf"^{pref}_(\w+)_P\d+_\w+_t0$").match, names)
+            if match
+        }
+        raise ValueError(
+            f"No {specie} {data_unit} in {file_name}: species in the file are "
+            f"{', '.join(sorted(species - {'dump'}))}"
+        )
+
+    cdf_names = {
+        "spin": f"{pref}_spin",
+        "sector": f"{pref}_sector",
+        **{
+            f"t{i:d}": f"{pref}_{specie}_P{p_nums[0]}_{data_unit}_t{i:d}"
+            for i in range(6)
+        },
+        **{f"look_t{i:d}": f"{pref}_look_t{i:d}" for i in range(6)},
+    }
+
+    # Non-record-varying energy table of the telescope 0, one value per channel
+    energy = {
+        k: np.ravel(cdf[f"{pref}_{specie}_t0_energy{k}"].values)
+        for k in ["", "_dminus", "_dplus"]
+    }
+
+    return cdf_names, energy
+
 
 def get_eis_allt(
     tar_var,
@@ -24,6 +78,7 @@ def get_eis_allt(
     mms_id,
     verbose: bool = True,
     data_path: str = "",
+    source: str = "default",
 ):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all telescopes.
@@ -41,12 +96,30 @@ def get_eis_allt(
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
         Path of MMS data.
+    source : {"default", "local", "sdc", "aws"}, Optional
+        Resource to fetch the data from. Default uses default in
+        `pyrfu/mms/config.json`. Each file is read (downloaded) once for all the
+        telescopes.
 
     Returns
     -------
     out : xarray.Dataset
         Dataset containing the energy spectrum of the 6 telescopes of the
         Energy Ion Spectrometer.
+
+    Raises
+    ------
+    ValueError
+        If the data unit is not one of flux, counts and cps, if the files don't
+        have the specie (e.g., helium in PHxTOF), if they are not reprocessed
+        (v3.0.0, 2015-2016) or if the energy table changes in the time
+        interval (split the time interval).
+
+    Notes
+    -----
+    The variable names are read from each file: the P# of the look-up table
+    is not always the major version of the file (e.g., P3 in v2.1.100). The
+    specie "alpha" is read as "helium".
 
     Examples
     --------
@@ -66,109 +139,57 @@ def get_eis_allt(
     mms_id = int(mms_id)
 
     data_unit, data_type, specie, data_rate, data_lvl = tar_var.split("_")
+    data_unit = data_unit.lower()
 
-    if tint[0] < "2020-01-01":
-        pref = f"mms{mms_id:d}_epd_eis"
-    else:
-        pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_lvl}"
-
-    var = {
-        "mms_id": mms_id,
-        "inst": "epd-eis",
-        "dtype": data_type,
-        "tmmode": data_rate,
-        "lev": data_lvl,
-        "specie": specie,
-        "data_path": data_path,
-    }
-
-    # EIS includes the version of the files in the cdfname need to read it
-    # before.
-    files = list_files(tint, mms_id, var, data_path=data_path)
-
-    if not files:
-        raise FileNotFoundError("no files for these inputs!!")
-
-    file_version = int(files[0].split("_")[-1][1])
-    var["version"] = file_version
-
-    pref = f"{pref}_{data_rate}_{data_lvl}_{data_type}"
-    if int(files[0].split("_")[-1][3]) >= 1:
-        if specie == "alpha":
-            specie = "helium"
-    else:
-        if data_rate == "brst":
-            pref = f"{pref}_{data_rate}_{data_type}"
-        else:
-            pref = f"{pref}_{data_type}"
-
-    if data_unit.lower() in ["flux", "counts", "cps"]:
-        suf = f"{specie}_P{file_version:d}_{data_unit.lower()}_t"
-    else:
+    if data_unit not in ["flux", "counts", "cps"]:
         raise ValueError("Invalid data unit")
 
-    # Name of the data containing index of the probe, instrument, data rate,
-    # data level and data type if needed
-    dset_name = (
-        f"mms{var['mms_id']:d}_{var['inst']}_{var['tmmode']}"
-        f"_{var['lev']}_{var['dtype']}"
+    if specie == "alpha":
+        specie = "helium"
+
+    var = {"inst": "epd-eis", "tmmode": data_rate, "lev": data_lvl, "dtype": data_type}
+    pref = f"mms{mms_id:d}_epd_eis_{data_rate}_{data_lvl}_{data_type}"
+
+    resource = _resolve_source(source)
+    file_names, sdc_session, headers = _list_files_sources(
+        resource, tint, str(mms_id), var, data_path
     )
 
-    # Names of the energy spectra in the CDF (one for each telescope)
-    cdfnames = [f"{pref}_{suf}{t:d}" for t in range(6)]
+    if not file_names:
+        raise FileNotFoundError("no files for these inputs!!")
 
-    spin_nums = db_get_ts(dset_name, f"{pref}_spin", tint, data_path=data_path)
-    sectors = db_get_ts(dset_name, f"{pref}_sector", tint, data_path=data_path)
+    outdict, energy = {}, None
 
-    e_minus = db_get_variable(
-        dset_name,
-        f"{pref}_{specie}_t0_energy_dminus",
-        tint,
-        verbose=verbose,
-        data_path=data_path,
-    )
-
-    e_plus = db_get_variable(
-        dset_name,
-        f"{pref}_{specie}_t0_energy_dplus",
-        tint,
-        verbose=verbose,
-        data_path=data_path,
-    )
-
-    outdict = {"spin": spin_nums, "sector": sectors}
-
-    for i, cdfname in enumerate(cdfnames):
-        scope_key = f"t{i:d}"
-
-        outdict[scope_key] = db_get_ts(
-            dset_name,
-            cdfname,
-            tint,
-            verbose=verbose,
-            data_path=data_path,
+    for file_name in file_names:
+        file_content = _get_file_content_sources(
+            resource, file_name, sdc_session, headers
         )
-        outdict[scope_key] = outdict[scope_key].rename(
-            {"time": "time", "Energy": "energy"},
+        cdf_names, file_energy = _eis_names(
+            load(file_content), pref, specie, data_unit, file_name
         )
 
-        outdict[f"look_{scope_key}"] = db_get_ts(
-            dset_name,
-            f"{pref}_look_{scope_key}",
-            tint,
-            verbose=verbose,
-            data_path=data_path,
-        )
+        if energy is None:
+            energy = file_energy
+        elif not np.array_equal(energy[""], file_energy[""]):
+            raise ValueError(
+                f"The energy table changes in {file_name}: split the time interval"
+            )
 
-    e_plus = e_plus.assign_coords(x=outdict["t0"].energy.data)
-    e_minus = e_minus.assign_coords(x=outdict["t0"].energy.data)
-    e_plus = e_plus.rename({"x": "energy"})
-    e_minus = e_minus.rename({"x": "energy"})
+        for key, cdf_name in cdf_names.items():
+            if verbose:
+                logger.info("Loading %s...", cdf_name)
 
-    # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
+            ts = get_ts(file_content, cdf_name, tint)
+            outdict[key] = ts_append(outdict[key], ts) if key in outdict else ts
+
+    outdict = {key: _check_times(value) for key, value in outdict.items()}
+
+    for i in range(6):
+        outdict[f"t{i:d}"] = outdict[f"t{i:d}"].rename({"Energy": "energy"})
+
     glob_attrs = {
-        "delta_energy_plus": e_plus.data,
-        "delta_energy_minus": e_minus.data,
+        "delta_energy_plus": energy["_dplus"],
+        "delta_energy_minus": energy["_dminus"],
         "species": specie,
         **outdict["spin"].attrs["GLOBAL"],
     }
