@@ -3521,6 +3521,170 @@ class FeepsRemoveSunlitSectorsTestCase(unittest.TestCase):
         self.assertTrue(np.isnan(result[eyes[0]].data[sunlit]).all())
 
 
+def _feeps_skymap_case(data_rate, n_pts, value=2.0, mms_id=1):
+    # Corrected and split eyes at the same intensity, spin sectors of 64
+    # samples per spin (burst) or 8 labelled 7, 15, ..., 63 (survey)
+    feeps_alle = generate_feeps(
+        64.0, n_pts, data_rate, "electron", "l2", "flux", mms_id
+    )
+    feeps_alle = mms.feeps_correct_energies(feeps_alle)
+    feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+    if data_rate == "brst":
+        sectors = np.arange(n_pts) % 64
+    else:
+        sectors = np.tile(np.arange(7, 64, 8), n_pts // 8 + 1)[:n_pts]
+
+    feeps_alle["spinsectnum"].data = sectors
+
+    for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+        feeps_alle[k].data = np.full(feeps_alle[k].shape, value)
+
+    return feeps_alle
+
+
+@ddt
+class FeepsSkymapTestCase(unittest.TestCase):
+    @data(("brst", 128, 32), ("srvy", 16, 8))
+    @unpack
+    def test_feeps_skymap_uniform(self, data_rate, n_pts, n_phi):
+        feeps_alle = _feeps_skymap_case(data_rate, n_pts)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        # one skymap per spin, every bin filled with the intensity
+        self.assertTupleEqual(result.data.shape, (2, 15, n_phi, 4))
+        np.testing.assert_array_equal(result.data.data, 2.0)
+        np.testing.assert_array_equal(result.theta.data, [5.0, 65.0, 115.0, 175.0])
+        np.testing.assert_array_equal(
+            result.time.data, feeps_alle.time.data[[0, n_pts // 2]]
+        )
+        np.testing.assert_allclose(result.attrs["coverage"], 1.0)
+        self.assertEqual(result.attrs["angle_integration"], "exact")
+        self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "DMPA")
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+    @data(("brst", 10, 32, 10.0), ("srvy", 1, 8, 15.0 - 3.5))
+    @unpack
+    def test_feeps_skymap_direction(self, data_rate, i_sample, n_phi, sector):
+        # A single sample of top-3 lands at its look direction: polar angle 65
+        # degrees, azimuth in BCS plus the spin phase at the centre of the
+        # accumulation (survey: 3.5 sectors before the label 15)
+        feeps_alle = _feeps_skymap_case(data_rate, 64)
+        for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            feeps_alle[k].data[:] = np.nan
+        feeps_alle["top-3"].data[i_sample] = 1.0
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        phi = (22.5 + 5.625 * sector - 75.94) % 360.0
+        i_phi = int(phi // (360.0 / n_phi))
+        finite = np.argwhere(np.isfinite(result.data.data).all(axis=1))
+        self.assertListEqual(finite.tolist(), [[0, i_phi, 1]])
+        np.testing.assert_array_equal(result.data.data[0, :, i_phi, 1], 1.0)
+        # one bin of the 35-90 degree band
+        self.assertAlmostEqual(
+            result.attrs["coverage"][0, 0], np.cos(np.deg2rad(35)) / 2 / n_phi
+        )
+
+    def test_feeps_skymap_fgm_phase(self):
+        # B rotating at the spin phase of the sectors (1 spin per second)
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        feeps_alle["top-3"].data[::3] = 5.0
+        expected = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        time = generate_timeline(512.0, 1024)
+        t_s = (time - time[0]).astype(float) / 1e9
+
+        def b_fields(shift, b_dmpa=(20.0, 0.0, 5.0)):
+            psi = np.deg2rad(-75.94 + 360.0 * t_s + shift)
+            b_x, b_y, b_z = b_dmpa
+            b_bcs = np.stack(
+                [
+                    np.cos(psi) * b_x + np.sin(psi) * b_y,
+                    -np.sin(psi) * b_x + np.cos(psi) * b_y,
+                    np.full(len(t_s), b_z),
+                ],
+                axis=1,
+            )
+            b_dmpa = np.tile(b_dmpa, (len(t_s), 1))
+            return pyrf.ts_vec_xyz(time, b_bcs), pyrf.ts_vec_xyz(time, b_dmpa)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = mms.feeps_skymap(feeps_alle, *b_fields(0.0), to_psd=False)
+            # B along the spin axis: no FGM phase, the sectors are used
+            along_z = mms.feeps_skymap(
+                feeps_alle, *b_fields(0.0, (0.0, 0.0, 20.0)), to_psd=False
+            )
+
+        xr.testing.assert_identical(result.data, expected.data)
+        xr.testing.assert_identical(along_z.data, expected.data)
+        self.assertEqual(result.attrs["spin_phase"], "FGM (b_bcs, b_dmpa)")
+        self.assertIn("B along the spin axis", along_z.attrs["spin_phase"])
+
+        with self.assertWarnsRegex(UserWarning, "differs from the spin sectors"):
+            mms.feeps_skymap(feeps_alle, *b_fields(3.0), to_psd=False)
+
+    def test_feeps_skymap_coverage_fill(self):
+        # No data on the 5 degree ring (top-5)
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        feeps_alle["top-5"].data[:] = np.nan
+        feeps_alle["top-1"].data[:64] = 6.0
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+        ring = mms.feeps_skymap(feeps_alle, to_psd=False, fill_empty="ring")
+        omni = mms.feeps_skymap(feeps_alle, to_psd=False, fill_empty="omni")
+
+        cap = (1.0 - np.cos(np.deg2rad(35.0))) / 2.0
+        np.testing.assert_allclose(result.attrs["coverage"], 1.0 - cap)
+        np.testing.assert_allclose(omni.attrs["coverage"], 1.0 - cap)
+        self.assertTrue(np.isnan(result.data.data[..., 0]).all())
+        self.assertTrue(np.isnan(ring.data.data[..., 0]).all())
+
+        # "omni": the mean of all the samples of the spin, i.e. the spin
+        # average of feeps_omni (top-1 at 6 in the first spin only)
+        spin_avg = mms.feeps_spin_avg(
+            mms.feeps_omni(feeps_alle), feeps_alle.spinsectnum.data
+        )
+        np.testing.assert_allclose(
+            omni.data.data[..., 0], np.tile(spin_avg.data[..., None], (1, 1, 32))
+        )
+        self.assertTrue((omni.data.data[0, :, :, 0] > 2.0).all())
+        np.testing.assert_array_equal(
+            omni.data.data[..., 1:], result.data.data[..., 1:]
+        )
+
+        with self.assertRaises(ValueError):
+            mms.feeps_skymap(feeps_alle, fill_empty="nearest")
+
+    def test_feeps_skymap_psd(self):
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        flux = mms.feeps_skymap(feeps_alle, to_psd=False)
+        result = mms.feeps_skymap(feeps_alle)
+
+        # s^3/cm^6, as FPI
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_allclose(
+            result.data.data, 1e-12 * mms.dpf2psd(flux).data.data, rtol=1e-12
+        )
+        self.assertEqual(result.attrs["species"], "electrons")
+
+        # Isotropic: psd_moments integrates the 4 rings exactly
+        sc_pot = pyrf.ts_scalar(result.time.data, np.zeros(2))
+        n_exact = mms.psd_moments(result, sc_pot)[0].data
+        n_mid = mms.psd_moments(result, sc_pot, angle_integration="midpoint")[0].data
+        np.testing.assert_allclose(n_mid / n_exact, 11.6017 / (4 * np.pi), rtol=1e-4)
+
+        feeps_alle = feeps_alle.copy(deep=True)
+        for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            feeps_alle[k].attrs["UNITS"] = "counts/s"
+
+        with self.assertRaises(ValueError):
+            mms.feeps_skymap(feeps_alle)
+
+
 @ddt
 class FeepsSpinAvgTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))

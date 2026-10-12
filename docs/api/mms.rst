@@ -187,6 +187,7 @@ Fly's Eye Energetic Particle Spectrometer (FEEPS)
    feeps_pad
    feeps_pad_spinavg
    feeps_sector_spec
+   feeps_skymap
 
 Hot Plasma Composition Analyzer (HPCA)
 --------------------------------------

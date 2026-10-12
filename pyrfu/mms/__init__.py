@@ -44,6 +44,7 @@ from .feeps_remove_bad_data import feeps_remove_bad_data
 from .feeps_remove_sun import feeps_remove_sun
 from .feeps_remove_sunlit_sectors import feeps_remove_sunlit_sectors
 from .feeps_sector_spec import feeps_sector_spec
+from .feeps_skymap import feeps_skymap
 from .feeps_spin_avg import feeps_spin_avg
 from .feeps_split_integral_ch import feeps_split_integral_ch
 from .fft_bandpass import fft_bandpass
@@ -146,6 +147,7 @@ __all__ = [
     "feeps_remove_sun",
     "feeps_remove_sunlit_sectors",
     "feeps_sector_spec",
+    "feeps_skymap",
     "feeps_spin_avg",
     "feeps_split_integral_ch",
     "fft_bandpass",
