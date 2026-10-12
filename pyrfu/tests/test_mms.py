@@ -3843,6 +3843,31 @@ class GetFeepsTestCase(unittest.TestCase):
 
         read.assert_not_called()
 
+    def test_get_feeps_omni(self):
+        # Quick look: bad data, split, sun and omni on the loaded eyes, then
+        # averaged over the spins of 12 samples
+        module = importlib.import_module("pyrfu.mms.get_feeps_omni")
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle = mms.feeps_correct_energies(feeps_alle)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        with mock.patch.object(module, "get_feeps_alleyes", return_value=feeps_alle):
+            result = mms.get_feeps_omni("fluxe_brst_l2", self.TINT, 1)
+            result_spin = mms.get_feeps_omni(
+                "fluxe_brst_l2", self.TINT, 1, spin_avg=True
+            )
+
+        expected, _ = mms.feeps_split_integral_ch(mms.feeps_remove_bad_data(feeps_ref))
+        expected = mms.feeps_omni(mms.feeps_remove_sun(expected))
+        xr.testing.assert_identical(result, expected)
+        self.assertTrue(np.isfinite(result.data).any())
+
+        expected_spin = mms.feeps_spin_avg(expected, feeps_ref.spinsectnum.data)
+        xr.testing.assert_identical(result_spin, expected_spin)
+        self.assertEqual(len(result_spin.time), 9)
+
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
     def test_get_feeps_omni_source(self):
         module = importlib.import_module("pyrfu.mms.get_feeps_omni")
 
