@@ -2886,6 +2886,21 @@ class FeepsPitchAnglesTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.time.data, feeps_alle.time.data)
         np.testing.assert_allclose(result.data, expected.data, atol=1e-10)
 
+    def test_feeps_pitch_angles_along_eye(self):
+        # B along the electron top-5 eye (and against bottom-5): 0 and 180
+        # degrees, not NaN from cos slightly beyond 1 (it used to be NaN)
+        module = importlib.import_module("pyrfu.mms.feeps_pitch_angles")
+        v_eye = -np.matmul(module.t_top, module.v_fcs[5])
+        b_bcs = pyrf.ts_vec_xyz(
+            generate_timeline(1.0, 1), 50.0 * v_eye[None, :] / np.linalg.norm(v_eye)
+        )
+
+        pas = module._calc_pas("electron", b_bcs)[0]
+
+        self.assertFalse(np.isnan(pas).any())
+        self.assertEqual(pas[4], 0.0)
+        self.assertEqual(pas[13], 180.0)
+
 
 @ddt
 class FeepsRemoveBadDataTestCase(unittest.TestCase):

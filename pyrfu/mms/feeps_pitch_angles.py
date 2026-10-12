@@ -105,7 +105,8 @@ def _calc_pas(d_type, b_bcs):
 
         v_dot_b = np.sum(v_bcs * b_bcs, axis=1)
         v_dot_b /= np.linalg.norm(v_bcs) * np.linalg.norm(b_bcs.data, axis=1)
-        pas[:, i] = np.rad2deg(np.arccos(v_dot_b))
+        # clip the rounding errors of B along an eye (|cos| slightly above 1)
+        pas[:, i] = np.rad2deg(np.arccos(np.clip(v_dot_b, -1.0, 1.0)))
 
     return pas
 
