@@ -14,6 +14,7 @@ import re
 import string
 import sys
 import tempfile
+import types
 import unittest
 import urllib.parse
 import warnings
@@ -749,6 +750,45 @@ class DbGetTsTestCase(unittest.TestCase):
         for value, name in enumerate(names):
             self.assertEqual(len(out[name]), 6)
             np.testing.assert_array_equal(out[name].data, value)
+
+    def test_db_get_ts_dict_support(self):
+        # Non-record-varying support variables: the first record of the first
+        # file that has them, without time; missing ones are left out
+        sources = (["file0", "file1"], mock.Mock(), {})
+        cdfs = {
+            b"file0": {"var_s": types.SimpleNamespace(values=np.array([[1, 2, 3]]))},
+            b"file1": {
+                "var_s": types.SimpleNamespace(values=np.array([[9, 9, 9]])),
+                "var_t": types.SimpleNamespace(values=np.array([[4, 5]])),
+            },
+        }
+
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ):
+            with mock.patch.object(
+                self.module,
+                "_get_file_content_sources",
+                side_effect=lambda r, f, *_: f.encode(),
+            ):
+                with mock.patch.object(self.module, "load", side_effect=cdfs.get):
+                    with mock.patch.object(
+                        self.module, "get_ts", return_value=self._ts(0, 1.0)
+                    ):
+                        out = self.module._db_get_ts_dict(
+                            "mms1_feeps_brst_l2_electron",
+                            ["var_a"],
+                            ["a", "b"],
+                            False,
+                            "",
+                            "sdc",
+                            support_names=["var_s", "var_t", "var_u"],
+                        )
+
+        np.testing.assert_array_equal(out["var_s"], [1, 2, 3])
+        np.testing.assert_array_equal(out["var_t"], [4, 5])
+        self.assertNotIn("var_u", out)
+        self.assertIsInstance(out["var_a"], xr.DataArray)
 
     def test_db_get_ts_no_file(self):
         session = mock.Mock()
