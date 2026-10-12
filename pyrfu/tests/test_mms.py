@@ -5814,7 +5814,7 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
     def test_vdf_frame_transformation_deprecated(self):
         v_gse = generate_ts(64.0, 42, tensor_order=1)
 
-        with self.assertWarnsRegex(FutureWarning, "deprecated") as context:
+        with self.assertWarnsRegex(FutureWarning, "pyrfu.mms.vdf_shift") as context:
             mms.vdf_frame_transformation(self.vdf, v_gse)
 
         self.assertEqual(context.filename, __file__)
