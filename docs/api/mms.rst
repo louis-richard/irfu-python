@@ -105,6 +105,7 @@ FPI particle distributions
    vdf_elim
    vdf_omni
    vdf_to_e64
+   vdf_mask
    vdf_velocity
    vdf_d3v
    vdf_solid_angle

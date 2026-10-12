@@ -6228,6 +6228,68 @@ class VdfFluxTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfMaskTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf():
+        # Alternating energy tables
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        energy = np.tile(10.0 * 1.3 ** np.arange(32), (4, 1))
+        energy[1::2] *= 1.1
+        return vdf.assign(energy=(["time", "idx0"], energy))
+
+    def test_vdf_mask_limits(self):
+        vdf = self._vdf()
+        energy = vdf.energy.data
+
+        # Energies of each time
+        result = mms.vdf_mask(vdf, below=13.5)
+        masked = np.all(np.isnan(result.data.data), axis=(2, 3))
+        np.testing.assert_array_equal(masked, energy < 13.5)
+        self.assertTrue(masked[0, 1] and not masked[1, 1])
+        self.assertFalse(np.any(np.isnan(vdf.data.data)))
+
+        limits = pyrf.ts_scalar(vdf.time.data, np.array([20.0, 30.0, 40.0, 50.0]))
+        result = mms.vdf_mask(vdf, below=limits, above=1000.0)
+        masked = np.all(np.isnan(result.data.data), axis=(2, 3))
+        expected = (energy < limits.data[:, None]) | (energy > 1000.0)
+        np.testing.assert_array_equal(masked, expected)
+        np.testing.assert_array_equal(
+            np.any(np.isnan(result.data.data), axis=(2, 3)), expected
+        )
+
+        # Limits on other times are resampled
+        shifted = pyrf.ts_scalar(
+            vdf.time.data + np.timedelta64(1, "ms"), np.full(4, 30.0)
+        )
+        result = mms.vdf_mask(vdf, below=shifted)
+        np.testing.assert_array_equal(
+            np.all(np.isnan(result.data.data), axis=(2, 3)), energy < 30.0
+        )
+
+    def test_vdf_mask_matrix(self):
+        vdf = self._vdf()
+        mask = np.zeros((4, 32), dtype=int)
+        mask[:, [2, 5]] = 1
+        mask[3, 20] = 1
+        result = mms.vdf_mask(vdf, mask=mask)
+        np.testing.assert_array_equal(
+            np.all(np.isnan(result.data.data), axis=(2, 3)), mask.astype(bool)
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_mask(vdf, mask=mask[:, :10])
+
+        with self.assertRaises(ValueError):
+            mms.vdf_mask(vdf, below=np.ones(3))
+
+        # Pitch-angle distributions
+        pad = _pad_case(np.ones((3, 2, 12)))
+        result = mms.vdf_mask(pad, above=150.0).data.data
+        self.assertTrue(np.all(np.isnan(result[:, 1])))
+        self.assertFalse(np.any(np.isnan(result[:, 0])))
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):
