@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import itertools
-
 # Built-in imports
 import warnings
 
@@ -111,30 +109,16 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
     pa_flux = np.zeros([len(pa_times), int(n_pabins)])
     delta_pa = (pa_bins[1] - pa_bins[0]) / 2.0
 
-    # Now loop through PA bins and time, find the telescopes where there is
-    # data in those bins and average it up!
-    for pa_idx, ipa in itertools.product(
-        range(len(pa_times)),
-        range(n_pabins),
-    ):
-        if not np.isnan(dpa[pa_idx, :]).all():
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                ind = np.where(
-                    (dpa[pa_idx, :] + dangresp >= pa_labels[ipa] - delta_pa)
-                    & (dpa[pa_idx, :] - dangresp < pa_labels[ipa] + delta_pa),
-                )
-
-                if ind[0].size != 0:
-                    if len(ind[0]) > 1:
-                        pa_flux[pa_idx, ipa] = np.nanmean(
-                            dflux[pa_idx, ind[0]],
-                            axis=0,
-                        )
-                    else:
-                        # Single telescope (assigning a 1-element array to an
-                        # element fails with NumPy >= 2.5)
-                        pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0][0]]
+    # Now loop through PA bins, find the telescopes where there is data in
+    # those bins at each time and average it up! (comparisons with NaN pitch
+    # angles are False)
+    for ipa in range(n_pabins):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            ind = (dpa + dangresp >= pa_labels[ipa] - delta_pa) & (
+                dpa - dangresp < pa_labels[ipa] + delta_pa
+            )
+            pa_flux[:, ipa] = np.nanmean(np.where(ind, dflux, np.nan), axis=1)
 
     pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
 

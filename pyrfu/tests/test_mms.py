@@ -2917,6 +2917,28 @@ class FeepsPadTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
             mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
 
+    def test_feeps_pad_values(self):
+        feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        # top-1 at 10 and top-2 at 30 degrees, the other eyes are filled
+        pitch_angle = np.full((feeps_alle.sizes["time"], 18), -2147483648.0)
+        pitch_angle[:, :2] = [10.0, 30.0]
+        feeps_alle["pitch_angle"] = (["time", "eye"], pitch_angle)
+        feeps_alle["top-1"].data[:] = 2.0
+        feeps_alle["top-2"].data[:] = 4.0
+        feeps_alle["top-2"].data[0, :] = np.nan
+
+        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 20, tensor_order=1))
+
+        # +/- 21.4 degrees: top-1 covers the bins 0-1, top-2 the bins 0-3
+        expected = np.full((20, 11), np.nan)
+        expected[:, :2], expected[:, 2:4] = 3.0, 4.0
+        expected[0, :2], expected[0, 2:4] = 2.0, np.nan  # top-2 NaN
+        np.testing.assert_allclose(result.data, expected)
+
 
 def _spin_avg_case(dim, values):
     # 3 samples of a partial spin, 5 spins of 8 sectors, 4 samples of a partial
