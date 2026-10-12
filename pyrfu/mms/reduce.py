@@ -30,6 +30,36 @@ def _energy2speed(energy, mass):
     return speed_of_light * np.sqrt(1 - 1 / gamma**2)
 
 
+def _angle_widths(vdf, theta, tint):
+    r"""Polar bands and azimuthal widths of the bins from the delta_theta_* and
+    delta_phi_* attributes (degrees), or None if the distribution has none."""
+    keys = ["delta_theta_minus", "delta_theta_plus"]
+    keys += ["delta_phi_minus", "delta_phi_plus"]
+
+    if not all(k in vdf.attrs for k in keys):
+        return None
+
+    # polar bands, as the (physical) elevation of the particle velocities
+    colat_1 = theta - vdf.attrs["delta_theta_minus"]
+    colat_2 = theta + vdf.attrs["delta_theta_plus"]
+    elev_c = np.deg2rad((colat_1 + colat_2) / 2.0 - 90.0)
+    d_theta = np.deg2rad(colat_2 - colat_1)
+    solid = np.sin(np.deg2rad(colat_2 - 90.0)) - np.sin(np.deg2rad(colat_1 - 90.0))
+
+    # azimuthal widths and shifts of the bin centres (time, phi)
+    in_tint = np.isin(vdf.time.data, time_clip(vdf.time, tint).time.data)
+    phi_m = np.asarray(vdf.attrs["delta_phi_minus"], dtype=np.float64)[in_tint]
+    phi_p = np.asarray(vdf.attrs["delta_phi_plus"], dtype=np.float64)[in_tint]
+
+    return {
+        "theta": elev_c,
+        "d_theta": d_theta,
+        "scale": solid / (np.cos(elev_c) * d_theta),
+        "phi_shift": np.deg2rad(phi_p - phi_m) / 2.0,
+        "d_phi": np.deg2rad(phi_p + phi_m),
+    }
+
+
 def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
 
@@ -100,6 +130,13 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
             dims=["time", "idx0"],
         )
         delta_energy_plus = time_clip(delta_energy_plus, tint)
+
+    # Angular widths of the bins (degrees), e.g. the FEEPS skymaps. The
+    # Monte-Carlo particles are drawn over the band between the edges of each
+    # polar bin, and the data are scaled so that each bin has its exact solid
+    # angle (int_sph_dist uses cos(theta) d_theta at the centre of the band).
+    # Without them, the widths are the spacing of the grids (FPI, EIS).
+    angle_widths = _angle_widths(vdf, vdf_theta.data, tint)
 
     # make input distribution to SI units, s^3/m^6
     if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
@@ -269,7 +306,16 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         theta = vdf_theta.data.astype(np.float64)  # in degrees
         theta = np.deg2rad(theta - 90.0)  # in radians
 
-        # TODO: add delta_phi and delta_theta if needed
+        angle_options = {}
+
+        if angle_widths is not None:
+            theta = angle_widths["theta"]
+            f_3d *= angle_widths["scale"][np.newaxis, np.newaxis, :]
+            phi += angle_widths["phi_shift"][i_t]
+            angle_options = {
+                "d_theta": angle_widths["d_theta"],
+                "d_phi": angle_widths["d_phi"][i_t],
+            }
 
         # Set velocity projection grid.
         if velocity_grid is None:
@@ -294,6 +340,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
             "projection_base": base,
             "velocity_grid_edges": velocity_grid_edges,
             **speed_widths,
+            **angle_options,
         }
 
         tmpst = int_sph_dist(

@@ -5047,6 +5047,36 @@ class ReduceTestCase(unittest.TestCase):
         self.assertAlmostEqual(v_bulk / 1e3, v_d[0], delta=3.0)
         self.assertAlmostEqual(t_x, 1000.0, delta=40.0)
 
+    def test_reduce_angle_widths(self):
+        # FEEPS skymap: 4 polar bands of different widths (delta_theta_*). The
+        # Monte-Carlo particles used to be drawn over the median spacing around
+        # the eye cones, beyond the poles, and the density was 4 % too large
+        sky = mms.feeps_skymap(_feeps_skymap_case("brst", 128))
+        energy = sky.energy.data
+        half = np.diff(energy, axis=1, append=1.1 * energy[:, -1:]) / 2
+        sky.attrs["delta_energy_minus"], sky.attrs["delta_energy_plus"] = half, half
+
+        v_grid = np.linspace(-2.9e8, 2.9e8, 291)
+        result = mms.reduce(sky, np.eye(3), "1d", "pol", vg=v_grid, n_mc=200)
+        n_reduced = np.sum(result.data, axis=1) * (v_grid[1] - v_grid[0])
+
+        # Direct sum with the relativistic speeds and the exact solid angles
+        def speed(e_ev):
+            gamma = 1 + constants.e * e_ev / (constants.m_e * constants.c**2)
+            return constants.c * np.sqrt(1 - 1 / gamma**2)
+
+        d_v = speed(energy + half) - speed(energy - half)
+        theta_1 = np.deg2rad(sky.theta.data - sky.attrs["delta_theta_minus"])
+        theta_2 = np.deg2rad(sky.theta.data + sky.attrs["delta_theta_plus"])
+        d_phi = np.deg2rad(sky.attrs["delta_phi_minus"] + sky.attrs["delta_phi_plus"])
+        d_omega = d_phi[:, :, None] * (np.cos(theta_1) - np.cos(theta_2))
+        f_si = sky.data.data * 1e12
+        n_direct = np.sum(
+            f_si * (speed(energy) ** 2 * d_v)[..., None, None] * d_omega[:, None],
+            axis=(1, 2, 3),
+        )
+        np.testing.assert_allclose(n_reduced, n_direct, rtol=0.01)
+
 
 @ddt
 class RemoveEdistBackgroundTestCase(unittest.TestCase):
