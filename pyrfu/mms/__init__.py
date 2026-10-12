@@ -92,6 +92,7 @@ from .tokenize import tokenize
 from .vdf_convert import vdf_convert
 from .vdf_d3v import vdf_d3v
 from .vdf_elim import vdf_elim
+from .vdf_flux import vdf_flux
 from .vdf_omni import vdf_omni
 from .vdf_partial_density import vdf_partial_density
 from .vdf_projection import vdf_projection
@@ -199,6 +200,7 @@ __all__ = [
     "vdf_convert",
     "vdf_d3v",
     "vdf_elim",
+    "vdf_flux",
     "vdf_frame_transformation",
     "vdf_omni",
     "vdf_partial_density",

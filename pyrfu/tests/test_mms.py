@@ -6191,6 +6191,43 @@ class VdfPartialDensityTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfFluxTestCase(unittest.TestCase):
+    def test_vdf_flux_maxwellian(self):
+        # Isotropic Maxwellian: the flux per steradian summed over the energies
+        # is n v_th / (2 pi^1.5)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        result = mms.vdf_flux(vdf)
+        self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr)")
+
+        v_th = np.sqrt(2 * constants.e * 1000.0 / constants.m_p) * 1e2  # cm/s
+        np.testing.assert_allclose(
+            result.data.data.sum(axis=1), v_th / (2 * np.pi**1.5), rtol=0.02
+        )
+
+        # Through the solid angle of the bins
+        total = mms.vdf_flux(vdf, per_sr=False)
+        self.assertEqual(total.data.attrs["UNITS"], "1/(cm^2 s)")
+        np.testing.assert_allclose(
+            total.data.data,
+            result.data.data * mms.vdf_solid_angle(vdf).data.data,
+            rtol=1e-12,
+        )
+
+    def test_vdf_flux_pad(self):
+        # (v_2^4 - v_1^4) / 4 f, the ion mass (irfu-matlab uses m_e)
+        pad = _pad_case(np.ones((3, 2, 12)))
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * f * pad.energy.data / constants.m_p)
+            for f in [0.75, 1.25]
+        )
+        expected = 1e12 * (v_2**4 - v_1**4) / 4 / 1e4
+        np.testing.assert_allclose(
+            mms.vdf_flux(pad).data.data[..., 4], expected, rtol=1e-12
+        )
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):

@@ -109,6 +109,7 @@ FPI particle distributions
    vdf_d3v
    vdf_solid_angle
    vdf_partial_density
+   vdf_flux
    psd_rebin
    vdf_frame_transformation
    vdf_projection
