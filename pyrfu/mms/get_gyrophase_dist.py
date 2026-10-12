@@ -128,8 +128,12 @@ def get_gyrophase_dist(
     perpendicular to B. The gyrophase of a sample is the angle of the particle
     velocity (minus the look direction) from e_perp1 towards e_perp2, i.e.
     right-handed about B, in [0, 360) degrees, as Li et al. (2022, 2024). It
-    is undefined where `r_xyz` is along B. pyspedas (``mms_feeps_gpd``)
-    measures it in the opposite sense.
+    is undefined where `r_xyz` is along B. IDL SPEDAS and pyspedas
+    (``mms_feeps_getgyrophase``) measure the gyrophase from the sunward
+    direction towards the dawnward direction (perpendicular to B), whatever the
+    direction of B: the same as here with the default `r_xyz` when e_perp2
+    points dawnward (B with a southward component), the opposite (360 degrees
+    minus the gyrophase) otherwise.
 
     A sample is in a bin if its gyrophase is in [lower edge, upper edge). Each
     bin is the mean of its samples weighted by their solid angle (exact for
