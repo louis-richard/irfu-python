@@ -2959,6 +2959,35 @@ class FeepsPadTestCase(unittest.TestCase):
         expected[0, :2], expected[0, 2:4] = 2.0, np.nan  # top-2 NaN
         np.testing.assert_allclose(result.data, expected)
 
+    def test_feeps_pad_nan_energies(self):
+        feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        pitch_angle = np.full((feeps_alle.sizes["time"], 18), -2147483648.0)
+        pitch_angle[:, :2] = [10.0, 30.0]
+        feeps_alle["pitch_angle"] = (["time", "eye"], pitch_angle)
+        feeps_alle["top-1"].data[:] = 2.0
+        feeps_alle["top-2"].data[:] = 4.0
+
+        # top-1 without energy calibration (NaN energies) is left out
+        top_1 = feeps_alle["top-1"].rename(energy="energy_top-1")
+        feeps_alle["top-1"] = top_1.assign_coords(
+            {"energy_top-1": np.full(len(energy), np.nan)}
+        )
+
+        b_bcs = generate_ts(64.0, 20, tensor_order=1)
+        result = mms.feeps_pad(feeps_alle, b_bcs)
+
+        expected = np.full((20, 11), np.nan)
+        expected[:, :4] = 4.0
+        np.testing.assert_array_equal(result.data, expected)
+
+        feeps_alle.attrs["dtype"] = "proton"
+        with self.assertRaisesRegex(ValueError, "Invalid species"):
+            mms.feeps_pad(feeps_alle, b_bcs)
+
 
 def _spin_avg_case(dim, values):
     # 3 samples of a partial spin, 5 spins of 8 sectors, 4 samples of a partial
