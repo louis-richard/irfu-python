@@ -71,6 +71,9 @@ New features
   partial moments above about 30 keV; ``coverage`` gives the fraction of the
   sphere with data, and ``fill_empty`` optionally fills the bins without
   data.
+- ``mms.reduce`` uses the angular widths of the skymap (``delta_theta_*`` and
+  ``delta_phi_*``) when they are given, as for the FEEPS skymaps, whose 4
+  polar bins have different widths; FPI and EIS skymaps are unchanged.
 - ``mms.get_gyrophase_dist``: gyrophase distributions of a skymap (FPI, EIS,
   FEEPS), optionally in a range of pitch angles. The gyrophase is measured
   right-handed about B from the component of a reference direction
