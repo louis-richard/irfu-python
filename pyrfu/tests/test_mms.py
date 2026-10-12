@@ -1091,6 +1091,25 @@ class Dpf2PsdTestCase(unittest.TestCase):
         result = mms.dpf2psd(spectr)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_dpf2psd_relativistic(self):
+        # f = gamma^3 m J / v^2 with the relativistic speed: 2 gamma^5 /
+        # (gamma + 1) times the non-relativistic f = m J / v^2
+        energy = np.array([1e3, 5e4, 5e5])  # eV
+        attrs = {"species": "electrons", "UNITS": "1/(cm^2 s sr keV)"}
+        spectr = pyrf.ts_spectr(generate_timeline(1.0, 2), energy, np.ones((2, 3)))
+        spectr.attrs = attrs
+        ratio = mms.dpf2psd(spectr, relativistic=True).data / mms.dpf2psd(spectr).data
+        np.testing.assert_allclose(ratio[0], [1.0098, 1.5205, 20.36], rtol=1e-3)
+
+        gamma = 1 + energy / 510998.95
+        np.testing.assert_allclose(ratio[0], 2 * gamma**5 / (gamma + 1), rtol=1e-6)
+
+        # Protons: 4.9 % at 10 MeV
+        spectr.attrs = {**attrs, "species": "ions"}
+        spectr = spectr.assign_coords(energy=energy * 20)
+        ratio = mms.dpf2psd(spectr, relativistic=True).data / mms.dpf2psd(spectr).data
+        self.assertAlmostEqual(float(ratio[0, -1]), 1.0488, delta=1e-4)
+
 
 @ddt
 class Dsl2GseTestCase(unittest.TestCase):

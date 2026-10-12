@@ -10,7 +10,13 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units, _energy, _mass_ratio, _output
+from pyrfu.mms._psd_units import (
+    _data_and_units,
+    _energy,
+    _mass_ratio,
+    _output,
+    _relativistic_factor,
+)
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -57,7 +63,9 @@ def _convert(inp: np.ndarray, units: str, mass_ratio: float) -> np.ndarray:
     return tmp_data
 
 
-def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
+def dpf2psd(
+    inp: Union[Dataset, DataArray], relativistic: bool = False
+) -> Union[Dataset, DataArray]:
     r"""Compute phase space density from differential particle flux.
 
     Parameters
@@ -65,6 +73,14 @@ def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
     inp : DataArray or Dataset
         Time series of the differential particle flux in
         [(cm^{2} s sr keV)^{-1}].
+    relativistic : bool, Optional
+        Phase-space density in velocity space with the relativistic speeds,
+        f = gamma^3 m J / v^2, whose integral over the velocities (with
+        relativistic speeds, e.g. `psd_moments` with ``relativistic=True`` or
+        `reduce`) is the density. Default is False: f = m J / v^2 with the
+        non-relativistic speed, as FPI and irfu-matlab. For electrons, f is
+        larger by 4.5 % at 5 keV, 52 % at 50 keV and a factor 2.2 at 100 keV
+        (the moments much less, as the speeds are smaller).
 
     Returns
     -------
@@ -80,5 +96,8 @@ def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
 
     data, units = _data_and_units(inp)
     data = _convert(data, units, _mass_ratio(inp)) / _energy(inp, data)
+
+    if relativistic:
+        data = data * _relativistic_factor(inp, data)
 
     return _output(inp, data, "s^3/m^6")
