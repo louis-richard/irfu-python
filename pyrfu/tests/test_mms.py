@@ -6145,6 +6145,52 @@ class VdfD3vTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfPartialDensityTestCase(unittest.TestCase):
+    def test_vdf_partial_density_moments(self):
+        # Sums are the density and particle flux of a drifting Maxwellian
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        d_n = mms.vdf_partial_density(vdf)
+        self.assertEqual(d_n.data.attrs["UNITS"], "cm^-3")
+        n_i = d_n.data.data.sum(axis=(1, 2, 3))
+        np.testing.assert_allclose(n_i, 1.0, rtol=0.01)
+
+        # Equal to f d3v
+        d3v = mms.vdf_d3v(vdf).data.data
+        np.testing.assert_allclose(d_n.data.data, vdf.data.data * d3v, rtol=1e-12)
+
+        for i, comp in enumerate("xyz"):
+            d_j = mms.vdf_partial_density(vdf, comp)
+            self.assertEqual(d_j.data.attrs["UNITS"], "1/(cm^2 s)")
+            j_i = d_j.data.data.sum(axis=(1, 2, 3))
+            np.testing.assert_allclose(j_i / n_i, v_kms[i] * 1e5, rtol=0.01)
+
+        # Any units: the same density from the differential particle flux
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        np.testing.assert_allclose(
+            mms.vdf_partial_density(dpf).data.data, d_n.data.data, rtol=1e-12
+        )
+
+    def test_vdf_partial_density_input(self):
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        with self.assertRaises(ValueError):
+            mms.vdf_partial_density(vdf, "w")
+
+        pad = _pad_case(np.ones((3, 2, 12)))
+        n_pad = mms.vdf_partial_density(pad).data.data
+        np.testing.assert_allclose(
+            n_pad, pad.data.data * mms.vdf_d3v(pad).data.data, rtol=1e-12
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_partial_density(pad, "x")
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):
