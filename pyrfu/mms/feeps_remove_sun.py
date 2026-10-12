@@ -19,6 +19,16 @@ __status__ = "Prototype"
 def feeps_remove_sun(inp_dataset):
     r"""Removes the sunlight contamination from FEEPS data.
 
+    The samples of an eye whose spin sector (``spinsectnum``) is in the eye's
+    sun-contamination mask (:func:`pyrfu.mms.read_feeps_sector_masks_csv`) are
+    set to NaN, as in IDL SPEDAS and pyspedas.
+
+    The masks are given for the 64 burst spin sectors. A survey sample averages
+    8 sectors and is labelled with the last one (7, 15, ..., 63), so it is
+    removed only when that sector is masked. Survey samples that contain other
+    masked sectors are kept: for example, the mask of MMS2 bottom-5 (sectors 40,
+    41, 52, 53 and 54) never removes a survey sample.
+
     Parameters
     ----------
     inp_dataset : xarray.Dataset
