@@ -6290,6 +6290,51 @@ class VdfMaskTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfFindLowCountsTestCase(unittest.TestCase):
+    def test_movmean(self):
+        # MATLAB movmean: centred window, shrinking at the ends
+        module = sys.modules["pyrfu.mms.vdf_find_low_counts"]
+        inp = np.array([1.0, 2.0, 4.0, 8.0, 16.0])[:, None]
+        np.testing.assert_allclose(module._movmean(inp, 1)[:, 0], inp[:, 0])
+        np.testing.assert_allclose(
+            module._movmean(inp, 3)[:, 0], [1.5, 7 / 3, 14 / 3, 28 / 3, 12.0]
+        )
+        # Even window: k / 2 back, k / 2 - 1 forward
+        np.testing.assert_allclose(
+            module._movmean(inp, 4)[:, 0], [1.5, 7 / 3, 15 / 4, 30 / 4, 28 / 3]
+        )
+        np.testing.assert_allclose(
+            module._movmean(inp, [0, 2])[:, 0], [7 / 3, 14 / 3, 28 / 3, 12.0, 16.0]
+        )
+
+    def test_vdf_find_low_counts(self):
+        counts = generate_vdf(64.0, 3, (4, 2, 2), False, "ions", "counts")
+        counts = counts.assign(
+            energy=(["time", "idx0"], np.tile([10.0, 20.0, 40.0, 80.0], (3, 1)))
+        )
+        summed = np.array([[0, 2, 8, 12], [1, 6, 9, 3], [0, 1, 2, 3]], dtype=float)
+        counts["data"] = counts.data.copy(
+            data=np.broadcast_to(summed[..., None, None] / 4, (3, 4, 2, 2)).copy()
+        )
+
+        mat = mms.vdf_find_low_counts(counts, 5, output="mat")
+        np.testing.assert_array_equal(mat.data, (summed < 5).astype(int))
+
+        energy = mms.vdf_find_low_counts(counts, 5)
+        self.assertEqual(energy.attrs["UNITS"], "eV")
+        np.testing.assert_array_equal(energy.data, [40.0, 20.0, np.nan])
+
+        smoothed = mms.vdf_find_low_counts(counts, 5, n_mov_mean=3, output="mat")
+        expected = np.array(
+            [[0.5, 4, 8.5, 7.5], [1 / 3, 3, 19 / 3, 6], [0.5, 3.5, 5.5, 3]]
+        )
+        np.testing.assert_array_equal(smoothed.data, (expected < 5).astype(int))
+
+        with self.assertRaises(ValueError):
+            mms.vdf_find_low_counts(counts, 5, output="index")
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):

@@ -92,6 +92,7 @@ from .tokenize import tokenize
 from .vdf_convert import vdf_convert
 from .vdf_d3v import vdf_d3v
 from .vdf_elim import vdf_elim
+from .vdf_find_low_counts import vdf_find_low_counts
 from .vdf_flux import vdf_flux
 from .vdf_mask import vdf_mask
 from .vdf_omni import vdf_omni
@@ -201,6 +202,7 @@ __all__ = [
     "vdf_convert",
     "vdf_d3v",
     "vdf_elim",
+    "vdf_find_low_counts",
     "vdf_flux",
     "vdf_frame_transformation",
     "vdf_mask",
