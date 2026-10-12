@@ -12,6 +12,7 @@ MMS examples gallery
     ./example_mms_electron_psd
     ./example_mms_feeps
     ./example_mms_feeps_electrons_4sc
+    ./example_mms_feeps_skymap
     ./example_mms_hpca
     ./example_mms_ipshocks
     ./example_mms_ohmslaw
