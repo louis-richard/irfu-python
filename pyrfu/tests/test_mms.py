@@ -4,6 +4,7 @@
 import contextlib
 
 # Built-in imports
+import datetime
 import importlib
 import itertools
 import json
@@ -2593,6 +2594,25 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
             str(random.randint(1, 4)),
         )
         self.assertIsInstance(result, dict)
+
+    def test_feeps_active_eyes_time_types(self):
+        # str, datetime64 and datetime.datetime give the same eyes on each side
+        # of the 2017-08-16 change (datetime.datetime used to raise)
+        var = {"tmmode": "srvy", "dtype": "electron", "lev": "l2"}
+        new = {"top": [3, 5, 9, 10, 12], "bottom": [2, 4, 5, 9, 10]}
+        old = {"top": [3, 4, 5, 11, 12], "bottom": [3, 4, 5, 11, 12]}
+
+        for start, expected in [
+            ("2017-08-16T00:00:00", new),
+            ("2017-08-15T23:59:00", old),
+        ]:
+            for t_start in [
+                start,
+                np.datetime64(start, "ns"),
+                datetime.datetime.fromisoformat(start),
+            ]:
+                result = mms.feeps_active_eyes(var, [t_start, t_start], 1)
+                self.assertDictEqual(result, expected)
 
 
 def _feeps_omni_4sc(values, energies=None):

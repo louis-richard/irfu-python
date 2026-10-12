@@ -5,7 +5,7 @@
 import numpy as np
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -20,7 +20,7 @@ def feeps_active_eyes(var, tint, mms_id):
     ----------
     var : dict
         Hash table containing parameters.
-    tint : list of str
+    tint : list of str or datetime64 or datetime.datetime
         Time range.
     mms_id : int or str
         mms_id e.g., '4' for MMS4.
@@ -86,10 +86,8 @@ def feeps_active_eyes(var, tint, mms_id):
         sensors["top"] = [6, 7, 8]
         sensors["bottom"] = [6, 7, 8]
 
-    if isinstance(tint[0], str):
-        start_day = np.array(tint[0]).astype("<M8[D]")
-    else:
-        start_day = tint[0].astype("<M8[D]")
+    # str, datetime64 or datetime.datetime
+    start_day = np.datetime64(tint[0]).astype("datetime64[D]")
 
     # srvy mode, after 16 August 2017
     if start_day >= np.datetime64("2017-08-16") and var["tmmode"].lower() == "srvy":
