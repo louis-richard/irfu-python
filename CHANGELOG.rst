@@ -62,6 +62,24 @@ Deprecations
 New features
 ^^^^^^^^^^^^
 
+- ``mms.feeps_skymap``: FEEPS skymaps, one per spin (time, energy, phi,
+  theta), in DMPA and in phase-space density (s\ :sup:`3` cm\ :sup:`-6`), as
+  the FPI distributions, for ``mms.psd_moments``, ``mms.reduce`` and
+  ``mms.vdf_projection``. The look directions are despun with the spin
+  sectors (a constant per spacecraft, measured on 2015-2024 FGM data), or with
+  FGM (``b_bcs`` and ``b_dmpa``). The 4 polar rings of the eyes give coarse
+  partial moments above about 30 keV; ``coverage`` gives the fraction of the
+  sphere with data, and ``fill_empty`` optionally fills the bins without
+  data.
+- ``mms.get_feeps_alleyes``: the lower and upper bounds of the energy
+  channels of each eye, from the CDF, as coordinates along its energies
+  (``energy_lower_bound_top-1``, ...).
+- ``mms.psd_moments``: ``angle_integration="exact"`` integrates the angular
+  kernels over each bin instead of taking them at the bin centre (the
+  default, as irfu-matlab). On the FPI grid the moments change by less than
+  1 %; on the wide FEEPS bins the midpoint rule underestimates the density by
+  8 to 11 %. The FEEPS skymaps use "exact" by default (``angle_integration``
+  attribute).
 - ``mms.feeps_pad``: ``angles_from_bfield`` (see above).
 - ``mms.feeps_remove_sunlit_sectors``: ``i_en``, the energy channel used to
   find the sunlit sectors (default 3, as before).
@@ -118,6 +136,9 @@ Each of these returned wrong values before.
 Other fixes
 ^^^^^^^^^^^
 
+- ``mms.psd_moments`` refused the distributions whose ``FIELDNAM`` doesn't
+  name the burst or fast rate (e.g. survey skymaps); the rate was only
+  logged.
 - ``mms.feeps_remove_bad_data``, ``mms.feeps_remove_sun`` and
   ``mms.feeps_pad`` no longer change the caller's data; ``feeps_pad`` works on
   integer counts.
