@@ -2091,6 +2091,44 @@ class MakeModelKappaTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
 
 
+@ddt
+class PadPalimTestCase(unittest.TestCase):
+    def test_pad_palim(self):
+        data = np.random.random((3, 2, 12))
+        data[0, 0, 5] = np.nan
+        pad = _pad_case(data)
+
+        # Range: strictly inside
+        result = mms.pad_palim(pad, [30.0, 90.0])
+        np.testing.assert_array_equal(result.theta.data[0], [37.5, 52.5, 67.5, 82.5])
+        np.testing.assert_array_equal(result.data.data, data[..., 2:6])
+        np.testing.assert_array_equal(result.attrs["delta_pitchangle_minus"], 7.5)
+
+        # 90: 82.5 and 97.5 are equally close, averaged (NaN-mean)
+        result = mms.pad_palim(pad, 90.0)
+        self.assertEqual(result.data.shape, (3, 2, 1))
+        np.testing.assert_array_equal(result.theta.data, 90.0)
+        expected = np.nanmean(data[..., 5:7], axis=2)
+        np.testing.assert_allclose(result.data.data[..., 0], expected)
+        self.assertEqual(result.attrs["delta_pitchangle_minus"][0], 15.0)
+        self.assertEqual(result.attrs["delta_pitchangle_plus"][0], 15.0)
+
+        # Without averaging (irfu-matlab "noav"), and the closest bin
+        result = mms.pad_palim(pad, 90.0, average=False)
+        np.testing.assert_array_equal(result.theta.data[0], [82.5, 97.5])
+        result = mms.pad_palim(pad, 50.0)
+        np.testing.assert_array_equal(result.theta.data, 52.5)
+        np.testing.assert_array_equal(result.data.data[..., 0], data[..., 3])
+
+        with self.assertRaises(ValueError):
+            mms.pad_palim(pad, [10.0, 20.0, 30.0])
+
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.pad_palim(vdf, 90.0)
+
+
 class ProbeAlignTimesTestCase(unittest.TestCase):
     def test_probe_align_times_values(self):
         # 20 s spin (18 deg/s), B along x in the spin plane except for

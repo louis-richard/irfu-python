@@ -75,6 +75,7 @@ from .make_model_kappa import make_model_kappa
 from .make_model_vdf import make_model_vdf
 
 # from .make_model_rq import make_model_rq
+from .pad_palim import pad_palim
 from .probe_align_times import probe_align_times
 from .psd2def import psd2def
 from .psd2dpf import psd2dpf
@@ -185,6 +186,7 @@ __all__ = [
     "load_brst_segments",
     "make_model_kappa",
     "make_model_vdf",
+    "pad_palim",
     "probe_align_times",
     "psd2def",
     "psd2dpf",
