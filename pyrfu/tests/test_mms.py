@@ -5968,6 +5968,65 @@ class VdfOmniTestCase(unittest.TestCase):
         expected = np.sum(ring * d_omega) / (4 * np.pi)
         np.testing.assert_allclose(mms.vdf_omni(vdf).data, expected, rtol=1e-12)
 
+    def test_vdf_omni_frame_isotropic(self):
+        # Isotropic, no frame velocity: the spacecraft-frame omni exactly
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        result = mms.vdf_omni(vdf, v_frame=[0.0, 0.0, 0.0], n_mc=500)
+        np.testing.assert_allclose(result.data, mms.vdf_omni(vdf).data, rtol=1e-12)
+        np.testing.assert_array_equal(result.attrs["coverage"], 1.0)
+        np.testing.assert_array_equal(result.attrs["frame_velocity"], 0.0)
+        self.assertEqual(result.attrs["n_mc"], 500)
+        self.assertEqual(result.attrs["UNITS"], "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_omni(vdf, "sum", v_frame=[0.0, 0.0, 0.0])
+
+    def test_vdf_omni_frame_maxwellian(self):
+        # Drifting Maxwellian in its frame: the Maxwellian at rest
+        v_kms = np.array([200.0, 150.0, -250.0])
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, list(v_kms))
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        result = mms.vdf_omni(vdf, v_frame=v_kms, random_state=0)
+
+        energy = vdf.energy.data[0]
+        v_th2 = 2 * constants.e * 1000.0 / constants.m_p
+        expected = np.exp(-energy / 1000.0) * 1e-6 / (np.pi * v_th2) ** 1.5
+        low = energy < 2e3
+        np.testing.assert_allclose(
+            result.data[:, low],
+            np.broadcast_to(expected[low], (2, low.sum())),
+            rtol=0.03,
+        )
+
+        # Time series of the frame velocity, other energies
+        v_frame = pyrf.ts_vec_xyz(vdf.time.data, np.tile(v_kms, (2, 1)))
+        again = mms.vdf_omni(vdf, v_frame=v_frame, random_state=0)
+        np.testing.assert_array_equal(again.data, result.data)
+        np.testing.assert_array_equal(
+            again.attrs["frame_velocity"], np.tile(v_kms, (2, 1))
+        )
+
+        energy = np.array([100.0, 1000.0, 1e6])
+        result = mms.vdf_omni(vdf, v_frame=v_kms, energy=energy, random_state=0)
+        np.testing.assert_array_equal(result.energy.data, energy)
+        np.testing.assert_allclose(
+            result.data[:, 1], np.exp(-1.0) * 1e-6 / (np.pi * v_th2) ** 1.5, rtol=0.03
+        )
+
+        # Outside the energy range: zero, without coverage
+        np.testing.assert_array_equal(result.data[:, 2], 0.0)
+        np.testing.assert_array_equal(result.attrs["coverage"][:, 2], 0.0)
+
+        # Bins without data count as zero, with less coverage: without the
+        # look directions theta < 90 (v_z < 0), the sphere of radius v_1keV
+        # centred on v_frame keeps (v_1keV - |v_z|) / (2 v_1keV) (Archimedes)
+        vdf.data.data[:, :, :, :8] = np.nan
+        result = mms.vdf_omni(vdf, v_frame=v_kms, energy=energy, random_state=0)
+        radius = np.sqrt(v_th2) / 1e3
+        expected = (radius - 250.0) / (2 * radius)
+        np.testing.assert_allclose(result.attrs["coverage"][:, 1], expected, atol=0.01)
+
     def test_vdf_omni_energy_tables(self):
         # Alternating tables: Dataset with the units and attributes of vdf, so
         # that the unit conversions work on it
