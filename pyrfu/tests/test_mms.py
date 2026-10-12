@@ -2129,6 +2129,59 @@ class PadPalimTestCase(unittest.TestCase):
             mms.pad_palim(vdf, 90.0)
 
 
+@ddt
+class PadDiffusionTestCase(unittest.TestCase):
+    def test_pad_diffusion_legendre(self):
+        # f = cos(a), constant D: df/dt = -2 D cos(a), and with the central
+        # differences on a grid of step h: -2 D cos(a) sin(h)/h sin(2h)/(2h)
+        alpha = np.deg2rad(7.5 + 15.0 * np.arange(12))
+        pad = _pad_case(np.tile(np.cos(alpha), (2, 3, 1)))
+        result = mms.pad_diffusion(pad, 0.1)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6/s")
+
+        step = np.deg2rad(15.0)
+        factor = np.sin(step) / step * np.sin(2 * step) / (2 * step)
+        expected = -0.2 * np.cos(alpha[2:-2]) * factor
+        np.testing.assert_allclose(
+            result.data.data[..., 2:-2], np.broadcast_to(expected, (2, 3, 8))
+        )
+
+        # f = P2(cos(a)) on a fine grid: -6 D f
+        pitch = 0.25 + 0.5 * np.arange(360)
+        p_2 = (3 * np.cos(np.deg2rad(pitch)) ** 2 - 1) / 2
+        pad = _pad_case(np.tile(p_2, (2, 3, 1)), pitch=pitch)
+        result = mms.pad_diffusion(pad, 0.1).data.data[..., 10:-10]
+        np.testing.assert_allclose(
+            result, np.broadcast_to(-0.6 * p_2[10:-10], result.shape), atol=2e-4
+        )
+
+    def test_pad_diffusion_coefficient(self):
+        # D (energy, pitch angle), linear in D, irfu-matlab edges
+        alpha = np.deg2rad(7.5 + 15.0 * np.arange(12))
+        pad = _pad_case(np.tile(np.cos(alpha), (2, 3, 1)))
+        d_aa = np.array([0.1, 0.2, 0.3])[:, None] * np.ones(12)
+        result = mms.pad_diffusion(pad, d_aa).data.data
+        np.testing.assert_allclose(
+            result[:, 2], 3 * mms.pad_diffusion(pad, 0.1).data.data[:, 0]
+        )
+
+        f_0, f_1 = np.cos(alpha[:2])
+        flux_0 = 0.1 * np.sin(alpha[0]) * (f_1 - f_0) / (alpha[1] - alpha[0])
+        flux_1 = (
+            0.1
+            * np.sin(alpha[1])
+            * (np.cos(alpha[2]) - f_0)
+            / (2 * (alpha[1] - alpha[0]))
+        )
+        expected = (flux_1 - flux_0) / (alpha[1] - alpha[0]) / np.sin(alpha[0])
+        np.testing.assert_allclose(result[:, 0, 0], expected)
+
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.pad_diffusion(vdf, 0.1)
+
+
 class ProbeAlignTimesTestCase(unittest.TestCase):
     def test_probe_align_times_values(self):
         # 20 s spin (18 deg/s), B along x in the spin plane except for
