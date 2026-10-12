@@ -3813,6 +3813,36 @@ class GetFeepsTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "l1b"):
             mms.get_feeps_alleyes("countse_brst_l2", self.TINT, 2)
 
+    def test_get_feeps_alleyes_ions(self):
+        # Survey ions before 2017-08-16: eyes 6-8, from the ion dataset
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("cpsi_srvy_l2", self.TINT, 2)
+
+        dset_name, cdf_names = read.call_args.args[:2]
+        self.assertEqual(dset_name, "mms2_feeps_srvy_l2_ion")
+        self.assertIn(
+            "mms2_epd_feeps_srvy_l2_ion_bottom_count_rate_sensorid_8", cdf_names
+        )
+        eyes = [k for k in out.data_vars if k not in ["spinsectnum", "pitch_angle"]]
+        self.assertListEqual(
+            eyes, ["top-6", "top-7", "top-8", "bottom-6", "bottom-7", "bottom-8"]
+        )
+        self.assertEqual(out.attrs["dtype"], "ion")
+        self.assertEqual(out["top-6"].attrs["species"], "ions")
+
+    def test_get_feeps_alleyes_input(self):
+        # Invalid species and units (the units raised a bare KeyError)
+        with mock.patch.object(self.module, "_db_get_ts_dict") as read:
+            with self.assertRaisesRegex(ValueError, "specie"):
+                mms.get_feeps_alleyes("fluxp_brst_l2", self.TINT, 2)
+
+            with self.assertRaisesRegex(ValueError, "Invalid units"):
+                mms.get_feeps_alleyes("fluxese_brst_l2", self.TINT, 2)
+
+        read.assert_not_called()
+
     def test_get_feeps_omni_source(self):
         module = importlib.import_module("pyrfu.mms.get_feeps_omni")
 

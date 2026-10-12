@@ -25,40 +25,10 @@ data_units_keys = {
 }
 
 
-def _tokenize(tar_var):
-    var = {"inst": "feeps"}
-
-    data_units = data_units_keys[tar_var.split("_")[0][:-1].lower()]
-
-    specie = tar_var.split("_")[0][-1]
-
-    if specie == "e":
-        var["dtype"] = "electron"
-    elif specie == "i":
-        var["dtype"] = "ion"
-    else:
-        raise ValueError("invalid specie")
-
-    var["tmmode"] = tar_var.split("_")[1]
-    var["lev"] = tar_var.split("_")[2]
-
-    return var, data_units
-
-
-def _eye_cdf_name(tar_var, e_id, mms_id, active_eyes):
+def _eye_cdf_name(pref, data_units, e_id, mms_id):
     # Name of the variable of the eye e_id ("top-1", "bottom-12", ...)
-    var, data_units = _tokenize(tar_var)
-    pref = f"epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
-
-    if e_id.split("-")[0] not in ["top", "bottom"]:
-        raise ValueError("Invalid format of eye id")
-
-    suf, sensor_id = e_id.split("-")[0], int(e_id.split("-")[1])
-
-    if sensor_id not in active_eyes[suf]:
-        raise ValueError(f"Unactive eye {e_id}")
-
-    return f"mms{mms_id:d}_{pref}_{suf}_{data_units}_sensorid_{sensor_id:d}"
+    suf, sensor_id = e_id.split("-")
+    return f"mms{mms_id:d}_{pref}_{suf}_{data_units}_sensorid_{sensor_id}"
 
 
 def get_feeps_alleyes(
@@ -162,6 +132,12 @@ def get_feeps_alleyes(
     else:
         raise ValueError("Invalid specie")
 
+    if var["units_name"] not in data_units_keys:
+        raise ValueError(
+            f"Invalid units {var['units_name']}: must be one of "
+            f"{', '.join(data_units_keys)}"
+        )
+
     data_units = data_units_keys[var["units_name"]]
 
     if data_units == "counts" and var["lev"] == "l2":
@@ -181,7 +157,7 @@ def get_feeps_alleyes(
     cdf_names = {
         "spinsectnum": f"mms{mms_id:d}_{pref}_spinsectnum",
         "pitch_angle": f"mms{mms_id:d}_{pref}_pitch_angle",
-        **{e_id: _eye_cdf_name(tar_var, e_id, mms_id, active_eyes) for e_id in e_ids},
+        **{e_id: _eye_cdf_name(pref, data_units, e_id, mms_id) for e_id in e_ids},
     }
 
     # Quality indicators of the eyes (L2 only)
