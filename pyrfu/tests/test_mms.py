@@ -5942,6 +5942,32 @@ class VdfOmniTestCase(unittest.TestCase):
             )
             self.assertEqual(result.attrs["UNITS"], "s^3/cm^6")
 
+    def test_vdf_omni_angular_widths(self):
+        # FEEPS-like rings of different widths (delta_theta_*): the mean is
+        # weighted by the solid angles of the bands, sum(f Omega) / 4 pi
+        n_t, theta = 3, np.array([5.0, 65.0, 115.0, 175.0])
+        edges = np.array([0.0, 35.0, 90.0, 145.0, 180.0])
+        ring = np.array([1.0, 2.0, 4.0, 8.0])
+        vdf = pyrf.ts_skymap(
+            generate_timeline(1.0, n_t),
+            np.broadcast_to(ring, (n_t, 5, 8, 4)).copy(),
+            np.tile(1e3 * np.arange(1, 6), (n_t, 1)),
+            np.tile(22.5 + 45.0 * np.arange(8), (n_t, 1)),
+            theta,
+            energy0=1e3 * np.arange(1, 6),
+            energy1=1e3 * np.arange(1, 6),
+            esteptable=np.zeros(n_t, dtype=np.uint8),
+            attrs={"UNITS": "s^3/cm^6"},
+            glob_attrs={
+                "species": "electrons",
+                "delta_theta_minus": theta - edges[:-1],
+                "delta_theta_plus": edges[1:] - theta,
+            },
+        )
+        d_omega = 2 * np.pi * -np.diff(np.cos(np.deg2rad(edges)))
+        expected = np.sum(ring * d_omega) / (4 * np.pi)
+        np.testing.assert_allclose(mms.vdf_omni(vdf).data, expected, rtol=1e-12)
+
     def test_vdf_omni_energy_tables(self):
         # Alternating tables: Dataset with the units and attributes of vdf, so
         # that the unit conversions work on it

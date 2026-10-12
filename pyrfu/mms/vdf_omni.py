@@ -11,6 +11,8 @@ import xarray as xr
 # Local imports
 from pyrfu.pyrf.ts_spectr import ts_spectr
 
+from ._vdf_bins import _band_solid_angles
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -54,8 +56,11 @@ def vdf_omni(vdf, method: str = "mean"):
     -----
     As irfu-matlab PDist.omni, "mean" averages the distribution weighted by
     the solid angles over theta, then phi, and divides by the mean solid
-    angle; without NaNs, this is the solid-angle weighted mean. A channel
-    without data at all angles gives NaN ("mean") or 0 ("sum").
+    angle; without NaNs, this is the solid-angle weighted mean. The solid
+    angles are those of `vdf_solid_angle`: from the angular widths of the
+    attributes when present (e.g. the polar bands of different widths of the
+    FEEPS skymaps), else from the spacing of the angles. A channel without
+    data at all angles gives NaN ("mean") or 0 ("sum").
 
     """
 
@@ -71,11 +76,11 @@ def vdf_omni(vdf, method: str = "mean"):
         warnings.simplefilter("ignore", category=RuntimeWarning)
 
         if method.lower() == "mean":
-            # Solid angles of the (phi, theta) bins: dphi dtheta sin(theta),
-            # the constant dphi dtheta cancels with the mean solid angle
-            solid_angles = np.sin(np.deg2rad(vdf.theta.data))
+            # Solid angles of the (phi, theta) bins (time, phi, theta), from
+            # the angular widths of the attributes when present
+            solid_angles = _band_solid_angles(vdf)[:, np.newaxis]
             omni = np.nanmean(np.nanmean(data * solid_angles, axis=3), axis=2)
-            omni /= np.mean(solid_angles)
+            omni /= np.mean(solid_angles, axis=(2, 3))
         else:
             omni = np.nansum(np.nansum(data, axis=3), axis=2)
 
