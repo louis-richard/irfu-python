@@ -1697,6 +1697,130 @@ class MakeModelVDFTestCase(unittest.TestCase):
             mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s[:2], v_xyz, t_xyz)
 
 
+def _gyro_skymap(values=None, n_t=2):
+    # FPI-like skymap (2 energies, 32 phi, 16 theta) of the look directions,
+    # filled with values(phi, theta) of the look directions (degrees)
+    phi = 5.625 + 11.25 * np.arange(32)
+    theta = 5.625 + 11.25 * np.arange(16)
+    data = np.ones((n_t, 2, 32, 16))
+    if values is not None:
+        data *= values(phi[:, None], theta[None, :])[None, None]
+    time = generate_timeline(1.0, n_t)
+    vdf = pyrf.ts_skymap(
+        time,
+        data,
+        np.tile([100.0, 200.0], (n_t, 1)),
+        np.tile(phi, (n_t, 1)),
+        theta,
+        attrs={"UNITS": "s^3/cm^6"},
+        glob_attrs={"species": "ions"},
+    )
+    return vdf
+
+
+def _b_const(b_xyz, n_t=2):
+    return pyrf.ts_vec_xyz(generate_timeline(1.0, n_t), np.tile(b_xyz, (n_t, 1)))
+
+
+class GetGyrophaseDistTestCase(unittest.TestCase):
+    def test_get_gyrophase_dist_gyrotropic(self):
+        # f(pitch angle) with B along z: the same in every gyrophase bin. The
+        # particle velocity is minus the look direction: pitch = 180 - theta
+        vdf = _gyro_skymap(lambda p, t: 1.0 + np.cos(np.deg2rad(t)) ** 2 + 0 * p)
+        result = mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, 10.0]))
+
+        self.assertTupleEqual(result.data.shape, (2, 2, 24))
+        np.testing.assert_allclose(result.gyrophase.data[0], 7.5 + 15.0 * np.arange(24))
+        flat = np.broadcast_to(result.data.data[..., :1], result.data.shape)
+        np.testing.assert_allclose(result.data.data, flat)
+        self.assertGreater(result.data.data[0, 0, 0], 1.0)
+
+    def test_get_gyrophase_dist_sense(self):
+        # A particle moving close to +y (look direction phi = 275.6, theta =
+        # 95.6) has a gyrophase of 95.6 degrees right-handed about B along +z
+        # from x (bin 6), and 264.4 degrees about B along -z (bin 17)
+        def beam(p, t):
+            return ((np.abs(p - 275.625) < 1) & (np.abs(t - 95.625) < 1)) * 1.0
+
+        vdf = _gyro_skymap(beam)
+        for b_z, i_bin in [(10.0, 6), (-10.0, 17)]:
+            result = mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, b_z]))
+            nonzero = np.flatnonzero(result.data.data[0, 0] > 0)
+            self.assertListEqual(nonzero.tolist(), [i_bin])
+
+        # Reference along y: the gyrophase is rotated by -90 degrees, also
+        # with a time series reference
+        r_xyz = _b_const([0.0, 1.0, 0.0])
+        for ref in [[0.0, 1.0, 0.0], r_xyz]:
+            result = mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, 10.0]), r_xyz=ref)
+            self.assertListEqual(np.flatnonzero(result.data.data[0, 0]).tolist(), [0])
+
+    def test_get_gyrophase_dist_convert_fac(self):
+        # Oblique B: the bin of a beam is that of the gyrophase of its velocity
+        # in the field-aligned coordinates of convert_fac
+        def beam(p, t):
+            return ((np.abs(p - 140.625) < 1) & (np.abs(t - 61.875) < 1)) * 1.0
+
+        b_xyz = _b_const([3.0, -4.0, 5.0])
+        result = mms.get_gyrophase_dist(_gyro_skymap(beam), b_xyz, angles=36)
+
+        look = np.deg2rad([140.625, 61.875])
+        u_xyz = -np.array(
+            [
+                np.cos(look[0]) * np.sin(look[1]),
+                np.sin(look[0]) * np.sin(look[1]),
+                np.cos(look[1]),
+            ]
+        )
+        u_fac = pyrf.convert_fac(_b_const(u_xyz), b_xyz, [1, 0, 0]).data[0]
+        gyrophase = np.rad2deg(np.arctan2(u_fac[1], u_fac[0])) % 360.0
+        nonzero = np.flatnonzero(result.data.data[0, 0] > 0)
+        self.assertListEqual(nonzero.tolist(), [int(gyrophase // 10)])
+
+    def test_get_gyrophase_dist_pitch_angle_range(self):
+        # Beams at pitch angles 95 and 30 degrees (theta 84.375 and 151.875)
+        def beams(p, t):
+            perp = (np.abs(p - 5.625) < 1) & (np.abs(t - 84.375) < 1)
+            obl = (np.abs(p - 95.625) < 1) & (np.abs(t - 151.875) < 1)
+            return perp * 1.0 + obl * 2.0
+
+        vdf = _gyro_skymap(beams)
+        b_z = _b_const([0.0, 0.0, 10.0])
+        all_pa = mms.get_gyrophase_dist(vdf, b_z, angles=12)
+        perp = mms.get_gyrophase_dist(vdf, b_z, angles=12, pitch_angle_range=[80, 100])
+
+        # look phi 5.625 -> velocity at 185.6 (bin 6), 95.625 -> 275.6 (bin 9)
+        self.assertListEqual(np.flatnonzero(all_pa.data.data[0, 0]).tolist(), [6, 9])
+        self.assertListEqual(np.flatnonzero(perp.data.data[0, 0] > 0).tolist(), [6])
+        np.testing.assert_array_equal(perp.attrs["pitch_angle_range"], [80, 100])
+
+    def test_get_gyrophase_dist_input(self):
+        vdf = _gyro_skymap()
+
+        # Reference along B: no gyrophase
+        result = mms.get_gyrophase_dist(
+            vdf, _b_const([10.0, 0.0, 0.0]), r_xyz=[1.0, 0.0, 0.0]
+        )
+        self.assertTrue(np.isnan(result.data.data).all())
+
+        for kwargs in [
+            {"angles": "15"},
+            {"pitch_angle_range": [0.0]},
+            {"r_xyz": [1.0, 0.0]},
+        ]:
+            with self.assertRaises(ValueError):
+                mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, 10.0]), **kwargs)
+
+    def test_get_gyrophase_dist_feeps(self):
+        # FEEPS skymap (4 rings with angular widths in the attributes)
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        sky = mms.feeps_skymap(feeps_alle, to_psd=False)
+        b_z = pyrf.ts_vec_xyz(sky.time.data, np.tile([0.0, 0.0, 10.0], (2, 1)))
+
+        result = mms.get_gyrophase_dist(sky, b_z, angles=8)
+        np.testing.assert_allclose(result.data.data, 2.0)
+
+
 class GetPitchAngleDistTestCase(unittest.TestCase):
     def setUp(self):
         # f = (i_energy + 1) (i_theta + 1) on FPI-like angles with B along z:

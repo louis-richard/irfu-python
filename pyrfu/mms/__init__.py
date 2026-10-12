@@ -54,6 +54,7 @@ from .get_dist import get_dist
 from .get_eis_allt import get_eis_allt
 from .get_feeps_alleyes import get_feeps_alleyes
 from .get_feeps_omni import get_feeps_omni
+from .get_gyrophase_dist import get_gyrophase_dist
 from .get_hpca_dist import get_hpca_dist
 from .get_pitch_angle_dist import get_pitch_angle_dist
 from .get_ts import get_ts
@@ -157,6 +158,7 @@ __all__ = [
     "get_eis_allt",
     "get_feeps_alleyes",
     "get_feeps_omni",
+    "get_gyrophase_dist",
     "get_hpca_dist",
     "get_pitch_angle_dist",
     "get_ts",

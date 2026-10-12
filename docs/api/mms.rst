@@ -61,6 +61,7 @@ Loading data
    get_variable
    get_dist
    get_pitch_angle_dist
+   get_gyrophase_dist
    load_ancillary
    tokenize
 
