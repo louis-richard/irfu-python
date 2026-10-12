@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import contextlib
+
+# Built-in imports
 import importlib
 import itertools
 import json
@@ -2662,6 +2663,26 @@ class FeepsCorrectEnergiesTestCase(unittest.TestCase):
 
         result = mms.feeps_correct_energies(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_feeps_correct_energies_values(self):
+        # Energies from the table, the loader's dimension names kept (they were
+        # renamed energy-top-1), and the caller's attrs left alone
+        feeps_alle = generate_feeps(64.0, 10, "brst", "electron", "l2", "flux", 2)
+        attrs = dict(feeps_alle.attrs)
+
+        result = mms.feeps_correct_energies(feeps_alle)
+        result.attrs["new"] = 1
+
+        self.assertTupleEqual(result["top-1"].dims, ("time", "energy_top-1"))
+        np.testing.assert_array_equal(
+            result["energy_top-1"].data, mms.feeps_energy_table(2, "top", 1)
+        )
+        self.assertDictEqual(feeps_alle.attrs, attrs)
+
+        # Already split (15 channels): clear error
+        split, _ = mms.feeps_split_integral_ch(feeps_alle)
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_correct_energies(split)
 
 
 @ddt
