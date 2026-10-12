@@ -1,14 +1,159 @@
 Changelog
 =========
 
+2.6.0 (unreleased)
+------------------
+
+This release follows a review of the FEEPS functions against IDL SPEDAS 6.1
+and pyspedas. The corrected chain ``get_feeps_alleyes`` →
+``feeps_corrections`` → ``feeps_omni`` now matches pyspedas to round-off on
+real burst and survey data. Most FEEPS products change: see
+`Changed behaviour <v2.6 changed_>`_ and
+`Fixes that change results <v2.6 fixes_>`_ before updating an analysis.
+Where pyrfu deliberately differs from IDL SPEDAS and pyspedas, the docstring
+says so.
+
+.. _v2.6 changed:
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+These changes can require updating your code.
+
+- ``mms.get_feeps_alleyes``: the samples flagged as not valid for science
+  are NaN (new ``quality_flag``, default 3, as the pyspedas omni; ``None``
+  keeps all samples; L2 only).
+- ``mms.feeps_correct_energies``: the energy dimension of each eye is renamed
+  ``energy_top-1``, ``energy_bottom-1``, ..., the name given by
+  ``mms.get_feeps_alleyes`` (it was ``energy-top-1``). Code selecting the
+  energies of corrected eyes by dimension name must use the new names.
+- ``mms.feeps_omni``, ``mms.feeps_pad`` and ``mms.feeps_sector_spec`` raise
+  ``ValueError`` on eyes whose integral channel isn't split (16 channels):
+  call ``mms.feeps_split_integral_ch`` (or ``mms.feeps_corrections``) first.
+  ``feeps_omni`` failed with an unclear broadcast error, and ``feeps_pad``
+  and ``feeps_sector_spec`` averaged the integral channel as a spectrum
+  channel.
+- ``mms.feeps_pad``:
+
+  - burst data use the pitch angles of the CDF (``pitch_angle``), as IDL
+    SPEDAS and pyspedas; ``angles_from_bfield=True`` computes them from
+    ``b_bcs`` as before;
+  - there are floor(180 / ``bin_size``) bins of exactly ``bin_size`` from 0,
+    labelled at their centres, as IDL SPEDAS and pyspedas. With a
+    ``bin_size`` that doesn't divide 180 (e.g. 25), the bins used to spread
+    over 0-180 with labels and windows of ``bin_size``;
+  - a 32 keV start is accepted, the invalid inputs raise ``ValueError``, a
+    range without energy channel warns (the PAD is NaN), and ``UNITS`` is
+    that of the eyes (it was always intensity).
+
+- ``mms.feeps_sector_spec`` returns one row per spin, timed at the spin
+  start, and no longer ``spinsectnum`` (the spectra were padded with NaN to
+  every sample of ``spinsectnum``).
+- ``mms.get_feeps_alleyes``: ``"counts"`` raises ``ValueError`` for L2 data
+  (counts are in L1b only), and ``"mask"`` returns the sector mask of each
+  sample, ``(time, sectornum)``.
+
+Deprecations
+^^^^^^^^^^^^
+
+- ``mms.feeps_pad_spinavg``: ``bin_size`` is ignored (the bins are those of
+  the PAD) and will be removed.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.feeps_pad``: ``angles_from_bfield`` (see above).
+- ``mms.feeps_remove_sunlit_sectors``: ``i_en``, the energy channel used to
+  find the sunlit sectors (default 3, as before).
+- The FEEPS sun-contamination masks of 2025-08-14 and 2025-12-26, and the
+  updated MMS4 masks of 2025-02-16.
+
+.. _v2.6 fixes:
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each of these returned wrong values before.
+
+- ``mms.feeps_remove_bad_data``:
+
+  - used the 2017 bad-eye table for all dates. It now takes the table
+    nearest in time, as pyspedas (data from 2018-04-01 12:00 UTC on use the
+    2018 table);
+  - never removed the ion eyes (6-8) or their bad channels, nor the bad
+    lowest channels of eyes without energy calibration, as IDL SPEDAS.
+
+- ``mms.read_feeps_sector_masks_csv`` (and ``mms.feeps_remove_sun``) used the
+  2018-10-05 masks for all later data; the mask nearest in time is used, as
+  IDL SPEDAS and pyspedas.
+- ``mms.feeps_flat_field_corrections``: the eyes with a gain of 0 (MMS2
+  top-7 and bottom-7, MMS4 top-7) are NaN; they were zeros, which pulled the
+  ion omni down by about 20 %.
+- ``mms.feeps_omni``: the channels of an eye whose energy is more than 10 %
+  from the omni energy are left out, as IDL SPEDAS and pyspedas.
+- ``mms.feeps_spin_avg`` and ``mms.feeps_pad_spinavg``: each spin is
+  averaged from its first sample up to the first sample of the next spin
+  (the windows were shifted by one sample, as in IDL SPEDAS and pyspedas),
+  the partial spins at the ends are kept, a spin without data is NaN (the
+  last rows were zeros), and the attributes are kept. ``feeps_spin_avg`` with
+  a ``DataArray`` of spin sectors (as ``mms.get_feeps_omni(spin_avg=True)``)
+  returned the samples unaveraged; ``feeps_pad_spinavg`` averages on the PAD
+  bins (it interpolated onto the bin edges) and failed with NumPy spin
+  sectors.
+- ``mms.feeps_avg_4sc`` of spin-averaged spectra: the zero rows of the spin
+  average counted as data, and ``combined_energies`` raised ``KeyError``.
+- ``mms.feeps_sector_spec``: each spin is stamped at its own start (it was
+  one row late, with a zero first row), and unsampled sectors are NaN (they
+  were 0).
+- ``mms.feeps_pitch_angles``: the survey pitch angles are interpolated onto
+  the FEEPS times, as pyspedas (B was averaged over the 2.5 s accumulation,
+  during which it turns by about 44° in body coordinates); B exactly along an
+  eye gives 0° or 180° (it was NaN).
+- ``mms.feeps_remove_sunlit_sectors``: the eye-sector pairs are averaged, as
+  documented (they were summed), and the pairs without data are left out of
+  the quantile. In survey data, the 56 empty sectors of each eye counted as
+  zeros, so about 9 % of a survey day was masked at ``outliers_q=0.99``
+  (1-3 % now).
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.feeps_remove_bad_data``, ``mms.feeps_remove_sun`` and
+  ``mms.feeps_pad`` no longer change the caller's data; ``feeps_pad`` works on
+  integer counts.
+- ``mms.feeps_split_integral_ch`` cut the last column of ``pitch_angle`` (the
+  last bottom eye) and dropped the variables other than the eyes and
+  ``spinsectnum``; only the eyes are split now.
+- ``mms.get_feeps_alleyes`` failed for ``"mask"`` and read the L2 dataset for
+  every level.
+- ``mms.feeps_active_eyes`` accepts ``datetime.datetime`` and
+  ``numpy.datetime64`` time intervals.
+- ``mms.feeps_avg_4sc`` accepts tuples and no longer warns on all-NaN times.
+- ``mms.feeps_correct_energies`` no longer shares its attributes with the
+  input, and raises a clear ``ValueError`` on already split eyes.
+- The sun-mask files of 2024-02-02 with a byte order mark are read.
+- ``mms.feeps_remove_sunlit_sectors`` and ``mms.feeps_pad`` are 50 to 300
+  times faster on long intervals.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.get_feeps_omni`` is documented as a quick look without the energy
+  and flat-field corrections; the docstring gives the corrected chain.
+- ``mms.feeps_remove_sun``: survey samples, which average 8 sectors, are
+  masked only by the sector they are labelled with, as IDL SPEDAS and
+  pyspedas.
+- The FEEPS examples are updated for these changes.
+
 2.5.0 (2026-10-07)
 ------------------
 
 This release follows a function-by-function review of ``pyrf`` and ``mms``
 against irfu-matlab. It fixes many functions that returned wrong values or
 failed on every call, and makes MMS data available from AWS without a local
-copy. Several fixes change numerical results: see `Changed behaviour`_ and
-`Fixes that change results`_ before updating an analysis.
+copy. Several fixes change numerical results: see
+`Changed behaviour <v2.5 changed_>`_ and
+`Fixes that change results <v2.5 fixes_>`_ before updating an analysis.
 
 Requirements
 ^^^^^^^^^^^^
@@ -19,6 +164,8 @@ Requirements
 - ``cdflib`` is no longer used: CDF time conversions use ``pycdfpp`` (now
   ``>=0.9.0``) and NumPy.
 - New dependency: ``platformdirs``.
+
+.. _v2.5 changed:
 
 Changed behaviour
 ^^^^^^^^^^^^^^^^^
@@ -134,6 +281,8 @@ New features
 - ``mms.get_data``: ``r_gse_mec_brst_l2``; the docstring lists all the keys.
 - ``dispersion.one_fluid_dispersion``: ``k_vec``; ``mms.lh_wave_analysis``:
   ``vmax``; ``plot.add_position``: ``units``.
+
+.. _v2.5 fixes:
 
 Fixes that change results
 ^^^^^^^^^^^^^^^^^^^^^^^^^
