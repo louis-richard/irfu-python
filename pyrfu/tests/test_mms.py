@@ -3791,6 +3791,34 @@ class FeepsRemoveSunlitSectorsTestCase(unittest.TestCase):
         self.assertTrue(np.isnan(result[eyes[0]].data[sunlit]).all())
 
 
+def _pad_case(data, pitch=None):
+    # Pitch-angle distribution (time, energy, pitch angle) of ions in
+    # s^3/cm^6, as get_pitch_angle_dist, with energies 100 * 2^i eV of widths
+    # +/- 25 % and pitch-angle bins of 15 degrees (default)
+    n_t, n_e, n_pa = data.shape
+    pitch = 7.5 + 15.0 * np.arange(n_pa) if pitch is None else np.asarray(pitch)
+    energy = np.tile(100.0 * 2.0 ** np.arange(n_e), (n_t, 1))
+    pad = xr.Dataset(
+        {
+            "data": (["time", "idx0", "idx1"], data),
+            "energy": (["time", "idx0"], energy),
+            "theta": (["time", "idx1"], np.tile(pitch, (n_t, 1))),
+            "time": generate_timeline(1.0, n_t),
+            "idx0": np.arange(n_e),
+            "idx1": np.arange(n_pa),
+        }
+    )
+    pad.attrs = {
+        "species": "ions",
+        "delta_energy_minus": 0.25 * energy,
+        "delta_energy_plus": 0.25 * energy,
+        "delta_pitchangle_minus": np.full(n_pa, 7.5),
+        "delta_pitchangle_plus": np.full(n_pa, 7.5),
+    }
+    pad.data.attrs["UNITS"] = "s^3/cm^6"
+    return pad
+
+
 def _feeps_skymap_case(data_rate, n_pts, value=2.0, mms_id=1):
     # Corrected and split eyes at the same intensity, spin sectors of 64
     # samples per spin (burst) or 8 labelled 7, 15, ..., 63 (survey)
@@ -6011,6 +6039,46 @@ class VdfVelocityTestCase(unittest.TestCase):
         np.testing.assert_array_equal(
             np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0]), rel
         )
+
+
+@ddt
+class VdfSolidAngleTestCase(unittest.TestCase):
+    def test_vdf_solid_angle_skymap(self):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(phi=vdf.phi * 0.0 + 5.625 + 11.25 * np.arange(32))
+        vdf = vdf.assign(theta=vdf.theta * 0.0 + 5.625 + 11.25 * np.arange(16))
+        result = mms.vdf_solid_angle(vdf)
+        self.assertEqual(result.data.attrs["UNITS"], "sr")
+        self.assertEqual(result.data.shape, vdf.data.shape)
+        np.testing.assert_allclose(result.data.data.sum(axis=(2, 3)), 4 * np.pi)
+
+        # Angular widths of the attributes (FEEPS: 4 rings of 8 bins)
+        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
+            [0.0, 35.0, 90.0, 145.0, 180.0]
+        )
+        vdf = vdf.isel(idx1=np.arange(8), idx2=np.arange(4))
+        vdf = vdf.assign(phi=vdf.phi * 0.0 + 22.5 + 45.0 * np.arange(8))
+        vdf = vdf.assign(theta=(["idx2"], theta))
+        vdf.attrs["delta_phi_minus"] = vdf.attrs["delta_phi_plus"] = np.full(
+            (4, 8), 22.5
+        )
+        vdf.attrs["delta_theta_minus"] = theta - edges[:-1]
+        vdf.attrs["delta_theta_plus"] = edges[1:] - theta
+        result = mms.vdf_solid_angle(vdf).data.data
+        np.testing.assert_allclose(result.sum(axis=(2, 3)), 4 * np.pi)
+        expected = np.pi / 4 * (np.cos(np.deg2rad(35.0)) - np.cos(np.pi / 2))
+        np.testing.assert_allclose(result[:, :, :, 1], expected)
+
+    def test_vdf_solid_angle_pad(self):
+        pad = _pad_case(np.ones((3, 2, 12)))
+        result = mms.vdf_solid_angle(pad).data.data
+        np.testing.assert_allclose(result.sum(axis=2), 4 * np.pi)
+        np.testing.assert_allclose(
+            result[0, 0, 0], 2 * np.pi * (1 - np.cos(np.deg2rad(15.0)))
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_solid_angle(pad.isel(idx1=0))
 
 
 @ddt

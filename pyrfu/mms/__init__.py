@@ -94,6 +94,7 @@ from .vdf_elim import vdf_elim
 from .vdf_omni import vdf_omni
 from .vdf_projection import vdf_projection
 from .vdf_reduce import vdf_frame_transformation, vdf_reduce
+from .vdf_solid_angle import vdf_solid_angle
 from .vdf_to_e64 import vdf_to_e64
 from .vdf_velocity import vdf_velocity
 from .whistler_b2e import whistler_b2e
@@ -199,6 +200,7 @@ __all__ = [
     "vdf_omni",
     "vdf_projection",
     "vdf_reduce",
+    "vdf_solid_angle",
     "vdf_to_e64",
     "vdf_velocity",
     "whistler_b2e",

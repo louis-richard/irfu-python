@@ -106,6 +106,7 @@ FPI particle distributions
    vdf_omni
    vdf_to_e64
    vdf_velocity
+   vdf_solid_angle
    psd_rebin
    vdf_frame_transformation
    vdf_projection
