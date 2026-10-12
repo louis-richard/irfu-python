@@ -2214,6 +2214,20 @@ class Psd2DpfTestCase(unittest.TestCase):
         result = mms.psd2dpf(spectr)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_psd2dpf_relativistic(self):
+        # Inverse of dpf2psd, also for the relativistic phase-space density
+        vdf = generate_vdf(64.0, 10, (32, 32, 16), False, "electrons")
+        vdf.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 1e3)
+
+        for relativistic in [False, True]:
+            psd = mms.dpf2psd(vdf, relativistic=relativistic)
+            result = mms.psd2dpf(psd, relativistic=relativistic)
+            np.testing.assert_allclose(result.data.data, vdf.data.data, rtol=1e-12)
+
+        psd = mms.dpf2psd(vdf, relativistic=True)
+        self.assertTrue(np.all(mms.psd2dpf(psd).data.data > vdf.data.data))
+
 
 @ddt
 class PsdMomentsTestCase(unittest.TestCase):

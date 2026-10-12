@@ -2,7 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units, _energy, _mass_ratio, _output
+from pyrfu.mms._psd_units import (
+    _data_and_units,
+    _energy,
+    _mass_ratio,
+    _output,
+    _relativistic_factor,
+)
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -27,7 +33,7 @@ def _convert(inp, units, mass_ratio):
     return out
 
 
-def psd2dpf(inp):
+def psd2dpf(inp, relativistic: bool = False):
     r"""Compute differential particle flux from phase density.
 
     Parameters
@@ -37,6 +43,9 @@ def psd2dpf(inp):
         (Dataset with a data variable, e.g. a skymap or a pitch-angle
         distribution) or a spectrum (DataArray), with (energy,) or
         (time, energy) energies in eV.
+    relativistic : bool, Optional
+        The phase-space density is the relativistic one (`dpf2psd` with
+        ``relativistic=True``). Default is False.
 
     Returns
     -------
@@ -55,5 +64,8 @@ def psd2dpf(inp):
 
     data, units = _data_and_units(inp)
     data = _convert(data, units, _mass_ratio(inp)) * _energy(inp, data) * 1e3
+
+    if relativistic:
+        data = data / _relativistic_factor(inp, data)
 
     return _output(inp, data, "1/(cm^2 s sr keV)")
