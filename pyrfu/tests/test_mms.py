@@ -33,6 +33,7 @@ from botocore import UNSIGNED
 from botocore.exceptions import ClientError
 from ddt import data, ddt, idata, unpack
 from scipy import constants
+from scipy.special import gammainc
 
 # Local imports
 from .. import mms, pyrf
@@ -6542,6 +6543,120 @@ class VdfMacroparticlesTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.vdf_macroparticles(_pad_case(np.ones((3, 2, 12))))
+
+
+@ddt
+class VdfShiftTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf(v_kms):
+        vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        return vdf, sc_pot
+
+    @staticmethod
+    def _moments(vdf, sc_pot):
+        n_i, v_i, _, _, t_i, _ = mms.psd_moments(vdf, sc_pot, angle_integration="exact")
+        return n_i.data, v_i.data, np.trace(t_i.data, axis1=1, axis2=2) / 3
+
+    def test_vdf_shift_no_shift(self):
+        # Every particle stays in its bin: the skymap is unchanged, apart from
+        # the widened first and last energy bins
+        vdf, _ = self._vdf([0.0, 0.0, 0.0])
+        result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], n_mc=20, random_state=0)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_allclose(
+            result.data.data[:, 1:-1], vdf.data.data[:, 1:-1], rtol=1e-9
+        )
+        np.testing.assert_allclose(
+            result.energy.data[:, 1:-1], vdf.energy.data[:, 1:-1]
+        )
+        np.testing.assert_allclose(result.theta.data, vdf.theta.data)
+        np.testing.assert_allclose(result.phi.data, vdf.phi.data)
+        np.testing.assert_array_equal(result.attrs["lost"], 0.0)
+
+        # Relativistic speeds: the same bins
+        vdf.attrs["relativistic"] = True
+        result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], n_mc=20, random_state=0)
+        self.assertTrue(result.attrs["relativistic"])
+        np.testing.assert_allclose(
+            result.energy.data[:, 1:-1], vdf.energy.data[:, 1:-1], rtol=1e-9
+        )
+        np.testing.assert_allclose(
+            result.data.data[:, 1:-1], vdf.data.data[:, 1:-1], rtol=1e-9
+        )
+
+    def test_vdf_shift_bulk_frame(self):
+        v_kms = np.array([200.0, 150.0, -250.0])
+        vdf, sc_pot = self._vdf(list(v_kms))
+        result = mms.vdf_shift(vdf, v_kms, random_state=1)
+        np.testing.assert_array_equal(
+            result.attrs["frame_velocity"], np.tile(v_kms, (2, 1))
+        )
+
+        # The density is conserved, apart from the particles outside the grid
+        n_old = mms.vdf_partial_density(vdf).data.data.sum(axis=(1, 2, 3))
+        n_new = mms.vdf_partial_density(result).data.data.sum(axis=(1, 2, 3))
+        lost = result.attrs["lost"]
+        self.assertTrue(np.all((lost > 0) & (lost < 1e-3)))
+        np.testing.assert_allclose(n_new, n_old * (1 - lost), rtol=1e-12)
+
+        # At rest in the new frame, with the same density and temperature
+        n_i, v_i, t_i = self._moments(result, sc_pot)
+        n_0, _, t_0 = self._moments(vdf, sc_pot)
+        np.testing.assert_allclose(n_i, n_0, rtol=0.01)
+        np.testing.assert_allclose(v_i, 0.0, atol=2.0)
+        np.testing.assert_allclose(t_i, t_0, rtol=0.03)
+
+        # A time series of the frame velocity
+        v_frame = pyrf.ts_vec_xyz(vdf.time.data, np.tile(v_kms, (2, 1)))
+        again = mms.vdf_shift(vdf, v_frame, random_state=1)
+        np.testing.assert_array_equal(again.data.data, result.data.data)
+
+        # Any units
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        result_dpf = mms.vdf_shift(dpf, v_kms, random_state=1)
+        self.assertEqual(result_dpf.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        np.testing.assert_allclose(
+            mms.vdf_convert(result_dpf, "s^3/cm^6").data.data,
+            result.data.data,
+            rtol=1e-12,
+        )
+
+    def test_vdf_shift_rotation_grid(self):
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, sc_pot = self._vdf(v_kms)
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], rotation=rotation, random_state=2)
+        _, v_0, _ = self._moments(vdf, sc_pot)
+        _, v_i, _ = self._moments(result, sc_pot)
+        np.testing.assert_allclose(v_i, v_0 @ rotation.T, atol=3.0)
+
+        # A coarse grid: 10 energies from 100 eV to 10 keV, 8 x 4 angles
+        grid = {
+            "energy": np.logspace(2, 4, 11),
+            "phi": np.linspace(0.0, 360.0, 9),
+            "theta": np.linspace(0.0, 180.0, 5),
+        }
+        result = mms.vdf_shift(vdf, v_kms, grid=grid, random_state=3)
+        self.assertEqual(result.data.shape, (2, 10, 8, 4))
+        np.testing.assert_allclose(
+            result.energy.data[0], np.sqrt(grid["energy"][:-1] * grid["energy"][1:])
+        )
+        np.testing.assert_allclose(result.attrs["delta_theta_minus"], 22.5)
+        n_old = mms.vdf_partial_density(vdf).data.data.sum(axis=(1, 2, 3))
+        n_new = mms.vdf_partial_density(result).data.data.sum(axis=(1, 2, 3))
+        # Lost: the energies below 100 eV and above 10 keV of the Maxwellian
+        # at rest (1 keV), P(3/2, 0.1) + 1 - P(3/2, 10)
+        lost = result.attrs["lost"]
+        expected = gammainc(1.5, 0.1) + 1 - gammainc(1.5, 10.0)
+        np.testing.assert_allclose(lost, expected, rtol=0.05)
+        np.testing.assert_allclose(n_new, n_old * (1 - lost), rtol=1e-12)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_shift(vdf, [1.0, 2.0])
+
+        with self.assertRaises(ValueError):
+            mms.vdf_shift(_pad_case(np.ones((3, 2, 12))), [0.0, 0.0, 0.0])
 
 
 @ddt

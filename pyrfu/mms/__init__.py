@@ -102,6 +102,7 @@ from .vdf_omni import vdf_omni
 from .vdf_partial_density import vdf_partial_density
 from .vdf_projection import vdf_projection
 from .vdf_reduce import vdf_frame_transformation, vdf_reduce
+from .vdf_shift import vdf_shift
 from .vdf_solid_angle import vdf_solid_angle
 from .vdf_to_e64 import vdf_to_e64
 from .vdf_velocity import vdf_velocity
@@ -216,6 +217,7 @@ __all__ = [
     "vdf_partial_density",
     "vdf_projection",
     "vdf_reduce",
+    "vdf_shift",
     "vdf_solid_angle",
     "vdf_to_e64",
     "vdf_velocity",
