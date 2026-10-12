@@ -214,7 +214,8 @@ def feeps_skymap(
         Number of azimuthal bins. Default is 32 for burst data and 8 for
         survey data (a survey sample spans 45 degrees of the spin).
     to_psd : bool, Optional
-        Convert the intensity to phase-space density in s^3/cm^6, as the FPI
+        Convert the intensity to the relativistic phase-space density
+        (`dpf2psd` with ``relativistic=True``) in s^3/cm^6, as the FPI
         distributions. Default is True.
     fill_empty : {None, "ring", "omni"}, Optional
         Bins without data: left NaN (None, default), filled with the mean of
@@ -265,7 +266,11 @@ def feeps_skymap(
     are lower limits where the ``coverage`` attribute (fraction of the sphere
     with data, per time and energy) is below 1; see `fill_empty`. The skymaps
     have ``angle_integration = "exact"``, so that `psd_moments` integrates the
-    wide bins exactly.
+    wide bins exactly, and ``relativistic = True``, so that `psd_moments` uses
+    the relativistic speeds (the non-relativistic moments underestimate the
+    electron density by about 10 % at the FEEPS energies). The moments and the
+    reduced distributions (`reduce`) of the phase-space density are then the
+    integrals of the intensity over the energy and the solid angle.
 
     See Also
     --------
@@ -312,6 +317,7 @@ def feeps_skymap(
         "tmmode": tmmode,
         "spin_phase": phase_source,
         "angle_integration": "exact",
+        "relativistic": bool(to_psd),
         "coverage": coverage,
         "fill_empty": str(fill_empty),
         "delta_phi_minus": np.full(phi.shape, 180.0 / n_phi),
@@ -354,7 +360,7 @@ def feeps_skymap(
 
     if to_psd:
         # s^3/cm^6, as the FPI distributions
-        out = dpf2psd(out)
+        out = dpf2psd(out, relativistic=True)
         out.data.data *= 1e-12
         out.data.attrs["UNITS"] = "s^3/cm^6"
 

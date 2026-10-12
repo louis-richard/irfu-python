@@ -3934,12 +3934,16 @@ class FeepsSkymapTestCase(unittest.TestCase):
         flux = mms.feeps_skymap(feeps_alle, to_psd=False)
         result = mms.feeps_skymap(feeps_alle)
 
-        # s^3/cm^6, as FPI
+        # Relativistic, in s^3/cm^6 as FPI
         self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
         np.testing.assert_allclose(
-            result.data.data, 1e-12 * mms.dpf2psd(flux).data.data, rtol=1e-12
+            result.data.data,
+            1e-12 * mms.dpf2psd(flux, relativistic=True).data.data,
+            rtol=1e-12,
         )
         self.assertEqual(result.attrs["species"], "electrons")
+        self.assertTrue(result.attrs["relativistic"])
+        self.assertFalse(flux.attrs["relativistic"])
 
         # Isotropic: psd_moments integrates the 4 rings exactly
         sc_pot = pyrf.ts_scalar(result.time.data, np.zeros(2))
