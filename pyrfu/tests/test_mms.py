@@ -6437,6 +6437,114 @@ class VdfFindLowCountsTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfMacroparticlesTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf():
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.data.data[:, :, 3, 5] = 0.0
+        vdf.data.data[:, :, 4, 6] = np.nan
+        return vdf, np.array(v_kms)
+
+    def test_vdf_macroparticles_one_per_bin(self):
+        vdf, v_kms = self._vdf()
+        result = mms.vdf_macroparticles(vdf, random_state=1)
+        self.assertEqual(result.vx.attrs["UNITS"], "km/s")
+        self.assertEqual(result.dn.attrs["UNITS"], "cm^-3")
+        self.assertEqual(result.dv.attrs["UNITS"], "cm^3/s^3")
+
+        # One per bin with data, the density of each bin
+        d_n = mms.vdf_partial_density(vdf).data.data
+        self.assertEqual(result.sizes["particle"], np.sum(d_n > 0))
+        n_t = result.dn.groupby("time").sum().data
+        np.testing.assert_allclose(n_t, np.nansum(d_n, axis=(1, 2, 3)), rtol=1e-12)
+        np.testing.assert_allclose(result.dn, result.df * result.dv, rtol=1e-12)
+
+        # The velocities of the bins: speed and look direction in the bin
+        v_xyz = np.stack([result[c].data for c in ["vx", "vy", "vz"]], axis=1)
+        speed = np.linalg.norm(v_xyz, axis=1) * 1e3
+        bins = sys.modules["pyrfu.mms._vdf_mc"]._source_bins(vdf)
+        i_t = np.searchsorted(vdf.time.data, result.time.data)
+        i_e, i_q = result.idx0.data, result.idx2.data
+        self.assertTrue(np.all(speed >= bins["v_lower"][i_t, i_e] * (1 - 1e-12)))
+        self.assertTrue(np.all(speed <= bins["v_upper"][i_t, i_e] * (1 + 1e-12)))
+        theta = np.rad2deg(np.arccos(-v_xyz[:, 2] * 1e3 / speed))
+        theta_lower = vdf.theta.data[i_q] - 5.625
+        self.assertTrue(
+            np.all((theta >= theta_lower - 1e-9) & (theta <= theta_lower + 11.26))
+        )
+
+        # Uniform in the volume of the bins (v^3)
+        v3_lower, v3_upper = (bins[k][i_t, i_e] ** 3 for k in ["v_lower", "v_upper"])
+        position = (speed**3 - v3_lower) / (v3_upper - v3_lower)
+        self.assertAlmostEqual(float(np.mean(position)), 0.5, delta=0.01)
+
+        # Bulk velocity, and reproducible
+        v_mean = np.array(
+            [
+                float((result[c] * result.dn).sum() / result.dn.sum())
+                for c in ["vx", "vy", "vz"]
+            ]
+        )
+        np.testing.assert_allclose(v_mean, v_kms, atol=3.0)
+        again = mms.vdf_macroparticles(vdf, random_state=np.random.default_rng(1))
+        np.testing.assert_array_equal(again.vx.data, result.vx.data)
+
+    def test_vdf_macroparticles_number(self):
+        vdf, _ = self._vdf()
+        d_n = np.nan_to_num(mms.vdf_partial_density(vdf).data.data)
+
+        # n_tot: in proportion to dn, rounded up
+        result = mms.vdf_macroparticles(vdf, n_tot=20000, random_state=1)
+        expected = np.ceil(d_n / d_n.sum(axis=(1, 2, 3), keepdims=True) * 20000)
+        counts = np.bincount(np.searchsorted(vdf.time.data, result.time.data))
+        np.testing.assert_array_equal(counts, expected.sum(axis=(1, 2, 3)))
+        np.testing.assert_allclose(
+            result.dn.groupby("time").sum().data, d_n.sum(axis=(1, 2, 3)), rtol=1e-12
+        )
+
+        # Without skipping the empty bins: one with dn = 0
+        result = mms.vdf_macroparticles(vdf, n_tot=20000, skip_zero=False)
+        self.assertEqual(result.sizes["particle"], int(np.maximum(expected, 1).sum()))
+        self.assertTrue(np.any(result.dn.data == 0.0))
+
+        # One macroparticle per count
+        counts = vdf.copy(deep=True)
+        counts["data"] = counts.data.copy(
+            data=np.random.default_rng(0).poisson(1.0, vdf.data.shape).astype(float)
+        )
+        counts.data.attrs["UNITS"] = "s^3/cm^6"
+        total = int(counts.data.data[0].sum())
+        result = mms.vdf_macroparticles(counts, n_tot=total, division="counts")
+        first = result.time.data == vdf.time.data[0]
+        self.assertEqual(np.sum(first), total)
+
+        result = mms.vdf_macroparticles(vdf, n_tot=1000, division="f")
+        self.assertGreater(result.sizes["particle"], 2000)
+
+    def test_vdf_macroparticles_center(self):
+        vdf, _ = self._vdf()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(2, 5.0))
+        result = mms.vdf_macroparticles(
+            vdf, n_bin=2, positioning="center", sc_pot=sc_pot
+        )
+        velocity = mms.vdf_velocity(vdf, sc_pot=sc_pot)
+        i_t = np.searchsorted(vdf.time.data, result.time.data)
+        index = (i_t, result.idx0.data, result.idx1.data, result.idx2.data)
+        np.testing.assert_array_equal(result.vx.data, velocity.vx.data[index])
+        d_n = mms.vdf_partial_density(vdf, sc_pot=sc_pot).data.data
+        self.assertEqual(result.sizes["particle"], 2 * np.sum(d_n > 0))
+
+        for kwargs in [{"positioning": "edge"}, {"division": "n"}]:
+            with self.assertRaises(ValueError):
+                mms.vdf_macroparticles(vdf, **kwargs)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_macroparticles(_pad_case(np.ones((3, 2, 12))))
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):
