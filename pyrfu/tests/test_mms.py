@@ -3196,6 +3196,39 @@ class FeepsRemoveSunTestCase(unittest.TestCase):
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
 
+class FeepsRemoveSunlitSectorsTestCase(unittest.TestCase):
+    def test_feeps_remove_sunlit_sectors(self):
+        feeps_alle = generate_feeps(64.0, 640, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_alle["spinsectnum"].data = np.arange(640) % 64
+
+        eyes = [k for k in feeps_alle if k.startswith(("top", "bottom"))]
+        rng = np.random.default_rng(1)
+        for k in eyes:
+            feeps_alle[k].data = rng.uniform(1.0, 2.0, feeps_alle[k].shape)
+
+        # Two sunlit eye-sector pairs, much brighter than the others
+        feeps_alle["top-1"].data[feeps_alle["spinsectnum"].data == 10] = 1e3
+        feeps_alle["bottom-3"].data[feeps_alle["spinsectnum"].data == 20] = 1e3
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        # Quantile between the two sunlit sums and the others
+        n_cells = 64 * len(eyes)
+        result = mms.feeps_remove_sunlit_sectors(
+            feeps_alle, outliers_q=(n_cells - 2.5) / (n_cells - 1)
+        )
+
+        sunlit = {"top-1": 10, "bottom-3": 20}
+        for k in eyes:
+            mask = feeps_alle["spinsectnum"].data == sunlit.get(k, -1)
+            self.assertTrue(np.isnan(result[k].data[mask]).all())
+            np.testing.assert_array_equal(
+                result[k].data[~mask], feeps_alle[k].data[~mask]
+            )
+
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+
 @ddt
 class FeepsSpinAvgTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))

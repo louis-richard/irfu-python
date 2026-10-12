@@ -56,67 +56,39 @@ def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q=0.99):
     top_eyes_keys = [data_var for data_var in feeps_data_vars if "top" in data_var]
     bot_eyes_keys = [data_var for data_var in feeps_data_vars if "bot" in data_var]
 
+    # Rows of the 24 x 64 table: top eyes then bottom eyes
+    eyes_rows = {key: int(key.split("-")[1]) - 1 for key in top_eyes_keys}
+    eyes_rows.update({key: int(key.split("-")[1]) - 1 + 12 for key in bot_eyes_keys})
+
+    # Times in each spin sector, found once for all eyes
+    spin_sectors = feeps_eyes.spinsectnum.data
+    times_in_ss = [np.flatnonzero(spin_sectors == ss) for ss in range(64)]
+
     table = np.empty(shape=(24, 64)) * np.nan
 
-    for key in top_eyes_keys:
-        key_id = int(key.split("-")[1])
+    for key, row in eyes_rows.items():
+        data = feeps_eyes[key].data[:, i_en]
 
-        for ss in np.arange(0, 64):
+        for ss, idx in enumerate(times_in_ss):
+            table[row, ss] = np.nansum(data[idx], axis=0)
 
-            times_in_ss = feeps_eyes.where(
-                feeps_eyes.spinsectnum == ss,
-                drop=True,
-            ).time
-            data_in_ss = feeps_eyes[key].sel(time=times_in_ss).data[:, i_en]
-            data_in_ss = np.nansum(data_in_ss, axis=0)
-            table[key_id - 1, ss] = data_in_ss
-
-    for key in bot_eyes_keys:
-        key_id = int(key.split("-")[1])
-
-        for ss in np.arange(0, 64):
-
-            times_in_ss = feeps_eyes.where(
-                feeps_eyes.spinsectnum == ss,
-                drop=True,
-            ).time
-            data_in_ss = feeps_eyes[key].sel(time=times_in_ss).data[:, i_en]
-            data_in_ss = np.nansum(data_in_ss, axis=0)
-            table[key_id - 1 + 12, ss] = data_in_ss
-
-    table_clean = np.empty_like(table) * np.nan
     table_clean = _reject_outliers(table, outliers_q=outliers_q)
 
     table = np.where(table == 0, np.nan, table)
     table_clean = np.where(table_clean == 0, np.nan, table_clean)
 
-    nans = np.isnan(table)
-    nans_clean = np.isnan(table_clean)
+    new_nans = np.isnan(table_clean) & ~np.isnan(table)
 
-    new_nans = nans_clean & ~nans
-
-    new_nans_indices = np.argwhere(new_nans)
-
-    new_cs = new_nans_indices + np.array([1, 0])
     feeps_eyes_new = deepcopy(feeps_eyes)
 
-    for cs in new_cs:
+    # Mask all the new sunlit sectors of an eye at once
+    for key, row in eyes_rows.items():
+        sunlit_sectors = np.flatnonzero(new_nans[row])
 
-        eye_id = int(cs[0])
-        ss = int(cs[1])
-
-        if eye_id <= 12:
-
-            feeps_eyes_new[f"top-{eye_id:d}"] = xr.where(
-                feeps_eyes_new["spinsectnum"] != ss,
-                feeps_eyes_new[f"top-{eye_id:d}"],
-                np.nan,
-                keep_attrs=True,
-            )
-        else:
-            feeps_eyes_new[f"bottom-{eye_id - 12:d}"] = xr.where(
-                feeps_eyes_new["spinsectnum"] != ss,
-                feeps_eyes_new[f"bottom-{eye_id - 12:d}"],
+        if sunlit_sectors.size:
+            feeps_eyes_new[key] = xr.where(
+                ~feeps_eyes_new["spinsectnum"].isin(sunlit_sectors),
+                feeps_eyes_new[key],
                 np.nan,
                 keep_attrs=True,
             )
