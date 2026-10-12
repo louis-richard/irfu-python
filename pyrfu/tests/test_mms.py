@@ -3250,6 +3250,39 @@ class FeepsRemoveSunlitSectorsTestCase(unittest.TestCase):
 
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_remove_sunlit_sectors_survey(self):
+        # Survey samples are labelled with 8 of the 64 sectors
+        feeps_alle = generate_feeps(64.0, 800, "srvy", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_alle["spinsectnum"].data = np.tile(np.arange(7, 64, 8), 100)
+
+        eyes = [k for k in feeps_alle if k.startswith(("top", "bottom"))]
+        rng = np.random.default_rng(2)
+        for k in eyes:
+            feeps_alle[k].data = rng.uniform(1.0, 2.0, feeps_alle[k].shape)
+
+        sunlit = feeps_alle["spinsectnum"].data == 15
+        feeps_alle[eyes[0]].data[sunlit] = 1e3
+
+        # Quantile between the sunlit average and the others, over the 8
+        # sectors with data (the 56 empty sectors used to count as zeros, and 4
+        # more eye-sector pairs were masked)
+        n_cells = 8 * len(eyes)
+        result = mms.feeps_remove_sunlit_sectors(
+            feeps_alle, outliers_q=(n_cells - 1.5) / (n_cells - 1)
+        )
+
+        self.assertTrue(np.isnan(result[eyes[0]].data[sunlit]).all())
+        n_nans = sum(int(np.isnan(result[k].data).sum()) for k in eyes)
+        self.assertEqual(n_nans, np.isnan(result[eyes[0]].data[sunlit]).size)
+
+        # Sunlit in the first channel only: found with i_en=0
+        feeps_alle[eyes[0]].data[sunlit, 1:] = 1.5
+        result = mms.feeps_remove_sunlit_sectors(
+            feeps_alle, outliers_q=(n_cells - 1.5) / (n_cells - 1), i_en=0
+        )
+        self.assertTrue(np.isnan(result[eyes[0]].data[sunlit]).all())
+
 
 @ddt
 class FeepsSpinAvgTestCase(unittest.TestCase):

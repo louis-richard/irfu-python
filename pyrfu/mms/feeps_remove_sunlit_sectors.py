@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import warnings
 from copy import deepcopy
 
 # 3rd party imports
@@ -16,14 +18,17 @@ __status__ = "Prototype"
 
 
 def _reject_outliers(data, outliers_q=0.99):
+    # all-NaN table (no data): nothing to reject
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        q = np.nanquantile(data, q=outliers_q)
 
-    q = np.nanquantile(data, q=outliers_q)
     data_clean = np.where(data < q, data, np.nan)
 
     return data_clean
 
 
-def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q=0.99):
+def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q: float = 0.99, i_en: int = 3):
     r"""
     Remove sunlit sectors for each eye in the all eyes FEEPS data product. This is
     needed because the FEEPS contaminated sectors csv files are not updated often enough
@@ -34,9 +39,10 @@ def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q=0.99):
     make tables of 24 eyes x 64 sectors, similar to the ones used in the FEEPS
     contaminated sectors csv files.
 
-    The function calculates the average observed flux for each eye-sector pair and
-    places it in a 24x64 array. Then replaces with NaN the eye-sector pairs that have
-    a value greater than the outliers_q percentile of the data.
+    The function calculates the average observed flux in the energy channel `i_en`
+    for each eye-sector pair and places it in a 24x64 array. Then replaces with NaN
+    the eye-sector pairs that have a value greater than the outliers_q percentile of
+    the eye-sector pairs with data.
 
     Parameters
     ----------
@@ -44,15 +50,24 @@ def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q=0.99):
         The all FEEPS eyes data product.
     outliers_q : float, optional
         The quantile to use for outlier rejection. The default is 0.99.
+    i_en : int, optional
+        Index of the energy channel used to find the sunlit sectors. The default
+        is 3.
 
     Returns
     -------
     feeps_eyes_new : xarray.Dataset
         The all FEEPS eyes data product with sunlit sectors removed.
+
+    Notes
+    -----
+    The eye-sector pairs without data (no sample, or only NaNs and zeros) are left
+    out of the quantile. Survey data are labelled with 8 of the 64 sectors, so the
+    quantile is taken over these 8 sectors of each eye.
+
     """
 
     feeps_data_vars = list(feeps_eyes.data_vars.keys())
-    i_en = 3
     top_eyes_keys = [data_var for data_var in feeps_data_vars if "top" in data_var]
     bot_eyes_keys = [data_var for data_var in feeps_data_vars if "bot" in data_var]
 
@@ -69,13 +84,14 @@ def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q=0.99):
     for key, row in eyes_rows.items():
         data = feeps_eyes[key].data[:, i_en]
 
-        for ss, idx in enumerate(times_in_ss):
-            table[row, ss] = np.nansum(data[idx], axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            for ss, idx in enumerate(times_in_ss):
+                table[row, ss] = np.nanmean(data[idx], axis=0)
 
-    table_clean = _reject_outliers(table, outliers_q=outliers_q)
-
+    # sectors without data (zero flux) are left out of the quantile
     table = np.where(table == 0, np.nan, table)
-    table_clean = np.where(table_clean == 0, np.nan, table_clean)
+    table_clean = _reject_outliers(table, outliers_q=outliers_q)
 
     new_nans = np.isnan(table_clean) & ~np.isnan(table)
 
