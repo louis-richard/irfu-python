@@ -159,9 +159,13 @@ def feeps_pad(
         FGM survey L2 field as in IDL SPEDAS. Not used for burst data, unless
         `angles_from_bfield` is True.
     bin_size : float, Optional
-        Width of the pitch angles bins. Default is 16.3636.
+        Width of the pitch angles bins in degrees. Default is 16.3636. As in
+        IDL SPEDAS and pyspedas, there are floor(180 / bin_size) bins of
+        exactly this width from 0, so the last bin ends below 180 degrees
+        when `bin_size` doesn't divide 180.
     energy : array_like, Optional
-        Energy range of particles. Default is [70., 600.]
+        Energy range of particles in keV, starting at 32 keV or above. Default
+        is [70., 600.]
     angles_from_bfield : bool, Optional
         For burst data, compute the pitch angles from `b_bcs` instead of using
         the pitch angles of the CDF (``pitch_angle``). Default is False.
@@ -174,7 +178,14 @@ def feeps_pad(
     Raises
     ------
     ValueError
-        If the integral channel of the eyes is not split (16 channels).
+        If the integral channel of the eyes is not split (16 channels), the
+        energy range starts below 32 keV, or the data rate or species is not
+        supported.
+
+    Warns
+    -----
+    UserWarning
+        If no energy channel is in the energy range (the PAD is then NaN).
 
     Notes
     -----
@@ -198,17 +209,37 @@ def feeps_pad(
     if energy is None:
         energy = [70.0, 600.0]
 
-    assert energy[0] > 32.0, "Please use a starting energy of 32 keV or above"
+    if energy[0] < 32.0:
+        raise ValueError("Please use a starting energy of 32 keV or above")
+
+    eye_names = list(filter(lambda x: x.startswith(("top", "bottom")), inp_dataset))
+    in_range = [
+        np.any(
+            (inp_dataset[inp_dataset[k].dims[1]].data >= energy[0])
+            & (inp_dataset[inp_dataset[k].dims[1]].data <= energy[1])
+        )
+        for k in eye_names
+    ]
+
+    if not any(in_range):
+        warnings.warn(
+            f"No FEEPS energy channel in {energy} keV: the PAD is NaN", UserWarning
+        )
 
     time = inp_dataset.time.data
     attrs = {**inp_dataset.attrs, "energy_range": energy}
     mms_id, d_type, d_rate = list(map(attrs.get, ["mmsId", "dtype", "tmmode"]))
 
-    assert d_rate in ["srvy", "brst"]
-    assert d_type in ["electron", "ion"]
+    if d_rate not in ["srvy", "brst"]:
+        raise ValueError(f"Invalid data rate {d_rate}: must be srvy or brst")
 
-    n_pabins = int(180 / bin_size)
-    pa_bins = [180.0 * pa_bin / n_pabins for pa_bin in range(n_pabins + 1)]
+    if d_type not in ["electron", "ion"]:
+        raise ValueError(f"Invalid species {d_type}: must be electron or ion")
+
+    # Bins of bin_size degrees from 0, as IDL SPEDAS and pyspedas (the
+    # tolerance keeps e.g. 180 / 7 at 7 bins)
+    n_pabins = int(np.floor(180.0 / bin_size + 1e-6))
+    pa_bins = [bin_size * pa_bin for pa_bin in range(n_pabins + 1)]
     pa_labels = [pa_bin + bin_size / 2.0 for pa_bin in pa_bins[:-1]]
 
     if d_rate == "brst" and not angles_from_bfield and "pitch_angle" in inp_dataset:
@@ -248,6 +279,9 @@ def feeps_pad(
         attrs=attrs,
     )
 
-    pad.attrs["UNITS"] = "1/(cm^2 s sr kev)"
+    # units of the eyes (intensity, count rate, ...)
+    pad.attrs["UNITS"] = inp_dataset[eye_names[0]].attrs.get(
+        "UNITS", "1/(cm^2 s sr keV)"
+    )
 
     return pad

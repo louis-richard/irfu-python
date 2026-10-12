@@ -2876,6 +2876,40 @@ class FeepsPadTestCase(unittest.TestCase):
         xr.testing.assert_allclose(result_srvy, expected)
         self.assertFalse(np.isnan(result_b.data[:, 2:]).all())
 
+    def test_feeps_pad_options(self):
+        feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+        feeps_alle["pitch_angle"] = (
+            ["time", "eye"],
+            np.full((feeps_alle.sizes["time"], 18), 10.0),
+        )
+        for eye in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            feeps_alle[eye].attrs["UNITS"] = "counts/s"
+        b_bcs = generate_ts(64.0, 20, tensor_order=1)
+
+        # bin_size not dividing 180: bins of 25 degrees from 0 up to 175, as
+        # IDL SPEDAS and pyspedas (they were 25.7 degrees wide, labelled as 25)
+        result = mms.feeps_pad(feeps_alle, b_bcs, bin_size=25.0, energy=[32.0, 600.0])
+        np.testing.assert_allclose(result.theta.data, 12.5 + 25.0 * np.arange(7))
+        self.assertTrue(np.isfinite(result.data[:, :2]).all())
+        self.assertTrue(np.isnan(result.data[:, 2:]).all())
+
+        # 32 keV accepted (it raised), units of the input (count rate)
+        self.assertEqual(result.attrs["UNITS"], "counts/s")
+
+        with self.assertRaises(ValueError):
+            mms.feeps_pad(feeps_alle, b_bcs, energy=[20.0, 600.0])
+
+        with self.assertWarns(UserWarning):
+            result = mms.feeps_pad(feeps_alle, b_bcs, energy=[700.0, 800.0])
+        self.assertTrue(np.isnan(result.data).all())
+
+        feeps_alle.attrs["tmmode"] = "fast"
+        with self.assertRaises(ValueError):
+            mms.feeps_pad(feeps_alle, b_bcs)
+
     def test_feeps_pad_unsplit(self):
         # Unsplit eyes (16 channels) used to average the integral channel
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
