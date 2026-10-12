@@ -103,8 +103,9 @@ def _kinetic_energy(vdf, energy, sc_pot):
 def _speed(energy, mass, relativistic):
     r"""Speed (m/s) of particles of kinetic energy (eV)."""
     if relativistic:
-        gamma = 1.0 + constants.elementary_charge * energy / (mass * constants.c**2)
-        return constants.c * np.sqrt(1.0 - 1.0 / gamma**2)
+        # beta^2 = 1 - 1 / gamma^2 without cancellation, gamma = 1 + eps
+        eps = constants.elementary_charge * energy / (mass * constants.c**2)
+        return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
 
     return np.sqrt(2.0 * constants.elementary_charge * energy / mass)
 

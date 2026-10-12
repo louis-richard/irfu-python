@@ -6131,6 +6131,17 @@ class VdfVelocityTestCase(unittest.TestCase):
             np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0]), rel
         )
 
+        # 10 eV protons: v_rel / v = 1 - 3 eps / 4 (eps = E / m c^2 = 1e-8),
+        # without cancellation errors
+        vdf = self._vdf("ions")
+        vdf = vdf.assign(energy=vdf.energy * 0.0 + 10.0)
+        ratio = (
+            mms.vdf_velocity(vdf, relativistic=True).vz.data[:, :, 0, 0]
+            / mms.vdf_velocity(vdf).vz.data[:, :, 0, 0]
+        )
+        eps = 10.0 * constants.e / (constants.m_p * constants.c**2)
+        np.testing.assert_allclose(ratio, 1 - 3 * eps / 4, rtol=1e-12)
+
 
 @ddt
 class VdfSolidAngleTestCase(unittest.TestCase):
