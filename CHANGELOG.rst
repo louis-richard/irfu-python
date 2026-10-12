@@ -71,6 +71,11 @@ New features
   partial moments above about 30 keV; ``coverage`` gives the fraction of the
   sphere with data, and ``fill_empty`` optionally fills the bins without
   data.
+- ``mms.get_gyrophase_dist``: gyrophase distributions of a skymap (FPI, EIS,
+  FEEPS), optionally in a range of pitch angles. The gyrophase is measured
+  right-handed about B from the component of a reference direction
+  perpendicular to B (default [1, 0, 0], as ``pyrf.convert_fac``), as Li et
+  al. (2022).
 - ``mms.get_feeps_alleyes``: the lower and upper bounds of the energy
   channels of each eye, from the CDF, as coordinates along its energies
   (``energy_lower_bound_top-1``, ...).
@@ -165,6 +170,8 @@ Documentation
   masked only by the sector they are labelled with, as IDL SPEDAS and
   pyspedas.
 - The FEEPS examples are updated for these changes.
+- New example: ion gyrophase bunching by EMIC waves, reproducing Fig. 1 of
+  Li et al. (2022) with ``mms.get_gyrophase_dist``.
 
 2.5.0 (2026-10-07)
 ------------------
