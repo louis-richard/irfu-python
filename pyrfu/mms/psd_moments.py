@@ -240,6 +240,12 @@ def _exact_kernels(
     return np.ascontiguousarray(np.stack(kernels, axis=1), dtype=np.float64)
 
 
+def _speed_relativistic(energy, p_mass):
+    # Relativistic speed (m/s) of particles of kinetic energy (eV)
+    gamma = 1.0 + constants.elementary_charge * energy / (p_mass * constants.c**2)
+    return constants.c * np.sqrt(1.0 - 1.0 / gamma**2)
+
+
 def _energy_edges(vdf, energy, energy0, energy1, step_table, flag_same_e):
     # Upper and lower energy edges of the channels (time, energy), as in
     # irfu-matlab mms.psd_moments: the delta_energy_plus/minus attributes
@@ -333,6 +339,42 @@ def _energy_mask(vdf, energy, kwargs):
     return use_energy
 
 
+def _moms_relativistic(moms_args, sc_pot, p_mass):
+    # Relativistic moments with the (non-relativistic) _moms kernel: energies
+    # whose non-relativistic speed is the relativistic one, and the pressure
+    # and heat flux from the data weighted by the Lorentz factor (momentum flux
+    # gamma m v v) and by the kinetic energy over m v^2 / 2
+    energy, vdf_data = moms_args[0], moms_args[10]
+    q_e, c_light = constants.elementary_charge, constants.c
+
+    energy_correct = energy - sc_pot[:, np.newaxis]
+    gamma = 1.0 + q_e * energy_correct / (p_mass * c_light**2)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        velocity = _speed_relativistic(energy_correct, p_mass)
+        kinetic = np.where(
+            velocity > 0.0, 2 * (gamma - 1) * c_light**2 / velocity**2, 1.0
+        )
+
+    # Raw energies where the kernel sets the speed to zero (inner electron
+    # energies) or where it is undefined (below the spacecraft potential)
+    keep = ~(velocity > 0.0) | (energy_correct < moms_args[5] * moms_args[6])
+
+    args = list(moms_args)
+    args[0] = np.where(
+        keep, energy, p_mass * velocity**2 / (2 * q_e) + sc_pot[:, np.newaxis]
+    )
+    n_psd, v_psd, _, _ = _moms(*args)
+
+    args[10] = np.ascontiguousarray(vdf_data * gamma[:, :, np.newaxis, np.newaxis])
+    p_psd = _moms(*args)[2]
+
+    args[10] = np.ascontiguousarray(vdf_data * kinetic[:, :, np.newaxis, np.newaxis])
+    h_psd = _moms(*args)[3]
+
+    return n_psd, v_psd, p_psd, h_psd
+
+
 def psd_moments(vdf, sc_pot, **kwargs):
     r"""Computes moments from the FPI particle phase-space densities.
 
@@ -400,6 +442,13 @@ def psd_moments(vdf, sc_pot, **kwargs):
         FEEPS skymaps), else "midpoint". On the 11.25 degree FPI grid, "exact"
         changes the moments by less than 1 %; on wide bins "midpoint"
         underestimates the density (8 % on the FEEPS polar bins).
+    relativistic : bool
+        Relativistic speeds, momentum flux (pressure, gamma m v v) and kinetic
+        energy (heat flux), for a relativistic phase-space density (`dpf2psd`
+        with ``relativistic=True``). Default is the ``relativistic``
+        attribute of `vdf` if any (True for the FEEPS skymaps), else False, as
+        FPI and irfu-matlab. The bulk-flow corrections of the pressure and heat
+        flux are non-relativistic.
 
     Raises
     ------
@@ -557,6 +606,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     use_exact = angle_integration == "exact"
 
+    relativistic = bool(
+        kwargs.get("relativistic", vdf.attrs.get("relativistic", False))
+    )
+
     if use_exact:
         half_phi = np.rad2deg(delta_phi[:, :, 0]) / 2
         half_theta = np.rad2deg(delta_theta[0, 0, :]) / 2
@@ -589,8 +642,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
     sc_pot_2d = sc_pot[:, np.newaxis]
     e_upper = np.clip(energy_upper - sc_pot_2d, 0.0, None)
     e_lower = np.clip(energy_lower - sc_pot_2d, 0.0, None)
-    v_upper = np.sqrt(2 * q_e * e_upper / p_mass)
-    v_lower = np.sqrt(2 * q_e * e_lower / p_mass)
+    if relativistic:
+        v_upper, v_lower = [_speed_relativistic(e, p_mass) for e in [e_upper, e_lower]]
+    else:
+        v_upper = np.sqrt(2 * q_e * e_upper / p_mass)
+        v_lower = np.sqrt(2 * q_e * e_lower / p_mass)
     delta_v = np.ascontiguousarray(v_upper - v_lower)
 
     # Clean up NaN values in the input VDF data before passing to the numba kernel.
@@ -599,7 +655,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # calculations.
     _sanitize_nan_inplace(vdf_data)
 
-    n_psd, v_psd, p_psd, h_psd = _moms(
+    moms_args = [
         energy,
         delta_v,
         q_e,
@@ -614,7 +670,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
         delta_ang,
         exact_kernels,
         use_exact,
-    )
+    ]
+
+    if relativistic:
+        n_psd, v_psd, p_psd, h_psd = _moms_relativistic(moms_args, sc_pot, p_mass)
+    else:
+        n_psd, v_psd, p_psd, h_psd = _moms(*moms_args)
 
     # No energy channel at these time steps (time dependent energy_range)
     no_energy = ~np.any(use_energy, axis=1)

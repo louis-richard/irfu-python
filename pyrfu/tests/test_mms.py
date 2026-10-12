@@ -2655,6 +2655,119 @@ class PsdMomentsTestCase(unittest.TestCase):
         n_half = mms.psd_moments(vdf, sc_pot, partial_moments=mask)[0].data
         self.assertTrue(np.all(n_half < 0.9 * n_full))
 
+    def test_psd_moments_relativistic(self):
+        # Electrons 30 keV to 500 keV moving downward (2 upper rings of 4, 8
+        # phi bins, FEEPS-like): the relativistic moments are the velocity
+        # integrals of f with the relativistic speeds, the momentum gamma m v
+        # (pressure) and the kinetic energy (gamma - 1) m c^2 (energy flux)
+        m_e, q_e, c_l = (
+            constants.electron_mass,
+            constants.elementary_charge,
+            constants.c,
+        )
+        n_t, ratio = 2, (5e5 / 3e4) ** (1 / 11)
+        energy = np.tile(3e4 * ratio ** np.arange(12), (n_t, 1))
+        delta_minus, delta_plus = energy * (1 - ratio**-0.5), energy * (ratio**0.5 - 1)
+        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
+            [0.0, 35.0, 90.0, 145.0, 180.0]
+        )
+        flux = 1e5 * (energy / 3e4)[:, :, None, None] ** -3 * np.ones((1, 1, 8, 4))
+        flux[..., 2:] = 0.0  # 1/(cm^2 s sr keV)
+
+        time = generate_timeline(0.05, n_t)
+        flux = pyrf.ts_skymap(
+            time,
+            flux,
+            energy,
+            np.tile(22.5 + 45.0 * np.arange(8), (n_t, 1)),
+            theta,
+            energy0=energy[0],
+            energy1=energy[0],
+            esteptable=np.zeros(n_t, dtype=np.uint8),
+            attrs={"UNITS": "1/(cm^2 s sr keV)"},
+            glob_attrs={
+                "species": "electrons",
+                "angle_integration": "exact",
+                "delta_energy_minus": delta_minus,
+                "delta_energy_plus": delta_plus,
+                "delta_phi_minus": np.full((n_t, 8), 22.5),
+                "delta_phi_plus": np.full((n_t, 8), 22.5),
+                "delta_theta_minus": theta - edges[:-1],
+                "delta_theta_plus": edges[1:] - theta,
+            },
+        )
+        vdf = mms.dpf2psd(flux, relativistic=True)
+        vdf.data.data *= 1e-12  # s^3/cm^6
+        sc_pot = pyrf.ts_scalar(time, np.zeros(n_t))
+
+        # Direct sums: speeds, Lorentz factors and widths in speed (SI)
+        def speed(e_ev):
+            return c_l * np.sqrt(1 - (1 + q_e * e_ev / (m_e * c_l**2)) ** -2)
+
+        gamma = 1 + q_e * energy[0] / (m_e * c_l**2)
+        v_e = speed(energy[0])
+        f_v = (
+            vdf.data.data[0, :, 0, 0]
+            * 1e12
+            * v_e**2
+            * (speed(energy[0] + delta_plus[0]) - speed(energy[0] - delta_minus[0]))
+        )
+
+        # Exact angular integrals over the 2 upper rings (velocity -look)
+        c_a, c_b = np.cos(np.deg2rad(edges[:2])), np.cos(np.deg2rad(edges[1:3]))
+        omega = 2 * np.pi * np.sum(c_a - c_b)
+        k_z = -np.pi * np.sum(c_a**2 - c_b**2)
+        k_zz = 2 * np.pi * np.sum(c_a**3 - c_b**3) / 3
+
+        n_exp = np.sum(f_v) * omega
+        f_z = np.sum(f_v * v_e) * k_z
+        p2_zz = m_e * np.sum(gamma * f_v * v_e**2) * k_zz
+        q_z = m_e * c_l**2 * np.sum((gamma - 1) * f_v * v_e) * k_z
+
+        n, v, p, p2, _, h = mms.psd_moments(vdf, sc_pot, relativistic=True)
+        np.testing.assert_allclose(n.data * 1e6, n_exp, rtol=1e-10)
+        np.testing.assert_allclose(v.data[:, 2] * 1e3, f_z / n_exp, rtol=1e-10)
+        np.testing.assert_allclose(v.data[:, :2], 0.0, atol=1e-6)
+        np.testing.assert_allclose(p2.data[:, 2, 2] * 1e-9, p2_zz, rtol=1e-10)
+
+        # Energy flux from the heat flux and the bulk-flow terms of psd_moments
+        v_z, p_zz = v.data[:, 2] * 1e3, p.data[:, 2, 2] * 1e-9
+        p_tr = np.trace(p.data, axis1=1, axis2=2) * 1e-9
+        q_tot = h.data[:, 2] * 1e-3 + v_z * p_zz
+        q_tot += 0.5 * v_z * (p_tr + m_e * n.data * 1e6 * v_z**2)
+        np.testing.assert_allclose(q_tot, q_z, rtol=1e-10)
+
+        # The density is the integral of the intensity, J / v dE dOmega
+        j_si = flux.data.data[0, :, 0, 0] * 1e4 / (1e3 * q_e)
+        n_flux = np.sum(j_si * q_e * (delta_minus[0] + delta_plus[0]) / v_e) * omega
+        np.testing.assert_allclose(n.data * 1e6, n_flux, rtol=0.02)
+
+        # The attribute sets the default, the argument has precedence
+        vdf.attrs["relativistic"] = True
+        n_attr = mms.psd_moments(vdf, sc_pot)[0].data
+        np.testing.assert_array_equal(n_attr, n.data)
+        n_nr = mms.psd_moments(vdf, sc_pot, relativistic=False)[0].data
+        del vdf.attrs["relativistic"]
+        np.testing.assert_array_equal(mms.psd_moments(vdf, sc_pot)[0].data, n_nr)
+        self.assertTrue(np.all(n_nr > 1.3 * n.data))
+
+    def test_psd_moments_relativistic_low_energy(self):
+        # 1 keV protons: the relativistic moments are the non-relativistic ones
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        result = mms.psd_moments(vdf, sc_pot, relativistic=True)
+        expected = mms.psd_moments(vdf, sc_pot)
+
+        # (the heat flux is a small difference of large terms)
+        for res, exp, rtol in zip(result, expected, [1e-4] * 5 + [1e-2]):
+            atol = 1e-5 * np.max(np.abs(exp.data))
+            np.testing.assert_allclose(res.data, exp.data, rtol=rtol, atol=atol)
+
+        # Below the spacecraft potential, as the non-relativistic moments
+        sc_pot.data[:] = 50.0
+        result = mms.psd_moments(vdf, sc_pot, relativistic=True)
+        expected = mms.psd_moments(vdf, sc_pot)
+        np.testing.assert_allclose(result[0].data, expected[0].data, rtol=1e-4)
+
 
 @ddt
 class PsdRebinTestCase(unittest.TestCase):
