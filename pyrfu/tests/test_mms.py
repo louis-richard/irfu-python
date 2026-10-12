@@ -2594,6 +2594,62 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
         self.assertIsInstance(result, dict)
 
 
+def _feeps_omni_4sc(values, energies=None):
+    # Omni spectra of the 4 spacecraft (3 channels, 4 times), one constant per
+    # spacecraft (NaN for no data), with their mmsId
+    time = generate_timeline(1.0, 4)
+    out = []
+    for i, value in enumerate(values):
+        energy = np.array([50.0, 70.0, 100.0]) if energies is None else energies[i]
+        out.append(
+            xr.DataArray(
+                np.full((4, 3), value),
+                coords=[time, energy],
+                dims=["time", "energy"],
+                attrs={"mmsId": i + 1, "species": "e"},
+            )
+        )
+    return out
+
+
+class FeepsAvg4scTestCase(unittest.TestCase):
+    def test_feeps_avg_4sc_nan(self):
+        # Spacecraft at 1, 2 and 4 and one without data: 7 / 3; a time without
+        # data on any spacecraft gives NaN without warning
+        omni = _feeps_omni_4sc([1.0, 2.0, 4.0, np.nan])
+        for b in omni:
+            b.data[2] = np.nan
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = mms.feeps_avg_4sc(tuple(omni))
+
+        expected = np.full((4, 3), 7.0 / 3.0)
+        expected[2] = np.nan
+        np.testing.assert_allclose(result.data, expected)
+        self.assertEqual(result.attrs["mmsId"], "4sc_avg")
+        self.assertEqual(omni[0].attrs["mmsId"], 1)
+
+    def test_feeps_avg_4sc_combined_energies(self):
+        # Output channel 0 = channel 1 of MMS1 and channel 2 of MMS2 (MMS3 and
+        # MMS4 left out), channels 1 and 2 = the same channel on all
+        energies = [np.array([50.0, 70.0, 100.0]), np.array([40.0, 54.0, 80.0])] * 2
+        omni = _feeps_omni_4sc([1.0, 2.0, 4.0, 8.0], energies)
+        combined = {0: [1, 2, None, None], 1: [2, 3, 2, 3], 2: [3, 3, 3, 3]}
+
+        result = mms.feeps_avg_4sc(omni, combined_energies=combined)
+
+        np.testing.assert_allclose(result.data[0], [1.5, 15.0 / 4.0, 15.0 / 4.0])
+        np.testing.assert_allclose(result.energy.data, [52.0, 75.0, 90.0])
+
+    def test_feeps_avg_4sc_input(self):
+        with self.assertRaises(TypeError):
+            mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0])[0])
+
+        with self.assertRaises(TypeError):
+            mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), combined_energies=[[1, 1]])
+
+
 @ddt
 class FeepsCorrectEnergiesTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))

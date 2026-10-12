@@ -42,7 +42,7 @@ def _nan_count(inp):
 
 
 def feeps_avg_4sc(
-    b_list: Sequence[DataArray], flag: str = "omni", combined_energies: list = None
+    b_list: Sequence[DataArray], flag: str = "omni", combined_energies: dict = None
 ) -> DataArray:
     r"""Average data from 4 spacecrafts while ignoring NaN values.
     Computes the input quantity at the center of mass of the MMS
@@ -58,12 +58,15 @@ def feeps_avg_4sc(
         type of data to be averaged (omnidirectional or
         pitch-angle distribution). The default is "omni".
 
-    combined_energies : list, optional
-        Used only if flag is "omni".
-        List of energy channel indices from each spacecraft to be combined into a common
-        energy channel. The default is None, which means that the initial channels from
-        the omnidirectional data are used. This will likely result to averaging fluxes
-        for much different energies.
+    combined_energies : dict, optional
+        Used only if flag is "omni". Energy channels of each spacecraft to combine
+        into each output channel: ``{i: [ch_1, ch_2, ch_3, ch_4]}``, where ``i`` is
+        the output channel (0-based, one key per channel of the first spacecraft)
+        and ``ch_k`` the channel of MMS k (1-based, as in pyspedas), or None to
+        leave MMS k out of that channel. The spacecraft are identified by their
+        ``mmsId`` attribute. The energy of each output channel is the average of
+        the combined channels. The default is None, which averages the channels
+        with the same index on all spacecraft, even if their energies differ.
 
     Returns
     -------
@@ -74,12 +77,17 @@ def feeps_avg_4sc(
     Raises
     ------
     TypeError
-        If b_list is not a list of DataArray or Dataset
+        If b_list is not a list (or tuple) of DataArray or Dataset, or
+        combined_energies is not a dict.
+
+    Notes
+    -----
+    Times where the quantity is NaN on all the spacecraft give NaN.
 
     """
     # Check input type
-    if not isinstance(b_list, list):
-        raise TypeError("b_list must be a list")
+    if not isinstance(b_list, (list, tuple)):
+        raise TypeError("b_list must be a list or a tuple")
 
     assert flag in ["omni", "pad"], "flag must be 'omni' or 'pad'"
 
@@ -118,7 +126,8 @@ def feeps_avg_4sc(
                     b_count_nan.data[:, combined_energies[ien_bin][mms_id] - 1]
                 ).data
                 energy[ien_bin] += b.energy.data[combined_energies[ien_bin][mms_id] - 1]
-            energy[ien_bin] /= non_none_sc_ch
+            with np.errstate(divide="ignore", invalid="ignore"):
+                energy[ien_bin] /= non_none_sc_ch
     else:
 
         for b, b_count_nan in zip(b_list_r, b_list_count_nans):
@@ -134,8 +143,12 @@ def feeps_avg_4sc(
     elif flag == "pad":
         coords = {"time": b_list_r[0].time, "theta": b_list_r[0].theta}
 
+    # NaN (without warning) where no spacecraft has data
+    with np.errstate(divide="ignore", invalid="ignore"):
+        b_avg_data = b_avg_data / b_nan_denom
+
     b_avg = xr.DataArray(
-        b_avg_data / b_nan_denom,
+        b_avg_data,
         coords=coords,
         dims=b_list_r[0].dims,
         attrs=b_list[0].attrs,
