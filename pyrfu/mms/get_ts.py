@@ -300,19 +300,23 @@ def get_ts(
             depend_3["attrs"]["LABLAXIS"] = "ccomp"
 
     if "sector_mask" in cdf_name:
-        cdf_name_mask = cdf_name.replace("sector_mask", "intensity")
-        depend_1_key = file.varattsget(cdf_name_mask)["DEPEND_1"]
-
-        depend_1["data"] = file[depend_1_key].values
-        depend_1["attrs"] = _pycdfpp_attributes_to_dict(file[depend_1_key].attributes)
-
-        depend_1["attrs"]["LABLAXIS"] = depend_1["attrs"]["LABLAXIS"].replace(" ", "_")
+        # FEEPS sector mask: one value per spin sector
+        depend_1["data"] = np.arange(file[cdf_name].shape[-1])
+        depend_1["attrs"] = {"LABLAXIS": "sectornum"}
 
     if "edp_dce_sensor" in cdf_name:
         depend_1["data"] = ["x", "y", "z"]
         depend_1["attrs"] = {"LABLAXIS": "comp"}
 
     out_dict["data"] = file[cdf_name].values
+
+    # Non-record-varying variables (e.g. FEEPS sector masks): same values at
+    # all times, without copy until the time clip
+    is_nrv = file[cdf_name].is_nrv and len(out_dict["data"]) != len(time["data"])
+
+    if is_nrv:
+        shape = (len(time["data"]), *out_dict["data"].shape[1:])
+        out_dict["data"] = np.broadcast_to(out_dict["data"][0], shape)
 
     # Remove the magnitude of (x, y, z, magnitude) variables only (not e.g. the
     # scalar part of quaternions)
@@ -384,5 +388,8 @@ def get_ts(
 
     # Time clip to original time interval
     out = time_clip(out, tint)
+
+    if is_nrv:
+        out = out.copy()
 
     return out

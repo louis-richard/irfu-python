@@ -3443,6 +3443,34 @@ class GetFeepsTestCase(unittest.TestCase):
             np.testing.assert_array_equal(finite, [True, True, False, False, False])
             self.assertTrue(np.isfinite(out_none[k].data).all())
 
+    def test_get_feeps_alleyes_units(self):
+        # Sector masks: one value per spin sector, no quality cut (used to fail)
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("maske_brst_l2", self.TINT, 2)
+            out_l1b = mms.get_feeps_alleyes("countse_brst_l1b", self.TINT, 2)
+
+        cdf_names = read.call_args_list[0].args[1]
+        self.assertFalse(any("quality" in name for name in cdf_names))
+        self.assertIn(
+            "mms2_epd_feeps_brst_l2_electron_top_sector_mask_sensorid_3", cdf_names
+        )
+        self.assertEqual(out["top-3"].dims, ("time", "sectornum"))
+        self.assertTrue(np.isfinite(out["top-3"].data).all())
+
+        # Counts are in the L1b files, read from the L1b dataset (it used to
+        # read the L2 dataset for every level)
+        dset_name, cdf_names = read.call_args_list[1].args[:2]
+        self.assertEqual(dset_name, "mms2_feeps_brst_l1b_electron")
+        self.assertIn(
+            "mms2_epd_feeps_brst_l1b_electron_top_counts_sensorid_3", cdf_names
+        )
+        self.assertIn("energy_top-3", out_l1b["top-3"].dims)
+
+        with self.assertRaisesRegex(ValueError, "l1b"):
+            mms.get_feeps_alleyes("countse_brst_l2", self.TINT, 2)
+
     def test_get_feeps_omni_source(self):
         module = importlib.import_module("pyrfu.mms.get_feeps_omni")
 
@@ -3499,6 +3527,45 @@ def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
 
 @ddt
 class GetTsTestCase(unittest.TestCase):
+    def test_get_ts_sector_mask(self):
+        # Non-record-varying FEEPS sector mask (1, 64) with an epoch: the same
+        # mask at all times, one value per spin sector (used to fail)
+        time = np.datetime64("2019-09-14T07:54:00", "ns") + np.arange(
+            5
+        ) * np.timedelta64(1, "s")
+        mask = np.zeros((1, 64))
+        mask[0, [3, 40]] = 3.0
+
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf_name = "mms1_epd_feeps_srvy_l2_electron_top_sector_mask_sensorid_3"
+        cdf.add_variable(cdf_name, values=mask, is_nrv=True)
+        cdf[cdf_name].add_attribute("DEPEND_0", "epoch")
+
+        tint = list(np.datetime_as_string(time[[1, 3]], "ns"))
+        result = get_ts(bytes(pycdfpp.save(cdf)), cdf_name, tint)
+
+        self.assertTupleEqual(result.dims, ("time", "sectornum"))
+        np.testing.assert_array_equal(result.time.data, time[1:4])
+        np.testing.assert_array_equal(result.sectornum.data, np.arange(64))
+        np.testing.assert_array_equal(result.data, np.tile(mask, (3, 1)))
+
+        # A writeable copy, not a view of the file values
+        result.data[0, 0] = 1.0
+        self.assertEqual(result.data[1, 0], 0.0)
+
+        # A file without records gives an empty mask
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "epoch", values=time[:0], data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf.add_variable(cdf_name, values=mask, is_nrv=True)
+        cdf[cdf_name].add_attribute("DEPEND_0", "epoch")
+        result = get_ts(bytes(pycdfpp.save(cdf)), cdf_name)
+        self.assertTupleEqual(result.shape, (0, 64))
+
     @data(
         ("mms1_fgm_b_gse_srvy_l2", ["x", "y", "z"]),
         ("mms1_mec_quat_eci_to_gse", ["qx", "qy", "qz", "qw"]),

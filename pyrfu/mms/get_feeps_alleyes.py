@@ -92,15 +92,24 @@ def get_feeps_alleyes(
         eyes.
     quality_flag : int or None, Optional
         The samples of an eye whose quality indicator is greater than or equal
-        to `quality_flag` are set to NaN (L2 data only). Default is 3, which
-        removes the samples not valid for science (3) and the calibration data
-        (4), as in pyspedas. None keeps all the samples.
+        to `quality_flag` are set to NaN (L2 data only, not for the sector
+        masks). Default is 3, which removes the samples not valid for science
+        (3) and the calibration data (4), as in pyspedas. None keeps all the
+        samples.
 
     Returns
     -------
     out : xarray.Dataset
         Dataset containing the energy spectrum of the available eyes of the
-        Fly's Eye Energetic Particle Spectrometer (FEEPS).
+        Fly's Eye Energetic Particle Spectrometer (FEEPS). For the sector masks
+        ("mask"), the onboard mask of the 64 spin sectors of each eye
+        (``sectornum``) at each time.
+
+    Raises
+    ------
+    ValueError
+        If counts are requested from the L2 files: they are only in the L1b
+        files (``counts{specie}_{data_rate}_l1b``).
 
     Notes
     -----
@@ -145,7 +154,15 @@ def get_feeps_alleyes(
     else:
         raise ValueError("Invalid specie")
 
-    dset_name = f"mms{mms_id:d}_feeps_{var['tmmode']}_l2_{var['dtype']}"
+    data_units = data_units_keys[var["units_name"]]
+
+    if data_units == "counts" and var["lev"] == "l2":
+        raise ValueError(
+            "FEEPS counts are only in the L1b files: use "
+            f"counts{specie}_{var['tmmode']}_l1b"
+        )
+
+    dset_name = f"mms{mms_id:d}_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
     pref = f"epd_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
 
     active_eyes = feeps_active_eyes(var, tint, mms_id)
@@ -161,6 +178,7 @@ def get_feeps_alleyes(
 
     # Quality indicators of the eyes (L2 only)
     quality_cut = quality_flag is not None and var["lev"] == "l2"
+    quality_cut = quality_cut and data_units != "sector_mask"
 
     if quality_cut:
         for e_id in e_ids:
@@ -187,7 +205,11 @@ def get_feeps_alleyes(
         eye.attrs["mms_id"] = mms_id
         eye.attrs["dtype"] = var["dtype"]
         eye.attrs["species"] = f"{var['dtype']}s"
-        out_dict[e_id] = eye.rename({eye.dims[1]: f"energy_{e_id}"})
+        # spin sectors (masks) are the same for all eyes, energies are not
+        if data_units == "sector_mask":
+            out_dict[e_id] = eye.rename({eye.dims[1]: "sectornum"})
+        else:
+            out_dict[e_id] = eye.rename({eye.dims[1]: f"energy_{e_id}"})
 
     out = xr.Dataset(out_dict)
 
