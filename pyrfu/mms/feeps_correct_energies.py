@@ -16,9 +16,11 @@ __status__ = "Prototype"
 
 
 def feeps_correct_energies(feeps_alle):
-    r"""Modifies the energy table in FEEPS spectra (intensity, count_rate,
-    counts) using the function: mms_feeps_energy_table (which is s/c, sensor
-    head and sensor ID dependent)
+    r"""Corrects the energy tables of the FEEPS spectra.
+
+    Modifies the energy table in FEEPS spectra (intensity, count_rate,
+    counts) using :func:`pyrfu.mms.feeps_energy_table` (which is s/c, sensor
+    head and sensor ID dependent).
 
     Parameters
     ----------
