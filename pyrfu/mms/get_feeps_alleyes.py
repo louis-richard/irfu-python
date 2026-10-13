@@ -25,10 +25,11 @@ data_units_keys = {
 }
 
 
-def _eye_cdf_name(pref, data_units, e_id, mms_id):
-    # Name of the variable of the eye e_id ("top-1", "bottom-12", ...)
+def _eye_cdf_name(pref, name, e_id, mms_id):
+    # Name of the variable name (data, quality indicator, energy bounds) of
+    # the eye e_id ("top-1", "bottom-12", ...)
     suf, sensor_id = e_id.split("-")
-    return f"mms{mms_id:d}_{pref}_{suf}_{data_units}_sensorid_{sensor_id}"
+    return f"mms{mms_id:d}_{pref}_{suf}_{name}_sensorid_{sensor_id}"
 
 
 def get_feeps_alleyes(
@@ -78,8 +79,9 @@ def get_feeps_alleyes(
     Raises
     ------
     ValueError
-        If counts are requested from the L2 files: they are only in the L1b
-        files (``counts{specie}_{data_rate}_l1b``).
+        If the units or the species in `tar_var` are invalid, or if counts are
+        requested from the L2 files: they are only in the L1b files
+        (``counts{specie}_{data_rate}_l1b``).
 
     Notes
     -----
@@ -161,25 +163,24 @@ def get_feeps_alleyes(
     }
 
     # Quality indicators of the eyes (L2 only)
-    quality_cut = quality_flag is not None and var["lev"] == "l2"
-    quality_cut = quality_cut and data_units != "sector_mask"
+    quality_cut = (
+        quality_flag is not None and var["lev"] == "l2" and data_units != "sector_mask"
+    )
 
     if quality_cut:
         for e_id in e_ids:
-            suf, sensor_id = e_id.split("-")
-            cdf_names[f"quality_{e_id}"] = (
-                f"mms{mms_id:d}_{pref}_{suf}_quality_indicator_sensorid_{sensor_id}"
+            cdf_names[f"quality_{e_id}"] = _eye_cdf_name(
+                pref, "quality_indicator", e_id, mms_id
             )
+
     # Lower and upper bounds of the energy channels of the eyes (one record)
     bounds = {}
 
     if data_units != "sector_mask":
         for e_id in e_ids:
-            suf, sensor_id = e_id.split("-")
             for bound in ["lower", "upper"]:
-                bounds[f"energy_{bound}_bound_{e_id}"] = (
-                    f"mms{mms_id:d}_{pref}_{suf}_energy_{bound}_bound_sensorid_"
-                    f"{sensor_id}"
+                bounds[f"energy_{bound}_bound_{e_id}"] = _eye_cdf_name(
+                    pref, f"energy_{bound}_bound", e_id, mms_id
                 )
 
     data = _db_get_ts_dict(
@@ -216,7 +217,7 @@ def get_feeps_alleyes(
             # channel bounds along the energies, when the files have them
             for bound in ["lower", "upper"]:
                 name = f"energy_{bound}_bound_{e_id}"
-                if bounds.get(name) in data:
+                if bounds[name] in data:
                     coord = (f"energy_{e_id}", data[bounds[name]])
                     eye = eye.assign_coords({name: coord})
 
