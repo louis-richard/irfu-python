@@ -48,7 +48,10 @@ def get_dist(file_path, cdf_name, tint: list = None):
     -------
     out : xarray.Dataset
         Time series of the velocity distribution function if the target
-        specie in the selected time interval.
+        specie in the selected time interval. The times are the centres of
+        the accumulations, whose half widths (s) are the attributes
+        ``delta_time_minus`` and ``delta_time_plus`` (time,), as the
+        irfu-matlab ``dt_minus`` and ``dt_plus``.
 
     """
 
@@ -104,7 +107,8 @@ def get_dist(file_path, cdf_name, tint: list = None):
     for n, k in zip(["time", "phi", "theta", "energy"], depends_keys):
         coords_attrs[n] = _pycdfpp_attributes_to_dict(file[k].attributes)
 
-    times = _get_epochs(file, cdf_name)["data"]
+    epochs = _get_epochs(file, cdf_name)
+    times = epochs["data"]
 
     dist = np.transpose(file[cdf_name].values, [0, 3, 1, 2])
     phi, theta, energy = [np.squeeze(file[k].values) for k in depends_keys[1:]]
@@ -200,6 +204,13 @@ def get_dist(file_path, cdf_name, tint: list = None):
     else:
         glob_attrs["delta_energy_plus"] = None
         glob_attrs["delta_energy_minus"] = None
+
+    # Half widths of the accumulation (s) around the (centred) times, as
+    # irfu-matlab dt_minus and dt_plus
+    if "half_width" in epochs:
+        half_width = np.full(len(times), epochs["half_width"])
+        glob_attrs["delta_time_minus"] = half_width
+        glob_attrs["delta_time_plus"] = half_width.copy()
 
     out = ts_skymap(
         times,

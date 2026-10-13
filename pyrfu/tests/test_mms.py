@@ -4901,10 +4901,11 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             xr.testing.assert_identical(result, full)
 
 
-def _cdf_fpi_brst_dist(n_records, t_start):
+def _cdf_fpi_brst_dist(n_records, t_start, deltas=False):
     # In-memory FPI burst ion distribution laid out as in the L2 files: record
     # varying phi, energy, steptable parity and energy deltas, with alternating
-    # energy tables (no energy0 and energy1 variables)
+    # energy tables (no energy0 and energy1 variables), and optionally the
+    # accumulation of the start times (Epoch_minus_var 0, Epoch_plus_var 150 ms)
     time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
         150, "ms"
     )
@@ -4915,6 +4916,12 @@ def _cdf_fpi_brst_dist(n_records, t_start):
 
     cdf = pycdfpp.CDF()
     cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    if deltas:
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", 0.0), ("Epoch_plus_var", 150.0)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            cdf[name].add_attribute("UNITS", "ms")
     cdf.add_variable(
         "mms1_dis_phi_brst", values=np.tile(np.arange(4.0), (n_records, 1))
     )
@@ -4950,6 +4957,29 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
                 self.module, "_get_file_content_sources", side_effect=contents
             ):
                 return mms.get_data(var_str, self.tint, 1, verbose=False, source="sdc")
+
+    def test_get_dist_delta_time(self):
+        # Times at the centres of the accumulations, whose half widths (s) are
+        # delta_time_minus/plus, also when files are appended; without the
+        # Epoch delta variables, no half widths
+        content = _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10", deltas=True)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        start = np.datetime64("2019-09-14T07:54:10", "ns")
+        expected = start + np.arange(4) * np.timedelta64(150, "ms")
+        np.testing.assert_array_equal(
+            result.time.data, expected + np.timedelta64(75, "ms")
+        )
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            np.testing.assert_allclose(result.attrs[key], np.full(4, 0.075))
+
+        later = _cdf_fpi_brst_dist(2, "2019-09-14T07:54:20", deltas=True)
+        result = self._get_data("pdi_fpi_brst_l2", [content, later])
+        np.testing.assert_allclose(result.attrs["delta_time_plus"], np.full(6, 0.075))
+
+        result = mms.get_dist(
+            _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10"), "mms1_dis_dist_brst"
+        )
+        self.assertNotIn("delta_time_minus", result.attrs)
 
     @data((0, 3), (3, 0), (0, 0))
     @unpack

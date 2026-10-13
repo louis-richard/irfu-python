@@ -76,6 +76,9 @@ def _shift_epochs(file, epoch):
             ]
         ]
 
+        # Half width of the accumulation
+        half_width = np.mean(t_diff)
+
         # If the accumulation does not match the sampling period, assume that the
         # epochs are start times and use half the sampling period (needs at least
         # two records, otherwise keep the delta variables)
@@ -93,10 +96,15 @@ def _shift_epochs(file, epoch):
                     )
 
                 t_offset = t_diff_data
+                half_width = t_diff_data
 
         epoch_shifted += t_offset
 
-        return {"data": epoch_shifted, "attrs": epoch["attrs"]}
+        return {
+            "data": epoch_shifted,
+            "attrs": epoch["attrs"],
+            "half_width": half_width / np.timedelta64(1, "s"),
+        }
 
     except KeyError:
         return {"data": epoch_shifted, "attrs": epoch["attrs"]}
