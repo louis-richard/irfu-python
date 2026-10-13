@@ -88,6 +88,109 @@ def _rebin(points, weights, v_edges, phi_edges, theta_edges):
     return summed.reshape(shape), np.sum(weights[~inside])
 
 
+def _shift(
+    vdf, v_frame, rotation, n_mc, grid, random_state, sc_pot=None, phi_per_time=False
+):
+    # Monte-Carlo rebinning of the skymap in the frame moving with v_frame and
+    # the rotated coordinates (vdf_shift and vdf_rebin)
+    relativistic = _relativistic(vdf, None)
+    units = vdf.data.attrs["UNITS"]
+    f_si = np.nan_to_num(vdf_convert(vdf, "s^3/m^6").data.data)
+    v_frame = _frame_velocity(vdf, v_frame)
+    rotations = _rotation_matrices(rotation, len(vdf.time))
+    mass, rng = _mass(vdf), _rng(random_state)
+
+    bins = _source_bins(vdf, sc_pot)
+    d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
+    d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
+    d_cos = bins["cos_upper"] - bins["cos_lower"]
+    d3v = d_v3[:, :, None, None] * d_phi[:, None, :, None] * d_cos
+
+    # Azimuth edges of each time: given, those of the first time, or those of
+    # each time (phi_per_time)
+    phi_edges = [
+        _grid_edges(
+            grid,
+            "phi",
+            np.hstack([bins["phi_lower"][i], bins["phi_upper"][i, -1]]),
+        )
+        for i in (range(len(vdf.time)) if phi_per_time else [0] * len(vdf.time))
+    ]
+    theta_edges = _grid_edges(
+        grid,
+        "theta",
+        np.rad2deg(np.arccos(np.hstack([bins["cos_upper"], bins["cos_lower"][-1]]))),
+    )
+
+    out_f, energy_edges, lost = [], [], np.zeros(len(vdf.time))
+
+    for i_t in range(len(vdf.time)):
+        if grid is not None and grid.get("energy") is not None:
+            v_edges = _speed(_grid_edges(grid, "energy", None), mass, relativistic)
+        else:
+            v_edges = _default_speed_edges(bins, i_t, v_frame[i_t])
+
+        f_d3v = f_si[i_t] * d3v[i_t]
+        i_e, i_p, i_q = np.nonzero(f_d3v)
+        i_e, i_p, i_q = (np.repeat(i, n_mc) for i in [i_e, i_p, i_q])
+        velocity = _sample(rng, bins, np.full(len(i_e), i_t), i_e, i_p, i_q)
+
+        # Look directions of the particles in the new frame and coordinates
+        points = -((velocity - v_frame[i_t]) @ rotations[i_t].T)
+        summed, lost_t = _rebin(
+            points, f_d3v[i_e, i_p, i_q] / n_mc, v_edges, phi_edges[i_t], theta_edges
+        )
+
+        new_d3v = (
+            np.diff(v_edges**3)[:, None, None]
+            / 3
+            * np.deg2rad(np.diff(phi_edges[i_t]))[None, :, None]
+            * -np.diff(np.cos(np.deg2rad(theta_edges)))[None, None, :]
+        )
+        out_f.append(summed / new_d3v)
+        energy_edges.append(_speed_to_energy(v_edges, mass, relativistic))
+        total = np.sum(f_d3v)
+        lost[i_t] = lost_t / total if total > 0 else 0.0
+
+    energy_edges = np.array(energy_edges)
+    # Geometric centres of the energy bins (those of FPI, so that the bins of
+    # an unshifted skymap are unchanged), arithmetic from 0 eV
+    lower, upper = energy_edges[:, :-1], energy_edges[:, 1:]
+    energy = np.where(lower > 0, np.sqrt(lower * upper), (lower + upper) / 2)
+    phi_edges = np.array(phi_edges)
+    phi = (phi_edges[:, :-1] + phi_edges[:, 1:]) / 2
+    theta = (theta_edges[:-1] + theta_edges[1:]) / 2
+    n_t = len(vdf.time)
+
+    out = ts_skymap(
+        vdf.time.data,
+        np.array(out_f),
+        energy,
+        phi,
+        theta,
+        energy0=energy[0],
+        energy1=energy[0],
+        esteptable=np.zeros(n_t, dtype=np.uint8),
+        attrs={**vdf.data.attrs, "UNITS": "s^3/m^6"},
+        glob_attrs={
+            **{
+                k: v
+                for k, v in vdf.attrs.items()
+                if not k.startswith(("delta_", "energy", "esteptable", "coverage"))
+            },
+            "delta_energy_minus": energy - energy_edges[:, :-1],
+            "delta_energy_plus": energy_edges[:, 1:] - energy,
+            "delta_phi_minus": phi - phi_edges[:, :-1],
+            "delta_phi_plus": phi_edges[:, 1:] - phi,
+            "delta_theta_minus": theta - theta_edges[:-1],
+            "delta_theta_plus": theta_edges[1:] - theta,
+            "frame_velocity": v_frame / 1e3,
+            "lost": lost,
+        },
+    )
+    return vdf_convert(out, units)
+
+
 def vdf_shift(
     vdf,
     v_frame,
@@ -169,91 +272,4 @@ def vdf_shift(
     if not _is_skymap(vdf):
         raise ValueError("vdf must be a skymap")
 
-    relativistic = _relativistic(vdf, None)
-    units = vdf.data.attrs["UNITS"]
-    f_si = np.nan_to_num(vdf_convert(vdf, "s^3/m^6").data.data)
-    v_frame = _frame_velocity(vdf, v_frame)
-    rotations = _rotation_matrices(rotation, len(vdf.time))
-    mass, rng = _mass(vdf), _rng(random_state)
-
-    bins = _source_bins(vdf)
-    d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
-    d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
-    d_cos = bins["cos_upper"] - bins["cos_lower"]
-    d3v = d_v3[:, :, None, None] * d_phi[:, None, :, None] * d_cos
-
-    phi_edges = _grid_edges(
-        grid, "phi", np.hstack([bins["phi_lower"][0], bins["phi_upper"][0, -1]])
-    )
-    theta_edges = _grid_edges(
-        grid,
-        "theta",
-        np.rad2deg(np.arccos(np.hstack([bins["cos_upper"], bins["cos_lower"][-1]]))),
-    )
-
-    out_f, energy_edges, lost = [], [], np.zeros(len(vdf.time))
-
-    for i_t in range(len(vdf.time)):
-        if grid is not None and grid.get("energy") is not None:
-            v_edges = _speed(_grid_edges(grid, "energy", None), mass, relativistic)
-        else:
-            v_edges = _default_speed_edges(bins, i_t, v_frame[i_t])
-
-        f_d3v = f_si[i_t] * d3v[i_t]
-        i_e, i_p, i_q = np.nonzero(f_d3v)
-        i_e, i_p, i_q = (np.repeat(i, n_mc) for i in [i_e, i_p, i_q])
-        velocity = _sample(rng, bins, np.full(len(i_e), i_t), i_e, i_p, i_q)
-
-        # Look directions of the particles in the new frame and coordinates
-        points = -((velocity - v_frame[i_t]) @ rotations[i_t].T)
-        summed, lost_t = _rebin(
-            points, f_d3v[i_e, i_p, i_q] / n_mc, v_edges, phi_edges, theta_edges
-        )
-
-        new_d3v = (
-            np.diff(v_edges**3)[:, None, None]
-            / 3
-            * np.deg2rad(np.diff(phi_edges))[None, :, None]
-            * -np.diff(np.cos(np.deg2rad(theta_edges)))[None, None, :]
-        )
-        out_f.append(summed / new_d3v)
-        energy_edges.append(_speed_to_energy(v_edges, mass, relativistic))
-        total = np.sum(f_d3v)
-        lost[i_t] = lost_t / total if total > 0 else 0.0
-
-    energy_edges = np.array(energy_edges)
-    # Geometric centres of the energy bins (those of FPI, so that the bins of
-    # an unshifted skymap are unchanged), arithmetic from 0 eV
-    lower, upper = energy_edges[:, :-1], energy_edges[:, 1:]
-    energy = np.where(lower > 0, np.sqrt(lower * upper), (lower + upper) / 2)
-    phi = (phi_edges[:-1] + phi_edges[1:]) / 2
-    theta = (theta_edges[:-1] + theta_edges[1:]) / 2
-    n_t = len(vdf.time)
-
-    out = ts_skymap(
-        vdf.time.data,
-        np.array(out_f),
-        energy,
-        np.tile(phi, (n_t, 1)),
-        theta,
-        energy0=energy[0],
-        energy1=energy[0],
-        esteptable=np.zeros(n_t, dtype=np.uint8),
-        attrs={**vdf.data.attrs, "UNITS": "s^3/m^6"},
-        glob_attrs={
-            **{
-                k: v
-                for k, v in vdf.attrs.items()
-                if not k.startswith(("delta_", "energy", "esteptable", "coverage"))
-            },
-            "delta_energy_minus": energy - energy_edges[:, :-1],
-            "delta_energy_plus": energy_edges[:, 1:] - energy,
-            "delta_phi_minus": np.tile(phi - phi_edges[:-1], (n_t, 1)),
-            "delta_phi_plus": np.tile(phi_edges[1:] - phi, (n_t, 1)),
-            "delta_theta_minus": theta - theta_edges[:-1],
-            "delta_theta_plus": theta_edges[1:] - theta,
-            "frame_velocity": v_frame / 1e3,
-            "lost": lost,
-        },
-    )
-    return vdf_convert(out, units)
+    return _shift(vdf, v_frame, rotation, n_mc, grid, random_state)
