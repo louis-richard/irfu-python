@@ -6,16 +6,7 @@ import numpy as np
 from scipy import constants
 
 # Local imports
-from ._vdf_bins import (
-    _energy_edges,
-    _kinetic_energy,
-    _mass,
-    _phi_edges,
-    _relativistic,
-    _sc_pot,
-    _speed,
-    _theta_edges,
-)
+from ._vdf_bins import _phi_edges, _speed_edges, _theta_edges
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -39,13 +30,7 @@ def _rng(random_state):
 def _source_bins(vdf, sc_pot=None, relativistic=None):
     r"""Edges of the bins of a skymap: speeds (m/s, time x energy), azimuths
     (degrees, time x phi) and cosines of the polar angles (theta,)."""
-    sc_pot = _sc_pot(vdf, sc_pot)
-    mass = _mass(vdf)
-    relativistic = _relativistic(vdf, relativistic)
-    v_lower, v_upper = (
-        _speed(_kinetic_energy(vdf, edge, sc_pot), mass, relativistic)
-        for edge in _energy_edges(vdf)
-    )
+    v_lower, v_upper = _speed_edges(vdf, sc_pot, relativistic)
     phi_lower, phi_upper = _phi_edges(vdf)
     theta_lower, theta_upper = _theta_edges(vdf)
     return {
@@ -56,6 +41,19 @@ def _source_bins(vdf, sc_pot=None, relativistic=None):
         "cos_upper": np.cos(np.deg2rad(theta_lower)),
         "cos_lower": np.cos(np.deg2rad(theta_upper)),
     }
+
+
+def _bins_d3v(bins):
+    r"""Velocity-space volume (m^3/s^3) of the bins of `_source_bins` (time,
+    energy, phi, theta)."""
+    d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
+    d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
+    d_cos = bins["cos_upper"] - bins["cos_lower"]
+    return (
+        d_v3[:, :, np.newaxis, np.newaxis]
+        * d_phi[:, np.newaxis, :, np.newaxis]
+        * d_cos[np.newaxis, np.newaxis, np.newaxis, :]
+    )
 
 
 def _sample(rng, bins, i_t, i_e, i_p, i_q):
