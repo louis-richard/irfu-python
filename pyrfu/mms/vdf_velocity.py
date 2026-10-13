@@ -98,24 +98,21 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None, relativistic: bool = None):
     phi, theta = phi[:, np.newaxis, :, np.newaxis], theta[np.newaxis, np.newaxis, :]
 
     # Particle velocity is minus the look direction
+    speed = -speed[..., np.newaxis, np.newaxis]
     v_xyz = [
-        -speed[..., np.newaxis, np.newaxis] * np.sin(theta) * np.cos(phi),
-        -speed[..., np.newaxis, np.newaxis] * np.sin(theta) * np.sin(phi),
-        -speed[..., np.newaxis, np.newaxis] * np.cos(theta) * np.ones_like(phi),
+        speed * np.sin(theta) * np.cos(phi),
+        speed * np.sin(theta) * np.sin(phi),
+        speed * np.cos(theta) * np.ones_like(phi),
     ]
     v_xyz = np.stack(np.broadcast_arrays(*v_xyz), axis=-1)
     v_xyz = np.einsum("tij,tepqj->tepqi", _rotation_matrices(rotation, n_t), v_xyz)
 
-    attrs = {"UNITS": "km/s"}
     out = xr.Dataset(
         {
-            name: vdf.data.copy(data=v_xyz[..., i])
+            name: (vdf.data.dims, v_xyz[..., i], {"UNITS": "km/s"})
             for i, name in enumerate(["vx", "vy", "vz"])
-        }
+        },
+        coords=vdf.data.coords,
     )
-
-    for name in ["vx", "vy", "vz"]:
-        out[name].attrs = dict(attrs)
-
     out.attrs = {"species": vdf.attrs.get("species")}
     return out
