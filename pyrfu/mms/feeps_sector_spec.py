@@ -8,6 +8,9 @@ import warnings
 import numpy as np
 import xarray as xr
 
+# Local imports
+from .feeps_spin_avg import _spin_bounds
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -17,8 +20,9 @@ __status__ = "Prototype"
 
 
 def feeps_sector_spec(inp_alle):
-    r"""Creates sector-spectrograms with FEEPS data (particle data organized
-    by time and sector number)
+    r"""Creates sector-spectrograms with FEEPS data.
+
+    The particle data are organized by time and sector number.
 
     Parameters
     ----------
@@ -61,12 +65,8 @@ def feeps_sector_spec(inp_alle):
             )
 
     sector_time = inp_alle["spinsectnum"].time.data
-    sector_data = np.asarray(inp_alle["spinsectnum"].data).astype(int)
-
-    spin_starts = np.where(sector_data[:-1] >= sector_data[1:])[0] + 1
-
-    # spins [s_k, s_k+1), with the partial spins at both ends
-    bounds = np.unique(np.hstack([0, spin_starts, len(sector_data)]))
+    sector_data = inp_alle["spinsectnum"].data.astype(int)
+    bounds = _spin_bounds(sector_data)
 
     out_dict = {}
 
