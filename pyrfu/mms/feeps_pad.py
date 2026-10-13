@@ -72,15 +72,15 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
         for isen, sensor_num in enumerate(particle_idxs):
             var_name = f"{s_type}-{sensor_num + 1:d}"
 
-            data = inp_dataset[var_name].data
             energies = inp_dataset[inp_dataset[var_name].dims[1]].data
-
-            # remove any 0s before averaging (on a float copy, not the input)
-            data = np.where(data == 0, np.nan, data.astype(float))
 
             # assumes all energies are NaNs if the first is
             if np.isnan(energies[0]):
                 continue
+
+            # remove any 0s before averaging (on a float copy, not the input)
+            data = inp_dataset[var_name].data
+            data = np.where(data == 0, np.nan, data.astype(float))
 
             # energy indices to use:
             idx = np.where(
@@ -151,7 +151,7 @@ def feeps_pad(
         when `bin_size` doesn't divide 180.
     energy : array_like, Optional
         Energy range of particles in keV, starting at 32 keV or above. Default
-        is [70., 600.]
+        is [70., 600.].
     angles_from_bfield : bool, Optional
         For burst data, compute the pitch angles from `b_bcs` instead of using
         the pitch angles of the CDF (``pitch_angle``). Default is False.
@@ -185,7 +185,9 @@ def feeps_pad(
 
     """
 
-    for k in filter(lambda x: x.startswith(("top", "bottom")), inp_dataset):
+    eye_names = list(filter(lambda x: x.startswith(("top", "bottom")), inp_dataset))
+
+    for k in eye_names:
         if inp_dataset[k].shape[1] == 16:
             raise ValueError(
                 f"{k} has 16 energy channels: split the integral channel first "
@@ -198,14 +200,8 @@ def feeps_pad(
     if energy[0] < 32.0:
         raise ValueError("Please use a starting energy of 32 keV or above")
 
-    eye_names = list(filter(lambda x: x.startswith(("top", "bottom")), inp_dataset))
-    in_range = [
-        np.any(
-            (inp_dataset[inp_dataset[k].dims[1]].data >= energy[0])
-            & (inp_dataset[inp_dataset[k].dims[1]].data <= energy[1])
-        )
-        for k in eye_names
-    ]
+    eye_energies = [inp_dataset[inp_dataset[k].dims[1]].data for k in eye_names]
+    in_range = [np.any((e_k >= energy[0]) & (e_k <= energy[1])) for e_k in eye_energies]
 
     if not any(in_range):
         warnings.warn(
