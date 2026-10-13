@@ -9,7 +9,7 @@ import xarray as xr
 from ..pyrf.resample import resample
 from ..pyrf.ts_skymap import ts_skymap
 from ._vdf_bins import _is_skymap, _mass, _relativistic, _speed
-from ._vdf_mc import _rng, _sample, _source_bins, _speed_to_energy
+from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins, _speed_to_energy
 from .vdf_convert import vdf_convert
 from .vdf_velocity import _rotation_matrices
 
@@ -101,10 +101,8 @@ def _shift(
     mass, rng = _mass(vdf), _rng(random_state)
 
     bins = _source_bins(vdf, sc_pot)
-    d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
-    d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
-    d_cos = bins["cos_upper"] - bins["cos_lower"]
-    d3v = d_v3[:, :, None, None] * d_phi[:, None, :, None] * d_cos
+    d3v = _bins_d3v(bins)
+    energy_grid = _grid_edges(grid, "energy", None)
 
     # Azimuth edges of each time: given, those of the first time, or those of
     # each time (phi_per_time)
@@ -125,8 +123,8 @@ def _shift(
     out_f, energy_edges, lost = [], [], np.zeros(len(vdf.time))
 
     for i_t in range(len(vdf.time)):
-        if grid is not None and grid.get("energy") is not None:
-            v_edges = _speed(_grid_edges(grid, "energy", None), mass, relativistic)
+        if energy_grid is not None:
+            v_edges = _speed(energy_grid, mass, relativistic)
         else:
             v_edges = _default_speed_edges(bins, i_t, v_frame[i_t])
 
@@ -240,6 +238,10 @@ def vdf_shift(
         If `vdf` is not a skymap or `v_frame` or `rotation` have the wrong
         shape.
 
+    See Also
+    --------
+    pyrfu.mms.vdf_macroparticles, pyrfu.pyrf.convert_fac
+
     Notes
     -----
     Each bin with data is sampled by `n_mc` particles, uniform in its volume
@@ -255,10 +257,6 @@ def vdf_shift(
     edges halfway between the channels, the arithmetic mean of the edges as
     energies (0.8 % hotter without a shift) and keeps the energies of the last
     time only.
-
-    See Also
-    --------
-    pyrfu.mms.vdf_macroparticles, pyrfu.pyrf.convert_fac
 
     Examples
     --------
