@@ -111,6 +111,10 @@ def vdf_cuts(vdf_fac, par_width: float = 10.0, perp_width: float = 10.0):
     ValueError
         If `vdf_fac` is not a skymap.
 
+    See Also
+    --------
+    pyrfu.mms.vdf_shift, pyrfu.mms.reduce, pyrfu.pyrf.convert_fac
+
     Notes
     -----
     The cuts are slices of the distribution near the field direction or the
@@ -121,10 +125,6 @@ def vdf_cuts(vdf_fac, par_width: float = 10.0, perp_width: float = 10.0):
     left out of the averages. irfu-matlab handles one time, uses the
     electron mass for the speeds (wrong for ions), labels the cut integrals
     as densities in cm^-3 and averages over the azimuths with NaNs as zeros.
-
-    See Also
-    --------
-    pyrfu.mms.vdf_shift, pyrfu.mms.reduce, pyrfu.pyrf.convert_fac
 
     Examples
     --------
