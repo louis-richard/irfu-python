@@ -4017,6 +4017,52 @@ class FeepsSkymapTestCase(unittest.TestCase):
         with self.assertWarnsRegex(UserWarning, "differs from the spin sectors"):
             mms.feeps_skymap(feeps_alle, *b_fields(3.0), to_psd=False)
 
+    def test_feeps_skymap_survey_fgm_widths(self):
+        # Survey: 8 samples per spin, labelled 7, 15, ..., 63, the centre of the
+        # accumulation 3.5 sectors before the label
+        feeps_alle = _feeps_skymap_case("srvy", 64)
+        feeps_alle["top-3"].data[::3] = 5.0
+        expected = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        time = generate_timeline(512.0, 512)
+        t_s = (time - time[0]).astype(float) / 1e9
+        psi = np.deg2rad(-75.94 + 39.375 + 360.0 * 8.0 * t_s)
+        b_bcs = np.stack(
+            [20.0 * np.cos(psi), -20.0 * np.sin(psi), np.full(len(t_s), 5.0)], axis=1
+        )
+        b_dmpa = np.tile([20.0, 0.0, 5.0], (len(t_s), 1))
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = mms.feeps_skymap(
+                feeps_alle,
+                pyrf.ts_vec_xyz(time, b_bcs),
+                pyrf.ts_vec_xyz(time, b_dmpa),
+                to_psd=False,
+            )
+
+        self.assertEqual(result.attrs["spin_phase"], "FGM (b_bcs, b_dmpa)")
+        np.testing.assert_allclose(result.data.data, expected.data.data)
+
+        # Energy widths from the channel bounds of the eyes
+        energy = expected.energy.data[0] / 1e3
+        for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            dim = feeps_alle[k].dims[1]
+            feeps_alle = feeps_alle.assign_coords(
+                {
+                    f"energy_lower_bound_{k}": (dim, 0.9 * energy),
+                    f"energy_upper_bound_{k}": (dim, 1.2 * energy),
+                }
+            )
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_minus"], 0.1 * result.energy.data
+        )
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_plus"], 0.2 * result.energy.data
+        )
+
     def test_feeps_skymap_coverage_fill(self):
         # No data on the 5 degree ring (top-5)
         feeps_alle = _feeps_skymap_case("brst", 128)

@@ -13,6 +13,7 @@ from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
 from .feeps_omni import _eyes_on_omni_energies
 from .feeps_pitch_angles import t_bot, t_top, v_fcs
+from .feeps_spin_avg import _spin_bounds
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -29,6 +30,14 @@ _SECTOR_PHASE_OFFSET = {1: -75.94, 2: -75.93, 3: -75.96, 4: -75.81}
 _RINGS = {"electron": [5.0, 65.0, 115.0, 175.0], "ion": [12.0, 49.0, 131.0, 168.0]}
 
 _SECTOR_WIDTH = 360.0 / 64.0
+
+# A survey sample is labelled with the last of the 8 sectors it accumulates:
+# the centre of the accumulation is 3.5 sectors before the label
+_SRVY_CENTRE_SHIFT = 3.5
+
+# B closer to the spin axis than about 6 degrees (|B_perp| / |B| < 0.1) gives
+# an undefined spin phase from FGM
+_MIN_B_PERP = 0.1
 
 
 def _look_direction(eye):
@@ -49,14 +58,15 @@ def _sector_phase(spin_sectors, tmmode, mms_id):
     sectors = np.asarray(spin_sectors, dtype=float)
 
     if tmmode == "srvy":
-        sectors = sectors - 3.5
+        sectors = sectors - _SRVY_CENTRE_SHIFT
 
     return sectors * _SECTOR_WIDTH + _SECTOR_PHASE_OFFSET[mms_id]
 
 
 def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     r"""Spin phase (degrees) of each sample: from the spin sectors, or from FGM
-    where it is defined (checked against the sectors)."""
+    where it is defined (checked against the sectors). Returns the phases and
+    the name of their source."""
     attrs = inp_dataset.attrs
     tmmode, mms_id = attrs["tmmode"], attrs["mmsId"]
     psi = _sector_phase(inp_dataset.spinsectnum.data, tmmode, mms_id)
@@ -70,7 +80,9 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
 
     # B close to the spin axis gives an undefined rotation
     b_perp = np.linalg.norm(b_xyz[:, :2], axis=1) / np.linalg.norm(b_xyz, axis=1)
-    good = np.isfinite(b_perp) & np.isfinite(d_xyz).all(axis=1) & (b_perp >= 0.1)
+    good = (
+        np.isfinite(b_perp) & np.isfinite(d_xyz).all(axis=1) & (b_perp >= _MIN_B_PERP)
+    )
 
     if not good.any():
         return psi, "spin sectors (B along the spin axis)"
@@ -86,26 +98,18 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     if tmmode == "srvy":
         # time tag at the centre of the labelled sector, 3.5 sectors after the
         # centre of the accumulation
-        psi_fgm -= 3.5 * _SECTOR_WIDTH
+        psi_fgm -= _SRVY_CENTRE_SHIFT * _SECTOR_WIDTH
 
     delta = (psi_fgm - psi + 180.0) % 360.0 - 180.0
 
     if np.isfinite(delta).any() and np.nanmedian(np.abs(delta)) > 1.0:
         warnings.warn(
-            f"The FGM spin phase differs from the spin sectors by "
+            "The FGM spin phase differs from the spin sectors by "
             f"{np.nanmedian(delta):.1f} degrees (median)",
             UserWarning,
         )
 
     return np.where(np.isfinite(delta), psi + delta, psi), "FGM (b_bcs, b_dmpa)"
-
-
-def _spins(spin_sectors):
-    r"""Start indices of the spins: the partial spins at both ends are kept,
-    as in feeps_spin_avg."""
-    sectors = np.asarray(spin_sectors)
-    starts = np.where(sectors[:-1] >= sectors[1:])[0] + 1
-    return np.unique(np.hstack([0, starts, len(sectors)]))
 
 
 def _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges):
@@ -236,6 +240,10 @@ def feeps_skymap(
         If the integral channel of the eyes is not split, if `to_psd` is True
         and the data are not intensities, or if `fill_empty` is invalid.
 
+    See Also
+    --------
+    pyrfu.mms.feeps_corrections, pyrfu.mms.feeps_omni, pyrfu.mms.psd_moments
+
     Notes
     -----
     Each spin, from its first sample up to the first sample of the next one
@@ -251,7 +259,8 @@ def feeps_skymap(
     rotation of B between BCS and DMPA on 2015 to 2024 data. A survey sample
     accumulates the 8 sectors up to the labelled one, so its centre is 3.5
     sectors before the label. With `b_bcs` and `b_dmpa`, the spin phase is
-    taken from FGM where B is more than 6 degrees from the spin axis, and a
+    taken from FGM where B is at least about 6 degrees from the spin axis
+    (|B_perp| / |B| >= 0.1), and a
     warning is given if it differs from the spin sectors by more than 1 degree.
 
     The eyes lie on 4 cones around the spin axis (electrons 5, 65, 115 and 175
@@ -272,9 +281,19 @@ def feeps_skymap(
     reduced distributions (`reduce`) of the phase-space density are then the
     integrals of the intensity over the energy and the solid angle.
 
-    See Also
+    Examples
     --------
-    pyrfu.mms.feeps_corrections, pyrfu.mms.feeps_omni, pyrfu.mms.psd_moments
+    >>> from pyrfu import mms
+    >>> tint = ["2017-07-24T12:48:30.000", "2017-07-24T12:50:23.000"]
+    >>> feeps_e = mms.get_feeps_alleyes("fluxe_brst_l2", tint, 1)
+    >>> feeps_e = mms.feeps_corrections(feeps_e)
+    >>> vdf_e = mms.feeps_skymap(feeps_e)
+
+    With the spin phase from FGM
+
+    >>> b_bcs = mms.get_data("b_bcs_fgm_brst_l2", tint, 1)
+    >>> b_dmpa = mms.get_data("b_dmpa_fgm_brst_l2", tint, 1)
+    >>> vdf_e = mms.feeps_skymap(feeps_e, b_bcs, b_dmpa)
 
     """
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
@@ -286,13 +305,13 @@ def feeps_skymap(
         raise ValueError(f"Phase-space density needs intensities, not {units}")
 
     if fill_empty not in [None, "ring", "omni"]:
-        raise ValueError(f"Invalid fill_empty {fill_empty}: None, ring or omni")
+        raise ValueError(f"Invalid fill_empty {fill_empty}: must be None, ring or omni")
 
     if n_phi is None:
         n_phi = 32 if tmmode == "brst" else 8
 
     psi, phase_source = _spin_phase(inp_dataset, b_bcs, b_dmpa)
-    bounds = _spins(inp_dataset.spinsectnum.data)
+    bounds = _spin_bounds(np.asarray(inp_dataset.spinsectnum.data))
     rings = _RINGS[d_type]
     phi_edges = np.linspace(0.0, 360.0, n_phi + 1)
 
