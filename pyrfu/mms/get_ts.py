@@ -390,6 +390,7 @@ def get_ts(
     out = time_clip(out, tint)
 
     if is_nrv:
+        # writable copy of the broadcast (read-only) data
         out = out.copy()
 
     return out
