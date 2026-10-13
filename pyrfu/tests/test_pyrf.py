@@ -1444,6 +1444,21 @@ class DistAppendTestCase(unittest.TestCase):
             np.testing.assert_array_equal(inp0.attrs[key], value)
         self.assertTupleEqual(result.attrs["delta_energy_plus"].shape, (20, 32))
 
+    def test_dist_append_delta_time(self):
+        inp0 = generate_vdf(64.0, 10, [32, 32, 16])
+        inp1 = generate_vdf(64.0, 5, [32, 32, 16])
+        for i, inp in enumerate([inp0, inp1]):
+            inp.attrs["delta_time_minus"] = np.full(len(inp.time), 0.1 * (i + 1))
+            inp.attrs["delta_time_plus"] = np.full(len(inp.time), 0.2 * (i + 1))
+
+        result = pyrf.dist_append(inp0, inp1)
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_minus"], np.hstack([[0.1] * 10, [0.2] * 5])
+        )
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_plus"], np.hstack([[0.2] * 10, [0.4] * 5])
+        )
+
 
 @ddt
 class DynamicPressTestCase(unittest.TestCase):
