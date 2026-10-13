@@ -23,7 +23,7 @@ def feeps_active_eyes(var, tint, mms_id):
     tint : list of str or datetime64 or datetime.datetime
         Time range.
     mms_id : int or str
-        mms_id e.g., '4' for MMS4.
+        Spacecraft index, e.g., '4' for MMS4.
 
     Returns
     -------
