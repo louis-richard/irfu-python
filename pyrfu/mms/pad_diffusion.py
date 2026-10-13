@@ -33,8 +33,8 @@ def pad_diffusion(pad, d_aa):
     Returns
     -------
     out : xarray.Dataset
-        df/dt = 1 / sin(a) d/da (D_aa sin(a) df/da), in the units of `pad`
-        per second.
+        Rate of change df/dt = 1 / sin(a) d/da (D_aa sin(a) df/da), in the
+        units of `pad` per second.
 
     Raises
     ------
