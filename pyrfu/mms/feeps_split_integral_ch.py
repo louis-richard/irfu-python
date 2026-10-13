@@ -13,8 +13,10 @@ __status__ = "Prototype"
 
 
 def feeps_split_integral_ch(inp_dataset):
-    r"""This function splits the last integral channel from the FEEPS spectra,
-    creating 2 new DataArrays
+    r"""Splits the last integral channel from the FEEPS spectra.
+
+    It returns the spectra without the integral channel and the integral
+    channel, as two Datasets.
 
     Parameters
     ----------
