@@ -27,7 +27,7 @@ def read_feeps_sector_masks_csv(tint):
     Parameters
     ----------
     tint : list of str
-        time range of interest [starttime, endtime] with the format
+        Time range of interest [starttime, endtime] with the format
         "YYYY-MM-DD", "YYYY-MM-DD" or to specify more or less than a day [
         'YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
 
@@ -49,6 +49,7 @@ def read_feeps_sector_masks_csv(tint):
     # dates of the mask files shipped with pyrfu
     sun_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sun")
     files = glob.glob(os.path.join(sun_path, "MMS1_FEEPS_ContaminatedSectors_*.csv"))
+    # YYYYMMDD of MMS1_FEEPS_ContaminatedSectors_YYYYMMDD.csv
     str_dates = sorted(os.path.basename(file)[-12:-4] for file in files)
     dates = np.array(
         [f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in str_dates],
