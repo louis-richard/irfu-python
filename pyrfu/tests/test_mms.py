@@ -5996,6 +5996,22 @@ class VdfToE64TestCase(unittest.TestCase):
         self.assertEqual(d_plus[0, -1], np.max(attrs["delta_energy_plus"][:, -1]))
         self.assertEqual(d_minus[0, 0], np.min(attrs["delta_energy_minus"][:, 0]))
 
+    def test_vdf_to_e64_delta_time(self):
+        # A pair of samples spans the two accumulations: twice their half
+        # widths for regular sampling, as irfu-matlab PDist.e64
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        half = 0.5 / 64.0
+        vdf.attrs["delta_time_minus"] = np.full(10, half)
+        vdf.attrs["delta_time_plus"] = np.full(10, half)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # zero energy channel
+            result = mms.vdf_to_e64(vdf)
+
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            self.assertEqual(len(result.attrs[key]), len(result.time))
+            np.testing.assert_allclose(result.attrs[key], 2 * half, rtol=1e-6)
+
 
 @ddt
 class VdfElimTestCase(unittest.TestCase):
