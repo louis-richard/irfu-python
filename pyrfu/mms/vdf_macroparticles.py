@@ -126,6 +126,7 @@ def vdf_macroparticles(
         raise ValueError(f"Invalid division {division}: dn, f or counts")
 
     f_data = np.nan_to_num(vdf.data.data)
+    units = vdf.data.attrs.get("UNITS", "")
     d3v = vdf_d3v(vdf, sc_pot)
     d_n = np.nan_to_num(vdf_partial_density(vdf, sc_pot=sc_pot).data.data)
     weights = d_n if division == "dn" else f_data
@@ -154,9 +155,17 @@ def vdf_macroparticles(
             "vx": ("particle", v_xyz[:, 0], {"UNITS": "km/s"}),
             "vy": ("particle", v_xyz[:, 1], {"UNITS": "km/s"}),
             "vz": ("particle", v_xyz[:, 2], {"UNITS": "km/s"}),
-            "dn": ("particle", d_n[i_t, i_e, i_p, i_q] / n_bin_part),
-            "df": ("particle", f_data[i_t, i_e, i_p, i_q]),
-            "dv": ("particle", d3v.data.data[i_t, i_e, i_p, i_q] / n_bin_part),
+            "dn": (
+                "particle",
+                d_n[i_t, i_e, i_p, i_q] / n_bin_part,
+                {"UNITS": "cm^-3"},
+            ),
+            "df": ("particle", f_data[i_t, i_e, i_p, i_q], {"UNITS": units}),
+            "dv": (
+                "particle",
+                d3v.data.data[i_t, i_e, i_p, i_q] / n_bin_part,
+                {"UNITS": d3v.data.attrs["UNITS"]},
+            ),
         },
         coords={
             "time": ("particle", vdf.time.data[i_t]),
@@ -165,9 +174,6 @@ def vdf_macroparticles(
             "idx2": ("particle", i_q),
         },
     )
-    particles["dn"].attrs["UNITS"] = "cm^-3"
-    particles["df"].attrs["UNITS"] = vdf.data.attrs.get("UNITS", "")
-    particles["dv"].attrs["UNITS"] = d3v.data.attrs["UNITS"]
     particles.attrs = {
         "species": vdf.attrs.get("species"),
         "positioning": positioning,
