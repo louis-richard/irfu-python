@@ -64,9 +64,8 @@ def pad_palim(pad, pitch_angles, average: bool = True):
 
     pitch = _pitch_angles(pad)
     lower, upper = _polar_edges(pitch, pad.attrs, "pitchangle")
-    lower, upper = np.broadcast_to(lower, pitch.shape), np.broadcast_to(
-        upper, pitch.shape
-    )
+    lower = np.broadcast_to(lower, pitch.shape)
+    upper = np.broadcast_to(upper, pitch.shape)
     pitch_angles = np.atleast_1d(np.asarray(pitch_angles, dtype=np.float64))
 
     if pitch_angles.size == 2:
