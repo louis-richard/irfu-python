@@ -2653,6 +2653,75 @@ class PsdMomentsTestCase(unittest.TestCase):
         self._assert_moments_equal(result, expected)
         self.assertAlmostEqual(float(result[0][0]), 1.0, delta=0.01)
 
+    def test_psd_moments_pitch_angle_range(self):
+        # Isotropic Maxwellian, oblique B: the density in the cone [0, a] is
+        # n (1 - cos(a)) / 2, closely with the solid-angle fractions
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        b_xyz = pyrf.ts_vec_xyz(vdf.time.data, np.tile([3.0, -4.0, 5.0], (2, 1)))
+        options = {"b_xyz": b_xyz, "angle_integration": "exact"}
+        n_full = mms.psd_moments(vdf, sc_pot, angle_integration="exact")[0].data
+
+        for weight, rtol in [("fraction", 2e-3), ("centre", 0.05)]:
+            n_cone = mms.psd_moments(
+                vdf,
+                sc_pot,
+                pitch_angle_range=[0.0, 30.0],
+                pitch_angle_weight=weight,
+                **options,
+            )[0].data
+            expected = n_full * (1 - np.cos(np.deg2rad(30.0))) / 2
+            np.testing.assert_allclose(n_cone, expected, rtol=rtol)
+
+            # Complementary ranges, and all the pitch angles
+            n_lower, n_upper = (
+                mms.psd_moments(
+                    vdf,
+                    sc_pot,
+                    pitch_angle_range=r,
+                    pitch_angle_weight=weight,
+                    **options,
+                )[0].data
+                for r in [[0.0, 90.0], [90.0, 180.0]]
+            )
+            np.testing.assert_allclose(n_lower + n_upper, n_full, rtol=1e-12)
+
+            for integration in ["midpoint", "exact"]:
+                result = mms.psd_moments(
+                    vdf,
+                    sc_pot,
+                    b_xyz=b_xyz,
+                    pitch_angle_range=[0.0, 180.0],
+                    pitch_angle_weight=weight,
+                    angle_integration=integration,
+                )
+                expected = mms.psd_moments(vdf, sc_pot, angle_integration=integration)
+                for res, exp in zip(result, expected):
+                    np.testing.assert_array_equal(res.data, exp.data)
+
+        # No B: NaN moments
+        b_xyz.data[0] = np.nan
+        n_i = mms.psd_moments(vdf, sc_pot, b_xyz=b_xyz, pitch_angle_range=[0, 90])
+        self.assertTrue(np.isnan(n_i[0].data[0]))
+        self.assertTrue(np.isfinite(n_i[0].data[1]))
+
+    def test_psd_moments_pitch_angle_input(self):
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        b_xyz = pyrf.ts_vec_xyz(vdf.time.data, np.tile([0.0, 0.0, 1.0], (2, 1)))
+
+        for kwargs in [
+            {"pitch_angle_range": [0.0, 90.0]},
+            {"pitch_angle_range": [90.0], "b_xyz": b_xyz},
+            {"pitch_angle_range": [90.0, 30.0], "b_xyz": b_xyz},
+            {"pitch_angle_range": [0.0, 200.0], "b_xyz": b_xyz},
+            {
+                "pitch_angle_range": [0.0, 90.0],
+                "b_xyz": b_xyz,
+                "pitch_angle_weight": "x",
+            },
+        ]:
+            with self.assertRaises(ValueError):
+                mms.psd_moments(vdf, sc_pot, **kwargs)
+
     def test_psd_moments_float32(self):
         # FPI angles and data are float32: the exact kernels (float64) failed
         # in numba; the moments are those of float64 inputs

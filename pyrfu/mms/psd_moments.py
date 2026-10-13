@@ -11,6 +11,8 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
+from pyrfu.mms._vdf_bins import _bin_pitch_angles, _phi_edges, _theta_edges
+from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
@@ -378,6 +380,71 @@ def _moms_relativistic(moms_args, sc_pot, p_mass):
     return n_psd, v_psd, p_psd, h_psd
 
 
+# Sub-grid of the angular bins for the pitch-angle fractions
+_N_SUB = 8
+
+
+def _pitch_angle_args(kwargs):
+    # b_xyz, [min, max] and method of the pitch-angle range
+    b_xyz = kwargs.get("b_xyz")
+    pitch_angle_range = np.asarray(kwargs["pitch_angle_range"], dtype=np.float64)
+    method = kwargs.get("pitch_angle_weight", "centre")
+
+    if b_xyz is None:
+        raise ValueError("pitch_angle_range needs b_xyz")
+
+    valid = pitch_angle_range.shape == (2,) and (
+        0.0 <= pitch_angle_range[0] <= pitch_angle_range[1] <= 180.0
+    )
+
+    if not valid:
+        raise ValueError("pitch_angle_range must be [min, max] within [0, 180]")
+
+    if method not in ["centre", "fraction"]:
+        raise ValueError(f"Invalid pitch_angle_weight {method}: centre or fraction")
+
+    return b_xyz, pitch_angle_range, method
+
+
+def _pitch_angle_weights(vdf, b_xyz, pitch_angle_range, method):
+    # Weight of each angular bin (time, phi, theta) for the pitch angles in
+    # pitch_angle_range: 1 or 0 from the pitch angle of its centre ("centre"),
+    # or the fraction of its solid angle in the range ("fraction", on a
+    # _N_SUB x _N_SUB grid uniform in phi and cos(theta)), and the times
+    # without B
+    b_hat = normalize(resample(b_xyz, vdf.time)).data
+    no_b = ~np.all(np.isfinite(b_hat), axis=1)
+    pa_min, pa_max = pitch_angle_range
+    phi = np.broadcast_to(vdf.phi.data, (len(vdf.time), vdf.data.shape[2]))
+
+    if method == "centre":
+        pitch = _bin_pitch_angles(phi, vdf.theta.data, b_hat)
+        return ((pitch >= pa_min) & (pitch <= pa_max)).astype(np.float64), no_b
+
+    sub = (np.arange(_N_SUB) + 0.5) / _N_SUB
+    phi_lower, phi_upper = _phi_edges(vdf)
+    phi_sub = phi_lower[..., None] + sub * (phi_upper - phi_lower)[..., None]
+    phi_sub = phi_sub.reshape(len(vdf.time), -1)
+    theta_lower, theta_upper = _theta_edges(vdf)
+    cos_lower = np.cos(np.deg2rad(theta_lower))[:, None]
+    cos_upper = np.cos(np.deg2rad(theta_upper))[:, None]
+    theta_sub = np.rad2deg(np.arccos(cos_lower - sub * (cos_lower - cos_upper)))
+    theta_sub = theta_sub.ravel()
+
+    n_t, n_ph, n_th = len(vdf.time), vdf.data.shape[2], vdf.data.shape[3]
+    weights = np.zeros((n_t, n_ph, n_th))
+
+    # Time chunks: the sub-grid is _N_SUB^2 times the angular grid
+    for start in range(0, n_t, 64):
+        chunk = slice(start, start + 64)
+        pitch = _bin_pitch_angles(phi_sub[chunk], theta_sub, b_hat[chunk])
+        inside = (pitch >= pa_min) & (pitch <= pa_max)
+        inside = inside.reshape(-1, n_ph, _N_SUB, n_th, _N_SUB)
+        weights[chunk] = np.mean(inside, axis=(2, 4))
+
+    return weights, no_b
+
+
 def psd_moments(vdf, sc_pot, **kwargs):
     r"""Computes moments from the FPI particle phase-space densities.
 
@@ -452,13 +519,30 @@ def psd_moments(vdf, sc_pot, **kwargs):
         attribute of `vdf` if any (True for the FEEPS skymaps), else False, as
         FPI and irfu-matlab. The bulk-flow corrections of the pressure and heat
         flux are non-relativistic.
+    pitch_angle_range : array_like
+        Range of pitch angles [min, max] (degrees, inclusive) of the particles
+        used, with `b_xyz`: the moments are those of the particles in the
+        range (the pressure and temperature about their own bulk velocity).
+        Default uses all the pitch angles.
+    b_xyz : xarray.DataArray
+        Time series of the magnetic field in the coordinate system of `vdf`
+        (e.g., DMPA for FPI), resampled to the times of `vdf`. Needed with
+        `pitch_angle_range`; the moments are NaN at the times without B.
+    pitch_angle_weight : {"centre", "fraction"}
+        With `pitch_angle_range`, a bin is used if the pitch angle of its
+        centre is in the range ("centre", default, as get_pitch_angle_dist
+        and the partial moments of the irfu-matlab examples), or weighted by
+        the fraction of its solid angle in the range ("fraction", for wide
+        bins such as those of FEEPS and EIS, or cones narrower than the bins).
 
     Raises
     ------
     ValueError
         If energy_range has no channel (fixed range) or a wrong shape, if
-        both energy_range and en_channels are given, or if angle_integration
-        is not "midpoint" or "exact".
+        both energy_range and en_channels are given, if angle_integration
+        is not "midpoint" or "exact", or if pitch_angle_range is given without
+        b_xyz, is not [min, max] within [0, 180], or pitch_angle_weight is not
+        "centre" or "fraction".
 
     Notes
     -----
@@ -630,6 +714,17 @@ def psd_moments(vdf, sc_pot, **kwargs):
         # placeholder, unused by _moms (numba needs an array)
         exact_kernels = np.zeros((1, 10, 1, 1))
 
+    # Pitch-angle range: weights of the angular bins
+    no_b = np.zeros(vdf_data.shape[0], dtype=bool)
+
+    if kwargs.get("pitch_angle_range") is not None:
+        weights, no_b = _pitch_angle_weights(vdf, *_pitch_angle_args(kwargs))
+
+        if use_exact:
+            exact_kernels = np.ascontiguousarray(exact_kernels * weights[:, None])
+        else:
+            delta_ang = delta_ang * weights
+
     # float64 angles: the angular kernels of _moms must have the dtype of the
     # exact kernels (FPI angles are float32)
     phi_mat = np.tile(phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
@@ -686,7 +781,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         n_psd, v_psd, p_psd, h_psd = _moms(*moms_args)
 
     # No energy channel at these time steps (time dependent energy_range)
-    no_energy = ~np.any(use_energy, axis=1)
+    no_energy = ~np.any(use_energy, axis=1) | no_b
     n_psd[no_energy] = np.nan
     v_psd[no_energy] = np.nan
     p_psd[no_energy] = np.nan
