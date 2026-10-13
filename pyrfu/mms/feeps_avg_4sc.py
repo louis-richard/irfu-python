@@ -55,7 +55,7 @@ def feeps_avg_4sc(
         List of the time series of the quantity for each spacecraft.
 
     flag : str, optional
-        type of data to be averaged (omnidirectional or
+        Type of data to be averaged (omnidirectional or
         pitch-angle distribution). The default is "omni".
 
     combined_energies : dict, optional
