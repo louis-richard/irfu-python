@@ -150,8 +150,10 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     -------
     out : xarray.DataArray
         Time series of the pitch angles.
-    idx_maps : dict
-        to fill.
+    idx_maps : dict or None
+        Columns of `out` of the active top and bottom eyes
+        (``"{species}-top"`` and ``"{species}-bottom"``), None for burst
+        electrons (all the eyes).
 
     Notes
     -----
