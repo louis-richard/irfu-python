@@ -151,6 +151,18 @@ def _pitch_angles(pad):
     return pitch[0] if pitch.ndim == 2 else pitch
 
 
+def _bin_pitch_angles(phi, theta, b_hat):
+    r"""Pitch angles (degrees) of the particle velocities (minus the look
+    directions phi (time, phi) and theta (theta,), degrees) with respect to
+    b_hat (time, 3): (time, phi, theta), independent of energy."""
+    phi = np.deg2rad(phi)[:, :, None]
+    theta = np.deg2rad(theta)
+    cos_pa = -np.cos(phi) * np.sin(theta) * b_hat[:, 0, None, None]
+    cos_pa -= np.sin(phi) * np.sin(theta) * b_hat[:, 1, None, None]
+    cos_pa -= np.cos(theta) * b_hat[:, 2, None, None]
+    return np.rad2deg(np.arccos(np.clip(cos_pa, -1.0, 1.0)))
+
+
 def _is_skymap(vdf):
     r"""Skymap (time, energy, phi, theta), else pitch-angle distribution
     (time, energy, pitch angle)."""
