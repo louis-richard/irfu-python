@@ -43,9 +43,10 @@ g_corr = {
 
 
 def feeps_flat_field_corrections(inp_alle):
-    r"""Apply flat field correction factors to FEEPS ion/electron
-    data. Correct factors are from the gain factor found in:
-    FlatFieldResults_V3.xlsx from Drew Turner, 1/19/2017
+    r"""Applies the flat field correction factors to the FEEPS data.
+
+    The correction factors are the gain factors of FlatFieldResults_V3.xlsx
+    from Drew Turner, 1/19/2017.
 
     Parameters
     ----------
