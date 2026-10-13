@@ -2653,6 +2653,23 @@ class PsdMomentsTestCase(unittest.TestCase):
         self._assert_moments_equal(result, expected)
         self.assertAlmostEqual(float(result[0][0]), 1.0, delta=0.01)
 
+    def test_psd_moments_float32(self):
+        # FPI angles and data are float32: the exact kernels (float64) failed
+        # in numba; the moments are those of float64 inputs
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        vdf_32 = vdf.assign(
+            phi=vdf.phi.astype(np.float32), theta=vdf.theta.astype(np.float32)
+        )
+        vdf_32["data"] = vdf_32.data.astype(np.float32)
+
+        for angle_integration in ["midpoint", "exact"]:
+            options = {"angle_integration": angle_integration}
+            result = mms.psd_moments(vdf_32, sc_pot, **options)
+            expected = mms.psd_moments(vdf, sc_pot, **options)
+
+            for res, exp in zip(result[:2], expected[:2]):
+                np.testing.assert_allclose(res.data, exp.data, rtol=1e-5, atol=1e-3)
+
     def test_psd_moments_exact_angles(self):
         # FPI grid: the exact angular integrals change the moments by < 1 %
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])

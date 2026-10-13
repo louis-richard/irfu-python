@@ -630,10 +630,13 @@ def psd_moments(vdf, sc_pot, **kwargs):
         # placeholder, unused by _moms (numba needs an array)
         exact_kernels = np.zeros((1, 10, 1, 1))
 
+    # float64 angles: the angular kernels of _moms must have the dtype of the
+    # exact kernels (FPI angles are float32)
     phi_mat = np.tile(phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
+    phi_mat = phi_mat.astype(np.float64)
     theta_mat = np.tile(
         theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
-    )
+    ).astype(np.float64)
 
     energy_correct = energy - sc_pot[:, np.newaxis]
     velocity = np.sqrt(2 * q_e * energy_correct / p_mass)
