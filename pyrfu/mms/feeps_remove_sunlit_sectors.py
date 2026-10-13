@@ -79,7 +79,7 @@ def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q: float = 0.99, i_en: int 
     spin_sectors = feeps_eyes.spinsectnum.data
     times_in_ss = [np.flatnonzero(spin_sectors == ss) for ss in range(64)]
 
-    table = np.empty(shape=(24, 64)) * np.nan
+    table = np.full((24, 64), np.nan)
 
     for key, row in eyes_rows.items():
         data = feeps_eyes[key].data[:, i_en]
