@@ -2373,6 +2373,55 @@ class PsdMomentsTestCase(unittest.TestCase):
         self.assertIsInstance(result[2], np.ndarray)
         self.assertIsInstance(result[3], np.ndarray)
 
+    def test_moms_exact_kernels(self):
+        # The midpoint kernels passed as exact kernels (delta_ang = 1) give the
+        # midpoint moments
+        rng = np.random.default_rng(0)
+        n_t, n_e, n_ph, n_th = 3, 4, 8, 6
+        phi = rng.uniform(0, 360, (n_t, n_ph, n_th))
+        theta = rng.uniform(0, 180, (n_t, n_ph, n_th))
+        delta_ang = rng.uniform(0.1, 0.2, (n_t, n_ph, n_th))
+        ph, th = np.deg2rad(phi), np.deg2rad(theta)
+        s_t, c_t, s_p, c_p = np.sin(th), np.cos(th), np.sin(ph), np.cos(ph)
+        kernels = np.stack(
+            [
+                s_t,
+                -c_p * s_t**2,
+                -s_p * s_t**2,
+                -s_t * c_t,
+                c_p**2 * s_t**3,
+                s_p**2 * s_t**3,
+                s_t * c_t**2,
+                c_p * s_p * s_t**3,
+                c_p * s_t**2 * c_t,
+                s_p * s_t**2 * c_t,
+            ],
+            axis=1,
+        )
+        args = [
+            np.tile(10.0 * 2.0 ** np.arange(n_e), (n_t, 1)),
+            rng.uniform(1.0, 2.0, (n_t, n_e)),
+            constants.e,
+            np.zeros(n_t),
+            constants.m_p,
+            False,
+            0.0,
+            phi,
+            theta,
+            np.ones((n_t, n_e), dtype=bool),
+            rng.uniform(0.0, 1.0, (n_t, n_e, n_ph, n_th)),
+        ]
+        expected = _moms.__wrapped__(*args, delta_ang, np.zeros((1, 10, 1, 1)), False)
+        exact = _moms.__wrapped__(
+            *args,
+            np.ones(delta_ang.shape),
+            kernels * delta_ang[:, None],
+            True,
+        )
+
+        for res, exp in zip(exact, expected):
+            np.testing.assert_allclose(res, exp, rtol=1e-12)
+
     @staticmethod
     def _drifting_maxwellian(n, t_ev, v_kms, n_t=2, energy1=None):
         # Isotropic proton Maxwellian on an FPI-like burst skymap (32

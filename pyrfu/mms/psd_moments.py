@@ -344,7 +344,10 @@ def _moms_relativistic(moms_args, sc_pot, p_mass):
     # whose non-relativistic speed is the relativistic one, and the pressure
     # and heat flux from the data weighted by the Lorentz factor (momentum flux
     # gamma m v v) and by the kinetic energy over m v^2 / 2
+    # arguments of _moms: energy (0), flag and width of the inner electron
+    # energies (5, 6), data (10)
     energy, vdf_data = moms_args[0], moms_args[10]
+    flag_inner_electron, w_inner_electron = moms_args[5], moms_args[6]
     q_e, c_light = constants.elementary_charge, constants.c
 
     energy_correct = energy - sc_pot[:, np.newaxis]
@@ -358,7 +361,7 @@ def _moms_relativistic(moms_args, sc_pot, p_mass):
 
     # Raw energies where the kernel sets the speed to zero (inner electron
     # energies) or where it is undefined (below the spacecraft potential)
-    keep = ~(velocity > 0.0) | (energy_correct < moms_args[5] * moms_args[6])
+    keep = ~(velocity > 0.0) | (energy_correct < flag_inner_electron * w_inner_electron)
 
     args = list(moms_args)
     args[0] = np.where(
@@ -453,8 +456,9 @@ def psd_moments(vdf, sc_pot, **kwargs):
     Raises
     ------
     ValueError
-        If energy_range has no channel (fixed range) or a wrong shape, or if
-        both energy_range and en_channels are given.
+        If energy_range has no channel (fixed range) or a wrong shape, if
+        both energy_range and en_channels are given, or if angle_integration
+        is not "midpoint" or "exact".
 
     Notes
     -----
@@ -623,6 +627,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         )
         delta_ang = np.ones(delta_ang.shape)
     else:
+        # placeholder, unused by _moms (numba needs an array)
         exact_kernels = np.zeros((1, 10, 1, 1))
 
     phi_mat = np.tile(phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
