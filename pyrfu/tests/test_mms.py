@@ -6745,6 +6745,152 @@ class VdfShiftTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfRebinTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf():
+        # Drifting Maxwellian with azimuths changing with time (FPI burst)
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms, n_t=3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf = vdf.assign(phi=vdf.phi + np.array([0.0, 2.0, 4.0])[:, None])
+        return vdf, np.array(v_kms)
+
+    @staticmethod
+    def _edges(vdf):
+        lower = vdf.energy.data[0] - vdf.attrs["delta_energy_minus"][0]
+        upper = vdf.energy.data[0] + vdf.attrs["delta_energy_plus"][0]
+        return np.hstack([lower, upper[-1]])
+
+    def test_vdf_rebin_energy(self):
+        # Channels of two old channels: the overlap of the bins in v^3 exactly
+        vdf, _ = self._vdf()
+        edges = self._edges(vdf)
+        result = mms.vdf_rebin(vdf, {"energy": edges[::2]}, random_state=0)
+        self.assertEqual(result.data.shape, (3, 16, 32, 16))
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_allclose(result.phi.data, vdf.phi.data)
+        np.testing.assert_allclose(
+            result.energy.data[0], np.sqrt(edges[:-2:2] * edges[2::2])
+        )
+        np.testing.assert_array_equal(result.attrs["lost"], 0.0)
+        self.assertNotIn("frame_velocity", result.attrs)
+
+        v_3 = (2 * constants.e * edges / constants.m_p) ** 1.5
+        w_3 = np.diff(v_3)[None, :, None, None]
+        f_old = vdf.data.data
+        expected = (f_old[:, 0::2] * w_3[:, 0::2] + f_old[:, 1::2] * w_3[:, 1::2]) / (
+            w_3[:, 0::2] + w_3[:, 1::2]
+        )
+        np.testing.assert_allclose(result.data.data, expected, rtol=1e-10)
+
+    def test_vdf_rebin_energy_overlap(self):
+        # EDI channel 475-525 eV across two FPI channels: the Monte-Carlo
+        # estimate of the overlap in v^3
+        vdf, _ = self._vdf()
+        edges = self._edges(vdf)
+        i_e = np.where((edges[1:] > 475.0) & (edges[:-1] < 525.0))[0]
+        small = vdf.isel(idx0=i_e, idx1=np.arange(4), idx2=np.arange(6, 10))
+        small.attrs = {
+            **vdf.attrs,
+            "delta_energy_minus": vdf.attrs["delta_energy_minus"][:, i_e],
+            "delta_energy_plus": vdf.attrs["delta_energy_plus"][:, i_e],
+        }
+        result = mms.vdf_rebin(
+            small, {"energy": [475.0, 525.0]}, n_mc=20000, random_state=0
+        )
+        self.assertEqual(result.data.shape, (3, 1, 4, 4))
+
+        v_3 = (2 * constants.e * edges / constants.m_p) ** 1.5
+        new_3 = (2 * constants.e * np.array([475.0, 525.0]) / constants.m_p) ** 1.5
+        overlap = np.clip(
+            np.minimum(v_3[i_e + 1], new_3[1]) - np.maximum(v_3[i_e], new_3[0]),
+            0.0,
+            None,
+        )
+        expected = np.sum(small.data.data * overlap[:, None, None], axis=1) / np.diff(
+            new_3
+        )
+        np.testing.assert_allclose(result.data.data[:, 0], expected, rtol=0.03)
+
+    def test_vdf_rebin_cartesian(self):
+        vdf, v_kms = self._vdf()
+        v_edges = np.linspace(-1500.0, 1500.0, 31)
+        result = mms.vdf_rebin(vdf, [v_edges] * 3, base="cart", random_state=0)
+        self.assertEqual(result.data.shape, (3, 30, 30, 30))
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_allclose(result.vx.data, v_edges[:-1] + 50.0)
+        np.testing.assert_array_equal(result.attrs["vz_edges"], v_edges)
+
+        # Density and bulk velocity
+        d_v3 = (100.0 * 1e5) ** 3  # cm^3/s^3
+        n_old = mms.vdf_partial_density(vdf).data.data.sum(axis=(1, 2, 3))
+        n_new = result.data.data.sum(axis=(1, 2, 3)) * d_v3
+        lost = result.attrs["lost"]
+        self.assertTrue(np.all((lost > 0) & (lost < 1e-3)))
+        np.testing.assert_allclose(n_new, n_old * (1 - lost), rtol=1e-10)
+        v_x, v_y, v_z = np.meshgrid(
+            result.vx.data, result.vy.data, result.vz.data, indexing="ij"
+        )
+        v_mean = [
+            np.sum(result.data.data[0] * v) / np.sum(result.data.data[0])
+            for v in [v_x, v_y, v_z]
+        ]
+        np.testing.assert_allclose(v_mean, v_kms, atol=2.0)
+
+        # The drifting Maxwellian in the boxes
+        v_th2 = 2 * constants.e * 1000.0 / constants.m_p / 1e6
+        d_v2 = (v_x - v_kms[0]) ** 2 + (v_y - v_kms[1]) ** 2 + (v_z - v_kms[2]) ** 2
+        expected = 1e-6 / (np.pi * v_th2 * 1e6) ** 1.5 * np.exp(-d_v2 / v_th2)
+        core = expected > 0.1 * expected.max()
+        ratio = result.data.data[0][core] / expected[core]
+        self.assertAlmostEqual(float(np.mean(ratio)), 1.0, delta=0.01)
+
+        # Rotation: rows are the new axes
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        rotated = mms.vdf_rebin(
+            vdf, [v_edges] * 3, base="cart", rotation=rotation, random_state=0
+        )
+        v_mean = [
+            np.sum(rotated.data.data[0] * v) / np.sum(rotated.data.data[0])
+            for v in [v_x, v_y, v_z]
+        ]
+        np.testing.assert_allclose(v_mean, rotation @ v_kms, atol=2.0)
+
+    def test_vdf_rebin_cartesian_units(self):
+        vdf, _ = self._vdf()
+        v_edges = np.linspace(-1500.0, 1500.0, 16)
+        expected = mms.vdf_rebin(vdf, [v_edges] * 3, base="cart", random_state=0)
+
+        # Fluxes give the phase-space density in s^3/m^6
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        result = mms.vdf_rebin(dpf, [v_edges] * 3, base="cart", random_state=0)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/m^6")
+        np.testing.assert_allclose(
+            result.data.data, 1e12 * expected.data.data, rtol=1e-10
+        )
+
+        # Spacecraft potential: the density of the corrected bins
+        result = mms.vdf_rebin(
+            vdf, [v_edges] * 3, base="cart", sc_pot=20.0, random_state=0
+        )
+        d_v3 = (200.0 * 1e5) ** 3
+        n_new = result.data.data.sum(axis=(1, 2, 3)) * d_v3
+        n_old = mms.vdf_partial_density(vdf, sc_pot=20.0).data.data.sum(axis=(1, 2, 3))
+        np.testing.assert_allclose(
+            n_new, n_old * (1 - result.attrs["lost"]), rtol=1e-10
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_rebin(vdf, [v_edges] * 2, base="cart")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_rebin(vdf, [v_edges] * 3, base="box")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_rebin(_pad_case(np.ones((3, 2, 12))), {"energy": [1.0, 2.0]})
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):

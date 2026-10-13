@@ -101,6 +101,7 @@ from .vdf_mask import vdf_mask
 from .vdf_omni import vdf_omni
 from .vdf_partial_density import vdf_partial_density
 from .vdf_projection import vdf_projection
+from .vdf_rebin import vdf_rebin
 from .vdf_reduce import vdf_frame_transformation, vdf_reduce
 from .vdf_shift import vdf_shift
 from .vdf_solid_angle import vdf_solid_angle
@@ -216,6 +217,7 @@ __all__ = [
     "vdf_omni",
     "vdf_partial_density",
     "vdf_projection",
+    "vdf_rebin",
     "vdf_reduce",
     "vdf_shift",
     "vdf_solid_angle",
