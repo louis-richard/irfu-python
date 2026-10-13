@@ -69,9 +69,12 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         3D skymap velocity distribution function.
     xyz : xarray.DataArray or numpy.ndarray
         Transformation matrix from instrument frame to desired frame.
-    base : str, Optional
-        Base for the 2D projection either cartesian 'cart' (default) or
-        polar 'pol'.
+    dim : {"1d", "2d", "3d"}, Optional
+        Dimension of the reduced distribution: a line ("1d", default), a plane
+        ("2d") or a box ("3d").
+    base : {"pol", "cart"}, Optional
+        Base of the projection: polar "pol" (default, for "1d") or cartesian
+        "cart" (for "2d" and "3d").
     **kwargs
         Keyword arguments
 
