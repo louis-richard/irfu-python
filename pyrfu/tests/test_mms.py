@@ -1831,6 +1831,27 @@ class GetGyrophaseDistTestCase(unittest.TestCase):
             with self.assertRaises(ValueError):
                 mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, 10.0]), **kwargs)
 
+    def test_get_gyrophase_dist_options(self):
+        # Bin edges as an array, azimuths without time, and a time interval
+        def beam(p, t):
+            return ((np.abs(p - 275.625) < 1) & (np.abs(t - 95.625) < 1)) * 1.0
+
+        vdf = _gyro_skymap(beam, n_t=4)
+        b_z = _b_const([0.0, 0.0, 10.0], n_t=4)
+        expected = mms.get_gyrophase_dist(vdf, b_z, angles=12)
+
+        result = mms.get_gyrophase_dist(vdf, b_z, angles=np.linspace(0, 360, 13))
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+        vdf_1d = vdf.assign(phi=(["idx1"], vdf.phi.data[0]))
+        result = mms.get_gyrophase_dist(vdf_1d, b_z, angles=12)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[1, 2]]))
+        result = mms.get_gyrophase_dist(vdf, b_z, tint=tint, angles=12)
+        np.testing.assert_array_equal(result.time.data, vdf.time.data[1:3])
+        np.testing.assert_array_equal(result.data.data, expected.data.data[1:3])
+
     def test_get_gyrophase_dist_feeps(self):
         # FEEPS skymap (4 rings with angular widths in the attributes)
         feeps_alle = _feeps_skymap_case("brst", 128)
