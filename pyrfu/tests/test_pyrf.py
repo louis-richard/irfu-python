@@ -211,6 +211,22 @@ class AverageVDFTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["delta_energy_minus"].ndim, 2)
         self.assertEqual(len(result.attrs["delta_energy_minus"]), len(avg_inds))
 
+    def test_average_vdf_delta_time(self):
+        # A window spans its accumulations: n_pts times the sampling period
+        vdf = generate_vdf(64.0, 100, [32, 32, 16])
+        vdf.attrs["delta_time_minus"] = np.full(100, 0.5 / 64.0)
+        vdf.attrs["delta_time_plus"] = np.full(100, 0.5 / 64.0)
+
+        result = pyrf.average_vdf(vdf, 3)
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            self.assertEqual(len(result.attrs[key]), len(result.time))
+            np.testing.assert_allclose(result.attrs[key], 1.5 / 64.0, rtol=1e-6)
+
+        # The whole interval, time tag at the middle
+        result = pyrf.average_vdf(vdf, None)
+        total = result.attrs["delta_time_minus"] + result.attrs["delta_time_plus"]
+        np.testing.assert_allclose(total, 100 / 64.0, rtol=1e-6)
+
 
 @ddt
 class Avg4SCTestCase(unittest.TestCase):

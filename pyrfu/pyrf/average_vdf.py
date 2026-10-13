@@ -17,6 +17,11 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _seconds(values):
+    r"""Durations in seconds as timedelta64[ns]."""
+    return (np.asarray(values, dtype=np.float64) * 1e9).astype("timedelta64[ns]")
+
+
 def average_vdf(vdf, n_pts, method: str = "mean"):
     r"""Time averages the velocity distribution functions over `n_pts` in time.
 
@@ -99,5 +104,19 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
         vdf_avg.attrs[k] = np.stack(
             [np.nanmean(vdf.attrs[k][i_l:i_r], axis=0) for i_l, i_r in bounds]
         )
+
+    # Half widths of the accumulations: from the start of the first sample of
+    # each window to the end of the last
+    if "delta_time_minus" in vdf.attrs and "delta_time_plus" in vdf.attrs:
+        t_start = np.array([times[i_l] for i_l, _ in bounds]) - _seconds(
+            [vdf.attrs["delta_time_minus"][i_l] for i_l, _ in bounds]
+        )
+        t_stop = np.array([times[i_r - 1] for _, i_r in bounds]) + _seconds(
+            [vdf.attrs["delta_time_plus"][i_r - 1] for _, i_r in bounds]
+        )
+        vdf_avg.attrs["delta_time_minus"] = (time_avg - t_start) / np.timedelta64(
+            1, "s"
+        )
+        vdf_avg.attrs["delta_time_plus"] = (t_stop - time_avg) / np.timedelta64(1, "s")
 
     return vdf_avg
