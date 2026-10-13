@@ -6013,6 +6013,17 @@ class VdfToE64TestCase(unittest.TestCase):
         self.assertEqual(d_plus[0, -1], np.max(attrs["delta_energy_plus"][:, -1]))
         self.assertEqual(d_minus[0, 0], np.min(attrs["delta_energy_minus"][:, 0]))
 
+    def test_vdf_to_e64_one_table(self):
+        # energy0 equal to energy1: returned unchanged (a copy), as irfu-matlab
+        # PDist.e64; it was merged into 64 duplicated channels
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=False)
+
+        with self.assertLogs("pyrfu", level="INFO"):
+            result = mms.vdf_to_e64(vdf)
+
+        xr.testing.assert_identical(result, vdf)
+        self.assertIsNot(result.data.data, vdf.data.data)
+
     def test_vdf_to_e64_delta_time(self):
         # A pair of samples spans the two accumulations: twice their half
         # widths for regular sampling, as irfu-matlab PDist.e64

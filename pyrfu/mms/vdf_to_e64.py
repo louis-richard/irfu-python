@@ -1,20 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import logging
+
 # 3rd party imports
 import numpy as np
 
-from ..pyrf.ts_skymap import ts_skymap
-
 # Local imports
+from ..pyrf.ts_skymap import ts_skymap
 from .psd_rebin import psd_rebin
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+logger = logging.getLogger(__name__)
 
 
 def _seconds(values):
@@ -34,9 +38,21 @@ def vdf_to_e64(vdf_e32):
     Returns
     -------
     vdf_e64 : xarray.Dataset
-        Time series of the particle distribution with 32 energy channels.
+        Time series of the particle distribution with 64 energy channels, or
+        a copy of `vdf_e32` if its two energy tables are the same.
+
+    Notes
+    -----
+    As irfu-matlab PDist.e64, a distribution with a single energy table
+    (``energy0`` equal to ``energy1``) is returned unchanged.
 
     """
+    energy0 = vdf_e32.attrs.get("energy0")
+    energy1 = vdf_e32.attrs.get("energy1")
+
+    if np.array_equal(np.asarray(energy0), np.asarray(energy1)):
+        logger.info("One energy table: the distribution is returned unchanged")
+        return vdf_e32.copy(deep=True)
 
     time_r, vdf_r, energy_r, phi_r = psd_rebin(
         vdf_e32,
