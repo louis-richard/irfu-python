@@ -61,6 +61,7 @@ energies_ = {
 # set unique energy bins per spacecraft; from DLT on 31 Jan 2017
 e_corr_ = {"electron": [14.0, -1.0, -3.0, -3.0], "ion": [0.0, 0.0, 0.0, 0.0]}
 
+# correction factors of the omni-directional data (0.84 for the MMS1 ions)
 g_fact_ = {"electron": [1.0, 1.0, 1.0, 1.0], "ion": [0.84, 1.0, 1.0, 1.0]}
 
 
@@ -91,10 +92,10 @@ def _eyes_on_omni_energies(inp_dataset):
         If the integral channel of the eyes is not split (16 channels).
 
     """
-    d_type, specie = [inp_dataset.attrs["dtype"] for _ in range(2)]
+    d_type = inp_dataset.attrs["dtype"]
     mms_id = inp_dataset.attrs["mmsId"]
     energies = copy(energies_[d_type])
-    energies += e_corr_[specie][mms_id - 1]
+    energies += e_corr_[d_type][mms_id - 1]
 
     top_sensors = list(filter(lambda x: "top" in x, inp_dataset))
     bot_sensors = list(filter(lambda x: "bot" in x, inp_dataset))
@@ -124,7 +125,7 @@ def _eyes_on_omni_energies(inp_dataset):
         bad_energies = np.abs(energies - eye_energies) > en_chk * energies
         dalleyes[:, bad_energies, idx] = np.nan
 
-    return eyes, dalleyes, energies, g_fact_[specie][mms_id - 1]
+    return eyes, dalleyes, energies, g_fact_[d_type][mms_id - 1]
 
 
 def feeps_omni(inp_dataset):
@@ -145,6 +146,11 @@ def feeps_omni(inp_dataset):
     ValueError
         If the integral channel of the eyes is not split (16 channels).
 
+    See Also
+    --------
+    pyrfu.mms.get_feeps_alleyes, pyrfu.mms.feeps_remove_bad_data,
+    pyrfu.mms.feeps_split_integral_ch, pyrfu.mms.feeps_remove_sun
+
     Notes
     -----
     The integral channel must be split before (`feeps_split_integral_ch`). It
@@ -154,11 +160,6 @@ def feeps_omni(inp_dataset):
     As in IDL SPEDAS and pyspedas, the channels of an eye whose energy is more
     than 10 % away from the omni-directional energy are not averaged (except
     for SITL data). Eyes with NaN energies are kept, as in IDL and pyspedas.
-
-    See Also
-    --------
-    pyrfu.mms.get_feeps_alleyes, pyrfu.mms.feeps_remove_bad_data,
-    pyrfu.mms.feeps_split_integral_ch, pyrfu.mms.feeps_remove_sun
 
     """
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
