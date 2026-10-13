@@ -38,48 +38,19 @@ def _bad_eyes(inp_dataset, bad_vars):
     return inp_dataset_clean
 
 
-def _bad_ch0(inp_dataset, bad_vars):
-    inp_dataset_clean = inp_dataset.copy()
-
+def _bad_channels(inp_dataset, bad_vars, n_channels):
+    # The n_channels lowest energy channels of the bad eyes set to NaN
     for bad_var in bad_vars:
-        if bad_var not in list(inp_dataset.keys()):
-            continue
+        if bad_var in inp_dataset:
+            inp_dataset[bad_var].data[:, :n_channels] = np.nan
 
-        inp_dataset_clean[bad_var].data[:, 0] = np.nan
-
-    return inp_dataset_clean
-
-
-def _bad_ch1(inp_dataset, bad_vars):
-    inp_dataset_clean = inp_dataset.copy()
-
-    for bad_var in bad_vars:
-        if bad_var not in list(inp_dataset.keys()):
-            continue
-
-        inp_dataset_clean[bad_var].data[:, 0] = np.nan
-        inp_dataset_clean[bad_var].data[:, 1] = np.nan
-
-    return inp_dataset_clean
-
-
-def _bad_ch2(inp_dataset, bad_vars):
-    inp_dataset_clean = inp_dataset.copy()
-
-    for bad_var in bad_vars:
-        if bad_var not in list(inp_dataset.keys()):
-            continue
-
-        inp_dataset_clean[bad_var].data[:, 0] = np.nan
-        inp_dataset_clean[bad_var].data[:, 1] = np.nan
-        inp_dataset_clean[bad_var].data[:, 2] = np.nan
-
-    return inp_dataset_clean
+    return inp_dataset
 
 
 def feeps_remove_bad_data(inp_dataset):
-    r"""This function removes bad eyes, bad lowest energy channels based on
-    data from Drew Turner
+    r"""Removes the bad eyes and the bad lowest energy channels of FEEPS data.
+
+    The bad eyes and channels are those of Drew Turner.
 
     Parameters
     ----------
@@ -149,26 +120,14 @@ def feeps_remove_bad_data(inp_dataset):
     # keV), meaning we'll have to adjust the hard-coded ylim settings in
     # SPEDAS and the SITL software:
 
-    # if t_data > iso86012datetime(["2019-05-01T00:00:00.000"])[0]:
-    #     bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
-    #     bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
-    #     bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]
-    # else:
-    #     bad_data_ch0 = bad_ch0["<2019-05-01"][f"mms{mms_id}"]
-    #     bad_data_ch1 = bad_ch1["<2019-05-01"][f"mms{mms_id}"]
-    #     bad_data_ch2 = bad_ch2["<2019-05-01"][f"mms{mms_id}"]
-
+    # The lists of May 2019 are used for all dates, as IDL SPEDAS
     bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
     bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
     bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]
 
-    bad_vars_ch0 = _bad_vars(bad_data_ch0)
-    inp_dataset_clean_ch0 = _bad_ch0(inp_dataset_clean_eye, bad_vars_ch0)
+    for n_channels, bad_data_ch in enumerate(
+        [bad_data_ch0, bad_data_ch1, bad_data_ch2], start=1
+    ):
+        _bad_channels(inp_dataset_clean_eye, _bad_vars(bad_data_ch), n_channels)
 
-    bad_vars_ch1 = _bad_vars(bad_data_ch1)
-    inp_dataset_clean_ch1 = _bad_ch1(inp_dataset_clean_ch0, bad_vars_ch1)
-
-    bad_vars_ch2 = _bad_vars(bad_data_ch2)
-    inp_dataset_clean_all = _bad_ch2(inp_dataset_clean_ch1, bad_vars_ch2)
-
-    return inp_dataset_clean_all
+    return inp_dataset_clean_eye
