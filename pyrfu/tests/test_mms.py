@@ -6891,6 +6891,117 @@ class VdfRebinTestCase(unittest.TestCase):
 
 
 @ddt
+class VdfCutsTestCase(unittest.TestCase):
+    @staticmethod
+    def _bimaxwellian(n_e=32, e_min=10.0, species="ions"):
+        # Bi-Maxwellian in field-aligned coordinates (theta from B), n = 1
+        # cm^-3, T_par = 2 keV, T_perp = 1 keV, 300 km/s along B
+        mass = constants.m_p if species == "ions" else constants.m_e
+        ratio = (3e4 / e_min) ** (1 / (n_e - 1))
+        energy0 = e_min * ratio ** np.arange(n_e)
+        phi = 5.625 + 11.25 * np.arange(32)
+        theta = 5.625 + 11.25 * np.arange(16)
+        speed = np.sqrt(2 * constants.e * energy0 / mass)[:, None, None]
+        ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
+        v_perp2 = (speed * np.sin(th)) ** 2 * np.ones_like(ph)
+        v_par = -speed * np.cos(th) * np.ones_like(ph)
+        w_par = 2 * constants.e * 2000.0 / mass
+        w_perp = 2 * constants.e * 1000.0 / mass
+        f_si = np.exp(-v_perp2 / w_perp - (v_par - 3e5) ** 2 / w_par)
+        f_si *= 1e6 / (np.pi**1.5 * w_perp * np.sqrt(w_par))
+
+        energy = np.tile(energy0, (2, 1))
+        vdf = pyrf.ts_skymap(
+            generate_timeline(1 / 0.15, 2),
+            np.tile(1e-12 * f_si, (2, 1, 1, 1)),
+            energy,
+            np.tile(phi, (2, 1)),
+            theta,
+            energy0=energy0,
+            energy1=energy0,
+            esteptable=np.zeros(2, dtype=np.uint8),
+            attrs={"UNITS": "s^3/cm^6"},
+            glob_attrs={
+                "species": species,
+                "delta_energy_plus": energy * (np.sqrt(ratio) - 1),
+                "delta_energy_minus": energy * (1 - 1 / np.sqrt(ratio)),
+            },
+        )
+        return vdf, f_si
+
+    def test_vdf_cuts_distributions(self):
+        vdf, f_si = self._bimaxwellian()
+        dists, _ = mms.vdf_cuts(vdf)
+        self.assertEqual(dists.f_par.attrs["UNITS"], "s^3/m^6")
+
+        # Along B: the look directions at theta = 174.375 (pitch angle 5.625),
+        # the same at all azimuths; against B: theta = 5.625
+        np.testing.assert_allclose(
+            dists.f_par.data[:, 32:], np.tile(f_si[:, 0, 15], (2, 1)), rtol=1e-12
+        )
+        np.testing.assert_allclose(
+            dists.f_par.data[:, :32], np.tile(f_si[::-1, 0, 0], (2, 1)), rtol=1e-12
+        )
+        speed = np.sqrt(2 * constants.e * vdf.energy.data[0] / constants.m_p) / 1e3
+        np.testing.assert_allclose(
+            dists.v_par.data[0], np.hstack([-speed[::-1], speed])
+        )
+
+        # Perpendicular plane: theta = 84.375 and 95.625
+        expected = (f_si[:, :, 7] + f_si[:, :, 8]) / 2
+        np.testing.assert_allclose(dists.f_perp_2d.data[0], expected, rtol=1e-12)
+        np.testing.assert_allclose(dists.f_perp.data[0], expected[:, 0], rtol=1e-12)
+        np.testing.assert_allclose(dists.v_perp.data[0], speed)
+
+        # Gyro-averaged: pitch angles of the particles, increasing
+        np.testing.assert_allclose(dists.pitch_angle.data, 180.0 - vdf.theta.data[::-1])
+        np.testing.assert_allclose(dists.f_pa.data[0], f_si[:, 0, ::-1], rtol=1e-12)
+
+        # Wider windows: two bins in each cone
+        dists, _ = mms.vdf_cuts(vdf, par_width=20.0, perp_width=20.0)
+        expected = (f_si[:, 0, 14] + f_si[:, 0, 15]) / 2
+        np.testing.assert_allclose(dists.f_par.data[0, 32:], expected, rtol=1e-12)
+        self.assertEqual(dists.attrs["par_width"], 20.0)
+
+    def test_vdf_cuts_moments(self):
+        # A grid from 0.1 eV, so that the low speeds are in the cuts
+        vdf, _ = self._bimaxwellian(n_e=64, e_min=0.1)
+        _, moms = mms.vdf_cuts(vdf)
+        self.assertEqual(moms.t.attrs["UNITS"], "eV")
+        np.testing.assert_array_equal(moms.comp.data, ["perp1", "perp2", "par"])
+
+        # Of the skymap: psd_moments
+        np.testing.assert_allclose(moms.n.data, 1.0, rtol=0.01)
+        np.testing.assert_allclose(moms.v.data[:, 2], 300.0, rtol=0.01)
+        np.testing.assert_allclose(
+            np.diag(moms.t.data[0]), [1000.0, 1000.0, 2000.0], rtol=0.01
+        )
+
+        # Of the cuts: T_par, T_perp and the drift
+        np.testing.assert_allclose(moms.v_par_cut.data, 300.0, rtol=0.01)
+        np.testing.assert_allclose(moms.t_par_cut.data, 2000.0, rtol=0.02)
+        np.testing.assert_allclose(moms.v_perp_cut.data, 0.0, atol=1e-6)
+        np.testing.assert_allclose(np.diag(moms.t_perp_cut.data[0]), 1000.0, rtol=0.03)
+        self.assertTrue(np.all(moms.n_par_cut.data > 0))
+        self.assertEqual(moms.n_perp_cut.attrs["UNITS"], "s/m^4")
+
+    def test_vdf_cuts_input(self):
+        # Any units, electrons, NaN bins
+        vdf, _ = self._bimaxwellian(species="electrons")
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        dists, moms = mms.vdf_cuts(dpf)
+        expected, _ = mms.vdf_cuts(vdf)
+        np.testing.assert_allclose(dists.f_par.data, expected.f_par.data, rtol=1e-10)
+
+        vdf.data.data[:, :, :16, :] = np.nan
+        dists, _ = mms.vdf_cuts(vdf)
+        np.testing.assert_allclose(dists.f_par.data, expected.f_par.data, rtol=1e-12)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_cuts(_pad_case(np.ones((3, 2, 12))))
+
+
+@ddt
 class TokenizeTestCase(unittest.TestCase):
     @data(*random.choices(_mms_keys(), k=10))
     def test_tokenize(self, var_str):

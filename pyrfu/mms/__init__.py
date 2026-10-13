@@ -92,6 +92,7 @@ from .scpot2ne import scpot2ne
 from .spectr_to_dataset import spectr_to_dataset
 from .tokenize import tokenize
 from .vdf_convert import vdf_convert
+from .vdf_cuts import vdf_cuts
 from .vdf_d3v import vdf_d3v
 from .vdf_elim import vdf_elim
 from .vdf_find_low_counts import vdf_find_low_counts
@@ -207,6 +208,7 @@ __all__ = [
     "spectr_to_dataset",
     "tokenize",
     "vdf_convert",
+    "vdf_cuts",
     "vdf_d3v",
     "vdf_elim",
     "vdf_find_low_counts",

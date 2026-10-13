@@ -116,6 +116,7 @@ FPI particle distributions
    pad_diffusion
    psd_rebin
    vdf_rebin
+   vdf_cuts
    vdf_shift
    vdf_macroparticles
    vdf_frame_transformation
