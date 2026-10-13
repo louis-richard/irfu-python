@@ -16,6 +16,13 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+def _spin_bounds(spin_sectors):
+    r"""Start indices of the spins [s_k, s_k+1), from the decreases of the spin
+    sector, with the partial spins at both ends."""
+    spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
+    return np.unique(np.hstack([0, spin_starts, len(spin_sectors)]))
+
+
 def feeps_spin_avg(flux_omni, spin_sectors):
     r"""Spin-average the omni-directional FEEPS energy spectra.
 
@@ -56,10 +63,7 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     if len(spin_sectors) != len(flux_omni.time):
         raise ValueError("spin_sectors must have one value per time of flux_omni")
 
-    spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
-
-    # spins [s_k, s_k+1), with the partial spins at both ends
-    bounds = np.unique(np.hstack([0, spin_starts, len(spin_sectors)]))
+    bounds = _spin_bounds(spin_sectors)
 
     energies = flux_omni.energy.data
     data = flux_omni.data
