@@ -7,7 +7,7 @@ import xarray as xr
 
 # Local imports
 from ._vdf_bins import _is_skymap
-from ._vdf_mc import _rng, _sample, _source_bins
+from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins
 from .vdf_convert import _PSD, vdf_convert
 from .vdf_shift import _shift
 from .vdf_velocity import _rotation_matrices
@@ -28,10 +28,7 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
 
     f_si = np.nan_to_num(vdf_convert(vdf, "s^3/m^6").data.data)
     bins = _source_bins(vdf, sc_pot)
-    d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
-    d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
-    d_cos = bins["cos_upper"] - bins["cos_lower"]
-    d3v = d_v3[:, :, None, None] * d_phi[:, None, :, None] * d_cos
+    d3v = _bins_d3v(bins)
     rotations = _rotation_matrices(rotation, len(vdf.time))
     rng = _rng(random_state)
 
@@ -114,6 +111,10 @@ def vdf_rebin(
         If `vdf` is not a skymap, `base` is invalid or `grid` is not three
         arrays of edges for ``base="cart"``.
 
+    See Also
+    --------
+    pyrfu.mms.vdf_shift, pyrfu.mms.reduce
+
     Notes
     -----
     As irfu-matlab, each bin with data is sampled by `n_mc` particles carrying
@@ -137,10 +138,6 @@ def vdf_rebin(
     For ``base="cart"``, irfu-matlab takes the azimuth widths of burst skymaps
     from the azimuths of two times and only works with as many vy as vz
     boxes.
-
-    See Also
-    --------
-    pyrfu.mms.vdf_shift, pyrfu.mms.reduce
 
     Examples
     --------
