@@ -39,7 +39,7 @@ def feeps_remove_sun(inp_dataset):
     out : xarray.Dataset
         Dataset of cleaned energy spectrum of all eyes.
 
-    See also
+    See Also
     --------
     pyrfu.mms.get_feeps_alleyes : Read energy spectrum for all FEEPS eyes.
 
