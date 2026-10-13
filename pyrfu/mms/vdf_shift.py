@@ -175,6 +175,7 @@ def _shift(
                 k: v
                 for k, v in vdf.attrs.items()
                 if not k.startswith(("delta_", "energy", "esteptable", "coverage"))
+                or k.startswith("delta_time")
             },
             "delta_energy_minus": energy - energy_edges[:, :-1],
             "delta_energy_plus": energy_edges[:, 1:] - energy,

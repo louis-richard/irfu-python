@@ -6809,8 +6809,10 @@ class VdfShiftTestCase(unittest.TestCase):
         # Every particle stays in its bin: the skymap is unchanged, apart from
         # the widened first and last energy bins
         vdf, _ = self._vdf([0.0, 0.0, 0.0])
+        vdf.attrs["delta_time_minus"] = vdf.attrs["delta_time_plus"] = np.ones(2)
         result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], n_mc=20, random_state=0)
         self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_array_equal(result.attrs["delta_time_plus"], np.ones(2))
         np.testing.assert_allclose(
             result.data.data[:, 1:-1], vdf.data.data[:, 1:-1], rtol=1e-9
         )
