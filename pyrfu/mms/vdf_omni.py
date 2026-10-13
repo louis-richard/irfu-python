@@ -9,15 +9,14 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from pyrfu.pyrf.ts_spectr import ts_spectr
-
+from ..pyrf.ts_spectr import ts_spectr
 from ._vdf_bins import (
     _band_solid_angles,
-    _energy_edges,
     _mass,
     _phi_edges,
     _relativistic,
     _speed,
+    _speed_edges,
     _theta_edges,
 )
 from ._vdf_mc import _rng
@@ -63,7 +62,7 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
         axis=-1,
     )
 
-    v_lower, v_upper = (_speed(e, mass, relativistic) for e in _energy_edges(vdf))
+    v_lower, v_upper = _speed_edges(vdf, None, relativistic)
     phi_lower, phi_upper = _phi_edges(vdf)
     theta_lower, theta_upper = _theta_edges(vdf)
     data = vdf.data.data
@@ -74,7 +73,8 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
     for i_t in range(n_t):
         # Look directions (minus the particle velocities in the spacecraft
         # frame) of the points
-        look = -(speed[i_t, :, None, None] * u_xyz[None] + v_frame[i_t])
+        look = speed[i_t, :, np.newaxis, np.newaxis] * u_xyz[np.newaxis]
+        look = -(look + v_frame[i_t])
         norm = np.linalg.norm(look, axis=-1)
 
         with np.errstate(invalid="ignore", divide="ignore"):
