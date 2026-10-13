@@ -3,6 +3,7 @@
 
 # Local imports
 from ._psd_units import _data_and_units, _output, _relativistic_factor
+from ._vdf_bins import _relativistic
 from .def2psd import def2psd
 from .dpf2psd import dpf2psd
 from .psd2def import psd2def
@@ -36,6 +37,7 @@ _NAMES = {
 
 
 def _check(units):
+    # Lower-case units, if supported
     if units.lower() not in _NAMES:
         raise ValueError(f"Units not supported: {units}")
 
@@ -53,9 +55,8 @@ def _to_psd_si(inp, units, relativistic):
         out = def2psd(inp)
 
         if relativistic:
-            out = _output(
-                out, out.data * _relativistic_factor(inp, out.data), "s^3/m^6"
-            )
+            data, _ = _data_and_units(out)
+            out = _output(out, data * _relativistic_factor(inp, data), "s^3/m^6")
 
         return out
 
@@ -127,11 +128,10 @@ def vdf_convert(vdf, units: str, relativistic: bool = None):
     _, old_units = _data_and_units(vdf)
     old_units, new_units = _check(old_units), _check(units)
 
-    if relativistic is None:
-        relativistic = vdf.attrs.get("relativistic", False)
+    relativistic = _relativistic(vdf, relativistic)
 
     if old_units == new_units:
         return _output(vdf, _data_and_units(vdf)[0].copy(), _NAMES[new_units])
 
-    psd = _to_psd_si(vdf, old_units, bool(relativistic))
-    return _from_psd_si(psd, new_units, bool(relativistic))
+    psd = _to_psd_si(vdf, old_units, relativistic)
+    return _from_psd_si(psd, new_units, relativistic)
