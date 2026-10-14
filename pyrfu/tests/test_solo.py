@@ -14,6 +14,8 @@ from unittest import mock
 
 # 3rd party imports
 import numpy as np
+import pycdfpp
+import xarray as xr
 from ddt import data, ddt, unpack
 
 # Local imports
@@ -138,6 +140,54 @@ class ReadTNRTestCase(unittest.TestCase):
     def test_read_tnr_output(self, tint, sensor, data_path):
         _use_empty_data_dir(self)
         self.assertIsNone(solo.read_tnr(tint, sensor, data_path))
+
+    @staticmethod
+    def _tnr_l2(sensor, n_sweeps):
+        # Synthetic L2 file: sweeps 1, ..., n_sweeps of the four bands (one
+        # record per band, 1 s apart), the sensor on the first channel, and the
+        # spectra equal to the sweep number at every frequency
+        n_rec = 4 * n_sweeps
+        sweep = np.repeat(np.arange(1, n_sweeps + 1), 4).astype(np.uint32)
+        time = np.datetime64("2023-01-01T00:00:00", "ns")
+        time = time + np.arange(n_rec) * np.timedelta64(1, "s")
+        spectra = np.repeat(sweep[:, None], 32, axis=1).astype(np.float64)
+        variables = {
+            "epoch": pycdfpp.to_tt2000(time),
+            "auto1": spectra,
+            "auto2": np.zeros_like(spectra),
+            "magnetic_spectral_power1": spectra,
+            "magnetic_spectral_power2": np.zeros_like(spectra),
+            "sweep_num": sweep,
+            "tnr_band": np.tile(np.arange(4), n_sweeps).astype(np.uint8),
+            "sensor_config": np.tile(np.array([sensor, 5], np.uint8), (n_rec, 1)),
+            "front_end": np.ones(n_rec, dtype=np.uint8),
+            "tnr_band_freq": np.geomspace(4e3, 1e6, 128)
+            .reshape(4, 32)
+            .astype(np.uint32),
+        }
+        return {k: xr.DataArray(v) for k, v in variables.items()}, time
+
+    @data(4, 7)
+    def test_read_tnr_data(self, sensor):
+        variables, time = self._tnr_l2(sensor, 5)
+        module = sys.modules["pyrfu.solo.read_tnr"]
+        files = ["solo_L2_rpw-tnr-surv_20230101_V01.cdf"]
+
+        with mock.patch.object(module, "_list_files_tnr_l2", return_value=files):
+            with mock.patch.object(module, "read_cdf", return_value=variables):
+                tint = ["2023-01-01T00:00:00", "2023-01-01T00:01:00"]
+                out = solo.read_tnr(tint, sensor)
+
+        # Sweeps 2 to 4 (the first and the last are dropped), at the time of
+        # their first record, below 100 kHz, minus the integral over frequency
+        # (trapezoidal rule, unit spacing) divided by the number of sweeps
+        freq = variables["tnr_band_freq"].data.ravel() / 1e3
+        n_freq = np.sum(freq < 1e2)
+        sweeps = np.arange(2.0, 5.0)
+        expected = sweeps - sweeps * (n_freq - 1) / len(sweeps)
+        np.testing.assert_array_equal(out.time.data, time[[4, 8, 12]])
+        np.testing.assert_allclose(out.frequency.data, freq[:n_freq])
+        np.testing.assert_allclose(out.data, np.tile(expected[:, None], n_freq))
 
 
 if __name__ == "__main__":
