@@ -5523,17 +5523,18 @@ class ReduceTestCase(unittest.TestCase):
         phi_grid = isd.call_args.args[5]
         np.testing.assert_allclose(phi_grid, np.deg2rad(5.625 + 11.25 * np.arange(32)))
 
-    @data(True, False)
-    def test_reduce_drifting_maxwellian(self, energy_widths):
+    @data([], ["delta_energy_minus"], ["delta_energy_minus", "delta_energy_plus"])
+    def test_reduce_drifting_maxwellian(self, removed):
         # 1 keV proton Maxwellian (n = 1 cm^-3) drifting at (-300, 200, 100) km/s,
         # reduced along x. Uses the channel widths from delta_energy_* or, if
         # missing, the default speed bin edges. The reduced distribution used to
-        # be shifted to lower speeds (n 6 %, V 7 % and T 12 % too low).
+        # be shifted to lower speeds (n 6 %, V 7 % and T 12 % too low), and
+        # failed without delta_energy_plus.
         v_d = [-300.0, 200.0, 100.0]
         vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_d)
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
-        if not energy_widths:
-            del vdf.attrs["delta_energy_minus"]
+        for key in removed:
+            del vdf.attrs[key]
 
         v_grid = np.linspace(-2500.0, 2500.0, 251) * 1e3
         result = mms.reduce(vdf, np.eye(3), "1d", "pol", vg=v_grid, n_mc=50)
@@ -5578,6 +5579,24 @@ class ReduceTestCase(unittest.TestCase):
             axis=(1, 2, 3),
         )
         np.testing.assert_allclose(n_reduced, n_direct, rtol=0.01)
+
+    def test_reduce_cart_without_energy_widths(self):
+        # Without the energy widths, the default Cartesian grid extends to the
+        # upper edge of the inferred speed bins: the top channel speed
+        # extrapolated by half a channel in log space (relativistic speeds)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        del vdf.attrs["delta_energy_minus"], vdf.attrs["delta_energy_plus"]
+
+        result = mms.reduce(vdf, np.eye(3), "2d", "cart", n_mc=1)
+
+        gamma = 1 + constants.electron_volt * vdf.energy.data[0, -2:] / (
+            constants.proton_mass * constants.speed_of_light**2
+        )
+        speed = constants.speed_of_light * np.sqrt(1 - 1 / gamma**2)
+        v_max = speed[1] * np.sqrt(speed[1] / speed[0])
+        np.testing.assert_allclose(result.vx.data[[0, -1]] * 1e3, [-v_max, v_max])
+        np.testing.assert_allclose(result.vy.data[[0, -1]] * 1e3, [-v_max, v_max])
 
 
 @ddt

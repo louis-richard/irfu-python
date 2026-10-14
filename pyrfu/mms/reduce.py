@@ -11,7 +11,7 @@ from scipy.constants import electron_mass, electron_volt, proton_mass, speed_of_
 
 # Local imports
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
-from pyrfu.pyrf.int_sph_dist import int_sph_dist
+from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip
 from pyrfu.pyrf.ts_scalar import ts_scalar
@@ -82,6 +82,14 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     -------
     out : xarray.DataArray
         Time series of reduced velocity distribution function.
+
+    Notes
+    -----
+    The energy widths of the channels (``delta_energy_minus`` and
+    ``delta_energy_plus`` attributes of `vdf`) are optional. Without both,
+    the speed bins are edged at the geometric means of neighbouring channel
+    speeds (see `pyrfu.pyrf.int_sph_dist`); without ``delta_energy_plus``,
+    the default Cartesian grid extends to the upper edge of these bins.
 
     """
 
@@ -231,11 +239,15 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     else:
         raise ValueError("Invalid species!!")
 
-    # Convert maximum energy from instrument to velocity (relativistically
-    # correct)
-    e_max = vdf_energy.data[0, -1] + vdf.attrs["delta_energy_plus"][0, -1]
-    gamma_max = 1 + electron_volt * e_max / (m_p * speed_of_light**2)
-    v_max = speed_of_light * np.sqrt(1 - 1 / gamma_max**2)  # m/s
+    # Maximum speed of the instrument (relativistically correct): the upper
+    # energy edge of the top channel, or without delta_energy_plus the upper
+    # edge of the speed bins inferred in int_sph_dist
+    if "delta_energy_plus" in vdf.attrs:
+        e_max = vdf_energy.data[0, -1] + vdf.attrs["delta_energy_plus"][0, -1]
+        v_max = _energy2speed(e_max, m_p)  # m/s
+    else:
+        energy = vdf_energy.data[0, :].astype(np.float64)
+        v_max = _speed_bin_edges(_energy2speed(energy, m_p))[-1]  # m/s
 
     # initiate projected f
     if velocity_grid is not None:
