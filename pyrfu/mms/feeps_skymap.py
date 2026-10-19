@@ -260,8 +260,8 @@ def feeps_skymap(
     accumulates the 8 sectors up to the labelled one, so its centre is 3.5
     sectors before the label. With `b_bcs` and `b_dmpa`, the spin phase is
     taken from FGM where B is at least about 6 degrees from the spin axis
-    (|B_perp| / |B| >= 0.1), and a
-    warning is given if it differs from the spin sectors by more than 1 degree.
+    (:math:`|B_\perp| / |B| \geq 0.1`), and a warning is given if it differs
+    from the spin sectors by more than 1 degree.
 
     The eyes lie on 4 cones around the spin axis (electrons 5, 65, 115 and 175
     degrees, ions 12, 49, 131 and 168 degrees), the theta bins. Their widths
