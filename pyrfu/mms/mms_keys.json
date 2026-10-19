@@ -170,6 +170,18 @@
       "cdf_name": "edp_sdevfit_p34_slow_l2a",
       "dtype": "dce2d"
     },
+    "v6_edp_brst_l2": {
+      "cdf_name": "edp_dcv_brst_l2",
+      "dtype": "scpot"
+    },
+    "v6_edp_fast_l2": {
+      "cdf_name": "edp_dcv_fast_l2",
+      "dtype": "scpot"
+    },
+    "v6_edp_slow_l2": {
+      "cdf_name": "edp_dcv_slow_l2",
+      "dtype": "scpot"
+    },
     "v_edp_brst_l2": {
       "cdf_name": "edp_scpot_brst_l2",
       "dtype": "scpot"

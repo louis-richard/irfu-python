@@ -7538,6 +7538,14 @@ class TokenizeTestCase(unittest.TestCase):
         # The GSM velocity keys read the GSE velocity (mec_v_gse)
         self.assertEqual(mms.tokenize(var_str)["cdf_name"], "mec_v_gsm")
 
+    @data("brst", "fast", "slow")
+    def test_tokenize_edp_probe_potentials(self, data_rate):
+        # The 6 probe-to-spacecraft potentials (dcv) are in the scpot files,
+        # as irfu-matlab mms.get_data V6_edp_*_l2
+        result = mms.tokenize(f"v6_edp_{data_rate}_l2")
+        self.assertEqual(result["cdf_name"], f"edp_dcv_{data_rate}_l2")
+        self.assertEqual(result["dtype"], "scpot")
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
