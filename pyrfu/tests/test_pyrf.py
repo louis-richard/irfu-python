@@ -3397,6 +3397,34 @@ class Iso86012TimeVec(unittest.TestCase):
         result = pyrf.iso86012timevec(value)
         self.assertIsInstance(result, np.ndarray)
 
+    @data(
+        ("2019-09-14T07:54:00", [2019, 9, 14, 7, 54, 0, 0, 0, 0]),
+        ("2019-09-14T07:54:00.000", [2019, 9, 14, 7, 54, 0, 0, 0, 0]),
+        ("2019-09-14T07:54:00.5", [2019, 9, 14, 7, 54, 0, 500, 0, 0]),
+        ("2019-09-14T07:54:00.123456", [2019, 9, 14, 7, 54, 0, 123, 456, 0]),
+        ("2019-09-14T07:54:00.123456789", [2019, 9, 14, 7, 54, 0, 123, 456, 789]),
+    )
+    @unpack
+    def test_iso86012timevec_precisions(self, time, expected):
+        # Fewer than 9 fractional digits used to raise AttributeError
+        result = pyrf.iso86012timevec(time)
+        np.testing.assert_array_equal(result, [expected])
+
+    def test_iso86012timevec_round_trip(self):
+        time = ["2019-01-01T00:00:00.123456789", "2019-09-14T07:54:00.000000000"]
+        result = pyrf.timevec2iso8601(pyrf.iso86012timevec(time))
+        self.assertListEqual(list(result), time)
+
+    @data(
+        "2019-09-14T07:54:00Z",
+        "2019-09-14T07:54:00.1234567891",
+        "2019-09-14 07:54:00",
+        "2019-09-14T07:54:00x123456789",
+    )
+    def test_iso86012timevec_invalid(self, time):
+        with self.assertRaises(ValueError):
+            pyrf.iso86012timevec(time)
+
 
 @ddt
 class LowPassTestCase(unittest.TestCase):
