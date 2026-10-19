@@ -84,6 +84,9 @@ redirects = _api_redirects()
 # Prefix section labels with the document name, as notebooks share section
 # titles ("Load data", "Plot", ...)
 autosectionlabel_prefix_document = True
+# Labels for the document and section titles only: the subsections of each
+# release in the changelog share their titles ("New features", ...)
+autosectionlabel_maxdepth = 2
 codeautolink_custom_blocks = {
     "python3": None,
     "pycon3": "sphinx_codeautolink.clean_pycon",
