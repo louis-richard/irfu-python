@@ -83,9 +83,10 @@ def rotate_tensor(
         Flag for perpendicular components of the tensor, for field-aligned
         coordinates only (as irfu-matlab): default "pp" for "fac", no
         additional rotation for the other coordinate systems.
-            * "" : no additional rotation applied
-            * "pp" : perpendicular diagonal components are equal
-            * "qq" : perpendicular diagonal components are most unequal
+
+        * "" : no additional rotation applied
+        * "pp" : perpendicular diagonal components are equal
+        * "qq" : perpendicular diagonal components are most unequal
 
     verbose : bool, Optional
         Set to True to print additional information.
