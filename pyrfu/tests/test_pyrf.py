@@ -20,7 +20,7 @@ import numba
 import numpy as np
 import xarray as xr
 from ddt import data, ddt, idata, unpack
-from scipy import constants, interpolate
+from scipy import constants, interpolate, signal
 
 # Local imports
 from .. import pyrf
@@ -5528,17 +5528,6 @@ class MedfiltTestCase(unittest.TestCase):
             pyrf.medfilt(inp, kernel_size)
 
     @data(
-        (
-            generate_ts(64.0, 100, tensor_order=random.randint(3, 10)),
-            random.randint(0, 99),
-        )
-    )
-    @unpack
-    def test_medfilt_input_value(self, inp, kernel_size):
-        with self.assertRaises(ValueError):
-            pyrf.medfilt(inp, kernel_size)
-
-    @data(
         (generate_ts(64.0, 100, tensor_order=0), None),
         (generate_ts(64.0, 100, tensor_order=0), random.randint(0, 99)),
         (generate_ts(64.0, 100, tensor_order=1), random.randint(0, 99)),
@@ -5548,6 +5537,53 @@ class MedfiltTestCase(unittest.TestCase):
     def test_medfilt_output(self, inp, kernel_size):
         result = pyrf.medfilt(inp, kernel_size)
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_medfilt_values(self):
+        # The median of scipy.signal.medfilt for each component, in double
+        # precision (the float32 output was 0.031 off for values of 1e6)
+        rng = np.random.default_rng(0)
+        time = generate_timeline(16.0, 200)
+        values = 1e6 + rng.standard_normal((200, 3))
+        result = pyrf.medfilt(pyrf.ts_vec_xyz(time, values), 5)
+
+        self.assertEqual(result.dtype, np.float64)
+
+        for i in range(3):
+            np.testing.assert_array_equal(
+                result.data[:, i], signal.medfilt(values[:, i], 5)
+            )
+
+    @data((200, 9), (200, 1), (200, 2, 3, 4))
+    def test_medfilt_shapes(self, shape):
+        # Any number of components, with the dims and attrs of the input:
+        # (time, 9) was reshaped to 3x3 and (time, 1) squeezed (ValueError)
+        rng = np.random.default_rng(1)
+        dims = ["time"] + [f"d{i}" for i in range(len(shape) - 1)]
+        inp = xr.DataArray(
+            rng.standard_normal(shape),
+            coords={"time": generate_timeline(16.0, shape[0])},
+            dims=dims,
+            attrs={"UNITS": "nT"},
+        )
+        inp_copy = inp.copy(deep=True)
+        result = pyrf.medfilt(inp, 3)
+
+        self.assertEqual(result.dims, inp.dims)
+        self.assertEqual(result.shape, shape)
+        self.assertEqual(result.attrs, {"UNITS": "nT"})
+        last = inp.data.reshape(shape[0], -1)[:, -1]
+        np.testing.assert_array_equal(
+            result.data.reshape(shape[0], -1)[:, -1], signal.medfilt(last, 3)
+        )
+        xr.testing.assert_identical(inp, inp_copy)
+
+    def test_medfilt_float_kernel_size(self):
+        # A float kernel size (the sampling frequency in the docstring
+        # example) is rounded, then made odd (it raised TypeError)
+        inp = generate_ts(16.0, 200, tensor_order=1)
+        np.testing.assert_array_equal(
+            pyrf.medfilt(inp, 16.0).data, pyrf.medfilt(inp, 17).data
+        )
 
 
 @ddt
