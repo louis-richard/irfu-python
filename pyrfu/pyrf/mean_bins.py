@@ -6,11 +6,44 @@ import numpy as np
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
+
+
+def _bin_stat(inp0, inp1, bins, func):
+    # Pairs with a non-finite x or y are left out
+    finite = np.isfinite(inp0.data) & np.isfinite(inp1.data)
+
+    if not np.any(finite):
+        raise ValueError("inp0 and inp1 have no finite pair of values")
+
+    x_data, y_data = [inp0.data[finite], inp1.data[finite]]
+
+    # Same edges as numpy.histogram: bins uniform bins from min(x) to max(x)
+    # (min(x) - 0.5 to max(x) + 0.5 if x is constant)
+    x_edge = np.histogram_bin_edges(x_data, bins)
+
+    # Bin i holds x_edge[i] <= x < x_edge[i + 1], the last one also max(x)
+    idx_bin = np.clip(np.digitize(x_data, x_edge) - 1, 0, bins - 1)
+
+    y_stat, y_std = [np.full(bins, np.nan), np.full(bins, np.nan)]
+
+    for i in range(bins):
+        y_bin = y_data[idx_bin == i]
+
+        if y_bin.size:
+            y_stat[i], y_std[i] = [func(y_bin), np.std(y_bin)]
+
+    out_dict = {
+        "data": (["bins"], y_stat),
+        "sigma": (["bins"], y_std),
+        "bins": (x_edge[:-1] + x_edge[1:]) / 2,
+    }
+
+    return xr.Dataset(out_dict)
 
 
 def mean_bins(inp0, inp1, bins: int = 10):
@@ -19,11 +52,12 @@ def mean_bins(inp0, inp1, bins: int = 10):
     Parameters
     ----------
     inp0 : xarray.DataArray
-        Time series of the quantity of corresponding to the bins.
+        Time series of the quantity x that defines the bins.
     inp1 : xarray.DataArray
-        Time series of the quantity to compute the binned mean.
+        Time series of the quantity y to compute the binned mean of, paired
+        with inp0 sample by sample.
     bins : int, Optional
-        Number of bins.
+        Number of bins. Default is 10.
 
     Returns
     -------
@@ -35,6 +69,18 @@ def mean_bins(inp0, inp1, bins: int = 10):
                 Mean values of y corresponding to each bin of x.
             * sigma : xarray.DataArray
                 Standard deviation.
+
+    Raises
+    ------
+    ValueError
+        If no pair of inp0 and inp1 values is finite.
+
+    Notes
+    -----
+    The bins are those of numpy.histogram: uniform from min(x) to max(x),
+    each closed on the left and the last one also on the right, so that
+    every sample falls in a bin. Pairs with a non-finite x or y are left out.
+    Empty bins are NaN.
 
     Examples
     --------
@@ -72,33 +118,12 @@ def mean_bins(inp0, inp1, bins: int = 10):
 
     """
 
-    assert isinstance(inp0, xr.DataArray), "inp0 must be xaray.DataArray"
-    assert isinstance(inp1, xr.DataArray), "inp1 must be xaray.DataArray"
+    assert isinstance(inp0, xr.DataArray), "inp0 must be xarray.DataArray"
+    assert isinstance(inp1, xr.DataArray), "inp1 must be xarray.DataArray"
 
     assert inp0.ndim == 1, "inp0 must be a scalar"
     assert inp1.ndim == 1, "inp1 must be a scalar"
 
-    x_sort = np.sort(inp0.data)
-    x_edge = np.linspace(x_sort[0], x_sort[-1], bins + 1)
-
-    y_avg, y_std = [np.zeros(bins), np.zeros(bins)]
-
-    for i in range(bins):
-        idx_left = inp0.data > x_edge[i]
-        idx_right = inp0.data < x_edge[i + 1]
-
-        y_bins = inp1.data[idx_left * idx_right]
-
-        y_avg[i], y_std[i] = [np.mean(y_bins), np.std(y_bins)]
-
-    bins = x_edge[:-1] + np.median(np.diff(x_edge)) / 2
-
-    out_dict = {
-        "data": (["bins"], y_avg),
-        "sigma": (["bins"], y_std),
-        "bins": bins,
-    }
-
-    out = xr.Dataset(out_dict)
+    out = _bin_stat(inp0, inp1, bins, np.mean)
 
     return out

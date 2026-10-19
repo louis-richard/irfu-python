@@ -3587,12 +3587,56 @@ class MeanTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data, expected, atol=1e-12)
 
 
+def _xy_series(x, y):
+    time = np.datetime64("2019-09-14T07:54:00", "ns")
+    time = time + np.arange(len(x)).astype("timedelta64[s]")
+    return pyrf.ts_scalar(time, np.array(x, float)), pyrf.ts_scalar(
+        time, np.array(y, float)
+    )
+
+
 class MeanBinsTestCase(unittest.TestCase):
     def test_mean_bins_output(self):
         result = pyrf.mean_bins(
             generate_ts(64.0, 100), generate_ts(64.0, 100), random.randint(2, 20)
         )
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_mean_bins_edges(self):
+        # The samples on the bin edges, min(x) and max(x) at least, were dropped
+        x = np.repeat(np.arange(10.0), 10)
+        result = pyrf.mean_bins(*_xy_series(x, 2 * x))
+        np.testing.assert_array_equal(result.data.data, 2 * np.arange(10.0))
+        np.testing.assert_array_equal(result.sigma.data, np.zeros(10))
+        np.testing.assert_allclose(result.bins.data, 0.45 + 0.9 * np.arange(10))
+
+    def test_mean_bins_matches_histogram(self):
+        rng = np.random.default_rng(0)
+        x, y = rng.normal(size=1000), rng.normal(size=1000)
+        result = pyrf.mean_bins(*_xy_series(x, y), 12)
+        counts, _ = np.histogram(x, 12)
+        sums, _ = np.histogram(x, 12, weights=y)
+        np.testing.assert_allclose(result.data.data, sums / counts, rtol=1e-12)
+
+    def test_mean_bins_non_finite(self):
+        # One NaN in x made every bin NaN
+        x, y = np.repeat(np.arange(10.0), 10), np.arange(100.0)
+        x_nan, y_inf = x.copy(), y.copy()
+        x_nan[3], y_inf[57] = np.nan, np.inf
+        result = pyrf.mean_bins(*_xy_series(x_nan, y_inf))
+        keep = np.isfinite(x_nan) & np.isfinite(y_inf)
+        expected = pyrf.mean_bins(*_xy_series(x[keep], y[keep]))
+        xr.testing.assert_identical(result, expected)
+
+    def test_mean_bins_no_finite_pair(self):
+        with self.assertRaises(ValueError):
+            pyrf.mean_bins(*_xy_series([np.nan, 1.0], [1.0, np.nan]))
+
+    def test_mean_bins_constant_x(self):
+        # Constant x gave all NaN; numpy.histogram's range min(x) +/- 0.5 now
+        result = pyrf.mean_bins(*_xy_series(np.ones(10), np.arange(10.0)), 4)
+        np.testing.assert_array_equal(result.data.data, [np.nan, np.nan, 4.5, np.nan])
+        np.testing.assert_allclose(result.bins.data, [0.625, 0.875, 1.125, 1.375])
 
 
 class MedianBinsTestCase(unittest.TestCase):
@@ -3601,6 +3645,23 @@ class MedianBinsTestCase(unittest.TestCase):
             generate_ts(64.0, 100), generate_ts(64.0, 100), random.randint(2, 20)
         )
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_median_bins_edges(self):
+        # One outlier per bin: the median ignores it, the mean wouldn't
+        x = np.repeat(np.arange(10.0), 10)
+        y = 2 * x + np.tile([0.0] * 9 + [100.0], 10)
+        result = pyrf.median_bins(*_xy_series(x, y))
+        np.testing.assert_array_equal(result.data.data, 2 * np.arange(10.0))
+
+    def test_median_bins_non_finite(self):
+        x, y = np.repeat(np.arange(10.0), 10), np.arange(100.0)
+        x[3], y[57] = np.nan, np.inf
+        result = pyrf.median_bins(*_xy_series(x, y))
+        self.assertFalse(np.isnan(result.data.data).any())
+
+    def test_median_bins_no_finite_pair(self):
+        with self.assertRaises(ValueError):
+            pyrf.median_bins(*_xy_series([np.nan], [1.0]))
 
 
 @ddt
