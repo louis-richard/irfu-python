@@ -1225,12 +1225,41 @@ class DateStrTestCase(unittest.TestCase):
     def test_date_str_input(self):
         with self.assertRaises(AssertionError):
             pyrf.date_str("2019-01-01T00:00:00")
-            pyrf.date_str([np.datetime64("2019-01-01T00:00:00"), "2019-01-01T00:10:00"])
-            pyrf.date_str(["2019-01-01T00:00:00", "2019-01-01T00:10:00"], 1)
 
-            tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
-            pyrf.date_str(tint, 0)
-            pyrf.date_str(tint, 5)
+        with self.assertRaises(AssertionError):
+            pyrf.date_str([np.datetime64("2019-01-01T00:00:00"), "2019-01-01T00:10:00"])
+
+        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+
+        for fmt in [0, 5]:
+            with self.assertRaises(AssertionError):
+                pyrf.date_str(tint, fmt)
+
+        with self.assertRaises(ValueError):
+            pyrf.date_str(["2019-01-01 noon", "2019-01-01T00:10:00"])
+
+    @data(
+        "2019-09-14T07:54:00",
+        "2019-09-14T07:54:00.000",
+        "2019-09-14T07:54:00.000000",
+        "2019-09-14T07:54:00.000000000",
+    )
+    def test_date_str_precisions(self, start):
+        # The standard tint format ("...00.000") used to raise AssertionError
+        tint = [start, start.replace("07:54", "08:11")]
+        expected = [
+            "20190914_0754",
+            "190914075400",
+            "20190914_075400_081100",
+            "20190914_075400_20190914_081100",
+        ]
+        self.assertListEqual(
+            [pyrf.date_str(tint, fmt) for fmt in range(1, 5)], expected
+        )
+
+    def test_date_str_truncates_seconds(self):
+        tint = ["2019-09-14T07:54:00.999999999", "2019-09-14T08:11:59.999999999"]
+        self.assertEqual(pyrf.date_str(tint, 3), "20190914_075400_081159")
 
     @idata(range(1, 5))
     def test_date_str_output(self, value):

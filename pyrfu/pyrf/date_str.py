@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from datetime import datetime
+# 3rd party imports
+import numpy as np
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -18,7 +18,8 @@ def date_str(tint: list[str], fmt: int = 1) -> str:
     Parameters
     ----------
     tint : list of str
-        Time interval.
+        Time interval, in ISO 8601 format at any precision (e.g.,
+        "2019-09-14T07:54:00.000").
     fmt : int
         Format of the output :
             * 1 : "%Y%m%d_%H%M"
@@ -39,13 +40,10 @@ def date_str(tint: list[str], fmt: int = 1) -> str:
     assert isinstance(tint[1], str), "2nd element of tint must be a string"
     assert fmt in range(1, 5), "fmt must be 1, 2, 3, or 4"
 
-    assert len(tint[0]) > 25, "tint[0] must be in %Y-%m-%dT%H:%M:%S.%f format"
-    assert len(tint[1]) > 25, "tint[1] must be in %Y-%m-%dT%H:%M:%S.%f format"
-
-    tint = [t_[:26] for t_ in tint]
-
-    start_time = datetime.strptime(tint[0], "%Y-%m-%dT%H:%M:%S.%f")
-    end_time = datetime.strptime(tint[1], "%Y-%m-%dT%H:%M:%S.%f")
+    # Any ISO 8601 precision ("...T07:54:00", "...00.000", "...00.000000000")
+    start_time, end_time = [
+        np.datetime64(t_, "ns").astype("datetime64[us]").item() for t_ in tint[:2]
+    ]
 
     if fmt == 1:
         out = start_time.strftime("%Y%m%d_%H%M")
