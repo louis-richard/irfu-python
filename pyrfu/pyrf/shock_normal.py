@@ -29,11 +29,13 @@ def shock_normal(spec, leq90: bool = True):
     r"""Calculates shock normals with different methods. Normal vectors are calculated
     by methods described in [1]_ and references therein.
 
-    The data can be averaged values or values from the time series in matrix format.
-    If series is from time series all parameters are calculated from a random
-    upstream and a random downstream point. This can help set errorbars on shock
-    angle etc. The time series input must have the same size (up- and downstream can
-    be different), so generally the user needs to resample the data first.
+    The data can be averaged values or values from the time series in matrix format,
+    as irfu-matlab irf_shock_normal. For time series, all the parameters are
+    calculated for `n` random pairs of an upstream and a downstream point
+    (interpolated at uniform random positions along each side), which can set
+    error bars on the shock angles etc. The time series of each side must have the
+    same number of samples (up- and downstream can be different), so generally the
+    user needs to resample the data first.
 
     Parameters
     ----------
@@ -50,7 +52,11 @@ def shock_normal(spec, leq90: bool = True):
         * d2u : Down-to-up, is 1 or -1. Optional.
         * dt_f : Time duration of shock foot (s). Optional.
         * f_cp : Reflected ion gyrofrequency (Hz). Optional.
-        * n : Number of Monte Carlo particles. Optional, default is 100.
+        * n : Number of random up- and downstream pairs for time series.
+          Optional, default is 100 (irfu-matlab uses 10, although its
+          documentation says 100).
+        * random_state : Seed or numpy.random.Generator of the random pairs.
+          Optional.
 
     leq90 : bool, Optional
         Force angles to be less than 90 (default). For leq90 = 0, angles can be between
@@ -60,7 +66,9 @@ def shock_normal(spec, leq90: bool = True):
     Returns
     -------
     out : dict
-        Hash table with:
+        Hash table with the fields below. For time series, each value is
+        stacked over the `n` random pairs (leading dimension `n`), except the
+        model parameters in info.
 
         * n : Hash table containing normal vectors (n always points toward the
           upstream region). From data:
@@ -97,6 +105,13 @@ def shock_normal(spec, leq90: bool = True):
           * sig : Scaling factor to fit shock models to sc position. Calculated
             from (10.9-10.13) in [1]_
 
+    Raises
+    ------
+    ValueError
+        If the magnetic field, velocity and density time series of a side
+        don't have the same number of samples.
+    TypeError
+        If `r_xyz` is neither a time series nor a vector.
 
     References
     ----------
@@ -151,28 +166,7 @@ def shock_normal(spec, leq90: bool = True):
     }
 
     if spec["b_u"].ndim > 1 or spec["b_d"].ndim > 1:
-        n_bu = len(spec["b_u"])
-        n_bd = len(spec["b_d"])
-
-        # randomize points upstream and downstream
-        n = int(np.floor(spec.get("n", 10.0)))
-        idt_u, idt_d = [np.random.rand(n) for _ in range(2)]
-
-        tmp_spec = {}
-        for i in range(n):
-            f_bu = interpolate.interp1d(np.linspace(0, 1, n_bu), spec["b_u"], axis=0)
-            tmp_spec["b_u"] = f_bu(idt_u[i])
-            f_vu = interpolate.interp1d(np.linspace(0, 1, n_bu), spec["v_u"], axis=0)
-            tmp_spec["v_u"] = f_vu(idt_u[i])
-            f_nu = interpolate.interp1d(np.linspace(0, 1, n_bu), spec["n_u"], axis=0)
-            tmp_spec["n_u"] = f_nu(idt_u[i])
-
-            f_bd = interpolate.interp1d(np.linspace(0, 1, n_bd), spec["b_d"], axis=0)
-            tmp_spec["b_d"] = f_bd(idt_d[i])
-            f_vd = interpolate.interp1d(np.linspace(0, 1, n_bd), spec["v_d"], axis=0)
-            tmp_spec["v_d"] = f_vd(idt_d[i])
-            f_nd = interpolate.interp1d(np.linspace(0, 1, n_bd), spec["n_d"], axis=0)
-            tmp_spec["n_d"] = f_nd(idt_d[i])
+        return _monte_carlo(spec, leq90)
 
     # normal vector, according to different models
     normal = {}
@@ -276,6 +270,65 @@ def shock_normal(spec, leq90: bool = True):
     return out
 
 
+def _monte_carlo(spec, leq90):
+    # As irfu-matlab: the parameters of n random pairs of upstream and
+    # downstream points (interpolated at uniform random positions along each
+    # side), each through the single-value calculation, stacked
+    n_mc = int(spec.get("n", 100))
+    rng = np.random.default_rng(spec.get("random_state"))
+    draws = {}
+
+    for side in ["u", "d"]:
+        position = rng.random(n_mc)
+        b_s, v_s, n_s = (spec[f"{q}_{side}"] for q in ["b", "v", "n"])
+
+        if b_s.ndim == 1:
+            # A single value on this side
+            draws[f"b_{side}"] = np.tile(b_s, (n_mc, 1))
+            draws[f"v_{side}"] = np.tile(v_s, (n_mc, 1))
+            draws[f"n_{side}"] = np.full(n_mc, float(n_s))
+            continue
+
+        if not len(v_s) == len(n_s) == len(b_s):
+            raise ValueError(
+                f"b_{side}, v_{side} and n_{side} must have the same number of "
+                "samples"
+            )
+
+        grid = np.linspace(0, 1, len(b_s))
+
+        for q, values in zip(["b", "v", "n"], [b_s, v_s, n_s]):
+            draws[f"{q}_{side}"] = interpolate.interp1d(grid, values, axis=0)(position)
+
+    results = [
+        shock_normal({**spec, **{k: v[i] for k, v in draws.items()}}, leq90)
+        for i in range(n_mc)
+    ]
+
+    out = {
+        k: _stack([result[k] for result in results])
+        for k in ["n", "theta_bn", "theta_vn", "v_sh"]
+    }
+
+    # Shear angles, constraint matrices and model scalings of each draw; the
+    # model parameters are the same for all draws
+    out["info"] = dict(results[0]["info"])
+
+    for k in ["msh", "vsh", "cmat", "sig"]:
+        if k in out["info"]:
+            out["info"][k] = _stack([result["info"][k] for result in results])
+
+    return out
+
+
+def _stack(values):
+    # Stacks the values of the draws, through nested dicts
+    if isinstance(values[0], dict):
+        return {k: _stack([value[k] for value in values]) for k in values[0]}
+
+    return np.stack(values)
+
+
 def _shear_angle(au, ad):
     theta = np.arccos(np.sum(au * ad) / (np.linalg.norm(au) * np.linalg.norm(ad)))
     return np.rad2deg(theta)
@@ -349,7 +402,7 @@ def _shock_model(spec, *args):
     ) + r_p0[1] * np.cos(np.deg2rad(alpha))
     grad_s_z = r_p0[2]
 
-    grad_s = np.array([grad_s_x, grad_s_y, grad_s_z], dtype=np.float32)
+    grad_s = np.array([grad_s_x, grad_s_y, grad_s_z], dtype=np.float64)
     grad_s /= np.linalg.norm(r_p0, keepdims=True) * 2 * sig_0.x[0] * l_
 
     # normal vector

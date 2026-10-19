@@ -20,7 +20,7 @@ import numba
 import numpy as np
 import xarray as xr
 from ddt import data, ddt, idata, unpack
-from scipy import constants
+from scipy import constants, interpolate
 
 # Local imports
 from .. import pyrf
@@ -4156,6 +4156,113 @@ class ShockNormalTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             _shock_angle({"b_u": b_u}, n_vec, "b", False)["x"], 120.0
         )
+
+    @staticmethod
+    def _series(n_u=20, n_d=30, seed=1):
+        # Noisy up- and downstream samples around the irfu-matlab example
+        rng = np.random.default_rng(seed)
+        return {
+            "b_u": [0.1, -0.02, 3] + 0.05 * rng.standard_normal((n_u, 3)),
+            "b_d": [1, 0.05, 9] + 0.2 * rng.standard_normal((n_d, 3)),
+            "v_u": [-300, 5, -2] + 5 * rng.standard_normal((n_u, 3)),
+            "v_d": [-100, 5, -2] + 10 * rng.standard_normal((n_d, 3)),
+            "n_u": 5 + 0.1 * rng.standard_normal(n_u),
+            "n_d": 15 + 0.5 * rng.standard_normal(n_d),
+        }
+
+    def test_shock_normal_time_series_draws(self):
+        # Each draw is the single-value calculation at the interpolated up-
+        # and downstream points (the loop had no effect, and unequal sides
+        # raised ValueError)
+        spec = {**self._series(), "n": 7, "random_state": 3}
+        out = pyrf.shock_normal(spec)
+
+        rng = np.random.default_rng(3)
+        position = {side: rng.random(7) for side in ["u", "d"]}
+
+        for i in [0, 6]:
+            single = {}
+
+            for side in ["u", "d"]:
+                grid = np.linspace(0, 1, len(spec[f"b_{side}"]))
+
+                for q in ["b", "v", "n"]:
+                    values = np.asarray(spec[f"{q}_{side}"])
+                    single[f"{q}_{side}"] = interpolate.interp1d(grid, values, axis=0)(
+                        position[side][i]
+                    )
+
+            expected = pyrf.shock_normal(single)
+
+            for k in expected["n"]:
+                np.testing.assert_allclose(out["n"][k][i], expected["n"][k])
+                self.assertAlmostEqual(out["theta_bn"][k][i], expected["theta_bn"][k])
+                self.assertAlmostEqual(
+                    out["v_sh"]["mf"][k][i], expected["v_sh"]["mf"][k]
+                )
+
+            self.assertAlmostEqual(out["info"]["msh"][i], expected["info"]["msh"])
+
+    def test_shock_normal_time_series_shapes(self):
+        # Every field stacked over the draws, default 100 draws as documented
+        # (it was 10); one side may be a single value
+        out = pyrf.shock_normal({**self._series(), "random_state": 0})
+        self.assertEqual(out["n"]["mc"].shape, (100, 3))
+        self.assertEqual(out["theta_bn"]["mc"].shape, (100,))
+        self.assertEqual(out["v_sh"]["sb"]["vc"].shape, (100,))
+        self.assertEqual(out["info"]["cmat"].shape, (100, 5, 5))
+
+        spec = {**self._series(), "n": 4}
+        spec.update(b_u=[0.1, -0.02, 3], v_u=[-300, 5, -2], n_u=5)
+        out = pyrf.shock_normal(spec)
+        self.assertEqual(out["n"]["vc"].shape, (4, 3))
+
+    def test_shock_normal_time_series_reproducible(self):
+        spec = {**self._series(), "n": 5, "random_state": 2}
+        out_1, out_2 = pyrf.shock_normal(spec), pyrf.shock_normal(spec)
+        np.testing.assert_array_equal(out_1["n"]["mx_3"], out_2["n"]["mx_3"])
+
+    def test_shock_normal_time_series_lengths(self):
+        spec = self._series()
+        spec["n_u"] = spec["n_u"][:-1]
+
+        with self.assertRaises(ValueError):
+            pyrf.shock_normal(spec)
+
+    def test_shock_normal_irfu_matlab(self):
+        # irfu-matlab irf_shock_normal on its docstring example
+        spec = {
+            "b_u": [0.1, -0.02, 3],
+            "b_d": [1, 0.05, 9],
+            "v_u": [-300, 5, -2],
+            "v_d": [-100, 5, -2],
+            "n_u": 5,
+            "n_d": 15,
+        }
+        expected = {
+            "mc": (
+                [0.976679367207427, 0.155243818215456, -0.148313082960294],
+                83.2968902632152,
+            ),
+            "vc": ([1.0, 0.0, 0.0], 88.0908899598051),
+            "mx_1": (
+                [0.988934176459199, 0.00098901109954472, -0.148351664931708],
+                83.3775038439101,
+            ),
+            "mx_2": (
+                [0.988937427415258, -0.000824061111477711, -0.148331000065988],
+                83.3793981541223,
+            ),
+            "mx_3": (
+                [0.988937833656664, -0.00173040568145919, -0.148320486982216],
+                83.3803533040341,
+            ),
+        }
+        out = pyrf.shock_normal(spec)
+
+        for k, (n_vec, theta_bn) in expected.items():
+            np.testing.assert_allclose(out["n"][k], n_vec, atol=1e-14)
+            self.assertAlmostEqual(out["theta_bn"][k], theta_bn, places=10)
 
 
 @ddt
