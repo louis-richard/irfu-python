@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -49,14 +49,35 @@ def histogram(inp, bins=100, y_range=None, weights=None, density=True):
     out : xarray.DataArray
         1D distribution of the input time series.
 
+    Raises
+    ------
+    ValueError
+        If `inp` has no finite value.
+
+    Notes
+    -----
+    NaN and infinite samples are ignored, as numpy.histogram with a range
+    and MATLAB histcounts (with `density`, the histogram is normalised over
+    the finite samples).
+
     """
 
     # Check input
     assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
     assert inp.ndim == 1, "inp must be a scalar time series"
 
+    # Finite samples only, as numpy.histogram with a range and MATLAB
+    # histcounts (a NaN or an inf made the automatic range undefined)
+    finite = np.isfinite(inp.data)
+
+    if not np.any(finite):
+        raise ValueError("inp has no finite value")
+
+    if weights is not None:
+        weights = np.asarray(weights)[finite]
+
     hist, bins = np.histogram(
-        inp.data,
+        inp.data[finite],
         bins=bins,
         range=y_range,
         weights=weights,

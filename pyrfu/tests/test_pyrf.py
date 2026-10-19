@@ -2437,6 +2437,53 @@ class HistogramTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    def _series(self, *bad):
+        # 1000 normal samples, with NaN or inf at the given indices
+        rng = np.random.default_rng(0)
+        values = rng.standard_normal(1000)
+
+        for i, value in bad:
+            values[i] = value
+
+        return pyrf.ts_scalar(generate_timeline(16.0, 1000), values)
+
+    @data(None, (-4.0, 4.0))
+    def test_histogram_non_finite(self, y_range):
+        # NaN and inf samples are ignored: the histogram of the finite ones,
+        # with or without a range (a NaN or an inf made the automatic range
+        # undefined: ValueError)
+        inp = self._series((10, np.nan), (20, np.inf), (30, -np.inf))
+        finite = np.isfinite(inp.data)
+        result = pyrf.histogram(inp, 50, y_range, density=False)
+        expected, edges = np.histogram(inp.data[finite], 50, range=y_range)
+
+        np.testing.assert_array_equal(result.data, expected)
+        np.testing.assert_allclose(result.bins.data, (edges[1:] + edges[:-1]) / 2)
+        self.assertEqual(result.data.sum(), 997)
+
+        # With density, normalised over the finite samples
+        density = pyrf.histogram(inp, 50, y_range)
+        self.assertAlmostEqual(float(np.sum(density.data) * np.diff(edges)[0]), 1.0)
+
+    def test_histogram_non_finite_weights(self):
+        # The weights of the ignored samples are ignored too
+        inp = self._series((10, np.nan))
+        weights = np.arange(1000.0)
+        result = pyrf.histogram(inp, 20, weights=weights, density=False)
+        self.assertAlmostEqual(float(result.data.sum()), weights.sum() - 10.0)
+
+    def test_histogram_no_finite_value(self):
+        inp = pyrf.ts_scalar(generate_timeline(16.0, 100), np.full(100, np.nan))
+
+        with self.assertRaises(ValueError):
+            pyrf.histogram(inp)
+
+    def test_histogram_finite_unchanged(self):
+        # Without NaN or inf, as numpy.histogram
+        inp = self._series()
+        expected, _ = np.histogram(inp.data, 30, density=True)
+        np.testing.assert_array_equal(pyrf.histogram(inp, 30).data, expected)
+
 
 @ddt
 class Histogram2DTestCase(unittest.TestCase):
