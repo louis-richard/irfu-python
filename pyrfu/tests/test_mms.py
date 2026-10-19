@@ -1056,6 +1056,65 @@ class UnitConversionsTestCase(unittest.TestCase):
 
 
 @ddt
+class DftTimeShiftTestCase(unittest.TestCase):
+    @staticmethod
+    def _signal(n_pts, f_s=8192.0):
+        # Sine and cosine periodic in the window, on a time line in ns
+        time = np.datetime64("2016-10-07T12:00:00", "ns")
+        time = time + np.round(np.arange(n_pts) / f_s * 1e9).astype("timedelta64[ns]")
+
+        def sig(s):
+            return np.sin(2 * np.pi * 5 * s / n_pts) + 0.3 * np.cos(
+                2 * np.pi * 17 * s / n_pts + 0.4
+            )
+
+        return pyrf.ts_scalar(time, sig(np.arange(n_pts))), sig
+
+    @data(
+        (128, -7.629e-6),
+        (128, 2.5 / 8192),
+        (127, -26.703e-6),
+        (127, 2.5 / 8192),
+    )
+    @unpack
+    def test_dft_time_shift_values(self, n_pts, tau):
+        # The output at t + tau is the input at t + tau, for fractions of a
+        # sample, as irfu-matlab (2e-15 against mms.dft_timeshift). It was
+        # shifted by whole samples, the wrong way, and complex
+        inp, sig = self._signal(n_pts)
+        result = mms.dft_time_shift(inp, tau, f_s=8192.0)
+        expected = sig(np.arange(n_pts) + tau * 8192.0)
+        self.assertFalse(np.iscomplexobj(result.data))
+        np.testing.assert_allclose(result.data, expected, atol=1e-12)
+        d_t = (result.time.data - inp.time.data) / np.timedelta64(1, "ns")
+        np.testing.assert_array_equal(d_t, np.round(tau * 1e9))
+
+    def test_dft_time_shift_default_f_s(self):
+        # Default sampling frequency from the mean time step
+        inp, sig = self._signal(8192)
+        result = mms.dft_time_shift(inp, 2.5 / 8192)
+        np.testing.assert_allclose(result.data, sig(np.arange(8192) + 2.5), atol=1e-8)
+
+    def test_dft_time_shift_vector(self):
+        # Each component is shifted as a scalar; the input is unchanged and
+        # the attributes are kept
+        inp, _ = self._signal(128)
+        vec = pyrf.ts_vec_xyz(
+            inp.time.data,
+            np.stack([inp.data, 2 * inp.data, -inp.data], axis=1),
+            attrs={"UNITS": "mV/m"},
+        )
+        vec_copy = vec.copy(deep=True)
+        result = mms.dft_time_shift(vec, 0.3 / 8192, f_s=8192.0)
+        scalar = mms.dft_time_shift(inp, 0.3 / 8192, f_s=8192.0)
+        np.testing.assert_allclose(result.data[:, 0], scalar.data, atol=1e-13)
+        np.testing.assert_allclose(result.data[:, 1], 2 * scalar.data, atol=1e-13)
+        self.assertEqual(result.dims, vec.dims)
+        self.assertEqual(result.attrs["UNITS"], "mV/m")
+        xr.testing.assert_identical(vec, vec_copy)
+
+
+@ddt
 class Dpf2PsdTestCase(unittest.TestCase):
     @data(
         ("I AM GROOT!!", "s^3/cm^6"),
