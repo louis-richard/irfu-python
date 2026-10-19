@@ -330,6 +330,19 @@ class C4VTestCase(unittest.TestCase):
         # The caller's list of positions is unchanged
         self.assertTrue(all(isinstance(r, xr.DataArray) for r in r_xyz))
 
+    def test_c_4_v_velocity_from_ms_delays(self):
+        # Electron hole at 8000 km/s past a 7 km tetrahedron: sub-ms delays,
+        # which float seconds since 1970 (~0.24 us resolution) would distort
+        time = generate_timeline(8192.0, 100)
+        offsets = np.array(
+            [[0, 0, 0], [7.0, 0, 0], [3.5, 6.1, 0], [3.5, 2.0, 5.7]], dtype=float
+        )
+        r_xyz = [pyrf.ts_vec_xyz(time, np.tile(o, (100, 1))) for o in offsets]
+        velocity = np.array([-7500.0, 600.0, 900.0])
+        delta_t = offsets @ velocity / np.linalg.norm(velocity) ** 2
+        t_cross = time[50] + np.round(delta_t * 1e9).astype("timedelta64[ns]")
+        np.testing.assert_allclose(pyrf.c_4_v(r_xyz, t_cross), velocity, rtol=1e-5)
+
     def test_c_4_v_times_from_velocity(self):
         r_xyz, t_cross, velocity, delta_t = self._plane_crossing()
         result = pyrf.c_4_v(r_xyz, [t_cross[0], *velocity])
