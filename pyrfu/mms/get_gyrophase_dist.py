@@ -123,12 +123,13 @@ def get_gyrophase_dist(
     Notes
     -----
     The field-aligned coordinates are those of `pyrfu.pyrf.convert_fac`:
-    e_par along B, e_perp2 = e_par x r_xyz / |e_par x r_xyz| and e_perp1 =
-    e_perp2 x e_par, so that e_perp1 is along the component of `r_xyz`
-    perpendicular to B. The gyrophase of a sample is the angle of the particle
-    velocity (minus the look direction) from e_perp1 towards e_perp2, i.e.
-    right-handed about B, in [0, 360) degrees, as Li et al. (2022, 2024). It
-    is undefined where `r_xyz` is along B. IDL SPEDAS and pyspedas
+    e_par along B, :math:`e_{\perp 2} = e_\parallel \times r / |e_\parallel
+    \times r|` (r = `r_xyz`) and e_perp1 = e_perp2 x e_par, so that e_perp1 is
+    along the component of `r_xyz` perpendicular to B. The gyrophase of a
+    sample is the angle of the particle velocity (minus the look direction)
+    from e_perp1 towards e_perp2, i.e. right-handed about B, in [0, 360)
+    degrees, as Li et al. (2022, 2024). It is undefined where `r_xyz` is
+    along B. IDL SPEDAS and pyspedas
     (``mms_feeps_getgyrophase``) measure the gyrophase from the sunward
     direction towards the dawnward direction (perpendicular to B), whatever the
     direction of B: the same as here with the default `r_xyz` when e_perp2
