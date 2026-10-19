@@ -2199,6 +2199,25 @@ class FiltTestCase(unittest.TestCase):
         result = pyrf.filt(inp, f_min, f_max, order)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_filt_default_f_max_warns(self):
+        # The implicit f_max = 1 Hz low-pass warns that it changes in 3.0;
+        # the result is that of f_max=1 (unchanged)
+        inp = generate_ts(64.0, 1000)
+
+        with self.assertWarnsRegex(FutureWarning, "f_max=0") as context:
+            result = pyrf.filt(inp, 4.0)
+
+        self.assertEqual(context.filename, __file__)
+        xr.testing.assert_allclose(result, pyrf.filt(inp, 4.0, 1.0))
+
+    @data(0.0, 1.0, 10.0)
+    def test_filt_explicit_f_max_silent(self, f_max):
+        inp = generate_ts(64.0, 1000)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            pyrf.filt(inp, 4.0 if f_max != 10.0 else 0.0, f_max)
+
 
 class FindClosestTestCase(unittest.TestCase):
     def test_find_closest_drop_t1(self):
