@@ -6324,6 +6324,55 @@ class RotateTensorTestCase(unittest.TestCase):
         result = mms.rotate_tensor(t_dsl, frame, defatt)
         np.testing.assert_allclose(result.data, expected, atol=1e-10)
 
+    @staticmethod
+    def _rot_tensor():
+        # P = [[1, 0, 0], [0, 2, 0.3], [0, 0.3, 3]] at 5 times
+        p_xyz = [[1.0, 0.0, 0.0], [0.0, 2.0, 0.3], [0.0, 0.3, 3.0]]
+        return pyrf.ts_tensor_xyz(generate_timeline(1.0, 5), np.tile(p_xyz, (5, 1, 1)))
+
+    def test_rotate_tensor_rot_no_perp_rotation(self):
+        # "rot" rotates to the given axes only, as irfu-matlab (the default
+        # "pp" also rotated the 2-3 components, even for the identity): the
+        # identity leaves P unchanged, (L, M, N) = (y, z, x) permutes it
+        inp = self._rot_tensor()
+        np.testing.assert_allclose(
+            mms.rotate_tensor(inp, "rot", np.eye(3)).data, inp.data, atol=1e-15
+        )
+
+        lmn = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        expected = [[2.0, 0.3, 0.0], [0.3, 3.0, 0.0], [0.0, 0.0, 1.0]]
+        np.testing.assert_allclose(
+            mms.rotate_tensor(inp, "rot", lmn).data[0], expected, atol=1e-15
+        )
+
+    def test_rotate_tensor_rot_explicit_perp(self):
+        # "pp" and "qq" are for field-aligned coordinates: ignored with a
+        # warning elsewhere
+        inp = self._rot_tensor()
+
+        with self.assertLogs("pyrfu.mms.rotate_tensor", "WARNING") as logs:
+            result = mms.rotate_tensor(inp, "rot", np.eye(3), "pp")
+
+        self.assertIn("field-aligned", "".join(logs.output))
+        np.testing.assert_allclose(result.data, inp.data, atol=1e-15)
+
+    def test_rotate_tensor_rot_right_handed_silent(self):
+        # A right-handed orthonormal system gives no warning (the check
+        # compared the new y axis with the x column of the input)
+        with self.assertNoLogs("pyrfu.mms.rotate_tensor", "WARNING"):
+            mms.rotate_tensor(self._rot_tensor(), "rot", np.eye(3))
+
+    def test_rotate_tensor_fac_default_pp(self):
+        # "fac" keeps "pp" by default: equal perpendicular components
+        inp = self._rot_tensor()
+        b_xyz = pyrf.ts_vec_xyz(inp.time.data, np.tile([0.2, 0.3, 1.0], (5, 1)))
+        result = mms.rotate_tensor(inp, "fac", b_xyz)
+
+        self.assertAlmostEqual(result.data[0, 1, 1], result.data[0, 2, 2])
+        np.testing.assert_allclose(
+            result.data, mms.rotate_tensor(inp, "fac", b_xyz, "pp").data
+        )
+
 
 @ddt
 class SpectrToDatasetTestCase(unittest.TestCase):
