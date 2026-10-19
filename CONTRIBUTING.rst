@@ -17,8 +17,8 @@ The main ideas are:
 
 Python version
 --------------
-Prefer if possible Python>=3.8 since there are major dependencies that do not support
-older python versions.
+pyrfu supports Python 3.12 to 3.15 (``requires-python`` in ``pyproject.toml``,
+following PHEP 3).
 
 
 Coding style
