@@ -6,6 +6,7 @@ import contextlib
 # Built-in imports
 import datetime
 import importlib
+import io
 import itertools
 import json
 import os
@@ -6235,6 +6236,65 @@ class Scpot2NeTestCase(unittest.TestCase):
         self.assertIsInstance(result[2], float)
         self.assertIsInstance(result[3], float)
         self.assertIsInstance(result[4], float)
+
+    @staticmethod
+    def _case(dtype=np.float64):
+        # Thermal current = two photoelectron populations (60 muA at 5 eV,
+        # 8 muA at 20 eV) for potentials of 3 to 40 V and T_e = 1 keV
+        i_ph = np.array([60.0, 5.0, 8.0, 20.0])
+        time = generate_timeline(1 / 4.5, 400)
+        v_sc = np.linspace(3.0, 40.0, 400)
+        t_e = np.full(400, 1000.0)
+        q_e, m_e = constants.elementary_charge, constants.electron_mass
+        current = i_ph[0] * np.exp(-v_sc / i_ph[1]) + i_ph[2] * np.exp(-v_sc / i_ph[3])
+        coeff = 1e12 * q_e * 34 / (2 * np.sqrt(np.pi))
+        coeff *= np.sqrt(2 * q_e * t_e / m_e) * (1 + v_sc / t_e)
+        t_tensor = np.zeros((400, 3, 3))
+        t_tensor[:, [0, 1, 2], [0, 1, 2]] = t_e[:, None]
+        return (
+            i_ph,
+            pyrf.ts_scalar(time, v_sc),
+            pyrf.ts_scalar(time, (current / coeff).astype(dtype)),
+            pyrf.ts_tensor_xyz(time, t_tensor.astype(dtype)),
+        )
+
+    @data(np.float64, np.float32)
+    def test_scpot2ne_two_populations(self, dtype):
+        # The fit finds the two photoelectron populations again, and the
+        # density from the potential is the density. The second population
+        # was subtracted in the fit, though added in the reconstruction
+        i_ph, sc_pot, n_e, t_e = self._case(dtype)
+        n_esc, *params = mms.scpot2ne(sc_pot, n_e, t_e)
+        np.testing.assert_allclose(params, i_ph, rtol=1e-4)
+        np.testing.assert_allclose(n_esc.data, n_e.data, rtol=1e-4)
+
+    def test_scpot2ne_scalar_temperature(self):
+        # A scalar temperature gives the result of the tensor with that trace
+        # (an assert refused it, though documented)
+        _, sc_pot, n_e, t_e = self._case()
+        t_scalar = pyrf.ts_scalar(
+            t_e.time.data, np.trace(t_e.data, axis1=1, axis2=2) / 3
+        )
+        result = mms.scpot2ne(sc_pot, n_e, t_scalar)
+        expected = mms.scpot2ne(sc_pot, n_e, t_e)
+        np.testing.assert_allclose(result[0].data, expected[0].data)
+        np.testing.assert_allclose(result[1:], expected[1:])
+
+    def test_scpot2ne_invalid_temperature(self):
+        _, sc_pot, n_e, t_e = self._case()
+        t_vector = pyrf.ts_vec_xyz(t_e.time.data, np.ones((len(t_e), 3)))
+
+        with self.assertRaises(ValueError):
+            mms.scpot2ne(sc_pot, n_e, t_vector)
+
+    def test_scpot2ne_silent(self):
+        # scipy's fmin printed its convergence messages
+        _, sc_pot, n_e, t_e = self._case()
+
+        with contextlib.redirect_stdout(io.StringIO()) as stdout:
+            mms.scpot2ne(sc_pot, n_e, t_e)
+
+        self.assertEqual(stdout.getvalue(), "")
 
 
 class VdfReduceDeprecationTestCase(unittest.TestCase):
