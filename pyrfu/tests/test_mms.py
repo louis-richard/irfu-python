@@ -2140,36 +2140,98 @@ class HpcaPadTestCase(unittest.TestCase):
 
 @ddt
 class MakeModelKappaTestCase(unittest.TestCase):
-    @data(
-        (generate_vdf(64.0, 100, (32, 16, 16), species="bazinga"), random.random()),
-    )
-    @unpack
-    def test_make_model_kappa_input(self, vdf, kappa):
-        with self.assertRaises(ValueError):
-            mms.make_model_kappa(
-                vdf,
-                generate_ts(64.0, 100, tensor_order=0),
-                generate_ts(64.0, 100, tensor_order=1),
-                generate_ts(64.0, 100, tensor_order=0),
-                kappa,
-            )
-
-    @data(
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), random.random()),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
-    )
-    @unpack
-    def test_make_model_kappa_output(self, vdf, kappa):
-        result = mms.make_model_kappa(
-            vdf,
-            generate_ts(64.0, 100, tensor_order=0),
-            generate_ts(64.0, 100, tensor_order=1),
-            generate_ts(64.0, 100, tensor_order=0),
-            kappa,
+    @staticmethod
+    def _moments(vdf, n_s, v_kms, t_ev):
+        # Constant moments on the times of vdf
+        time = vdf.time.data
+        n_t = len(time)
+        return (
+            pyrf.ts_scalar(time, np.full(n_t, n_s)),
+            pyrf.ts_vec_xyz(time, np.tile(np.asarray(v_kms, dtype=float), (n_t, 1))),
+            pyrf.ts_scalar(time, np.full(n_t, t_ev)),
         )
 
-        self.assertIsInstance(result, xr.Dataset)
+    @data(("bazinga", 7.0), ("ions", 1.5), ("ions", 1.0))
+    @unpack
+    def test_make_model_kappa_input(self, species, kappa):
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        vdf.attrs["species"] = species
+
+        with self.assertRaises(ValueError):
+            mms.make_model_kappa(vdf, *self._moments(vdf, 1.0, [0.0] * 3, 500.0), kappa)
+
+    @data(5.0, 20.0)
+    def test_make_model_kappa_moments(self, kappa):
+        # psd_moments of the model gives back n, V and T. The model was
+        # centred at V / 1000 (km/s taken as m/s), 1e6 too small (cm^-3) and
+        # along the look directions
+        v_kms = [100.0, -50.0, 200.0]
+        vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        moments = self._moments(vdf, 2.0, v_kms, 500.0)
+        model = mms.make_model_kappa(vdf, *moments, kappa)
+        self.assertEqual(model.data.attrs["UNITS"], "s^3/m^6")
+
+        n, v, _, _, t, _ = mms.psd_moments(model, sc_pot)
+        np.testing.assert_allclose(n.data, 2.0, rtol=0.01)
+        np.testing.assert_allclose(v.data, moments[1].data, atol=2.0)
+        np.testing.assert_allclose(
+            np.trace(t.data, axis1=1, axis2=2) / 3, 500.0, rtol=0.01
+        )
+
+    def test_make_model_kappa_maxwellian_limit(self):
+        # As kappa -> infinity, the model tends to the Maxwellian of
+        # make_model_vdf, as 1 / kappa (2e-4 at kappa = 1e4)
+        v_kms = [100.0, -50.0, 200.0]
+        vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        n_s, v_xyz, t_s = self._moments(vdf, 2.0, v_kms, 500.0)
+        time = vdf.time.data
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (len(time), 1)))
+        t_xyz = pyrf.ts_tensor_xyz(time, np.tile(np.eye(3) * 500.0, (len(time), 1, 1)))
+        maxwellian = mms.make_model_vdf(
+            vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic=True
+        )
+        f_max = maxwellian.data.data * 1e-18  # s^3/km^6 -> s^3/m^6
+
+        model = mms.make_model_kappa(vdf, n_s, v_xyz, t_s, kappa=1e4)
+        error = np.nanmax(np.abs(model.data.data - f_max)) / np.nanmax(f_max)
+        self.assertLess(error, 1e-3)
+
+    def test_make_model_kappa_phi_per_time(self):
+        # Each time uses its own azimuths (FPI burst); the first time's were
+        # used for all times
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        vdf.phi.data[1] += 5.0
+        moments = self._moments(vdf, 2.0, [300.0, 0.0, 0.0], 500.0)
+        model = mms.make_model_kappa(vdf, *moments)
+
+        swapped = vdf.isel(time=[1, 0]).assign_coords(time=vdf.time.data)
+        model_swapped = mms.make_model_kappa(swapped, *moments)
+        np.testing.assert_allclose(model.data.data[1], model_swapped.data.data[0])
+        change = np.abs(model.data.data[0] - model.data.data[1])
+        self.assertGreater(np.max(change) / np.max(model.data.data[0]), 0.01)
+
+    @data(("electrons", 1.0), ("ions", -1.0))
+    @unpack
+    def test_make_model_kappa_sc_pot(self, species, sign):
+        # The energies are corrected as in make_model_vdf (electrons lose,
+        # ions gain e V); the electron channels below the potential are NaN
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 50.0, [0.0] * 3)
+        vdf.attrs["species"] = species
+        time = vdf.time.data
+        sc_pot = pyrf.ts_scalar(time, np.full(len(time), 20.0))
+        moments = self._moments(vdf, 2.0, [0.0] * 3, 50.0)
+        model = mms.make_model_kappa(vdf, *moments, sc_pot=sc_pot)
+
+        shifted = vdf.copy(deep=True)
+        shifted.energy.data[:] = vdf.energy.data - sign * 20.0
+        valid = shifted.energy.data[0] >= 0
+        shifted.energy.data[:] = np.clip(shifted.energy.data, 0.0, None)
+        expected = mms.make_model_kappa(shifted, *moments)
+        np.testing.assert_allclose(
+            model.data.data[:, valid], expected.data.data[:, valid]
+        )
+        self.assertTrue(np.all(np.isnan(model.data.data[:, ~valid])))
+        self.assertEqual(np.any(~valid), sign > 0)
 
 
 @ddt
