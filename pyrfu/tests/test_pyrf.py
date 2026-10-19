@@ -3385,6 +3385,34 @@ class Iso86012Unix(unittest.TestCase):
         result = pyrf.iso86012unix(value)
         self.assertIsInstance(result, np.ndarray)
 
+    def test_iso86012unix_values(self):
+        # Used to return datetime64[ns], not seconds since 1970
+        time = [
+            "1970-01-01T00:00:00.000",
+            "2019-01-01T00:00:00.5",
+            "1969-12-31T23:59:59",
+        ]
+        result = pyrf.iso86012unix(time)
+        self.assertEqual(result.dtype, np.float64)
+        np.testing.assert_array_equal(result, [0.0, 1546300800.5, -1.0])
+
+    def test_iso86012unix_single_str(self):
+        result = pyrf.iso86012unix("2019-01-01T00:00:00")
+        np.testing.assert_array_equal(result, [1546300800.0])
+
+    def test_iso86012unix_nat(self):
+        result = pyrf.iso86012unix(["NaT", "2019-01-01T00:00:00"])
+        np.testing.assert_array_equal(result, [np.nan, 1546300800.0])
+
+    def test_iso86012unix_matches_datetime642unix(self):
+        time = np.array(
+            ["2019-09-14T07:54:00.123456789", "2019-09-14T08:11:00.000000000"]
+        )
+        np.testing.assert_array_equal(
+            pyrf.iso86012unix(time),
+            pyrf.datetime642unix(time.astype("datetime64[ns]")),
+        )
+
 
 @ddt
 class Iso86012TimeVec(unittest.TestCase):
