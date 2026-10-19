@@ -3450,6 +3450,44 @@ class EstimatePhaseSpeedTestCase(unittest.TestCase):
         self.assertAlmostEqual(vph / 2e4, 1.0, delta=0.01)
         np.testing.assert_array_equal(power, power_in)
 
+    def test_estimate_phase_speed_weights(self):
+        # The fit is irfu-matlab's least squares weighted by
+        # w = 1 + log10(P / P_max): the slope 2 pi sum(w k f) / sum(w k^2)
+        # over the selected points. scipy's sigma=w weighted them by 1 / w^2,
+        # the weakest the most (two modes: 13 % from the speed, against 10 %)
+        k = np.linspace(-0.1, 0.1, 201)
+        freq = np.linspace(0.0, 4000.0, 401)
+        k_mat, f_mat = np.meshgrid(k, freq)
+        v_ph = 1e5
+        power = np.exp(-(((f_mat - v_ph * k_mat / (2 * np.pi)) / 80.0) ** 2))
+        power += 0.5 * np.exp(
+            -(((f_mat - 1.4 * v_ph * k_mat / (2 * np.pi)) / 80.0) ** 2)
+        )
+        power *= np.exp(-(((k_mat - 0.03) / 0.03) ** 2))
+
+        vph = mms.estimate_phase_speed(power, freq, k, 100.0)
+
+        # The selection of the function: masked k and f, the maximum, the
+        # positive k side, power > 0.3 max and v within a factor 3 of the
+        # maximum's
+        sel_power = power.copy()
+        sel_power[:, np.abs(k) > 2 * k.max() / 3] = 0.0
+        sel_power[freq < 100.0, :] = 0.0
+        i_f, i_k = np.unravel_index(np.argmax(sel_power), sel_power.shape)
+        v_guess = freq[i_f] / k[i_k]
+        sel_power[:, k < 0.0] = 0.0
+        selected = sel_power > 0.3 * sel_power.max()
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ratio = np.abs(f_mat / k_mat)
+
+        selected &= (ratio > v_guess / 3) & (ratio < 3 * v_guess)
+        weights = 1 + np.log10(sel_power[selected] / sel_power[selected].max())
+        k_s, f_s = k_mat[selected], f_mat[selected]
+        expected = 2 * np.pi * np.sum(weights * k_s * f_s) / np.sum(weights * k_s**2)
+
+        self.assertAlmostEqual(vph / expected, 1.0, delta=1e-6)
+
 
 @ddt
 class FeepsActiveEyesTestCase(unittest.TestCase):
