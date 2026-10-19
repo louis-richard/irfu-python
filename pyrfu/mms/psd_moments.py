@@ -12,6 +12,7 @@ from scipy import constants
 
 # Local imports
 from pyrfu.mms._vdf_bins import _bin_pitch_angles, _phi_edges, _theta_edges
+from pyrfu.mms.vdf_convert import _PSD, vdf_convert
 from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
@@ -384,6 +385,22 @@ def _moms_relativistic(moms_args, sc_pot, p_mass):
 _N_SUB = 8
 
 
+def _psd_si(vdf, relativistic):
+    r"""Phase-space density in s^3/m^6, as a new C-contiguous float64 array
+    (get_dist returns a transposed view, which the numba kernels can't
+    reshape), from the units of `vdf` (``UNITS``, s^3/cm^6 if missing)."""
+    units = str(vdf.data.attrs.get("UNITS", "s^3/cm^6"))
+
+    if units.lower() in _PSD:
+        factor = _PSD[units.lower()]
+        return np.multiply(vdf.data.data, factor, dtype=np.float64, order="C")
+
+    # Differential energy or particle fluxes, as irfu-matlab
+    # (PDist.convertto)
+    vdf_si = vdf_convert(vdf, "s^3/m^6", relativistic=relativistic)
+    return np.ascontiguousarray(vdf_si.data.data, dtype=np.float64)
+
+
 def _pitch_angle_args(kwargs):
     # b_xyz, [min, max] and method of the pitch-angle range
     b_xyz = kwargs.get("b_xyz")
@@ -454,7 +471,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
         3D skymap velocity distribution. The angular widths are taken from the
         optional attributes `delta_phi_minus`/`delta_phi_plus` (time, phi) and
         `delta_theta_minus`/`delta_theta_plus` (theta), in degrees, or else
-        from the spacing of the phi and theta grids.
+        from the spacing of the phi and theta grids. The data are in the
+        units of their ``UNITS`` attribute (s^3/cm^6, as FPI, if missing): a
+        phase-space density or a differential energy or particle flux, see
+        `vdf_convert`.
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
 
@@ -541,8 +561,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
         If energy_range has no channel (fixed range) or a wrong shape, if
         both energy_range and en_channels are given, if angle_integration
         is not "midpoint" or "exact", or if pitch_angle_range is given without
-        b_xyz, is not [min, max] within [0, 180], or pitch_angle_weight is not
-        "centre" or "fraction".
+        b_xyz, is not [min, max] within [0, 180], pitch_angle_weight is not
+        "centre" or "fraction", or the units of `vdf` are not supported.
 
     Notes
     -----
@@ -592,9 +612,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
     particle_type = vdf.attrs["species"]
     assert particle_type[0].lower() in ["e", "i"], "invalid particle type"
 
-    # In SI units, as a new C-contiguous float64 array: get_dist returns a
-    # transposed (non-contiguous) view, which the numba kernels can't reshape
-    vdf_data = np.multiply(vdf.data.data, 1e12, dtype=np.float64, order="C")
+    # In SI units (s^3/m^6)
+    relativistic = bool(
+        kwargs.get("relativistic", vdf.attrs.get("relativistic", False))
+    )
+    vdf_data = _psd_si(vdf, relativistic)
 
     step_table = vdf.attrs["esteptable"]
     energy = vdf.energy.data
@@ -693,10 +715,6 @@ def psd_moments(vdf, sc_pot, **kwargs):
         )
 
     use_exact = angle_integration == "exact"
-
-    relativistic = bool(
-        kwargs.get("relativistic", vdf.attrs.get("relativistic", False))
-    )
 
     if use_exact:
         half_phi = np.rad2deg(delta_phi[:, :, 0]) / 2

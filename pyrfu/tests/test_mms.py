@@ -2511,6 +2511,64 @@ class PsdMomentsTestCase(unittest.TestCase):
             p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
         )
 
+    @data(("s^3/cm^6", 1.0), ("s^3/m^6", 1e12), ("S^3/KM^6", 1e30), (None, 1.0))
+    @unpack
+    def test_psd_moments_units(self, units, scale):
+        # The same Maxwellian in other units, or without UNITS (s^3/cm^6, as
+        # FPI), gives the same moments. s^3/m^6 and s^3/km^6 were taken as
+        # s^3/cm^6 (moments 1e12 and 1e30 too large)
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        expected = mms.psd_moments(vdf, sc_pot)
+
+        vdf.data.data *= scale
+        vdf.data.attrs.pop("UNITS", None)
+
+        if units is not None:
+            vdf.data.attrs["UNITS"] = units
+
+        for result, reference in zip(mms.psd_moments(vdf, sc_pot), expected):
+            atol = 1e-10 * np.max(np.abs(reference.data))
+            np.testing.assert_allclose(
+                result.data, reference.data, rtol=1e-10, atol=atol
+            )
+
+    @data("keV/(cm^2 s sr keV)", "1/(cm^2 s sr eV)")
+    def test_psd_moments_units_flux(self, units):
+        # Fluxes are converted to phase-space densities (vdf_convert), as
+        # irfu-matlab; they were taken as s^3/cm^6
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        expected = mms.psd_moments(vdf, sc_pot)
+
+        flux = mms.vdf_convert(vdf, units)
+        for result, reference in zip(mms.psd_moments(flux, sc_pot), expected):
+            atol = 1e-10 * np.max(np.abs(reference.data))
+            np.testing.assert_allclose(
+                result.data, reference.data, rtol=1e-10, atol=atol
+            )
+
+        flux.data.attrs["UNITS"] = "counts"
+
+        with self.assertRaises(ValueError):
+            mms.psd_moments(flux, sc_pot)
+
+    def test_psd_moments_model_vdf(self):
+        # Moments of a model distribution (make_model_vdf, in s^3/km^6)
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        time = vdf.time.data
+        n_s = pyrf.ts_scalar(time, np.full(len(time), 2.0))
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([100.0, -50.0, 200.0], (len(time), 1)))
+        t_xyz = pyrf.ts_tensor_xyz(time, np.tile(np.eye(3) * 800.0, (len(time), 1, 1)))
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (len(time), 1)))
+        model = mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+
+        n, v, _, _, t, _ = mms.psd_moments(model, sc_pot)
+        np.testing.assert_allclose(n.data, 2.0, rtol=0.01)
+        np.testing.assert_allclose(v.data, v_xyz.data, atol=2.0)
+        np.testing.assert_allclose(
+            np.trace(t.data, axis1=1, axis2=2) / 3, 800.0, rtol=0.01
+        )
+
     def test_psd_moments_tables_differ_in_some_channels(self):
         # Tables that differ in all but one channel must use the alternating-table
         # speed widths (which don't use delta_energy_*). `all(e_tmp) == 0` flagged
@@ -2945,7 +3003,8 @@ class PsdMomentsTestCase(unittest.TestCase):
             },
         )
         vdf = mms.dpf2psd(flux, relativistic=True)
-        vdf.data.data *= 1e-12  # s^3/cm^6
+        vdf.data.data *= 1e-12
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
         sc_pot = pyrf.ts_scalar(time, np.zeros(n_t))
 
         # Direct sums: speeds, Lorentz factors and widths in speed (SI)
