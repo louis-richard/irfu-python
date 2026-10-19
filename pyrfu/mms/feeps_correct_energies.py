@@ -8,7 +8,7 @@ import xarray as xr
 from .feeps_energy_table import feeps_energy_table
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -16,9 +16,11 @@ __status__ = "Prototype"
 
 
 def feeps_correct_energies(feeps_alle):
-    r"""Modifies the energy table in FEEPS spectra (intensity, count_rate,
-    counts) using the function: mms_feeps_energy_table (which is s/c, sensor
-    head and sensor ID dependent)
+    r"""Corrects the energy tables of the FEEPS spectra.
+
+    Modifies the energy table in FEEPS spectra (intensity, count_rate,
+    counts) using :func:`pyrfu.mms.feeps_energy_table` (which is s/c, sensor
+    head and sensor ID dependent).
 
     Parameters
     ----------
@@ -31,7 +33,14 @@ def feeps_correct_energies(feeps_alle):
     out : xarray.Dataset
         Dataset containing the energy spectrum of the available eyes of the
         Fly's Eye Energetic Particle Spectrometer (FEEPS) with corrected
-        energy table.
+        energy table. The energy dimension of each eye is named as in
+        :func:`pyrfu.mms.get_feeps_alleyes` (e.g. ``energy_top-1``).
+
+    Raises
+    ------
+    ValueError
+        If an eye doesn't have the 16 energy channels of the table, e.g. after
+        :func:`pyrfu.mms.feeps_split_integral_ch`: correct the energies first.
 
     """
 
@@ -47,14 +56,23 @@ def feeps_correct_energies(feeps_alle):
         new_energy = feeps_energy_table(mms_id, sensor, int(eye))
 
         dim = feeps_alle[sensors_eye].dims[1]
-        out_dict[sensors_eye] = feeps_alle[sensors_eye].assign_coords(
-            {dim: new_energy},
-        )
-        out_dict[sensors_eye] = out_dict[sensors_eye].rename(
-            {dim: f"energy-{sensors_eye}"},
+
+        if feeps_alle.sizes[dim] != len(new_energy):
+            raise ValueError(
+                f"{sensors_eye} has {feeps_alle.sizes[dim]:d} energy channels "
+                f"instead of {len(new_energy):d}: correct the energies before "
+                "feeps_split_integral_ch"
+            )
+
+        # each eye has its own energy table, so its own dimension, named as in
+        # get_feeps_alleyes
+        out_dict[sensors_eye] = (
+            feeps_alle[sensors_eye]
+            .assign_coords({dim: new_energy})
+            .rename({dim: f"energy_{sensors_eye}"})
         )
 
     out = xr.Dataset(out_dict)
-    out.attrs = feeps_alle.attrs
+    out.attrs = dict(feeps_alle.attrs)
 
     return out

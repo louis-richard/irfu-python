@@ -20,8 +20,10 @@ from ddt import data, ddt, unpack
 from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
 from matplotlib.colors import LogNorm, to_rgba
+from matplotlib.contour import ContourSet
 from matplotlib.dates import date2num
 from matplotlib.image import AxesImage
+from scipy import constants
 
 # Local imports
 from .. import plot, pyrf
@@ -339,6 +341,221 @@ class PlotAngAngTestCase(unittest.TestCase):
             self.vdf.data.attrs["UNITS"] = units
             _, _, cax = plot.plot_ang_ang(self.vdf, self.tint, [5.0, 10.0])
             self.assertEqual(cax.get_ylabel(), label)
+
+
+class PlotPadPolarTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        # 8 contiguous energy channels from 10 eV to 10 keV, 6 pitch-angle bins
+        # of 30 degrees, and data (t + 1) (E + 1) (alpha + 1) at 4 times
+        edges = np.logspace(1, 4, 9)
+        self.energy_edges = edges
+        energy = np.sqrt(edges[:-1] * edges[1:])
+        time = pyrf.iso86012datetime64(
+            np.array([f"2017-07-11T22:34:0{i}.000" for i in range(4)])
+        )
+        t_idx, e_idx, a_idx = np.meshgrid(
+            np.arange(4), np.arange(8), np.arange(6), indexing="ij"
+        )
+        self.pad = xr.Dataset(
+            {
+                "data": (
+                    ["time", "idx0", "idx1"],
+                    (t_idx + 1.0) * (e_idx + 1.0) * (a_idx + 1.0),
+                    {"UNITS": "s^3/m^6"},
+                ),
+                "energy": (["time", "idx0"], np.tile(energy, (4, 1))),
+                "theta": (
+                    ["time", "idx1"],
+                    np.tile(np.arange(15.0, 180.0, 30.0), (4, 1)),
+                ),
+            },
+            coords={"time": time, "idx0": np.arange(8), "idx1": np.arange(6)},
+            attrs={
+                "species": "ions",
+                "delta_energy_minus": np.tile(energy - edges[:-1], (4, 1)),
+                "delta_energy_plus": np.tile(edges[1:] - energy, (4, 1)),
+                "delta_pitchangle_minus": np.full(6, 15.0),
+                "delta_pitchangle_plus": np.full(6, 15.0),
+            },
+        )
+
+    @staticmethod
+    def _speed(energy, mass=constants.proton_mass):
+        # Speed (km/s) of energy (eV)
+        return np.sqrt(2 * constants.elementary_charge * energy / mass) / 1e3
+
+    @staticmethod
+    def _mesh(ax, i=0):
+        # Radii and pitch angles (degrees) of the edges, and the values drawn
+        coords = ax.collections[i].get_coordinates()
+        radius = np.hypot(coords[..., 0], coords[..., 1])[:, 0]
+        angle = np.rad2deg(np.arctan2(coords[0, :, 1], coords[0, :, 0]))
+        values = np.ma.filled(ax.collections[i].get_array(), np.nan)
+        return radius, angle, values.reshape(len(radius) - 1, len(angle) - 1)
+
+    def test_plot_pad_polar_output(self):
+        f, ax = plt.subplots(1)
+        ax, cax = plot.plot_pad_polar(ax, self.pad)
+        self.assertIsInstance(ax, Axes)
+        self.assertIsInstance(cax, Axes)
+        self.assertEqual(cax.get_ylabel(), "PSD [s$^3$ m$^{-6}$]")
+        self.assertEqual(ax.get_xlabel(), "$v_\\parallel$ [km/s]")
+        self.assertEqual(ax.get_ylabel(), "$v_\\perp$ [km/s]")
+        r_max = self._speed(1e4)
+        np.testing.assert_allclose(ax.get_xlim(), [-r_max, r_max])
+        np.testing.assert_allclose(ax.get_ylim(), [0.0, r_max])
+
+        _, cax = plot.plot_pad_polar(ax, self.pad, colorbar="top")
+        self.assertEqual(cax.get_xlabel(), "PSD [s$^3$ m$^{-6}$]")
+        _, cax = plot.plot_pad_polar(ax, self.pad, colorbar="none")
+        self.assertIsNone(cax)
+
+    def test_plot_pad_polar_values(self):
+        f, ax = plt.subplots(1)
+        plot.plot_pad_polar(ax, self.pad)
+        radius, angle, values = self._mesh(ax)
+        # Radii: the speeds of the energy edges (ions, km/s)
+        np.testing.assert_allclose(radius, self._speed(self.energy_edges))
+        # Pitch angles from 0 to 180 degrees as arcs of at most 2 degrees
+        np.testing.assert_allclose(angle[[0, -1]], [0.0, 180.0], atol=1e-12)
+        self.assertLessEqual(np.max(np.diff(angle)), 2.0 + 1e-9)
+        # Time average 2.5 (E + 1) (alpha + 1) in each bin
+        a_idx = np.floor(((angle[:-1] + angle[1:]) / 2) / 30.0)
+        expected = 2.5 * np.outer(np.arange(1.0, 9.0), a_idx + 1.0)
+        np.testing.assert_allclose(values, expected)
+
+    def test_plot_pad_polar_tint(self):
+        f, ax = plt.subplots(1)
+        tint = ["2017-07-11T22:34:01.200"]
+        plot.plot_pad_polar(ax, self.pad, tint)
+        values = self._mesh(ax)[2]
+        self.assertAlmostEqual(values[0, 0], 2.0)
+
+        tint = ["2017-07-11T22:34:01.500", "2017-07-11T22:34:03.000"]
+        plot.plot_pad_polar(ax, self.pad, tint)
+        values = self._mesh(ax, 1)[2]
+        self.assertAlmostEqual(values[0, 0], 3.5)
+
+        with self.assertRaises(ValueError):
+            plot.plot_pad_polar(ax, self.pad, ["2017-07-11T22:35:00.000"] * 2)
+
+        with self.assertRaises(ValueError):
+            plot.plot_pad_polar(ax, self.pad, ["2017-07-11T22:34:00.000"] * 3)
+
+    def test_plot_pad_polar_sc_pot(self):
+        f, ax = plt.subplots(1)
+        # Ions gain q V
+        plot.plot_pad_polar(ax, self.pad, sc_pot=5.0)
+        radius = self._mesh(ax)[0]
+        np.testing.assert_allclose(radius, self._speed(self.energy_edges + 5.0))
+
+        # Electrons lose e V: the channels below the potential are not drawn
+        pad = self.pad.assign_attrs(species="electrons")
+        sc_pot = xr.DataArray(
+            np.full(4, 30.0), coords=[self.pad.time.data], dims=["time"]
+        )
+        plot.plot_pad_polar(ax, pad, sc_pot=sc_pot)
+        radius, _, values = self._mesh(ax, 1)
+        speed = self._speed(self.energy_edges - 30.0, constants.electron_mass) / 1e3
+        np.testing.assert_allclose(radius, np.hstack([0.0, speed[2:]]))
+        np.testing.assert_allclose(values[:, 0], 2.5 * np.arange(2.0, 9.0))
+        self.assertEqual(ax.get_xlabel(), "$v_\\parallel$ [10$^3$ km/s]")
+
+    def test_plot_pad_polar_edges(self):
+        f, ax = plt.subplots(1)
+        # A gap between 90 and 100 degrees is blank
+        pad = self.pad.copy()
+        pad.attrs["delta_pitchangle_minus"] = np.array([15.0] * 3 + [5.0] + [15.0] * 2)
+        pad.attrs["delta_pitchangle_plus"] = np.full(6, 15.0)
+        plot.plot_pad_polar(ax, pad)
+        _, angle, values = self._mesh(ax)
+        middle = (angle[:-1] + angle[1:]) / 2
+        gap = (middle > 90.0) & (middle < 100.0)
+        self.assertTrue(np.all(np.isnan(values[:, gap])))
+        self.assertFalse(np.any(np.isnan(values[:, ~gap])))
+
+        # Rounded half widths (FPI) leave no gaps nor overlaps
+        pad = self.pad.copy()
+        pad.attrs["delta_energy_minus"] = self.pad.attrs["delta_energy_minus"] * 0.999
+        plot.plot_pad_polar(ax, pad)
+        radius, _, values = self._mesh(ax, 1)
+        self.assertEqual(len(radius), 9)
+        self.assertFalse(np.any(np.isnan(values)))
+
+        # Zeros are not drawn
+        pad = self.pad.copy(deep=True)
+        pad.data.data[:, 0, 0] = 0.0
+        plot.plot_pad_polar(ax, pad)
+        values = self._mesh(ax, 2)[2]
+        self.assertTrue(np.isnan(values[0, 0]))
+
+    def test_plot_pad_polar_contour(self):
+        f, ax = plt.subplots(1)
+        plot.plot_pad_polar(ax, self.pad, contour=3)
+        contours = [c for c in ax.collections if isinstance(c, ContourSet)]
+        self.assertEqual(len(contours), 1)
+
+        f, ax = plt.subplots(1)
+        plot.plot_pad_polar(ax, self.pad, contour=[10.0, 20.0], clim=[1.0, 100.0])
+        contours = [c for c in ax.collections if isinstance(c, ContourSet)]
+        np.testing.assert_allclose(contours[0].levels, [1.0, np.log10(20.0)])
+        np.testing.assert_allclose(ax.collections[0].norm.vmin, 1.0)
+        np.testing.assert_allclose(ax.collections[0].norm.vmax, 100.0)
+
+    def _monte_carlo(self, pad, **kwargs):
+        # Edges (m/s) and values of the Monte-Carlo grid, and the density
+        f, ax = plt.subplots(1)
+        plot.plot_pad_polar(ax, pad, monte_carlo=True, random_state=0, **kwargs)
+        coords = ax.collections[0].get_coordinates() * 1e3
+        par, perp = coords[:, 0, 0], coords[0, :, 1]
+        values = np.ma.filled(ax.collections[0].get_array(), np.nan)
+        values = values.reshape(len(par) - 1, len(perp) - 1)
+        volume = np.outer(np.diff(par), np.pi * np.diff(perp**2))
+        return ax, par, perp, values, np.nansum(values * volume)
+
+    def test_plot_pad_polar_monte_carlo(self):
+        ax, par, perp, values, density = self._monte_carlo(self.pad, n_grid=40)
+        # Grid of 40 x 20 cells up to the largest speed
+        v_max = self._speed(1e4) * 1e3
+        np.testing.assert_allclose(par[[0, -1]], [-v_max, v_max])
+        np.testing.assert_allclose(perp[[0, -1]], [0.0, v_max])
+        self.assertEqual(values.shape, (40, 20))
+        np.testing.assert_allclose(ax.get_ylim(), [0.0, v_max / 1e3])
+
+        # The density (time average 2.5 (E + 1) (alpha + 1)) is conserved
+        speed = self._speed(self.energy_edges) * 1e3
+        cos_alpha = np.cos(np.deg2rad(np.arange(0.0, 181.0, 30.0)))
+        d3v = np.outer(2 * np.pi * np.diff(speed**3) / 3, -np.diff(cos_alpha))
+        f_avg = 2.5 * np.outer(np.arange(1.0, 9.0), np.arange(1.0, 7.0))
+        self.assertAlmostEqual(density / np.sum(f_avg * d3v), 1.0, places=12)
+
+        # Same particles for the same random_state
+        values_2 = self._monte_carlo(self.pad, n_grid=40)[3]
+        np.testing.assert_array_equal(values, values_2)
+
+    def test_plot_pad_polar_monte_carlo_tables(self):
+        # Constant f = 1 with energy tables that alternate in time (FPI burst):
+        # f = 1 where both tables have data, and the contours are drawn
+        pad = self.pad.copy(deep=True)
+        pad.data.data[:] = 1.0
+        pad.energy.data[1::2] *= 10 ** (3 / 16)
+        pad.attrs["delta_energy_minus"] = None
+        pad.attrs["delta_energy_plus"] = None
+        ax, par, perp, values, _ = self._monte_carlo(
+            pad, n_mc=2000, n_grid=20, contour=[0.5]
+        )
+        centre = np.hypot(*np.meshgrid(par[:-1] + par[1:], perp[:-1] + perp[1:]))
+        inside = (centre.T / 2 > 0.3 * perp[-1]) & (centre.T / 2 < 0.8 * perp[-1])
+        self.assertAlmostEqual(np.median(values[inside]), 1.0, delta=0.02)
+        contours = [c for c in ax.collections if isinstance(c, ContourSet)]
+        self.assertEqual(len(contours), 1)
+
+    def test_plot_pad_polar_invalid(self):
+        f, ax = plt.subplots(1)
+
+        with self.assertRaises(ValueError):
+            plot.plot_pad_polar(ax, self.pad, colorbar="left")
 
 
 class PlScatterMatrixTestCase(unittest.TestCase):

@@ -10,6 +10,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from pyrfu.mms._vdf_bins import _bin_pitch_angles
 from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip
@@ -168,13 +169,9 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
 
     b_hat = normalize(resample(b_xyz, vdf_data)).data
 
-    # Cosine of the pitch angles of the particle velocities (minus the look
-    # directions), (time, phi, theta): independent of energy
-    phi = np.deg2rad(phi)[:, :, None]
-    cos_pa = -np.cos(phi) * np.sin(theta) * b_hat[:, 0, None, None]
-    cos_pa -= np.sin(phi) * np.sin(theta) * b_hat[:, 1, None, None]
-    cos_pa -= np.cos(theta) * b_hat[:, 2, None, None]
-    theta_b = np.rad2deg(np.arccos(np.clip(cos_pa, -1.0, 1.0)))
+    # Pitch angles of the particle velocities (minus the look directions),
+    # (time, phi, theta): independent of energy
+    theta_b = _bin_pitch_angles(phi, vdf.theta.data, b_hat)
 
     # Samples with data, and the data with zeros elsewhere, for the bin sums
     finite = np.isfinite(data)

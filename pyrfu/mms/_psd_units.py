@@ -62,6 +62,19 @@ def _energy(inp, data):
     return energy.reshape(shape)
 
 
+def _relativistic_factor(inp, data):
+    r"""Ratio of the relativistic to the non-relativistic phase-space density
+    in velocity space for the same intensity, 2 gamma^5 / (gamma + 1), shaped
+    as the energies of `_energy`.
+
+    The non-relativistic conversions use f = m J / v^2 with v^2 = 2 E / m. In
+    velocity space, the phase-space density whose integral over d^3v is the
+    density is f = gamma^3 m J / v^2 with the relativistic speed v."""
+    rest_energy = _mass_ratio(inp) * constants.proton_mass * constants.c**2
+    gamma = 1.0 + constants.elementary_charge * _energy(inp, data) / rest_energy
+    return 2.0 * gamma**5 / (gamma + 1.0)
+
+
 def _output(inp, data, units):
     r"""Copy of the input with the converted data and units, without changing
     the input or its attributes."""

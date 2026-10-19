@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import contextlib
+
+# Built-in imports
+import datetime
 import importlib
 import itertools
 import json
@@ -12,6 +14,7 @@ import re
 import string
 import sys
 import tempfile
+import types
 import unittest
 import urllib.parse
 import warnings
@@ -30,6 +33,7 @@ from botocore import UNSIGNED
 from botocore.exceptions import ClientError
 from ddt import data, ddt, idata, unpack
 from scipy import constants
+from scipy.special import gammainc
 
 # Local imports
 from .. import mms, pyrf
@@ -748,6 +752,45 @@ class DbGetTsTestCase(unittest.TestCase):
             self.assertEqual(len(out[name]), 6)
             np.testing.assert_array_equal(out[name].data, value)
 
+    def test_db_get_ts_dict_support(self):
+        # Non-record-varying support variables: the first record of the first
+        # file that has them, without time; missing ones are left out
+        sources = (["file0", "file1"], mock.Mock(), {})
+        cdfs = {
+            b"file0": {"var_s": types.SimpleNamespace(values=np.array([[1, 2, 3]]))},
+            b"file1": {
+                "var_s": types.SimpleNamespace(values=np.array([[9, 9, 9]])),
+                "var_t": types.SimpleNamespace(values=np.array([[4, 5]])),
+            },
+        }
+
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ):
+            with mock.patch.object(
+                self.module,
+                "_get_file_content_sources",
+                side_effect=lambda r, f, *_: f.encode(),
+            ):
+                with mock.patch.object(self.module, "load", side_effect=cdfs.get):
+                    with mock.patch.object(
+                        self.module, "get_ts", return_value=self._ts(0, 1.0)
+                    ):
+                        out = self.module._db_get_ts_dict(
+                            "mms1_feeps_brst_l2_electron",
+                            ["var_a"],
+                            ["a", "b"],
+                            False,
+                            "",
+                            "sdc",
+                            support_names=["var_s", "var_t", "var_u"],
+                        )
+
+        np.testing.assert_array_equal(out["var_s"], [1, 2, 3])
+        np.testing.assert_array_equal(out["var_t"], [4, 5])
+        self.assertNotIn("var_u", out)
+        self.assertIsInstance(out["var_a"], xr.DataArray)
+
     def test_db_get_ts_no_file(self):
         session = mock.Mock()
 
@@ -1048,6 +1091,25 @@ class Dpf2PsdTestCase(unittest.TestCase):
         spectr = generate_spectr(64.0, 100, 32, {"species": species, "UNITS": units})
         result = mms.dpf2psd(spectr)
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_dpf2psd_relativistic(self):
+        # f = gamma^3 m J / v^2 with the relativistic speed: 2 gamma^5 /
+        # (gamma + 1) times the non-relativistic f = m J / v^2
+        energy = np.array([1e3, 5e4, 5e5])  # eV
+        attrs = {"species": "electrons", "UNITS": "1/(cm^2 s sr keV)"}
+        spectr = pyrf.ts_spectr(generate_timeline(1.0, 2), energy, np.ones((2, 3)))
+        spectr.attrs = attrs
+        ratio = mms.dpf2psd(spectr, relativistic=True).data / mms.dpf2psd(spectr).data
+        np.testing.assert_allclose(ratio[0], [1.0098, 1.5205, 20.36], rtol=1e-3)
+
+        gamma = 1 + energy / 510998.95
+        np.testing.assert_allclose(ratio[0], 2 * gamma**5 / (gamma + 1), rtol=1e-6)
+
+        # Protons: 4.9 % at 10 MeV
+        spectr.attrs = {**attrs, "species": "ions"}
+        spectr = spectr.assign_coords(energy=energy * 20)
+        ratio = mms.dpf2psd(spectr, relativistic=True).data / mms.dpf2psd(spectr).data
+        self.assertAlmostEqual(float(ratio[0, -1]), 1.0488, delta=1e-4)
 
 
 @ddt
@@ -1655,6 +1717,151 @@ class MakeModelVDFTestCase(unittest.TestCase):
             mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s[:2], v_xyz, t_xyz)
 
 
+def _gyro_skymap(values=None, n_t=2):
+    # FPI-like skymap (2 energies, 32 phi, 16 theta) of the look directions,
+    # filled with values(phi, theta) of the look directions (degrees)
+    phi = 5.625 + 11.25 * np.arange(32)
+    theta = 5.625 + 11.25 * np.arange(16)
+    data = np.ones((n_t, 2, 32, 16))
+    if values is not None:
+        data *= values(phi[:, None], theta[None, :])[None, None]
+    time = generate_timeline(1.0, n_t)
+    vdf = pyrf.ts_skymap(
+        time,
+        data,
+        np.tile([100.0, 200.0], (n_t, 1)),
+        np.tile(phi, (n_t, 1)),
+        theta,
+        attrs={"UNITS": "s^3/cm^6"},
+        glob_attrs={"species": "ions"},
+    )
+    return vdf
+
+
+def _b_const(b_xyz, n_t=2):
+    return pyrf.ts_vec_xyz(generate_timeline(1.0, n_t), np.tile(b_xyz, (n_t, 1)))
+
+
+class GetGyrophaseDistTestCase(unittest.TestCase):
+    def test_get_gyrophase_dist_gyrotropic(self):
+        # f(pitch angle) with B along z: the same in every gyrophase bin. The
+        # particle velocity is minus the look direction: pitch = 180 - theta
+        vdf = _gyro_skymap(lambda p, t: 1.0 + np.cos(np.deg2rad(t)) ** 2 + 0 * p)
+        result = mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, 10.0]))
+
+        self.assertTupleEqual(result.data.shape, (2, 2, 24))
+        np.testing.assert_allclose(result.gyrophase.data[0], 7.5 + 15.0 * np.arange(24))
+        flat = np.broadcast_to(result.data.data[..., :1], result.data.shape)
+        np.testing.assert_allclose(result.data.data, flat)
+        self.assertGreater(result.data.data[0, 0, 0], 1.0)
+
+    def test_get_gyrophase_dist_sense(self):
+        # A particle moving close to +y (look direction phi = 275.6, theta =
+        # 95.6) has a gyrophase of 95.6 degrees right-handed about B along +z
+        # from x (bin 6), and 264.4 degrees about B along -z (bin 17)
+        def beam(p, t):
+            return ((np.abs(p - 275.625) < 1) & (np.abs(t - 95.625) < 1)) * 1.0
+
+        vdf = _gyro_skymap(beam)
+        for b_z, i_bin in [(10.0, 6), (-10.0, 17)]:
+            result = mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, b_z]))
+            nonzero = np.flatnonzero(result.data.data[0, 0] > 0)
+            self.assertListEqual(nonzero.tolist(), [i_bin])
+
+        # Reference along y: the gyrophase is rotated by -90 degrees, also
+        # with a time series reference
+        r_xyz = _b_const([0.0, 1.0, 0.0])
+        for ref in [[0.0, 1.0, 0.0], r_xyz]:
+            result = mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, 10.0]), r_xyz=ref)
+            self.assertListEqual(np.flatnonzero(result.data.data[0, 0]).tolist(), [0])
+
+    def test_get_gyrophase_dist_convert_fac(self):
+        # Oblique B: the bin of a beam is that of the gyrophase of its velocity
+        # in the field-aligned coordinates of convert_fac
+        def beam(p, t):
+            return ((np.abs(p - 140.625) < 1) & (np.abs(t - 61.875) < 1)) * 1.0
+
+        b_xyz = _b_const([3.0, -4.0, 5.0])
+        result = mms.get_gyrophase_dist(_gyro_skymap(beam), b_xyz, angles=36)
+
+        look = np.deg2rad([140.625, 61.875])
+        u_xyz = -np.array(
+            [
+                np.cos(look[0]) * np.sin(look[1]),
+                np.sin(look[0]) * np.sin(look[1]),
+                np.cos(look[1]),
+            ]
+        )
+        u_fac = pyrf.convert_fac(_b_const(u_xyz), b_xyz, [1, 0, 0]).data[0]
+        gyrophase = np.rad2deg(np.arctan2(u_fac[1], u_fac[0])) % 360.0
+        nonzero = np.flatnonzero(result.data.data[0, 0] > 0)
+        self.assertListEqual(nonzero.tolist(), [int(gyrophase // 10)])
+
+    def test_get_gyrophase_dist_pitch_angle_range(self):
+        # Beams at pitch angles 95 and 30 degrees (theta 84.375 and 151.875)
+        def beams(p, t):
+            perp = (np.abs(p - 5.625) < 1) & (np.abs(t - 84.375) < 1)
+            obl = (np.abs(p - 95.625) < 1) & (np.abs(t - 151.875) < 1)
+            return perp * 1.0 + obl * 2.0
+
+        vdf = _gyro_skymap(beams)
+        b_z = _b_const([0.0, 0.0, 10.0])
+        all_pa = mms.get_gyrophase_dist(vdf, b_z, angles=12)
+        perp = mms.get_gyrophase_dist(vdf, b_z, angles=12, pitch_angle_range=[80, 100])
+
+        # look phi 5.625 -> velocity at 185.6 (bin 6), 95.625 -> 275.6 (bin 9)
+        self.assertListEqual(np.flatnonzero(all_pa.data.data[0, 0]).tolist(), [6, 9])
+        self.assertListEqual(np.flatnonzero(perp.data.data[0, 0] > 0).tolist(), [6])
+        np.testing.assert_array_equal(perp.attrs["pitch_angle_range"], [80, 100])
+
+    def test_get_gyrophase_dist_input(self):
+        vdf = _gyro_skymap()
+
+        # Reference along B: no gyrophase
+        result = mms.get_gyrophase_dist(
+            vdf, _b_const([10.0, 0.0, 0.0]), r_xyz=[1.0, 0.0, 0.0]
+        )
+        self.assertTrue(np.isnan(result.data.data).all())
+
+        for kwargs in [
+            {"angles": "15"},
+            {"pitch_angle_range": [0.0]},
+            {"r_xyz": [1.0, 0.0]},
+        ]:
+            with self.assertRaises(ValueError):
+                mms.get_gyrophase_dist(vdf, _b_const([0.0, 0.0, 10.0]), **kwargs)
+
+    def test_get_gyrophase_dist_options(self):
+        # Bin edges as an array, azimuths without time, and a time interval
+        def beam(p, t):
+            return ((np.abs(p - 275.625) < 1) & (np.abs(t - 95.625) < 1)) * 1.0
+
+        vdf = _gyro_skymap(beam, n_t=4)
+        b_z = _b_const([0.0, 0.0, 10.0], n_t=4)
+        expected = mms.get_gyrophase_dist(vdf, b_z, angles=12)
+
+        result = mms.get_gyrophase_dist(vdf, b_z, angles=np.linspace(0, 360, 13))
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+        vdf_1d = vdf.assign(phi=(["idx1"], vdf.phi.data[0]))
+        result = mms.get_gyrophase_dist(vdf_1d, b_z, angles=12)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[1, 2]]))
+        result = mms.get_gyrophase_dist(vdf, b_z, tint=tint, angles=12)
+        np.testing.assert_array_equal(result.time.data, vdf.time.data[1:3])
+        np.testing.assert_array_equal(result.data.data, expected.data.data[1:3])
+
+    def test_get_gyrophase_dist_feeps(self):
+        # FEEPS skymap (4 rings with angular widths in the attributes)
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        sky = mms.feeps_skymap(feeps_alle, to_psd=False)
+        b_z = pyrf.ts_vec_xyz(sky.time.data, np.tile([0.0, 0.0, 10.0], (2, 1)))
+
+        result = mms.get_gyrophase_dist(sky, b_z, angles=8)
+        np.testing.assert_allclose(result.data.data, 2.0)
+
+
 class GetPitchAngleDistTestCase(unittest.TestCase):
     def setUp(self):
         # f = (i_energy + 1) (i_theta + 1) on FPI-like angles with B along z:
@@ -1906,6 +2113,97 @@ class MakeModelKappaTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
 
 
+@ddt
+class PadPalimTestCase(unittest.TestCase):
+    def test_pad_palim(self):
+        data = np.random.random((3, 2, 12))
+        data[0, 0, 5] = np.nan
+        pad = _pad_case(data)
+
+        # Range: strictly inside
+        result = mms.pad_palim(pad, [30.0, 90.0])
+        np.testing.assert_array_equal(result.theta.data[0], [37.5, 52.5, 67.5, 82.5])
+        np.testing.assert_array_equal(result.data.data, data[..., 2:6])
+        np.testing.assert_array_equal(result.attrs["delta_pitchangle_minus"], 7.5)
+
+        # 90: 82.5 and 97.5 are equally close, averaged (NaN-mean)
+        result = mms.pad_palim(pad, 90.0)
+        self.assertEqual(result.data.shape, (3, 2, 1))
+        np.testing.assert_array_equal(result.theta.data, 90.0)
+        expected = np.nanmean(data[..., 5:7], axis=2)
+        np.testing.assert_allclose(result.data.data[..., 0], expected)
+        self.assertEqual(result.attrs["delta_pitchangle_minus"][0], 15.0)
+        self.assertEqual(result.attrs["delta_pitchangle_plus"][0], 15.0)
+
+        # Without averaging (irfu-matlab "noav"), and the closest bin
+        result = mms.pad_palim(pad, 90.0, average=False)
+        np.testing.assert_array_equal(result.theta.data[0], [82.5, 97.5])
+        result = mms.pad_palim(pad, 50.0)
+        np.testing.assert_array_equal(result.theta.data, 52.5)
+        np.testing.assert_array_equal(result.data.data[..., 0], data[..., 3])
+
+        with self.assertRaises(ValueError):
+            mms.pad_palim(pad, [10.0, 20.0, 30.0])
+
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.pad_palim(vdf, 90.0)
+
+
+@ddt
+class PadDiffusionTestCase(unittest.TestCase):
+    def test_pad_diffusion_legendre(self):
+        # f = cos(a), constant D: df/dt = -2 D cos(a), and with the central
+        # differences on a grid of step h: -2 D cos(a) sin(h)/h sin(2h)/(2h)
+        alpha = np.deg2rad(7.5 + 15.0 * np.arange(12))
+        pad = _pad_case(np.tile(np.cos(alpha), (2, 3, 1)))
+        result = mms.pad_diffusion(pad, 0.1)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6/s")
+
+        step = np.deg2rad(15.0)
+        factor = np.sin(step) / step * np.sin(2 * step) / (2 * step)
+        expected = -0.2 * np.cos(alpha[2:-2]) * factor
+        np.testing.assert_allclose(
+            result.data.data[..., 2:-2], np.broadcast_to(expected, (2, 3, 8))
+        )
+
+        # f = P2(cos(a)) on a fine grid: -6 D f
+        pitch = 0.25 + 0.5 * np.arange(360)
+        p_2 = (3 * np.cos(np.deg2rad(pitch)) ** 2 - 1) / 2
+        pad = _pad_case(np.tile(p_2, (2, 3, 1)), pitch=pitch)
+        result = mms.pad_diffusion(pad, 0.1).data.data[..., 10:-10]
+        np.testing.assert_allclose(
+            result, np.broadcast_to(-0.6 * p_2[10:-10], result.shape), atol=2e-4
+        )
+
+    def test_pad_diffusion_coefficient(self):
+        # D (energy, pitch angle), linear in D, irfu-matlab edges
+        alpha = np.deg2rad(7.5 + 15.0 * np.arange(12))
+        pad = _pad_case(np.tile(np.cos(alpha), (2, 3, 1)))
+        d_aa = np.array([0.1, 0.2, 0.3])[:, None] * np.ones(12)
+        result = mms.pad_diffusion(pad, d_aa).data.data
+        np.testing.assert_allclose(
+            result[:, 2], 3 * mms.pad_diffusion(pad, 0.1).data.data[:, 0]
+        )
+
+        f_0, f_1 = np.cos(alpha[:2])
+        flux_0 = 0.1 * np.sin(alpha[0]) * (f_1 - f_0) / (alpha[1] - alpha[0])
+        flux_1 = (
+            0.1
+            * np.sin(alpha[1])
+            * (np.cos(alpha[2]) - f_0)
+            / (2 * (alpha[1] - alpha[0]))
+        )
+        expected = (flux_1 - flux_0) / (alpha[1] - alpha[0]) / np.sin(alpha[0])
+        np.testing.assert_allclose(result[:, 0, 0], expected)
+
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.pad_diffusion(vdf, 0.1)
+
+
 class ProbeAlignTimesTestCase(unittest.TestCase):
     def test_probe_align_times_values(self):
         # 20 s spin (18 deg/s), B along x in the spin plane except for
@@ -2029,6 +2327,20 @@ class Psd2DpfTestCase(unittest.TestCase):
         result = mms.psd2dpf(spectr)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_psd2dpf_relativistic(self):
+        # Inverse of dpf2psd, also for the relativistic phase-space density
+        vdf = generate_vdf(64.0, 10, (32, 32, 16), False, "electrons")
+        vdf.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 1e3)
+
+        for relativistic in [False, True]:
+            psd = mms.dpf2psd(vdf, relativistic=relativistic)
+            result = mms.psd2dpf(psd, relativistic=relativistic)
+            np.testing.assert_allclose(result.data.data, vdf.data.data, rtol=1e-12)
+
+        psd = mms.dpf2psd(vdf, relativistic=True)
+        self.assertTrue(np.all(mms.psd2dpf(psd).data.data > vdf.data.data))
+
 
 @ddt
 class PsdMomentsTestCase(unittest.TestCase):
@@ -2071,6 +2383,8 @@ class PsdMomentsTestCase(unittest.TestCase):
             np.ones((100, 32), dtype=bool),  # use_energy
             np.random.random((100, 32, 32, 16)),  # vdf
             np.random.random((100, 32, 16)),  # delta_ang
+            np.zeros((1, 10, 1, 1)),  # exact_kernels
+            False,  # use_exact
         )
     )
     def test_moms(self, value):
@@ -2079,6 +2393,55 @@ class PsdMomentsTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], np.ndarray)
         self.assertIsInstance(result[2], np.ndarray)
         self.assertIsInstance(result[3], np.ndarray)
+
+    def test_moms_exact_kernels(self):
+        # The midpoint kernels passed as exact kernels (delta_ang = 1) give the
+        # midpoint moments
+        rng = np.random.default_rng(0)
+        n_t, n_e, n_ph, n_th = 3, 4, 8, 6
+        phi = rng.uniform(0, 360, (n_t, n_ph, n_th))
+        theta = rng.uniform(0, 180, (n_t, n_ph, n_th))
+        delta_ang = rng.uniform(0.1, 0.2, (n_t, n_ph, n_th))
+        ph, th = np.deg2rad(phi), np.deg2rad(theta)
+        s_t, c_t, s_p, c_p = np.sin(th), np.cos(th), np.sin(ph), np.cos(ph)
+        kernels = np.stack(
+            [
+                s_t,
+                -c_p * s_t**2,
+                -s_p * s_t**2,
+                -s_t * c_t,
+                c_p**2 * s_t**3,
+                s_p**2 * s_t**3,
+                s_t * c_t**2,
+                c_p * s_p * s_t**3,
+                c_p * s_t**2 * c_t,
+                s_p * s_t**2 * c_t,
+            ],
+            axis=1,
+        )
+        args = [
+            np.tile(10.0 * 2.0 ** np.arange(n_e), (n_t, 1)),
+            rng.uniform(1.0, 2.0, (n_t, n_e)),
+            constants.e,
+            np.zeros(n_t),
+            constants.m_p,
+            False,
+            0.0,
+            phi,
+            theta,
+            np.ones((n_t, n_e), dtype=bool),
+            rng.uniform(0.0, 1.0, (n_t, n_e, n_ph, n_th)),
+        ]
+        expected = _moms.__wrapped__(*args, delta_ang, np.zeros((1, 10, 1, 1)), False)
+        exact = _moms.__wrapped__(
+            *args,
+            np.ones(delta_ang.shape),
+            kernels * delta_ang[:, None],
+            True,
+        )
+
+        for res, exp in zip(exact, expected):
+            np.testing.assert_allclose(res, exp, rtol=1e-12)
 
     @staticmethod
     def _drifting_maxwellian(n, t_ev, v_kms, n_t=2, energy1=None):
@@ -2146,6 +2509,64 @@ class PsdMomentsTestCase(unittest.TestCase):
         p2_expected = constants.proton_mass * 1e6 * np.outer(v_d, v_d) * 1e9
         np.testing.assert_allclose(
             p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
+        )
+
+    @data(("s^3/cm^6", 1.0), ("s^3/m^6", 1e12), ("S^3/KM^6", 1e30), (None, 1.0))
+    @unpack
+    def test_psd_moments_units(self, units, scale):
+        # The same Maxwellian in other units, or without UNITS (s^3/cm^6, as
+        # FPI), gives the same moments. s^3/m^6 and s^3/km^6 were taken as
+        # s^3/cm^6 (moments 1e12 and 1e30 too large)
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        expected = mms.psd_moments(vdf, sc_pot)
+
+        vdf.data.data *= scale
+        vdf.data.attrs.pop("UNITS", None)
+
+        if units is not None:
+            vdf.data.attrs["UNITS"] = units
+
+        for result, reference in zip(mms.psd_moments(vdf, sc_pot), expected):
+            atol = 1e-10 * np.max(np.abs(reference.data))
+            np.testing.assert_allclose(
+                result.data, reference.data, rtol=1e-10, atol=atol
+            )
+
+    @data("keV/(cm^2 s sr keV)", "1/(cm^2 s sr eV)")
+    def test_psd_moments_units_flux(self, units):
+        # Fluxes are converted to phase-space densities (vdf_convert), as
+        # irfu-matlab; they were taken as s^3/cm^6
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        expected = mms.psd_moments(vdf, sc_pot)
+
+        flux = mms.vdf_convert(vdf, units)
+        for result, reference in zip(mms.psd_moments(flux, sc_pot), expected):
+            atol = 1e-10 * np.max(np.abs(reference.data))
+            np.testing.assert_allclose(
+                result.data, reference.data, rtol=1e-10, atol=atol
+            )
+
+        flux.data.attrs["UNITS"] = "counts"
+
+        with self.assertRaises(ValueError):
+            mms.psd_moments(flux, sc_pot)
+
+    def test_psd_moments_model_vdf(self):
+        # Moments of a model distribution (make_model_vdf, in s^3/km^6)
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        time = vdf.time.data
+        n_s = pyrf.ts_scalar(time, np.full(len(time), 2.0))
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([100.0, -50.0, 200.0], (len(time), 1)))
+        t_xyz = pyrf.ts_tensor_xyz(time, np.tile(np.eye(3) * 800.0, (len(time), 1, 1)))
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (len(time), 1)))
+        model = mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+
+        n, v, _, _, t, _ = mms.psd_moments(model, sc_pot)
+        np.testing.assert_allclose(n.data, 2.0, rtol=0.01)
+        np.testing.assert_allclose(v.data, v_xyz.data, atol=2.0)
+        np.testing.assert_allclose(
+            np.trace(t.data, axis1=1, axis2=2) / 3, 800.0, rtol=0.01
         )
 
     def test_psd_moments_tables_differ_in_some_channels(self):
@@ -2290,6 +2711,152 @@ class PsdMomentsTestCase(unittest.TestCase):
         self._assert_moments_equal(result, expected)
         self.assertAlmostEqual(float(result[0][0]), 1.0, delta=0.01)
 
+    def test_psd_moments_pitch_angle_range(self):
+        # Isotropic Maxwellian, oblique B: the density in the cone [0, a] is
+        # n (1 - cos(a)) / 2, closely with the solid-angle fractions
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        b_xyz = pyrf.ts_vec_xyz(vdf.time.data, np.tile([3.0, -4.0, 5.0], (2, 1)))
+        options = {"b_xyz": b_xyz, "angle_integration": "exact"}
+        n_full = mms.psd_moments(vdf, sc_pot, angle_integration="exact")[0].data
+
+        for weight, rtol in [("fraction", 2e-3), ("centre", 0.05)]:
+            n_cone = mms.psd_moments(
+                vdf,
+                sc_pot,
+                pitch_angle_range=[0.0, 30.0],
+                pitch_angle_weight=weight,
+                **options,
+            )[0].data
+            expected = n_full * (1 - np.cos(np.deg2rad(30.0))) / 2
+            np.testing.assert_allclose(n_cone, expected, rtol=rtol)
+
+            # Complementary ranges, and all the pitch angles
+            n_lower, n_upper = (
+                mms.psd_moments(
+                    vdf,
+                    sc_pot,
+                    pitch_angle_range=r,
+                    pitch_angle_weight=weight,
+                    **options,
+                )[0].data
+                for r in [[0.0, 90.0], [90.0, 180.0]]
+            )
+            np.testing.assert_allclose(n_lower + n_upper, n_full, rtol=1e-12)
+
+            for integration in ["midpoint", "exact"]:
+                result = mms.psd_moments(
+                    vdf,
+                    sc_pot,
+                    b_xyz=b_xyz,
+                    pitch_angle_range=[0.0, 180.0],
+                    pitch_angle_weight=weight,
+                    angle_integration=integration,
+                )
+                expected = mms.psd_moments(vdf, sc_pot, angle_integration=integration)
+                for res, exp in zip(result, expected):
+                    np.testing.assert_array_equal(res.data, exp.data)
+
+        # No B: NaN moments
+        b_xyz.data[0] = np.nan
+        n_i = mms.psd_moments(vdf, sc_pot, b_xyz=b_xyz, pitch_angle_range=[0, 90])
+        self.assertTrue(np.isnan(n_i[0].data[0]))
+        self.assertTrue(np.isfinite(n_i[0].data[1]))
+
+    def test_psd_moments_pitch_angle_input(self):
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        b_xyz = pyrf.ts_vec_xyz(vdf.time.data, np.tile([0.0, 0.0, 1.0], (2, 1)))
+
+        for kwargs in [
+            {"pitch_angle_range": [0.0, 90.0]},
+            {"pitch_angle_range": [90.0], "b_xyz": b_xyz},
+            {"pitch_angle_range": [90.0, 30.0], "b_xyz": b_xyz},
+            {"pitch_angle_range": [0.0, 200.0], "b_xyz": b_xyz},
+            {
+                "pitch_angle_range": [0.0, 90.0],
+                "b_xyz": b_xyz,
+                "pitch_angle_weight": "x",
+            },
+        ]:
+            with self.assertRaises(ValueError):
+                mms.psd_moments(vdf, sc_pot, **kwargs)
+
+    def test_psd_moments_float32(self):
+        # FPI angles and data are float32: the exact kernels (float64) failed
+        # in numba; the moments are those of float64 inputs
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        vdf_32 = vdf.assign(
+            phi=vdf.phi.astype(np.float32), theta=vdf.theta.astype(np.float32)
+        )
+        vdf_32["data"] = vdf_32.data.astype(np.float32)
+
+        for angle_integration in ["midpoint", "exact"]:
+            options = {"angle_integration": angle_integration}
+            result = mms.psd_moments(vdf_32, sc_pot, **options)
+            expected = mms.psd_moments(vdf, sc_pot, **options)
+
+            for res, exp in zip(result[:2], expected[:2]):
+                np.testing.assert_allclose(res.data, exp.data, rtol=1e-5, atol=1e-3)
+
+    def test_psd_moments_exact_angles(self):
+        # FPI grid: the exact angular integrals change the moments by < 1 %
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        n_m, v_m, *_ = mms.psd_moments(vdf, sc_pot)
+        n_e, v_e, *_ = mms.psd_moments(vdf, sc_pot, angle_integration="exact")
+        np.testing.assert_allclose(n_e.data, n_m.data, rtol=0.01)
+        np.testing.assert_allclose(v_e.data, v_m.data, rtol=0.01)
+        self.assertAlmostEqual(float(n_e.data[0]), 1.0, delta=0.01)
+
+        # 4 rings of 8 phi bins (FEEPS electrons): the midpoint rule
+        # underestimates the density by 8 %, the exact integrals don't
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        n_t = vdf.data.shape[0]
+        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
+            [0, 35, 90, 145, 180]
+        )
+        coarse = pyrf.ts_skymap(
+            vdf.time.data,
+            vdf.data.data[:, :, ::4, [0, 5, 10, 15]].copy(),
+            vdf.energy.data,
+            np.tile(22.5 + 45.0 * np.arange(8), (n_t, 1)),
+            theta,
+            energy0=vdf.attrs["energy0"],
+            energy1=vdf.attrs["energy1"],
+            esteptable=vdf.attrs["esteptable"],
+            attrs=dict(vdf.data.attrs),
+            glob_attrs={
+                "species": "ions",
+                "delta_phi_minus": np.full((n_t, 8), 22.5),
+                "delta_phi_plus": np.full((n_t, 8), 22.5),
+                "delta_theta_minus": theta - edges[:-1],
+                "delta_theta_plus": edges[1:] - theta,
+            },
+        )
+        n_m = mms.psd_moments(coarse, sc_pot)[0].data
+        n_e = mms.psd_moments(coarse, sc_pot, angle_integration="exact")[0].data
+        np.testing.assert_allclose(n_m / n_e, 11.6017 / (4 * np.pi), rtol=1e-4)
+        self.assertAlmostEqual(float(n_e[0]), 1.0, delta=0.01)
+
+        # The attribute sets the default, the argument has precedence
+        coarse.attrs["angle_integration"] = "exact"
+        np.testing.assert_array_equal(mms.psd_moments(coarse, sc_pot)[0].data, n_e)
+        n_kw = mms.psd_moments(coarse, sc_pot, angle_integration="midpoint")[0].data
+        np.testing.assert_array_equal(n_kw, n_m)
+
+        with self.assertRaises(ValueError):
+            mms.psd_moments(coarse, sc_pot, angle_integration="trapezoid")
+
+    def test_psd_moments_any_data_rate(self):
+        # The data rate in FIELDNAM is for information only: survey skymaps
+        # (FEEPS) and skymaps without FIELDNAM used to raise
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        expected = self._moments(vdf, sc_pot)
+
+        vdf.data.attrs["FIELDNAM"] = "mms1_feeps_srvy_ion_skymap"
+        self._assert_moments_equal(self._moments(vdf, sc_pot), expected)
+
+        del vdf.data.attrs["FIELDNAM"]
+        self._assert_moments_equal(self._moments(vdf, sc_pot), expected)
+
     def _moments(self, vdf, sc_pot, **kwargs):
         # n, V, P and q at all times
         n, v, p, _, _, h = mms.psd_moments(vdf, sc_pot, **kwargs)
@@ -2393,6 +2960,120 @@ class PsdMomentsTestCase(unittest.TestCase):
         mask[:, :, :16, :] = 0
         n_half = mms.psd_moments(vdf, sc_pot, partial_moments=mask)[0].data
         self.assertTrue(np.all(n_half < 0.9 * n_full))
+
+    def test_psd_moments_relativistic(self):
+        # Electrons 30 keV to 500 keV moving downward (2 upper rings of 4, 8
+        # phi bins, FEEPS-like): the relativistic moments are the velocity
+        # integrals of f with the relativistic speeds, the momentum gamma m v
+        # (pressure) and the kinetic energy (gamma - 1) m c^2 (energy flux)
+        m_e, q_e, c_l = (
+            constants.electron_mass,
+            constants.elementary_charge,
+            constants.c,
+        )
+        n_t, ratio = 2, (5e5 / 3e4) ** (1 / 11)
+        energy = np.tile(3e4 * ratio ** np.arange(12), (n_t, 1))
+        delta_minus, delta_plus = energy * (1 - ratio**-0.5), energy * (ratio**0.5 - 1)
+        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
+            [0.0, 35.0, 90.0, 145.0, 180.0]
+        )
+        flux = 1e5 * (energy / 3e4)[:, :, None, None] ** -3 * np.ones((1, 1, 8, 4))
+        flux[..., 2:] = 0.0  # 1/(cm^2 s sr keV)
+
+        time = generate_timeline(0.05, n_t)
+        flux = pyrf.ts_skymap(
+            time,
+            flux,
+            energy,
+            np.tile(22.5 + 45.0 * np.arange(8), (n_t, 1)),
+            theta,
+            energy0=energy[0],
+            energy1=energy[0],
+            esteptable=np.zeros(n_t, dtype=np.uint8),
+            attrs={"UNITS": "1/(cm^2 s sr keV)"},
+            glob_attrs={
+                "species": "electrons",
+                "angle_integration": "exact",
+                "delta_energy_minus": delta_minus,
+                "delta_energy_plus": delta_plus,
+                "delta_phi_minus": np.full((n_t, 8), 22.5),
+                "delta_phi_plus": np.full((n_t, 8), 22.5),
+                "delta_theta_minus": theta - edges[:-1],
+                "delta_theta_plus": edges[1:] - theta,
+            },
+        )
+        vdf = mms.dpf2psd(flux, relativistic=True)
+        vdf.data.data *= 1e-12
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        sc_pot = pyrf.ts_scalar(time, np.zeros(n_t))
+
+        # Direct sums: speeds, Lorentz factors and widths in speed (SI)
+        def speed(e_ev):
+            return c_l * np.sqrt(1 - (1 + q_e * e_ev / (m_e * c_l**2)) ** -2)
+
+        gamma = 1 + q_e * energy[0] / (m_e * c_l**2)
+        v_e = speed(energy[0])
+        f_v = (
+            vdf.data.data[0, :, 0, 0]
+            * 1e12
+            * v_e**2
+            * (speed(energy[0] + delta_plus[0]) - speed(energy[0] - delta_minus[0]))
+        )
+
+        # Exact angular integrals over the 2 upper rings (velocity -look)
+        c_a, c_b = np.cos(np.deg2rad(edges[:2])), np.cos(np.deg2rad(edges[1:3]))
+        omega = 2 * np.pi * np.sum(c_a - c_b)
+        k_z = -np.pi * np.sum(c_a**2 - c_b**2)
+        k_zz = 2 * np.pi * np.sum(c_a**3 - c_b**3) / 3
+
+        n_exp = np.sum(f_v) * omega
+        f_z = np.sum(f_v * v_e) * k_z
+        p2_zz = m_e * np.sum(gamma * f_v * v_e**2) * k_zz
+        q_z = m_e * c_l**2 * np.sum((gamma - 1) * f_v * v_e) * k_z
+
+        n, v, p, p2, _, h = mms.psd_moments(vdf, sc_pot, relativistic=True)
+        np.testing.assert_allclose(n.data * 1e6, n_exp, rtol=1e-10)
+        np.testing.assert_allclose(v.data[:, 2] * 1e3, f_z / n_exp, rtol=1e-10)
+        np.testing.assert_allclose(v.data[:, :2], 0.0, atol=1e-6)
+        np.testing.assert_allclose(p2.data[:, 2, 2] * 1e-9, p2_zz, rtol=1e-10)
+
+        # Energy flux from the heat flux and the bulk-flow terms of psd_moments
+        v_z, p_zz = v.data[:, 2] * 1e3, p.data[:, 2, 2] * 1e-9
+        p_tr = np.trace(p.data, axis1=1, axis2=2) * 1e-9
+        q_tot = h.data[:, 2] * 1e-3 + v_z * p_zz
+        q_tot += 0.5 * v_z * (p_tr + m_e * n.data * 1e6 * v_z**2)
+        np.testing.assert_allclose(q_tot, q_z, rtol=1e-10)
+
+        # The density is the integral of the intensity, J / v dE dOmega
+        j_si = flux.data.data[0, :, 0, 0] * 1e4 / (1e3 * q_e)
+        n_flux = np.sum(j_si * q_e * (delta_minus[0] + delta_plus[0]) / v_e) * omega
+        np.testing.assert_allclose(n.data * 1e6, n_flux, rtol=0.02)
+
+        # The attribute sets the default, the argument has precedence
+        vdf.attrs["relativistic"] = True
+        n_attr = mms.psd_moments(vdf, sc_pot)[0].data
+        np.testing.assert_array_equal(n_attr, n.data)
+        n_nr = mms.psd_moments(vdf, sc_pot, relativistic=False)[0].data
+        del vdf.attrs["relativistic"]
+        np.testing.assert_array_equal(mms.psd_moments(vdf, sc_pot)[0].data, n_nr)
+        self.assertTrue(np.all(n_nr > 1.3 * n.data))
+
+    def test_psd_moments_relativistic_low_energy(self):
+        # 1 keV protons: the relativistic moments are the non-relativistic ones
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        result = mms.psd_moments(vdf, sc_pot, relativistic=True)
+        expected = mms.psd_moments(vdf, sc_pot)
+
+        # (the heat flux is a small difference of large terms)
+        for res, exp, rtol in zip(result, expected, [1e-4] * 5 + [1e-2]):
+            atol = 1e-5 * np.max(np.abs(exp.data))
+            np.testing.assert_allclose(res.data, exp.data, rtol=rtol, atol=atol)
+
+        # Below the spacecraft potential, as the non-relativistic moments
+        sc_pot.data[:] = 50.0
+        result = mms.psd_moments(vdf, sc_pot, relativistic=True)
+        expected = mms.psd_moments(vdf, sc_pot)
+        np.testing.assert_allclose(result[0].data, expected[0].data, rtol=1e-4)
 
 
 @ddt
@@ -2593,6 +3274,130 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, dict)
 
+    def test_feeps_active_eyes_time_types(self):
+        # str, datetime64 and datetime.datetime give the same eyes on each side
+        # of the 2017-08-16 change (datetime.datetime used to raise)
+        var = {"tmmode": "srvy", "dtype": "electron", "lev": "l2"}
+        new = {"top": [3, 5, 9, 10, 12], "bottom": [2, 4, 5, 9, 10]}
+        old = {"top": [3, 4, 5, 11, 12], "bottom": [3, 4, 5, 11, 12]}
+
+        for start, expected in [
+            ("2017-08-16T00:00:00", new),
+            ("2017-08-15T23:59:00", old),
+        ]:
+            for t_start in [
+                start,
+                np.datetime64(start, "ns"),
+                datetime.datetime.fromisoformat(start),
+            ]:
+                result = mms.feeps_active_eyes(var, [t_start, t_start], 1)
+                self.assertDictEqual(result, expected)
+
+    def test_feeps_active_eyes_sitl(self):
+        # SITL: top eyes 5, 11 and 12 only, as IDL SPEDAS; after 2017-08-16 in
+        # survey, those of them that are active
+        for dtype in ["electron", "ion"]:
+            var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
+            result = mms.feeps_active_eyes(var, ["2017-08-01", "2017-08-02"], 1)
+            self.assertDictEqual(result, {"top": [5, 11, 12], "bottom": []})
+
+        tint = ["2019-01-01", "2019-01-02"]
+        for mms_id, dtype, top in [
+            (1, "electron", [5, 12]),
+            (2, "electron", [5, 11]),
+            (4, "electron", [5, 11]),
+            (1, "ion", []),
+        ]:
+            var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
+            result = mms.feeps_active_eyes(var, tint, mms_id)
+            self.assertListEqual(sorted(result["top"]), top)
+            self.assertListEqual(result["bottom"], [])
+
+
+def _feeps_omni_4sc(values, energies=None):
+    # Omni spectra of the 4 spacecraft (3 channels, 4 times), one constant per
+    # spacecraft (NaN for no data), with their mmsId
+    time = generate_timeline(1.0, 4)
+    out = []
+    for i, value in enumerate(values):
+        energy = np.array([50.0, 70.0, 100.0]) if energies is None else energies[i]
+        out.append(
+            xr.DataArray(
+                np.full((4, 3), value),
+                coords=[time, energy],
+                dims=["time", "energy"],
+                attrs={"mmsId": i + 1, "species": "e"},
+            )
+        )
+    return out
+
+
+class FeepsAvg4scTestCase(unittest.TestCase):
+    def test_feeps_avg_4sc_nan(self):
+        # Spacecraft at 1, 2 and 4 and one without data: 7 / 3; a time without
+        # data on any spacecraft gives NaN without warning
+        omni = _feeps_omni_4sc([1.0, 2.0, 4.0, np.nan])
+        for b in omni:
+            b.data[2] = np.nan
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = mms.feeps_avg_4sc(tuple(omni))
+
+        expected = np.full((4, 3), 7.0 / 3.0)
+        expected[2] = np.nan
+        np.testing.assert_allclose(result.data, expected)
+        self.assertEqual(result.attrs["mmsId"], "4sc_avg")
+        self.assertEqual(omni[0].attrs["mmsId"], 1)
+
+    def test_feeps_avg_4sc_combined_energies(self):
+        # Output channel 0 = channel 1 of MMS1 and channel 2 of MMS2 (MMS3 and
+        # MMS4 left out), channels 1 and 2 = the same channel on all
+        energies = [np.array([50.0, 70.0, 100.0]), np.array([40.0, 54.0, 80.0])] * 2
+        omni = _feeps_omni_4sc([1.0, 2.0, 4.0, 8.0], energies)
+        combined = {0: [1, 2, None, None], 1: [2, 3, 2, 3], 2: [3, 3, 3, 3]}
+
+        result = mms.feeps_avg_4sc(omni, combined_energies=combined)
+
+        np.testing.assert_allclose(result.data[0], [1.5, 15.0 / 4.0, 15.0 / 4.0])
+        np.testing.assert_allclose(result.energy.data, [52.0, 75.0, 90.0])
+
+    def test_feeps_avg_4sc_pad(self):
+        # PADs (time, theta) of the 4 spacecraft, one without data
+        time = generate_timeline(1.0, 4)
+        theta = 8.18 + 16.36 * np.arange(11)
+        pads = [
+            xr.DataArray(
+                np.full((4, 11), value),
+                coords=[time, theta],
+                dims=["time", "theta"],
+                attrs={"mmsId": i + 1, "probe": i + 1, "mms": i + 1, "MMS": i + 1},
+            )
+            for i, value in enumerate([1.0, 2.0, 4.0, np.nan])
+        ]
+
+        result = mms.feeps_avg_4sc(pads, flag="pad")
+
+        np.testing.assert_allclose(result.data, np.full((4, 11), 7.0 / 3.0))
+        np.testing.assert_array_equal(result.theta.data, theta)
+        for key in ["mmsId", "probe", "mms", "MMS"]:
+            self.assertEqual(result.attrs[key], "4sc_avg")
+
+    def test_feeps_avg_4sc_input(self):
+        with self.assertRaises(TypeError):
+            mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0])[0])
+
+        with self.assertRaises(TypeError):
+            mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), combined_energies=[[1, 1]])
+
+        # Datasets were documented but failed with AttributeError
+        omni = [b.to_dataset(name="omni") for b in _feeps_omni_4sc([1.0, 2.0])]
+        with self.assertRaisesRegex(TypeError, "DataArray"):
+            mms.feeps_avg_4sc(omni)
+
+        with self.assertRaises(ValueError):
+            mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), flag="gpd")
+
 
 @ddt
 class FeepsCorrectEnergiesTestCase(unittest.TestCase):
@@ -2606,6 +3411,53 @@ class FeepsCorrectEnergiesTestCase(unittest.TestCase):
 
         result = mms.feeps_correct_energies(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_feeps_correct_energies_values(self):
+        # Energies from the table, the loader's dimension names kept (they were
+        # renamed energy-top-1), and the caller's attrs left alone
+        feeps_alle = generate_feeps(64.0, 10, "brst", "electron", "l2", "flux", 2)
+        attrs = dict(feeps_alle.attrs)
+
+        result = mms.feeps_correct_energies(feeps_alle)
+        result.attrs["new"] = 1
+
+        self.assertTupleEqual(result["top-1"].dims, ("time", "energy_top-1"))
+        np.testing.assert_array_equal(
+            result["energy_top-1"].data, mms.feeps_energy_table(2, "top", 1)
+        )
+        self.assertDictEqual(feeps_alle.attrs, attrs)
+
+        # Already split (15 channels): clear error
+        split, _ = mms.feeps_split_integral_ch(feeps_alle)
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_correct_energies(split)
+
+
+class FeepsCorrectionsTestCase(unittest.TestCase):
+    def test_feeps_corrections(self):
+        # MMS2 ions in 2017: zero-gain and bad eye bottom-7, bad channels
+        feeps_alle = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", 2)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64("2017-07-11T22:00:00", "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+        feeps_alle["spinsectnum"].data = np.arange(100) % 64
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_corrections(feeps_alle)
+
+        # The chain of IDL SPEDAS mms_load_feeps
+        expected = mms.feeps_correct_energies(feeps_ref)
+        expected = mms.feeps_flat_field_corrections(expected)
+        expected = mms.feeps_remove_bad_data(expected)
+        expected, _ = mms.feeps_split_integral_ch(expected)
+        expected = mms.feeps_remove_sun(expected)
+        xr.testing.assert_identical(result, expected)
+
+        self.assertEqual(result["top-6"].shape, (100, 15))
+        self.assertIn("energy_top-6", result["top-6"].dims)
+        self.assertTrue(np.isnan(result["bottom-7"].data).all())
+        self.assertTrue(np.isfinite(result["top-6"].data[:, 1:]).any())
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
 
 
 @ddt
@@ -2628,10 +3480,12 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
 
         result = mms.feeps_flat_field_corrections(feeps_alle)
 
-        # Each eye is scaled by its gain (1 if not in the table)
+        # Each eye is scaled by its gain (1 if not in the table), and the eyes
+        # with a gain of 0 are NaN (they used to be zeros)
         for k in filter(lambda x: x[:3] in ["top", "bot"], feeps_ref):
             sensor, eye = k.split("-")
             gain = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
+            gain = np.nan if gain == 0 else gain
             np.testing.assert_array_equal(result[k].data, feeps_ref[k].data * gain)
             self.assertDictEqual(result[k].attrs, feeps_ref[k].attrs)
 
@@ -2655,6 +3509,62 @@ class FeepsOmniTestCase(unittest.TestCase):
         result = mms.feeps_omni(feeps_alle)
         self.assertIsInstance(result, xr.DataArray)
 
+    @data("l2", "sitl")
+    def test_feeps_omni_energy_check(self, lev):
+        # mms1 electron omni energies
+        energies = np.array(
+            [33.2, 51.9, 70.6, 89.4, 107.1, 125.2, 146.5, 171.3]
+            + [200.2, 234.0, 273.4, 319.4, 373.2, 436.0, 509.2]
+        )
+        energies += 14.0
+        time = generate_timeline(64.0, 10)
+
+        # 4 eyes at 1, top-2 at 3 with channel 3 20 % off and channel 4 5 % off,
+        # bottom-1 with NaN energies
+        eye_energies = {k: energies.copy() for k in ["top-1", "top-2", "bottom-1"]}
+        eye_energies["top-2"][3] *= 1.2
+        eye_energies["top-2"][4] *= 1.05
+        eye_energies["bottom-1"][:] = np.nan
+        eye_energies["bottom-2"] = energies.copy()
+
+        feeps_dict = {}
+        for k, e_eye in eye_energies.items():
+            value = 3.0 if k == "top-2" else 1.0
+            feeps_dict[k] = xr.DataArray(
+                np.full((len(time), len(energies)), value),
+                coords=[time, e_eye],
+                dims=["time", f"energy-{k}"],
+                attrs={"UNITS": "1/(cm^2 s sr keV)"},
+            )
+
+        feeps_alle = xr.Dataset(feeps_dict)
+        feeps_alle.attrs = {
+            "tmmode": "brst",
+            "dtype": "electron",
+            "lev": lev,
+            "units_name": "flux",
+            "species": "e",
+            "mmsId": 1,
+        }
+
+        result = mms.feeps_omni(feeps_alle)
+        np.testing.assert_allclose(result.energy.data, energies)
+
+        # Channel 3 of top-2 is averaged only without the check (SITL), the
+        # other channels of top-2 and the NaN-energy eye are always averaged
+        expected = np.full(len(energies), 1.5)
+        if lev != "sitl":
+            expected[3] = 1.0
+
+        np.testing.assert_allclose(result.data, np.tile(expected, (len(time), 1)))
+
+    def test_feeps_omni_unsplit(self):
+        # Unsplit eyes (16 channels) used to fail with a broadcasting error
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_omni(feeps_alle)
+
 
 @ddt
 class FeepsPadTestCase(unittest.TestCase):
@@ -2669,6 +3579,162 @@ class FeepsPadTestCase(unittest.TestCase):
 
         result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_feeps_pad_input_unchanged(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        # Integer counts with a whole eye at zero
+        for k in feeps_alle:
+            if k.startswith(("top", "bottom")):
+                counts = np.round(100 * feeps_alle[k].data).astype(np.int64)
+                feeps_alle[k] = feeps_alle[k].copy(data=counts)
+
+        feeps_alle["top-2"].data[:] = 0
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
+        self.assertEqual(result.dtype, np.float64)
+        self.assertTrue(np.isfinite(result.data).all())
+        self.assertEqual(result.attrs["energy_range"], [70.0, 600.0])
+
+        # The zeros used to be set to NaN in the caller's data, and
+        # energy_range added to the caller's attrs
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+    def test_feeps_pad_cdf_angles(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        # CDF pitch angles at 10 degrees, one eye with the fill value
+        pitch_angle = np.full((feeps_alle.sizes["time"], 18), 10.0)
+        pitch_angle[:, 0] = -2147483648
+        feeps_alle["pitch_angle"] = (["time", "eye"], pitch_angle)
+
+        b_bcs = generate_ts(64.0, 100, tensor_order=1)
+        result = mms.feeps_pad(feeps_alle, b_bcs)
+
+        # Burst: the CDF angles are used (they used to be computed from B),
+        # 10 +/- 21.4 degrees covers the first two bins only
+        self.assertTrue(np.isfinite(result.data[:, :2]).all())
+        self.assertTrue(np.isnan(result.data[:, 2:]).all())
+
+        # Angles from B on request, and always in survey
+        result_b = mms.feeps_pad(feeps_alle, b_bcs, angles_from_bfield=True)
+        feeps_alle.attrs["tmmode"] = "srvy"
+        result_srvy = mms.feeps_pad(feeps_alle, b_bcs)
+        expected = mms.feeps_pad(feeps_alle.drop_vars("pitch_angle"), b_bcs)
+        xr.testing.assert_allclose(result_srvy, expected)
+        self.assertFalse(np.isnan(result_b.data[:, 2:]).all())
+
+    def test_feeps_pad_options(self):
+        feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+        feeps_alle["pitch_angle"] = (
+            ["time", "eye"],
+            np.full((feeps_alle.sizes["time"], 18), 10.0),
+        )
+        for eye in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            feeps_alle[eye].attrs["UNITS"] = "counts/s"
+        b_bcs = generate_ts(64.0, 20, tensor_order=1)
+
+        # bin_size not dividing 180: bins of 25 degrees from 0 up to 175, as
+        # IDL SPEDAS and pyspedas (they were 25.7 degrees wide, labelled as 25)
+        result = mms.feeps_pad(feeps_alle, b_bcs, bin_size=25.0, energy=[32.0, 600.0])
+        np.testing.assert_allclose(result.theta.data, 12.5 + 25.0 * np.arange(7))
+        self.assertTrue(np.isfinite(result.data[:, :2]).all())
+        self.assertTrue(np.isnan(result.data[:, 2:]).all())
+
+        # 32 keV accepted (it raised), units of the input (count rate)
+        self.assertEqual(result.attrs["UNITS"], "counts/s")
+
+        with self.assertRaises(ValueError):
+            mms.feeps_pad(feeps_alle, b_bcs, energy=[20.0, 600.0])
+
+        with self.assertWarns(UserWarning):
+            result = mms.feeps_pad(feeps_alle, b_bcs, energy=[700.0, 800.0])
+        self.assertTrue(np.isnan(result.data).all())
+
+        feeps_alle.attrs["tmmode"] = "fast"
+        with self.assertRaises(ValueError):
+            mms.feeps_pad(feeps_alle, b_bcs)
+
+    def test_feeps_pad_unsplit(self):
+        # Unsplit eyes (16 channels) used to average the integral channel
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
+
+    def test_feeps_pad_values(self):
+        feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        # top-1 at 10 and top-2 at 30 degrees, the other eyes are filled
+        pitch_angle = np.full((feeps_alle.sizes["time"], 18), -2147483648.0)
+        pitch_angle[:, :2] = [10.0, 30.0]
+        feeps_alle["pitch_angle"] = (["time", "eye"], pitch_angle)
+        feeps_alle["top-1"].data[:] = 2.0
+        feeps_alle["top-2"].data[:] = 4.0
+        feeps_alle["top-2"].data[0, :] = np.nan
+
+        result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 20, tensor_order=1))
+
+        # +/- 21.4 degrees: top-1 covers the bins 0-1, top-2 the bins 0-3
+        expected = np.full((20, 11), np.nan)
+        expected[:, :2], expected[:, 2:4] = 3.0, 4.0
+        expected[0, :2], expected[0, 2:4] = 2.0, np.nan  # top-2 NaN
+        np.testing.assert_allclose(result.data, expected)
+
+    def test_feeps_pad_nan_energies(self):
+        feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        pitch_angle = np.full((feeps_alle.sizes["time"], 18), -2147483648.0)
+        pitch_angle[:, :2] = [10.0, 30.0]
+        feeps_alle["pitch_angle"] = (["time", "eye"], pitch_angle)
+        feeps_alle["top-1"].data[:] = 2.0
+        feeps_alle["top-2"].data[:] = 4.0
+
+        # top-1 without energy calibration (NaN energies) is left out
+        top_1 = feeps_alle["top-1"].rename(energy="energy_top-1")
+        feeps_alle["top-1"] = top_1.assign_coords(
+            {"energy_top-1": np.full(len(energy), np.nan)}
+        )
+
+        b_bcs = generate_ts(64.0, 20, tensor_order=1)
+        result = mms.feeps_pad(feeps_alle, b_bcs)
+
+        expected = np.full((20, 11), np.nan)
+        expected[:, :4] = 4.0
+        np.testing.assert_array_equal(result.data, expected)
+
+        feeps_alle.attrs["dtype"] = "proton"
+        with self.assertRaisesRegex(ValueError, "Invalid species"):
+            mms.feeps_pad(feeps_alle, b_bcs)
+
+
+def _spin_avg_case(dim, values):
+    # 3 samples of a partial spin, 5 spins of 8 sectors, 4 samples of a partial
+    # spin, with the data equal to the spin number (0 to 6)
+    spin_sectors = np.hstack([[5, 6, 7], np.tile(np.arange(8), 5), [0, 1, 2, 3]])
+    spin = np.hstack([[0] * 3, np.repeat(np.arange(1, 6), 8), [6] * 4]).astype(float)
+    time = generate_timeline(0.4, len(spin))
+    data = np.tile(spin[:, None], (1, len(values)))
+    out = xr.DataArray(
+        data, coords=[time, values], dims=["time", dim], attrs={"mmsId": 1}
+    )
+    return spin_sectors, out
 
 
 @ddt
@@ -2685,6 +3751,42 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_feeps_pad_spin_avg_input_types(self):
+        feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
+
+        # A NumPy array used to raise TypeError
+        result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
+        result_np = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum.data)
+
+        self.assertEqual(len(result.time), 9)
+        xr.testing.assert_identical(result, result_np)
+
+    def test_feeps_pad_spin_avg_windows(self):
+        # Partial spin (3 samples), 5 spins of 8 sectors, partial spin (4)
+        theta = 8.1818 + 16.3636 * np.arange(11)
+        spin_sectors, pad = _spin_avg_case("theta", theta)
+        pad.data[3:11, 4] = np.nan  # spin 1 without data in one bin
+
+        result = mms.feeps_pad_spinavg(pad, spin_sectors)
+
+        # One row per spin, at its first sample, on the PAD bins: the windows
+        # used to be shifted by one sample and interpolated onto 12 bin edges
+        expected = np.tile(np.arange(7.0)[:, None], (1, 11))
+        expected[1, 4] = np.nan
+        np.testing.assert_array_equal(result.data, expected)
+        np.testing.assert_array_equal(result.theta.data, theta)
+        np.testing.assert_array_equal(
+            result.time.data, pad.time.data[[0, 3, 11, 19, 27, 35, 43]]
+        )
+
+        with self.assertWarns(FutureWarning):
+            mms.feeps_pad_spinavg(pad, spin_sectors, 16.3636)
+
+        with self.assertRaises(ValueError):
+            mms.feeps_pad_spinavg(pad, spin_sectors[:-1])
 
 
 @ddt
@@ -2703,6 +3805,39 @@ class FeepsPitchAnglesTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result[0], xr.DataArray)
 
+    def test_feeps_pitch_angles_interpolation(self):
+        # B turning by 45 degrees per FEEPS sample, at 10 times the FEEPS rate
+        feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
+        time = generate_timeline(640.0, 1000)
+        phi = np.deg2rad(4.5) * np.arange(1000)
+        b_xyz = np.stack([np.cos(phi), np.sin(phi), 0.5 * np.ones(1000)], axis=1)
+        b_fast = xr.DataArray(
+            b_xyz, coords=[time, ["x", "y", "z"]], dims=["time", "comp"]
+        )
+
+        # The angles at the FEEPS times are those of B at these times (they
+        # used to be averaged over the sample, while B turns)
+        result, _ = mms.feeps_pitch_angles(feeps_alle, b_fast)
+        expected, _ = mms.feeps_pitch_angles(feeps_alle, b_fast[::10])
+
+        np.testing.assert_array_equal(result.time.data, feeps_alle.time.data)
+        np.testing.assert_allclose(result.data, expected.data, atol=1e-10)
+
+    def test_feeps_pitch_angles_along_eye(self):
+        # B along the electron top-5 eye (and against bottom-5): 0 and 180
+        # degrees, not NaN from cos slightly beyond 1 (it used to be NaN)
+        module = importlib.import_module("pyrfu.mms.feeps_pitch_angles")
+        v_eye = -np.matmul(module.t_top, module.v_fcs[5])
+        b_bcs = pyrf.ts_vec_xyz(
+            generate_timeline(1.0, 1), 50.0 * v_eye[None, :] / np.linalg.norm(v_eye)
+        )
+
+        pas = module._calc_pas("electron", b_bcs)[0]
+
+        self.assertFalse(np.isnan(pas).any())
+        self.assertEqual(pas[4], 0.0)
+        self.assertEqual(pas[13], 180.0)
+
 
 @ddt
 class FeepsRemoveBadDataTestCase(unittest.TestCase):
@@ -2716,6 +3851,159 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
 
         result = mms.feeps_remove_bad_data(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_feeps_remove_bad_data_input_unchanged(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        # Bad eye and bad lowest channel are NaN in the output only
+        self.assertTrue(np.isnan(result["top-1"].data).all())
+        self.assertTrue(np.isnan(result["top-2"].data[:, 0]).all())
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+    @data(
+        (1, "2019-01-01T00:00:00", {"top-6": 2, "bottom-6": 2, "bottom-8": 1}),
+        (
+            2,
+            "2017-07-11T22:00:00",
+            {"top-6": 1, "top-7": 15, "top-8": 2, "bottom-7": 15},
+        ),
+        (
+            2,
+            "2019-01-01T00:00:00",
+            {"top-6": 1, "top-7": 15, "top-8": 2, "bottom-7": 2},
+        ),
+        # MMS4 bottom-6 and bottom-7: the 3 lowest channels are bad
+        (
+            4,
+            "2019-01-01T00:00:00",
+            {
+                "top-6": 2,
+                "top-7": 15,
+                "top-8": 1,
+                "bottom-6": 3,
+                "bottom-7": 3,
+                "bottom-8": 2,
+            },
+        ),
+    )
+    @unpack
+    def test_feeps_remove_bad_data_ions(self, mms_id, t_start, n_bad):
+        # Ion eyes (6-8) used to be skipped: bad eyes and channels kept
+        feeps_alle = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", mms_id)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64(t_start, "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        # Number of lowest channels set to NaN in each eye (15: bad eye)
+        for k in filter(lambda x: x[:3] in ["top", "bot"], result):
+            n_nan = int(np.isnan(result[k].data).all(axis=0).sum())
+            self.assertEqual(n_nan, n_bad.get(k, 0), k)
+
+    def test_feeps_remove_bad_data_electrons(self):
+        # MMS4 electrons in 2019 (2018-10-01 table): bad eyes top-1, bottom-4
+        # and bottom-11, bad channel 0 of the other eyes but bottom-9 (0-1);
+        # the bad ion channels 0-2 are skipped
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 4)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64("2019-01-01T00:00:00", "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        n_bad = {"top-1": 15, "bottom-4": 15, "bottom-11": 15, "bottom-9": 2}
+        for k in filter(lambda x: x[:3] in ["top", "bot"], result):
+            n_nan = int(np.isnan(result[k].data).all(axis=0).sum())
+            self.assertEqual(n_nan, n_bad.get(k, 1), k)
+
+    def test_feeps_remove_bad_data_nan_energies(self):
+        # mms2 top-5 is a good eye in the 2018-10-01 table, without energy
+        # calibration: its bad lowest channel used to be kept
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 2)
+        eye = feeps_alle["top-5"].rename(energy="energy-top-5")
+        eye = eye.assign_coords({"energy-top-5": np.full(eye.shape[1], np.nan)})
+        feeps_alle = feeps_alle.drop_vars("top-5").assign({"top-5": eye})
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        self.assertTrue(np.isnan(result["top-5"].data[:, 0]).all())
+        self.assertTrue(np.isfinite(result["top-5"].data[:, 1:]).all())
+
+    @data(
+        ("2017-07-11T22:00:00", ["top-12", "top-5"]),
+        ("2018-04-01T11:00:00", ["top-12", "top-5"]),
+        ("2018-04-01T13:00:00", ["bottom-12", "bottom-2", "top-12"]),
+        ("2018-10-01T00:00:00", ["bottom-12", "bottom-2", "top-12"]),
+        ("2024-03-15T10:00:00", ["bottom-12", "bottom-2", "top-12"]),
+    )
+    @unpack
+    def test_feeps_remove_bad_data_table(self, t_start, bad_eyes):
+        # mms2 bad eyes: 2017-10-01 table before 2018-04-01 12:00 UTC (half way
+        # to the next table), 2018-10-01 table after, as in pyspedas
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 2)
+        time = feeps_alle.time.data
+        time = time - time[0] + np.datetime64(t_start, "ns")
+        feeps_alle = feeps_alle.assign_coords(time=time)
+
+        result = mms.feeps_remove_bad_data(feeps_alle)
+
+        eyes = [k for k in result if k.startswith(("top", "bottom"))]
+        all_nan = sorted(k for k in eyes if np.isnan(result[k].data).all())
+        self.assertListEqual(all_nan, bad_eyes)
+
+
+@ddt
+class ReadFeepsSectorMasksCsvTestCase(unittest.TestCase):
+    sun_path = os.path.join(os.path.dirname(mms.__file__), "sun")
+
+    def _table(self, mms_id, file_date):
+        file_name = f"MMS{mms_id:d}_FEEPS_ContaminatedSectors_{file_date}.csv"
+        file_path = os.path.join(self.sun_path, file_name)
+        return np.loadtxt(file_path, delimiter=",", encoding="utf-8-sig")
+
+    @data(
+        ("2017-07-11T22:00:00", "20170531"),
+        ("2020-01-01T00:00:00", "20181005"),
+        ("2024-03-15T10:00:00", "20240202"),
+        ("2025-06-01T00:00:00", "20250814"),
+        ("2026-06-01T00:00:00", "20251226"),
+    )
+    @unpack
+    def test_read_feeps_sector_masks_csv_date(self, t_start, file_date):
+        # Masks from the file nearest to the start time; the list used to
+        # stop at 20181005
+        masks = mms.read_feeps_sector_masks_csv([t_start, t_start])
+
+        for mms_id in range(1, 5):
+            table = self._table(mms_id, file_date)
+            for i in range(12):
+                top = list(np.where(table[:, i] == 1)[0])
+                bottom = list(np.where(table[:, i + 12] == 1)[0])
+                self.assertListEqual(masks[f"mms{mms_id:d}_imask_top-{i + 1:d}"], top)
+                self.assertListEqual(
+                    masks[f"mms{mms_id:d}_imask_bottom-{i + 1:d}"], bottom
+                )
+
+    def test_read_feeps_sector_masks_csv_files(self):
+        files = os.listdir(self.sun_path)
+        file_dates = sorted({f[-12:-4] for f in files if f.endswith(".csv")})
+        self.assertEqual(file_dates[-1], "20251226")
+
+        # 64 sectors x 24 eyes of 0/1 for each spacecraft and date
+        for file_date in file_dates:
+            for mms_id in range(1, 5):
+                table = self._table(mms_id, file_date)
+                self.assertTupleEqual(table.shape, (64, 24))
+                self.assertTrue(np.isin(table, [0, 1]).all())
+
+        # MMS4 20250216 table as updated upstream in April 2025
+        self.assertEqual(int(self._table(4, "20250216").sum()), 564)
 
 
 @ddt
@@ -2731,6 +4019,325 @@ class FeepsRemoveSunTestCase(unittest.TestCase):
 
         result = mms.feeps_remove_sun(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_feeps_remove_sun_input_unchanged(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_remove_sun(feeps_alle)
+
+        # Masked sectors are NaN in the output only
+        self.assertTrue(np.isnan(result["top-5"].data).any())
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+
+class FeepsRemoveSunlitSectorsTestCase(unittest.TestCase):
+    def test_feeps_remove_sunlit_sectors(self):
+        feeps_alle = generate_feeps(64.0, 640, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_alle["spinsectnum"].data = np.arange(640) % 64
+
+        eyes = [k for k in feeps_alle if k.startswith(("top", "bottom"))]
+        rng = np.random.default_rng(1)
+        for k in eyes:
+            feeps_alle[k].data = rng.uniform(1.0, 2.0, feeps_alle[k].shape)
+
+        # Two sunlit eye-sector pairs, much brighter than the others
+        feeps_alle["top-1"].data[feeps_alle["spinsectnum"].data == 10] = 1e3
+        feeps_alle["bottom-3"].data[feeps_alle["spinsectnum"].data == 20] = 1e3
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        # Quantile between the two sunlit sums and the others
+        n_cells = 64 * len(eyes)
+        result = mms.feeps_remove_sunlit_sectors(
+            feeps_alle, outliers_q=(n_cells - 2.5) / (n_cells - 1)
+        )
+
+        sunlit = {"top-1": 10, "bottom-3": 20}
+        for k in eyes:
+            mask = feeps_alle["spinsectnum"].data == sunlit.get(k, -1)
+            self.assertTrue(np.isnan(result[k].data[mask]).all())
+            np.testing.assert_array_equal(
+                result[k].data[~mask], feeps_alle[k].data[~mask]
+            )
+
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+    def test_feeps_remove_sunlit_sectors_survey(self):
+        # Survey samples are labelled with 8 of the 64 sectors
+        feeps_alle = generate_feeps(64.0, 800, "srvy", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_alle["spinsectnum"].data = np.tile(np.arange(7, 64, 8), 100)
+
+        eyes = [k for k in feeps_alle if k.startswith(("top", "bottom"))]
+        rng = np.random.default_rng(2)
+        for k in eyes:
+            feeps_alle[k].data = rng.uniform(1.0, 2.0, feeps_alle[k].shape)
+
+        sunlit = feeps_alle["spinsectnum"].data == 15
+        feeps_alle[eyes[0]].data[sunlit] = 1e3
+
+        # Quantile between the sunlit average and the others, over the 8
+        # sectors with data (the 56 empty sectors used to count as zeros, and 4
+        # more eye-sector pairs were masked)
+        n_cells = 8 * len(eyes)
+        result = mms.feeps_remove_sunlit_sectors(
+            feeps_alle, outliers_q=(n_cells - 1.5) / (n_cells - 1)
+        )
+
+        self.assertTrue(np.isnan(result[eyes[0]].data[sunlit]).all())
+        n_nans = sum(int(np.isnan(result[k].data).sum()) for k in eyes)
+        self.assertEqual(n_nans, np.isnan(result[eyes[0]].data[sunlit]).size)
+
+        # Sunlit in the first channel only: found with i_en=0
+        feeps_alle[eyes[0]].data[sunlit, 1:] = 1.5
+        result = mms.feeps_remove_sunlit_sectors(
+            feeps_alle, outliers_q=(n_cells - 1.5) / (n_cells - 1), i_en=0
+        )
+        self.assertTrue(np.isnan(result[eyes[0]].data[sunlit]).all())
+
+
+def _pad_case(data, pitch=None):
+    # Pitch-angle distribution (time, energy, pitch angle) of ions in
+    # s^3/cm^6, as get_pitch_angle_dist, with energies 100 * 2^i eV of widths
+    # +/- 25 % and pitch-angle bins of 15 degrees (default)
+    n_t, n_e, n_pa = data.shape
+    pitch = 7.5 + 15.0 * np.arange(n_pa) if pitch is None else np.asarray(pitch)
+    energy = np.tile(100.0 * 2.0 ** np.arange(n_e), (n_t, 1))
+    pad = xr.Dataset(
+        {
+            "data": (["time", "idx0", "idx1"], data),
+            "energy": (["time", "idx0"], energy),
+            "theta": (["time", "idx1"], np.tile(pitch, (n_t, 1))),
+            "time": generate_timeline(1.0, n_t),
+            "idx0": np.arange(n_e),
+            "idx1": np.arange(n_pa),
+        }
+    )
+    pad.attrs = {
+        "species": "ions",
+        "delta_energy_minus": 0.25 * energy,
+        "delta_energy_plus": 0.25 * energy,
+        "delta_pitchangle_minus": np.full(n_pa, 7.5),
+        "delta_pitchangle_plus": np.full(n_pa, 7.5),
+    }
+    pad.data.attrs["UNITS"] = "s^3/cm^6"
+    return pad
+
+
+def _feeps_skymap_case(data_rate, n_pts, value=2.0, mms_id=1):
+    # Corrected and split eyes at the same intensity, spin sectors of 64
+    # samples per spin (burst) or 8 labelled 7, 15, ..., 63 (survey)
+    feeps_alle = generate_feeps(
+        64.0, n_pts, data_rate, "electron", "l2", "flux", mms_id
+    )
+    feeps_alle = mms.feeps_correct_energies(feeps_alle)
+    feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+    if data_rate == "brst":
+        sectors = np.arange(n_pts) % 64
+    else:
+        sectors = np.tile(np.arange(7, 64, 8), n_pts // 8 + 1)[:n_pts]
+
+    feeps_alle["spinsectnum"].data = sectors
+
+    for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+        feeps_alle[k].data = np.full(feeps_alle[k].shape, value)
+
+    return feeps_alle
+
+
+@ddt
+class FeepsSkymapTestCase(unittest.TestCase):
+    @data(("brst", 128, 32), ("srvy", 16, 8))
+    @unpack
+    def test_feeps_skymap_uniform(self, data_rate, n_pts, n_phi):
+        feeps_alle = _feeps_skymap_case(data_rate, n_pts)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        # one skymap per spin, every bin filled with the intensity
+        self.assertTupleEqual(result.data.shape, (2, 15, n_phi, 4))
+        np.testing.assert_array_equal(result.data.data, 2.0)
+        np.testing.assert_array_equal(result.theta.data, [5.0, 65.0, 115.0, 175.0])
+        np.testing.assert_array_equal(
+            result.time.data, feeps_alle.time.data[[0, n_pts // 2]]
+        )
+        np.testing.assert_allclose(result.attrs["coverage"], 1.0)
+        self.assertEqual(result.attrs["angle_integration"], "exact")
+        self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "DMPA")
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
+
+    @data(("brst", 10, 32, 10.0), ("srvy", 1, 8, 15.0 - 3.5))
+    @unpack
+    def test_feeps_skymap_direction(self, data_rate, i_sample, n_phi, sector):
+        # A single sample of top-3 lands at its look direction: polar angle 65
+        # degrees, azimuth in BCS plus the spin phase at the centre of the
+        # accumulation (survey: 3.5 sectors before the label 15)
+        feeps_alle = _feeps_skymap_case(data_rate, 64)
+        for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            feeps_alle[k].data[:] = np.nan
+        feeps_alle["top-3"].data[i_sample] = 1.0
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        phi = (22.5 + 5.625 * sector - 75.94) % 360.0
+        i_phi = int(phi // (360.0 / n_phi))
+        finite = np.argwhere(np.isfinite(result.data.data).all(axis=1))
+        self.assertListEqual(finite.tolist(), [[0, i_phi, 1]])
+        np.testing.assert_array_equal(result.data.data[0, :, i_phi, 1], 1.0)
+        # one bin of the 35-90 degree band
+        self.assertAlmostEqual(
+            result.attrs["coverage"][0, 0], np.cos(np.deg2rad(35)) / 2 / n_phi
+        )
+
+    def test_feeps_skymap_fgm_phase(self):
+        # B rotating at the spin phase of the sectors (1 spin per second)
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        feeps_alle["top-3"].data[::3] = 5.0
+        expected = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        time = generate_timeline(512.0, 1024)
+        t_s = (time - time[0]).astype(float) / 1e9
+
+        def b_fields(shift, b_dmpa=(20.0, 0.0, 5.0)):
+            psi = np.deg2rad(-75.94 + 360.0 * t_s + shift)
+            b_x, b_y, b_z = b_dmpa
+            b_bcs = np.stack(
+                [
+                    np.cos(psi) * b_x + np.sin(psi) * b_y,
+                    -np.sin(psi) * b_x + np.cos(psi) * b_y,
+                    np.full(len(t_s), b_z),
+                ],
+                axis=1,
+            )
+            b_dmpa = np.tile(b_dmpa, (len(t_s), 1))
+            return pyrf.ts_vec_xyz(time, b_bcs), pyrf.ts_vec_xyz(time, b_dmpa)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = mms.feeps_skymap(feeps_alle, *b_fields(0.0), to_psd=False)
+            # B along the spin axis: no FGM phase, the sectors are used
+            along_z = mms.feeps_skymap(
+                feeps_alle, *b_fields(0.0, (0.0, 0.0, 20.0)), to_psd=False
+            )
+
+        xr.testing.assert_identical(result.data, expected.data)
+        xr.testing.assert_identical(along_z.data, expected.data)
+        self.assertEqual(result.attrs["spin_phase"], "FGM (b_bcs, b_dmpa)")
+        self.assertIn("B along the spin axis", along_z.attrs["spin_phase"])
+
+        with self.assertWarnsRegex(UserWarning, "differs from the spin sectors"):
+            mms.feeps_skymap(feeps_alle, *b_fields(3.0), to_psd=False)
+
+    def test_feeps_skymap_survey_fgm_widths(self):
+        # Survey: 8 samples per spin, labelled 7, 15, ..., 63, the centre of the
+        # accumulation 3.5 sectors before the label
+        feeps_alle = _feeps_skymap_case("srvy", 64)
+        feeps_alle["top-3"].data[::3] = 5.0
+        expected = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        time = generate_timeline(512.0, 512)
+        t_s = (time - time[0]).astype(float) / 1e9
+        psi = np.deg2rad(-75.94 + 39.375 + 360.0 * 8.0 * t_s)
+        b_bcs = np.stack(
+            [20.0 * np.cos(psi), -20.0 * np.sin(psi), np.full(len(t_s), 5.0)], axis=1
+        )
+        b_dmpa = np.tile([20.0, 0.0, 5.0], (len(t_s), 1))
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = mms.feeps_skymap(
+                feeps_alle,
+                pyrf.ts_vec_xyz(time, b_bcs),
+                pyrf.ts_vec_xyz(time, b_dmpa),
+                to_psd=False,
+            )
+
+        self.assertEqual(result.attrs["spin_phase"], "FGM (b_bcs, b_dmpa)")
+        np.testing.assert_allclose(result.data.data, expected.data.data)
+
+        # Energy widths from the channel bounds of the eyes
+        energy = expected.energy.data[0] / 1e3
+        for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            dim = feeps_alle[k].dims[1]
+            feeps_alle = feeps_alle.assign_coords(
+                {
+                    f"energy_lower_bound_{k}": (dim, 0.9 * energy),
+                    f"energy_upper_bound_{k}": (dim, 1.2 * energy),
+                }
+            )
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_minus"], 0.1 * result.energy.data
+        )
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_plus"], 0.2 * result.energy.data
+        )
+
+    def test_feeps_skymap_coverage_fill(self):
+        # No data on the 5 degree ring (top-5)
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        feeps_alle["top-5"].data[:] = np.nan
+        feeps_alle["top-1"].data[:64] = 6.0
+
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+        ring = mms.feeps_skymap(feeps_alle, to_psd=False, fill_empty="ring")
+        omni = mms.feeps_skymap(feeps_alle, to_psd=False, fill_empty="omni")
+
+        cap = (1.0 - np.cos(np.deg2rad(35.0))) / 2.0
+        np.testing.assert_allclose(result.attrs["coverage"], 1.0 - cap)
+        np.testing.assert_allclose(omni.attrs["coverage"], 1.0 - cap)
+        self.assertTrue(np.isnan(result.data.data[..., 0]).all())
+        self.assertTrue(np.isnan(ring.data.data[..., 0]).all())
+
+        # "omni": the mean of all the samples of the spin, i.e. the spin
+        # average of feeps_omni (top-1 at 6 in the first spin only)
+        spin_avg = mms.feeps_spin_avg(
+            mms.feeps_omni(feeps_alle), feeps_alle.spinsectnum.data
+        )
+        np.testing.assert_allclose(
+            omni.data.data[..., 0], np.tile(spin_avg.data[..., None], (1, 1, 32))
+        )
+        self.assertTrue((omni.data.data[0, :, :, 0] > 2.0).all())
+        np.testing.assert_array_equal(
+            omni.data.data[..., 1:], result.data.data[..., 1:]
+        )
+
+        with self.assertRaises(ValueError):
+            mms.feeps_skymap(feeps_alle, fill_empty="nearest")
+
+    def test_feeps_skymap_psd(self):
+        feeps_alle = _feeps_skymap_case("brst", 128)
+        flux = mms.feeps_skymap(feeps_alle, to_psd=False)
+        result = mms.feeps_skymap(feeps_alle)
+
+        # Relativistic, in s^3/cm^6 as FPI
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_allclose(
+            result.data.data,
+            1e-12 * mms.dpf2psd(flux, relativistic=True).data.data,
+            rtol=1e-12,
+        )
+        self.assertEqual(result.attrs["species"], "electrons")
+        self.assertTrue(result.attrs["relativistic"])
+        self.assertFalse(flux.attrs["relativistic"])
+
+        # Isotropic: psd_moments integrates the 4 rings exactly
+        sc_pot = pyrf.ts_scalar(result.time.data, np.zeros(2))
+        n_exact = mms.psd_moments(result, sc_pot)[0].data
+        n_mid = mms.psd_moments(result, sc_pot, angle_integration="midpoint")[0].data
+        np.testing.assert_allclose(n_mid / n_exact, 11.6017 / (4 * np.pi), rtol=1e-4)
+
+        feeps_alle = feeps_alle.copy(deep=True)
+        for k in filter(lambda x: x.startswith(("top", "bottom")), feeps_alle):
+            feeps_alle[k].attrs["UNITS"] = "counts/s"
+
+        with self.assertRaises(ValueError):
+            mms.feeps_skymap(feeps_alle)
 
 
 @ddt
@@ -2748,6 +4355,98 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_feeps_spin_avg_input_types(self):
+        feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_omni = mms.feeps_omni(feeps_alle)
+
+        # Spin sectors 0..11 repeated: spins start at 0, 12, ..., 96
+        spin_starts = np.arange(0, 100, 12)
+
+        # A DataArray used to give one row per sample (aligned on time)
+        result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
+        result_np = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum.data)
+
+        self.assertEqual(len(result.time), len(spin_starts))
+        np.testing.assert_array_equal(
+            result.time.data, feeps_omni.time.data[spin_starts]
+        )
+        xr.testing.assert_identical(result, result_np)
+
+    def test_feeps_spin_avg_windows(self):
+        # Partial spin (3 samples), 5 spins of 8 sectors, partial spin (4)
+        spin_sectors, flux = _spin_avg_case("energy", [100.0, 200.0])
+        flux[3:11] = np.nan  # spin 1 without data
+
+        result = mms.feeps_spin_avg(flux, spin_sectors)
+
+        # One row per spin, at its first sample: the windows used to be
+        # shifted by one sample and the last two spins set to 0
+        expected = np.array([0.0, np.nan, 2.0, 3.0, 4.0, 5.0, 6.0])
+        np.testing.assert_array_equal(result.data[:, 0], expected)
+        np.testing.assert_array_equal(result.data[:, 1], expected)
+        np.testing.assert_array_equal(
+            result.time.data, flux.time.data[[0, 3, 11, 19, 27, 35, 43]]
+        )
+        self.assertDictEqual(result.attrs, flux.attrs)
+
+        with self.assertRaises(ValueError):
+            mms.feeps_spin_avg(flux, spin_sectors[:-1])
+
+
+class FeepsSectorSpecTestCase(unittest.TestCase):
+    def test_feeps_sector_spec(self):
+        # Partial spin (sectors 62-63), 2 spins of 64 sectors, partial spin (0-2),
+        # with the data equal to 100 * spin + sector
+        spin_sectors = np.hstack([[62, 63], np.tile(np.arange(64), 2), [0, 1, 2]])
+        spin = np.hstack([[0, 0], np.repeat([1, 2], 64), [3, 3, 3]])
+        value = 100.0 * spin + spin_sectors
+        time = generate_timeline(64.0 / 20.0, len(spin))
+
+        # 3 energy channels around the value, and one sample without data
+        top = np.stack([value - 1.0, value, value + 1.0], axis=1)
+        bottom = top.copy()
+        bottom[10] = np.nan
+        feeps_alle = xr.Dataset(
+            {
+                "top-1": (["time", "energy-top-1"], top),
+                "bottom-1": (["time", "energy-bottom-1"], bottom),
+                "spinsectnum": (["time"], spin_sectors),
+            },
+            coords={"time": time},
+            attrs={"mmsId": 1},
+        )
+
+        result = mms.feeps_sector_spec(feeps_alle)
+
+        # One row per spin at its first sample (the spectra used to be padded
+        # with NaN to every sample, row 0 empty and spins one row late)
+        self.assertListEqual(sorted(result.data_vars), ["bottom-1", "top-1"])
+        np.testing.assert_array_equal(result.time.data, time[[0, 2, 66, 130]])
+        self.assertEqual(result.sizes["sectornum"], 64)
+
+        expected = np.full((4, 64), np.nan)
+        expected[0, 62:] = [62.0, 63.0]
+        expected[1] = 100.0 + np.arange(64)
+        expected[2] = 200.0 + np.arange(64)
+        expected[3, :3] = 300.0 + np.arange(3)
+        np.testing.assert_array_equal(result["top-1"].data, expected)
+
+        expected[1, 8] = np.nan
+        np.testing.assert_array_equal(result["bottom-1"].data, expected)
+        self.assertDictEqual(result.attrs, feeps_alle.attrs)
+
+        # Float spin sectors (used to raise IndexError)
+        feeps_alle["spinsectnum"] = feeps_alle["spinsectnum"].astype(float)
+        xr.testing.assert_identical(mms.feeps_sector_spec(feeps_alle), result)
+
+    def test_feeps_sector_spec_unsplit(self):
+        # Unsplit eyes (16 channels) used to average the integral channel
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
+            mms.feeps_sector_spec(feeps_alle)
+
 
 @ddt
 class FeepsSplitIntegralChTestCase(unittest.TestCase):
@@ -2758,6 +4457,30 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
             64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
         )
         mms.feeps_split_integral_ch(feeps_alle)
+
+    def test_feeps_split_integral_ch_other_variables(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        eyes = [k for k in feeps_alle if k.startswith(("top", "bottom"))]
+
+        # Pitch angles (one column per eye) and a 1-D variable
+        time = feeps_alle.time.data
+        feeps_alle["pitch_angle"] = (["time", "eye"], np.ones((len(time), 18)))
+        feeps_alle["other"] = (["time"], np.arange(len(time), dtype=float))
+
+        out, out_500kev = mms.feeps_split_integral_ch(feeps_alle)
+
+        # Only the eyes are split: pitch_angle used to lose its last column
+        # and the 1-D variables other than spinsectnum used to be dropped
+        for k in eyes:
+            np.testing.assert_array_equal(out[k].data, feeps_alle[k].data[:, :-1])
+            np.testing.assert_array_equal(out_500kev[k].data, feeps_alle[k].data[:, -1])
+
+        for k in ["spinsectnum", "pitch_angle", "other"]:
+            xr.testing.assert_identical(out[k], feeps_alle[k])
+
+        self.assertListEqual(
+            sorted(out_500kev.data_vars), sorted([*eyes, "spinsectnum"])
+        )
 
 
 @ddt
@@ -2942,16 +4665,27 @@ class GetFeepsTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.get_feeps_alleyes")
 
-    def _fake_read(self, dset_name, cdf_names, tint, verbose, data_path, source):
-        # (time, energy) time series for every variable
+    # quality indicator of every eye at the 5 times
+    quality = np.array([0, 1, 2, 3, 4])
+
+    def _fake_read(
+        self, dset_name, cdf_names, tint, verbose, data_path, source, **kwargs
+    ):
+        # (time, energy) time series for every variable, (time,) for the
+        # quality indicators, the energy bounds without time
         times = generate_timeline(1.0, 5)
         energy = np.arange(1, 4, dtype=float)
-        return {
-            name: xr.DataArray(
-                np.ones((5, 3)), coords=[times, energy], dims=["time", "Epoch_E"]
-            )
-            for name in cdf_names
-        }
+        out = {}
+        for name in kwargs.get("support_names") or []:
+            out[name] = energy + (0.4 if "upper" in name else -0.4)
+        for name in cdf_names:
+            if "quality_indicator" in name:
+                out[name] = xr.DataArray(self.quality, coords=[times], dims=["time"])
+            else:
+                out[name] = xr.DataArray(
+                    np.ones((5, 3)), coords=[times, energy], dims=["time", "Epoch_E"]
+                )
+        return out
 
     def test_get_feeps_alleyes_source(self):
         # All the eyes are read at once (one download per file), from the source
@@ -2966,12 +4700,149 @@ class GetFeepsTestCase(unittest.TestCase):
         self.assertEqual(read.call_args.args[5], "aws")
 
         eyes = [k for k in out.data_vars if k not in ["spinsectnum", "pitch_angle"]]
-        self.assertEqual(len(cdf_names), len(eyes) + 2)
+        self.assertEqual(len(cdf_names), 2 * len(eyes) + 2)
         self.assertIn(
             "mms2_epd_feeps_brst_l2_electron_top_intensity_sensorid_3", cdf_names
         )
         self.assertIn("energy_top-3", out["top-3"].dims)
         self.assertEqual(out["top-3"].attrs["species"], "electrons")
+
+    def test_get_feeps_alleyes_quality(self):
+        # Samples with a quality indicator >= quality_flag are NaN (they used
+        # to be kept, the indicators weren't read)
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2)
+            out_2 = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2, quality_flag=2)
+            out_none = mms.get_feeps_alleyes(
+                "fluxe_brst_l2", self.TINT, 2, quality_flag=None
+            )
+
+        self.assertIn(
+            "mms2_epd_feeps_brst_l2_electron_top_quality_indicator_sensorid_3",
+            read.call_args_list[0].args[1],
+        )
+        self.assertFalse(
+            any("quality" in name for name in read.call_args_list[2].args[1])
+        )
+
+        eyes = [k for k in out.data_vars if k not in ["spinsectnum", "pitch_angle"]]
+        self.assertEqual(len(eyes), 18)
+
+        for k in eyes:
+            finite = np.isfinite(out[k].data).all(axis=1)
+            np.testing.assert_array_equal(finite, [True, True, True, False, False])
+            finite = np.isfinite(out_2[k].data).all(axis=1)
+            np.testing.assert_array_equal(finite, [True, True, False, False, False])
+            self.assertTrue(np.isfinite(out_none[k].data).all())
+
+    def test_get_feeps_alleyes_units(self):
+        # Sector masks: one value per spin sector, no quality cut (used to fail)
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("maske_brst_l2", self.TINT, 2)
+            out_l1b = mms.get_feeps_alleyes("countse_brst_l1b", self.TINT, 2)
+
+        cdf_names = read.call_args_list[0].args[1]
+        self.assertFalse(any("quality" in name for name in cdf_names))
+        self.assertIn(
+            "mms2_epd_feeps_brst_l2_electron_top_sector_mask_sensorid_3", cdf_names
+        )
+        self.assertEqual(out["top-3"].dims, ("time", "sectornum"))
+        self.assertTrue(np.isfinite(out["top-3"].data).all())
+
+        # Counts are in the L1b files, read from the L1b dataset (it used to
+        # read the L2 dataset for every level)
+        dset_name, cdf_names = read.call_args_list[1].args[:2]
+        self.assertEqual(dset_name, "mms2_feeps_brst_l1b_electron")
+        self.assertIn(
+            "mms2_epd_feeps_brst_l1b_electron_top_counts_sensorid_3", cdf_names
+        )
+        self.assertIn("energy_top-3", out_l1b["top-3"].dims)
+
+        with self.assertRaisesRegex(ValueError, "l1b"):
+            mms.get_feeps_alleyes("countse_brst_l2", self.TINT, 2)
+
+    def test_get_feeps_alleyes_energy_bounds(self):
+        # Channel bounds read once (not per time), along the eye energies
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2)
+            mask = mms.get_feeps_alleyes("maske_brst_l2", self.TINT, 2)
+
+        support = read.call_args_list[0].kwargs["support_names"]
+        self.assertIn(
+            "mms2_epd_feeps_brst_l2_electron_top_energy_lower_bound_sensorid_3",
+            support,
+        )
+        self.assertEqual(len(support), 36)
+        self.assertListEqual(read.call_args_list[1].kwargs["support_names"], [])
+
+        lower = out["top-3"]["energy_lower_bound_top-3"]
+        self.assertTupleEqual(lower.dims, ("energy_top-3",))
+        np.testing.assert_allclose(lower.data, [0.6, 1.6, 2.6])
+        np.testing.assert_allclose(
+            out["top-3"]["energy_upper_bound_top-3"].data, [1.4, 2.4, 3.4]
+        )
+        self.assertNotIn("energy_lower_bound_top-3", mask["top-3"].coords)
+
+    def test_get_feeps_alleyes_ions(self):
+        # Survey ions before 2017-08-16: eyes 6-8, from the ion dataset
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=self._fake_read
+        ) as read:
+            out = mms.get_feeps_alleyes("cpsi_srvy_l2", self.TINT, 2)
+
+        dset_name, cdf_names = read.call_args.args[:2]
+        self.assertEqual(dset_name, "mms2_feeps_srvy_l2_ion")
+        self.assertIn(
+            "mms2_epd_feeps_srvy_l2_ion_bottom_count_rate_sensorid_8", cdf_names
+        )
+        eyes = [k for k in out.data_vars if k not in ["spinsectnum", "pitch_angle"]]
+        self.assertListEqual(
+            eyes, ["top-6", "top-7", "top-8", "bottom-6", "bottom-7", "bottom-8"]
+        )
+        self.assertEqual(out.attrs["dtype"], "ion")
+        self.assertEqual(out["top-6"].attrs["species"], "ions")
+
+    def test_get_feeps_alleyes_input(self):
+        # Invalid species and units (the units raised a bare KeyError)
+        with mock.patch.object(self.module, "_db_get_ts_dict") as read:
+            with self.assertRaisesRegex(ValueError, "specie"):
+                mms.get_feeps_alleyes("fluxp_brst_l2", self.TINT, 2)
+
+            with self.assertRaisesRegex(ValueError, "Invalid units"):
+                mms.get_feeps_alleyes("fluxese_brst_l2", self.TINT, 2)
+
+        read.assert_not_called()
+
+    def test_get_feeps_omni(self):
+        # Quick look: bad data, split, sun and omni on the loaded eyes, then
+        # averaged over the spins of 12 samples
+        module = importlib.import_module("pyrfu.mms.get_feeps_omni")
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle = mms.feeps_correct_energies(feeps_alle)
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        with mock.patch.object(module, "get_feeps_alleyes", return_value=feeps_alle):
+            result = mms.get_feeps_omni("fluxe_brst_l2", self.TINT, 1)
+            result_spin = mms.get_feeps_omni(
+                "fluxe_brst_l2", self.TINT, 1, spin_avg=True
+            )
+
+        expected, _ = mms.feeps_split_integral_ch(mms.feeps_remove_bad_data(feeps_ref))
+        expected = mms.feeps_omni(mms.feeps_remove_sun(expected))
+        xr.testing.assert_identical(result, expected)
+        self.assertTrue(np.isfinite(result.data).any())
+
+        expected_spin = mms.feeps_spin_avg(expected, feeps_ref.spinsectnum.data)
+        xr.testing.assert_identical(result_spin, expected_spin)
+        self.assertEqual(len(result_spin.time), 9)
+
+        xr.testing.assert_identical(feeps_alle, feeps_ref)
 
     def test_get_feeps_omni_source(self):
         module = importlib.import_module("pyrfu.mms.get_feeps_omni")
@@ -3029,6 +4900,45 @@ def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
 
 @ddt
 class GetTsTestCase(unittest.TestCase):
+    def test_get_ts_sector_mask(self):
+        # Non-record-varying FEEPS sector mask (1, 64) with an epoch: the same
+        # mask at all times, one value per spin sector (used to fail)
+        time = np.datetime64("2019-09-14T07:54:00", "ns") + np.arange(
+            5
+        ) * np.timedelta64(1, "s")
+        mask = np.zeros((1, 64))
+        mask[0, [3, 40]] = 3.0
+
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf_name = "mms1_epd_feeps_srvy_l2_electron_top_sector_mask_sensorid_3"
+        cdf.add_variable(cdf_name, values=mask, is_nrv=True)
+        cdf[cdf_name].add_attribute("DEPEND_0", "epoch")
+
+        tint = list(np.datetime_as_string(time[[1, 3]], "ns"))
+        result = get_ts(bytes(pycdfpp.save(cdf)), cdf_name, tint)
+
+        self.assertTupleEqual(result.dims, ("time", "sectornum"))
+        np.testing.assert_array_equal(result.time.data, time[1:4])
+        np.testing.assert_array_equal(result.sectornum.data, np.arange(64))
+        np.testing.assert_array_equal(result.data, np.tile(mask, (3, 1)))
+
+        # A writeable copy, not a view of the file values
+        result.data[0, 0] = 1.0
+        self.assertEqual(result.data[1, 0], 0.0)
+
+        # A file without records gives an empty mask
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "epoch", values=time[:0], data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf.add_variable(cdf_name, values=mask, is_nrv=True)
+        cdf[cdf_name].add_attribute("DEPEND_0", "epoch")
+        result = get_ts(bytes(pycdfpp.save(cdf)), cdf_name)
+        self.assertTupleEqual(result.shape, (0, 64))
+
     @data(
         ("mms1_fgm_b_gse_srvy_l2", ["x", "y", "z"]),
         ("mms1_mec_quat_eci_to_gse", ["qx", "qy", "qz", "qw"]),
@@ -3136,10 +5046,11 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             xr.testing.assert_identical(result, full)
 
 
-def _cdf_fpi_brst_dist(n_records, t_start):
+def _cdf_fpi_brst_dist(n_records, t_start, deltas=False):
     # In-memory FPI burst ion distribution laid out as in the L2 files: record
     # varying phi, energy, steptable parity and energy deltas, with alternating
-    # energy tables (no energy0 and energy1 variables)
+    # energy tables (no energy0 and energy1 variables), and optionally the
+    # accumulation of the start times (Epoch_minus_var 0, Epoch_plus_var 150 ms)
     time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
         150, "ms"
     )
@@ -3150,6 +5061,12 @@ def _cdf_fpi_brst_dist(n_records, t_start):
 
     cdf = pycdfpp.CDF()
     cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    if deltas:
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", 0.0), ("Epoch_plus_var", 150.0)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            cdf[name].add_attribute("UNITS", "ms")
     cdf.add_variable(
         "mms1_dis_phi_brst", values=np.tile(np.arange(4.0), (n_records, 1))
     )
@@ -3186,6 +5103,29 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
             ):
                 return mms.get_data(var_str, self.tint, 1, verbose=False, source="sdc")
 
+    def test_get_dist_delta_time(self):
+        # Times at the centres of the accumulations, whose half widths (s) are
+        # delta_time_minus/plus, also when files are appended; without the
+        # Epoch delta variables, no half widths
+        content = _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10", deltas=True)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        start = np.datetime64("2019-09-14T07:54:10", "ns")
+        expected = start + np.arange(4) * np.timedelta64(150, "ms")
+        np.testing.assert_array_equal(
+            result.time.data, expected + np.timedelta64(75, "ms")
+        )
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            np.testing.assert_allclose(result.attrs[key], np.full(4, 0.075))
+
+        later = _cdf_fpi_brst_dist(2, "2019-09-14T07:54:20", deltas=True)
+        result = self._get_data("pdi_fpi_brst_l2", [content, later])
+        np.testing.assert_allclose(result.attrs["delta_time_plus"], np.full(6, 0.075))
+
+        result = mms.get_dist(
+            _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10"), "mms1_dis_dist_brst"
+        )
+        self.assertNotIn("delta_time_minus", result.attrs)
+
     @data((0, 3), (3, 0), (0, 0))
     @unpack
     def test_get_data_dist_empty_files(self, n_first, n_second):
@@ -3217,6 +5157,191 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
         result = self._get_data("b_gse_fgm_srvy_l2", contents)
         self.assertEqual(result.sizes["time"], 5)
         self.assertListEqual(list(result.shape), [5, 3])
+
+
+def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120.0)):
+    # In-memory EIS L2 file named as the reprocessed (v*.100) files, e.g.
+    # mms1_epd_eis_brst_l2_extof_proton_P5_flux_t0, with the non-record-varying
+    # energy tables (one record) of the 6 telescopes
+    time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
+        2500, "ms"
+    )
+    energy = np.array(energy)
+
+    cdf = pycdfpp.CDF()
+    cdf.add_attribute("Data_type", ["synthetic"])
+    cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    for name, values in [
+        ("spin", np.arange(n_records, dtype=np.uint16) // 2),
+        ("sector", np.arange(n_records, dtype=np.int8)),
+    ]:
+        cdf.add_variable(f"{pref}_{name}", values=values)
+        cdf[f"{pref}_{name}"].add_attribute("DEPEND_0", "Epoch")
+
+    for i in range(6):
+        cdf.add_variable(f"{pref}_look_t{i:d}", values=np.ones((n_records, 3)) * i)
+        cdf[f"{pref}_look_t{i:d}"].add_attribute("DEPEND_0", "Epoch")
+
+        for j, specie in enumerate(species):
+            energy_name = f"{pref}_{specie}_t{i:d}_energy"
+            for suffix, values in [("", energy), ("_dminus", 0.1 * energy)]:
+                cdf.add_variable(
+                    f"{energy_name}{suffix}", values=values[None], is_nrv=True
+                )
+            cdf.add_variable(
+                f"{energy_name}_dplus", values=0.2 * energy[None], is_nrv=True
+            )
+            cdf[energy_name].add_attribute("LABLAXIS", "Energy")
+
+            for unit in ["counts", "cps", "flux"]:
+                flux = np.arange(n_records * len(energy), dtype=float)
+                flux = flux.reshape(n_records, -1) + 100.0 * i + 1000.0 * j
+                name = f"{pref}_{specie}_P{p_num:d}_{unit}_t{i:d}"
+                cdf.add_variable(name, values=flux)
+                cdf[name].add_attribute("DEPEND_0", "Epoch")
+                cdf[name].add_attribute("DEPEND_1", energy_name)
+
+    return bytes(pycdfpp.save(cdf))
+
+
+@ddt
+class GetEisAlltTestCase(unittest.TestCase):
+    tint = ["2021-07-11T00:00:00", "2021-07-11T01:00:00"]
+
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.get_eis_allt")
+
+    def _get_eis_allt(self, tar_var, contents, tint=None):
+        sources = ([f"file_{i:d}" for i in range(len(contents))], None, {})
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=sources
+        ) as list_files:
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", side_effect=contents
+            ) as get_content:
+                result = mms.get_eis_allt(
+                    tar_var, tint or self.tint, 1, verbose=False, source="sdc"
+                )
+        # one listing, and each file read (downloaded) once
+        self.assertEqual(list_files.call_count, 1)
+        self.assertEqual(get_content.call_count, len(contents))
+        return result
+
+    @data(
+        # minor version 0 (all files since late 2019) and burst
+        ("flux_extof_proton_brst_l2", "brst", "extof", ["proton"], 5, "proton"),
+        # P# is not the major version of the file (v2.1.100 has P3)
+        (
+            "cps_phxtof_oxygen_srvy_l2",
+            "srvy",
+            "phxtof",
+            ["proton", "oxygen"],
+            3,
+            "oxygen",
+        ),
+        (
+            "counts_extof_alpha_srvy_l2",
+            "srvy",
+            "extof",
+            ["proton", "helium"],
+            4,
+            "helium",
+        ),
+        (
+            "Flux_electronenergy_electron_srvy_l2",
+            "srvy",
+            "electronenergy",
+            ["electron"],
+            4,
+            "electron",
+        ),
+    )
+    @unpack
+    def test_get_eis_allt_names(self, tar_var, rate, dtype, species, p_num, specie):
+        pref = f"mms1_epd_eis_{rate}_l2_{dtype}"
+        content = _cdf_eis(pref, species, p_num, "2021-07-11T00:10:00")
+        result = self._get_eis_allt(tar_var, [content])
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertListEqual(
+            sorted(result),
+            sorted(
+                [
+                    "spin",
+                    "sector",
+                    *[f"{k}t{i:d}" for k in ["", "look_"] for i in range(6)],
+                ]
+            ),
+        )
+        self.assertEqual(result.attrs["species"], specie)
+        self.assertEqual(result.attrs["Data_type"], "synthetic")
+        np.testing.assert_array_equal(result.energy.data, [50.0, 80.0, 120.0])
+        np.testing.assert_allclose(result.attrs["delta_energy_minus"], [5.0, 8.0, 12.0])
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_plus"], [10.0, 16.0, 24.0]
+        )
+
+        j = species.index(specie)
+        for i in range(6):
+            self.assertTupleEqual(result[f"t{i:d}"].dims, ("time", "energy"))
+            np.testing.assert_array_equal(
+                result[f"t{i:d}"].data[:, 0], np.arange(0, 12, 3) + 100 * i + 1000 * j
+            )
+            np.testing.assert_array_equal(result[f"look_t{i:d}"].data, i)
+
+    def test_get_eis_allt_files(self):
+        # two files appended in time and clipped to tint, P# changes but not
+        # the energy table
+        pref = "mms1_epd_eis_srvy_l2_extof"
+        contents = [
+            _cdf_eis(pref, ["proton"], 4, "2021-07-11T00:59:50"),
+            _cdf_eis(pref, ["proton"], 5, "2021-07-11T01:00:00"),
+        ]
+        tint = ["2021-07-11T00:59:52", "2021-07-11T01:00:04"]
+        result = self._get_eis_allt("flux_extof_proton_srvy_l2", contents, tint)
+
+        expected = np.datetime64("2021-07-11T00:59:52.500", "ns") + np.arange(
+            5
+        ) * np.timedelta64(2500, "ms")
+        np.testing.assert_array_equal(result.time.data, expected)
+        np.testing.assert_array_equal(result.t0.data[:, 0], [3, 6, 9, 0, 3])
+        np.testing.assert_array_equal(result.sector.data, [1, 2, 3, 0, 1])
+
+    def test_get_eis_allt_energy_change(self):
+        pref = "mms1_epd_eis_srvy_l2_extof"
+        contents = [
+            _cdf_eis(pref, ["proton"], 4, "2021-07-11T00:10:00"),
+            _cdf_eis(
+                pref, ["proton"], 5, "2021-07-11T00:20:00", energy=(55.0, 80.0, 120.0)
+            ),
+        ]
+        with self.assertRaisesRegex(ValueError, "split the time interval"):
+            self._get_eis_allt("flux_extof_proton_srvy_l2", contents)
+
+    def test_get_eis_allt_old_naming(self):
+        # not reprocessed v3.0.0 files: mms1_epd_eis_extof_alpha_P2_flux_t0
+        content = _cdf_eis(
+            "mms1_epd_eis_extof", ["proton", "alpha"], 2, "2021-07-11T00:10:00"
+        )
+        with self.assertRaisesRegex(ValueError, r"reprocessed \(v\*\.100\)"):
+            self._get_eis_allt("flux_extof_proton_srvy_l2", [content])
+
+    def test_get_eis_allt_species(self):
+        # no helium in PHxTOF
+        content = _cdf_eis(
+            "mms1_epd_eis_srvy_l2_phxtof",
+            ["proton", "oxygen"],
+            4,
+            "2021-07-11T00:10:00",
+        )
+        with self.assertRaisesRegex(
+            ValueError, "species in the file are oxygen, proton"
+        ):
+            self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
+
+    def test_get_eis_allt_unit(self):
+        with self.assertRaisesRegex(ValueError, "Invalid data unit"):
+            mms.get_eis_allt("dpf_extof_proton_srvy_l2", self.tint, 1, source="sdc")
 
 
 class _FakeS3Bucket:
@@ -3457,17 +5582,18 @@ class ReduceTestCase(unittest.TestCase):
         phi_grid = isd.call_args.args[5]
         np.testing.assert_allclose(phi_grid, np.deg2rad(5.625 + 11.25 * np.arange(32)))
 
-    @data(True, False)
-    def test_reduce_drifting_maxwellian(self, energy_widths):
+    @data([], ["delta_energy_minus"], ["delta_energy_minus", "delta_energy_plus"])
+    def test_reduce_drifting_maxwellian(self, removed):
         # 1 keV proton Maxwellian (n = 1 cm^-3) drifting at (-300, 200, 100) km/s,
         # reduced along x. Uses the channel widths from delta_energy_* or, if
         # missing, the default speed bin edges. The reduced distribution used to
-        # be shifted to lower speeds (n 6 %, V 7 % and T 12 % too low).
+        # be shifted to lower speeds (n 6 %, V 7 % and T 12 % too low), and
+        # failed without delta_energy_plus.
         v_d = [-300.0, 200.0, 100.0]
         vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_d)
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
-        if not energy_widths:
-            del vdf.attrs["delta_energy_minus"]
+        for key in removed:
+            del vdf.attrs[key]
 
         v_grid = np.linspace(-2500.0, 2500.0, 251) * 1e3
         result = mms.reduce(vdf, np.eye(3), "1d", "pol", vg=v_grid, n_mc=50)
@@ -3482,6 +5608,54 @@ class ReduceTestCase(unittest.TestCase):
         self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
         self.assertAlmostEqual(v_bulk / 1e3, v_d[0], delta=3.0)
         self.assertAlmostEqual(t_x, 1000.0, delta=40.0)
+
+    def test_reduce_angle_widths(self):
+        # FEEPS skymap: 4 polar bands of different widths (delta_theta_*). The
+        # Monte-Carlo particles used to be drawn over the median spacing around
+        # the eye cones, beyond the poles, and the density was 4 % too large
+        sky = mms.feeps_skymap(_feeps_skymap_case("brst", 128))
+        energy = sky.energy.data
+        half = np.diff(energy, axis=1, append=1.1 * energy[:, -1:]) / 2
+        sky.attrs["delta_energy_minus"], sky.attrs["delta_energy_plus"] = half, half
+
+        v_grid = np.linspace(-2.9e8, 2.9e8, 291)
+        result = mms.reduce(sky, np.eye(3), "1d", "pol", vg=v_grid, n_mc=200)
+        n_reduced = np.sum(result.data, axis=1) * (v_grid[1] - v_grid[0])
+
+        # Direct sum with the relativistic speeds and the exact solid angles
+        def speed(e_ev):
+            gamma = 1 + constants.e * e_ev / (constants.m_e * constants.c**2)
+            return constants.c * np.sqrt(1 - 1 / gamma**2)
+
+        d_v = speed(energy + half) - speed(energy - half)
+        theta_1 = np.deg2rad(sky.theta.data - sky.attrs["delta_theta_minus"])
+        theta_2 = np.deg2rad(sky.theta.data + sky.attrs["delta_theta_plus"])
+        d_phi = np.deg2rad(sky.attrs["delta_phi_minus"] + sky.attrs["delta_phi_plus"])
+        d_omega = d_phi[:, :, None] * (np.cos(theta_1) - np.cos(theta_2))
+        f_si = sky.data.data * 1e12
+        n_direct = np.sum(
+            f_si * (speed(energy) ** 2 * d_v)[..., None, None] * d_omega[:, None],
+            axis=(1, 2, 3),
+        )
+        np.testing.assert_allclose(n_reduced, n_direct, rtol=0.01)
+
+    def test_reduce_cart_without_energy_widths(self):
+        # Without the energy widths, the default Cartesian grid extends to the
+        # upper edge of the inferred speed bins: the top channel speed
+        # extrapolated by half a channel in log space (relativistic speeds)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        del vdf.attrs["delta_energy_minus"], vdf.attrs["delta_energy_plus"]
+
+        result = mms.reduce(vdf, np.eye(3), "2d", "cart", n_mc=1)
+
+        gamma = 1 + constants.electron_volt * vdf.energy.data[0, -2:] / (
+            constants.proton_mass * constants.speed_of_light**2
+        )
+        speed = constants.speed_of_light * np.sqrt(1 - 1 / gamma**2)
+        v_max = speed[1] * np.sqrt(speed[1] / speed[0])
+        np.testing.assert_allclose(result.vx.data[[0, -1]] * 1e3, [-v_max, v_max])
+        np.testing.assert_allclose(result.vy.data[[0, -1]] * 1e3, [-v_max, v_max])
 
 
 @ddt
@@ -3950,7 +6124,7 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
     def test_vdf_frame_transformation_deprecated(self):
         v_gse = generate_ts(64.0, 42, tensor_order=1)
 
-        with self.assertWarnsRegex(FutureWarning, "deprecated") as context:
+        with self.assertWarnsRegex(FutureWarning, "pyrfu.mms.vdf_shift") as context:
             mms.vdf_frame_transformation(self.vdf, v_gse)
 
         self.assertEqual(context.filename, __file__)
@@ -3985,6 +6159,33 @@ class VdfToE64TestCase(unittest.TestCase):
             np.testing.assert_array_equal(d_e, np.broadcast_to(d_e[0], d_e.shape))
         self.assertEqual(d_plus[0, -1], np.max(attrs["delta_energy_plus"][:, -1]))
         self.assertEqual(d_minus[0, 0], np.min(attrs["delta_energy_minus"][:, 0]))
+
+    def test_vdf_to_e64_one_table(self):
+        # energy0 equal to energy1: returned unchanged (a copy), as irfu-matlab
+        # PDist.e64; it was merged into 64 duplicated channels
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=False)
+
+        with self.assertLogs("pyrfu", level="INFO"):
+            result = mms.vdf_to_e64(vdf)
+
+        xr.testing.assert_identical(result, vdf)
+        self.assertIsNot(result.data.data, vdf.data.data)
+
+    def test_vdf_to_e64_delta_time(self):
+        # A pair of samples spans the two accumulations: twice their half
+        # widths for regular sampling, as irfu-matlab PDist.e64
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        half = 0.5 / 64.0
+        vdf.attrs["delta_time_minus"] = np.full(10, half)
+        vdf.attrs["delta_time_plus"] = np.full(10, half)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # zero energy channel
+            result = mms.vdf_to_e64(vdf)
+
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            self.assertEqual(len(result.attrs[key]), len(result.time))
+            np.testing.assert_allclose(result.attrs[key], 2 * half, rtol=1e-6)
 
 
 @ddt
@@ -4078,6 +6279,91 @@ class VdfOmniTestCase(unittest.TestCase):
             )
             self.assertEqual(result.attrs["UNITS"], "s^3/cm^6")
 
+    def test_vdf_omni_angular_widths(self):
+        # FEEPS-like rings of different widths (delta_theta_*): the mean is
+        # weighted by the solid angles of the bands, sum(f Omega) / 4 pi
+        n_t, theta = 3, np.array([5.0, 65.0, 115.0, 175.0])
+        edges = np.array([0.0, 35.0, 90.0, 145.0, 180.0])
+        ring = np.array([1.0, 2.0, 4.0, 8.0])
+        vdf = pyrf.ts_skymap(
+            generate_timeline(1.0, n_t),
+            np.broadcast_to(ring, (n_t, 5, 8, 4)).copy(),
+            np.tile(1e3 * np.arange(1, 6), (n_t, 1)),
+            np.tile(22.5 + 45.0 * np.arange(8), (n_t, 1)),
+            theta,
+            energy0=1e3 * np.arange(1, 6),
+            energy1=1e3 * np.arange(1, 6),
+            esteptable=np.zeros(n_t, dtype=np.uint8),
+            attrs={"UNITS": "s^3/cm^6"},
+            glob_attrs={
+                "species": "electrons",
+                "delta_theta_minus": theta - edges[:-1],
+                "delta_theta_plus": edges[1:] - theta,
+            },
+        )
+        d_omega = 2 * np.pi * -np.diff(np.cos(np.deg2rad(edges)))
+        expected = np.sum(ring * d_omega) / (4 * np.pi)
+        np.testing.assert_allclose(mms.vdf_omni(vdf).data, expected, rtol=1e-12)
+
+    def test_vdf_omni_frame_isotropic(self):
+        # Isotropic, no frame velocity: the spacecraft-frame omni exactly
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        result = mms.vdf_omni(vdf, v_frame=[0.0, 0.0, 0.0], n_mc=500)
+        np.testing.assert_allclose(result.data, mms.vdf_omni(vdf).data, rtol=1e-12)
+        np.testing.assert_array_equal(result.attrs["coverage"], 1.0)
+        np.testing.assert_array_equal(result.attrs["frame_velocity"], 0.0)
+        self.assertEqual(result.attrs["n_mc"], 500)
+        self.assertEqual(result.attrs["UNITS"], "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_omni(vdf, "sum", v_frame=[0.0, 0.0, 0.0])
+
+    def test_vdf_omni_frame_maxwellian(self):
+        # Drifting Maxwellian in its frame: the Maxwellian at rest
+        v_kms = np.array([200.0, 150.0, -250.0])
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, list(v_kms))
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        result = mms.vdf_omni(vdf, v_frame=v_kms, random_state=0)
+
+        energy = vdf.energy.data[0]
+        v_th2 = 2 * constants.e * 1000.0 / constants.m_p
+        expected = np.exp(-energy / 1000.0) * 1e-6 / (np.pi * v_th2) ** 1.5
+        low = energy < 2e3
+        np.testing.assert_allclose(
+            result.data[:, low],
+            np.broadcast_to(expected[low], (2, low.sum())),
+            rtol=0.03,
+        )
+
+        # Time series of the frame velocity, other energies
+        v_frame = pyrf.ts_vec_xyz(vdf.time.data, np.tile(v_kms, (2, 1)))
+        again = mms.vdf_omni(vdf, v_frame=v_frame, random_state=0)
+        np.testing.assert_array_equal(again.data, result.data)
+        np.testing.assert_array_equal(
+            again.attrs["frame_velocity"], np.tile(v_kms, (2, 1))
+        )
+
+        energy = np.array([100.0, 1000.0, 1e6])
+        result = mms.vdf_omni(vdf, v_frame=v_kms, energy=energy, random_state=0)
+        np.testing.assert_array_equal(result.energy.data, energy)
+        np.testing.assert_allclose(
+            result.data[:, 1], np.exp(-1.0) * 1e-6 / (np.pi * v_th2) ** 1.5, rtol=0.03
+        )
+
+        # Outside the energy range: zero, without coverage
+        np.testing.assert_array_equal(result.data[:, 2], 0.0)
+        np.testing.assert_array_equal(result.attrs["coverage"][:, 2], 0.0)
+
+        # Bins without data count as zero, with less coverage: without the
+        # look directions theta < 90 (v_z < 0), the sphere of radius v_1keV
+        # centred on v_frame keeps (v_1keV - |v_z|) / (2 v_1keV) (Archimedes)
+        vdf.data.data[:, :, :, :8] = np.nan
+        result = mms.vdf_omni(vdf, v_frame=v_kms, energy=energy, random_state=0)
+        radius = np.sqrt(v_th2) / 1e3
+        expected = (radius - 250.0) / (2 * radius)
+        np.testing.assert_allclose(result.attrs["coverage"][:, 1], expected, atol=0.01)
+
     def test_vdf_omni_energy_tables(self):
         # Alternating tables: Dataset with the units and attributes of vdf, so
         # that the unit conversions work on it
@@ -4120,6 +6406,938 @@ class VdfOmniTestCase(unittest.TestCase):
     def test_vdf_omni_invalid_method(self):
         with self.assertRaises(ValueError):
             mms.vdf_omni(self._vdf(), "bazinga")
+
+
+@ddt
+class VdfConvertTestCase(unittest.TestCase):
+    def test_vdf_convert_round_trips(self):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+        units = [
+            "s^3/m^6",
+            "s^3/km^6",
+            "keV/(cm^2 s sr keV)",
+            "eV/(cm^2 s sr eV)",
+            "1/(cm^2 s sr keV)",
+            "1/(cm^2 s sr eV)",
+        ]
+
+        for unit in units:
+            result = mms.vdf_convert(vdf, unit)
+            self.assertEqual(result.data.attrs["UNITS"], unit)
+            back = mms.vdf_convert(result, "s^3/cm^6")
+            np.testing.assert_allclose(back.data.data, vdf.data.data, rtol=1e-12)
+
+        # The existing converters, and the per eV flux is 1e-3 the per keV one
+        np.testing.assert_allclose(
+            mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)").data.data,
+            mms.psd2def(vdf).data.data,
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data,
+            1e-3 * mms.psd2dpf(vdf).data.data,
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            mms.vdf_convert(vdf, "s^3/km^6").data.data, 1e30 * vdf.data.data
+        )
+
+        # Same units: a copy
+        result = mms.vdf_convert(vdf, "S^3/CM^6")
+        np.testing.assert_array_equal(result.data.data, vdf.data.data)
+        self.assertIsNot(result.data.data, vdf.data.data)
+
+    def test_vdf_convert_relativistic(self):
+        # Electrons at 100 keV: the relativistic attribute is used by default
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "electrons")
+        vdf.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 1e4)
+        vdf.attrs["relativistic"] = True
+
+        psd = mms.vdf_convert(vdf, "s^3/m^6")
+        expected = mms.dpf2psd(vdf, relativistic=True)
+        np.testing.assert_allclose(psd.data.data, expected.data.data, rtol=1e-12)
+        non_rel = mms.vdf_convert(vdf, "s^3/m^6", relativistic=False)
+        np.testing.assert_allclose(
+            non_rel.data.data, mms.dpf2psd(vdf).data.data, rtol=1e-12
+        )
+
+        # Energy fluxes: J = DEF / E, so the same factor
+        def_e = mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)")
+        np.testing.assert_allclose(
+            mms.vdf_convert(def_e, "s^3/m^6").data.data, psd.data.data, rtol=1e-12
+        )
+        back = mms.vdf_convert(psd, "keV/(cm^2 s sr keV)")
+        np.testing.assert_allclose(back.data.data, def_e.data.data, rtol=1e-12)
+
+    def test_vdf_convert_input(self):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_convert(vdf, "counts")
+
+        vdf.data.attrs["UNITS"] = "counts"
+
+        with self.assertRaises(ValueError):
+            mms.vdf_convert(vdf, "s^3/m^6")
+
+
+@ddt
+class VdfVelocityTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf(species):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, species, "s^3/cm^6")
+        return vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+
+    def test_vdf_velocity_values(self):
+        vdf = self._vdf("ions")
+        result = mms.vdf_velocity(vdf)
+        self.assertEqual(result.vx.attrs["UNITS"], "km/s")
+
+        # Speed of the energy, along minus the look direction
+        speed = np.sqrt(result.vx**2 + result.vy**2 + result.vz**2).data
+        expected = np.sqrt(2 * constants.e * vdf.energy.data / constants.m_p) / 1e3
+        np.testing.assert_allclose(
+            speed, np.broadcast_to(expected[..., None, None], speed.shape)
+        )
+        phi, theta = np.deg2rad(vdf.phi.data[1, 7]), np.deg2rad(vdf.theta.data[3])
+        look = np.array(
+            [np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)]
+        )
+        v_bin = [result[name].data[1, 5, 7, 3] for name in ["vx", "vy", "vz"]]
+        np.testing.assert_allclose(v_bin, -expected[1, 5] * look)
+
+        # Rotation: rows are the new unit vectors
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        rotated = mms.vdf_velocity(vdf, rotation=rotation)
+        np.testing.assert_allclose(rotated.vx.data, result.vz.data)
+        np.testing.assert_allclose(rotated.vy.data, result.vx.data)
+        rotated = mms.vdf_velocity(vdf, rotation=np.tile(rotation, (4, 1, 1)))
+        np.testing.assert_allclose(rotated.vz.data, result.vy.data)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_velocity(vdf, rotation=np.eye(2))
+
+    def test_vdf_velocity_sc_pot(self):
+        # Ions gain and electrons lose e V, as irfu-matlab PDist.v
+        for species, sign in [("ions", 1.0), ("electrons", -1.0)]:
+            vdf = self._vdf(species)
+            mass = constants.m_p if species == "ions" else constants.m_e
+            sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, 150.0))
+            speed = mms.vdf_velocity(vdf, sc_pot=sc_pot).vx.data
+            speed = np.abs(speed[:, :, 0, 8]) / np.sin(np.deg2rad(vdf.theta.data[8]))
+            speed /= np.abs(np.cos(np.deg2rad(vdf.phi.data[:, :1])))
+            energy = np.clip(vdf.energy.data + sign * 150.0, 0.0, None)
+            np.testing.assert_allclose(
+                speed, np.sqrt(2 * constants.e * energy / mass) / 1e3, rtol=1e-6
+            )
+            for other in [150.0, np.full(4, 150.0)]:
+                np.testing.assert_array_equal(
+                    mms.vdf_velocity(vdf, sc_pot=other).vx.data,
+                    mms.vdf_velocity(vdf, sc_pot=sc_pot).vx.data,
+                )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_velocity(vdf, sc_pot=np.ones(3))
+
+    def test_vdf_velocity_relativistic(self):
+        vdf = self._vdf("electrons")
+        vdf = vdf.assign(energy=vdf.energy * 100.0)
+        speed = np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0])
+        rel = np.abs(mms.vdf_velocity(vdf, relativistic=True).vz.data[:, -1, 0, 0])
+        self.assertTrue(np.all(speed > constants.c / 1e3))
+        self.assertTrue(np.all(rel < constants.c / 1e3))
+
+        vdf.attrs["relativistic"] = True
+        np.testing.assert_array_equal(
+            np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0]), rel
+        )
+
+        # 10 eV protons: v_rel / v = 1 - 3 eps / 4 (eps = E / m c^2 = 1e-8),
+        # without cancellation errors
+        vdf = self._vdf("ions")
+        vdf = vdf.assign(energy=vdf.energy * 0.0 + 10.0)
+        ratio = (
+            mms.vdf_velocity(vdf, relativistic=True).vz.data[:, :, 0, 0]
+            / mms.vdf_velocity(vdf).vz.data[:, :, 0, 0]
+        )
+        eps = 10.0 * constants.e / (constants.m_p * constants.c**2)
+        np.testing.assert_allclose(ratio, 1 - 3 * eps / 4, rtol=1e-12)
+
+
+@ddt
+class VdfSolidAngleTestCase(unittest.TestCase):
+    def test_vdf_solid_angle_skymap(self):
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(phi=vdf.phi * 0.0 + 5.625 + 11.25 * np.arange(32))
+        vdf = vdf.assign(theta=vdf.theta * 0.0 + 5.625 + 11.25 * np.arange(16))
+        result = mms.vdf_solid_angle(vdf)
+        self.assertEqual(result.data.attrs["UNITS"], "sr")
+        self.assertEqual(result.data.shape, vdf.data.shape)
+        np.testing.assert_allclose(result.data.data.sum(axis=(2, 3)), 4 * np.pi)
+
+        # Angular widths of the attributes (FEEPS: 4 rings of 8 bins)
+        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
+            [0.0, 35.0, 90.0, 145.0, 180.0]
+        )
+        vdf = vdf.isel(idx1=np.arange(8), idx2=np.arange(4))
+        vdf = vdf.assign(phi=vdf.phi * 0.0 + 22.5 + 45.0 * np.arange(8))
+        vdf = vdf.assign(theta=(["idx2"], theta))
+        vdf.attrs["delta_phi_minus"] = vdf.attrs["delta_phi_plus"] = np.full(
+            (4, 8), 22.5
+        )
+        vdf.attrs["delta_theta_minus"] = theta - edges[:-1]
+        vdf.attrs["delta_theta_plus"] = edges[1:] - theta
+        result = mms.vdf_solid_angle(vdf).data.data
+        np.testing.assert_allclose(result.sum(axis=(2, 3)), 4 * np.pi)
+        expected = np.pi / 4 * (np.cos(np.deg2rad(35.0)) - np.cos(np.pi / 2))
+        np.testing.assert_allclose(result[:, :, :, 1], expected)
+
+    def test_vdf_solid_angle_pad(self):
+        pad = _pad_case(np.ones((3, 2, 12)))
+        result = mms.vdf_solid_angle(pad).data.data
+        np.testing.assert_allclose(result.sum(axis=2), 4 * np.pi)
+        np.testing.assert_allclose(
+            result[0, 0, 0], 2 * np.pi * (1 - np.cos(np.deg2rad(15.0)))
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_solid_angle(pad.isel(idx1=0))
+
+
+@ddt
+class VdfD3vTestCase(unittest.TestCase):
+    def test_vdf_d3v_sphere(self):
+        # The bins of the sphere: 4 pi / 3 (v_2^3 - v_1^3) per energy channel
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        lower = vdf.energy.data - vdf.attrs["delta_energy_minus"]
+        upper = vdf.energy.data + vdf.attrs["delta_energy_plus"]
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * e / constants.m_p) for e in [lower, upper]
+        )
+        expected = 4 * np.pi / 3 * (v_2**3 - v_1**3)
+
+        result = mms.vdf_d3v(vdf)
+        self.assertEqual(result.data.attrs["UNITS"], "cm^3/s^3")
+        np.testing.assert_allclose(
+            result.data.data.sum(axis=(2, 3)), 1e6 * expected, rtol=1e-12
+        )
+
+        for units, unit_volume, factor in [
+            ("s^3/km^6", "km^3/s^3", 1e-9),
+            ("s^3/m^6", "m^3/s^3", 1.0),
+            ("1/(cm^2 s sr keV)", "m^3/s^3", 1.0),
+        ]:
+            vdf.data.attrs["UNITS"] = units
+            result = mms.vdf_d3v(vdf)
+            self.assertEqual(result.data.attrs["UNITS"], unit_volume)
+            np.testing.assert_allclose(
+                result.data.data.sum(axis=(2, 3)), factor * expected, rtol=1e-12
+            )
+
+        # Without the energy widths: midpoints between the channels
+        del vdf.attrs["delta_energy_minus"], vdf.attrs["delta_energy_plus"]
+        energy = vdf.energy.data[0]
+        result = mms.vdf_d3v(vdf).data.data[0, 5].sum()
+        e_1, e_2 = (energy[4] + energy[5]) / 2, (energy[5] + energy[6]) / 2
+        v_1, v_2 = (np.sqrt(2 * constants.e * e / constants.m_p) for e in [e_1, e_2])
+        np.testing.assert_allclose(result, 4 * np.pi / 3 * (v_2**3 - v_1**3))
+
+    def test_vdf_d3v_sc_pot_pad(self):
+        # Ions gain e V (irfu-matlab PDist.d3v subtracts V for all species)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/m^6"
+        result = mms.vdf_d3v(vdf, sc_pot=20.0).data.data[0, 3].sum()
+        lower = vdf.energy.data[0, 3] - vdf.attrs["delta_energy_minus"][0, 3] + 20.0
+        upper = vdf.energy.data[0, 3] + vdf.attrs["delta_energy_plus"][0, 3] + 20.0
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * e / constants.m_p) for e in [lower, upper]
+        )
+        np.testing.assert_allclose(result, 4 * np.pi / 3 * (v_2**3 - v_1**3))
+
+        pad = _pad_case(np.ones((3, 2, 12)))
+        result = mms.vdf_d3v(pad)
+        self.assertEqual(result.data.attrs["UNITS"], "cm^3/s^3")
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * f * pad.energy.data / constants.m_p)
+            for f in [0.75, 1.25]
+        )
+        np.testing.assert_allclose(
+            result.data.data.sum(axis=2), 1e6 * 4 * np.pi / 3 * (v_2**3 - v_1**3)
+        )
+
+
+@ddt
+class VdfPartialDensityTestCase(unittest.TestCase):
+    def test_vdf_partial_density_moments(self):
+        # Sums are the density and particle flux of a drifting Maxwellian
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        d_n = mms.vdf_partial_density(vdf)
+        self.assertEqual(d_n.data.attrs["UNITS"], "cm^-3")
+        n_i = d_n.data.data.sum(axis=(1, 2, 3))
+        np.testing.assert_allclose(n_i, 1.0, rtol=0.01)
+
+        # Equal to f d3v
+        d3v = mms.vdf_d3v(vdf).data.data
+        np.testing.assert_allclose(d_n.data.data, vdf.data.data * d3v, rtol=1e-12)
+
+        for i, comp in enumerate("xyz"):
+            d_j = mms.vdf_partial_density(vdf, comp)
+            self.assertEqual(d_j.data.attrs["UNITS"], "1/(cm^2 s)")
+            j_i = d_j.data.data.sum(axis=(1, 2, 3))
+            np.testing.assert_allclose(j_i / n_i, v_kms[i] * 1e5, rtol=0.01)
+
+        # Any units: the same density from the differential particle flux
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        np.testing.assert_allclose(
+            mms.vdf_partial_density(dpf).data.data, d_n.data.data, rtol=1e-12
+        )
+
+    def test_vdf_partial_density_input(self):
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        with self.assertRaises(ValueError):
+            mms.vdf_partial_density(vdf, "w")
+
+        pad = _pad_case(np.ones((3, 2, 12)))
+        n_pad = mms.vdf_partial_density(pad).data.data
+        np.testing.assert_allclose(
+            n_pad, pad.data.data * mms.vdf_d3v(pad).data.data, rtol=1e-12
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_partial_density(pad, "x")
+
+
+@ddt
+class VdfFluxTestCase(unittest.TestCase):
+    def test_vdf_flux_maxwellian(self):
+        # Isotropic Maxwellian: the flux per steradian summed over the energies
+        # is n v_th / (2 pi^1.5)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        result = mms.vdf_flux(vdf)
+        self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr)")
+
+        v_th = np.sqrt(2 * constants.e * 1000.0 / constants.m_p) * 1e2  # cm/s
+        np.testing.assert_allclose(
+            result.data.data.sum(axis=1), v_th / (2 * np.pi**1.5), rtol=0.02
+        )
+
+        # Through the solid angle of the bins
+        total = mms.vdf_flux(vdf, per_sr=False)
+        self.assertEqual(total.data.attrs["UNITS"], "1/(cm^2 s)")
+        np.testing.assert_allclose(
+            total.data.data,
+            result.data.data * mms.vdf_solid_angle(vdf).data.data,
+            rtol=1e-12,
+        )
+
+    def test_vdf_flux_pad(self):
+        # (v_2^4 - v_1^4) / 4 f, the ion mass (irfu-matlab uses m_e)
+        pad = _pad_case(np.ones((3, 2, 12)))
+        v_1, v_2 = (
+            np.sqrt(2 * constants.e * f * pad.energy.data / constants.m_p)
+            for f in [0.75, 1.25]
+        )
+        expected = 1e12 * (v_2**4 - v_1**4) / 4 / 1e4
+        np.testing.assert_allclose(
+            mms.vdf_flux(pad).data.data[..., 4], expected, rtol=1e-12
+        )
+
+
+@ddt
+class VdfMaskTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf():
+        # Alternating energy tables
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        energy = np.tile(10.0 * 1.3 ** np.arange(32), (4, 1))
+        energy[1::2] *= 1.1
+        return vdf.assign(energy=(["time", "idx0"], energy))
+
+    def test_vdf_mask_limits(self):
+        vdf = self._vdf()
+        energy = vdf.energy.data
+
+        # Energies of each time
+        result = mms.vdf_mask(vdf, below=13.5)
+        masked = np.all(np.isnan(result.data.data), axis=(2, 3))
+        np.testing.assert_array_equal(masked, energy < 13.5)
+        self.assertTrue(masked[0, 1] and not masked[1, 1])
+        self.assertFalse(np.any(np.isnan(vdf.data.data)))
+
+        limits = pyrf.ts_scalar(vdf.time.data, np.array([20.0, 30.0, 40.0, 50.0]))
+        result = mms.vdf_mask(vdf, below=limits, above=1000.0)
+        masked = np.all(np.isnan(result.data.data), axis=(2, 3))
+        expected = (energy < limits.data[:, None]) | (energy > 1000.0)
+        np.testing.assert_array_equal(masked, expected)
+        np.testing.assert_array_equal(
+            np.any(np.isnan(result.data.data), axis=(2, 3)), expected
+        )
+
+        # Limits on other times are resampled
+        shifted = pyrf.ts_scalar(
+            vdf.time.data + np.timedelta64(1, "ms"), np.full(4, 30.0)
+        )
+        result = mms.vdf_mask(vdf, below=shifted)
+        np.testing.assert_array_equal(
+            np.all(np.isnan(result.data.data), axis=(2, 3)), energy < 30.0
+        )
+
+    def test_vdf_mask_matrix(self):
+        vdf = self._vdf()
+        mask = np.zeros((4, 32), dtype=int)
+        mask[:, [2, 5]] = 1
+        mask[3, 20] = 1
+        result = mms.vdf_mask(vdf, mask=mask)
+        np.testing.assert_array_equal(
+            np.all(np.isnan(result.data.data), axis=(2, 3)), mask.astype(bool)
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_mask(vdf, mask=mask[:, :10])
+
+        with self.assertRaises(ValueError):
+            mms.vdf_mask(vdf, below=np.ones(3))
+
+        # Pitch-angle distributions
+        pad = _pad_case(np.ones((3, 2, 12)))
+        result = mms.vdf_mask(pad, above=150.0).data.data
+        self.assertTrue(np.all(np.isnan(result[:, 1])))
+        self.assertFalse(np.any(np.isnan(result[:, 0])))
+
+
+@ddt
+class VdfFindLowCountsTestCase(unittest.TestCase):
+    def test_movmean(self):
+        # MATLAB movmean: centred window, shrinking at the ends
+        module = sys.modules["pyrfu.mms.vdf_find_low_counts"]
+        inp = np.array([1.0, 2.0, 4.0, 8.0, 16.0])[:, None]
+        np.testing.assert_allclose(module._movmean(inp, 1)[:, 0], inp[:, 0])
+        np.testing.assert_allclose(
+            module._movmean(inp, 3)[:, 0], [1.5, 7 / 3, 14 / 3, 28 / 3, 12.0]
+        )
+        # Even window: k / 2 back, k / 2 - 1 forward
+        np.testing.assert_allclose(
+            module._movmean(inp, 4)[:, 0], [1.5, 7 / 3, 15 / 4, 30 / 4, 28 / 3]
+        )
+        np.testing.assert_allclose(
+            module._movmean(inp, [0, 2])[:, 0], [7 / 3, 14 / 3, 28 / 3, 12.0, 16.0]
+        )
+
+    def test_vdf_find_low_counts(self):
+        counts = generate_vdf(64.0, 3, (4, 2, 2), False, "ions", "counts")
+        counts = counts.assign(
+            energy=(["time", "idx0"], np.tile([10.0, 20.0, 40.0, 80.0], (3, 1)))
+        )
+        summed = np.array([[0, 2, 8, 12], [1, 6, 9, 3], [0, 1, 2, 3]], dtype=float)
+        counts["data"] = counts.data.copy(
+            data=np.broadcast_to(summed[..., None, None] / 4, (3, 4, 2, 2)).copy()
+        )
+
+        mat = mms.vdf_find_low_counts(counts, 5, output="mat")
+        np.testing.assert_array_equal(mat.data, (summed < 5).astype(int))
+
+        energy = mms.vdf_find_low_counts(counts, 5)
+        self.assertEqual(energy.attrs["UNITS"], "eV")
+        np.testing.assert_array_equal(energy.data, [40.0, 20.0, np.nan])
+
+        smoothed = mms.vdf_find_low_counts(counts, 5, n_mov_mean=3, output="mat")
+        expected = np.array(
+            [[0.5, 4, 8.5, 7.5], [1 / 3, 3, 19 / 3, 6], [0.5, 3.5, 5.5, 3]]
+        )
+        np.testing.assert_array_equal(smoothed.data, (expected < 5).astype(int))
+
+        with self.assertRaises(ValueError):
+            mms.vdf_find_low_counts(counts, 5, output="index")
+
+
+@ddt
+class VdfMacroparticlesTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf():
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.data.data[:, :, 3, 5] = 0.0
+        vdf.data.data[:, :, 4, 6] = np.nan
+        return vdf, np.array(v_kms)
+
+    def test_vdf_macroparticles_one_per_bin(self):
+        vdf, v_kms = self._vdf()
+        result = mms.vdf_macroparticles(vdf, random_state=1)
+        self.assertEqual(result.vx.attrs["UNITS"], "km/s")
+        self.assertEqual(result.dn.attrs["UNITS"], "cm^-3")
+        self.assertEqual(result.dv.attrs["UNITS"], "cm^3/s^3")
+
+        # One per bin with data, the density of each bin
+        d_n = mms.vdf_partial_density(vdf).data.data
+        self.assertEqual(result.sizes["particle"], np.sum(d_n > 0))
+        n_t = result.dn.groupby("time").sum().data
+        np.testing.assert_allclose(n_t, np.nansum(d_n, axis=(1, 2, 3)), rtol=1e-12)
+        np.testing.assert_allclose(result.dn, result.df * result.dv, rtol=1e-12)
+
+        # The velocities of the bins: speed and look direction in the bin
+        v_xyz = np.stack([result[c].data for c in ["vx", "vy", "vz"]], axis=1)
+        speed = np.linalg.norm(v_xyz, axis=1) * 1e3
+        bins = sys.modules["pyrfu.mms._vdf_mc"]._source_bins(vdf)
+        i_t = np.searchsorted(vdf.time.data, result.time.data)
+        i_e, i_q = result.idx0.data, result.idx2.data
+        self.assertTrue(np.all(speed >= bins["v_lower"][i_t, i_e] * (1 - 1e-12)))
+        self.assertTrue(np.all(speed <= bins["v_upper"][i_t, i_e] * (1 + 1e-12)))
+        theta = np.rad2deg(np.arccos(-v_xyz[:, 2] * 1e3 / speed))
+        theta_lower = vdf.theta.data[i_q] - 5.625
+        self.assertTrue(
+            np.all((theta >= theta_lower - 1e-9) & (theta <= theta_lower + 11.26))
+        )
+
+        # Uniform in the volume of the bins (v^3)
+        v3_lower, v3_upper = (bins[k][i_t, i_e] ** 3 for k in ["v_lower", "v_upper"])
+        position = (speed**3 - v3_lower) / (v3_upper - v3_lower)
+        self.assertAlmostEqual(float(np.mean(position)), 0.5, delta=0.01)
+
+        # Bulk velocity, and reproducible
+        v_mean = np.array(
+            [
+                float((result[c] * result.dn).sum() / result.dn.sum())
+                for c in ["vx", "vy", "vz"]
+            ]
+        )
+        np.testing.assert_allclose(v_mean, v_kms, atol=3.0)
+        again = mms.vdf_macroparticles(vdf, random_state=np.random.default_rng(1))
+        np.testing.assert_array_equal(again.vx.data, result.vx.data)
+
+    def test_vdf_macroparticles_number(self):
+        vdf, _ = self._vdf()
+        d_n = np.nan_to_num(mms.vdf_partial_density(vdf).data.data)
+
+        # n_tot: in proportion to dn, rounded up
+        result = mms.vdf_macroparticles(vdf, n_tot=20000, random_state=1)
+        expected = np.ceil(d_n / d_n.sum(axis=(1, 2, 3), keepdims=True) * 20000)
+        counts = np.bincount(np.searchsorted(vdf.time.data, result.time.data))
+        np.testing.assert_array_equal(counts, expected.sum(axis=(1, 2, 3)))
+        np.testing.assert_allclose(
+            result.dn.groupby("time").sum().data, d_n.sum(axis=(1, 2, 3)), rtol=1e-12
+        )
+
+        # Without skipping the empty bins: one with dn = 0
+        result = mms.vdf_macroparticles(vdf, n_tot=20000, skip_zero=False)
+        self.assertEqual(result.sizes["particle"], int(np.maximum(expected, 1).sum()))
+        self.assertTrue(np.any(result.dn.data == 0.0))
+
+        # One macroparticle per count
+        counts = vdf.copy(deep=True)
+        counts["data"] = counts.data.copy(
+            data=np.random.default_rng(0).poisson(1.0, vdf.data.shape).astype(float)
+        )
+        counts.data.attrs["UNITS"] = "s^3/cm^6"
+        total = int(counts.data.data[0].sum())
+        result = mms.vdf_macroparticles(counts, n_tot=total, division="counts")
+        first = result.time.data == vdf.time.data[0]
+        self.assertEqual(np.sum(first), total)
+
+        result = mms.vdf_macroparticles(vdf, n_tot=1000, division="f")
+        self.assertGreater(result.sizes["particle"], 2000)
+
+    def test_vdf_macroparticles_center(self):
+        vdf, _ = self._vdf()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(2, 5.0))
+        result = mms.vdf_macroparticles(
+            vdf, n_bin=2, positioning="center", sc_pot=sc_pot
+        )
+        velocity = mms.vdf_velocity(vdf, sc_pot=sc_pot)
+        i_t = np.searchsorted(vdf.time.data, result.time.data)
+        index = (i_t, result.idx0.data, result.idx1.data, result.idx2.data)
+        np.testing.assert_array_equal(result.vx.data, velocity.vx.data[index])
+        d_n = mms.vdf_partial_density(vdf, sc_pot=sc_pot).data.data
+        self.assertEqual(result.sizes["particle"], 2 * np.sum(d_n > 0))
+
+        for kwargs in [{"positioning": "edge"}, {"division": "n"}]:
+            with self.assertRaises(ValueError):
+                mms.vdf_macroparticles(vdf, **kwargs)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_macroparticles(_pad_case(np.ones((3, 2, 12))))
+
+
+@ddt
+class VdfShiftTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf(v_kms):
+        vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        return vdf, sc_pot
+
+    @staticmethod
+    def _moments(vdf, sc_pot):
+        n_i, v_i, _, _, t_i, _ = mms.psd_moments(vdf, sc_pot, angle_integration="exact")
+        return n_i.data, v_i.data, np.trace(t_i.data, axis1=1, axis2=2) / 3
+
+    def test_vdf_shift_no_shift(self):
+        # Every particle stays in its bin: the skymap is unchanged, apart from
+        # the widened first and last energy bins
+        vdf, _ = self._vdf([0.0, 0.0, 0.0])
+        vdf.attrs["delta_time_minus"] = vdf.attrs["delta_time_plus"] = np.ones(2)
+        result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], n_mc=20, random_state=0)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_array_equal(result.attrs["delta_time_plus"], np.ones(2))
+        np.testing.assert_allclose(
+            result.data.data[:, 1:-1], vdf.data.data[:, 1:-1], rtol=1e-9
+        )
+        np.testing.assert_allclose(
+            result.energy.data[:, 1:-1], vdf.energy.data[:, 1:-1]
+        )
+        np.testing.assert_allclose(result.theta.data, vdf.theta.data)
+        np.testing.assert_allclose(result.phi.data, vdf.phi.data)
+        np.testing.assert_array_equal(result.attrs["lost"], 0.0)
+
+        # Relativistic speeds: the same bins
+        vdf.attrs["relativistic"] = True
+        result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], n_mc=20, random_state=0)
+        self.assertTrue(result.attrs["relativistic"])
+        np.testing.assert_allclose(
+            result.energy.data[:, 1:-1], vdf.energy.data[:, 1:-1], rtol=1e-9
+        )
+        np.testing.assert_allclose(
+            result.data.data[:, 1:-1], vdf.data.data[:, 1:-1], rtol=1e-9
+        )
+
+    def test_vdf_shift_bulk_frame(self):
+        v_kms = np.array([200.0, 150.0, -250.0])
+        vdf, sc_pot = self._vdf(list(v_kms))
+        result = mms.vdf_shift(vdf, v_kms, random_state=1)
+        np.testing.assert_array_equal(
+            result.attrs["frame_velocity"], np.tile(v_kms, (2, 1))
+        )
+
+        # The density is conserved, apart from the particles outside the grid
+        n_old = mms.vdf_partial_density(vdf).data.data.sum(axis=(1, 2, 3))
+        n_new = mms.vdf_partial_density(result).data.data.sum(axis=(1, 2, 3))
+        lost = result.attrs["lost"]
+        self.assertTrue(np.all((lost > 0) & (lost < 1e-3)))
+        np.testing.assert_allclose(n_new, n_old * (1 - lost), rtol=1e-12)
+
+        # At rest in the new frame, with the same density and temperature
+        n_i, v_i, t_i = self._moments(result, sc_pot)
+        n_0, _, t_0 = self._moments(vdf, sc_pot)
+        np.testing.assert_allclose(n_i, n_0, rtol=0.01)
+        np.testing.assert_allclose(v_i, 0.0, atol=2.0)
+        np.testing.assert_allclose(t_i, t_0, rtol=0.03)
+
+        # A time series of the frame velocity
+        v_frame = pyrf.ts_vec_xyz(vdf.time.data, np.tile(v_kms, (2, 1)))
+        again = mms.vdf_shift(vdf, v_frame, random_state=1)
+        np.testing.assert_array_equal(again.data.data, result.data.data)
+
+        # Any units
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        result_dpf = mms.vdf_shift(dpf, v_kms, random_state=1)
+        self.assertEqual(result_dpf.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        np.testing.assert_allclose(
+            mms.vdf_convert(result_dpf, "s^3/cm^6").data.data,
+            result.data.data,
+            rtol=1e-12,
+        )
+
+    def test_vdf_shift_rotation_grid(self):
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, sc_pot = self._vdf(v_kms)
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], rotation=rotation, random_state=2)
+        _, v_0, _ = self._moments(vdf, sc_pot)
+        _, v_i, _ = self._moments(result, sc_pot)
+        np.testing.assert_allclose(v_i, v_0 @ rotation.T, atol=3.0)
+
+        # A coarse grid: 10 energies from 100 eV to 10 keV, 8 x 4 angles
+        grid = {
+            "energy": np.logspace(2, 4, 11),
+            "phi": np.linspace(0.0, 360.0, 9),
+            "theta": np.linspace(0.0, 180.0, 5),
+        }
+        result = mms.vdf_shift(vdf, v_kms, grid=grid, random_state=3)
+        self.assertEqual(result.data.shape, (2, 10, 8, 4))
+        np.testing.assert_allclose(
+            result.energy.data[0], np.sqrt(grid["energy"][:-1] * grid["energy"][1:])
+        )
+        np.testing.assert_allclose(result.attrs["delta_theta_minus"], 22.5)
+        n_old = mms.vdf_partial_density(vdf).data.data.sum(axis=(1, 2, 3))
+        n_new = mms.vdf_partial_density(result).data.data.sum(axis=(1, 2, 3))
+        # Lost: the energies below 100 eV and above 10 keV of the Maxwellian
+        # at rest (1 keV), P(3/2, 0.1) + 1 - P(3/2, 10)
+        lost = result.attrs["lost"]
+        expected = gammainc(1.5, 0.1) + 1 - gammainc(1.5, 10.0)
+        np.testing.assert_allclose(lost, expected, rtol=0.05)
+        np.testing.assert_allclose(n_new, n_old * (1 - lost), rtol=1e-12)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_shift(vdf, [1.0, 2.0])
+
+        with self.assertRaises(ValueError):
+            mms.vdf_shift(_pad_case(np.ones((3, 2, 12))), [0.0, 0.0, 0.0])
+
+
+@ddt
+class VdfRebinTestCase(unittest.TestCase):
+    @staticmethod
+    def _vdf():
+        # Drifting Maxwellian with azimuths changing with time (FPI burst)
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_kms, n_t=3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf = vdf.assign(phi=vdf.phi + np.array([0.0, 2.0, 4.0])[:, None])
+        return vdf, np.array(v_kms)
+
+    @staticmethod
+    def _edges(vdf):
+        lower = vdf.energy.data[0] - vdf.attrs["delta_energy_minus"][0]
+        upper = vdf.energy.data[0] + vdf.attrs["delta_energy_plus"][0]
+        return np.hstack([lower, upper[-1]])
+
+    def test_vdf_rebin_energy(self):
+        # Channels of two old channels: the overlap of the bins in v^3 exactly
+        vdf, _ = self._vdf()
+        edges = self._edges(vdf)
+        result = mms.vdf_rebin(vdf, {"energy": edges[::2]}, random_state=0)
+        self.assertEqual(result.data.shape, (3, 16, 32, 16))
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_allclose(result.phi.data, vdf.phi.data)
+        np.testing.assert_allclose(
+            result.energy.data[0], np.sqrt(edges[:-2:2] * edges[2::2])
+        )
+        np.testing.assert_array_equal(result.attrs["lost"], 0.0)
+        self.assertNotIn("frame_velocity", result.attrs)
+
+        v_3 = (2 * constants.e * edges / constants.m_p) ** 1.5
+        w_3 = np.diff(v_3)[None, :, None, None]
+        f_old = vdf.data.data
+        expected = (f_old[:, 0::2] * w_3[:, 0::2] + f_old[:, 1::2] * w_3[:, 1::2]) / (
+            w_3[:, 0::2] + w_3[:, 1::2]
+        )
+        np.testing.assert_allclose(result.data.data, expected, rtol=1e-10)
+
+    def test_vdf_rebin_energy_overlap(self):
+        # EDI channel 475-525 eV across two FPI channels: the Monte-Carlo
+        # estimate of the overlap in v^3
+        vdf, _ = self._vdf()
+        edges = self._edges(vdf)
+        i_e = np.where((edges[1:] > 475.0) & (edges[:-1] < 525.0))[0]
+        small = vdf.isel(idx0=i_e, idx1=np.arange(4), idx2=np.arange(6, 10))
+        small.attrs = {
+            **vdf.attrs,
+            "delta_energy_minus": vdf.attrs["delta_energy_minus"][:, i_e],
+            "delta_energy_plus": vdf.attrs["delta_energy_plus"][:, i_e],
+        }
+        result = mms.vdf_rebin(
+            small, {"energy": [475.0, 525.0]}, n_mc=20000, random_state=0
+        )
+        self.assertEqual(result.data.shape, (3, 1, 4, 4))
+
+        v_3 = (2 * constants.e * edges / constants.m_p) ** 1.5
+        new_3 = (2 * constants.e * np.array([475.0, 525.0]) / constants.m_p) ** 1.5
+        overlap = np.clip(
+            np.minimum(v_3[i_e + 1], new_3[1]) - np.maximum(v_3[i_e], new_3[0]),
+            0.0,
+            None,
+        )
+        expected = np.sum(small.data.data * overlap[:, None, None], axis=1) / np.diff(
+            new_3
+        )
+        np.testing.assert_allclose(result.data.data[:, 0], expected, rtol=0.03)
+
+    def test_vdf_rebin_cartesian(self):
+        vdf, v_kms = self._vdf()
+        v_edges = np.linspace(-1500.0, 1500.0, 31)
+        result = mms.vdf_rebin(vdf, [v_edges] * 3, base="cart", random_state=0)
+        self.assertEqual(result.data.shape, (3, 30, 30, 30))
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        np.testing.assert_allclose(result.vx.data, v_edges[:-1] + 50.0)
+        np.testing.assert_array_equal(result.attrs["vz_edges"], v_edges)
+
+        # Density and bulk velocity
+        d_v3 = (100.0 * 1e5) ** 3  # cm^3/s^3
+        n_old = mms.vdf_partial_density(vdf).data.data.sum(axis=(1, 2, 3))
+        n_new = result.data.data.sum(axis=(1, 2, 3)) * d_v3
+        lost = result.attrs["lost"]
+        self.assertTrue(np.all((lost > 0) & (lost < 1e-3)))
+        np.testing.assert_allclose(n_new, n_old * (1 - lost), rtol=1e-10)
+        v_x, v_y, v_z = np.meshgrid(
+            result.vx.data, result.vy.data, result.vz.data, indexing="ij"
+        )
+        v_mean = [
+            np.sum(result.data.data[0] * v) / np.sum(result.data.data[0])
+            for v in [v_x, v_y, v_z]
+        ]
+        np.testing.assert_allclose(v_mean, v_kms, atol=2.0)
+
+        # The drifting Maxwellian in the boxes
+        v_th2 = 2 * constants.e * 1000.0 / constants.m_p / 1e6
+        d_v2 = (v_x - v_kms[0]) ** 2 + (v_y - v_kms[1]) ** 2 + (v_z - v_kms[2]) ** 2
+        expected = 1e-6 / (np.pi * v_th2 * 1e6) ** 1.5 * np.exp(-d_v2 / v_th2)
+        core = expected > 0.1 * expected.max()
+        ratio = result.data.data[0][core] / expected[core]
+        self.assertAlmostEqual(float(np.mean(ratio)), 1.0, delta=0.01)
+
+        # Rotation: rows are the new axes
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        rotated = mms.vdf_rebin(
+            vdf, [v_edges] * 3, base="cart", rotation=rotation, random_state=0
+        )
+        v_mean = [
+            np.sum(rotated.data.data[0] * v) / np.sum(rotated.data.data[0])
+            for v in [v_x, v_y, v_z]
+        ]
+        np.testing.assert_allclose(v_mean, rotation @ v_kms, atol=2.0)
+
+    def test_vdf_rebin_cartesian_units(self):
+        vdf, _ = self._vdf()
+        v_edges = np.linspace(-1500.0, 1500.0, 16)
+        expected = mms.vdf_rebin(vdf, [v_edges] * 3, base="cart", random_state=0)
+
+        # Fluxes give the phase-space density in s^3/m^6
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        result = mms.vdf_rebin(dpf, [v_edges] * 3, base="cart", random_state=0)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/m^6")
+        np.testing.assert_allclose(
+            result.data.data, 1e12 * expected.data.data, rtol=1e-10
+        )
+
+        # Spacecraft potential: the density of the corrected bins
+        result = mms.vdf_rebin(
+            vdf, [v_edges] * 3, base="cart", sc_pot=20.0, random_state=0
+        )
+        d_v3 = (200.0 * 1e5) ** 3
+        n_new = result.data.data.sum(axis=(1, 2, 3)) * d_v3
+        n_old = mms.vdf_partial_density(vdf, sc_pot=20.0).data.data.sum(axis=(1, 2, 3))
+        np.testing.assert_allclose(
+            n_new, n_old * (1 - result.attrs["lost"]), rtol=1e-10
+        )
+
+        with self.assertRaises(ValueError):
+            mms.vdf_rebin(vdf, [v_edges] * 2, base="cart")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_rebin(vdf, [v_edges] * 3, base="box")
+
+        with self.assertRaises(ValueError):
+            mms.vdf_rebin(_pad_case(np.ones((3, 2, 12))), {"energy": [1.0, 2.0]})
+
+
+@ddt
+class VdfCutsTestCase(unittest.TestCase):
+    @staticmethod
+    def _bimaxwellian(n_e=32, e_min=10.0, species="ions"):
+        # Bi-Maxwellian in field-aligned coordinates (theta from B), n = 1
+        # cm^-3, T_par = 2 keV, T_perp = 1 keV, 300 km/s along B
+        mass = constants.m_p if species == "ions" else constants.m_e
+        ratio = (3e4 / e_min) ** (1 / (n_e - 1))
+        energy0 = e_min * ratio ** np.arange(n_e)
+        phi = 5.625 + 11.25 * np.arange(32)
+        theta = 5.625 + 11.25 * np.arange(16)
+        speed = np.sqrt(2 * constants.e * energy0 / mass)[:, None, None]
+        ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
+        v_perp2 = (speed * np.sin(th)) ** 2 * np.ones_like(ph)
+        v_par = -speed * np.cos(th) * np.ones_like(ph)
+        w_par = 2 * constants.e * 2000.0 / mass
+        w_perp = 2 * constants.e * 1000.0 / mass
+        f_si = np.exp(-v_perp2 / w_perp - (v_par - 3e5) ** 2 / w_par)
+        f_si *= 1e6 / (np.pi**1.5 * w_perp * np.sqrt(w_par))
+
+        energy = np.tile(energy0, (2, 1))
+        vdf = pyrf.ts_skymap(
+            generate_timeline(1 / 0.15, 2),
+            np.tile(1e-12 * f_si, (2, 1, 1, 1)),
+            energy,
+            np.tile(phi, (2, 1)),
+            theta,
+            energy0=energy0,
+            energy1=energy0,
+            esteptable=np.zeros(2, dtype=np.uint8),
+            attrs={"UNITS": "s^3/cm^6"},
+            glob_attrs={
+                "species": species,
+                "delta_energy_plus": energy * (np.sqrt(ratio) - 1),
+                "delta_energy_minus": energy * (1 - 1 / np.sqrt(ratio)),
+            },
+        )
+        return vdf, f_si
+
+    def test_vdf_cuts_distributions(self):
+        vdf, f_si = self._bimaxwellian()
+        dists, _ = mms.vdf_cuts(vdf)
+        self.assertEqual(dists.f_par.attrs["UNITS"], "s^3/m^6")
+
+        # Along B: the look directions at theta = 174.375 (pitch angle 5.625),
+        # the same at all azimuths; against B: theta = 5.625
+        np.testing.assert_allclose(
+            dists.f_par.data[:, 32:], np.tile(f_si[:, 0, 15], (2, 1)), rtol=1e-12
+        )
+        np.testing.assert_allclose(
+            dists.f_par.data[:, :32], np.tile(f_si[::-1, 0, 0], (2, 1)), rtol=1e-12
+        )
+        speed = np.sqrt(2 * constants.e * vdf.energy.data[0] / constants.m_p) / 1e3
+        np.testing.assert_allclose(
+            dists.v_par.data[0], np.hstack([-speed[::-1], speed])
+        )
+
+        # Perpendicular plane: theta = 84.375 and 95.625
+        expected = (f_si[:, :, 7] + f_si[:, :, 8]) / 2
+        np.testing.assert_allclose(dists.f_perp_2d.data[0], expected, rtol=1e-12)
+        np.testing.assert_allclose(dists.f_perp.data[0], expected[:, 0], rtol=1e-12)
+        np.testing.assert_allclose(dists.v_perp.data[0], speed)
+
+        # Gyro-averaged: pitch angles of the particles, increasing
+        np.testing.assert_allclose(dists.pitch_angle.data, 180.0 - vdf.theta.data[::-1])
+        np.testing.assert_allclose(dists.f_pa.data[0], f_si[:, 0, ::-1], rtol=1e-12)
+
+        # Wider windows: two bins in each cone
+        dists, _ = mms.vdf_cuts(vdf, par_width=20.0, perp_width=20.0)
+        expected = (f_si[:, 0, 14] + f_si[:, 0, 15]) / 2
+        np.testing.assert_allclose(dists.f_par.data[0, 32:], expected, rtol=1e-12)
+        self.assertEqual(dists.attrs["par_width"], 20.0)
+
+    def test_vdf_cuts_moments(self):
+        # A grid from 0.1 eV, so that the low speeds are in the cuts
+        vdf, _ = self._bimaxwellian(n_e=64, e_min=0.1)
+        _, moms = mms.vdf_cuts(vdf)
+        self.assertEqual(moms.t.attrs["UNITS"], "eV")
+        np.testing.assert_array_equal(moms.comp.data, ["perp1", "perp2", "par"])
+
+        # Of the skymap: psd_moments
+        np.testing.assert_allclose(moms.n.data, 1.0, rtol=0.01)
+        np.testing.assert_allclose(moms.v.data[:, 2], 300.0, rtol=0.01)
+        np.testing.assert_allclose(
+            np.diag(moms.t.data[0]), [1000.0, 1000.0, 2000.0], rtol=0.01
+        )
+
+        # Of the cuts: T_par, T_perp and the drift
+        np.testing.assert_allclose(moms.v_par_cut.data, 300.0, rtol=0.01)
+        np.testing.assert_allclose(moms.t_par_cut.data, 2000.0, rtol=0.02)
+        np.testing.assert_allclose(moms.v_perp_cut.data, 0.0, atol=1e-6)
+        np.testing.assert_allclose(np.diag(moms.t_perp_cut.data[0]), 1000.0, rtol=0.03)
+        self.assertTrue(np.all(moms.n_par_cut.data > 0))
+        self.assertEqual(moms.n_perp_cut.attrs["UNITS"], "s/m^4")
+
+    def test_vdf_cuts_input(self):
+        # Any units, electrons, NaN bins
+        vdf, _ = self._bimaxwellian(species="electrons")
+        dpf = mms.vdf_convert(vdf, "1/(cm^2 s sr keV)")
+        dists, moms = mms.vdf_cuts(dpf)
+        expected, _ = mms.vdf_cuts(vdf)
+        np.testing.assert_allclose(dists.f_par.data, expected.f_par.data, rtol=1e-10)
+
+        vdf.data.data[:, :, :16, :] = np.nan
+        dists, _ = mms.vdf_cuts(vdf)
+        np.testing.assert_allclose(dists.f_par.data, expected.f_par.data, rtol=1e-12)
+
+        with self.assertRaises(ValueError):
+            mms.vdf_cuts(_pad_case(np.ones((3, 2, 12))))
 
 
 @ddt

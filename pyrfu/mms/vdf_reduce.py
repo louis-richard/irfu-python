@@ -147,11 +147,12 @@ def vdf_frame_transformation(vdf, v_gse):
     velocity `v_gse`.
 
     .. deprecated:: 2.5.0
-        `vdf_frame_transformation` will be removed or replaced in a future
-        version. It always uses the proton mass, and the transformed skymap is
-        rotated by 180 degrees in azimuth. Only the omni-directional spectra of
-        proton skymaps in the angle convention of :func:`pyrfu.mms.eis_skymap`
-        are correct; the results are wrong for FPI skymaps.
+        `vdf_frame_transformation` will be removed in 3.0; use
+        :func:`pyrfu.mms.vdf_shift` instead. It always uses the proton mass,
+        and the transformed skymap is rotated by 180 degrees in azimuth. Only
+        the omni-directional spectra of proton skymaps in the angle convention
+        of :func:`pyrfu.mms.eis_skymap` are correct; the results are wrong for
+        FPI skymaps.
 
     Parameters
     ----------
@@ -178,11 +179,11 @@ def vdf_frame_transformation(vdf, v_gse):
     """
 
     warnings.warn(
-        "vdf_frame_transformation is deprecated and will be removed or replaced in "
-        "a future version. It always uses the proton mass, and the transformed "
-        "skymap is rotated by 180 degrees in azimuth: only the omni-directional "
-        "spectra of proton skymaps from pyrfu.mms.eis_skymap are correct, and the "
-        "results are wrong for FPI skymaps.",
+        "vdf_frame_transformation is deprecated and will be removed in 3.0; use "
+        "pyrfu.mms.vdf_shift instead. It always uses the proton mass, and the "
+        "transformed skymap is rotated by 180 degrees in azimuth: only the "
+        "omni-directional spectra of proton skymaps from pyrfu.mms.eis_skymap are "
+        "correct, and the results are wrong for FPI skymaps.",
         FutureWarning,
         stacklevel=2,
     )

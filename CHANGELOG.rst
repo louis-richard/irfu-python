@@ -1,14 +1,293 @@
 Changelog
 =========
 
+2.5.1 (2026-10-19)
+------------------
+
+This release follows a review of the FEEPS functions against IDL SPEDAS 6.1
+and pyspedas, and ports the methods of the irfu-matlab particle distribution
+class (``PDist``). The corrected chain ``get_feeps_alleyes`` →
+``feeps_corrections`` → ``feeps_omni`` now matches pyspedas to round-off on
+real burst and survey data, and the new FEEPS skymaps can be used as the FPI
+distributions. The new ``vdf_*`` and ``pad_*`` functions (frame shift,
+rebinning, macroparticles, cuts, ...) are each compared with irfu-matlab on
+real FPI data. Most FEEPS products change: see
+`Changed behaviour <v2.5.1 changed_>`_ and
+`Fixes that change results <v2.5.1 fixes_>`_ before updating an analysis.
+Where pyrfu deliberately differs from IDL SPEDAS, pyspedas or irfu-matlab,
+the docstring says so.
+
+.. _v2.5.1 changed:
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+These changes can require updating your code.
+
+- ``mms.get_feeps_alleyes``: the samples flagged as not valid for science
+  are NaN (new ``quality_flag``, default 3, as the pyspedas omni; ``None``
+  keeps all samples; L2 only).
+- ``mms.feeps_correct_energies``: the energy dimension of each eye is renamed
+  ``energy_top-1``, ``energy_bottom-1``, ..., the name given by
+  ``mms.get_feeps_alleyes`` (it was ``energy-top-1``). Code selecting the
+  energies of corrected eyes by dimension name must use the new names.
+- ``mms.feeps_omni``, ``mms.feeps_pad`` and ``mms.feeps_sector_spec`` raise
+  ``ValueError`` on eyes whose integral channel isn't split (16 channels):
+  call ``mms.feeps_split_integral_ch`` (or ``mms.feeps_corrections``) first.
+  ``feeps_omni`` failed with an unclear broadcast error, and ``feeps_pad``
+  and ``feeps_sector_spec`` averaged the integral channel as a spectrum
+  channel.
+- ``mms.feeps_pad``:
+
+  - burst data use the pitch angles of the CDF (``pitch_angle``), as IDL
+    SPEDAS and pyspedas; ``angles_from_bfield=True`` computes them from
+    ``b_bcs`` as before;
+  - there are floor(180 / ``bin_size``) bins of exactly ``bin_size`` from 0,
+    labelled at their centres, as IDL SPEDAS and pyspedas. With a
+    ``bin_size`` that doesn't divide 180 (e.g. 25), the bins used to spread
+    over 0-180 with labels and windows of ``bin_size``;
+  - a 32 keV start is accepted, the invalid inputs raise ``ValueError``, a
+    range without energy channel warns (the PAD is NaN), and ``UNITS`` is
+    that of the eyes (it was always intensity).
+
+- ``mms.feeps_sector_spec`` returns one row per spin, timed at the spin
+  start, and no longer ``spinsectnum`` (the spectra were padded with NaN to
+  every sample of ``spinsectnum``).
+- ``mms.get_feeps_alleyes``: ``"counts"`` raises ``ValueError`` for L2 data
+  (counts are in L1b only), and ``"mask"`` returns the sector mask of each
+  sample, ``(time, sectornum)``.
+
+Deprecations
+^^^^^^^^^^^^
+
+- ``mms.feeps_pad_spinavg``: ``bin_size`` is ignored (the bins are those of
+  the PAD) and will be removed.
+- ``mms.vdf_frame_transformation``: the warning points to its replacement,
+  ``mms.vdf_shift``; it will be removed in 3.0.
+
+New features
+^^^^^^^^^^^^
+
+- The methods of the irfu-matlab ``PDist`` class, each compared with
+  irfu-matlab on real FPI data (the differences are irfu-matlab bugs, or
+  deliberate and documented in the docstrings):
+
+  - ``mms.vdf_convert`` (``PDist.convertto``): phase-space densities
+    (s\ :sup:`3` cm\ :sup:`-6`, m\ :sup:`-6` or km\ :sup:`-6`),
+    differential energy and particle fluxes;
+  - ``mms.vdf_velocity`` (``PDist.v``), ``mms.vdf_solid_angle``
+    (``solidangle``) and ``mms.vdf_d3v`` (``d3v``): the velocities, solid
+    angles and velocity-space volumes of the bins, from the ``delta_*``
+    attributes when they are given;
+  - ``mms.vdf_partial_density`` (``dn`` and ``dj``) and ``mms.vdf_flux``
+    (``flux``);
+  - ``mms.vdf_mask`` (``mask``) and ``mms.vdf_find_low_counts``
+    (``find_low_counts``);
+  - ``mms.pad_palim`` (``palim``) and ``mms.pad_diffusion``
+    (``pitchangle_diffusion``, with the derivatives in radians);
+  - ``mms.vdf_shift`` (``shift``): the distribution in a moving frame and in
+    rotated coordinates;
+  - ``mms.vdf_rebin`` (``rebin``): the distribution on new spherical or
+    Cartesian bins;
+  - ``mms.vdf_macroparticles`` (``macroparticles``), as one Dataset;
+  - ``mms.vdf_cuts`` (``cuts``): cuts along and perpendicular to B, with
+    their moments.
+
+  The Monte-Carlo particles of ``vdf_shift``, ``vdf_rebin`` and
+  ``vdf_macroparticles`` are uniform in the volume of each bin (in
+  v\ :sup:`3` and cos θ); irfu-matlab draws them uniformly in energy and
+  polar angle, which biases them towards the low speeds and the poles.
+
+- ``mms.vdf_omni``: ``v_frame`` gives the omni-directional distribution in a
+  moving frame, as irfu-matlab ``get_omni_dist_framedep``, e.g. in the normal
+  incidence frame of a shock.
+- ``plot.plot_pad_polar`` (irfu-matlab ``PDist.plot_pad_polar``): a
+  pitch-angle distribution in the (v\ :sub:`∥`, v\ :sub:`⊥`) half plane,
+  drawn from its bins or resampled with Monte-Carlo particles.
+- ``mms.psd_moments``: ``pitch_angle_range`` with ``b_xyz`` gives the moments
+  of the particles in a range of pitch angles, the bins selected by their
+  centre (as the partial moments of the irfu-matlab examples) or weighted by
+  the fraction of their solid angle in the range
+  (``pitch_angle_weight="fraction"``, for wide bins).
+- ``mms.get_dist``: the half widths of the accumulations, ``delta_time_minus``
+  and ``delta_time_plus`` (s, per time), as irfu-matlab; ``pyrf.dist_append``,
+  ``mms.vdf_to_e64``, ``pyrf.average_vdf`` and ``mms.vdf_shift`` carry them.
+- ``mms.get_eis_allt``: ``source`` (``"default"``, ``"local"``, ``"sdc"`` or
+  ``"aws"``); each file is read once.
+- ``mms.feeps_skymap``: FEEPS skymaps, one per spin (time, energy, phi,
+  theta), in DMPA and in relativistic phase-space density (s\ :sup:`3`
+  cm\ :sup:`-6`), as the FPI distributions, for ``mms.psd_moments``,
+  ``mms.reduce`` and ``mms.vdf_projection``. The look directions are despun with the spin
+  sectors (a constant per spacecraft, measured on 2015-2024 FGM data), or with
+  FGM (``b_bcs`` and ``b_dmpa``). The 4 polar rings of the eyes give coarse
+  partial moments above about 30 keV; ``coverage`` gives the fraction of the
+  sphere with data, and ``fill_empty`` optionally fills the bins without
+  data.
+- ``mms.reduce`` uses the angular widths of the skymap (``delta_theta_*`` and
+  ``delta_phi_*``) when they are given, as for the FEEPS skymaps, whose 4
+  polar bins have different widths; FPI and EIS skymaps are unchanged.
+- ``mms.dpf2psd`` and ``mms.psd2dpf``: ``relativistic=True`` converts to
+  and from the relativistic phase-space density, f = γ\ :sup:`3` m J /
+  v\ :sup:`2` with the relativistic speed v, whose integral over the
+  velocities is the density. For electrons, it is larger than the
+  non-relativistic f = m J / v\ :sup:`2` (v\ :sup:`2` = 2E/m, the default, as
+  FPI) by 4.5 % at 5 keV, 52 % at 50 keV and a factor 2.2 at 100 keV. The
+  FEEPS skymaps use it.
+- ``mms.psd_moments``: ``relativistic=True`` uses the relativistic speeds,
+  momentum (pressure) and kinetic energy (heat flux), for the relativistic
+  phase-space density; the default is the ``relativistic`` attribute of the
+  distribution (True for the FEEPS skymaps), else False, as before. The
+  density is then the integral of the intensity over the energy and the solid
+  angle; the non-relativistic moments underestimate the FEEPS electron density
+  by about 10 % (more for harder spectra).
+- ``mms.get_gyrophase_dist``: gyrophase distributions of a skymap (FPI, EIS,
+  FEEPS), optionally in a range of pitch angles. The gyrophase is measured
+  right-handed about B from the component of a reference direction
+  perpendicular to B (default [1, 0, 0], as ``pyrf.convert_fac``), as Li et
+  al. (2022).
+- ``mms.get_feeps_alleyes``: the lower and upper bounds of the energy
+  channels of each eye, from the CDF, as coordinates along its energies
+  (``energy_lower_bound_top-1``, ...).
+- ``mms.psd_moments``: ``angle_integration="exact"`` integrates the angular
+  kernels over each bin instead of taking them at the bin centre (the
+  default, as irfu-matlab). On the FPI grid the moments change by less than
+  1 %; on the wide FEEPS bins the midpoint rule underestimates the density by
+  8 to 11 %. The FEEPS skymaps use "exact" by default (``angle_integration``
+  attribute).
+- ``mms.feeps_pad``: ``angles_from_bfield`` (see above).
+- ``mms.feeps_remove_sunlit_sectors``: ``i_en``, the energy channel used to
+  find the sunlit sectors (default 3, as before).
+- The FEEPS sun-contamination masks of 2025-08-14 and 2025-12-26, and the
+  updated MMS4 masks of 2025-02-16.
+
+.. _v2.5.1 fixes:
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each of these returned wrong values before.
+
+- ``mms.psd_moments`` took every distribution as s\ :sup:`3` cm\ :sup:`-6`
+  (FPI): the moments of a distribution in s\ :sup:`3` m\ :sup:`-6`
+  (``mms.dpf2psd``, ``mms.eis_skymap``) were 10\ :sup:`12` too large, and in
+  s\ :sup:`3` km\ :sup:`-6` (``mms.make_model_vdf``) 10\ :sup:`30`. It now
+  reads ``UNITS`` (s\ :sup:`3` cm\ :sup:`-6` if missing) and converts the
+  differential energy and particle fluxes with ``mms.vdf_convert``, as
+  irfu-matlab. The FPI moments are unchanged.
+- ``mms.vdf_omni`` weighted the angles by sin θ, which is exact only on
+  uniform polar grids: the weights are the solid angles of the bins. The FEEPS
+  skymaps were 4 % off; the FPI omni is unchanged.
+- ``mms.vdf_to_e64`` merged a distribution with a single energy table into 64
+  duplicated channels at half the time resolution; it is returned unchanged,
+  as irfu-matlab ``PDist.e64``.
+- ``mms.feeps_remove_bad_data``:
+
+  - used the 2017 bad-eye table for all dates. It now takes the table
+    nearest in time, as pyspedas (data from 2018-04-01 12:00 UTC on use the
+    2018 table);
+  - never removed the ion eyes (6-8) or their bad channels, nor the bad
+    lowest channels of eyes without energy calibration, as IDL SPEDAS.
+
+- ``mms.read_feeps_sector_masks_csv`` (and ``mms.feeps_remove_sun``) used the
+  2018-10-05 masks for all later data; the mask nearest in time is used, as
+  IDL SPEDAS and pyspedas.
+- ``mms.feeps_flat_field_corrections``: the eyes with a gain of 0 (MMS2
+  top-7 and bottom-7, MMS4 top-7) are NaN; they were zeros, which pulled the
+  ion omni down by about 20 %.
+- ``mms.feeps_omni``: the channels of an eye whose energy is more than 10 %
+  from the omni energy are left out, as IDL SPEDAS and pyspedas.
+- ``mms.feeps_spin_avg`` and ``mms.feeps_pad_spinavg``: each spin is
+  averaged from its first sample up to the first sample of the next spin
+  (the windows were shifted by one sample, as in IDL SPEDAS and pyspedas),
+  the partial spins at the ends are kept, a spin without data is NaN (the
+  last rows were zeros), and the attributes are kept. ``feeps_spin_avg`` with
+  a ``DataArray`` of spin sectors (as ``mms.get_feeps_omni(spin_avg=True)``)
+  returned the samples unaveraged; ``feeps_pad_spinavg`` averages on the PAD
+  bins (it interpolated onto the bin edges) and failed with NumPy spin
+  sectors.
+- ``mms.feeps_avg_4sc`` of spin-averaged spectra: the zero rows of the spin
+  average counted as data, and ``combined_energies`` raised ``KeyError``.
+- ``mms.feeps_sector_spec``: each spin is stamped at its own start (it was
+  one row late, with a zero first row), and unsampled sectors are NaN (they
+  were 0).
+- ``mms.feeps_pitch_angles``: the survey pitch angles are interpolated onto
+  the FEEPS times, as pyspedas (B was averaged over the 2.5 s accumulation,
+  during which it turns by about 44° in body coordinates); B exactly along an
+  eye gives 0° or 180° (it was NaN).
+- ``mms.feeps_remove_sunlit_sectors``: the eye-sector pairs are averaged, as
+  documented (they were summed), and the pairs without data are left out of
+  the quantile. In survey data, the 56 empty sectors of each eye counted as
+  zeros, so about 9 % of a survey day was masked at ``outliers_q=0.99``
+  (1-3 % now).
+
+Other fixes
+^^^^^^^^^^^
+
+- ``solo.read_tnr`` failed on every file with data: it called
+  ``scipy.integrate.trapz``, removed in SciPy 1.14 (the known issue of 2.5.0).
+- ``mms.reduce`` raised ``KeyError`` on skymaps without
+  ``delta_energy_plus``; the default Cartesian grid then extends to the upper
+  edge of the speed bins inferred from the channels.
+- ``mms.get_eis_allt`` could not read any real EIS file: the variable names
+  were wrong since 2020 and for the files of minor version 0, and the energy
+  deltas failed in ``assign_coords``. Old (non-reprocessed) files, a species
+  missing from the file and an energy table changing in the time interval
+  raise ``ValueError``.
+- ``mms.psd_moments`` refused the distributions whose ``FIELDNAM`` doesn't
+  name the burst or fast rate (e.g. survey skymaps); the rate was only
+  logged.
+- ``mms.feeps_remove_bad_data``, ``mms.feeps_remove_sun`` and
+  ``mms.feeps_pad`` no longer change the caller's data; ``feeps_pad`` works on
+  integer counts.
+- ``mms.feeps_split_integral_ch`` cut the last column of ``pitch_angle`` (the
+  last bottom eye) and dropped the variables other than the eyes and
+  ``spinsectnum``; only the eyes are split now.
+- ``mms.get_feeps_alleyes`` failed for ``"mask"`` and read the L2 dataset for
+  every level.
+- ``mms.feeps_active_eyes`` accepts ``datetime.datetime`` and
+  ``numpy.datetime64`` time intervals.
+- ``mms.feeps_avg_4sc`` accepts tuples and no longer warns on all-NaN times.
+- ``mms.feeps_correct_energies`` no longer shares its attributes with the
+  input, and raises a clear ``ValueError`` on already split eyes.
+- The sun-mask files of 2024-02-02 with a byte order mark are read.
+- ``mms.feeps_remove_sunlit_sectors`` and ``mms.feeps_pad`` are 50 to 300
+  times faster on long intervals.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.get_feeps_omni`` is documented as a quick look without the energy
+  and flat-field corrections; the docstring gives the corrected chain.
+- ``mms.feeps_remove_sun``: survey samples, which average 8 sectors, are
+  masked only by the sector they are labelled with, as IDL SPEDAS and
+  pyspedas.
+- The FEEPS examples are updated for these changes.
+- New example: ion gyrophase bunching by EMIC waves, reproducing Fig. 1 of
+  Li et al. (2022) with ``mms.get_gyrophase_dist``.
+- The IP shock example follows irfu-matlab ``Example_MMS_IPshock``: data from
+  AWS, the omni-directional ion distribution in the normal incidence frame
+  (``mms.vdf_omni`` with ``v_frame``) and the event of 2023-12-17.
+- The README, the docs and ``CITATION.cff`` describe pyrfu on its own;
+  IRFU-MATLAB stays credited as its origin.
+
+Development
+^^^^^^^^^^^
+
+- The pre-commit hook that ran ``pre-commit autoupdate`` on every commit is
+  removed (it failed the commits and updated the linters without review);
+  black and pylint are updated.
+- The CodeQL workflow, which never ran, and its badge are removed.
+- The docs build again without warnings (``sphinx-build -W``).
+
 2.5.0 (2026-10-07)
 ------------------
 
 This release follows a function-by-function review of ``pyrf`` and ``mms``
 against irfu-matlab. It fixes many functions that returned wrong values or
 failed on every call, and makes MMS data available from AWS without a local
-copy. Several fixes change numerical results: see `Changed behaviour`_ and
-`Fixes that change results`_ before updating an analysis.
+copy. Several fixes change numerical results: see
+`Changed behaviour <v2.5 changed_>`_ and
+`Fixes that change results <v2.5 fixes_>`_ before updating an analysis.
 
 Requirements
 ^^^^^^^^^^^^
@@ -19,6 +298,8 @@ Requirements
 - ``cdflib`` is no longer used: CDF time conversions use ``pycdfpp`` (now
   ``>=0.9.0``) and NumPy.
 - New dependency: ``platformdirs``.
+
+.. _v2.5 changed:
 
 Changed behaviour
 ^^^^^^^^^^^^^^^^^
@@ -134,6 +415,8 @@ New features
 - ``mms.get_data``: ``r_gse_mec_brst_l2``; the docstring lists all the keys.
 - ``dispersion.one_fluid_dispersion``: ``k_vec``; ``mms.lh_wave_analysis``:
   ``vmax``; ``plot.add_position``: ``units``.
+
+.. _v2.5 fixes:
 
 Fixes that change results
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -331,4 +614,4 @@ Known issues
 
 - ``solo.read_tnr`` fails on every file with data: it calls
   ``scipy.integrate.trapz``, which was removed in SciPy 1.14 (the minimum
-  supported version). It will be fixed in 2.6.
+  supported version). Fixed in 2.5.1.

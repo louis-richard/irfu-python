@@ -44,6 +44,7 @@ from .feeps_remove_bad_data import feeps_remove_bad_data
 from .feeps_remove_sun import feeps_remove_sun
 from .feeps_remove_sunlit_sectors import feeps_remove_sunlit_sectors
 from .feeps_sector_spec import feeps_sector_spec
+from .feeps_skymap import feeps_skymap
 from .feeps_spin_avg import feeps_spin_avg
 from .feeps_split_integral_ch import feeps_split_integral_ch
 from .fft_bandpass import fft_bandpass
@@ -53,6 +54,7 @@ from .get_dist import get_dist
 from .get_eis_allt import get_eis_allt
 from .get_feeps_alleyes import get_feeps_alleyes
 from .get_feeps_omni import get_feeps_omni
+from .get_gyrophase_dist import get_gyrophase_dist
 from .get_hpca_dist import get_hpca_dist
 from .get_pitch_angle_dist import get_pitch_angle_dist
 from .get_ts import get_ts
@@ -73,6 +75,8 @@ from .make_model_kappa import make_model_kappa
 from .make_model_vdf import make_model_vdf
 
 # from .make_model_rq import make_model_rq
+from .pad_diffusion import pad_diffusion
+from .pad_palim import pad_palim
 from .probe_align_times import probe_align_times
 from .psd2def import psd2def
 from .psd2dpf import psd2dpf
@@ -87,11 +91,23 @@ from .rotate_tensor import rotate_tensor
 from .scpot2ne import scpot2ne
 from .spectr_to_dataset import spectr_to_dataset
 from .tokenize import tokenize
+from .vdf_convert import vdf_convert
+from .vdf_cuts import vdf_cuts
+from .vdf_d3v import vdf_d3v
 from .vdf_elim import vdf_elim
+from .vdf_find_low_counts import vdf_find_low_counts
+from .vdf_flux import vdf_flux
+from .vdf_macroparticles import vdf_macroparticles
+from .vdf_mask import vdf_mask
 from .vdf_omni import vdf_omni
+from .vdf_partial_density import vdf_partial_density
 from .vdf_projection import vdf_projection
+from .vdf_rebin import vdf_rebin
 from .vdf_reduce import vdf_frame_transformation, vdf_reduce
+from .vdf_shift import vdf_shift
+from .vdf_solid_angle import vdf_solid_angle
 from .vdf_to_e64 import vdf_to_e64
+from .vdf_velocity import vdf_velocity
 from .whistler_b2e import whistler_b2e
 
 __author__ = "Louis Richard"
@@ -146,6 +162,7 @@ __all__ = [
     "feeps_remove_sun",
     "feeps_remove_sunlit_sectors",
     "feeps_sector_spec",
+    "feeps_skymap",
     "feeps_spin_avg",
     "feeps_split_integral_ch",
     "fft_bandpass",
@@ -155,6 +172,7 @@ __all__ = [
     "get_eis_allt",
     "get_feeps_alleyes",
     "get_feeps_omni",
+    "get_gyrophase_dist",
     "get_hpca_dist",
     "get_pitch_angle_dist",
     "get_ts",
@@ -173,6 +191,8 @@ __all__ = [
     "load_brst_segments",
     "make_model_kappa",
     "make_model_vdf",
+    "pad_diffusion",
+    "pad_palim",
     "probe_align_times",
     "psd2def",
     "psd2dpf",
@@ -187,11 +207,23 @@ __all__ = [
     "scpot2ne",
     "spectr_to_dataset",
     "tokenize",
+    "vdf_convert",
+    "vdf_cuts",
+    "vdf_d3v",
     "vdf_elim",
+    "vdf_find_low_counts",
+    "vdf_flux",
     "vdf_frame_transformation",
+    "vdf_macroparticles",
+    "vdf_mask",
     "vdf_omni",
+    "vdf_partial_density",
     "vdf_projection",
+    "vdf_rebin",
     "vdf_reduce",
+    "vdf_shift",
+    "vdf_solid_angle",
     "vdf_to_e64",
+    "vdf_velocity",
     "whistler_b2e",
 ]

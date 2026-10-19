@@ -211,6 +211,22 @@ class AverageVDFTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["delta_energy_minus"].ndim, 2)
         self.assertEqual(len(result.attrs["delta_energy_minus"]), len(avg_inds))
 
+    def test_average_vdf_delta_time(self):
+        # A window spans its accumulations: n_pts times the sampling period
+        vdf = generate_vdf(64.0, 100, [32, 32, 16])
+        vdf.attrs["delta_time_minus"] = np.full(100, 0.5 / 64.0)
+        vdf.attrs["delta_time_plus"] = np.full(100, 0.5 / 64.0)
+
+        result = pyrf.average_vdf(vdf, 3)
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            self.assertEqual(len(result.attrs[key]), len(result.time))
+            np.testing.assert_allclose(result.attrs[key], 1.5 / 64.0, rtol=1e-6)
+
+        # The whole interval, time tag at the middle
+        result = pyrf.average_vdf(vdf, None)
+        total = result.attrs["delta_time_minus"] + result.attrs["delta_time_plus"]
+        np.testing.assert_allclose(total, 100 / 64.0, rtol=1e-6)
+
 
 @ddt
 class Avg4SCTestCase(unittest.TestCase):
@@ -1443,6 +1459,21 @@ class DistAppendTestCase(unittest.TestCase):
         for key, value in attrs.items():
             np.testing.assert_array_equal(inp0.attrs[key], value)
         self.assertTupleEqual(result.attrs["delta_energy_plus"].shape, (20, 32))
+
+    def test_dist_append_delta_time(self):
+        inp0 = generate_vdf(64.0, 10, [32, 32, 16])
+        inp1 = generate_vdf(64.0, 5, [32, 32, 16])
+        for i, inp in enumerate([inp0, inp1]):
+            inp.attrs["delta_time_minus"] = np.full(len(inp.time), 0.1 * (i + 1))
+            inp.attrs["delta_time_plus"] = np.full(len(inp.time), 0.2 * (i + 1))
+
+        result = pyrf.dist_append(inp0, inp1)
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_minus"], np.hstack([[0.1] * 10, [0.2] * 5])
+        )
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_plus"], np.hstack([[0.2] * 10, [0.4] * 5])
+        )
 
 
 @ddt

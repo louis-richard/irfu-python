@@ -61,6 +61,7 @@ Loading data
    get_variable
    get_dist
    get_pitch_angle_dist
+   get_gyrophase_dist
    load_ancillary
    tokenize
 
@@ -104,7 +105,20 @@ FPI particle distributions
    vdf_elim
    vdf_omni
    vdf_to_e64
+   vdf_mask
+   vdf_find_low_counts
+   vdf_velocity
+   vdf_d3v
+   vdf_solid_angle
+   vdf_partial_density
+   vdf_flux
+   pad_palim
+   pad_diffusion
    psd_rebin
+   vdf_rebin
+   vdf_cuts
+   vdf_shift
+   vdf_macroparticles
    vdf_frame_transformation
    vdf_projection
    reduce
@@ -136,6 +150,7 @@ Unit conversions
    dpf2psd
    psd2def
    psd2dpf
+   vdf_convert
    spectr_to_dataset
 
 Energetic Ion Spectrometer (EIS)
@@ -187,6 +202,7 @@ Fly's Eye Energetic Particle Spectrometer (FEEPS)
    feeps_pad
    feeps_pad_spinavg
    feeps_sector_spec
+   feeps_skymap
 
 Hot Plasma Composition Analyzer (HPCA)
 --------------------------------------

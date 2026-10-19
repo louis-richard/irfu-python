@@ -19,9 +19,9 @@ pyrfu
       .. rst-class:: pyrfu-lead
 
       ``pyrfu`` is an open-source package for in-situ space plasma data
-      analysis, based on the IRFU-MATLAB library. It covers the
-      Magnetospheric Multiscale (MMS) mission from data access to particle
-      distributions and wave analysis, and general plasma physics tools.
+      analysis. It covers the Magnetospheric Multiscale (MMS) mission from
+      data access to particle distributions and wave analysis, and general
+      plasma physics tools.
 
       .. code-block:: console
 
@@ -206,9 +206,9 @@ Zenodo page also lists the DOI of each release):
     }
 
 ``pyrfu`` was developed at the Swedish Institute of Space Physics (IRF) in
-Uppsala, building on the IRFU-MATLAB library, and is now maintained at the
-Rudolf Peierls Centre for Theoretical Physics, University of Oxford. It is
-distributed under the MIT license.
+Uppsala, where it started from the IRFU-MATLAB library, and is now maintained
+at the Rudolf Peierls Centre for Theoretical Physics, University of Oxford.
+It is distributed under the MIT license.
 
 .. toctree::
    :hidden:

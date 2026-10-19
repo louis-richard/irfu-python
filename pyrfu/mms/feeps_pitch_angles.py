@@ -5,13 +5,11 @@
 import numpy as np
 import xarray as xr
 
-from ..pyrf.resample import resample
-
 # Local imports
 from .feeps_active_eyes import feeps_active_eyes
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -107,7 +105,8 @@ def _calc_pas(d_type, b_bcs):
 
         v_dot_b = np.sum(v_bcs * b_bcs, axis=1)
         v_dot_b /= np.linalg.norm(v_bcs) * np.linalg.norm(b_bcs.data, axis=1)
-        pas[:, i] = np.rad2deg(np.arccos(v_dot_b))
+        # clip the rounding errors of B along an eye (|cos| slightly above 1)
+        pas[:, i] = np.rad2deg(np.arccos(np.clip(v_dot_b, -1.0, 1.0)))
 
     return pas
 
@@ -142,14 +141,25 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         Dataset of the time series of the energy spectrum for each eye of
         FEEPS telescopes.
     b_bcs : xarray.DataArray
-        Time series of the magnetic in spacecraft coordinates system.
+        Time series of the magnetic field in body coordinates (BCS), covering
+        the FEEPS times. IDL SPEDAS uses the FGM survey L2 field at all data
+        rates (``mms.get_data("b_bcs_fgm_srvy_l2", tint, mms_id)``), and
+        pyspedas the FGM field at the FEEPS data rate.
 
     Returns
     -------
     out : xarray.DataArray
         Time series of the pitch angles.
-    idx_maps : dict
-        to fill.
+    idx_maps : dict or None
+        Columns of `out` of the active top and bottom eyes
+        (``"{species}-top"`` and ``"{species}-bottom"``), None for burst
+        electrons (all the eyes).
+
+    Notes
+    -----
+    The pitch angles are computed at the times of `b_bcs` and linearly
+    interpolated onto the FEEPS times, as in IDL SPEDAS and pyspedas. The FEEPS
+    times outside `b_bcs` are NaN.
 
     """
 
@@ -185,6 +195,8 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         coords=[b_bcs.time.data, np.arange(new_pas.shape[1])],
         dims=["time", "idx"],
     )
-    out = resample(out, inp_dataset.time)
+
+    # interpolate the instantaneous angles (not averaged over the accumulation)
+    out = out.interp(time=times)
 
     return out, idx_maps

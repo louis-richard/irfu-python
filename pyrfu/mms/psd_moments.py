@@ -11,6 +11,9 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
+from pyrfu.mms._vdf_bins import _bin_pitch_angles, _phi_edges, _theta_edges
+from pyrfu.mms.vdf_convert import _PSD, vdf_convert
+from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
@@ -68,6 +71,8 @@ def _moms(
     use_energy,
     vdf,
     delta_ang,
+    exact_kernels,
+    use_exact,
 ):
     n_psd = np.zeros(vdf.shape[0])
     v_psd = np.zeros((vdf.shape[0], 3))
@@ -99,6 +104,19 @@ def _moms(
         psd2p_xy_mat = np.cos(phi_i) * np.sin(phi_i) * np.sin(theta_i) ** 3
         psd2p_xz_mat = np.cos(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
         psd2p_yz_mat = np.sin(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
+
+        # Kernels integrated exactly over each angular bin (delta_ang is 1)
+        if use_exact:
+            psd2n_mat = exact_kernels[i_t, 0].copy()
+            psd2v_x_mat = exact_kernels[i_t, 1].copy()
+            psd2v_y_mat = exact_kernels[i_t, 2].copy()
+            psd2v_z_mat = exact_kernels[i_t, 3].copy()
+            psd2p_xx_mat = exact_kernels[i_t, 4].copy()
+            psd2p_yy_mat = exact_kernels[i_t, 5].copy()
+            psd2p_zz_mat = exact_kernels[i_t, 6].copy()
+            psd2p_xy_mat = exact_kernels[i_t, 7].copy()
+            psd2p_xz_mat = exact_kernels[i_t, 8].copy()
+            psd2p_yz_mat = exact_kernels[i_t, 9].copy()
 
         for i_e in range(vdf.shape[1]):
             # Energy channels selected for this time step
@@ -175,6 +193,60 @@ def _moms(
             h_psd[i_t, 2] += vz_acc * delta_v[i_t, i_e] * velocity[i_e] ** 5
 
     return n_psd, v_psd, p_psd, h_psd
+
+
+def _exact_kernels(
+    phi, theta, delta_phi_minus, delta_phi_plus, delta_theta_minus, delta_theta_plus
+):
+    # Angular kernels of the moments integrated over each (phi, theta) bin,
+    # assuming a constant phase-space density in the bin: (time, kernel, phi,
+    # theta), kernels in the order of _moms. Angles and widths in degrees, phi
+    # (time, phi), theta (theta,).
+    phi_a = np.deg2rad(phi - delta_phi_minus)[:, :, np.newaxis]
+    phi_b = np.deg2rad(phi + delta_phi_plus)[:, :, np.newaxis]
+    theta_a = np.deg2rad(theta - delta_theta_minus)[np.newaxis, np.newaxis, :]
+    theta_b = np.deg2rad(theta + delta_theta_plus)[np.newaxis, np.newaxis, :]
+
+    # integrals over phi of 1, cos, sin, cos^2, sin^2 and cos sin
+    d_phi = phi_b - phi_a
+    sin2_phi = (np.sin(2 * phi_b) - np.sin(2 * phi_a)) / 4
+    i_1 = d_phi
+    i_c = np.sin(phi_b) - np.sin(phi_a)
+    i_s = np.cos(phi_a) - np.cos(phi_b)
+    i_cc = d_phi / 2 + sin2_phi
+    i_ss = d_phi / 2 - sin2_phi
+    i_cs = (np.sin(phi_b) ** 2 - np.sin(phi_a) ** 2) / 2
+
+    # integrals over theta of sin, sin^2, sin cos, sin^3, sin cos^2, sin^2 cos
+    c_a, c_b = np.cos(theta_a), np.cos(theta_b)
+    s_a, s_b = np.sin(theta_a), np.sin(theta_b)
+    j_s = c_a - c_b
+    j_ss = (theta_b - theta_a) / 2 - (np.sin(2 * theta_b) - np.sin(2 * theta_a)) / 4
+    j_sc = (s_b**2 - s_a**2) / 2
+    j_sss = (c_a - c_b) - (c_a**3 - c_b**3) / 3
+    j_scc = (c_a**3 - c_b**3) / 3
+    j_ssc = (s_b**3 - s_a**3) / 3
+
+    kernels = [
+        i_1 * j_s,
+        -i_c * j_ss,
+        -i_s * j_ss,
+        -i_1 * j_sc,
+        i_cc * j_sss,
+        i_ss * j_sss,
+        i_1 * j_scc,
+        i_cs * j_sss,
+        i_c * j_ssc,
+        i_s * j_ssc,
+    ]
+
+    return np.ascontiguousarray(np.stack(kernels, axis=1), dtype=np.float64)
+
+
+def _speed_relativistic(energy, p_mass):
+    # Relativistic speed (m/s) of particles of kinetic energy (eV)
+    gamma = 1.0 + constants.elementary_charge * energy / (p_mass * constants.c**2)
+    return constants.c * np.sqrt(1.0 - 1.0 / gamma**2)
 
 
 def _energy_edges(vdf, energy, energy0, energy1, step_table, flag_same_e):
@@ -270,6 +342,126 @@ def _energy_mask(vdf, energy, kwargs):
     return use_energy
 
 
+def _moms_relativistic(moms_args, sc_pot, p_mass):
+    # Relativistic moments with the (non-relativistic) _moms kernel: energies
+    # whose non-relativistic speed is the relativistic one, and the pressure
+    # and heat flux from the data weighted by the Lorentz factor (momentum flux
+    # gamma m v v) and by the kinetic energy over m v^2 / 2
+    # arguments of _moms: energy (0), flag and width of the inner electron
+    # energies (5, 6), data (10)
+    energy, vdf_data = moms_args[0], moms_args[10]
+    flag_inner_electron, w_inner_electron = moms_args[5], moms_args[6]
+    q_e, c_light = constants.elementary_charge, constants.c
+
+    energy_correct = energy - sc_pot[:, np.newaxis]
+    gamma = 1.0 + q_e * energy_correct / (p_mass * c_light**2)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        velocity = _speed_relativistic(energy_correct, p_mass)
+        kinetic = np.where(
+            velocity > 0.0, 2 * (gamma - 1) * c_light**2 / velocity**2, 1.0
+        )
+
+    # Raw energies where the kernel sets the speed to zero (inner electron
+    # energies) or where it is undefined (below the spacecraft potential)
+    keep = ~(velocity > 0.0) | (energy_correct < flag_inner_electron * w_inner_electron)
+
+    args = list(moms_args)
+    args[0] = np.where(
+        keep, energy, p_mass * velocity**2 / (2 * q_e) + sc_pot[:, np.newaxis]
+    )
+    n_psd, v_psd, _, _ = _moms(*args)
+
+    args[10] = np.ascontiguousarray(vdf_data * gamma[:, :, np.newaxis, np.newaxis])
+    p_psd = _moms(*args)[2]
+
+    args[10] = np.ascontiguousarray(vdf_data * kinetic[:, :, np.newaxis, np.newaxis])
+    h_psd = _moms(*args)[3]
+
+    return n_psd, v_psd, p_psd, h_psd
+
+
+# Sub-grid of the angular bins for the pitch-angle fractions
+_N_SUB = 8
+
+
+def _psd_si(vdf, relativistic):
+    r"""Phase-space density in s^3/m^6, as a new C-contiguous float64 array
+    (get_dist returns a transposed view, which the numba kernels can't
+    reshape), from the units of `vdf` (``UNITS``, s^3/cm^6 if missing)."""
+    units = str(vdf.data.attrs.get("UNITS", "s^3/cm^6"))
+
+    if units.lower() in _PSD:
+        factor = _PSD[units.lower()]
+        return np.multiply(vdf.data.data, factor, dtype=np.float64, order="C")
+
+    # Differential energy or particle fluxes, as irfu-matlab
+    # (PDist.convertto)
+    vdf_si = vdf_convert(vdf, "s^3/m^6", relativistic=relativistic)
+    return np.ascontiguousarray(vdf_si.data.data, dtype=np.float64)
+
+
+def _pitch_angle_args(kwargs):
+    # b_xyz, [min, max] and method of the pitch-angle range
+    b_xyz = kwargs.get("b_xyz")
+    pitch_angle_range = np.asarray(kwargs["pitch_angle_range"], dtype=np.float64)
+    method = kwargs.get("pitch_angle_weight", "centre")
+
+    if b_xyz is None:
+        raise ValueError("pitch_angle_range needs b_xyz")
+
+    valid = pitch_angle_range.shape == (2,) and (
+        0.0 <= pitch_angle_range[0] <= pitch_angle_range[1] <= 180.0
+    )
+
+    if not valid:
+        raise ValueError("pitch_angle_range must be [min, max] within [0, 180]")
+
+    if method not in ["centre", "fraction"]:
+        raise ValueError(f"Invalid pitch_angle_weight {method}: centre or fraction")
+
+    return b_xyz, pitch_angle_range, method
+
+
+def _pitch_angle_weights(vdf, b_xyz, pitch_angle_range, method):
+    # Weight of each angular bin (time, phi, theta) for the pitch angles in
+    # pitch_angle_range: 1 or 0 from the pitch angle of its centre ("centre"),
+    # or the fraction of its solid angle in the range ("fraction", on a
+    # _N_SUB x _N_SUB grid uniform in phi and cos(theta)), and the times
+    # without B
+    b_hat = normalize(resample(b_xyz, vdf.time)).data
+    no_b = ~np.all(np.isfinite(b_hat), axis=1)
+    pa_min, pa_max = pitch_angle_range
+    phi = np.broadcast_to(vdf.phi.data, (len(vdf.time), vdf.data.shape[2]))
+
+    if method == "centre":
+        pitch = _bin_pitch_angles(phi, vdf.theta.data, b_hat)
+        return ((pitch >= pa_min) & (pitch <= pa_max)).astype(np.float64), no_b
+
+    sub = (np.arange(_N_SUB) + 0.5) / _N_SUB
+    phi_lower, phi_upper = _phi_edges(vdf)
+    phi_sub = phi_lower[..., None] + sub * (phi_upper - phi_lower)[..., None]
+    phi_sub = phi_sub.reshape(len(vdf.time), -1)
+    theta_lower, theta_upper = _theta_edges(vdf)
+    cos_lower = np.cos(np.deg2rad(theta_lower))[:, None]
+    cos_upper = np.cos(np.deg2rad(theta_upper))[:, None]
+    theta_sub = np.rad2deg(np.arccos(cos_lower - sub * (cos_lower - cos_upper)))
+    theta_sub = theta_sub.ravel()
+
+    n_t, n_ph, n_th = len(vdf.time), vdf.data.shape[2], vdf.data.shape[3]
+    weights = np.zeros((n_t, n_ph, n_th))
+
+    # Time chunks: the sub-grid is _N_SUB^2 times the angular grid
+    for start in range(0, n_t, 64):
+        chunk = slice(start, start + 64)
+        pitch = _bin_pitch_angles(phi_sub[chunk], theta_sub, b_hat[chunk])
+        inside = (pitch >= pa_min) & (pitch <= pa_max)
+        inside = inside.reshape(-1, n_ph, _N_SUB, n_th, _N_SUB)
+        weights[chunk] = np.mean(inside, axis=(2, 4))
+
+    return weights, no_b
+
+
 def psd_moments(vdf, sc_pot, **kwargs):
     r"""Computes moments from the FPI particle phase-space densities.
 
@@ -279,7 +471,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
         3D skymap velocity distribution. The angular widths are taken from the
         optional attributes `delta_phi_minus`/`delta_phi_plus` (time, phi) and
         `delta_theta_minus`/`delta_theta_plus` (theta), in degrees, or else
-        from the spacing of the phi and theta grids.
+        from the spacing of the phi and theta grids. The data are in the
+        units of their ``UNITS`` attribute (s^3/cm^6, as FPI, if missing): a
+        phase-space density or a differential energy or particle flux, see
+        `vdf_convert`.
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
 
@@ -328,12 +523,46 @@ def psd_moments(vdf, sc_pot, **kwargs):
         size as vdf.data.
     inner_electron : {"on", "off"}
         inner_electrontron potential for electron moments.
+    angle_integration : {"midpoint", "exact"}
+        Integration of the angular kernels over each (phi, theta) bin:
+        "midpoint", the kernels at the bin centres times the bin widths, as
+        irfu-matlab, or "exact", the kernels integrated over each bin for a
+        phase-space density constant in the bin. Default is the
+        ``angle_integration`` attribute of `vdf` if any (e.g. "exact" for the
+        FEEPS skymaps), else "midpoint". On the 11.25 degree FPI grid, "exact"
+        changes the moments by less than 1 %; on wide bins "midpoint"
+        underestimates the density (8 % on the FEEPS polar bins).
+    relativistic : bool
+        Relativistic speeds, momentum flux (pressure, gamma m v v) and kinetic
+        energy (heat flux), for a relativistic phase-space density (`dpf2psd`
+        with ``relativistic=True``). Default is the ``relativistic``
+        attribute of `vdf` if any (True for the FEEPS skymaps), else False, as
+        FPI and irfu-matlab. The bulk-flow corrections of the pressure and heat
+        flux are non-relativistic.
+    pitch_angle_range : array_like
+        Range of pitch angles [min, max] (degrees, inclusive) of the particles
+        used, with `b_xyz`: the moments are those of the particles in the
+        range (the pressure and temperature about their own bulk velocity).
+        Default uses all the pitch angles.
+    b_xyz : xarray.DataArray
+        Time series of the magnetic field in the coordinate system of `vdf`
+        (e.g., DMPA for FPI), resampled to the times of `vdf`. Needed with
+        `pitch_angle_range`; the moments are NaN at the times without B.
+    pitch_angle_weight : {"centre", "fraction"}
+        With `pitch_angle_range`, a bin is used if the pitch angle of its
+        centre is in the range ("centre", default, as get_pitch_angle_dist
+        and the partial moments of the irfu-matlab examples), or weighted by
+        the fraction of its solid angle in the range ("fraction", for wide
+        bins such as those of FEEPS and EIS, or cones narrower than the bins).
 
     Raises
     ------
     ValueError
-        If energy_range has no channel (fixed range) or a wrong shape, or if
-        both energy_range and en_channels are given.
+        If energy_range has no channel (fixed range) or a wrong shape, if
+        both energy_range and en_channels are given, if angle_integration
+        is not "midpoint" or "exact", or if pitch_angle_range is given without
+        b_xyz, is not [min, max] within [0, 180], pitch_angle_weight is not
+        "centre" or "fraction", or the units of `vdf` are not supported.
 
     Notes
     -----
@@ -373,21 +602,21 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # [eV] sc_pot + w_inner_electron for electron moments calculation
     w_inner_electron = 3.5
 
-    # Check if data is fast or burst resolution
-    if "brst" in vdf.data.attrs["FIELDNAM"].lower():
-        logger.info("Burst resolution data is used")
-    elif "fast" in vdf.data.attrs["FIELDNAM"].lower():
-        logger.info("Fast resolution data is used")
-    else:
-        raise TypeError("Could not identify if data is fast or burst.")
+    # Data rate, for information only (e.g. FEEPS survey skymaps)
+    field_name = str(vdf.data.attrs.get("FIELDNAM", "")).lower()
+    for rate in ["brst", "fast", "srvy"]:
+        if rate in field_name:
+            logger.info("%s resolution data is used", rate)
 
     theta = vdf.theta.data
     particle_type = vdf.attrs["species"]
     assert particle_type[0].lower() in ["e", "i"], "invalid particle type"
 
-    # In SI units, as a new C-contiguous float64 array: get_dist returns a
-    # transposed (non-contiguous) view, which the numba kernels can't reshape
-    vdf_data = np.multiply(vdf.data.data, 1e12, dtype=np.float64, order="C")
+    # In SI units (s^3/m^6)
+    relativistic = bool(
+        kwargs.get("relativistic", vdf.attrs.get("relativistic", False))
+    )
+    vdf_data = _psd_si(vdf, relativistic)
 
     step_table = vdf.attrs["esteptable"]
     energy = vdf.energy.data
@@ -475,10 +704,52 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     delta_ang = delta_phi * delta_theta
 
+    angle_integration = kwargs.get(
+        "angle_integration", vdf.attrs.get("angle_integration", "midpoint")
+    )
+
+    if angle_integration not in ["midpoint", "exact"]:
+        raise ValueError(
+            f"Invalid angle_integration {angle_integration}: must be midpoint or "
+            "exact"
+        )
+
+    use_exact = angle_integration == "exact"
+
+    if use_exact:
+        half_phi = np.rad2deg(delta_phi[:, :, 0]) / 2
+        half_theta = np.rad2deg(delta_theta[0, 0, :]) / 2
+        exact_kernels = _exact_kernels(
+            phi,
+            theta,
+            vdf.attrs.get("delta_phi_minus", half_phi),
+            vdf.attrs.get("delta_phi_plus", half_phi),
+            vdf.attrs.get("delta_theta_minus", half_theta),
+            vdf.attrs.get("delta_theta_plus", half_theta),
+        )
+        delta_ang = np.ones(delta_ang.shape)
+    else:
+        # placeholder, unused by _moms (numba needs an array)
+        exact_kernels = np.zeros((1, 10, 1, 1))
+
+    # Pitch-angle range: weights of the angular bins
+    no_b = np.zeros(vdf_data.shape[0], dtype=bool)
+
+    if kwargs.get("pitch_angle_range") is not None:
+        weights, no_b = _pitch_angle_weights(vdf, *_pitch_angle_args(kwargs))
+
+        if use_exact:
+            exact_kernels = np.ascontiguousarray(exact_kernels * weights[:, None])
+        else:
+            delta_ang = delta_ang * weights
+
+    # float64 angles: the angular kernels of _moms must have the dtype of the
+    # exact kernels (FPI angles are float32)
     phi_mat = np.tile(phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
+    phi_mat = phi_mat.astype(np.float64)
     theta_mat = np.tile(
         theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
-    )
+    ).astype(np.float64)
 
     energy_correct = energy - sc_pot[:, np.newaxis]
     velocity = np.sqrt(2 * q_e * energy_correct / p_mass)
@@ -492,8 +763,11 @@ def psd_moments(vdf, sc_pot, **kwargs):
     sc_pot_2d = sc_pot[:, np.newaxis]
     e_upper = np.clip(energy_upper - sc_pot_2d, 0.0, None)
     e_lower = np.clip(energy_lower - sc_pot_2d, 0.0, None)
-    v_upper = np.sqrt(2 * q_e * e_upper / p_mass)
-    v_lower = np.sqrt(2 * q_e * e_lower / p_mass)
+    if relativistic:
+        v_upper, v_lower = [_speed_relativistic(e, p_mass) for e in [e_upper, e_lower]]
+    else:
+        v_upper = np.sqrt(2 * q_e * e_upper / p_mass)
+        v_lower = np.sqrt(2 * q_e * e_lower / p_mass)
     delta_v = np.ascontiguousarray(v_upper - v_lower)
 
     # Clean up NaN values in the input VDF data before passing to the numba kernel.
@@ -502,7 +776,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # calculations.
     _sanitize_nan_inplace(vdf_data)
 
-    n_psd, v_psd, p_psd, h_psd = _moms(
+    moms_args = [
         energy,
         delta_v,
         q_e,
@@ -515,10 +789,17 @@ def psd_moments(vdf, sc_pot, **kwargs):
         use_energy,
         vdf_data,
         delta_ang,
-    )
+        exact_kernels,
+        use_exact,
+    ]
+
+    if relativistic:
+        n_psd, v_psd, p_psd, h_psd = _moms_relativistic(moms_args, sc_pot, p_mass)
+    else:
+        n_psd, v_psd, p_psd, h_psd = _moms(*moms_args)
 
     # No energy channel at these time steps (time dependent energy_range)
-    no_energy = ~np.any(use_energy, axis=1)
+    no_energy = ~np.any(use_energy, axis=1) | no_b
     n_psd[no_energy] = np.nan
     v_psd[no_energy] = np.nan
     p_psd[no_energy] = np.nan

@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import warnings
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
+# Local imports
+from .feeps_spin_avg import _spin_bounds
+
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -14,56 +20,73 @@ __status__ = "Prototype"
 
 
 def feeps_sector_spec(inp_alle):
-    r"""Creates sector-spectrograms with FEEPS data (particle data organized
-    by time and sector number)
+    r"""Creates sector-spectrograms with FEEPS data.
+
+    The particle data are organized by time and sector number.
 
     Parameters
     ----------
     inp_alle : xarray.Dataset
-        Dataset of energy spectrum of all eyes.
+        Dataset of energy spectrum of all eyes, with the spin sectors
+        (``spinsectnum``).
 
     Returns
     -------
     out : xarray.Dataset
-        Sector-spectrograms with FEEPS data for all eyes.
+        Sector-spectrograms with FEEPS data for all eyes: one row per spin and
+        one column per spin sector (64).
+
+    Raises
+    ------
+    ValueError
+        If the integral channel of the eyes is not split (16 channels).
+
+    Notes
+    -----
+    A spin starts at the first sample after the spin sector number wraps
+    around and is time stamped at that sample. Each sample of a spin, averaged
+    over energy, goes to the column of its spin sector; the sectors not
+    sampled are NaN. The partial spins at the start and end of the interval
+    are kept.
+
+    IDL SPEDAS leaves the first row at zero, stamps each spin at the start of
+    the next one, and lets the first sample of the next spin overwrite its
+    sector.
 
     """
 
-    sensors_eyes_top = list(filter(lambda x: x[:3] in "top", inp_alle))
-    sensors_eyes_bot = list(filter(lambda x: x[:3] in "bot", inp_alle))
-    sensors_eyes = [*sensors_eyes_top, *sensors_eyes_bot]
-
-    sector_time = inp_alle["spinsectnum"].time.data
-    sector_data = inp_alle["spinsectnum"].data
-
-    out_dict = {k: inp_alle[k] for k in inp_alle if k not in sensors_eyes}
+    sensors_eyes = list(filter(lambda x: x.startswith(("top", "bottom")), inp_alle))
 
     for sensors_eye in sensors_eyes:
-        sensor_data = inp_alle[sensors_eye].data
-
-        spin_starts = np.where(sector_data[:-1] > sector_data[1:])[0] + 1
-
-        sector_spec = np.zeros((len(spin_starts), 64))
-
-        c_start = spin_starts[0]
-
-        for i, spin in enumerate(spin_starts):
-            # find the sectors for this spin
-            spin_sect = sector_data[c_start:spin]
-
-            sector_spec[i, spin_sect] = np.nanmean(
-                sensor_data[c_start:spin, :],
-                axis=1,
+        if inp_alle[sensors_eye].shape[1] == 16:
+            raise ValueError(
+                f"{sensors_eye} has 16 energy channels: split the integral channel "
+                "first with feeps_split_integral_ch (or use feeps_corrections)"
             )
 
-            c_start = spin
+    sector_time = inp_alle["spinsectnum"].time.data
+    sector_data = inp_alle["spinsectnum"].data.astype(int)
+    bounds = _spin_bounds(sector_data)
+
+    out_dict = {}
+
+    for sensors_eye in sensors_eyes:
+        # average over energy, quiet for the samples without data
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            sensor_data = np.nanmean(inp_alle[sensors_eye].data, axis=1)
+
+        sector_spec = np.full((len(bounds) - 1, 64), np.nan)
+
+        for i, (i_start, i_stop) in enumerate(zip(bounds[:-1], bounds[1:])):
+            sector_spec[i, sector_data[i_start:i_stop]] = sensor_data[i_start:i_stop]
 
         out_dict[sensors_eye] = xr.DataArray(
             sector_spec,
-            coords=[sector_time[spin_starts], np.arange(64)],
+            coords=[sector_time[bounds[:-1]], np.arange(64)],
             dims=["time", "sectornum"],
         )
 
-    out = xr.Dataset(out_dict)
+    out = xr.Dataset(out_dict, attrs={**inp_alle.attrs})
 
     return out

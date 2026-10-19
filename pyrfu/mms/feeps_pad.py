@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import itertools
-
 # Built-in imports
 import warnings
 
@@ -74,15 +72,15 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
         for isen, sensor_num in enumerate(particle_idxs):
             var_name = f"{s_type}-{sensor_num + 1:d}"
 
-            data = inp_dataset[var_name].data
             energies = inp_dataset[inp_dataset[var_name].dims[1]].data
-
-            # remove any 0s before averaging
-            data[data == 0] = "nan"
 
             # assumes all energies are NaNs if the first is
             if np.isnan(energies[0]):
                 continue
+
+            # remove any 0s before averaging (on a float copy, not the input)
+            data = inp_dataset[var_name].data
+            data = np.where(data == 0, np.nan, data.astype(float))
 
             # energy indices to use:
             idx = np.where(
@@ -111,30 +109,16 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
     pa_flux = np.zeros([len(pa_times), int(n_pabins)])
     delta_pa = (pa_bins[1] - pa_bins[0]) / 2.0
 
-    # Now loop through PA bins and time, find the telescopes where there is
-    # data in those bins and average it up!
-    for pa_idx, ipa in itertools.product(
-        range(len(pa_times)),
-        range(n_pabins),
-    ):
-        if not np.isnan(dpa[pa_idx, :]).all():
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                ind = np.where(
-                    (dpa[pa_idx, :] + dangresp >= pa_labels[ipa] - delta_pa)
-                    & (dpa[pa_idx, :] - dangresp < pa_labels[ipa] + delta_pa),
-                )
-
-                if ind[0].size != 0:
-                    if len(ind[0]) > 1:
-                        pa_flux[pa_idx, ipa] = np.nanmean(
-                            dflux[pa_idx, ind[0]],
-                            axis=0,
-                        )
-                    else:
-                        # Single telescope (assigning a 1-element array to an
-                        # element fails with NumPy >= 2.5)
-                        pa_flux[pa_idx, ipa] = dflux[pa_idx, ind[0][0]]
+    # Now loop through PA bins, find the telescopes where there is data in
+    # those bins at each time and average it up! (comparisons with NaN pitch
+    # angles are False)
+    for ipa in range(n_pabins):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            ind = (dpa + dangresp >= pa_labels[ipa] - delta_pa) & (
+                dpa - dangresp < pa_labels[ipa] + delta_pa
+            )
+            pa_flux[:, ipa] = np.nanmean(np.where(ind, dflux, np.nan), axis=1)
 
     pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
 
@@ -146,6 +130,7 @@ def feeps_pad(
     b_bcs,
     bin_size: float = 16.3636,
     energy: list = None,
+    angles_from_bfield: bool = False,
 ):
     r"""Compute pitch angle distribution using FEEPS data.
 
@@ -154,37 +139,100 @@ def feeps_pad(
     inp_dataset : xarray.Dataset
         Energy spectrum of all eyes.
     b_bcs : xarray.DataArray
-        Time series of the magnetic field in spacecraft coordinates.
+        Time series of the magnetic field in body coordinates (BCS), covering
+        the FEEPS times. IDL SPEDAS uses the FGM survey L2 field at all data
+        rates (``mms.get_data("b_bcs_fgm_srvy_l2", tint, mms_id)``), and
+        pyspedas the FGM field at the FEEPS data rate. Not used for burst data,
+        unless `angles_from_bfield` is True.
     bin_size : float, Optional
-        Width of the pitch angles bins. Default is 16.3636.
+        Width of the pitch angles bins in degrees. Default is 16.3636. As in
+        IDL SPEDAS and pyspedas, there are floor(180 / bin_size) bins of
+        exactly this width from 0, so the last bin ends below 180 degrees
+        when `bin_size` doesn't divide 180.
     energy : array_like, Optional
-        Energy range of particles. Default is [70., 600.]
+        Energy range of particles in keV, starting at 32 keV or above. Default
+        is [70., 600.].
+    angles_from_bfield : bool, Optional
+        For burst data, compute the pitch angles from `b_bcs` instead of using
+        the pitch angles of the CDF (``pitch_angle``). Default is False.
 
     Returns
     -------
     pad : xarray.DataArray
         Time series of the pitch angle distribution.
 
+    Raises
+    ------
+    ValueError
+        If the integral channel of the eyes is not split (16 channels), the
+        energy range starts below 32 keV, or the data rate or species is not
+        supported.
+
+    Warns
+    -----
+    UserWarning
+        If no energy channel is in the energy range (the PAD is then NaN).
+
+    Notes
+    -----
+    The integral channel must be split before (`feeps_split_integral_ch`),
+    otherwise the electron integral channel (about 580 keV) would be averaged
+    as a spectrum channel.
+
+    As in IDL SPEDAS and pyspedas, burst data use the pitch angles of the CDF
+    by default, and survey data the pitch angles computed from `b_bcs`
+    (`feeps_pitch_angles`).
+
     """
+
+    eye_names = list(filter(lambda x: x.startswith(("top", "bottom")), inp_dataset))
+
+    for k in eye_names:
+        if inp_dataset[k].shape[1] == 16:
+            raise ValueError(
+                f"{k} has 16 energy channels: split the integral channel first "
+                "with feeps_split_integral_ch (or use feeps_corrections)"
+            )
 
     if energy is None:
         energy = [70.0, 600.0]
 
-    assert energy[0] > 32.0, "Please use a starting energy of 32 keV or above"
+    if energy[0] < 32.0:
+        raise ValueError("Please use a starting energy of 32 keV or above")
+
+    eye_energies = [inp_dataset[inp_dataset[k].dims[1]].data for k in eye_names]
+    in_range = [np.any((e_k >= energy[0]) & (e_k <= energy[1])) for e_k in eye_energies]
+
+    if not any(in_range):
+        warnings.warn(
+            f"No FEEPS energy channel in {energy} keV: the PAD is NaN", UserWarning
+        )
 
     time = inp_dataset.time.data
-    attrs = inp_dataset.attrs
-    attrs["energy_range"] = energy
+    attrs = {**inp_dataset.attrs, "energy_range": energy}
     mms_id, d_type, d_rate = list(map(attrs.get, ["mmsId", "dtype", "tmmode"]))
 
-    assert d_rate in ["srvy", "brst"]
-    assert d_type in ["electron", "ion"]
+    if d_rate not in ["srvy", "brst"]:
+        raise ValueError(f"Invalid data rate {d_rate}: must be srvy or brst")
 
-    n_pabins = int(180 / bin_size)
-    pa_bins = [180.0 * pa_bin / n_pabins for pa_bin in range(n_pabins + 1)]
+    if d_type not in ["electron", "ion"]:
+        raise ValueError(f"Invalid species {d_type}: must be electron or ion")
+
+    # Bins of bin_size degrees from 0, as IDL SPEDAS and pyspedas (the
+    # tolerance keeps e.g. 180 / 7 at 7 bins)
+    n_pabins = int(np.floor(180.0 / bin_size + 1e-6))
+    pa_bins = [bin_size * pa_bin for pa_bin in range(n_pabins + 1)]
     pa_labels = [pa_bin + bin_size / 2.0 for pa_bin in pa_bins[:-1]]
 
-    pitch_angles, idx_maps = feeps_pitch_angles(inp_dataset, b_bcs)
+    if d_rate == "brst" and not angles_from_bfield and "pitch_angle" in inp_dataset:
+        # pitch angles of the CDF, fill values (inactive eyes) to NaN
+        pitch_angles = inp_dataset["pitch_angle"].astype(float)
+        pitch_angles = pitch_angles.where(
+            (pitch_angles >= 0.0) & (pitch_angles <= 180.0)
+        )
+        idx_maps = None
+    else:
+        pitch_angles, idx_maps = feeps_pitch_angles(inp_dataset, b_bcs)
 
     pa_data_map = _pa_data_map(idx_maps, d_type, d_rate)
 
@@ -213,6 +261,9 @@ def feeps_pad(
         attrs=attrs,
     )
 
-    pad.attrs["UNITS"] = "1/(cm^2 s sr kev)"
+    # units of the eyes (intensity, count rate, ...)
+    pad.attrs["UNITS"] = inp_dataset[eye_names[0]].attrs.get(
+        "UNITS", "1/(cm^2 s sr keV)"
+    )
 
     return pad

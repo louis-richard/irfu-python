@@ -9,6 +9,8 @@ from functools import lru_cache
 from typing import Mapping, Optional, Tuple
 
 # 3rd party imports
+import numpy as np
+from pycdfpp import load
 from xarray.core.dataarray import DataArray
 
 from pyrfu.mms.db_init import MMS_CFG_PATH
@@ -95,12 +97,15 @@ def _db_get_ts_dict(
     verbose: Optional[bool] = True,
     data_path: Optional[str] = "",
     source: Optional[str] = "default",
+    support_names: Optional[list[str]] = None,
 ) -> dict[str, DataArray]:
     r"""Time series of several variables of a dataset, reading each file once
     (i.e., one download per file from the SDC or AWS for all the variables).
 
     See :func:`db_get_ts` for the parameters; returns a dictionary of the time
-    series with `cdf_names` as keys.
+    series with `cdf_names` as keys. The non-record-varying variables of
+    `support_names` (e.g. the FEEPS energy bounds) are returned as the array of
+    their first record in the first file that has them, without time.
 
     """
     mms_id, var = _tokenize(dataset_name)
@@ -119,10 +124,20 @@ def _db_get_ts_dict(
         for cdf_name in cdf_names:
             logger.info("Loading %s...", cdf_name)
 
+    support = {}
+
     for file_name in file_names:
         file_content = _get_file_content_sources(
             resource, file_name, sdc_session, headers
         )
+
+        missing = [name for name in support_names or [] if name not in support]
+
+        if missing:
+            cdf = load(file_content)
+            for name in missing:
+                if name in cdf:
+                    support[name] = np.array(cdf[name].values[0])
 
         for cdf_name in cdf_names:
             try:
@@ -133,7 +148,7 @@ def _db_get_ts_dict(
 
             out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
 
-    return {cdf_name: _check_times(ts) for cdf_name, ts in out.items()}
+    return {cdf_name: _check_times(ts) for cdf_name, ts in out.items()} | support
 
 
 def db_get_ts(
@@ -158,9 +173,9 @@ def db_get_ts(
         Status monitoring. Default is verbose = True
     data_path : str, Optional
         Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
-    source: str, Optional
-        Resource to fetch data from: {"default", "local", "sdc", "aws"}. Default uses
-        default in `pyrfu/mms/config.json`
+    source : {"default", "local", "sdc", "aws"}, Optional
+        Resource to fetch the data from. Default uses default in
+        `pyrfu/mms/config.json`.
 
     Returns
     -------

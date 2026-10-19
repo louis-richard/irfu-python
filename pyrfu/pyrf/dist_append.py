@@ -95,6 +95,11 @@ def dist_append(inp0, inp1):
         )
         glob_attrs["delta_energy_minus"] = delta_energy_minus
 
+    # Half widths of the accumulations (time,)
+    for k in ["delta_time_minus", "delta_time_plus"]:
+        if k in inp0.attrs and k in inp1.attrs:
+            glob_attrs[k] = np.hstack([inp0.attrs[k], inp1.attrs[k]])
+
     step_table = np.hstack(
         [inp0.attrs["esteptable"], inp1.attrs["esteptable"]],
     )

@@ -23,8 +23,10 @@ def feeps_corrections(feeps_alle):
     r"""
     Apply the FEEPS corrections to the all FEEPS eyes data product. The function
     applies the following corrections: feeps_correct_energies,
-    feeps_flat_field_corrections, feeps_remove_bad_data and
-    feeps_remove_sun.
+    feeps_flat_field_corrections, feeps_remove_bad_data, then splits the
+    integral channel (feeps_split_integral_ch) and applies feeps_remove_sun, in
+    the order of IDL SPEDAS and pyspedas (``mms_load_feeps``). The integral
+    channel is not returned.
 
     Parameters
     ----------
