@@ -30,6 +30,7 @@ from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
 from ..pyrf.int_sph_dist import (
     _mc_cart_2d,
     _mc_cart_3d,
+    _mc_particles,
     _mc_pol_1d,
     _speed_bin_edges,
     _uniform_step,
@@ -3042,6 +3043,35 @@ class IntSphDistTestCase(unittest.TestCase):
         )
 
         self.assertAlmostEqual(np.sum(result), np.cos(theta) if kept else 0.0)
+
+    def test_int_sph_dist_log_weight(self):
+        # "log" is logarithmic whatever the units of f: the same allocation
+        # in s^3/m^6 and s^3/km^6. irfu-matlab's log10(1 + f) was "lin" for
+        # SI phase-space densities (f << 1), which starved the tails
+        vdf, *_ = self._maxwellian()
+        vdf[0, :4, :2] = 0.0  # a few empty bins
+        n_si = _mc_particles(vdf, 10, "log")
+        n_km = _mc_particles(vdf * 1e18, 10, "log")
+        n_lin = _mc_particles(vdf, 10, "lin")
+
+        np.testing.assert_array_equal(n_si, n_km)
+        self.assertFalse(np.array_equal(n_si, n_lin))
+
+        # Particles in the tails (f < 1e-4 of the peak): 10.3 % against
+        # 1.6 % for "lin" (Claude outputs/int_sph_dist-log-weighting.md)
+        tail = (vdf > 0) & (vdf < 1e-4 * vdf.max())
+        self.assertGreater(n_si[tail].sum() / n_si.sum(), 0.05)
+        self.assertLess(n_lin[tail].sum() / n_lin.sum(), 0.02)
+
+        # At least one particle per bin with data, none in empty bins, and
+        # n_mc per bin on average (ceil adds less than one particle per bin)
+        self.assertTrue(np.all(n_si[vdf > 0] >= 1))
+        self.assertTrue(np.all(n_si[vdf == 0] == 0))
+        ratio = n_si.sum() / (10 * np.sum(vdf > 0))
+        self.assertTrue(1.0 <= ratio < 1.1)
+
+    def test_int_sph_dist_log_weight_empty(self):
+        np.testing.assert_array_equal(_mc_particles(np.zeros((2, 3, 4)), 10, "log"), 0)
 
     @data(
         ("pol", "1d", None, False),
