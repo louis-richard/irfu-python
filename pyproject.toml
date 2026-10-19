@@ -1,7 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=42",
-    "wheel==0.38.1",
+    "setuptools>=77",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,12 +10,12 @@ version = "2.5.1"
 description = "Python Space Physics (RymdFysik) Utilities"
 readme = "README.rst"
 authors = [{ name = "Louis RICHARD", email = "louis.richard@physics.ox.ac.uk" }]
-license = { file = "LICENSE.txt" }
+license = "MIT"
+license-files = ["LICENSE.txt"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Other Environment",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: Unix",
     "Operating System :: MacOS",
