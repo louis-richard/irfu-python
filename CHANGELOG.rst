@@ -1,19 +1,23 @@
 Changelog
 =========
 
-2.6.0 (unreleased)
+2.5.1 (2026-10-19)
 ------------------
 
 This release follows a review of the FEEPS functions against IDL SPEDAS 6.1
-and pyspedas. The corrected chain ``get_feeps_alleyes`` →
+and pyspedas, and ports the methods of the irfu-matlab particle distribution
+class (``PDist``). The corrected chain ``get_feeps_alleyes`` →
 ``feeps_corrections`` → ``feeps_omni`` now matches pyspedas to round-off on
-real burst and survey data. Most FEEPS products change: see
-`Changed behaviour <v2.6 changed_>`_ and
-`Fixes that change results <v2.6 fixes_>`_ before updating an analysis.
-Where pyrfu deliberately differs from IDL SPEDAS and pyspedas, the docstring
-says so.
+real burst and survey data, and the new FEEPS skymaps can be used as the FPI
+distributions. The new ``vdf_*`` and ``pad_*`` functions (frame shift,
+rebinning, macroparticles, cuts, ...) are each compared with irfu-matlab on
+real FPI data. Most FEEPS products change: see
+`Changed behaviour <v2.5.1 changed_>`_ and
+`Fixes that change results <v2.5.1 fixes_>`_ before updating an analysis.
+Where pyrfu deliberately differs from IDL SPEDAS, pyspedas or irfu-matlab,
+the docstring says so.
 
-.. _v2.6 changed:
+.. _v2.5.1 changed:
 
 Changed behaviour
 ^^^^^^^^^^^^^^^^^
@@ -58,10 +62,58 @@ Deprecations
 
 - ``mms.feeps_pad_spinavg``: ``bin_size`` is ignored (the bins are those of
   the PAD) and will be removed.
+- ``mms.vdf_frame_transformation``: the warning points to its replacement,
+  ``mms.vdf_shift``; it will be removed in 3.0.
 
 New features
 ^^^^^^^^^^^^
 
+- The methods of the irfu-matlab ``PDist`` class, each compared with
+  irfu-matlab on real FPI data (the differences are irfu-matlab bugs, or
+  deliberate and documented in the docstrings):
+
+  - ``mms.vdf_convert`` (``PDist.convertto``): phase-space densities
+    (s\ :sup:`3` cm\ :sup:`-6`, m\ :sup:`-6` or km\ :sup:`-6`),
+    differential energy and particle fluxes;
+  - ``mms.vdf_velocity`` (``PDist.v``), ``mms.vdf_solid_angle``
+    (``solidangle``) and ``mms.vdf_d3v`` (``d3v``): the velocities, solid
+    angles and velocity-space volumes of the bins, from the ``delta_*``
+    attributes when they are given;
+  - ``mms.vdf_partial_density`` (``dn`` and ``dj``) and ``mms.vdf_flux``
+    (``flux``);
+  - ``mms.vdf_mask`` (``mask``) and ``mms.vdf_find_low_counts``
+    (``find_low_counts``);
+  - ``mms.pad_palim`` (``palim``) and ``mms.pad_diffusion``
+    (``pitchangle_diffusion``, with the derivatives in radians);
+  - ``mms.vdf_shift`` (``shift``): the distribution in a moving frame and in
+    rotated coordinates;
+  - ``mms.vdf_rebin`` (``rebin``): the distribution on new spherical or
+    Cartesian bins;
+  - ``mms.vdf_macroparticles`` (``macroparticles``), as one Dataset;
+  - ``mms.vdf_cuts`` (``cuts``): cuts along and perpendicular to B, with
+    their moments.
+
+  The Monte-Carlo particles of ``vdf_shift``, ``vdf_rebin`` and
+  ``vdf_macroparticles`` are uniform in the volume of each bin (in
+  v\ :sup:`3` and cos θ); irfu-matlab draws them uniformly in energy and
+  polar angle, which biases them towards the low speeds and the poles.
+
+- ``mms.vdf_omni``: ``v_frame`` gives the omni-directional distribution in a
+  moving frame, as irfu-matlab ``get_omni_dist_framedep``, e.g. in the normal
+  incidence frame of a shock.
+- ``plot.plot_pad_polar`` (irfu-matlab ``PDist.plot_pad_polar``): a
+  pitch-angle distribution in the (v\ :sub:`∥`, v\ :sub:`⊥`) half plane,
+  drawn from its bins or resampled with Monte-Carlo particles.
+- ``mms.psd_moments``: ``pitch_angle_range`` with ``b_xyz`` gives the moments
+  of the particles in a range of pitch angles, the bins selected by their
+  centre (as the partial moments of the irfu-matlab examples) or weighted by
+  the fraction of their solid angle in the range
+  (``pitch_angle_weight="fraction"``, for wide bins).
+- ``mms.get_dist``: the half widths of the accumulations, ``delta_time_minus``
+  and ``delta_time_plus`` (s, per time), as irfu-matlab; ``pyrf.dist_append``,
+  ``mms.vdf_to_e64``, ``pyrf.average_vdf`` and ``mms.vdf_shift`` carry them.
+- ``mms.get_eis_allt``: ``source`` (``"default"``, ``"local"``, ``"sdc"`` or
+  ``"aws"``); each file is read once.
 - ``mms.feeps_skymap``: FEEPS skymaps, one per spin (time, energy, phi,
   theta), in DMPA and in relativistic phase-space density (s\ :sup:`3`
   cm\ :sup:`-6`), as the FPI distributions, for ``mms.psd_moments``,
@@ -108,13 +160,26 @@ New features
 - The FEEPS sun-contamination masks of 2025-08-14 and 2025-12-26, and the
   updated MMS4 masks of 2025-02-16.
 
-.. _v2.6 fixes:
+.. _v2.5.1 fixes:
 
 Fixes that change results
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Each of these returned wrong values before.
 
+- ``mms.psd_moments`` took every distribution as s\ :sup:`3` cm\ :sup:`-6`
+  (FPI): the moments of a distribution in s\ :sup:`3` m\ :sup:`-6`
+  (``mms.dpf2psd``, ``mms.eis_skymap``) were 10\ :sup:`12` too large, and in
+  s\ :sup:`3` km\ :sup:`-6` (``mms.make_model_vdf``) 10\ :sup:`30`. It now
+  reads ``UNITS`` (s\ :sup:`3` cm\ :sup:`-6` if missing) and converts the
+  differential energy and particle fluxes with ``mms.vdf_convert``, as
+  irfu-matlab. The FPI moments are unchanged.
+- ``mms.vdf_omni`` weighted the angles by sin θ, which is exact only on
+  uniform polar grids: the weights are the solid angles of the bins. The FEEPS
+  skymaps were 4 % off; the FPI omni is unchanged.
+- ``mms.vdf_to_e64`` merged a distribution with a single energy table into 64
+  duplicated channels at half the time resolution; it is returned unchanged,
+  as irfu-matlab ``PDist.e64``.
 - ``mms.feeps_remove_bad_data``:
 
   - used the 2017 bad-eye table for all dates. It now takes the table
@@ -158,6 +223,16 @@ Each of these returned wrong values before.
 Other fixes
 ^^^^^^^^^^^
 
+- ``solo.read_tnr`` failed on every file with data: it called
+  ``scipy.integrate.trapz``, removed in SciPy 1.14 (the known issue of 2.5.0).
+- ``mms.reduce`` raised ``KeyError`` on skymaps without
+  ``delta_energy_plus``; the default Cartesian grid then extends to the upper
+  edge of the speed bins inferred from the channels.
+- ``mms.get_eis_allt`` could not read any real EIS file: the variable names
+  were wrong since 2020 and for the files of minor version 0, and the energy
+  deltas failed in ``assign_coords``. Old (non-reprocessed) files, a species
+  missing from the file and an energy table changing in the time interval
+  raise ``ValueError``.
 - ``mms.psd_moments`` refused the distributions whose ``FIELDNAM`` doesn't
   name the burst or fast rate (e.g. survey skymaps); the rate was only
   logged.
@@ -189,10 +264,20 @@ Documentation
 - The FEEPS examples are updated for these changes.
 - New example: ion gyrophase bunching by EMIC waves, reproducing Fig. 1 of
   Li et al. (2022) with ``mms.get_gyrophase_dist``.
-- New example: FEEPS skymaps (``mms.feeps_skymap``) at the dipolarization
-  front of Kolokotronis et al. (2026), with angle-angle maps, coverage, partial
-  moments, the pitch-angle and gyrophase distributions and the reduced
-  distributions.
+- The IP shock example follows irfu-matlab ``Example_MMS_IPshock``: data from
+  AWS, the omni-directional ion distribution in the normal incidence frame
+  (``mms.vdf_omni`` with ``v_frame``) and the event of 2023-12-17.
+- The README, the docs and ``CITATION.cff`` describe pyrfu on its own;
+  IRFU-MATLAB stays credited as its origin.
+
+Development
+^^^^^^^^^^^
+
+- The pre-commit hook that ran ``pre-commit autoupdate`` on every commit is
+  removed (it failed the commits and updated the linters without review);
+  black and pylint are updated.
+- The CodeQL workflow, which never ran, and its badge are removed.
+- The docs build again without warnings (``sphinx-build -W``).
 
 2.5.0 (2026-10-07)
 ------------------
@@ -529,4 +614,4 @@ Known issues
 
 - ``solo.read_tnr`` fails on every file with data: it calls
   ``scipy.integrate.trapz``, which was removed in SciPy 1.14 (the minimum
-  supported version). It will be fixed in 2.6.
+  supported version). Fixed in 2.5.1.
