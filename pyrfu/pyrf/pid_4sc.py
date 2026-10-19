@@ -77,7 +77,10 @@ def pid_4sc(r_mms, v_mms, p_mms):
     Notes
     -----
     The units are given for positions in km, velocities in km/s and pressures
-    in nPa. No conversion is applied: other input units carry through.
+    in nPa. No conversion is applied: other input units carry through. The
+    pressure tensors are resampled onto the time base of the first
+    velocity, as the positions and velocities, and the outputs are on that
+    time base.
 
     References
     ----------
@@ -88,8 +91,9 @@ def pid_4sc(r_mms, v_mms, p_mms):
 
     """
 
-    # Compute pressure tensor and background magnetic field at the center of
-    # mass of the tetrahedron
+    # Compute pressure tensor at the center of mass of the tetrahedron, on
+    # the time base of the velocity (as r and v in c_4_grad)
+    p_mms = [resample(p_i, v_mms[0]) for p_i in p_mms]
     p_xyz = avg_4sc(p_mms)
 
     # Compute divergence and gradient tensor of the bulk velocity. Yang's
@@ -130,15 +134,22 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     r"""Compute error propagation for Pi-D term using definition of [1]_ as :
 
     .. math::
+
         Pi-D = - \Pi_{ij}D_{ij}
+
     with :math:`\Pi_{ij}` the deviatoric part of the pressure
     tensor :
+
     .. math::
+
         \Pi_{ij} = P_{ij} - p\delta_{ij}
 
         p = \frac{1}{3}P_{ii}
+
     and :math:`D_{ij}` the deviatoric part of the strain tensor :
+
     .. math::
+
         D_{ij} = \frac{1}{2}\left ( \partial_i u_j + \partial_j u_i \right )
         - \frac{1}{3}\theta\delta_{ij}
 
@@ -147,20 +158,28 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     Parameters
     ----------
     r_mms : list of xarray.DataArray
-        Time series of the position of the 4 spacecraft.
+        Time series of the position of the 4 spacecraft [km].
     v_mms : list of xarray.DataArray
-        Time series of the bulk velocities of the 4 spacecraft.
+        Time series of the bulk velocities of the 4 spacecraft [km/s].
     p_mms : list of xarray.DataArray
-        Time series of the pressure tensor of the 4 spacecraft.
+        Time series of the pressure tensor of the 4 spacecraft [nPa].
     errv_mms : list of xarray.DataArray
-        Time series of the error on the bulk velocities of the 4 spacecraft.
+        Time series of the error on the bulk velocities of the 4 spacecraft
+        [km/s].
     errp_mms : list of xarray.DataArray
-        Time series of the error on the pressure tensor of the 4 spacecraft.
+        Time series of the error on the pressure tensor of the 4 spacecraft
+        [nPa].
 
     Returns
     -------
     sigma_pid : xarray.DataArray
-        Time series of the error on Pi-D.
+        Time series of the error on Pi-D [nW/m^3].
+
+    Notes
+    -----
+    The errors of the 4 spacecraft are taken as independent, and the errors
+    on the positions are not propagated. All the inputs are resampled onto
+    the time base of the first velocity, as in pyrfu.pyrf.pid_4sc.
 
     References
     ----------
@@ -174,13 +193,13 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     """
 
     # Compute Pi-D and its components
-    d_xyz, pi_xyz, _, pid = pid_4sc(r_mms, v_mms, p_mms)
+    d_xyz, pi_xyz, _, _ = pid_4sc(r_mms, v_mms, p_mms)
 
-    # Compute error propagation for the gradient of the velocity field (see c_4_k)
-    errv_mms = [resample(errv_i, errv_mms[0]) for errv_i in errv_mms]
-    errp_mms = [resample(errp_i, errv_mms[0]) for errp_i in errp_mms]
-    r_mms = [resample(r, errv_mms[0]) for r in r_mms]
-    p_mms = [resample(p_i, errv_mms[0]) for p_i in p_mms]
+    # Compute error propagation for the gradient of the velocity field (see
+    # c_4_k), on the time base of the velocity, as pid_4sc
+    errv_mms = [resample(errv_i, v_mms[0]) for errv_i in errv_mms]
+    errp_mms = [resample(errp_i, v_mms[0]) for errp_i in errp_mms]
+    r_mms = [resample(r_i, v_mms[0]) for r_i in r_mms]
 
     # Compute reciprocal vectors in barycentric coordinates (see c_4_k)
     k_list = c_4_k(r_mms)
@@ -264,11 +283,11 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     sigma_pi_xyz[:, 2, 1] = sigma_pi_xyz[:, 1, 2]  # Symmetry
     sigma_pi_xyz = np.sqrt(sigma_pi_xyz)
 
-    sigma_pid_xyz_rel = np.zeros_like(pid.data)
-    sigma_pid_xyz_rel = np.sqrt(
-        (sigma_d_xyz / d_xyz.data) ** 2 + (sigma_pi_xyz / pi_xyz.data) ** 2
+    # Error on each Pi_ij D_ij, without dividing by Pi or D (NaN where either
+    # is 0)
+    sigma_pid_xyz = np.sqrt(
+        (pi_xyz.data * sigma_d_xyz) ** 2 + (d_xyz.data * sigma_pi_xyz) ** 2
     )
-    sigma_pid_xyz = np.abs(pi_xyz.data * d_xyz.data) * sigma_pid_xyz_rel
 
     sigma_pid = np.sqrt(
         sigma_pid_xyz[:, 0, 0] ** 2

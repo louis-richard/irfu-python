@@ -3858,6 +3858,7 @@ class OptimizeNbins2DTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], int)
 
 
+@ddt
 class Pid4SCTestCase(unittest.TestCase):
     def test_pid_4sc_output(self):
         result = pyrf.pid_4sc(
@@ -3902,6 +3903,72 @@ class Pid4SCTestCase(unittest.TestCase):
         # Pressure-strain interaction -(P.grad).u = -p theta + Pi-D
         p_strain = -(pi_xz * s_shear + (p_iso - a_anis) * c_comp)
         np.testing.assert_allclose(-ptheta.data + pid.data, p_strain)
+
+    @staticmethod
+    def _pid_case(p_data, p_time=None, p_slope=0.0):
+        # u = (S z, C y, 0) on a regular tetrahedron; P = p_data (1 + p_slope t)
+        time = generate_timeline(64.0, 10)
+        p_time = time if p_time is None else p_time
+        p_t = (p_time - time[0]) / np.timedelta64(1, "s")
+        dr_mms = 20.0 * np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+
+        r_mms, v_mms, p_mms = [], [], []
+
+        for dr in dr_mms:
+            r_mms.append(pyrf.ts_vec_xyz(time, np.tile(dr + [6.4e4, 0, 0], (10, 1))))
+            v_data = [0.5 * dr[2], 0.2 * dr[1], 0.0]
+            v_mms.append(pyrf.ts_vec_xyz(time, np.tile(v_data, (10, 1))))
+            p_ts = p_data * (1 + p_slope * p_t)[:, np.newaxis, np.newaxis]
+            p_mms.append(pyrf.ts_tensor_xyz(p_time, p_ts))
+
+        return time, r_mms, v_mms, p_mms
+
+    @data(
+        generate_timeline(32.0, 5),
+        generate_timeline(64.0, 10) + np.timedelta64(7812500, "ns"),
+    )
+    def test_pid_4sc_p_time_base(self, p_time):
+        # P at half the cadence of V raised ValueError, and on a shifted grid of
+        # the same length was misaligned. P linear in time: resampling is exact
+        p_data = np.diag([0.6, 0.4, 0.5])
+        p_data[0, 2] = p_data[2, 0] = 0.05
+        time, r_mms, v_mms, p_mms = self._pid_case(p_data, p_time, p_slope=0.5)
+        pid = pyrf.pid_4sc(r_mms, v_mms, p_mms)[3]
+        t_s = (time - time[0]) / np.timedelta64(1, "s")
+        expected = (0.1 * 0.2 - 0.05 * 0.5) * (1 + 0.5 * t_s)
+        np.testing.assert_allclose(pid.data, expected, rtol=1e-12)
+        np.testing.assert_array_equal(pid.time.data, time)
+
+    def test_pid_4sc_err_isotropic(self):
+        # Pi = 0 gave NaN (relative errors); only sigma_Pi contributes:
+        # sigma = sigma_P / 2 * sqrt(4 C^2 / 9 + S^2), sigma_P / 2 at the centre
+        time, r_mms, v_mms, p_mms = self._pid_case(0.5 * np.eye(3))
+        errv = [pyrf.ts_vec_xyz(time, np.zeros((10, 3))) for _ in range(4)]
+        errp = [pyrf.ts_tensor_xyz(time, 0.02 * np.ones((10, 3, 3))) for _ in range(4)]
+        sigma = pyrf.pid_4sc_err(r_mms, v_mms, p_mms, errv, errp)
+        expected = 0.01 * np.sqrt(4 * 0.2**2 / 9 + 0.5**2)
+        np.testing.assert_allclose(sigma.data, expected, rtol=1e-12)
+
+    def test_pid_4sc_err_velocity(self):
+        # Regular tetrahedron of half side a = 20 km: sum_alpha k_alpha,i^2 =
+        # 1 / (4 a^2), so sigma(du_j / dx_i) = sigma_v / 40 for all i, j and
+        # sigma = sigma_v / 40 * sqrt(4 A^2 / 3 + 2 Pi_xz^2)
+        p_data = np.diag([0.6, 0.4, 0.5])
+        p_data[0, 2] = p_data[2, 0] = 0.05
+        time, r_mms, v_mms, p_mms = self._pid_case(p_data)
+        errv = [pyrf.ts_vec_xyz(time, 3.0 * np.ones((10, 3))) for _ in range(4)]
+        errp = [pyrf.ts_tensor_xyz(time, np.zeros((10, 3, 3))) for _ in range(4)]
+        sigma = pyrf.pid_4sc_err(r_mms, v_mms, p_mms, errv, errp)
+        expected = 3.0 / 40 * np.sqrt(4 * 0.1**2 / 3 + 2 * 0.05**2)
+        np.testing.assert_allclose(sigma.data, expected, rtol=1e-12)
+
+        # Errors at half the cadence: resampled onto the time base of V
+        time_h = generate_timeline(32.0, 5)
+        errv_h = [pyrf.ts_vec_xyz(time_h, 3.0 * np.ones((5, 3))) for _ in range(4)]
+        errp_h = [pyrf.ts_tensor_xyz(time_h, np.zeros((5, 3, 3))) for _ in range(4)]
+        sigma_h = pyrf.pid_4sc_err(r_mms, v_mms, p_mms, errv_h, errp_h)
+        np.testing.assert_allclose(sigma_h.data, expected, rtol=1e-12)
+        np.testing.assert_array_equal(sigma_h.time.data, time)
 
 
 class PlasmaCalcTestCase(unittest.TestCase):
