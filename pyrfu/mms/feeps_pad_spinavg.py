@@ -31,7 +31,7 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     bin_size : float, Optional
         Ignored, the spin average is on the pitch angle bins of `pad`.
 
-        .. deprecated:: 2.6.0
+        .. deprecated:: 2.5.1
             `bin_size` will be removed in a future version.
 
     Returns
