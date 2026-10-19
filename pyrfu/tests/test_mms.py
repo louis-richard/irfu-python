@@ -2235,6 +2235,80 @@ class MakeModelKappaTestCase(unittest.TestCase):
         self.assertEqual(np.any(~valid), sign > 0)
 
 
+class Mms4DisplacementTestCase(unittest.TestCase):
+    # Tetrahedron (km) and B along z: R_par is the z separation
+    offsets = np.array(
+        [[0.0, 0.0, 0.0], [10.0, 0.0, 2.0], [3.0, 8.0, -4.0], [-5.0, 6.0, 7.0]]
+    )
+
+    def _constant(self, time, value):
+        return pyrf.ts_vec_xyz(time, np.tile(value, (len(time), 1)))
+
+    def test_mms4_displacement_values(self):
+        time = generate_timeline(16.0, 32)
+        b_mms = [self._constant(time, [0.0, 0.0, 20.0]) for _ in range(4)]
+        r_mms = [self._constant(time, o) for o in self.offsets]
+
+        r_par, r_perp, theta_br = mms.mms4_displacement(b_mms, r_mms)
+
+        pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+        r_ij = np.array([self.offsets[i] - self.offsets[j] for i, j in pairs])
+        np.testing.assert_allclose(r_par.data[0], r_ij[:, 2])
+        np.testing.assert_allclose(r_perp.data[0], np.hypot(r_ij[:, 0], r_ij[:, 1]))
+        np.testing.assert_allclose(
+            theta_br.data[0],
+            np.rad2deg(np.arccos(r_ij[:, 2] / np.linalg.norm(r_ij, axis=1))),
+        )
+        self.assertListEqual(
+            list(r_par.pair.data), ["12", "13", "14", "23", "24", "34"]
+        )
+        np.testing.assert_array_equal(r_par.time.data, time)
+        self.assertEqual(r_par.attrs["UNITS"], "km")
+        self.assertEqual(theta_br.attrs["UNITS"], "deg")
+
+    def test_mms4_displacement_pair_average_field(self):
+        # MMS1 B along z and MMS2 B along x: pair 12 uses B along (1, 0, 1)
+        time = generate_timeline(16.0, 32)
+        b_mms = [self._constant(time, [0.0, 0.0, 20.0]) for _ in range(4)]
+        b_mms[1] = self._constant(time, [20.0, 0.0, 0.0])
+        r_mms = [self._constant(time, o) for o in self.offsets]
+
+        r_par, r_perp, _ = mms.mms4_displacement(b_mms, r_mms)
+
+        r_12 = self.offsets[0] - self.offsets[1]
+        b_hat = np.array([1.0, 0.0, 1.0]) / np.sqrt(2)
+        np.testing.assert_allclose(r_par.data[:, 0], r_12 @ b_hat)
+        np.testing.assert_allclose(
+            r_perp.data[:, 0], np.linalg.norm(r_12 - (r_12 @ b_hat) * b_hat)
+        )
+
+    def test_mms4_displacement_resamples_to_mms1_field(self):
+        # Positions at 1 Hz drifting along z at 2 km/s, B at 16 Hz: R is
+        # interpolated to the B times of MMS1
+        time_r = generate_timeline(1.0, 10)
+        time_b = generate_timeline(16.0, 64)
+        t_r = (time_r - time_r[0]).astype(np.int64) * 1e-9
+        r_mms = [
+            pyrf.ts_vec_xyz(time_r, o + np.outer(t_r * (k + 1), [0.0, 0.0, 2.0]))
+            for k, o in enumerate(self.offsets)
+        ]
+        b_mms = [self._constant(time_b, [0.0, 0.0, 20.0]) for _ in range(4)]
+
+        r_par, _, _ = mms.mms4_displacement(b_mms, r_mms)
+
+        t_b = (time_b - time_r[0]).astype(np.int64) * 1e-9
+        expected_12 = self.offsets[0, 2] - self.offsets[1, 2] + 2.0 * t_b * (1 - 2)
+        np.testing.assert_allclose(r_par.data[:, 0], expected_12, atol=1e-9)
+        np.testing.assert_array_equal(r_par.time.data, time_b)
+
+    def test_mms4_displacement_input(self):
+        time = generate_timeline(16.0, 32)
+        b_mms = [self._constant(time, [0.0, 0.0, 20.0]) for _ in range(3)]
+        r_mms = [self._constant(time, o) for o in self.offsets[:3]]
+        with self.assertRaises(ValueError):
+            mms.mms4_displacement(b_mms, r_mms)
+
+
 @ddt
 class PadPalimTestCase(unittest.TestCase):
     def test_pad_palim(self):
