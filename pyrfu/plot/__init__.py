@@ -26,6 +26,7 @@ from .plot_contour import plot_contour
 from .plot_heatmap import plot_heatmap
 from .plot_line import plot_line
 from .plot_magnetosphere import plot_magnetosphere
+from .plot_pad_polar import plot_pad_polar
 from .plot_projection import plot_projection
 from .plot_reduced_2d import plot_reduced_2d
 from .plot_spectr import plot_spectr
@@ -56,6 +57,7 @@ __all__ = [
     "plot_heatmap",
     "plot_line",
     "plot_magnetosphere",
+    "plot_pad_polar",
     "plot_projection",
     "plot_reduced_2d",
     "plot_spectr",

@@ -38,6 +38,7 @@ Particle distributions
    plot_projection
    plot_reduced_2d
    plot_ang_ang
+   plot_pad_polar
 
 Spacecraft and magnetosphere
 ----------------------------
