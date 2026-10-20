@@ -236,7 +236,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         Time series of the wave magnetic field.
     b_xyz : xarray.DataArray
         Time series of the high resolution background magnetic field used
-        for E.B=0.
+        for E.B=0, resampled onto the time line of E and delta_b if needed.
     b_bgd : xarray.DataArray
         Time series of the background magnetic field used for field aligned
         coordinates.
@@ -466,9 +466,12 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     idx_b_par_spin_plane = None
 
     if flag_de_dot_b0:
-        # MATLAB removes the last sample of fullB if the number of samples is odd
-        n_even = 2 * (len(b_xyz) // 2)
-        b_x, b_y, b_z = [b_xyz[:n_even, i].data for i in range(3)]
+        # Full B onto the final time line of E and delta_b (after the
+        # resampling and the even-length trim): it may come at another cadence
+        if not np.array_equal(b_xyz.time.data, db_xyz.time.data):
+            b_xyz = resample(b_xyz, db_xyz)
+
+        b_x, b_y, b_z = [b_xyz.data[:, i] for i in range(3)]
 
         _, idx_b_par_spin_plane = _b_elevation(b_x, b_y, b_z, angle_b_elevation_max)
 

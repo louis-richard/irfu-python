@@ -5977,6 +5977,42 @@ class EbspPhysicsTestCase(unittest.TestCase):
         res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)
         self.assertLess(float(np.isnan(res["pf_xyz"].data).mean()), 0.2)
 
+    def test_ebsp_de_dot_b0_full_b_cadence(self):
+        # Full B at a quarter of the cadence of E and dB raised ValueError
+        # ((4096,) vs (1024,)); a constant B resamples exactly
+        e, b, b0 = self._wave()
+        time = e.time.data
+        b_full, b_full_16 = [
+            pyrf.ts_vec_xyz(t_, np.tile([10.0, 5.0, 50.0], (len(t_), 1)))
+            for t_ in [time, time[::4]]
+        ]
+        options = dict(fac=False, de_dot_b0=True)
+        res = pyrf.ebsp(e, b, b_full, b0, None, [0.5, 8], **options)
+        res_16 = pyrf.ebsp(e, b, b_full_16, b0, None, [0.5, 8], **options)
+
+        for k in ["bb_xxyyzzss", "ee_xxyyzzss", "ee_ss", "pf_xyz", "pf_rtp"]:
+            np.testing.assert_array_equal(res_16[k].data, res[k].data)
+
+    def test_ebsp_de_dot_b0_recovers_ez(self):
+        # E perpendicular to a tilted full B: Ez from E.B = 0 and (Ex, Ey) gives
+        # the spectra of the full E
+        e, b, b0 = self._wave()
+        time = e.time.data
+        b_dir = np.array([10.0, 5.0, 50.0])
+        b_hat = b_dir / np.linalg.norm(b_dir)
+        e_perp = e.data - np.outer(e.data @ b_hat, b_hat)
+        b_full = pyrf.ts_vec_xyz(time[::4], np.tile(b_dir, (len(time[::4]), 1)))
+        e_xy = xr.DataArray(
+            e_perp[:, :2], coords=[time, ["x", "y"]], dims=["time", "comp"]
+        )
+        e_perp = pyrf.ts_vec_xyz(time, e_perp)
+
+        res = pyrf.ebsp(e_xy, b, b_full, b0, None, [0.5, 8], fac=False, de_dot_b0=True)
+        ref = pyrf.ebsp(e_perp, b, b_full, b0, None, [0.5, 8], fac=False)
+
+        ee, ee_ref = res["ee_xxyyzzss"].data, ref["ee_xxyyzzss"].data
+        np.testing.assert_allclose(ee, ee_ref, rtol=0, atol=1e-12 * np.nanmax(ee_ref))
+
 
 if __name__ == "__main__":
     unittest.main()
