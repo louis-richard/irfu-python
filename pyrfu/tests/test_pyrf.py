@@ -1292,6 +1292,26 @@ class Datetime2Iso8601TestCase(unittest.TestCase):
         self.assertEqual(len(pyrf.datetime2iso8601(ref_time)), 29)
         self.assertEqual(len(pyrf.datetime2iso8601(time_line)), 10)
 
+    def test_datetime2iso8601_datetime64(self):
+        # numpy.datetime64 times, as those of a time series, raised TypeError
+        time = np.array(
+            ["2019-01-01T00:00:00.123456789", "2019-01-01T00:00:01"],
+            dtype="datetime64[ns]",
+        )
+        expected = ["2019-01-01T00:00:00.123456789", "2019-01-01T00:00:01.000000000"]
+        self.assertListEqual(pyrf.datetime2iso8601(time), expected)
+        self.assertListEqual(pyrf.datetime2iso8601(list(time)), expected)
+        self.assertEqual(pyrf.datetime2iso8601(time[0]), expected[0])
+        self.assertIs(type(pyrf.datetime2iso8601(time)[0]), str)
+
+    def test_datetime2iso8601_datetime_unchanged(self):
+        time = datetime.datetime(2019, 1, 1, 0, 0, 0, 123456)
+        self.assertEqual(pyrf.datetime2iso8601(time), "2019-01-01T00:00:00.123456000")
+
+    def test_datetime2iso8601_invalid(self):
+        with self.assertRaises(TypeError):
+            pyrf.datetime2iso8601("2019-01-01T00:00:00")
+
 
 @ddt
 class Datetime642Iso8601TestCase(unittest.TestCase):
