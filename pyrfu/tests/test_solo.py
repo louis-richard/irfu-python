@@ -15,6 +15,7 @@ from unittest import mock
 # 3rd party imports
 import numpy as np
 import pycdfpp
+import pytest
 import xarray as xr
 from ddt import data, ddt, unpack
 
@@ -158,8 +159,10 @@ class ReadLFRDensityTestCase(unittest.TestCase):
         ]
         self.assertListEqual(files, expected)
 
+    @pytest.mark.filterwarnings("error::DeprecationWarning")
     def test_read_lfr_density_list_files_tree(self):
-        # [data_path]/L3/lfr_density/YYYY/MM, across a change of month
+        # [data_path]/L3/lfr_density/YYYY/MM, across a change of month (an
+        # integer added to datetime64[M] is deprecated from NumPy 2.5)
         data_dir = _make_files(
             self,
             [

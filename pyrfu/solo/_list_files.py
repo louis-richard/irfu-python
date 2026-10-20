@@ -96,7 +96,8 @@ def _list_files(
 
     if tree:
         months = np.arange(
-            d_start.astype("datetime64[M]"), d_end.astype("datetime64[M]") + 1
+            d_start.astype("datetime64[M]"),
+            d_end.astype("datetime64[M]") + np.timedelta64(1, "M"),
         )
         local_dirs = [
             os.path.join(data_path, *tree_dirs, *str(month).split("-"))
