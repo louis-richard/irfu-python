@@ -11,6 +11,7 @@ import os
 import random
 import subprocess
 import sys
+import tempfile
 import unittest
 import warnings
 from unittest import mock
@@ -18,6 +19,7 @@ from unittest import mock
 # 3rd party imports
 import numba
 import numpy as np
+import pycdfpp
 import pytest
 import xarray as xr
 from ddt import data, ddt, idata, unpack
@@ -4036,6 +4038,43 @@ class RemoveRepeatedPointsTestCase(unittest.TestCase):
         result = pyrf.remove_repeated_points(inp)
         np.testing.assert_array_equal(result["data"], [0.0, 2.0, 4.0, 5.0, 6.0])
         self.assertEqual(len(inp["data"]), 7)
+
+
+class ReadCdfTestCase(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.directory = directory.name
+
+    def test_read_cdf_missing_file(self):
+        # pycdfpp returns None: AttributeError ('NoneType' object has no
+        # attribute 'items')
+        with self.assertRaisesRegex(FileNotFoundError, "missing.cdf"):
+            pyrf.read_cdf(os.path.join(self.directory, "missing.cdf"))
+
+    def test_read_cdf_not_a_cdf(self):
+        path = os.path.join(self.directory, "not_a_cdf.cdf")
+        with open(path, "w", encoding="utf-8") as file:
+            file.write("not a CDF file")
+
+        with self.assertRaises(FileNotFoundError):
+            pyrf.read_cdf(path)
+
+    def test_read_cdf_values(self):
+        # Lower-case names, the epochs as stored (TT2000), size-1 dims removed
+        time = np.datetime64("2023-01-01T00:00:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(1, "s")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable("Epoch", time)
+        cdf.add_variable("DENSITY", np.array([[1.0], [2.0], [3.0]]))
+        path = os.path.join(self.directory, "density.cdf")
+        pycdfpp.save(cdf, path)
+
+        result = pyrf.read_cdf(path)
+
+        self.assertListEqual(sorted(result), ["density", "epoch"])
+        np.testing.assert_array_equal(result["density"].data, [1.0, 2.0, 3.0])
+        np.testing.assert_array_equal(pycdfpp.to_datetime64(result["epoch"].data), time)
 
 
 @ddt
