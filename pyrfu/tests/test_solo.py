@@ -142,23 +142,22 @@ class ReadTNRTestCase(unittest.TestCase):
         self.assertIsNone(solo.read_tnr(tint, sensor, data_path))
 
     @staticmethod
-    def _tnr_l2(sensor, n_sweeps):
-        # Synthetic L2 file: sweeps 1, ..., n_sweeps of the four bands (one
-        # record per band, 1 s apart), the sensor on the first channel, and the
-        # spectra equal to the sweep number at every frequency
-        n_rec = 4 * n_sweeps
-        sweep = np.repeat(np.arange(1, n_sweeps + 1), 4).astype(np.uint32)
+    def _tnr_records(sweep, band, power, sensor=4):
+        # Synthetic L2 file: one record per (sweep, band), 1 s apart, the sensor
+        # on the first channel, auto1 equal to power at the 32 frequencies of
+        # the band
+        n_rec = len(sweep)
         time = np.datetime64("2023-01-01T00:00:00", "ns")
         time = time + np.arange(n_rec) * np.timedelta64(1, "s")
-        spectra = np.repeat(sweep[:, None], 32, axis=1).astype(np.float64)
+        spectra = np.repeat(np.array(power, np.float64)[:, None], 32, axis=1)
         variables = {
             "epoch": pycdfpp.to_tt2000(time),
             "auto1": spectra,
             "auto2": np.zeros_like(spectra),
             "magnetic_spectral_power1": spectra,
             "magnetic_spectral_power2": np.zeros_like(spectra),
-            "sweep_num": sweep,
-            "tnr_band": np.tile(np.arange(4), n_sweeps).astype(np.uint8),
+            "sweep_num": np.array(sweep, np.uint32),
+            "tnr_band": np.array(band, np.uint8),
             "sensor_config": np.tile(np.array([sensor, 5], np.uint8), (n_rec, 1)),
             "front_end": np.ones(n_rec, dtype=np.uint8),
             "tnr_band_freq": np.geomspace(4e3, 1e6, 128)
@@ -167,27 +166,89 @@ class ReadTNRTestCase(unittest.TestCase):
         }
         return {k: xr.DataArray(v) for k, v in variables.items()}, time
 
-    @data(4, 7)
-    def test_read_tnr_data(self, sensor):
-        variables, time = self._tnr_l2(sensor, 5)
+    @classmethod
+    def _tnr_l2(cls, sensor, n_sweeps):
+        # Sweeps 1, ..., n_sweeps of the four bands, spectra equal to the sweep
+        # number at every frequency
+        sweep = np.repeat(np.arange(1, n_sweeps + 1), 4)
+        band = np.tile(np.arange(4), n_sweeps)
+        return cls._tnr_records(sweep, band, sweep, sensor)
+
+    @staticmethod
+    def _read_tnr(variables, sensor=4, n_files=1):
         module = sys.modules["pyrfu.solo.read_tnr"]
-        files = ["solo_L2_rpw-tnr-surv_20230101_V01.cdf"]
+        files = [f"solo_L2_rpw-tnr-surv_2023010{i + 1}_V01.cdf" for i in range(n_files)]
 
         with mock.patch.object(module, "_list_files_tnr_l2", return_value=files):
-            with mock.patch.object(module, "read_cdf", return_value=variables):
-                tint = ["2023-01-01T00:00:00", "2023-01-01T00:01:00"]
-                out = solo.read_tnr(tint, sensor)
+            with mock.patch.object(module, "read_cdf", side_effect=variables):
+                tint = ["2023-01-01T00:00:00", "2023-01-02T00:00:00"]
+                return solo.read_tnr(tint, sensor)
 
-        # Sweeps 2 to 4 (the first and the last are dropped), at the time of
-        # their first record, below 100 kHz, minus the integral over frequency
-        # (trapezoidal rule, unit spacing) divided by the number of sweeps
+    @data(4, 7)
+    def test_read_tnr_data(self, sensor):
+        # Every sweep (the first and the last were dropped), at the time of its
+        # first record, below 100 kHz, without subtraction (was minus the
+        # integral over frequency divided by the number of sweeps)
+        variables, time = self._tnr_l2(sensor, 5)
+        out = self._read_tnr([variables], sensor)
+
         freq = variables["tnr_band_freq"].data.ravel() / 1e3
         n_freq = np.sum(freq < 1e2)
-        sweeps = np.arange(2.0, 5.0)
-        expected = sweeps - sweeps * (n_freq - 1) / len(sweeps)
-        np.testing.assert_array_equal(out.time.data, time[[4, 8, 12]])
+        np.testing.assert_array_equal(out.time.data, time[::4])
         np.testing.assert_allclose(out.frequency.data, freq[:n_freq])
-        np.testing.assert_allclose(out.data, np.tile(expected[:, None], n_freq))
+        np.testing.assert_array_equal(
+            out.data, np.tile(np.arange(1.0, 6.0)[:, None], n_freq)
+        )
+
+    def test_read_tnr_missing_band_and_empty_sweep(self):
+        # Sweep 2 misses band 1 (NaN there), sweep 3 has no power (skipped):
+        # sweep 4 keeps its own time (time and spectra were out of step)
+        sweep = [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]
+        band = [0, 1, 2, 3, 0, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3]
+        power = [1, 1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 4, 4, 4, 4]
+        variables, time = self._tnr_records(sweep, band, power)
+        out = self._read_tnr([variables])
+
+        np.testing.assert_array_equal(out.time.data, time[[0, 4, 11]])
+        np.testing.assert_array_equal(out.data[:, 0], [1.0, 2.0, 4.0])
+        self.assertTrue(np.isnan(out.data[1, 32:64]).all())
+        self.assertFalse(np.isnan(out.data[[0, 2]]).any())
+
+    def test_read_tnr_interleaved_sweeps(self):
+        # A record of sweep 2 after the first one of sweep 3: SWEEP_NUM
+        # decreases by 1, which wrapped in uint32 and counted as a reset,
+        # splitting sweep 2 in two spectra
+        sweep = [1, 1, 1, 1, 2, 2, 2, 3, 2, 3, 3, 3]
+        band = [0, 1, 2, 3, 0, 1, 2, 0, 3, 1, 2, 3]
+        variables, time = self._tnr_records(sweep, band, sweep)
+        out = self._read_tnr([variables])
+
+        np.testing.assert_array_equal(out.time.data, time[[0, 4, 7]])
+        np.testing.assert_array_equal(out.data[:, 0], [1.0, 2.0, 3.0])
+        self.assertFalse(np.isnan(out.data).any())
+
+    def test_read_tnr_sweep_reset(self):
+        # SWEEP_NUM jumps from 202 to 5 (a reset): the sweeps after it are
+        # renumbered, including the last record (the slice missed it)
+        sweep = np.repeat([200, 201, 202, 5, 6], 4)
+        band = np.tile(np.arange(4), 5)
+        variables, time = self._tnr_records(sweep, band, np.repeat(np.arange(1, 6), 4))
+        out = self._read_tnr([variables])
+
+        np.testing.assert_array_equal(out.time.data, time[::4])
+        np.testing.assert_array_equal(out.data[:, 0], np.arange(1.0, 6.0))
+        self.assertFalse(np.isnan(out.data).any())
+
+    def test_read_tnr_no_sensor(self):
+        # A file without the sensor is skipped (raised ValueError); ValueError
+        # only if no file has the sensor
+        variables_4, _ = self._tnr_l2(4, 3)
+        variables_7, _ = self._tnr_l2(7, 3)
+        out = self._read_tnr([variables_7, variables_4], sensor=4, n_files=2)
+        self.assertEqual(len(out), 3)
+
+        with self.assertRaises(ValueError):
+            self._read_tnr([variables_7], sensor=4)
 
 
 if __name__ == "__main__":

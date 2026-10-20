@@ -15,7 +15,6 @@ import pycdfpp
 import xarray as xr
 from dateutil import parser
 from dateutil.rrule import DAILY, rrule
-from scipy import integrate
 from xarray.core.dataarray import DataArray
 
 from ..pyrf import read_cdf, time_clip, ts_append
@@ -42,7 +41,8 @@ def _list_files_tnr_l2(
     tint : list
         Time interval
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.solo.config.json`
+        Path of Solar Orbiter data. Default uses the local_data_dir of the
+        configuration in the user directory (see pyrfu.solo.db_init).
     tree : bool, Optional
         Flag for tree structured data repos. Default is False.
 
@@ -149,24 +149,27 @@ def read_tnr(
             * 6: V3 - V1
             * 7: B
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.solo.config.json`
+        Path of Solar Orbiter data. Default uses the local_data_dir of the
+        configuration in the user directory (see pyrfu.solo.db_init).
     tree : bool, Optional
         Flag for tree structured data repos. Default is False.
 
     Returns
     -------
     DataArray
-        Spectrum of the measured signals.
+        Spectrum of the measured signals, below 100 kHz (frequencies in kHz).
 
     Raises
     ------
     ValueError
-        If there is no data from the sensor selected.
+        If no file has data from the sensor selected.
 
     Notes
     -----
-    The script check if there are data from the two channel and put them
-    together.
+    As irfu-matlab solo.read_TNR, the two channels are put together, one
+    spectrum per sweep, the bands not measured in a sweep are NaN and the
+    sweeps without positive power are skipped. The files without data from
+    the sensor are skipped.
 
     """
 
@@ -207,17 +210,18 @@ def read_tnr(
         sweep_ = sweep_[puntical]
         bande_ = bande_[puntical]
 
-        sweep_num = sweep_
+        # Renumber the sweeps after a reset of SWEEP_NUM (a jump of more than
+        # 100), as read_TNR.m, in int64: differences of the uint32 wrapped, so
+        # that any small decrease (records out of order) counted as a reset
+        sweep_num = sweep_.astype(np.int64)
+        xdelta_sw = np.where(np.abs(np.diff(sweep_num)) > 100)[0]
 
-        delta_sw = np.abs(sweep_[1:] - sweep_[:-1])
-
-        xdelta_sw = np.where(delta_sw > 100)[0]
         if xdelta_sw.size:
-            xdelta_sw = np.hstack([xdelta_sw, len(sweep_) - 1])
-            nxdelta_sw = len(xdelta_sw)
-            for inswn in range(nxdelta_sw - 1):
+            xdelta_sw = np.hstack([xdelta_sw, len(sweep_num) - 1])
+
+            for inswn in range(len(xdelta_sw) - 1):
                 idx_l, idx_r = [xdelta_sw[inswn] + 1, xdelta_sw[inswn + 1]]
-                sweep_num[idx_l:idx_r] += sweep_num[xdelta_sw[inswn]]
+                sweep_num[idx_l : idx_r + 1] += sweep_num[xdelta_sw[inswn]]
 
         # Convert epoch to datetime64
         timet_ = pycdfpp.to_datetime64(epoch_)
@@ -237,7 +241,8 @@ def read_tnr(
             sens_ = sens1_
             timet_ici = timet_[sens1_]
         else:
-            raise ValueError("no data at all ?!?")
+            logger.info("no data from sensor %d in %s", sensor, file)
+            continue
 
         ord_time = np.argsort(timet_ici)
         time_rr = timet_ici[ord_time]
@@ -249,48 +254,46 @@ def read_tnr(
         min_sweep = np.min(sweep_num[sens_])
         sweep_num = sweep_num[sens_]
 
-        v_, time, sweepn_tnr = [[], [], []]
+        v_, time = [[], []]
 
-        for ind_sweep in range(min_sweep, max_sweep):
-            v1_ = np.zeros(128)
+        for ind_sweep in range(min_sweep, max_sweep + 1):
             p_punt = np.where(sweep_num == ind_sweep)[0]
-            if p_punt.size:
-                for indband in range(p_punt.size):
-                    idx_l = 32 * bande_e[p_punt[indband]]
-                    idx_r = 32 * (bande_e[p_punt[indband]] + 1)
-                    v1_[idx_l:idx_r] = auto_calib[p_punt[indband], :]
 
-                if np.sum(v1_) > 0.0:
-                    punt0_ = np.where(v1_ == 0.0)[0]
-                    if punt0_.size:
-                        v1_[punt0_] = np.nan
-                    v_.append(v1_)
-                    sweepn_tnr.append(sweep_num[p_punt[0]])
+            if not p_punt.size:
+                continue
 
-            if p_punt.size:
+            v1_ = np.zeros(128)
+
+            for idx in p_punt:
+                v1_[32 * bande_e[idx] : 32 * (bande_e[idx] + 1)] = auto_calib[idx, :]
+
+            # Sweeps without positive power (e.g., fill values) are skipped;
+            # the bands not measured are NaN
+            if np.sum(v1_) > 0.0:
+                v1_[v1_ == 0.0] = np.nan
+                v_.append(v1_)
                 time.append(time_rr[np.min(p_punt)])
 
-        time = time[1:]
-        v_ = np.stack(v_)
+        if not v_:
+            logger.info("no spectrum from sensor %d in %s", sensor, file)
+            continue
 
-        # select frequencies lower than 100 kHz
-        freq_tnr = freq_tnr[freq_tnr < 1e2]
-        vp = v_[1:, : len(freq_tnr)]
-
-        # Integration
-        itg = integrate.trapezoid(vp, axis=1) / vp.shape[0]
-        vp = vp - itg[:, None]
+        # Frequencies below 100 kHz
+        f_100 = freq_tnr < 1e2
 
         out = ts_append(
             out,
             xr.DataArray(
-                vp,
-                coords=[np.stack(time), freq_tnr],
+                np.stack(v_)[:, f_100],
+                coords=[np.stack(time), freq_tnr[f_100]],
                 dims=["time", "frequency"],
             ),
         )
 
         out = out[np.argsort(out.time.data)]
+
+    if files and out is None:
+        raise ValueError(f"no data from sensor {sensor} in {tint}")
 
     # Time clip
     if out is not None:
