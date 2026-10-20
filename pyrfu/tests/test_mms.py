@@ -28,6 +28,7 @@ import keyring.credentials
 import keyring.errors
 import numpy as np
 import pycdfpp
+import pytest
 import requests
 import xarray as xr
 from botocore import UNSIGNED
@@ -5172,6 +5173,7 @@ class GetFeepsTestCase(unittest.TestCase):
 
         self.assertEqual(alleyes.call_args.kwargs["source"], "sdc")
 
+    @pytest.mark.network
     @unittest.skipUnless(
         os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
     )
@@ -5813,6 +5815,7 @@ class ListFilesAwsTestCase(unittest.TestCase):
         signature = resource.meta.client.meta.config.signature_version
         self.assertEqual(signature is UNSIGNED, not has_credentials)
 
+    @pytest.mark.network
     @unittest.skipUnless(
         os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
     )
@@ -8044,6 +8047,7 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
         )
 
 
+@pytest.mark.network
 @unittest.skipUnless(
     os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
 )

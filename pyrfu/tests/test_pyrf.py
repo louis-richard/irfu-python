@@ -18,6 +18,7 @@ from unittest import mock
 # 3rd party imports
 import numba
 import numpy as np
+import pytest
 import xarray as xr
 from ddt import data, ddt, idata, unpack
 from scipy import constants, interpolate, signal
@@ -2387,6 +2388,7 @@ class GetOmniDataTestCase(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pyrf.get_omni_data(["b"], ["2019-09-14", "2019-09-15"])
 
+    @pytest.mark.network
     @unittest.skipUnless(
         os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
     )
