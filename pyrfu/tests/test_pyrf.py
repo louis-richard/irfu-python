@@ -3677,6 +3677,57 @@ class MeanTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data, expected, atol=1e-12)
 
 
+class MagnetosphereTestCase(unittest.TestCase):
+    @staticmethod
+    def _r_zero(d_p, b_z):
+        # Subsolar magnetopause distance of Shue et al. (1998), in R_E
+        return (10.22 + 1.29 * np.tanh(0.184 * (b_z + 8.14))) * d_p ** (-1 / 6.6)
+
+    @staticmethod
+    def _standoff(r_zero, m_a, gamma=5 / 3):
+        # Bow shock standoff distance of Farris and Russell (1994), in R_E
+        ratio = ((gamma - 1) * m_a**2 + 2) / ((gamma + 1) * (m_a**2 - 1))
+        return r_zero * (1 + 1.1 * ratio)
+
+    def test_magnetosphere_default(self):
+        x_mp, y_mp = pyrf.magnetosphere("mp_shue1998")
+        x_bs, y_bs = pyrf.magnetosphere("bs")
+        r_zero = self._r_zero(1.7389104, 0.012695087)
+
+        self.assertAlmostEqual(x_mp[0], r_zero)
+        self.assertAlmostEqual(y_mp[0], 0.0)
+        self.assertAlmostEqual(x_bs[0], self._standoff(r_zero, 4.0))
+        self.assertAlmostEqual(y_bs[0], 0.0)
+        self.assertTrue(np.all(np.abs(x_mp) < 100))
+
+    def test_magnetosphere_omni_once(self):
+        # The bow shock downloaded the OMNI data a second time for the
+        # magnetopause standoff distance
+        time = np.datetime64("2019-09-14T07:00:00", "ns") + np.arange(
+            3
+        ) * np.timedelta64(1, "h")
+        omni = xr.Dataset(
+            {
+                "p": (["time"], np.full(3, 2.0)),
+                "bzgsm": (["time"], np.zeros(3)),
+                "ma": (["time"], np.full(3, 8.0)),
+            },
+            coords={"time": time},
+        )
+        module = sys.modules["pyrfu.pyrf.magnetosphere"]
+        tint = ["2019-09-14T07:00:00", "2019-09-14T10:00:00"]
+
+        with mock.patch.object(module, "get_omni_data", return_value=omni) as omni_get:
+            x_bs, _ = pyrf.magnetosphere("bs", tint)
+
+        omni_get.assert_called_once()
+        self.assertAlmostEqual(x_bs[0], self._standoff(self._r_zero(2.0, 0.0), 8.0))
+
+    def test_magnetosphere_unknown_model(self):
+        with self.assertRaises(NotImplementedError):
+            pyrf.magnetosphere("mp_bazinga")
+
+
 def _xy_series(x, y):
     time = np.datetime64("2019-09-14T07:54:00", "ns")
     time = time + np.arange(len(x)).astype("timedelta64[s]")
