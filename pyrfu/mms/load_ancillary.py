@@ -52,7 +52,7 @@ def load_ancillary(
     Returns
     -------
     out : xarray.Dataset
-        Time series of the ancillary data
+        Time series of the ancillary data, with strictly increasing times
 
     Raises
     ------
@@ -60,6 +60,14 @@ def load_ancillary(
         If the product is not supported.
     FileNotFoundError
         If no file of the product covers the time interval.
+
+    Notes
+    -----
+    DEFATT files repeat some times by design, and consecutive files overlap
+    (by about 5 minutes, with phases different by up to 0.007 deg). As
+    irfu-matlab, the last of the repeated rows of a file is kept
+    (mms_load_ancillary), and in an overlap the rows of the earlier file
+    (mms_db).
 
     """
 
@@ -110,14 +118,17 @@ def load_ancillary(
         end_idx = bisect.bisect_left(rows[0][:], tint[1])
         rows.columns = anc_dict[product]["columns_names"]
 
-        data_frame_dict[i] = rows[:][start_idx:end_idx]
+        # The last of the rows repeating a time, as mms_load_ancillary
+        rows = rows[start_idx:end_idx].drop_duplicates(subset="time", keep="last")
+        data_frame_dict[i] = rows
 
-    data_frame = data_frame_dict[0]
+    data_frame = pd.concat(list(data_frame_dict.values()), ignore_index=True)
 
-    for k in list(data_frame_dict.keys())[1:]:
-        data_frame = pd.concat([data_frame, data_frame_dict[k]], ignore_index=True)
-
-    data_frame = data_frame.sort_values(by="time").set_index(["time"])
+    # Consecutive files overlap: the rows of the earlier file, as mms_db (the
+    # files are in time order, and the sort is stable)
+    data_frame = data_frame.sort_values(by="time", kind="stable")
+    data_frame = data_frame.drop_duplicates(subset="time", keep="first")
+    data_frame = data_frame.set_index(["time"])
     dataset_out = data_frame.to_xarray()
 
     dataset_out = dataset_out.assign_coords(time=dataset_out.time.astype("<M8[ns]"))

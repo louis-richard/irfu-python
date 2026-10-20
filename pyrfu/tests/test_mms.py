@@ -8257,6 +8257,54 @@ class LoadAncillaryTestCase(unittest.TestCase):
         self.assertEqual(len(result.time), 2)
         np.testing.assert_allclose(result.z_dec.data, [66.080, 66.086])
 
+    def test_load_ancillary_defatt_repeats_and_overlap(self):
+        # DEFATT repeats times by design and consecutive files overlap: the
+        # times are strictly increasing, with the last of the repeated rows of
+        # a file and, in an overlap, the earlier file, as irfu-matlab
+        # (mms_load_ancillary, mms_db)
+        def row(time, z_dec):
+            return (
+                _DEFATT_ROWS[0]
+                .replace("2019-257T00:00:00.012", time)
+                .replace("66.080", z_dec)
+            )
+
+        header = ["META_START"] * 48 + ["COMMENT   Time (UTC)    Elapsed Sec"]
+        self._write(
+            "defatt",
+            "MMS1_DEFATT_2019256_2019257.V00",
+            header
+            + [
+                row("2019-256T23:59:59.000", "1.000"),
+                row("2019-257T00:00:00.012", "1.500"),
+                row("2019-257T00:00:00.012", "2.000"),
+            ]
+            + ["DATA_STOP"],
+        )
+        self._write(
+            "defatt",
+            "MMS1_DEFATT_2019257_2019258.V00",
+            header
+            + [
+                row("2019-257T00:00:00.012", "3.000"),
+                row("2019-257T00:00:00.562", "4.000"),
+            ]
+            + ["DATA_STOP"],
+        )
+        tint = ["2019-09-13T23:00:00", "2019-09-14T01:00:00"]
+        result = mms.load_ancillary("defatt", tint, 1, False, self.root)
+
+        expected_time = np.array(
+            [
+                "2019-09-13T23:59:59.000",
+                "2019-09-14T00:00:00.012",
+                "2019-09-14T00:00:00.562",
+            ],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result.time.data, expected_time)
+        np.testing.assert_allclose(result.z_dec.data, [1.0, 2.0, 4.0])
+
     def test_load_ancillary_no_file(self):
         with self.assertRaises(FileNotFoundError):
             mms.load_ancillary("defeph", self.tint, 1, False, self.root)
