@@ -7936,6 +7936,78 @@ class ListFilesTestCase(unittest.TestCase):
             ],
         )
 
+    def test_list_files_brst_across_midnight(self):
+        # A segment starting at 23:59 the day before covers the start of the
+        # interval: it is in the previous day directory, which was not listed
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fgm/brst/l2/2017/07/11",
+                ["mms1_fgm_brst_l2_20170711235900_v5.87.0.cdf"],
+            )
+            self._touch(
+                root,
+                "mms1/fgm/brst/l2/2017/07/12",
+                ["mms1_fgm_brst_l2_20170712000500_v5.87.0.cdf"],
+            )
+            var = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
+            result_start = mms.list_files(
+                ["2017-07-12T00:00:30", "2017-07-12T00:01:00"], 1, var, root
+            )
+            result_both = mms.list_files(
+                ["2017-07-12T00:00:30", "2017-07-12T00:06:00"], 1, var, root
+            )
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result_start],
+            ["mms1_fgm_brst_l2_20170711235900_v5.87.0.cdf"],
+        )
+        self.assertListEqual(
+            [os.path.basename(f) for f in result_both],
+            [
+                "mms1_fgm_brst_l2_20170711235900_v5.87.0.cdf",
+                "mms1_fgm_brst_l2_20170712000500_v5.87.0.cdf",
+            ],
+        )
+
+    def test_list_files_month_boundary(self):
+        # A file starting on the last evening of the previous month (in the
+        # previous month directory) covers the start of the interval
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fpi/fast/l2/dis-moms/2017/06",
+                ["mms1_fpi_fast_l2_dis-moms_20170630230000_v3.4.0.cdf"],
+            )
+            var = {"inst": "fpi", "tmmode": "fast", "lev": "l2", "dtype": "dis-moms"}
+            tint = ["2017-07-01T00:10:00", "2017-07-01T00:20:00"]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["mms1_fpi_fast_l2_dis-moms_20170630230000_v3.4.0.cdf"],
+        )
+
+    def test_list_files_walks_each_directory_once(self):
+        # The month directory of survey data was walked for every day
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fgm/srvy/l2/2019/09",
+                ["mms1_fgm_srvy_l2_20190912_v5.211.0.cdf"],
+            )
+            var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+            tint = ["2019-09-10T00:00:00", "2019-09-15T00:00:00"]
+
+            with mock.patch("os.walk", wraps=os.walk) as walk:
+                result = mms.list_files(tint, 1, var, root)
+
+        self.assertEqual(walk.call_count, 1)
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["mms1_fgm_srvy_l2_20190912_v5.211.0.cdf"],
+        )
+
 
 class _FakeSdcResponse:
     def __init__(self, files, error=None):
