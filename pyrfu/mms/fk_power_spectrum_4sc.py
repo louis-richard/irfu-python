@@ -215,12 +215,20 @@ def fk_power_spectrum_4sc(
     -------
     out : xarray.Dataset
         Dataset of array of powers as a function of frequency and
-        wavenumber. Power is normalized to the maximum value.
+        wavenumber. Power is normalized to the maximum value. The wave
+        numbers are in rad/m for positions in km.
+
+    Raises
+    ------
+    ValueError
+        If no wave vector in tints is finite.
 
     Notes
     -----
     Wavelength must be larger than twice the spacecraft separations,
-    otherwise spatial aliasing will occur.
+    otherwise spatial aliasing will occur. Averaging windows without a
+    finite phase difference (e.g., data gaps) or position are left out of
+    the power maps.
 
     Examples
     --------
@@ -258,6 +266,9 @@ def fk_power_spectrum_4sc(
     # and compute 4SC average
     b = [resample(b[i - 1], b[0]) for i in ic]
     b_avg = avg_4sc(b)
+
+    # Only the first component of vector fields is used
+    e = [e_i[:, 0] if e_i.ndim > 1 else e_i for e_i in e]
 
     # Resample e and r to common time base
     e = [resample(e[i - 1], e[0]) for i in ic]
@@ -299,7 +310,7 @@ def fk_power_spectrum_4sc(
     # Compute averaged power spectrum from all spacecraft
     fk_power = np.zeros((nt, num_f), dtype=np.float64)
     for i in range(4):
-        fk_power += (w[i].data * np.conj(w[i].data) / 4).astype(np.float64)
+        fk_power += np.real(w[i].data * np.conj(w[i].data)) / 4
 
     # Find the time positions for averaging
     cav = int(cav)
@@ -394,13 +405,11 @@ def fk_power_spectrum_4sc(
 
     frequency_data = w[0].frequency.data
 
-    # OPTIMIZED: one linalg.solve call per averaging window (was one per
-    # (window, frequency) pair). dr depends only on ii, so scipy factors
-    # it once and solves all num_f right-hand sides (stacked as columns)
-    # in that single call, instead of re-factorizing the same matrix
-    # num_f times. Bit-identical result (verified in
-    # test_fk_power_correctness.py) -- same LAPACK routine, same
-    # factorization applied to each column either way.
+    # One linalg.solve call per averaging window (was one per (window,
+    # frequency) pair). dr depends only on ii, so scipy factors it once and
+    # solves all the finite right-hand sides (stacked as columns) in that
+    # single call: the same LAPACK routine and factorization as one solve
+    # per column.
     for ii in range(n + 1):
         dr = np.array(
             [
@@ -410,7 +419,15 @@ def fk_power_spectrum_4sc(
             ],
         )
         rhs = np.vstack([dt2[ii, :], dt3[ii, :], dt4[ii, :]])
-        m = linalg.solve(dr, rhs)
+
+        # Frequencies without a phase (all-NaN window) or a tetrahedron
+        # without position are left NaN
+        finite = np.all(np.isfinite(rhs), axis=0)
+        m = np.full(rhs.shape, np.nan)
+
+        if np.all(np.isfinite(dr)) and np.any(finite):
+            m[:, finite] = linalg.solve(dr, rhs[:, finite])
+
         k_x[ii, :] = 2 * np.pi * frequency_data * m[0, :]
         k_y[ii, :] = 2 * np.pi * frequency_data * m[1, :]
         k_z[ii, :] = 2 * np.pi * frequency_data * m[2, :]
@@ -429,7 +446,19 @@ def fk_power_spectrum_4sc(
     b_avg_abs_mat = np.tile(b_avg_abs, (num_f, 1)).T
 
     k_para = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
-    k_perp = np.sqrt(k_mag**2 - k_para**2)
+    k_perp = np.sqrt(np.maximum(k_mag**2 - k_para**2, 0.0))
+
+    # Points without a wave vector or a power are left out of the maps (their
+    # power set to 0; fastmath kernels cannot test for NaN)
+    valid = np.isfinite(k_mag) & np.isfinite(k_para) & np.isfinite(power_avg)
+
+    if not np.any(valid):
+        raise ValueError("no finite wave vector in tints")
+
+    k_x, k_y, k_z, k_mag, k_para, k_perp = [
+        np.where(valid, k_, 0.0) for k_ in [k_x, k_y, k_z, k_mag, k_para, k_perp]
+    ]
+    power_avg = np.where(valid, power_avg, 0.0)
 
     # Determine the maximum and minimum wave numbers
     k_max = np.max(k_mag) * 1.1
@@ -559,8 +588,8 @@ def fk_power_spectrum_4sc(
 
     out_dict = {
         "k_x_f": (["k_x", "f"], power_k_x_f.T),
-        "k_y_f": (["k_x", "f"], power_k_y_f.T),
-        "k_z_f": (["k_x", "f"], power_k_z_f.T),
+        "k_y_f": (["k_y", "f"], power_k_y_f.T),
+        "k_z_f": (["k_z", "f"], power_k_z_f.T),
         "k_mag_f": (["k_mag", "f"], power_k_mag_f.T),
         "k_x_k_y": (["k_x", "k_y"], power_k_x_k_y.T),
         "k_x_k_z": (["k_x", "k_z"], power_k_x_k_z.T),

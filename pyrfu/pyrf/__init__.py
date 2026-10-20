@@ -74,7 +74,7 @@ from .norm import norm
 from .normalize import normalize
 from .optimize_nbins_1d import optimize_nbins_1d
 from .optimize_nbins_2d import optimize_nbins_2d
-from .pid_4sc import pid_4sc
+from .pid_4sc import pid_4sc, pid_4sc_err
 from .plasma_beta import plasma_beta
 from .plasma_calc import plasma_calc
 from .poynting_flux import poynting_flux
@@ -195,6 +195,7 @@ __all__ = [
     "optimize_nbins_1d",
     "optimize_nbins_2d",
     "pid_4sc",
+    "pid_4sc_err",
     "plasma_beta",
     "plasma_calc",
     "poynting_flux",

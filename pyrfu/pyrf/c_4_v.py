@@ -85,9 +85,17 @@ def c_4_v(r_xyz, time):
 
     if flag == "v_from_t":
         # Time input, velocity output
-        time = _to_seconds(time)
-        dr_mat = _get_vol_ten(r_xyz, time[0])
-        tau = time[1:] - time[0]
+        time = np.asarray(time)
+
+        if np.issubdtype(time.dtype, np.datetime64):
+            # Delays in integer ns before converting to seconds: float seconds
+            # since 1970 only resolve ~0.24 us, too coarse for ms delays.
+            time = time.astype("datetime64[ns]")
+            tau = (time[1:] - time[0]).astype(np.int64) * 1e-9
+        else:
+            tau = time[1:].astype(np.float64) - float(time[0])
+
+        dr_mat = _get_vol_ten(r_xyz, _to_seconds(time[0]))
         slowness = np.linalg.solve(dr_mat, tau)
 
         # "1/v vector"

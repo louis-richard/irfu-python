@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import numpy as np
-import xarray as xr
 from scipy import constants, special
 
 # Local imports
@@ -17,118 +16,111 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _thermal_velocity(energy, specie):
-    if specie.lower() == "ions":
-        mass = constants.proton_mass
-    elif specie.lower() == "electrons":
-        mass = constants.electron_mass
-    else:
-        raise ValueError("Invalid specie")
-
-    return np.sqrt(2 * energy * constants.electron_volt / mass)
-
-
-def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0):
-    r"""Make a general isottropic kappa distribution function based on
-    particle moment data in the same format as vdf.
+def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
+    r"""Makes an isotropic kappa distribution function from particle moments,
+    on the bins of the skymap `vdf`, as the kappa distribution of irfu-matlab
+    PDist.generate_dist.
 
     Parameters
     ----------
     vdf : xarray.Dataset
-        Particle distribution (skymap).
+        Particle distribution (skymap), ions or electrons.
     n_s : xarray.DataArray
-        Time series of the number density.
+        Time series of the number density (cm^-3).
     v_xyz_s : xarray.DataArray
-        Time series of the bulk velocity.
+        Time series of the bulk velocity (km/s), in the coordinates of `vdf`.
     t_s : xarray.DataArray
-        Time series of the scalar temperature.
-    kappa : float. Optional
-        Kappa index, Default is 7.
+        Time series of the scalar temperature (eV).
+    kappa : float, Optional
+        Kappa index, larger than 3/2. Default is 7.
+    sc_pot : xarray.DataArray, Optional
+        Time series of the spacecraft potential (V): the energies are
+        corrected as in `make_model_vdf`. Default is no correction.
 
     Returns
     -------
-    out : xarray.Dataset
-        Distribution function in the same format as vdf.
+    model_vdf : xarray.Dataset
+        Kappa distribution in the format of `vdf`, in s^3/m^6, as
+        irfu-matlab. Channels whose energy is below the spacecraft potential
+        are NaN, as in `make_model_vdf`.
 
-    See also
+    Raises
+    ------
+    ValueError
+        If the species is not ions or electrons, or `kappa` is not larger
+        than 3/2.
+
+    See Also
     --------
     pyrfu.mms.make_model_vdf
 
     Notes
     -----
-    Not yet generalized to bi-Kappa distributions.
+    .. math::
+
+        f(v) = \frac{n \Gamma(\kappa + 1)}{\Gamma(\kappa - 1/2)
+        (\pi w^2)^{3/2}} \left(1 + \frac{|v - V|^2}{w^2}\right)^{-(\kappa + 1)}
+
+    with :math:`w^2 = (\kappa - 3/2) v_{th}^2` and
+    :math:`v_{th}^2 = 2 T / m`, so that the temperature of the model is T
+    for any κ and it tends to the Maxwellian as κ → ∞. Not yet generalised
+    to bi-kappa distributions.
 
     """
+    if kappa <= 1.5:
+        raise ValueError("kappa must be larger than 3/2")
 
-    # Unpack azimuthal and elevation angles from the skymap distribution
+    species = str(vdf.attrs["species"]).lower()
 
-    phi = vdf.phi.data[0, :]
-    theta = vdf.theta.data
+    if species[:1] not in ["i", "e"]:
+        raise ValueError(f"Invalid species {vdf.attrs['species']!r}")
 
-    # Resample number density, bulk velocity and temperature to skymap sampling
-    n_s = resample(n_s, vdf.time)
-    v_xyz_s = resample(v_xyz_s, vdf.time)
-    t_s = resample(t_s, vdf.time)
+    q_e = constants.elementary_charge
+    mass = constants.electron_mass if species[0] == "e" else constants.proton_mass
 
-    # Compute thermal velocity
-    v_th = _thermal_velocity(t_s.data, vdf.attrs["species"])
+    # Moments at the times of the distribution, in SI units
+    n_s = 1e6 * resample(n_s, vdf.time).data
+    v_bulk = 1e3 * resample(v_xyz_s, vdf.time).data
+    w_2 = (kappa - 1.5) * 2 * q_e * resample(t_s, vdf.time).data / mass
 
-    # Initialize output to zeros
-    out_data = np.zeros(
-        [
-            vdf.data.shape[0],
-            vdf.data.shape[3],
-            vdf.data.shape[1],
-            vdf.data.shape[2],
-        ],
-    )
+    # Speeds of the channels (time, energy, 1, 1), corrected for the
+    # spacecraft potential as make_model_vdf (electrons lose and ions gain
+    # q V); NaN below it
+    energy = np.broadcast_to(vdf.energy.data, (len(vdf.time), vdf.data.shape[1]))
+    energy = energy.astype(np.float64)
 
-    for i in range(len(vdf.time.data)):
-        energies = vdf.energy.data[i, :]
+    if sc_pot is not None:
+        sign = 1.0 if species[0] == "e" else -1.0
+        energy = energy - sign * resample(sc_pot, vdf.time).data[:, None]
 
-        # Construct velocities matrix
-        en_mat, theta_mat, phi_mat = np.meshgrid(energies, theta, phi)
-        v_x_hat = np.sin(np.deg2rad(theta_mat)) * np.cos(np.deg2rad(phi_mat))
-        v_y_hat = np.sin(np.deg2rad(theta_mat)) * np.sin(np.deg2rad(phi_mat))
-        v_z_hat = np.cos(np.deg2rad(theta_mat))
-        v_mag = _thermal_velocity(en_mat, vdf.attrs["species"])
-        v_mat = np.stack([v_mag * v_x_hat, v_mag * v_y_hat, v_mag * v_z_hat])
+    below = energy < 0
+    speed = np.sqrt(2 * q_e * np.clip(energy, 0.0, None) / mass)
+    speed = speed[..., None, None]
 
-        # Unpack thermal and bulk velocities
-        v_thk = (kappa - 3 / 2) * v_th[i] ** 2
-        v_bulk = v_xyz_s.data[i, ...]
+    # Particle velocity directions (minus the look directions), each time
+    # with its own azimuths: (time, 1, phi, theta)
+    phi = np.deg2rad(np.atleast_2d(vdf.phi.data))[:, :, None]
+    theta = np.deg2rad(vdf.theta.data)[None, None, :]
+    dirs = [
+        -np.cos(phi) * np.sin(theta),
+        -np.sin(phi) * np.sin(theta),
+        -np.cos(theta) * np.ones_like(phi),
+    ]
+    v_dot = sum(d * v_bulk[:, i, None, None] for i, d in enumerate(dirs))[:, None]
 
-        # Shift velocities with lbulk velocity
-        v_squ = np.sum((v_mat - v_bulk[:, None, None, None]) ** 2, axis=0)
+    # |v - V|^2 = v^2 - 2 v (d.V) + V^2, without 4-D tiles
+    v_bulk2 = np.sum(v_bulk**2, axis=1)[:, None, None, None]
+    dv_2 = speed**2 - 2 * speed * v_dot + v_bulk2
 
-        # Compute kappa distribution
-        coef1 = 1 / (np.pi * v_thk) ** (3 / 2)
-        coef2 = special.gamma(kappa + 1) / special.gamma(kappa - 1 / 2)
-        out_data[i, ...] = (1 + v_squ / v_thk) ** -(kappa + 1)
-        out_data[i, ...] *= coef1 * coef2
+    w_2 = w_2[:, None, None, None]
+    # Γ(κ + 1) / Γ(κ - 1/2) through the logarithms (Γ overflows above 170)
+    gamma_ratio = np.exp(special.gammaln(kappa + 1) - special.gammaln(kappa - 0.5))
+    coeff = n_s[:, None, None, None] * gamma_ratio / (np.pi * w_2) ** 1.5
+    model = coeff * (1 + dv_2 / w_2) ** -(kappa + 1)
+    model[np.broadcast_to(below[..., None, None], model.shape)] = np.nan
 
-    # Scale with number density
-    out_data *= n_s.data[:, None, None, None]
+    model_vdf = vdf.copy()
+    model_vdf["data"] = vdf.data.copy(data=model)
+    model_vdf.data.attrs = {**vdf.data.attrs, "UNITS": "s^3/m^6"}
 
-    # Convert to differential particule flux
-    # out_data *= np.tile(en_mat, (n_t, 1, 1, 1)) * 1e15 / 0.53707
-
-    # Transform to usual shape
-    out_data = np.transpose(out_data, [0, 2, 3, 1])
-
-    # Creates Dataset
-    out_dict = {f"idx{i}": range(k) for i, k in enumerate(out_data.shape[1:])}
-    out_dict["data"] = (["time", "idx0", "idx1", "idx2"], out_data)
-    out_dict["energy"] = (["time", "idx0"], vdf.energy.data)
-    out_dict["phi"] = (["time", "idx1"], vdf.phi.data)
-    out_dict["theta"] = (["idx2"], vdf.theta.data)
-    out_dict["time"] = vdf.time.data
-
-    out = xr.Dataset(out_dict)
-
-    out.attrs["UNITS"] = "s^3/m^6"
-    out.attrs["species"] = vdf.attrs.get("species", None)
-    out.attrs["energy_dminus"] = vdf.attrs.get("energy_dminus", None)
-    out.attrs["energy_dplus"] = vdf.attrs.get("energy_dplus", None)
-
-    return out
+    return model_vdf

@@ -32,11 +32,17 @@ logger = logging.getLogger(__name__)
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 
+def _angle(u_vec, v_vec):
+    r"""Angle (degrees) between two vectors."""
+    cos_angle = np.dot(u_vec, v_vec) / (np.linalg.norm(u_vec) * np.linalg.norm(v_vec))
+    return np.rad2deg(np.arccos(np.clip(cos_angle, -1.0, 1.0)))
+
+
 def rotate_tensor(
     inp: DataArray,
     rot_flag: str,
     vec: Union[DataArray, NDArrayFloats, Dataset],
-    perp: Optional[str] = "pp",
+    perp: Optional[str] = None,
     verbose: Optional[bool] = False,
 ) -> DataArray:
     r"""Rotates pressure or temperature tensor into another coordinate system.
@@ -69,13 +75,18 @@ def rotate_tensor(
     vec : DataArray or numpy.ndarray or xarray.Dataset
         Vector or coordinates system to rotate the tensor. If vec is time series of a
         vector tensor is rotated in field aligned coordinates. If vec is a
-        numpy.ndarray rotates to a time independent coordinates system.
+        numpy.ndarray rotates to a time independent coordinates system: the new
+        x direction, or a 3x3 matrix whose columns are the new x, y and z
+        directions.
 
     perp : str, Optional
-        Flag for perpendicular components of the tensor. Default is "pp".
-            * "" : no additional rotation applied
-            * "pp" : perpendicular diagonal components are equal
-            * "qq" : perpendicular diagonal components are most unequal
+        Flag for perpendicular components of the tensor, for field-aligned
+        coordinates only (as irfu-matlab): default "pp" for "fac", no
+        additional rotation for the other coordinate systems.
+
+        * "" : no additional rotation applied
+        * "pp" : perpendicular diagonal components are equal
+        * "qq" : perpendicular diagonal components are most unequal
 
     verbose : bool, Optional
         Set to True to print additional information.
@@ -125,8 +136,21 @@ def rotate_tensor(
     if not isinstance(rot_flag, str):
         raise TypeError("rot_flag must be a string")
 
-    if not isinstance(perp, str):
+    if perp is not None and not isinstance(perp, str):
         raise TypeError("perp must be a string")
+
+    # The perpendicular rotations are for field-aligned coordinates only, as
+    # irfu-matlab: elsewhere they rotate away from the requested axes
+    if perp is None:
+        perp = "pp" if rot_flag.lower() == "fac" else ""
+    elif perp.lower() in ["pp", "qq"] and rot_flag.lower() != "fac":
+        logger.warning(
+            "perp=%s applies to field-aligned coordinates (rot_flag='fac') only: "
+            "no additional rotation for rot_flag=%s",
+            perp,
+            rot_flag,
+        )
+        perp = ""
 
     # Get input data type
     precision = inp.data.dtype
@@ -203,10 +227,7 @@ def rotate_tensor(
             r_y = np.cross(r_z, r_x) / np.linalg.norm(np.cross(r_z, r_x))
 
             # Check if the coordinate system has been changed and issue a warning
-            if (
-                abs(np.rad2deg(np.arccos(np.dot(r_y, vec[:, 0])))) > 1.0
-                or abs(np.rad2deg(np.arccos(np.dot(r_z, vec[:, 2])))) > 1.0
-            ):
+            if _angle(r_y, vec[:, 1]) > 1.0 or _angle(r_z, vec[:, 2]) > 1.0:
                 logger.warning(
                     "The new coordinate system has been changed to be right handed "
                     "orthogonal.",
@@ -259,8 +280,7 @@ def rotate_tensor(
             np.transpose(rot_temp),
         )
 
-    if perp.lower() == "" or rot_flag.lower() in ["gse", "gsm"]:
-        # maybe also add "rot" here??
+    if perp.lower() == "":
         logger.info("No additional rotation applied.")
     elif perp.lower() == "pp":
         if verbose:

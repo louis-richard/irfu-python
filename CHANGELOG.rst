@@ -1,6 +1,161 @@
 Changelog
 =========
 
+2.5.2 (2026-10-20)
+------------------
+
+This release fixes the routines that returned wrong values in common use
+(``dft_time_shift``, ``make_model_kappa``, ``scpot2ne``, the ``shock_normal``
+Monte Carlo, ``wavelet`` with data gaps, ...), ports the Solar Orbiter TNR
+reader from irfu-matlab, and adds multi-spacecraft and probe timing
+utilities (``mms4_displacement``, the ``V6`` probe potentials). Each fix is
+checked against irfu-matlab, an analytic case or real data. Several fixes
+change numerical results: see `Changed behaviour <v2.5.2 changed_>`_ and
+`Fixes that change results <v2.5.2 fixes_>`_ before updating an analysis.
+
+.. _v2.5.2 changed:
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+These changes can require updating your code.
+
+- ``pyrf.iso86012unix`` returns Unix seconds (float64, always 1-D, NaN for
+  NaT), as its name says and as before 2.3.7; it returned ``datetime64[ns]``,
+  the output of ``iso86012datetime64``.
+- ``pyrf.rotate_tensor``: the perpendicular rotation (``perp="pp"`` or
+  ``"qq"``) is for field-aligned coordinates only, as irfu-matlab. A tensor
+  rotated to user-given axes (``"rot"``, e.g. LMN) was also rotated about the
+  first axis; an explicit ``"pp"`` or ``"qq"`` with another frame is ignored
+  with a warning.
+- ``mms.fk_power_spectrum_4sc``: ``k_y_f`` and ``k_z_f`` are on the
+  dimensions ``k_y`` and ``k_z`` (both were on ``k_x``).
+- ``pyrf.medfilt`` returns float64 (it returned float32).
+- ``pyrf.mean_bins`` and ``pyrf.median_bins`` use the bins of
+  ``numpy.histogram``: the samples on the bin edges, including ``min(x)`` and
+  ``max(x)``, are counted (the first and last bins were often NaN), and the
+  non-finite pairs are left out.
+- ``pyrf.int_sph_dist`` (and ``mms.reduce``): ``weight="log"`` gives the bins
+  1 + ln(f / min f) particles, whatever the units of the distribution. It was
+  equal to ``"lin"`` for phase-space densities in SI units.
+- ``solo.read_tnr`` returns every sweep, without the subtraction of the
+  integral over frequency, and ``solo.read_tnr`` and
+  ``solo.read_lfr_density`` read only the latest version of each daily file
+  (see `Fixes that change results <v2.5.2 fixes_>`_).
+
+Deprecations
+^^^^^^^^^^^^
+
+- ``pyrf.filt``: the default ``f_max`` = 1 Hz adds a 1 Hz low-pass to
+  ``filt(x, f_min)``. It warns (``FutureWarning``) and will be ``f_max = 0``
+  (high-pass only) in 3.0, as irfu-matlab ``irf_filt``; give ``f_max`` to
+  keep the current behaviour without the warning.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.mms4_displacement``: the separations of the six pairs of spacecraft
+  along and across the field, and their angle to B (irfu-matlab
+  ``mms.mms4_displacement``, to 1e-7).
+- ``mms.get_data``: the keys ``v6_edp_{brst,fast,slow}_l2``, the six
+  probe-to-spacecraft potentials (irfu-matlab ``V6_edp_*_l2``, identical
+  samples).
+- ``pyrf.pid_4sc_err`` (the error on Pi-D, Roberts et al., 2023) is exported
+  by ``pyrfu.pyrf`` and documented.
+- ``mms.dft_time_shift``: new ``f_s`` argument (irfu-matlab ``Freq``).
+- ``mms.make_model_kappa``: new ``sc_pot`` argument, as ``make_model_vdf``.
+- ``pyrf.shock_normal``: new ``random_state`` in the Monte-Carlo ``spec``.
+
+.. _v2.5.2 fixes:
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``mms.dft_time_shift`` shifted by whole samples and the wrong way, with a
+  complex output: as irfu-matlab, it now shifts by any fraction of a sample
+  (2e-15 from irfu-matlab).
+- ``mms.make_model_kappa``: the units (1e6 too small), the particle
+  directions and the azimuths of each time are fixed; the model gives back
+  n, V and T through ``psd_moments`` and agrees with irfu-matlab
+  ``generate_dist(..., 'kappa')`` to 2e-9.
+- ``mms.scpot2ne`` fitted the second photoelectron population with the wrong
+  sign (61 % from irfu-matlab on one hour of MMS1 data; now 4e-8).
+- ``pyrf.shock_normal``: the time-series (Monte Carlo) branch ignored its
+  draws; each of the ``n`` draws (default 100, as documented) now goes
+  through the single-value calculation, as irfu-matlab.
+- ``pyrf.c_4_v``: the crossing delays of ``datetime64`` inputs are taken in
+  integer ns; float seconds since 1970 resolve only ~0.24 µs, 2–3 km/s on
+  the velocity of structures crossing the tetrahedron in less than 1 ms.
+- ``pyrf.wavelet``: one NaN (or inf) made the whole transform NaN. As
+  irfu-matlab, the gaps are set to 0 for the transform and NaN at their own
+  times only; ``mms.fk_power_spectrum_4sc`` now works on data with gaps.
+- ``mms.estimate_phase_speed`` weighted the fit by the inverse of its
+  weights (the weakest points the most).
+- ``pyrf.pid_4sc`` mixed the time bases of P and V (``ValueError``, or
+  misaligned on shifted grids): P is resampled onto the time base of V.
+  ``pyrf.pid_4sc_err`` was NaN wherever Pi or D is 0 (every sample for an
+  isotropic pressure).
+- ``pyrf.medfilt`` rounded to float32 (0.031 off for values of 1e6).
+- ``solo.read_tnr``, port of irfu-matlab ``read_TNR.m``: the first and last
+  sweeps were dropped, the sweeps were split at every decrease of the sweep
+  number (uint32), the times got out of step with the spectra, and the
+  subtraction of the integral over frequency gave negative powers and
+  all-NaN spectra (6.5 % on 2022-03-01). A file without the sensor is
+  skipped.
+- ``solo.read_tnr`` and ``solo.read_lfr_density`` read every version of a
+  daily file, and the ``-cdag`` and public files, so a day could be read two
+  or three times; ``read_lfr_density`` also read the 10-second product. They
+  read the highest version of each date (the public file on a tie), and
+  ``read_lfr_density`` sorts its output in time.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``pyrf.histogram`` raised ``ValueError`` on any NaN or inf with the
+  automatic range; the non-finite samples are left out.
+- ``pyrf.date_str`` rejected the standard ``tint`` format
+  (``"2019-09-14T07:54:00.000"``), and ``pyrf.iso86012timevec`` any time
+  without 9 fractional digits.
+- ``pyrf.medfilt`` failed on (time, 9) and (time, 1) series and on a float
+  kernel size.
+- ``pyrf.ebsp`` with ``de_dot_b0=True`` failed when the full B had another
+  cadence than E and dB; it is resampled onto their time line.
+- ``mms.fk_power_spectrum_4sc`` failed on vector fields (the first component
+  is used, as documented) and on data gaps; ``k_perp`` could be NaN from
+  rounding.
+- ``mms.scpot2ne`` accepts a scalar temperature, as documented.
+- ``pyrf.rotate_tensor`` warned that every ``"rot"`` matrix was left-handed.
+
+Documentation
+^^^^^^^^^^^^^
+
+- The example notebooks no longer emit ``SyntaxWarning`` (invalid escape
+  sequences in the LaTeX labels).
+- ``CONTRIBUTING.rst`` and the installation page give Python 3.12–3.15 and
+  an https clone URL.
+- The units of ``mms.fk_power_spectrum_4sc`` (rad/m for positions in km) and
+  the float64 resolution of ``pyrf.iso86012unix`` are documented.
+
+Development
+^^^^^^^^^^^
+
+- CI runs on pull requests (and on pushes to ``master`` and ``devel``), with
+  the test extra of the package, and a new job runs the tests of the built
+  wheel installed in a clean environment.
+- The tests are reproducible (seeded), with a 300 s timeout per test, a
+  ``network`` marker, ``--strict-markers`` and ``--strict-config``, and
+  targeted warning filters instead of ignoring every ``RuntimeWarning``.
+- The docs build with current Sphinx (``docs/requirements.txt``: Sphinx
+  9.1, pydata-sphinx-theme 0.22).
+- Two Jupyter checkpoint files are no longer tracked.
+
+Requirements
+^^^^^^^^^^^^
+
+- Building needs setuptools 77 or later; the license is declared as an SPDX
+  expression (PEP 639), and the ``wheel`` pin is removed.
+- New test dependency: ``pytest-timeout``.
+
 2.5.1 (2026-10-19)
 ------------------
 

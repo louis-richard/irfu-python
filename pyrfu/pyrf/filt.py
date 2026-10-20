@@ -3,6 +3,7 @@
 
 # Built-in imports
 import numbers
+import warnings
 
 # 3rd party imports
 import numpy as np
@@ -75,7 +76,7 @@ def _sos_padlen(sos):
     return 3 * (2 * len(sos) - n_trailing)
 
 
-def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
+def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
     r"""Filters input quantity.
 
     Parameters
@@ -83,9 +84,13 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
     inp : xarray.DataArray
         Time series of the variable to filter.
     f_min : float, Optional
-        Lower limit of the frequency range. Default is 0. (Highpass filter).
+        Lower limit of the frequency range (Hz), 0 for no high-pass. Default
+        is 0.
     f_max : float, Optional
-        Upper limit of the frequency range. Default is 1. (Highpass filter).
+        Upper limit of the frequency range (Hz), 0 for no low-pass. Default
+        is 1 Hz, with a FutureWarning: it will be 0 (no low-pass) in 3.0, as
+        the fmax = 0 convention of irfu-matlab irf_filt. Give `f_max`
+        explicitly to keep the current behaviour without the warning.
     order : int, Optional
         Order of the elliptic filter. Default is -1.
 
@@ -126,6 +131,16 @@ def filt(inp, f_min: float = 0.0, f_max: float = 1.0, order: int = -1):
 
     # Data of the input
     inp_data = inp.data.astype(np.float64)
+
+    if f_max is None:
+        warnings.warn(
+            "filt: the default f_max=1 Hz adds a 1 Hz low-pass and will "
+            "change to f_max=0 (no low-pass) in pyrfu 3.0; give f_max "
+            "explicitly (e.g. f_max=0 for a high-pass)",
+            FutureWarning,
+            stacklevel=2,
+        )
+        f_max = 1.0
 
     # Any real number, including numpy scalars (np.int64, np.float32)
     assert isinstance(f_min, numbers.Real), "f_min must be a real number"

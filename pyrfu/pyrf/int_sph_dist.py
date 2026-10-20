@@ -55,7 +55,9 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     weight : {None, "lin", "log"}
         Number of Monte-Carlo particles per bin: `n_mc` in every non-empty bin
         (None), or `n_mc` on average, in proportion to vdf ("lin") or to
-        log(1 + vdf) ("log"). Default is None.
+        1 + ln(vdf / min(vdf)) over the bins with data ("log", whatever the
+        units of vdf). Default is None. irfu-matlab's "log", log10(1 + vdf),
+        equals "lin" for phase-space densities in SI units.
     d_v_m, d_v_p : numpy.ndarray
         Speed widths below and above the speed of each instrument bin, i.e., the
         bin spans [velocity - d_v_m, velocity + d_v_p]. Both must be given, and
@@ -188,19 +190,7 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         d_v_grid = mean_diff
 
     # Weighting of number of Monte Carlo particles
-    n_sum = n_mc * np.sum(vdf != 0)  # total number of Monte Carlo particles
-    if weight == "lin":
-        n_mc_mat = np.ceil(n_sum / np.sum(vdf) * vdf)
-    elif weight == "log":
-        # log(1 + vdf) with log1p: log10(vdf + 1.0) rounds to 0 for vdf < 1e-16
-        # (e.g., in SI units), which would leave these bins without particles.
-        # The base of the logarithm cancels out.
-        n_mc_mat = np.ceil(n_sum / np.sum(np.log1p(vdf)) * np.log1p(vdf))
-    else:
-        n_mc_mat = np.zeros_like(vdf)
-        n_mc_mat[vdf != 0] = n_mc
-
-    n_mc_mat = n_mc_mat.astype(int)
+    n_mc_mat = _mc_particles(vdf, n_mc, weight)
 
     if projection_base == "pol":
         d_a_grid = velocity_grid ** (int(projection_dim[0]) - 1) * d_phi_grid * d_v_grid
@@ -308,6 +298,33 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         pst = {"f": f_g, "vx": velocity_grid, "vx_edges": velocity_grid_edges}
 
     return pst
+
+
+def _mc_particles(vdf, n_mc, weight):
+    r"""Number of Monte-Carlo particles in each bin of vdf: n_mc in every bin
+    with data (None), or n_mc on average in proportion to vdf ("lin") or to
+    1 + ln(vdf / min(vdf)) ("log")."""
+    n_sum = n_mc * np.sum(vdf != 0)  # total number of Monte Carlo particles
+
+    if weight == "lin":
+        n_mc_mat = np.ceil(n_sum / np.sum(vdf) * vdf)
+    elif weight == "log":
+        # 1 + ln(vdf / vdf_min) over the bins with data: logarithmic whatever
+        # the units of vdf (irfu-matlab's log10(vdf + 1) equals "lin" for SI
+        # phase-space densities, f << 1), and at least 1 in each bin
+        positive = vdf > 0
+        log_w = np.zeros_like(vdf, dtype=np.float64)
+
+        if np.any(positive):
+            log_w[positive] = 1 + np.log(vdf[positive] / np.min(vdf[positive]))
+            n_mc_mat = np.ceil(n_sum / np.sum(log_w) * log_w)
+        else:
+            n_mc_mat = log_w
+    else:
+        n_mc_mat = np.zeros_like(vdf)
+        n_mc_mat[vdf != 0] = n_mc
+
+    return n_mc_mat.astype(int)
 
 
 def _speed_bin_edges(velocity):

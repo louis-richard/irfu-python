@@ -5,8 +5,11 @@
 import numpy as np
 import xarray as xr
 
+# Local imports
+from .mean_bins import _bin_stat
+
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -19,11 +22,12 @@ def median_bins(inp0, inp1, bins: int = 10):
     Parameters
     ----------
     inp0 : xarray.DataArray
-        Time series of the quantity of bins.
+        Time series of the quantity x that defines the bins.
     inp1 : xarray.DataArray
-        Time series of the quantity to the median.
+        Time series of the quantity y to compute the binned median of, paired
+        with inp0 sample by sample.
     bins : int, Optional
-        Number of bins.
+        Number of bins. Default is 10.
 
     Returns
     -------
@@ -35,6 +39,18 @@ def median_bins(inp0, inp1, bins: int = 10):
                 Median values of y corresponding to each bin of x.
             * sigma : xarray.DataArray
                 Standard deviation.
+
+    Raises
+    ------
+    ValueError
+        If no pair of inp0 and inp1 values is finite.
+
+    Notes
+    -----
+    The bins are those of numpy.histogram: uniform from min(x) to max(x),
+    each closed on the left and the last one also on the right, so that
+    every sample falls in a bin. Pairs with a non-finite x or y are left out.
+    Empty bins are NaN.
 
     Examples
     --------
@@ -68,37 +84,16 @@ def median_bins(inp0, inp1, bins: int = 10):
 
     Median value of J for 10 bins of B
 
-    >>> med_b_j = pyrf.mean_bins(b_mag, j_mag)
+    >>> med_b_j = pyrf.median_bins(b_mag, j_mag)
 
     """
 
-    assert isinstance(inp0, xr.DataArray), "inp0 must be xaray.DataArray"
-    assert isinstance(inp1, xr.DataArray), "inp1 must be xaray.DataArray"
+    assert isinstance(inp0, xr.DataArray), "inp0 must be xarray.DataArray"
+    assert isinstance(inp1, xr.DataArray), "inp1 must be xarray.DataArray"
 
     assert inp0.ndim == 1, "inp0 must be a scalar"
     assert inp1.ndim == 1, "inp1 must be a scalar"
 
-    x_sort = np.sort(inp0.data)
-    x_edge = np.linspace(x_sort[0], x_sort[-1], bins + 1)
-
-    y_med, y_std = [np.zeros(bins), np.zeros(bins)]
-
-    for i in range(bins):
-        idx_left = inp0.data > x_edge[i]
-        idx_right = inp0.data < x_edge[i + 1]
-
-        y_bins = inp1.data[idx_left * idx_right]
-
-        y_med[i], y_std[i] = [np.median(y_bins), np.std(y_bins)]
-
-    bins = x_edge[:-1] + np.median(np.diff(x_edge)) / 2
-
-    out_dict = {
-        "data": (["bins"], y_med),
-        "sigma": (["bins"], y_std),
-        "bins": bins,
-    }
-
-    out = xr.Dataset(out_dict)
+    out = _bin_stat(inp0, inp1, bins, np.median)
 
     return out

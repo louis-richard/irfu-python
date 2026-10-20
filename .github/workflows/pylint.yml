@@ -1,6 +1,9 @@
 name: pylint
 
-on: [push]
+on:
+  push:
+    branches: [master, devel]
+  pull_request:
 
 jobs:
   build:
@@ -18,8 +21,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install -r docs/requirements.txt
-        python -m pip install -r requirements.txt
-        pip install pylint
+        python -m pip install -e ".[tests]" pylint
     - name: pylint
       run: |
         pylint --rcfile=pyproject.toml $(git ls-files '*.py')

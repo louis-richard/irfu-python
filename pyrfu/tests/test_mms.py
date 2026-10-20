@@ -6,6 +6,7 @@ import contextlib
 # Built-in imports
 import datetime
 import importlib
+import io
 import itertools
 import json
 import os
@@ -27,6 +28,7 @@ import keyring.credentials
 import keyring.errors
 import numpy as np
 import pycdfpp
+import pytest
 import requests
 import xarray as xr
 from botocore import UNSIGNED
@@ -1056,6 +1058,65 @@ class UnitConversionsTestCase(unittest.TestCase):
 
 
 @ddt
+class DftTimeShiftTestCase(unittest.TestCase):
+    @staticmethod
+    def _signal(n_pts, f_s=8192.0):
+        # Sine and cosine periodic in the window, on a time line in ns
+        time = np.datetime64("2016-10-07T12:00:00", "ns")
+        time = time + np.round(np.arange(n_pts) / f_s * 1e9).astype("timedelta64[ns]")
+
+        def sig(s):
+            return np.sin(2 * np.pi * 5 * s / n_pts) + 0.3 * np.cos(
+                2 * np.pi * 17 * s / n_pts + 0.4
+            )
+
+        return pyrf.ts_scalar(time, sig(np.arange(n_pts))), sig
+
+    @data(
+        (128, -7.629e-6),
+        (128, 2.5 / 8192),
+        (127, -26.703e-6),
+        (127, 2.5 / 8192),
+    )
+    @unpack
+    def test_dft_time_shift_values(self, n_pts, tau):
+        # The output at t + tau is the input at t + tau, for fractions of a
+        # sample, as irfu-matlab (2e-15 against mms.dft_timeshift). It was
+        # shifted by whole samples, the wrong way, and complex
+        inp, sig = self._signal(n_pts)
+        result = mms.dft_time_shift(inp, tau, f_s=8192.0)
+        expected = sig(np.arange(n_pts) + tau * 8192.0)
+        self.assertFalse(np.iscomplexobj(result.data))
+        np.testing.assert_allclose(result.data, expected, atol=1e-12)
+        d_t = (result.time.data - inp.time.data) / np.timedelta64(1, "ns")
+        np.testing.assert_array_equal(d_t, np.round(tau * 1e9))
+
+    def test_dft_time_shift_default_f_s(self):
+        # Default sampling frequency from the mean time step
+        inp, sig = self._signal(8192)
+        result = mms.dft_time_shift(inp, 2.5 / 8192)
+        np.testing.assert_allclose(result.data, sig(np.arange(8192) + 2.5), atol=1e-8)
+
+    def test_dft_time_shift_vector(self):
+        # Each component is shifted as a scalar; the input is unchanged and
+        # the attributes are kept
+        inp, _ = self._signal(128)
+        vec = pyrf.ts_vec_xyz(
+            inp.time.data,
+            np.stack([inp.data, 2 * inp.data, -inp.data], axis=1),
+            attrs={"UNITS": "mV/m"},
+        )
+        vec_copy = vec.copy(deep=True)
+        result = mms.dft_time_shift(vec, 0.3 / 8192, f_s=8192.0)
+        scalar = mms.dft_time_shift(inp, 0.3 / 8192, f_s=8192.0)
+        np.testing.assert_allclose(result.data[:, 0], scalar.data, atol=1e-13)
+        np.testing.assert_allclose(result.data[:, 1], 2 * scalar.data, atol=1e-13)
+        self.assertEqual(result.dims, vec.dims)
+        self.assertEqual(result.attrs["UNITS"], "mV/m")
+        xr.testing.assert_identical(vec, vec_copy)
+
+
+@ddt
 class Dpf2PsdTestCase(unittest.TestCase):
     @data(
         ("I AM GROOT!!", "s^3/cm^6"),
@@ -2081,36 +2142,172 @@ class HpcaPadTestCase(unittest.TestCase):
 
 @ddt
 class MakeModelKappaTestCase(unittest.TestCase):
-    @data(
-        (generate_vdf(64.0, 100, (32, 16, 16), species="bazinga"), random.random()),
-    )
-    @unpack
-    def test_make_model_kappa_input(self, vdf, kappa):
-        with self.assertRaises(ValueError):
-            mms.make_model_kappa(
-                vdf,
-                generate_ts(64.0, 100, tensor_order=0),
-                generate_ts(64.0, 100, tensor_order=1),
-                generate_ts(64.0, 100, tensor_order=0),
-                kappa,
-            )
-
-    @data(
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="electrons"), random.random()),
-        (generate_vdf(64.0, 100, (32, 16, 16), species="ions"), random.random()),
-    )
-    @unpack
-    def test_make_model_kappa_output(self, vdf, kappa):
-        result = mms.make_model_kappa(
-            vdf,
-            generate_ts(64.0, 100, tensor_order=0),
-            generate_ts(64.0, 100, tensor_order=1),
-            generate_ts(64.0, 100, tensor_order=0),
-            kappa,
+    @staticmethod
+    def _moments(vdf, n_s, v_kms, t_ev):
+        # Constant moments on the times of vdf
+        time = vdf.time.data
+        n_t = len(time)
+        return (
+            pyrf.ts_scalar(time, np.full(n_t, n_s)),
+            pyrf.ts_vec_xyz(time, np.tile(np.asarray(v_kms, dtype=float), (n_t, 1))),
+            pyrf.ts_scalar(time, np.full(n_t, t_ev)),
         )
 
-        self.assertIsInstance(result, xr.Dataset)
+    @data(("bazinga", 7.0), ("ions", 1.5), ("ions", 1.0))
+    @unpack
+    def test_make_model_kappa_input(self, species, kappa):
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        vdf.attrs["species"] = species
+
+        with self.assertRaises(ValueError):
+            mms.make_model_kappa(vdf, *self._moments(vdf, 1.0, [0.0] * 3, 500.0), kappa)
+
+    @data(5.0, 20.0)
+    def test_make_model_kappa_moments(self, kappa):
+        # psd_moments of the model gives back n, V and T. The model was
+        # centred at V / 1000 (km/s taken as m/s), 1e6 too small (cm^-3) and
+        # along the look directions
+        v_kms = [100.0, -50.0, 200.0]
+        vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        moments = self._moments(vdf, 2.0, v_kms, 500.0)
+        model = mms.make_model_kappa(vdf, *moments, kappa)
+        self.assertEqual(model.data.attrs["UNITS"], "s^3/m^6")
+
+        n, v, _, _, t, _ = mms.psd_moments(model, sc_pot)
+        np.testing.assert_allclose(n.data, 2.0, rtol=0.01)
+        np.testing.assert_allclose(v.data, moments[1].data, atol=2.0)
+        np.testing.assert_allclose(
+            np.trace(t.data, axis1=1, axis2=2) / 3, 500.0, rtol=0.01
+        )
+
+    def test_make_model_kappa_maxwellian_limit(self):
+        # As kappa -> infinity, the model tends to the Maxwellian of
+        # make_model_vdf, as 1 / kappa (2e-4 at kappa = 1e4)
+        v_kms = [100.0, -50.0, 200.0]
+        vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        n_s, v_xyz, t_s = self._moments(vdf, 2.0, v_kms, 500.0)
+        time = vdf.time.data
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (len(time), 1)))
+        t_xyz = pyrf.ts_tensor_xyz(time, np.tile(np.eye(3) * 500.0, (len(time), 1, 1)))
+        maxwellian = mms.make_model_vdf(
+            vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz, isotropic=True
+        )
+        f_max = maxwellian.data.data * 1e-18  # s^3/km^6 -> s^3/m^6
+
+        model = mms.make_model_kappa(vdf, n_s, v_xyz, t_s, kappa=1e4)
+        error = np.nanmax(np.abs(model.data.data - f_max)) / np.nanmax(f_max)
+        self.assertLess(error, 1e-3)
+
+    def test_make_model_kappa_phi_per_time(self):
+        # Each time uses its own azimuths (FPI burst); the first time's were
+        # used for all times
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        vdf.phi.data[1] += 5.0
+        moments = self._moments(vdf, 2.0, [300.0, 0.0, 0.0], 500.0)
+        model = mms.make_model_kappa(vdf, *moments)
+
+        swapped = vdf.isel(time=[1, 0]).assign_coords(time=vdf.time.data)
+        model_swapped = mms.make_model_kappa(swapped, *moments)
+        np.testing.assert_allclose(model.data.data[1], model_swapped.data.data[0])
+        change = np.abs(model.data.data[0] - model.data.data[1])
+        self.assertGreater(np.max(change) / np.max(model.data.data[0]), 0.01)
+
+    @data(("electrons", 1.0), ("ions", -1.0))
+    @unpack
+    def test_make_model_kappa_sc_pot(self, species, sign):
+        # The energies are corrected as in make_model_vdf (electrons lose,
+        # ions gain e V); the electron channels below the potential are NaN
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 50.0, [0.0] * 3)
+        vdf.attrs["species"] = species
+        time = vdf.time.data
+        sc_pot = pyrf.ts_scalar(time, np.full(len(time), 20.0))
+        moments = self._moments(vdf, 2.0, [0.0] * 3, 50.0)
+        model = mms.make_model_kappa(vdf, *moments, sc_pot=sc_pot)
+
+        shifted = vdf.copy(deep=True)
+        shifted.energy.data[:] = vdf.energy.data - sign * 20.0
+        valid = shifted.energy.data[0] >= 0
+        shifted.energy.data[:] = np.clip(shifted.energy.data, 0.0, None)
+        expected = mms.make_model_kappa(shifted, *moments)
+        np.testing.assert_allclose(
+            model.data.data[:, valid], expected.data.data[:, valid]
+        )
+        self.assertTrue(np.all(np.isnan(model.data.data[:, ~valid])))
+        self.assertEqual(np.any(~valid), sign > 0)
+
+
+class Mms4DisplacementTestCase(unittest.TestCase):
+    # Tetrahedron (km) and B along z: R_par is the z separation
+    offsets = np.array(
+        [[0.0, 0.0, 0.0], [10.0, 0.0, 2.0], [3.0, 8.0, -4.0], [-5.0, 6.0, 7.0]]
+    )
+
+    def _constant(self, time, value):
+        return pyrf.ts_vec_xyz(time, np.tile(value, (len(time), 1)))
+
+    def test_mms4_displacement_values(self):
+        time = generate_timeline(16.0, 32)
+        b_mms = [self._constant(time, [0.0, 0.0, 20.0]) for _ in range(4)]
+        r_mms = [self._constant(time, o) for o in self.offsets]
+
+        r_par, r_perp, theta_br = mms.mms4_displacement(b_mms, r_mms)
+
+        pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+        r_ij = np.array([self.offsets[i] - self.offsets[j] for i, j in pairs])
+        np.testing.assert_allclose(r_par.data[0], r_ij[:, 2])
+        np.testing.assert_allclose(r_perp.data[0], np.hypot(r_ij[:, 0], r_ij[:, 1]))
+        np.testing.assert_allclose(
+            theta_br.data[0],
+            np.rad2deg(np.arccos(r_ij[:, 2] / np.linalg.norm(r_ij, axis=1))),
+        )
+        self.assertListEqual(
+            list(r_par.pair.data), ["12", "13", "14", "23", "24", "34"]
+        )
+        np.testing.assert_array_equal(r_par.time.data, time)
+        self.assertEqual(r_par.attrs["UNITS"], "km")
+        self.assertEqual(theta_br.attrs["UNITS"], "deg")
+
+    def test_mms4_displacement_pair_average_field(self):
+        # MMS1 B along z and MMS2 B along x: pair 12 uses B along (1, 0, 1)
+        time = generate_timeline(16.0, 32)
+        b_mms = [self._constant(time, [0.0, 0.0, 20.0]) for _ in range(4)]
+        b_mms[1] = self._constant(time, [20.0, 0.0, 0.0])
+        r_mms = [self._constant(time, o) for o in self.offsets]
+
+        r_par, r_perp, _ = mms.mms4_displacement(b_mms, r_mms)
+
+        r_12 = self.offsets[0] - self.offsets[1]
+        b_hat = np.array([1.0, 0.0, 1.0]) / np.sqrt(2)
+        np.testing.assert_allclose(r_par.data[:, 0], r_12 @ b_hat)
+        np.testing.assert_allclose(
+            r_perp.data[:, 0], np.linalg.norm(r_12 - (r_12 @ b_hat) * b_hat)
+        )
+
+    def test_mms4_displacement_resamples_to_mms1_field(self):
+        # Positions at 1 Hz drifting along z at 2 km/s, B at 16 Hz: R is
+        # interpolated to the B times of MMS1
+        time_r = generate_timeline(1.0, 10)
+        time_b = generate_timeline(16.0, 64)
+        t_r = (time_r - time_r[0]).astype(np.int64) * 1e-9
+        r_mms = [
+            pyrf.ts_vec_xyz(time_r, o + np.outer(t_r * (k + 1), [0.0, 0.0, 2.0]))
+            for k, o in enumerate(self.offsets)
+        ]
+        b_mms = [self._constant(time_b, [0.0, 0.0, 20.0]) for _ in range(4)]
+
+        r_par, _, _ = mms.mms4_displacement(b_mms, r_mms)
+
+        t_b = (time_b - time_r[0]).astype(np.int64) * 1e-9
+        expected_12 = self.offsets[0, 2] - self.offsets[1, 2] + 2.0 * t_b * (1 - 2)
+        np.testing.assert_allclose(r_par.data[:, 0], expected_12, atol=1e-9)
+        np.testing.assert_array_equal(r_par.time.data, time_b)
+
+    def test_mms4_displacement_input(self):
+        time = generate_timeline(16.0, 32)
+        b_mms = [self._constant(time, [0.0, 0.0, 20.0]) for _ in range(3)]
+        r_mms = [self._constant(time, o) for o in self.offsets[:3]]
+        with self.assertRaises(ValueError):
+            mms.mms4_displacement(b_mms, r_mms)
 
 
 @ddt
@@ -3253,6 +3450,60 @@ class EstimatePhaseSpeedTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(vph / 2e4, 1.0, delta=0.01)
         np.testing.assert_array_equal(power, power_in)
+
+    def test_estimate_phase_speed_weights(self):
+        # The fit is irfu-matlab's least squares weighted by
+        # w = 1 + log10(P / P_max): the slope 2 pi sum(w k f) / sum(w k^2)
+        # over the selected points. scipy's sigma=w weighted them by 1 / w^2,
+        # the weakest the most (two modes: 13 % from the speed, against 10 %)
+        k = np.linspace(-0.1, 0.1, 201)
+        freq = np.linspace(0.0, 4000.0, 401)
+        k_mat, f_mat = np.meshgrid(k, freq)
+        v_ph = 1e5
+        power = np.exp(-(((f_mat - v_ph * k_mat / (2 * np.pi)) / 80.0) ** 2))
+        power += 0.5 * np.exp(
+            -(((f_mat - 1.4 * v_ph * k_mat / (2 * np.pi)) / 80.0) ** 2)
+        )
+        power *= np.exp(-(((k_mat - 0.03) / 0.03) ** 2))
+
+        vph = mms.estimate_phase_speed(power, freq, k, 100.0)
+
+        # The selection of the function: masked k and f, the maximum, the
+        # positive k side, power > 0.3 max and v within a factor 3 of the
+        # maximum's
+        sel_power = power.copy()
+        sel_power[:, np.abs(k) > 2 * k.max() / 3] = 0.0
+        sel_power[freq < 100.0, :] = 0.0
+        i_f, i_k = np.unravel_index(np.argmax(sel_power), sel_power.shape)
+        v_guess = freq[i_f] / k[i_k]
+        sel_power[:, k < 0.0] = 0.0
+        selected = sel_power > 0.3 * sel_power.max()
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ratio = np.abs(f_mat / k_mat)
+
+        selected &= (ratio > v_guess / 3) & (ratio < 3 * v_guess)
+        weights = 1 + np.log10(sel_power[selected] / sel_power[selected].max())
+        k_s, f_s = k_mat[selected], f_mat[selected]
+        expected = 2 * np.pi * np.sum(weights * k_s * f_s) / np.sum(weights * k_s**2)
+
+        self.assertAlmostEqual(vph / expected, 1.0, delta=1e-6)
+
+    def test_estimate_phase_speed_negative(self):
+        # Ridge along f = v k / (2 pi) with v = -20 km/s (k < 0), and a weaker
+        # one of opposite sign (k > 0): the k > 0 side is left out
+        k = np.linspace(-0.3, 0.3, 121)
+        freq = np.linspace(0.0, 1000.0, 201)
+        k_mat, f_mat = np.meshgrid(k, freq)
+
+        def ridge(v_ph):
+            return np.exp(-(((f_mat - v_ph * k_mat / (2 * np.pi)) / 20.0) ** 2))
+
+        power = ridge(-2e4) * (k_mat < 0) + 0.5 * ridge(1e4) * (k_mat > 0)
+
+        vph = mms.estimate_phase_speed(power, freq, k, 100.0)
+
+        self.assertAlmostEqual(vph / -2e4, 1.0, delta=0.01)
 
 
 @ddt
@@ -4497,6 +4748,97 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.Dataset)
 
+    @staticmethod
+    def _plane_wave(k_vec, f_0=4.0, f_s=128.0, n_pts=1024):
+        # cos(2 pi f_0 t - k.r) on a regular tetrahedron of 10 km side pairs
+        t_s = np.arange(n_pts) / f_s
+        time = np.datetime64("2019-01-01T00:00:00", "ns")
+        time = time + (t_s * 1e9).astype("timedelta64[ns]")
+        dr_mms = 5.0 * np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+        r_mms = [
+            pyrf.ts_vec_xyz(time, np.tile(dr + [6.4e4, 0, 0], (n_pts, 1)))
+            for dr in dr_mms
+        ]
+        e_mms = [
+            pyrf.ts_scalar(time, np.cos(2 * np.pi * f_0 * t_s - k_vec @ dr))
+            for dr in dr_mms
+        ]
+        b_mms = [
+            pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 20.0], (n_pts, 1))) for _ in dr_mms
+        ]
+        tint = list(np.datetime_as_string(time[[n_pts // 4, 3 * n_pts // 4]], "ns"))
+        return e_mms, r_mms, b_mms, tint
+
+    def test_fk_power_spectrum_4sc_plane_wave(self):
+        # k in rad/km in, rad/m out; recovered within one k bin
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint, f_range=[3, 5])
+        d_k = float(result.k_x[1] - result.k_x[0])
+        k_ref = {
+            "k_x_avg": k_vec[0],
+            "k_y_avg": k_vec[1],
+            "k_z_avg": k_vec[2],
+            "k_para_avg": k_vec[2],
+            "k_perp_avg": np.hypot(k_vec[0], k_vec[1]),
+        }
+        for key, value in k_ref.items():
+            self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
+        self.assertAlmostEqual(result.attrs["f_avg"], 4.0, delta=0.1)
+
+    def test_fk_power_spectrum_4sc_vector(self):
+        # Vector input raised AttributeError; the first component is used
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+        e_vec = [
+            pyrf.ts_vec_xyz(e_.time.data, np.stack([e_.data, -e_.data, 0 * e_.data], 1))
+            for e_ in e_mms
+        ]
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+        result_vec = mms.fk_power_spectrum_4sc(e_vec, r_mms, b_mms, tint)
+        xr.testing.assert_identical(result_vec, result)
+
+    def test_fk_power_spectrum_4sc_position_gap(self):
+        # A gap raised ValueError (array must not contain infs or NaNs); the
+        # windows without position are left out
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+        r_gap = [r_.copy() for r_ in r_mms]
+        r_gap[2].data[400:500] = np.nan
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+        result_gap = mms.fk_power_spectrum_4sc(e_mms, r_gap, b_mms, tint)
+        for key in ["k_x_avg", "k_y_avg", "k_z_avg", "f_avg"]:
+            self.assertAlmostEqual(result_gap.attrs[key], result.attrs[key])
+
+        r_nan = [r_.copy() for r_ in r_mms]
+        for r_ in r_nan:
+            r_.data[:] = np.nan
+        with self.assertRaises(ValueError):
+            mms.fk_power_spectrum_4sc(e_mms, r_nan, b_mms, tint)
+
+    def test_fk_power_spectrum_4sc_dims(self):
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+        self.assertTupleEqual(result.k_y_f.dims, ("k_y", "f"))
+        self.assertTupleEqual(result.k_z_f.dims, ("k_z", "f"))
+
+    def test_fk_power_spectrum_4sc_no_complex_warning(self):
+        # The power was cast from complex to float (ComplexWarning)
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", np.exceptions.ComplexWarning)
+            mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+
+    def test_fk_power_spectrum_4sc_field_gap(self):
+        # A NaN gap in the field made every wavelet coefficient NaN, so no
+        # wave vector was left; the windows around the gap are left out
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        e_mms[1].data[400:440] = np.nan
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint, f_range=[3, 5])
+        d_k = float(result.k_x[1] - result.k_x[0])
+        for key, value in zip(["k_x_avg", "k_y_avg", "k_z_avg"], k_vec):
+            self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
+
 
 @ddt
 class GetDataDownloadTestCase(unittest.TestCase):
@@ -4855,6 +5197,7 @@ class GetFeepsTestCase(unittest.TestCase):
 
         self.assertEqual(alleyes.call_args.kwargs["source"], "sdc")
 
+    @pytest.mark.network
     @unittest.skipUnless(
         os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
     )
@@ -5496,6 +5839,7 @@ class ListFilesAwsTestCase(unittest.TestCase):
         signature = resource.meta.client.meta.config.signature_version
         self.assertEqual(signature is UNSIGNED, not has_credentials)
 
+    @pytest.mark.network
     @unittest.skipUnless(
         os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
     )
@@ -6090,6 +6434,55 @@ class RotateTensorTestCase(unittest.TestCase):
         result = mms.rotate_tensor(t_dsl, frame, defatt)
         np.testing.assert_allclose(result.data, expected, atol=1e-10)
 
+    @staticmethod
+    def _rot_tensor():
+        # P = [[1, 0, 0], [0, 2, 0.3], [0, 0.3, 3]] at 5 times
+        p_xyz = [[1.0, 0.0, 0.0], [0.0, 2.0, 0.3], [0.0, 0.3, 3.0]]
+        return pyrf.ts_tensor_xyz(generate_timeline(1.0, 5), np.tile(p_xyz, (5, 1, 1)))
+
+    def test_rotate_tensor_rot_no_perp_rotation(self):
+        # "rot" rotates to the given axes only, as irfu-matlab (the default
+        # "pp" also rotated the 2-3 components, even for the identity): the
+        # identity leaves P unchanged, (L, M, N) = (y, z, x) permutes it
+        inp = self._rot_tensor()
+        np.testing.assert_allclose(
+            mms.rotate_tensor(inp, "rot", np.eye(3)).data, inp.data, atol=1e-15
+        )
+
+        lmn = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        expected = [[2.0, 0.3, 0.0], [0.3, 3.0, 0.0], [0.0, 0.0, 1.0]]
+        np.testing.assert_allclose(
+            mms.rotate_tensor(inp, "rot", lmn).data[0], expected, atol=1e-15
+        )
+
+    def test_rotate_tensor_rot_explicit_perp(self):
+        # "pp" and "qq" are for field-aligned coordinates: ignored with a
+        # warning elsewhere
+        inp = self._rot_tensor()
+
+        with self.assertLogs("pyrfu.mms.rotate_tensor", "WARNING") as logs:
+            result = mms.rotate_tensor(inp, "rot", np.eye(3), "pp")
+
+        self.assertIn("field-aligned", "".join(logs.output))
+        np.testing.assert_allclose(result.data, inp.data, atol=1e-15)
+
+    def test_rotate_tensor_rot_right_handed_silent(self):
+        # A right-handed orthonormal system gives no warning (the check
+        # compared the new y axis with the x column of the input)
+        with self.assertNoLogs("pyrfu.mms.rotate_tensor", "WARNING"):
+            mms.rotate_tensor(self._rot_tensor(), "rot", np.eye(3))
+
+    def test_rotate_tensor_fac_default_pp(self):
+        # "fac" keeps "pp" by default: equal perpendicular components
+        inp = self._rot_tensor()
+        b_xyz = pyrf.ts_vec_xyz(inp.time.data, np.tile([0.2, 0.3, 1.0], (5, 1)))
+        result = mms.rotate_tensor(inp, "fac", b_xyz)
+
+        self.assertAlmostEqual(result.data[0, 1, 1], result.data[0, 2, 2])
+        np.testing.assert_allclose(
+            result.data, mms.rotate_tensor(inp, "fac", b_xyz, "pp").data
+        )
+
 
 @ddt
 class SpectrToDatasetTestCase(unittest.TestCase):
@@ -6114,6 +6507,65 @@ class Scpot2NeTestCase(unittest.TestCase):
         self.assertIsInstance(result[2], float)
         self.assertIsInstance(result[3], float)
         self.assertIsInstance(result[4], float)
+
+    @staticmethod
+    def _case(dtype=np.float64):
+        # Thermal current = two photoelectron populations (60 muA at 5 eV,
+        # 8 muA at 20 eV) for potentials of 3 to 40 V and T_e = 1 keV
+        i_ph = np.array([60.0, 5.0, 8.0, 20.0])
+        time = generate_timeline(1 / 4.5, 400)
+        v_sc = np.linspace(3.0, 40.0, 400)
+        t_e = np.full(400, 1000.0)
+        q_e, m_e = constants.elementary_charge, constants.electron_mass
+        current = i_ph[0] * np.exp(-v_sc / i_ph[1]) + i_ph[2] * np.exp(-v_sc / i_ph[3])
+        coeff = 1e12 * q_e * 34 / (2 * np.sqrt(np.pi))
+        coeff *= np.sqrt(2 * q_e * t_e / m_e) * (1 + v_sc / t_e)
+        t_tensor = np.zeros((400, 3, 3))
+        t_tensor[:, [0, 1, 2], [0, 1, 2]] = t_e[:, None]
+        return (
+            i_ph,
+            pyrf.ts_scalar(time, v_sc),
+            pyrf.ts_scalar(time, (current / coeff).astype(dtype)),
+            pyrf.ts_tensor_xyz(time, t_tensor.astype(dtype)),
+        )
+
+    @data(np.float64, np.float32)
+    def test_scpot2ne_two_populations(self, dtype):
+        # The fit finds the two photoelectron populations again, and the
+        # density from the potential is the density. The second population
+        # was subtracted in the fit, though added in the reconstruction
+        i_ph, sc_pot, n_e, t_e = self._case(dtype)
+        n_esc, *params = mms.scpot2ne(sc_pot, n_e, t_e)
+        np.testing.assert_allclose(params, i_ph, rtol=1e-4)
+        np.testing.assert_allclose(n_esc.data, n_e.data, rtol=1e-4)
+
+    def test_scpot2ne_scalar_temperature(self):
+        # A scalar temperature gives the result of the tensor with that trace
+        # (an assert refused it, though documented)
+        _, sc_pot, n_e, t_e = self._case()
+        t_scalar = pyrf.ts_scalar(
+            t_e.time.data, np.trace(t_e.data, axis1=1, axis2=2) / 3
+        )
+        result = mms.scpot2ne(sc_pot, n_e, t_scalar)
+        expected = mms.scpot2ne(sc_pot, n_e, t_e)
+        np.testing.assert_allclose(result[0].data, expected[0].data)
+        np.testing.assert_allclose(result[1:], expected[1:])
+
+    def test_scpot2ne_invalid_temperature(self):
+        _, sc_pot, n_e, t_e = self._case()
+        t_vector = pyrf.ts_vec_xyz(t_e.time.data, np.ones((len(t_e), 3)))
+
+        with self.assertRaises(ValueError):
+            mms.scpot2ne(sc_pot, n_e, t_vector)
+
+    def test_scpot2ne_silent(self):
+        # scipy's fmin printed its convergence messages
+        _, sc_pot, n_e, t_e = self._case()
+
+        with contextlib.redirect_stdout(io.StringIO()) as stdout:
+            mms.scpot2ne(sc_pot, n_e, t_e)
+
+        self.assertEqual(stdout.getvalue(), "")
 
 
 class VdfReduceDeprecationTestCase(unittest.TestCase):
@@ -7357,6 +7809,14 @@ class TokenizeTestCase(unittest.TestCase):
         # The GSM velocity keys read the GSE velocity (mec_v_gse)
         self.assertEqual(mms.tokenize(var_str)["cdf_name"], "mec_v_gsm")
 
+    @data("brst", "fast", "slow")
+    def test_tokenize_edp_probe_potentials(self, data_rate):
+        # The 6 probe-to-spacecraft potentials (dcv) are in the scpot files,
+        # as irfu-matlab mms.get_data V6_edp_*_l2
+        result = mms.tokenize(f"v6_edp_{data_rate}_l2")
+        self.assertEqual(result["cdf_name"], f"edp_dcv_{data_rate}_l2")
+        self.assertEqual(result["dtype"], "scpot")
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
@@ -7611,6 +8071,7 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
         )
 
 
+@pytest.mark.network
 @unittest.skipUnless(
     os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
 )

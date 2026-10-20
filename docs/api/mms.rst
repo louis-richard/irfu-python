@@ -80,6 +80,7 @@ Fields, coordinates and spacecraft potential
    fft_bandpass
    scpot2ne
    probe_align_times
+   mms4_displacement
 
 Waves
 -----

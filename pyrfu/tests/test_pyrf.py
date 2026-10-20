@@ -18,9 +18,10 @@ from unittest import mock
 # 3rd party imports
 import numba
 import numpy as np
+import pytest
 import xarray as xr
 from ddt import data, ddt, idata, unpack
-from scipy import constants
+from scipy import constants, interpolate, signal
 
 # Local imports
 from .. import pyrf
@@ -30,6 +31,7 @@ from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
 from ..pyrf.int_sph_dist import (
     _mc_cart_2d,
     _mc_cart_3d,
+    _mc_particles,
     _mc_pol_1d,
     _speed_bin_edges,
     _uniform_step,
@@ -329,6 +331,19 @@ class C4VTestCase(unittest.TestCase):
 
         # The caller's list of positions is unchanged
         self.assertTrue(all(isinstance(r, xr.DataArray) for r in r_xyz))
+
+    def test_c_4_v_velocity_from_ms_delays(self):
+        # A structure at 8000 km/s past a 7 km tetrahedron: sub-ms delays,
+        # which float seconds since 1970 (~0.24 us resolution) would distort
+        time = generate_timeline(8192.0, 100)
+        offsets = np.array(
+            [[0, 0, 0], [7.0, 0, 0], [3.5, 6.1, 0], [3.5, 2.0, 5.7]], dtype=float
+        )
+        r_xyz = [pyrf.ts_vec_xyz(time, np.tile(o, (100, 1))) for o in offsets]
+        velocity = np.array([-7500.0, 600.0, 900.0])
+        delta_t = offsets @ velocity / np.linalg.norm(velocity) ** 2
+        t_cross = time[50] + np.round(delta_t * 1e9).astype("timedelta64[ns]")
+        np.testing.assert_allclose(pyrf.c_4_v(r_xyz, t_cross), velocity, rtol=1e-5)
 
     def test_c_4_v_times_from_velocity(self):
         r_xyz, t_cross, velocity, delta_t = self._plane_crossing()
@@ -1211,12 +1226,41 @@ class DateStrTestCase(unittest.TestCase):
     def test_date_str_input(self):
         with self.assertRaises(AssertionError):
             pyrf.date_str("2019-01-01T00:00:00")
-            pyrf.date_str([np.datetime64("2019-01-01T00:00:00"), "2019-01-01T00:10:00"])
-            pyrf.date_str(["2019-01-01T00:00:00", "2019-01-01T00:10:00"], 1)
 
-            tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
-            pyrf.date_str(tint, 0)
-            pyrf.date_str(tint, 5)
+        with self.assertRaises(AssertionError):
+            pyrf.date_str([np.datetime64("2019-01-01T00:00:00"), "2019-01-01T00:10:00"])
+
+        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+
+        for fmt in [0, 5]:
+            with self.assertRaises(AssertionError):
+                pyrf.date_str(tint, fmt)
+
+        with self.assertRaises(ValueError):
+            pyrf.date_str(["2019-01-01 noon", "2019-01-01T00:10:00"])
+
+    @data(
+        "2019-09-14T07:54:00",
+        "2019-09-14T07:54:00.000",
+        "2019-09-14T07:54:00.000000",
+        "2019-09-14T07:54:00.000000000",
+    )
+    def test_date_str_precisions(self, start):
+        # The standard tint format ("...00.000") used to raise AssertionError
+        tint = [start, start.replace("07:54", "08:11")]
+        expected = [
+            "20190914_0754",
+            "190914075400",
+            "20190914_075400_081100",
+            "20190914_075400_20190914_081100",
+        ]
+        self.assertListEqual(
+            [pyrf.date_str(tint, fmt) for fmt in range(1, 5)], expected
+        )
+
+    def test_date_str_truncates_seconds(self):
+        tint = ["2019-09-14T07:54:00.999999999", "2019-09-14T08:11:59.999999999"]
+        self.assertEqual(pyrf.date_str(tint, 3), "20190914_075400_081159")
 
     @idata(range(1, 5))
     def test_date_str_output(self, value):
@@ -2186,6 +2230,25 @@ class FiltTestCase(unittest.TestCase):
         result = pyrf.filt(inp, f_min, f_max, order)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_filt_default_f_max_warns(self):
+        # The implicit f_max = 1 Hz low-pass warns that it changes in 3.0;
+        # the result is that of f_max=1 (unchanged)
+        inp = generate_ts(64.0, 1000)
+
+        with self.assertWarnsRegex(FutureWarning, "f_max=0") as context:
+            result = pyrf.filt(inp, 4.0)
+
+        self.assertEqual(context.filename, __file__)
+        xr.testing.assert_allclose(result, pyrf.filt(inp, 4.0, 1.0))
+
+    @data(0.0, 1.0, 10.0)
+    def test_filt_explicit_f_max_silent(self, f_max):
+        inp = generate_ts(64.0, 1000)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            pyrf.filt(inp, 4.0 if f_max != 10.0 else 0.0, f_max)
+
 
 class FindClosestTestCase(unittest.TestCase):
     def test_find_closest_drop_t1(self):
@@ -2325,6 +2388,7 @@ class GetOmniDataTestCase(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pyrf.get_omni_data(["b"], ["2019-09-14", "2019-09-15"])
 
+    @pytest.mark.network
     @unittest.skipUnless(
         os.environ.get("PYRFU_NETWORK_TESTS"), "set PYRFU_NETWORK_TESTS=1 to run"
     )
@@ -2403,6 +2467,53 @@ class HistogramTestCase(unittest.TestCase):
             generate_ts(64.0, 1000), bins, y_range, weights, density
         )
         self.assertIsInstance(result, xr.DataArray)
+
+    def _series(self, *bad):
+        # 1000 normal samples, with NaN or inf at the given indices
+        rng = np.random.default_rng(0)
+        values = rng.standard_normal(1000)
+
+        for i, value in bad:
+            values[i] = value
+
+        return pyrf.ts_scalar(generate_timeline(16.0, 1000), values)
+
+    @data(None, (-4.0, 4.0))
+    def test_histogram_non_finite(self, y_range):
+        # NaN and inf samples are ignored: the histogram of the finite ones,
+        # with or without a range (a NaN or an inf made the automatic range
+        # undefined: ValueError)
+        inp = self._series((10, np.nan), (20, np.inf), (30, -np.inf))
+        finite = np.isfinite(inp.data)
+        result = pyrf.histogram(inp, 50, y_range, density=False)
+        expected, edges = np.histogram(inp.data[finite], 50, range=y_range)
+
+        np.testing.assert_array_equal(result.data, expected)
+        np.testing.assert_allclose(result.bins.data, (edges[1:] + edges[:-1]) / 2)
+        self.assertEqual(result.data.sum(), 997)
+
+        # With density, normalised over the finite samples
+        density = pyrf.histogram(inp, 50, y_range)
+        self.assertAlmostEqual(float(np.sum(density.data) * np.diff(edges)[0]), 1.0)
+
+    def test_histogram_non_finite_weights(self):
+        # The weights of the ignored samples are ignored too
+        inp = self._series((10, np.nan))
+        weights = np.arange(1000.0)
+        result = pyrf.histogram(inp, 20, weights=weights, density=False)
+        self.assertAlmostEqual(float(result.data.sum()), weights.sum() - 10.0)
+
+    def test_histogram_no_finite_value(self):
+        inp = pyrf.ts_scalar(generate_timeline(16.0, 100), np.full(100, np.nan))
+
+        with self.assertRaises(ValueError):
+            pyrf.histogram(inp)
+
+    def test_histogram_finite_unchanged(self):
+        # Without NaN or inf, as numpy.histogram
+        inp = self._series()
+        expected, _ = np.histogram(inp.data, 30, density=True)
+        np.testing.assert_array_equal(pyrf.histogram(inp, 30).data, expected)
 
 
 @ddt
@@ -3011,6 +3122,35 @@ class IntSphDistTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(np.sum(result), np.cos(theta) if kept else 0.0)
 
+    def test_int_sph_dist_log_weight(self):
+        # "log" is logarithmic whatever the units of f: the same allocation
+        # in s^3/m^6 and s^3/km^6. irfu-matlab's log10(1 + f) was "lin" for
+        # SI phase-space densities (f << 1), which starved the tails
+        vdf, *_ = self._maxwellian()
+        vdf[0, :4, :2] = 0.0  # a few empty bins
+        n_si = _mc_particles(vdf, 10, "log")
+        n_km = _mc_particles(vdf * 1e18, 10, "log")
+        n_lin = _mc_particles(vdf, 10, "lin")
+
+        np.testing.assert_array_equal(n_si, n_km)
+        self.assertFalse(np.array_equal(n_si, n_lin))
+
+        # Particles in the tails (f < 1e-4 of the peak): 10.3 % against
+        # 1.6 % for "lin" (Claude outputs/int_sph_dist-log-weighting.md)
+        tail = (vdf > 0) & (vdf < 1e-4 * vdf.max())
+        self.assertGreater(n_si[tail].sum() / n_si.sum(), 0.05)
+        self.assertLess(n_lin[tail].sum() / n_lin.sum(), 0.02)
+
+        # At least one particle per bin with data, none in empty bins, and
+        # n_mc per bin on average (ceil adds less than one particle per bin)
+        self.assertTrue(np.all(n_si[vdf > 0] >= 1))
+        self.assertTrue(np.all(n_si[vdf == 0] == 0))
+        ratio = n_si.sum() / (10 * np.sum(vdf > 0))
+        self.assertTrue(1.0 <= ratio < 1.1)
+
+    def test_int_sph_dist_log_weight_empty(self):
+        np.testing.assert_array_equal(_mc_particles(np.zeros((2, 3, 4)), 10, "log"), 0)
+
     @data(
         ("pol", "1d", None, False),
         ("pol", "1d", "lin", False),
@@ -3247,6 +3387,34 @@ class Iso86012Unix(unittest.TestCase):
         result = pyrf.iso86012unix(value)
         self.assertIsInstance(result, np.ndarray)
 
+    def test_iso86012unix_values(self):
+        # Used to return datetime64[ns], not seconds since 1970
+        time = [
+            "1970-01-01T00:00:00.000",
+            "2019-01-01T00:00:00.5",
+            "1969-12-31T23:59:59",
+        ]
+        result = pyrf.iso86012unix(time)
+        self.assertEqual(result.dtype, np.float64)
+        np.testing.assert_array_equal(result, [0.0, 1546300800.5, -1.0])
+
+    def test_iso86012unix_single_str(self):
+        result = pyrf.iso86012unix("2019-01-01T00:00:00")
+        np.testing.assert_array_equal(result, [1546300800.0])
+
+    def test_iso86012unix_nat(self):
+        result = pyrf.iso86012unix(["NaT", "2019-01-01T00:00:00"])
+        np.testing.assert_array_equal(result, [np.nan, 1546300800.0])
+
+    def test_iso86012unix_matches_datetime642unix(self):
+        time = np.array(
+            ["2019-09-14T07:54:00.123456789", "2019-09-14T08:11:00.000000000"]
+        )
+        np.testing.assert_array_equal(
+            pyrf.iso86012unix(time),
+            pyrf.datetime642unix(time.astype("datetime64[ns]")),
+        )
+
 
 @ddt
 class Iso86012TimeVec(unittest.TestCase):
@@ -3258,6 +3426,34 @@ class Iso86012TimeVec(unittest.TestCase):
     def test_iso86012timevec_output(self, value):
         result = pyrf.iso86012timevec(value)
         self.assertIsInstance(result, np.ndarray)
+
+    @data(
+        ("2019-09-14T07:54:00", [2019, 9, 14, 7, 54, 0, 0, 0, 0]),
+        ("2019-09-14T07:54:00.000", [2019, 9, 14, 7, 54, 0, 0, 0, 0]),
+        ("2019-09-14T07:54:00.5", [2019, 9, 14, 7, 54, 0, 500, 0, 0]),
+        ("2019-09-14T07:54:00.123456", [2019, 9, 14, 7, 54, 0, 123, 456, 0]),
+        ("2019-09-14T07:54:00.123456789", [2019, 9, 14, 7, 54, 0, 123, 456, 789]),
+    )
+    @unpack
+    def test_iso86012timevec_precisions(self, time, expected):
+        # Fewer than 9 fractional digits used to raise AttributeError
+        result = pyrf.iso86012timevec(time)
+        np.testing.assert_array_equal(result, [expected])
+
+    def test_iso86012timevec_round_trip(self):
+        time = ["2019-01-01T00:00:00.123456789", "2019-09-14T07:54:00.000000000"]
+        result = pyrf.timevec2iso8601(pyrf.iso86012timevec(time))
+        self.assertListEqual(list(result), time)
+
+    @data(
+        "2019-09-14T07:54:00Z",
+        "2019-09-14T07:54:00.1234567891",
+        "2019-09-14 07:54:00",
+        "2019-09-14T07:54:00x123456789",
+    )
+    def test_iso86012timevec_invalid(self, time):
+        with self.assertRaises(ValueError):
+            pyrf.iso86012timevec(time)
 
 
 @ddt
@@ -3393,12 +3589,56 @@ class MeanTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data, expected, atol=1e-12)
 
 
+def _xy_series(x, y):
+    time = np.datetime64("2019-09-14T07:54:00", "ns")
+    time = time + np.arange(len(x)).astype("timedelta64[s]")
+    return pyrf.ts_scalar(time, np.array(x, float)), pyrf.ts_scalar(
+        time, np.array(y, float)
+    )
+
+
 class MeanBinsTestCase(unittest.TestCase):
     def test_mean_bins_output(self):
         result = pyrf.mean_bins(
             generate_ts(64.0, 100), generate_ts(64.0, 100), random.randint(2, 20)
         )
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_mean_bins_edges(self):
+        # The samples on the bin edges, min(x) and max(x) at least, were dropped
+        x = np.repeat(np.arange(10.0), 10)
+        result = pyrf.mean_bins(*_xy_series(x, 2 * x))
+        np.testing.assert_array_equal(result.data.data, 2 * np.arange(10.0))
+        np.testing.assert_array_equal(result.sigma.data, np.zeros(10))
+        np.testing.assert_allclose(result.bins.data, 0.45 + 0.9 * np.arange(10))
+
+    def test_mean_bins_matches_histogram(self):
+        rng = np.random.default_rng(0)
+        x, y = rng.normal(size=1000), rng.normal(size=1000)
+        result = pyrf.mean_bins(*_xy_series(x, y), 12)
+        counts, _ = np.histogram(x, 12)
+        sums, _ = np.histogram(x, 12, weights=y)
+        np.testing.assert_allclose(result.data.data, sums / counts, rtol=1e-12)
+
+    def test_mean_bins_non_finite(self):
+        # One NaN in x made every bin NaN
+        x, y = np.repeat(np.arange(10.0), 10), np.arange(100.0)
+        x_nan, y_inf = x.copy(), y.copy()
+        x_nan[3], y_inf[57] = np.nan, np.inf
+        result = pyrf.mean_bins(*_xy_series(x_nan, y_inf))
+        keep = np.isfinite(x_nan) & np.isfinite(y_inf)
+        expected = pyrf.mean_bins(*_xy_series(x[keep], y[keep]))
+        xr.testing.assert_identical(result, expected)
+
+    def test_mean_bins_no_finite_pair(self):
+        with self.assertRaises(ValueError):
+            pyrf.mean_bins(*_xy_series([np.nan, 1.0], [1.0, np.nan]))
+
+    def test_mean_bins_constant_x(self):
+        # Constant x gave all NaN; numpy.histogram's range min(x) +/- 0.5 now
+        result = pyrf.mean_bins(*_xy_series(np.ones(10), np.arange(10.0)), 4)
+        np.testing.assert_array_equal(result.data.data, [np.nan, np.nan, 4.5, np.nan])
+        np.testing.assert_allclose(result.bins.data, [0.625, 0.875, 1.125, 1.375])
 
 
 class MedianBinsTestCase(unittest.TestCase):
@@ -3407,6 +3647,23 @@ class MedianBinsTestCase(unittest.TestCase):
             generate_ts(64.0, 100), generate_ts(64.0, 100), random.randint(2, 20)
         )
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_median_bins_edges(self):
+        # One outlier per bin: the median ignores it, the mean wouldn't
+        x = np.repeat(np.arange(10.0), 10)
+        y = 2 * x + np.tile([0.0] * 9 + [100.0], 10)
+        result = pyrf.median_bins(*_xy_series(x, y))
+        np.testing.assert_array_equal(result.data.data, 2 * np.arange(10.0))
+
+    def test_median_bins_non_finite(self):
+        x, y = np.repeat(np.arange(10.0), 10), np.arange(100.0)
+        x[3], y[57] = np.nan, np.inf
+        result = pyrf.median_bins(*_xy_series(x, y))
+        self.assertFalse(np.isnan(result.data.data).any())
+
+    def test_median_bins_no_finite_pair(self):
+        with self.assertRaises(ValueError):
+            pyrf.median_bins(*_xy_series([np.nan], [1.0]))
 
 
 @ddt
@@ -3603,6 +3860,7 @@ class OptimizeNbins2DTestCase(unittest.TestCase):
         self.assertIsInstance(result[1], int)
 
 
+@ddt
 class Pid4SCTestCase(unittest.TestCase):
     def test_pid_4sc_output(self):
         result = pyrf.pid_4sc(
@@ -3647,6 +3905,72 @@ class Pid4SCTestCase(unittest.TestCase):
         # Pressure-strain interaction -(P.grad).u = -p theta + Pi-D
         p_strain = -(pi_xz * s_shear + (p_iso - a_anis) * c_comp)
         np.testing.assert_allclose(-ptheta.data + pid.data, p_strain)
+
+    @staticmethod
+    def _pid_case(p_data, p_time=None, p_slope=0.0):
+        # u = (S z, C y, 0) on a regular tetrahedron; P = p_data (1 + p_slope t)
+        time = generate_timeline(64.0, 10)
+        p_time = time if p_time is None else p_time
+        p_t = (p_time - time[0]) / np.timedelta64(1, "s")
+        dr_mms = 20.0 * np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+
+        r_mms, v_mms, p_mms = [], [], []
+
+        for dr in dr_mms:
+            r_mms.append(pyrf.ts_vec_xyz(time, np.tile(dr + [6.4e4, 0, 0], (10, 1))))
+            v_data = [0.5 * dr[2], 0.2 * dr[1], 0.0]
+            v_mms.append(pyrf.ts_vec_xyz(time, np.tile(v_data, (10, 1))))
+            p_ts = p_data * (1 + p_slope * p_t)[:, np.newaxis, np.newaxis]
+            p_mms.append(pyrf.ts_tensor_xyz(p_time, p_ts))
+
+        return time, r_mms, v_mms, p_mms
+
+    @data(
+        generate_timeline(32.0, 5),
+        generate_timeline(64.0, 10) + np.timedelta64(7812500, "ns"),
+    )
+    def test_pid_4sc_p_time_base(self, p_time):
+        # P at half the cadence of V raised ValueError, and on a shifted grid of
+        # the same length was misaligned. P linear in time: resampling is exact
+        p_data = np.diag([0.6, 0.4, 0.5])
+        p_data[0, 2] = p_data[2, 0] = 0.05
+        time, r_mms, v_mms, p_mms = self._pid_case(p_data, p_time, p_slope=0.5)
+        pid = pyrf.pid_4sc(r_mms, v_mms, p_mms)[3]
+        t_s = (time - time[0]) / np.timedelta64(1, "s")
+        expected = (0.1 * 0.2 - 0.05 * 0.5) * (1 + 0.5 * t_s)
+        np.testing.assert_allclose(pid.data, expected, rtol=1e-12)
+        np.testing.assert_array_equal(pid.time.data, time)
+
+    def test_pid_4sc_err_isotropic(self):
+        # Pi = 0 gave NaN (relative errors); only sigma_Pi contributes:
+        # sigma = sigma_P / 2 * sqrt(4 C^2 / 9 + S^2), sigma_P / 2 at the centre
+        time, r_mms, v_mms, p_mms = self._pid_case(0.5 * np.eye(3))
+        errv = [pyrf.ts_vec_xyz(time, np.zeros((10, 3))) for _ in range(4)]
+        errp = [pyrf.ts_tensor_xyz(time, 0.02 * np.ones((10, 3, 3))) for _ in range(4)]
+        sigma = pyrf.pid_4sc_err(r_mms, v_mms, p_mms, errv, errp)
+        expected = 0.01 * np.sqrt(4 * 0.2**2 / 9 + 0.5**2)
+        np.testing.assert_allclose(sigma.data, expected, rtol=1e-12)
+
+    def test_pid_4sc_err_velocity(self):
+        # Regular tetrahedron of half side a = 20 km: sum_alpha k_alpha,i^2 =
+        # 1 / (4 a^2), so sigma(du_j / dx_i) = sigma_v / 40 for all i, j and
+        # sigma = sigma_v / 40 * sqrt(4 A^2 / 3 + 2 Pi_xz^2)
+        p_data = np.diag([0.6, 0.4, 0.5])
+        p_data[0, 2] = p_data[2, 0] = 0.05
+        time, r_mms, v_mms, p_mms = self._pid_case(p_data)
+        errv = [pyrf.ts_vec_xyz(time, 3.0 * np.ones((10, 3))) for _ in range(4)]
+        errp = [pyrf.ts_tensor_xyz(time, np.zeros((10, 3, 3))) for _ in range(4)]
+        sigma = pyrf.pid_4sc_err(r_mms, v_mms, p_mms, errv, errp)
+        expected = 3.0 / 40 * np.sqrt(4 * 0.1**2 / 3 + 2 * 0.05**2)
+        np.testing.assert_allclose(sigma.data, expected, rtol=1e-12)
+
+        # Errors at half the cadence: resampled onto the time base of V
+        time_h = generate_timeline(32.0, 5)
+        errv_h = [pyrf.ts_vec_xyz(time_h, 3.0 * np.ones((5, 3))) for _ in range(4)]
+        errp_h = [pyrf.ts_tensor_xyz(time_h, np.zeros((5, 3, 3))) for _ in range(4)]
+        sigma_h = pyrf.pid_4sc_err(r_mms, v_mms, p_mms, errv_h, errp_h)
+        np.testing.assert_allclose(sigma_h.data, expected, rtol=1e-12)
+        np.testing.assert_array_equal(sigma_h.time.data, time)
 
 
 class PlasmaCalcTestCase(unittest.TestCase):
@@ -4143,6 +4467,113 @@ class ShockNormalTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             _shock_angle({"b_u": b_u}, n_vec, "b", False)["x"], 120.0
         )
+
+    @staticmethod
+    def _series(n_u=20, n_d=30, seed=1):
+        # Noisy up- and downstream samples around the irfu-matlab example
+        rng = np.random.default_rng(seed)
+        return {
+            "b_u": [0.1, -0.02, 3] + 0.05 * rng.standard_normal((n_u, 3)),
+            "b_d": [1, 0.05, 9] + 0.2 * rng.standard_normal((n_d, 3)),
+            "v_u": [-300, 5, -2] + 5 * rng.standard_normal((n_u, 3)),
+            "v_d": [-100, 5, -2] + 10 * rng.standard_normal((n_d, 3)),
+            "n_u": 5 + 0.1 * rng.standard_normal(n_u),
+            "n_d": 15 + 0.5 * rng.standard_normal(n_d),
+        }
+
+    def test_shock_normal_time_series_draws(self):
+        # Each draw is the single-value calculation at the interpolated up-
+        # and downstream points (the loop had no effect, and unequal sides
+        # raised ValueError)
+        spec = {**self._series(), "n": 7, "random_state": 3}
+        out = pyrf.shock_normal(spec)
+
+        rng = np.random.default_rng(3)
+        position = {side: rng.random(7) for side in ["u", "d"]}
+
+        for i in [0, 6]:
+            single = {}
+
+            for side in ["u", "d"]:
+                grid = np.linspace(0, 1, len(spec[f"b_{side}"]))
+
+                for q in ["b", "v", "n"]:
+                    values = np.asarray(spec[f"{q}_{side}"])
+                    single[f"{q}_{side}"] = interpolate.interp1d(grid, values, axis=0)(
+                        position[side][i]
+                    )
+
+            expected = pyrf.shock_normal(single)
+
+            for k in expected["n"]:
+                np.testing.assert_allclose(out["n"][k][i], expected["n"][k])
+                self.assertAlmostEqual(out["theta_bn"][k][i], expected["theta_bn"][k])
+                self.assertAlmostEqual(
+                    out["v_sh"]["mf"][k][i], expected["v_sh"]["mf"][k]
+                )
+
+            self.assertAlmostEqual(out["info"]["msh"][i], expected["info"]["msh"])
+
+    def test_shock_normal_time_series_shapes(self):
+        # Every field stacked over the draws, default 100 draws as documented
+        # (it was 10); one side may be a single value
+        out = pyrf.shock_normal({**self._series(), "random_state": 0})
+        self.assertEqual(out["n"]["mc"].shape, (100, 3))
+        self.assertEqual(out["theta_bn"]["mc"].shape, (100,))
+        self.assertEqual(out["v_sh"]["sb"]["vc"].shape, (100,))
+        self.assertEqual(out["info"]["cmat"].shape, (100, 5, 5))
+
+        spec = {**self._series(), "n": 4}
+        spec.update(b_u=[0.1, -0.02, 3], v_u=[-300, 5, -2], n_u=5)
+        out = pyrf.shock_normal(spec)
+        self.assertEqual(out["n"]["vc"].shape, (4, 3))
+
+    def test_shock_normal_time_series_reproducible(self):
+        spec = {**self._series(), "n": 5, "random_state": 2}
+        out_1, out_2 = pyrf.shock_normal(spec), pyrf.shock_normal(spec)
+        np.testing.assert_array_equal(out_1["n"]["mx_3"], out_2["n"]["mx_3"])
+
+    def test_shock_normal_time_series_lengths(self):
+        spec = self._series()
+        spec["n_u"] = spec["n_u"][:-1]
+
+        with self.assertRaises(ValueError):
+            pyrf.shock_normal(spec)
+
+    def test_shock_normal_irfu_matlab(self):
+        # irfu-matlab irf_shock_normal on its docstring example
+        spec = {
+            "b_u": [0.1, -0.02, 3],
+            "b_d": [1, 0.05, 9],
+            "v_u": [-300, 5, -2],
+            "v_d": [-100, 5, -2],
+            "n_u": 5,
+            "n_d": 15,
+        }
+        expected = {
+            "mc": (
+                [0.976679367207427, 0.155243818215456, -0.148313082960294],
+                83.2968902632152,
+            ),
+            "vc": ([1.0, 0.0, 0.0], 88.0908899598051),
+            "mx_1": (
+                [0.988934176459199, 0.00098901109954472, -0.148351664931708],
+                83.3775038439101,
+            ),
+            "mx_2": (
+                [0.988937427415258, -0.000824061111477711, -0.148331000065988],
+                83.3793981541223,
+            ),
+            "mx_3": (
+                [0.988937833656664, -0.00173040568145919, -0.148320486982216],
+                83.3803533040341,
+            ),
+        }
+        out = pyrf.shock_normal(spec)
+
+        for k, (n_vec, theta_bn) in expected.items():
+            np.testing.assert_allclose(out["n"][k], n_vec, atol=1e-14)
+            self.assertAlmostEqual(out["theta_bn"][k], theta_bn, places=10)
 
 
 @ddt
@@ -4997,6 +5428,38 @@ class WaverageTestCase(unittest.TestCase):
 
 @ddt
 class WaveletTestCase(unittest.TestCase):
+    def test_wavelet_nan(self):
+        # One NaN made the whole transform NaN; as irf_wavelet, the gap is set
+        # to 0 for the FFT and NaN in the output (inf too)
+        t_s = np.arange(1024) / 64.0
+        time = np.datetime64("2019-01-01", "ns") + (t_s * 1e9).astype("timedelta64[ns]")
+        x_gap = np.sin(2 * np.pi * 4.0 * t_s)
+        x_gap[300:320], x_gap[500] = np.nan, np.inf
+        x_zero = np.where(np.isfinite(x_gap), x_gap, 0.0)
+        inp = pyrf.ts_scalar(time, x_gap)
+        inp_copy = inp.copy()
+
+        options = dict(n_freqs=50, cut_edge=False, return_power=False)
+        result = pyrf.wavelet(inp, **options)
+        result_zero = pyrf.wavelet(pyrf.ts_scalar(time, x_zero), **options)
+
+        gap = ~np.isfinite(x_gap)
+        self.assertTrue(np.isnan(result.data[gap]).all())
+        np.testing.assert_array_equal(result.data[~gap], result_zero.data[~gap])
+        xr.testing.assert_identical(inp, inp_copy)
+
+    def test_wavelet_nan_vector(self):
+        # Only the rows of the component with the gap are NaN
+        t_s = np.arange(1024) / 64.0
+        time = np.datetime64("2019-01-01", "ns") + (t_s * 1e9).astype("timedelta64[ns]")
+        data = np.tile(np.sin(2 * np.pi * 4.0 * t_s)[:, np.newaxis], (1, 3))
+        data[300:320, 1] = np.nan
+        result = pyrf.wavelet(pyrf.ts_vec_xyz(time, data), n_freqs=50, cut_edge=False)
+        n_nan_rows = {
+            k: int(np.isnan(result[k].data).any(axis=1).sum()) for k in result
+        }
+        self.assertDictEqual(n_nan_rows, {"x": 0, "y": 20, "z": 0})
+
     def test_wavelet_linear_frequencies(self):
         # The linear spacing ignored f: f=[1, 10] with 1 Hz gave 1 to 64 Hz
         time = generate_timeline(128.0, 1024)
@@ -5359,17 +5822,6 @@ class MedfiltTestCase(unittest.TestCase):
             pyrf.medfilt(inp, kernel_size)
 
     @data(
-        (
-            generate_ts(64.0, 100, tensor_order=random.randint(3, 10)),
-            random.randint(0, 99),
-        )
-    )
-    @unpack
-    def test_medfilt_input_value(self, inp, kernel_size):
-        with self.assertRaises(ValueError):
-            pyrf.medfilt(inp, kernel_size)
-
-    @data(
         (generate_ts(64.0, 100, tensor_order=0), None),
         (generate_ts(64.0, 100, tensor_order=0), random.randint(0, 99)),
         (generate_ts(64.0, 100, tensor_order=1), random.randint(0, 99)),
@@ -5379,6 +5831,53 @@ class MedfiltTestCase(unittest.TestCase):
     def test_medfilt_output(self, inp, kernel_size):
         result = pyrf.medfilt(inp, kernel_size)
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_medfilt_values(self):
+        # The median of scipy.signal.medfilt for each component, in double
+        # precision (the float32 output was 0.031 off for values of 1e6)
+        rng = np.random.default_rng(0)
+        time = generate_timeline(16.0, 200)
+        values = 1e6 + rng.standard_normal((200, 3))
+        result = pyrf.medfilt(pyrf.ts_vec_xyz(time, values), 5)
+
+        self.assertEqual(result.dtype, np.float64)
+
+        for i in range(3):
+            np.testing.assert_array_equal(
+                result.data[:, i], signal.medfilt(values[:, i], 5)
+            )
+
+    @data((200, 9), (200, 1), (200, 2, 3, 4))
+    def test_medfilt_shapes(self, shape):
+        # Any number of components, with the dims and attrs of the input:
+        # (time, 9) was reshaped to 3x3 and (time, 1) squeezed (ValueError)
+        rng = np.random.default_rng(1)
+        dims = ["time"] + [f"d{i}" for i in range(len(shape) - 1)]
+        inp = xr.DataArray(
+            rng.standard_normal(shape),
+            coords={"time": generate_timeline(16.0, shape[0])},
+            dims=dims,
+            attrs={"UNITS": "nT"},
+        )
+        inp_copy = inp.copy(deep=True)
+        result = pyrf.medfilt(inp, 3)
+
+        self.assertEqual(result.dims, inp.dims)
+        self.assertEqual(result.shape, shape)
+        self.assertEqual(result.attrs, {"UNITS": "nT"})
+        last = inp.data.reshape(shape[0], -1)[:, -1]
+        np.testing.assert_array_equal(
+            result.data.reshape(shape[0], -1)[:, -1], signal.medfilt(last, 3)
+        )
+        xr.testing.assert_identical(inp, inp_copy)
+
+    def test_medfilt_float_kernel_size(self):
+        # A float kernel size (the sampling frequency in the docstring
+        # example) is rounded, then made odd (it raised TypeError)
+        inp = generate_ts(16.0, 200, tensor_order=1)
+        np.testing.assert_array_equal(
+            pyrf.medfilt(inp, 16.0).data, pyrf.medfilt(inp, 17).data
+        )
 
 
 @ddt
@@ -5511,6 +6010,42 @@ class EbspPhysicsTestCase(unittest.TestCase):
         e.data[5000:5100] = np.nan
         res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)
         self.assertLess(float(np.isnan(res["pf_xyz"].data).mean()), 0.2)
+
+    def test_ebsp_de_dot_b0_full_b_cadence(self):
+        # Full B at a quarter of the cadence of E and dB raised ValueError
+        # ((4096,) vs (1024,)); a constant B resamples exactly
+        e, b, b0 = self._wave()
+        time = e.time.data
+        b_full, b_full_16 = [
+            pyrf.ts_vec_xyz(t_, np.tile([10.0, 5.0, 50.0], (len(t_), 1)))
+            for t_ in [time, time[::4]]
+        ]
+        options = dict(fac=False, de_dot_b0=True)
+        res = pyrf.ebsp(e, b, b_full, b0, None, [0.5, 8], **options)
+        res_16 = pyrf.ebsp(e, b, b_full_16, b0, None, [0.5, 8], **options)
+
+        for k in ["bb_xxyyzzss", "ee_xxyyzzss", "ee_ss", "pf_xyz", "pf_rtp"]:
+            np.testing.assert_array_equal(res_16[k].data, res[k].data)
+
+    def test_ebsp_de_dot_b0_recovers_ez(self):
+        # E perpendicular to a tilted full B: Ez from E.B = 0 and (Ex, Ey) gives
+        # the spectra of the full E
+        e, b, b0 = self._wave()
+        time = e.time.data
+        b_dir = np.array([10.0, 5.0, 50.0])
+        b_hat = b_dir / np.linalg.norm(b_dir)
+        e_perp = e.data - np.outer(e.data @ b_hat, b_hat)
+        b_full = pyrf.ts_vec_xyz(time[::4], np.tile(b_dir, (len(time[::4]), 1)))
+        e_xy = xr.DataArray(
+            e_perp[:, :2], coords=[time, ["x", "y"]], dims=["time", "comp"]
+        )
+        e_perp = pyrf.ts_vec_xyz(time, e_perp)
+
+        res = pyrf.ebsp(e_xy, b, b_full, b0, None, [0.5, 8], fac=False, de_dot_b0=True)
+        ref = pyrf.ebsp(e_perp, b, b_full, b0, None, [0.5, 8], fac=False)
+
+        ee, ee_ref = res["ee_xxyyzzss"].data, ref["ee_xxyyzzss"].data
+        np.testing.assert_allclose(ee, ee_ref, rtol=0, atol=1e-12 * np.nanmax(ee_ref))
 
 
 if __name__ == "__main__":

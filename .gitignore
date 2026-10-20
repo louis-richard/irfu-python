@@ -173,3 +173,6 @@ Claude outputs/
 
 # Sphinx autosummary pages (generated at build time)
 docs/api/generated/
+
+# irfu-matlab comparison harness (not committed yet)
+pyrfu/tests/matlab/

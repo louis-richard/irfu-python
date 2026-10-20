@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -38,8 +38,11 @@ def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.0):
 
     Notes
     -----
-    Draft version but seems to work well. Does not yet handle multiple
-    modes in the same power spectrum.
+    As irfu-matlab mms.estimate_phase_speed: f = v k / 2 pi is fitted to the
+    points of power above 0.3 of the maximum and of phase speed within a
+    factor 3 of the maximum's, by least squares weighted by
+    1 + log10(P / P_max). Does not yet handle multiple modes in the same
+    power spectrum.
 
     See also
     --------
@@ -101,10 +104,13 @@ def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.0):
 
     weights = 1 + np.log10(p_power2 / np.max(p_power2))
 
-    def fun(k_pow, f_pow):
-        return f_pow * k_pow
+    def fun(k_pow, slope):
+        return slope * k_pow
 
-    res = curve_fit(fun, k_power2, f_power2, p0=vph_guess, sigma=weights)
+    # Weighted least squares, sum(w (f - a k)^2), as irfu-matlab's fit(...,
+    # "Weight", w): scipy's sigma is an uncertainty, so sigma = 1 / sqrt(w)
+    # (sigma=w weighted the points by 1 / w^2, the weakest the most)
+    res = curve_fit(fun, k_power2, f_power2, p0=vph_guess, sigma=1 / np.sqrt(weights))
     vph = res[0][0] * 2 * np.pi
 
     return vph

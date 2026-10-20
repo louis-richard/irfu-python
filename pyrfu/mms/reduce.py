@@ -91,6 +91,11 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     speeds (see `pyrfu.pyrf.int_sph_dist`); without ``delta_energy_plus``,
     the default Cartesian grid extends to the upper edge of these bins.
 
+    The Monte-Carlo options (``n_mc``, ``weight``, ...) are those of
+    `pyrfu.pyrf.int_sph_dist`. ``weight="log"`` weights the particles by
+    1 + ln(f / min f); in irfu-matlab, and before pyrfu 2.5.2, it was the
+    same as ``"lin"`` for phase-space densities in SI units.
+
     """
 
     # Make sure the projection dimension amd base are correct

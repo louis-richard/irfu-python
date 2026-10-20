@@ -171,6 +171,7 @@ Multi-spacecraft methods
    c_4_v
    st_diff
    pid_4sc
+   pid_4sc_err
    pvi_4sc
 
 Plasma parameters
