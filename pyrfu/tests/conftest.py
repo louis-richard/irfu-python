@@ -16,6 +16,29 @@ __license__ = "MIT"
 __version__ = "2.5.1"
 __status__ = "Prototype"
 
+# In this conftest rather than in pyproject.toml, so that they also apply to the
+# tests of the installed package (pytest --pyargs pyrfu.tests)
+MARKERS = ["network: needs internet access (run with PYRFU_NETWORK_TESTS=1)"]
+
+# NumPy floating-point warnings on the random test data (sqrt, arccos, log10 of
+# out-of-domain values, means of empty slices)
+FILTERWARNINGS = [
+    "ignore:invalid value encountered:RuntimeWarning",
+    "ignore:divide by zero encountered:RuntimeWarning",
+    "ignore:overflow encountered:RuntimeWarning",
+    "ignore:Mean of empty slice:RuntimeWarning",
+]
+
+
+def pytest_configure(config):
+    r"""Register the markers and the warning filters of the tests."""
+    for marker in MARKERS:
+        config.addinivalue_line("markers", marker)
+
+    for warning_filter in FILTERWARNINGS:
+        config.addinivalue_line("filterwarnings", warning_filter)
+
+
 # Seeded at import, before pytest collects the test modules: the random
 # parametrisations (@data(random.random(), ...)) are drawn at collection
 random.seed(0)
