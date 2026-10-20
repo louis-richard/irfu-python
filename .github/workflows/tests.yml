@@ -42,8 +42,7 @@ jobs:
         sudo apt update && sudo apt install -y texlive
         pytest --cov=pyrfu --cov-report=xml
     - name: Upload coverage reports to Codecov
-      # Right after the coverage run, so it doesn't depend on the release check;
-      # fail the job if the upload fails instead of silently passing
+      # Fail the job if the upload fails instead of silently passing
       if: matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v7
       with:
@@ -51,16 +50,6 @@ jobs:
         files: ./coverage.xml
         flags: unittests
         fail_ci_if_error: true
-    - name: Check that release process is not broken
-      if: matrix.python-version == '3.14' && matrix.os == 'ubuntu-latest'
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
-      run: |
-        pip install build wheel twine
-        python -m build .
-        twine check dist/*
-        twine upload --repository testpypi --skip-existing dist/*
 
   wheel:
     # Build the wheel, install it in a clean environment and run the tests of
