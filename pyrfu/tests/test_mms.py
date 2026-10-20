@@ -3489,6 +3489,22 @@ class EstimatePhaseSpeedTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(vph / expected, 1.0, delta=1e-6)
 
+    def test_estimate_phase_speed_negative(self):
+        # Ridge along f = v k / (2 pi) with v = -20 km/s (k < 0), and a weaker
+        # one of opposite sign (k > 0): the k > 0 side is left out
+        k = np.linspace(-0.3, 0.3, 121)
+        freq = np.linspace(0.0, 1000.0, 201)
+        k_mat, f_mat = np.meshgrid(k, freq)
+
+        def ridge(v_ph):
+            return np.exp(-(((f_mat - v_ph * k_mat / (2 * np.pi)) / 20.0) ** 2))
+
+        power = ridge(-2e4) * (k_mat < 0) + 0.5 * ridge(1e4) * (k_mat > 0)
+
+        vph = mms.estimate_phase_speed(power, freq, k, 100.0)
+
+        self.assertAlmostEqual(vph / -2e4, 1.0, delta=0.01)
+
 
 @ddt
 class FeepsActiveEyesTestCase(unittest.TestCase):
