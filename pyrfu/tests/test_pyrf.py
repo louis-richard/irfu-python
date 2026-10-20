@@ -333,7 +333,7 @@ class C4VTestCase(unittest.TestCase):
         self.assertTrue(all(isinstance(r, xr.DataArray) for r in r_xyz))
 
     def test_c_4_v_velocity_from_ms_delays(self):
-        # Electron hole at 8000 km/s past a 7 km tetrahedron: sub-ms delays,
+        # A structure at 8000 km/s past a 7 km tetrahedron: sub-ms delays,
         # which float seconds since 1970 (~0.24 us resolution) would distort
         time = generate_timeline(8192.0, 100)
         offsets = np.array(
