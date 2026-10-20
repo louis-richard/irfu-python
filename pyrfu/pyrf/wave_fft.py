@@ -6,7 +6,7 @@ import numpy as np
 from scipy import signal
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -26,23 +26,24 @@ def wave_fft(
     ----------
     inp : xarray.DataArray
         Time series of the one dimension data.
-    window : str
-        Window function such as rectwin, hamming (default).
+    window : str or tuple
+        Window function, as for ``scipy.signal.spectrogram`` (e.g.,
+        "hamming", "boxcar"). Required.
     frame_overlap : float, Optional
-        Length of each frame overlaps in second.
+        Overlap of consecutive frames, in seconds. Default is 10.
     frame_length : float, Optional
-        Length of each frame in second.
+        Length of each frame, in seconds. Default is 20.
     f_sampling : float, Optional
-        Sampling frequency.
+        Sampling frequency, in Hz. Default is that of inp.
 
     Returns
     -------
-    spectrogram : ndarray
-        Spectrogram of x.
-    time : ndarray
-        Value corresponds to the center of each frame (x-axis) in sec.
     frequencies : ndarray
-        Vector of frequencies (y-axis) in Hz.
+        Frequencies (y-axis), in Hz.
+    time : ndarray
+        Centre of each frame (x-axis), in seconds from the start of inp.
+    spectrogram : ndarray
+        Complex short-time Fourier transform, of shape (frequencies, time).
 
     """
 
