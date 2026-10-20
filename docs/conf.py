@@ -87,10 +87,6 @@ autosectionlabel_prefix_document = True
 # Labels for the document and section titles only: the subsections of each
 # release in the changelog share their titles ("New features", ...)
 autosectionlabel_maxdepth = 2
-codeautolink_custom_blocks = {
-    "python3": None,
-    "pycon3": "sphinx_codeautolink.clean_pycon",
-}
 
 nbsphinx_execute_arguments = [
     "--InlineBackend.figure_formats={'svg', 'pdf'}",
@@ -326,7 +322,7 @@ epub_exclude_files = ["search.html"]
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
-    "xarray": ("http://xarray.pydata.org/en/stable/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
