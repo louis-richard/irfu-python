@@ -4731,6 +4731,78 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.Dataset)
 
+    @staticmethod
+    def _plane_wave(k_vec, f_0=4.0, f_s=128.0, n_pts=1024):
+        # cos(2 pi f_0 t - k.r) on a regular tetrahedron of 10 km side pairs
+        t_s = np.arange(n_pts) / f_s
+        time = np.datetime64("2019-01-01T00:00:00", "ns")
+        time = time + (t_s * 1e9).astype("timedelta64[ns]")
+        dr_mms = 5.0 * np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+        r_mms = [
+            pyrf.ts_vec_xyz(time, np.tile(dr + [6.4e4, 0, 0], (n_pts, 1)))
+            for dr in dr_mms
+        ]
+        e_mms = [
+            pyrf.ts_scalar(time, np.cos(2 * np.pi * f_0 * t_s - k_vec @ dr))
+            for dr in dr_mms
+        ]
+        b_mms = [
+            pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 20.0], (n_pts, 1))) for _ in dr_mms
+        ]
+        tint = list(np.datetime_as_string(time[[n_pts // 4, 3 * n_pts // 4]], "ns"))
+        return e_mms, r_mms, b_mms, tint
+
+    def test_fk_power_spectrum_4sc_plane_wave(self):
+        # k in rad/km in, rad/m out; recovered within one k bin
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint, f_range=[3, 5])
+        d_k = float(result.k_x[1] - result.k_x[0])
+        k_ref = {
+            "k_x_avg": k_vec[0],
+            "k_y_avg": k_vec[1],
+            "k_z_avg": k_vec[2],
+            "k_para_avg": k_vec[2],
+            "k_perp_avg": np.hypot(k_vec[0], k_vec[1]),
+        }
+        for key, value in k_ref.items():
+            self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
+        self.assertAlmostEqual(result.attrs["f_avg"], 4.0, delta=0.1)
+
+    def test_fk_power_spectrum_4sc_vector(self):
+        # Vector input raised AttributeError; the first component is used
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+        e_vec = [
+            pyrf.ts_vec_xyz(e_.time.data, np.stack([e_.data, -e_.data, 0 * e_.data], 1))
+            for e_ in e_mms
+        ]
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+        result_vec = mms.fk_power_spectrum_4sc(e_vec, r_mms, b_mms, tint)
+        xr.testing.assert_identical(result_vec, result)
+
+    def test_fk_power_spectrum_4sc_position_gap(self):
+        # A gap raised ValueError (array must not contain infs or NaNs); the
+        # windows without position are left out
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+        r_gap = [r_.copy() for r_ in r_mms]
+        r_gap[2].data[400:500] = np.nan
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+        result_gap = mms.fk_power_spectrum_4sc(e_mms, r_gap, b_mms, tint)
+        for key in ["k_x_avg", "k_y_avg", "k_z_avg", "f_avg"]:
+            self.assertAlmostEqual(result_gap.attrs[key], result.attrs[key])
+
+        r_nan = [r_.copy() for r_ in r_mms]
+        for r_ in r_nan:
+            r_.data[:] = np.nan
+        with self.assertRaises(ValueError):
+            mms.fk_power_spectrum_4sc(e_mms, r_nan, b_mms, tint)
+
+    def test_fk_power_spectrum_4sc_dims(self):
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+        self.assertTupleEqual(result.k_y_f.dims, ("k_y", "f"))
+        self.assertTupleEqual(result.k_z_f.dims, ("k_z", "f"))
+
 
 @ddt
 class GetDataDownloadTestCase(unittest.TestCase):
