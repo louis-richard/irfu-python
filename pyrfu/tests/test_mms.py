@@ -4803,6 +4803,17 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         self.assertTupleEqual(result.k_y_f.dims, ("k_y", "f"))
         self.assertTupleEqual(result.k_z_f.dims, ("k_z", "f"))
 
+    def test_fk_power_spectrum_4sc_field_gap(self):
+        # A NaN gap in the field made every wavelet coefficient NaN, so no
+        # wave vector was left; the windows around the gap are left out
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        e_mms[1].data[400:440] = np.nan
+        result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint, f_range=[3, 5])
+        d_k = float(result.k_x[1] - result.k_x[0])
+        for key, value in zip(["k_x_avg", "k_y_avg", "k_z_avg"], k_vec):
+            self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
+
 
 @ddt
 class GetDataDownloadTestCase(unittest.TestCase):

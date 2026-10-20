@@ -114,6 +114,11 @@ def wavelet(
     ValueError
         If input is not 1D or 2D.
 
+    Notes
+    -----
+    As irf_wavelet, NaN samples are set to zero for the transform and the
+    output is NaN at their times (inf samples too).
+
     """
 
     # Check input
@@ -205,9 +210,6 @@ def wavelet(
     else:
         power2 = np.zeros((len(time), n_freqs), dtype=np.complex128)
 
-    # Check for NaNs
-    scales[np.isnan(scales)] = 0.0
-
     # Find the frequencies for an FFT of all data
     freq: NDArray[np.float64] = (
         f_nyq * np.arange(1, 1 + len(data) / 2) / (len(data) / 2)
@@ -229,6 +231,11 @@ def wavelet(
     # if scalar add virtual axis
     if len(inp.shape) == 1:
         data = data[:, np.newaxis]
+
+    # NaN (and inf) samples set to 0 for the FFT and back to NaN in the
+    # output, as irf_wavelet (one NaN made the whole transform NaN)
+    idx_nan = ~np.isfinite(data)
+    data[idx_nan] = 0.0
 
     # go through all the data columns
     for i in range(data.shape[1]):
@@ -262,6 +269,8 @@ def wavelet(
                 power2[: censure[j], j] = np.nan
 
                 power2[len(data_col) - censure[j] : len(data_col), j] = np.nan
+
+        power2[idx_nan[:, i], :] = np.nan
 
         if len(inp.shape) == 2:
             # Construct xarray.DataArray here

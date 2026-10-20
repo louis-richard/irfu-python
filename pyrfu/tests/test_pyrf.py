@@ -5426,6 +5426,38 @@ class WaverageTestCase(unittest.TestCase):
 
 @ddt
 class WaveletTestCase(unittest.TestCase):
+    def test_wavelet_nan(self):
+        # One NaN made the whole transform NaN; as irf_wavelet, the gap is set
+        # to 0 for the FFT and NaN in the output (inf too)
+        t_s = np.arange(1024) / 64.0
+        time = np.datetime64("2019-01-01", "ns") + (t_s * 1e9).astype("timedelta64[ns]")
+        x_gap = np.sin(2 * np.pi * 4.0 * t_s)
+        x_gap[300:320], x_gap[500] = np.nan, np.inf
+        x_zero = np.where(np.isfinite(x_gap), x_gap, 0.0)
+        inp = pyrf.ts_scalar(time, x_gap)
+        inp_copy = inp.copy()
+
+        options = dict(n_freqs=50, cut_edge=False, return_power=False)
+        result = pyrf.wavelet(inp, **options)
+        result_zero = pyrf.wavelet(pyrf.ts_scalar(time, x_zero), **options)
+
+        gap = ~np.isfinite(x_gap)
+        self.assertTrue(np.isnan(result.data[gap]).all())
+        np.testing.assert_array_equal(result.data[~gap], result_zero.data[~gap])
+        xr.testing.assert_identical(inp, inp_copy)
+
+    def test_wavelet_nan_vector(self):
+        # Only the rows of the component with the gap are NaN
+        t_s = np.arange(1024) / 64.0
+        time = np.datetime64("2019-01-01", "ns") + (t_s * 1e9).astype("timedelta64[ns]")
+        data = np.tile(np.sin(2 * np.pi * 4.0 * t_s)[:, np.newaxis], (1, 3))
+        data[300:320, 1] = np.nan
+        result = pyrf.wavelet(pyrf.ts_vec_xyz(time, data), n_freqs=50, cut_edge=False)
+        n_nan_rows = {
+            k: int(np.isnan(result[k].data).any(axis=1).sum()) for k in result
+        }
+        self.assertDictEqual(n_nan_rows, {"x": 0, "y": 20, "z": 0})
+
     def test_wavelet_linear_frequencies(self):
         # The linear spacing ignored f: f=[1, 10] with 1 Hz gave 1 to 64 Hz
         time = generate_timeline(128.0, 1024)
