@@ -3399,6 +3399,43 @@ class Iso86012DatetimeTestCase(unittest.TestCase):
 
 
 @ddt
+class Iso86012Datetime64TestCase(unittest.TestCase):
+    @data(
+        ["2019-01-01T00:00:00.000", "2019-01-01T00:10:00"],
+        ("2019-01-01T00:00:00.000", "2019-01-01T00:10:00"),
+        np.array(["2019-01-01T00:00:00.000", "2019-01-01T00:10:00"]),
+    )
+    def test_iso86012datetime64_array_like(self, value):
+        # Tuples raised TypeError
+        result = pyrf.iso86012datetime64(value)
+        expected = np.array(
+            ["2019-01-01T00:00:00", "2019-01-01T00:10:00"], dtype="datetime64[ns]"
+        )
+        np.testing.assert_array_equal(result, expected)
+
+    def test_iso86012datetime64_str(self):
+        # A single str raised TypeError; a 1-D array, as documented
+        result = pyrf.iso86012datetime64("2019-01-01T00:00:00.123456789")
+        np.testing.assert_array_equal(
+            result, np.array(["2019-01-01T00:00:00.123456789"], dtype="datetime64[ns]")
+        )
+
+    def test_iso86012datetime64_utc_designator(self):
+        # A trailing "Z" (UTC) made numpy warn (time zones deprecated)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.iso86012datetime64(["2019-01-01T00:00:00Z"])
+
+        np.testing.assert_array_equal(
+            result, np.array(["2019-01-01T00:00:00"], dtype="datetime64[ns]")
+        )
+
+    def test_iso86012datetime64_invalid(self):
+        with self.assertRaises(TypeError):
+            pyrf.iso86012datetime64(1.0)
+
+
+@ddt
 class Iso86012Unix(unittest.TestCase):
     @data(
         "2019-01-01T00:00:00.000000000",
