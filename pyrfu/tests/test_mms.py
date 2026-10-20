@@ -7861,6 +7861,44 @@ class TokenizeTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not supported"):
             mms.tokenize(var_str)
 
+    @data(
+        "B_gse_fgm_srvy_l2",
+        "b_GSE_fgm_srvy_l2",
+        "B_GSE_FGM_SRVY_L2",
+        "Ti_gse_fpi_fast_l2",
+        "V_edp_brst_l2",
+    )
+    def test_tokenize_case(self, var_str):
+        # Any case, as the irfu-matlab names of the docstring examples (they
+        # raised ValueError: invalid parameter)
+        self.assertDictEqual(mms.tokenize(var_str), mms.tokenize(var_str.lower()))
+
+    @data(
+        ("b_fgm_srvy", "not a variable key"),
+        ("b_gse_fgm_srvy_l2_extra", "not a variable key"),
+        ("bx_gse_fgm_srvy_l2", "invalid parameter 'bx'"),
+        ("b_xyz_fgm_srvy_l2", "invalid coord. sys. 'xyz'"),
+        ("b_gse_fgx_srvy_l2", "invalid instrument 'fgx'"),
+        ("b_gse_fgm_srvx_l2", "invalid sampling mode 'srvx'"),
+        ("b_gse_fgm_srvy_l9", "invalid data level 'l9'"),
+    )
+    @unpack
+    def test_tokenize_invalid(self, var_str, message):
+        # ValueError naming the part (the number of parts and the parameter
+        # raised AssertionError)
+        with self.assertRaisesRegex(ValueError, re.escape(message)):
+            mms.tokenize(var_str)
+
+    def test_tokenize_reads_keys_once(self):
+        module = sys.modules["pyrfu.mms.tokenize"]
+        module._mms_keys.cache_clear()
+
+        with mock.patch("builtins.open", wraps=open) as opened:
+            for _ in range(3):
+                mms.tokenize("b_gse_fgm_srvy_l2")
+
+        self.assertEqual(opened.call_count, 1)
+
 
 @ddt
 class ListFilesTestCase(unittest.TestCase):
