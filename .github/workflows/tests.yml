@@ -77,6 +77,27 @@ jobs:
       run: |
         "$RUNNER_TEMP/venv/bin/python" -m pytest --pyargs pyrfu.tests -p no:cacheprovider
 
+  lowest:
+    # The oldest dependency versions that pyproject.toml allows, on the oldest
+    # supported Python: checks the lower bounds (the test tools are current)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v7
+      with:
+        python-version: '3.12'
+    - name: Install pyrfu with the lowest versions of its dependencies
+      run: |
+        python -m pip install --upgrade pip uv
+        uv pip install --system --resolution lowest-direct .
+        uv pip install --system ".[tests]"
+    - name: Run the tests of the installed package
+      working-directory: ${{ runner.temp }}
+      run: |
+        python -m pytest --pyargs pyrfu.tests -p no:cacheprovider
+
   docs:
     # Build the documentation as Read the Docs does (.readthedocs.yaml), with
     # the warnings as errors so that broken docstrings fail CI
