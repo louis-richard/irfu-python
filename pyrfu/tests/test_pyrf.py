@@ -614,6 +614,18 @@ class CalcDtTestCase(unittest.TestCase):
         result = pyrf.calc_dt(value)
         self.assertIsInstance(result, float)
 
+    def test_calc_dt_values(self):
+        self.assertAlmostEqual(pyrf.calc_dt(generate_ts(64.0, 100)), 1 / 64.0)
+
+    @data(0, 1)
+    def test_calc_dt_fewer_than_two_samples(self, n_samples):
+        # NaN (undefined), without the RuntimeWarnings of the median of nothing
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.calc_dt(generate_ts(64.0, 100)[:n_samples])
+
+        self.assertTrue(np.isnan(result))
+
 
 @ddt
 class CalcFsTestCase(unittest.TestCase):
@@ -633,6 +645,23 @@ class CalcFsTestCase(unittest.TestCase):
         inp = xr.DataArray(np.zeros(len(time)), coords=[time], dims=["time"])
         self.assertAlmostEqual(pyrf.calc_fs(inp), 100.0, places=9)
         self.assertAlmostEqual(pyrf.calc_fs(inp.to_dataset(name="x")), 100.0)
+
+    @data(0, 1)
+    def test_calc_fs_fewer_than_two_samples(self, n_samples):
+        # NaN (undefined), without the RuntimeWarnings of the median of nothing
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.calc_fs(generate_ts(64.0, 100)[:n_samples])
+
+        self.assertTrue(np.isnan(result))
+
+    def test_calc_fs_one_sample_series_still_averaged(self):
+        # The NaN is kept rather than an error: single-sample series (averaged
+        # over an interval) go through avg_4sc and resample
+        one = [generate_ts(64.0, 100, tensor_order=1)[:1] for _ in range(4)]
+        result = pyrf.avg_4sc(one)
+        expected = np.mean([o.data for o in one], axis=0)
+        np.testing.assert_allclose(result.data, expected)
 
 
 @ddt
