@@ -4804,6 +4804,14 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         self.assertTupleEqual(result.k_y_f.dims, ("k_y", "f"))
         self.assertTupleEqual(result.k_z_f.dims, ("k_z", "f"))
 
+    def test_fk_power_spectrum_4sc_no_complex_warning(self):
+        # The power was cast from complex to float (ComplexWarning)
+        e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", np.exceptions.ComplexWarning)
+            mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+
     def test_fk_power_spectrum_4sc_field_gap(self):
         # A NaN gap in the field made every wavelet coefficient NaN, so no
         # wave vector was left; the windows around the gap are left out

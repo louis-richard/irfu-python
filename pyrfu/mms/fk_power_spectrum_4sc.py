@@ -310,7 +310,7 @@ def fk_power_spectrum_4sc(
     # Compute averaged power spectrum from all spacecraft
     fk_power = np.zeros((nt, num_f), dtype=np.float64)
     for i in range(4):
-        fk_power += (w[i].data * np.conj(w[i].data) / 4).astype(np.float64)
+        fk_power += np.real(w[i].data * np.conj(w[i].data)) / 4
 
     # Find the time positions for averaging
     cav = int(cav)
