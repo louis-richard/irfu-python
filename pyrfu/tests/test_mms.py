@@ -8106,6 +8106,8 @@ class ListFilesSdcTestCase(unittest.TestCase):
             _, session = self._list(tint, 2, var_str, [])
             path, query = _sdc_query(session.urls[0])
             self.assertTrue(path.endswith("file_info/science"))
+            # The base URL ends with "/": it was doubled (".../v1//file_info")
+            self.assertNotIn("//", path)
             self.assertEqual(query.get("descriptor"), descriptor)
             expected = {
                 "start_date": "2019-09-14",
@@ -8166,6 +8168,8 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
 
         path, query = _sdc_query(session.urls[0])
         self.assertTrue(path.endswith("file_info/ancillary"))
+        # The base URL ends with "/": it was doubled (".../v1//file_info")
+        self.assertNotIn("//", path)
         self.assertDictEqual(
             {k: query[k] for k in ["start_date", "end_date", "sc_id", "product"]},
             {
