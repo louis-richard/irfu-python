@@ -44,14 +44,16 @@ def ts_skymap(
     energy : np.ndarray
         Energy levels.
     phi : np.ndarray
-        Azimuthal angles.
+        Azimuthal angles, (time, phi) or (phi,) (then the same at all times).
     theta : np.ndarray
         Elevation angles.
-    energy0: np.ndarray, Optional
-        Energy table 0 (odd time indices).
-    energy1: np.ndarray, Optional
-        Energy table 1 (even time indices).
-    esteptable: np.ndarray, Optional
+    energy0 : np.ndarray, Optional
+        Energy table 0 (odd time indices). Default is the energies of the first
+        time.
+    energy1 : np.ndarray, Optional
+        Energy table 1 (even time indices). Default is the energies of the second
+        time, or of the first one for a single time.
+    esteptable : np.ndarray, Optional
         Time series of the stepping table between energies (burst).
     attrs : dict, Optional
         Metadata for the VDF.
@@ -91,6 +93,10 @@ def ts_skymap(
     if not isinstance(theta, np.ndarray):
         raise TypeError("theta must be a numpy.ndarray")
 
+    # Azimuths as (time, phi), as get_dist for the fast mode
+    if phi.ndim == 1:
+        phi = np.tile(phi, (len(time), 1))
+
     # Check if even (odd) time step energy channels energy1 (energy0), and
     # energy step table are provided.
     if energy0 is None:
@@ -100,10 +106,11 @@ def ts_skymap(
             raise TypeError("energy0 must be a numpy.ndarray")
 
     if energy1 is None:
-        energy1 = energy[1, :]
+        # A single time (e.g. a distribution selected at one time) has one table
+        energy1 = energy[1, :] if energy.shape[0] > 1 else energy[0, :]
     else:
         if not isinstance(energy1, np.ndarray):
-            raise TypeError("energy0 must be a numpy.ndarray")
+            raise TypeError("energy1 must be a numpy.ndarray")
 
     if esteptable is None:
         esteptable = np.zeros(len(time), dtype=np.uint8)

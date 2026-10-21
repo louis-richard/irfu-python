@@ -34,14 +34,18 @@ def _time_avg(vdf, tint):
         idx = bisect.bisect_left(vdf.time.data, np.datetime64(tint[0]))
         vdf_data = vdf.data.data[idx, ...]
         vdf_ener = vdf.energy.data[idx, ...]
-        vdf_azim = vdf.phi.data[idx, ...]
+        vdf_azim = vdf.phi.data[idx, ...] if vdf.phi.ndim == 2 else vdf.phi.data
         vdf_thet = vdf.theta.data
 
     elif len(tint) == 2:
         vdf = time_clip(vdf, tint)
         vdf_data = np.nanmean(vdf.data.data, axis=0)
         vdf_ener = np.nanmean(vdf.energy.data, axis=0)
-        vdf_azim = np.nanmean(vdf.phi.data, axis=0)
+        # phi as (time, phi) or (phi,)
+        if vdf.phi.ndim == 2:
+            vdf_azim = np.nanmean(vdf.phi.data, axis=0)
+        else:
+            vdf_azim = vdf.phi.data
         vdf_thet = vdf.theta.data
     else:
         raise TypeError("Invalid time interval format")
@@ -106,7 +110,7 @@ def plot_ang_ang(vdf, tint: list = None, en_range: list = None):
     Parameters
     ----------
     vdf : xarray.Dataset
-        Skymap distribution.
+        Skymap distribution, with phi as (time, phi) or (phi,).
     tint : list of str, Optional
         Time interval. If the time interval contains only one element,
         uses the distribution at the closest time. If the time interval

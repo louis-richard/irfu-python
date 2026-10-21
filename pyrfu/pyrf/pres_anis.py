@@ -10,7 +10,7 @@ from .resample import resample
 from .ts_scalar import ts_scalar
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -27,14 +27,16 @@ def pres_anis(p_fac, b_xyz):
     Parameters
     ----------
     p_fac : xarray.DataArray
-        Time series of the pressure tensor in field aligne coordinates.
+        Time series of the pressure tensor in field-aligned coordinates
+        (parallel first), in nPa.
     b_xyz : xarray.DataArray
-        Time series of the background magnetic field.
+        Time series of the background magnetic field, in nT.
 
     Returns
     -------
     p_anis : xarray.DataArray
-        Time series of the pressure anisotropy.
+        Time series of the pressure anisotropy (dimensionless), on the time
+        line of p_fac.
 
     See also
     --------
@@ -59,11 +61,12 @@ def pres_anis(p_fac, b_xyz):
     >>> p_xyz_i = mms.get_data("Pi_gse_fpi_fast_l2", tint, mms_id)
 
     Transform pressure tensor to field aligned coordinates
+
     >>> p_fac_i = mms.rotate_tensor(p_xyz_i, "fac", b_xyz)
 
-    Compute pressure anistropy
+    Compute pressure anisotropy
 
-    >>> p_anis = pyrf.pres_anis(p_xyz_i, b_xyz)
+    >>> p_anis = pyrf.pres_anis(p_fac_i, b_xyz)
 
     """
 

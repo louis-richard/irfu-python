@@ -64,8 +64,8 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
 
     """
     # Check input type
-    if not isinstance(b_list, list):
-        raise TypeError("b_list must be a list")
+    if not isinstance(b_list, (list, tuple)):
+        raise TypeError("b_list must be a list or a tuple")
 
     b_list_r = []
     f_sb = calc_fs(b_list[0])

@@ -73,7 +73,8 @@ def calculate_epsilon(
     Parameters
     ----------
     vdf : Dataset
-        Observed particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6.
+        Observed particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6,
+        with phi as (time, phi) or (phi,).
     model_vdf : Dataset
         Model particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6.
     n_s : DataArray
@@ -179,8 +180,9 @@ def calculate_epsilon(
     delta_v = _speed(energy_upper) - _speed(energy_lower)
 
     # Weights of the integral over velocity space: v^2 dv (time, energy) and
-    # sin(theta) dphi dtheta (theta), broadcast instead of tiled
-    delta_ang = np.deg2rad(np.median(np.diff(phi[0, :])))
+    # sin(theta) dphi dtheta (theta), broadcast instead of tiled; phi as
+    # (time, phi) or (phi,)
+    delta_ang = np.deg2rad(np.median(np.diff(np.atleast_2d(phi)[0, :])))
     delta_ang *= np.deg2rad(np.median(np.diff(theta)))
     w_v = (velocity**2 * delta_v)[:, int_energies]
     w_ang = np.sin(np.deg2rad(theta)) * delta_ang

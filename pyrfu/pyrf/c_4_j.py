@@ -114,8 +114,9 @@ def c_4_j(
 
     """
     # Check inputs
-    assert isinstance(r_list, list) and len(r_list) == 4, "r_list must a list of s/c"
-    assert isinstance(b_list, list) and len(b_list) == 4, "b_list must a list of s/c"
+    message = "must be a list or a tuple of the 4 spacecraft"
+    assert isinstance(r_list, (list, tuple)) and len(r_list) == 4, f"r_list {message}"
+    assert isinstance(b_list, (list, tuple)) and len(b_list) == 4, f"b_list {message}"
 
     # Magnetic field at the center of the tetrahedron [nT]
     b_avg = avg_4sc(b_list)

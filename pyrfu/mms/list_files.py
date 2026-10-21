@@ -102,9 +102,14 @@ def list_files(
     else:
         level_and_dtype = [var["lev"], var["dtype"]]
 
-    # Latest version of each file, by time tag
+    # Latest version of each file, by time tag, from the day before the start of
+    # the time interval (a file starting then can cover it, e.g. a burst segment
+    # across midnight) to its end, as list_files_aws; each directory is walked
+    # once (the month directory of survey data was walked for every day)
     files = {}
+    walked = set()
     day = datetime.datetime.combine(t_start.date(), datetime.time())
+    day -= datetime.timedelta(days=1)
 
     while day < t_end:
         local_dir = os.path.join(
@@ -120,6 +125,13 @@ def list_files(
         if var["tmmode"] == "brst":
             local_dir = os.path.join(local_dir, day.strftime("%d"))
 
+        day += datetime.timedelta(days=1)
+
+        if local_dir in walked:
+            continue
+
+        walked.add(local_dir)
+
         for root, _, file_names in os.walk(local_dir):
             for file_name in file_names:
                 matches = file_regex.match(file_name)
@@ -132,8 +144,6 @@ def list_files(
 
                 if time_tag not in files or version > files[time_tag][0]:
                     files[time_tag] = (version, os.path.join(root, file_name))
-
-        day += datetime.timedelta(days=1)
 
     # Files starting within the time interval, and the last one starting before
     # (or at) its start, which covers it (as list_files_aws)

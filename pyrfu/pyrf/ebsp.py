@@ -17,6 +17,7 @@ from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.cart2sph import cart2sph
 from pyrfu.pyrf.convert_fac import convert_fac
 from pyrfu.pyrf.resample import resample
+from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 from pyrfu.pyrf.ts_time import ts_time
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 from pyrfu.pyrf.unix2datetime64 import unix2datetime64
@@ -303,8 +304,10 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         delta_b contains DC field. Default False.
     nav : int
         Number of wave periods to average Default 8.
-    fac_matrix : numpy.ndarray
-        Specify rotation matrix to FAC system Default None.
+    fac_matrix : xarray.DataArray or numpy.ndarray
+        Rotation matrix to the FAC system, with the unit vectors perp1, perp2
+        and par as rows: time series (n, 3, 3), or array on the times of
+        delta_b (n, 3, 3), or constant (3, 3). Default None (from b0 and xyz).
     m_width_coeff : int or float
         Specify coefficient to multiple Morlet wavelet width by. Default 1.
     matlab_dop2d : bool
@@ -407,6 +410,21 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     # matrix for rotation to FAC
     fac_matrix = kwargs.get("fac_matrix", None)
 
+    # An array (constant or on the times of delta_b) as a time series of
+    # matrices, as convert_fac takes it (it was rejected)
+    if fac_matrix is not None and not isinstance(fac_matrix, xr.DataArray):
+        fac_matrix = np.asarray(fac_matrix, dtype=np.float64)
+
+        if fac_matrix.shape == (3, 3):
+            fac_matrix = np.tile(fac_matrix, (len(db_xyz), 1, 1))
+
+        if fac_matrix.shape != (len(db_xyz), 3, 3):
+            raise ValueError(
+                "fac_matrix must be (3, 3) or (n, 3, 3) on the times of delta_b"
+            )
+
+        fac_matrix = ts_tensor_xyz(db_xyz.time.data, fac_matrix)
+
     if flag_want_fac and fac_matrix is None:
         if xyz is None:
             logger.info(
@@ -479,7 +497,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     if flag_want_fac:
         res["flagFac"] = True
 
-        time_b0 = b_bgd.time.data.astype(np.float64) / 1e9
+        # Times of B0 for the E rotated to FAC with Ez from dE.B = 0 (float seconds
+        # were read as ns: B0 was resampled to times in 1970)
+        time_b0 = b_bgd.time.data
 
         if want_ee and not flag_de_dot_b0:
             eisr2 = e_xyz[:, :2]

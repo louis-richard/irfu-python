@@ -1,0 +1,34 @@
+# PyHC checks (from PR #38 by S. Polson, PyHC): PHEP 3 compliance of the
+# supported Python and dependency versions, and compatibility with the shared
+# PyHC environment. Also run on devel, to catch a problem before a release; the
+# quarterly run is on the default branch.
+name: PyHC Actions
+
+on:
+  push:
+    branches: [master, devel]
+  pull_request:
+    branches: [master, devel]
+  schedule:
+    # Run quarterly: Jan 1, Apr 1, Jul 1, Oct 1 at 3pm UTC (8am MST)
+    - cron: 0 15 1 1,4,7,10 *
+  workflow_dispatch:
+
+jobs:
+  phep3-compliance:
+    name: PHEP 3 Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check PHEP 3 Compliance
+        uses: heliophysicsPy/pyhc-actions/phep3-compliance@v1
+
+  pyhc-env-compat:
+    name: PyHC Environment Compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check PyHC Environment Compatibility
+        uses: heliophysicsPy/pyhc-actions/pyhc-env-compat@v1

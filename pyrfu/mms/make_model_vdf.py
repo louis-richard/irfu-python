@@ -52,7 +52,7 @@ def make_model_vdf(
     Parameters
     ----------
     vdf : xarray.Dataset
-        Particle distribution (skymap).
+        Particle distribution (skymap), with phi as (time, phi) or (phi,).
     b_xyz : xarray.DataArray
         Time series of the background magnetic field.
     sc_pot : xarray.DataArray
@@ -171,8 +171,12 @@ def make_model_vdf(
     n_s = 1e6 * n_s.data
 
     # Directions of the particle velocities (minus the look directions),
-    # (time, phi, theta)
-    phi = np.deg2rad(vdf.phi.data)[:, :, None]
+    # (time, phi, theta), with phi as (time, phi) or (phi,)
+    phi = vdf.phi.data
+    if phi.ndim == 1:
+        phi = np.broadcast_to(phi, (len(vdf.time), len(phi)))
+
+    phi = np.deg2rad(phi)[:, :, None]
     theta = np.deg2rad(vdf.theta.data)[None, None, :]
     dirs = [
         -np.cos(phi) * np.sin(theta),

@@ -7,7 +7,7 @@ import functools
 import json
 import os
 import re
-import urllib
+import urllib.parse
 import warnings
 from bisect import bisect_left
 from datetime import datetime, timedelta
@@ -114,7 +114,8 @@ def _construct_url_json_list(tint, mms_id, var, lasp_url):
     start_date = tint[0].strftime("%Y-%m-%d")
     end_date = (tint[1] - timedelta(seconds=1)).strftime("%Y-%m-%d-%H-%M-%S")
 
-    url = f"{lasp_url}/file_info/science"
+    # lasp_url ends with "/" (it was doubled)
+    url = f"{lasp_url}file_info/science"
     url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
 
     url = f"{url}&instrument_id={var['inst']}"

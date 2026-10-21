@@ -11,6 +11,7 @@ import os
 import random
 import subprocess
 import sys
+import tempfile
 import unittest
 import warnings
 from unittest import mock
@@ -18,6 +19,7 @@ from unittest import mock
 # 3rd party imports
 import numba
 import numpy as np
+import pycdfpp
 import pytest
 import xarray as xr
 from ddt import data, ddt, idata, unpack
@@ -255,6 +257,11 @@ class Avg4SCTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, *[3] * tensor_order])
 
+    def test_avg_4sc_tuple(self):
+        # A tuple of spacecraft raised TypeError ("b_list must be a list")
+        b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
+        xr.testing.assert_identical(pyrf.avg_4sc(tuple(b_mms)), pyrf.avg_4sc(b_mms))
+
 
 class NanAvg4SCTestCase(unittest.TestCase):
     def test_nanavg_4sc_values(self):
@@ -490,6 +497,32 @@ class C4JTestCase(unittest.TestCase):
             atol=1e-30,
         )
 
+    def test_c_4_j_and_c_4_grad_tuples(self):
+        # Tuples of spacecraft were rejected (AssertionError, TypeError)
+        r_sc = 10.0 * np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.5, np.sqrt(3) / 2, 0.0],
+                [0.5, np.sqrt(3) / 6, np.sqrt(2 / 3)],
+            ]
+        )
+        time = generate_timeline(1.0, 3)
+        r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (3, 1))) for r in r_sc]
+        b_mms = [
+            pyrf.ts_vec_xyz(time, np.tile([0.5 * r[2], 0.0, 20.0 + r[0]], (3, 1)))
+            for r in r_sc
+        ]
+
+        for res_tuple, res_list in zip(
+            pyrf.c_4_j(tuple(r_mms), tuple(b_mms)), pyrf.c_4_j(r_mms, b_mms)
+        ):
+            xr.testing.assert_identical(res_tuple, res_list)
+
+        xr.testing.assert_identical(
+            pyrf.c_4_grad(tuple(r_mms), tuple(b_mms)), pyrf.c_4_grad(r_mms, b_mms)
+        )
+
 
 @ddt
 class CalcAgTestCase(unittest.TestCase):
@@ -612,6 +645,18 @@ class CalcDtTestCase(unittest.TestCase):
         result = pyrf.calc_dt(value)
         self.assertIsInstance(result, float)
 
+    def test_calc_dt_values(self):
+        self.assertAlmostEqual(pyrf.calc_dt(generate_ts(64.0, 100)), 1 / 64.0)
+
+    @data(0, 1)
+    def test_calc_dt_fewer_than_two_samples(self, n_samples):
+        # NaN (undefined), without the RuntimeWarnings of the median of nothing
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.calc_dt(generate_ts(64.0, 100)[:n_samples])
+
+        self.assertTrue(np.isnan(result))
+
 
 @ddt
 class CalcFsTestCase(unittest.TestCase):
@@ -631,6 +676,23 @@ class CalcFsTestCase(unittest.TestCase):
         inp = xr.DataArray(np.zeros(len(time)), coords=[time], dims=["time"])
         self.assertAlmostEqual(pyrf.calc_fs(inp), 100.0, places=9)
         self.assertAlmostEqual(pyrf.calc_fs(inp.to_dataset(name="x")), 100.0)
+
+    @data(0, 1)
+    def test_calc_fs_fewer_than_two_samples(self, n_samples):
+        # NaN (undefined), without the RuntimeWarnings of the median of nothing
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.calc_fs(generate_ts(64.0, 100)[:n_samples])
+
+        self.assertTrue(np.isnan(result))
+
+    def test_calc_fs_one_sample_series_still_averaged(self):
+        # The NaN is kept rather than an error: single-sample series (averaged
+        # over an interval) go through avg_4sc and resample
+        one = [generate_ts(64.0, 100, tensor_order=1)[:1] for _ in range(4)]
+        result = pyrf.avg_4sc(one)
+        expected = np.mean([o.data for o in one], axis=0)
+        np.testing.assert_allclose(result.data, expected)
 
 
 @ddt
@@ -1289,6 +1351,26 @@ class Datetime2Iso8601TestCase(unittest.TestCase):
         # ISO8601 contains 29 characters (nanosecond precision)
         self.assertEqual(len(pyrf.datetime2iso8601(ref_time)), 29)
         self.assertEqual(len(pyrf.datetime2iso8601(time_line)), 10)
+
+    def test_datetime2iso8601_datetime64(self):
+        # numpy.datetime64 times, as those of a time series, raised TypeError
+        time = np.array(
+            ["2019-01-01T00:00:00.123456789", "2019-01-01T00:00:01"],
+            dtype="datetime64[ns]",
+        )
+        expected = ["2019-01-01T00:00:00.123456789", "2019-01-01T00:00:01.000000000"]
+        self.assertListEqual(pyrf.datetime2iso8601(time), expected)
+        self.assertListEqual(pyrf.datetime2iso8601(list(time)), expected)
+        self.assertEqual(pyrf.datetime2iso8601(time[0]), expected[0])
+        self.assertIs(type(pyrf.datetime2iso8601(time)[0]), str)
+
+    def test_datetime2iso8601_datetime_unchanged(self):
+        time = datetime.datetime(2019, 1, 1, 0, 0, 0, 123456)
+        self.assertEqual(pyrf.datetime2iso8601(time), "2019-01-01T00:00:00.123456000")
+
+    def test_datetime2iso8601_invalid(self):
+        with self.assertRaises(TypeError):
+            pyrf.datetime2iso8601("2019-01-01T00:00:00")
 
 
 @ddt
@@ -2056,6 +2138,67 @@ class EbspTestCase(unittest.TestCase):
         self.assertIsInstance(result, np.ndarray)
         self.assertListEqual(list(result.shape), [len(out_time), len(a_)])
 
+    def test_ebsp_de_dot_b0_fac_rotating_b0(self):
+        # E perpendicular to a B0 rotating by 90 deg, with Ez from dE.B = 0: no
+        # power along B0 in FAC (0.2 of the perpendicular power when B0 was
+        # resampled to wrong times; irf_ebsp.m agrees with the fix to 1e-15)
+        t_sec = np.arange(1024) / 64.0
+        time = generate_timeline(64.0, 1024)
+        angle = np.pi / 2 * t_sec / t_sec[-1]
+        b_0 = pyrf.ts_vec_xyz(
+            time, np.stack([10 * np.cos(angle), 10 * np.sin(angle), 5 + 0 * t_sec], 1)
+        )
+        wave = np.stack([np.cos(8 * np.pi * t_sec), -np.sin(8 * np.pi * t_sec)], 1)
+        d_b = pyrf.ts_vec_xyz(time, 0.01 * np.hstack([wave[:, ::-1], 0 * wave[:, :1]]))
+        e_xyz = pyrf.ts_vec_xyz(time, np.hstack([wave, 0 * wave[:, :1]]))
+
+        result = pyrf.ebsp(
+            e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0], de_dot_b0=True
+        )
+
+        e_power = result["ee_xxyyzzss"].data
+        self.assertTrue(np.isfinite(e_power).any())
+        self.assertLess(
+            np.nanmax(e_power[..., 2]),
+            1e-5 * np.nanmax(e_power[..., 0] + e_power[..., 1]),
+        )
+
+    def test_ebsp_fac_matrix_array(self):
+        # The FAC matrices as an array (rejected): as the matrices from B0 and
+        # r = [1, 0, 0]; a constant identity as no FAC
+        t_sec = np.arange(512) / 64.0
+        time = generate_timeline(64.0, 512)
+        angle = np.pi / 2 * t_sec / t_sec[-1]
+        b_0 = np.stack([10 * np.cos(angle), 10 * np.sin(angle), 5 + 0 * t_sec], 1)
+        b_hat = b_0 / np.linalg.norm(b_0, axis=1, keepdims=True)
+        perp_y = np.cross(b_hat, [1.0, 0.0, 0.0])
+        perp_y /= np.linalg.norm(perp_y, axis=1, keepdims=True)
+        perp_x = np.cross(perp_y, b_hat)
+        fac_matrix = np.stack([perp_x, perp_y, b_hat], 1)
+
+        rng = np.random.default_rng(0)
+        e_xyz = pyrf.ts_vec_xyz(time, rng.standard_normal((512, 3)))
+        d_b = pyrf.ts_vec_xyz(time, rng.standard_normal((512, 3)))
+        b_0 = pyrf.ts_vec_xyz(time, b_0)
+
+        def run(**kwargs):
+            return pyrf.ebsp(e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0], **kwargs)
+
+        keys = ["bb_xxyyzzss", "ee_xxyyzzss", "pf_xyz"]
+        ref = run()
+        for matrix in [fac_matrix, pyrf.ts_tensor_xyz(time, fac_matrix)]:
+            result = run(fac_matrix=matrix)
+
+            for k in keys:
+                np.testing.assert_allclose(result[k].data, ref[k].data, rtol=1e-10)
+
+        result, ref = run(fac_matrix=np.eye(3).tolist()), run(fac=False)
+        for k in keys:
+            np.testing.assert_allclose(result[k].data, ref[k].data, rtol=1e-12)
+
+        with self.assertRaises(ValueError):
+            run(fac_matrix=fac_matrix[:-1])
+
 
 class EndTestCase(unittest.TestCase):
     def test_end_input(self):
@@ -2139,6 +2282,23 @@ class ExtendTintTestCase(unittest.TestCase):
     @unpack
     def test_extend_tint_ouput(self, tint, ext):
         pyrf.extend_tint(tint, ext)
+
+    def test_extend_tint_values(self):
+        # Rounded to the ns: 0.0157 * 1e9 = 15699999.999999998 was truncated
+        tint = ["2019-01-01T00:00:00", "2019-01-01T00:00:01"]
+        result = pyrf.extend_tint(tint, [-0.0157, 0.0157])
+        self.assertListEqual(
+            result,
+            ["2018-12-31T23:59:59.984300000", "2019-01-01T00:00:01.015700000"],
+        )
+
+    def test_extend_tint_str(self):
+        # numpy.str_ items, documented as str
+        result = pyrf.extend_tint(["2019-01-01T00:00:00", "2019-01-01T00:00:01"])
+        self.assertTrue(all(type(t_) is str for t_ in result))
+        self.assertListEqual(
+            result, ["2018-12-31T23:59:00.000000000", "2019-01-01T00:01:01.000000000"]
+        )
 
 
 @ddt
@@ -2412,6 +2572,41 @@ class GradientTestCase(unittest.TestCase):
         result = pyrf.gradient(value)
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), list(value.shape))
+
+    def test_gradient_time_steps(self):
+        # 128 Hz with a 1 s gap and +-1 ms jitter: the actual time steps, not the
+        # median one (65 times the slope next to the gap, 15 % with the jitter)
+        rng = np.random.default_rng(0)
+        off = np.concatenate([np.arange(50), np.arange(50) + 178]) * 7812500
+        off += rng.integers(-1_000_000, 1_000_000, 100)
+        t_sec = off * 1e-9
+        time = np.datetime64("2019-01-01T00:00:00", "ns") + off.astype(
+            "timedelta64[ns]"
+        )
+        inp = pyrf.ts_vec_xyz(
+            time, np.outer(3.0 * t_sec + t_sec**2, [1.0, -2.0, 0.5]), {"UNITS": "nT"}
+        )
+        result = pyrf.gradient(inp)
+
+        # Exact inside (second order), first order at the ends
+        np.testing.assert_allclose(
+            result.data[1:-1],
+            np.outer(3.0 + 2.0 * t_sec[1:-1], [1.0, -2.0, 0.5]),
+            rtol=1e-9,
+        )
+        np.testing.assert_array_equal(result.time.data, time)
+        np.testing.assert_array_equal(result.comp.data, inp.comp.data)
+        self.assertEqual(result.attrs["UNITS"], "nT/s")
+        self.assertEqual(inp.attrs["UNITS"], "nT")
+
+    def test_gradient_regular(self):
+        # Evenly sampled: np.gradient divided by the time step, as before
+        inp = generate_ts(64.0, 100, tensor_order=1)
+        result = pyrf.gradient(inp)
+
+        np.testing.assert_allclose(
+            result.data, np.gradient(inp.data, axis=0) * 64.0, rtol=1e-6
+        )
 
 
 @ddt
@@ -3377,6 +3572,43 @@ class Iso86012DatetimeTestCase(unittest.TestCase):
 
 
 @ddt
+class Iso86012Datetime64TestCase(unittest.TestCase):
+    @data(
+        ["2019-01-01T00:00:00.000", "2019-01-01T00:10:00"],
+        ("2019-01-01T00:00:00.000", "2019-01-01T00:10:00"),
+        np.array(["2019-01-01T00:00:00.000", "2019-01-01T00:10:00"]),
+    )
+    def test_iso86012datetime64_array_like(self, value):
+        # Tuples raised TypeError
+        result = pyrf.iso86012datetime64(value)
+        expected = np.array(
+            ["2019-01-01T00:00:00", "2019-01-01T00:10:00"], dtype="datetime64[ns]"
+        )
+        np.testing.assert_array_equal(result, expected)
+
+    def test_iso86012datetime64_str(self):
+        # A single str raised TypeError; a 1-D array, as documented
+        result = pyrf.iso86012datetime64("2019-01-01T00:00:00.123456789")
+        np.testing.assert_array_equal(
+            result, np.array(["2019-01-01T00:00:00.123456789"], dtype="datetime64[ns]")
+        )
+
+    def test_iso86012datetime64_utc_designator(self):
+        # A trailing "Z" (UTC) made numpy warn (time zones deprecated)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.iso86012datetime64(["2019-01-01T00:00:00Z"])
+
+        np.testing.assert_array_equal(
+            result, np.array(["2019-01-01T00:00:00"], dtype="datetime64[ns]")
+        )
+
+    def test_iso86012datetime64_invalid(self):
+        with self.assertRaises(TypeError):
+            pyrf.iso86012datetime64(1.0)
+
+
+@ddt
 class Iso86012Unix(unittest.TestCase):
     @data(
         "2019-01-01T00:00:00.000000000",
@@ -3587,6 +3819,57 @@ class MeanTestCase(unittest.TestCase):
         h = 1.0 / np.sqrt(2.0)
         expected = np.array([[-1.0, -h, h]] * 3 + [[1.0, h, -h]] * 3)
         np.testing.assert_allclose(result.data, expected, atol=1e-12)
+
+
+class MagnetosphereTestCase(unittest.TestCase):
+    @staticmethod
+    def _r_zero(d_p, b_z):
+        # Subsolar magnetopause distance of Shue et al. (1998), in R_E
+        return (10.22 + 1.29 * np.tanh(0.184 * (b_z + 8.14))) * d_p ** (-1 / 6.6)
+
+    @staticmethod
+    def _standoff(r_zero, m_a, gamma=5 / 3):
+        # Bow shock standoff distance of Farris and Russell (1994), in R_E
+        ratio = ((gamma - 1) * m_a**2 + 2) / ((gamma + 1) * (m_a**2 - 1))
+        return r_zero * (1 + 1.1 * ratio)
+
+    def test_magnetosphere_default(self):
+        x_mp, y_mp = pyrf.magnetosphere("mp_shue1998")
+        x_bs, y_bs = pyrf.magnetosphere("bs")
+        r_zero = self._r_zero(1.7389104, 0.012695087)
+
+        self.assertAlmostEqual(x_mp[0], r_zero)
+        self.assertAlmostEqual(y_mp[0], 0.0)
+        self.assertAlmostEqual(x_bs[0], self._standoff(r_zero, 4.0))
+        self.assertAlmostEqual(y_bs[0], 0.0)
+        self.assertTrue(np.all(np.abs(x_mp) < 100))
+
+    def test_magnetosphere_omni_once(self):
+        # The bow shock downloaded the OMNI data a second time for the
+        # magnetopause standoff distance
+        time = np.datetime64("2019-09-14T07:00:00", "ns") + np.arange(
+            3
+        ) * np.timedelta64(1, "h")
+        omni = xr.Dataset(
+            {
+                "p": (["time"], np.full(3, 2.0)),
+                "bzgsm": (["time"], np.zeros(3)),
+                "ma": (["time"], np.full(3, 8.0)),
+            },
+            coords={"time": time},
+        )
+        module = sys.modules["pyrfu.pyrf.magnetosphere"]
+        tint = ["2019-09-14T07:00:00", "2019-09-14T10:00:00"]
+
+        with mock.patch.object(module, "get_omni_data", return_value=omni) as omni_get:
+            x_bs, _ = pyrf.magnetosphere("bs", tint)
+
+        omni_get.assert_called_once()
+        self.assertAlmostEqual(x_bs[0], self._standoff(self._r_zero(2.0, 0.0), 8.0))
+
+    def test_magnetosphere_unknown_model(self):
+        with self.assertRaises(NotImplementedError):
+            pyrf.magnetosphere("mp_bazinga")
 
 
 def _xy_series(x, y):
@@ -4038,6 +4321,52 @@ class RemoveRepeatedPointsTestCase(unittest.TestCase):
         self.assertEqual(len(inp["data"]), 7)
 
 
+class ReadCdfTestCase(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.directory = directory.name
+
+    def test_read_cdf_missing_file(self):
+        # pycdfpp returns None: AttributeError ('NoneType' object has no
+        # attribute 'items')
+        with self.assertRaisesRegex(FileNotFoundError, "missing.cdf"):
+            pyrf.read_cdf(os.path.join(self.directory, "missing.cdf"))
+
+    def test_read_cdf_not_a_cdf(self):
+        path = os.path.join(self.directory, "not_a_cdf.cdf")
+        with open(path, "w", encoding="utf-8") as file:
+            file.write("not a CDF file")
+
+        with self.assertRaises(FileNotFoundError):
+            pyrf.read_cdf(path)
+
+    def test_read_cdf_pycdfpp_versions(self):
+        # pycdfpp returns None (< 0.18) or raises (ValueError for a file that
+        # is not a CDF, 0.18): FileNotFoundError with any version
+        path = os.path.join(self.directory, "test.cdf")
+        for kwargs in [{"return_value": None}, {"side_effect": ValueError("bad")}]:
+            with mock.patch("pyrfu.pyrf.read_cdf.pycdfpp.load", **kwargs):
+                with self.assertRaisesRegex(FileNotFoundError, "test.cdf"):
+                    pyrf.read_cdf(path)
+
+    def test_read_cdf_values(self):
+        # Lower-case names, the epochs as stored (TT2000), size-1 dims removed
+        time = np.datetime64("2023-01-01T00:00:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(1, "s")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable("Epoch", time)
+        cdf.add_variable("DENSITY", np.array([[1.0], [2.0], [3.0]]))
+        path = os.path.join(self.directory, "density.cdf")
+        pycdfpp.save(cdf, path)
+
+        result = pyrf.read_cdf(path)
+
+        self.assertListEqual(sorted(result), ["density", "epoch"])
+        np.testing.assert_array_equal(result["density"].data, [1.0, 2.0, 3.0])
+        np.testing.assert_array_equal(pycdfpp.to_datetime64(result["epoch"].data), time)
+
+
 @ddt
 class ResampleTestCase(unittest.TestCase):
     @data(
@@ -4331,6 +4660,51 @@ class PviTestCase(unittest.TestCase):
         for scale in [0, -1, 1.5]:
             with self.assertRaises(ValueError):
                 pyrf.pvi(inp, scale)
+
+
+class Pvi4scTestCase(unittest.TestCase):
+    @staticmethod
+    def _fields(directions, n_pts=200):
+        # Fields of fixed directions and a common varying magnitude
+        rng = np.random.default_rng(0)
+        time = generate_timeline(1.0, n_pts)
+        scale = 10.0 + rng.random(n_pts)
+        return [
+            pyrf.ts_vec_xyz(time, scale[:, np.newaxis] * np.array(d, dtype=float))
+            for d in directions
+        ]
+
+    def test_pvi_4sc_shear_angles(self):
+        # Pairs 12, 13, 14, 23, 24, 34, in radians
+        b_mms = self._fields([[1, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]])
+        _, theta = pyrf.pvi_4sc(b_mms)
+        expected = [np.pi / 2, np.pi / 4, 0.0, np.pi / 4, np.pi / 2, np.pi / 4]
+
+        for theta_ij, value in zip(theta, expected):
+            np.testing.assert_allclose(theta_ij.data, value, atol=1e-7)
+
+    def test_pvi_4sc_parallel_fields(self):
+        # Cosines just above 1 by rounding gave arccos NaN instead of 0
+        rng = np.random.default_rng(1)
+        time = generate_timeline(1.0, 600)
+        b_data = rng.normal(size=(600, 3)) * [3, 5, 7] + [10, -20, 30]
+        b_mms = [pyrf.ts_vec_xyz(time, b_data.copy()) for _ in range(4)]
+        _, theta = pyrf.pvi_4sc(b_mms)
+
+        for theta_ij in theta:
+            self.assertFalse(np.isnan(theta_ij.data).any())
+            np.testing.assert_allclose(theta_ij.data, 0.0, atol=1e-7)
+
+    def test_pvi_4sc_constant_increment(self):
+        # A constant increment is its own mean: PVI = 1
+        b_mms = self._fields([[1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]])
+        b_mms = [
+            b_xyz.copy(data=np.ones((200, 3)) * k) for k, b_xyz in enumerate(b_mms)
+        ]
+        pvi, _ = pyrf.pvi_4sc(b_mms)
+
+        for pvi_ij in pvi:
+            np.testing.assert_allclose(pvi_ij.data, 1.0)
 
 
 @ddt
@@ -4662,6 +5036,74 @@ class ShockParametersTestCase(unittest.TestCase):
         )
 
 
+class SlidingDerivativeTestCase(unittest.TestCase):
+    def setUp(self):
+        # 8192 Hz, quadratic in time: the central differences are exact
+        self.time = np.datetime64("2019-01-01T00:00:00", "ns") + np.arange(
+            100
+        ) * np.timedelta64(122070, "ns")
+        self.t_sec = np.arange(100) * 122070e-9
+        self.slope = 2.0 + 6.0 * self.t_sec
+
+    def test_sliding_derivative_methods(self):
+        inp = pyrf.ts_scalar(self.time, 2.0 * self.t_sec + 3.0 * self.t_sec**2)
+
+        # Case-insensitive, NaN where the window or stencil is incomplete
+        for method, window_size, n_edge in [
+            ("window", 3, 1),
+            ("Window", 7, 3),
+            ("5PS", 3, 2),
+            ("9ps", 3, 4),
+        ]:
+            result = pyrf.sliding_derivative(
+                inp, window_size=window_size, method=method
+            )
+
+            self.assertIsInstance(result, xr.DataArray)
+            np.testing.assert_array_equal(result.time.data, self.time)
+            self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
+            self.assertTrue(np.isnan(result.data[:n_edge]).all())
+            self.assertTrue(np.isnan(result.data[-n_edge:]).all())
+            # Exact time differences (as float64 epochs, 1e-3 at 8192 Hz)
+            np.testing.assert_allclose(
+                result.data[n_edge:-n_edge], self.slope[n_edge:-n_edge], rtol=1e-10
+            )
+
+    def test_sliding_derivative_vector(self):
+        inp = pyrf.ts_vec_xyz(self.time, np.outer(self.t_sec, [1.0, -2.0, 3.0]))
+        result = pyrf.sliding_derivative(inp, method="5ps")
+
+        self.assertEqual(result.dims, inp.dims)
+        np.testing.assert_array_equal(result.comp.data, inp.comp.data)
+        self.assertEqual(result.attrs["TENSOR_ORDER"], 1)
+        np.testing.assert_allclose(
+            result.data[2:-2], np.tile([1.0, -2.0, 3.0], (96, 1)), rtol=1e-10
+        )
+
+    def test_sliding_derivative_t_units(self):
+        # datetime64 times are in seconds whatever t_units
+        inp = pyrf.ts_scalar(self.time, 2.0 * self.t_sec)
+        result = pyrf.sliding_derivative(inp, t_units="s")
+        np.testing.assert_allclose(result.data[1:-1], 2.0, rtol=1e-10)
+
+        # Numeric times in the given units
+        for t_units, scale in [("ns", 1e9), ("S", 1.0)]:
+            inp = xr.DataArray(
+                2.0 * self.t_sec, coords=[self.t_sec * scale], dims=["time"]
+            )
+            result = pyrf.sliding_derivative(inp, t_units=t_units)
+            np.testing.assert_allclose(result.data[1:-1], 2.0, rtol=1e-10)
+
+    def test_sliding_derivative_options(self):
+        inp = pyrf.ts_scalar(self.time, self.t_sec)
+
+        with self.assertRaises(ValueError):
+            pyrf.sliding_derivative(inp, t_units="ms")
+
+        with self.assertRaises(ValueError):
+            pyrf.sliding_derivative(inp, method="7ps")
+
+
 @ddt
 class SolidAngleTestCase(unittest.TestCase):
     @data(
@@ -4731,6 +5173,58 @@ class TsAppendTestCase(unittest.TestCase):
         result = pyrf.ts_append(value, value)
         self.assertIsInstance(result, xr.DataArray)
         self.assertEqual(result.ndim, value.ndim)
+
+    @staticmethod
+    def _series(start, n_t):
+        time = np.datetime64(start, "ns") + np.arange(n_t) * np.timedelta64(1, "s")
+        inp = pyrf.ts_scalar(
+            time,
+            np.arange(n_t, dtype=np.float64),
+            attrs={
+                "delta": np.full((n_t, 2), float(n_t)),
+                "vec": np.arange(n_t) + 10 * n_t,
+                "scalar": np.array(1.0),
+                "table": np.arange(4.0),
+                "name": "test",
+            },
+        )
+        inp.time.attrs = {"delta": np.full(n_t, n_t), "UNITS": "ns"}
+        return inp
+
+    def test_ts_append_attrs(self):
+        # Time-dependent array attributes appended along the time (2-D ones were
+        # appended along the second dimension), the others kept
+        for n_1 in [5, 3]:
+            inp0 = self._series("2019-01-01T00:00:00", 5)
+            inp1 = self._series("2019-01-01T00:00:05", n_1)
+            result = pyrf.ts_append(inp0, inp1)
+
+            self.assertEqual(len(result.time), 5 + n_1)
+            np.testing.assert_array_equal(
+                result.attrs["delta"],
+                np.vstack([np.full((5, 2), 5.0), np.full((n_1, 2), float(n_1))]),
+            )
+            np.testing.assert_array_equal(
+                result.attrs["vec"],
+                np.hstack([np.arange(5) + 50, np.arange(n_1) + 10 * n_1]),
+            )
+            self.assertEqual(result.attrs["scalar"].shape, ())
+            np.testing.assert_array_equal(result.attrs["table"], np.arange(4.0))
+            self.assertEqual(result.attrs["name"], "test")
+            np.testing.assert_array_equal(
+                result.time.attrs["delta"],
+                np.hstack([np.full(5, 5), np.full(n_1, n_1)]),
+            )
+            self.assertEqual(result.time.attrs["UNITS"], "ns")
+
+    def test_ts_append_attrs_missing(self):
+        # An array attribute only in the first input is kept as is (it raised KeyError)
+        inp0 = self._series("2019-01-01T00:00:00", 5)
+        inp1 = self._series("2019-01-01T00:00:05", 3)
+        del inp1.attrs["vec"]
+        result = pyrf.ts_append(inp0, inp1)
+
+        np.testing.assert_array_equal(result.attrs["vec"], np.arange(5) + 50)
 
 
 @ddt
@@ -4825,6 +5319,55 @@ class TimeClipTestCase(unittest.TestCase):
         self.assertEqual(inp.attrs["delta"].shape, (20, 2))
 
 
+class TsConvolveTestCase(unittest.TestCase):
+    def setUp(self):
+        self.time = generate_timeline(1.0, 6)
+        self.kernel = np.ones(3) / 3
+        # Moving average of 0, 1, 0, 1, 0, 1 with the edges extended
+        self.average = np.array([1.0, 1.0, 2.0, 1.0, 2.0, 2.0]) / 3
+
+    def test_ts_convolve_scalar(self):
+        for dtype in [np.int64, np.float64]:
+            inp = pyrf.ts_scalar(
+                self.time, np.array([0, 1, 0, 1, 0, 1], dtype=dtype), {"UNITS": "1"}
+            )
+            result = pyrf.ts_convolve(inp, self.kernel)
+
+            # Integers are not truncated
+            self.assertEqual(result.dtype, np.float64)
+            np.testing.assert_allclose(result.data, self.average)
+            np.testing.assert_array_equal(result.time.data, self.time)
+            self.assertEqual(result.attrs["UNITS"], "1")
+
+        # The precision of floats is kept
+        result = pyrf.ts_convolve(inp.astype(np.float32), self.kernel)
+        self.assertEqual(result.dtype, np.float32)
+
+    def test_ts_convolve_vector(self):
+        data = np.outer([0, 1, 0, 1, 0, 1], [1, 2, -3])
+        inp = pyrf.ts_vec_xyz(self.time, data)
+        result = pyrf.ts_convolve(inp, self.kernel)
+
+        np.testing.assert_array_equal(result.comp.data, inp.comp.data)
+        np.testing.assert_allclose(result.data, np.outer(self.average, [1, 2, -3]))
+
+    def test_ts_convolve_mode(self):
+        inp = pyrf.ts_scalar(self.time, np.array([0, 1, 0, 1, 0, 1]))
+        result = pyrf.ts_convolve(inp, self.kernel, mode="constant")
+
+        np.testing.assert_allclose(result.data[[0, -1]], [1.0 / 3, 1.0 / 3])
+
+    def test_ts_convolve_input(self):
+        with self.assertRaises(TypeError):
+            pyrf.ts_convolve(np.arange(6.0), self.kernel)
+
+        with self.assertRaises(ValueError):
+            pyrf.ts_convolve(xr.DataArray(np.arange(6.0), dims=["x"]), self.kernel)
+
+        with self.assertRaises(ValueError):
+            pyrf.ts_convolve(generate_ts(1.0, 6, tensor_order=2), self.kernel)
+
+
 @ddt
 class TsTimeTestCase(unittest.TestCase):
     def test_ts_skymap_input_type(self):
@@ -4843,6 +5386,29 @@ class TsTimeTestCase(unittest.TestCase):
     def test_ts_time_output(self, timeline):
         result = pyrf.ts_time(timeline, {})
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_ts_time_rounded(self):
+        # 6.5e-5 * 1e9 = 64999.99999999999 was truncated to 64 999 ns
+        result = pyrf.ts_time(np.array([6.5e-5, 1.1]))
+        expected = np.array([65000, 1_100_000_000]).astype("datetime64[ns]")
+        np.testing.assert_array_equal(result.data, expected)
+
+    @data(np.float32, np.float16)
+    def test_ts_time_float_types(self, dtype):
+        # Float types other than float64 raised TypeError
+        result = pyrf.ts_time(np.array([1.5, 2.0], dtype=dtype))
+        np.testing.assert_array_equal(
+            result.data,
+            np.array([1_500_000_000, 2_000_000_000]).astype("datetime64[ns]"),
+        )
+
+    @data("datetime64[us]", "datetime64[ms]", "datetime64[s]")
+    def test_ts_time_datetime64_units(self, dtype):
+        # datetime64 in another unit than ns raised TypeError
+        time = np.array(["2019-01-01T00:00:01", "2019-01-01T00:00:02"], dtype=dtype)
+        result = pyrf.ts_time(time)
+        self.assertEqual(result.dtype, np.dtype("datetime64[ns]"))
+        np.testing.assert_array_equal(result.data, time.astype("datetime64[ns]"))
 
 
 @ddt
@@ -4982,6 +5548,39 @@ class TsSkymapTestCase(unittest.TestCase):
 
         for k in result:
             self.assertEqual(result[k].attrs, {})
+
+    def test_ts_skymap_phi_1d(self):
+        # phi as (phi,) (IndexError): the same at all times, as (time, phi)
+        time = generate_timeline(64.0, 5)
+        args = (np.random.random((5, 32, 32, 16)), np.tile(np.arange(32.0), (5, 1)))
+        phi = 5.625 + 11.25 * np.arange(32)
+        result = pyrf.ts_skymap(time, *args, phi, np.arange(16.0))
+        expected = pyrf.ts_skymap(time, *args, np.tile(phi, (5, 1)), np.arange(16.0))
+
+        self.assertEqual(result.phi.dims, ("time", "idx1"))
+        xr.testing.assert_identical(result, expected)
+
+    def test_ts_skymap_energy_tables(self):
+        energy = np.vstack([np.arange(1.0, 33.0), np.arange(2.0, 34.0)])
+        args = (np.random.random((2, 32, 32, 16)), energy, np.ones((2, 32)))
+        result = pyrf.ts_skymap(generate_timeline(64.0, 2), *args, np.arange(16.0))
+        np.testing.assert_array_equal(result.attrs["energy0"], energy[0])
+        np.testing.assert_array_equal(result.attrs["energy1"], energy[1])
+
+        # A single time (it raised IndexError): one table
+        result = pyrf.ts_skymap(
+            generate_timeline(64.0, 1),
+            *[arg[:1] for arg in args],
+            np.arange(16.0),
+        )
+        self.assertEqual(result.data.shape, (1, 32, 32, 16))
+        np.testing.assert_array_equal(result.attrs["energy0"], energy[0])
+        np.testing.assert_array_equal(result.attrs["energy1"], energy[0])
+
+        with self.assertRaisesRegex(TypeError, "energy1"):
+            pyrf.ts_skymap(
+                generate_timeline(64.0, 2), *args, np.arange(16.0), energy1=[1.0]
+            )
 
 
 @ddt
@@ -6013,7 +6612,8 @@ class EbspPhysicsTestCase(unittest.TestCase):
 
     def test_ebsp_de_dot_b0_full_b_cadence(self):
         # Full B at a quarter of the cadence of E and dB raised ValueError
-        # ((4096,) vs (1024,)); a constant B resamples exactly
+        # ((4096,) vs (1024,)); a constant B resamples to the same values, to
+        # rounding (7e-15 with numpy 2.0 on Linux x86)
         e, b, b0 = self._wave()
         time = e.time.data
         b_full, b_full_16 = [
@@ -6024,8 +6624,9 @@ class EbspPhysicsTestCase(unittest.TestCase):
         res = pyrf.ebsp(e, b, b_full, b0, None, [0.5, 8], **options)
         res_16 = pyrf.ebsp(e, b, b_full_16, b0, None, [0.5, 8], **options)
 
+        # Same values and NaN masks
         for k in ["bb_xxyyzzss", "ee_xxyyzzss", "ee_ss", "pf_xyz", "pf_rtp"]:
-            np.testing.assert_array_equal(res_16[k].data, res[k].data)
+            np.testing.assert_allclose(res_16[k].data, res[k].data, rtol=1e-12)
 
     def test_ebsp_de_dot_b0_recovers_ez(self):
         # E perpendicular to a tilted full B: Ez from E.B = 0 and (Ex, Ey) gives

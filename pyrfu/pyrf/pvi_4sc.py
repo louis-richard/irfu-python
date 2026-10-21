@@ -11,7 +11,7 @@ from .norm import norm
 from .resample import resample
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -27,7 +27,7 @@ def pvi_4sc(b_mms):
             PVI_{ij}(t) = \sqrt{\frac{|\Delta B_{ij}(t)|^2}
             {\langle|\Delta B_{ij}|^2\rangle}}
 
-    where :math:`\Delta B_{ij}(t) = B_i(t) - B_i(t)` is the magnetic field
+    where :math:`\Delta B_{ij}(t) = B_i(t) - B_j(t)` is the magnetic field
     increments, the average :math:`\langle . \rangle` is taken over the
     whole interval, and :math:`i`, :math:`j` = 1,2,3,4 is the MMS spacecraft
     number.
@@ -48,12 +48,12 @@ def pvi_4sc(b_mms):
 
     Returns
     -------
-    pvi_ij : xarray.DataArray
+    pvi_ij : list of xarray.DataArray
         Time series of the Partial Variance of Increments for the 6
-        pairs of spacecraft.
-    alpha_ij : xarray.DataArray
-        Time series of the magnetic field shear angle for the 6 pairs
-        of spacecraft.
+        pairs of spacecraft (12, 13, 14, 23, 24, 34).
+    alpha_ij : list of xarray.DataArray
+        Time series of the magnetic field shear angle, in radians, for the
+        6 pairs of spacecraft.
 
     References
     ----------
@@ -79,7 +79,10 @@ def pvi_4sc(b_mms):
 
     # Compute magnetic field shear angle
     def shear_angle(b_i, b_j):
-        return np.arccos(dot(b_i, b_j) / (norm(b_i) * norm(b_j)))
+        # Clipped to [-1, 1]: rounding gave cosines just above 1 for parallel
+        # fields, and arccos NaN instead of 0
+        cos_ij = dot(b_i, b_j) / (norm(b_i) * norm(b_j))
+        return np.arccos(cos_ij.clip(-1.0, 1.0))
 
     theta_ij = []
     for i, j in zip(i_indices, j_indices):

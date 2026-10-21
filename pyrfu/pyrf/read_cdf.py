@@ -7,7 +7,7 @@ import pycdfpp
 import xarray as xr
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.13"
@@ -28,13 +28,33 @@ def read_cdf(path: str) -> dict:
     dict
         Hash table with fields contained in the .cdf file.
 
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist or cannot be read as a CDF file.
+
+    Notes
+    -----
+    The variables are returned as stored, with lower-case names: the epochs
+    are not decoded (TT2000 nanoseconds, see ``pycdfpp.to_datetime64``), the
+    dimensions of size 1 are removed (``numpy.squeeze``), and the dimensions
+    are numbered (``dim_0``, ``dim_1``, ...) without the CDF attributes.
+
     """
 
     # Initialize output dictionary
     out_dict = {}
 
-    # Load file
-    file = pycdfpp.load(path)
+    # Load file: pycdfpp returns None for a missing or unreadable file, or
+    # raises (FileNotFoundError, or ValueError for a file that is not a CDF)
+    # in recent versions (0.18)
+    try:
+        file = pycdfpp.load(path)
+    except (FileNotFoundError, ValueError):
+        file = None
+
+    if file is None:
+        raise FileNotFoundError(f"cannot read the CDF file {path}")
 
     # Get keys (a.k.a zvariables) from file
     keys = list(map(lambda x: x[0], file.items()))

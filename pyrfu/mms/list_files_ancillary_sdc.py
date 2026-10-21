@@ -12,7 +12,7 @@ import numpy as np
 from .list_files_sdc import SDC_TIMEOUT, _login_lasp
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.11"
@@ -30,7 +30,8 @@ def _construct_url_json_list(tint, mms_id, product, lasp_url):
     start_date = (tint[0] - timedelta(days=1)).strftime("%Y-%m-%d")
     end_date = (tint[1] + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    url = f"{lasp_url}/file_info/ancillary"
+    # lasp_url ends with "/" (it was doubled)
+    url = f"{lasp_url}file_info/ancillary"
     url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
 
     url = f"{url}&product={product}"

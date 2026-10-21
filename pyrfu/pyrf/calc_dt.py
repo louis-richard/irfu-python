@@ -28,12 +28,17 @@ def calc_dt(inp: Union[Dataset, DataArray]) -> float:
     Returns
     -------
     float
-        Time step in seconds.
+        Time step in seconds, the median of the time steps; NaN for fewer
+        than 2 samples (undefined).
 
     """
     # Check input type
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
+
+    # One sample: no time step (and no warning from the median of nothing)
+    if len(inp.time) < 2:
+        return np.nan
 
     # Convert time to nanoseconds
     time_datetime64 = inp.time.data.astype("datetime64[ns]")

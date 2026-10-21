@@ -336,6 +336,18 @@ class CalcEpsilonTestCase(unittest.TestCase):
         eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
+    def test_calc_epsilon_phi_1d(self):
+        # phi as (phi,) (IndexError): as with phi as (time, phi)
+        vdf, n_s = self._maxwellian()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+        expected = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+
+        vdf["phi"] = ("idx1", vdf.phi.data[0])
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        np.testing.assert_allclose(eps.data, expected.data, rtol=1e-12)
+
     def test_calc_epsilon_straddling_sc_pot(self):
         # Channels whose lower edge is below the spacecraft potential used to be
         # dropped (sqrt of a negative energy is NaN); compare with a direct sum
@@ -803,6 +815,43 @@ class DbGetTsTestCase(unittest.TestCase):
                 mms.db_get_ts("mms1_fgm_srvy_l2", "b", ["a", "b"], source="sdc")
 
         session.close.assert_not_called()  # shared, cached session
+
+    def test_db_get_ts_value_verbose(self):
+        # The time series of the variable, the loading logged when verbose
+        ts = self._ts(0, 1.0)
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=(["file"], None, {})
+        ):
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=b"cdf"
+            ):
+                with mock.patch.object(self.module, "get_ts", return_value=ts):
+                    with self.assertLogs("pyrfu", level="INFO") as logs:
+                        out = mms.db_get_ts(
+                            "mms1_fgm_srvy_l2", "b", ["a", "b"], verbose=True
+                        )
+
+        xr.testing.assert_identical(out, ts)
+        self.assertTrue(any("Loading b" in line for line in logs.output))
+
+    def test_db_get_ts_read_error(self):
+        # A variable that cannot be read is logged with its file and re-raised
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=(["file.cdf"], None, {})
+        ):
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=b"cdf"
+            ):
+                with mock.patch.object(
+                    self.module, "get_ts", side_effect=KeyError("b")
+                ):
+                    with self.assertLogs("pyrfu", level="ERROR") as logs:
+                        with self.assertRaises(KeyError):
+                            mms.db_get_ts(
+                                "mms1_fgm_srvy_l2", "b", ["a", "b"], verbose=False
+                            )
+
+        self.assertTrue(any("file.cdf" in line for line in logs.output))
 
     def test_resolve_source(self):
         with mock.patch.object(
@@ -1653,6 +1702,20 @@ class MakeModelVDFTestCase(unittest.TestCase):
             - (v_z - v_d[2]) ** 2 / vth_par2
         )
         return f_ * 1e18
+
+    def test_make_model_vdf_phi_1d(self):
+        # phi as (phi,) (IndexError): as with phi as (time, phi), phi unchanged
+        vdf = self._skymap("ions", 10.0, 3e4)
+        b_xyz, n_s, v_xyz, t_xyz = self._moments(
+            vdf.time.data, 2.0, [100.0, 0.0, 0.0], 1000.0, 500.0
+        )
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(3))
+        expected = mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+
+        vdf["phi"] = ("idx1", vdf.phi.data[0])
+        result = mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+        np.testing.assert_allclose(result.data.data, expected.data.data, rtol=1e-12)
+        self.assertEqual(result.phi.dims, ("idx1",))
 
     def test_make_model_vdf_b_along_x(self):
         # B exactly along x gave an all-NaN model (through rotate_tensor). An
@@ -4920,6 +4983,129 @@ def _sdc_session(chunks=(b"cdf", b"data"), status_error=None, stream_error=None)
     return session
 
 
+def _write_config(test_case, local):
+    # A temporary MMS configuration, never the user's
+    directory = tempfile.TemporaryDirectory()
+    test_case.addCleanup(directory.cleanup)
+    path = os.path.join(directory.name, "mms_config.json")
+    with open(path, "w", encoding="utf-8") as file:
+        json.dump({"local": local}, file)
+    return path
+
+
+class DownloadAncillaryTestCase(unittest.TestCase):
+    _FILE = "MMS1_DEFATT_2019257_2019258.V00"
+
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.download_ancillary")
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        self.root = root.name
+        files = [{"file_name": self._FILE, "url": "url", "file_size": 7}]
+        for name, value in [
+            ("list_files_ancillary_sdc", files),
+            ("_login_lasp", (_sdc_session(), {}, "")),
+        ]:
+            patch = mock.patch.object(self.module, name, return_value=value)
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def _check(self):
+        out_file = os.path.join(self.root, "ancillary", "mms1", "defatt", self._FILE)
+        with open(out_file, "rb") as file:
+            self.assertEqual(file.read(), b"cdfdata")
+
+    def test_download_ancillary(self):
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        self.module.download_ancillary("defatt", tint, 1, self.root)
+        self._check()
+
+    def test_download_ancillary_default_path(self):
+        # The local data path of the configuration
+        config = _write_config(self, self.root)
+        with mock.patch.object(self.module, "MMS_CFG_PATH", config):
+            tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+            self.module.download_ancillary("defatt", tint, 1)
+        self._check()
+
+    def test_download_ancillary_missing_path(self):
+        with self.assertRaises(FileNotFoundError):
+            self.module.download_ancillary(
+                "defatt", ["2019-09-14T07:54:00", "2019-09-14T08:11:00"], 1, "/bazinga"
+            )
+
+
+class CopyFilesTestCase(unittest.TestCase):
+    _SCI = "mms1/fgm/srvy/l2/2019/09/mms1_fgm_srvy_l2_20190914_v5.211.0.cdf"
+    _ANC = "ancillary/mms1/defatt/MMS1_DEFATT_2019257_2019258.V00"
+    _TINT = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+
+    def setUp(self):
+        source, target = tempfile.TemporaryDirectory(), tempfile.TemporaryDirectory()
+        self.addCleanup(source.cleanup)
+        self.addCleanup(target.cleanup)
+        self.source, self.target = source.name, target.name
+
+        for rel_path in [self._SCI, self._ANC]:
+            path = os.path.join(self.source, *rel_path.split("/"))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "wb") as file:
+                file.write(b"cdfdata")
+
+    def _check(self, rel_path):
+        # Same relative path in the target, same content
+        with open(os.path.join(self.target, *rel_path.split("/")), "rb") as file:
+            self.assertEqual(file.read(), b"cdfdata")
+
+    def test_copy_files(self):
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        mms.copy_files(var, self._TINT, 1, self.target, self.source)
+        self._check(self._SCI)
+
+    def test_copy_files_ancillary(self):
+        mms.copy_files_ancillary("defatt", self._TINT, 1, self.target, self.source)
+        self._check(self._ANC)
+
+    def test_copy_files_default_path(self):
+        # The local data path of the configuration
+        config = _write_config(self, self.source)
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+
+        for name, call, rel_path in [
+            (
+                "copy_files",
+                lambda: mms.copy_files(var, self._TINT, 1, self.target),
+                self._SCI,
+            ),
+            (
+                "copy_files_ancillary",
+                lambda: mms.copy_files_ancillary("defatt", self._TINT, 1, self.target),
+                self._ANC,
+            ),
+        ]:
+            module = sys.modules[f"pyrfu.mms.{name}"]
+            with mock.patch.object(module, "MMS_CFG_PATH", config):
+                call()
+            self._check(rel_path)
+
+    def test_copy_files_missing_paths(self):
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        missing = os.path.join(self.target, "missing")
+
+        for call in [
+            lambda: mms.copy_files(var, self._TINT, 1, missing, self.source),
+            lambda: mms.copy_files(var, self._TINT, 1, self.target, missing),
+            lambda: mms.copy_files_ancillary(
+                "defatt", self._TINT, 1, missing, self.source
+            ),
+            lambda: mms.copy_files_ancillary(
+                "defatt", self._TINT, 1, self.target, missing
+            ),
+        ]:
+            with self.assertRaises(FileNotFoundError):
+                call()
+
+
 class DownloadDataTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.download_data")
@@ -7861,6 +8047,44 @@ class TokenizeTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not supported"):
             mms.tokenize(var_str)
 
+    @data(
+        "B_gse_fgm_srvy_l2",
+        "b_GSE_fgm_srvy_l2",
+        "B_GSE_FGM_SRVY_L2",
+        "Ti_gse_fpi_fast_l2",
+        "V_edp_brst_l2",
+    )
+    def test_tokenize_case(self, var_str):
+        # Any case, as the irfu-matlab names of the docstring examples (they
+        # raised ValueError: invalid parameter)
+        self.assertDictEqual(mms.tokenize(var_str), mms.tokenize(var_str.lower()))
+
+    @data(
+        ("b_fgm_srvy", "not a variable key"),
+        ("b_gse_fgm_srvy_l2_extra", "not a variable key"),
+        ("bx_gse_fgm_srvy_l2", "invalid parameter 'bx'"),
+        ("b_xyz_fgm_srvy_l2", "invalid coord. sys. 'xyz'"),
+        ("b_gse_fgx_srvy_l2", "invalid instrument 'fgx'"),
+        ("b_gse_fgm_srvx_l2", "invalid sampling mode 'srvx'"),
+        ("b_gse_fgm_srvy_l9", "invalid data level 'l9'"),
+    )
+    @unpack
+    def test_tokenize_invalid(self, var_str, message):
+        # ValueError naming the part (the number of parts and the parameter
+        # raised AssertionError)
+        with self.assertRaisesRegex(ValueError, re.escape(message)):
+            mms.tokenize(var_str)
+
+    def test_tokenize_reads_keys_once(self):
+        module = sys.modules["pyrfu.mms.tokenize"]
+        module._mms_keys.cache_clear()
+
+        with mock.patch("builtins.open", wraps=open) as opened:
+            for _ in range(3):
+                mms.tokenize("b_gse_fgm_srvy_l2")
+
+        self.assertEqual(opened.call_count, 1)
+
 
 @ddt
 class ListFilesTestCase(unittest.TestCase):
@@ -7936,6 +8160,78 @@ class ListFilesTestCase(unittest.TestCase):
             ],
         )
 
+    def test_list_files_brst_across_midnight(self):
+        # A segment starting at 23:59 the day before covers the start of the
+        # interval: it is in the previous day directory, which was not listed
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fgm/brst/l2/2017/07/11",
+                ["mms1_fgm_brst_l2_20170711235900_v5.87.0.cdf"],
+            )
+            self._touch(
+                root,
+                "mms1/fgm/brst/l2/2017/07/12",
+                ["mms1_fgm_brst_l2_20170712000500_v5.87.0.cdf"],
+            )
+            var = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
+            result_start = mms.list_files(
+                ["2017-07-12T00:00:30", "2017-07-12T00:01:00"], 1, var, root
+            )
+            result_both = mms.list_files(
+                ["2017-07-12T00:00:30", "2017-07-12T00:06:00"], 1, var, root
+            )
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result_start],
+            ["mms1_fgm_brst_l2_20170711235900_v5.87.0.cdf"],
+        )
+        self.assertListEqual(
+            [os.path.basename(f) for f in result_both],
+            [
+                "mms1_fgm_brst_l2_20170711235900_v5.87.0.cdf",
+                "mms1_fgm_brst_l2_20170712000500_v5.87.0.cdf",
+            ],
+        )
+
+    def test_list_files_month_boundary(self):
+        # A file starting on the last evening of the previous month (in the
+        # previous month directory) covers the start of the interval
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fpi/fast/l2/dis-moms/2017/06",
+                ["mms1_fpi_fast_l2_dis-moms_20170630230000_v3.4.0.cdf"],
+            )
+            var = {"inst": "fpi", "tmmode": "fast", "lev": "l2", "dtype": "dis-moms"}
+            tint = ["2017-07-01T00:10:00", "2017-07-01T00:20:00"]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["mms1_fpi_fast_l2_dis-moms_20170630230000_v3.4.0.cdf"],
+        )
+
+    def test_list_files_walks_each_directory_once(self):
+        # The month directory of survey data was walked for every day
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fgm/srvy/l2/2019/09",
+                ["mms1_fgm_srvy_l2_20190912_v5.211.0.cdf"],
+            )
+            var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+            tint = ["2019-09-10T00:00:00", "2019-09-15T00:00:00"]
+
+            with mock.patch("os.walk", wraps=os.walk) as walk:
+                result = mms.list_files(tint, 1, var, root)
+
+        self.assertEqual(walk.call_count, 1)
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["mms1_fgm_srvy_l2_20190912_v5.211.0.cdf"],
+        )
+
 
 class _FakeSdcResponse:
     def __init__(self, files, error=None):
@@ -7996,6 +8292,8 @@ class ListFilesSdcTestCase(unittest.TestCase):
             _, session = self._list(tint, 2, var_str, [])
             path, query = _sdc_query(session.urls[0])
             self.assertTrue(path.endswith("file_info/science"))
+            # The base URL ends with "/": it was doubled (".../v1//file_info")
+            self.assertNotIn("//", path)
             self.assertEqual(query.get("descriptor"), descriptor)
             expected = {
                 "start_date": "2019-09-14",
@@ -8056,6 +8354,8 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
 
         path, query = _sdc_query(session.urls[0])
         self.assertTrue(path.endswith("file_info/ancillary"))
+        # The base URL ends with "/": it was doubled (".../v1//file_info")
+        self.assertNotIn("//", path)
         self.assertDictEqual(
             {k: query[k] for k in ["start_date", "end_date", "sc_id", "product"]},
             {
@@ -8184,6 +8484,54 @@ class LoadAncillaryTestCase(unittest.TestCase):
 
         self.assertEqual(len(result.time), 2)
         np.testing.assert_allclose(result.z_dec.data, [66.080, 66.086])
+
+    def test_load_ancillary_defatt_repeats_and_overlap(self):
+        # DEFATT repeats times by design and consecutive files overlap: the
+        # times are strictly increasing, with the last of the repeated rows of
+        # a file and, in an overlap, the earlier file, as irfu-matlab
+        # (mms_load_ancillary, mms_db)
+        def row(time, z_dec):
+            return (
+                _DEFATT_ROWS[0]
+                .replace("2019-257T00:00:00.012", time)
+                .replace("66.080", z_dec)
+            )
+
+        header = ["META_START"] * 48 + ["COMMENT   Time (UTC)    Elapsed Sec"]
+        self._write(
+            "defatt",
+            "MMS1_DEFATT_2019256_2019257.V00",
+            header
+            + [
+                row("2019-256T23:59:59.000", "1.000"),
+                row("2019-257T00:00:00.012", "1.500"),
+                row("2019-257T00:00:00.012", "2.000"),
+            ]
+            + ["DATA_STOP"],
+        )
+        self._write(
+            "defatt",
+            "MMS1_DEFATT_2019257_2019258.V00",
+            header
+            + [
+                row("2019-257T00:00:00.012", "3.000"),
+                row("2019-257T00:00:00.562", "4.000"),
+            ]
+            + ["DATA_STOP"],
+        )
+        tint = ["2019-09-13T23:00:00", "2019-09-14T01:00:00"]
+        result = mms.load_ancillary("defatt", tint, 1, False, self.root)
+
+        expected_time = np.array(
+            [
+                "2019-09-13T23:59:59.000",
+                "2019-09-14T00:00:00.012",
+                "2019-09-14T00:00:00.562",
+            ],
+            dtype="datetime64[ns]",
+        )
+        np.testing.assert_array_equal(result.time.data, expected_time)
+        np.testing.assert_allclose(result.z_dec.data, [1.0, 2.0, 4.0])
 
     def test_load_ancillary_no_file(self):
         with self.assertRaises(FileNotFoundError):
