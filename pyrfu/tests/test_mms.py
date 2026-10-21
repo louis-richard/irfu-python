@@ -804,6 +804,43 @@ class DbGetTsTestCase(unittest.TestCase):
 
         session.close.assert_not_called()  # shared, cached session
 
+    def test_db_get_ts_value_verbose(self):
+        # The time series of the variable, the loading logged when verbose
+        ts = self._ts(0, 1.0)
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=(["file"], None, {})
+        ):
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=b"cdf"
+            ):
+                with mock.patch.object(self.module, "get_ts", return_value=ts):
+                    with self.assertLogs("pyrfu", level="INFO") as logs:
+                        out = mms.db_get_ts(
+                            "mms1_fgm_srvy_l2", "b", ["a", "b"], verbose=True
+                        )
+
+        xr.testing.assert_identical(out, ts)
+        self.assertTrue(any("Loading b" in line for line in logs.output))
+
+    def test_db_get_ts_read_error(self):
+        # A variable that cannot be read is logged with its file and re-raised
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=(["file.cdf"], None, {})
+        ):
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=b"cdf"
+            ):
+                with mock.patch.object(
+                    self.module, "get_ts", side_effect=KeyError("b")
+                ):
+                    with self.assertLogs("pyrfu", level="ERROR") as logs:
+                        with self.assertRaises(KeyError):
+                            mms.db_get_ts(
+                                "mms1_fgm_srvy_l2", "b", ["a", "b"], verbose=False
+                            )
+
+        self.assertTrue(any("file.cdf" in line for line in logs.output))
+
     def test_resolve_source(self):
         with mock.patch.object(
             self.module, "_load_config", return_value={"default": "local"}
@@ -4918,6 +4955,129 @@ def _sdc_session(chunks=(b"cdf", b"data"), status_error=None, stream_error=None)
     session.get.return_value = response
     response.__enter__.return_value = response
     return session
+
+
+def _write_config(test_case, local):
+    # A temporary MMS configuration, never the user's
+    directory = tempfile.TemporaryDirectory()
+    test_case.addCleanup(directory.cleanup)
+    path = os.path.join(directory.name, "mms_config.json")
+    with open(path, "w", encoding="utf-8") as file:
+        json.dump({"local": local}, file)
+    return path
+
+
+class DownloadAncillaryTestCase(unittest.TestCase):
+    _FILE = "MMS1_DEFATT_2019257_2019258.V00"
+
+    def setUp(self):
+        self.module = importlib.import_module("pyrfu.mms.download_ancillary")
+        root = tempfile.TemporaryDirectory()
+        self.addCleanup(root.cleanup)
+        self.root = root.name
+        files = [{"file_name": self._FILE, "url": "url", "file_size": 7}]
+        for name, value in [
+            ("list_files_ancillary_sdc", files),
+            ("_login_lasp", (_sdc_session(), {}, "")),
+        ]:
+            patch = mock.patch.object(self.module, name, return_value=value)
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def _check(self):
+        out_file = os.path.join(self.root, "ancillary", "mms1", "defatt", self._FILE)
+        with open(out_file, "rb") as file:
+            self.assertEqual(file.read(), b"cdfdata")
+
+    def test_download_ancillary(self):
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        self.module.download_ancillary("defatt", tint, 1, self.root)
+        self._check()
+
+    def test_download_ancillary_default_path(self):
+        # The local data path of the configuration
+        config = _write_config(self, self.root)
+        with mock.patch.object(self.module, "MMS_CFG_PATH", config):
+            tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+            self.module.download_ancillary("defatt", tint, 1)
+        self._check()
+
+    def test_download_ancillary_missing_path(self):
+        with self.assertRaises(FileNotFoundError):
+            self.module.download_ancillary(
+                "defatt", ["2019-09-14T07:54:00", "2019-09-14T08:11:00"], 1, "/bazinga"
+            )
+
+
+class CopyFilesTestCase(unittest.TestCase):
+    _SCI = "mms1/fgm/srvy/l2/2019/09/mms1_fgm_srvy_l2_20190914_v5.211.0.cdf"
+    _ANC = "ancillary/mms1/defatt/MMS1_DEFATT_2019257_2019258.V00"
+    _TINT = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+
+    def setUp(self):
+        source, target = tempfile.TemporaryDirectory(), tempfile.TemporaryDirectory()
+        self.addCleanup(source.cleanup)
+        self.addCleanup(target.cleanup)
+        self.source, self.target = source.name, target.name
+
+        for rel_path in [self._SCI, self._ANC]:
+            path = os.path.join(self.source, *rel_path.split("/"))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "wb") as file:
+                file.write(b"cdfdata")
+
+    def _check(self, rel_path):
+        # Same relative path in the target, same content
+        with open(os.path.join(self.target, *rel_path.split("/")), "rb") as file:
+            self.assertEqual(file.read(), b"cdfdata")
+
+    def test_copy_files(self):
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        mms.copy_files(var, self._TINT, 1, self.target, self.source)
+        self._check(self._SCI)
+
+    def test_copy_files_ancillary(self):
+        mms.copy_files_ancillary("defatt", self._TINT, 1, self.target, self.source)
+        self._check(self._ANC)
+
+    def test_copy_files_default_path(self):
+        # The local data path of the configuration
+        config = _write_config(self, self.source)
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+
+        for name, call, rel_path in [
+            (
+                "copy_files",
+                lambda: mms.copy_files(var, self._TINT, 1, self.target),
+                self._SCI,
+            ),
+            (
+                "copy_files_ancillary",
+                lambda: mms.copy_files_ancillary("defatt", self._TINT, 1, self.target),
+                self._ANC,
+            ),
+        ]:
+            module = sys.modules[f"pyrfu.mms.{name}"]
+            with mock.patch.object(module, "MMS_CFG_PATH", config):
+                call()
+            self._check(rel_path)
+
+    def test_copy_files_missing_paths(self):
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        missing = os.path.join(self.target, "missing")
+
+        for call in [
+            lambda: mms.copy_files(var, self._TINT, 1, missing, self.source),
+            lambda: mms.copy_files(var, self._TINT, 1, self.target, missing),
+            lambda: mms.copy_files_ancillary(
+                "defatt", self._TINT, 1, missing, self.source
+            ),
+            lambda: mms.copy_files_ancillary(
+                "defatt", self._TINT, 1, self.target, missing
+            ),
+        ]:
+            with self.assertRaises(FileNotFoundError):
+                call()
 
 
 class DownloadDataTestCase(unittest.TestCase):
