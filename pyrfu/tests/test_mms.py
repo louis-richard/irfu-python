@@ -2913,6 +2913,51 @@ class PsdMomentsTestCase(unittest.TestCase):
         )
         self.assertTrue(np.all(result[0] < self._moments(vdf, sc_pot)[0]))
 
+    def test_psd_moments_en_channels_time_series(self):
+        # A time series of first channels (as partidxi_fpi_*_l2): at each time
+        # the channels from it to the last, as energy_range with each time's
+        # own range
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0], n_t=4)
+        first = np.array([0, 3, 11, 3], dtype=np.uint16)
+        energy = vdf.energy.data[0]
+        e_min = [0.0 if k == 0 else (energy[k - 1] + energy[k]) / 2 for k in first]
+        e_range = np.stack([e_min, np.full(4, 1e6)], axis=1)
+
+        result = self._moments(
+            vdf, sc_pot, en_channels=pyrf.ts_scalar(vdf.time.data, first)
+        )
+        self._assert_moments_equal(
+            result, self._moments(vdf, sc_pot, energy_range=e_range)
+        )
+
+        # A constant series is en_channels=[k, 32]
+        for k in [0, 11]:
+            constant = pyrf.ts_scalar(vdf.time.data, np.full(4, k, dtype=np.uint16))
+            self._assert_moments_equal(
+                self._moments(vdf, sc_pot, en_channels=constant),
+                self._moments(vdf, sc_pot, en_channels=[k, 32]),
+            )
+
+        # On other times: the nearest sample, not interpolated
+        shifted = pyrf.ts_scalar(vdf.time.data + np.timedelta64(1, "ms"), first)
+        self._assert_moments_equal(
+            self._moments(vdf, sc_pot, en_channels=shifted), result
+        )
+
+    def test_psd_moments_en_channels_time_series_invalid(self):
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        time = vdf.time.data
+
+        for first in [
+            pyrf.ts_scalar(time, np.array([0, 32])),
+            pyrf.ts_scalar(time, np.array([-1, 0])),
+            xr.DataArray(
+                np.zeros((2, 2)), coords=[time, [0, 1]], dims=["time", "comp"]
+            ),
+        ]:
+            with self.assertRaises(ValueError):
+                mms.psd_moments(vdf, sc_pot, en_channels=first)
+
     @staticmethod
     def _electrons_through_potential(t_ev, sc_pot, energy01=False, rate="brst"):
         # Isotropic electron Maxwellian (1 cm^-3, t_ev) seen through a positive

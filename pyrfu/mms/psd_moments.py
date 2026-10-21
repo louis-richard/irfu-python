@@ -286,6 +286,25 @@ def _energy_edges(vdf, energy, energy0, energy1, step_table, flag_same_e):
     return energy_upper, energy_lower
 
 
+def _first_channel_mask(vdf, n_e, first_channel):
+    r"""Channels from a time series of first channels (e.g. the recommended
+    energy index of the FPI partial moments) to the last, as a boolean (time,
+    energy) array."""
+    if not np.array_equal(first_channel.time.data, vdf.time.data):
+        # Nearest sample: the indices are integers, not to be interpolated
+        first_channel = first_channel.sel(time=vdf.time.data, method="nearest")
+
+    start = np.asarray(first_channel.data)
+
+    if start.shape != (len(vdf.time),) or np.any((start < 0) | (start >= n_e)):
+        raise ValueError(
+            f"en_channels as a time series must be a scalar time series of "
+            f"channel indices in [0, {n_e})"
+        )
+
+    return np.arange(n_e)[np.newaxis, :] >= start.astype(np.int64)[:, np.newaxis]
+
+
 def _energy_mask(vdf, energy, kwargs):
     r"""Energy channels to integrate over at each time step, as a boolean
     (time, energy) array, from the energy_range or en_channels options."""
@@ -295,7 +314,12 @@ def _energy_mask(vdf, energy, kwargs):
         raise ValueError("Use either energy_range or en_channels, not both")
 
     if "energy_range" not in kwargs:
-        start, stop = kwargs.get("en_channels", [0, n_e])
+        en_channels = kwargs.get("en_channels", [0, n_e])
+
+        if isinstance(en_channels, xr.DataArray):
+            return _first_channel_mask(vdf, n_e, en_channels)
+
+        start, stop = en_channels
         use_energy = np.zeros((n_t, n_e), dtype=np.bool_)
         use_energy[:, start:stop] = True
         return use_energy
@@ -512,10 +536,18 @@ def psd_moments(vdf, sc_pot, **kwargs):
     no_sc_pot : bool
         Set to 1 to set spacecraft potential to zero. Calculates moments
         without correcting for spacecraft potential.
-    en_channels : array_like
-        Energy channels to integrate over, [start, stop) 0-based indices as a
-        Python slice (default [0, 32], all the channels; unlike irfu-matlab's
-        1-based inclusive [min max]). Can't be used with energy_range.
+    en_channels : array_like or xarray.DataArray
+        Energy channels to integrate over:
+
+        * [start, stop): 0-based indices as a Python slice (default [0, 32],
+          all the channels; unlike irfu-matlab's 1-based inclusive
+          [min max]);
+        * a time series of first channels, e.g. FPI's recommended energy
+          index ``partidxi_fpi_brst_l2``: at each time step, the channels
+          from it to the last. Its nearest sample is used at each time of
+          vdf.
+
+        Can't be used with energy_range.
     partial_moments : numpy.ndarray or xarray.DataArray
         Use a binary array to select which psd points are used in the moments
         calculation. `partial_moments` must be a binary array (1s and 0s,
@@ -562,7 +594,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
         both energy_range and en_channels are given, if angle_integration
         is not "midpoint" or "exact", or if pitch_angle_range is given without
         b_xyz, is not [min, max] within [0, 180], pitch_angle_weight is not
-        "centre" or "fraction", or the units of `vdf` are not supported.
+        "centre" or "fraction", the units of `vdf` are not supported, or
+        en_channels as a time series is not of channel indices.
 
     Notes
     -----
@@ -582,10 +615,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
     file): 0, all the channels, in dense plasma, but up to 11 (100 eV) in the
     tenuous plasma sheet, where the lowest channels can hold most of the
     density (3.8 times the FPI density on 2017-07-11, MMS1). Use
-    ``en_channels=[index, 32]`` to compare the ion moments with them (within
-    4 % on the magnetopause, magnetosheath, bow shock, solar wind and plasma
-    sheet intervals tested). The penetrating-radiation background
-    (`remove_idist_background`) is another correction, which is small there.
+    ``en_channels=mms.get_data("partidxi_fpi_brst_l2", tint, mms_id)`` to
+    compare the ion moments with them, also across files with different
+    indices (within 4 % on the magnetopause, magnetosheath, bow shock, solar
+    wind and plasma sheet intervals tested). The penetrating-radiation
+    background (`remove_idist_background`) is another correction, which is
+    small there.
 
     Examples
     --------
