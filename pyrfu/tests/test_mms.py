@@ -336,6 +336,18 @@ class CalcEpsilonTestCase(unittest.TestCase):
         eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
+    def test_calc_epsilon_phi_1d(self):
+        # phi as (phi,) (IndexError): as with phi as (time, phi)
+        vdf, n_s = self._maxwellian()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+        expected = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+
+        vdf["phi"] = ("idx1", vdf.phi.data[0])
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        np.testing.assert_allclose(eps.data, expected.data, rtol=1e-12)
+
     def test_calc_epsilon_straddling_sc_pot(self):
         # Channels whose lower edge is below the spacecraft potential used to be
         # dropped (sqrt of a negative energy is NaN); compare with a direct sum
@@ -1690,6 +1702,20 @@ class MakeModelVDFTestCase(unittest.TestCase):
             - (v_z - v_d[2]) ** 2 / vth_par2
         )
         return f_ * 1e18
+
+    def test_make_model_vdf_phi_1d(self):
+        # phi as (phi,) (IndexError): as with phi as (time, phi), phi unchanged
+        vdf = self._skymap("ions", 10.0, 3e4)
+        b_xyz, n_s, v_xyz, t_xyz = self._moments(
+            vdf.time.data, 2.0, [100.0, 0.0, 0.0], 1000.0, 500.0
+        )
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(3))
+        expected = mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+
+        vdf["phi"] = ("idx1", vdf.phi.data[0])
+        result = mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+        np.testing.assert_allclose(result.data.data, expected.data.data, rtol=1e-12)
+        self.assertEqual(result.phi.dims, ("idx1",))
 
     def test_make_model_vdf_b_along_x(self):
         # B exactly along x gave an all-NaN model (through rotate_tensor). An
