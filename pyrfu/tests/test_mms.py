@@ -8473,7 +8473,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             "MMS1_DEFEPH_2019257_2019258.V01",
             _DEFEPH_HEADER + _DEFEPH_ROWS,
         )
-        result = mms.load_ancillary("defeph", self.tint, 1, False, self.root)
+        result = mms.load_ancillary("defeph", self.tint, 1, False, self.root, "local")
 
         self.assertEqual(len(result.time), 3)
         self.assertEqual(
@@ -8491,7 +8491,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             "MMS1_DEFATT_2019257_2019258.V00",
             header + _DEFATT_ROWS + ["DATA_STOP"],
         )
-        result = mms.load_ancillary("defatt", self.tint, 1, False, self.root)
+        result = mms.load_ancillary("defatt", self.tint, 1, False, self.root, "local")
 
         self.assertEqual(len(result.time), 2)
         np.testing.assert_allclose(result.z_dec.data, [66.080, 66.086])
@@ -8531,7 +8531,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             + ["DATA_STOP"],
         )
         tint = ["2019-09-13T23:00:00", "2019-09-14T01:00:00"]
-        result = mms.load_ancillary("defatt", tint, 1, False, self.root)
+        result = mms.load_ancillary("defatt", tint, 1, False, self.root, "local")
 
         expected_time = np.array(
             [
@@ -8546,12 +8546,149 @@ class LoadAncillaryTestCase(unittest.TestCase):
 
     def test_load_ancillary_no_file(self):
         with self.assertRaises(FileNotFoundError):
-            mms.load_ancillary("defeph", self.tint, 1, False, self.root)
+            mms.load_ancillary("defeph", self.tint, 1, False, self.root, "local")
 
     def test_load_ancillary_unsupported(self):
         for product in ["predatt", "predeph", "bazinga"]:
             with self.assertRaisesRegex(ValueError, "not supported"):
-                mms.load_ancillary(product, self.tint, 1, False, self.root)
+                mms.load_ancillary(product, self.tint, 1, False, self.root, "local")
+
+    # From the SDC (mocked listing and session)
+    _DEFATT_HEADER = ["META_START"] * 48 + ["COMMENT   Time (UTC)    Elapsed Sec"]
+
+    @staticmethod
+    def _sdc_file(name, start, end):
+        return {
+            "file_name": name,
+            "url": f"url/{name}",
+            "start_date": start,
+            "end_date": end,
+        }
+
+    def _sdc(self, files, contents, status_error=None):
+        module = importlib.import_module("pyrfu.mms.load_ancillary")
+        responses = {}
+
+        for file, content in zip(files, contents):
+            response = mock.MagicMock(content=content.encode())
+            if status_error:
+                response.raise_for_status.side_effect = status_error
+            responses[file["url"]] = response
+
+        session = mock.MagicMock()
+        session.get.side_effect = lambda url, **kwargs: responses[url]
+
+        for name, value in [
+            ("list_files_ancillary_sdc", files),
+            ("_login_lasp", (session, {}, "")),
+        ]:
+            patch = mock.patch.object(module, name, return_value=value)
+            patch.start()
+            self.addCleanup(patch.stop)
+
+        return session
+
+    def _defatt_files(self):
+        # The day before (no row in tint), the day of tint, the day after
+        day = "\n".join(self._DEFATT_HEADER + _DEFATT_ROWS + ["DATA_STOP"]) + "\n"
+        before = day.replace("2019-257T", "2019-256T")
+        files = [
+            self._sdc_file(
+                "MMS1_DEFATT_2019256_2019257.V00",
+                "2019-09-13T00:00:00",
+                "2019-09-14T00:00:00",
+            ),
+            self._sdc_file(
+                "MMS1_DEFATT_2019257_2019258.V00",
+                "2019-09-14T00:00:00",
+                "2019-09-15T00:00:00",
+            ),
+            self._sdc_file(
+                "MMS1_DEFATT_2019258_2019259.V00",
+                "2019-09-15T00:00:00",
+                "2019-09-16T00:00:00",
+            ),
+        ]
+        return files, [before, day, day]
+
+    def test_load_ancillary_sdc(self):
+        # Read in memory from the SDC: as the same local file, and only the
+        # files covering tint (here near midnight: also the day before)
+        files, contents = self._defatt_files()
+        session = self._sdc(files, contents)
+        self._write("defatt", files[1]["file_name"], contents[1].splitlines())
+        local = mms.load_ancillary("defatt", self.tint, 1, False, self.root, "local")
+
+        for source in ["sdc", "aws"]:
+            session.get.reset_mock()
+
+            with self.assertLogs("pyrfu.mms.load_ancillary", "INFO") as logs:
+                result = mms.load_ancillary("defatt", self.tint, 1, source=source)
+
+            self.assertEqual(
+                any("No ancillary files on AWS" in line for line in logs.output),
+                source == "aws",
+            )
+
+            xr.testing.assert_identical(result, local)
+            self.assertListEqual(
+                [call.args[0] for call in session.get.call_args_list],
+                [files[0]["url"], files[1]["url"]],
+            )
+
+    def test_load_ancillary_sdc_files(self):
+        # The files covering tint (with 1 h on their end: a DEFATT file ends 5
+        # min after the midnight of its end date), the latest version of each,
+        # in time order
+        module = importlib.import_module("pyrfu.mms.load_ancillary")
+        files, contents = self._defatt_files()
+        newer = dict(files[1], file_name=files[1]["file_name"].replace("V00", "V01"))
+        self._sdc([files[2], newer, files[1], files[0]], [contents[2]] * 4)
+
+        for tint, expected in [
+            (["2019-09-14T12:00:00", "2019-09-14T13:00:00"], [newer]),
+            (["2019-09-14T00:10:00", "2019-09-14T00:20:00"], [files[0], newer]),
+            (["2019-09-14T23:30:00", "2019-09-15T00:30:00"], [newer, files[2]]),
+        ]:
+            self.assertListEqual(module._list_files_sdc(tint, 1, "defatt"), expected)
+
+    def test_load_ancillary_default_source(self):
+        # The default resource of the configuration (a temporary one, also for
+        # the local path of the local lister)
+        db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
+        lister = importlib.import_module("pyrfu.mms.list_files_ancillary")
+        files, contents = self._defatt_files()
+        session = self._sdc(files, contents)
+        self._write("defatt", files[1]["file_name"], contents[1].splitlines())
+
+        for default, n_get in [("sdc", 2), ("aws", 2), ("local", 0)]:
+            path = os.path.join(self.root, f"config_{default}.json")
+            with open(path, "w", encoding="utf-8") as file:
+                json.dump({"default": default, "local": self.root}, file)
+
+            db_get_ts._load_config_cached.cache_clear()
+            session.get.reset_mock()
+            with (
+                mock.patch.object(db_get_ts, "MMS_CFG_PATH", path),
+                mock.patch.object(lister, "MMS_CFG_PATH", path),
+            ):
+                result = mms.load_ancillary("defatt", self.tint, 1, False)
+            db_get_ts._load_config_cached.cache_clear()
+
+            self.assertEqual(len(result.time), 2)
+            self.assertEqual(session.get.call_count, n_get)
+
+    def test_load_ancillary_sdc_errors(self):
+        files, contents = self._defatt_files()
+        self._sdc(files, contents, status_error=requests.HTTPError("404"))
+
+        with self.assertRaises(requests.HTTPError):
+            mms.load_ancillary("defatt", self.tint, 1, False, source="sdc")
+
+        self._sdc([], [])
+
+        with self.assertRaises(FileNotFoundError):
+            mms.load_ancillary("defatt", self.tint, 1, False, source="sdc")
 
 
 @ddt
