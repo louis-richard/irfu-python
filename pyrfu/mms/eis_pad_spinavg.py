@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import warnings
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -45,7 +48,10 @@ def eis_pad_spinavg(inp, spin_nums):
     # loop through the spins
     for i, spin_start in enumerate(spin_starts):
         idx_ = np.where(spin_nums.data == spin_nums.data[spin_start])[0]
-        spin_sum_flux[i, :, :] = np.nanmean(inp.data[idx_, :, :], axis=0)
+        # NaN for the pitch-angle bins empty during the whole spin
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+            spin_sum_flux[i, :, :] = np.nanmean(inp.data[idx_, :, :], axis=0)
         spin_times[i] = inp.time.data[current_start]
         current_start = spin_start + 1
 

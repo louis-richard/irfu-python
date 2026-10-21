@@ -3,6 +3,7 @@
 
 # Built-in imports
 import itertools
+import warnings
 
 # 3rd party imports
 import numpy as np
@@ -121,7 +122,10 @@ def eis_pad(
         )
         ind = np.where(cond_)[0]
         if ind.size != 0:
-            pa_flux[i, j, :] = np.nanmean(flux_file[i, ind, :], axis=0)
+            # NaN where no telescope has data: an expected empty bin
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+                pa_flux[i, j, :] = np.nanmean(flux_file[i, ind, :], axis=0)
 
     pa_flux = xr.DataArray(
         pa_flux,
