@@ -5104,6 +5104,58 @@ class TsAppendTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertEqual(result.ndim, value.ndim)
 
+    @staticmethod
+    def _series(start, n_t):
+        time = np.datetime64(start, "ns") + np.arange(n_t) * np.timedelta64(1, "s")
+        inp = pyrf.ts_scalar(
+            time,
+            np.arange(n_t, dtype=np.float64),
+            attrs={
+                "delta": np.full((n_t, 2), float(n_t)),
+                "vec": np.arange(n_t) + 10 * n_t,
+                "scalar": np.array(1.0),
+                "table": np.arange(4.0),
+                "name": "test",
+            },
+        )
+        inp.time.attrs = {"delta": np.full(n_t, n_t), "UNITS": "ns"}
+        return inp
+
+    def test_ts_append_attrs(self):
+        # Time-dependent array attributes appended along the time (2-D ones were
+        # appended along the second dimension), the others kept
+        for n_1 in [5, 3]:
+            inp0 = self._series("2019-01-01T00:00:00", 5)
+            inp1 = self._series("2019-01-01T00:00:05", n_1)
+            result = pyrf.ts_append(inp0, inp1)
+
+            self.assertEqual(len(result.time), 5 + n_1)
+            np.testing.assert_array_equal(
+                result.attrs["delta"],
+                np.vstack([np.full((5, 2), 5.0), np.full((n_1, 2), float(n_1))]),
+            )
+            np.testing.assert_array_equal(
+                result.attrs["vec"],
+                np.hstack([np.arange(5) + 50, np.arange(n_1) + 10 * n_1]),
+            )
+            self.assertEqual(result.attrs["scalar"].shape, ())
+            np.testing.assert_array_equal(result.attrs["table"], np.arange(4.0))
+            self.assertEqual(result.attrs["name"], "test")
+            np.testing.assert_array_equal(
+                result.time.attrs["delta"],
+                np.hstack([np.full(5, 5), np.full(n_1, n_1)]),
+            )
+            self.assertEqual(result.time.attrs["UNITS"], "ns")
+
+    def test_ts_append_attrs_missing(self):
+        # An array attribute only in the first input is kept as is (it raised KeyError)
+        inp0 = self._series("2019-01-01T00:00:00", 5)
+        inp1 = self._series("2019-01-01T00:00:05", 3)
+        del inp1.attrs["vec"]
+        result = pyrf.ts_append(inp0, inp1)
+
+        np.testing.assert_array_equal(result.attrs["vec"], np.arange(5) + 50)
+
 
 @ddt
 class TimeClipTestCase(unittest.TestCase):
