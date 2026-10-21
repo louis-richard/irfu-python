@@ -28,6 +28,7 @@ from scipy import constants
 # Local imports
 from .. import plot, pyrf
 from ..constants import R_E
+from ..models.ion_anisotropy_thresh import ion_anisotropy_thresh
 from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
 
@@ -247,11 +248,24 @@ class ZoomTestCase(unittest.TestCase):
 
 @ddt
 class SetColorCycleTestCase(unittest.TestCase):
-    @data("pyrfu", "oceanic", "tab", "")
-    def set_color_cycle_input(self, value):
-        result = plot.set_color_cycle(value)
-        self.asssertIsInstance(result[0], list)
-        self.asssertIsInstance(result[1], str)
+    @data(
+        ("pyrfu", "hot_white_desaturated"),
+        ("Oceanic", "ocean"),
+        ("tab", "Spectral_r"),
+        ("Tableau", "Spectral_r"),
+        ("mpl", "Spectral_r"),
+        ("", "jet"),
+    )
+    @unpack
+    def test_set_color_cycle_input(self, value, cmap):
+        with mpl.rc_context():
+            colors, result = plot.set_color_cycle(value)
+
+            self.assertEqual(result, cmap)
+            self.assertEqual(mpl.rcParams["image.cmap"], cmap)
+            self.assertListEqual(
+                mpl.rcParams["axes.prop_cycle"].by_key()["color"], colors
+            )
 
 
 class UsePyrfuStyleTestCase(unittest.TestCase):
@@ -330,6 +344,10 @@ class PlotAngAngTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             plot.plot_ang_ang(self.vdf, self.tint, [100.0, 200.0])
+
+    def test_plot_ang_ang_tint_type(self):
+        with self.assertRaises(TypeError):
+            plot.plot_ang_ang(self.vdf, self.tint + self.tint[:1])
 
     def test_plot_ang_ang_units(self):
         for units, label in [
@@ -590,6 +608,14 @@ class PlScatterMatrixTestCase(unittest.TestCase):
         self.assertTrue(all(isinstance(cax, Axes) for cax in caxs))
         self.assertEqual(len({id(cax) for cax in caxs}), 9)
 
+    def test_pl_scatter_matrix_no_inp2(self):
+        with self.assertWarns(UserWarning):
+            _, axs = plot.pl_scatter_matrix(self.inp1)
+
+        offsets = axs[1, 0].collections[0].get_offsets()
+        np.testing.assert_allclose(offsets[:, 0], self.inp1.data[:, 0])
+        np.testing.assert_allclose(offsets[:, 1], self.inp1.data[:, 1])
+
     def test_pl_scatter_matrix_input_type(self):
         with self.assertRaises(TypeError):
             plot.pl_scatter_matrix(self.inp1.data, self.inp2)
@@ -770,6 +796,466 @@ class MmsPlConfigTestCase(unittest.TestCase):
         r_mms = [r + 30 * R_E for r in self.r_mms]
         _, axs = plot.mms_pl_config(r_mms)
         self.assertGreater(axs[0].get_xlim()[0], 30 + np.max(self.r_mean) / R_E)
+
+
+class ColorbarTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
+    def test_colorbar(self):
+        f, ax = plt.subplots(1)
+        image = ax.pcolormesh(
+            np.arange(4.0), np.arange(3.0), np.arange(12.0).reshape(3, 4)
+        )
+        cax = plot.colorbar(image, ax, pad=0.02, width=0.05)
+
+        self.assertIn(cax, f.axes)
+        pos, cpos = ax.get_position(), cax.get_position()
+        self.assertAlmostEqual(cpos.x0, pos.x1 + 0.02)
+        self.assertAlmostEqual(cpos.width, 0.05)
+        self.assertAlmostEqual(cpos.y0, pos.y0)
+        self.assertAlmostEqual(cpos.height, pos.height)
+        np.testing.assert_allclose(cax.get_ylim(), [0.0, 11.0])
+
+
+class IonBrazilPlotThreshTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
+    def test_ion_brazil_plot_thresh(self):
+        f, ax = plt.subplots(1)
+        plot.ion_brazil_plot_thresh(ax)
+
+        self.assertEqual(len(ax.lines), 4)
+        self.assertEqual(ax.get_xscale(), "log")
+        self.assertEqual(ax.get_yscale(), "log")
+        np.testing.assert_allclose(ax.get_xlim(), [1e-2, 5e3])
+        np.testing.assert_allclose(ax.get_ylim(), [0.3, 1e1])
+
+        beta = np.logspace(-2, 4)
+        for line, instability in zip(
+            ax.lines,
+            ["proton-cyclotron", "mirror", "parallel-firehose", "oblique-firehose"],
+        ):
+            np.testing.assert_allclose(line.get_xdata(), beta)
+            np.testing.assert_allclose(
+                line.get_ydata(), ion_anisotropy_thresh(beta, instability, "10^-2")
+            )
+
+        self.assertEqual(len(f.legends), 1)
+        self.assertListEqual(
+            [text.get_text() for text in f.legends[0].get_texts()],
+            [
+                "Proton cyclotron",
+                "Mirror Mode",
+                "Parallel Firehose",
+                "Oblique Firehose",
+            ],
+        )
+
+    def test_ion_brazil_plot_thresh_options(self):
+        f, ax = plt.subplots(1)
+        colors = ["k", "r", "g", "y"]
+        plot.ion_brazil_plot_thresh(ax, legend=False, colors=colors)
+
+        self.assertEqual(len(f.legends), 0)
+        for line, color in zip(ax.lines, colors):
+            self.assertEqual(to_rgba(line.get_color()), to_rgba(color))
+
+
+class MakeLabelsTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
+    def test_make_labels(self):
+        _, axs = plt.subplots(3)
+        result = plot.make_labels(axs, [0.02, 0.9], fontsize=7)
+
+        self.assertIs(result, axs)
+        for axis, label in zip(axs, ["(a)", "(b)", "(c)"]):
+            self.assertEqual(len(axis.texts), 1)
+            self.assertEqual(axis.texts[0].get_text(), label)
+            self.assertEqual(axis.texts[0].get_position(), (0.02, 0.9))
+            self.assertIs(axis.texts[0].get_transform(), axis.transAxes)
+            self.assertEqual(axis.texts[0].get_fontsize(), 7)
+
+    def test_make_labels_pref_suff_pad(self):
+        _, axs = plt.subplots(2)
+        plot.make_labels(axs, [0.1, 0.1], pref="1", suff="'", pad=2)
+
+        self.assertListEqual(
+            [axis.texts[0].get_text() for axis in axs], ["(1c')", "(1d')"]
+        )
+
+    def test_make_labels_3d(self):
+        f = plt.figure()
+        axs = [f.add_subplot(1, 2, 1), f.add_subplot(1, 2, 2, projection="3d")]
+        plot.make_labels(axs, [0.1, 0.9])
+
+        # text2D on the 3d axis, at the same axes position as on the 2d one
+        for axis, label in zip(axs, ["(a)", "(b)"]):
+            self.assertEqual(axis.texts[0].get_text(), label)
+            self.assertEqual(axis.texts[0].get_position(), (0.1, 0.9))
+            self.assertIs(axis.texts[0].get_transform(), axis.transAxes)
+
+    def test_make_labels_too_many(self):
+        _, axs = plt.subplots(3)
+
+        with self.assertRaises(ValueError):
+            plot.make_labels(axs, [0.1, 0.9], pad=24)
+
+
+class PlotContourTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        x, y = np.linspace(-2.0, 2.0, 21), np.linspace(-1.0, 1.0, 11)
+        self.inp = xr.DataArray(
+            np.add.outer(x**2, y**2), coords=[x, y], dims=["x", "y"]
+        )
+
+    def test_plot_contour(self):
+        _, ax = plt.subplots(1)
+        axis, clines = plot.plot_contour(ax, self.inp, levels=[0.5, 1.0, 2.0])
+
+        self.assertIs(axis, ax)
+        self.assertIsInstance(clines, ContourSet)
+        np.testing.assert_allclose(clines.levels, [0.5, 1.0, 2.0])
+        # x along the horizontal axis
+        np.testing.assert_allclose(ax.dataLim.intervalx, [-2.0, 2.0], atol=0.21)
+
+    def test_plot_contour_input_type(self):
+        _, ax = plt.subplots(1)
+
+        with self.assertRaises(TypeError):
+            plot.plot_contour(None, self.inp)
+
+        with self.assertRaises(TypeError):
+            plot.plot_contour(ax, self.inp.data)
+
+
+class PlotProjectionTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        # Velocities in m/s, plotted in 10^3 m/s
+        self.v_x = np.linspace(-2e3, 2e3, 20)
+        self.v_y = np.linspace(-1e3, 1e3, 10)
+        self.f_mat = np.outer(np.arange(1.0, 21.0), np.arange(1.0, 11.0)) * 1e-15
+
+    def test_plot_projection(self):
+        f, ax = plt.subplots(1)
+        axis, caxis = plot.plot_projection(
+            ax, self.v_x, self.v_y, self.f_mat, vlim=1.5e3, clim=[-15, -12]
+        )
+
+        self.assertIs(axis, ax)
+        self.assertIn(caxis, f.axes)
+        image = ax.collections[0]
+        np.testing.assert_allclose(
+            np.asarray(image.get_array()).reshape(10, 20), np.log10(self.f_mat.T)
+        )
+        self.assertEqual((image.norm.vmin, image.norm.vmax), (-15, -12))
+        np.testing.assert_allclose(ax.get_xlim(), [-1.5, 1.5])
+        np.testing.assert_allclose(ax.get_ylim(), [-1.5, 1.5])
+        self.assertEqual(ax.get_aspect(), 1.0)
+        # On the right
+        self.assertGreater(caxis.get_position().x0, ax.get_position().x1)
+
+    def test_plot_projection_colorbar(self):
+        f, ax = plt.subplots(1)
+        _, caxis = plot.plot_projection(
+            ax, self.v_x, self.v_y, self.f_mat, colorbar="top"
+        )
+        self.assertGreater(caxis.get_position().y0, ax.get_position().y1)
+        self.assertEqual(caxis.xaxis.get_label_position(), "top")
+
+        f, ax = plt.subplots(1)
+        _, caxis = plot.plot_projection(
+            ax, self.v_x, self.v_y, self.f_mat, colorbar="none"
+        )
+        self.assertIsNone(caxis)
+        self.assertEqual(len(f.axes), 1)
+
+        with self.assertRaises(NotImplementedError):
+            plot.plot_projection(ax, self.v_x, self.v_y, self.f_mat, colorbar="left")
+
+    def test_plot_projection_cmap(self):
+        _, ax = plt.subplots(1)
+        plot.plot_projection(ax, self.v_x, self.v_y, self.f_mat, cmap="viridis")
+        self.assertEqual(ax.collections[0].get_cmap().name, "viridis")
+
+        with self.assertRaises(TypeError):
+            plot.plot_projection(
+                ax, self.v_x, self.v_y, self.f_mat, cmap=mpl.colormaps["viridis"]
+            )
+
+
+class PlotReduced2dTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        v_x, v_y = np.linspace(-3e3, 3e3, 31), np.linspace(-2e3, 2e3, 21)
+        self.f2d = xr.DataArray(
+            1e-9 * np.exp(-np.add.outer(v_x**2, v_y**2) / 1e6) + 1e-14,
+            coords=[v_x, v_y],
+            dims=["vx", "vy"],
+        )
+
+    def test_plot_reduced_2d(self):
+        f, ax = plt.subplots(1)
+        axis, cax = plot.plot_reduced_2d(ax, self.f2d)
+
+        self.assertIs(axis, ax)
+        self.assertIn(cax, f.axes)
+        image = ax.collections[0]
+        np.testing.assert_allclose(
+            np.asarray(image.get_array()).reshape(21, 31), self.f2d.data.T
+        )
+        self.assertIsInstance(image.norm, LogNorm)
+        self.assertEqual((image.norm.vmin, image.norm.vmax), (1e-13, 1e-8))
+        # One contour per decade of the colour range
+        clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
+        np.testing.assert_allclose(clines.levels, np.logspace(-13, -8, 6))
+        np.testing.assert_allclose(ax.get_xlim(), [-3e3, 3e3])
+        np.testing.assert_allclose(ax.get_ylim(), [-2e3, 2e3])
+        # Colour bar on top, with the contour lines
+        self.assertGreater(cax.get_position().y0, ax.get_position().y1)
+        self.assertEqual(cax.xaxis.get_label_position(), "top")
+        self.assertGreater(len(cax.collections), 0)
+
+    def test_plot_reduced_2d_clim(self):
+        _, ax = plt.subplots(1)
+        plot.plot_reduced_2d(ax, self.f2d, clim=[1e-12, 1e-9])
+
+        image = ax.collections[0]
+        self.assertEqual((image.norm.vmin, image.norm.vmax), (1e-12, 1e-9))
+        clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
+        np.testing.assert_allclose(clines.levels, np.logspace(-12, -9, 4))
+
+
+class PlotSpectrTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        self.time = generate_timeline(64.0, 50)
+        self.energy = np.logspace(1, 4, 8)
+        self.data = np.outer(np.arange(1.0, 51.0), np.arange(1.0, 9.0))
+        self.inp = pyrf.ts_spectr(self.time, self.energy, self.data)
+
+    @staticmethod
+    def _image(ax):
+        return ax.collections[0]
+
+    def test_plot_spectr_dataarray(self):
+        f, ax = plt.subplots(1)
+        axis, cax = plot.plot_spectr(ax, self.inp)
+
+        self.assertIs(axis, ax)
+        self.assertIn(cax, f.axes)
+        image = self._image(ax)
+        np.testing.assert_allclose(
+            np.asarray(image.get_array()).reshape(8, 50), self.data.T
+        )
+        self.assertNotIsInstance(image.norm, LogNorm)
+        np.testing.assert_allclose(ax.get_ylim(), [10.0, 1e4])
+        self.assertEqual(ax.get_yscale(), "linear")
+        self.assertIsInstance(
+            ax.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
+        )
+        # Colour bar on the right, 4 ticks at most
+        self.assertAlmostEqual(cax.get_position().x0, ax.get_position().x1 + 0.01)
+        self.assertIsInstance(cax.yaxis.get_major_locator(), mpl.ticker.MaxNLocator)
+
+    def test_plot_spectr_new_axis(self):
+        axis, _ = plot.plot_spectr(None, self.inp)
+
+        self.assertIsInstance(axis, Axes)
+        self.assertIn(axis.get_figure().number, plt.get_fignums())
+
+    def test_plot_spectr_not_time(self):
+        # A spectrum of another quantity than time (no date formatter)
+        inp = xr.DataArray(
+            self.data, coords=[np.arange(50.0), self.energy], dims=["x", "energy"]
+        )
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, inp, colorbar="none")
+
+        self.assertNotIsInstance(
+            ax.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
+        )
+
+    def test_plot_spectr_scales(self):
+        _, ax = plt.subplots(1)
+        _, cax = plot.plot_spectr(ax, self.inp, yscale="log", cscale="log")
+
+        self.assertEqual(ax.get_yscale(), "log")
+        self.assertIsInstance(ax.yaxis.get_major_locator(), mpl.ticker.LogLocator)
+        self.assertIsInstance(self._image(ax).norm, LogNorm)
+        self.assertEqual(self._image(ax).norm.vmin, 1.0)
+        self.assertEqual(self._image(ax).norm.vmax, 400.0)
+        self.assertIsInstance(cax.yaxis.get_major_locator(), mpl.ticker.LogLocator)
+
+    def test_plot_spectr_clim(self):
+        for cscale, norm_type in [("log", LogNorm), ("linear", mpl.colors.Normalize)]:
+            _, ax = plt.subplots(1)
+            plot.plot_spectr(ax, self.inp, cscale=cscale, clim=[2.0, 100.0])
+
+            norm = self._image(ax).norm
+            self.assertIsInstance(norm, norm_type)
+            self.assertEqual((norm.vmin, norm.vmax), (2.0, 100.0))
+
+    def test_plot_spectr_norm(self):
+        # Any matplotlib norm as cscale
+        norm = mpl.colors.SymLogNorm(linthresh=1.0, vmin=-10.0, vmax=10.0)
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, self.inp, cscale=norm, cmap="viridis")
+
+        self.assertIs(self._image(ax).norm, norm)
+        self.assertEqual(self._image(ax).get_cmap().name, "viridis")
+
+    def test_plot_spectr_colorbar(self):
+        _, ax = plt.subplots(1)
+        _, cax = plot.plot_spectr(ax, self.inp, colorbar="right", pad=0.05)
+        self.assertAlmostEqual(cax.get_position().x0, ax.get_position().x1 + 0.05)
+
+        # Default and given pad
+        for cscale, locator, pad in [
+            ("linear", mpl.ticker.MaxNLocator, {}),
+            ("log", mpl.ticker.LogLocator, {"pad": 0.05}),
+        ]:
+            _, ax = plt.subplots(1)
+            _, cax = plot.plot_spectr(
+                ax, self.inp, cscale=cscale, colorbar="top", **pad
+            )
+
+            self.assertAlmostEqual(
+                cax.get_position().y0,
+                ax.get_position().y1 + pad.get("pad", 0.01),
+            )
+            self.assertEqual(cax.xaxis.get_label_position(), "top")
+            self.assertIsInstance(cax.xaxis.get_major_locator(), locator)
+
+        f, ax = plt.subplots(1)
+        self.assertIs(plot.plot_spectr(ax, self.inp, colorbar="none"), ax)
+        self.assertEqual(len(f.axes), 1)
+
+        with self.assertRaises(NotImplementedError):
+            plot.plot_spectr(ax, self.inp, colorbar="left")
+
+    def test_plot_spectr_dataset(self):
+        # Time-dependent energy table: as a coordinate (named energy or not) or
+        # as a second data variable
+        energy = np.tile(self.energy, (50, 1))
+        energy[25:] *= 2.0
+        datasets = [
+            xr.Dataset(
+                {"data": (["time", "idx"], self.data)},
+                coords={
+                    "time": self.time,
+                    "idx": np.arange(8),
+                    "energy": (["time", "idx"], energy),
+                },
+            ),
+            xr.Dataset(
+                {"data": (["time", "idx"], self.data)},
+                coords={
+                    "time": self.time,
+                    "idx": np.arange(8),
+                    "en": (["time", "idx"], energy),
+                },
+            ),
+            xr.Dataset(
+                {
+                    "data": (["time", "idx"], self.data),
+                    "energy": (["time", "idx"], energy),
+                },
+                coords={"time": self.time, "idx": np.arange(8)},
+            ),
+        ]
+
+        for dataset in datasets:
+            _, ax = plt.subplots(1)
+            plot.plot_spectr(ax, dataset, yscale="log")
+
+            image = self._image(ax)
+            np.testing.assert_allclose(
+                np.asarray(image.get_array()).reshape(8, 50), self.data.T
+            )
+            np.testing.assert_allclose(ax.get_ylim(), [10.0, 2e4])
+
+    def test_plot_spectr_input_type(self):
+        _, ax = plt.subplots(1)
+
+        with self.assertRaises(TypeError):
+            plot.plot_spectr(ax, self.data)
+
+
+class PlotSurfTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+        phi, theta = np.meshgrid(np.linspace(0, 2 * np.pi, 9), np.linspace(0, np.pi, 5))
+        self.xyz = [
+            np.sin(theta) * np.cos(phi),
+            np.sin(theta) * np.sin(phi),
+            np.cos(theta),
+        ]
+        self.c = np.cos(theta)
+        self.cmap = mpl.colormaps["viridis"]
+        self.norm = mpl.colors.Normalize(vmin=-1.0, vmax=1.0)
+
+    def _plot(self, cax_pos):
+        f = plt.figure()
+        ax = f.add_subplot(projection="3d")
+        axis, caxis = plot.plot_surf(
+            ax, *self.xyz, self.c, self.cmap, self.norm, cax_pos
+        )
+        self.assertIs(axis, ax)
+        self.assertIn(caxis, f.axes)
+        return ax.get_position(), caxis
+
+    def test_plot_surf(self):
+        f = plt.figure()
+        ax = f.add_subplot(projection="3d")
+        plot.plot_surf(ax, *self.xyz, self.c, self.cmap, self.norm)
+
+        self.assertEqual(len(ax.collections), 1)
+        # Bottom colour bar with the norm's range
+        caxis = f.axes[1]
+        self.assertLess(caxis.get_position().y0, ax.get_position().y0)
+        np.testing.assert_allclose(caxis.get_xlim(), [-1.0, 1.0])
+
+    def test_plot_surf_cax_pos(self):
+        pos, caxis = self._plot("top")
+        self.assertGreater(caxis.get_position().y0, pos.y1)
+        self.assertEqual(caxis.xaxis.get_label_position(), "top")
+
+        pos, caxis = self._plot("left")
+        self.assertLess(caxis.get_position().x0, pos.x0)
+        self.assertEqual(caxis.yaxis.get_label_position(), "left")
+
+        pos, caxis = self._plot("right")
+        self.assertGreater(caxis.get_position().x0, pos.x1)
+
+        with self.assertRaises(ValueError):
+            self._plot("center")
+
+
+class SpanTintTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
+    def test_span_tint(self):
+        tint = ["2019-01-01T00:00:01.000000000", "2019-01-01T00:00:02.500000000"]
+        _, axs = plt.subplots(2)
+        result = plot.span_tint(axs, tint, ymin=0.2, ymax=0.7, color="r")
+
+        self.assertIs(result, axs)
+        t_lim = date2num(np.array(tint, dtype="datetime64[ns]"))
+        for axis in axs:
+            self.assertEqual(len(axis.patches), 1)
+            verts = axis.patches[0].get_verts()
+            x_span = axis.transData.inverted().transform(verts)[:, 0]
+            y_span = axis.transAxes.inverted().transform(verts)[:, 1]
+            np.testing.assert_allclose([x_span.min(), x_span.max()], t_lim, atol=1e-9)
+            np.testing.assert_allclose([y_span.min(), y_span.max()], [0.2, 0.7])
+            self.assertEqual(axis.patches[0].get_facecolor()[:3], (1.0, 0.0, 0.0))
 
 
 if __name__ == "__main__":
