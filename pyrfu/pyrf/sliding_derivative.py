@@ -4,9 +4,6 @@
 # 3rd party imports
 import numpy as np
 
-# Local imports
-from .ts_scalar import ts_scalar
-
 __author__ = "Apostolos Kolokotronis"
 __email__ = "apostolos.kolokotronis@irf.se"
 __copyright__ = "Copyright 2020-2024"
@@ -29,20 +26,30 @@ def sliding_derivative(
     Parameters
     ----------
     time_series : xarray.DataArray
-        The time series data for which the derivative is to be calculated.
-    t_units: str, optional, default: "ns"
-        The units of the time coordinate in time_series. If t_units is "ns" then the
-        time is converted to seconds.
+        The time series data for which the derivative is to be calculated (scalar,
+        vector or tensor).
+    t_units : {"ns", "s"}, optional, default: "ns"
+        The units of the time coordinate in time_series when it is not
+        ``datetime64`` (``datetime64`` times are always converted to seconds).
     window_size : int, optional, default: 3
-        The number of data points in each sliding window. It should be an odd integer
-        to ensure a symmetric window around the central point for central differences.
+        The number of data points in each sliding window (method "window"). It
+        should be an odd integer to ensure a symmetric window around the central
+        point for central differences.
+    method : {"window", "5ps", "9ps"}, optional, default: "window"
+        Difference between the ends of the sliding window, or 5-point or 9-point
+        central-difference stencil (assumes evenly spaced times). Case-insensitive.
 
     Returns
     -------
     derivative : xarray.DataArray
-        An array containing the sliding derivative for each point in the time series.
-        The length of this array matches the length of `time_series`. For points near
+        An array containing the sliding derivative for each point in the time series,
+        per second, with the shape and coordinates of `time_series`. For points near
         the boundaries (where a full window cannot be formed), the result will be NaN.
+
+    Raises
+    ------
+    ValueError
+        If t_units or method is not one of the above.
 
     Notes
     -----
@@ -54,24 +61,29 @@ def sliding_derivative(
 
     """
 
+    if t_units.lower() not in ["ns", "s"]:
+        raise ValueError(f"t_units must be 'ns' or 's', not {t_units!r}")
+
+    method = method.lower()
+
+    if method not in ["window", "5ps", "9ps"]:
+        raise ValueError(f"method must be 'window', '5ps' or '9ps', not {method!r}")
+
     data = time_series.data
-    time = time_series.time.astype(np.float64).data
+    time = time_series.time.data
 
-    assert t_units.lower() in ["ns", "s"], "convert time to ns or s."
+    if np.issubdtype(time.dtype, np.datetime64):
+        # Seconds from the first sample (epochs in ns as float64 are rounded to
+        # 256 ns, i.e. 0.1 % of the time step of 8192 Hz data)
+        time = (time - time[0]).astype("timedelta64[ns]").astype(np.float64) * 1e-9
+    else:
+        time = time.astype(np.float64)
 
-    if t_units.lower() == "ns" or time.data.dtype == "<M8[ns]":
-        time = time * 1e-9
-
-    assert method.lower() in [
-        "window",
-        "5ps",
-        "9ps",
-    ], "this method has not been implemented."
-
-    half_window = window_size // 2
+        if t_units.lower() == "ns":
+            time = time * 1e-9
 
     # Fill the output with NaN for edge cases
-    derivative = np.full(len(data), np.nan)
+    derivative = np.full(data.shape, np.nan)
     if method == "window":
 
         half_window = window_size // 2
@@ -113,10 +125,7 @@ def sliding_derivative(
                 - 1 / 280 * data[i + 4]
             ) / ((time[i + 4] - time[i - 4]) * 1 / 8)
 
-    # time_dt64 = ts_time(time).data
-    out = ts_scalar(
-        time_series.time.data,
-        derivative,
-    )
+    out = time_series.copy(data=derivative)
+    out.attrs = {"TENSOR_ORDER": data.ndim - 1}
 
     return out

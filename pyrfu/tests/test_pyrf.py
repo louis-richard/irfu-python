@@ -4931,6 +4931,74 @@ class ShockParametersTestCase(unittest.TestCase):
         )
 
 
+class SlidingDerivativeTestCase(unittest.TestCase):
+    def setUp(self):
+        # 8192 Hz, quadratic in time: the central differences are exact
+        self.time = np.datetime64("2019-01-01T00:00:00", "ns") + np.arange(
+            100
+        ) * np.timedelta64(122070, "ns")
+        self.t_sec = np.arange(100) * 122070e-9
+        self.slope = 2.0 + 6.0 * self.t_sec
+
+    def test_sliding_derivative_methods(self):
+        inp = pyrf.ts_scalar(self.time, 2.0 * self.t_sec + 3.0 * self.t_sec**2)
+
+        # Case-insensitive, NaN where the window or stencil is incomplete
+        for method, window_size, n_edge in [
+            ("window", 3, 1),
+            ("Window", 7, 3),
+            ("5PS", 3, 2),
+            ("9ps", 3, 4),
+        ]:
+            result = pyrf.sliding_derivative(
+                inp, window_size=window_size, method=method
+            )
+
+            self.assertIsInstance(result, xr.DataArray)
+            np.testing.assert_array_equal(result.time.data, self.time)
+            self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
+            self.assertTrue(np.isnan(result.data[:n_edge]).all())
+            self.assertTrue(np.isnan(result.data[-n_edge:]).all())
+            # Exact time differences (as float64 epochs, 1e-3 at 8192 Hz)
+            np.testing.assert_allclose(
+                result.data[n_edge:-n_edge], self.slope[n_edge:-n_edge], rtol=1e-10
+            )
+
+    def test_sliding_derivative_vector(self):
+        inp = pyrf.ts_vec_xyz(self.time, np.outer(self.t_sec, [1.0, -2.0, 3.0]))
+        result = pyrf.sliding_derivative(inp, method="5ps")
+
+        self.assertEqual(result.dims, inp.dims)
+        np.testing.assert_array_equal(result.comp.data, inp.comp.data)
+        self.assertEqual(result.attrs["TENSOR_ORDER"], 1)
+        np.testing.assert_allclose(
+            result.data[2:-2], np.tile([1.0, -2.0, 3.0], (96, 1)), rtol=1e-10
+        )
+
+    def test_sliding_derivative_t_units(self):
+        # datetime64 times are in seconds whatever t_units
+        inp = pyrf.ts_scalar(self.time, 2.0 * self.t_sec)
+        result = pyrf.sliding_derivative(inp, t_units="s")
+        np.testing.assert_allclose(result.data[1:-1], 2.0, rtol=1e-10)
+
+        # Numeric times in the given units
+        for t_units, scale in [("ns", 1e9), ("S", 1.0)]:
+            inp = xr.DataArray(
+                2.0 * self.t_sec, coords=[self.t_sec * scale], dims=["time"]
+            )
+            result = pyrf.sliding_derivative(inp, t_units=t_units)
+            np.testing.assert_allclose(result.data[1:-1], 2.0, rtol=1e-10)
+
+    def test_sliding_derivative_options(self):
+        inp = pyrf.ts_scalar(self.time, self.t_sec)
+
+        with self.assertRaises(ValueError):
+            pyrf.sliding_derivative(inp, t_units="ms")
+
+        with self.assertRaises(ValueError):
+            pyrf.sliding_derivative(inp, method="7ps")
+
+
 @ddt
 class SolidAngleTestCase(unittest.TestCase):
     @data(
