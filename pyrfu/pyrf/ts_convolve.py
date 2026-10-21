@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+import numpy as np
 import scipy
 import xarray as xr
 
@@ -21,47 +22,60 @@ def ts_convolve(inp, kernel, mode: str = "nearest"):
     Right now, this has only been tested for calculating moving averages of 1D time
     series.
 
-    The convolution is done using scipy.ndimage.convolve, with mode = "nearest"
-    (read documentation for scipy.ndimage.convolve for more information).
+    The convolution is done using scipy.ndimage.convolve (read documentation for
+    scipy.ndimage.convolve for more information).
 
     Parameters
     ----------
     inp : xarray.DataArray
-        The time series to be convolved with the kernel.
-
-    kernel: nd.array
+        The time series to be convolved with the kernel (scalar, or vector convolved
+        component by component). Integer data are converted to float64.
+    kernel : numpy.ndarray
         The kernel to apply to inp for the convolution.
+    mode : str, Optional
+        How the edges are extended (see scipy.ndimage.convolve). Default is
+        "nearest".
 
     Returns
     -------
     out : xarray.DataArray
-        An array containing the convolution of inp with kernel. Mode "valid" is applied
-        from numpy.convolve, which does not affect the edges of the time series.
+        An array containing the convolution of inp with kernel, with the shape,
+        coordinates and attributes of inp.
+
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray.
+    ValueError
+        If inp has no "time" dimension or more than 2 dimensions.
+
     """
-    message = "Invalid input type. Input must be xarray.DataArary or xarray.Dataset"
-    assert isinstance(inp, xr.DataArray), message
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("Invalid input type. Input must be xarray.DataArray")
 
     if "time" not in inp.dims:
         message = "Invalid input dimensions. Input must have a 'time' dimension"
         raise ValueError(message)
 
-    if 0 < inp.data.ndim <= 2:
-        if inp.data.ndim == 2:
-            convolution = inp.copy()
-            for comp in range(inp.data.shape[1]):
-                convolution[:, comp] = ts_convolve(inp[:, comp], kernel, mode)
-
-            out = convolution
-        else:
-            convolution = scipy.ndimage.convolve(
-                input=inp.data, weights=kernel, mode=mode
-            )
-            convolution = xr.DataArray(
-                convolution, coords=inp.coords, dims=inp.dims, attrs=inp.attrs
-            )
-            out = convolution
-    else:
-
+    if not 0 < inp.data.ndim <= 2:
         raise ValueError("Invalid dimensions.")
+
+    # scipy returns the type of the input: an average of integers is truncated
+    data = inp.data
+    if not np.issubdtype(data.dtype, np.inexact):
+        data = data.astype(np.float64)
+
+    if data.ndim == 2:
+        convolution = np.stack(
+            [
+                scipy.ndimage.convolve(input=column, weights=kernel, mode=mode)
+                for column in data.T
+            ],
+            axis=1,
+        )
+    else:
+        convolution = scipy.ndimage.convolve(input=data, weights=kernel, mode=mode)
+
+    out = inp.copy(data=convolution)
 
     return out

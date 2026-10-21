@@ -5162,6 +5162,55 @@ class TimeClipTestCase(unittest.TestCase):
         self.assertEqual(inp.attrs["delta"].shape, (20, 2))
 
 
+class TsConvolveTestCase(unittest.TestCase):
+    def setUp(self):
+        self.time = generate_timeline(1.0, 6)
+        self.kernel = np.ones(3) / 3
+        # Moving average of 0, 1, 0, 1, 0, 1 with the edges extended
+        self.average = np.array([1.0, 1.0, 2.0, 1.0, 2.0, 2.0]) / 3
+
+    def test_ts_convolve_scalar(self):
+        for dtype in [np.int64, np.float64]:
+            inp = pyrf.ts_scalar(
+                self.time, np.array([0, 1, 0, 1, 0, 1], dtype=dtype), {"UNITS": "1"}
+            )
+            result = pyrf.ts_convolve(inp, self.kernel)
+
+            # Integers are not truncated
+            self.assertEqual(result.dtype, np.float64)
+            np.testing.assert_allclose(result.data, self.average)
+            np.testing.assert_array_equal(result.time.data, self.time)
+            self.assertEqual(result.attrs["UNITS"], "1")
+
+        # The precision of floats is kept
+        result = pyrf.ts_convolve(inp.astype(np.float32), self.kernel)
+        self.assertEqual(result.dtype, np.float32)
+
+    def test_ts_convolve_vector(self):
+        data = np.outer([0, 1, 0, 1, 0, 1], [1, 2, -3])
+        inp = pyrf.ts_vec_xyz(self.time, data)
+        result = pyrf.ts_convolve(inp, self.kernel)
+
+        np.testing.assert_array_equal(result.comp.data, inp.comp.data)
+        np.testing.assert_allclose(result.data, np.outer(self.average, [1, 2, -3]))
+
+    def test_ts_convolve_mode(self):
+        inp = pyrf.ts_scalar(self.time, np.array([0, 1, 0, 1, 0, 1]))
+        result = pyrf.ts_convolve(inp, self.kernel, mode="constant")
+
+        np.testing.assert_allclose(result.data[[0, -1]], [1.0 / 3, 1.0 / 3])
+
+    def test_ts_convolve_input(self):
+        with self.assertRaises(TypeError):
+            pyrf.ts_convolve(np.arange(6.0), self.kernel)
+
+        with self.assertRaises(ValueError):
+            pyrf.ts_convolve(xr.DataArray(np.arange(6.0), dims=["x"]), self.kernel)
+
+        with self.assertRaises(ValueError):
+            pyrf.ts_convolve(generate_ts(1.0, 6, tensor_order=2), self.kernel)
+
+
 @ddt
 class TsTimeTestCase(unittest.TestCase):
     def test_ts_skymap_input_type(self):
