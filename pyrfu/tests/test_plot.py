@@ -877,6 +877,15 @@ class IonBrazilPlotThreshTestCase(unittest.TestCase):
         for line, color in zip(ax.lines, colors):
             self.assertEqual(to_rgba(line.get_color()), to_rgba(color))
 
+    def test_ion_brazil_plot_thresh_other_figure(self):
+        # The legend goes in the figure of the axis, not the current figure
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        plot.ion_brazil_plot_thresh(ax)
+
+        self.assertEqual(len(f.legends), 1)
+        self.assertEqual(len(f_current.legends), 0)
+
 
 class MakeLabelsTestCase(unittest.TestCase):
     def setUp(self):
