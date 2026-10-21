@@ -1,6 +1,143 @@
 Changelog
 =========
 
+2.5.3 (2026-10-21)
+------------------
+
+This release is the first published to PyPI by trusted publishing. It
+fixes ``ebsp`` with ``de_dot_b0``, the time derivatives (``gradient``,
+``sliding_derivative``), the reading of MMS files around midnight and of
+overlapping ancillary files, and the joining of time series from several
+files. It accepts the irfu-matlab variable names in ``get_data``, and
+distributions with ``phi`` as ``(phi,)`` in more routines. Several fixes
+change results: see `Fixes that change results <v2.5.3 fixes_>`_.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``mms.tokenize`` (and so ``mms.get_data``) accepts variable names in any
+  case, as the irfu-matlab names (``"B_gse_fgm_srvy_l2"``); a name without
+  4 or 5 parts and an unknown parameter raise ``ValueError``, as documented,
+  instead of ``AssertionError``.
+- ``pyrf.read_cdf`` raises ``FileNotFoundError`` for a missing or unreadable
+  file (it raised ``AttributeError``).
+- ``pyrf.sliding_derivative`` raises ``ValueError`` for an invalid
+  ``t_units`` or ``method``, and ``pyrf.ts_convolve`` ``TypeError`` for an
+  input that is not a ``DataArray`` (both raised ``AssertionError``).
+- ``pyrf.ts_convolve`` returns float64 for integer data (see below).
+
+New features
+^^^^^^^^^^^^
+
+- ``pyrf.datetime2iso8601`` accepts ``numpy.datetime64`` times (scalars and
+  arrays, e.g. the times of a time series).
+- ``pyrf.iso86012datetime64`` accepts a single str and tuples, and times
+  ending with ``"Z"`` without warning.
+- ``pyrf.ts_time`` accepts any float type and ``datetime64`` in any unit.
+- ``pyrf.avg_4sc``, ``pyrf.c_4_grad`` and ``pyrf.c_4_j`` accept a tuple of
+  the four spacecraft, as their type hints say.
+- ``pyrf.sliding_derivative`` accepts vectors and tensors.
+- ``pyrf.ebsp`` accepts ``fac_matrix`` as an array, ``(n, 3, 3)`` on the
+  times of ``delta_b`` or a constant ``(3, 3)``, as documented (only a time
+  series of matrices worked).
+- ``mms.make_model_vdf``, ``mms.calculate_epsilon``, ``plot.plot_ang_ang``
+  and ``pyrf.ts_skymap`` accept distributions with ``phi`` as ``(phi,)``,
+  as ``vdf_omni`` and ``get_pitch_angle_dist`` (``ts_skymap`` repeats it at
+  all times).
+
+.. _v2.5.3 fixes:
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``pyrf.ebsp`` with ``de_dot_b0`` and FAC (the default): E was rotated to
+  field-aligned coordinates with B0 resampled to wrong times (in 1970), so
+  the E powers, Poynting flux and polarization were wrong whenever B0
+  varies (60-80 % perpendicular, x100 parallel, for B0 rotating by 90 deg).
+  Identical to irfu-matlab's ``irf_ebsp`` now.
+- ``pyrf.gradient`` divided by the median time step: wrong next to data
+  gaps (65 times the slope around a 1 s gap in 128 Hz data) and with
+  jittered times (15 % for +-1 ms at 128 Hz). It uses the actual time
+  steps; unchanged for even sampling. ``pyrf.st_diff`` uses it for dB/dt.
+- ``pyrf.sliding_derivative``: times as float64 epochs were rounded to
+  256 ns, an error of 0.1 % on the derivative of 8192 Hz data.
+- ``pyrf.ts_convolve`` truncated the convolution of integer data (a moving
+  average of counts of 0 and 1 gave zeros).
+- ``pyrf.ts_append`` (used to join files in ``mms.get_data``,
+  ``mms.db_get_ts``, ``mms.get_eis_allt`` and the Solar Orbiter readers):
+  a time-dependent 2-D attribute was appended along its second dimension
+  (or raised ``ValueError``), a 0-d array became two values and a constant
+  table was doubled. As ``time_clip``, only the arrays with the times along
+  the first dimension are appended.
+- ``mms.list_files`` (local data) missed the file that starts the day
+  before the time interval, e.g. a burst segment across midnight: no file,
+  or the first minutes of data missing. As ``list_files_aws``, the search
+  starts the day before.
+- ``mms.load_ancillary`` returned repeated times: DEFATT files repeat some
+  times by design and consecutive files overlap (by about 5 minutes). As
+  irfu-matlab, the last repeated row of a file is kept and, in an overlap,
+  the earlier file (identical to irfu-matlab on MMS1 5-7 Jul 2017).
+- ``pyrf.ts_time`` truncated Unix times to the nanosecond (6.5e-5 s gave
+  64 999 ns), and ``pyrf.extend_tint`` the extension (0.0157 s added
+  15 699 999 ns); both are rounded.
+- ``pyrf.pvi_4sc`` gave NaN shear angles for parallel fields (cosines just
+  above 1 from rounding) instead of 0.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``pyrf.sliding_derivative`` raised ``AttributeError`` with
+  ``t_units="s"``, and a method in another case (``"Window"``) gave only
+  NaN.
+- ``pyrf.ts_skymap`` raised ``IndexError`` for a single time without
+  ``energy1``; an invalid ``energy1`` named ``energy0`` in the error.
+- ``pyrf.extend_tint`` returns ``str`` items, as documented (they were
+  ``numpy.str_``).
+- ``pyrf.calc_fs`` and ``pyrf.calc_dt`` give NaN without warnings for a
+  series of one sample (documented; ``resample`` and ``avg_4sc`` accept such
+  series).
+- ``pyrf.magnetosphere``: the bow shock downloaded the OMNI data twice.
+- ``mms.list_files`` walks each directory once (the month directory of
+  survey data was walked for every day of the interval).
+- The SDC file listings no longer request a doubled slash
+  (``.../api/v1//file_info/``), and ``mms.list_files_sdc`` imports
+  ``urllib.parse`` itself.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``pyrf.plasma_calc``: the keys of the output (``w_pe``, ``v_a``, ``l_i``,
+  ... none of the documented ones existed), and the example takes a third
+  of the trace as the scalar temperature (it used the trace).
+- ``pyrf.pres_anis``: the example passes the tensor in field-aligned
+  coordinates (it passed the GSE one); the units are given.
+- ``pyrf.wave_fft``: the return order (frequencies, time, spectrogram) and
+  the required ``window``.
+- ``pyrf.magnetosphere``: the example runs (it was irfu-matlab's, a
+  ``TypeError``); both models and the default solar wind are documented.
+- ``pyrf.read_cdf``: what it returns (epochs not decoded, size-1 dimensions
+  removed).
+- ``pyrf.pvi_4sc``: Delta B_ij = B_i - B_j (was B_i - B_i), the outputs
+  are lists of the 6 pairs, the angles in radians.
+- ``pyrf.sliding_derivative`` documents ``method``, ``pyrf.ts_convolve``
+  ``mode``, and ``pyrf.ebsp`` the forms and rows of ``fac_matrix``; the
+  ``pyrf.extend_tint`` example runs.
+
+Development
+^^^^^^^^^^^
+
+- Releases are published by trusted publishing: the workflow checks that
+  the tag is the package version, builds and tests the wheel, and uploads
+  without an API token. The TestPyPI upload on every push is removed.
+- The PyHC checks (PHEP 3 compliance and PyHC environment compatibility)
+  run on ``master`` and ``devel``, from PR #38 by S. Polson.
+- A CI job tests the lowest dependency versions that ``pyproject.toml``
+  allows, on Python 3.12.
+- The coverage is measured on the library only (93 %). The SDC download,
+  the local copies and ``db_get_ts`` are tested offline (mocked SDC,
+  temporary configuration), and so are the plot functions that had no
+  tests; the colour cycle test never ran.
+
 2.5.2 (2026-10-20)
 ------------------
 
