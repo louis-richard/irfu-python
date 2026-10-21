@@ -577,6 +577,16 @@ def psd_moments(vdf, sc_pot, **kwargs):
     ``inner_electron="on"`` or an energy range above the spacecraft potential
     to compare the electron moments with them.
 
+    The FPI ion moments start at the recommended energy index of the
+    partial-moments files (``partidxi_fpi_brst_l2``, constant within each
+    file): 0, all the channels, in dense plasma, but up to 11 (100 eV) in the
+    tenuous plasma sheet, where the lowest channels can hold most of the
+    density (3.8 times the FPI density on 2017-07-11, MMS1). Use
+    ``en_channels=[index, 32]`` to compare the ion moments with them (within
+    4 % on the magnetopause, magnetosheath, bow shock, solar wind and plasma
+    sheet intervals tested). The penetrating-radiation background
+    (`remove_idist_background`) is another correction, which is small there.
+
     Examples
     --------
     >>> from pyrfu import mms

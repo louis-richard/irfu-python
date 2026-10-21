@@ -2902,6 +2902,17 @@ class PsdMomentsTestCase(unittest.TestCase):
             for res, exp in zip(result, expected):
                 np.testing.assert_allclose(res, exp, rtol=rtol)
 
+    def test_psd_moments_en_channels_fpi_index(self):
+        # The recommended energy index of the FPI partial-moments files
+        # (partidxi_fpi_*_l2, uint16) as the first channel, to compare the ion
+        # moments with FPI's
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
+        result = self._moments(vdf, sc_pot, en_channels=[np.uint16(11), 32])
+        self._assert_moments_equal(
+            result, self._moments(vdf, sc_pot, en_channels=[11, 32])
+        )
+        self.assertTrue(np.all(result[0] < self._moments(vdf, sc_pot)[0]))
+
     @staticmethod
     def _electrons_through_potential(t_ev, sc_pot, energy01=False, rate="brst"):
         # Isotropic electron Maxwellian (1 cm^-3, t_ev) seen through a positive
