@@ -33,9 +33,8 @@ from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
 
 def _close_new_figures(test_case):
-    r"""Close the figures created during the test, and only those: closing the
-    figures created at import by @data (e.g., plt.subplots in the decorators)
-    breaks the tests using them with interactive backends (Tk on Windows)."""
+    r"""Close the figures created during the test, and only those (not the
+    figures the caller may have open)."""
     before = set(plt.get_fignums())
 
     def close():
@@ -45,39 +44,51 @@ def _close_new_figures(test_case):
     test_case.addCleanup(close)
 
 
+# Axes named in @data, created when the test runs: the decorators run at
+# import, where plt.subplots opened 20 figures
+_AXES = {
+    "axis": lambda: plt.subplots(1)[1],
+    "axes": lambda: plt.subplots(3)[1],
+    "axes[0]": lambda: plt.subplots(3)[1][0],
+}
+
+
+def _axis(spec):
+    r"""Axis named by `spec` in _AXES, or `spec` itself (None, a number)."""
+    return _AXES[spec]() if isinstance(spec, str) else spec
+
+
 @ddt
 class PlotLineTestCase(unittest.TestCase):
-    @data((0.0, generate_ts(64.0, 100)), (plt.subplots(3)[1], generate_ts(64.0, 100)))
+    def setUp(self):
+        _close_new_figures(self)
+
+    @data((0.0, generate_ts(64.0, 100)), ("axes", generate_ts(64.0, 100)))
     @unpack
     def test_plot_line_axis_type(self, axis, inp):
         with self.assertRaises(TypeError):
-            plot.plot_line(axis, inp)
+            plot.plot_line(_axis(axis), inp)
 
-    @data((plt.subplots(1)[1], generate_data(100)))
+    @data(("axis", generate_data(100)))
     @unpack
     def test_plot_line_inp_type(self, axis, inp):
         with self.assertRaises(TypeError):
-            plot.plot_line(axis, inp)
+            plot.plot_line(_axis(axis), inp)
 
-    @data(
-        (plt.subplots(1)[1], generate_ts(64.0, 100, tensor_order=random.randint(3, 10)))
-    )
+    @data(("axis", generate_ts(64.0, 100, tensor_order=random.randint(3, 10))))
     @unpack
     def test_plot_line_inp_shape(self, axis, inp):
         with self.assertRaises(NotImplementedError):
-            plot.plot_line(axis, inp)
+            plot.plot_line(_axis(axis), inp)
 
     @data(
         (None, generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
-        (plt.subplots(1)[1], generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
-        (
-            plt.subplots(3)[1][0],
-            generate_ts(64.0, 100, tensor_order=random.randint(0, 2)),
-        ),
+        ("axis", generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
+        ("axes[0]", generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
     )
     @unpack
     def test_plot_line_output(self, axis, inp):
-        result = plot.plot_line(axis, inp)
+        result = plot.plot_line(_axis(axis), inp)
         self.assertIsInstance(result, Axes)
 
 
@@ -190,6 +201,9 @@ class AddPositionTestCase(unittest.TestCase):
 
 @ddt
 class PlTxTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     @data(
         ([generate_ts(64.0, 100, tensor_order=3) for _ in range(4)], "cluster"),
         ([generate_ts(64.0, 100, tensor_order=0) for _ in range(4)], "bazinga"),
@@ -210,7 +224,7 @@ class PlTxTestCase(unittest.TestCase):
             ],
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             [
                 generate_ts(64.0, 100, tensor_order=0),
                 generate_ts(64.0, 100, tensor_order=0),
@@ -219,7 +233,7 @@ class PlTxTestCase(unittest.TestCase):
             ],
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             [
                 generate_ts(64.0, 100, tensor_order=1),
                 generate_ts(64.0, 100, tensor_order=1),
@@ -228,7 +242,7 @@ class PlTxTestCase(unittest.TestCase):
             ],
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             [
                 generate_ts(64.0, 100, tensor_order=2),
                 generate_ts(64.0, 100, tensor_order=2),
@@ -239,21 +253,23 @@ class PlTxTestCase(unittest.TestCase):
     )
     @unpack
     def test_pl_tx_output(self, ax, value):
-        result = plot.pl_tx(ax, value, 0)
+        result = plot.pl_tx(_axis(ax), value, 0)
         self.assertIsInstance(result, Axes)
 
 
 @ddt
 class ZoomTestCase(unittest.TestCase):
-    @data((None, plt.subplots(2)[1][1]), (plt.subplots(2)[1][0], None))
+    def setUp(self):
+        _close_new_figures(self)
+
+    @data((None, "axis"), ("axis", None))
     @unpack
     def test_zoom_input(self, ax1, ax2):
         with self.assertRaises(TypeError):
-            plot.zoom(ax1, ax2)
+            plot.zoom(_axis(ax1), _axis(ax2))
 
-    @data((plt.subplots(2)[1][0], plt.subplots(2)[1][1]))
-    @unpack
-    def test_zoom_output(self, ax1, ax2):
+    def test_zoom_output(self):
+        _, (ax1, ax2) = plt.subplots(2)
         result = plot.zoom(ax1, ax2)
         self.assertIsInstance(result, tuple)
         self.assertIsInstance(result[0], Axes)
@@ -704,25 +720,28 @@ class PlotMagnetosphereTestCase(unittest.TestCase):
 
 @ddt
 class PlotHeatmapTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     @data(
-        (plt.subplots(1)[1], "bazinga", np.random.rand(10), np.random.rand(10)),
-        (plt.subplots(1)[1], np.random.rand(10, 10), "bazinga", np.random.rand(10)),
-        (plt.subplots(1)[1], np.random.rand(10, 10), np.random.rand(10), "bazinga"),
+        ("axis", "bazinga", np.random.rand(10), np.random.rand(10)),
+        ("axis", np.random.rand(10, 10), "bazinga", np.random.rand(10)),
+        ("axis", np.random.rand(10, 10), np.random.rand(10), "bazinga"),
     )
     @unpack
     def test_plot_heatmap_input_types(self, ax, data, x, y):
         with self.assertRaises(TypeError):
-            plot.plot_heatmap(ax, data, x, y)
+            plot.plot_heatmap(_axis(ax), data, x, y)
 
     @data(
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(9),
             np.random.rand(10),
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(9),
@@ -731,12 +750,12 @@ class PlotHeatmapTestCase(unittest.TestCase):
     @unpack
     def test_plot_heatmap_input_shape(self, ax, data, x, y):
         with self.assertRaises(ValueError):
-            plot.plot_heatmap(ax, data, x, y)
+            plot.plot_heatmap(_axis(ax), data, x, y)
 
     @data(
         (None, np.random.rand(10, 10), np.random.rand(10), np.random.rand(10)),
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(10),
@@ -744,13 +763,16 @@ class PlotHeatmapTestCase(unittest.TestCase):
     )
     @unpack
     def test_plot_heatmap_output(self, ax, data, x, y):
-        result = plot.plot_heatmap(ax, data, x, y)
+        result = plot.plot_heatmap(_axis(ax), data, x, y)
         self.assertIsInstance(result[0], AxesImage)
         self.assertIsInstance(result[1], Colorbar)
 
 
 @ddt
 class AnnotateHeatmapTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     def test_annotate_heatmap_input(self):
         _, ax = plt.subplots(1)
         # Create image
@@ -762,14 +784,14 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
 
     @data(
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(10),
             random.random(),
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(10),
@@ -779,7 +801,7 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
     @unpack
     def test_annotate_heatmap_output(self, ax, data, x, y, threshold):
         # Create image
-        im, _ = plot.plot_heatmap(ax, data, x, y)
+        im, _ = plot.plot_heatmap(_axis(ax), data, x, y)
 
         # Test with data provided
         plot.annotate_heatmap(im, data, threshold=threshold)
