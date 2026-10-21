@@ -156,10 +156,7 @@ def plot_spectr(
     axis.set_aspect(aspect)
 
     if colorbar.lower() == "right":
-        if kwargs.get("pad"):
-            pad = kwargs["pad"]
-        else:
-            pad = 0.01
+        pad = kwargs.get("pad", 0.01)
 
         pos = axis.get_position()
         cax = fig.add_axes(
@@ -181,10 +178,7 @@ def plot_spectr(
 
         out = (axis, cax)
     elif colorbar.lower() == "top":
-        if kwargs.get("pad"):
-            pad = kwargs["pad"]
-        else:
-            pad = 0.01
+        pad = kwargs.get("pad", 0.01)
 
         pos = axis.get_position()
         cax = fig.add_axes(

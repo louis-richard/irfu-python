@@ -1154,6 +1154,16 @@ class PlotSpectrTestCase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             plot.plot_spectr(ax, self.inp, colorbar="left")
 
+    def test_plot_spectr_pad_zero(self):
+        # pad=0 puts the colour bar against the axis (it was taken as 0.01)
+        _, ax = plt.subplots(1)
+        _, cax = plot.plot_spectr(ax, self.inp, colorbar="right", pad=0)
+        self.assertAlmostEqual(cax.get_position().x0, ax.get_position().x1)
+
+        _, ax = plt.subplots(1)
+        _, cax = plot.plot_spectr(ax, self.inp, colorbar="top", pad=0)
+        self.assertAlmostEqual(cax.get_position().y0, ax.get_position().y1)
+
     def test_plot_spectr_dataset(self):
         # Time-dependent energy table: as a coordinate (named energy or not) or
         # as a second data variable
