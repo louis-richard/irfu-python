@@ -345,6 +345,21 @@ class PlotAngAngTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             plot.plot_ang_ang(self.vdf, self.tint, [100.0, 200.0])
 
+    def test_plot_ang_ang_phi_1d(self):
+        # phi as (phi,) (ValueError): the same map
+        vdf = self.vdf.copy()
+        vdf["phi"] = ("idx1", self.vdf.phi.data[0])
+
+        for tint in [self.tint, self.tint[:1]]:
+            _, ax, _ = plot.plot_ang_ang(vdf, tint, [5.0, 10.0])
+            _, expected, _ = plot.plot_ang_ang(self.vdf, tint, [5.0, 10.0])
+
+            np.testing.assert_allclose(self._map(ax), 8.5 * self.angles)
+            np.testing.assert_allclose(
+                ax.collections[0].get_coordinates(),
+                expected.collections[0].get_coordinates(),
+            )
+
     def test_plot_ang_ang_tint_type(self):
         with self.assertRaises(TypeError):
             plot.plot_ang_ang(self.vdf, self.tint + self.tint[:1])
