@@ -5479,6 +5479,28 @@ class TsSkymapTestCase(unittest.TestCase):
         for k in result:
             self.assertEqual(result[k].attrs, {})
 
+    def test_ts_skymap_energy_tables(self):
+        energy = np.vstack([np.arange(1.0, 33.0), np.arange(2.0, 34.0)])
+        args = (np.random.random((2, 32, 32, 16)), energy, np.ones((2, 32)))
+        result = pyrf.ts_skymap(generate_timeline(64.0, 2), *args, np.arange(16.0))
+        np.testing.assert_array_equal(result.attrs["energy0"], energy[0])
+        np.testing.assert_array_equal(result.attrs["energy1"], energy[1])
+
+        # A single time (it raised IndexError): one table
+        result = pyrf.ts_skymap(
+            generate_timeline(64.0, 1),
+            *[arg[:1] for arg in args],
+            np.arange(16.0),
+        )
+        self.assertEqual(result.data.shape, (1, 32, 32, 16))
+        np.testing.assert_array_equal(result.attrs["energy0"], energy[0])
+        np.testing.assert_array_equal(result.attrs["energy1"], energy[0])
+
+        with self.assertRaisesRegex(TypeError, "energy1"):
+            pyrf.ts_skymap(
+                generate_timeline(64.0, 2), *args, np.arange(16.0), energy1=[1.0]
+            )
+
 
 @ddt
 class TsScalarTestCase(unittest.TestCase):
