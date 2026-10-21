@@ -279,7 +279,7 @@ class ZoomTestCase(unittest.TestCase):
 @ddt
 class SetColorCycleTestCase(unittest.TestCase):
     @data(
-        ("pyrfu", "hot_white_desaturated"),
+        ("pyrfu", "Spectral_r"),
         ("Oceanic", "ocean"),
         ("tab", "Spectral_r"),
         ("Tableau", "Spectral_r"),
@@ -299,9 +299,51 @@ class SetColorCycleTestCase(unittest.TestCase):
 
 
 class UsePyrfuStyleTestCase(unittest.TestCase):
+    # The style of the example notebooks
+    STYLE = {
+        "image.cmap": "Spectral_r",
+        "legend.loc": "upper right",
+        "legend.frameon": False,
+        "legend.handlelength": 1.5,
+        "xtick.minor.visible": True,
+        "ytick.minor.visible": True,
+        "mathtext.fontset": "dejavusans",
+        "text.usetex": False,
+    }
+    COLORS = ["#005f87", "#008700", "#af0000", "#444444", "#d75f00"]
+
     @staticmethod
     def _which(missing=()):
         return lambda cmd: None if cmd in missing else f"/usr/bin/{cmd}"
+
+    def _assert_pyrfu_style(self):
+        for key, value in self.STYLE.items():
+            self.assertEqual(mpl.rcParams[key], value, key)
+
+        colors = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+        self.assertListEqual(
+            [mpl.colors.to_hex(c) for c in colors[: len(self.COLORS)]], self.COLORS
+        )
+
+    def test_use_pyrfu_style_default(self):
+        with mpl.rc_context():
+            # The pyrfu sheet is applied on matplotlib's defaults
+            mpl.rcParams["lines.linewidth"] = 5.0
+            plot.use_pyrfu_style()
+            self._assert_pyrfu_style()
+            self.assertEqual(mpl.rcParams["lines.linewidth"], 1.5)
+
+    def test_use_pyrfu_style_sheet(self):
+        # plt.style.use("pyrfu") gives the same style
+        with mpl.rc_context():
+            plt.style.use(["default", "pyrfu"])
+            self._assert_pyrfu_style()
+
+    def test_use_pyrfu_style_other_sheet(self):
+        with mpl.rc_context():
+            plot.use_pyrfu_style("classic", color_cycle="tab")
+            self.assertEqual(mpl.rcParams["image.cmap"], "Spectral_r")
+            self.assertTrue(mpl.rcParams["xtick.minor.visible"])
 
     def test_use_pyrfu_style_usetex(self):
         with mpl.rc_context(), mock.patch("pyrfu.plot.shutil.which", self._which()):

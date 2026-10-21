@@ -215,7 +215,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
             "pyrfu:lightblue",
             "pyrfu:olive",
         ]
-        cmap = "hot_white_desaturated"
+        cmap = "Spectral_r"
     elif pal.lower() == "oceanic":
         colors = [
             "on:green",
@@ -260,7 +260,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
 
 
 def use_pyrfu_style(
-    name: str = "default",
+    name: str = "pyrfu",
     color_cycle: str = "pyrfu",
     fancy_legend: bool = False,
     usetex: bool = False,
@@ -270,7 +270,11 @@ def use_pyrfu_style(
     Parameters
     ----------
     name : str, Optional
-       Name of the style sheet. Default is "default" (see also
+       Name of the style sheet. Default is "pyrfu", the style of the example
+       notebooks (pyrfu colour cycle, Spectral_r colormap, minor ticks,
+       frameless legends in the upper right corner), applied on top of
+       matplotlib's default style. Any other matplotlib style sheet can be
+       given (see also
        https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html).
     color_cycle : str, Optional
        Name of the color cycle to use. Default is "pyrfu".
@@ -292,7 +296,8 @@ def use_pyrfu_style(
             )
             usetex = False
 
-    style.use(name)
+    # The pyrfu sheet only sets what it changes: start from the defaults
+    style.use(["default", name] if name == "pyrfu" else name)
     set_color_cycle(color_cycle)
     mpl.rcParams["xtick.minor.visible"] = True
     mpl.rcParams["ytick.minor.visible"] = True
