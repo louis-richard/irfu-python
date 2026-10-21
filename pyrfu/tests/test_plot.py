@@ -117,6 +117,20 @@ class PlotClinesTestCase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             plot.plot_clines(plt.subplots(1)[1], inp, cscale="lin")
 
+    def test_plot_clines_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        inp = xr.DataArray(
+            np.random.rand(10, 3),
+            coords=[generate_ts(64.0, 10).time.data, [1.0, 10.0, 100.0]],
+            dims=["time", "energy"],
+        )
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        _, cax = plot.plot_clines(ax, inp)
+
+        self.assertIn(cax, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
+
 
 @ddt
 class AddPositionTestCase(unittest.TestCase):

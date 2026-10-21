@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 
 # 3rd party import
 import numpy as np
@@ -70,7 +69,7 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
         plot_line(axis, inp[:, i], color=c, **kwargs)
 
     pos = axis.get_position()
-    f = plt.gcf()
+    f = axis.get_figure()
     cax = f.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])
 
     ColorbarBase(cax, cmap=c_map, norm=norm, orientation="vertical")
