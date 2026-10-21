@@ -122,11 +122,11 @@ def c_4_grad(
 
     """
 
-    if not isinstance(r_list, list) or not isinstance(b_list, list):
-        raise TypeError("r_list and b_list must be lists")
+    if not isinstance(r_list, (list, tuple)) or not isinstance(b_list, (list, tuple)):
+        raise TypeError("r_list and b_list must be lists or tuples")
 
     if len(r_list) != 4 or len(b_list) != 4:
-        raise ValueError("r_list and b_list must be lists of length 4")
+        raise ValueError("r_list and b_list must have 4 elements")
 
     if not all(isinstance(r, DataArray) for r in r_list):
         raise TypeError("All elements of r_list must be xarray.DataArray")

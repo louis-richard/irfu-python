@@ -257,6 +257,11 @@ class Avg4SCTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, *[3] * tensor_order])
 
+    def test_avg_4sc_tuple(self):
+        # A tuple of spacecraft raised TypeError ("b_list must be a list")
+        b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
+        xr.testing.assert_identical(pyrf.avg_4sc(tuple(b_mms)), pyrf.avg_4sc(b_mms))
+
 
 class NanAvg4SCTestCase(unittest.TestCase):
     def test_nanavg_4sc_values(self):
@@ -490,6 +495,32 @@ class C4JTestCase(unittest.TestCase):
             * 3,
             rtol=1e-9,
             atol=1e-30,
+        )
+
+    def test_c_4_j_and_c_4_grad_tuples(self):
+        # Tuples of spacecraft were rejected (AssertionError, TypeError)
+        r_sc = 10.0 * np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.5, np.sqrt(3) / 2, 0.0],
+                [0.5, np.sqrt(3) / 6, np.sqrt(2 / 3)],
+            ]
+        )
+        time = generate_timeline(1.0, 3)
+        r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (3, 1))) for r in r_sc]
+        b_mms = [
+            pyrf.ts_vec_xyz(time, np.tile([0.5 * r[2], 0.0, 20.0 + r[0]], (3, 1)))
+            for r in r_sc
+        ]
+
+        for res_tuple, res_list in zip(
+            pyrf.c_4_j(tuple(r_mms), tuple(b_mms)), pyrf.c_4_j(r_mms, b_mms)
+        ):
+            xr.testing.assert_identical(res_tuple, res_list)
+
+        xr.testing.assert_identical(
+            pyrf.c_4_grad(tuple(r_mms), tuple(b_mms)), pyrf.c_4_grad(r_mms, b_mms)
         )
 
 
