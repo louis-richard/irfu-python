@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
-
 # 3rd party imports
 import numpy as np
 from matplotlib import colors
@@ -68,7 +66,7 @@ def plot_reduced_2d(ax, f2d, clim: list = None):
     ax.set_ylim(np.array([-vy_lim, vy_lim]))
     ax.set_aspect("equal")
 
-    f = plt.gcf()
+    f = ax.get_figure()
     pos = ax.get_position()
     cax = f.add_axes([pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01])
     cbar = f.colorbar(mappable=im, cax=cax, ax=ax, orientation="horizontal")

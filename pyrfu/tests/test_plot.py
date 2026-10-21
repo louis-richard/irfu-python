@@ -1077,6 +1077,15 @@ class PlotReduced2dTestCase(unittest.TestCase):
         clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
         np.testing.assert_allclose(clines.levels, np.logspace(-12, -9, 4))
 
+    def test_plot_reduced_2d_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        _, cax = plot.plot_reduced_2d(ax, self.f2d)
+
+        self.assertIn(cax, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
+
 
 class PlotSpectrTestCase(unittest.TestCase):
     def setUp(self):
