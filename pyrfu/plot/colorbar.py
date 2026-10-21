@@ -11,23 +11,25 @@ __status__ = "Prototype"
 
 
 def colorbar(mappable, axis, pad: float = 0.01, width: float = 0.03):
-    r"""Add colorbar to ax corresponding to im.
+    r"""Add a colorbar of `mappable` on the right of `axis`.
 
     Parameters
     ----------
-    mappable : matplotlib.collections.QuadMesh
-        The quadrilateral mesh mappable described by this colorbar.
-    axis : matplotlib.pyplot.subplotsaxes
-        Axis of plot.
+    mappable : matplotlib.cm.ScalarMappable
+        The mappable described by this colorbar, e.g. the
+        matplotlib.collections.QuadMesh returned by pcolormesh.
+    axis : matplotlib.axes.Axes
+        Axis of the plot.
     pad : float, Optional
-        Shift the colorbar with respect to the axis.
+        Gap between the axis and the colorbar, in figure coordinates. Default
+        is 0.01.
     width : float, Optional
-        Width of the colorbar.
+        Width of the colorbar, in figure coordinates. Default is 0.03.
 
     Returns
     -------
-    cax : matplotlib.colorbar.Colorbar
-        Colorbar added to the plot.
+    cax : matplotlib.axes.Axes
+        Axis of the colorbar, added to the figure of `axis`.
 
     """
 
