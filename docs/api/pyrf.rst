@@ -169,6 +169,7 @@ Multi-spacecraft methods
    c_4_grad
    c_4_j
    c_4_v
+   c_4_v_xcorr
    st_diff
    pid_4sc
    pid_4sc_err
