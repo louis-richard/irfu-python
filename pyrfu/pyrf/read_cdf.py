@@ -45,8 +45,13 @@ def read_cdf(path: str) -> dict:
     # Initialize output dictionary
     out_dict = {}
 
-    # Load file (pycdfpp returns None for a missing or unreadable file)
-    file = pycdfpp.load(path)
+    # Load file: pycdfpp returns None for a missing or unreadable file, or
+    # raises (FileNotFoundError, or ValueError for a file that is not a CDF)
+    # in recent versions (0.18)
+    try:
+        file = pycdfpp.load(path)
+    except (FileNotFoundError, ValueError):
+        file = None
 
     if file is None:
         raise FileNotFoundError(f"cannot read the CDF file {path}")

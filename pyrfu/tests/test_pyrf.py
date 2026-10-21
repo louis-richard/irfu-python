@@ -4341,6 +4341,15 @@ class ReadCdfTestCase(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             pyrf.read_cdf(path)
 
+    def test_read_cdf_pycdfpp_versions(self):
+        # pycdfpp returns None (< 0.18) or raises (ValueError for a file that
+        # is not a CDF, 0.18): FileNotFoundError with any version
+        path = os.path.join(self.directory, "test.cdf")
+        for kwargs in [{"return_value": None}, {"side_effect": ValueError("bad")}]:
+            with mock.patch("pyrfu.pyrf.read_cdf.pycdfpp.load", **kwargs):
+                with self.assertRaisesRegex(FileNotFoundError, "test.cdf"):
+                    pyrf.read_cdf(path)
+
     def test_read_cdf_values(self):
         # Lower-case names, the epochs as stored (TT2000), size-1 dims removed
         time = np.datetime64("2023-01-01T00:00:00", "ns")
