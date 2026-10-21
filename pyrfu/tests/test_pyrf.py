@@ -2163,6 +2163,42 @@ class EbspTestCase(unittest.TestCase):
             1e-5 * np.nanmax(e_power[..., 0] + e_power[..., 1]),
         )
 
+    def test_ebsp_fac_matrix_array(self):
+        # The FAC matrices as an array (rejected): as the matrices from B0 and
+        # r = [1, 0, 0]; a constant identity as no FAC
+        t_sec = np.arange(512) / 64.0
+        time = generate_timeline(64.0, 512)
+        angle = np.pi / 2 * t_sec / t_sec[-1]
+        b_0 = np.stack([10 * np.cos(angle), 10 * np.sin(angle), 5 + 0 * t_sec], 1)
+        b_hat = b_0 / np.linalg.norm(b_0, axis=1, keepdims=True)
+        perp_y = np.cross(b_hat, [1.0, 0.0, 0.0])
+        perp_y /= np.linalg.norm(perp_y, axis=1, keepdims=True)
+        perp_x = np.cross(perp_y, b_hat)
+        fac_matrix = np.stack([perp_x, perp_y, b_hat], 1)
+
+        rng = np.random.default_rng(0)
+        e_xyz = pyrf.ts_vec_xyz(time, rng.standard_normal((512, 3)))
+        d_b = pyrf.ts_vec_xyz(time, rng.standard_normal((512, 3)))
+        b_0 = pyrf.ts_vec_xyz(time, b_0)
+
+        def run(**kwargs):
+            return pyrf.ebsp(e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0], **kwargs)
+
+        keys = ["bb_xxyyzzss", "ee_xxyyzzss", "pf_xyz"]
+        ref = run()
+        for matrix in [fac_matrix, pyrf.ts_tensor_xyz(time, fac_matrix)]:
+            result = run(fac_matrix=matrix)
+
+            for k in keys:
+                np.testing.assert_allclose(result[k].data, ref[k].data, rtol=1e-10)
+
+        result, ref = run(fac_matrix=np.eye(3).tolist()), run(fac=False)
+        for k in keys:
+            np.testing.assert_allclose(result[k].data, ref[k].data, rtol=1e-12)
+
+        with self.assertRaises(ValueError):
+            run(fac_matrix=fac_matrix[:-1])
+
 
 class EndTestCase(unittest.TestCase):
     def test_end_input(self):
