@@ -44,7 +44,7 @@ def ts_skymap(
     energy : np.ndarray
         Energy levels.
     phi : np.ndarray
-        Azimuthal angles.
+        Azimuthal angles, (time, phi) or (phi,) (then the same at all times).
     theta : np.ndarray
         Elevation angles.
     energy0 : np.ndarray, Optional
@@ -92,6 +92,10 @@ def ts_skymap(
 
     if not isinstance(theta, np.ndarray):
         raise TypeError("theta must be a numpy.ndarray")
+
+    # Azimuths as (time, phi), as get_dist for the fast mode
+    if phi.ndim == 1:
+        phi = np.tile(phi, (len(time), 1))
 
     # Check if even (odd) time step energy channels energy1 (energy0), and
     # energy step table are provided.

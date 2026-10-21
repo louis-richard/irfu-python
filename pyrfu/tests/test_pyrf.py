@@ -5540,6 +5540,17 @@ class TsSkymapTestCase(unittest.TestCase):
         for k in result:
             self.assertEqual(result[k].attrs, {})
 
+    def test_ts_skymap_phi_1d(self):
+        # phi as (phi,) (IndexError): the same at all times, as (time, phi)
+        time = generate_timeline(64.0, 5)
+        args = (np.random.random((5, 32, 32, 16)), np.tile(np.arange(32.0), (5, 1)))
+        phi = 5.625 + 11.25 * np.arange(32)
+        result = pyrf.ts_skymap(time, *args, phi, np.arange(16.0))
+        expected = pyrf.ts_skymap(time, *args, np.tile(phi, (5, 1)), np.arange(16.0))
+
+        self.assertEqual(result.phi.dims, ("time", "idx1"))
+        xr.testing.assert_identical(result, expected)
+
     def test_ts_skymap_energy_tables(self):
         energy = np.vstack([np.arange(1.0, 33.0), np.arange(2.0, 34.0)])
         args = (np.random.random((2, 32, 32, 16)), energy, np.ones((2, 32)))
