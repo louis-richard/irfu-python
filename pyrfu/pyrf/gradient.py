@@ -5,9 +5,6 @@
 import numpy as np
 import xarray as xr
 
-# Local imports
-from .calc_dt import calc_dt
-
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -27,7 +24,13 @@ def gradient(inp):
     Returns
     -------
     out : xarray.DataArray
-        Time series of the time derivative of the input variable.
+        Time series of the time derivative of the input variable, per second.
+
+    Notes
+    -----
+    Second-order central differences with the actual time steps (also across
+    gaps and for uneven sampling), and first-order differences at the ends (see
+    numpy.gradient).
 
     Examples
     --------
@@ -51,10 +54,12 @@ def gradient(inp):
 
     """
 
-    # guess time step
-    delta_t = calc_dt(inp)
+    # Times in seconds from the first sample, from the exact time steps in ns (the
+    # median time step was wrong across gaps and for jittered times)
+    time = inp.time.data.astype("datetime64[ns]")
+    time = (time - time[0]).astype(np.int64) * 1e-9
 
-    d_inp_dt = np.gradient(inp.data, axis=0) / delta_t
+    d_inp_dt = np.gradient(inp.data, time, axis=0)
 
     out = xr.DataArray(
         d_inp_dt,

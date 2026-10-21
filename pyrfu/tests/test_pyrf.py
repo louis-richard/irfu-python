@@ -2512,6 +2512,41 @@ class GradientTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), list(value.shape))
 
+    def test_gradient_time_steps(self):
+        # 128 Hz with a 1 s gap and +-1 ms jitter: the actual time steps, not the
+        # median one (65 times the slope next to the gap, 15 % with the jitter)
+        rng = np.random.default_rng(0)
+        off = np.concatenate([np.arange(50), np.arange(50) + 178]) * 7812500
+        off += rng.integers(-1_000_000, 1_000_000, 100)
+        t_sec = off * 1e-9
+        time = np.datetime64("2019-01-01T00:00:00", "ns") + off.astype(
+            "timedelta64[ns]"
+        )
+        inp = pyrf.ts_vec_xyz(
+            time, np.outer(3.0 * t_sec + t_sec**2, [1.0, -2.0, 0.5]), {"UNITS": "nT"}
+        )
+        result = pyrf.gradient(inp)
+
+        # Exact inside (second order), first order at the ends
+        np.testing.assert_allclose(
+            result.data[1:-1],
+            np.outer(3.0 + 2.0 * t_sec[1:-1], [1.0, -2.0, 0.5]),
+            rtol=1e-9,
+        )
+        np.testing.assert_array_equal(result.time.data, time)
+        np.testing.assert_array_equal(result.comp.data, inp.comp.data)
+        self.assertEqual(result.attrs["UNITS"], "nT/s")
+        self.assertEqual(inp.attrs["UNITS"], "nT")
+
+    def test_gradient_regular(self):
+        # Evenly sampled: np.gradient divided by the time step, as before
+        inp = generate_ts(64.0, 100, tensor_order=1)
+        result = pyrf.gradient(inp)
+
+        np.testing.assert_allclose(
+            result.data, np.gradient(inp.data, axis=0) * 64.0, rtol=1e-6
+        )
+
 
 @ddt
 class Gse2GsmTestCase(unittest.TestCase):
