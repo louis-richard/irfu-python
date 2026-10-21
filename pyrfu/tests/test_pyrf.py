@@ -5020,6 +5020,29 @@ class TsTimeTestCase(unittest.TestCase):
         result = pyrf.ts_time(timeline, {})
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_ts_time_rounded(self):
+        # 6.5e-5 * 1e9 = 64999.99999999999 was truncated to 64 999 ns
+        result = pyrf.ts_time(np.array([6.5e-5, 1.1]))
+        expected = np.array([65000, 1_100_000_000]).astype("datetime64[ns]")
+        np.testing.assert_array_equal(result.data, expected)
+
+    @data(np.float32, np.float16)
+    def test_ts_time_float_types(self, dtype):
+        # Float types other than float64 raised TypeError
+        result = pyrf.ts_time(np.array([1.5, 2.0], dtype=dtype))
+        np.testing.assert_array_equal(
+            result.data,
+            np.array([1_500_000_000, 2_000_000_000]).astype("datetime64[ns]"),
+        )
+
+    @data("datetime64[us]", "datetime64[ms]", "datetime64[s]")
+    def test_ts_time_datetime64_units(self, dtype):
+        # datetime64 in another unit than ns raised TypeError
+        time = np.array(["2019-01-01T00:00:01", "2019-01-01T00:00:02"], dtype=dtype)
+        result = pyrf.ts_time(time)
+        self.assertEqual(result.dtype, np.dtype("datetime64[ns]"))
+        np.testing.assert_array_equal(result.data, time.astype("datetime64[ns]"))
+
 
 @ddt
 class TsSkymapTestCase(unittest.TestCase):
