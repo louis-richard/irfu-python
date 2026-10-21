@@ -201,6 +201,18 @@
     "v_edp_slow_sitl": {
       "cdf_name": "edp_scpot_slow_sitl",
       "dtype": "scpot"
+    },
+    "vpsp_edp_brst_l2": {
+      "cdf_name": "edp_psp_brst_l2",
+      "dtype": "scpot"
+    },
+    "vpsp_edp_fast_l2": {
+      "cdf_name": "edp_psp_fast_l2",
+      "dtype": "scpot"
+    },
+    "vpsp_edp_slow_l2": {
+      "cdf_name": "edp_psp_slow_l2",
+      "dtype": "scpot"
     }
   },
   "fgm": {

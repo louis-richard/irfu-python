@@ -177,7 +177,8 @@ def get_data(
     erre_edp_fast_l2, hmfe_dsl_edp_brst_l2, hmfe_par_edp_brst_l2, phase_edp_fast_l2a,
     phase_edp_slow_l2a, sdev12_edp_fast_l2a, sdev12_edp_slow_l2a, sdev34_edp_fast_l2a,
     sdev34_edp_slow_l2a, v6_edp_brst_l2, v6_edp_fast_l2, v6_edp_slow_l2,
-    v_edp_brst_l2, v_edp_fast_l2, v_edp_fast_sitl, v_edp_slow_l2, v_edp_slow_sitl
+    v_edp_brst_l2, v_edp_fast_l2, v_edp_fast_sitl, v_edp_slow_l2, v_edp_slow_sitl,
+    vpsp_edp_brst_l2, vpsp_edp_fast_l2, vpsp_edp_slow_l2
 
     FGM: b_bcs_fgm_brst_l2, b_bcs_fgm_srvy_l2, b_dmpa_fgm_brst_l2, b_dmpa_fgm_srvy_l2,
     b_gse_fgm_brst_l2, b_gse_fgm_srvy_l2, b_gsm_fgm_brst_l2, b_gsm_fgm_srvy_l2

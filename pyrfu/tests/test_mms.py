@@ -8003,6 +8003,17 @@ class TokenizeTestCase(unittest.TestCase):
         self.assertEqual(result["cdf_name"], f"edp_dcv_{data_rate}_l2")
         self.assertEqual(result["dtype"], "scpot")
 
+    @data("brst", "fast", "slow")
+    def test_tokenize_edp_vpsp(self, data_rate):
+        # The probe-to-spacecraft potential averaged over the probes (psp) is in
+        # the scpot files, as irfu-matlab mms.get_data Vpsp_edp_*_l2 (its name
+        # in any case)
+        for var_str in [f"vpsp_edp_{data_rate}_l2", f"Vpsp_edp_{data_rate}_l2"]:
+            result = mms.tokenize(var_str)
+            self.assertEqual(result["cdf_name"], f"edp_psp_{data_rate}_l2")
+            self.assertEqual(result["dtype"], "scpot")
+            self.assertEqual(result["param"], "vpsp")
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)

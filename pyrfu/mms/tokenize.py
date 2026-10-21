@@ -43,6 +43,7 @@ ALL_PARAMS_SCALARS = [
     "pderri",
     "v",
     "v6",
+    "vpsp",
     "defi",
     "defbgi",
     "defe",
