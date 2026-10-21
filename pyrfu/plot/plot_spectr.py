@@ -30,7 +30,7 @@ def plot_spectr(
 
     Parameters
     ----------
-    axis : matplotlib.pyplot.subplotsaxes
+    axis : matplotlib.axes.Axes
         Target axis to plot. If None create a new figure.
     inp : xarray.DataArray or xarray.Dataset
         Input 2D data to plot. If a Dataset, it must contain a "data"
@@ -41,30 +41,41 @@ def plot_spectr(
         - a second data variable holding the y-axis values.
 
     yscale : {"linear", "log"}, Optional
-        Y-axis scaling. Default is "" (linear).
-    cscale : {"linear", "log"}, Optional
-        C-axis scaling. Default is "" (linear).
+        Y-axis scaling. Default is "linear".
+    cscale : {"linear", "log"} or matplotlib.colors.Normalize, Optional
+        C-axis scaling, or the norm to use. Default is "linear".
     clim : list, Optional
-        C-axis bounds. Default is None (autolim).
-    cmap : str, Optional
-        Colormap. Default is "jet".
-    colorbar : str, Optional
-        Location of the colorbar with respect to the axis.
-        Set to "none" to hide.
+        C-axis bounds [min, max]. Default is None (the range of the data).
+    cmap : str or matplotlib.colors.Colormap, Optional
+        Colormap. Default is matplotlib's default (``image.cmap``, set by the
+        pyrfu style).
+    colorbar : {"right", "top", "none"}, Optional
+        Location of the colorbar with respect to the axis, "none" to hide it.
+        Default is "right".
+    aspect : str or float, Optional
+        Aspect ratio of the axis, see matplotlib.axes.Axes.set_aspect.
+        Default is "auto".
 
     Other Parameters
     ----------------
-    **kwargs
-        Keyword arguments.
+    pad : float
+        Gap between the axis and the colorbar, in figure coordinates. Default
+        is 0.01.
 
     Returns
     -------
-    fig : figure
-        Figure with axis.
-    axs : matplotlib.pyplot.subplotsaxes
-        Axis with spectrum.
-    caxs : matplotlib.pyplot.subplotsaxes
-        Only if colorbar is True.
+    axis : matplotlib.axes.Axes
+        Axis with the spectrogram.
+    cax : matplotlib.axes.Axes
+        Axis of the colorbar, only if colorbar is not "none" (otherwise only
+        `axis` is returned).
+
+    Raises
+    ------
+    TypeError
+        If `inp` is not a DataArray or a Dataset.
+    NotImplementedError
+        If `colorbar` is not "right", "top" or "none".
 
     """
 
