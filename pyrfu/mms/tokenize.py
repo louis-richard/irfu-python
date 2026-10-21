@@ -189,9 +189,6 @@ def _tensor_order(splitted_key: list[str]) -> int:
     """
     param = splitted_key[0].lower()
 
-    if param not in ALL_PARAMETERS:
-        raise ValueError(f"invalid parameter {param!r}")
-
     if param in PARAMS_SCALARS:
         tensor_order = 0
     elif param in ALL_PARAMS_VECTORS:
@@ -248,6 +245,10 @@ def tokenize(var_str: str) -> Mapping[str, str]:
             f"{var_str!r} is not a variable key: param[_cs]_inst_rate_level"
         )
 
+    # Parameter (the first part in both forms)
+    if splitted_key[0] not in ALL_PARAMETERS:
+        raise ValueError(f"invalid parameter {splitted_key[0]!r} in {var_str!r}")
+
     tensor_order = _tensor_order(splitted_key)
 
     if len(splitted_key) == 5 and tensor_order > 0:
@@ -255,10 +256,6 @@ def tokenize(var_str: str) -> Mapping[str, str]:
     else:
         parameter, instrument, data_rate, data_level = splitted_key
         coordinates_system = ""
-
-    # Parameter
-    if parameter not in ALL_PARAMETERS:
-        raise ValueError(f"invalid parameter {parameter!r} in {var_str!r}")
 
     # Coordinate system
     if coordinates_system not in COORDINATE_SYSTEMS:
