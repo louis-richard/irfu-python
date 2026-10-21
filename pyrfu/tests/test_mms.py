@@ -8014,6 +8014,16 @@ class TokenizeTestCase(unittest.TestCase):
             self.assertEqual(result["dtype"], "scpot")
             self.assertEqual(result["param"], "vpsp")
 
+    @data("brst", "fast")
+    def test_tokenize_fpi_part_index(self, data_rate):
+        # The recommended energy index of the FPI partial moments (FPI's
+        # moments are the partial moments from this channel)
+        for species in ["i", "e"]:
+            result = mms.tokenize(f"partidx{species}_fpi_{data_rate}_l2")
+            self.assertEqual(result["cdf_name"], f"d{species}s_part_index_{data_rate}")
+            self.assertEqual(result["dtype"], f"d{species}s-partmoms")
+            self.assertEqual(result["param"], f"partidx{species}")
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
