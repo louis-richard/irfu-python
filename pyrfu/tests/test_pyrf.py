@@ -6612,7 +6612,8 @@ class EbspPhysicsTestCase(unittest.TestCase):
 
     def test_ebsp_de_dot_b0_full_b_cadence(self):
         # Full B at a quarter of the cadence of E and dB raised ValueError
-        # ((4096,) vs (1024,)); a constant B resamples exactly
+        # ((4096,) vs (1024,)); a constant B resamples to the same values, to
+        # rounding (7e-15 with numpy 2.0 on Linux x86)
         e, b, b0 = self._wave()
         time = e.time.data
         b_full, b_full_16 = [
@@ -6623,8 +6624,9 @@ class EbspPhysicsTestCase(unittest.TestCase):
         res = pyrf.ebsp(e, b, b_full, b0, None, [0.5, 8], **options)
         res_16 = pyrf.ebsp(e, b, b_full_16, b0, None, [0.5, 8], **options)
 
+        # Same values and NaN masks
         for k in ["bb_xxyyzzss", "ee_xxyyzzss", "ee_ss", "pf_xyz", "pf_rtp"]:
-            np.testing.assert_array_equal(res_16[k].data, res[k].data)
+            np.testing.assert_allclose(res_16[k].data, res[k].data, rtol=1e-12)
 
     def test_ebsp_de_dot_b0_recovers_ez(self):
         # E perpendicular to a tilted full B: Ez from E.B = 0 and (Ex, Ey) gives
