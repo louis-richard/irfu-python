@@ -951,7 +951,7 @@ class PlotContourTestCase(unittest.TestCase):
 class PlotProjectionTestCase(unittest.TestCase):
     def setUp(self):
         _close_new_figures(self)
-        # Velocities in m/s, plotted in 10^3 m/s
+        # Velocities in km/s, plotted in 10^3 km/s
         self.v_x = np.linspace(-2e3, 2e3, 20)
         self.v_y = np.linspace(-1e3, 1e3, 10)
         self.f_mat = np.outer(np.arange(1.0, 21.0), np.arange(1.0, 11.0)) * 1e-15
@@ -1002,6 +1002,15 @@ class PlotProjectionTestCase(unittest.TestCase):
             plot.plot_projection(
                 ax, self.v_x, self.v_y, self.f_mat, cmap=mpl.colormaps["viridis"]
             )
+
+    def test_plot_projection_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        _, caxis = plot.plot_projection(ax, self.v_x, self.v_y, self.f_mat)
+
+        self.assertIn(caxis, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
 
 
 class PlotReduced2dTestCase(unittest.TestCase):

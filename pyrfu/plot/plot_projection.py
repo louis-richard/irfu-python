@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 
 __author__ = "Louis Richard"
@@ -86,7 +85,7 @@ def plot_projection(
     axis.set_ylim([-vlim / 1e3, vlim / 1e3])
     axis.set_aspect("equal")
 
-    f = plt.gcf()
+    f = axis.get_figure()
     pos = axis.get_position()
 
     if colorbar == "top":
