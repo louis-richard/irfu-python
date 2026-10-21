@@ -10,7 +10,7 @@ from .datetime642iso8601 import datetime642iso8601
 from .iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
+__email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
@@ -22,16 +22,17 @@ def extend_tint(tint, ext: list = None):
 
     Parameters
     ----------
-    tint : list of str
+    tint : list of str or list of numpy.datetime64
         Reference time interval to extend.
-    ext : list of float or list of float
-        Number of seconds to extend time interval
-        [left extend, right extend].
+    ext : list of float, Optional
+        Seconds added to the start and to the end of the time interval
+        (negative to extend the start backwards), rounded to the nanosecond.
+        Default is [-60, 60].
 
     Returns
     -------
     tint_new : list of str
-        Extended time interval.
+        Extended time interval, in ISO 8601 format with nanoseconds.
 
     Examples
     --------
@@ -39,11 +40,11 @@ def extend_tint(tint, ext: list = None):
 
     Time interval
 
-    >>> tints = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
+    >>> tint = ["2015-10-30T05:15:42.000", "2015-10-30T05:15:54.000"]
 
-    Load spacecraft position
+    Extend it by 100 s on each side
 
-    >>> tints_long = pyrf.extend_tint(tint, [-100, 100])
+    >>> tint_long = pyrf.extend_tint(tint, [-100, 100])
 
     """
 
@@ -56,8 +57,9 @@ def extend_tint(tint, ext: list = None):
     assert isinstance(tint, (np.ndarray, list)) and len(tint) == 2, f"tint {message}"
     assert isinstance(ext, (np.ndarray, list)) and len(ext) == 2, f"ext {message}"
 
-    # Convert extension to timedelta64[ns]
-    ext = (np.array(ext) * 1e9).astype("timedelta64[ns]")
+    # Convert extension to timedelta64[ns], rounded (0.0157 * 1e9 is
+    # 15699999.999999998, which was truncated to 1 ns less)
+    ext = np.round(np.array(ext, dtype=np.float64) * 1e9).astype("timedelta64[ns]")
 
     # Original time interval to datetime64[ns]
     if isinstance(tint[0], np.datetime64):
@@ -68,6 +70,6 @@ def extend_tint(tint, ext: list = None):
         raise TypeError("Invalid time format!! Must be datetime64 or str!!")
 
     # New time interval in iso 8601 format
-    tint_new = list(datetime642iso8601(tint_ori + ext))
+    tint_new = [str(t_) for t_ in datetime642iso8601(tint_ori + ext)]
 
     return tint_new

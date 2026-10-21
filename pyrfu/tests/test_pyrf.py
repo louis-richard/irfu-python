@@ -2191,6 +2191,23 @@ class ExtendTintTestCase(unittest.TestCase):
     def test_extend_tint_ouput(self, tint, ext):
         pyrf.extend_tint(tint, ext)
 
+    def test_extend_tint_values(self):
+        # Rounded to the ns: 0.0157 * 1e9 = 15699999.999999998 was truncated
+        tint = ["2019-01-01T00:00:00", "2019-01-01T00:00:01"]
+        result = pyrf.extend_tint(tint, [-0.0157, 0.0157])
+        self.assertListEqual(
+            result,
+            ["2018-12-31T23:59:59.984300000", "2019-01-01T00:00:01.015700000"],
+        )
+
+    def test_extend_tint_str(self):
+        # numpy.str_ items, documented as str
+        result = pyrf.extend_tint(["2019-01-01T00:00:00", "2019-01-01T00:00:01"])
+        self.assertTrue(all(type(t_) is str for t_ in result))
+        self.assertListEqual(
+            result, ["2018-12-31T23:59:00.000000000", "2019-01-01T00:01:01.000000000"]
+        )
+
 
 @ddt
 class FiltTestCase(unittest.TestCase):
