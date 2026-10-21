@@ -4557,6 +4557,51 @@ class PviTestCase(unittest.TestCase):
                 pyrf.pvi(inp, scale)
 
 
+class Pvi4scTestCase(unittest.TestCase):
+    @staticmethod
+    def _fields(directions, n_pts=200):
+        # Fields of fixed directions and a common varying magnitude
+        rng = np.random.default_rng(0)
+        time = generate_timeline(1.0, n_pts)
+        scale = 10.0 + rng.random(n_pts)
+        return [
+            pyrf.ts_vec_xyz(time, scale[:, np.newaxis] * np.array(d, dtype=float))
+            for d in directions
+        ]
+
+    def test_pvi_4sc_shear_angles(self):
+        # Pairs 12, 13, 14, 23, 24, 34, in radians
+        b_mms = self._fields([[1, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]])
+        _, theta = pyrf.pvi_4sc(b_mms)
+        expected = [np.pi / 2, np.pi / 4, 0.0, np.pi / 4, np.pi / 2, np.pi / 4]
+
+        for theta_ij, value in zip(theta, expected):
+            np.testing.assert_allclose(theta_ij.data, value, atol=1e-7)
+
+    def test_pvi_4sc_parallel_fields(self):
+        # Cosines just above 1 by rounding gave arccos NaN instead of 0
+        rng = np.random.default_rng(1)
+        time = generate_timeline(1.0, 600)
+        b_data = rng.normal(size=(600, 3)) * [3, 5, 7] + [10, -20, 30]
+        b_mms = [pyrf.ts_vec_xyz(time, b_data.copy()) for _ in range(4)]
+        _, theta = pyrf.pvi_4sc(b_mms)
+
+        for theta_ij in theta:
+            self.assertFalse(np.isnan(theta_ij.data).any())
+            np.testing.assert_allclose(theta_ij.data, 0.0, atol=1e-7)
+
+    def test_pvi_4sc_constant_increment(self):
+        # A constant increment is its own mean: PVI = 1
+        b_mms = self._fields([[1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1]])
+        b_mms = [
+            b_xyz.copy(data=np.ones((200, 3)) * k) for k, b_xyz in enumerate(b_mms)
+        ]
+        pvi, _ = pyrf.pvi_4sc(b_mms)
+
+        for pvi_ij in pvi:
+            np.testing.assert_allclose(pvi_ij.data, 1.0)
+
+
 @ddt
 class ShockNormalTestCase(unittest.TestCase):
     def test_shock_normal_lists(self):
