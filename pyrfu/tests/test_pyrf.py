@@ -2138,6 +2138,31 @@ class EbspTestCase(unittest.TestCase):
         self.assertIsInstance(result, np.ndarray)
         self.assertListEqual(list(result.shape), [len(out_time), len(a_)])
 
+    def test_ebsp_de_dot_b0_fac_rotating_b0(self):
+        # E perpendicular to a B0 rotating by 90 deg, with Ez from dE.B = 0: no
+        # power along B0 in FAC (0.2 of the perpendicular power when B0 was
+        # resampled to wrong times; irf_ebsp.m agrees with the fix to 1e-15)
+        t_sec = np.arange(1024) / 64.0
+        time = generate_timeline(64.0, 1024)
+        angle = np.pi / 2 * t_sec / t_sec[-1]
+        b_0 = pyrf.ts_vec_xyz(
+            time, np.stack([10 * np.cos(angle), 10 * np.sin(angle), 5 + 0 * t_sec], 1)
+        )
+        wave = np.stack([np.cos(8 * np.pi * t_sec), -np.sin(8 * np.pi * t_sec)], 1)
+        d_b = pyrf.ts_vec_xyz(time, 0.01 * np.hstack([wave[:, ::-1], 0 * wave[:, :1]]))
+        e_xyz = pyrf.ts_vec_xyz(time, np.hstack([wave, 0 * wave[:, :1]]))
+
+        result = pyrf.ebsp(
+            e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0], de_dot_b0=True
+        )
+
+        e_power = result["ee_xxyyzzss"].data
+        self.assertTrue(np.isfinite(e_power).any())
+        self.assertLess(
+            np.nanmax(e_power[..., 2]),
+            1e-5 * np.nanmax(e_power[..., 0] + e_power[..., 1]),
+        )
+
 
 class EndTestCase(unittest.TestCase):
     def test_end_input(self):

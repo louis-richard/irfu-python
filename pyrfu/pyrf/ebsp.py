@@ -479,7 +479,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     if flag_want_fac:
         res["flagFac"] = True
 
-        time_b0 = b_bgd.time.data.astype(np.float64) / 1e9
+        # Times of B0 for the E rotated to FAC with Ez from dE.B = 0 (float seconds
+        # were read as ns: B0 was resampled to times in 1970)
+        time_b0 = b_bgd.time.data
 
         if want_ee and not flag_de_dot_b0:
             eisr2 = e_xyz[:, :2]
