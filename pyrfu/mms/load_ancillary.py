@@ -31,9 +31,11 @@ __status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
 
-# Margin on the end of the SDC files: a daily file ends 5 min after the
-# midnight of its end date (DEFATT, MMS1 2017-07-05 and 06)
-_END_MARGIN = np.timedelta64(1, "h")
+# Margin on the end of the SDC files, as list_files_ancillary for the local
+# files: the file names give dates only, and a file can cover up to a day
+# after its end date (MMS1 DEFATT 2015361_2015362: 2015-361T15:56 to
+# 362T15:54; 2017: 00:00 to 00:05 the day after)
+_END_MARGIN = np.timedelta64(1, "D")
 
 
 def _list_files_sdc(tint, mms_id, product):

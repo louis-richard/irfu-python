@@ -8637,20 +8637,62 @@ class LoadAncillaryTestCase(unittest.TestCase):
             )
 
     def test_load_ancillary_sdc_files(self):
-        # The files covering tint (with 1 h on their end: a DEFATT file ends 5
-        # min after the midnight of its end date), the latest version of each,
-        # in time order
+        # The files covering tint (with a day on their end, as
+        # list_files_ancillary: the names give dates only), the latest version
+        # of each, in time order
         module = importlib.import_module("pyrfu.mms.load_ancillary")
         files, contents = self._defatt_files()
         newer = dict(files[1], file_name=files[1]["file_name"].replace("V00", "V01"))
         self._sdc([files[2], newer, files[1], files[0]], [contents[2]] * 4)
 
         for tint, expected in [
-            (["2019-09-14T12:00:00", "2019-09-14T13:00:00"], [newer]),
+            (["2019-09-14T12:00:00", "2019-09-14T13:00:00"], [files[0], newer]),
             (["2019-09-14T00:10:00", "2019-09-14T00:20:00"], [files[0], newer]),
-            (["2019-09-14T23:30:00", "2019-09-15T00:30:00"], [newer, files[2]]),
+            (
+                ["2019-09-14T23:30:00", "2019-09-15T00:30:00"],
+                [files[0], newer, files[2]],
+            ),
         ]:
             self.assertListEqual(module._list_files_sdc(tint, 1, "defatt"), expected)
+
+    def test_load_ancillary_sdc_file_from_the_day_before(self):
+        # Early DEFATT files cover about 16:00 to 16:00 (MMS1 2015361_2015362:
+        # 2015-361T15:56 to 362T15:54): the morning of a day is in the file of
+        # the day before (it was not read: no row)
+        def content(times):
+            rows = [
+                _DEFATT_ROWS[0].replace("2019-257T00:00:00.012", time) for time in times
+            ]
+            return "\n".join(self._DEFATT_HEADER + rows + ["DATA_STOP"]) + "\n"
+
+        files = [
+            self._sdc_file(
+                "MMS1_DEFATT_2019256_2019257.V00",
+                "2019-09-13T00:00:00",
+                "2019-09-14T00:00:00",
+            ),
+            self._sdc_file(
+                "MMS1_DEFATT_2019257_2019258.V00",
+                "2019-09-14T00:00:00",
+                "2019-09-15T00:00:00",
+            ),
+        ]
+        before = [
+            "2019-256T15:56:14.012",
+            "2019-257T03:57:10.012",
+            "2019-257T03:57:20.012",
+        ]
+        self._sdc(files, [content(before), content(["2019-257T15:49:23.062"])])
+        tint = ["2019-09-14T03:57:00", "2019-09-14T03:58:00"]
+        result = mms.load_ancillary("defatt", tint, 1, False, source="sdc")
+
+        np.testing.assert_array_equal(
+            result.time.data,
+            np.array(
+                ["2019-09-14T03:57:10.012", "2019-09-14T03:57:20.012"],
+                dtype="datetime64[ns]",
+            ),
+        )
 
     def test_load_ancillary_default_source(self):
         # The default resource of the configuration (a temporary one, also for
