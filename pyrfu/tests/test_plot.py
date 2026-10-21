@@ -1302,6 +1302,16 @@ class PlotSurfTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._plot("center")
 
+    def test_plot_surf_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        f = plt.figure()
+        ax = f.add_subplot(projection="3d")
+        f_current = plt.figure()
+        _, caxis = plot.plot_surf(ax, *self.xyz, self.c, self.cmap, self.norm)
+
+        self.assertIn(caxis, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
+
 
 class SpanTintTestCase(unittest.TestCase):
     def setUp(self):
