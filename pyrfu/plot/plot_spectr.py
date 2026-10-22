@@ -142,7 +142,7 @@ def plot_spectr(
         **options,
     )
 
-    if x_data.dtype == "<M8[ns]":
+    if np.issubdtype(x_data.dtype, np.datetime64):
         locator = mpl.dates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = mpl.dates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)

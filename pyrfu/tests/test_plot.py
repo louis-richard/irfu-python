@@ -1230,6 +1230,16 @@ class PlotSpectrTestCase(unittest.TestCase):
             norm = self._image(ax).norm
             self.assertEqual((norm.vmin, norm.vmax), (2.0, 100.0))
 
+    def test_plot_spectr_microseconds(self):
+        # Times in another unit than ns (xarray keeps it): concise dates
+        inp = self.inp.assign_coords(time=self.time.astype("datetime64[us]"))
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, inp)
+
+        self.assertIsInstance(
+            ax.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
+        )
+
     def test_plot_spectr_norm(self):
         # Any matplotlib norm as cscale
         norm = mpl.colors.SymLogNorm(linthresh=1.0, vmin=-10.0, vmax=10.0)
