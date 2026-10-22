@@ -845,6 +845,17 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             plot.annotate_heatmap(im, "bazinga")
 
+    def test_annotate_heatmap_list(self):
+        # A list passes the type check, and failed on .max()
+        im, _ = plot.plot_heatmap(
+            _axis("axis"), np.array([[1.0, 2.0], [3.0, 4.0]]), ["a", "b"], ["c", "d"]
+        )
+        texts = plot.annotate_heatmap(im, [[1.0, 2.0], [3.0, 4.0]])
+
+        self.assertListEqual(
+            [t.get_text() for t in texts], ["1.00", "2.00", "3.00", "4.00"]
+        )
+
     @data(
         (
             "axis",
