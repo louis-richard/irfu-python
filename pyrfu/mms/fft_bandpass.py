@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import numbers
 from typing import Union
 
 # 3rd party imports
@@ -34,9 +35,9 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
     inp : DataArray
         Time series to be bandpass filtered.
     f_min : float
-        Minimum frequency of filter, f < ``f_min`` are removed.
+        Minimum frequency of filter in Hz, f < ``f_min`` are removed.
     f_max : float
-        Maximum frequency of filter, f > ``f_max`` are removed.
+        Maximum frequency of filter in Hz, f > ``f_max`` are removed.
 
     Returns
     -------
@@ -47,15 +48,15 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
     ------
     TypeError
         * If input is not a xarray.DataArray.
-        * If f_min is not a float.
-        * If f_max is not a float.
+        * If f_min or f_max is not a real number.
     ValueError
         If f_min is larger than f_max.
 
     Notes
     -----
     Can be some spurious effects near boundary. Can take longer interval then
-    use pyrfu.pyrf.time_clip to remove.
+    use pyrfu.pyrf.time_clip to remove. With an odd number of samples, the
+    last one is dropped (as irfu-matlab ``mms.fftbandpass``).
 
     Examples
     --------
@@ -83,12 +84,12 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
     if not isinstance(inp, xr.DataArray):
         raise TypeError("Input must be a xarray.DataArray")
 
-    # Check f_min and f_max
-    if not isinstance(f_min, float):
-        raise TypeError("f_min must be a float")
+    # Check f_min and f_max (any real number, e.g., an int)
+    for name, value in [("f_min", f_min), ("f_max", f_max)]:
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            raise TypeError(f"{name} must be a real number")
 
-    if not isinstance(f_max, float):
-        raise TypeError("f_max must be a float")
+    f_min, f_max = float(f_min), float(f_max)
 
     # Check that f_min < f_max
     if f_min >= f_max:
@@ -117,10 +118,12 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
     idx_nans = np.isnan(inp_data)
     inp_data = np.where(idx_nans, 0.0, inp_data)
 
-    # Bandpass filter field data
+    # Bandpass filter field data: the frequencies of the FFT bins (as
+    # irfu-matlab, -f_nyq:df:f_nyq-df once shifted; they were spaced by
+    # 2 f_nyq / (N - 1), so that the positive and negative frequencies of a
+    # component could fall on either side of a cutoff, which halved it)
     f_sam = calc_fs(inp)
-    f_nyq = f_sam / 2
-    frequencies = np.linspace(-f_nyq, f_nyq, len(inp_time))
+    frequencies = np.fft.fftshift(np.fft.fftfreq(len(inp_time), 1 / f_sam))
 
     # Preallocate output
     out_data_64: NDArray[np.float64] = np.empty_like(inp_data, dtype=np.float64)

@@ -9126,6 +9126,21 @@ class FftBandpassTestCase(unittest.TestCase):
             expected = np.tile(expected[:, None], (1, 3))
         np.testing.assert_allclose(out.data[300:700], expected[300:700], atol=0.05)
 
+    def test_fft_bandpass_frequency_grid(self):
+        # The frequencies of the FFT bins, as irfu-matlab: a 10 Hz sine (a bin
+        # of 1024 samples at 128 Hz) is kept whole by a band starting at 10 Hz
+        # (it was halved: its negative frequency was taken for 9.95 Hz), and
+        # integer frequencies are accepted (they raised TypeError)
+        times = generate_timeline(128.0, 1024)
+        sig = np.sin(2 * np.pi * 10 * np.arange(1024) / 128.0)
+        inp = pyrf.ts_scalar(times, sig)
+
+        np.testing.assert_allclose(mms.fft_bandpass(inp, 10, 30).data, sig, atol=1e-9)
+        np.testing.assert_allclose(mms.fft_bandpass(inp, 1, 9).data, 0.0, atol=1e-9)
+
+        with self.assertRaises(TypeError):
+            mms.fft_bandpass(inp, True, 30.0)
+
 
 class WhistlerB2ETestCase(unittest.TestCase):
     b_mag, n_e = 50.0, 5.0  # nT, cm^-3
