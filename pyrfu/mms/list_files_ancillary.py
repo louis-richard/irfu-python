@@ -27,6 +27,16 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
+# Products of the whole constellation: one file for the four spacecraft
+# (MMS_DEFQ_2017187_2017188.V00, in ancillary/mms/defq; sc_id=mms on the SDC)
+_CONSTELLATION_PRODUCTS = ("defq", "predq")
+
+
+def _sc_name(product: str, mms_id: Union[str, int]) -> str:
+    r"""Spacecraft part of the names of the files of an ancillary product:
+    mms1-4, or mms for the products of the constellation."""
+    return "mms" if product.lower() in _CONSTELLATION_PRODUCTS else f"mms{mms_id}"
+
 
 def list_files_ancillary(
     tint: list[str],
@@ -42,9 +52,11 @@ def list_files_ancillary(
     tint : list of str
         Time interval
     mms_id : str or int
-        Spacecraft index
+        Spacecraft index (not used for "defq" and "predq", which cover the
+        four spacecraft).
     product : str
-        Ancillary type: {"predatt", "predeph", "defatt", "defeph"}.
+        Ancillary type: {"predatt", "predeph", "predq", "defatt", "defeph",
+        "defq"}.
     data_path : str, Optional
         Path of MMS data. If None use `pyrfu.mms.mms_config.py`
 
@@ -94,18 +106,23 @@ def list_files_ancillary(
     #       mms\ancillary
     # -assume file names are of the form:
     #   SPACECRAFT_FILETYPE_startDate_endDate.version
-    #   where SPACECRAFT is [MMS1, MMS2, MMS3, MMS4] in uppercase
-    #   and FILETYPE is either DEFATT, PREDATT, DEFEPH, PREDEPH in uppercase
+    #   where SPACECRAFT is [MMS1, MMS2, MMS3, MMS4] in uppercase, or MMS for
+    #   the products of the constellation (DEFQ, PREDQ)
+    #   and FILETYPE is either DEFATT, PREDATT, DEFEPH, PREDEPH, DEFQ, PREDQ
+    #   in uppercase
     #   and start/endDate is YYYYDOY
     #   and version is Vnn (.V00, .V01, etc..)
-    dir_pattern = os.sep.join([root_path, "ancillary", f"mms{mms_id}", product])
-    file_pattern = "_".join([f"MMS{mms_id}", product.upper(), "???????_???????.V??"])
+    sc_name = _sc_name(product, mms_id)
+    dir_pattern = os.sep.join([root_path, "ancillary", sc_name, product])
+    file_pattern = "_".join([sc_name.upper(), product.upper(), "???????_???????.V??"])
 
     # find all files in the directory
     files = glob.glob(os.sep.join([dir_pattern, file_pattern]))
 
     # find the files within the time interval
-    fname_fmt = f"MMS{mms_id}_{product.upper()}_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
+    fname_fmt = (
+        f"{sc_name.upper()}_{product.upper()}_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
+    )
 
     if os.name == "nt":
         full_path = os.sep.join([re.escape(dir_pattern) + os.sep, fname_fmt])

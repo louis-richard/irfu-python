@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 # Local imports
+from .list_files_ancillary import _sc_name
 from .list_files_sdc import SDC_TIMEOUT, _login_lasp
 
 __author__ = "Louis Richard"
@@ -32,7 +33,8 @@ def _construct_url_json_list(tint, mms_id, product, lasp_url):
 
     # lasp_url ends with "/" (it was doubled)
     url = f"{lasp_url}file_info/ancillary"
-    url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
+    url = f"{url}?start_date={start_date}&end_date={end_date}"
+    url = f"{url}&sc_id={_sc_name(product, mms_id)}"
 
     url = f"{url}&product={product}"
 
@@ -54,8 +56,9 @@ def list_files_ancillary_sdc(tint, mms_id, product):
     tint : list of str
         Time interval
     mms_id : str or int
-        Spacecraft index
-    product : {"predatt", "predeph", "defatt", "defeph"}
+        Spacecraft index (not used for "defq" and "predq", which cover the
+        four spacecraft).
+    product : {"predatt", "predeph", "predq", "defatt", "defeph", "defq"}
         Ancillary type.
 
     Returns

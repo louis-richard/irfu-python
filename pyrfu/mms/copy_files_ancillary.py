@@ -20,7 +20,7 @@ __status__ = "Prototype"
 
 
 def copy_files_ancillary(
-    product: Literal["predatt", "predeph", "defatt", "defeph"],
+    product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],
     tint: list[str],
     mms_id: Union[int, str],
     tar_path: str,
@@ -30,12 +30,13 @@ def copy_files_ancillary(
 
     Parameters
     ----------
-    product : {"predatt", "predeph", "defatt", "defeph"}
+    product : {"predatt", "predeph", "predq", "defatt", "defeph", "defq"}
         Ancillary type.
     tint : list
         Time interval.
     mms_id : str or int
-        Index of the spacecraft.
+        Index of the spacecraft (not used for "defq" and "predq", which cover
+        the four spacecraft).
     tar_path : str
         Target path.
     data_path : str, Optional
