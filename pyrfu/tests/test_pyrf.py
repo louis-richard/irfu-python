@@ -2043,8 +2043,27 @@ class DecParPerpTestCase(unittest.TestCase):
     )
     @unpack
     def test_dec_par_perp_input(self, inp, b_bgd, flag_spin_plane):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises((TypeError, ValueError)):
             pyrf.dec_par_perp(inp, b_bgd, flag_spin_plane)
+
+    def test_dec_par_perp_components(self):
+        # 3 components, or 2 for inp in the spin plane (only x and y are
+        # used); an inp of 2 components passed the check and failed in a
+        # broadcast
+        b_xyz = generate_ts(64.0, 100, tensor_order=1)
+        e_xyz = generate_ts(64.0, 100, tensor_order=1)
+        e_xy = e_xyz[:, :2]
+
+        with self.assertRaisesRegex(ValueError, "inp must be a vector of 3"):
+            pyrf.dec_par_perp(e_xy, b_xyz)
+
+        with self.assertRaisesRegex(ValueError, "b_bgd must be a vector of 3"):
+            pyrf.dec_par_perp(e_xyz, b_xyz[:, :2], True)
+
+        for a_xy, a_xyz in zip(
+            pyrf.dec_par_perp(e_xy, b_xyz, True), pyrf.dec_par_perp(e_xyz, b_xyz, True)
+        ):
+            np.testing.assert_array_equal(a_xy.data, a_xyz.data)
 
     @data(
         (
