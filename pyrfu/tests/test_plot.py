@@ -91,6 +91,16 @@ class PlotLineTestCase(unittest.TestCase):
         result = plot.plot_line(_axis(axis), inp)
         self.assertIsInstance(result, Axes)
 
+    def test_plot_line_microseconds(self):
+        # Times in another unit than ns (xarray keeps it): concise dates
+        inp = generate_ts(64.0, 100)
+        inp = inp.assign_coords(time=inp.time.data.astype("datetime64[us]"))
+        axis = plot.plot_line(_axis("axis"), inp)
+
+        self.assertIsInstance(
+            axis.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
+        )
+
 
 @ddt
 class PlotClinesTestCase(unittest.TestCase):
