@@ -38,10 +38,12 @@ class _BandLimited:
     The samples in [t_min, t_max] and up to `margin` more on each side are
     detrended by the line through the end samples (continuous periodic
     extension), interpolated through their DFT, and the line is added back.
+    With f_max (in Hz), the DFT terms above f_max are zeroed (zero-phase
+    low-pass).
 
     """
 
-    def __init__(self, time, data, t_min, t_max, name, margin=64):
+    def __init__(self, time, data, t_min, t_max, name, margin=64, f_max=None):
         if time[0] > t_min + 1e-9 or time[-1] < t_max - 1e-9:
             raise ValueError(
                 f"{name} does not cover tint extended by the search window "
@@ -76,6 +78,9 @@ class _BandLimited:
         ramp = np.linspace(0.0, 1.0, self.m)[:, None]
         self.coef = np.fft.rfft(data - self.line[0] - self.line[1] * ramp, axis=0)
         self.freq = np.fft.rfftfreq(self.m)
+
+        if f_max is not None:
+            self.coef[self.freq > f_max * self.d_t] = 0.0
 
     def exact(self, pos):
         r"""Values at any (fractional) sample positions: the trigonometric
@@ -333,6 +338,7 @@ def c_4_v_xcorr(
     pattern: Optional[DataArray] = None,
     errors: bool = True,
     fit: str = "none",
+    f_max: Optional[float] = None,
 ) -> dict:
     r"""Four-spacecraft timing by cross-correlation, with error estimates.
 
@@ -389,6 +395,13 @@ def c_4_v_xcorr(
           offsets as well. Not for boundaries: the levels on each side carry
           part of the delay, and fitting an offset loses it unless tint
           extends well beyond the transition.
+
+    f_max : float, Optional
+        Low-pass the four signals (and the pattern) at f_max, in Hz, by
+        zeroing their DFT above it: the same zero-phase filter for all, which
+        leaves the delays unchanged. Set it to the top of the band of the
+        structure, so that the errors account for the noise (see Notes).
+        Default is no filter.
 
     Returns
     -------
@@ -456,10 +469,10 @@ def c_4_v_xcorr(
     TypeError
         If s_mms or r_mms are not lists of four DataArrays.
     ValueError
-        If fit is not "none", "scale" or "scale_offset", if a signal does not
-        cover tint extended by the search window, has NaN
-        or a gap there, if the pattern does not cover tint, or if the
-        positions do not cover the middle of tint.
+        If fit is not "none", "scale" or "scale_offset", if f_max is not
+        positive, if a signal does not cover tint extended by the search
+        window, has NaN or a gap there, if the pattern does not cover tint, or
+        if the positions do not cover the middle of tint.
 
     Warns
     -----
@@ -518,13 +531,15 @@ def c_4_v_xcorr(
     fitted scale lowers the errors more than the spread: on a tanh boundary
     with 5 % noise, the spread is 1.5-1.6 times the error with fit="none"
     and 2.4-2.8 with fit="scale" (the same delays). The noise above the band
-    of the structure dominates: low-pass filtering the four signals to that
-    band with the same zero-phase filter (which leaves the delays unchanged)
-    reduces the spread and brings it within 1.1-1.4 of the errors (on that
-    hole, a 0.5 ms pulse sampled at 8192 Hz, filtered at 1-2 kHz: a spread
-    40 % smaller; on a tanh boundary in +-33 samples at 0.25 f_s, from 1.4-1.7
-    to 1.0-1.2 times the least-squares limit). A cutoff inside the band of the
-    structure increases the spread instead.
+    of the structure dominates: ``f_max`` at the top of that band reduces the
+    spread and brings it within 1.0-1.4 of the errors. On that hole (a
+    0.5 ms pulse sampled at 8192 Hz) with 12 % noise in +-40 samples,
+    f_max = 0.15-0.25 f_s (1.2-2 kHz) brings the ratio from 1.7-1.8 to
+    1.0-1.2, and the false matches of fit="none" from 16 % to 2-4 % of the
+    noise draws (found by their correlation); on a tanh boundary 3 samples
+    wide with 10 % noise in +-33 samples, f_max = 0.1-0.25 f_s brings it
+    from 1.7-2.0 to 1.1-1.4 (1.4-1.6 with fit="scale_offset"). An f_max
+    inside the band of the structure increases the spread instead.
 
     Differences from irfu-matlab:
 
@@ -581,6 +596,9 @@ def c_4_v_xcorr(
     if fit not in ("none", "scale", "scale_offset"):
         raise ValueError(f'fit must be "none", "scale" or "scale_offset", not {fit}')
 
+    if f_max is not None and not f_max > 0:
+        raise ValueError(f"f_max must be positive, not {f_max}")
+
     start_tau = np.zeros(4) if tau is None else np.asarray(tau, dtype=np.float64)
 
     if start_tau.shape != (4,):
@@ -625,6 +643,7 @@ def c_4_v_xcorr(
             t_start + tau_a - max_lag - t_samp,
             t_start + (grid[2] - 1) * t_samp + tau_a + max_lag + t_samp,
             f"s_mms[{i}]",
+            f_max=f_max,
         )
         for i, (s_sc, tau_a) in enumerate(zip(s_mms, start_tau))
     ]
@@ -660,6 +679,7 @@ def c_4_v_xcorr(
             t_start,
             t_start + (grid[2] - 1) * t_samp,
             "pattern",
+            f_max=f_max,
         )
         p_pat = p_in(grid, 0.0)[0]
 

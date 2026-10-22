@@ -630,6 +630,49 @@ class C4VXcorrTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fit must be"):
             pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, fit="offset")
 
+    def test_c_4_v_xcorr_f_max(self):
+        # The same low-pass for the four signals (and a given pattern) leaves
+        # the delays unchanged
+        for profile, max_lag in [(self._hole, 0.03), (self._boundary, None)]:
+            s_mms, r_mms, tau_true = self._synthetic(profile)
+            options = {"max_lag": max_lag, "f_max": 0.1 * self.F_S}
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, **options)
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-4 / self.F_S)
+
+            res = pyrf.c_4_v_xcorr(
+                self._tint(0.002), s_mms, r_mms, pattern=res["pattern"], **options
+            )
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-4 / self.F_S)
+
+        with self.assertRaisesRegex(ValueError, "f_max must be positive"):
+            pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, f_max=0.0)
+
+    def test_c_4_v_xcorr_f_max_monte_carlo(self):
+        # Noisy pattern (12 % noise in +-40 samples): without f_max, the spread
+        # of the delays is 1.7-1.8 times the errors; with f_max at the top of
+        # the band of the hole, within x1.4 (exit criterion)
+        rng = np.random.default_rng(0)
+        tau, d_tau = [], []
+
+        for _ in range(100):
+            s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.12, rng=rng)
+            res = pyrf.c_4_v_xcorr(
+                self._tint(40 / self.F_S),
+                s_mms,
+                r_mms,
+                max_lag=0.03,
+                fit="scale",
+                f_max=0.2 * self.F_S,
+            )
+            dtau2 = res["dtau2"]
+            tau.append(res["tau"])
+            d_tau.append(
+                [np.sqrt(dtau2[i, i] + dtau2[0, 0] - 2 * dtau2[0, i]) for i in range(4)]
+            )
+
+        ratio = np.std(tau, axis=0)[1:] / np.mean(d_tau, axis=0)[1:]
+        self.assertTrue(np.all((ratio > 1 / 1.4) & (ratio < 1.4)), ratio)
+
     def test_c_4_v_xcorr_matlab(self):
         # Velocity and errors from the delays and their covariance of
         # irf_4_v_xcorr_errors (irfu-matlab, R2024a, noisy synthetic hole):
