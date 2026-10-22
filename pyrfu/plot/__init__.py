@@ -123,9 +123,17 @@ EXTRA_COLORS = {
 
 mpl.colors.EXTRA_COLORS = EXTRA_COLORS
 mpl.colors.colorConverter.colors.update(EXTRA_COLORS)
-mpl.colormaps.register(
-    name="parula",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+
+
+def _register_cmap(cmap):
+    # Once: reloading pyrfu.plot (e.g., autoreload in notebooks) raised
+    # ValueError, the name being already registered
+    if cmap.name not in mpl.colormaps:
+        mpl.colormaps.register(cmap)
+
+
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "parula",
         [
             (0.0592, 0.3599, 0.8684),
@@ -140,9 +148,8 @@ mpl.colormaps.register(
         N=2560,
     ),
 )
-mpl.colormaps.register(
-    name="jet_gray",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "jet_gray",
         [
             (0.0, "darkblue"),
@@ -155,9 +162,8 @@ mpl.colormaps.register(
     ),
 )
 
-mpl.colormaps.register(
-    name="hot_desaturated",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "hot_desaturated",
         [
             (0.2784, 0.2784, 0.8588),
@@ -173,9 +179,8 @@ mpl.colormaps.register(
     ),
 )
 
-mpl.colormaps.register(
-    name="hot_white_desaturated",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "hot_white_desaturated",
         [
             (1.0000, 1.0000, 1.0000),

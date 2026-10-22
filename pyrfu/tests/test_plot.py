@@ -355,6 +355,19 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
             self.assertEqual(mpl.rcParams["image.cmap"], "Spectral_r")
             self.assertTrue(mpl.rcParams["xtick.minor.visible"])
 
+    def test_reload_pyrfu_plot(self):
+        # Reloading pyrfu.plot (e.g., autoreload in notebooks) raised
+        # ValueError: the colormaps were already registered (no warning now)
+        code = "import importlib, pyrfu.plot as p; importlib.reload(p); print('ok')"
+        result = subprocess.run(
+            [sys.executable, "-W", "error", "-c", code],
+            capture_output=True,
+            check=False,
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            text=True,
+        )
+        self.assertEqual(result.stdout, "ok\n", result.stderr[-500:])
+
     def test_use_pyrfu_style_usetex(self):
         with mpl.rc_context(), mock.patch("pyrfu.plot.shutil.which", self._which()):
             plot.use_pyrfu_style(usetex=True)
