@@ -527,15 +527,78 @@ class C4VXcorrTestCase(unittest.TestCase):
         self.assertTrue(np.isnan(res["tau"][1]) and np.isnan(res["speed"]))
         self.assertTrue(np.all(np.isnan(res["v"])) and res["dtau2"] is None)
 
-    def test_c_4_v_xcorr_poor_correlation(self):
-        # A hole beyond the search window: flat mean square difference, a
-        # minimum anywhere inside, found by its correlation with the pattern
+    def test_c_4_v_xcorr_outside_window(self):
+        # A hole just beyond the search window (MMS2 at 16.3 ms): its best fit
+        # is at the edge, flagged (unscaled, an interior minimum of a flat
+        # mean square difference)
         s_mms, r_mms, _ = self._synthetic(self._hole)
+
+        with self.assertWarnsRegex(UserWarning, "MMS2 is at the edge"):
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.016)
+
+        np.testing.assert_array_equal(res["flags"], [False, True, False, False])
+        self.assertTrue(np.isnan(res["tau"][1]))
+
+    def test_c_4_v_xcorr_poor_correlation(self):
+        # A spacecraft that sees only noise: a fit anywhere, found by its
+        # correlation with the pattern
+        s_mms, r_mms, _ = self._synthetic(self._hole)
+        rng = np.random.default_rng(5)
+        s_mms[1] = s_mms[1].copy(data=0.1 * rng.standard_normal(len(s_mms[1])))
 
         with self.assertWarnsRegex(UserWarning, "MMS2 correlates poorly"):
             res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.016)
 
         self.assertLess(res["corr"][1], 0.7)
+
+    def test_c_4_v_xcorr_amplitudes(self):
+        # The structure seen with different amplitudes (an electron hole
+        # crossed at different distances from its centre): the delays are
+        # exact and the scales are the amplitudes relative to MMS1 (unscaled,
+        # MMS2 x 2.5 or 4 was 257 samples off without a warning)
+        for factor in [0.3, 2.5, 4.0]:
+            s_mms, r_mms, tau_true = self._synthetic(self._hole)
+            s_mms[1] = s_mms[1] * factor
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.03)
+
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+            np.testing.assert_allclose(res["scale"], [1.0, factor, 1.0, 1.0])
+            np.testing.assert_allclose(res["offset"], 0.0, atol=1e-9)
+            self.assertFalse(np.any(res["inverted"]))
+
+    def test_c_4_v_xcorr_inverted(self):
+        # An inverted signal (sign error) is flagged, with a warning; its
+        # delay is that of the best positive fit (one lobe of the hole)
+        s_mms, r_mms, _ = self._synthetic(self._hole)
+        s_mms[3] = -s_mms[3]
+
+        with self.assertWarnsRegex(UserWarning, "MMS4 fits an inverted pattern"):
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.03)
+
+        np.testing.assert_array_equal(res["inverted"], [False, False, False, True])
+
+    def test_c_4_v_xcorr_offset(self):
+        # An offset on one spacecraft (calibration) leaves the delays exact
+        # (unscaled, an offset of 1 on a step of 2 moved MMS2 by 10 samples)
+        s_mms, r_mms, tau_true = self._synthetic(self._boundary)
+        s_mms[1] = s_mms[1] + 1.0
+        res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, errors=False)
+
+        np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+        np.testing.assert_allclose(res["offset"], [0.0, 1.0, 0.0, 0.0], atol=1e-7)
+
+    def test_c_4_v_xcorr_scale_offset_invariance(self):
+        # Noisy signals: offsets on any spacecraft and a common scale change
+        # neither the delays nor their errors
+        rng = np.random.default_rng(3)
+        s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.05, rng=rng)
+        res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.03)
+        s_new = [5.0 * s_sc + off for s_sc, off in zip(s_mms, [0.0, 2.0, -1.0, 0.3])]
+        res_new = pyrf.c_4_v_xcorr(self._tint(0.002), s_new, r_mms, max_lag=0.03)
+
+        np.testing.assert_allclose(res_new["tau"], res["tau"], atol=1e-6 / self.F_S)
+        np.testing.assert_allclose(res_new["dtau2"], res["dtau2"], rtol=1e-6)
+        np.testing.assert_allclose(res_new["scale"], res["scale"], rtol=1e-9)
 
     def test_c_4_v_xcorr_matlab(self):
         # Velocity and errors from the delays and their covariance of
