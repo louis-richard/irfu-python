@@ -392,7 +392,8 @@ def c_4_v_xcorr(
         * scale : numpy.ndarray
             Scale of the pattern fitted to each signal (4,): the amplitude of
             the structure on each spacecraft relative to the pattern (about
-            that of MMS1).
+            that of MMS1; below 1 for equal amplitudes when the pattern is
+            noisy, its variance including its noise).
         * offset : numpy.ndarray
             Offset fitted to each signal (4,), or (4, n_comp) for vectors.
         * flags : numpy.ndarray
@@ -461,20 +462,23 @@ def c_4_v_xcorr(
     **Choice of tint.** Take tint around the whole structure at MMS1, with a
     margin of a few times its width (e.g., +-5 ms for a 1 ms electron hole),
     but not much longer: a tint that cuts the structure lets it leave the
-    window as it shifts, and the pattern is built from the noisy signals,
-    whose noise-by-noise terms grow with the length of tint. On a
-    synthetic electron hole in tint +-10-25 samples, the spread of the delays
-    over noise draws is at the least-squares limit and within 1.1 of dtau2,
-    and the speed spread within 1.4 of d_speed. For a step-like boundary, or
-    a tint much longer than the structure, the errors are underestimated (by
-    1.4-2 on a tanh boundary in +-12-33 samples, more for longer tint).
-    There, the noise above the band of the structure dominates: low-pass
-    filtering the four signals to that band with the same zero-phase filter
-    (which leaves the delays unchanged) brings the spread close to the
-    least-squares limit (on the tanh boundary in +-33 samples at 0.25 f_s:
-    from 1.4-1.7 to 1.0-1.2 times the limit, and the errors within 1.5 instead
-    of 2). A cutoff inside the band of the structure increases the spread
-    instead.
+    window as it shifts.
+
+    **Noise and errors.** The pattern is built from the noisy signals: the
+    noise-by-noise terms of the fit, which grow with the length of tint, add
+    to the spread of the delays without entering dtau2 (eq. 52 assumes a
+    noise-free pattern). On a synthetic electron hole, the spread of the
+    delays over noise draws is 1.1-1.3 times the error from dtau2 with 5 %
+    noise in tint +-10-25 samples, but 1.7 with 12 % noise in +-40 samples
+    (about +-10 widths), and 2.1 when MMS2-4 see half the amplitude of MMS1;
+    more for a step-like boundary or a longer tint. The noise above the band
+    of the structure dominates: low-pass filtering the four signals to that
+    band with the same zero-phase filter (which leaves the delays unchanged)
+    reduces the spread and brings it within 1.1-1.4 of the errors (on that
+    hole, a 0.5 ms pulse sampled at 8192 Hz, filtered at 1-2 kHz: a spread
+    40 % smaller; on a tanh boundary in +-33 samples at 0.25 f_s, from 1.4-1.7
+    to 1.0-1.2 times the least-squares limit). A cutoff inside the band of the
+    structure increases the spread instead.
 
     Differences from irfu-matlab:
 
