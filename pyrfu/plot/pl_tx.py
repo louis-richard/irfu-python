@@ -77,6 +77,6 @@ def pl_tx(
     formatter = mdates.ConciseDateFormatter(locator)
     axis.xaxis.set_major_locator(locator)
     axis.xaxis.set_major_formatter(formatter)
-    axis.grid(True, which="major", linestyle="-", linewidth="0.5", c="0.5")
+    axis.grid(True, which="major", linestyle="-", linewidth="0.2", c="0.5")
 
     return axis

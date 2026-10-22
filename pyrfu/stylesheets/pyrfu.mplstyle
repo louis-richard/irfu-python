@@ -1,42 +1,28 @@
 ## *************************************************************************************
-## * Matplotlib style sheet for default figures *
+## * pyrfu style: the look of the pyrfu example notebooks                              *
+## * Used by pyrfu.plot.use_pyrfu_style(), or plt.style.use("pyrfu") once pyrfu.plot   *
+## * is imported. Applied on top of matplotlib's default style.                        *
 ## author : Louis Richard
-## email : louisr@irfu.se
+## email : louis.richard@physics.ox.ac.uk
 ## *************************************************************************************
 
-## Fonts
-font.family: serif
-font.style: normal
-font.variant: normal
-font.weight: normal
-font.stretch: normal
+## Colours: the pyrfu colour cycle (blue, green, red, dark grey, ...) and a
+## diverging colormap for spectrograms
+axes.prop_cycle: cycler("color", ["005f87", "008700", "af0000", "444444", "d75f00", "8700af", "afaf00", "0087af", "5f7800"])
+image.cmap: Spectral_r
 
-## LaTeX
-#text.usetex: True
-#text.latex.preamble: \usepackage{bm}
-pgf.texsystem: xelatex
-
-## Axes
-axes.labelsize: 8
-axes.linewidth: .5
-axes.xmargin: 0
-axes.ymargin: 0
-
-## Save
-savefig.dpi: 600
-savefig.format: eps
-# savefig.bbox: tight
-
-## Legend
-legend.loc: best
-legend.frameon: False  # if True, draw the legend on a background patch
-legend.framealpha: 0.8  # legend patch transparency
-legend.facecolor: inherit  # inherit from axes.facecolor; or color spec
-legend.edgecolor: 0.8  # background patch boundary color
-legend.fancybox: False  # if True, use a rectangle box for the legend background
 ## Ticks
-xtick.direction: in
-xtick.top: True
+xtick.minor.visible: True
+ytick.minor.visible: True
 
-ytick.direction : in
-ytick.right: True
+## Text: mathtext in DejaVu Sans, no LaTeX
+text.usetex: False
+mathtext.fontset: dejavusans
+mathtext.sf: sans
+
+## Legend: frameless, in the upper right corner
+legend.loc: upper right
+legend.frameon: False
+legend.fancybox: False
+legend.framealpha: 0.75
+legend.handlelength: 1.5

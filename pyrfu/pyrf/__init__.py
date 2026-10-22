@@ -10,6 +10,7 @@ from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
 from .c_4_k import c_4_k
 from .c_4_v import c_4_v
+from .c_4_v_xcorr import c_4_v_xcorr
 from .calc_ag import calc_ag
 from .calc_agyro import calc_agyro
 from .calc_dng import calc_dng
@@ -130,6 +131,7 @@ __all__ = [
     "c_4_j",
     "c_4_k",
     "c_4_v",
+    "c_4_v_xcorr",
     "calc_ag",
     "calc_agyro",
     "calc_dng",

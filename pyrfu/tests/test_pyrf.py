@@ -28,6 +28,9 @@ from scipy import constants, interpolate, signal
 # Local imports
 from .. import pyrf
 from ..constants import R_E
+from ..pyrf.c_4_v_xcorr import _BandLimited as _C4VXcorrBandLimited
+from ..pyrf.c_4_v_xcorr import _corr_h as _c_4_v_xcorr_corr_h
+from ..pyrf.c_4_v_xcorr import _get_disc_vel as _c_4_v_xcorr_get_disc_vel
 from ..pyrf.compress_cwt import _compress_cwt_1d
 from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
 from ..pyrf.int_sph_dist import (
@@ -356,6 +359,414 @@ class C4VTestCase(unittest.TestCase):
         r_xyz, t_cross, velocity, delta_t = self._plane_crossing()
         result = pyrf.c_4_v(r_xyz, [t_cross[0], *velocity])
         np.testing.assert_allclose(result, delta_t, atol=1e-9)
+
+
+class C4VXcorrTestCase(unittest.TestCase):
+    # Tetrahedron of ~10 km and velocity of the structure
+    R_XYZ = np.array(
+        [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [5.0, 8.66, 0.0], [5.0, 2.89, 8.16]]
+    ) + [20000.0, 5000.0, -3000.0]
+    V_XYZ = np.array([400.0, -250.0, 150.0])
+    F_S = 8192.0
+    T_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+
+    @staticmethod
+    def _hole(t_s, width=2 / 8192):
+        # Bipolar pulse (the parallel field of an electron hole), ~4 samples
+        # peak to peak
+        return -t_s / width * np.exp(-0.5 * (t_s / width) ** 2)
+
+    @staticmethod
+    def _boundary(t_s):
+        return np.tanh(t_s / (3 / 8192))
+
+    def _train(self, t_s):
+        # Train of holes spaced by 3 peak-to-peak times
+        return sum(self._hole(t_s - k * 12 / self.F_S) for k in range(-3, 4))
+
+    def _crossings(self):
+        slowness = self.V_XYZ / np.dot(self.V_XYZ, self.V_XYZ)
+        return (self.R_XYZ - np.mean(self.R_XYZ, axis=0)) @ slowness
+
+    def _synthetic(self, profile, noise=0.0, rng=None, vector=False, cadence=None):
+        # The structure crosses the centre of the tetrahedron at 0.125 s; each
+        # spacecraft samples at its own times (and cadence)
+        t_cross = self._crossings()
+        cadence = np.ones(4) if cadence is None else np.asarray(cadence)
+        s_mms, r_mms = [], []
+
+        for i, offset in enumerate([0.0, 0.31, 0.62, 0.87]):
+            t_s = (np.arange(2048) + offset) / (self.F_S * cadence[i])
+            data = profile(t_s - 0.125 - t_cross[i])
+
+            if vector:
+                data = np.outer(data, [1.0, 0.5, -0.2])
+
+            if noise:
+                data = data + noise * rng.standard_normal(data.shape)
+
+            time = self.T_0 + np.round(t_s * 1e9).astype("timedelta64[ns]")
+            s_mms.append(
+                pyrf.ts_vec_xyz(time, data) if vector else pyrf.ts_scalar(time, data)
+            )
+            t_r = self.T_0 + np.array([-60, 0, 60, 120], dtype="timedelta64[s]")
+            r_mms.append(pyrf.ts_vec_xyz(t_r, np.tile(self.R_XYZ[i], (4, 1))))
+
+        return s_mms, r_mms, t_cross - t_cross[0]
+
+    def _tint(self, half_width):
+        # Around the crossing of MMS1
+        t_c1 = 0.125 + self._crossings()[0]
+        times = self.T_0 + np.round(
+            np.array([t_c1 - half_width, t_c1 + half_width]) * 1e9
+        ).astype("timedelta64[ns]")
+        return list(pyrf.datetime642iso8601(times))
+
+    def _check_velocity(self, res, rtol):
+        np.testing.assert_allclose(res["v"], self.V_XYZ, rtol=rtol)
+        self.assertAlmostEqual(res["speed"], np.linalg.norm(self.V_XYZ), delta=1e-3)
+        np.testing.assert_allclose(res["n"] / res["speed"], res["m"], rtol=1e-12)
+
+    def test_c_4_v_xcorr_hole(self):
+        # Delays within 0.3 sample (exit criterion): within 1e-3 sample, scalar
+        # or vector, and the same velocity as c_4_v from the crossing times
+        for vector in [False, True]:
+            s_mms, r_mms, tau_true = self._synthetic(self._hole, vector=vector)
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.03)
+
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+            self._check_velocity(res, 1e-5)
+            np.testing.assert_allclose(res["corr"], 1.0, atol=1e-9)
+            self.assertFalse(np.any(res["flags"]))
+            self.assertEqual(res["pattern"].dims, s_mms[0].dims)
+
+            t_cross = np.datetime64("2019-01-01T00:00:00.125") + np.round(
+                res["tau"] * 1e9
+            ).astype("timedelta64[ns]")
+            np.testing.assert_allclose(
+                pyrf.c_4_v(r_mms, list(t_cross)), res["v"], rtol=1e-6
+            )
+
+    def test_c_4_v_xcorr_boundary(self):
+        # Planar boundary: the speed within 1 % (exit criterion), here 1e-5;
+        # the default max_lag (all the data allow) and no errors
+        s_mms, r_mms, tau_true = self._synthetic(self._boundary)
+        res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, errors=False)
+
+        np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+        self._check_velocity(res, 1e-5)
+        for k in ["dtau2", "dm2", "d_speed", "d_theta", "e_theta"]:
+            self.assertIsNone(res[k])
+
+    def test_c_4_v_xcorr_cadence(self):
+        # Clocks a few ppm apart (fast path) or a cadence 0.5 % off (exact
+        # interpolant)
+        for cadence in [[1.0, 1 + 2e-6, 1.0, 1 - 2e-6], [1.0, 1.005, 1.0, 1.0]]:
+            s_mms, r_mms, tau_true = self._synthetic(self._hole, cadence=cadence)
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.03)
+
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+
+    def test_c_4_v_xcorr_train(self):
+        # Train of holes 12 samples apart: around picked delays (0.4 sample
+        # off), a max_lag of one peak-to-peak time keeps each delay on the same
+        # hole; the delays found far away are on another hole
+        s_mms, r_mms, tau_true = self._synthetic(self._train)
+        tint = self._tint(0.0006)
+        picked = tau_true + 0.4 / self.F_S
+        res = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=4 / self.F_S, tau=picked)
+        np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+
+        res = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=0.03)
+        jumps = (res["tau"] - tau_true) * self.F_S / 12
+        self.assertTrue(np.any(np.abs(jumps) > 0.5))
+        np.testing.assert_allclose(jumps, np.round(jumps), atol=0.05)
+
+    def test_c_4_v_xcorr_monte_carlo(self):
+        # The spread of the delays and of the speed over noise draws agrees with
+        # the reported errors within x1.5 (exit criterion)
+        rng = np.random.default_rng(0)
+        tau, d_tau, speed, d_speed = [], [], [], []
+
+        for _ in range(100):
+            s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.05, rng=rng)
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.03)
+            dtau2 = res["dtau2"]
+            tau.append(res["tau"])
+            d_tau.append(
+                [np.sqrt(dtau2[i, i] + dtau2[0, 0] - 2 * dtau2[0, i]) for i in range(4)]
+            )
+            speed.append(res["speed"])
+            d_speed.append(res["d_speed"])
+
+        ratio = np.std(tau, axis=0)[1:] / np.mean(d_tau, axis=0)[1:]
+        self.assertTrue(np.all((ratio > 1 / 1.5) & (ratio < 1.5)), ratio)
+        ratio = np.std(speed) / np.mean(d_speed)
+        self.assertTrue(1 / 1.5 < ratio < 1.5, ratio)
+
+    def test_c_4_v_xcorr_pattern(self):
+        # The pattern of a call gives the same delays; on other times (exact
+        # interpolant) too
+        s_mms, r_mms, tau_true = self._synthetic(self._hole)
+        tint = self._tint(0.002)
+        res = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=0.03)
+
+        for pattern in [res["pattern"], s_mms[0][::2]]:
+            res_p = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=0.03, pattern=pattern)
+            np.testing.assert_allclose(res_p["tau"], tau_true, atol=1e-3 / self.F_S)
+
+    def test_c_4_v_xcorr_edge(self):
+        # The boundary of MMS2 (16.3 ms) just beyond the search window (the
+        # mean square difference decreases towards it): NaN, flagged, warned
+        s_mms, r_mms, _ = self._synthetic(self._boundary)
+
+        with self.assertWarnsRegex(UserWarning, "edge of the search window"):
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.015)
+
+        np.testing.assert_array_equal(res["flags"], [False, True, False, False])
+        self.assertTrue(np.isnan(res["tau"][1]) and np.isnan(res["speed"]))
+        self.assertTrue(np.all(np.isnan(res["v"])) and res["dtau2"] is None)
+
+    def test_c_4_v_xcorr_outside_window(self):
+        # A hole just beyond the search window (MMS2 at 16.3 ms): with a
+        # fitted scale, its best fit is at the edge, flagged; unscaled, an
+        # interior minimum of a flat mean square difference, found by its
+        # correlation with the pattern
+        s_mms, r_mms, _ = self._synthetic(self._hole)
+
+        with self.assertWarnsRegex(UserWarning, "MMS2 is at the edge"):
+            res = pyrf.c_4_v_xcorr(
+                self._tint(0.002), s_mms, r_mms, max_lag=0.016, fit="scale"
+            )
+
+        np.testing.assert_array_equal(res["flags"], [False, True, False, False])
+        self.assertTrue(np.isnan(res["tau"][1]))
+
+        with self.assertWarnsRegex(UserWarning, "MMS2 correlates poorly"):
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.016)
+
+        self.assertLess(res["corr"][1], 0.7)
+
+    def test_c_4_v_xcorr_poor_correlation(self):
+        # A spacecraft that sees only noise: a fit anywhere, found by its
+        # correlation with the pattern
+        s_mms, r_mms, _ = self._synthetic(self._hole)
+        rng = np.random.default_rng(5)
+        s_mms[1] = s_mms[1].copy(data=0.1 * rng.standard_normal(len(s_mms[1])))
+
+        with self.assertWarnsRegex(UserWarning, "MMS2 correlates poorly"):
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.016)
+
+        self.assertLess(res["corr"][1], 0.7)
+
+    def test_c_4_v_xcorr_amplitudes(self):
+        # The structure seen with different amplitudes (an electron hole
+        # crossed at different distances from its centre): with a fitted
+        # scale, the delays are exact and the scales are the amplitudes
+        # relative to MMS1
+        for fit, factor in itertools.product(["scale", "scale_offset"], [0.3, 2.5, 4]):
+            s_mms, r_mms, tau_true = self._synthetic(self._hole)
+            s_mms[1] = s_mms[1] * factor
+            res = pyrf.c_4_v_xcorr(
+                self._tint(0.002), s_mms, r_mms, max_lag=0.03, fit=fit
+            )
+
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+            np.testing.assert_allclose(res["scale"], [1.0, factor, 1.0, 1.0])
+            np.testing.assert_allclose(res["offset"], 0.0, atol=1e-9)
+            self.assertFalse(np.any(res["inverted"]))
+
+        # Unscaled (irfu-matlab), MMS2 x 2.5 is 257 samples off, with a poor
+        # correlation suggesting the scale
+        with self.assertWarnsRegex(UserWarning, 'MMS2 correlates.*fit="scale"'):
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, max_lag=0.03)
+
+        np.testing.assert_array_equal(res["scale"], 1.0)
+        np.testing.assert_array_equal(res["offset"], 0.0)
+        self.assertFalse(np.any(res["inverted"]))
+
+    def test_c_4_v_xcorr_inverted(self):
+        # An inverted signal (sign error) is flagged, with a warning; its
+        # delay is that of the best positive fit (one lobe of the hole)
+        s_mms, r_mms, _ = self._synthetic(self._hole)
+        s_mms[3] = -s_mms[3]
+
+        with self.assertWarnsRegex(UserWarning, "MMS4 fits an inverted pattern"):
+            res = pyrf.c_4_v_xcorr(
+                self._tint(0.002), s_mms, r_mms, max_lag=0.03, fit="scale"
+            )
+
+        np.testing.assert_array_equal(res["inverted"], [False, False, False, True])
+
+    def test_c_4_v_xcorr_offset(self):
+        # An offset on one spacecraft (calibration) leaves the delays exact
+        # (unscaled, an offset of 1 on a step of 2 moved MMS2 by 10 samples)
+        s_mms, r_mms, tau_true = self._synthetic(self._boundary)
+        s_mms[1] = s_mms[1] + 1.0
+        res = pyrf.c_4_v_xcorr(
+            self._tint(0.002), s_mms, r_mms, errors=False, fit="scale_offset"
+        )
+
+        np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+        np.testing.assert_allclose(res["offset"], [0.0, 1.0, 0.0, 0.0], atol=1e-7)
+
+    def test_c_4_v_xcorr_scale_offset_invariance(self):
+        # Noisy signals: offsets on any spacecraft and a common scale change
+        # neither the delays nor their errors
+        rng = np.random.default_rng(3)
+        s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.05, rng=rng)
+        options = {"max_lag": 0.03, "fit": "scale_offset"}
+        res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, **options)
+        s_new = [5.0 * s_sc + off for s_sc, off in zip(s_mms, [0.0, 2.0, -1.0, 0.3])]
+        res_new = pyrf.c_4_v_xcorr(self._tint(0.002), s_new, r_mms, **options)
+
+        np.testing.assert_allclose(res_new["tau"], res["tau"], atol=1e-6 / self.F_S)
+        np.testing.assert_allclose(res_new["dtau2"], res["dtau2"], rtol=1e-6)
+        np.testing.assert_allclose(res_new["scale"], res["scale"], rtol=1e-9)
+
+    def test_c_4_v_xcorr_fit_invalid(self):
+        s_mms, r_mms, _ = self._synthetic(self._hole)
+
+        with self.assertRaisesRegex(ValueError, "fit must be"):
+            pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, fit="offset")
+
+    def test_c_4_v_xcorr_matlab(self):
+        # Velocity and errors from the delays and their covariance of
+        # irf_4_v_xcorr_errors (irfu-matlab, R2024a, noisy synthetic hole):
+        # get_disc_vel to round-off (its direction errors scan 10^4 directions)
+        r_xyz = np.array(
+            [
+                [19995.0, 4997.1125, -3002.04],
+                [20005.0, 4997.1125, -3002.04],
+                [20000.0, 5005.7725, -3002.04],
+                [20000.0, 5000.0025, -2993.88],
+            ]
+        )
+        tau = np.array(
+            [1.0e-09, 1.6326530612244899e-02, -6.9030612244882822e-04,
+             1.0210204081633157e-02]
+        )  # fmt: skip
+        dtau2 = np.array(
+            [
+                [3.9617399384055356e-11, -3.6372212120332508e-12,
+                 -2.5154268415536643e-11, -1.3456239866786820e-11],
+                [-3.7897740896298421e-12, 1.8173456124429292e-11,
+                 -6.2395711851240417e-12, -7.5495220718242649e-12],
+                [-2.4817184563706896e-11, -6.5655354298413145e-12,
+                 5.1825590480969800e-11, -1.9203846937616876e-12],
+                [-1.3673323827609315e-11, -7.5776133056350031e-12,
+                 -1.6758739333873071e-12, 2.8176030298823655e-11],
+            ]
+        )  # fmt: skip
+        v, n, m, rms_v, d_th, e_th, dm2 = _c_4_v_xcorr_get_disc_vel(
+            r_xyz, tau - tau[0], dtau2
+        )
+
+        self.assertAlmostEqual(v, 494.68305700334247, places=9)
+        np.testing.assert_allclose(
+            n, [0.8076457578840902, -0.5057404188250221, 0.30320778113123176]
+        )
+        np.testing.assert_allclose(
+            m, [0.00163265296122449, -0.00102235241669416, 0.0006129334264407262]
+        )
+        self.assertAlmostEqual(rms_v, 0.19957475080942916, places=12)
+        np.testing.assert_allclose(
+            d_th, [0.000403377150588889, 0.0004036068623278077], rtol=1e-9
+        )
+        np.testing.assert_allclose(
+            np.abs(e_th @ np.array(
+                [[0.43096853207755365, 0.8572189680414665, 0.281854155883574],
+                 [-0.4025281982701901, -0.09709996490283254, 0.910243179822416]]
+            ).T),
+            np.eye(2),
+            atol=1e-3,
+        )  # fmt: skip
+        np.testing.assert_allclose(
+            dm2,
+            [
+                [
+                    6.5217850810147750e-13,
+                    3.4310560391483180e-13,
+                    8.3201150863202964e-14,
+                ],
+                [
+                    3.3368757880924718e-13,
+                    1.2774727494650736e-12,
+                    6.9241608846005905e-14,
+                ],
+                [
+                    8.6983268203478874e-14,
+                    7.4515152992623926e-14,
+                    7.1840811339498245e-13,
+                ],
+            ],
+        )
+
+    def test_c_4_v_xcorr_band_limited(self):
+        # Exact on a band-limited signal with a trend at other times and
+        # cadence (even and odd number of samples), and the variance of white
+        # noise kept at half a sample
+        def wave(time):
+            return (
+                np.exp(-(((time - 1.6) / 0.4) ** 2)) * np.sin(6 * np.pi * time) + time
+            )
+
+        for n_t in [200, 201]:
+            time = np.arange(n_t) / 64.0
+            shifter = _C4VXcorrBandLimited(time, wave(time), time[0], time[-1], "s")
+            grid = (10.3 / 64.0, 1.37 / 64.0, 100)
+            expected = wave(grid[0] + grid[1] * np.arange(100))
+            np.testing.assert_allclose(shifter(grid, 0.0)[0], expected, atol=1e-9)
+
+        rng = np.random.default_rng(0)
+        time = np.arange(4000) / 64.0
+        shifter = _C4VXcorrBandLimited(
+            time, rng.standard_normal(4000), time[500], time[3500], "s"
+        )
+        grid = (time[500], 1 / 64.0, 3000)
+        variances = np.var(shifter(grid, [0.0, 0.5 / 64.0]), axis=1)
+        self.assertAlmostEqual(variances[1] / variances[0], 1.0, delta=0.02)
+
+    def test_c_4_v_xcorr_corr_h(self):
+        # H (eq. 50) normalised by the rms of the residuals: 0 (not 0/0) for a
+        # perfect fit
+        h_res = np.array([1.0, -1.0, 2.0, 0.5, -0.5])
+        np.testing.assert_allclose(_c_4_v_xcorr_corr_h(h_res, h_res)[4], 1.0)
+        np.testing.assert_array_equal(
+            _c_4_v_xcorr_corr_h(np.zeros(5), h_res), np.zeros(9)
+        )
+
+    def test_c_4_v_xcorr_input(self):
+        s_mms, r_mms, _ = self._synthetic(self._hole)
+        tint = self._tint(0.002)
+
+        for s_in, r_in in [
+            (s_mms[:3], r_mms),
+            (s_mms, r_mms[0]),
+            ([s_mms[0].data, *s_mms[1:]], r_mms),
+        ]:
+            with self.assertRaises(TypeError):
+                pyrf.c_4_v_xcorr(tint, s_in, r_in)
+
+        s_nan = [s_mms[0], s_mms[1].copy(), *s_mms[2:]]
+        s_nan[1].data[1024] = np.nan
+        s_gap = [s_mms[0], s_mms[1].drop_isel(time=1024), *s_mms[2:]]
+        r_far = [r[:1] for r in r_mms]
+        for kwargs, message in [
+            ({"tau": [0.0, 0.0]}, "tau"),
+            ({"max_lag": 1e-4}, "extend beyond tint"),
+            ({"max_lag": 0.2}, "does not cover"),
+            ({"s_mms": s_nan}, "NaN"),
+            ({"s_mms": s_gap}, "gap"),
+            ({"r_mms": r_far}, "middle of tint"),
+            ({"tint": self._tint(1e-4)}, "5 samples"),
+            ({"pattern": s_mms[0][1100:1110]}, "pattern"),
+        ]:
+            inputs = {"tint": tint, "s_mms": s_mms, "r_mms": r_mms, "max_lag": 0.03}
+            inputs.update(kwargs)
+
+            with self.assertRaisesRegex(ValueError, message):
+                pyrf.c_4_v_xcorr(**inputs)
 
 
 class C4GradTestCase(unittest.TestCase):

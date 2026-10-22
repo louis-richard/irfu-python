@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
-import matplotlib.pyplot as plt
 import numpy as np
 
 # Local imports
@@ -17,9 +16,14 @@ def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list = None):
 
     Parameters
     ----------
-    ax : matplotlib.axes._subplots.AxesSubplot
+    ax : matplotlib.axes.Axes
         Axis where to plot the thresholds in a Brazil plot format.
-
+    legend : bool, Optional
+        Add a legend of the four thresholds at the top of the figure of `ax`.
+        Default is True.
+    colors : list of str, Optional
+        Colors of the proton cyclotron, mirror mode, parallel firehose and
+        oblique firehose thresholds. Default is ["deeppink", "m", "b", "c"].
 
     References
     ----------
@@ -70,7 +74,7 @@ def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list = None):
     ax.set_xlim([1e-2, 5e3])
     ax.set_ylim([0.3, 1e1])
 
-    f = plt.gcf()
+    f = ax.get_figure()
     if legend:
         f.legend(
             handles=[l0, l1, l2, l3],  # The line objects

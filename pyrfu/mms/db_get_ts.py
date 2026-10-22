@@ -66,14 +66,15 @@ def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
 def _load_config() -> Mapping[str, str]:
     r"""Load the MMS configuration file (cached until it changes, e.g., after
     mms.db_init). Returns a copy, so that callers cannot change the cache."""
-    return dict(_load_config_cached(os.stat(MMS_CFG_PATH).st_mtime_ns))
+    return dict(_load_config_cached(MMS_CFG_PATH, os.stat(MMS_CFG_PATH).st_mtime_ns))
 
 
 @lru_cache(maxsize=1)
-def _load_config_cached(config_mtime_ns: int) -> Mapping[str, str]:
-    r"""Load the MMS configuration file (cached by modification time)."""
+def _load_config_cached(config_path: str, config_mtime_ns: int) -> Mapping[str, str]:
+    r"""Load the MMS configuration file (cached by path and modification time:
+    another file with the same time is read)."""
     del config_mtime_ns  # cache key only
-    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
+    with open(config_path, "r", encoding="utf-8") as fs:
         return json.load(fs)
 
 

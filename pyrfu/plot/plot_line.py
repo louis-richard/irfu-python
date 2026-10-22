@@ -64,7 +64,7 @@ def plot_line(axis, inp, **kwargs):
     time = inp.time
     axis.plot(time, data, **kwargs)
 
-    if time.dtype == "<M8[ns]":
+    if np.issubdtype(time.dtype, np.datetime64):
         locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = mdates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)

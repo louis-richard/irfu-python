@@ -123,9 +123,17 @@ EXTRA_COLORS = {
 
 mpl.colors.EXTRA_COLORS = EXTRA_COLORS
 mpl.colors.colorConverter.colors.update(EXTRA_COLORS)
-mpl.colormaps.register(
-    name="parula",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+
+
+def _register_cmap(cmap):
+    # Once: reloading pyrfu.plot (e.g., autoreload in notebooks) raised
+    # ValueError, the name being already registered
+    if cmap.name not in mpl.colormaps:
+        mpl.colormaps.register(cmap)
+
+
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "parula",
         [
             (0.0592, 0.3599, 0.8684),
@@ -140,9 +148,8 @@ mpl.colormaps.register(
         N=2560,
     ),
 )
-mpl.colormaps.register(
-    name="jet_gray",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "jet_gray",
         [
             (0.0, "darkblue"),
@@ -155,9 +162,8 @@ mpl.colormaps.register(
     ),
 )
 
-mpl.colormaps.register(
-    name="hot_desaturated",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "hot_desaturated",
         [
             (0.2784, 0.2784, 0.8588),
@@ -173,9 +179,8 @@ mpl.colormaps.register(
     ),
 )
 
-mpl.colormaps.register(
-    name="hot_white_desaturated",
-    cmap=mpl.colors.LinearSegmentedColormap.from_list(
+_register_cmap(
+    mpl.colors.LinearSegmentedColormap.from_list(
         "hot_white_desaturated",
         [
             (1.0000, 1.0000, 1.0000),
@@ -215,7 +220,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
             "pyrfu:lightblue",
             "pyrfu:olive",
         ]
-        cmap = "hot_white_desaturated"
+        cmap = "Spectral_r"
     elif pal.lower() == "oceanic":
         colors = [
             "on:green",
@@ -260,7 +265,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
 
 
 def use_pyrfu_style(
-    name: str = "default",
+    name: str = "pyrfu",
     color_cycle: str = "pyrfu",
     fancy_legend: bool = False,
     usetex: bool = False,
@@ -270,7 +275,11 @@ def use_pyrfu_style(
     Parameters
     ----------
     name : str, Optional
-       Name of the style sheet. Default is "default" (see also
+       Name of the style sheet. Default is "pyrfu", the style of the example
+       notebooks (pyrfu colour cycle, Spectral_r colormap, minor ticks,
+       frameless legends in the upper right corner), applied on top of
+       matplotlib's default style. Any other matplotlib style sheet can be
+       given (see also
        https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html).
     color_cycle : str, Optional
        Name of the color cycle to use. Default is "pyrfu".
@@ -292,7 +301,8 @@ def use_pyrfu_style(
             )
             usetex = False
 
-    style.use(name)
+    # The pyrfu sheet only sets what it changes: start from the defaults
+    style.use(["default", name] if name == "pyrfu" else name)
     set_color_cycle(color_cycle)
     mpl.rcParams["xtick.minor.visible"] = True
     mpl.rcParams["ytick.minor.visible"] = True

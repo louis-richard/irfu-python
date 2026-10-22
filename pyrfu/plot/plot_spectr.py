@@ -30,7 +30,7 @@ def plot_spectr(
 
     Parameters
     ----------
-    axis : matplotlib.pyplot.subplotsaxes
+    axis : matplotlib.axes.Axes
         Target axis to plot. If None create a new figure.
     inp : xarray.DataArray or xarray.Dataset
         Input 2D data to plot. If a Dataset, it must contain a "data"
@@ -41,30 +41,42 @@ def plot_spectr(
         - a second data variable holding the y-axis values.
 
     yscale : {"linear", "log"}, Optional
-        Y-axis scaling. Default is "" (linear).
-    cscale : {"linear", "log"}, Optional
-        C-axis scaling. Default is "" (linear).
-    clim : list, Optional
-        C-axis bounds. Default is None (autolim).
-    cmap : str, Optional
-        Colormap. Default is "jet".
-    colorbar : str, Optional
-        Location of the colorbar with respect to the axis.
-        Set to "none" to hide.
+        Y-axis scaling. Default is "linear".
+    cscale : {"linear", "log"} or matplotlib.colors.Normalize, Optional
+        C-axis scaling, or the norm to use. Default is "linear".
+    clim : array_like, Optional
+        C-axis bounds [min, max] (list, tuple or array). Default is None (the
+        range of the data).
+    cmap : str or matplotlib.colors.Colormap, Optional
+        Colormap. Default is matplotlib's default (``image.cmap``, set by the
+        pyrfu style).
+    colorbar : {"right", "top", "none"}, Optional
+        Location of the colorbar with respect to the axis, "none" to hide it.
+        Default is "right".
+    aspect : str or float, Optional
+        Aspect ratio of the axis, see matplotlib.axes.Axes.set_aspect.
+        Default is "auto".
 
     Other Parameters
     ----------------
-    **kwargs
-        Keyword arguments.
+    pad : float
+        Gap between the axis and the colorbar, in figure coordinates. Default
+        is 0.01.
 
     Returns
     -------
-    fig : figure
-        Figure with axis.
-    axs : matplotlib.pyplot.subplotsaxes
-        Axis with spectrum.
-    caxs : matplotlib.pyplot.subplotsaxes
-        Only if colorbar is True.
+    axis : matplotlib.axes.Axes
+        Axis with the spectrogram.
+    cax : matplotlib.axes.Axes
+        Axis of the colorbar, only if colorbar is not "none" (otherwise only
+        `axis` is returned).
+
+    Raises
+    ------
+    TypeError
+        If `inp` is not a DataArray or a Dataset.
+    NotImplementedError
+        If `colorbar` is not "right", "top" or "none".
 
     """
 
@@ -77,7 +89,7 @@ def plot_spectr(
         cmap = mpl.colormaps.get_cmap(cmap)
 
     if cscale == "log":
-        if clim is not None and isinstance(clim, list):
+        if clim is not None:
             options = {
                 "norm": mpl.colors.LogNorm(vmin=clim[0], vmax=clim[1]),
                 "cmap": cmap,
@@ -85,7 +97,7 @@ def plot_spectr(
         else:
             options = {"norm": mpl.colors.LogNorm(), "cmap": cmap}
     elif cscale == "linear":
-        if clim is not None and isinstance(clim, list):
+        if clim is not None:
             options = {"cmap": cmap, "vmin": clim[0], "vmax": clim[1]}
         else:
             options = {"cmap": cmap, "vmin": None, "vmax": None}
@@ -130,7 +142,7 @@ def plot_spectr(
         **options,
     )
 
-    if x_data.dtype == "<M8[ns]":
+    if np.issubdtype(x_data.dtype, np.datetime64):
         locator = mpl.dates.AutoDateLocator(minticks=3, maxticks=7)
         formatter = mpl.dates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)
@@ -145,10 +157,7 @@ def plot_spectr(
     axis.set_aspect(aspect)
 
     if colorbar.lower() == "right":
-        if kwargs.get("pad"):
-            pad = kwargs["pad"]
-        else:
-            pad = 0.01
+        pad = kwargs.get("pad", 0.01)
 
         pos = axis.get_position()
         cax = fig.add_axes(
@@ -170,10 +179,7 @@ def plot_spectr(
 
         out = (axis, cax)
     elif colorbar.lower() == "top":
-        if kwargs.get("pad"):
-            pad = kwargs["pad"]
-        else:
-            pad = 0.01
+        pad = kwargs.get("pad", 0.01)
 
         pos = axis.get_position()
         cax = fig.add_axes(

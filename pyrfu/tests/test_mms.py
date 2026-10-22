@@ -446,6 +446,19 @@ class ConfigCacheTestCase(unittest.TestCase):
                 self.assertEqual(module._load_config()["default"], "aws")
                 module._load_config_cached.cache_clear()
 
+    def test_load_config_other_path(self):
+        # Another configuration file with the same modification time is read
+        # (the cache was keyed by the time only)
+        module = importlib.import_module("pyrfu.mms.db_get_ts")
+        with tempfile.TemporaryDirectory() as root:
+            module._load_config_cached.cache_clear()
+            for default in ["local", "aws"]:
+                path = os.path.join(root, f"config_{default}.json")
+                self._write_config(path, default, mtime_ns=10**18)
+                with mock.patch.object(module, "MMS_CFG_PATH", path):
+                    self.assertEqual(module._load_config()["default"], default)
+            module._load_config_cached.cache_clear()
+
     def test_login_lasp_refresh(self):
         module = importlib.import_module("pyrfu.mms.list_files_sdc")
         with tempfile.TemporaryDirectory() as root:
@@ -2901,6 +2914,62 @@ class PsdMomentsTestCase(unittest.TestCase):
                 expected = [expected[0], expected[1], np.diagonal(expected[2], 0, 1, 2)]
             for res, exp in zip(result, expected):
                 np.testing.assert_allclose(res, exp, rtol=rtol)
+
+    def test_psd_moments_en_channels_fpi_index(self):
+        # The recommended energy index of the FPI partial-moments files
+        # (partidxi_fpi_*_l2, uint16) as the first channel, to compare the ion
+        # moments with FPI's
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
+        result = self._moments(vdf, sc_pot, en_channels=[np.uint16(11), 32])
+        self._assert_moments_equal(
+            result, self._moments(vdf, sc_pot, en_channels=[11, 32])
+        )
+        self.assertTrue(np.all(result[0] < self._moments(vdf, sc_pot)[0]))
+
+    def test_psd_moments_en_channels_time_series(self):
+        # A time series of first channels (as partidxi_fpi_*_l2): at each time
+        # the channels from it to the last, as energy_range with each time's
+        # own range
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0], n_t=4)
+        first = np.array([0, 3, 11, 3], dtype=np.uint16)
+        energy = vdf.energy.data[0]
+        e_min = [0.0 if k == 0 else (energy[k - 1] + energy[k]) / 2 for k in first]
+        e_range = np.stack([e_min, np.full(4, 1e6)], axis=1)
+
+        result = self._moments(
+            vdf, sc_pot, en_channels=pyrf.ts_scalar(vdf.time.data, first)
+        )
+        self._assert_moments_equal(
+            result, self._moments(vdf, sc_pot, energy_range=e_range)
+        )
+
+        # A constant series is en_channels=[k, 32]
+        for k in [0, 11]:
+            constant = pyrf.ts_scalar(vdf.time.data, np.full(4, k, dtype=np.uint16))
+            self._assert_moments_equal(
+                self._moments(vdf, sc_pot, en_channels=constant),
+                self._moments(vdf, sc_pot, en_channels=[k, 32]),
+            )
+
+        # On other times: the nearest sample, not interpolated
+        shifted = pyrf.ts_scalar(vdf.time.data + np.timedelta64(1, "ms"), first)
+        self._assert_moments_equal(
+            self._moments(vdf, sc_pot, en_channels=shifted), result
+        )
+
+    def test_psd_moments_en_channels_time_series_invalid(self):
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
+        time = vdf.time.data
+
+        for first in [
+            pyrf.ts_scalar(time, np.array([0, 32])),
+            pyrf.ts_scalar(time, np.array([-1, 0])),
+            xr.DataArray(
+                np.zeros((2, 2)), coords=[time, [0, 1]], dims=["time", "comp"]
+            ),
+        ]:
+            with self.assertRaises(ValueError):
+                mms.psd_moments(vdf, sc_pot, en_channels=first)
 
     @staticmethod
     def _electrons_through_potential(t_ev, sc_pot, energy01=False, rate="brst"):
@@ -8003,6 +8072,27 @@ class TokenizeTestCase(unittest.TestCase):
         self.assertEqual(result["cdf_name"], f"edp_dcv_{data_rate}_l2")
         self.assertEqual(result["dtype"], "scpot")
 
+    @data("brst", "fast", "slow")
+    def test_tokenize_edp_vpsp(self, data_rate):
+        # The probe-to-spacecraft potential averaged over the probes (psp) is in
+        # the scpot files, as irfu-matlab mms.get_data Vpsp_edp_*_l2 (its name
+        # in any case)
+        for var_str in [f"vpsp_edp_{data_rate}_l2", f"Vpsp_edp_{data_rate}_l2"]:
+            result = mms.tokenize(var_str)
+            self.assertEqual(result["cdf_name"], f"edp_psp_{data_rate}_l2")
+            self.assertEqual(result["dtype"], "scpot")
+            self.assertEqual(result["param"], "vpsp")
+
+    @data("brst", "fast")
+    def test_tokenize_fpi_part_index(self, data_rate):
+        # The recommended energy index of the FPI partial moments (FPI's
+        # moments are the partial moments from this channel)
+        for species in ["i", "e"]:
+            result = mms.tokenize(f"partidx{species}_fpi_{data_rate}_l2")
+            self.assertEqual(result["cdf_name"], f"d{species}s_part_index_{data_rate}")
+            self.assertEqual(result["dtype"], f"d{species}s-partmoms")
+            self.assertEqual(result["param"], f"partidx{species}")
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
@@ -8462,7 +8552,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             "MMS1_DEFEPH_2019257_2019258.V01",
             _DEFEPH_HEADER + _DEFEPH_ROWS,
         )
-        result = mms.load_ancillary("defeph", self.tint, 1, False, self.root)
+        result = mms.load_ancillary("defeph", self.tint, 1, False, self.root, "local")
 
         self.assertEqual(len(result.time), 3)
         self.assertEqual(
@@ -8480,7 +8570,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             "MMS1_DEFATT_2019257_2019258.V00",
             header + _DEFATT_ROWS + ["DATA_STOP"],
         )
-        result = mms.load_ancillary("defatt", self.tint, 1, False, self.root)
+        result = mms.load_ancillary("defatt", self.tint, 1, False, self.root, "local")
 
         self.assertEqual(len(result.time), 2)
         np.testing.assert_allclose(result.z_dec.data, [66.080, 66.086])
@@ -8520,7 +8610,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             + ["DATA_STOP"],
         )
         tint = ["2019-09-13T23:00:00", "2019-09-14T01:00:00"]
-        result = mms.load_ancillary("defatt", tint, 1, False, self.root)
+        result = mms.load_ancillary("defatt", tint, 1, False, self.root, "local")
 
         expected_time = np.array(
             [
@@ -8535,12 +8625,191 @@ class LoadAncillaryTestCase(unittest.TestCase):
 
     def test_load_ancillary_no_file(self):
         with self.assertRaises(FileNotFoundError):
-            mms.load_ancillary("defeph", self.tint, 1, False, self.root)
+            mms.load_ancillary("defeph", self.tint, 1, False, self.root, "local")
 
     def test_load_ancillary_unsupported(self):
         for product in ["predatt", "predeph", "bazinga"]:
             with self.assertRaisesRegex(ValueError, "not supported"):
-                mms.load_ancillary(product, self.tint, 1, False, self.root)
+                mms.load_ancillary(product, self.tint, 1, False, self.root, "local")
+
+    # From the SDC (mocked listing and session)
+    _DEFATT_HEADER = ["META_START"] * 48 + ["COMMENT   Time (UTC)    Elapsed Sec"]
+
+    @staticmethod
+    def _sdc_file(name, start, end):
+        return {
+            "file_name": name,
+            "url": f"url/{name}",
+            "start_date": start,
+            "end_date": end,
+        }
+
+    def _sdc(self, files, contents, status_error=None):
+        module = importlib.import_module("pyrfu.mms.load_ancillary")
+        responses = {}
+
+        for file, content in zip(files, contents):
+            response = mock.MagicMock(content=content.encode())
+            if status_error:
+                response.raise_for_status.side_effect = status_error
+            responses[file["url"]] = response
+
+        session = mock.MagicMock()
+        session.get.side_effect = lambda url, **kwargs: responses[url]
+
+        for name, value in [
+            ("list_files_ancillary_sdc", files),
+            ("_login_lasp", (session, {}, "")),
+        ]:
+            patch = mock.patch.object(module, name, return_value=value)
+            patch.start()
+            self.addCleanup(patch.stop)
+
+        return session
+
+    def _defatt_files(self):
+        # The day before (no row in tint), the day of tint, the day after
+        day = "\n".join(self._DEFATT_HEADER + _DEFATT_ROWS + ["DATA_STOP"]) + "\n"
+        before = day.replace("2019-257T", "2019-256T")
+        files = [
+            self._sdc_file(
+                "MMS1_DEFATT_2019256_2019257.V00",
+                "2019-09-13T00:00:00",
+                "2019-09-14T00:00:00",
+            ),
+            self._sdc_file(
+                "MMS1_DEFATT_2019257_2019258.V00",
+                "2019-09-14T00:00:00",
+                "2019-09-15T00:00:00",
+            ),
+            self._sdc_file(
+                "MMS1_DEFATT_2019258_2019259.V00",
+                "2019-09-15T00:00:00",
+                "2019-09-16T00:00:00",
+            ),
+        ]
+        return files, [before, day, day]
+
+    def test_load_ancillary_sdc(self):
+        # Read in memory from the SDC: as the same local file, and only the
+        # files covering tint (here near midnight: also the day before)
+        files, contents = self._defatt_files()
+        session = self._sdc(files, contents)
+        self._write("defatt", files[1]["file_name"], contents[1].splitlines())
+        local = mms.load_ancillary("defatt", self.tint, 1, False, self.root, "local")
+
+        for source in ["sdc", "aws"]:
+            session.get.reset_mock()
+
+            with self.assertLogs("pyrfu.mms.load_ancillary", "INFO") as logs:
+                result = mms.load_ancillary("defatt", self.tint, 1, source=source)
+
+            self.assertEqual(
+                any("No ancillary files on AWS" in line for line in logs.output),
+                source == "aws",
+            )
+
+            xr.testing.assert_identical(result, local)
+            self.assertListEqual(
+                [call.args[0] for call in session.get.call_args_list],
+                [files[0]["url"], files[1]["url"]],
+            )
+
+    def test_load_ancillary_sdc_files(self):
+        # The files covering tint (with a day on their end, as
+        # list_files_ancillary: the names give dates only), the latest version
+        # of each, in time order
+        module = importlib.import_module("pyrfu.mms.load_ancillary")
+        files, contents = self._defatt_files()
+        newer = dict(files[1], file_name=files[1]["file_name"].replace("V00", "V01"))
+        self._sdc([files[2], newer, files[1], files[0]], [contents[2]] * 4)
+
+        for tint, expected in [
+            (["2019-09-14T12:00:00", "2019-09-14T13:00:00"], [files[0], newer]),
+            (["2019-09-14T00:10:00", "2019-09-14T00:20:00"], [files[0], newer]),
+            (
+                ["2019-09-14T23:30:00", "2019-09-15T00:30:00"],
+                [files[0], newer, files[2]],
+            ),
+        ]:
+            self.assertListEqual(module._list_files_sdc(tint, 1, "defatt"), expected)
+
+    def test_load_ancillary_sdc_file_from_the_day_before(self):
+        # Early DEFATT files cover about 16:00 to 16:00 (MMS1 2015361_2015362:
+        # 2015-361T15:56 to 362T15:54): the morning of a day is in the file of
+        # the day before (it was not read: no row)
+        def content(times):
+            rows = [
+                _DEFATT_ROWS[0].replace("2019-257T00:00:00.012", time) for time in times
+            ]
+            return "\n".join(self._DEFATT_HEADER + rows + ["DATA_STOP"]) + "\n"
+
+        files = [
+            self._sdc_file(
+                "MMS1_DEFATT_2019256_2019257.V00",
+                "2019-09-13T00:00:00",
+                "2019-09-14T00:00:00",
+            ),
+            self._sdc_file(
+                "MMS1_DEFATT_2019257_2019258.V00",
+                "2019-09-14T00:00:00",
+                "2019-09-15T00:00:00",
+            ),
+        ]
+        before = [
+            "2019-256T15:56:14.012",
+            "2019-257T03:57:10.012",
+            "2019-257T03:57:20.012",
+        ]
+        self._sdc(files, [content(before), content(["2019-257T15:49:23.062"])])
+        tint = ["2019-09-14T03:57:00", "2019-09-14T03:58:00"]
+        result = mms.load_ancillary("defatt", tint, 1, False, source="sdc")
+
+        np.testing.assert_array_equal(
+            result.time.data,
+            np.array(
+                ["2019-09-14T03:57:10.012", "2019-09-14T03:57:20.012"],
+                dtype="datetime64[ns]",
+            ),
+        )
+
+    def test_load_ancillary_default_source(self):
+        # The default resource of the configuration (a temporary one, also for
+        # the local path of the local lister)
+        db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
+        lister = importlib.import_module("pyrfu.mms.list_files_ancillary")
+        files, contents = self._defatt_files()
+        session = self._sdc(files, contents)
+        self._write("defatt", files[1]["file_name"], contents[1].splitlines())
+
+        for default, n_get in [("sdc", 2), ("aws", 2), ("local", 0)]:
+            path = os.path.join(self.root, f"config_{default}.json")
+            with open(path, "w", encoding="utf-8") as file:
+                json.dump({"default": default, "local": self.root}, file)
+
+            db_get_ts._load_config_cached.cache_clear()
+            session.get.reset_mock()
+            with (
+                mock.patch.object(db_get_ts, "MMS_CFG_PATH", path),
+                mock.patch.object(lister, "MMS_CFG_PATH", path),
+            ):
+                result = mms.load_ancillary("defatt", self.tint, 1, False)
+            db_get_ts._load_config_cached.cache_clear()
+
+            self.assertEqual(len(result.time), 2)
+            self.assertEqual(session.get.call_count, n_get)
+
+    def test_load_ancillary_sdc_errors(self):
+        files, contents = self._defatt_files()
+        self._sdc(files, contents, status_error=requests.HTTPError("404"))
+
+        with self.assertRaises(requests.HTTPError):
+            mms.load_ancillary("defatt", self.tint, 1, False, source="sdc")
+
+        self._sdc([], [])
+
+        with self.assertRaises(FileNotFoundError):
+            mms.load_ancillary("defatt", self.tint, 1, False, source="sdc")
 
 
 @ddt

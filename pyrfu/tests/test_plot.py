@@ -33,9 +33,8 @@ from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
 
 def _close_new_figures(test_case):
-    r"""Close the figures created during the test, and only those: closing the
-    figures created at import by @data (e.g., plt.subplots in the decorators)
-    breaks the tests using them with interactive backends (Tk on Windows)."""
+    r"""Close the figures created during the test, and only those (not the
+    figures the caller may have open)."""
     before = set(plt.get_fignums())
 
     def close():
@@ -45,40 +44,62 @@ def _close_new_figures(test_case):
     test_case.addCleanup(close)
 
 
+# Axes named in @data, created when the test runs: the decorators run at
+# import, where plt.subplots opened 20 figures
+_AXES = {
+    "axis": lambda: plt.subplots(1)[1],
+    "axes": lambda: plt.subplots(3)[1],
+    "axes[0]": lambda: plt.subplots(3)[1][0],
+}
+
+
+def _axis(spec):
+    r"""Axis named by `spec` in _AXES, or `spec` itself (None, a number)."""
+    return _AXES[spec]() if isinstance(spec, str) else spec
+
+
 @ddt
 class PlotLineTestCase(unittest.TestCase):
-    @data((0.0, generate_ts(64.0, 100)), (plt.subplots(3)[1], generate_ts(64.0, 100)))
+    def setUp(self):
+        _close_new_figures(self)
+
+    @data((0.0, generate_ts(64.0, 100)), ("axes", generate_ts(64.0, 100)))
     @unpack
     def test_plot_line_axis_type(self, axis, inp):
         with self.assertRaises(TypeError):
-            plot.plot_line(axis, inp)
+            plot.plot_line(_axis(axis), inp)
 
-    @data((plt.subplots(1)[1], generate_data(100)))
+    @data(("axis", generate_data(100)))
     @unpack
     def test_plot_line_inp_type(self, axis, inp):
         with self.assertRaises(TypeError):
-            plot.plot_line(axis, inp)
+            plot.plot_line(_axis(axis), inp)
 
-    @data(
-        (plt.subplots(1)[1], generate_ts(64.0, 100, tensor_order=random.randint(3, 10)))
-    )
+    @data(("axis", generate_ts(64.0, 100, tensor_order=random.randint(3, 10))))
     @unpack
     def test_plot_line_inp_shape(self, axis, inp):
         with self.assertRaises(NotImplementedError):
-            plot.plot_line(axis, inp)
+            plot.plot_line(_axis(axis), inp)
 
     @data(
         (None, generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
-        (plt.subplots(1)[1], generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
-        (
-            plt.subplots(3)[1][0],
-            generate_ts(64.0, 100, tensor_order=random.randint(0, 2)),
-        ),
+        ("axis", generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
+        ("axes[0]", generate_ts(64.0, 100, tensor_order=random.randint(0, 2))),
     )
     @unpack
     def test_plot_line_output(self, axis, inp):
-        result = plot.plot_line(axis, inp)
+        result = plot.plot_line(_axis(axis), inp)
         self.assertIsInstance(result, Axes)
+
+    def test_plot_line_microseconds(self):
+        # Times in another unit than ns (xarray keeps it): concise dates
+        inp = generate_ts(64.0, 100)
+        inp = inp.assign_coords(time=inp.time.data.astype("datetime64[us]"))
+        axis = plot.plot_line(_axis("axis"), inp)
+
+        self.assertIsInstance(
+            axis.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
+        )
 
 
 @ddt
@@ -116,6 +137,20 @@ class PlotClinesTestCase(unittest.TestCase):
         )
         with self.assertRaises(NotImplementedError):
             plot.plot_clines(plt.subplots(1)[1], inp, cscale="lin")
+
+    def test_plot_clines_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        inp = xr.DataArray(
+            np.random.rand(10, 3),
+            coords=[generate_ts(64.0, 10).time.data, [1.0, 10.0, 100.0]],
+            dims=["time", "energy"],
+        )
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        _, cax = plot.plot_clines(ax, inp)
+
+        self.assertIn(cax, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
 
 
 @ddt
@@ -176,6 +211,9 @@ class AddPositionTestCase(unittest.TestCase):
 
 @ddt
 class PlTxTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     @data(
         ([generate_ts(64.0, 100, tensor_order=3) for _ in range(4)], "cluster"),
         ([generate_ts(64.0, 100, tensor_order=0) for _ in range(4)], "bazinga"),
@@ -196,7 +234,7 @@ class PlTxTestCase(unittest.TestCase):
             ],
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             [
                 generate_ts(64.0, 100, tensor_order=0),
                 generate_ts(64.0, 100, tensor_order=0),
@@ -205,7 +243,7 @@ class PlTxTestCase(unittest.TestCase):
             ],
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             [
                 generate_ts(64.0, 100, tensor_order=1),
                 generate_ts(64.0, 100, tensor_order=1),
@@ -214,7 +252,7 @@ class PlTxTestCase(unittest.TestCase):
             ],
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             [
                 generate_ts(64.0, 100, tensor_order=2),
                 generate_ts(64.0, 100, tensor_order=2),
@@ -225,21 +263,31 @@ class PlTxTestCase(unittest.TestCase):
     )
     @unpack
     def test_pl_tx_output(self, ax, value):
-        result = plot.pl_tx(ax, value, 0)
+        result = plot.pl_tx(_axis(ax), value, 0)
         self.assertIsInstance(result, Axes)
+
+    def test_pl_tx_grid(self):
+        # The grid of plot_line (0.5 drew darker panels)
+        value = [generate_ts(64.0, 100, tensor_order=0) for _ in range(4)]
+        axis = plot.pl_tx(_axis("axis"), value, 0)
+
+        for line in axis.xaxis.get_gridlines() + axis.yaxis.get_gridlines():
+            self.assertEqual(line.get_linewidth(), 0.2)
 
 
 @ddt
 class ZoomTestCase(unittest.TestCase):
-    @data((None, plt.subplots(2)[1][1]), (plt.subplots(2)[1][0], None))
+    def setUp(self):
+        _close_new_figures(self)
+
+    @data((None, "axis"), ("axis", None))
     @unpack
     def test_zoom_input(self, ax1, ax2):
         with self.assertRaises(TypeError):
-            plot.zoom(ax1, ax2)
+            plot.zoom(_axis(ax1), _axis(ax2))
 
-    @data((plt.subplots(2)[1][0], plt.subplots(2)[1][1]))
-    @unpack
-    def test_zoom_output(self, ax1, ax2):
+    def test_zoom_output(self):
+        _, (ax1, ax2) = plt.subplots(2)
         result = plot.zoom(ax1, ax2)
         self.assertIsInstance(result, tuple)
         self.assertIsInstance(result[0], Axes)
@@ -249,7 +297,7 @@ class ZoomTestCase(unittest.TestCase):
 @ddt
 class SetColorCycleTestCase(unittest.TestCase):
     @data(
-        ("pyrfu", "hot_white_desaturated"),
+        ("pyrfu", "Spectral_r"),
         ("Oceanic", "ocean"),
         ("tab", "Spectral_r"),
         ("Tableau", "Spectral_r"),
@@ -269,9 +317,73 @@ class SetColorCycleTestCase(unittest.TestCase):
 
 
 class UsePyrfuStyleTestCase(unittest.TestCase):
+    # The style of the example notebooks
+    STYLE = {
+        "image.cmap": "Spectral_r",
+        "legend.loc": "upper right",
+        "legend.frameon": False,
+        "legend.handlelength": 1.5,
+        "xtick.minor.visible": True,
+        "ytick.minor.visible": True,
+        "mathtext.fontset": "dejavusans",
+        "text.usetex": False,
+    }
+    COLORS = ["#005f87", "#008700", "#af0000", "#444444", "#d75f00"]
+
     @staticmethod
     def _which(missing=()):
         return lambda cmd: None if cmd in missing else f"/usr/bin/{cmd}"
+
+    def _assert_pyrfu_style(self):
+        for key, value in self.STYLE.items():
+            self.assertEqual(mpl.rcParams[key], value, key)
+
+        colors = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+        self.assertListEqual(
+            [mpl.colors.to_hex(c) for c in colors[: len(self.COLORS)]], self.COLORS
+        )
+
+    def test_use_pyrfu_style_default(self):
+        with mpl.rc_context():
+            # The pyrfu sheet is applied on matplotlib's defaults
+            mpl.rcParams["lines.linewidth"] = 5.0
+            plot.use_pyrfu_style()
+            self._assert_pyrfu_style()
+            self.assertEqual(mpl.rcParams["lines.linewidth"], 1.5)
+
+    def test_use_pyrfu_style_sheet(self):
+        # plt.style.use("pyrfu") gives the same style
+        with mpl.rc_context():
+            plt.style.use(["default", "pyrfu"])
+            self._assert_pyrfu_style()
+
+    def test_use_pyrfu_style_other_sheet(self):
+        with mpl.rc_context():
+            plot.use_pyrfu_style("classic", color_cycle="tab")
+            self.assertEqual(mpl.rcParams["image.cmap"], "Spectral_r")
+            self.assertTrue(mpl.rcParams["xtick.minor.visible"])
+
+    def test_reload_pyrfu_plot(self):
+        # Reloading pyrfu.plot (e.g., autoreload in notebooks) raised
+        # ValueError: the colormaps were already registered. No warning about
+        # them either (only the reload is watched: importing matplotlib can
+        # warn, e.g. pyparsing deprecations with old matplotlib versions)
+        code = (
+            "import importlib, warnings\n"
+            "import pyrfu.plot as p\n"
+            "with warnings.catch_warnings(record=True) as w:\n"
+            "    warnings.simplefilter('always')\n"
+            "    importlib.reload(p)\n"
+            "print([str(x.message) for x in w if 'cmap' in str(x.message)])"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            check=False,
+            cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            text=True,
+        )
+        self.assertEqual(result.stdout, "[]\n", result.stderr[-500:])
 
     def test_use_pyrfu_style_usetex(self):
         with mpl.rc_context(), mock.patch("pyrfu.plot.shutil.which", self._which()):
@@ -690,25 +802,39 @@ class PlotMagnetosphereTestCase(unittest.TestCase):
 
 @ddt
 class PlotHeatmapTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
+    def test_plot_heatmap_lists(self):
+        # Lists pass the type check, and failed on .shape
+        im, cbar = plot.plot_heatmap(
+            _axis("axis"), [[1.0, 2.0], [3.0, 4.0]], ["a", "b"], ["c", "d"]
+        )
+        np.testing.assert_array_equal(im.get_array(), [[1.0, 2.0], [3.0, 4.0]])
+        self.assertIsInstance(cbar, Colorbar)
+
+        with self.assertRaisesRegex(TypeError, "data must be"):
+            plot.plot_heatmap(_axis("axis"), "bazinga", ["a", "b"], ["c", "d"])
+
     @data(
-        (plt.subplots(1)[1], "bazinga", np.random.rand(10), np.random.rand(10)),
-        (plt.subplots(1)[1], np.random.rand(10, 10), "bazinga", np.random.rand(10)),
-        (plt.subplots(1)[1], np.random.rand(10, 10), np.random.rand(10), "bazinga"),
+        ("axis", "bazinga", np.random.rand(10), np.random.rand(10)),
+        ("axis", np.random.rand(10, 10), "bazinga", np.random.rand(10)),
+        ("axis", np.random.rand(10, 10), np.random.rand(10), "bazinga"),
     )
     @unpack
     def test_plot_heatmap_input_types(self, ax, data, x, y):
         with self.assertRaises(TypeError):
-            plot.plot_heatmap(ax, data, x, y)
+            plot.plot_heatmap(_axis(ax), data, x, y)
 
     @data(
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(9),
             np.random.rand(10),
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(9),
@@ -717,12 +843,12 @@ class PlotHeatmapTestCase(unittest.TestCase):
     @unpack
     def test_plot_heatmap_input_shape(self, ax, data, x, y):
         with self.assertRaises(ValueError):
-            plot.plot_heatmap(ax, data, x, y)
+            plot.plot_heatmap(_axis(ax), data, x, y)
 
     @data(
         (None, np.random.rand(10, 10), np.random.rand(10), np.random.rand(10)),
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(10),
@@ -730,13 +856,16 @@ class PlotHeatmapTestCase(unittest.TestCase):
     )
     @unpack
     def test_plot_heatmap_output(self, ax, data, x, y):
-        result = plot.plot_heatmap(ax, data, x, y)
+        result = plot.plot_heatmap(_axis(ax), data, x, y)
         self.assertIsInstance(result[0], AxesImage)
         self.assertIsInstance(result[1], Colorbar)
 
 
 @ddt
 class AnnotateHeatmapTestCase(unittest.TestCase):
+    def setUp(self):
+        _close_new_figures(self)
+
     def test_annotate_heatmap_input(self):
         _, ax = plt.subplots(1)
         # Create image
@@ -746,16 +875,27 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             plot.annotate_heatmap(im, "bazinga")
 
+    def test_annotate_heatmap_list(self):
+        # A list passes the type check, and failed on .max()
+        im, _ = plot.plot_heatmap(
+            _axis("axis"), np.array([[1.0, 2.0], [3.0, 4.0]]), ["a", "b"], ["c", "d"]
+        )
+        texts = plot.annotate_heatmap(im, [[1.0, 2.0], [3.0, 4.0]])
+
+        self.assertListEqual(
+            [t.get_text() for t in texts], ["1.00", "2.00", "3.00", "4.00"]
+        )
+
     @data(
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(10),
             random.random(),
         ),
         (
-            plt.subplots(1)[1],
+            "axis",
             np.random.rand(10, 10),
             np.random.rand(10),
             np.random.rand(10),
@@ -765,7 +905,7 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
     @unpack
     def test_annotate_heatmap_output(self, ax, data, x, y, threshold):
         # Create image
-        im, _ = plot.plot_heatmap(ax, data, x, y)
+        im, _ = plot.plot_heatmap(_axis(ax), data, x, y)
 
         # Test with data provided
         plot.annotate_heatmap(im, data, threshold=threshold)
@@ -877,6 +1017,15 @@ class IonBrazilPlotThreshTestCase(unittest.TestCase):
         for line, color in zip(ax.lines, colors):
             self.assertEqual(to_rgba(line.get_color()), to_rgba(color))
 
+    def test_ion_brazil_plot_thresh_other_figure(self):
+        # The legend goes in the figure of the axis, not the current figure
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        plot.ion_brazil_plot_thresh(ax)
+
+        self.assertEqual(len(f.legends), 1)
+        self.assertEqual(len(f_current.legends), 0)
+
 
 class MakeLabelsTestCase(unittest.TestCase):
     def setUp(self):
@@ -951,7 +1100,7 @@ class PlotContourTestCase(unittest.TestCase):
 class PlotProjectionTestCase(unittest.TestCase):
     def setUp(self):
         _close_new_figures(self)
-        # Velocities in m/s, plotted in 10^3 m/s
+        # Velocities in km/s, plotted in 10^3 km/s
         self.v_x = np.linspace(-2e3, 2e3, 20)
         self.v_y = np.linspace(-1e3, 1e3, 10)
         self.f_mat = np.outer(np.arange(1.0, 21.0), np.arange(1.0, 11.0)) * 1e-15
@@ -1003,6 +1152,15 @@ class PlotProjectionTestCase(unittest.TestCase):
                 ax, self.v_x, self.v_y, self.f_mat, cmap=mpl.colormaps["viridis"]
             )
 
+    def test_plot_projection_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        _, caxis = plot.plot_projection(ax, self.v_x, self.v_y, self.f_mat)
+
+        self.assertIn(caxis, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
+
 
 class PlotReduced2dTestCase(unittest.TestCase):
     def setUp(self):
@@ -1044,6 +1202,15 @@ class PlotReduced2dTestCase(unittest.TestCase):
         self.assertEqual((image.norm.vmin, image.norm.vmax), (1e-12, 1e-9))
         clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
         np.testing.assert_allclose(clines.levels, np.logspace(-12, -9, 4))
+
+    def test_plot_reduced_2d_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        f, ax = plt.subplots(1)
+        f_current = plt.figure()
+        _, cax = plot.plot_reduced_2d(ax, self.f2d)
+
+        self.assertIn(cax, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
 
 
 class PlotSpectrTestCase(unittest.TestCase):
@@ -1116,6 +1283,25 @@ class PlotSpectrTestCase(unittest.TestCase):
             self.assertIsInstance(norm, norm_type)
             self.assertEqual((norm.vmin, norm.vmax), (2.0, 100.0))
 
+    def test_plot_spectr_clim_sequence(self):
+        # A tuple or an array as clim (was ignored: only lists were used)
+        for clim in [(2.0, 100.0), np.array([2.0, 100.0])]:
+            _, ax = plt.subplots(1)
+            plot.plot_spectr(ax, self.inp, cscale="log", clim=clim)
+
+            norm = self._image(ax).norm
+            self.assertEqual((norm.vmin, norm.vmax), (2.0, 100.0))
+
+    def test_plot_spectr_microseconds(self):
+        # Times in another unit than ns (xarray keeps it): concise dates
+        inp = self.inp.assign_coords(time=self.time.astype("datetime64[us]"))
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, inp)
+
+        self.assertIsInstance(
+            ax.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
+        )
+
     def test_plot_spectr_norm(self):
         # Any matplotlib norm as cscale
         norm = mpl.colors.SymLogNorm(linthresh=1.0, vmin=-10.0, vmax=10.0)
@@ -1153,6 +1339,16 @@ class PlotSpectrTestCase(unittest.TestCase):
 
         with self.assertRaises(NotImplementedError):
             plot.plot_spectr(ax, self.inp, colorbar="left")
+
+    def test_plot_spectr_pad_zero(self):
+        # pad=0 puts the colour bar against the axis (it was taken as 0.01)
+        _, ax = plt.subplots(1)
+        _, cax = plot.plot_spectr(ax, self.inp, colorbar="right", pad=0)
+        self.assertAlmostEqual(cax.get_position().x0, ax.get_position().x1)
+
+        _, ax = plt.subplots(1)
+        _, cax = plot.plot_spectr(ax, self.inp, colorbar="top", pad=0)
+        self.assertAlmostEqual(cax.get_position().y0, ax.get_position().y1)
 
     def test_plot_spectr_dataset(self):
         # Time-dependent energy table: as a coordinate (named energy or not) or
@@ -1250,6 +1446,16 @@ class PlotSurfTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self._plot("center")
+
+    def test_plot_surf_other_figure(self):
+        # The colour bar goes in the figure of the axis, not the current figure
+        f = plt.figure()
+        ax = f.add_subplot(projection="3d")
+        f_current = plt.figure()
+        _, caxis = plot.plot_surf(ax, *self.xyz, self.c, self.cmap, self.norm)
+
+        self.assertIn(caxis, f.axes)
+        self.assertEqual(len(f_current.axes), 0)
 
 
 class SpanTintTestCase(unittest.TestCase):

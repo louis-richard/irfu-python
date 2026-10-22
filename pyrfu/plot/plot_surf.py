@@ -50,7 +50,7 @@ def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
     mappable = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     mappable.set_array(np.array([]))
 
-    f = plt.gcf()
+    f = axis.get_figure()
     pos = axis.get_position()
 
     if cax_pos == "bottom":

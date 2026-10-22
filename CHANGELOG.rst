@@ -1,6 +1,136 @@
 Changelog
 =========
 
+2.5.4 (2026-10-23)
+------------------
+
+This release adds ``pyrf.c_4_v_xcorr``, four-spacecraft timing by
+cross-correlation with error estimates, reads the MMS ancillary files from
+the SDC, and lets ``psd_moments`` start the ion moments at FPI's
+recommended energy channel. The look of the example notebooks becomes the
+pyrfu style (``plot.use_pyrfu_style()``, ``plt.style.use("pyrfu")``). All
+the example notebooks read their data from AWS, without ``db_init``, in
+that style, and the results of several of them are fixed.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``plot.use_pyrfu_style()`` applies the ``pyrfu`` style sheet on
+  matplotlib's defaults: the look of the example notebooks (pyrfu colour
+  cycle, ``Spectral_r`` colormap, minor ticks, mathtext in DejaVu Sans,
+  frameless legends in the upper right corner). Its colormap, and that of
+  ``plot.set_color_cycle("pyrfu")``, is ``Spectral_r`` (was
+  ``hot_white_desaturated``), and so the default of ``plot_spectr``. The
+  ``pyrfu.mplstyle`` sheet (``plt.style.use("pyrfu")`` once ``pyrfu.plot``
+  is imported) is this style: the former serif sheet (labels of size 8,
+  ticks in, eps at 600 dpi) is removed.
+- ``mms.load_ancillary`` reads the files from the resource of the
+  configuration (``source="default"``, see ``mms.db_init``), or from
+  ``source``: with ``"sdc"`` or ``"aws"`` (AWS has no ancillary files) it
+  reads them from the SDC, where it read only local files. Use
+  ``source="local"`` for the former behaviour.
+
+New features
+^^^^^^^^^^^^
+
+- ``pyrf.c_4_v_xcorr``: four-spacecraft timing by cross-correlation, from
+  irfu-matlab ``c_4_v_xcorr`` and ``irf_4_v_xcorr_errors``, for boundaries,
+  current sheets, shocks or localised structures. The delays to a common
+  pattern are continuous (band-limited shift of the signals), and the
+  velocity and its errors follow Vogt et al. (2011). Scalar or vector
+  signals, with cadences that may differ slightly. Without noise, the delays
+  are within 5e-5 sample; on the interplanetary shock of 2018-01-08,
+  356.8 +- 34.3 km/s (irfu-matlab: 357.5 +- 34.1). ``fit`` chooses what is
+  fitted per spacecraft besides the delay: nothing (``"none"``, the default,
+  as irfu-matlab), a scale (``"scale"``, for structures seen with amplitudes
+  differing by more than a factor of 2, e.g. an electron hole crossed far
+  from its centre: unscaled, the delay is wrong, with a poor correlation),
+  or a scale and an offset (``"scale_offset"``, not for boundaries). Unlike
+  irfu-matlab, no start guess is needed and the delays are not pulled
+  towards half-samples (by up to 0.11 sample with linear interpolation).
+  With noisy signals, the errors are underestimated unless the signals are
+  low-passed to the band of the structure (see its Notes).
+- ``mms.load_ancillary`` reads the ancillary files from the SDC (DEFATT,
+  DEFEPH; not yet DEFQ, whose files cover the four spacecraft): the latest
+  version of each file covering the interval.
+- ``mms.psd_moments``: ``en_channels`` accepts a time series of first
+  channels, e.g. FPI's recommended energy index ``partidxi_fpi_brst_l2``:
+  at each time, the channels from it to the last. FPI's ion moments start
+  at this index (0 in dense plasma, up to 11, about 100 eV, in the tenuous
+  plasma sheet), and from it ``psd_moments`` agrees with FPI's ion density
+  within 4 % on the intervals tested (with all the channels: 3.8 times on
+  2017-07-11, MMS1). ``remove_idist_background`` is another correction.
+- ``mms.get_data`` keys:
+
+  - ``vpsp_edp_{brst,fast,slow}_l2``: the probe-to-spacecraft potential
+    averaged over the probes, as irfu-matlab ``Vpsp_edp_*_l2``;
+  - ``partidx{i,e}_fpi_{brst,fast}_l2``: the recommended energy index of
+    the FPI partial moments.
+
+- ``plot.plot_spectr`` accepts ``clim`` as a tuple or an array (only a list
+  was used; others were ignored silently).
+- ``plot.plot_heatmap`` and ``plot.annotate_heatmap`` accept lists (they
+  passed the type check, then failed).
+
+Other fixes
+^^^^^^^^^^^
+
+- ``plot.plot_projection``, ``plot.ion_brazil_plot_thresh``,
+  ``plot.plot_clines``, ``plot.plot_reduced_2d`` and ``plot.plot_surf``
+  draw their colour bar or legend in the figure of their axis (they used
+  the current figure, e.g. after ``plt.figure()``).
+- ``plot.plot_spectr`` with ``pad=0``: the colour bar is against the axis
+  (0 was taken as 0.01).
+- ``plot.plot_line`` and ``plot.plot_spectr`` use the concise date format
+  for times in any unit (only nanoseconds; xarray keeps other units).
+- ``plot.pl_tx`` draws the grid as ``plot_line`` (darker panels).
+- Reloading ``pyrfu.plot`` (e.g. autoreload in notebooks) raised
+  ``ValueError``: the colormaps are registered once.
+- ``mms.eis_pad`` and ``mms.eis_pad_spinavg`` no longer warn for the empty
+  pitch-angle bins (``Mean of empty slice``).
+- The MMS configuration is read again when ``MMS_CFG_PATH`` points to
+  another file with the same modification time (the cache was keyed by
+  the time only).
+
+Documentation
+^^^^^^^^^^^^^
+
+- The example notebooks read their data from AWS, without ``db_init``
+  (``load_ancillary`` from the SDC), all in the pyrfu style, with panel
+  labels. Fixed results:
+
+  - ``ohmslaw``: the sign of the convection fields (E + V_i x B now matches
+    the right-hand side);
+  - ``electron_psd``: the units of the phase-space density and the 90 deg
+    bin;
+  - ``b_e_j``: \|div B\|/\|curl B\| (computed after scaling J), and a note
+    on the quality of the curlometer estimate;
+  - ``edr_signatures``: the spike filter (the first sample was compared
+    with the last) and the units of E'.J;
+  - ``particle_distributions``: the 90 deg bin and the angle labels;
+  - ``reduced_electron_dist``: reduced in the (B, E x B) frame it is
+    labelled with, with the spacecraft potential;
+  - ``reduced_ion_dist_para``: the fitted time selected by value;
+  - ``particle_pad``, ``walen_test``, ``hpca``: the densities plotted and
+    labelled, and the HPCA flux units;
+  - ``particle_deflux``: the potential lines below the energy range
+    removed.
+
+- ``plot.colorbar`` returns the colour-bar axis, ``plot.plot_spectr``
+  ``(axis, cax)`` (not ``fig, axs, caxs``), and ``plot.plot_projection``
+  takes velocities in km/s, with a colour bar on the right and matplotlib's
+  colormap by default; ``plot.ion_brazil_plot_thresh`` documents
+  ``legend`` and ``colors``.
+- ``mms.psd_moments``: how its ion moments compare with FPI's.
+
+Development
+^^^^^^^^^^^
+
+- ``codecov.yml``: 100 % coverage of the patch, and no drop of the project
+  coverage (merges are not blocked).
+- ``test_plot.py`` no longer opens 20 figures at import, and every test
+  closes its figures.
+
 2.5.3 (2026-10-21)
 ------------------
 

@@ -3,7 +3,6 @@
 
 # 3rd party imports
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 
 __author__ = "Louis Richard"
@@ -28,29 +27,38 @@ def plot_projection(
 
     Parameters
     ----------
-    axis : matplotlib.pyplot.subplotsaxes
+    axis : matplotlib.axes.Axes
         Axis to plot.
     v_x : ndarray
-        X axis velocity grid.
+        X axis velocity grid, in km/s (plotted in 10^3 km/s).
     v_y : ndarray
-        Y axis velocity grid.
+        Y axis velocity grid, in km/s (plotted in 10^3 km/s).
     f_mat : ndarray
-        Projected distribution.
+        Projected distribution, plotted as its base-10 logarithm.
     vlim : float, Optional
-        Maximum velocity to limit axis. Default is vlim = 1000 km/s.
+        Maximum velocity of the axes, in km/s. Default is 1000.
     clim : list, Optional
-        Caxes limit. Default is clim = [-18, -13] (assume to be in SI units)
-    colorbar : str, Optional
-        Location of the colorbar. Default is cbar_pos = "top".
+        Limits of the colour scale, [min, max] of log10(f_mat). Default is
+        the range of the data.
     cmap : str, Optional
-        Colormap. Default is cmap = "jet".
+        Colormap. Default is matplotlib's default (``image.cmap``, set by the
+        pyrfu style).
+    colorbar : {"right", "top", "none"}, Optional
+        Location of the colorbar. Default is "right".
 
     Returns
     -------
-    axis : axis
-        Axis
-    caxis : axis
-        Colorbar axis.
+    axis : matplotlib.axes.Axes
+        Axis.
+    caxis : matplotlib.axes.Axes or None
+        Colorbar axis, None if colorbar is "none".
+
+    Raises
+    ------
+    TypeError
+        If `cmap` is not a string.
+    NotImplementedError
+        If `colorbar` is not "right", "top" or "none".
 
     """
 
@@ -77,7 +85,7 @@ def plot_projection(
     axis.set_ylim([-vlim / 1e3, vlim / 1e3])
     axis.set_aspect("equal")
 
-    f = plt.gcf()
+    f = axis.get_figure()
     pos = axis.get_position()
 
     if colorbar == "top":

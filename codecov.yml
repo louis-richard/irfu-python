@@ -1,0 +1,22 @@
+# Codecov settings (D10): coverage of the library only (the test files are
+# omitted in pyproject.toml), uploaded by the Ubuntu / Python 3.14 job of
+# .github/workflows/tests.yml
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 1
+  round: down
+  status:
+    project:
+      default:
+        # The library coverage must not drop below that of the base branch
+        target: auto
+        threshold: 0.1%
+    patch:
+      default:
+        # Every line added or changed in a pull request is tested
+        target: 100%
+
+comment:
+  layout: "condensed_header, diff, files"

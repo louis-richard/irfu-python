@@ -177,7 +177,8 @@ def get_data(
     erre_edp_fast_l2, hmfe_dsl_edp_brst_l2, hmfe_par_edp_brst_l2, phase_edp_fast_l2a,
     phase_edp_slow_l2a, sdev12_edp_fast_l2a, sdev12_edp_slow_l2a, sdev34_edp_fast_l2a,
     sdev34_edp_slow_l2a, v6_edp_brst_l2, v6_edp_fast_l2, v6_edp_slow_l2,
-    v_edp_brst_l2, v_edp_fast_l2, v_edp_fast_sitl, v_edp_slow_l2, v_edp_slow_sitl
+    v_edp_brst_l2, v_edp_fast_l2, v_edp_fast_sitl, v_edp_slow_l2, v_edp_slow_sitl,
+    vpsp_edp_brst_l2, vpsp_edp_fast_l2, vpsp_edp_slow_l2
 
     FGM: b_bcs_fgm_brst_l2, b_bcs_fgm_srvy_l2, b_dmpa_fgm_brst_l2, b_dmpa_fgm_srvy_l2,
     b_gse_fgm_brst_l2, b_gse_fgm_srvy_l2, b_gsm_fgm_brst_l2, b_gsm_fgm_srvy_l2
@@ -189,7 +190,8 @@ def get_data(
     errte_fpi_fast_l2, errti_fpi_brst_l2, errti_fpi_fast_l2, errve_fpi_brst_l2,
     errve_fpi_fast_l2, errvi_fpi_brst_l2, errvi_fpi_fast_l2, nbgi_fpi_brst_l2,
     nbgi_fpi_fast_l2, ne_fpi_brst_l2, ne_fpi_fast_l2, ne_fpi_fast_ql, ni_fpi_brst_l2,
-    ni_fpi_fast_l2, ni_fpi_fast_ql, partne_fpi_brst_l2, partne_fpi_fast_l2,
+    ni_fpi_fast_l2, ni_fpi_fast_ql, partidxe_fpi_brst_l2, partidxe_fpi_fast_l2,
+    partidxi_fpi_brst_l2, partidxi_fpi_fast_l2, partne_fpi_brst_l2, partne_fpi_fast_l2,
     partni_fpi_brst_l2, partni_fpi_fast_l2, partpe_gse_fpi_brst_l2,
     partpe_gse_fpi_fast_l2, partpi_gse_fpi_brst_l2, partpi_gse_fpi_fast_l2,
     partte_dbcs_fpi_brst_l2, partte_dbcs_fpi_fast_l2, partte_gse_fpi_brst_l2,

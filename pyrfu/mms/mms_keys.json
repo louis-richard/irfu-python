@@ -201,6 +201,18 @@
     "v_edp_slow_sitl": {
       "cdf_name": "edp_scpot_slow_sitl",
       "dtype": "scpot"
+    },
+    "vpsp_edp_brst_l2": {
+      "cdf_name": "edp_psp_brst_l2",
+      "dtype": "scpot"
+    },
+    "vpsp_edp_fast_l2": {
+      "cdf_name": "edp_psp_fast_l2",
+      "dtype": "scpot"
+    },
+    "vpsp_edp_slow_l2": {
+      "cdf_name": "edp_psp_slow_l2",
+      "dtype": "scpot"
     }
   },
   "fgm": {
@@ -361,6 +373,22 @@
     "ni_fpi_fast_ql": {
       "cdf_name": "dis_numberdensity_fast",
       "dtype": "dis"
+    },
+    "partidxe_fpi_brst_l2": {
+      "cdf_name": "des_part_index_brst",
+      "dtype": "des-partmoms"
+    },
+    "partidxe_fpi_fast_l2": {
+      "cdf_name": "des_part_index_fast",
+      "dtype": "des-partmoms"
+    },
+    "partidxi_fpi_brst_l2": {
+      "cdf_name": "dis_part_index_brst",
+      "dtype": "dis-partmoms"
+    },
+    "partidxi_fpi_fast_l2": {
+      "cdf_name": "dis_part_index_fast",
+      "dtype": "dis-partmoms"
     },
     "partne_fpi_brst_l2": {
       "cdf_name": "des_numberdensity_part_brst",
