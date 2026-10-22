@@ -1221,6 +1221,15 @@ class PlotSpectrTestCase(unittest.TestCase):
             self.assertIsInstance(norm, norm_type)
             self.assertEqual((norm.vmin, norm.vmax), (2.0, 100.0))
 
+    def test_plot_spectr_clim_sequence(self):
+        # A tuple or an array as clim (was ignored: only lists were used)
+        for clim in [(2.0, 100.0), np.array([2.0, 100.0])]:
+            _, ax = plt.subplots(1)
+            plot.plot_spectr(ax, self.inp, cscale="log", clim=clim)
+
+            norm = self._image(ax).norm
+            self.assertEqual((norm.vmin, norm.vmax), (2.0, 100.0))
+
     def test_plot_spectr_norm(self):
         # Any matplotlib norm as cscale
         norm = mpl.colors.SymLogNorm(linthresh=1.0, vmin=-10.0, vmax=10.0)

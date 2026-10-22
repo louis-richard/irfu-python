@@ -44,8 +44,9 @@ def plot_spectr(
         Y-axis scaling. Default is "linear".
     cscale : {"linear", "log"} or matplotlib.colors.Normalize, Optional
         C-axis scaling, or the norm to use. Default is "linear".
-    clim : list, Optional
-        C-axis bounds [min, max]. Default is None (the range of the data).
+    clim : array_like, Optional
+        C-axis bounds [min, max] (list, tuple or array). Default is None (the
+        range of the data).
     cmap : str or matplotlib.colors.Colormap, Optional
         Colormap. Default is matplotlib's default (``image.cmap``, set by the
         pyrfu style).
@@ -88,7 +89,7 @@ def plot_spectr(
         cmap = mpl.colormaps.get_cmap(cmap)
 
     if cscale == "log":
-        if clim is not None and isinstance(clim, list):
+        if clim is not None:
             options = {
                 "norm": mpl.colors.LogNorm(vmin=clim[0], vmax=clim[1]),
                 "cmap": cmap,
@@ -96,7 +97,7 @@ def plot_spectr(
         else:
             options = {"norm": mpl.colors.LogNorm(), "cmap": cmap}
     elif cscale == "linear":
-        if clim is not None and isinstance(clim, list):
+        if clim is not None:
             options = {"cmap": cmap, "vmin": clim[0], "vmax": clim[1]}
         else:
             options = {"cmap": cmap, "vmin": None, "vmax": None}
