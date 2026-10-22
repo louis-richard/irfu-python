@@ -365,16 +365,25 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
 
     def test_reload_pyrfu_plot(self):
         # Reloading pyrfu.plot (e.g., autoreload in notebooks) raised
-        # ValueError: the colormaps were already registered (no warning now)
-        code = "import importlib, pyrfu.plot as p; importlib.reload(p); print('ok')"
+        # ValueError: the colormaps were already registered. No warning about
+        # them either (only the reload is watched: importing matplotlib can
+        # warn, e.g. pyparsing deprecations with old matplotlib versions)
+        code = (
+            "import importlib, warnings\n"
+            "import pyrfu.plot as p\n"
+            "with warnings.catch_warnings(record=True) as w:\n"
+            "    warnings.simplefilter('always')\n"
+            "    importlib.reload(p)\n"
+            "print([str(x.message) for x in w if 'cmap' in str(x.message)])"
+        )
         result = subprocess.run(
-            [sys.executable, "-W", "error", "-c", code],
+            [sys.executable, "-c", code],
             capture_output=True,
             check=False,
             cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             text=True,
         )
-        self.assertEqual(result.stdout, "ok\n", result.stderr[-500:])
+        self.assertEqual(result.stdout, "[]\n", result.stderr[-500:])
 
     def test_use_pyrfu_style_usetex(self):
         with mpl.rc_context(), mock.patch("pyrfu.plot.shutil.which", self._which()):
