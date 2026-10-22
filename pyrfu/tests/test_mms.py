@@ -446,6 +446,19 @@ class ConfigCacheTestCase(unittest.TestCase):
                 self.assertEqual(module._load_config()["default"], "aws")
                 module._load_config_cached.cache_clear()
 
+    def test_load_config_other_path(self):
+        # Another configuration file with the same modification time is read
+        # (the cache was keyed by the time only)
+        module = importlib.import_module("pyrfu.mms.db_get_ts")
+        with tempfile.TemporaryDirectory() as root:
+            module._load_config_cached.cache_clear()
+            for default in ["local", "aws"]:
+                path = os.path.join(root, f"config_{default}.json")
+                self._write_config(path, default, mtime_ns=10**18)
+                with mock.patch.object(module, "MMS_CFG_PATH", path):
+                    self.assertEqual(module._load_config()["default"], default)
+            module._load_config_cached.cache_clear()
+
     def test_login_lasp_refresh(self):
         module = importlib.import_module("pyrfu.mms.list_files_sdc")
         with tempfile.TemporaryDirectory() as root:
