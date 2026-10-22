@@ -647,6 +647,34 @@ class C4VXcorrTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "f_max must be positive"):
             pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, f_max=0.0)
 
+    def test_c_4_v_xcorr_f_max_background(self):
+        # A boundary on a broadband background, convected with it (the delays
+        # of the whole signals are exact): the low-pass leaves the delays
+        # unchanged (with a sharp cut-off, the segments of the spacecraft were
+        # filtered differently, 0.02 sample off)
+        rng = np.random.default_rng(3)
+        freqs = rng.uniform(0.0, 0.4 * self.F_S, 80)
+        phases = rng.uniform(0.0, 2 * np.pi, 80)
+        amplitudes = rng.normal(size=80) / 20
+
+        def profile(t_s):
+            waves = amplitudes[:, None] * np.cos(
+                2 * np.pi * freqs[:, None] * t_s[None, :] + phases[:, None]
+            )
+            return self._boundary(t_s) + np.sum(waves, axis=0)
+
+        s_mms, r_mms, tau_true = self._synthetic(profile)
+
+        for f_max in [0.1, 0.25]:
+            res = pyrf.c_4_v_xcorr(
+                self._tint(33 / self.F_S),
+                s_mms,
+                r_mms,
+                max_lag=0.03,
+                f_max=f_max * self.F_S,
+            )
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+
     def test_c_4_v_xcorr_f_max_monte_carlo(self):
         # Noisy pattern (12 % noise in +-40 samples): without f_max, the spread
         # of the delays is 1.7-1.8 times the errors; with f_max at the top of

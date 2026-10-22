@@ -38,8 +38,8 @@ class _BandLimited:
     The samples in [t_min, t_max] and up to `margin` more on each side are
     detrended by the line through the end samples (continuous periodic
     extension), interpolated through their DFT, and the line is added back.
-    With f_max (in Hz), the DFT terms above f_max are zeroed (zero-phase
-    low-pass).
+    With f_max (in Hz), the DFT terms are tapered to zero from f_max / 2 to
+    f_max (raised cosine; zero-phase low-pass).
 
     """
 
@@ -80,7 +80,11 @@ class _BandLimited:
         self.freq = np.fft.rfftfreq(self.m)
 
         if f_max is not None:
-            self.coef[self.freq > f_max * self.d_t] = 0.0
+            # Raised-cosine roll-off: a sharp cut-off spreads the errors of the
+            # periodic extension over the whole segment, differently for each
+            # spacecraft (their segments differ), and biases the delays
+            ramp = np.clip(2 * (1 - self.freq / (f_max * self.d_t)), 0.0, 1.0)
+            self.coef *= (0.5 - 0.5 * np.cos(np.pi * ramp))[:, None]
 
     def exact(self, pos):
         r"""Values at any (fractional) sample positions: the trigonometric
@@ -397,11 +401,11 @@ def c_4_v_xcorr(
           extends well beyond the transition.
 
     f_max : float, Optional
-        Low-pass the four signals (and the pattern) at f_max, in Hz, by
-        zeroing their DFT above it: the same zero-phase filter for all, which
-        leaves the delays unchanged. Set it to the top of the band of the
-        structure, so that the errors account for the noise (see Notes).
-        Default is no filter.
+        Low-pass the four signals (and the pattern) at f_max, in Hz: their DFT
+        is tapered to zero from f_max / 2 to f_max (raised cosine), the same
+        zero-phase filter for all, which leaves the delays unchanged. Set it
+        at or a little above the top of the band of the structure, so that
+        the errors account for the noise (see Notes). Default is no filter.
 
     Returns
     -------
@@ -531,14 +535,14 @@ def c_4_v_xcorr(
     fitted scale lowers the errors more than the spread: on a tanh boundary
     with 5 % noise, the spread is 1.5-1.6 times the error with fit="none"
     and 2.4-2.8 with fit="scale" (the same delays). The noise above the band
-    of the structure dominates: ``f_max`` at the top of that band reduces the
-    spread and brings it within 1.0-1.4 of the errors. On that hole (a
-    0.5 ms pulse sampled at 8192 Hz) with 12 % noise in +-40 samples,
-    f_max = 0.15-0.25 f_s (1.2-2 kHz) brings the ratio from 1.7-1.8 to
-    1.0-1.2, and the false matches of fit="none" from 16 % to 2-4 % of the
-    noise draws (found by their correlation); on a tanh boundary 3 samples
-    wide with 10 % noise in +-33 samples, f_max = 0.1-0.25 f_s brings it
-    from 1.7-2.0 to 1.1-1.4 (1.4-1.6 with fit="scale_offset"). An f_max
+    of the structure dominates: ``f_max`` at or a little above the top of
+    that band reduces the spread and brings it within 1.0-1.4 of the errors.
+    On that hole (a 0.5 ms pulse sampled at 8192 Hz) with 12 % noise in +-40
+    samples, f_max = 0.2-0.3 f_s (1.6-2.5 kHz) brings the ratio from 1.7-1.8
+    to 1.0-1.15, and the false matches of fit="none" from 16 % to 1-2 % of
+    the noise draws (found by their correlation); on a tanh boundary 3
+    samples wide with 10 % noise in +-33 samples, f_max = 0.15-0.3 f_s brings
+    it from 1.7-2.0 to 1.1-1.4 (1.4-1.6 with fit="scale_offset"). An f_max
     inside the band of the structure increases the spread instead.
 
     Differences from irfu-matlab:
