@@ -266,6 +266,14 @@ class PlTxTestCase(unittest.TestCase):
         result = plot.pl_tx(_axis(ax), value, 0)
         self.assertIsInstance(result, Axes)
 
+    def test_pl_tx_grid(self):
+        # The grid of plot_line (0.5 drew darker panels)
+        value = [generate_ts(64.0, 100, tensor_order=0) for _ in range(4)]
+        axis = plot.pl_tx(_axis("axis"), value, 0)
+
+        for line in axis.xaxis.get_gridlines() + axis.yaxis.get_gridlines():
+            self.assertEqual(line.get_linewidth(), 0.2)
+
 
 @ddt
 class ZoomTestCase(unittest.TestCase):
