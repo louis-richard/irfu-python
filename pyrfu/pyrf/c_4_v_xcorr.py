@@ -132,29 +132,43 @@ class _BandLimited:
         return out[..., 0] if self.scalar else out
 
 
-def _msd_ts(taus, s_sc, p_pat, grid):
-    r"""Misfit between the signal shifted by each tau and the pattern, with a
-    scale a and an offset b fitted at each tau, S(t + tau) = a P(t) + b + h
-    (irfu-matlab msdTS, with a = 1 and b = 0): 1 - rho, rho being the
-    correlation coefficient of the shifted signal and the pattern (the
-    fraction of the variance of the shifted signal that a P + b doesn't
-    explain is 1 - rho^2). Normalised, so that a window without the structure
-    doesn't fit (with a -> 0); signed, so that an inverted copy (a < 0, e.g.
-    one lobe of a bipolar structure fitting the other) doesn't fit either. The
-    signal is shifted by band-limited interpolation (MATLAB: linear
-    S.resample(P)), over the samples of the pattern for every tau.
+def _msd_ts(taus, s_sc, p_pat, grid, fit="none"):
+    r"""Misfit between the signal shifted by each tau and the pattern
+    (irfu-matlab msdTS), S(t + tau) = a P(t) + b + h:
+
+    * fit="none": a = 1 and b = 0, the mean square deviation I (Vogt et al.
+      2011, eq. 45), as MATLAB;
+    * fit="scale": a fitted at each tau, b = 0; misfit 1 - rho, rho being
+      the (uncentred) correlation coefficient of the shifted signal and the
+      pattern;
+    * fit="scale_offset": a and b fitted, rho the correlation coefficient.
+
+    With a fitted, the misfit is normalised, so that a window without the
+    structure doesn't fit (with a -> 0), and signed, so that an inverted copy
+    (a < 0, e.g. one lobe of a bipolar structure fitting the other) doesn't
+    fit either. The signal is shifted by band-limited interpolation (MATLAB:
+    linear S.resample(P)), over the samples of the pattern for every tau.
 
     Also returns, for the last tau, the scale, the offset and the residuals in
-    units of the pattern, h / a (Vogt et al. 2011, eq. 48)."""
+    units of the pattern, h / a (eq. 48)."""
     n_t = grid[2]
-    p_c = p_pat - np.mean(p_pat, axis=0)
+    centred = fit == "scale_offset"
+    p_c = p_pat - np.mean(p_pat, axis=0) if centred else p_pat
     p_var = np.sum(p_c**2)
     n_chunk = max(1, _CHUNK // (s_sc.m * p_pat.size // n_t))
     misfit = np.empty(len(taus))
 
     for i in range(0, len(taus), n_chunk):
         s_tau = s_sc(grid, taus[i : i + n_chunk])
-        s_mean = np.mean(s_tau, axis=1, keepdims=True)
+
+        if fit == "none":
+            h_res = s_tau - p_pat[None, ...]
+            misfit[i : i + n_chunk] = (
+                np.sum(h_res.reshape(h_res.shape[0], -1) ** 2, axis=1) / n_t
+            )
+            continue
+
+        s_mean = np.mean(s_tau, axis=1, keepdims=True) if centred else 0.0
         s_c = (s_tau - s_mean).reshape(s_tau.shape[0], -1)
         s_var = np.sum(s_c**2, axis=1)
         sp_cov = s_c @ p_c.ravel()
@@ -162,34 +176,42 @@ def _msd_ts(taus, s_sc, p_pat, grid):
         rho = np.divide(sp_cov, np.sqrt(norm), out=np.zeros_like(norm), where=norm > 0)
         misfit[i : i + n_chunk] = 1 - rho
 
+    if fit == "none":
+        return misfit, (1.0, np.zeros(p_pat.shape[1:]), h_res[-1])
+
     scale = sp_cov[-1] / p_var if p_var > 0 else 0.0
-    offset = s_mean[-1, 0] - scale * np.mean(p_pat, axis=0)
+    offset = (
+        s_mean[-1, 0] - scale * np.mean(p_pat, axis=0)
+        if centred
+        else np.zeros(p_pat.shape[1:])
+    )
     h_res = (s_c[-1].reshape(p_pat.shape) - scale * p_c) / scale if scale else None
 
     return misfit, (scale, offset, h_res)
 
 
-def _get_tau(s_sc, p_pat, grid, start_tau, max_lag):
+def _get_tau(s_sc, p_pat, grid, start_tau, max_lag, fit):
     r"""Time difference of the signal to the pattern: the minimum of the
     misfit (irfu-matlab fminsearch(@(x) msdTS(x,S,P,tint), startTau)). Here, a global
     search on the sample grid within start_tau +- max_lag, then a bounded
     refinement within +-1 sample of the grid minimum: no start guess needed,
     and no wrong local minimum. Returns (tau, flag, inverted): NaN and True
     when the grid minimum is at the edge of the window; inverted is True when
-    an inverted copy of the pattern fits better than any copy (a < 0)."""
+    an inverted copy of the pattern fits better than any copy (a < 0, with
+    a fitted scale)."""
     t_samp = grid[1]
     k_max = int(np.floor(max_lag / t_samp + 1e-9))
     taus = start_tau + t_samp * np.arange(-k_max, k_max + 1)
-    misfit = _msd_ts(taus, s_sc, p_pat, grid)[0]
+    misfit = _msd_ts(taus, s_sc, p_pat, grid, fit)[0]
     i_grid = int(np.argmin(misfit))
     # An inverted copy fits better: max(-rho) > max(rho), with misfit = 1 - rho
-    inverted = bool(np.max(misfit) - 1 > 1 - misfit[i_grid])
+    inverted = fit != "none" and bool(np.max(misfit) - 1 > 1 - misfit[i_grid])
 
     if i_grid in (0, len(taus) - 1):
         return np.nan, True, inverted
 
     res = optimize.minimize_scalar(
-        lambda tau: _msd_ts(np.array([tau]), s_sc, p_pat, grid)[0][0],
+        lambda tau: _msd_ts(np.array([tau]), s_sc, p_pat, grid, fit)[0][0],
         bounds=(taus[i_grid] - t_samp, taus[i_grid] + t_samp),
         method="bounded",
         options={"xatol": 1e-6 * t_samp},
@@ -310,12 +332,13 @@ def c_4_v_xcorr(
     tau: Optional[Sequence[float]] = None,
     pattern: Optional[DataArray] = None,
     errors: bool = True,
+    fit: str = "none",
 ) -> dict:
     r"""Four-spacecraft timing by cross-correlation, with error estimates.
 
     The delays between the signals of the four spacecraft are found by fitting
-    each signal to a common pattern, with a scale and an offset per spacecraft
-    (the best correlation), and the velocity
+    each signal to a common pattern (optionally with a scale, and an offset,
+    per spacecraft), and the velocity
     of the structure and its errors follow from the delays and the positions
     of the spacecraft (Vogt et al. 2011 [1]_). It combines irfu-matlab
     ``c_4_v_xcorr`` (global search of the delays) and ``irf_4_v_xcorr_errors``
@@ -350,6 +373,22 @@ def c_4_v_xcorr(
         to MMS1.
     errors : bool, Optional
         Compute the errors (Vogt et al. 2011, eqs. 45-53). Default is True.
+    fit : {"none", "scale", "scale_offset"}, Optional
+        What is fitted besides the delay, for each spacecraft (see Notes):
+
+        * "none": nothing, the signals are compared with the pattern as they
+          are (irfu-matlab). For structures seen with about the same
+          amplitude by the four spacecraft: boundaries, current sheets,
+          shocks. Default.
+        * "scale": a scale, for structures seen with different amplitudes
+          (e.g., an electron hole crossed at different distances from its
+          centre, or a solitary wave). A spacecraft that sees the structure
+          more than twice as strong as the pattern, or inverted, gets a
+          wrong delay with "none" (with a poor correlation).
+        * "scale_offset": a scale and an offset, for signals with different
+          offsets as well. Not for boundaries: the levels on each side carry
+          part of the delay, and fitting an offset loses it unless tint
+          extends well beyond the transition.
 
     Returns
     -------
@@ -393,9 +432,11 @@ def c_4_v_xcorr(
             Scale of the pattern fitted to each signal (4,): the amplitude of
             the structure on each spacecraft relative to the pattern (about
             that of MMS1; below 1 for equal amplitudes when the pattern is
-            noisy, its variance including its noise).
+            noisy, its variance including its noise). Ones with
+            fit="none".
         * offset : numpy.ndarray
             Offset fitted to each signal (4,), or (4, n_comp) for vectors.
+            Zeros unless fit="scale_offset".
         * flags : numpy.ndarray
             True where the minimum is at the edge of the search window (4,):
             the delay is NaN, increase max_lag or move tau.
@@ -403,7 +444,7 @@ def c_4_v_xcorr(
             True where an inverted pattern fits the signal better than the
             pattern (4,), with a warning: a sign or coordinate error, or a
             different structure. The delay is that of the best fit of the
-            pattern.
+            pattern. Always False with fit="none".
         * pattern : xarray.DataArray
             Pattern the signals are fitted to, on the times of MMS1 in tint.
 
@@ -415,7 +456,8 @@ def c_4_v_xcorr(
     TypeError
         If s_mms or r_mms are not lists of four DataArrays.
     ValueError
-        If a signal does not cover tint extended by the search window, has NaN
+        If fit is not "none", "scale" or "scale_offset", if a signal does not
+        cover tint extended by the search window, has NaN
         or a gap there, if the pattern does not cover tint, or if the
         positions do not cover the middle of tint.
 
@@ -437,24 +479,25 @@ def c_4_v_xcorr(
     Steps:
 
     1. Each delay is searched on the sample grid of MMS1 within ``tau`` +-
-       ``max_lag``, then refined continuously within +-1 sample. At each
-       delay, a scale and an offset are fitted, S(t + tau) = a P(t) + b + h,
-       and the delay is that of the best correlation of the shifted signal
-       with the pattern (the least unexplained variance, with a > 0): the
-       spacecraft may see the structure with different amplitudes (e.g., an
-       electron hole crossed at different distances from its centre) and
-       offsets. The signals are shifted by band-limited (DFT)
+       ``max_lag``, then refined continuously within +-1 sample. With
+       fit="none", the delay minimises the mean square difference of the
+       shifted signal and the pattern. With a scale (and an offset) fitted
+       at each delay, S(t + tau) = a P(t) + b + h, it is that of the best
+       correlation of the shifted signal with the pattern (the least
+       unexplained variance, with a > 0). The signals are shifted by
+       band-limited (DFT)
        interpolation, which keeps the variance of the noise at any fraction
        of a sample: linear or cubic interpolation lowers it between samples
        (by 50 % and 25 % at half a sample) and pulls the delays towards
        half-samples. The fit is over the same samples of tint for every
        delay.
     2. Without a pattern, MMS2-4 are first fitted to MMS1; the pattern is the
-       least-squares average of the four signals shifted to MMS1, in the
-       scale and offset of MMS1 (sum(a (S - b)) / sum(a^2), which weights
-       down the noise of the spacecraft that see the structure weaker), and
-       the four signals are fitted to it. The errors use the residuals in
-       units of the pattern, h / a.
+       average of the four signals shifted to MMS1 (with a scale, the
+       least-squares average in the scale and offset of MMS1,
+       sum(a (S - b)) / sum(a^2), which weights down the noise of the
+       spacecraft that see the structure weaker), and the four signals are
+       fitted to it. The errors use the residuals in units of the pattern,
+       h / a.
     3. The slowness follows from the reciprocal vectors of the tetrahedron at
        the middle of tint, and the errors from Vogt et al. (2011), eqs. 45-53
        and 32-33.
@@ -470,8 +513,11 @@ def c_4_v_xcorr(
     noise-free pattern). On a synthetic electron hole, the spread of the
     delays over noise draws is 1.1-1.3 times the error from dtau2 with 5 %
     noise in tint +-10-25 samples, but 1.7 with 12 % noise in +-40 samples
-    (about +-10 widths), and 2.1 when MMS2-4 see half the amplitude of MMS1;
-    more for a step-like boundary or a longer tint. The noise above the band
+    (about +-10 widths), and 2.1 with a fitted scale when MMS2-4 see half the
+    amplitude of MMS1; more for a step-like boundary or a longer tint. A
+    fitted scale lowers the errors more than the spread: on a tanh boundary
+    with 5 % noise, the spread is 1.5-1.6 times the error with fit="none"
+    and 2.4-2.8 with fit="scale" (the same delays). The noise above the band
     of the structure dominates: low-pass filtering the four signals to that
     band with the same zero-phase filter (which leaves the delays unchanged)
     reduces the spread and brings it within 1.1-1.4 of the errors (on that
@@ -487,11 +533,11 @@ def c_4_v_xcorr(
       by its length, and finds the edge for a localised structure); scalar
       signals are accepted; the "minimum doubles" error is replaced by the
       Vogt errors.
-    * ``irf_4_v_xcorr_errors``: a scale and an offset per spacecraft (MATLAB
-      fits the signals unscaled: a spacecraft that sees the structure more
-      than twice as strong as the pattern, or inverted, gets a wrong delay,
-      and an offset biases it, both without a warning); the pattern weighted
-      by the scales; no start guess needed (MATLAB's local search from -10 ms
+    * ``irf_4_v_xcorr_errors``: optionally a scale (and an offset) per
+      spacecraft (MATLAB, as fit="none", fits the signals unscaled: a
+      spacecraft that sees the structure more than twice as strong as the
+      pattern, or inverted, gets a wrong delay, and an offset biases it, both
+      without a warning); no start guess needed (MATLAB's local search from -10 ms
       can find a wrong minimum); band-limited instead of linear
       interpolation; P' by central differences; the direction errors are the
       eigenvalues of K projected on the plane perpendicular to n (exact, for
@@ -531,6 +577,9 @@ def c_4_v_xcorr(
 
     if not all(isinstance(inp, DataArray) for inp in [*s_mms, *r_mms]):
         raise TypeError("s_mms and r_mms must be lists of xarray.DataArray")
+
+    if fit not in ("none", "scale", "scale_offset"):
+        raise ValueError(f'fit must be "none", "scale" or "scale_offset", not {fit}')
 
     start_tau = np.zeros(4) if tau is None else np.asarray(tau, dtype=np.float64)
 
@@ -584,9 +633,9 @@ def c_4_v_xcorr(
     if pattern is None:
         # Time differences with the first spacecraft as reference
         p_pat = s_1(grid, 0.0)[0]
-        tau_12 = _get_tau(s_2, p_pat, grid, start_tau[1], max_lag)[0]
-        tau_13 = _get_tau(s_3, p_pat, grid, start_tau[2], max_lag)[0]
-        tau_14 = _get_tau(s_4, p_pat, grid, start_tau[3], max_lag)[0]
+        tau_12 = _get_tau(s_2, p_pat, grid, start_tau[1], max_lag, fit)[0]
+        tau_13 = _get_tau(s_3, p_pat, grid, start_tau[2], max_lag, fit)[0]
+        tau_14 = _get_tau(s_4, p_pat, grid, start_tau[3], max_lag, fit)[0]
 
         # Average signal to use as pattern (the ones found), in the scale and
         # offset of MMS1: the least-squares pattern of S = a P + b + noise,
@@ -596,7 +645,8 @@ def c_4_v_xcorr(
 
         for s_sc, tau_1a in zip([s_2, s_3, s_4], [tau_12, tau_13, tau_14]):
             if np.isfinite(tau_1a):
-                scale, offset, _ = _msd_ts(np.array([tau_1a]), s_sc, p_pat, grid)[1]
+                fit_1a = _msd_ts(np.array([tau_1a]), s_sc, p_pat, grid, fit)[1]
+                scale, offset = fit_1a[0], fit_1a[1]
 
                 if scale > 0:
                     p_sum += scale * (s_sc(grid, tau_1a)[0] - offset)
@@ -615,7 +665,7 @@ def c_4_v_xcorr(
 
     # %% Get time differences using the pattern
     tau_1, tau_2, tau_3, tau_4 = [
-        _get_tau(s_sc, p_pat, grid, tau_a, max_lag)
+        _get_tau(s_sc, p_pat, grid, tau_a, max_lag, fit)
         for s_sc, tau_a in zip([s_1, s_2, s_3, s_4], start_tau)
     ]
     flags = np.array([tau_1[1], tau_2[1], tau_3[1], tau_4[1]])
@@ -638,7 +688,7 @@ def c_4_v_xcorr(
     for i, (s_sc, tau_a) in enumerate(zip([s_1, s_2, s_3, s_4], tau_p)):
         if np.isfinite(tau_a):
             scales[i], offsets[i], h_res[i] = _msd_ts(
-                np.array([tau_a]), s_sc, p_pat, grid
+                np.array([tau_a]), s_sc, p_pat, grid, fit
             )[1]
             corr[i] = _corr(s_sc(grid, tau_a)[0], p_pat)
 
@@ -648,7 +698,8 @@ def c_4_v_xcorr(
     for i in np.where(np.abs(corr) < 0.7)[0]:
         warnings.warn(
             f"MMS{i + 1} correlates poorly with the pattern ({corr[i]:.2f}): its "
-            "structure may be outside the search window, or the signals differ",
+            "structure may be outside the search window, or the signals differ "
+            '(fit="scale" if the amplitudes differ between the spacecraft)',
             UserWarning,
         )
 
