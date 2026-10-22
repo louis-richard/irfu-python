@@ -276,15 +276,14 @@ def _corr_h(h_a, h_b):
 
 def _get_disc_vel(r_xyz, tau, dtau2):
     r"""Velocity with errors with the timing method (irfu-matlab get_disc_vel;
-    Vogt et al. 2011, sections 3 and 4)."""
+    Vogt et al. 2011, sections 3 and 4): the errors in speed and direction
+    from the slowness covariance, with the correlations of the delays."""
     # Position vectors with origin in the tetrahedron center
     r_star = r_xyz - np.mean(r_xyz, axis=0)
 
-    # Position tensor Rstar (1), generalized reciprocal vectors q (3) and the
-    # reciprocal tensor K
+    # Position tensor Rstar (1) and generalized reciprocal vectors q (3)
     r_star_tensor = r_star.T @ r_star
     q = np.linalg.solve(r_star_tensor, r_star.T).T
-    k_mat = q.T @ q
 
     # Slowness vector (17), which holds for arbitrary time offsets; normal
     # vector and discontinuity speed from (9)
@@ -295,24 +294,24 @@ def _get_disc_vel(r_xyz, tau, dtau2):
     if dtau2 is None:
         return v, n, m, None, None, None, None
 
-    # Scalar time error, as MATLAB: dT = trace(sqrt(dT_tensor)) / 4
-    d_t = np.trace(np.sqrt(np.abs(dtau2))) / 4
-
-    # Absolute rms error in velocity (33)
-    rms_v = v**2 * d_t * np.sqrt(n @ k_mat @ n)
-
-    # Errors in angle (32), dTh = V dT sqrt(e K e) for e perpendicular to n:
-    # min and max are the eigenvalues of K projected on the plane
-    # perpendicular to n, and eTh the eigenvectors (MATLAB: a scan of 10^4
-    # directions from cross([0 1 0], n))
-    proj = np.eye(3) - np.outer(n, n)
-    eig_val, eig_vec = np.linalg.eigh(proj @ k_mat @ proj)
-    in_plane = np.sort(np.argsort(np.abs(eig_vec.T @ n))[:2])
-    d_th = v * d_t * np.sqrt(np.abs(eig_val[in_plane]))
-    e_th = eig_vec[:, in_plane].T
-
     # Error in m, from (21) with dk = 0
     dm2 = q.T @ dtau2 @ q
+
+    # Absolute rms error in speed (20), <dV^2> = V^4 n.dm2.n (MATLAB: the
+    # simplified case of uncorrelated and identical errors (33), with the
+    # scalar time error dT = trace(sqrt(dT_tensor)) / 4, which misses the
+    # correlations of the delays to the pattern)
+    rms_v = v**2 * np.sqrt(n @ dm2 @ n)
+
+    # Errors in direction (19), <dn dn^T> = V^2 (I - nn) dm2 (I - nn): min
+    # and max are its eigenvalues in the plane perpendicular to n, and eTh
+    # the eigenvectors (MATLAB: (32) with dT, from a scan of 10^4 directions
+    # from cross([0 1 0], n)); dm2 symmetrised (a given dtau2 may not be)
+    proj = np.eye(3) - np.outer(n, n)
+    eig_val, eig_vec = np.linalg.eigh(proj @ (dm2 + dm2.T) / 2 @ proj)
+    in_plane = np.sort(np.argsort(np.abs(eig_vec.T @ n))[:2])
+    d_th = v * np.sqrt(np.abs(eig_val[in_plane]))
+    e_th = eig_vec[:, in_plane].T
 
     return v, n, m, rms_v, d_th, e_th, dm2
 
@@ -431,13 +430,12 @@ def c_4_v_xcorr(
             Covariance of the slowness <dm dm^T> (3, 3) in s^2/km^2 (MATLAB
             dm2).
         * d_speed : float
-            Root-mean-square error of the speed in km/s (MATLAB dV), from the
-            scalar time error trace(sqrt(dtau2)) / 4 as MATLAB (it ignores the
-            correlations of the delays, which dm2 includes).
+            Root-mean-square error of the speed in km/s, from dm2 (eq. 20),
+            with the correlations of the delays (MATLAB dV: see Notes).
         * d_theta : numpy.ndarray
             Smallest and largest errors of the direction of propagation (2,),
-            in rad (semi-axes of the error ellipse; MATLAB dTh), from the same
-            scalar time error.
+            in rad (semi-axes of the error ellipse), from dm2 (eq. 19; MATLAB
+            dTh: see Notes).
         * e_theta : numpy.ndarray
             Axes of the error ellipse (2, 3), perpendicular to n (MATLAB eTh,
             as rows).
@@ -516,8 +514,9 @@ def c_4_v_xcorr(
        fitted to it. The errors use the residuals in units of the pattern,
        h / a.
     3. The slowness follows from the reciprocal vectors of the tetrahedron at
-       the middle of tint, and the errors from Vogt et al. (2011), eqs. 45-53
-       and 32-33.
+       the middle of tint. The errors follow from Vogt et al. (2011): the
+       covariance of the delays from eqs. 45-53, that of the slowness from
+       eq. 21, and those of the speed and the direction from eqs. 19-20.
 
     **Choice of tint.** Take tint around the whole structure at MMS1, with a
     margin of a few times its width (e.g., +-5 ms for a 1 ms electron hole),
@@ -558,10 +557,19 @@ def c_4_v_xcorr(
       pattern, or inverted, gets a wrong delay, and an offset biases it, both
       without a warning); no start guess needed (MATLAB's local search from -10 ms
       can find a wrong minimum); band-limited instead of linear
-      interpolation; P' by central differences; the direction errors are the
-      eigenvalues of K projected on the plane perpendicular to n (exact, for
-      any n; MATLAB scans 10^4 directions from ``cross([0 1 0], n)``); vector
-      signals (dot products in eqs. 48-50).
+      interpolation; P' by central differences; vector signals (dot products
+      in eqs. 48-50).
+    * ``get_disc_vel``: the errors in speed and direction from the slowness
+      covariance (eqs. 19-20), as Vogt et al. (2011) recommend. MATLAB uses
+      the formulas of the simplified case of uncorrelated and identical
+      errors (eqs. 32-33) with the scalar time error
+      ``trace(sqrt(dtau2)) / 4``, but the delays to a pattern made of the four
+      signals are anti-correlated (about -1/3): on synthetic structures, its
+      errors are 15-30 % smaller than the spread of the speed and the
+      direction, those from dm2 0-17 % (the underestimate of the delays, see
+      Noise and errors). With uncorrelated and identical errors, both agree.
+      The direction errors are exact for any n (MATLAB scans 10^4 directions
+      from ``cross([0 1 0], n)``).
 
     The spacecraft are assumed not to move during tint (the velocity is in the
     spacecraft frame).

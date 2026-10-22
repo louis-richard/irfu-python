@@ -483,10 +483,13 @@ class C4VXcorrTestCase(unittest.TestCase):
         np.testing.assert_allclose(jumps, np.round(jumps), atol=0.05)
 
     def test_c_4_v_xcorr_monte_carlo(self):
-        # The spread of the delays and of the speed over noise draws agrees with
-        # the reported errors within x1.5 (exit criterion)
+        # The spread of the delays over noise draws agrees with the reported
+        # errors within x1.5 (exit criterion), and that of the speed and the
+        # direction within x1.15: from dm2, with the anti-correlation of the
+        # delays to the pattern (irfu-matlab's scalar time error gave 1.23
+        # and 1.26)
         rng = np.random.default_rng(0)
-        tau, d_tau, speed, d_speed = [], [], [], []
+        tau, d_tau, speed, d_speed, normal, d_theta = [], [], [], [], [], []
 
         for _ in range(100):
             s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.05, rng=rng)
@@ -498,11 +501,19 @@ class C4VXcorrTestCase(unittest.TestCase):
             )
             speed.append(res["speed"])
             d_speed.append(res["d_speed"])
+            normal.append(res["n"])
+            d_theta.append(res["d_theta"])
 
         ratio = np.std(tau, axis=0)[1:] / np.mean(d_tau, axis=0)[1:]
         self.assertTrue(np.all((ratio > 1 / 1.5) & (ratio < 1.5)), ratio)
         ratio = np.std(speed) / np.mean(d_speed)
-        self.assertTrue(1 / 1.5 < ratio < 1.5, ratio)
+        self.assertTrue(1 / 1.15 < ratio < 1.15, ratio)
+
+        # Rms angle of the direction, and the rms of the error ellipse
+        n_true = self.V_XYZ / np.linalg.norm(self.V_XYZ)
+        rms_angle = np.sqrt(np.mean(np.sum((np.array(normal) - n_true) ** 2, axis=1)))
+        ratio = rms_angle / np.sqrt(np.mean(np.sum(np.square(d_theta), axis=1)))
+        self.assertTrue(1 / 1.15 < ratio < 1.15, ratio)
 
     def test_c_4_v_xcorr_pattern(self):
         # The pattern of a call gives the same delays; on other times (exact
@@ -702,9 +713,14 @@ class C4VXcorrTestCase(unittest.TestCase):
         self.assertTrue(np.all((ratio > 1 / 1.4) & (ratio < 1.4)), ratio)
 
     def test_c_4_v_xcorr_matlab(self):
-        # Velocity and errors from the delays and their covariance of
-        # irf_4_v_xcorr_errors (irfu-matlab, R2024a, noisy synthetic hole):
-        # get_disc_vel to round-off (its direction errors scan 10^4 directions)
+        # Velocity and slowness covariance from the delays and their covariance
+        # of irf_4_v_xcorr_errors (irfu-matlab, R2024a, noisy synthetic hole):
+        # get_disc_vel to round-off. Its speed and direction errors, from the
+        # scalar time error trace(sqrt(dtau2)) / 4 (Vogt et al. 2011, eqs.
+        # 32-33, for uncorrelated and identical errors), are those of
+        # uncorrelated delays with that error (its direction errors scan 10^4
+        # directions); with the covariance of the delays, from dm2 (eqs.
+        # 19-20)
         r_xyz = np.array(
             [
                 [19995.0, 4997.1125, -3002.04],
@@ -729,8 +745,9 @@ class C4VXcorrTestCase(unittest.TestCase):
                  -1.6758739333873071e-12, 2.8176030298823655e-11],
             ]
         )  # fmt: skip
-        v, n, m, rms_v, d_th, e_th, dm2 = _c_4_v_xcorr_get_disc_vel(
-            r_xyz, tau - tau[0], dtau2
+        d_t = np.trace(np.sqrt(np.abs(dtau2))) / 4
+        v, n, m, rms_v, d_th, e_th, _ = _c_4_v_xcorr_get_disc_vel(
+            r_xyz, tau - tau[0], d_t**2 * np.eye(4)
         )
 
         self.assertAlmostEqual(v, 494.68305700334247, places=9)
@@ -752,6 +769,15 @@ class C4VXcorrTestCase(unittest.TestCase):
             np.eye(2),
             atol=1e-3,
         )  # fmt: skip
+
+        v, n, _, rms_v, d_th, e_th, dm2 = _c_4_v_xcorr_get_disc_vel(
+            r_xyz, tau - tau[0], dtau2
+        )
+        self.assertAlmostEqual(rms_v, v**2 * np.sqrt(n @ dm2 @ n), places=12)
+        np.testing.assert_allclose(
+            d_th**2, [v**2 * e @ dm2 @ e for e in e_th], rtol=1e-9
+        )
+        np.testing.assert_allclose(e_th @ n, 0.0, atol=1e-12)
         np.testing.assert_allclose(
             dm2,
             [
