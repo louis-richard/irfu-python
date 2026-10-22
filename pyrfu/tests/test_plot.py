@@ -775,6 +775,17 @@ class PlotHeatmapTestCase(unittest.TestCase):
     def setUp(self):
         _close_new_figures(self)
 
+    def test_plot_heatmap_lists(self):
+        # Lists pass the type check, and failed on .shape
+        im, cbar = plot.plot_heatmap(
+            _axis("axis"), [[1.0, 2.0], [3.0, 4.0]], ["a", "b"], ["c", "d"]
+        )
+        np.testing.assert_array_equal(im.get_array(), [[1.0, 2.0], [3.0, 4.0]])
+        self.assertIsInstance(cbar, Colorbar)
+
+        with self.assertRaisesRegex(TypeError, "data must be"):
+            plot.plot_heatmap(_axis("axis"), "bazinga", ["a", "b"], ["c", "d"])
+
     @data(
         ("axis", "bazinga", np.random.rand(10), np.random.rand(10)),
         ("axis", np.random.rand(10, 10), "bazinga", np.random.rand(10)),

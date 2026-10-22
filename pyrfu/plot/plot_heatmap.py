@@ -60,13 +60,15 @@ def plot_heatmap(
         _, ax = plt.subplots(1)
 
     if not isinstance(data, (list, np.ndarray)):
-        raise TypeError("row_labels must be a list or numpy.ndarray")
+        raise TypeError("data must be a list or numpy.ndarray")
 
     if not isinstance(row_labels, (list, np.ndarray)):
         raise TypeError("row_labels must be a list or numpy.ndarray")
 
     if not isinstance(col_labels, (list, np.ndarray)):
         raise TypeError("col_labels must be a list or numpy.ndarray")
+
+    data = np.asarray(data)
 
     if data.shape[0] != len(row_labels):
         raise ValueError("row_labels must have the same length as data")
