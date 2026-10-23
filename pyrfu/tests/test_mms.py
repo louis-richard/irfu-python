@@ -4978,6 +4978,129 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
         )
 
 
+class FkPowerSpectrumTestCase(unittest.TestCase):
+    # A plane wave of potential cos(k.r - 2 pi f t) seen by the six probes of a
+    # spacecraft spinning in 20 s, sampled with the channel delays of the
+    # burst mode (as v6_edp_brst_l2)
+    F_S = 8192.0
+    T_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+
+    def _probes(self, t_s, phase_0):
+        # Positions (m) of the six probes at the times t_s (s), probe k in the
+        # spin plane at the spin phase + 30, 210, 120 and 300 deg
+        phase = np.deg2rad(phase_0 + 18.0 * t_s)
+        spin_plane = [
+            60.0 * np.column_stack([np.cos(phase + p), np.sin(phase + p), 0 * t_s])
+            for p in np.deg2rad([30.0, 210.0, 120.0, 300.0])
+        ]
+        axial = [np.tile([0.0, 0.0, z], (len(t_s), 1)) for z in [14.6, -14.6]]
+        return spin_plane + axial
+
+    def _inputs(self, k_vec, f_0, b_xyz, phase_0=0.0):
+        t_s = np.arange(int(2.5 * self.F_S)) / self.F_S
+
+        def pot(k, delay):
+            r_k = self._probes(t_s + delay, phase_0)[k]
+            return -5.0 + np.cos(r_k @ k_vec - 2 * np.pi * f_0 * (t_s + delay))
+
+        # V1, V3 and V5, and V1 - V2, V3 - V4, V5 - V6, sampled after V1
+        d_12, d_34, d_56 = [
+            pot(k, d) - pot(k + 1, d)
+            for k, d in [(0, 26.703e-6), (2, 30.518e-6), (4, 34.332e-6)]
+        ]
+        v_3, v_5 = pot(2, 7.629e-6), pot(4, 15.259e-6)
+        v_1 = pot(0, 0.0)
+        v6 = xr.DataArray(
+            np.column_stack([v_1, v_1 - d_12, v_3, v_3 - d_34, v_5, v_5 - d_56]),
+            coords=[generate_timeline(self.F_S, len(t_s)), np.arange(1, 7)],
+            dims=["time", "probe"],
+        )
+        t_b = np.arange(0.0, 2.5, 1 / 128)
+        b_xyz = pyrf.ts_vec_xyz(
+            self.T_0 + (t_b * 1e9).astype("timedelta64[ns]"),
+            np.tile(b_xyz, (len(t_b), 1)),
+        )
+        t_z = np.arange(0.0, 2.5, 0.25)
+        z_phase = pyrf.ts_scalar(
+            self.T_0 + (t_z * 1e9).astype("timedelta64[ns]"),
+            (phase_0 + 18.0 * t_z) % 360.0,
+        )
+        return v6, b_xyz, z_phase
+
+    def _tint(self, t_1, t_2):
+        times = self.T_0 + (np.array([t_1, t_2]) * 1e9).astype("timedelta64[ns]")
+        return list(pyrf.datetime642iso8601(times))
+
+    def _peak(self, power):
+        # Frequency and wave-number bin [k, k + dk) of the maximum
+        i_f, i_k = np.unravel_index(np.nanargmax(power.data), power.shape)
+        return power.f.data[i_f], power.k.data[i_k], np.diff(power.k.data[:2])[0]
+
+    def test_fk_power_spectrum_axial(self):
+        # Probes 5 and 6: k along z, B along +z or -z; k > 0 along B
+        k_vec = np.array([0.0, 0.0, 2 * np.pi / 200.0])
+
+        for sign in [1.0, -1.0]:
+            v6, b_xyz, _ = self._inputs(k_vec, 500.0, [0.0, 0.0, 20.0 * sign])
+
+            for field in [True, False]:
+                power = mms.fk_power_spectrum(
+                    v6, b_xyz, self._tint(1.0, 1.5), 5, field=field, n_f=50
+                )
+                f_peak, k_peak, d_k = self._peak(power)
+
+                self.assertLessEqual(k_peak, sign * k_vec[2])
+                self.assertLess(sign * k_vec[2], k_peak + d_k)
+                self.assertLess(abs(f_peak / 500.0 - 1.0), 0.1)
+
+        # Wave numbers +-pi / 14.6 m (potentials: 29.2 m), normalised power
+        self.assertEqual(power.dims, ("f", "k"))
+        self.assertEqual(power.k.size, 101)
+        self.assertAlmostEqual(power.k.data[0], -np.pi / 29.2)
+        self.assertEqual(np.nanmax(power.data), 1.0)
+        self.assertGreaterEqual(np.nanmin(power.data), 1e-3)
+        self.assertEqual(power.k.attrs["UNITS"], "rad/m")
+
+    def test_fk_power_spectrum_spin_plane(self):
+        # Probes 1 and 2 (3 and 4) along x at 1.25 s, k and B along x: the
+        # other probes are perpendicular to k
+        k_vec = np.array([2 * np.pi / 1000.0, 0.0, 0.0])
+
+        for probe, phase_0 in [(1, -30.0 - 22.5), (3, -120.0 - 22.5)]:
+            for sign in [1.0, -1.0]:
+                v6, b_xyz, z_phase = self._inputs(
+                    k_vec, 200.0, [20.0 * sign, 0.0, 0.0], phase_0
+                )
+
+                for field in [True, False]:
+                    power = mms.fk_power_spectrum(
+                        v6,
+                        b_xyz,
+                        self._tint(1.2, 1.3),
+                        probe,
+                        z_phase=z_phase,
+                        field=field,
+                        n_f=50,
+                    )
+                    _, k_peak, d_k = self._peak(power)
+
+                    self.assertLessEqual(k_peak, sign * k_vec[0])
+                    self.assertLess(sign * k_vec[0], k_peak + d_k)
+
+    def test_fk_power_spectrum_errors(self):
+        v6, b_xyz, z_phase = self._inputs(np.zeros(3), 200.0, [0.0, 0.0, 20.0])
+        tint = self._tint(1.0, 1.5)
+
+        with self.assertRaisesRegex(ValueError, "probe must be"):
+            mms.fk_power_spectrum(v6, b_xyz, tint, 2, z_phase=z_phase)
+
+        with self.assertRaisesRegex(ValueError, "z_phase"):
+            mms.fk_power_spectrum(v6, b_xyz, tint, 1)
+
+        with self.assertRaisesRegex(ValueError, "at least"):
+            mms.fk_power_spectrum(v6, b_xyz, self._tint(1.0, 1.01), 5)
+
+
 @ddt
 class FkPowerSpectrum4scTestCase(unittest.TestCase):
     @data((None, None), (random.random(), None), (None, [0.1, 1]))

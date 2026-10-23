@@ -48,6 +48,7 @@ from .feeps_skymap import feeps_skymap
 from .feeps_spin_avg import feeps_spin_avg
 from .feeps_split_integral_ch import feeps_split_integral_ch
 from .fft_bandpass import fft_bandpass
+from .fk_power_spectrum import fk_power_spectrum
 from .fk_power_spectrum_4sc import fk_power_spectrum_4sc
 from .get_data import get_data
 from .get_dist import get_dist
@@ -168,6 +169,7 @@ __all__ = [
     "feeps_spin_avg",
     "feeps_split_integral_ch",
     "fft_bandpass",
+    "fk_power_spectrum",
     "fk_power_spectrum_4sc",
     "get_data",
     "get_dist",

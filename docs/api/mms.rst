@@ -90,6 +90,7 @@ Waves
    :toctree: generated/
    :nosignatures:
 
+   fk_power_spectrum
    fk_power_spectrum_4sc
    lh_wave_analysis
    whistler_b2e
