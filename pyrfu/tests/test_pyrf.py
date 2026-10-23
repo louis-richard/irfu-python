@@ -17,12 +17,15 @@ import warnings
 from unittest import mock
 
 # 3rd party imports
+import matplotlib.pyplot as plt
 import numba
 import numpy as np
 import pycdfpp
 import pytest
 import xarray as xr
 from ddt import data, ddt, idata, unpack
+from matplotlib import dates
+from matplotlib.backend_bases import MouseEvent
 from scipy import constants, interpolate, signal
 
 # Local imports
@@ -4490,6 +4493,26 @@ class MedianBinsTestCase(unittest.TestCase):
     def test_median_bins_no_finite_pair(self):
         with self.assertRaises(ValueError):
             pyrf.median_bins(*_xy_series([np.nan], [1.0]))
+
+
+class MvaGuiTestCase(unittest.TestCase):
+    def test_mva_gui_reset(self):
+        # A click on Reset, through the events of the figure, clears the
+        # selection (the callback took no event: every click raised TypeError)
+        gui = pyrf.mva_gui(generate_ts(64.0, 100, tensor_order=1))
+        self.addCleanup(plt.close, gui.fig)
+        gui.update_onselect(*dates.date2num(gui.t[[10, 60]]))
+        self.assertTrue(gui.fig.axes[2].lines)
+
+        canvas = gui.fig.canvas
+        x_pix, y_pix = gui.resetbutton.ax.transAxes.transform((0.5, 0.5))
+
+        for name in ["button_press_event", "button_release_event"]:
+            event = MouseEvent(name, canvas, x_pix, y_pix, button=1)
+            canvas.callbacks.process(name, event)
+
+        self.assertFalse(gui.fig.axes[2].lines or gui.fig.axes[3].lines)
+        self.assertFalse(any(txt.get_visible() for txt in gui.fig.axes[4].texts))
 
 
 @ddt
