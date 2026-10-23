@@ -37,25 +37,34 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
     Parameters
     ----------
     e_xyz : xarray.DataArray
-        Time series of the electric field.
+        Time series of the electric field, in the spin-plane coordinates
+        (e.g., DSL): Ex and Ey are used, Ez is replaced.
     b_bgd : xarray.DataArray
         Time series of the background magnetic field.
     angle_lim : float, Optional
-        B angle with respect to the spin plane should be less than angle_lim
-        degrees otherwise Ez is set to 0. Default is 20.
-    flag_method : str, Optional
-        Assumption on the direction of the measured electric field :
-            "e.b=0" :  :math:`\mathbf{E}.\mathbf{B}=0`. (Default)
-            "e_par" :  :math:`\mathbf{E}` field along the B projection is
-            coming from parallelelectric field.
-            "e_perp+nan" : to fill.
+        Limit on the elevation of B above the spin plane, in degrees. With
+        "E.B=0" and "E_perp+NaN", Ez is computed where the elevation is more
+        than angle_lim (Bz large enough to divide by), and set to 0 (NaN with
+        "E_perp+NaN") elsewhere. With "E_par", Ez is computed where the
+        elevation is less than angle_lim, and set to 0 elsewhere. Default is
+        20.
+    flag_method : {"E.B=0", "E_par", "E_perp+NaN"}, Optional
+        Assumption on the measured electric field (case-insensitive):
+
+        * "E.B=0": E perpendicular to B,
+          :math:`E_z = -(E_x B_x + E_y B_y) / B_z`. Default.
+        * "E_par": the field measured along the projection of B on the spin
+          plane is a parallel field,
+          :math:`E_z = (E_x B_x + E_y B_y) B_z / (B_x^2 + B_y^2)`.
+        * "E_perp+NaN": as "E.B=0", with Ez set to NaN where it is not
+          computed.
 
     Returns
     -------
     ed : xarray.DataArray
-        Time series of the electric field output.
+        Time series of the electric field with the computed Ez.
     d : xarray.DataArray
-        Time series of the B elevation angle above spin plane.
+        Time series of the elevation of B above the spin plane, in degrees.
 
     Examples
     --------
