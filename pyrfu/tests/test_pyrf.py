@@ -686,6 +686,34 @@ class C4VXcorrTestCase(unittest.TestCase):
         np.testing.assert_allclose(res_new["dtau2"], res["dtau2"], rtol=1e-6)
         np.testing.assert_allclose(res_new["scale"], res["scale"], rtol=1e-9)
 
+    def test_c_4_v_xcorr_frame(self):
+        # A formation drifting at d (km/s) past the hole (delays to the
+        # positions at the middle of tint): relative to the spacecraft
+        # (default) the velocity of the hole, in the frame of the positions
+        # the speed along the normal plus d.n
+        s_mms, _, tau_true = self._synthetic(self._hole)
+        tint = self._tint(0.002)
+        t_mid = (
+            np.datetime64(tint[0])
+            + (np.datetime64(tint[1]) - np.datetime64(tint[0])) / 2
+        )
+        t_r = self.T_0 + np.array([-60, 0, 60, 120], dtype="timedelta64[s]")
+        d_t = (t_r - t_mid).astype(np.int64) * 1e-9
+        drift = np.array([50.0, -30.0, 20.0])
+        r_mms = [pyrf.ts_vec_xyz(t_r, r_a + np.outer(d_t, drift)) for r_a in self.R_XYZ]
+        n_hat = self.V_XYZ / np.linalg.norm(self.V_XYZ)
+        speed = np.linalg.norm(self.V_XYZ)
+
+        res = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=0.03)
+        np.testing.assert_allclose(res["v"], self.V_XYZ, rtol=1e-5)
+
+        res = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=0.03, frame="positions")
+        np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+        np.testing.assert_allclose(res["v"], (speed + drift @ n_hat) * n_hat, rtol=1e-5)
+
+        with self.assertRaisesRegex(ValueError, "frame must be"):
+            pyrf.c_4_v_xcorr(tint, s_mms, r_mms, frame="gse")
+
     def test_c_4_v_xcorr_fit_invalid(self):
         s_mms, r_mms, _ = self._synthetic(self._hole)
 

@@ -316,13 +316,14 @@ def _get_disc_vel(r_xyz, tau, dtau2):
     return v, n, m, rms_v, d_th, e_th, dm2
 
 
-def _positions(r_mms, t_center):
-    r"""Positions of the four spacecraft at t_center (linear interpolation;
-    MATLAB: R?.resample(T))."""
+def _positions(r_mms, t_center, offsets=None):
+    r"""Positions of the four spacecraft at t_center plus their offsets (s)
+    (linear interpolation; MATLAB: R?.resample(T), at t_center)."""
     r_xyz = np.zeros((4, 3))
+    offsets = np.zeros(4) if offsets is None else offsets
 
-    for i, r_sc in enumerate(r_mms):
-        time = _seconds(r_sc.time.data, t_center)
+    for i, (r_sc, offset) in enumerate(zip(r_mms, offsets)):
+        time = _seconds(r_sc.time.data, t_center) - offset
 
         if time[0] > 0 or time[-1] < 0:
             raise ValueError(f"r_mms[{i}] does not cover the middle of tint")
@@ -342,6 +343,7 @@ def c_4_v_xcorr(
     errors: bool = True,
     fit: str = "none",
     f_max: Optional[float] = None,
+    frame: str = "spacecraft",
 ) -> dict:
     r"""Four-spacecraft timing by cross-correlation, with error estimates.
 
@@ -405,6 +407,12 @@ def c_4_v_xcorr(
         zero-phase filter for all, which leaves the delays unchanged. Set it
         at or a little above the top of the band of the structure, so that
         the errors account for the noise (see Notes). Default is no filter.
+    frame : {"spacecraft", "positions"}, Optional
+        Frame of the velocity, as ``pyrf.c_4_v``: relative to the spacecraft,
+        with the four positions at the middle of tint, as irfu-matlab
+        (default); or in the frame of the positions (e.g., GSE), with each
+        position at its crossing time, the middle of tint plus its delay.
+        The speeds differ by the velocity of the spacecraft along the normal.
 
     Returns
     -------
@@ -419,7 +427,8 @@ def c_4_v_xcorr(
             <dtau_a dtau_b> (4, 4), in s^2 (eq. 52; MATLAB dtau2). The error of
             tau[a] (relative to MMS1) is sqrt(d_aa + d_11 - 2 d_1a).
         * v : numpy.ndarray
-            Velocity of the structure (3,) in km/s, in the frame of r_mms.
+            Velocity of the structure (3,) in km/s, relative to the
+            spacecraft or in the frame of r_mms (see frame).
         * speed : float
             Speed in km/s (MATLAB V).
         * n : numpy.ndarray
@@ -472,9 +481,10 @@ def c_4_v_xcorr(
         If s_mms or r_mms are not lists of four DataArrays.
     ValueError
         If fit is not "none", "scale" or "scale_offset", if f_max is not
-        positive, if a signal does not cover tint extended by the search
-        window, has NaN or a gap there, if the pattern does not cover tint, or
-        if the positions do not cover the middle of tint.
+        positive, if frame is not "spacecraft" or "positions", if a signal
+        does not cover tint extended by the search window, has NaN or a gap
+        there, if the pattern does not cover tint, or if the positions do not
+        cover the middle of tint.
 
     Warns
     -----
@@ -576,8 +586,12 @@ def c_4_v_xcorr(
       are exact for any n (MATLAB scans 10^4 directions from
       ``cross([0 1 0], n)``).
 
-    The spacecraft are assumed not to move during tint (the velocity is in the
-    spacecraft frame).
+    With frame="spacecraft", the spacecraft are assumed not to move between
+    the crossings, and the velocity is relative to them; with
+    frame="positions", each position is at its crossing time, and the
+    velocity is in the frame of the positions. The errors are those of the
+    slowness for the positions used (the motion of the spacecraft during the
+    delays is not an error).
 
     References
     ----------
@@ -615,6 +629,9 @@ def c_4_v_xcorr(
 
     if f_max is not None and not f_max > 0:
         raise ValueError(f"f_max must be positive, not {f_max}")
+
+    if frame not in ("spacecraft", "positions"):
+        raise ValueError(f'frame must be "spacecraft" or "positions", not {frame!r}')
 
     start_tau = np.zeros(4) if tau is None else np.asarray(tau, dtype=np.float64)
 
@@ -786,9 +803,10 @@ def c_4_v_xcorr(
         v_n, n, m = np.nan, np.full(3, np.nan), np.full(3, np.nan)
         rms_v, d_th, e_th, dm2 = None, None, None, None
     else:
-        # Time in center of interval
+        # Time in center of interval (MMS1), and the positions there or at the
+        # crossing time of each spacecraft (that of MMS1 plus its delay)
         mean_t = t_ref + (t_end - t_ref) // 2
-        r_xyz = _positions(r_mms, mean_t)
+        r_xyz = _positions(r_mms, mean_t, tau if frame == "positions" else None)
         v_n, n, m, rms_v, d_th, e_th, dm2 = _get_disc_vel(r_xyz, tau, dtau2)
 
     # %% Set output
