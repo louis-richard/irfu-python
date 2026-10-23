@@ -34,16 +34,22 @@ def ts_spectr(
     time : numpy.ndarray
         Array of times.
     energy : numpy.ndarray
-        Y value of the spectrum (energies, frequencies, etc.)
+        Y value of the spectrum (energies, frequencies, etc.), (m,) or
+        (n, m) if it varies with time.
     data : numpy.ndarray
-        Data of the spectrum.
+        Data of the spectrum (n, m).
+    comp_name : str, Optional
+        Name of the second dimension of the DataArray. Default is "energy".
     attrs : dict, Optional
-        Attributes of the data list.
+        Attributes of the spectrum (e.g., its units).
 
     Returns
     -------
-    out : xarray.DataArray
-        Time series of a spectrum
+    out : xarray.DataArray or xarray.Dataset
+        Time series of a spectrum, with attrs and TENSOR_ORDER = 0. If energy
+        varies with time, a Dataset with the variable data (the spectrum, with
+        attrs and TENSOR_ORDER = 0, as the data of ``ts_skymap``) and the
+        coordinate energy (time, idx0); comp_name is not used.
 
     """
 
@@ -89,8 +95,9 @@ def ts_spectr(
         )
         out.attrs["TENSOR_ORDER"] = 0
     else:
+        # The attributes of the spectrum on its data (they were dropped)
         out = xr.Dataset(
-            {"data": (["time", "idx0"], data)},
+            {"data": (["time", "idx0"], data, {**attrs, "TENSOR_ORDER": 0})},
             coords={
                 "time": time,
                 "idx0": np.arange(energy.shape[1]),

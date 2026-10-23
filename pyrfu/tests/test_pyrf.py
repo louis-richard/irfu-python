@@ -6262,6 +6262,31 @@ class TsSpectrTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_ts_spectr_time_varying_energy(self):
+        # Energies varying with time: a Dataset with the attributes and
+        # TENSOR_ORDER on its data, the spectrum (they were dropped), as
+        # ts_skymap; the caller's attributes unchanged
+        energy = np.tile(np.arange(1.0, 11.0), (100, 1))
+        energy[::2] *= 1.1
+        attrs = {"UNITS": "keV/(cm^2 s sr keV)"}
+        result = pyrf.ts_spectr(
+            generate_timeline(64.0, 100),
+            energy,
+            np.random.random((100, 10)),
+            None,
+            attrs,
+        )
+
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.energy.data, energy)
+
+        self.assertDictEqual(
+            result.data.attrs, {"UNITS": "keV/(cm^2 s sr keV)", "TENSOR_ORDER": 0}
+        )
+        self.assertDictEqual(result.energy.attrs, {})
+
+        self.assertDictEqual(attrs, {"UNITS": "keV/(cm^2 s sr keV)"})
+
 
 @ddt
 class TsVecXYZTestCase(unittest.TestCase):
