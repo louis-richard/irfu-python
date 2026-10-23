@@ -363,6 +363,54 @@ class C4VTestCase(unittest.TestCase):
         result = pyrf.c_4_v(r_xyz, [t_cross[0], *velocity])
         np.testing.assert_allclose(result, delta_t, atol=1e-9)
 
+    @staticmethod
+    def _moving_crossing(drift):
+        # A plane moving at 7.6 km/s (in the frame of the positions) past a
+        # formation drifting at drift (km/s): exact crossing times
+        time = generate_timeline(1.0, 30)
+        t_s = np.arange(30.0)
+        offsets = np.array(
+            [[0, 0, 0], [20, 0, 0], [10, 17, 0], [10, 6, 16]], dtype=float
+        )
+        r_xyz = [pyrf.ts_vec_xyz(time, o + np.outer(t_s, drift)) for o in offsets]
+        velocity = np.array([-6.0, 2.5, 4.0])
+        speed, n_hat = np.linalg.norm(velocity), velocity / np.linalg.norm(velocity)
+        # n.(r_a(t)) = n.(r_1(10)) + speed (t - 10)
+        r_1 = offsets[0] + 10.0 * np.asarray(drift)
+        t_cross = (offsets @ n_hat - r_1 @ n_hat + 10.0 * speed) / (
+            speed - np.asarray(drift) @ n_hat
+        )
+        t_cross = time[0] + np.round(t_cross * 1e9).astype("timedelta64[ns]")
+        return r_xyz, t_cross, velocity
+
+    def test_c_4_v_frames(self):
+        # Moving spacecraft: in the frame of the positions (irfu-matlab), the
+        # velocity of the plane; relative to the spacecraft (default), the
+        # speed differs by the velocity of the spacecraft along the normal
+        drift = np.array([2.0, -1.5, 1.0])
+        r_xyz, t_cross, velocity = self._moving_crossing(drift)
+        n_hat = velocity / np.linalg.norm(velocity)
+        v_rel = velocity - (drift @ n_hat) * n_hat
+
+        np.testing.assert_allclose(
+            pyrf.c_4_v(r_xyz, t_cross, frame="positions"), velocity, rtol=1e-6
+        )
+        np.testing.assert_allclose(pyrf.c_4_v(r_xyz, t_cross), v_rel, rtol=1e-6)
+
+        # From the velocity, the time shifts (to the ns rounding)
+        delta_t = (t_cross - t_cross[0]).astype(np.int64) * 1e-9
+        result = pyrf.c_4_v(r_xyz, [t_cross[0], *velocity], frame="positions")
+        np.testing.assert_allclose(result, delta_t, atol=1e-8)
+        result = pyrf.c_4_v(r_xyz, [t_cross[0], *v_rel])
+        np.testing.assert_allclose(result, delta_t, atol=1e-8)
+
+        with self.assertRaisesRegex(ValueError, "frame must be"):
+            pyrf.c_4_v(r_xyz, t_cross, frame="gse")
+
+        # Spacecraft faster than the plane along its normal: no crossing
+        with self.assertRaisesRegex(ValueError, "no crossing times"):
+            pyrf.c_4_v(r_xyz, [t_cross[0], *(0.1 * n_hat)], frame="positions")
+
 
 class C4VXcorrTestCase(unittest.TestCase):
     # Tetrahedron of ~10 km and velocity of the structure
