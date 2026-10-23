@@ -563,13 +563,18 @@ def c_4_v_xcorr(
       covariance (eqs. 19-20), as Vogt et al. (2011) recommend. MATLAB uses
       the formulas of the simplified case of uncorrelated and identical
       errors (eqs. 32-33) with the scalar time error
-      ``trace(sqrt(dtau2)) / 4``, but the delays to a pattern made of the four
-      signals are anti-correlated (about -1/3): on synthetic structures, its
-      errors are 15-30 % smaller than the spread of the speed and the
-      direction, those from dm2 0-17 % (the underestimate of the delays, see
-      Noise and errors). With uncorrelated and identical errors, both agree.
-      The direction errors are exact for any n (MATLAB scans 10^4 directions
-      from ``cross([0 1 0], n)``).
+      ``trace(sqrt(dtau2)) / 4``, which ignores the correlations of the
+      delays, never zero with a pattern made of the four signals, so that
+      the errors differ either way. On synthetic structures, the delays are
+      anti-correlated (about -1/3), and its errors are 15-30 % smaller than
+      the spread of the speed and the direction, those from dm2 0-17 % (the
+      underestimate of the delays, see Noise and errors). On the
+      interplanetary shock of 2018-01-08 (Examples), the delays are strongly
+      correlated, and the errors from dm2 are 15.4 km/s in speed (MATLAB:
+      34.1) and 2.2 and 4.8 deg in direction (3.4 and 3.9). With
+      uncorrelated and identical errors, both agree. The direction errors
+      are exact for any n (MATLAB scans 10^4 directions from
+      ``cross([0 1 0], n)``).
 
     The spacecraft are assumed not to move during tint (the velocity is in the
     spacecraft frame).
