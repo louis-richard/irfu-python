@@ -5036,6 +5036,51 @@ class ResampleTestCase(unittest.TestCase):
 
         np.testing.assert_allclose(result.data, np.arange(-2.0, 12.0, 0.5))
 
+    def test_resample_methods(self):
+        # The kinds of scipy interp1d ("cubic" is the not-a-knot cubic spline,
+        # MATLAB "spline"); other names are refused with a clear error (they
+        # raised NotImplementedError from scipy)
+        t_s = np.arange(64) / 64.0
+        t_q = t_s + 0.3 / 64.0
+        values = np.sin(2 * np.pi * 3 * t_s) + 0.5 * np.cos(2 * np.pi * 7 * t_s)
+        inp, ref = self._ts(t_s, values), self._ts(t_q, np.zeros(64))
+        expected = {
+            "linear": np.interp(t_q[:-1], t_s, values),
+            "cubic": interpolate.CubicSpline(t_s, values)(t_q[:-1]),
+        }
+
+        for method, values_q in expected.items():
+            result = pyrf.resample(inp, ref, method=method)
+            np.testing.assert_allclose(result.data[:-1], values_q, atol=1e-12)
+
+        with self.assertRaisesRegex(ValueError, 'MATLAB "spline" is "cubic"'):
+            pyrf.resample(inp, ref, method="spline")
+
+        with self.assertRaisesRegex(ValueError, "method must be one of"):
+            pyrf.resample(inp, ref, method="pchip")
+
+        # NaN, as MATLAB interp1 (R2024a): next to it with "linear"; skipped
+        # by "cubic", each component through its finite samples ("cubic" gave
+        # NaN at all the times), also at the ends
+        values_2 = np.column_stack([values, np.cos(2 * np.pi * 5 * t_s)])
+        values_2[[0, 10], 0] = np.nan
+        inp = pyrf.ts_vec_xyz(inp.time.data, np.column_stack([values_2, values]))
+
+        self.assertEqual(np.isnan(pyrf.resample(inp, ref).data).sum(), 3)
+
+        result = pyrf.resample(inp, ref, method="cubic").data
+        finite = np.isfinite(values_2[:, 0])
+        np.testing.assert_allclose(
+            result[:, 0],
+            interpolate.CubicSpline(t_s[finite], values_2[finite, 0])(t_q),
+            atol=1e-12,
+        )
+        np.testing.assert_allclose(
+            result[:, 1],
+            interpolate.CubicSpline(t_s, values_2[:, 1])(t_q),
+            atol=1e-12,
+        )
+
 
 @ddt
 class PoyntingFluxTestCase(unittest.TestCase):

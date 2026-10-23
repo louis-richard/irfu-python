@@ -17,6 +17,24 @@ __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
 
+# Interpolation methods: the kinds of scipy.interpolate.interp1d
+_METHODS = (
+    "linear",
+    "nearest",
+    "nearest-up",
+    "zero",
+    "slinear",
+    "quadratic",
+    "cubic",
+    "previous",
+    "next",
+)
+
+# Methods whose interpolant depends on all the samples, where a NaN would
+# spread to the whole output: each component is interpolated through its
+# finite samples, as MATLAB interp1 ("spline", "pchip")
+_GLOBAL_METHODS = ("quadratic", "cubic")
+
 logger = logging.getLogger(__name__)
 
 
@@ -85,6 +103,27 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
                 out_data[i] = np.nanmean(np.where(keep, window, np.nan), axis=0)
 
     return out_data.reshape(len(ref_time), *shape)
+
+
+def _interp_finite(inp_time, inp_data, ref_time, method):
+    r"""Interpolation of each component through its finite samples (NaN for
+    a component without any), as MATLAB interp1 with "spline" or "pchip"
+    (Interp1DStripNaN); a NaN would spread to all the times otherwise."""
+    data = np.asarray(inp_data, dtype=np.float64).reshape(len(inp_time), -1)
+    out_data = np.full((len(ref_time), data.shape[1]), np.nan)
+
+    for k in range(data.shape[1]):
+        finite = np.isfinite(data[:, k])
+
+        if np.any(finite):
+            out_data[:, k] = interpolate.interp1d(
+                inp_time[finite],
+                data[finite, k],
+                kind=method,
+                fill_value="extrapolate",
+            )(ref_time)
+
+    return out_data.reshape(len(ref_time), *np.shape(inp_data)[1:])
 
 
 def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
@@ -173,15 +212,19 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
 
             return out
 
-        # Linear extrapolation outside the time range of inp, as irf_resamp
-        tck = interpolate.interp1d(
-            inp_time,
-            inp.data,
-            kind=method,
-            axis=0,
-            fill_value="extrapolate",
-        )
-        out_data = tck(ref_time)
+        # Extrapolation outside the time range of inp with the interpolant,
+        # as irf_resamp (MATLAB interp1 with 'extrap')
+        if method in _GLOBAL_METHODS and not np.all(np.isfinite(inp.data)):
+            out_data = _interp_finite(inp_time, inp.data, ref_time, method)
+        else:
+            tck = interpolate.interp1d(
+                inp_time,
+                inp.data,
+                kind=method,
+                axis=0,
+                fill_value="extrapolate",
+            )
+            out_data = tck(ref_time)
 
     coord = [ref.coords["time"]]
 
@@ -261,9 +304,13 @@ def resample(
     ref : xarray.DataArray
         Reference time line.
     method : str, Optional
-        Method of interpolation "spline", "linear" etc.
-        (default "linear") if method is given then interpolate
-        independent of sampling.
+        Method of interpolation, a kind of ``scipy.interpolate.interp1d``:
+        "linear", "nearest", "nearest-up", "zero", "slinear", "quadratic",
+        "cubic", "previous" or "next". If given, interpolate whatever the
+        sampling. Default is "linear" when interpolating, as irf_resamp. The
+        names are those of scipy, not of MATLAB: the MATLAB "spline" (the
+        not-a-knot cubic spline) is "cubic" here, and the MATLAB "cubic"
+        ("pchip") has no equivalent.
     f_s : float, Optional
         Sampling frequency of the Y signal, 1/window. Default is guessed from
         the median time step of ref.
@@ -283,6 +330,8 @@ def resample(
     TypeError
         If the times of inp and ref are not both datetime64 or both numeric
         (seconds).
+    ValueError
+        If method is not one of the methods above.
 
     Notes
     -----
@@ -291,8 +340,14 @@ def resample(
     * Averaging uses the windows (t - 1/(2 f_s), t + 1/(2 f_s)] around each
       reference time t, so that each sample belongs to one window. A window
       without samples gives NaN, and a NaN in a window gives NaN.
-    * Interpolation extrapolates linearly outside the time range of inp: clip
-      ref to the time range of inp (e.g., with time_clip) if this is not wanted.
+    * Interpolation extrapolates outside the time range of inp with the
+      interpolant (linearly with "linear"): clip ref to the time range of inp
+      (e.g., with time_clip) if this is not wanted.
+    * With "quadratic" or "cubic", whose interpolant depends on all the
+      samples, each component is interpolated through its finite samples, as
+      MATLAB interp1 ("spline"): NaN samples are skipped (a NaN gave NaN at
+      all the times). With "linear" or "nearest", a NaN gives NaN at the times
+      next to it, as MATLAB.
 
     Examples
     --------
@@ -319,6 +374,12 @@ def resample(
 
     message = "Invalid input type. Input must be xarray.DataArary or xarray.Dataset"
     assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
+
+    if method and method not in _METHODS:
+        hint = ' (MATLAB "spline" is "cubic")' if method == "spline" else ""
+        raise ValueError(
+            f"method must be one of {', '.join(_METHODS)}, not {method!r}{hint}"
+        )
 
     # Fix make sure that the time are in the same precision format
 
