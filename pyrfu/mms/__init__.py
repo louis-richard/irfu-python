@@ -79,6 +79,7 @@ from .mms4_displacement import mms4_displacement
 from .pad_diffusion import pad_diffusion
 from .pad_palim import pad_palim
 from .probe_align_times import probe_align_times
+from .probe_fields import probe_fields
 from .psd2def import psd2def
 from .psd2dpf import psd2dpf
 from .psd_moments import psd_moments
@@ -196,6 +197,7 @@ __all__ = [
     "pad_diffusion",
     "pad_palim",
     "probe_align_times",
+    "probe_fields",
     "psd2def",
     "psd2dpf",
     "psd_moments",

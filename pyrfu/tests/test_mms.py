@@ -2477,6 +2477,118 @@ class PadDiffusionTestCase(unittest.TestCase):
             mms.pad_diffusion(vdf, 0.1)
 
 
+class ProbeFieldsTestCase(unittest.TestCase):
+    # Probes 1-4 60 m from the centre along +x, -x, +y, -y, probes 5 and 6
+    # 14.6 m along +z and -z (the frame of the probes)
+    R_PROBES = np.array(
+        [[60, 0, 0], [-60, 0, 0], [0, 60, 0], [0, -60, 0], [0, 0, 14.6], [0, 0, -14.6]]
+    )
+
+    @staticmethod
+    def _v6(time, pot):
+        return xr.DataArray(pot, coords=[time, np.arange(1, 7)], dims=["time", "probe"])
+
+    def test_probe_fields_uniform_field(self):
+        # In a uniform field E (V/m) with the spacecraft at -10 V, each field
+        # Eij is the component of E along the direction from probe i to j
+        rng = np.random.default_rng(0)
+        e_xyz = rng.normal(size=(50, 3)) * 1e-3
+        pot = -10.0 - e_xyz @ self.R_PROBES.T
+        out = mms.probe_fields(
+            self._v6(generate_timeline(8192.0, 50), pot), timing=None
+        )
+
+        np.testing.assert_allclose(out.v.data, pot)
+        np.testing.assert_allclose(out.v_sc.data, -10.0)
+
+        def along(i, j):
+            unit = self.R_PROBES[j - 1] - self.R_PROBES[i - 1]
+            return e_xyz @ (unit / np.linalg.norm(unit)) * 1e3
+
+        expected = {
+            "e_probe": [along(1, 2)] * 2 + [along(3, 4)] * 2 + [along(5, 6)] * 2,
+            "e_diag": [along(1, 3), along(1, 4), along(2, 3), along(2, 4)],
+            "e_pair": [along(1, 2), along(3, 4), along(5, 6)],
+        }
+
+        for name, columns in expected.items():
+            np.testing.assert_allclose(out[name].data, np.transpose(columns))
+
+        self.assertEqual(out.e_probe.attrs["UNITS"], "mV/m")
+        self.assertEqual((out.l_spin, out.l_axial), (120.0, 29.2))
+        self.assertAlmostEqual(out.d_diag, 60.0 * np.sqrt(2))
+
+    def test_probe_fields_boom_shortening(self):
+        # Effective lengths 96 m and 14.5 m (Pedersen et al. 1998)
+        pot = np.random.default_rng(1).normal(size=(20, 6))
+        v6 = self._v6(generate_timeline(8192.0, 20), pot)
+        out = mms.probe_fields(v6, timing=None, boom_shortening=True)
+
+        self.assertEqual((out.l_spin, out.l_axial), (96.0, 14.5))
+        np.testing.assert_allclose(
+            out.e_pair.sel(boom="12").data, (pot[:, 0] - pot[:, 1]) / 96.0 * 1e3
+        )
+
+    def test_probe_fields_timing(self):
+        # Potentials sampled with the channel delays of the burst mode: the
+        # DFT shift gives them at the times of V1 (exact for periodic
+        # band-limited signals), the interpolation is that of
+        # correct_edp_probe_timing
+        n_t, f_s = 256, 8192.0
+        t_s = np.arange(n_t) / f_s
+
+        def true(t_k):
+            # Potential of probe k at the times t_k: periodic on the window
+            freqs = np.array([3, 17, 40, 90]) * f_s / n_t
+            phases = np.arange(6)[:, None] * 0.7
+            return np.sum(
+                np.cos(2 * np.pi * freqs[None, :, None] * t_k + phases[:, :, None]),
+                axis=1,
+            )
+
+        def at(delay_us):
+            return true(t_s + delay_us * 1e-6)
+
+        p_0, p_3, p_5 = at(0.0), at(7.629), at(15.259)
+        p_12, p_34, p_56 = at(26.703), at(30.518), at(34.332)
+        sampled = np.column_stack(
+            [
+                p_0[0],
+                p_0[0] - (p_12[0] - p_12[1]),
+                p_3[2],
+                p_3[2] - (p_34[2] - p_34[3]),
+                p_5[4],
+                p_5[4] - (p_56[4] - p_56[5]),
+            ]
+        )
+        v6 = self._v6(generate_timeline(f_s, n_t), sampled)
+
+        # To the rounding of the time tags to the ns (at 8192 Hz)
+        out = mms.probe_fields(v6)
+        np.testing.assert_allclose(out.v.data, p_0.T, atol=1e-7)
+        self.assertEqual(out.timing, "dft")
+
+        out = mms.probe_fields(v6, timing="resample")
+        np.testing.assert_array_equal(out.v.data, mms.correct_edp_probe_timing(v6).data)
+
+    def test_probe_fields_errors(self):
+        v6 = self._v6(generate_timeline(8192.0, 20), np.zeros((20, 6)))
+
+        with self.assertRaises(TypeError):
+            mms.probe_fields(v6.data)
+
+        with self.assertRaisesRegex(ValueError, "six probes"):
+            mms.probe_fields(v6[:, :4])
+
+        with self.assertRaisesRegex(ValueError, "timing must be"):
+            mms.probe_fields(v6, timing="linear")
+
+        v6.data[3, 2] = np.nan
+
+        with self.assertRaisesRegex(ValueError, "NaN"):
+            mms.probe_fields(v6)
+
+
 class ProbeAlignTimesTestCase(unittest.TestCase):
     def test_probe_align_times_values(self):
         # 20 s spin (18 deg/s), B along x in the spin plane except for
