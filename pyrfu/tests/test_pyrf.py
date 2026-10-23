@@ -4134,6 +4134,51 @@ class IntegrateTestCase(unittest.TestCase):
         result = pyrf.integrate(value)
         self.assertIsInstance(result, xr.DataArray)
 
+    @staticmethod
+    def _time(t_s):
+        t_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+        return t_0 + np.round(np.asarray(t_s) * 1e9).astype("timedelta64[ns]")
+
+    def test_integrate_values(self):
+        # Sum of x(t_i) (t_i - t_(i-1)), exact to the ns at 2019 epochs (the
+        # times were rounded to 256 ns: 6e-5 of a 256 Hz step)
+        t_s = np.arange(2561) / 256.0
+        values = np.cos(2 * np.pi * 3.0 * t_s)
+        result = pyrf.integrate(pyrf.ts_scalar(self._time(t_s), values))
+
+        expected = np.cumsum(values * np.r_[0.0, np.full(2560, 1 / 256.0)])
+        np.testing.assert_allclose(result.data, expected, rtol=0, atol=1e-14)
+
+    def test_integrate_gaps_nan(self):
+        # A step over 3 time_step is a gap (not integrated); a NaN sample is
+        # NaN and not integrated, nor its step
+        t_s = np.array([0.0, 1.0, 2.0, 3.0, 10.0, 11.0])
+        values = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0])
+        result = pyrf.integrate(pyrf.ts_scalar(self._time(t_s), values))
+        np.testing.assert_allclose(result.data, [0, 2, np.nan, 6, 6, 12])
+
+        # A given time_step: the 7 s step is no gap with 3 s
+        result = pyrf.integrate(pyrf.ts_scalar(self._time(t_s), values), 3.0)
+        np.testing.assert_allclose(result.data, [0, 2, np.nan, 6, 41, 47])
+
+    def test_integrate_shapes(self):
+        # Two samples, a (time, 1) array and a tensor, the units times s
+        time = self._time([0.0, 0.5, 1.0])
+        result = pyrf.integrate(pyrf.ts_scalar(time[:2], np.array([2.0, 4.0])))
+        np.testing.assert_allclose(result.data, [0.0, 2.0])
+
+        inp = xr.DataArray(np.ones((3, 1)), coords=[time, [0]], dims=["time", "c"])
+        np.testing.assert_allclose(pyrf.integrate(inp).data, [[0.0], [0.5], [1.0]])
+
+        inp = pyrf.ts_tensor_xyz(time, np.ones((3, 3, 3)))
+        np.testing.assert_allclose(pyrf.integrate(inp).data[:, 1, 2], [0.0, 0.5, 1.0])
+
+        inp = pyrf.ts_vec_xyz(time, np.ones((3, 3)), attrs={"UNITS": "mV/m"})
+        self.assertEqual(pyrf.integrate(inp).attrs["UNITS"], "(mV/m)*s")
+
+        with self.assertRaises(TypeError):
+            pyrf.integrate(inp.data)
+
 
 class IPlasmaCalcTestCase(unittest.TestCase):
     def test_iplasma_calc_output(self):
