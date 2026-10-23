@@ -15,7 +15,7 @@ import requests
 
 # Local imports
 from pyrfu.mms.db_get_ts import _resolve_source
-from pyrfu.mms.list_files_ancillary import list_files_ancillary
+from pyrfu.mms.list_files_ancillary import _sc_name, list_files_ancillary
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp
 from pyrfu.pyrf.extend_tint import extend_tint
@@ -64,7 +64,16 @@ def _list_files_sdc(tint, mms_id, product):
 def _read_file(file, product_info, tint):
     r"""Rows of an ancillary file (path or file-like) in tint, with the last of
     the rows repeating a time (as mms_load_ancillary)."""
-    rows = pd.read_csv(file, sep=r"\s+", header=None, skiprows=product_info["header"])
+    # All the columns of the product: the rows may leave the last ones empty
+    # (the maneuver flag of DEFQ) or have no data ("No data exists")
+    rows = pd.read_csv(
+        file,
+        sep=r"\s+",
+        header=None,
+        skiprows=product_info["header"],
+        names=range(len(product_info["columns_names"])),
+        index_col=False,
+    )
 
     # Convert time, and remove the rows that are not data, such as the
     # DATA_STOP footer of DEFATT files (DEFEPH files have no footer)
@@ -96,7 +105,8 @@ def load_ancillary(
     tint : list of str
         Time interval
     mms_id : str or int
-        Spacecraft index
+        Spacecraft index (not used for "defq", which covers the four
+        spacecraft).
     verbose : bool, Optional
         Set to True to follow the loading. Default is True
     data_path : str, Optional
@@ -111,7 +121,10 @@ def load_ancillary(
     Returns
     -------
     out : xarray.Dataset
-        Time series of the ancillary data, with strictly increasing times
+        Time series of the ancillary data, with strictly increasing times. For
+        "defq", every 30 s: the tetrahedron quality factor q (1 for a regular
+        tetrahedron), the scale of the file, and the maneuver flag (NaN when
+        not set).
 
     Raises
     ------
@@ -168,7 +181,10 @@ def load_ancillary(
         sdc_session, headers, _ = _login_lasp()
 
     if not files_names:
-        raise FileNotFoundError(f"No {product} file found for MMS{mms_id} in {tint}")
+        raise FileNotFoundError(
+            f"No {product} file found for {_sc_name(product, mms_id).upper()} in "
+            f"{tint}"
+        )
 
     # Convert time interval to datetime
     tint = iso86012datetime(tint)

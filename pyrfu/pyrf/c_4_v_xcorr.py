@@ -38,10 +38,12 @@ class _BandLimited:
     The samples in [t_min, t_max] and up to `margin` more on each side are
     detrended by the line through the end samples (continuous periodic
     extension), interpolated through their DFT, and the line is added back.
+    With f_max (in Hz), the DFT terms are tapered to zero from f_max / 2 to
+    f_max (raised cosine; zero-phase low-pass).
 
     """
 
-    def __init__(self, time, data, t_min, t_max, name, margin=64):
+    def __init__(self, time, data, t_min, t_max, name, margin=64, f_max=None):
         if time[0] > t_min + 1e-9 or time[-1] < t_max - 1e-9:
             raise ValueError(
                 f"{name} does not cover tint extended by the search window "
@@ -76,6 +78,13 @@ class _BandLimited:
         ramp = np.linspace(0.0, 1.0, self.m)[:, None]
         self.coef = np.fft.rfft(data - self.line[0] - self.line[1] * ramp, axis=0)
         self.freq = np.fft.rfftfreq(self.m)
+
+        if f_max is not None:
+            # Raised-cosine roll-off: a sharp cut-off spreads the errors of the
+            # periodic extension over the whole segment, differently for each
+            # spacecraft (their segments differ), and biases the delays
+            ramp = np.clip(2 * (1 - self.freq / (f_max * self.d_t)), 0.0, 1.0)
+            self.coef *= (0.5 - 0.5 * np.cos(np.pi * ramp))[:, None]
 
     def exact(self, pos):
         r"""Values at any (fractional) sample positions: the trigonometric
@@ -267,15 +276,14 @@ def _corr_h(h_a, h_b):
 
 def _get_disc_vel(r_xyz, tau, dtau2):
     r"""Velocity with errors with the timing method (irfu-matlab get_disc_vel;
-    Vogt et al. 2011, sections 3 and 4)."""
+    Vogt et al. 2011, sections 3 and 4): the errors in speed and direction
+    from the slowness covariance, with the correlations of the delays."""
     # Position vectors with origin in the tetrahedron center
     r_star = r_xyz - np.mean(r_xyz, axis=0)
 
-    # Position tensor Rstar (1), generalized reciprocal vectors q (3) and the
-    # reciprocal tensor K
+    # Position tensor Rstar (1) and generalized reciprocal vectors q (3)
     r_star_tensor = r_star.T @ r_star
     q = np.linalg.solve(r_star_tensor, r_star.T).T
-    k_mat = q.T @ q
 
     # Slowness vector (17), which holds for arbitrary time offsets; normal
     # vector and discontinuity speed from (9)
@@ -286,24 +294,24 @@ def _get_disc_vel(r_xyz, tau, dtau2):
     if dtau2 is None:
         return v, n, m, None, None, None, None
 
-    # Scalar time error, as MATLAB: dT = trace(sqrt(dT_tensor)) / 4
-    d_t = np.trace(np.sqrt(np.abs(dtau2))) / 4
-
-    # Absolute rms error in velocity (33)
-    rms_v = v**2 * d_t * np.sqrt(n @ k_mat @ n)
-
-    # Errors in angle (32), dTh = V dT sqrt(e K e) for e perpendicular to n:
-    # min and max are the eigenvalues of K projected on the plane
-    # perpendicular to n, and eTh the eigenvectors (MATLAB: a scan of 10^4
-    # directions from cross([0 1 0], n))
-    proj = np.eye(3) - np.outer(n, n)
-    eig_val, eig_vec = np.linalg.eigh(proj @ k_mat @ proj)
-    in_plane = np.sort(np.argsort(np.abs(eig_vec.T @ n))[:2])
-    d_th = v * d_t * np.sqrt(np.abs(eig_val[in_plane]))
-    e_th = eig_vec[:, in_plane].T
-
     # Error in m, from (21) with dk = 0
     dm2 = q.T @ dtau2 @ q
+
+    # Absolute rms error in speed (20), <dV^2> = V^4 n.dm2.n (MATLAB: the
+    # simplified case of uncorrelated and identical errors (33), with the
+    # scalar time error dT = trace(sqrt(dT_tensor)) / 4, which misses the
+    # correlations of the delays to the pattern)
+    rms_v = v**2 * np.sqrt(n @ dm2 @ n)
+
+    # Errors in direction (19), <dn dn^T> = V^2 (I - nn) dm2 (I - nn): min
+    # and max are its eigenvalues in the plane perpendicular to n, and eTh
+    # the eigenvectors (MATLAB: (32) with dT, from a scan of 10^4 directions
+    # from cross([0 1 0], n)); dm2 symmetrised (a given dtau2 may not be)
+    proj = np.eye(3) - np.outer(n, n)
+    eig_val, eig_vec = np.linalg.eigh(proj @ (dm2 + dm2.T) / 2 @ proj)
+    in_plane = np.sort(np.argsort(np.abs(eig_vec.T @ n))[:2])
+    d_th = v * np.sqrt(np.abs(eig_val[in_plane]))
+    e_th = eig_vec[:, in_plane].T
 
     return v, n, m, rms_v, d_th, e_th, dm2
 
@@ -333,6 +341,7 @@ def c_4_v_xcorr(
     pattern: Optional[DataArray] = None,
     errors: bool = True,
     fit: str = "none",
+    f_max: Optional[float] = None,
 ) -> dict:
     r"""Four-spacecraft timing by cross-correlation, with error estimates.
 
@@ -390,6 +399,13 @@ def c_4_v_xcorr(
           part of the delay, and fitting an offset loses it unless tint
           extends well beyond the transition.
 
+    f_max : float, Optional
+        Low-pass the four signals (and the pattern) at f_max, in Hz: their DFT
+        is tapered to zero from f_max / 2 to f_max (raised cosine), the same
+        zero-phase filter for all, which leaves the delays unchanged. Set it
+        at or a little above the top of the band of the structure, so that
+        the errors account for the noise (see Notes). Default is no filter.
+
     Returns
     -------
     dict
@@ -414,13 +430,12 @@ def c_4_v_xcorr(
             Covariance of the slowness <dm dm^T> (3, 3) in s^2/km^2 (MATLAB
             dm2).
         * d_speed : float
-            Root-mean-square error of the speed in km/s (MATLAB dV), from the
-            scalar time error trace(sqrt(dtau2)) / 4 as MATLAB (it ignores the
-            correlations of the delays, which dm2 includes).
+            Root-mean-square error of the speed in km/s, from dm2 (eq. 20),
+            with the correlations of the delays (MATLAB dV: see Notes).
         * d_theta : numpy.ndarray
             Smallest and largest errors of the direction of propagation (2,),
-            in rad (semi-axes of the error ellipse; MATLAB dTh), from the same
-            scalar time error.
+            in rad (semi-axes of the error ellipse), from dm2 (eq. 19; MATLAB
+            dTh: see Notes).
         * e_theta : numpy.ndarray
             Axes of the error ellipse (2, 3), perpendicular to n (MATLAB eTh,
             as rows).
@@ -456,10 +471,10 @@ def c_4_v_xcorr(
     TypeError
         If s_mms or r_mms are not lists of four DataArrays.
     ValueError
-        If fit is not "none", "scale" or "scale_offset", if a signal does not
-        cover tint extended by the search window, has NaN
-        or a gap there, if the pattern does not cover tint, or if the
-        positions do not cover the middle of tint.
+        If fit is not "none", "scale" or "scale_offset", if f_max is not
+        positive, if a signal does not cover tint extended by the search
+        window, has NaN or a gap there, if the pattern does not cover tint, or
+        if the positions do not cover the middle of tint.
 
     Warns
     -----
@@ -499,8 +514,9 @@ def c_4_v_xcorr(
        fitted to it. The errors use the residuals in units of the pattern,
        h / a.
     3. The slowness follows from the reciprocal vectors of the tetrahedron at
-       the middle of tint, and the errors from Vogt et al. (2011), eqs. 45-53
-       and 32-33.
+       the middle of tint. The errors follow from Vogt et al. (2011): the
+       covariance of the delays from eqs. 45-53, that of the slowness from
+       eq. 21, and those of the speed and the direction from eqs. 19-20.
 
     **Choice of tint.** Take tint around the whole structure at MMS1, with a
     margin of a few times its width (e.g., +-5 ms for a 1 ms electron hole),
@@ -518,13 +534,15 @@ def c_4_v_xcorr(
     fitted scale lowers the errors more than the spread: on a tanh boundary
     with 5 % noise, the spread is 1.5-1.6 times the error with fit="none"
     and 2.4-2.8 with fit="scale" (the same delays). The noise above the band
-    of the structure dominates: low-pass filtering the four signals to that
-    band with the same zero-phase filter (which leaves the delays unchanged)
-    reduces the spread and brings it within 1.1-1.4 of the errors (on that
-    hole, a 0.5 ms pulse sampled at 8192 Hz, filtered at 1-2 kHz: a spread
-    40 % smaller; on a tanh boundary in +-33 samples at 0.25 f_s, from 1.4-1.7
-    to 1.0-1.2 times the least-squares limit). A cutoff inside the band of the
-    structure increases the spread instead.
+    of the structure dominates: ``f_max`` at or a little above the top of
+    that band reduces the spread and brings it within 1.0-1.4 of the errors.
+    On that hole (a 0.5 ms pulse sampled at 8192 Hz) with 12 % noise in +-40
+    samples, f_max = 0.2-0.3 f_s (1.6-2.5 kHz) brings the ratio from 1.7-1.8
+    to 1.0-1.15, and the false matches of fit="none" from 16 % to 1-2 % of
+    the noise draws (found by their correlation); on a tanh boundary 3
+    samples wide with 10 % noise in +-33 samples, f_max = 0.15-0.3 f_s brings
+    it from 1.7-2.0 to 1.1-1.4 (1.4-1.6 with fit="scale_offset"). An f_max
+    inside the band of the structure increases the spread instead.
 
     Differences from irfu-matlab:
 
@@ -539,10 +557,24 @@ def c_4_v_xcorr(
       pattern, or inverted, gets a wrong delay, and an offset biases it, both
       without a warning); no start guess needed (MATLAB's local search from -10 ms
       can find a wrong minimum); band-limited instead of linear
-      interpolation; P' by central differences; the direction errors are the
-      eigenvalues of K projected on the plane perpendicular to n (exact, for
-      any n; MATLAB scans 10^4 directions from ``cross([0 1 0], n)``); vector
-      signals (dot products in eqs. 48-50).
+      interpolation; P' by central differences; vector signals (dot products
+      in eqs. 48-50).
+    * ``get_disc_vel``: the errors in speed and direction from the slowness
+      covariance (eqs. 19-20), as Vogt et al. (2011) recommend. MATLAB uses
+      the formulas of the simplified case of uncorrelated and identical
+      errors (eqs. 32-33) with the scalar time error
+      ``trace(sqrt(dtau2)) / 4``, which ignores the correlations of the
+      delays, never zero with a pattern made of the four signals, so that
+      the errors differ either way. On synthetic structures, the delays are
+      anti-correlated (about -1/3), and its errors are 15-30 % smaller than
+      the spread of the speed and the direction, those from dm2 0-17 % (the
+      underestimate of the delays, see Noise and errors). On the
+      interplanetary shock of 2018-01-08 (Examples), the delays are strongly
+      correlated, and the errors from dm2 are 15.4 km/s in speed (MATLAB:
+      34.1) and 2.2 and 4.8 deg in direction (3.4 and 3.9). With
+      uncorrelated and identical errors, both agree. The direction errors
+      are exact for any n (MATLAB scans 10^4 directions from
+      ``cross([0 1 0], n)``).
 
     The spacecraft are assumed not to move during tint (the velocity is in the
     spacecraft frame).
@@ -580,6 +612,9 @@ def c_4_v_xcorr(
 
     if fit not in ("none", "scale", "scale_offset"):
         raise ValueError(f'fit must be "none", "scale" or "scale_offset", not {fit}')
+
+    if f_max is not None and not f_max > 0:
+        raise ValueError(f"f_max must be positive, not {f_max}")
 
     start_tau = np.zeros(4) if tau is None else np.asarray(tau, dtype=np.float64)
 
@@ -625,6 +660,7 @@ def c_4_v_xcorr(
             t_start + tau_a - max_lag - t_samp,
             t_start + (grid[2] - 1) * t_samp + tau_a + max_lag + t_samp,
             f"s_mms[{i}]",
+            f_max=f_max,
         )
         for i, (s_sc, tau_a) in enumerate(zip(s_mms, start_tau))
     ]
@@ -660,6 +696,7 @@ def c_4_v_xcorr(
             t_start,
             t_start + (grid[2] - 1) * t_samp,
             "pattern",
+            f_max=f_max,
         )
         p_pat = p_in(grid, 0.0)[0]
 

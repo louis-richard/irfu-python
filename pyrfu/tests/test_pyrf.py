@@ -17,12 +17,15 @@ import warnings
 from unittest import mock
 
 # 3rd party imports
+import matplotlib.pyplot as plt
 import numba
 import numpy as np
 import pycdfpp
 import pytest
 import xarray as xr
 from ddt import data, ddt, idata, unpack
+from matplotlib import dates
+from matplotlib.backend_bases import MouseEvent
 from scipy import constants, interpolate, signal
 
 # Local imports
@@ -483,10 +486,13 @@ class C4VXcorrTestCase(unittest.TestCase):
         np.testing.assert_allclose(jumps, np.round(jumps), atol=0.05)
 
     def test_c_4_v_xcorr_monte_carlo(self):
-        # The spread of the delays and of the speed over noise draws agrees with
-        # the reported errors within x1.5 (exit criterion)
+        # The spread of the delays over noise draws agrees with the reported
+        # errors within x1.5 (exit criterion), and that of the speed and the
+        # direction within x1.15: from dm2, with the anti-correlation of the
+        # delays to the pattern (irfu-matlab's scalar time error gave 1.23
+        # and 1.26)
         rng = np.random.default_rng(0)
-        tau, d_tau, speed, d_speed = [], [], [], []
+        tau, d_tau, speed, d_speed, normal, d_theta = [], [], [], [], [], []
 
         for _ in range(100):
             s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.05, rng=rng)
@@ -498,11 +504,19 @@ class C4VXcorrTestCase(unittest.TestCase):
             )
             speed.append(res["speed"])
             d_speed.append(res["d_speed"])
+            normal.append(res["n"])
+            d_theta.append(res["d_theta"])
 
         ratio = np.std(tau, axis=0)[1:] / np.mean(d_tau, axis=0)[1:]
         self.assertTrue(np.all((ratio > 1 / 1.5) & (ratio < 1.5)), ratio)
         ratio = np.std(speed) / np.mean(d_speed)
-        self.assertTrue(1 / 1.5 < ratio < 1.5, ratio)
+        self.assertTrue(1 / 1.15 < ratio < 1.15, ratio)
+
+        # Rms angle of the direction, and the rms of the error ellipse
+        n_true = self.V_XYZ / np.linalg.norm(self.V_XYZ)
+        rms_angle = np.sqrt(np.mean(np.sum((np.array(normal) - n_true) ** 2, axis=1)))
+        ratio = rms_angle / np.sqrt(np.mean(np.sum(np.square(d_theta), axis=1)))
+        self.assertTrue(1 / 1.15 < ratio < 1.15, ratio)
 
     def test_c_4_v_xcorr_pattern(self):
         # The pattern of a call gives the same delays; on other times (exact
@@ -630,10 +644,86 @@ class C4VXcorrTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fit must be"):
             pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, fit="offset")
 
+    def test_c_4_v_xcorr_f_max(self):
+        # The same low-pass for the four signals (and a given pattern) leaves
+        # the delays unchanged
+        for profile, max_lag in [(self._hole, 0.03), (self._boundary, None)]:
+            s_mms, r_mms, tau_true = self._synthetic(profile)
+            options = {"max_lag": max_lag, "f_max": 0.1 * self.F_S}
+            res = pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, **options)
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-4 / self.F_S)
+
+            res = pyrf.c_4_v_xcorr(
+                self._tint(0.002), s_mms, r_mms, pattern=res["pattern"], **options
+            )
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-4 / self.F_S)
+
+        with self.assertRaisesRegex(ValueError, "f_max must be positive"):
+            pyrf.c_4_v_xcorr(self._tint(0.002), s_mms, r_mms, f_max=0.0)
+
+    def test_c_4_v_xcorr_f_max_background(self):
+        # A boundary on a broadband background, convected with it (the delays
+        # of the whole signals are exact): the low-pass leaves the delays
+        # unchanged (with a sharp cut-off, the segments of the spacecraft were
+        # filtered differently, 0.02 sample off)
+        rng = np.random.default_rng(3)
+        freqs = rng.uniform(0.0, 0.4 * self.F_S, 80)
+        phases = rng.uniform(0.0, 2 * np.pi, 80)
+        amplitudes = rng.normal(size=80) / 20
+
+        def profile(t_s):
+            waves = amplitudes[:, None] * np.cos(
+                2 * np.pi * freqs[:, None] * t_s[None, :] + phases[:, None]
+            )
+            return self._boundary(t_s) + np.sum(waves, axis=0)
+
+        s_mms, r_mms, tau_true = self._synthetic(profile)
+
+        for f_max in [0.1, 0.25]:
+            res = pyrf.c_4_v_xcorr(
+                self._tint(33 / self.F_S),
+                s_mms,
+                r_mms,
+                max_lag=0.03,
+                f_max=f_max * self.F_S,
+            )
+            np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+
+    def test_c_4_v_xcorr_f_max_monte_carlo(self):
+        # Noisy pattern (12 % noise in +-40 samples): without f_max, the spread
+        # of the delays is 1.7-1.8 times the errors; with f_max at the top of
+        # the band of the hole, within x1.4 (exit criterion)
+        rng = np.random.default_rng(0)
+        tau, d_tau = [], []
+
+        for _ in range(100):
+            s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.12, rng=rng)
+            res = pyrf.c_4_v_xcorr(
+                self._tint(40 / self.F_S),
+                s_mms,
+                r_mms,
+                max_lag=0.03,
+                fit="scale",
+                f_max=0.2 * self.F_S,
+            )
+            dtau2 = res["dtau2"]
+            tau.append(res["tau"])
+            d_tau.append(
+                [np.sqrt(dtau2[i, i] + dtau2[0, 0] - 2 * dtau2[0, i]) for i in range(4)]
+            )
+
+        ratio = np.std(tau, axis=0)[1:] / np.mean(d_tau, axis=0)[1:]
+        self.assertTrue(np.all((ratio > 1 / 1.4) & (ratio < 1.4)), ratio)
+
     def test_c_4_v_xcorr_matlab(self):
-        # Velocity and errors from the delays and their covariance of
-        # irf_4_v_xcorr_errors (irfu-matlab, R2024a, noisy synthetic hole):
-        # get_disc_vel to round-off (its direction errors scan 10^4 directions)
+        # Velocity and slowness covariance from the delays and their covariance
+        # of irf_4_v_xcorr_errors (irfu-matlab, R2024a, noisy synthetic hole):
+        # get_disc_vel to round-off. Its speed and direction errors, from the
+        # scalar time error trace(sqrt(dtau2)) / 4 (Vogt et al. 2011, eqs.
+        # 32-33, for uncorrelated and identical errors), are those of
+        # uncorrelated delays with that error (its direction errors scan 10^4
+        # directions); with the covariance of the delays, from dm2 (eqs.
+        # 19-20)
         r_xyz = np.array(
             [
                 [19995.0, 4997.1125, -3002.04],
@@ -658,8 +748,9 @@ class C4VXcorrTestCase(unittest.TestCase):
                  -1.6758739333873071e-12, 2.8176030298823655e-11],
             ]
         )  # fmt: skip
-        v, n, m, rms_v, d_th, e_th, dm2 = _c_4_v_xcorr_get_disc_vel(
-            r_xyz, tau - tau[0], dtau2
+        d_t = np.trace(np.sqrt(np.abs(dtau2))) / 4
+        v, n, m, rms_v, d_th, e_th, _ = _c_4_v_xcorr_get_disc_vel(
+            r_xyz, tau - tau[0], d_t**2 * np.eye(4)
         )
 
         self.assertAlmostEqual(v, 494.68305700334247, places=9)
@@ -681,6 +772,15 @@ class C4VXcorrTestCase(unittest.TestCase):
             np.eye(2),
             atol=1e-3,
         )  # fmt: skip
+
+        v, n, _, rms_v, d_th, e_th, dm2 = _c_4_v_xcorr_get_disc_vel(
+            r_xyz, tau - tau[0], dtau2
+        )
+        self.assertAlmostEqual(rms_v, v**2 * np.sqrt(n @ dm2 @ n), places=12)
+        np.testing.assert_allclose(
+            d_th**2, [v**2 * e @ dm2 @ e for e in e_th], rtol=1e-9
+        )
+        np.testing.assert_allclose(e_th @ n, 0.0, atol=1e-12)
         np.testing.assert_allclose(
             dm2,
             [
@@ -1896,6 +1996,22 @@ class Datetime642UnixTestCase(unittest.TestCase):
     def test_datetime642unix_output(self, value):
         self.assertIsInstance(pyrf.datetime642unix(value), np.ndarray)
 
+    def test_datetime642unix_empty_and_types(self):
+        # An empty input gives an empty array (it raised IndexError); the type
+        # is that of the elements: object arrays of datetime64 are accepted,
+        # strings and datetime objects are not
+        for value in [[], np.array([], dtype="datetime64[ns]")]:
+            result = pyrf.datetime642unix(value)
+            self.assertEqual(result.shape, (0,))
+            self.assertEqual(result.dtype, np.float64)
+
+        time = np.array([np.datetime64("2019-01-01T00:00:00.5")], dtype=object)
+        np.testing.assert_array_equal(pyrf.datetime642unix(time), [1546300800.5])
+
+        for value in [["2019-01-01T00:00:00"], [datetime.datetime(2019, 1, 1)]]:
+            with self.assertRaises(TypeError):
+                pyrf.datetime642unix(value)
+
 
 class Unix2Datetime64TestCase(unittest.TestCase):
     def test_unix2datetime64_input(self):
@@ -1946,8 +2062,27 @@ class DecParPerpTestCase(unittest.TestCase):
     )
     @unpack
     def test_dec_par_perp_input(self, inp, b_bgd, flag_spin_plane):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises((TypeError, ValueError)):
             pyrf.dec_par_perp(inp, b_bgd, flag_spin_plane)
+
+    def test_dec_par_perp_components(self):
+        # 3 components, or 2 for inp in the spin plane (only x and y are
+        # used); an inp of 2 components passed the check and failed in a
+        # broadcast
+        b_xyz = generate_ts(64.0, 100, tensor_order=1)
+        e_xyz = generate_ts(64.0, 100, tensor_order=1)
+        e_xy = e_xyz[:, :2]
+
+        with self.assertRaisesRegex(ValueError, "inp must be a vector of 3"):
+            pyrf.dec_par_perp(e_xy, b_xyz)
+
+        with self.assertRaisesRegex(ValueError, "b_bgd must be a vector of 3"):
+            pyrf.dec_par_perp(e_xyz, b_xyz[:, :2], True)
+
+        for a_xy, a_xyz in zip(
+            pyrf.dec_par_perp(e_xy, b_xyz, True), pyrf.dec_par_perp(e_xyz, b_xyz, True)
+        ):
+            np.testing.assert_array_equal(a_xy.data, a_xyz.data)
 
     @data(
         (
@@ -4360,6 +4495,26 @@ class MedianBinsTestCase(unittest.TestCase):
             pyrf.median_bins(*_xy_series([np.nan], [1.0]))
 
 
+class MvaGuiTestCase(unittest.TestCase):
+    def test_mva_gui_reset(self):
+        # A click on Reset, through the events of the figure, clears the
+        # selection (the callback took no event: every click raised TypeError)
+        gui = pyrf.mva_gui(generate_ts(64.0, 100, tensor_order=1))
+        self.addCleanup(plt.close, gui.fig)
+        gui.update_onselect(*dates.date2num(gui.t[[10, 60]]))
+        self.assertTrue(gui.fig.axes[2].lines)
+
+        canvas = gui.fig.canvas
+        x_pix, y_pix = gui.resetbutton.ax.transAxes.transform((0.5, 0.5))
+
+        for name in ["button_press_event", "button_release_event"]:
+            event = MouseEvent(name, canvas, x_pix, y_pix, button=1)
+            canvas.callbacks.process(name, event)
+
+        self.assertFalse(gui.fig.axes[2].lines or gui.fig.axes[3].lines)
+        self.assertFalse(any(txt.get_visible() for txt in gui.fig.axes[4].texts))
+
+
 @ddt
 class MvaTestCase(unittest.TestCase):
     @data("mvar", "<bn>=0", "td")
@@ -6106,6 +6261,31 @@ class TsSpectrTestCase(unittest.TestCase):
             np.random.random((100, 10)),
         )
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_ts_spectr_time_varying_energy(self):
+        # Energies varying with time: a Dataset with the attributes and
+        # TENSOR_ORDER on its data, the spectrum (they were dropped), as
+        # ts_skymap; the caller's attributes unchanged
+        energy = np.tile(np.arange(1.0, 11.0), (100, 1))
+        energy[::2] *= 1.1
+        attrs = {"UNITS": "keV/(cm^2 s sr keV)"}
+        result = pyrf.ts_spectr(
+            generate_timeline(64.0, 100),
+            energy,
+            np.random.random((100, 10)),
+            None,
+            attrs,
+        )
+
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.energy.data, energy)
+
+        self.assertDictEqual(
+            result.data.attrs, {"UNITS": "keV/(cm^2 s sr keV)", "TENSOR_ORDER": 0}
+        )
+        self.assertDictEqual(result.energy.attrs, {})
+
+        self.assertDictEqual(attrs, {"UNITS": "keV/(cm^2 s sr keV)"})
 
 
 @ddt

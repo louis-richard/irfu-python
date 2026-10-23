@@ -14,6 +14,7 @@ MMS examples gallery
     ./example_mms_feeps_electrons_4sc
     ./example_mms_hpca
     ./example_mms_ipshocks
+    ./example_mms_timing_xcorr
     ./example_mms_ohmslaw
     ./example_mms_particle_deflux
     ./example_mms_particle_distributions

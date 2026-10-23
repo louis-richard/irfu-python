@@ -32,9 +32,10 @@ def dec_par_perp(
     Parameters
     ----------
     inp : xarray.DataArray
-        Time series of the field to decompose.
+        Time series of the field to decompose (3 components; with
+        flag_spin_plane, 2 or 3, of which x and y are used).
     b_bgd : xarray.DataArray
-        Time series of the background magnetic field.
+        Time series of the background magnetic field (3 components).
     flag_spin_plane : bool, Optional
         Flag if True gives the projection in XY plane.
 
@@ -49,6 +50,13 @@ def dec_par_perp(
     alpha : xarray.DataArray
         Time series of the angle between the background magnetic field and
         the XY plane.
+
+    Raises
+    ------
+    TypeError
+        If inp or b_bgd is not a DataArray, or flag_spin_plane not a bool.
+    ValueError
+        If inp or b_bgd does not have the components above.
 
     Examples
     --------
@@ -74,13 +82,24 @@ def dec_par_perp(
     """
 
     # Check arguments types
-    assert isinstance(inp, xr.DataArray), "inp must be an xarray.DataArray"
-    assert isinstance(b_bgd, xr.DataArray), "b_bgd must be an xarray.DataArray"
-    assert isinstance(flag_spin_plane, bool), "flag_spin_plane must be boolean"
+    if not isinstance(inp, xr.DataArray) or not isinstance(b_bgd, xr.DataArray):
+        raise TypeError("inp and b_bgd must be xarray.DataArray")
 
-    # Check inp and b_bgd shapes
-    assert inp.ndim == 2 and inp.shape[1], "inp must be a vector"
-    assert b_bgd.ndim == 2 and b_bgd.shape[1], "b_bgd must be a vector"
+    if not isinstance(flag_spin_plane, bool):
+        raise TypeError("flag_spin_plane must be a bool")
+
+    # Check inp and b_bgd shapes (the components were not checked: an inp of
+    # 2 components failed in a broadcast); in the spin plane, inp may have
+    # only x and y (as irfu-matlab irf_dec_parperp)
+    n_comps = (2, 3) if flag_spin_plane else (3,)
+
+    if inp.ndim != 2 or inp.shape[1] not in n_comps:
+        raise ValueError(
+            f"inp must be a vector of {' or '.join(map(str, n_comps))} components"
+        )
+
+    if b_bgd.ndim != 2 or b_bgd.shape[1] != 3:
+        raise ValueError("b_bgd must be a vector of 3 components")
 
     # Resample background magnetic field to input
     b_bgd = resample(b_bgd, inp)

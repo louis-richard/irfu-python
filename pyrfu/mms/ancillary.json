@@ -45,7 +45,8 @@
       "time",
       "epoch_mms_tai",
       "q",
-      "scale"
+      "scale",
+      "maneuver_flag"
     ],
     "header": 11,
     "time_format": "%Y-%j/%H:%M:%S.%f"

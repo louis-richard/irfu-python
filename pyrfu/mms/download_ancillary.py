@@ -10,6 +10,7 @@ from typing import Literal, Optional, Union
 # Local imports
 from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.mms.download_data import _download_file
+from pyrfu.mms.list_files_ancillary import _sc_name
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import _login_lasp
 
@@ -32,7 +33,7 @@ LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 
 def _make_path_local(
     file: dict,
-    product: Literal["predatt", "predeph", "defatt", "defeph"],
+    product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],
     mms_id: Union[str, int],
     data_path: Optional[str] = "",
 ) -> str:
@@ -42,7 +43,7 @@ def _make_path_local(
     ----------
     file : dict
         File information.
-    product : {"predatt", "predeph", "defatt", "defeph"}
+    product : {"predatt", "predeph", "predq", "defatt", "defeph", "defq"}
         Ancillary type.
     mms_id : str or int
         Spacecraft index.
@@ -75,7 +76,7 @@ def _make_path_local(
     path_list = [
         data_path,
         "ancillary",
-        f"mms{mms_id}",
+        _sc_name(product, mms_id),
         product,
     ]
 
@@ -83,7 +84,7 @@ def _make_path_local(
 
 
 def download_ancillary(
-    product: Literal["predatt", "predeph", "defatt", "defeph"],
+    product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],
     tint: list,
     mms_id: Union[str, int],
     data_path: Optional[str] = "",
@@ -95,12 +96,13 @@ def download_ancillary(
 
     Parameters
     ----------
-    product : {"predatt", "predeph", "defatt", "defeph"}
+    product : {"predatt", "predeph", "predq", "defatt", "defeph", "defq"}
         Ancillary type.
     tint : list
         Time interval
     mms_id : str or int
-        Spacecraft index
+        Spacecraft index (not used for "defq" and "predq", which cover the
+        four spacecraft: ancillary/mms/defq).
     data_path : str, Optional
         Path of MMS data. If None use `pyrfu/mms/config.json`
 

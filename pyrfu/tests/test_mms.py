@@ -5103,6 +5103,20 @@ class DownloadAncillaryTestCase(unittest.TestCase):
                 "defatt", ["2019-09-14T07:54:00", "2019-09-14T08:11:00"], 1, "/bazinga"
             )
 
+    def test_download_ancillary_defq(self):
+        # One file for the four spacecraft, in ancillary/mms/defq
+        name = "MMS_DEFQ_2019257_2019258.V00"
+        self.module.list_files_ancillary_sdc.return_value = [
+            {"file_name": name, "url": "url", "file_size": 7}
+        ]
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        self.module.download_ancillary("defq", tint, 3, self.root)
+
+        with open(
+            os.path.join(self.root, "ancillary", "mms", "defq", name), "rb"
+        ) as file:
+            self.assertEqual(file.read(), b"cdfdata")
+
 
 class CopyFilesTestCase(unittest.TestCase):
     _SCI = "mms1/fgm/srvy/l2/2019/09/mms1_fgm_srvy_l2_20190914_v5.211.0.cdf"
@@ -5134,6 +5148,17 @@ class CopyFilesTestCase(unittest.TestCase):
     def test_copy_files_ancillary(self):
         mms.copy_files_ancillary("defatt", self._TINT, 1, self.target, self.source)
         self._check(self._ANC)
+
+    def test_copy_files_ancillary_defq(self):
+        # One file for the four spacecraft, in ancillary/mms/defq
+        rel_path = "ancillary/mms/defq/MMS_DEFQ_2019257_2019258.V00"
+        path = os.path.join(self.source, *rel_path.split("/"))
+        os.makedirs(os.path.dirname(path))
+        with open(path, "wb") as file:
+            file.write(b"cdfdata")
+
+        mms.copy_files_ancillary("defq", self._TINT, 2, self.target, self.source)
+        self._check(rel_path)
 
     def test_copy_files_default_path(self):
         # The local data path of the configuration
@@ -8460,6 +8485,21 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
             [{"file_name": name, "url": f"{_SDC_URL}download/ancillary?file={name}"}],
         )
 
+    def test_list_files_ancillary_sdc_defq(self):
+        # One file for the four spacecraft: sc_id=mms (with mms3, no file)
+        module = importlib.import_module("pyrfu.mms.list_files_ancillary_sdc")
+        session = _FakeSdcSession([{"file_name": "MMS_DEFQ_2019257_2019258.V00"}])
+        with mock.patch.object(
+            module, "_login_lasp", return_value=(session, {}, _SDC_URL)
+        ):
+            module.list_files_ancillary_sdc(
+                ["2019-09-14T07:54:00", "2019-09-14T08:11:00"], 3, "defq"
+            )
+
+        _, query = _sdc_query(session.urls[0])
+        self.assertEqual(query["sc_id"], "mms")
+        self.assertEqual(query["product"], "defq")
+
 
 @pytest.mark.network
 @unittest.skipUnless(
@@ -8490,6 +8530,13 @@ class SdcNetworkTestCase(unittest.TestCase):
 
         result = mms.list_files_ancillary_sdc(tint, 1, "defeph")
         self.assertGreater(len(result), 0)
+
+    def test_load_ancillary_defq_public(self):
+        # One file for the four spacecraft (MMS_DEFQ_*), every 30 s
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        result = mms.load_ancillary("defq", tint, 1, False, source="sdc")
+        self.assertEqual(len(result.time), 34)
+        self.assertTrue(np.all((result.q.data > 0) & (result.q.data <= 1)))
 
 
 # DEFEPH layout (MMS1_DEFEPH_2019257_2019258.V01): 14 header lines, no footer
@@ -8531,6 +8578,32 @@ _DEFATT_ROWS = [
 ]
 
 
+# DEFQ layout (MMS_DEFQ_2017187_2017188.V00, one file for the four
+# spacecraft): 11 header lines, a maneuver flag column that is empty in the
+# files checked, and "No data exists" for a day without data
+# (MMS_DEFQ_2017275_2017276.V00)
+_DEFQ_HEADER = [
+    "Definitive Tetrahedron Quality Factor",
+    "StartTime = 2017-187/00:05:53.151 UTC  (MMS TAI: 21736.004515637)",
+    "StopTime = 2017-188/00:14:23.151 UTC  (MMS TAI: 21737.010418414)",
+    "MMS TAI Reference Epoch = 1958-001/00:00:00 UTC",
+    "Ephemeris Set = MMS1_DEFEPH_2017187_2017188.V01, "
+    "MMS2_DEFEPH_2017187_2017188.V01,",
+    "MMS3_DEFEPH_2017187_2017188.V01, MMS4_DEFEPH_2017187_2017188.V01",
+    "Project = PPFA_ProductGeneration_QualityFactor.m",
+    "Source = FDGSS OPS",
+    "FileCreationDate = Jul 10 2017 13:26:50.074 UTC",
+    " ",
+    "Epoch (UTC)              Epoch MMS TAI     Q        Scale      Maneuver Flag",
+]
+
+_DEFQ_ROWS = [
+    "2017-187/13:50:23.151    21736.577085081   0.927    20                      ",
+    "2017-187/13:50:53.151    21736.577432303   0.927    20                      ",
+    "2017-187/13:51:23.151    21736.577779525   0.927    20                      ",
+]
+
+
 class LoadAncillaryTestCase(unittest.TestCase):
     def setUp(self):
         root = tempfile.TemporaryDirectory()
@@ -8538,8 +8611,8 @@ class LoadAncillaryTestCase(unittest.TestCase):
         self.root = root.name
         self.tint = ["2019-09-14T00:00:00", "2019-09-14T01:00:00"]
 
-    def _write(self, product, file_name, lines):
-        path = os.path.join(self.root, "ancillary", "mms1", product)
+    def _write(self, product, file_name, lines, sc_name="mms1"):
+        path = os.path.join(self.root, "ancillary", sc_name, product)
         os.makedirs(path, exist_ok=True)
 
         with open(os.path.join(path, file_name), "w", encoding="utf-8") as file:
@@ -8626,6 +8699,48 @@ class LoadAncillaryTestCase(unittest.TestCase):
     def test_load_ancillary_no_file(self):
         with self.assertRaises(FileNotFoundError):
             mms.load_ancillary("defeph", self.tint, 1, False, self.root, "local")
+
+    def test_load_ancillary_defq(self):
+        # One file for the four spacecraft (it was looked for as MMS1_DEFQ in
+        # ancillary/mms1): the same for any mms_id; the maneuver flag is NaN,
+        # or its value when set
+        rows = _DEFQ_ROWS[:2] + [_DEFQ_ROWS[2].rstrip() + "     1"]
+        self._write("defq", "MMS_DEFQ_2017187_2017188.V00", _DEFQ_HEADER + rows, "mms")
+        tint = ["2017-07-06T13:50:00", "2017-07-06T13:55:00"]
+
+        for mms_id in range(1, 5):
+            result = mms.load_ancillary("defq", tint, mms_id, False, self.root, "local")
+
+            np.testing.assert_allclose(result.q.data, 0.927)
+            np.testing.assert_allclose(
+                result.epoch_mms_tai.data[0], 21736.577085081, rtol=1e-15
+            )
+            np.testing.assert_array_equal(result.scale.data, 20)
+            np.testing.assert_array_equal(
+                result.maneuver_flag.data, [np.nan, np.nan, 1]
+            )
+            self.assertEqual(
+                result.time.data[0], np.datetime64("2017-07-06T13:50:23.151", "ns")
+            )
+
+        with self.assertRaisesRegex(FileNotFoundError, "for MMS in"):
+            mms.load_ancillary("defq", self.tint, 1, False, self.root, "local")
+
+    def test_load_ancillary_defq_no_data(self):
+        # A day without data: no row (the reader raised ValueError)
+        self._write(
+            "defq",
+            "MMS_DEFQ_2017275_2017276.V00",
+            _DEFQ_HEADER + ["No data exists"],
+            "mms",
+        )
+        tint = ["2017-10-02T12:00:00", "2017-10-02T12:05:00"]
+        result = mms.load_ancillary("defq", tint, 1, False, self.root, "local")
+
+        self.assertEqual(len(result.time), 0)
+        self.assertListEqual(
+            list(result.data_vars), ["epoch_mms_tai", "q", "scale", "maneuver_flag"]
+        )
 
     def test_load_ancillary_unsupported(self):
         for product in ["predatt", "predeph", "bazinga"]:
@@ -8814,7 +8929,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
 
 @ddt
 class ListFilesAncillaryTestCase(unittest.TestCase):
-    @data("predatt", "predeph", "defatt", "defeph")
+    @data("predatt", "predeph", "predq", "defatt", "defeph", "defq")
     def test_list_files_ancillary(self, product):
         # Empty data directory, independent of the user's configuration
         with tempfile.TemporaryDirectory() as root:
@@ -9010,6 +9125,60 @@ class FftBandpassTestCase(unittest.TestCase):
         if tensor_order:
             expected = np.tile(expected[:, None], (1, 3))
         np.testing.assert_allclose(out.data[300:700], expected[300:700], atol=0.05)
+
+    def test_fft_bandpass_frequency_grid(self):
+        # The frequencies of the FFT bins, as irfu-matlab: a 10 Hz sine (a bin
+        # of 1024 samples at 128 Hz) is kept whole by a band starting at 10 Hz
+        # (it was halved: its negative frequency was taken for 9.95 Hz), and
+        # integer frequencies are accepted (they raised TypeError)
+        times = generate_timeline(128.0, 1024)
+        sig = np.sin(2 * np.pi * 10 * np.arange(1024) / 128.0)
+        inp = pyrf.ts_scalar(times, sig)
+
+        np.testing.assert_allclose(mms.fft_bandpass(inp, 10, 30).data, sig, atol=1e-9)
+        np.testing.assert_allclose(mms.fft_bandpass(inp, 1, 9).data, 0.0, atol=1e-9)
+
+        with self.assertRaises(TypeError):
+            mms.fft_bandpass(inp, True, 30.0)
+
+
+class HpcaSpinSumTestCase(unittest.TestCase):
+    @staticmethod
+    def _inputs(start_az):
+        # 16 azimuths per spin; the data (time, polar, energy)
+        time = generate_timeline(16.0, len(start_az))
+        inp = xr.DataArray(
+            np.random.random((len(start_az), 2, 3)),
+            coords=[time, np.arange(2), np.arange(3)],
+            dims=["time", "polar", "energy"],
+            attrs={"UNITS": "cm^-2 s^-1 sr^-1 eV^-1"},
+        )
+        return inp, pyrf.ts_scalar(time, np.asarray(start_az, dtype=float))
+
+    def test_hpca_spin_sum(self):
+        # Spins from one start to the next; the samples after the last start
+        # are not used (as pyspedas)
+        inp, saz = self._inputs(np.arange(50) % 16)
+
+        for method in ["mean", "sum"]:
+            result = mms.hpca_spin_sum(inp, saz, method)
+            expected = [
+                getattr(inp.data[k : k + 16], method)(axis=0) for k in [0, 16, 32]
+            ]
+
+            np.testing.assert_allclose(result.data, expected)
+            np.testing.assert_array_equal(result.time.data, saz.time.data[[0, 16, 32]])
+            self.assertEqual(result.dims, inp.dims)
+            self.assertDictEqual(result.attrs, inp.attrs)
+
+    def test_hpca_spin_sum_errors(self):
+        # One spin start (it raised IndexError) or none: no complete spin
+        for start_az in [np.arange(20) % 32, np.arange(1, 20)]:
+            with self.assertRaisesRegex(ValueError, "two spin starts"):
+                mms.hpca_spin_sum(*self._inputs(start_az))
+
+        with self.assertRaisesRegex(ValueError, "Invalid method"):
+            mms.hpca_spin_sum(*self._inputs(np.arange(50) % 16), method="median")
 
 
 class WhistlerB2ETestCase(unittest.TestCase):
