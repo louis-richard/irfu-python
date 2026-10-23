@@ -49,7 +49,8 @@ def dec_par_perp(
         magnetic field.
     alpha : xarray.DataArray
         Time series of the angle between the background magnetic field and
-        the XY plane.
+        the XY plane, in radians (irfu-matlab ``irf_dec_parperp`` returns it
+        in degrees), with flag_spin_plane; zero otherwise.
 
     Raises
     ------
