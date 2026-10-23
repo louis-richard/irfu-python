@@ -9142,6 +9142,45 @@ class FftBandpassTestCase(unittest.TestCase):
             mms.fft_bandpass(inp, True, 30.0)
 
 
+class HpcaSpinSumTestCase(unittest.TestCase):
+    @staticmethod
+    def _inputs(start_az):
+        # 16 azimuths per spin; the data (time, polar, energy)
+        time = generate_timeline(16.0, len(start_az))
+        inp = xr.DataArray(
+            np.random.random((len(start_az), 2, 3)),
+            coords=[time, np.arange(2), np.arange(3)],
+            dims=["time", "polar", "energy"],
+            attrs={"UNITS": "cm^-2 s^-1 sr^-1 eV^-1"},
+        )
+        return inp, pyrf.ts_scalar(time, np.asarray(start_az, dtype=float))
+
+    def test_hpca_spin_sum(self):
+        # Spins from one start to the next; the samples after the last start
+        # are not used (as pyspedas)
+        inp, saz = self._inputs(np.arange(50) % 16)
+
+        for method in ["mean", "sum"]:
+            result = mms.hpca_spin_sum(inp, saz, method)
+            expected = [
+                getattr(inp.data[k : k + 16], method)(axis=0) for k in [0, 16, 32]
+            ]
+
+            np.testing.assert_allclose(result.data, expected)
+            np.testing.assert_array_equal(result.time.data, saz.time.data[[0, 16, 32]])
+            self.assertEqual(result.dims, inp.dims)
+            self.assertDictEqual(result.attrs, inp.attrs)
+
+    def test_hpca_spin_sum_errors(self):
+        # One spin start (it raised IndexError) or none: no complete spin
+        for start_az in [np.arange(20) % 32, np.arange(1, 20)]:
+            with self.assertRaisesRegex(ValueError, "two spin starts"):
+                mms.hpca_spin_sum(*self._inputs(start_az))
+
+        with self.assertRaisesRegex(ValueError, "Invalid method"):
+            mms.hpca_spin_sum(*self._inputs(np.arange(50) % 16), method="median")
+
+
 class WhistlerB2ETestCase(unittest.TestCase):
     b_mag, n_e = 50.0, 5.0  # nT, cm^-3
     f_ce = constants.e * 1e-9 * b_mag / constants.m_e / (2 * np.pi)
