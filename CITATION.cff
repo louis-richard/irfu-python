@@ -29,7 +29,7 @@ authors:
 title: "Python RymdFysik Utilities (PyRFU): An Open-Source Python Package for Advanced In-Situ Space Plasma Analysis"
 abstract: "pyrfu is an open-source Python package for advanced in-situ space plasma analysis, particularly of the Magnetospheric Multiscale (MMS) mission."
 license: MIT
-version: "2.5.4"
+version: "2.5.5"
 date-released: 2026-10-23
 doi: 10.5281/zenodo.10678695
 url: "https://pyrfu.readthedocs.io/"
