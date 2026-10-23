@@ -15,13 +15,18 @@ Changed behaviour
 
 - ``pyrf.c_4_v_xcorr``: ``d_speed``, ``d_theta`` and ``e_theta`` follow
   from the slowness covariance ``dm2`` (Vogt et al. 2011, eqs. 19-20),
-  with the correlations of the delays. They followed irfu-matlab, with the
-  formulas of the simplified case of uncorrelated and identical errors
-  (eqs. 32-33) and the scalar time error ``trace(sqrt(dtau2)) / 4``; the
-  delays to a pattern made of the four signals are anti-correlated (about
-  -1/3), and these errors were 15-30 % smaller than the spread of the speed
-  and the direction over noise draws (now 0-17 %). Both agree for
-  uncorrelated and identical errors.
+  with the correlations of the delays, and differ from those of
+  irfu-matlab either way. They followed irfu-matlab, with the formulas of
+  the simplified case of uncorrelated and identical errors (eqs. 32-33) and
+  the scalar time error ``trace(sqrt(dtau2)) / 4``, which ignores the
+  correlations, never zero with a pattern made of the four signals. On
+  synthetic structures, the delays are anti-correlated (about -1/3), and
+  these errors were 15-30 % smaller than the spread of the speed and the
+  direction over noise draws (now 0-17 %). On the interplanetary shock of
+  2018-01-08, the delays are strongly correlated: the speed error goes from
+  34.3 to 15.4 km/s (irfu-matlab: 34.1), and the direction errors from 3.4
+  and 3.9 deg to 2.2 and 4.8 deg. Both agree for uncorrelated and identical
+  errors.
 - ``pyrf.dec_par_perp`` checks the components of its inputs (3 for
   ``b_bgd``, 3 for ``inp``, or 2 or 3 with ``flag_spin_plane``, of which x
   and y are used) and raises ``TypeError`` or ``ValueError`` (was
