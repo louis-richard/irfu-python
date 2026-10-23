@@ -104,12 +104,20 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pyrfu*"]
+# The irfu-matlab comparison suite stays local (git-ignored)
+exclude = ["pyrfu.tests.matlab*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["pyrfu/tests"]
+# pytest's defaults, and the local irfu-matlab comparison suite (git-ignored;
+# run it with pytest pyrfu/tests/matlab)
+norecursedirs = [
+    "*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv",
+    "{arch}", "matlab",
+]
 addopts = ["--strict-markers", "--strict-config"]
 timeout = 300
 log_file = "pyrfu-tests.log"
