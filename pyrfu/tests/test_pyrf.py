@@ -1993,6 +1993,22 @@ class Datetime642UnixTestCase(unittest.TestCase):
     def test_datetime642unix_output(self, value):
         self.assertIsInstance(pyrf.datetime642unix(value), np.ndarray)
 
+    def test_datetime642unix_empty_and_types(self):
+        # An empty input gives an empty array (it raised IndexError); the type
+        # is that of the elements: object arrays of datetime64 are accepted,
+        # strings and datetime objects are not
+        for value in [[], np.array([], dtype="datetime64[ns]")]:
+            result = pyrf.datetime642unix(value)
+            self.assertEqual(result.shape, (0,))
+            self.assertEqual(result.dtype, np.float64)
+
+        time = np.array([np.datetime64("2019-01-01T00:00:00.5")], dtype=object)
+        np.testing.assert_array_equal(pyrf.datetime642unix(time), [1546300800.5])
+
+        for value in [["2019-01-01T00:00:00"], [datetime.datetime(2019, 1, 1)]]:
+            with self.assertRaises(TypeError):
+                pyrf.datetime642unix(value)
+
 
 class Unix2Datetime64TestCase(unittest.TestCase):
     def test_unix2datetime64_input(self):
