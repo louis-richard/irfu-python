@@ -1,7 +1,86 @@
 Changelog
 =========
 
-2.5.4 (2026-10-23)
+2.5.5 (2026-10-23)
+------------------
+
+This release completes ``pyrf.c_4_v_xcorr`` for noisy signals, with a
+low-pass inside the fit (``f_max``) and errors in speed and direction that
+include the correlations of the delays, and adds an example of
+four-spacecraft timing by cross-correlation. It reads the MMS DEFQ files,
+and fixes ``mms.fft_bandpass``, which could halve a component at a cutoff.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``pyrf.c_4_v_xcorr``: ``d_speed``, ``d_theta`` and ``e_theta`` follow
+  from the slowness covariance ``dm2`` (Vogt et al. 2011, eqs. 19-20),
+  with the correlations of the delays. They followed irfu-matlab, with the
+  formulas of the simplified case of uncorrelated and identical errors
+  (eqs. 32-33) and the scalar time error ``trace(sqrt(dtau2)) / 4``; the
+  delays to a pattern made of the four signals are anti-correlated (about
+  -1/3), and these errors were 15-30 % smaller than the spread of the speed
+  and the direction over noise draws (now 0-17 %). Both agree for
+  uncorrelated and identical errors.
+- ``pyrf.dec_par_perp`` checks the components of its inputs (3 for
+  ``b_bgd``, 3 for ``inp``, or 2 or 3 with ``flag_spin_plane``, of which x
+  and y are used) and raises ``TypeError`` or ``ValueError`` (was
+  ``AssertionError``; an ``inp`` of 2 components failed in a broadcast).
+
+New features
+^^^^^^^^^^^^
+
+- ``pyrf.c_4_v_xcorr``: ``f_max`` low-passes the four signals and the
+  pattern inside the fit, with the same zero-phase filter for all (a
+  raised-cosine roll-off from ``f_max`` / 2 to ``f_max``): the delays are
+  unchanged. At or a little above the top of the band of the structure, it
+  brings the spread of the delays over noise draws within 1.0-1.4 of the
+  reported errors (1.7-2.3 without), and the false matches of
+  ``fit="none"`` on a noisy electron hole from 16 % to 1-2 % of the draws.
+- ``mms.load_ancillary``, ``mms.list_files_ancillary``,
+  ``mms.list_files_ancillary_sdc``, ``mms.download_ancillary`` and
+  ``mms.copy_files_ancillary`` find the DEFQ (and PREDQ) files, one for the
+  four spacecraft (``MMS_DEFQ_*``, ``ancillary/mms/defq``; they were looked
+  for as ``MMS<n>_DEFQ`` and never found): ``load_ancillary("defq", ...)``
+  gives the tetrahedron quality factor ``q``, ``scale`` and
+  ``maneuver_flag`` every 30 s, for any ``mms_id``.
+- ``mms.fft_bandpass`` accepts integer frequencies (they raised
+  ``TypeError``).
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.fft_bandpass``: the frequencies of the FFT bins are those of
+  irfu-matlab ``mms.fftbandpass`` (they were spaced by 2 f_nyq / (N - 1)):
+  the positive and negative frequencies of a component within a bin of a
+  cutoff could fall on either side of it, which halved the component.
+- ``mms.load_ancillary`` reads the files without data (``No data exists``,
+  e.g. DEFQ of 2017-10-02) as no rows (it raised ``ValueError``).
+- ``mms.hpca_spin_sum`` raises a clear ``ValueError`` with fewer than two
+  spin starts (one raised ``IndexError``).
+- ``pyrf.datetime642unix`` accepts an empty input (it raised
+  ``IndexError``).
+- ``pyrf.mva_gui``: the Reset button works (every click raised
+  ``TypeError``).
+- ``pyrf.ts_spectr`` with energies varying with time keeps ``attrs`` on the
+  data of the Dataset, with ``TENSOR_ORDER`` (they were dropped).
+
+Documentation
+^^^^^^^^^^^^^
+
+- A new example notebook, four-spacecraft timing by cross-correlation: the
+  electron hole of Fig. 2 of Kamaletdinov et al. (2021), on 2017-08-04,
+  with the delays, the velocity and its errors from ``pyrf.c_4_v_xcorr``,
+  and a first guess of the delays in a train of electron holes.
+- ``pyrf.c_4_v_xcorr``: the use of ``f_max`` against the noise, and the
+  equations of Vogt et al. (2011) behind each error.
+- ``pyrf.edb``: ``angle_lim`` is described the right way (with ``"E.B=0"``,
+  Ez is computed where B is more than ``angle_lim`` above the spin plane),
+  with the formula of each method.
+- ``mms.hpca_spin_sum``: the samples after the last spin start are not used,
+  as pyspedas.
+
+2.5.4 (2026-10-22)
 ------------------
 
 This release adds ``pyrf.c_4_v_xcorr``, four-spacecraft timing by
