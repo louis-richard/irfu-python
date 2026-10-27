@@ -5885,6 +5885,43 @@ class SolidAngleTestCase(unittest.TestCase):
         result = pyrf.solid_angle(inp0, inp1, inp2)
         self.assertIsInstance(result, np.ndarray)
 
+    def test_solid_angle_values(self):
+        x_hat, y_hat, z_hat = np.eye(3)
+
+        # Octant, with the sign of (inp2 x inp1) . inp0; any lengths
+        np.testing.assert_allclose(pyrf.solid_angle(x_hat, y_hat, z_hat), -np.pi / 2)
+        np.testing.assert_allclose(pyrf.solid_angle(x_hat, z_hat, y_hat), np.pi / 2)
+        inp = [[1.0, 0.2, 0.1], [0.1, 1.0, 0.3], [0.2, 0.1, 1.0]]
+        np.testing.assert_allclose(
+            pyrf.solid_angle(*[2 * np.array(v) for v in inp]),
+            pyrf.solid_angle(*[np.array(v) / np.linalg.norm(v) for v in inp]),
+        )
+
+        # Small and large triangles, against a 50-digit evaluation of the
+        # spherical excess (the law of cosines gave +7.5e-11 sr for the small
+        # one with unit vectors, NaN with these, and -6.2507 for the large)
+        eps = 1e-5
+        np.testing.assert_allclose(
+            pyrf.solid_angle(z_hat, [eps, 0, 1], [0, eps, 1]),
+            -4.999999999750001e-11,
+            rtol=1e-9,
+        )
+        np.testing.assert_allclose(
+            pyrf.solid_angle(x_hat, [-0.5, 0.866, 0], [-0.5, -0.866, 0.01]),
+            -6.2485455149282565,
+            rtol=1e-12,
+        )
+
+        # Degenerate triangle (it gave NaN)
+        self.assertEqual(pyrf.solid_angle(x_hat, x_hat, y_hat)[0], 0.0)
+
+    def test_solid_angle_errors(self):
+        with self.assertRaises(TypeError):
+            pyrf.solid_angle(1.0, [0, 1, 0], [0, 0, 1])
+
+        with self.assertRaisesRegex(ValueError, "inp1 must be a vector"):
+            pyrf.solid_angle([1, 0, 0], [0, 1], [0, 0, 1])
+
 
 @ddt
 class Sph2CartTestCase(unittest.TestCase):
