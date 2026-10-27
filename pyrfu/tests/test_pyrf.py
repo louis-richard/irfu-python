@@ -4698,6 +4698,43 @@ class MvaTestCase(unittest.TestCase):
             handedness = np.dot(np.cross(lmn[:, 0], lmn[:, 1]), lmn[:, 2])
             self.assertAlmostEqual(handedness, 1.0, places=6)
 
+    def test_mva_bn0_eigenvalue(self):
+        # With "<bn>=0", l[2] is the constrained minimum variance n.M.n (from
+        # M n = l n + mu <B> and <B>.n = 0), above the unconstrained one; it
+        # was the variance along n of the field without B.n, zero
+        b_xyz, _ = self._field()
+        b_lmn, lamb, lmn = pyrf.mva(b_xyz, "<bn>=0")
+        cov = np.cov(b_xyz.data.T, bias=True)
+
+        self.assertAlmostEqual(np.mean(b_lmn.data[:, 2]), 0.0, places=10)
+        self.assertAlmostEqual(lamb[2], lmn[:, 2] @ cov @ lmn[:, 2], places=10)
+        self.assertGreater(lamb[2], pyrf.mva(b_xyz)[1][2])
+
+    @data("mvar", "<bn>=0", "td")
+    def test_mva_nan(self, flag):
+        # NaN samples are ignored, as irf_minvar (they raised LinAlgError)
+        b_xyz, _ = self._field()
+        b_nan = b_xyz.copy()
+        b_nan.data[[10, 500, 1500]] = np.nan
+        b_lmn, lamb, lmn = pyrf.mva(b_nan, flag)
+        _, lamb_ref, lmn_ref = pyrf.mva(b_xyz.drop_isel(time=[10, 500, 1500]), flag)
+
+        np.testing.assert_allclose(lamb, lamb_ref, rtol=1e-10)
+        np.testing.assert_allclose(lmn, lmn_ref, atol=1e-10)
+        self.assertTrue(np.all(np.isnan(b_lmn.data[[10, 500, 1500]])))
+
+    def test_mva_errors(self):
+        b_xyz, _ = self._field()
+
+        with self.assertRaises(TypeError):
+            pyrf.mva(b_xyz.data)
+
+        with self.assertRaisesRegex(ValueError, "3D vectors"):
+            pyrf.mva(b_xyz[:, :2])
+
+        with self.assertRaisesRegex(ValueError, "flag must be"):
+            pyrf.mva(b_xyz, "minvar")
+
 
 @ddt
 class NewXyzTestCase(unittest.TestCase):
