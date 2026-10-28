@@ -5153,6 +5153,31 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
             self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
         self.assertAlmostEqual(result.attrs["f_avg"], 4.0, delta=0.1)
 
+    def test_fk_power_spectrum_4sc_k_bins(self):
+        # The wave numbers are the centres of the bins of the power maps
+        # (linspace(-k_max, k_max, num_k) was up to half a bin off): the peak
+        # of each map within half a bin of the wave vector
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        result = mms.fk_power_spectrum_4sc(
+            e_mms, r_mms, b_mms, tint, num_k=20, f_range=[3, 5]
+        )
+        d_k = float(result.k_x[1] - result.k_x[0])
+        d_k_mag = float(result.k_mag[1] - result.k_mag[0])
+
+        self.assertAlmostEqual(float(result.k_mag[0]), d_k_mag / 2)
+        self.assertAlmostEqual(
+            float(result.k_x[-1]) + d_k / 2, float(result.k_mag[-1]) + d_k_mag / 2
+        )
+
+        for name, value in zip(
+            ["k_x", "k_y", "k_z", "k_mag"], [*k_vec, np.linalg.norm(k_vec)]
+        ):
+            power = np.nan_to_num(result[f"{name}_f"].data)
+            i_k = np.unravel_index(np.argmax(power), power.shape)[0]
+            width = d_k_mag if name == "k_mag" else d_k
+            self.assertLessEqual(abs(result[name].data[i_k] - value / 1e3), width / 2)
+
     def test_fk_power_spectrum_4sc_vector(self):
         # Vector input raised AttributeError; the first component is used
         e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
