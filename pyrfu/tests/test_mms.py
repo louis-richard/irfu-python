@@ -8482,6 +8482,45 @@ class TokenizeTestCase(unittest.TestCase):
             self.assertEqual(result["cdf_name"], f"hpca_{species}_ion_pressure")
             self.assertEqual(result["dtype"], "moments")
 
+    @data(
+        ("qe_gse_fpi_brst_l2", "des_heatq_gse_brst", "des-moms", "gse"),
+        ("errqi_fpi_fast_l2", "dis_heatq_err_fast", "dis-moms", ""),
+        ("flagi_fpi_fast_l2", "dis_errorflags_fast", "dis-moms", ""),
+        ("padmidene_fpi_brst_l2", "des_pitchangdist_miden_brst", "des-moms", ""),
+        ("tparae_fpi_fast_l2", "des_temppara_fast", "des-moms", ""),
+        (
+            "partpi_dbcs_fpi_brst_l2",
+            "dis_prestensor_part_dbcs_brst",
+            "dis-partmoms",
+            "dbcs",
+        ),
+        ("qualitye_edp_fast_l2", "edp_quality_fast_l2", "dce", ""),
+        ("qualityv_edp_brst_l2", "edp_quality_brst_l2", "scpot", ""),
+        ("flag_fgm_srvy_l2", "fgm_flag_srvy_l2", "", ""),
+        ("r_gsm_fgm_brst_l2", "fgm_r_gsm_brst_l2", "", "gsm"),
+        ("quat_gse2000_mec_srvy_l2", "mec_quat_eci_to_gse2000", "epht89d", "gse2000"),
+        ("ldip_mec_brst_l2", "mec_l_dipole", "epht89d", ""),
+        ("tparaoplus_hpca_srvy_l2", "hpca_oplus_tparallel", "moments", ""),
+        ("b_gsm_hpca_brst_l2", "hpca_B_GSM_spin_avg", "moments", "gsm"),
+        ("epsdz_dsp_slow_l2", "dsp_epsd_z", "epsd", ""),
+        ("bpsd_dsp_fast_l2", "dsp_bpsd_omni_fast_l2", "bpsd", ""),
+        ("vdrift_gse_edi_srvy_l2", "edi_vdrift_gse_srvy_l2", "efield", "gse"),
+        ("b_gse_scm_srvy_l2", "scm_acb_gse_scsrvy_srvy_l2", "scsrvy", "gse"),
+        ("bschb_gse_scm_brst_l2", "scm_acb_gse_schb_brst_l2", "schb", "gse"),
+    )
+    @unpack
+    def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
+        # Variables documented in the CMAD and checked on files from AWS
+        # (2017-07-11, MMS1): FPI heat flux, flags, electron PADs, extrapolated
+        # densities; EDP quality and bitmask of the dce and scpot files; FGM
+        # flag and position; MEC quaternions (ECI to the frame), MLT, L, Kp,
+        # Dst; HPCA T_para, T_perp, B; DSP spectra; EDI E and drift velocity;
+        # SCM survey and high-speed burst waveforms
+        result = mms.tokenize(var_str)
+        self.assertEqual(result["cdf_name"], cdf_name)
+        self.assertEqual(result["dtype"], dtype)
+        self.assertEqual(result["cs"], coords)
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)

@@ -60,6 +60,30 @@ ALL_PARAMS_SCALARS = [
     "bpsd",
     "epsd",
     "ionc",
+    "flagi",
+    "flage",
+    "nextlowi",
+    "nexthighi",
+    "nextlowe",
+    "nexthighe",
+    "qualitye",
+    "bitmaske",
+    "qualityv",
+    "bitmaskv",
+    "flag",
+    "mlt",
+    "mlat",
+    "ldip",
+    "kp",
+    "dst",
+    "eclipseearth",
+    "eclipsemoon",
+    "epsdx",
+    "epsdy",
+    "epsdz",
+    "bpsdscm1",
+    "bpsdscm2",
+    "bpsdscm3",
 ]
 
 ALL_PARAMS_VECTORS = [
@@ -84,6 +108,9 @@ ALL_PARAMS_VECTORS = [
     "e2d",
     "es12",
     "es34",
+    "quat",
+    "vdrift",
+    "bschb",
 ]
 
 ALL_PARAMS_TENSORS = [
@@ -118,6 +145,14 @@ HPCA_PARAMS_SCALARS = [
     "adcoff",
     "saz",
     "azimuth",
+    "tparahplus",
+    "tparaheplus",
+    "tparaheplusplus",
+    "tparaoplus",
+    "tperphplus",
+    "tperpheplus",
+    "tperpheplusplus",
+    "tperpoplus",
 ]
 
 HPCA_PARAMS_TENSORS = [
@@ -150,6 +185,11 @@ COORDINATE_SYSTEMS = [
     "ssc",
     "bcs",
     "par",
+    "geo",
+    "sm",
+    "gse2000",
+    "smpa",
+    "ssl",
     "",
 ]
 
