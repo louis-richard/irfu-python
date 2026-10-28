@@ -1360,6 +1360,15 @@ class Cart2SphTestCase(unittest.TestCase):
             ],
         )
 
+    def test_cart2sph_angles(self):
+        # Azimuth in (-pi, pi] (atan2), polar angle from the z axis
+        x_cart, y_cart = np.array([0.0, -1.0]), np.array([-1.0, 0.0])
+        alpha, beta, r = pyrf.cart2sph(x_cart, y_cart, 0.0)
+
+        np.testing.assert_allclose(alpha, [-np.pi / 2, np.pi])
+        np.testing.assert_allclose(beta, np.pi / 2)
+        np.testing.assert_allclose(r, 1.0)
+
 
 class Cart2SphTsTestCase(unittest.TestCase):
     def test_cart2sph_ts_input(self):

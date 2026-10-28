@@ -17,11 +17,11 @@ def cart2sph(x, y, z):
 
     .. math::
 
-        \alpha = \arctan \left( \frac{y}{x} \right) \\
+        \alpha = \mathrm{atan2}(y, x) \\
         \beta = \arccos \left( \frac{z}{r} \right) \\
         r = \sqrt{x^2 + y^2 + z^2}
 
-    with :math:`\alpha \in [0, 2\pi], \beta \in [0, \pi], r \geq 0`
+    with :math:`\alpha \in (-\pi, \pi], \beta \in [0, \pi], r \geq 0`
 
     Parameters
     ----------
@@ -35,11 +35,19 @@ def cart2sph(x, y, z):
     Returns
     -------
     alpha : float or array_like
-        Azimuth angle in radians
+        Azimuth angle in radians, from the x axis towards the y axis, between
+        -pi and pi.
     beta : float or array_like
-        Elevation angle in radians (with 0 denoting North pole)
+        Polar angle in radians, from the z axis (the colatitude: 0 on the z
+        axis). MATLAB's cart2sph returns the elevation from the xy plane,
+        pi / 2 - beta.
     r : float or array_like
         Radius
+
+    See Also
+    --------
+    pyrfu.pyrf.sph2cart
+
     """
 
     # Radius
