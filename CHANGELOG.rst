@@ -1,6 +1,113 @@
 Changelog
 =========
 
+2.5.6 (2026-10-28)
+------------------
+
+This release adds single-spacecraft interferometry with the MMS electric
+field probes: ``mms.probe_fields`` gives the fields between the six probes,
+and ``mms.fk_power_spectrum`` the frequency-wave number power spectrum from
+one probe pair. ``pyrf.c_4_v`` and ``pyrf.c_4_v_xcorr`` can give the
+velocity in the frame of the positions, as irfu-matlab. ``pyrf.resample``
+handles NaN with the cubic and quadratic interpolations, and ``pyrf.mva``
+with all its methods. It fixes ``pyrf.integrate``, ``pyrf.mva``,
+``pyrf.solid_angle`` and ``mms.fk_power_spectrum_4sc``, checked against
+irfu-matlab and exact references.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``pyrf.resample``: the interpolation methods are the kinds of scipy's
+  ``interp1d`` (``"linear"``, ``"cubic"``, ...), and other names raise
+  ``ValueError`` (they raised ``NotImplementedError`` from scipy), with a
+  hint for MATLAB's ``"spline"``, which is ``"cubic"`` here. With
+  ``"cubic"`` or ``"quadratic"``, each component is interpolated through
+  its finite samples, as MATLAB ``interp1`` (identical to 1e-16): a NaN
+  gave NaN at all the times.
+- ``pyrf.mva``, ``pyrf.integrate``, ``pyrf.solid_angle`` and
+  ``pyrf.struct_func`` raise ``TypeError`` or ``ValueError`` for invalid
+  inputs (were ``AssertionError``, or errors from NumPy or xarray).
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.probe_fields``: the fields from the potentials of the six probes of
+  EDP (``v6_edp_brst_l2``), for probe interferometry: the single-probe
+  fields (each probe against the spacecraft potential estimated by the
+  other probes), the diagonal fields between neighbouring spin-plane probes
+  and the double-probe fields, as irfu-matlab ``mms.fk_powerspectrum`` and
+  ``mms.fk_powerspec_E80``. The channel delays of the burst sampling are
+  corrected by a DFT shift (or by interpolation, or not), and the boom
+  lengths can be the effective ones of Pedersen et al. (1998).
+- ``mms.fk_power_spectrum``: the frequency-wave number power spectrum from
+  the probes of one EDP pair (1-2, 3-4 or 5-6) aligned with B, from
+  irfu-matlab ``mms.fk_powerspectrum`` (Graham et al. 2016), as a
+  ``DataArray`` (f, k) for ``mms.estimate_phase_speed``. It agrees with
+  irfu-matlab on MMS1 data of 2017-05-05 (wave numbers to 3e-5 or better).
+  With ``field=False`` (the probe potentials instead of the single-probe
+  fields), irfu-matlab's wave numbers are wrong (the second potential
+  enters with a minus sign, which adds pi to the phase, over half the
+  separation of the potentials); here the two potentials are used with
+  their separation.
+- ``pyrf.c_4_v`` and ``pyrf.c_4_v_xcorr``: ``frame="positions"`` gives the
+  velocity in the frame of the positions (e.g., GSE), with each position at
+  its own crossing time, as irfu-matlab ``c_4_v`` (checked on a drifting
+  tetrahedron). The default, ``"spacecraft"``, is unchanged: the positions
+  at the first time, the velocity relative to the spacecraft.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``pyrf.mva`` with ``"<bn>=0"``: the third eigenvalue is the constrained
+  minimum variance, the root of the constraint polynomial, as irfu-matlab
+  ``irf_minvar`` (it was the variance along the normal of the field without
+  its normal component, zero). The frames are unchanged.
+- ``pyrf.integrate``: the times are in seconds from the first one, as
+  irfu-matlab ``irf_integrate``. They were converted to float64 seconds
+  since 1970, rounded to 256 ns: 6e-5 of a time step at 256 Hz, and 2e-5
+  on ``int_e_dt`` and ``corr`` of ``pyrf.match_phibe_dir``.
+- ``pyrf.solid_angle`` uses the formula of Van Oosterom and Strackee
+  (1983) on the directions of the inputs. The spherical excess with the
+  law of cosines (irfu-matlab ``irf.solidangle``) lost all precision for
+  small triangles (a relative error of 0.2 for sides of 0.01 rad, and the
+  wrong sign for 1e-5 rad), and gave NaN for vectors that are not unit
+  vectors and for degenerate triangles.
+- ``mms.fk_power_spectrum_4sc``: the wave numbers are the centres of the
+  bins of the power maps. ``linspace(-k_max, k_max, num_k)``, as
+  irfu-matlab, was up to half a bin off, and so the averages and standard
+  deviations of k in the attributes (by 5-8 % on a test case with
+  ``num_k=100``). The power maps are unchanged.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``pyrf.mva`` ignores NaN samples in the averages, as irfu-matlab (one
+  raised ``LinAlgError``).
+- ``pyrf.integrate`` accepts two samples, ``(time, 1)`` arrays and tensors
+  (they raised), and keeps the attributes, with the units times s.
+- ``pyrf.struct_func`` with a single scale (it raised ``ValueError``), also
+  given as an integer.
+- ``mms.lh_wave_analysis`` with B along x: the plane perpendicular to B is
+  built from y instead of x (B x x vanished and all the outputs were NaN,
+  as in irfu-matlab).
+- ``pyrf.st_diff`` sets ``COORDINATE_SYSTEM`` to ``"lmn"`` on its output.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``pyrf.st_diff``: the formula it computes, the velocity along each of l,
+  m and n, valid in the frame of the minimum directional derivative, what
+  ``lmn`` is and the units.
+- ``pyrf.c_4_grad``: the layout of the gradient, ``"bdivb"`` and
+  ``"curv"``, whose average unit vector is not normalised, as irfu-matlab
+  (this partly compensates the error of the linear estimate).
+- ``pyrf.sph2cart``: the second angle is the colatitude, as returned by
+  ``pyrf.cart2sph`` (MATLAB's ``sph2cart`` takes the elevation).
+- ``pyrf.dec_par_perp``: ``alpha`` is in radians (degrees in irfu-matlab),
+  and zero without ``flag_spin_plane``.
+- ``pyrf.struct_func``: the absolute increments, without the nonexistent
+  ``ncut``.
+
 2.5.5 (2026-10-23)
 ------------------
 
