@@ -4556,6 +4556,39 @@ class MagnetosphereTestCase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pyrf.magnetosphere("mp_bazinga")
 
+    def test_magnetosphere_solar_wind(self):
+        # Given solar wind, as irf_magnetosphere(model, Dp, Bz) (M = 4); the
+        # magnetopause at 0, 0.1, ..., 3.1 rad as irfu-matlab (it was
+        # linspace(0, pi, 31)), up to abs(x) = 100 R_E
+        x_mp, y_mp = pyrf.magnetosphere("mp_shue1998", d_p=10.0, b_z=-2.0)
+        x_bs, _ = pyrf.magnetosphere("BS", d_p=10.0, b_z=-2.0)
+        r_zero = self._r_zero(10.0, -2.0)
+
+        self.assertAlmostEqual(x_mp[0], r_zero)
+        np.testing.assert_allclose(
+            np.arctan2(y_mp, x_mp), 0.1 * np.arange(len(x_mp)), atol=1e-12
+        )
+        self.assertEqual(len(pyrf.magnetosphere("mp_shue1998")[0]), 29)
+        self.assertAlmostEqual(x_bs[0], self._standoff(r_zero, 4.0))
+
+        x_bs, _ = pyrf.magnetosphere("bs", d_p=10.0, b_z=-2.0, m_a=8.0)
+        self.assertAlmostEqual(x_bs[0], self._standoff(r_zero, 8.0))
+
+    def test_magnetosphere_errors(self):
+        tint = ["2019-09-14T07:00:00", "2019-09-14T10:00:00"]
+
+        with self.assertRaisesRegex(ValueError, "either tint"):
+            pyrf.magnetosphere("mp_shue1998", tint, d_p=2.0)
+
+        with self.assertRaisesRegex(ValueError, "dynamic pressure"):
+            pyrf.magnetosphere("mp_shue1998", d_p=0.0)
+
+        with self.assertRaisesRegex(ValueError, "dynamic pressure"):
+            pyrf.magnetosphere("mp_shue1998", b_z=np.nan)
+
+        with self.assertRaisesRegex(ValueError, "Mach number"):
+            pyrf.magnetosphere("bs", m_a=1.0)
+
 
 def _xy_series(x, y):
     time = np.datetime64("2019-09-14T07:54:00", "ns")
