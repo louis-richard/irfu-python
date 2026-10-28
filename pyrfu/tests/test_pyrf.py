@@ -4837,6 +4837,31 @@ class StructFuncTestCase(unittest.TestCase):
         result = pyrf.struct_func(inp, scales, order)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_struct_func_values(self):
+        # Ramps of slopes a: |x_i - x_(i+s)|^o = (s |a|)^o at every i; a
+        # single scale, list or int, keeps the scales dimension (it failed)
+        slopes = np.array([0.5, -2.0, 1.0])
+        inp = pyrf.ts_vec_xyz(
+            generate_timeline(64.0, 100), np.arange(100.0)[:, None] * slopes
+        )
+
+        result = pyrf.struct_func(inp, [1, 3], 2)
+        np.testing.assert_allclose(result.data, (np.outer([1, 3], np.abs(slopes))) ** 2)
+        self.assertEqual(result.attrs["order"], 2)
+
+        for scales in [[3], 3]:
+            result = pyrf.struct_func(inp, scales, 3)
+            self.assertEqual(result.dims, ("scales", "comp"))
+            np.testing.assert_allclose(result.data, [(3 * np.abs(slopes)) ** 3])
+
+        result = pyrf.struct_func(inp[:, 0], [3], 1)
+        self.assertEqual(result.shape, (1,))
+        np.testing.assert_allclose(result.data, [1.5])
+
+        for scales in [[0, 3], [100], [1.5], []]:
+            with self.assertRaisesRegex(ValueError, "scales must be integers"):
+                pyrf.struct_func(inp, scales, 2)
+
 
 class TraceTestCase(unittest.TestCase):
     def test_trace_input_type(self):
