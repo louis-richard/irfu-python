@@ -5972,7 +5972,7 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             xr.testing.assert_identical(result, full)
 
 
-def _cdf_fpi_brst_dist(n_records, t_start, deltas=False):
+def _cdf_fpi_brst_dist(n_records, t_start, deltas=False, energy_delta=True):
     # In-memory FPI burst ion distribution laid out as in the L2 files: record
     # varying phi, energy, steptable parity and energy deltas, with alternating
     # energy tables (no energy0 and energy1 variables), and optionally the
@@ -5999,7 +5999,8 @@ def _cdf_fpi_brst_dist(n_records, t_start, deltas=False):
     cdf.add_variable("mms1_dis_theta_brst", values=np.arange(3.0)[None], is_nrv=True)
     cdf.add_variable("mms1_dis_energy_brst", values=energies[parity].reshape(-1, 5))
     cdf.add_variable("mms1_dis_steptable_parity_brst", values=parity.astype(np.uint8))
-    cdf.add_variable("mms1_dis_energy_delta_brst", values=np.ones((n_records, 5)))
+    if energy_delta:
+        cdf.add_variable("mms1_dis_energy_delta_brst", values=np.ones((n_records, 5)))
     cdf.add_variable(
         "mms1_dis_dist_brst",
         values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
@@ -6051,6 +6052,24 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
             _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10"), "mms1_dis_dist_brst"
         )
         self.assertNotIn("delta_time_minus", result.attrs)
+
+    def test_get_dist_no_energy_delta(self):
+        # A file without energy widths: no delta_energy_* attributes (they
+        # were None, on which reduce raised TypeError), also when appended
+        content = _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10", energy_delta=False)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+
+        for key in ["delta_energy_minus", "delta_energy_plus"]:
+            self.assertNotIn(key, result.attrs)
+
+        result.data.attrs["UNITS"] = "s^3/cm^6"
+        reduced = mms.reduce(result, np.eye(3), n_mc=2, verbose=False)
+        self.assertEqual(reduced.shape[0], 4)
+
+        later = _cdf_fpi_brst_dist(2, "2019-09-14T07:54:20", energy_delta=False)
+        result = self._get_data("pdi_fpi_brst_l2", [content, later])
+        self.assertEqual(result.sizes["time"], 6)
+        self.assertNotIn("delta_energy_plus", result.attrs)
 
     @data((0, 3), (3, 0), (0, 0))
     @unpack
