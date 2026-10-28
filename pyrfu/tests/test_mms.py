@@ -1567,6 +1567,26 @@ class LhWaveAnalysisTestCase(unittest.TestCase):
         self.assertGreater(np.max(corrs), 0.99)
         self.assertListEqual(list(phi_eb.comp.data), ["Ebest", "Bs"])
 
+    @data([1.0, 0.0, 0.0], [-1.0, 0.0, 0.0])
+    def test_lh_wave_analysis_b_along_x(self, b_hat):
+        # The wave of _lh_wave with B along +x or -x (axes permuted, z to x,
+        # x reversed for -x): B x x vanished and everything was NaN; the
+        # angles are then from y towards B x y
+        tints, e_xyz, b_scm, b_xyz, n_e, d_vec = _lh_wave(300.0, np.deg2rad(30.0))
+        sign = b_hat[0]
+        e_xyz, b_scm, b_xyz = [
+            pyrf.ts_vec_xyz(inp.time.data, inp.data[:, [2, 0, 1]] * [sign, 1, 1])
+            for inp in [e_xyz, b_scm, b_xyz]
+        ]
+        phi_eb, v_best, dir_best, _, corrs = mms.lh_wave_analysis(
+            tints, e_xyz, b_scm, b_xyz, n_e, min_freq=10.0
+        )
+
+        np.testing.assert_allclose(dir_best, d_vec[[2, 0, 1]], atol=1e-6)
+        self.assertAlmostEqual(v_best, 300.0, delta=1.0)
+        self.assertGreater(np.max(corrs), 0.99)
+        self.assertFalse(np.any(np.isnan(phi_eb.data)))
+
     def test_lh_wave_analysis_vmax(self):
         tints, e_xyz, b_scm, b_xyz, n_e, _ = _lh_wave(1200.0, np.deg2rad(30.0))
         with self.assertLogs("pyrfu", level="WARNING"):

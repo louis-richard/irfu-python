@@ -78,7 +78,9 @@ def lh_wave_analysis(
     dir_best : ndarray
         Best propagation direction (unit vector perpendicular to B).
     thetas : ndarray
-        Angles [rad] of the trial directions in the plane perpendicular to B.
+        Angles [rad] of the trial directions in the plane perpendicular to B,
+        from the component of x perpendicular to B towards B x x (from y
+        towards B x y if B is within 0.06 deg of x), as irfu-matlab.
     corrs : ndarray
         Normalised zero-lag cross-correlation of the potentials for each
         trial direction.
@@ -132,8 +134,13 @@ def lh_wave_analysis(
     b_xyz_tc = time_clip(b_xyz, tints)
     b_mean = np.mean(b_xyz_tc.data, axis=0)
     b_vec = b_mean / np.linalg.norm(b_mean)
-    r_temp = [1, 0, 0]
-    bxr = np.cross(b_vec, r_temp)
+    bxr = np.cross(b_vec, [1.0, 0.0, 0.0])
+
+    # Reference y instead of x if B is (nearly) along x, where B x x vanishes
+    # (irfu-matlab gives NaN)
+    if np.linalg.norm(bxr) < 1e-3:
+        bxr = np.cross(b_vec, [0.0, 1.0, 0.0])
+
     bxr /= np.linalg.norm(bxr)
     bxrxb = np.cross(bxr, b_vec)
 
