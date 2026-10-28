@@ -6494,6 +6494,39 @@ class ReduceTestCase(unittest.TestCase):
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
 
+    def test_reduce_input_handling(self):
+        # lower_e_lim as an int (TypeError), base and dim in capitals (base
+        # was compared case-sensitively), no progress bar with verbose=False
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        stderr = io.StringIO()
+
+        with contextlib.redirect_stderr(stderr):
+            result = mms.reduce(vdf, np.eye(3), lower_e_lim=0, n_mc=5, verbose=False)
+            result_2d = mms.reduce(vdf, np.eye(3), "2D", "CART", n_mc=5, verbose=False)
+
+        self.assertEqual(result.shape, (3, 64))
+        self.assertEqual(result_2d.shape, (3, 100, 100))
+        self.assertEqual(stderr.getvalue(), "")
+
+        with self.assertRaisesRegex(ValueError, "base must be"):
+            mms.reduce(vdf, np.eye(3), "1d", "sph")
+
+    def test_reduce_no_channel(self):
+        # V_sc above every channel at the first time: NaN there (IndexError),
+        # the grid from the next time; at all times: ValueError
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.array([1e3, 0.0, 0.0]))
+        result = mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
+
+        self.assertTrue(np.all(np.isnan(result.data[0])))
+        self.assertTrue(np.all(np.isfinite(result.data[1:])))
+        self.assertGreater(np.max(np.abs(result.vx.data)), 0.0)
+
+        sc_pot.data[:] = 1e3
+
+        with self.assertRaisesRegex(ValueError, "no energy channel"):
+            mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
+
     def test_reduce_default_phi_grid(self):
         # Default azimuthal grid has one point per instrument azimuth. phi is
         # (time, phi), so len(phi) gave one point per time step (5 here).
