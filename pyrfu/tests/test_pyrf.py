@@ -4383,6 +4383,76 @@ class LowPassTestCase(unittest.TestCase):
     def test_lowpass_output(self, value):
         pyrf.lowpass(value, random.random(), 64.0)
 
+    @staticmethod
+    def _signal(f_s, n_pts, f_low, n_comp=1):
+        # A slow sine, white noise and a trend
+        t_s = np.arange(n_pts) / f_s
+        noise = np.random.default_rng(0).normal(size=(n_pts, n_comp))
+        slow = np.sin(2 * np.pi * f_low * t_s)[:, None] + 0.01 * t_s[:, None]
+        time = generate_timeline(f_s, n_pts)
+
+        if n_comp == 1:
+            return pyrf.ts_scalar(time, (slow + noise)[:, 0]), slow[:, 0]
+
+        return pyrf.ts_vec_xyz(time, slow + noise, {"UNITS": "mV/m"}), slow
+
+    def test_lowpass_matlab(self):
+        # irf_lowpass: detrend, elliptic filter (4, 0.1 dB, 60 dB), filtfilt
+        # with MATLAB's padding of 12 samples (scipy's filtfilt used 15, which
+        # changed the first and last samples), trend added back
+        inp, _ = self._signal(64.0, 2000, 0.1, 3)
+        result = pyrf.lowpass(inp, 1.0, 64.0)
+
+        b_coeffs, a_coeffs = signal.ellip(4, 0.1, 60, 1.0 / 32.0)
+        detrended = signal.detrend(inp.data, axis=0)
+        expected = signal.filtfilt(b_coeffs, a_coeffs, detrended, axis=0, padlen=12)
+        expected += inp.data - detrended
+        np.testing.assert_allclose(result.data, expected, atol=1e-10)
+        self.assertEqual(result.attrs["UNITS"], "mV/m")
+
+    def test_lowpass_low_cutoff(self):
+        # 0.1 Hz at 8192 Hz: the (b, a) filter was unstable (outputs of 40
+        # for an input of about 1 over 16 s)
+        inp, _ = self._signal(8192.0, 2**17, 0.01)
+        result = pyrf.lowpass(inp, 0.1, 8192.0)
+
+        self.assertLess(np.max(np.abs(result.data)), 2.0)
+
+    def test_lowpass_errors(self):
+        inp, _ = self._signal(64.0, 100, 0.1)
+
+        with self.assertRaises(TypeError):
+            pyrf.lowpass(inp.data, 1.0, 64.0)
+
+        for f_cut in [0.0, 32.0, 40.0]:
+            with self.assertRaisesRegex(ValueError, "f_cut must be"):
+                pyrf.lowpass(inp, f_cut, 64.0)
+
+        with self.assertRaisesRegex(ValueError, "more than 12 samples"):
+            pyrf.lowpass(inp[:12], 1.0, 64.0)
+
+        inp.data[50] = np.nan
+
+        with self.assertRaisesRegex(ValueError, "NaN"):
+            pyrf.lowpass(inp, 1.0, 64.0)
+
+    def test_lowpass_f_s(self):
+        # f_s, as resample and wavelet, by default from the time series; fhz
+        # (its former name) still accepted with a FutureWarning
+        inp, _ = self._signal(64.0, 500, 0.1)
+        expected = pyrf.lowpass(inp, 1.0, 64.0)
+
+        xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0), expected)
+        xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0, f_s=64.0), expected)
+
+        with self.assertWarns(FutureWarning):
+            xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0, fhz=64.0), expected)
+
+        with self.assertRaisesRegex(ValueError, "f_s only"):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                pyrf.lowpass(inp, 1.0, f_s=64.0, fhz=64.0)
+
 
 @ddt
 class LShellTestCase(unittest.TestCase):
