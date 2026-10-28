@@ -8515,15 +8515,29 @@ class TokenizeTestCase(unittest.TestCase):
                         self.assertSetEqual(cdf_coords, key_coords)
 
     @data(
-        "tsi_fpi_brst_l2",
-        "qe_gse_fpi_brst_l2",
+        "es12_dsl_edp_fast_l2a",
+        "adcoff_edp_slow_l2a",
         "phplus_gsm_hpca_brst_l2",
-        "e_dsl_edi_srvy_l2",
+        "flux-amb-pm2_edi_brst_l2",
         "energye_fpi_fast_ql",
     )
     def test_tokenize_unsupported(self, var_str):
         # Valid parts, but not in mms_keys.json: a clear ValueError, not KeyError
         with self.assertRaisesRegex(ValueError, "not supported"):
+            mms.tokenize(var_str)
+
+    @data(
+        "tsi_fpi_brst_l2",
+        "tse_fpi_fast_l2",
+        "epar_edp_brst_l2",
+        "nbge_fpi_brst_l2",
+        "pbge_fpi_fast_l2",
+        "defbge_fpi_brst_l2",
+    )
+    def test_tokenize_removed_parameters(self, var_str):
+        # Parameters without data (no FPI DES background, scalar temperatures
+        # computed in irfu-matlab, epar the e_par keys): invalid parameters
+        with self.assertRaisesRegex(ValueError, "invalid parameter"):
             mms.tokenize(var_str)
 
     @data(

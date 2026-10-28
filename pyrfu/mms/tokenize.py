@@ -16,6 +16,10 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 
+# Parameters with keys in mms_keys.json, or kept for keys to come (irfu-matlab
+# names: energyi/e, es12/34, adcoff, flux-amb-pm2). Removed for want of data:
+# nbge, pbge, defbge (the FPI background is DIS only), tsi, tse (computed in
+# irfu-matlab: the trace of ti_dbcs or te_dbcs / 3) and epar (the e_par keys)
 ALL_PARAMS_SCALARS = [
     "ni",
     "errni",
@@ -25,16 +29,12 @@ ALL_PARAMS_SCALARS = [
     "partidxi",
     "ne",
     "errne",
-    "pbge",
-    "nbge",
     "partne",
     "partidxe",
-    "tsi",
     "tperpi",
     "tparai",
     "parttperpi",
     "parttparai",
-    "tse",
     "tperpe",
     "tparae",
     "parttperpe",
@@ -49,10 +49,8 @@ ALL_PARAMS_SCALARS = [
     "defi",
     "defbgi",
     "defe",
-    "defbge",
     "energyi",
     "energye",
-    "epar",
     "sdev12",
     "sdev34",
     "flux-amb-pm2",
