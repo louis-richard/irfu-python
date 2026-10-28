@@ -363,6 +363,54 @@ class C4VTestCase(unittest.TestCase):
         result = pyrf.c_4_v(r_xyz, [t_cross[0], *velocity])
         np.testing.assert_allclose(result, delta_t, atol=1e-9)
 
+    @staticmethod
+    def _moving_crossing(drift):
+        # A plane moving at 7.6 km/s (in the frame of the positions) past a
+        # formation drifting at drift (km/s): exact crossing times
+        time = generate_timeline(1.0, 30)
+        t_s = np.arange(30.0)
+        offsets = np.array(
+            [[0, 0, 0], [20, 0, 0], [10, 17, 0], [10, 6, 16]], dtype=float
+        )
+        r_xyz = [pyrf.ts_vec_xyz(time, o + np.outer(t_s, drift)) for o in offsets]
+        velocity = np.array([-6.0, 2.5, 4.0])
+        speed, n_hat = np.linalg.norm(velocity), velocity / np.linalg.norm(velocity)
+        # n.(r_a(t)) = n.(r_1(10)) + speed (t - 10)
+        r_1 = offsets[0] + 10.0 * np.asarray(drift)
+        t_cross = (offsets @ n_hat - r_1 @ n_hat + 10.0 * speed) / (
+            speed - np.asarray(drift) @ n_hat
+        )
+        t_cross = time[0] + np.round(t_cross * 1e9).astype("timedelta64[ns]")
+        return r_xyz, t_cross, velocity
+
+    def test_c_4_v_frames(self):
+        # Moving spacecraft: in the frame of the positions (irfu-matlab), the
+        # velocity of the plane; relative to the spacecraft (default), the
+        # speed differs by the velocity of the spacecraft along the normal
+        drift = np.array([2.0, -1.5, 1.0])
+        r_xyz, t_cross, velocity = self._moving_crossing(drift)
+        n_hat = velocity / np.linalg.norm(velocity)
+        v_rel = velocity - (drift @ n_hat) * n_hat
+
+        np.testing.assert_allclose(
+            pyrf.c_4_v(r_xyz, t_cross, frame="positions"), velocity, rtol=1e-6
+        )
+        np.testing.assert_allclose(pyrf.c_4_v(r_xyz, t_cross), v_rel, rtol=1e-6)
+
+        # From the velocity, the time shifts (to the ns rounding)
+        delta_t = (t_cross - t_cross[0]).astype(np.int64) * 1e-9
+        result = pyrf.c_4_v(r_xyz, [t_cross[0], *velocity], frame="positions")
+        np.testing.assert_allclose(result, delta_t, atol=1e-8)
+        result = pyrf.c_4_v(r_xyz, [t_cross[0], *v_rel])
+        np.testing.assert_allclose(result, delta_t, atol=1e-8)
+
+        with self.assertRaisesRegex(ValueError, "frame must be"):
+            pyrf.c_4_v(r_xyz, t_cross, frame="gse")
+
+        # Spacecraft faster than the plane along its normal: no crossing
+        with self.assertRaisesRegex(ValueError, "no crossing times"):
+            pyrf.c_4_v(r_xyz, [t_cross[0], *(0.1 * n_hat)], frame="positions")
+
 
 class C4VXcorrTestCase(unittest.TestCase):
     # Tetrahedron of ~10 km and velocity of the structure
@@ -637,6 +685,34 @@ class C4VXcorrTestCase(unittest.TestCase):
         np.testing.assert_allclose(res_new["tau"], res["tau"], atol=1e-6 / self.F_S)
         np.testing.assert_allclose(res_new["dtau2"], res["dtau2"], rtol=1e-6)
         np.testing.assert_allclose(res_new["scale"], res["scale"], rtol=1e-9)
+
+    def test_c_4_v_xcorr_frame(self):
+        # A formation drifting at d (km/s) past the hole (delays to the
+        # positions at the middle of tint): relative to the spacecraft
+        # (default) the velocity of the hole, in the frame of the positions
+        # the speed along the normal plus d.n
+        s_mms, _, tau_true = self._synthetic(self._hole)
+        tint = self._tint(0.002)
+        t_mid = (
+            np.datetime64(tint[0])
+            + (np.datetime64(tint[1]) - np.datetime64(tint[0])) / 2
+        )
+        t_r = self.T_0 + np.array([-60, 0, 60, 120], dtype="timedelta64[s]")
+        d_t = (t_r - t_mid).astype(np.int64) * 1e-9
+        drift = np.array([50.0, -30.0, 20.0])
+        r_mms = [pyrf.ts_vec_xyz(t_r, r_a + np.outer(d_t, drift)) for r_a in self.R_XYZ]
+        n_hat = self.V_XYZ / np.linalg.norm(self.V_XYZ)
+        speed = np.linalg.norm(self.V_XYZ)
+
+        res = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=0.03)
+        np.testing.assert_allclose(res["v"], self.V_XYZ, rtol=1e-5)
+
+        res = pyrf.c_4_v_xcorr(tint, s_mms, r_mms, max_lag=0.03, frame="positions")
+        np.testing.assert_allclose(res["tau"], tau_true, atol=1e-3 / self.F_S)
+        np.testing.assert_allclose(res["v"], (speed + drift @ n_hat) * n_hat, rtol=1e-5)
+
+        with self.assertRaisesRegex(ValueError, "frame must be"):
+            pyrf.c_4_v_xcorr(tint, s_mms, r_mms, frame="gse")
 
     def test_c_4_v_xcorr_fit_invalid(self):
         s_mms, r_mms, _ = self._synthetic(self._hole)
@@ -923,6 +999,24 @@ class C4GradTestCase(unittest.TestCase):
         result = pyrf.c_4_grad(r_mms, n_mms, "grad")
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
+
+    def test_c_4_grad_curvature(self):
+        # Circular field lines of radius R_c about z: the curvature is 1 / R_c
+        # towards the centre, the average of the four unit vectors not
+        # normalised (as irfu-matlab): 0.997 / R_c at L / R_c = 0.3
+        time = generate_timeline(1.0, 4)
+        tetrahedron = np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+        r_c = 1000.0
+
+        for size, ratio in [(10.0, 1.0), (300.0, 0.99731)]:
+            pos = [r_c, 0.0, 0.0] + size * tetrahedron / np.sqrt(3)
+            b_hat = np.column_stack([-pos[:, 1], pos[:, 0], 0 * pos[:, 0]])
+            b_hat /= np.linalg.norm(b_hat, axis=1, keepdims=True)
+            r_mms = [pyrf.ts_vec_xyz(time, np.tile(p, (4, 1))) for p in pos]
+            b_mms = [pyrf.ts_vec_xyz(time, np.tile(20 * b, (4, 1))) for b in b_hat]
+            curv = pyrf.c_4_grad(r_mms, b_mms, "curv").data[0]
+
+            np.testing.assert_allclose(curv * r_c, [-ratio, 0.0, 0.0], atol=1e-4)
 
 
 class C4JTestCase(unittest.TestCase):
@@ -4058,6 +4152,51 @@ class IntegrateTestCase(unittest.TestCase):
         result = pyrf.integrate(value)
         self.assertIsInstance(result, xr.DataArray)
 
+    @staticmethod
+    def _time(t_s):
+        t_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+        return t_0 + np.round(np.asarray(t_s) * 1e9).astype("timedelta64[ns]")
+
+    def test_integrate_values(self):
+        # Sum of x(t_i) (t_i - t_(i-1)), exact to the ns at 2019 epochs (the
+        # times were rounded to 256 ns: 6e-5 of a 256 Hz step)
+        t_s = np.arange(2561) / 256.0
+        values = np.cos(2 * np.pi * 3.0 * t_s)
+        result = pyrf.integrate(pyrf.ts_scalar(self._time(t_s), values))
+
+        expected = np.cumsum(values * np.r_[0.0, np.full(2560, 1 / 256.0)])
+        np.testing.assert_allclose(result.data, expected, rtol=0, atol=1e-14)
+
+    def test_integrate_gaps_nan(self):
+        # A step over 3 time_step is a gap (not integrated); a NaN sample is
+        # NaN and not integrated, nor its step
+        t_s = np.array([0.0, 1.0, 2.0, 3.0, 10.0, 11.0])
+        values = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0])
+        result = pyrf.integrate(pyrf.ts_scalar(self._time(t_s), values))
+        np.testing.assert_allclose(result.data, [0, 2, np.nan, 6, 6, 12])
+
+        # A given time_step: the 7 s step is no gap with 3 s
+        result = pyrf.integrate(pyrf.ts_scalar(self._time(t_s), values), 3.0)
+        np.testing.assert_allclose(result.data, [0, 2, np.nan, 6, 41, 47])
+
+    def test_integrate_shapes(self):
+        # Two samples, a (time, 1) array and a tensor, the units times s
+        time = self._time([0.0, 0.5, 1.0])
+        result = pyrf.integrate(pyrf.ts_scalar(time[:2], np.array([2.0, 4.0])))
+        np.testing.assert_allclose(result.data, [0.0, 2.0])
+
+        inp = xr.DataArray(np.ones((3, 1)), coords=[time, [0]], dims=["time", "c"])
+        np.testing.assert_allclose(pyrf.integrate(inp).data, [[0.0], [0.5], [1.0]])
+
+        inp = pyrf.ts_tensor_xyz(time, np.ones((3, 3, 3)))
+        np.testing.assert_allclose(pyrf.integrate(inp).data[:, 1, 2], [0.0, 0.5, 1.0])
+
+        inp = pyrf.ts_vec_xyz(time, np.ones((3, 3)), attrs={"UNITS": "mV/m"})
+        self.assertEqual(pyrf.integrate(inp).attrs["UNITS"], "(mV/m)*s")
+
+        with self.assertRaises(TypeError):
+            pyrf.integrate(inp.data)
+
 
 class IPlasmaCalcTestCase(unittest.TestCase):
     def test_iplasma_calc_output(self):
@@ -4577,6 +4716,43 @@ class MvaTestCase(unittest.TestCase):
             handedness = np.dot(np.cross(lmn[:, 0], lmn[:, 1]), lmn[:, 2])
             self.assertAlmostEqual(handedness, 1.0, places=6)
 
+    def test_mva_bn0_eigenvalue(self):
+        # With "<bn>=0", l[2] is the constrained minimum variance n.M.n (from
+        # M n = l n + mu <B> and <B>.n = 0), above the unconstrained one; it
+        # was the variance along n of the field without B.n, zero
+        b_xyz, _ = self._field()
+        b_lmn, lamb, lmn = pyrf.mva(b_xyz, "<bn>=0")
+        cov = np.cov(b_xyz.data.T, bias=True)
+
+        self.assertAlmostEqual(np.mean(b_lmn.data[:, 2]), 0.0, places=10)
+        self.assertAlmostEqual(lamb[2], lmn[:, 2] @ cov @ lmn[:, 2], places=10)
+        self.assertGreater(lamb[2], pyrf.mva(b_xyz)[1][2])
+
+    @data("mvar", "<bn>=0", "td")
+    def test_mva_nan(self, flag):
+        # NaN samples are ignored, as irf_minvar (they raised LinAlgError)
+        b_xyz, _ = self._field()
+        b_nan = b_xyz.copy()
+        b_nan.data[[10, 500, 1500]] = np.nan
+        b_lmn, lamb, lmn = pyrf.mva(b_nan, flag)
+        _, lamb_ref, lmn_ref = pyrf.mva(b_xyz.drop_isel(time=[10, 500, 1500]), flag)
+
+        np.testing.assert_allclose(lamb, lamb_ref, rtol=1e-10)
+        np.testing.assert_allclose(lmn, lmn_ref, atol=1e-10)
+        self.assertTrue(np.all(np.isnan(b_lmn.data[[10, 500, 1500]])))
+
+    def test_mva_errors(self):
+        b_xyz, _ = self._field()
+
+        with self.assertRaises(TypeError):
+            pyrf.mva(b_xyz.data)
+
+        with self.assertRaisesRegex(ValueError, "3D vectors"):
+            pyrf.mva(b_xyz[:, :2])
+
+        with self.assertRaisesRegex(ValueError, "flag must be"):
+            pyrf.mva(b_xyz, "minvar")
+
 
 @ddt
 class NewXyzTestCase(unittest.TestCase):
@@ -4660,6 +4836,31 @@ class StructFuncTestCase(unittest.TestCase):
     def test_struct_func_output(self, inp, scales, order):
         result = pyrf.struct_func(inp, scales, order)
         self.assertIsInstance(result, xr.DataArray)
+
+    def test_struct_func_values(self):
+        # Ramps of slopes a: |x_i - x_(i+s)|^o = (s |a|)^o at every i; a
+        # single scale, list or int, keeps the scales dimension (it failed)
+        slopes = np.array([0.5, -2.0, 1.0])
+        inp = pyrf.ts_vec_xyz(
+            generate_timeline(64.0, 100), np.arange(100.0)[:, None] * slopes
+        )
+
+        result = pyrf.struct_func(inp, [1, 3], 2)
+        np.testing.assert_allclose(result.data, (np.outer([1, 3], np.abs(slopes))) ** 2)
+        self.assertEqual(result.attrs["order"], 2)
+
+        for scales in [[3], 3]:
+            result = pyrf.struct_func(inp, scales, 3)
+            self.assertEqual(result.dims, ("scales", "comp"))
+            np.testing.assert_allclose(result.data, [(3 * np.abs(slopes)) ** 3])
+
+        result = pyrf.struct_func(inp[:, 0], [3], 1)
+        self.assertEqual(result.shape, (1,))
+        np.testing.assert_allclose(result.data, [1.5])
+
+        for scales in [[0, 3], [100], [1.5], []]:
+            with self.assertRaisesRegex(ValueError, "scales must be integers"):
+                pyrf.struct_func(inp, scales, 2)
 
 
 class TraceTestCase(unittest.TestCase):
@@ -5035,6 +5236,51 @@ class ResampleTestCase(unittest.TestCase):
         result = pyrf.resample(inp, ref)
 
         np.testing.assert_allclose(result.data, np.arange(-2.0, 12.0, 0.5))
+
+    def test_resample_methods(self):
+        # The kinds of scipy interp1d ("cubic" is the not-a-knot cubic spline,
+        # MATLAB "spline"); other names are refused with a clear error (they
+        # raised NotImplementedError from scipy)
+        t_s = np.arange(64) / 64.0
+        t_q = t_s + 0.3 / 64.0
+        values = np.sin(2 * np.pi * 3 * t_s) + 0.5 * np.cos(2 * np.pi * 7 * t_s)
+        inp, ref = self._ts(t_s, values), self._ts(t_q, np.zeros(64))
+        expected = {
+            "linear": np.interp(t_q[:-1], t_s, values),
+            "cubic": interpolate.CubicSpline(t_s, values)(t_q[:-1]),
+        }
+
+        for method, values_q in expected.items():
+            result = pyrf.resample(inp, ref, method=method)
+            np.testing.assert_allclose(result.data[:-1], values_q, atol=1e-12)
+
+        with self.assertRaisesRegex(ValueError, 'MATLAB "spline" is "cubic"'):
+            pyrf.resample(inp, ref, method="spline")
+
+        with self.assertRaisesRegex(ValueError, "method must be one of"):
+            pyrf.resample(inp, ref, method="pchip")
+
+        # NaN, as MATLAB interp1 (R2024a): next to it with "linear"; skipped
+        # by "cubic", each component through its finite samples ("cubic" gave
+        # NaN at all the times), also at the ends
+        values_2 = np.column_stack([values, np.cos(2 * np.pi * 5 * t_s)])
+        values_2[[0, 10], 0] = np.nan
+        inp = pyrf.ts_vec_xyz(inp.time.data, np.column_stack([values_2, values]))
+
+        self.assertEqual(np.isnan(pyrf.resample(inp, ref).data).sum(), 3)
+
+        result = pyrf.resample(inp, ref, method="cubic").data
+        finite = np.isfinite(values_2[:, 0])
+        np.testing.assert_allclose(
+            result[:, 0],
+            interpolate.CubicSpline(t_s[finite], values_2[finite, 0])(t_q),
+            atol=1e-12,
+        )
+        np.testing.assert_allclose(
+            result[:, 1],
+            interpolate.CubicSpline(t_s, values_2[:, 1])(t_q),
+            atol=1e-12,
+        )
 
 
 @ddt
@@ -5682,6 +5928,43 @@ class SolidAngleTestCase(unittest.TestCase):
         result = pyrf.solid_angle(inp0, inp1, inp2)
         self.assertIsInstance(result, np.ndarray)
 
+    def test_solid_angle_values(self):
+        x_hat, y_hat, z_hat = np.eye(3)
+
+        # Octant, with the sign of (inp2 x inp1) . inp0; any lengths
+        np.testing.assert_allclose(pyrf.solid_angle(x_hat, y_hat, z_hat), -np.pi / 2)
+        np.testing.assert_allclose(pyrf.solid_angle(x_hat, z_hat, y_hat), np.pi / 2)
+        inp = [[1.0, 0.2, 0.1], [0.1, 1.0, 0.3], [0.2, 0.1, 1.0]]
+        np.testing.assert_allclose(
+            pyrf.solid_angle(*[2 * np.array(v) for v in inp]),
+            pyrf.solid_angle(*[np.array(v) / np.linalg.norm(v) for v in inp]),
+        )
+
+        # Small and large triangles, against a 50-digit evaluation of the
+        # spherical excess (the law of cosines gave +7.5e-11 sr for the small
+        # one with unit vectors, NaN with these, and -6.2507 for the large)
+        eps = 1e-5
+        np.testing.assert_allclose(
+            pyrf.solid_angle(z_hat, [eps, 0, 1], [0, eps, 1]),
+            -4.999999999750001e-11,
+            rtol=1e-9,
+        )
+        np.testing.assert_allclose(
+            pyrf.solid_angle(x_hat, [-0.5, 0.866, 0], [-0.5, -0.866, 0.01]),
+            -6.2485455149282565,
+            rtol=1e-12,
+        )
+
+        # Degenerate triangle (it gave NaN)
+        self.assertEqual(pyrf.solid_angle(x_hat, x_hat, y_hat)[0], 0.0)
+
+    def test_solid_angle_errors(self):
+        with self.assertRaises(TypeError):
+            pyrf.solid_angle(1.0, [0, 1, 0], [0, 0, 1])
+
+        with self.assertRaisesRegex(ValueError, "inp1 must be a vector"):
+            pyrf.solid_angle([1, 0, 0], [0, 1], [0, 0, 1])
+
 
 @ddt
 class Sph2CartTestCase(unittest.TestCase):
@@ -5692,6 +5975,44 @@ class Sph2CartTestCase(unittest.TestCase):
     @unpack
     def test_sph2cart_output(self, azimuth, elevation, r):
         self.assertIsNotNone(pyrf.sph2cart(azimuth, elevation, r))
+
+    def test_sph2cart_colatitude(self):
+        # The second angle is the colatitude, as returned by cart2sph
+        np.testing.assert_allclose(pyrf.sph2cart(0.0, 0.0, 2.0), [0.0, 0.0, 2.0])
+        np.testing.assert_allclose(
+            pyrf.sph2cart(np.pi / 2, np.pi / 2, 1.0), [0.0, 1.0, 0.0], atol=1e-15
+        )
+        xyz = np.random.default_rng(0).normal(size=(3, 50))
+        np.testing.assert_allclose(pyrf.sph2cart(*pyrf.cart2sph(*xyz)), xyz)
+
+
+class StDiffTestCase(unittest.TestCase):
+    def test_st_diff_values(self):
+        # Field B0 + A (r - V t), with A symmetric of eigenvectors l, m, n
+        # (the MDD frame): the velocity along l, m and n is that of V; for a
+        # one-dimensional structure (gradient along n only), along n
+        rng = np.random.default_rng(0)
+        lmn = np.linalg.qr(rng.normal(size=(3, 3)))[0]
+        lmn[:, 2] = np.cross(lmn[:, 0], lmn[:, 1])
+        v_xyz, b_0 = np.array([100.0, -50.0, 20.0]), np.array([5.0, -3.0, 20.0])
+        r_sc = 10.0 * rng.normal(size=(4, 3))
+        time = generate_timeline(1.0, 10)
+        t_s = np.arange(10.0)
+
+        for g_lmn, comps in [([0.3, 0.1, 0.5], [0, 1, 2]), ([0.0, 0.0, 0.5], [2])]:
+            a_mat = lmn @ np.diag(g_lmn) @ lmn.T
+            r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (10, 1))) for r in r_sc]
+            b_mms = [
+                pyrf.ts_vec_xyz(time, b_0 + (r - t_s[:, None] * v_xyz) @ a_mat.T)
+                for r in r_sc
+            ]
+
+            v_str = pyrf.st_diff(r_mms, b_mms, lmn)
+
+            np.testing.assert_allclose(
+                v_str.data[:, comps], np.tile(lmn.T @ v_xyz, (10, 1))[:, comps]
+            )
+            self.assertEqual(v_str.attrs["COORDINATE_SYSTEM"], "lmn")
 
 
 class StartTestCase(unittest.TestCase):

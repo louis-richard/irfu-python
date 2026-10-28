@@ -1567,6 +1567,26 @@ class LhWaveAnalysisTestCase(unittest.TestCase):
         self.assertGreater(np.max(corrs), 0.99)
         self.assertListEqual(list(phi_eb.comp.data), ["Ebest", "Bs"])
 
+    @data([1.0, 0.0, 0.0], [-1.0, 0.0, 0.0])
+    def test_lh_wave_analysis_b_along_x(self, b_hat):
+        # The wave of _lh_wave with B along +x or -x (axes permuted, z to x,
+        # x reversed for -x): B x x vanished and everything was NaN; the
+        # angles are then from y towards B x y
+        tints, e_xyz, b_scm, b_xyz, n_e, d_vec = _lh_wave(300.0, np.deg2rad(30.0))
+        sign = b_hat[0]
+        e_xyz, b_scm, b_xyz = [
+            pyrf.ts_vec_xyz(inp.time.data, inp.data[:, [2, 0, 1]] * [sign, 1, 1])
+            for inp in [e_xyz, b_scm, b_xyz]
+        ]
+        phi_eb, v_best, dir_best, _, corrs = mms.lh_wave_analysis(
+            tints, e_xyz, b_scm, b_xyz, n_e, min_freq=10.0
+        )
+
+        np.testing.assert_allclose(dir_best, d_vec[[2, 0, 1]], atol=1e-6)
+        self.assertAlmostEqual(v_best, 300.0, delta=1.0)
+        self.assertGreater(np.max(corrs), 0.99)
+        self.assertFalse(np.any(np.isnan(phi_eb.data)))
+
     def test_lh_wave_analysis_vmax(self):
         tints, e_xyz, b_scm, b_xyz, n_e, _ = _lh_wave(1200.0, np.deg2rad(30.0))
         with self.assertLogs("pyrfu", level="WARNING"):
@@ -2475,6 +2495,118 @@ class PadDiffusionTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.pad_diffusion(vdf, 0.1)
+
+
+class ProbeFieldsTestCase(unittest.TestCase):
+    # Probes 1-4 60 m from the centre along +x, -x, +y, -y, probes 5 and 6
+    # 14.6 m along +z and -z (the frame of the probes)
+    R_PROBES = np.array(
+        [[60, 0, 0], [-60, 0, 0], [0, 60, 0], [0, -60, 0], [0, 0, 14.6], [0, 0, -14.6]]
+    )
+
+    @staticmethod
+    def _v6(time, pot):
+        return xr.DataArray(pot, coords=[time, np.arange(1, 7)], dims=["time", "probe"])
+
+    def test_probe_fields_uniform_field(self):
+        # In a uniform field E (V/m) with the spacecraft at -10 V, each field
+        # Eij is the component of E along the direction from probe i to j
+        rng = np.random.default_rng(0)
+        e_xyz = rng.normal(size=(50, 3)) * 1e-3
+        pot = -10.0 - e_xyz @ self.R_PROBES.T
+        out = mms.probe_fields(
+            self._v6(generate_timeline(8192.0, 50), pot), timing=None
+        )
+
+        np.testing.assert_allclose(out.v.data, pot)
+        np.testing.assert_allclose(out.v_sc.data, -10.0)
+
+        def along(i, j):
+            unit = self.R_PROBES[j - 1] - self.R_PROBES[i - 1]
+            return e_xyz @ (unit / np.linalg.norm(unit)) * 1e3
+
+        expected = {
+            "e_probe": [along(1, 2)] * 2 + [along(3, 4)] * 2 + [along(5, 6)] * 2,
+            "e_diag": [along(1, 3), along(1, 4), along(2, 3), along(2, 4)],
+            "e_pair": [along(1, 2), along(3, 4), along(5, 6)],
+        }
+
+        for name, columns in expected.items():
+            np.testing.assert_allclose(out[name].data, np.transpose(columns))
+
+        self.assertEqual(out.e_probe.attrs["UNITS"], "mV/m")
+        self.assertEqual((out.l_spin, out.l_axial), (120.0, 29.2))
+        self.assertAlmostEqual(out.d_diag, 60.0 * np.sqrt(2))
+
+    def test_probe_fields_boom_shortening(self):
+        # Effective lengths 96 m and 14.5 m (Pedersen et al. 1998)
+        pot = np.random.default_rng(1).normal(size=(20, 6))
+        v6 = self._v6(generate_timeline(8192.0, 20), pot)
+        out = mms.probe_fields(v6, timing=None, boom_shortening=True)
+
+        self.assertEqual((out.l_spin, out.l_axial), (96.0, 14.5))
+        np.testing.assert_allclose(
+            out.e_pair.sel(boom="12").data, (pot[:, 0] - pot[:, 1]) / 96.0 * 1e3
+        )
+
+    def test_probe_fields_timing(self):
+        # Potentials sampled with the channel delays of the burst mode: the
+        # DFT shift gives them at the times of V1 (exact for periodic
+        # band-limited signals), the interpolation is that of
+        # correct_edp_probe_timing
+        n_t, f_s = 256, 8192.0
+        t_s = np.arange(n_t) / f_s
+
+        def true(t_k):
+            # Potential of probe k at the times t_k: periodic on the window
+            freqs = np.array([3, 17, 40, 90]) * f_s / n_t
+            phases = np.arange(6)[:, None] * 0.7
+            return np.sum(
+                np.cos(2 * np.pi * freqs[None, :, None] * t_k + phases[:, :, None]),
+                axis=1,
+            )
+
+        def at(delay_us):
+            return true(t_s + delay_us * 1e-6)
+
+        p_0, p_3, p_5 = at(0.0), at(7.629), at(15.259)
+        p_12, p_34, p_56 = at(26.703), at(30.518), at(34.332)
+        sampled = np.column_stack(
+            [
+                p_0[0],
+                p_0[0] - (p_12[0] - p_12[1]),
+                p_3[2],
+                p_3[2] - (p_34[2] - p_34[3]),
+                p_5[4],
+                p_5[4] - (p_56[4] - p_56[5]),
+            ]
+        )
+        v6 = self._v6(generate_timeline(f_s, n_t), sampled)
+
+        # To the rounding of the time tags to the ns (at 8192 Hz)
+        out = mms.probe_fields(v6)
+        np.testing.assert_allclose(out.v.data, p_0.T, atol=1e-7)
+        self.assertEqual(out.timing, "dft")
+
+        out = mms.probe_fields(v6, timing="resample")
+        np.testing.assert_array_equal(out.v.data, mms.correct_edp_probe_timing(v6).data)
+
+    def test_probe_fields_errors(self):
+        v6 = self._v6(generate_timeline(8192.0, 20), np.zeros((20, 6)))
+
+        with self.assertRaises(TypeError):
+            mms.probe_fields(v6.data)
+
+        with self.assertRaisesRegex(ValueError, "six probes"):
+            mms.probe_fields(v6[:, :4])
+
+        with self.assertRaisesRegex(ValueError, "timing must be"):
+            mms.probe_fields(v6, timing="linear")
+
+        v6.data[3, 2] = np.nan
+
+        with self.assertRaisesRegex(ValueError, "NaN"):
+            mms.probe_fields(v6)
 
 
 class ProbeAlignTimesTestCase(unittest.TestCase):
@@ -4866,6 +4998,129 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
         )
 
 
+class FkPowerSpectrumTestCase(unittest.TestCase):
+    # A plane wave of potential cos(k.r - 2 pi f t) seen by the six probes of a
+    # spacecraft spinning in 20 s, sampled with the channel delays of the
+    # burst mode (as v6_edp_brst_l2)
+    F_S = 8192.0
+    T_0 = np.datetime64("2019-01-01T00:00:00", "ns")
+
+    def _probes(self, t_s, phase_0):
+        # Positions (m) of the six probes at the times t_s (s), probe k in the
+        # spin plane at the spin phase + 30, 210, 120 and 300 deg
+        phase = np.deg2rad(phase_0 + 18.0 * t_s)
+        spin_plane = [
+            60.0 * np.column_stack([np.cos(phase + p), np.sin(phase + p), 0 * t_s])
+            for p in np.deg2rad([30.0, 210.0, 120.0, 300.0])
+        ]
+        axial = [np.tile([0.0, 0.0, z], (len(t_s), 1)) for z in [14.6, -14.6]]
+        return spin_plane + axial
+
+    def _inputs(self, k_vec, f_0, b_xyz, phase_0=0.0):
+        t_s = np.arange(int(2.5 * self.F_S)) / self.F_S
+
+        def pot(k, delay):
+            r_k = self._probes(t_s + delay, phase_0)[k]
+            return -5.0 + np.cos(r_k @ k_vec - 2 * np.pi * f_0 * (t_s + delay))
+
+        # V1, V3 and V5, and V1 - V2, V3 - V4, V5 - V6, sampled after V1
+        d_12, d_34, d_56 = [
+            pot(k, d) - pot(k + 1, d)
+            for k, d in [(0, 26.703e-6), (2, 30.518e-6), (4, 34.332e-6)]
+        ]
+        v_3, v_5 = pot(2, 7.629e-6), pot(4, 15.259e-6)
+        v_1 = pot(0, 0.0)
+        v6 = xr.DataArray(
+            np.column_stack([v_1, v_1 - d_12, v_3, v_3 - d_34, v_5, v_5 - d_56]),
+            coords=[generate_timeline(self.F_S, len(t_s)), np.arange(1, 7)],
+            dims=["time", "probe"],
+        )
+        t_b = np.arange(0.0, 2.5, 1 / 128)
+        b_xyz = pyrf.ts_vec_xyz(
+            self.T_0 + (t_b * 1e9).astype("timedelta64[ns]"),
+            np.tile(b_xyz, (len(t_b), 1)),
+        )
+        t_z = np.arange(0.0, 2.5, 0.25)
+        z_phase = pyrf.ts_scalar(
+            self.T_0 + (t_z * 1e9).astype("timedelta64[ns]"),
+            (phase_0 + 18.0 * t_z) % 360.0,
+        )
+        return v6, b_xyz, z_phase
+
+    def _tint(self, t_1, t_2):
+        times = self.T_0 + (np.array([t_1, t_2]) * 1e9).astype("timedelta64[ns]")
+        return list(pyrf.datetime642iso8601(times))
+
+    def _peak(self, power):
+        # Frequency and wave-number bin [k, k + dk) of the maximum
+        i_f, i_k = np.unravel_index(np.nanargmax(power.data), power.shape)
+        return power.f.data[i_f], power.k.data[i_k], np.diff(power.k.data[:2])[0]
+
+    def test_fk_power_spectrum_axial(self):
+        # Probes 5 and 6: k along z, B along +z or -z; k > 0 along B
+        k_vec = np.array([0.0, 0.0, 2 * np.pi / 200.0])
+
+        for sign in [1.0, -1.0]:
+            v6, b_xyz, _ = self._inputs(k_vec, 500.0, [0.0, 0.0, 20.0 * sign])
+
+            for field in [True, False]:
+                power = mms.fk_power_spectrum(
+                    v6, b_xyz, self._tint(1.0, 1.5), 5, field=field, n_f=50
+                )
+                f_peak, k_peak, d_k = self._peak(power)
+
+                self.assertLessEqual(k_peak, sign * k_vec[2])
+                self.assertLess(sign * k_vec[2], k_peak + d_k)
+                self.assertLess(abs(f_peak / 500.0 - 1.0), 0.1)
+
+        # Wave numbers +-pi / 14.6 m (potentials: 29.2 m), normalised power
+        self.assertEqual(power.dims, ("f", "k"))
+        self.assertEqual(power.k.size, 101)
+        self.assertAlmostEqual(power.k.data[0], -np.pi / 29.2)
+        self.assertEqual(np.nanmax(power.data), 1.0)
+        self.assertGreaterEqual(np.nanmin(power.data), 1e-3)
+        self.assertEqual(power.k.attrs["UNITS"], "rad/m")
+
+    def test_fk_power_spectrum_spin_plane(self):
+        # Probes 1 and 2 (3 and 4) along x at 1.25 s, k and B along x: the
+        # other probes are perpendicular to k
+        k_vec = np.array([2 * np.pi / 1000.0, 0.0, 0.0])
+
+        for probe, phase_0 in [(1, -30.0 - 22.5), (3, -120.0 - 22.5)]:
+            for sign in [1.0, -1.0]:
+                v6, b_xyz, z_phase = self._inputs(
+                    k_vec, 200.0, [20.0 * sign, 0.0, 0.0], phase_0
+                )
+
+                for field in [True, False]:
+                    power = mms.fk_power_spectrum(
+                        v6,
+                        b_xyz,
+                        self._tint(1.2, 1.3),
+                        probe,
+                        z_phase=z_phase,
+                        field=field,
+                        n_f=50,
+                    )
+                    _, k_peak, d_k = self._peak(power)
+
+                    self.assertLessEqual(k_peak, sign * k_vec[0])
+                    self.assertLess(sign * k_vec[0], k_peak + d_k)
+
+    def test_fk_power_spectrum_errors(self):
+        v6, b_xyz, z_phase = self._inputs(np.zeros(3), 200.0, [0.0, 0.0, 20.0])
+        tint = self._tint(1.0, 1.5)
+
+        with self.assertRaisesRegex(ValueError, "probe must be"):
+            mms.fk_power_spectrum(v6, b_xyz, tint, 2, z_phase=z_phase)
+
+        with self.assertRaisesRegex(ValueError, "z_phase"):
+            mms.fk_power_spectrum(v6, b_xyz, tint, 1)
+
+        with self.assertRaisesRegex(ValueError, "at least"):
+            mms.fk_power_spectrum(v6, b_xyz, self._tint(1.0, 1.01), 5)
+
+
 @ddt
 class FkPowerSpectrum4scTestCase(unittest.TestCase):
     @data((None, None), (random.random(), None), (None, [0.1, 1]))
@@ -4917,6 +5172,31 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         for key, value in k_ref.items():
             self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
         self.assertAlmostEqual(result.attrs["f_avg"], 4.0, delta=0.1)
+
+    def test_fk_power_spectrum_4sc_k_bins(self):
+        # The wave numbers are the centres of the bins of the power maps
+        # (linspace(-k_max, k_max, num_k) was up to half a bin off): the peak
+        # of each map within half a bin of the wave vector
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        result = mms.fk_power_spectrum_4sc(
+            e_mms, r_mms, b_mms, tint, num_k=20, f_range=[3, 5]
+        )
+        d_k = float(result.k_x[1] - result.k_x[0])
+        d_k_mag = float(result.k_mag[1] - result.k_mag[0])
+
+        self.assertAlmostEqual(float(result.k_mag[0]), d_k_mag / 2)
+        self.assertAlmostEqual(
+            float(result.k_x[-1]) + d_k / 2, float(result.k_mag[-1]) + d_k_mag / 2
+        )
+
+        for name, value in zip(
+            ["k_x", "k_y", "k_z", "k_mag"], [*k_vec, np.linalg.norm(k_vec)]
+        ):
+            power = np.nan_to_num(result[f"{name}_f"].data)
+            i_k = np.unravel_index(np.argmax(power), power.shape)[0]
+            width = d_k_mag if name == "k_mag" else d_k
+            self.assertLessEqual(abs(result[name].data[i_k] - value / 1e3), width / 2)
 
     def test_fk_power_spectrum_4sc_vector(self):
         # Vector input raised AttributeError; the first component is used

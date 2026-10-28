@@ -230,6 +230,14 @@ def fk_power_spectrum_4sc(
     finite phase difference (e.g., data gaps) or position are left out of
     the power maps.
 
+    The wave numbers are the centres of ``num_k`` bins between -k_max and
+    k_max (0 and k_max for :math:`|k|` and k_perp), with k_max 1.1 times
+    the largest :math:`|k|`, and the averages and standard deviations in
+    the attributes are weighted by the power of each bin. irfu-matlab
+    labels the bins with linspace(-k_max, k_max, num_k) (linspace(0, k_max,
+    num_k)), up to half a bin from their centres, which offsets its averages
+    by up to k_max / num_k.
+
     Examples
     --------
     >>> from pyrfu.mms import get_data, fk_power_spectrum_4sc
@@ -376,9 +384,10 @@ def fk_power_spectrum_4sc(
     dt24 = th24 / w_mat
     dt34 = th34 / w_mat
 
-    # Weighted averaged time delay using all spacecraft pairs.
-    # CHANGED: noted per review that the 0.5/0.2/0.1 weights are otherwise
-    # undocumented magic numbers with no cited source in this docstring.
+    # Delays of spacecraft 2, 3 and 4 from spacecraft 1, each the weighted
+    # average of four estimates from the measured pairs (e.g., for t2 - t1:
+    # dt12, dt13 - dt23, dt14 - dt24 and dt14 - dt34 - dt23), with the weights
+    # 0.5, 0.2, 0.2 and 0.1 of irfu-matlab mms.fk_powerspec4SC
     dt2 = (
         0.5 * dt12
         + 0.2 * (dt13 - dt23)
@@ -463,11 +472,14 @@ def fk_power_spectrum_4sc(
     # Determine the maximum and minimum wave numbers
     k_max = np.max(k_mag) * 1.1
     k_min = -k_max
-    k_vec = np.linspace(-k_max, k_max, num_k)
-    k_mag_vec = np.linspace(0, k_max, num_k)
-
     dk_mag = k_max / num_k
     dk = 2 * k_max / num_k
+
+    # Centres of the bins of the power maps, num_k of width dk from k_min (of
+    # width dk_mag from 0 for |k| and k_perp); irfu-matlab labels them with
+    # linspace(k_min, k_max, num_k), up to half a bin off
+    k_vec = k_min + (np.arange(num_k) + 0.5) * dk
+    k_mag_vec = (np.arange(num_k) + 0.5) * dk_mag
 
     # Sort power into frequency and wave vector
     logger.info("Computing power versus (kx,f); (ky,f), (kz,f), (k,f)")

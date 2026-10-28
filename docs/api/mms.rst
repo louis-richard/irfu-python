@@ -80,6 +80,7 @@ Fields, coordinates and spacecraft potential
    fft_bandpass
    scpot2ne
    probe_align_times
+   probe_fields
    mms4_displacement
 
 Waves
@@ -89,6 +90,7 @@ Waves
    :toctree: generated/
    :nosignatures:
 
+   fk_power_spectrum
    fk_power_spectrum_4sc
    lh_wave_analysis
    whistler_b2e
