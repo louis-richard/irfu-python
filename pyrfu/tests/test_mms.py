@@ -2916,6 +2916,29 @@ class PsdMomentsTestCase(unittest.TestCase):
             p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
         )
 
+    @data(False, True)
+    def test_psd_moments_no_warnings(self, relativistic):
+        # Electrons with V_sc above the lowest channel (unused speeds warned
+        # "invalid value in sqrt"), and a time without particles: n = 0 and
+        # NaN bulk velocity, pressure, temperature and heat flux (0 / 0
+        # warned)
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        vdf.attrs["species"] = "electrons"
+        vdf.data.data[1] = 0.0
+        sc_pot.data[:] = 15.0
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            n, v, p, p2, t, h = mms.psd_moments(vdf, sc_pot, relativistic=relativistic)
+
+        self.assertGreater(n.data[0], 0.0)
+        self.assertEqual(n.data[1], 0.0)
+        np.testing.assert_array_equal(p2.data[1], 0.0)
+
+        for moment in [v, p, t, h]:
+            self.assertTrue(np.all(np.isfinite(moment.data[0])))
+            self.assertTrue(np.all(np.isnan(moment.data[1])))
+
     @data(("s^3/cm^6", 1.0), ("s^3/m^6", 1e12), ("S^3/KM^6", 1e30), (None, 1.0))
     @unpack
     def test_psd_moments_units(self, units, scale):
