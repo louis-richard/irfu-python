@@ -6236,6 +6236,14 @@ class TsAppendTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(result.attrs["vec"], np.arange(5) + 50)
 
+    def test_ts_append_none(self):
+        # None for two None (the start of an accumulation loop), as documented
+        inp = self._series("2019-01-01T00:00:00", 5)
+
+        self.assertIsNone(pyrf.ts_append(None, None))
+        self.assertIs(pyrf.ts_append(None, inp), inp)
+        self.assertIs(pyrf.ts_append(inp, None), inp)
+
 
 @ddt
 class TimeClipTestCase(unittest.TestCase):

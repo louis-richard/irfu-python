@@ -42,7 +42,7 @@ def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
 
 def ts_append(
     inp0: Optional[DataArray] = None, inp1: Optional[DataArray] = None
-) -> DataArray:
+) -> Optional[DataArray]:
     r"""Concatenate two time series along the time axis.
 
     Parameters
@@ -54,8 +54,9 @@ def ts_append(
 
     Returns
     -------
-    DataArray
-        Concatenated time series.
+    DataArray or None
+        Concatenated time series: the other input if one is None, None if both
+        are (so that a loop can start from None, ``out = ts_append(out, ts)``).
 
     Notes
     -----
