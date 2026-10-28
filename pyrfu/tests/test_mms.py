@@ -8473,6 +8473,15 @@ class TokenizeTestCase(unittest.TestCase):
             self.assertEqual(result["dtype"], f"d{species}s-partmoms")
             self.assertEqual(result["param"], f"partidx{species}")
 
+    @data("srvy", "brst")
+    def test_tokenize_hpca_pressure(self, data_rate):
+        # The pressure tensors of the HPCA moments files (DBCS only), as
+        # irfu-matlab mms.get_data P*_dbcs_hpca_*_l2
+        for species in ["hplus", "heplus", "heplusplus", "oplus"]:
+            result = mms.tokenize(f"p{species}_dbcs_hpca_{data_rate}_l2")
+            self.assertEqual(result["cdf_name"], f"hpca_{species}_ion_pressure")
+            self.assertEqual(result["dtype"], "moments")
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
@@ -8508,7 +8517,7 @@ class TokenizeTestCase(unittest.TestCase):
     @data(
         "tsi_fpi_brst_l2",
         "qe_gse_fpi_brst_l2",
-        "phplus_dbcs_hpca_brst_l2",
+        "phplus_gsm_hpca_brst_l2",
         "e_dsl_edi_srvy_l2",
         "energye_fpi_fast_ql",
     )

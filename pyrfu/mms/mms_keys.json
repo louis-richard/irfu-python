@@ -830,6 +830,38 @@
       "cdf_name": "hpca_oplus_number_density",
       "dtype": "moments"
     },
+    "pheplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_heplus_ion_pressure",
+      "dtype": "moments"
+    },
+    "pheplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplus_ion_pressure",
+      "dtype": "moments"
+    },
+    "pheplusplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_heplusplus_ion_pressure",
+      "dtype": "moments"
+    },
+    "pheplusplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplusplus_ion_pressure",
+      "dtype": "moments"
+    },
+    "phplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_hplus_ion_pressure",
+      "dtype": "moments"
+    },
+    "phplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_hplus_ion_pressure",
+      "dtype": "moments"
+    },
+    "poplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_oplus_ion_pressure",
+      "dtype": "moments"
+    },
+    "poplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_oplus_ion_pressure",
+      "dtype": "moments"
+    },
     "saz_hpca_brst_l2": {
       "cdf_name": "hpca_start_azimuth",
       "dtype": "ion"
