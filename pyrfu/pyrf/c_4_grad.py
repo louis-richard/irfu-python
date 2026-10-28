@@ -78,16 +78,30 @@ def c_4_grad(
         Time series of the magnetic field at the corresponding positions
     method : {"grad", "div", "curl", "bdivb", "curv"}, Optional
         Method flag :
-            * "grad" : compute gradient (default)
+            * "grad" : compute gradient (default), d B_j / d x_i at
+              [time, j, i] for a vector field
             * "div" : compute divergence
             * "curl" : compute curl
-            * "bdivb" : compute b.div(b)
-            * "curv" : compute curvature
+            * "bdivb" : compute (B.grad) B, with B the average of the four
+              fields
+            * "curv" : compute curvature (b.grad) b of the unit vectors
+              b = B / abs(B), as "bdivb" of the four b (see Notes)
 
     Returns
     -------
     DataArray
         Time series of the derivative of the input field corresponding to the method
+
+    Notes
+    -----
+    The derivatives are those of a field varying linearly over the
+    tetrahedron. For "curv", the b in front of the gradient is the average
+    of the four unit vectors, which is not normalised (as irfu-matlab
+    c_4_grad): it is shorter than one by a term of order (L / R_c)^2, with L
+    the size of the tetrahedron and R_c the radius of curvature, and this
+    partly compensates the error of the linear estimate. On circular field
+    lines with the spacecraft at L = 0.3 R_c from the barycentre, the
+    curvature is 0.997 / R_c (1.014 / R_c with the average normalised).
 
     See also
     --------

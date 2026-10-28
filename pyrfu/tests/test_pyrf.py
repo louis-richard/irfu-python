@@ -1000,6 +1000,24 @@ class C4GradTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
 
+    def test_c_4_grad_curvature(self):
+        # Circular field lines of radius R_c about z: the curvature is 1 / R_c
+        # towards the centre, the average of the four unit vectors not
+        # normalised (as irfu-matlab): 0.997 / R_c at L / R_c = 0.3
+        time = generate_timeline(1.0, 4)
+        tetrahedron = np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+        r_c = 1000.0
+
+        for size, ratio in [(10.0, 1.0), (300.0, 0.99731)]:
+            pos = [r_c, 0.0, 0.0] + size * tetrahedron / np.sqrt(3)
+            b_hat = np.column_stack([-pos[:, 1], pos[:, 0], 0 * pos[:, 0]])
+            b_hat /= np.linalg.norm(b_hat, axis=1, keepdims=True)
+            r_mms = [pyrf.ts_vec_xyz(time, np.tile(p, (4, 1))) for p in pos]
+            b_mms = [pyrf.ts_vec_xyz(time, np.tile(20 * b, (4, 1))) for b in b_hat]
+            curv = pyrf.c_4_grad(r_mms, b_mms, "curv").data[0]
+
+            np.testing.assert_allclose(curv * r_c, [-ratio, 0.0, 0.0], atol=1e-4)
+
 
 class C4JTestCase(unittest.TestCase):
     def test_c_4_j_input(self):
