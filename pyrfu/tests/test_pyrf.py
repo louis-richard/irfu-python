@@ -3244,7 +3244,8 @@ class GradientTestCase(unittest.TestCase):
 
     def test_gradient_time_steps(self):
         # 128 Hz with a 1 s gap and +-1 ms jitter: the actual time steps, not the
-        # median one (65 times the slope next to the gap, 15 % with the jitter)
+        # median one (65 times the slope next to the gap, 15 % with the jitter),
+        # and each segment differentiated separately
         rng = np.random.default_rng(0)
         off = np.concatenate([np.arange(50), np.arange(50) + 178]) * 7812500
         off += rng.integers(-1_000_000, 1_000_000, 100)
@@ -3257,16 +3258,43 @@ class GradientTestCase(unittest.TestCase):
         )
         result = pyrf.gradient(inp)
 
-        # Exact inside (second order), first order at the ends
+        # Exact inside the segments (second order), first order at their ends
+        inside = np.r_[1:49, 51:99]
         np.testing.assert_allclose(
-            result.data[1:-1],
-            np.outer(3.0 + 2.0 * t_sec[1:-1], [1.0, -2.0, 0.5]),
+            result.data[inside],
+            np.outer(3.0 + 2.0 * t_sec[inside], [1.0, -2.0, 0.5]),
             rtol=1e-9,
         )
+
+        for i_end, i_next in [(49, 48), (50, 51)]:
+            slope = (inp.data[i_next] - inp.data[i_end]) / (
+                t_sec[i_next] - t_sec[i_end]
+            )
+            np.testing.assert_allclose(result.data[i_end], slope, rtol=1e-9)
         np.testing.assert_array_equal(result.time.data, time)
         np.testing.assert_array_equal(result.comp.data, inp.comp.data)
         self.assertEqual(result.attrs["UNITS"], "nT/s")
         self.assertEqual(inp.attrs["UNITS"], "nT")
+
+    def test_gradient_gaps(self):
+        # Segments between gaps (steps over 3 time_step) differentiated
+        # separately, as irf_gradient; a single sample between gaps is NaN; a
+        # larger time_step joins them (they were differentiated across)
+        t_sec = np.r_[np.arange(10.0), 20.0, np.arange(30.0, 40.0)]
+        time = np.datetime64("2019-01-01T00:00:00", "ns") + (t_sec * 1e9).astype(
+            "timedelta64[ns]"
+        )
+        inp = pyrf.ts_scalar(time, t_sec**2)
+        result = pyrf.gradient(inp)
+
+        segments = [slice(0, 10), slice(11, 21)]
+        expected = np.hstack([np.gradient(t_sec[s] ** 2, t_sec[s]) for s in segments])
+        np.testing.assert_allclose(np.delete(result.data, 10), expected)
+        self.assertTrue(np.isnan(result.data[10]))
+
+        np.testing.assert_allclose(
+            pyrf.gradient(inp, time_step=5.0).data, np.gradient(t_sec**2, t_sec)
+        )
 
     def test_gradient_regular(self):
         # Evenly sampled: np.gradient divided by the time step, as before
