@@ -2237,6 +2237,114 @@ class HpcaPadTestCase(unittest.TestCase):
 
 
 @ddt
+class GetHpcaDistTestCase(unittest.TestCase):
+    # 4 azimuth steps per half-spin, 3 anodes, 2 energies, 1 s samples
+    N_AZ, N_PO, N_EN = 4, 3, 2
+    ELEVATION = np.array([123.75, 101.25, 78.75])
+
+    def _inputs(self, centred=True):
+        # 20 samples, half-spins from samples 2, 6, 10, 14 and 18 (incomplete),
+        # without azimuths in half-spin 2; value 100 * sample + 10 * anode +
+        # energy, azimuth 90 * step + half-spin + 1
+        t_0 = np.datetime64("2019-09-14T07:54:00", "ns")
+        offset = 0.5 if centred else 0.0  # middle of the accumulations
+        t_vdf = t_0 + ((np.arange(20) + offset) * 1e9).astype("timedelta64[ns]")
+        sample, anode, energy = np.meshgrid(
+            np.arange(20), np.arange(self.N_PO), np.arange(self.N_EN), indexing="ij"
+        )
+        vdf = xr.DataArray(
+            100.0 * sample + 10 * anode + energy,
+            coords=[t_vdf, np.arange(self.N_PO), [1.0, 2.0]],
+            dims=["time", "rcomp", "ccomp"],
+            attrs={"FIELDNAM": "Hydrogen+ Phase Space Density"},
+        )
+
+        # Half-spin centres (1.5 samples after the first one) or starts
+        offset = 1.5 if centred else 0.0
+        t_aze = t_vdf[2::4] + np.timedelta64(int(offset * 1e9), "ns")
+        aze_deg = 90.0 * np.arange(self.N_AZ)[None, :] + np.arange(1, 6)[:, None]
+        aze_deg[2] = 0.0
+        aze = xr.DataArray(
+            np.broadcast_to(
+                aze_deg[..., None, None], (5, self.N_AZ, self.N_PO, self.N_EN)
+            ).copy(),
+            coords=[t_aze, np.arange(self.N_AZ), np.arange(self.N_PO), [0, 1]],
+            dims=["time", "az", "po", "en"],
+        )
+
+        return vdf, aze
+
+    @data(True, False)
+    def test_get_hpca_dist_half_spins(self, centred):
+        # The data of a half-spin are the samples from its first one (they were
+        # shifted by one sample); NaN without azimuths or not complete in vdf
+        vdf, aze = self._inputs(centred)
+        out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
+
+        self.assertEqual(out["n_times"], 5)
+        np.testing.assert_array_equal(out["time"], aze.time.data)
+
+        for i, i_start in zip([0, 1, 3], [2, 6, 14]):
+            np.testing.assert_array_equal(
+                out["data"][i], np.transpose(vdf.data[i_start : i_start + 4], [2, 0, 1])
+            )
+            np.testing.assert_array_equal(
+                out["phi"][i, 0, :, 0], 90.0 * np.arange(self.N_AZ) + i + 1
+            )
+
+        np.testing.assert_array_equal(out["dphi"][[0, 1, 3]], 90.0)
+
+        for key in ["data", "phi", "dphi"]:
+            self.assertEqual(out[key].shape, (5, self.N_EN, self.N_AZ, self.N_PO))
+            self.assertTrue(np.all(np.isnan(out[key][[2, 4]])))
+
+    def test_get_hpca_dist_angles(self):
+        # Elevations of the anodes (they were the anode numbers), with the
+        # dimensions of a distribution (energy, azimuth, elevation)
+        vdf, aze = self._inputs()
+        out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
+        dim = (self.N_EN, self.N_AZ, self.N_PO)
+
+        for key in ["theta", "energy", "dtheta", "bins", "denergy"]:
+            self.assertEqual(out[key].shape, dim)
+
+        np.testing.assert_array_equal(out["theta"][0, 0], [-33.75, -11.25, 11.25])
+        np.testing.assert_array_equal(out["energy"][:, 0, 0], [1.0, 2.0])
+        np.testing.assert_array_equal(out["bins"], 1.0)
+        self.assertEqual((out["species"], out["charge"]), ("hydrogen+", 1))
+
+    def test_get_hpca_dist_elevation_from_file(self):
+        module = importlib.import_module("pyrfu.mms.get_hpca_dist")
+        vdf, aze = self._inputs()
+
+        with mock.patch.object(
+            module, "_hpca_elevations", return_value=self.ELEVATION
+        ) as read:
+            out = mms.get_hpca_dist(vdf, aze, source="aws")
+
+        self.assertIs(read.call_args.args[0], vdf)
+        self.assertEqual(read.call_args.args[1:], ("aws", ""))
+        np.testing.assert_array_equal(out["theta"][0, 0], [-33.75, -11.25, 11.25])
+
+    def test_get_hpca_dist_errors(self):
+        vdf, aze = self._inputs()
+
+        # not monotonic
+        aze_bad = aze.assign_coords(time=aze.time.data[[1, 0, 2, 3, 4]])
+        with self.assertRaisesRegex(ValueError, "non-monotonic"):
+            mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
+
+        # without azimuths
+        with self.assertRaisesRegex(ValueError, "no complete half-spin"):
+            mms.get_hpca_dist(vdf, aze * 0, elevation=self.ELEVATION)
+
+        # times out of vdf
+        aze_bad = aze.assign_coords(time=aze.time.data + np.timedelta64(100, "s"))
+        with self.assertRaisesRegex(ValueError, "no complete half-spin"):
+            mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
+
+
+@ddt
 class MakeModelKappaTestCase(unittest.TestCase):
     @staticmethod
     def _moments(vdf, n_s, v_kms, t_ev):
