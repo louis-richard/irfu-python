@@ -5961,6 +5961,35 @@ class Sph2CartTestCase(unittest.TestCase):
         np.testing.assert_allclose(pyrf.sph2cart(*pyrf.cart2sph(*xyz)), xyz)
 
 
+class StDiffTestCase(unittest.TestCase):
+    def test_st_diff_values(self):
+        # Field B0 + A (r - V t), with A symmetric of eigenvectors l, m, n
+        # (the MDD frame): the velocity along l, m and n is that of V; for a
+        # one-dimensional structure (gradient along n only), along n
+        rng = np.random.default_rng(0)
+        lmn = np.linalg.qr(rng.normal(size=(3, 3)))[0]
+        lmn[:, 2] = np.cross(lmn[:, 0], lmn[:, 1])
+        v_xyz, b_0 = np.array([100.0, -50.0, 20.0]), np.array([5.0, -3.0, 20.0])
+        r_sc = 10.0 * rng.normal(size=(4, 3))
+        time = generate_timeline(1.0, 10)
+        t_s = np.arange(10.0)
+
+        for g_lmn, comps in [([0.3, 0.1, 0.5], [0, 1, 2]), ([0.0, 0.0, 0.5], [2])]:
+            a_mat = lmn @ np.diag(g_lmn) @ lmn.T
+            r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (10, 1))) for r in r_sc]
+            b_mms = [
+                pyrf.ts_vec_xyz(time, b_0 + (r - t_s[:, None] * v_xyz) @ a_mat.T)
+                for r in r_sc
+            ]
+
+            v_str = pyrf.st_diff(r_mms, b_mms, lmn)
+
+            np.testing.assert_allclose(
+                v_str.data[:, comps], np.tile(lmn.T @ v_xyz, (10, 1))[:, comps]
+            )
+            self.assertEqual(v_str.attrs["COORDINATE_SYSTEM"], "lmn")
+
+
 class StartTestCase(unittest.TestCase):
     def test_start_input_type(self):
         self.assertIsNotNone(pyrf.start(generate_ts(64.0, 100, tensor_order=0)))

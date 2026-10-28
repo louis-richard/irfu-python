@@ -25,13 +25,19 @@ def st_diff(r_mms, b_mms, lmn):
 
     .. math::
 
-        V_{str}^{LMN} = -d_t B^{LMN}\left [\nabla^{LMN} B^{LMN}\right]^T
-        \left [ S^{LMN} \right ]^{-1}
+        V_k = - \frac{\partial_t \mathbf{B} \cdot \partial_k
+        \mathbf{B}}{\left | \partial_k \mathbf{B} \right |^2},
+        \quad \partial_k \mathbf{B} = (\mathbf{k} \cdot \nabla)
+        \mathbf{B}, \quad \mathbf{k} = \mathbf{l}, \mathbf{m},
+        \mathbf{n}
 
-    where :math:`B^{LMN}`, :math:`\nabla^{LMN}B^{LMN}`, :math:`S^{LMN}`
-    and :math:`V_{str}^{LMN}` are namely the magnetic
-    field, its gradient, its rotation rate tensor and the velocity of the
-    structure in the LMN coordinates system.
+    with :math:`\partial_t \mathbf{B}` the time derivative of the field at
+    the barycentre and :math:`\nabla \mathbf{B}` its gradient
+    (``c_4_grad``). This is the solution of :math:`\partial_t \mathbf{B} +
+    (\mathbf{V} \cdot \nabla) \mathbf{B} = 0` when the derivatives along
+    l, m and n are orthogonal, i.e., in the frame of the minimum directional
+    derivative (MDD) [13]_, and only along the directions with a significant
+    gradient (the dimensions of the structure).
 
     Parameters
     ----------
@@ -40,12 +46,17 @@ def st_diff(r_mms, b_mms, lmn):
     b_mms : list of xarray.DataArray
         Background magnetic field.
     lmn : ndarray
-        Structure coordinates system.
+        Structure coordinates system: the l, m and n unit vectors as the
+        columns, e.g., the eigenvectors of the average of grad_b^T grad_b
+        (MDD), with grad_b = c_4_grad(r_mms, b_mms).data at [time, j, i] =
+        d B_j / d x_i.
 
     Returns
     -------
     v_str : xarray.DataArray
-        Velocity of the structure in its coordinates system.
+        Velocity of the structure along l, m and n (``COORDINATE_SYSTEM``
+        "lmn"), in the unit of the positions per second (km/s for MMS).
+        Meaningless (large or NaN) along a direction without gradient.
 
     References
     ----------
@@ -86,7 +97,7 @@ def st_diff(r_mms, b_mms, lmn):
     v_str[:, 2] = np.sum(db_dt * n_grad_b, axis=1)
     v_str[:, 2] /= np.linalg.norm(n_grad_b, axis=1) ** 2
 
-    # To time series
-    v_str_xyz = ts_vec_xyz(b_xyz.time.data, -v_str)
+    # To time series, in the LMN coordinates system
+    v_str_xyz = ts_vec_xyz(b_xyz.time.data, -v_str, {"COORDINATE_SYSTEM": "lmn"})
 
     return v_str_xyz
