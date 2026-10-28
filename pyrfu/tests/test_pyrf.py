@@ -2241,6 +2241,26 @@ class DistAppendTestCase(unittest.TestCase):
             result.attrs["delta_time_plus"], np.hstack([[0.2] * 10, [0.4] * 5])
         )
 
+    def test_dist_append_missing_widths(self):
+        # Energy widths missing (KeyError) or None as get_dist gives for files
+        # without them (AttributeError), half widths in inp0 only (kept with
+        # the length of inp0): left out
+        for missing in [{}, {"delta_energy_plus": None, "delta_energy_minus": None}]:
+            inp0 = generate_vdf(64.0, 4, [32, 32, 16])
+            inp1 = generate_vdf(64.0, 3, [32, 32, 16])
+            inp0.attrs["delta_time_minus"] = np.full(4, 0.1)
+
+            for key in ["delta_energy_plus", "delta_energy_minus"]:
+                inp1.attrs.pop(key)
+
+            inp1.attrs.update(missing)
+            result = pyrf.dist_append(inp0, inp1)
+
+            self.assertEqual(len(result.time), 7)
+
+            for key in ["delta_energy_plus", "delta_energy_minus", "delta_time_minus"]:
+                self.assertNotIn(key, result.attrs)
+
 
 @ddt
 class DynamicPressTestCase(unittest.TestCase):
