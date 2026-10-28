@@ -5933,6 +5933,15 @@ class Sph2CartTestCase(unittest.TestCase):
     def test_sph2cart_output(self, azimuth, elevation, r):
         self.assertIsNotNone(pyrf.sph2cart(azimuth, elevation, r))
 
+    def test_sph2cart_colatitude(self):
+        # The second angle is the colatitude, as returned by cart2sph
+        np.testing.assert_allclose(pyrf.sph2cart(0.0, 0.0, 2.0), [0.0, 0.0, 2.0])
+        np.testing.assert_allclose(
+            pyrf.sph2cart(np.pi / 2, np.pi / 2, 1.0), [0.0, 1.0, 0.0], atol=1e-15
+        )
+        xyz = np.random.default_rng(0).normal(size=(3, 50))
+        np.testing.assert_allclose(pyrf.sph2cart(*pyrf.cart2sph(*xyz)), xyz)
+
 
 class StartTestCase(unittest.TestCase):
     def test_start_input_type(self):
