@@ -68,8 +68,8 @@ def eis_combine_proton_pad(
     extof_allt : xarray.Dataset
         Dataset containing the energy spectrum of the 6 telescopes of the
         Energy Ion Spectrometer (EIS) for Energy by Time Of Flight (ExTOF).
-    vec : xarray.DataArray, Optional
-        Axis with to compute pitch-angle. Default is X-GSE.
+    vec : xarray.DataArray or array_like
+        Magnetic field in GSE (see :func:`pyrfu.mms.eis_pad`).
     energy : array_like, Optional
         Energy range to include in the calculation. Default is [55, 800].
     pa_width : int, Optional

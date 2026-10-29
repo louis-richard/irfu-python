@@ -42,11 +42,14 @@ def eis_pad(
     Parameters
     ----------
     inp_allt : xarray.Dataset
-        Energy spectrum for all telescopes.
-    vec : xarray.DataArray, Optional
-        Axis with to compute pitch-angle. Default is X-GSE.
+        Energy spectrum for all telescopes, with their look directions in GSE
+        (from :func:`pyrfu.mms.get_eis_allt`).
+    vec : xarray.DataArray or array_like
+        Magnetic field in GSE, the frame of the look directions: a time
+        series (resampled to the times of `inp_allt`) or a constant direction.
     energy : array_like, Optional
-        Energy range to include in the calculation. Default is [55, 800].
+        Energy range to include in the calculation: the channels with their
+        lower or upper edge in it. Default is all the channels.
     pa_width : int, Optional
         Size of the pitch angle bins, in degrees. Default is 15.
 
@@ -55,6 +58,24 @@ def eis_pad(
     pa_flux : xarray.DataArray
         Pitch-angle angle distribution for every energy channels in the
         `energy` range.
+
+    Raises
+    ------
+    ValueError
+        If `vec` is not given (the pitch angles were taken from X-GSE), is
+        neither a time series nor a direction, or if no channel is in the
+        `energy` range.
+
+    Notes
+    -----
+    The pitch angles are those of the particles, which move opposite to the
+    look direction of the telescope: 180 deg minus the angle between the look
+    direction and the field. With the field of the EIS files, they equal their
+    ``pitch_angle_t?``; with the FGM field, the pitch angles differ by the
+    angle between the two fields (a fraction of a degree in survey). Each bin
+    averages the telescopes whose field of view (+-10 deg) overlaps it, zero
+    fluxes included, as IDL SPEDAS ``mms_eis_pad`` and pySPEDAS: the zeros were
+    left out, which biased the PADs high and left the bins without counts NaN.
 
     See Also
     --------
@@ -65,12 +86,20 @@ def eis_pad(
     time_ = inp_allt.time.data
 
     if vec is None:
-        vec = ts_vec_xyz(time_, np.tile(np.eye(1, 3), (len(time_), 1)))
-    elif isinstance(vec, list):
-        assert len(vec) == 3
-        vec = ts_vec_xyz(time_, np.tile(vec, (len(time_), 1)))
-    elif isinstance(vec, xr.DataArray):
+        raise ValueError(
+            "give the magnetic field in GSE (vec): the pitch angles were taken "
+            "from X-GSE"
+        )
+
+    if isinstance(vec, xr.DataArray):
         vec = resample(vec, inp_allt.time)
+    else:
+        vec = np.asarray(vec, dtype=np.float64)
+
+        if vec.shape != (3,):
+            raise ValueError("vec must be a time series or a direction (3 values)")
+
+        vec = ts_vec_xyz(time_, np.tile(vec, (len(time_), 1)))
 
     if energy is None:
         energy = inp_allt.energy.data[[0, -1]]
@@ -87,15 +116,16 @@ def eis_pad(
 
     pa_file = np.zeros([len(time_), len(scopes)])
 
-    e_minu = inp_allt.energy.data + inp_allt.delta_energy_minus
+    # Lower and upper edges of the channels (the lower one was E + delta_minus)
+    e_minu = inp_allt.energy.data - inp_allt.delta_energy_minus
     e_plus = inp_allt.energy.data + inp_allt.delta_energy_plus
 
     cond_low = np.logical_and(e_minu >= energy[0], e_minu <= energy[1])
     cond_hig = np.logical_and(e_plus >= energy[0], e_plus <= energy[1])
     ener_idx = np.where(np.logical_or(cond_low, cond_hig))[0]
 
-    msg = "Energy range selected is not covered by the detector"
-    assert np.sum(cond_low) != 0 and np.sum(cond_hig) != 0, msg
+    if ener_idx.size == 0:
+        raise ValueError(f"No energy channel in the energy range {energy}")
 
     flux_file = np.zeros([len(time_), len(scopes), len(ener_idx)])
     shape_ = [len(time_), n_pabins, len(ener_idx)]
@@ -110,7 +140,7 @@ def eis_pad(
         # get energy range of interest
         flux_file[:, i_s, :] = inp_allt[scope][:, ener_idx]
 
-    flux_file[flux_file == 0] = np.nan
+    # The zero fluxes are kept, as IDL and pySPEDAS (they were set to NaN)
 
     for (i), (j, pa_lbl) in itertools.product(
         range(len(time_)),

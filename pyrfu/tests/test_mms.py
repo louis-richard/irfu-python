@@ -1322,7 +1322,7 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
         extof_allt = generate_eis(
             64.0, 100, tmmode, "extof", "l2", specie, unit, mms_id
         )
-        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt)
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, [0, 0, 1])
         self.assertIsInstance(result, xr.DataArray)
 
     @idata(itertools.product([99, 100], repeat=2))
@@ -1334,10 +1334,10 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
         extof_allt = generate_eis(
             64.0, n_extof, "brst", "extof", "l2", "proton", "flux", 1
         )
-        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt)
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, [0, 0, 1])
         self.assertIsInstance(result, xr.DataArray)
 
-    @data(None, [1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
+    @data([1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
     def test_eis_combine_proton_pad_vec(self, vec):
         phxtof_allt = generate_eis(
             64.0, 100, "brst", "phxtof", "l2", "proton", "flux", 1
@@ -1351,7 +1351,9 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
             64.0, 100, "brst", "phxtof", "l2", "proton", "flux", 1
         )
         extof_allt = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
-        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, None, despin=True)
+        result = mms.eis_combine_proton_pad(
+            phxtof_allt, extof_allt, [0, 0, 1], despin=True
+        )
         self.assertIsInstance(result, xr.DataArray)
 
 
@@ -1562,11 +1564,68 @@ class EisSpecCombineScTestCase(unittest.TestCase):
 
 @ddt
 class EisPadTestCase(unittest.TestCase):
-    @data(None, [1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
+    @data([1, 0, 0], np.array([1, 0, 0]), generate_ts(64.0, 10, tensor_order=1))
     def test_eis_pad_output(self, vec):
+        # NumPy directions raised TypeError
         eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
         result = mms.eis_pad(eis, vec)
         self.assertIsInstance(result, xr.DataArray)
+
+    @staticmethod
+    def _eis(flux, look, energies, delta_minus, delta_plus):
+        # Telescope fluxes flux[telescope] (time x energy) and look directions
+        time = generate_timeline(1.0, flux.shape[1])
+        eis = {}
+        for i in range(6):
+            eis[f"t{i:d}"] = xr.DataArray(
+                flux[i], coords=[time, energies], dims=["time", "energy"]
+            )
+            eis[f"look_t{i:d}"] = pyrf.ts_vec_xyz(
+                time, np.tile(look[i], (flux.shape[1], 1))
+            )
+        attrs = {"delta_energy_minus": delta_minus, "delta_energy_plus": delta_plus}
+        return xr.Dataset(eis, attrs=attrs)
+
+    def test_eis_pad_values(self):
+        # B along z: telescopes looking along -z (pitch angle 0), +z (180) and
+        # x (90); the zeros are averaged, as IDL and pySPEDAS (they were NaN)
+        look = np.array(
+            [[0, 0, -1], [0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
+        )
+        flux = np.zeros((6, 3, 2))
+        flux[0], flux[3] = 4.0, 6.0
+        eis = self._eis(flux, look, np.array([100.0, 200.0]), 10.0, 10.0)
+        result = mms.eis_pad(eis, [0, 0, 1])
+
+        np.testing.assert_array_equal(result.theta.data[[0, 6, 11]], [7.5, 97.5, 172.5])
+        np.testing.assert_allclose(result.data[:, 0, :], 2.0)
+        np.testing.assert_allclose(result.data[:, 6, :], 2.0)
+        np.testing.assert_allclose(result.data[:, 11, :], 0.0)
+        self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
+
+    def test_eis_pad_energy_edges(self):
+        # Channels with a lower (E - delta_minus, it was E + delta_minus) or
+        # upper edge in the range
+        look = np.tile([0, 0, -1], (6, 1))
+        eis = self._eis(np.ones((6, 3, 2)), look, np.array([100.0, 200.0]), 40.0, 5.0)
+        result = mms.eis_pad(eis, [0, 0, 1], energy=[150, 180])
+
+        np.testing.assert_array_equal(result.energy.data, [200.0])
+        np.testing.assert_array_equal(
+            mms.eis_pad(eis, [0, 0, 1]).energy.data, [100.0, 200.0]
+        )
+
+    def test_eis_pad_errors(self):
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "magnetic field"):
+            mms.eis_pad(eis)
+
+        with self.assertRaises(ValueError):
+            mms.eis_pad(eis, [1, 0])
+
+        with self.assertRaisesRegex(ValueError, "No energy channel"):
+            mms.eis_pad(eis, [1, 0, 0], energy=[5000, 6000])
 
 
 @ddt
@@ -1584,7 +1643,7 @@ class EisPadSpinAvgTestCase(unittest.TestCase):
         eis = generate_eis(
             64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
         )
-        eis_pad = mms.eis_pad(eis)
+        eis_pad = mms.eis_pad(eis, [0, 0, 1])
         result = mms.eis_pad_spinavg(eis_pad, eis.spin)
         self.assertIsInstance(result, xr.DataArray)
 
