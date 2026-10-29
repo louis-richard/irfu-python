@@ -2237,6 +2237,114 @@ class HpcaPadTestCase(unittest.TestCase):
 
 
 @ddt
+class GetHpcaDistTestCase(unittest.TestCase):
+    # 4 azimuth steps per half-spin, 3 anodes, 2 energies, 1 s samples
+    N_AZ, N_PO, N_EN = 4, 3, 2
+    ELEVATION = np.array([123.75, 101.25, 78.75])
+
+    def _inputs(self, centred=True):
+        # 20 samples, half-spins from samples 2, 6, 10, 14 and 18 (incomplete),
+        # without azimuths in half-spin 2; value 100 * sample + 10 * anode +
+        # energy, azimuth 90 * step + half-spin + 1
+        t_0 = np.datetime64("2019-09-14T07:54:00", "ns")
+        offset = 0.5 if centred else 0.0  # middle of the accumulations
+        t_vdf = t_0 + ((np.arange(20) + offset) * 1e9).astype("timedelta64[ns]")
+        sample, anode, energy = np.meshgrid(
+            np.arange(20), np.arange(self.N_PO), np.arange(self.N_EN), indexing="ij"
+        )
+        vdf = xr.DataArray(
+            100.0 * sample + 10 * anode + energy,
+            coords=[t_vdf, np.arange(self.N_PO), [1.0, 2.0]],
+            dims=["time", "rcomp", "ccomp"],
+            attrs={"FIELDNAM": "Hydrogen+ Phase Space Density"},
+        )
+
+        # Half-spin centres (1.5 samples after the first one) or starts
+        offset = 1.5 if centred else 0.0
+        t_aze = t_vdf[2::4] + np.timedelta64(int(offset * 1e9), "ns")
+        aze_deg = 90.0 * np.arange(self.N_AZ)[None, :] + np.arange(1, 6)[:, None]
+        aze_deg[2] = 0.0
+        aze = xr.DataArray(
+            np.broadcast_to(
+                aze_deg[..., None, None], (5, self.N_AZ, self.N_PO, self.N_EN)
+            ).copy(),
+            coords=[t_aze, np.arange(self.N_AZ), np.arange(self.N_PO), [0, 1]],
+            dims=["time", "az", "po", "en"],
+        )
+
+        return vdf, aze
+
+    @data(True, False)
+    def test_get_hpca_dist_half_spins(self, centred):
+        # The data of a half-spin are the samples from its first one (they were
+        # shifted by one sample); NaN without azimuths or not complete in vdf
+        vdf, aze = self._inputs(centred)
+        out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
+
+        self.assertEqual(out["n_times"], 5)
+        np.testing.assert_array_equal(out["time"], aze.time.data)
+
+        for i, i_start in zip([0, 1, 3], [2, 6, 14]):
+            np.testing.assert_array_equal(
+                out["data"][i], np.transpose(vdf.data[i_start : i_start + 4], [2, 0, 1])
+            )
+            np.testing.assert_array_equal(
+                out["phi"][i, 0, :, 0], 90.0 * np.arange(self.N_AZ) + i + 1
+            )
+
+        np.testing.assert_array_equal(out["dphi"][[0, 1, 3]], 90.0)
+
+        for key in ["data", "phi", "dphi"]:
+            self.assertEqual(out[key].shape, (5, self.N_EN, self.N_AZ, self.N_PO))
+            self.assertTrue(np.all(np.isnan(out[key][[2, 4]])))
+
+    def test_get_hpca_dist_angles(self):
+        # Elevations of the anodes (they were the anode numbers), with the
+        # dimensions of a distribution (energy, azimuth, elevation)
+        vdf, aze = self._inputs()
+        out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
+        dim = (self.N_EN, self.N_AZ, self.N_PO)
+
+        for key in ["theta", "energy", "dtheta", "bins", "denergy"]:
+            self.assertEqual(out[key].shape, dim)
+
+        np.testing.assert_array_equal(out["theta"][0, 0], [-33.75, -11.25, 11.25])
+        np.testing.assert_array_equal(out["energy"][:, 0, 0], [1.0, 2.0])
+        np.testing.assert_array_equal(out["bins"], 1.0)
+        self.assertEqual((out["species"], out["charge"]), ("hydrogen+", 1))
+
+    def test_get_hpca_dist_elevation_from_file(self):
+        module = importlib.import_module("pyrfu.mms.get_hpca_dist")
+        vdf, aze = self._inputs()
+
+        with mock.patch.object(
+            module, "_hpca_elevations", return_value=self.ELEVATION
+        ) as read:
+            out = mms.get_hpca_dist(vdf, aze, source="aws")
+
+        self.assertIs(read.call_args.args[0], vdf)
+        self.assertEqual(read.call_args.args[1:], ("aws", ""))
+        np.testing.assert_array_equal(out["theta"][0, 0], [-33.75, -11.25, 11.25])
+
+    def test_get_hpca_dist_errors(self):
+        vdf, aze = self._inputs()
+
+        # not monotonic
+        aze_bad = aze.assign_coords(time=aze.time.data[[1, 0, 2, 3, 4]])
+        with self.assertRaisesRegex(ValueError, "non-monotonic"):
+            mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
+
+        # without azimuths
+        with self.assertRaisesRegex(ValueError, "no complete half-spin"):
+            mms.get_hpca_dist(vdf, aze * 0, elevation=self.ELEVATION)
+
+        # times out of vdf
+        aze_bad = aze.assign_coords(time=aze.time.data + np.timedelta64(100, "s"))
+        with self.assertRaisesRegex(ValueError, "no complete half-spin"):
+            mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
+
+
+@ddt
 class MakeModelKappaTestCase(unittest.TestCase):
     @staticmethod
     def _moments(vdf, n_s, v_kms, t_ev):
@@ -2915,6 +3023,29 @@ class PsdMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
         )
+
+    @data(False, True)
+    def test_psd_moments_no_warnings(self, relativistic):
+        # Electrons with V_sc above the lowest channel (unused speeds warned
+        # "invalid value in sqrt"), and a time without particles: n = 0 and
+        # NaN bulk velocity, pressure, temperature and heat flux (0 / 0
+        # warned)
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
+        vdf.attrs["species"] = "electrons"
+        vdf.data.data[1] = 0.0
+        sc_pot.data[:] = 15.0
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            n, v, p, p2, t, h = mms.psd_moments(vdf, sc_pot, relativistic=relativistic)
+
+        self.assertGreater(n.data[0], 0.0)
+        self.assertEqual(n.data[1], 0.0)
+        np.testing.assert_array_equal(p2.data[1], 0.0)
+
+        for moment in [v, p, t, h]:
+            self.assertTrue(np.all(np.isfinite(moment.data[0])))
+            self.assertTrue(np.all(np.isnan(moment.data[1])))
 
     @data(("s^3/cm^6", 1.0), ("s^3/m^6", 1e12), ("S^3/KM^6", 1e30), (None, 1.0))
     @unpack
@@ -3809,8 +3940,9 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
                 self.assertDictEqual(result, expected)
 
     def test_feeps_active_eyes_sitl(self):
-        # SITL: top eyes 5, 11 and 12 only, as IDL SPEDAS; after 2017-08-16 in
-        # survey, those of them that are active
+        # SITL: top eyes 5, 11 and 12 only, as IDL SPEDAS and pySPEDAS (also for
+        # the ions); after 2017-08-16 in survey, those of them that are active,
+        # sorted
         for dtype in ["electron", "ion"]:
             var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
             result = mms.feeps_active_eyes(var, ["2017-08-01", "2017-08-02"], 1)
@@ -3825,7 +3957,7 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
         ]:
             var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
             result = mms.feeps_active_eyes(var, tint, mms_id)
-            self.assertListEqual(sorted(result["top"]), top)
+            self.assertListEqual(result["top"], top)
             self.assertListEqual(result["bottom"], [])
 
 
@@ -5949,7 +6081,7 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             xr.testing.assert_identical(result, full)
 
 
-def _cdf_fpi_brst_dist(n_records, t_start, deltas=False):
+def _cdf_fpi_brst_dist(n_records, t_start, deltas=False, energy_delta=True):
     # In-memory FPI burst ion distribution laid out as in the L2 files: record
     # varying phi, energy, steptable parity and energy deltas, with alternating
     # energy tables (no energy0 and energy1 variables), and optionally the
@@ -5976,7 +6108,8 @@ def _cdf_fpi_brst_dist(n_records, t_start, deltas=False):
     cdf.add_variable("mms1_dis_theta_brst", values=np.arange(3.0)[None], is_nrv=True)
     cdf.add_variable("mms1_dis_energy_brst", values=energies[parity].reshape(-1, 5))
     cdf.add_variable("mms1_dis_steptable_parity_brst", values=parity.astype(np.uint8))
-    cdf.add_variable("mms1_dis_energy_delta_brst", values=np.ones((n_records, 5)))
+    if energy_delta:
+        cdf.add_variable("mms1_dis_energy_delta_brst", values=np.ones((n_records, 5)))
     cdf.add_variable(
         "mms1_dis_dist_brst",
         values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
@@ -6028,6 +6161,24 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
             _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10"), "mms1_dis_dist_brst"
         )
         self.assertNotIn("delta_time_minus", result.attrs)
+
+    def test_get_dist_no_energy_delta(self):
+        # A file without energy widths: no delta_energy_* attributes (they
+        # were None, on which reduce raised TypeError), also when appended
+        content = _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10", energy_delta=False)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+
+        for key in ["delta_energy_minus", "delta_energy_plus"]:
+            self.assertNotIn(key, result.attrs)
+
+        result.data.attrs["UNITS"] = "s^3/cm^6"
+        reduced = mms.reduce(result, np.eye(3), n_mc=2, verbose=False)
+        self.assertEqual(reduced.shape[0], 4)
+
+        later = _cdf_fpi_brst_dist(2, "2019-09-14T07:54:20", energy_delta=False)
+        result = self._get_data("pdi_fpi_brst_l2", [content, later])
+        self.assertEqual(result.sizes["time"], 6)
+        self.assertNotIn("delta_energy_plus", result.attrs)
 
     @data((0, 3), (3, 0), (0, 0))
     @unpack
@@ -6471,6 +6622,39 @@ class ReduceTestCase(unittest.TestCase):
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
 
+    def test_reduce_input_handling(self):
+        # lower_e_lim as an int (TypeError), base and dim in capitals (base
+        # was compared case-sensitively), no progress bar with verbose=False
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        stderr = io.StringIO()
+
+        with contextlib.redirect_stderr(stderr):
+            result = mms.reduce(vdf, np.eye(3), lower_e_lim=0, n_mc=5, verbose=False)
+            result_2d = mms.reduce(vdf, np.eye(3), "2D", "CART", n_mc=5, verbose=False)
+
+        self.assertEqual(result.shape, (3, 64))
+        self.assertEqual(result_2d.shape, (3, 100, 100))
+        self.assertEqual(stderr.getvalue(), "")
+
+        with self.assertRaisesRegex(ValueError, "base must be"):
+            mms.reduce(vdf, np.eye(3), "1d", "sph")
+
+    def test_reduce_no_channel(self):
+        # V_sc above every channel at the first time: NaN there (IndexError),
+        # the grid from the next time; at all times: ValueError
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.array([1e3, 0.0, 0.0]))
+        result = mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
+
+        self.assertTrue(np.all(np.isnan(result.data[0])))
+        self.assertTrue(np.all(np.isfinite(result.data[1:])))
+        self.assertGreater(np.max(np.abs(result.vx.data)), 0.0)
+
+        sc_pot.data[:] = 1e3
+
+        with self.assertRaisesRegex(ValueError, "no energy channel"):
+            mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
+
     def test_reduce_default_phi_grid(self):
         # Default azimuthal grid has one point per instrument azimuth. phi is
         # (time, phi), so len(phi) gave one point per time step (5 here).
@@ -6880,6 +7064,32 @@ class RotateTensorTestCase(unittest.TestCase):
             warnings.simplefilter("error", RuntimeWarning)
             result = mms.rotate_tensor(p_xyz, "fac", b_xyz, "pp")
         np.testing.assert_allclose(np.diag(result.data[0]), [3.0, 1.5, 1.5])
+
+    def test_rotate_tensor_fac_time_varying(self):
+        # A different tensor and B at each time (rotated at all times at once;
+        # it was a loop): P_par = b.P.b, trace kept, equal perpendicular
+        # diagonal terms for "pp", no perpendicular off-diagonal term for "qq"
+        time = generate_timeline(1.0, 50)
+        rng = np.random.default_rng(3)
+        a_mat = rng.standard_normal((50, 3, 3))
+        p_xyz = pyrf.ts_tensor_xyz(time, a_mat @ np.transpose(a_mat, [0, 2, 1]))
+        b_xyz = pyrf.ts_vec_xyz(time, rng.standard_normal((50, 3)))
+        b_hat = b_xyz.data / np.linalg.norm(b_xyz.data, axis=1, keepdims=True)
+        p_par = np.einsum("ti,tij,tj->t", b_hat, p_xyz.data, b_hat)
+
+        for perp in ["pp", "qq"]:
+            result = mms.rotate_tensor(p_xyz, "fac", b_xyz, perp).data
+            np.testing.assert_allclose(result[:, 0, 0], p_par, rtol=1e-12)
+            np.testing.assert_allclose(
+                np.trace(result, axis1=1, axis2=2),
+                np.trace(p_xyz.data, axis1=1, axis2=2),
+                rtol=1e-12,
+            )
+
+            if perp == "pp":
+                np.testing.assert_allclose(result[:, 1, 1], result[:, 2, 2])
+            else:
+                np.testing.assert_allclose(result[:, 1, 2], 0.0, atol=1e-12)
 
     @data(
         (
@@ -8398,6 +8608,54 @@ class TokenizeTestCase(unittest.TestCase):
             self.assertEqual(result["dtype"], f"d{species}s-partmoms")
             self.assertEqual(result["param"], f"partidx{species}")
 
+    @data("srvy", "brst")
+    def test_tokenize_hpca_pressure(self, data_rate):
+        # The pressure tensors of the HPCA moments files (DBCS only), as
+        # irfu-matlab mms.get_data P*_dbcs_hpca_*_l2
+        for species in ["hplus", "heplus", "heplusplus", "oplus"]:
+            result = mms.tokenize(f"p{species}_dbcs_hpca_{data_rate}_l2")
+            self.assertEqual(result["cdf_name"], f"hpca_{species}_ion_pressure")
+            self.assertEqual(result["dtype"], "moments")
+
+    @data(
+        ("qe_gse_fpi_brst_l2", "des_heatq_gse_brst", "des-moms", "gse"),
+        ("errqi_fpi_fast_l2", "dis_heatq_err_fast", "dis-moms", ""),
+        ("flagi_fpi_fast_l2", "dis_errorflags_fast", "dis-moms", ""),
+        ("padmidene_fpi_brst_l2", "des_pitchangdist_miden_brst", "des-moms", ""),
+        ("tparae_fpi_fast_l2", "des_temppara_fast", "des-moms", ""),
+        (
+            "partpi_dbcs_fpi_brst_l2",
+            "dis_prestensor_part_dbcs_brst",
+            "dis-partmoms",
+            "dbcs",
+        ),
+        ("qualitye_edp_fast_l2", "edp_quality_fast_l2", "dce", ""),
+        ("qualityv_edp_brst_l2", "edp_quality_brst_l2", "scpot", ""),
+        ("flag_fgm_srvy_l2", "fgm_flag_srvy_l2", "", ""),
+        ("r_gsm_fgm_brst_l2", "fgm_r_gsm_brst_l2", "", "gsm"),
+        ("quat_gse2000_mec_srvy_l2", "mec_quat_eci_to_gse2000", "epht89d", "gse2000"),
+        ("ldip_mec_brst_l2", "mec_l_dipole", "epht89d", ""),
+        ("tparaoplus_hpca_srvy_l2", "hpca_oplus_tparallel", "moments", ""),
+        ("b_gsm_hpca_brst_l2", "hpca_B_GSM_spin_avg", "moments", "gsm"),
+        ("epsdz_dsp_slow_l2", "dsp_epsd_z", "epsd", ""),
+        ("bpsd_dsp_fast_l2", "dsp_bpsd_omni_fast_l2", "bpsd", ""),
+        ("vdrift_gse_edi_srvy_l2", "edi_vdrift_gse_srvy_l2", "efield", "gse"),
+        ("b_gse_scm_srvy_l2", "scm_acb_gse_scsrvy_srvy_l2", "scsrvy", "gse"),
+        ("bschb_gse_scm_brst_l2", "scm_acb_gse_schb_brst_l2", "schb", "gse"),
+    )
+    @unpack
+    def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
+        # Variables documented in the CMAD and checked on files from AWS
+        # (2017-07-11, MMS1): FPI heat flux, flags, electron PADs, extrapolated
+        # densities; EDP quality and bitmask of the dce and scpot files; FGM
+        # flag and position; MEC quaternions (ECI to the frame), MLT, L, Kp,
+        # Dst; HPCA T_para, T_perp, B; DSP spectra; EDI E and drift velocity;
+        # SCM survey and high-speed burst waveforms
+        result = mms.tokenize(var_str)
+        self.assertEqual(result["cdf_name"], cdf_name)
+        self.assertEqual(result["dtype"], dtype)
+        self.assertEqual(result["cs"], coords)
+
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
         # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
@@ -8431,15 +8689,29 @@ class TokenizeTestCase(unittest.TestCase):
                         self.assertSetEqual(cdf_coords, key_coords)
 
     @data(
-        "tsi_fpi_brst_l2",
-        "qe_gse_fpi_brst_l2",
-        "phplus_dbcs_hpca_brst_l2",
-        "e_dsl_edi_srvy_l2",
+        "es12_dsl_edp_fast_l2a",
+        "adcoff_edp_slow_l2a",
+        "phplus_gsm_hpca_brst_l2",
+        "flux-amb-pm2_edi_brst_l2",
         "energye_fpi_fast_ql",
     )
     def test_tokenize_unsupported(self, var_str):
         # Valid parts, but not in mms_keys.json: a clear ValueError, not KeyError
         with self.assertRaisesRegex(ValueError, "not supported"):
+            mms.tokenize(var_str)
+
+    @data(
+        "tsi_fpi_brst_l2",
+        "tse_fpi_fast_l2",
+        "epar_edp_brst_l2",
+        "nbge_fpi_brst_l2",
+        "pbge_fpi_fast_l2",
+        "defbge_fpi_brst_l2",
+    )
+    def test_tokenize_removed_parameters(self, var_str):
+        # Parameters without data (no FPI DES background, scalar temperatures
+        # computed in irfu-matlab, epar the e_par keys): invalid parameters
+        with self.assertRaisesRegex(ValueError, "invalid parameter"):
             mms.tokenize(var_str)
 
     @data(

@@ -4,6 +4,9 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from .hpca_pad import _hpca_elevations
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -20,92 +23,85 @@ mass_and_charge = {
 }
 
 
-def _get_energy(inp, dim):
-    energy_len = len(inp.ccomp.data)
-    energy_reform = np.reshape(inp.ccomp.data, [energy_len, 1, 1])
-    # repeated across theta
-    energy_rebin1 = np.repeat(energy_reform, dim[1], axis=2)
-    out_energy = np.repeat(energy_rebin1, dim[2], axis=1)
+def _half_spins(inp, azimuth):
+    r"""First sample of inp of each half-spin of azimuth, and whether the
+    half-spin is complete in inp with non-zero azimuths."""
+    t_inp = inp.time.data.astype("datetime64[ns]")
+    t_azi = (azimuth.time.data.astype("datetime64[ns]") - t_inp[0]).astype(np.int64)
+    t_inp = (t_inp - t_inp[0]).astype(np.int64)
+    n_az = azimuth.shape[1]
+    d_t = np.median(np.diff(t_inp))
 
-    return out_energy
+    # The azimuth times are the centres of the half-spins, 7.5 samples after
+    # their first samples (times shifted to the middle of the accumulations, as
+    # by get_ts and get_data), or their starts (Epoch_Angles in the files)
+    for offset in [(n_az - 1) / 2 * d_t, 0.0]:
+        t_first = t_azi - offset
+        i_start = np.searchsorted(t_inp, t_first - d_t / 4)
+        i_first = np.minimum(i_start, len(t_inp) - 1)
+        complete = np.abs(t_inp[i_first] - t_first) < d_t / 4
 
+        if np.any(complete):
+            break
 
-def _get_theta(inp, azimuth_dim):
-    energy_len = len(inp.ccomp.data)
+    i_last = np.minimum(i_start + n_az - 1, len(t_inp) - 1)
+    complete &= i_start + n_az <= len(t_inp)
+    complete &= np.abs(t_inp[i_last] - t_inp[i_first] - (n_az - 1) * d_t) < d_t / 2
 
-    # elevations are constant across time
-    # convert colat -> lat
-    theta_len = len(inp.rcomp.data)
-    theta_reform = 90.0 - np.reshape(inp.rcomp.data, [1, 1, theta_len])
+    # Half-spins without azimuths (zeros), from the first energy and anode
+    complete &= np.any(azimuth.data[:, :, 0, 0] != 0, axis=1)
 
-    # in the IDL code, we use reform to repeat the vector above
-    # here, we'll do the same thing with np.repeat
-    # repeated across phi
-    theta_rebin1 = np.repeat(theta_reform, azimuth_dim[1], axis=1)
-    # repeated across energy
-    out_theta = np.repeat(theta_rebin1, energy_len, axis=0)
-
-    return out_theta
-
-
-def _get_phi(azimuth, full):
-    # get azimuth
-    # -shift from time-azi.-elev.-en. to time-en.-azi.-elev.
-    out_phi = azimuth.data[full, :, :, :]
-
-    if out_phi.ndim == 4:
-        out_phi = out_phi.transpose([0, 3, 1, 2])
-    elif out_phi.ndim == 3:
-        out_phi = out_phi.transpose([2, 0, 1])
-
-    return out_phi
+    return i_start, complete
 
 
-def _get_dphi(azimuth, full, out_phi, inp):
-    energy_len = len(inp.ccomp.data)
-    theta_len = len(inp.rcomp.data)
-    phi_len = azimuth.shape[1]
-    # get dphi
-    #  - use median distance between subsequent phi measurements within each
-    #  distribution (median is used to discard large differences across 0=360)
-    #  - preserve dimensionality in case differences arise across energy or
-    #  elevation
-
-    if out_phi.ndim == 4:
-        out_dphi = np.median(np.diff(azimuth.data[full, ...], axis=1), axis=1)
-        out_dphi = np.transpose(out_dphi, [0, 2, 1])
-        dphi_reform = np.reshape(
-            out_dphi,
-            [full.size, energy_len, theta_len, 1],
-        )
-        out_dphi = np.repeat(dphi_reform, phi_len, axis=3)
-    elif out_phi.ndim == 3:
-        out_dphi = np.median(np.diff(azimuth.data[full, ...], axis=1), axis=0)
-        out_dphi = out_dphi.transpose([1, 0])
-        dphi_reform = np.reshape(out_dphi, [energy_len, theta_len, 1])
-        out_dphi = np.repeat(dphi_reform, phi_len, axis=2)
-    else:
-        raise TypeError("Invalid shape of out_phi")
-
-    return out_dphi
-
-
-def get_hpca_dist(inp, azimuth):
+def get_hpca_dist(
+    inp,
+    azimuth,
+    elevation=None,
+    source: str = "default",
+    data_path: str = "",
+):
     r"""Returns pseudo-3D particle data structures containing mms hpca data
-    for use with spd_slice2d.
+    for use with spd_slice2d, as SPEDAS mms_get_hpca_dist.
 
     Parameters
     ----------
     inp : xarray.DataArray
-        HPCA ion spec
+        HPCA ion spec; [nt, npo16, ner63].
     azimuth : xarray.DataArray
-        Azimuthal angles.
+        Azimuthal angles per energy; [nT, naz16, npo16, ner63], one record per
+        half-spin, at its centre (as :func:`pyrfu.mms.get_data` gives it) or at
+        its start (Epoch_Angles in the files).
+    elevation : array_like, Optional
+        Polar angles (colatitudes, deg) of the 16 anodes. Default reads
+        mms?_hpca_centroid_elevation_angle in the file of `inp`.
+    source : {"default", "local", "sdc", "aws"}, Optional
+        Resource to read the anode elevations from (if `elevation` is None).
+        Default uses default in `pyrfu/mms/config.json`.
+    data_path : str, Optional
+        Path of MMS data (for `source` "local").
 
     Returns
     -------
     out : dict
-        HPCA distribution
+        HPCA distribution: one distribution per half-spin of `azimuth` (data,
+        phi and dphi of shape [nT, ner63, naz16, npo16]), with the times of
+        `azimuth` (time), NaN for the half-spins not complete in `inp` or
+        without azimuths.
 
+    Raises
+    ------
+    ValueError
+        If the times of `azimuth` are not monotonic, or if no half-spin is
+        complete in `inp` with azimuths.
+
+    Notes
+    -----
+    The data of a half-spin are the naz16 samples of `inp` from its first
+    sample (start azimuth 0). They were shifted by one sample (as in SPEDAS):
+    each sample had the azimuth of the next one, and the first sample was the
+    last of the previous half-spin. The elevations were the anode numbers of
+    `inp`.
 
     """
 
@@ -113,89 +109,65 @@ def get_hpca_dist(inp, azimuth):
     # calculations when there's a problem with the CDF files
     time_data = azimuth.time.data
 
-    n_mono = np.where(time_data[1:] <= time_data[:-1])
-    assert len(n_mono[0]) == 0, "non-monotonic data found in the Epoch_Angles"
+    if np.any(time_data[1:] <= time_data[:-1]):
+        raise ValueError("non-monotonic data found in the Epoch_Angles")
 
-    # find azimuth times with complete 1/2 spins of particle data this is
-    # used to determine the number of 3D distributions that will be created
-    # and where their corresponding data is located in the particle data
-    # structure
-    n_times = len(azimuth.data[0, 0, :, 0])
-    data_idx = np.searchsorted(inp.time.data, time_data) - 1
-    full = np.argwhere((data_idx[1:] - data_idx[:-1]) == n_times)
-    assert len(full) != 0, "Azimuth data does not cover current time range"
+    i_start, complete = _half_spins(inp, azimuth)
 
-    # filter times when azimuth data is all zero
-    #   -just check the first energy & elevation
-    #   -assume azimuth values are positive
-    n_expected = azimuth.data[full, 0, 0, :].size
-    n_valid_az = np.count_nonzero(azimuth.data[full, 0, 0, :])
-    assert n_valid_az == n_expected, "zeroes found in the azimuth array"
+    if not np.any(complete):
+        raise ValueError(
+            "no complete half-spin of inp with azimuths: the times of azimuth "
+            "must be the centres or the starts of the half-spins of inp"
+        )
 
-    full = np.squeeze(full)
+    if elevation is None:
+        elevation = _hpca_elevations(inp, source, data_path)
 
-    data_idx = data_idx[full].flatten()
+    elevation = np.asarray(elevation, dtype=np.float64).ravel()
 
-    # Initialize energies, angles, and support data
     # final dimensions for a single distribution (energy-azimuth-elevation)
-    azimuth_dim = azimuth.data.shape
-    dim = (azimuth_dim[3], azimuth_dim[2], azimuth_dim[1])
+    n_half, n_az, n_po, n_en = azimuth.shape
+    dim = (n_en, n_az, n_po)
 
     specie = inp.attrs["FIELDNAM"].split(" ")[0].lower()
 
     mass, charge = mass_and_charge[specie]
 
-    out_bins = np.ones(dim) + 1
-    out_denergy = np.zeros(dim)
+    # energy bins and elevations are constant
+    out_energy = np.broadcast_to(inp.ccomp.data[:, None, None], dim).copy()
+    out_theta = np.broadcast_to(90.0 - elevation[None, None, :], dim).copy()
 
-    energy_len = len(inp.ccomp.data)
-    theta_len = len(inp.rcomp.data)
-    phi_len = azimuth_dim[1]
+    # azimuths, from half-spin-azimuth-elevation-energy
+    out_phi = np.transpose(azimuth.data, [0, 3, 1, 2]).astype(np.float64)
 
-    # energy bins are constant
-    out_energy = _get_energy(inp, dim)
+    # median step between subsequent azimuths of each half-spin (median to
+    # discard the step across 0 = 360)
+    out_dphi = np.median(np.diff(azimuth.data, axis=1), axis=1)
+    out_dphi = np.transpose(out_dphi, [0, 2, 1])[:, :, None, :]
+    out_dphi = np.broadcast_to(out_dphi, out_phi.shape).copy()
 
-    out_theta = _get_theta(inp, azimuth_dim)
+    out_data = np.full(out_phi.shape, np.nan)
 
-    out_dtheta = np.zeros([energy_len, theta_len, azimuth_dim[2]]) + 22.5
+    for i in np.flatnonzero(complete):
+        out_data[i] = np.transpose(inp.data[i_start[i] : i_start[i] + n_az], [2, 0, 1])
 
-    out_phi = _get_phi(azimuth, full)
-
-    out_dphi = _get_dphi(azimuth, full, out_phi, inp)
-
-    out_data = np.zeros((full.size, dim[0], dim[1], dim[2]))
-
-    # copy particle data
-    for i in range(full.size):
-        # need to extract the data from the center of the half-spin
-        if data_idx[i] - n_times / 2.0 >= 0:
-            start_idx = int(data_idx[i] - n_times / 2.0)
-        else:
-            continue
-
-        if data_idx[i] + n_times / 2.0 - 1 < len(inp.time):
-            end_idx = int(data_idx[i] + n_times / 2.0)
-        else:
-            continue
-
-        out_data[i, ...] = np.transpose(
-            inp.data[start_idx:end_idx, :, :],
-            [2, 0, 1],
-        )
+    out_phi[~complete] = np.nan
+    out_dphi[~complete] = np.nan
 
     out = {
+        "time": time_data,
         "data": out_data,
-        "bins": out_bins,
+        "bins": np.ones(dim),
         "theta": out_theta,
         "phi": out_phi,
         "energy": out_energy,
-        "dtheta": out_dtheta,
+        "dtheta": np.full(dim, 22.5),
         "dphi": out_dphi,
-        "denergy": out_denergy,
-        "n_energy": energy_len,
-        "n_theta": theta_len,
-        "n_phi": phi_len,
-        "n_times": full.size,
+        "denergy": np.zeros(dim),
+        "n_energy": n_en,
+        "n_theta": n_po,
+        "n_phi": n_az,
+        "n_times": n_half,
         "project_name": "MMS",
         "species": specie,
         "charge": charge,

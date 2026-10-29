@@ -33,7 +33,11 @@ def dist_append(inp0, inp1):
 
     Notes
     -----
-    The time series have to be in the correct time order.
+    The time series have to be in the correct time order. The energy widths
+    (``delta_energy_plus``, ``delta_energy_minus``) and the half widths of the
+    accumulations (``delta_time_minus``, ``delta_time_plus``) are joined when
+    both inputs have them, and left out otherwise (``mms.get_dist`` gives None
+    energy widths for files without them).
 
     """
 
@@ -77,28 +81,22 @@ def dist_append(inp0, inp1):
     data = np.vstack([inp0.data, inp1.data])
     data_attrs = dict(inp0.data.attrs)
 
-    if "delta_energy_plus" in glob_attrs:
-        delta_energy_plus = np.vstack(
-            [
-                inp0.attrs["delta_energy_plus"].data,
-                inp1.attrs["delta_energy_plus"].data,
-            ],
-        )
-        glob_attrs["delta_energy_plus"] = delta_energy_plus
+    # Energy widths (time, energy) and half widths of the accumulations (time,),
+    # joined when both have them, left out otherwise (a missing key raised
+    # KeyError, a None from get_dist AttributeError, and the half widths of
+    # inp0 alone were kept)
+    for key in [
+        "delta_energy_plus",
+        "delta_energy_minus",
+        "delta_time_minus",
+        "delta_time_plus",
+    ]:
+        values = [inp0.attrs.get(key), inp1.attrs.get(key)]
 
-    if "delta_energy_minus" in glob_attrs:
-        delta_energy_minus = np.vstack(
-            [
-                inp0.attrs["delta_energy_minus"].data,
-                inp1.attrs["delta_energy_minus"].data,
-            ],
-        )
-        glob_attrs["delta_energy_minus"] = delta_energy_minus
-
-    # Half widths of the accumulations (time,)
-    for k in ["delta_time_minus", "delta_time_plus"]:
-        if k in inp0.attrs and k in inp1.attrs:
-            glob_attrs[k] = np.hstack([inp0.attrs[k], inp1.attrs[k]])
+        if all(value is not None for value in values):
+            glob_attrs[key] = np.concatenate([np.asarray(v) for v in values])
+        else:
+            glob_attrs.pop(key, None)
 
     step_table = np.hstack(
         [inp0.attrs["esteptable"], inp1.attrs["esteptable"]],

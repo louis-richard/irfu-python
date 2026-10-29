@@ -40,7 +40,6 @@ def _ww(
     w_w: NDArray[np.complex128] = s_ww * np.exp(
         -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2,
     )
-    w_w = w_w * np.sqrt(1.0)
     return w_w
 
 
@@ -202,14 +201,6 @@ def wavelet(
         time = inp.time.data
         data = inp.data.astype(np.float64)
 
-    # Preallocate power2
-    if return_power:
-        power2: NDArray[Union[np.float64, np.complex128]] = np.zeros(
-            (len(time), n_freqs), dtype=np.float64
-        )
-    else:
-        power2 = np.zeros((len(time), n_freqs), dtype=np.complex128)
-
     # Find the frequencies for an FFT of all data
     freq: NDArray[np.float64] = (
         f_nyq * np.arange(1, 1 + len(data) / 2) / (len(data) / 2)
@@ -221,7 +212,6 @@ def wavelet(
 
     # Get the correct frequencies for the wavelet transform
     freqs_cwt: NDArray[np.float64] = f_nyq / scales
-    freqs_cwt_mat, _ = np.meshgrid(freqs_cwt, freqs_fft, sparse=True)
 
     if data.ndim in [1, 2]:
         out_dict: Dict[str, object] = {}
@@ -253,14 +243,19 @@ def wavelet(
             s_w_mat, scales_mat, sigma, freqs_fft_mat, f_nyq
         )
 
-        # Backward FFT
-        power: NDArray[np.complex128] = fft.ifft(w_w, axis=0, workers=os.cpu_count())
+        # Backward FFT (in place of w_w)
+        power: NDArray[np.complex128] = fft.ifft(
+            w_w, axis=0, overwrite_x=True, workers=os.cpu_count()
+        )
 
-        # Calculate the power spectrum
+        # Calculate the power spectrum, with the frequencies of the columns
+        # broadcast along time (they were tiled to the size of power)
+        power2: NDArray[Union[np.float64, np.complex128]]
+
         if return_power:
-            power2 = _power_r(power, np.tile(freqs_cwt_mat, (len(power), 1)))
+            power2 = _power_r(power, freqs_cwt)
         else:
-            power2 = _power_c(power, np.tile(freqs_cwt_mat, (len(power), 1)))
+            power2 = _power_c(power, freqs_cwt)
 
         if cut_edge:
             censure = np.floor(2 * scales).astype(int)

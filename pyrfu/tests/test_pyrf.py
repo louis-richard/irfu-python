@@ -179,6 +179,28 @@ class AutoCorrTestCase(unittest.TestCase):
         self.assertEqual(result.shape[0], 100)
         self.assertEqual(result.shape[1], 3)
 
+    def test_autocorr_values(self):
+        # sum_k x[k] x[k + lag], normalised by the lag 0, at the lags in s; in
+        # double precision (float32 lost precision, integers failed)
+        inp = generate_ts(64.0, 2000, tensor_order=1)
+        data = inp.data.astype(np.float64)
+        result = pyrf.autocorr(inp, 25)
+        expected = [
+            [data[: len(data) - lag, i] @ data[lag:, i] for i in range(3)]
+            for lag in range(26)
+        ]
+
+        np.testing.assert_allclose(result.data, expected / np.sum(data**2, axis=0))
+        np.testing.assert_allclose(result.lag.data, np.arange(26) / 64.0)
+
+        result = pyrf.autocorr(inp, 25, normed=False)
+        np.testing.assert_allclose(result.data, expected, rtol=1e-12)
+
+        # integers
+        inp = xr.DataArray(np.arange(1, 5), coords=[inp.time.data[:4]], dims=["time"])
+        expected = np.array([30, 20, 11, 4]) / 30
+        np.testing.assert_allclose(pyrf.autocorr(inp).data, expected)
+
 
 @ddt
 class AverageVDFTestCase(unittest.TestCase):
@@ -1360,6 +1382,15 @@ class Cart2SphTestCase(unittest.TestCase):
             ],
         )
 
+    def test_cart2sph_angles(self):
+        # Azimuth in (-pi, pi] (atan2), polar angle from the z axis
+        x_cart, y_cart = np.array([0.0, -1.0]), np.array([-1.0, 0.0])
+        alpha, beta, r = pyrf.cart2sph(x_cart, y_cart, 0.0)
+
+        np.testing.assert_allclose(alpha, [-np.pi / 2, np.pi])
+        np.testing.assert_allclose(beta, np.pi / 2)
+        np.testing.assert_allclose(r, 1.0)
+
 
 class Cart2SphTsTestCase(unittest.TestCase):
     def test_cart2sph_ts_input(self):
@@ -1824,6 +1855,24 @@ class CotransTestCase(unittest.TestCase):
         np.testing.assert_allclose((theta - gmst + 180) % 360 - 180, 0, atol=1e-3)
         self.assertAlmostEqual(theta[0] % 360, 280.46061837, delta=1e-3)
 
+    @data(("gse>sm", 1), ("mag>sm", 1), ("sm>geo", 1), ("gse>gei", 0))
+    @unpack
+    def test_cotrans_dipole_once(self, flag, n_calls):
+        # The dipole direction is computed once per call (it was computed for
+        # each transformation to or from GSM and SM), with the same result
+        module = sys.modules["pyrfu.pyrf.cotrans"]
+        time = generate_timeline(1.0, 10)
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 2.0, 3.0], (10, 1)))
+        direct = module._dipole_direction_gse
+
+        with mock.patch.object(module, "_dipole_direction_gse", wraps=direct) as dipole:
+            result = pyrf.cotrans(inp, flag)
+
+        self.assertEqual(dipole.call_count, n_calls)
+        np.testing.assert_allclose(
+            np.linalg.norm(result.data, axis=1), np.sqrt(14.0), rtol=1e-12
+        )
+
 
 @ddt
 class CrossTestCase(unittest.TestCase):
@@ -2240,6 +2289,26 @@ class DistAppendTestCase(unittest.TestCase):
         np.testing.assert_array_equal(
             result.attrs["delta_time_plus"], np.hstack([[0.2] * 10, [0.4] * 5])
         )
+
+    def test_dist_append_missing_widths(self):
+        # Energy widths missing (KeyError) or None as get_dist gives for files
+        # without them (AttributeError), half widths in inp0 only (kept with
+        # the length of inp0): left out
+        for missing in [{}, {"delta_energy_plus": None, "delta_energy_minus": None}]:
+            inp0 = generate_vdf(64.0, 4, [32, 32, 16])
+            inp1 = generate_vdf(64.0, 3, [32, 32, 16])
+            inp0.attrs["delta_time_minus"] = np.full(4, 0.1)
+
+            for key in ["delta_energy_plus", "delta_energy_minus"]:
+                inp1.attrs.pop(key)
+
+            inp1.attrs.update(missing)
+            result = pyrf.dist_append(inp0, inp1)
+
+            self.assertEqual(len(result.time), 7)
+
+            for key in ["delta_energy_plus", "delta_energy_minus", "delta_time_minus"]:
+                self.assertNotIn(key, result.attrs)
 
 
 @ddt
@@ -3215,7 +3284,8 @@ class GradientTestCase(unittest.TestCase):
 
     def test_gradient_time_steps(self):
         # 128 Hz with a 1 s gap and +-1 ms jitter: the actual time steps, not the
-        # median one (65 times the slope next to the gap, 15 % with the jitter)
+        # median one (65 times the slope next to the gap, 15 % with the jitter),
+        # and each segment differentiated separately
         rng = np.random.default_rng(0)
         off = np.concatenate([np.arange(50), np.arange(50) + 178]) * 7812500
         off += rng.integers(-1_000_000, 1_000_000, 100)
@@ -3228,16 +3298,43 @@ class GradientTestCase(unittest.TestCase):
         )
         result = pyrf.gradient(inp)
 
-        # Exact inside (second order), first order at the ends
+        # Exact inside the segments (second order), first order at their ends
+        inside = np.r_[1:49, 51:99]
         np.testing.assert_allclose(
-            result.data[1:-1],
-            np.outer(3.0 + 2.0 * t_sec[1:-1], [1.0, -2.0, 0.5]),
+            result.data[inside],
+            np.outer(3.0 + 2.0 * t_sec[inside], [1.0, -2.0, 0.5]),
             rtol=1e-9,
         )
+
+        for i_end, i_next in [(49, 48), (50, 51)]:
+            slope = (inp.data[i_next] - inp.data[i_end]) / (
+                t_sec[i_next] - t_sec[i_end]
+            )
+            np.testing.assert_allclose(result.data[i_end], slope, rtol=1e-9)
         np.testing.assert_array_equal(result.time.data, time)
         np.testing.assert_array_equal(result.comp.data, inp.comp.data)
         self.assertEqual(result.attrs["UNITS"], "nT/s")
         self.assertEqual(inp.attrs["UNITS"], "nT")
+
+    def test_gradient_gaps(self):
+        # Segments between gaps (steps over 3 time_step) differentiated
+        # separately, as irf_gradient; a single sample between gaps is NaN; a
+        # larger time_step joins them (they were differentiated across)
+        t_sec = np.r_[np.arange(10.0), 20.0, np.arange(30.0, 40.0)]
+        time = np.datetime64("2019-01-01T00:00:00", "ns") + (t_sec * 1e9).astype(
+            "timedelta64[ns]"
+        )
+        inp = pyrf.ts_scalar(time, t_sec**2)
+        result = pyrf.gradient(inp)
+
+        segments = [slice(0, 10), slice(11, 21)]
+        expected = np.hstack([np.gradient(t_sec[s] ** 2, t_sec[s]) for s in segments])
+        np.testing.assert_allclose(np.delete(result.data, 10), expected)
+        self.assertTrue(np.isnan(result.data[10]))
+
+        np.testing.assert_allclose(
+            pyrf.gradient(inp, time_step=5.0).data, np.gradient(t_sec**2, t_sec)
+        )
 
     def test_gradient_regular(self):
         # Evenly sampled: np.gradient divided by the time step, as before
@@ -4255,6 +4352,28 @@ class Iso86012DatetimeTestCase(unittest.TestCase):
         result = pyrf.iso86012datetime(value)
         self.assertIsInstance(result, list)
 
+    def test_iso86012datetime_values(self):
+        # Truncated to microseconds, also before 1970; tuples and datetime64
+        # (tuples raised TypeError)
+        time = (
+            "1969-12-31T23:59:59.999999999",
+            "2019-09-14T07:54:00.123456789",
+        )
+        expected = [
+            datetime.datetime(1969, 12, 31, 23, 59, 59, 999999),
+            datetime.datetime(2019, 9, 14, 7, 54, 0, 123456),
+        ]
+
+        for value in [time, np.array(time, dtype="datetime64[ns]")]:
+            self.assertListEqual(pyrf.iso86012datetime(value), expected)
+
+    def test_iso86012datetime_errors(self):
+        with self.assertRaises(TypeError):
+            pyrf.iso86012datetime("2019-01-01T00:00:00")
+
+        with self.assertRaisesRegex(ValueError, "NaT"):
+            pyrf.iso86012datetime(["2019-01-01T00:00:00", "NaT"])
+
 
 @ddt
 class Iso86012Datetime64TestCase(unittest.TestCase):
@@ -4382,6 +4501,76 @@ class LowPassTestCase(unittest.TestCase):
     )
     def test_lowpass_output(self, value):
         pyrf.lowpass(value, random.random(), 64.0)
+
+    @staticmethod
+    def _signal(f_s, n_pts, f_low, n_comp=1):
+        # A slow sine, white noise and a trend
+        t_s = np.arange(n_pts) / f_s
+        noise = np.random.default_rng(0).normal(size=(n_pts, n_comp))
+        slow = np.sin(2 * np.pi * f_low * t_s)[:, None] + 0.01 * t_s[:, None]
+        time = generate_timeline(f_s, n_pts)
+
+        if n_comp == 1:
+            return pyrf.ts_scalar(time, (slow + noise)[:, 0]), slow[:, 0]
+
+        return pyrf.ts_vec_xyz(time, slow + noise, {"UNITS": "mV/m"}), slow
+
+    def test_lowpass_matlab(self):
+        # irf_lowpass: detrend, elliptic filter (4, 0.1 dB, 60 dB), filtfilt
+        # with MATLAB's padding of 12 samples (scipy's filtfilt used 15, which
+        # changed the first and last samples), trend added back
+        inp, _ = self._signal(64.0, 2000, 0.1, 3)
+        result = pyrf.lowpass(inp, 1.0, 64.0)
+
+        b_coeffs, a_coeffs = signal.ellip(4, 0.1, 60, 1.0 / 32.0)
+        detrended = signal.detrend(inp.data, axis=0)
+        expected = signal.filtfilt(b_coeffs, a_coeffs, detrended, axis=0, padlen=12)
+        expected += inp.data - detrended
+        np.testing.assert_allclose(result.data, expected, atol=1e-10)
+        self.assertEqual(result.attrs["UNITS"], "mV/m")
+
+    def test_lowpass_low_cutoff(self):
+        # 0.1 Hz at 8192 Hz: the (b, a) filter was unstable (outputs of 40
+        # for an input of about 1 over 16 s)
+        inp, _ = self._signal(8192.0, 2**17, 0.01)
+        result = pyrf.lowpass(inp, 0.1, 8192.0)
+
+        self.assertLess(np.max(np.abs(result.data)), 2.0)
+
+    def test_lowpass_errors(self):
+        inp, _ = self._signal(64.0, 100, 0.1)
+
+        with self.assertRaises(TypeError):
+            pyrf.lowpass(inp.data, 1.0, 64.0)
+
+        for f_cut in [0.0, 32.0, 40.0]:
+            with self.assertRaisesRegex(ValueError, "f_cut must be"):
+                pyrf.lowpass(inp, f_cut, 64.0)
+
+        with self.assertRaisesRegex(ValueError, "more than 12 samples"):
+            pyrf.lowpass(inp[:12], 1.0, 64.0)
+
+        inp.data[50] = np.nan
+
+        with self.assertRaisesRegex(ValueError, "NaN"):
+            pyrf.lowpass(inp, 1.0, 64.0)
+
+    def test_lowpass_f_s(self):
+        # f_s, as resample and wavelet, by default from the time series; fhz
+        # (its former name) still accepted with a FutureWarning
+        inp, _ = self._signal(64.0, 500, 0.1)
+        expected = pyrf.lowpass(inp, 1.0, 64.0)
+
+        xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0), expected)
+        xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0, f_s=64.0), expected)
+
+        with self.assertWarns(FutureWarning):
+            xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0, fhz=64.0), expected)
+
+        with self.assertRaisesRegex(ValueError, "f_s only"):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                pyrf.lowpass(inp, 1.0, f_s=64.0, fhz=64.0)
 
 
 @ddt
@@ -4555,6 +4744,39 @@ class MagnetosphereTestCase(unittest.TestCase):
     def test_magnetosphere_unknown_model(self):
         with self.assertRaises(NotImplementedError):
             pyrf.magnetosphere("mp_bazinga")
+
+    def test_magnetosphere_solar_wind(self):
+        # Given solar wind, as irf_magnetosphere(model, Dp, Bz) (M = 4); the
+        # magnetopause at 0, 0.1, ..., 3.1 rad as irfu-matlab (it was
+        # linspace(0, pi, 31)), up to abs(x) = 100 R_E
+        x_mp, y_mp = pyrf.magnetosphere("mp_shue1998", d_p=10.0, b_z=-2.0)
+        x_bs, _ = pyrf.magnetosphere("BS", d_p=10.0, b_z=-2.0)
+        r_zero = self._r_zero(10.0, -2.0)
+
+        self.assertAlmostEqual(x_mp[0], r_zero)
+        np.testing.assert_allclose(
+            np.arctan2(y_mp, x_mp), 0.1 * np.arange(len(x_mp)), atol=1e-12
+        )
+        self.assertEqual(len(pyrf.magnetosphere("mp_shue1998")[0]), 29)
+        self.assertAlmostEqual(x_bs[0], self._standoff(r_zero, 4.0))
+
+        x_bs, _ = pyrf.magnetosphere("bs", d_p=10.0, b_z=-2.0, m_a=8.0)
+        self.assertAlmostEqual(x_bs[0], self._standoff(r_zero, 8.0))
+
+    def test_magnetosphere_errors(self):
+        tint = ["2019-09-14T07:00:00", "2019-09-14T10:00:00"]
+
+        with self.assertRaisesRegex(ValueError, "either tint"):
+            pyrf.magnetosphere("mp_shue1998", tint, d_p=2.0)
+
+        with self.assertRaisesRegex(ValueError, "dynamic pressure"):
+            pyrf.magnetosphere("mp_shue1998", d_p=0.0)
+
+        with self.assertRaisesRegex(ValueError, "dynamic pressure"):
+            pyrf.magnetosphere("mp_shue1998", b_z=np.nan)
+
+        with self.assertRaisesRegex(ValueError, "Mach number"):
+            pyrf.magnetosphere("bs", m_a=1.0)
 
 
 def _xy_series(x, y):
@@ -4897,6 +5119,24 @@ class OptimizeNbins1DTestCase(unittest.TestCase):
 
         self.assertIsInstance(result, int)
 
+    def test_optimize_nbins_1d_values(self):
+        # Minimum of the cost function of the numpy.histogram counts, n_max
+        # included (it was left out), NaN samples left out (they raised)
+        data = np.random.default_rng(0).standard_normal(2000)
+
+        def cost(n_bins):
+            counts = np.histogram(data, bins=n_bins)[0]
+            return (2 * counts.mean() - counts.var()) * (n_bins / np.ptp(data)) ** 2
+
+        expected = 2 + int(np.argmin([cost(n_bins) for n_bins in range(2, 31)]))
+        x = xr.DataArray(np.hstack([data, np.nan]))
+
+        self.assertEqual(pyrf.optimize_nbins_1d(x, 2, 30), expected)
+        self.assertEqual(pyrf.optimize_nbins_1d(x, 5, 5), 5)
+
+        with self.assertRaises(ValueError):
+            pyrf.optimize_nbins_1d(xr.DataArray(np.ones(10)))
+
 
 class OptimizeNbins2DTestCase(unittest.TestCase):
     def test_optimize_nbins_2d(self):
@@ -4908,6 +5148,34 @@ class OptimizeNbins2DTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result[0], int)
         self.assertIsInstance(result[1], int)
+
+    def test_optimize_nbins_2d_values(self):
+        # Minimum of the cost function of the numpy.histogram2d counts, n_max
+        # included (it was left out), samples with NaN left out (they raised)
+        rng = np.random.default_rng(1)
+        x_data = rng.standard_normal(2000)
+        y_data = rng.gamma(2.0, size=2000) + 0.5 * x_data
+
+        def cost(n_x, n_y):
+            counts = np.histogram2d(x_data, y_data, bins=(n_x, n_y))[0]
+            d_xy = np.ptp(x_data) * np.ptp(y_data) / (n_x * n_y)
+            return (2 * counts.mean() - counts.var()) / d_xy**2
+
+        costs = [[cost(n_x, n_y) for n_y in range(3, 16)] for n_x in range(2, 13)]
+        i_min, j_min = np.unravel_index(np.argmin(costs), np.shape(costs))
+        x = xr.DataArray(np.hstack([x_data, 1.0]))
+        y = xr.DataArray(np.hstack([y_data, np.nan]))
+
+        self.assertTupleEqual(
+            pyrf.optimize_nbins_2d(x, y, [2, 3], [12, 15]), (2 + i_min, 3 + j_min)
+        )
+        self.assertTupleEqual(pyrf.optimize_nbins_2d(x, y, [4, 6], [4, 6]), (4, 6))
+
+        with self.assertRaises(ValueError):
+            pyrf.optimize_nbins_2d(x, y[:-1])
+
+        with self.assertRaises(ValueError):
+            pyrf.optimize_nbins_2d(x, xr.DataArray(np.ones(len(x))))
 
 
 @ddt
@@ -6113,6 +6381,14 @@ class TsAppendTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(result.attrs["vec"], np.arange(5) + 50)
 
+    def test_ts_append_none(self):
+        # None for two None (the start of an accumulation loop), as documented
+        inp = self._series("2019-01-01T00:00:00", 5)
+
+        self.assertIsNone(pyrf.ts_append(None, None))
+        self.assertIs(pyrf.ts_append(None, inp), inp)
+        self.assertIs(pyrf.ts_append(inp, None), inp)
+
 
 @ddt
 class TimeClipTestCase(unittest.TestCase):
@@ -7071,25 +7347,27 @@ class WaveletTestCase(unittest.TestCase):
             _ww.__wrapped__(s_ww, scales_mat, sigma, frequencies_mat, f_nyq)
         )
 
-    @data(
-        (
-            np.random.random((100, 3)) + np.random.random((100, 3)) * 1j,
-            np.random.random((100, 3)),
-        )
-    )
-    @unpack
-    def test_power_r(self, power, new_freq_mat):
-        self.assertIsNotNone(_power_r.__wrapped__(power, new_freq_mat))
+    def test_power(self):
+        # 2 pi |power|^2 / f and sqrt(2 pi / f) power, with the frequencies of
+        # the columns broadcast along time (as wavelet calls them; they were
+        # tiled to the size of power), jitted and not
+        power = np.random.random((100, 3)) + np.random.random((100, 3)) * 1j
+        frequencies = np.array([1.0, 2.0, 4.0])
 
-    @data(
-        (
-            np.random.random((100, 3)) + np.random.random((100, 3)) * 1j,
-            np.random.random((100, 3)),
-        )
-    )
-    @unpack
-    def test_power_c(self, power, new_freq_mat):
-        self.assertIsNotNone(_power_c.__wrapped__(power, new_freq_mat))
+        for power_r, power_c in [
+            (_power_r, _power_c),
+            (_power_r.__wrapped__, _power_c.__wrapped__),
+        ]:
+            np.testing.assert_allclose(
+                power_r(power, frequencies),
+                2 * np.pi * np.abs(power) ** 2 / frequencies,
+                rtol=1e-12,
+            )
+            np.testing.assert_allclose(
+                power_c(power, frequencies),
+                np.sqrt(2 * np.pi / frequencies) * power,
+                rtol=1e-12,
+            )
 
 
 @ddt

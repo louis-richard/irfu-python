@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import numbers
+
 # Third party imports
 import numpy as np
-
-# Built-in imports
 import tqdm
 import xarray as xr
 from scipy.constants import electron_mass, electron_volt, proton_mass, speed_of_light
@@ -74,9 +75,17 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         ("2d") or a box ("3d").
     base : {"pol", "cart"}, Optional
         Base of the projection: polar "pol" (default, for "1d") or cartesian
-        "cart" (for "2d" and "3d").
+        "cart" (for "2d" and "3d"). dim and base are case-insensitive.
     **kwargs
-        Keyword arguments
+        Keyword arguments, among which:
+
+        * sc_pot : xarray.DataArray, the spacecraft potential (V), 0 V by
+          default.
+        * lower_e_lim : float or xarray.DataArray, the threshold energy
+          (eV), 0 eV by default. The channels below max(sc_pot,
+          lower_e_lim) are set to zero; a time step without any channel
+          above it is NaN.
+        * verbose : bool, show a progress bar (default True).
 
     Returns
     -------
@@ -98,9 +107,15 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     """
 
-    # Make sure the projection dimension amd base are correct
-    assert base.lower() in ["cart", "pol"], "Invalid projection base!!"
-    assert dim.lower() in ["1d", "2d", "3d"], "Invalid projection dimension!!"
+    # Make sure the projection dimension and base are correct
+    base, dim = base.lower(), dim.lower()
+
+    if base not in ["cart", "pol"]:
+        raise ValueError(f'base must be "pol" or "cart", not {base!r}')
+
+    if dim not in ["1d", "2d", "3d"]:
+        raise ValueError(f'dim must be "1d", "2d" or "3d", not {dim!r}')
+
     ndim = int(dim[0])
 
     # Clip the distribution. If no time interval provided use the entire
@@ -230,9 +245,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     if isinstance(lower_e_lim, xr.DataArray):
         # If time series, clip to time interval and resample to VDF's time line
         lower_e_lim = resample(lower_e_lim, vdf_time).data
-    elif isinstance(lower_e_lim, float):
-        # If float, tile to VDF's timeline
-        lower_e_lim = np.tile(lower_e_lim, n_t)
+    elif isinstance(lower_e_lim, numbers.Real):
+        # If a number (int or float), tile to VDF's timeline
+        lower_e_lim = np.tile(float(lower_e_lim), n_t)
     else:
         raise TypeError("Invalid lower_e_lim!!")
 
@@ -274,7 +289,11 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     f_g = np.zeros([n_t, *[n_vg] * ndim])
     all_v = {f"v{chr(120 + i)}": np.zeros((n_t, n_vg)) for i in range(ndim)}
 
-    for i_t in tqdm.tqdm(range(n_t), ncols=60):  # display progress
+    # Time steps computed (those without any channel above the threshold
+    # energy are NaN)
+    computed = np.zeros(n_t, dtype=bool)
+
+    for i_t in tqdm.tqdm(range(n_t), ncols=60, disable=not kwargs.get("verbose", True)):
         # 3d data matrix for time index
         f_3d = np.squeeze(vdf_data.data[i_t, ...])  # s^3/m^6
         f_3d = f_3d.astype(np.float64).copy()  # Convert to float64
@@ -287,8 +306,13 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         # below the threshold energy or below the spacecraft potential if
         # provided.
         thresh_e = np.max([lower_e_lim[i_t], sc_pot[i_t]])
-        e_min_idx = np.where(energy - delta_energy_minu[i_t, :] > thresh_e)[0][0]
-        f_3d[:e_min_idx] = 0.0
+        above = np.where(energy - delta_energy_minu[i_t, :] > thresh_e)[0]
+
+        if len(above) == 0:
+            f_g[i_t, ...] = np.nan
+            continue
+
+        f_3d[: above[0]] = 0.0
 
         # Correct energy shift due to spacecraft potential
         energy -= sc_pot[i_t]
@@ -372,12 +396,21 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         for i in range(ndim):
             all_v[f"v{chr(120 + i)}"][i_t, :] = tmpst[f"v{chr(120 + i)}"] / 1e3  # km/s
 
+        computed[i_t] = True
+
+    if not np.any(computed):
+        raise ValueError(
+            "no energy channel above the spacecraft potential and lower_e_lim at "
+            "any time"
+        )
+
     # Build output as a time series with dimensions:
     #   - (time x vx) for 1D reduced distribution
     #   - (time x vx x vy) for 2D reduced distribution
+    i_grid = np.argmax(computed)  # the grid of the first computed step
     coords = [
         vdf_time.data,
-        *[all_v[f"v{chr(120 + i)}"][0, :] for i in range(ndim)],
+        *[all_v[f"v{chr(120 + i)}"][i_grid, :] for i in range(ndim)],
     ]
     dims = ["time", *[f"v{chr(120 + i)}" for i in range(ndim)]]
     out = xr.DataArray(f_g, coords=coords, dims=dims)

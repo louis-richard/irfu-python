@@ -51,7 +51,9 @@ def get_dist(file_path, cdf_name, tint: list = None):
         specie in the selected time interval. The times are the centres of
         the accumulations, whose half widths (s) are the attributes
         ``delta_time_minus`` and ``delta_time_plus`` (time,), as the
-        irfu-matlab ``dt_minus`` and ``dt_plus``.
+        irfu-matlab ``dt_minus`` and ``dt_plus``. The energy widths of the
+        channels are ``delta_energy_minus`` and ``delta_energy_plus``, when
+        the file has them.
 
     """
 
@@ -198,12 +200,11 @@ def get_dist(file_path, cdf_name, tint: list = None):
         ],
     )
 
+    # Energy widths, left out of the files without them (they were None, which
+    # the routines that check for the attribute, e.g. reduce, took as given)
     if d_en_name in z_vars:
         glob_attrs["delta_energy_plus"] = file[d_en_name].values
         glob_attrs["delta_energy_minus"] = file[d_en_name].values
-    else:
-        glob_attrs["delta_energy_plus"] = None
-        glob_attrs["delta_energy_minus"] = None
 
     # Half widths of the accumulation (s) around the (centred) times, as
     # irfu-matlab dt_minus and dt_plus

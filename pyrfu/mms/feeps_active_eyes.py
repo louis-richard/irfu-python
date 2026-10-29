@@ -42,6 +42,10 @@ def feeps_active_eyes(var, tint, mms_id):
         * electrons : set_intersection([5, 11, 12], active_eyes).
         * ions : None.
 
+       As in IDL SPEDAS and pySPEDAS, SITL returns the top eyes 5, 11 and 12
+       for the ions too before 16 August 2017; after, the intersection with the
+       active ion eyes (6, 7 and 8) is empty.
+
     3) From Drew Turner, 9/7/2017, srvy mode :
         * before 16 August 2017 :
             * electrons : [3, 4, 5, 11, 12].
@@ -132,15 +136,9 @@ def feeps_active_eyes(var, tint, mms_id):
         sensors = active_table[f"{mms_id:d}-{var['dtype'].lower()}"]
 
         if var["lev"].lower() == "sitl":
-            sensors["top"] = list(set(sensors["top"]) & {5, 11, 12})
-            sensors["bottom"] = []
-            return {
-                "top": list(set(sensors["top"]) & {5, 11, 12}),
-                "bottom": [],
-            }
+            return {"top": sorted(set(sensors["top"]) & {5, 11, 12}), "bottom": []}
 
     if var["lev"].lower() == "sitl":
-        sensors["top"] = [5, 11, 12]
-        sensors["bottom"] = []
+        sensors = {"top": [5, 11, 12], "bottom": []}
 
     return sensors

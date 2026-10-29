@@ -507,7 +507,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
     n_psd : xarray.DataArray
         Time series of the number density (1rst moment).
     v_psd : xarray.DataArray
-        Time series of the bulk velocity (2nd moment).
+        Time series of the bulk velocity (2nd moment). NaN where the density
+        is zero, as the pressure, temperature and heat flux.
     p_psd : xarray.DataArray
         Time series of the pressure tensor (3rd moment).
     p2_psd : xarray.DataArray
@@ -796,10 +797,6 @@ def psd_moments(vdf, sc_pot, **kwargs):
         theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
     ).astype(np.float64)
 
-    energy_correct = energy - sc_pot[:, np.newaxis]
-    velocity = np.sqrt(2 * q_e * energy_correct / p_mass)
-    velocity[energy_correct < flag_inner_electron * w_inner_electron] = 0
-
     # Speed widths of the energy channels, as in irfu-matlab mms.psd_moments:
     # the edges of each channel, corrected for the spacecraft potential
     energy_upper, energy_lower = _energy_edges(
@@ -850,9 +847,13 @@ def psd_moments(vdf, sc_pot, **kwargs):
     p_psd[no_energy] = np.nan
     h_psd[no_energy] = np.nan
 
-    # Compute moments in SI units
+    # Compute moments in SI units. Without particles (n = 0), the bulk
+    # velocity, pressure, temperature and heat flux are NaN (0 / 0, silently)
     p_psd *= p_mass
-    v_psd /= n_psd[:, np.newaxis]
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        v_psd /= n_psd[:, np.newaxis]
+
     p2_psd = np.zeros_like(p_psd)
     p2_psd[:, 0, 0] = p_psd[:, 0, 0]
     p2_psd[:, 0, 1] = p_psd[:, 0, 1]
@@ -876,7 +877,9 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     p_trace = np.trace(p_psd, axis1=1, axis2=2)
     t_psd = np.zeros(p_psd.shape)
-    t_psd[...] = p_psd[...] / (k_b * n_psd[:, np.newaxis, np.newaxis])
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        t_psd[...] = p_psd[...] / (k_b * n_psd[:, np.newaxis, np.newaxis])
 
     v_abs2 = np.linalg.norm(v_psd, axis=1) ** 2
     h_psd *= p_mass / 2
