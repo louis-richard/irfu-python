@@ -1451,6 +1451,23 @@ class EisOmniTestCase(unittest.TestCase):
         result = mms.eis_omni(eis, "mean")
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_eis_omni_spin_sector_attrs(self):
+        # The spin numbers and sectors as coordinates and the energy widths and
+        # species in the attributes (left out: KeyError in eis_spec_combine_sc)
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
+        result = mms.eis_omni(eis)
+
+        np.testing.assert_array_equal(result.spin.data, eis.spin.data)
+        np.testing.assert_array_equal(result.sector.data, eis.sector.data)
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_plus"], eis.attrs["delta_energy_plus"]
+        )
+        self.assertEqual(result.attrs["species"], "proton")
+
+        # attributes not shared with the telescope
+        result.attrs["new"] = 1
+        self.assertNotIn("new", eis.t0.attrs)
+
 
 @ddt
 class EisPadTestCase(unittest.TestCase):

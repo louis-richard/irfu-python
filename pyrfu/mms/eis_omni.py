@@ -24,7 +24,11 @@ def eis_omni(eis_allt, method: str = "mean"):
     Returns
     -------
     flux_omni : xarray.DataArray
-        Omni-directional flux for all 6 telescopes
+        Omni-directional flux for all 6 telescopes, with the spin numbers and
+        sectors of the samples (``spin`` and ``sector`` coordinates, if
+        `eis_allt` has them on the same times) and the energy widths and
+        species of `eis_allt` in its attributes (``delta_energy_plus``,
+        ``delta_energy_minus``, ``species``).
 
     See Also
     --------
@@ -70,8 +74,22 @@ def eis_omni(eis_allt, method: str = "mean"):
     # Get dimensions, coordinates and attributes based on first telescope
     dims = eis_allt[scopes[0]].dims
     coords = [eis_allt[scopes[0]][k] for k in dims]
-    attrs = eis_allt[scopes[0]].attrs
+    attrs = {**eis_allt[scopes[0]].attrs}
+
+    # Energy widths and species, attributes of the Dataset (they were left
+    # out, on which eis_spec_combine_sc raised KeyError)
+    for key in ["delta_energy_plus", "delta_energy_minus", "species"]:
+        if key in eis_allt.attrs:
+            attrs[key] = eis_allt.attrs[key]
 
     flux_omni = xr.DataArray(flux_omni, coords=coords, dims=dims, attrs=attrs)
+
+    # Spin numbers and sectors of the samples, to pair the spacecraft in
+    # eis_spec_combine_sc (the sector gives the look direction)
+    for key in ["spin", "sector"]:
+        if key in eis_allt and np.array_equal(
+            eis_allt[key].time.data, flux_omni.time.data
+        ):
+            flux_omni = flux_omni.assign_coords({key: ("time", eis_allt[key].data)})
 
     return flux_omni
