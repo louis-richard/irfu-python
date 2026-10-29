@@ -762,22 +762,18 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
             s_mat_avg[censure_idx, ...] = np.nan
 
-            a_mat, u_mat = [np.zeros((6, 3, n_data_out)) for _ in range(2)]
-            w_mat, v_mat = [np.zeros((3, 3, n_data_out)) for _ in range(2)]
+            a_mat = np.zeros((n_data_out, 6, 3))
+            w_mat, v_mat = [np.full((3, 3, n_data_out), np.nan) for _ in range(2)]
 
-            a_mat[:3, ...] = np.real(np.transpose(s_mat_avg, [1, 2, 0]))
-            a_mat[3:6, ...] = -np.imag(np.transpose(s_mat_avg, [1, 2, 0]))
+            a_mat[:, :3, :] = np.real(s_mat_avg)
+            a_mat[:, 3:6, :] = -np.imag(s_mat_avg)
 
-            for i in range(n_data_out):
-                if np.sum(np.isnan(a_mat[..., i])) != 0:
-                    u_mat[..., i] = np.nan
-                    w_mat[..., i] = np.nan
-                    v_mat[..., i] = np.nan
-                else:
-                    uu_, ww_, vv_ = np.linalg.svd(a_mat[..., i], full_matrices=False)
-                    u_mat[..., i] = uu_
-                    w_mat[..., i] = ww_
-                    v_mat[..., i] = vv_.T
+            # SVD of the matrices without NaN, all at once (it was a loop over
+            # the times); NaN elsewhere
+            valid = ~np.any(np.isnan(a_mat), axis=(1, 2))
+            _, ww_, vv_ = np.linalg.svd(a_mat[valid], full_matrices=False)
+            w_mat[..., valid] = ww_.T[None, ...]
+            v_mat[..., valid] = np.transpose(vv_, [2, 1, 0])
 
             sign_kz = np.sign(v_mat[2, 2, :])
             v_mat[2, 2, :] = v_mat[2, 2, :] * sign_kz
