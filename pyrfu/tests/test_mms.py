@@ -1469,6 +1469,97 @@ class EisOmniTestCase(unittest.TestCase):
         self.assertNotIn("new", eis.t0.attrs)
 
 
+class EisSpecCombineScTestCase(unittest.TestCase):
+    @staticmethod
+    def _omni(t_0, n_pts, first_sector, value, energies=None, spin_avg=False):
+        # Survey-like omni spectrum: a sample every 2.5 s, 8 sectors per spin
+        # (0, 4, ..., 28), flux value(sector) at every energy
+        energies = np.array([50.0, 80.0, 120.0]) if energies is None else energies
+        time = np.datetime64(t_0, "ns") + (
+            np.arange(n_pts) * 2.5e9 * (8 if spin_avg else 1)
+        ).astype("timedelta64[ns]")
+        sector = (first_sector + 4 * np.arange(n_pts)) % 32
+        flux = np.tile(value(sector)[:, None], (1, len(energies)))
+        out = xr.DataArray(
+            flux,
+            coords=[time, energies],
+            dims=["time", "energy"],
+            attrs={"delta_energy_plus": energies / 10, "UNITS": "1/(cm^2 s sr keV)"},
+        )
+        return out if spin_avg else out.assign_coords(sector=("time", sector))
+
+    def test_eis_spec_combine_sc_documented_chain(self):
+        # get_eis_allt -> eis_omni -> eis_spec_combine_sc (KeyError: 'energy_dplus')
+        omnis = [
+            mms.eis_omni(
+                generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", ic)
+            )
+            for ic in range(2, 5)
+        ]
+        result = mms.eis_spec_combine_sc(omnis)
+
+        np.testing.assert_allclose(
+            result.data, np.mean([o.data for o in omnis], axis=0), rtol=1e-12
+        )
+        self.assertIn("delta_energy_minus", result.attrs)
+
+    def test_eis_spec_combine_sc_sectors(self):
+        # Paired at the same sector (look direction), not by index: a flux that
+        # depends on the sector only gives back the value of each sector
+        def value(sector):
+            return 1.0 + sector.astype(float)
+
+        ref = self._omni("2017-07-11T22:00:01.0", 40, 4, value)
+        other = self._omni("2017-07-11T22:00:00.1", 41, 28, value)
+        result = mms.eis_spec_combine_sc([ref, other])
+
+        np.testing.assert_array_equal(result.time.data, ref.time.data)
+        np.testing.assert_array_equal(result.sector.data, ref.sector.data)
+        np.testing.assert_allclose(result.data, ref.data)
+
+        result = mms.eis_spec_combine_sc([ref, other], "sum")
+        np.testing.assert_allclose(result.data[2:-2], 2 * ref.data[2:-2])
+
+    def test_eis_spec_combine_sc_spin_averages(self):
+        # Spin averages paired by time: a spin missing on one spacecraft is
+        # left out there (by index, all the next ones were shifted by a spin)
+        ref = self._omni(
+            "2017-07-11T22:00:00", 10, 0, lambda s: 0 * s + 1.0, spin_avg=True
+        )
+        other = self._omni(
+            "2017-07-11T22:00:00.5", 11, 0, lambda s: 0 * s + 3.0, spin_avg=True
+        )
+        other.data[np.arange(11) > 4] = 5.0
+        other = other.drop_isel(time=4)
+        result = mms.eis_spec_combine_sc([ref, other])
+
+        np.testing.assert_allclose(result.data[:4], 2.0)
+        np.testing.assert_allclose(result.data[4], 1.0)
+        np.testing.assert_allclose(result.data[5:], 3.0)
+
+    def test_eis_spec_combine_sc_energies_method(self):
+        # Energies of the spacecraft with the fewest channels, the others at
+        # their closest channels; ValueError for an unknown method
+        ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)
+        other = self._omni(
+            "2017-07-11T22:00:00",
+            16,
+            0,
+            lambda s: 0 * s + 3.0,
+            energies=np.array([48.0, 60.0, 81.0, 119.0]),
+        )
+        result = mms.eis_spec_combine_sc([other, ref])
+
+        np.testing.assert_array_equal(result.energy.data, ref.energy.data)
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_plus"], ref.attrs["delta_energy_plus"]
+        )
+        np.testing.assert_allclose(result.data, 2.0)
+
+        with self.assertRaises(ValueError):
+            mms.eis_spec_combine_sc([ref, other], "median")
+
+
 @ddt
 class EisPadTestCase(unittest.TestCase):
     @data(None, [1, 0, 0], generate_ts(64.0, 10, tensor_order=1))

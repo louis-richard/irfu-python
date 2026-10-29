@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import itertools
+import warnings
 
 # 3rd party imports
 import numpy as np
@@ -20,6 +20,51 @@ def _idx_closest(lst0, lst1):
     return [(np.abs(np.asarray(lst0) - k)).argmin() for k in lst1]
 
 
+def _nearest(t_ref, t_inp, tol):
+    r"""Index in t_inp of the time nearest to each time of t_ref, -1 if it is
+    more than tol away (times sorted, in ns)."""
+    out = np.full(len(t_ref), -1)
+
+    if len(t_inp) == 0:
+        return out
+
+    idx = np.searchsorted(t_inp, t_ref).clip(0, len(t_inp) - 1)
+    idx_prev = (idx - 1).clip(0)
+    closer = np.abs(t_inp[idx_prev] - t_ref) < np.abs(t_inp[idx] - t_ref)
+    idx = np.where(closer, idx_prev, idx)
+    near = np.abs(t_inp[idx] - t_ref) <= tol
+    out[near] = idx[near]
+
+    return out
+
+
+def _paired_samples(ref, inp):
+    r"""Index of the sample of inp paired with each sample of ref (-1 for
+    none): for full-resolution spectra (with sectors), the same sector nearest
+    in time within half a spin, as the sector gives the look direction;
+    otherwise (spin averages), the nearest time within half a time step."""
+    t_ref = ref.time.data.astype("datetime64[ns]").astype(np.int64)
+    t_inp = inp.time.data.astype("datetime64[ns]").astype(np.int64)
+    d_t = np.median(np.diff(t_ref)) if len(t_ref) > 1 else np.inf
+
+    if "sector" not in ref.coords or "sector" not in inp.coords:
+        return _nearest(t_ref, t_inp, d_t / 2)
+
+    sec_ref, sec_inp = ref.sector.data, inp.sector.data
+
+    # Half a spin: the samples of a spin have different sectors
+    tol = len(np.unique(sec_ref)) * d_t / 2
+    out = np.full(len(t_ref), -1)
+
+    for sector in np.unique(sec_ref):
+        i_ref = np.flatnonzero(sec_ref == sector)
+        i_inp = np.flatnonzero(sec_inp == sector)
+        idx = _nearest(t_ref[i_ref], t_inp[i_inp], tol)
+        out[i_ref] = np.where(idx >= 0, i_inp[idx.clip(0)], -1)
+
+    return out
+
+
 def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     r"""Combines omni-directional energy spectrogram variable from EIS on
     multiple MMS spacecraft.
@@ -27,14 +72,34 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     Parameters
     ----------
     omni_vars : list of xarray.DataArray
-        Omni-directional energy spectrograms of all spacecraft.
+        Omni-directional energy spectrograms of all spacecraft (from
+        :func:`pyrfu.mms.eis_omni`).
     method : str, Optional
         Method to combine spectra, "mean" or "sum"
 
     Returns
     -------
     omni_spec : xarray.DataArray
-        Combined omni-directional energy spectrogram.
+        Combined omni-directional energy spectrogram, on the times of the
+        spacecraft with the fewest samples and the energies of the one with
+        the fewest channels (the others at their closest channels).
+
+    Raises
+    ------
+    ValueError
+        If method is not "mean" or "sum".
+
+    Notes
+    -----
+    Full-resolution spectra (with the ``sector`` coordinate of
+    :func:`pyrfu.mms.eis_omni`) are combined sample by sample at the same
+    sector, the nearest in time within half a spin: the sector gives the look
+    direction. Spin-averaged spectra are combined at the nearest time, within
+    half a spin. A spacecraft without a paired sample is left out (NaN). IDL
+    SPEDAS ``mms_eis_spec_combine_sc`` and pySPEDAS combine the samples by
+    index, which matches neither the times nor the look directions (on MMS2-4,
+    2017-07-11, the sectors of the same index differed throughout, the look
+    directions by 61 to 86 deg).
 
     See Also
     --------
@@ -67,7 +132,8 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
 
     """
 
-    assert method.lower() in ["mean", "sum"]
+    if method.lower() not in ["mean", "sum"]:
+        raise ValueError(f"method must be mean or sum, not {method}")
 
     reftime_sc_loc = np.argmin([len(x_.time.data) for x_ in omni_vars])
     refener_sc_loc = np.argmin([len(x_.energy.data) for x_ in omni_vars])
@@ -78,42 +144,41 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     nt_ref, ne_ref = [time_refprobe.shape[0], ener_refprobe.shape[1]]
 
     # time x energy x spacecraft
-    omni_spec_data = np.empty([nt_ref, ne_ref, len(omni_vars)])
-    omni_spec_data[:] = np.nan
-    # time x energy
-    omni_spec = np.empty([nt_ref, ne_ref])
-    omni_spec[:] = np.nan
+    omni_spec_data = np.full([nt_ref, ne_ref, len(omni_vars)], np.nan)
 
-    # energy_data = np.zeros([ne_ref, len(omni_vars)])
-
-    # Average omni flux over all spacecraft and define common energy grid
+    # Paired samples (they were paired by index) at the closest channels
     for i_p, flux_ in enumerate(omni_vars):
-        idx_closest = _idx_closest(
-            flux_.energy.data,
-            ener_refprobe.energy.data,
-        )
-        # energy_data[:, pp] = flux_.energy.data[0:ne_ref]
-        omni_spec_data[0:nt_ref, :, i_p] = flux_.data[0:nt_ref, idx_closest]
+        idx_closest = _idx_closest(flux_.energy.data, ener_refprobe.energy.data)
+        idx_time = _paired_samples(time_refprobe, flux_)
+        paired = idx_time >= 0
+        omni_spec_data[paired, :, i_p] = flux_.data[idx_time[paired]][:, idx_closest]
 
-    # Average omni flux over all spacecraft
-    for i_t, i_e in itertools.product(range(nt_ref), range(ne_ref)):
+    # Average (or sum) omni flux over all spacecraft
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+
         if method.lower() == "mean":
-            omni_spec[i_t, i_e] = np.nanmean(
-                omni_spec_data[i_t, i_e, :],
-                axis=0,
-            )
+            omni_spec = np.nanmean(omni_spec_data, axis=2)
         else:
-            omni_spec[i_t, i_e] = np.nansum(
-                omni_spec_data[i_t, i_e, :],
-                axis=0,
-            )
+            omni_spec = np.nansum(omni_spec_data, axis=2)
 
     omni_spec = xr.DataArray(
         omni_spec,
         coords=[time_refprobe.time.data, ener_refprobe.energy.data],
         dims=["time", "energy"],
+        attrs={**time_refprobe.attrs},
     )
-    omni_spec.attrs["energy_dplus"] = ener_refprobe.attrs["energy_dplus"]
-    omni_spec.attrs["energy_dminus"] = ener_refprobe.attrs["energy_dminus"]
+
+    for key in ["spin", "sector"]:
+        if key in time_refprobe.coords:
+            omni_spec = omni_spec.assign_coords({key: time_refprobe[key]})
+
+    # Energy widths of the energies of the output (they were read as
+    # energy_dplus and energy_dminus: KeyError)
+    for key in ["delta_energy_plus", "delta_energy_minus"]:
+        if key in ener_refprobe.attrs:
+            omni_spec.attrs[key] = ener_refprobe.attrs[key]
+        else:
+            omni_spec.attrs.pop(key, None)
 
     return omni_spec
