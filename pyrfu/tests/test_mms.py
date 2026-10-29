@@ -1356,6 +1356,45 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.DataArray)
 
+    @staticmethod
+    def _allt(energy, factor, n_t=12):
+        # 6 telescopes looking in different directions, flux factor * time
+        # index + channel index, spins of 4 samples, widths 0.1 E and 0.2 E
+        time = generate_timeline(1.0, n_t)
+        flux = factor * np.arange(n_t, dtype=float)[:, None] + np.arange(len(energy))
+        look = [[0, 0, -1], [0, 0, 1], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0]]
+        allt = {}
+        for i in range(6):
+            allt[f"t{i:d}"] = xr.DataArray(
+                flux * (i + 1), coords=[time, energy], dims=["time", "energy"]
+            )
+            allt[f"look_t{i:d}"] = pyrf.ts_vec_xyz(time, np.tile(look[i], (n_t, 1)))
+        allt["spin"] = pyrf.ts_scalar(time, np.arange(n_t) // 4)
+        attrs = {"delta_energy_minus": 0.1 * energy, "delta_energy_plus": 0.2 * energy}
+        return xr.Dataset(allt, attrs=attrs)
+
+    def test_eis_combine_proton_pad_channels(self):
+        # The PADs of the combined spectra, labelled with their energies (on
+        # the 2021 tables, the columns were stitched and mislabelled)
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, 100), self._allt(e_ex, 1000)
+        result = mms.eis_combine_proton_pad(phx, ext, [0, 0, 1])
+
+        np.testing.assert_array_equal(result.energy.data, np.hstack([e_phx, e_ex[1:]]))
+        np.testing.assert_array_equal(
+            result.data[..., :7], mms.eis_pad(phx, [0, 0, 1]).data
+        )
+        np.testing.assert_array_equal(
+            result.data[..., 7:], mms.eis_pad(ext, [0, 0, 1]).data[..., 1:]
+        )
+
+        # Spin average of the complete spins (the last one was dropped, the
+        # spins of PHxTOF used on the times of ExTOF)
+        despun = mms.eis_combine_proton_pad(phx, ext, [0, 0, 1], despin=True)
+        np.testing.assert_array_equal(despun.time.data, phx.time.data[[0, 4, 8]])
+        xr.testing.assert_identical(despun, mms.eis_pad_spinavg(result, ext.spin))
+
 
 @ddt
 class EisCombineProtonSpecTestCase(unittest.TestCase):
