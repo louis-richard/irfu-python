@@ -1,6 +1,163 @@
 Changelog
 =========
 
+2.5.7 (2026-10-29)
+------------------
+
+This release lets ``pyrf.magnetosphere`` take the solar wind directly, as
+irfu-matlab, with its magnetopause on the same angles, makes
+``pyrf.lowpass`` stable for low cutoffs, and makes ``pyrf.gradient``
+differentiate each segment between data gaps separately. ``mms.get_hpca_dist``
+pairs each sample with its own azimuth and the anode elevations, and
+``mms.get_data`` loads 146 more variables of the MMS CMAD. ``pyrf.wavelet``,
+``pyrf.autocorr``, ``mms.rotate_tensor``, ``pyrf.cotrans``,
+``pyrf.optimize_nbins_2d``, ``pyrf.ebsp`` and ``pyrf.iso86012datetime`` are
+faster, with the same results. It fixes the handling of unusual inputs in
+``mms.reduce``, ``pyrf.dist_append``, ``mms.get_dist``, ``mms.psd_moments``,
+``pyrf.autocorr`` and ``pyrf.optimize_nbins_1d/2d``.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``pyrf.lowpass``: the sampling frequency is ``f_s``, as in
+  ``pyrf.resample`` and ``pyrf.wavelet``, by default that of the input;
+  ``fhz`` still works, with a ``FutureWarning`` (removed in 3.0). An input
+  with NaN raises ``ValueError`` (the whole output was NaN), as do a cutoff
+  outside (0, f_s / 2) and 12 samples or fewer.
+- ``pyrf.magnetosphere`` raises ``ValueError`` for a non-positive or NaN
+  dynamic pressure, e.g. without OMNI data in ``tint`` (the curves were
+  NaN), and for a Mach number of 1 or less with the bow shock.
+- ``mms.reduce`` raises ``ValueError`` (was ``AssertionError``) for an
+  unknown ``dim`` or ``base``.
+- ``mms.get_hpca_dist`` returns one distribution per half-spin of
+  ``azimuth``, with their times (``time``), NaN for the half-spins not
+  complete in the data or without azimuths (they were zeros, and a single
+  zero azimuth raised ``AssertionError``); ``ValueError`` (was
+  ``AssertionError``) for non-monotonic times or no complete half-spin. The
+  anode elevations are read from the file of the data by default, as in
+  ``mms.hpca_pad``.
+- ``pyrf.iso86012datetime`` raises ``ValueError`` for NaT (it was a
+  ``strptime`` format error).
+
+New features
+^^^^^^^^^^^^
+
+- ``pyrf.magnetosphere``: ``d_p``, ``b_z`` and ``m_a`` give the solar wind
+  directly, as irfu-matlab ``irf_magnetosphere(model, Dp, Bz)``; identical
+  to it for both models. The model name is case-insensitive.
+- ``mms.reduce``: ``verbose=False`` turns off the progress bar.
+- ``pyrf.gradient``: ``time_step`` sets the data gaps (steps over 3
+  ``time_step``), by default the smallest time step but one, as
+  irfu-matlab ``irf_gradient``.
+- ``mms.get_data``: 146 more variables of the MMS CMAD:
+
+  - FPI: heat flux and its error, error flags, energy range of the density
+    extrapolation, DES pitch angle distributions (low, mid and high energy),
+    partial pressure (DBCS), DES fast parallel and perpendicular temperatures;
+  - EDP: quality and bitmask of the E field (``qualitye``, ``bitmaske``) and
+    of the spacecraft potential (``qualityv``, ``bitmaskv``: they differ),
+    slow ``dce`` error and E parallel;
+  - FGM: flag, position in GSE and GSM;
+  - MEC: quaternions to 11 frames, MLT, MLAT, dipole L, Kp, Dst, Earth and
+    Moon eclipse flags, position in SM;
+  - HPCA: pressure tensors (DBCS, as irfu-matlab ``P*_dbcs_hpca_*_l2``),
+    parallel and perpendicular temperatures, spin-averaged B (GSE, GSM);
+  - DSP: E and B power spectral densities (fast, slow);
+  - EDI: E and drift velocity (DSL, GSE, GSM; survey);
+  - SCM: survey (``b_gse_scm_srvy_l2``) and high-speed burst
+    (``bschb_gse_scm_brst_l2``).
+
+  The new frames are ``geo``, ``sm``, ``gse2000``, ``smpa`` and ``ssl``.
+- ``mms.get_hpca_dist``: ``elevation`` (the anode elevations), ``source``
+  and ``data_path`` (to read them), as ``mms.hpca_pad``.
+- ``pyrf.iso86012datetime`` accepts tuples, as ``pyrf.iso86012datetime64``.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``pyrf.gradient`` differentiates each segment between data gaps
+  separately, as irfu-matlab ``irf_gradient`` (it differentiated across
+  the gaps): first-order differences at the samples next to a gap, NaN for
+  a single sample between gaps; unchanged without gaps. This also changes
+  dB/dt in ``pyrf.st_diff``. ``irf_gradient``'s own segments are off by one
+  and still differentiate across the gaps next to them.
+- ``pyrf.magnetosphere``: the Shue et al. (1998) magnetopause is at the
+  angles 0, 0.1, ..., 3.1 rad, as irfu-matlab (it was ``linspace(0, pi,
+  31)``: 28 points instead of 29 at the default solar wind). The bow shock
+  is unchanged.
+- ``pyrf.lowpass``: the elliptic filter is applied in second-order
+  sections. The (b, a) form was unstable for cutoffs below about 3e-5 of
+  the Nyquist frequency (e.g., 0.1 Hz at 8192 Hz: outputs of 40 for an input
+  of 1 over 16 s), and imprecise near it (4 % at 1e-4). The padding is that
+  of MATLAB's ``filtfilt`` (12 samples; scipy's 15 changed the first and
+  last samples).
+- ``mms.get_hpca_dist``: the data of a half-spin are its 16 samples from the
+  first one (start azimuth 0). They were shifted by one sample, as in SPEDAS
+  ``mms_get_hpca_dist``: each sample had the azimuth of the next one (11.4
+  deg off), and the first sample was the last of the previous half-spin. The
+  polar angles are those of the anodes (they were 90 deg minus the anode
+  numbers), and ``dphi`` and ``dtheta`` have the dimensions of ``phi``.
+- ``pyrf.optimize_nbins_1d`` and ``pyrf.optimize_nbins_2d`` include
+  ``n_max`` in the numbers of bins tried, as documented (it was left out).
+- ``pyrf.autocorr`` computes in double precision: float32 inputs differed by
+  about 1e-7.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.reduce``: ``lower_e_lim`` accepts an integer (it raised
+  ``TypeError``); ``dim`` and ``base`` are case-insensitive (``"CART"``
+  failed); a time step without any energy channel above the spacecraft
+  potential and ``lower_e_lim`` is NaN (it raised ``IndexError``).
+- ``pyrf.dist_append`` (used by ``mms.get_data`` for the distributions)
+  joins the energy widths and the half widths of the accumulations only
+  when both skymaps have them, and leaves them out otherwise: a missing key
+  raised ``KeyError``, the ``None`` of files without energy widths
+  ``AttributeError``, and the half widths of the first skymap alone were
+  kept with the wrong length.
+- ``mms.psd_moments`` no longer warns "invalid value in sqrt" for electrons
+  with the spacecraft potential above the lowest channel (unused speeds),
+  nor divides by zero where the density is zero (the bulk velocity,
+  pressure, temperature and heat flux are NaN there, as before).
+- ``pyrf.lowpass`` keeps the attributes of the input.
+- ``mms.get_dist`` leaves out the energy widths of the files without them
+  (they were None, on which ``mms.reduce`` raised ``TypeError``).
+- ``pyrf.autocorr`` accepts integer inputs (``UFuncTypeError``).
+- ``pyrf.optimize_nbins_1d`` and ``pyrf.optimize_nbins_2d`` leave out the
+  non-finite samples (a NaN raised ``ValueError``), and raise a clear
+  ``ValueError`` for constant inputs and x and y of different sizes.
+- ``mms.tokenize`` no longer lists the parameters without data (``nbge``,
+  ``pbge``, ``defbge``: no FPI DES background; ``tsi``, ``tse``: computed in
+  irfu-matlab, the trace of ``ti_dbcs`` or ``te_dbcs`` over 3; ``epar``: the
+  ``e_par`` keys); they are invalid parameters.
+- ``mms.feeps_active_eyes`` returns the SITL eyes after 16 August 2017 in
+  order.
+- Faster, with the same results: ``pyrf.wavelet`` (about twice, and 1 to
+  1.5 GB less memory for 3 x 200000 samples and 200 frequencies: the
+  frequencies were tiled to the size of the transform),
+  ``pyrf.autocorr`` (``scipy.signal.correlate``: 65 times on 200000 samples),
+  ``mms.rotate_tensor`` (10 to 15 times: all times at once),
+  ``pyrf.cotrans`` (the dipole direction once per call, for the
+  transformations through GSM and SM), ``pyrf.optimize_nbins_2d`` (15 to 20
+  times: about 30 s for 100 x 100 numbers of bins and 1e5 samples),
+  ``pyrf.ebsp`` (one SVD per frequency: about 25 %) and
+  ``pyrf.iso86012datetime`` (about 100 times).
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``pyrf.lowpass``: what it does (it said "low or highpass filter ... and
+  subtract from the original").
+- ``mms.reduce``: ``sc_pot``, ``lower_e_lim`` and ``verbose``.
+- ``pyrf.ts_append``: it returns None for two None inputs (the start of
+  accumulation loops).
+- ``pyrf.cart2sph``: the azimuth is in (-pi, pi] (it said [0, 2 pi]), and
+  the second angle is the polar angle from the z axis.
+- ``mms.feeps_active_eyes``: SITL gives the top eyes 5, 11 and 12 for the
+  ions too before 16 August 2017, as IDL SPEDAS and pySPEDAS.
+- ``mms.get_hpca_dist``: the dimensions of the inputs and outputs.
+- ``pyrf.autocorr``: the mean is not removed.
+
 2.5.6 (2026-10-28)
 ------------------
 
