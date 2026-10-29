@@ -5119,6 +5119,24 @@ class OptimizeNbins1DTestCase(unittest.TestCase):
 
         self.assertIsInstance(result, int)
 
+    def test_optimize_nbins_1d_values(self):
+        # Minimum of the cost function of the numpy.histogram counts, n_max
+        # included (it was left out), NaN samples left out (they raised)
+        data = np.random.default_rng(0).standard_normal(2000)
+
+        def cost(n_bins):
+            counts = np.histogram(data, bins=n_bins)[0]
+            return (2 * counts.mean() - counts.var()) * (n_bins / np.ptp(data)) ** 2
+
+        expected = 2 + int(np.argmin([cost(n_bins) for n_bins in range(2, 31)]))
+        x = xr.DataArray(np.hstack([data, np.nan]))
+
+        self.assertEqual(pyrf.optimize_nbins_1d(x, 2, 30), expected)
+        self.assertEqual(pyrf.optimize_nbins_1d(x, 5, 5), 5)
+
+        with self.assertRaises(ValueError):
+            pyrf.optimize_nbins_1d(xr.DataArray(np.ones(10)))
+
 
 class OptimizeNbins2DTestCase(unittest.TestCase):
     def test_optimize_nbins_2d(self):
@@ -5130,6 +5148,34 @@ class OptimizeNbins2DTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result[0], int)
         self.assertIsInstance(result[1], int)
+
+    def test_optimize_nbins_2d_values(self):
+        # Minimum of the cost function of the numpy.histogram2d counts, n_max
+        # included (it was left out), samples with NaN left out (they raised)
+        rng = np.random.default_rng(1)
+        x_data = rng.standard_normal(2000)
+        y_data = rng.gamma(2.0, size=2000) + 0.5 * x_data
+
+        def cost(n_x, n_y):
+            counts = np.histogram2d(x_data, y_data, bins=(n_x, n_y))[0]
+            d_xy = np.ptp(x_data) * np.ptp(y_data) / (n_x * n_y)
+            return (2 * counts.mean() - counts.var()) / d_xy**2
+
+        costs = [[cost(n_x, n_y) for n_y in range(3, 16)] for n_x in range(2, 13)]
+        i_min, j_min = np.unravel_index(np.argmin(costs), np.shape(costs))
+        x = xr.DataArray(np.hstack([x_data, 1.0]))
+        y = xr.DataArray(np.hstack([y_data, np.nan]))
+
+        self.assertTupleEqual(
+            pyrf.optimize_nbins_2d(x, y, [2, 3], [12, 15]), (2 + i_min, 3 + j_min)
+        )
+        self.assertTupleEqual(pyrf.optimize_nbins_2d(x, y, [4, 6], [4, 6]), (4, 6))
+
+        with self.assertRaises(ValueError):
+            pyrf.optimize_nbins_2d(x, y[:-1])
+
+        with self.assertRaises(ValueError):
+            pyrf.optimize_nbins_2d(x, xr.DataArray(np.ones(len(x))))
 
 
 @ddt
