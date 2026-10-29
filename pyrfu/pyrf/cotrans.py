@@ -82,6 +82,13 @@ def _transformation_matrix(t, tind, hapgood, *args):
     transf_mat_out[:, 1, 1] = np.ones(len(t))
     transf_mat_out[:, 2, 2] = np.ones(len(t))
 
+    # Dipole direction in GSE, for the transformations to and from GSM and SM,
+    # computed once (it was computed for each of them, e.g., twice for GSE>SM)
+    dipole_direction_gse_ = None
+
+    if any(abs(t_num) in [3, 4] for t_num in tind):
+        dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
+
     for j, t_num in enumerate(tind[::-1]):
         assert abs(t_num) in list(range(1, 6)), "t_num must be +/- 1, 2, 3, 4, 5"
 
@@ -133,7 +140,6 @@ def _transformation_matrix(t, tind, hapgood, *args):
                 transf_mat = np.transpose(transf_mat, [0, 2, 1])
 
         elif t_num in [-3, 3]:
-            dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
             y_e = dipole_direction_gse_[:, 1]  # 1st col is time
             z_e = dipole_direction_gse_[:, 2]
             psi = np.rad2deg(np.arctan(y_e / z_e))
@@ -141,8 +147,6 @@ def _transformation_matrix(t, tind, hapgood, *args):
             transf_mat = _triang(-psi * np.sign(t_num), 0)  # inverse if -3
 
         elif t_num in [-4, 4]:
-            dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
-
             mu = np.arctan(
                 dipole_direction_gse_[:, 0]
                 / np.sqrt(np.sum(dipole_direction_gse_[:, 1:] ** 2, axis=1)),

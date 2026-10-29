@@ -1855,6 +1855,24 @@ class CotransTestCase(unittest.TestCase):
         np.testing.assert_allclose((theta - gmst + 180) % 360 - 180, 0, atol=1e-3)
         self.assertAlmostEqual(theta[0] % 360, 280.46061837, delta=1e-3)
 
+    @data(("gse>sm", 1), ("mag>sm", 1), ("sm>geo", 1), ("gse>gei", 0))
+    @unpack
+    def test_cotrans_dipole_once(self, flag, n_calls):
+        # The dipole direction is computed once per call (it was computed for
+        # each transformation to or from GSM and SM), with the same result
+        module = sys.modules["pyrfu.pyrf.cotrans"]
+        time = generate_timeline(1.0, 10)
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 2.0, 3.0], (10, 1)))
+        direct = module._dipole_direction_gse
+
+        with mock.patch.object(module, "_dipole_direction_gse", wraps=direct) as dipole:
+            result = pyrf.cotrans(inp, flag)
+
+        self.assertEqual(dipole.call_count, n_calls)
+        np.testing.assert_allclose(
+            np.linalg.norm(result.data, axis=1), np.sqrt(14.0), rtol=1e-12
+        )
+
 
 @ddt
 class CrossTestCase(unittest.TestCase):
