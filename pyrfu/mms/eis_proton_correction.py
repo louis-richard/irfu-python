@@ -60,13 +60,19 @@ def eis_proton_correction(flux_eis):
     flux_eis_corr : xarray.DataArray
         Cross-calibrated omni-directional energy spectrum from EIS-EPD.
 
+    Raises
+    ------
+    TypeError
+        If flux_eis is not a xarray.Dataset or xarray.DataArray.
+
     See Also
     --------
     pyrfu.mms.get_eis_allt, pyrfu.mms.eis_omni
 
     """
 
-    assert isinstance(flux_eis, (xr.Dataset, xr.DataArray)), "flux_eis must be a xarray"
+    if not isinstance(flux_eis, (xr.Dataset, xr.DataArray)):
+        raise TypeError("flux_eis must be a xarray.Dataset or xarray.DataArray")
 
     #  Coefficients from EPD Data Product Guide
     alpha_, beta_, gamma_ = [-0.3, 49e-3, 1e-3]

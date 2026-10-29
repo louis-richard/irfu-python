@@ -2048,6 +2048,11 @@ class EisPadSpinAvgTestCase(unittest.TestCase):
 
 @ddt
 class EisProtonCorrectionTestCase(unittest.TestCase):
+    def test_eis_proton_correction_type(self):
+        # TypeError (was AssertionError)
+        with self.assertRaises(TypeError):
+            mms.eis_proton_correction(np.ones((3, 16)))
+
     def test_eis_proton_correction_dataarray(self):
         flux_eis = generate_spectr(64, 100, 16, "energy")
         result = mms.eis_proton_correction(flux_eis)
