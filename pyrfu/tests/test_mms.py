@@ -4632,11 +4632,12 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
         feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
 
-        # A NumPy array used to raise TypeError
+        # A NumPy array used to raise TypeError; the 8 complete spins (the
+        # partial last one was kept)
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         result_np = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum.data)
 
-        self.assertEqual(len(result.time), 9)
+        self.assertEqual(len(result.time), 8)
         xr.testing.assert_identical(result, result_np)
 
     def test_feeps_pad_spin_avg_windows(self):
@@ -4647,14 +4648,15 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
 
         result = mms.feeps_pad_spinavg(pad, spin_sectors)
 
-        # One row per spin, at its first sample, on the PAD bins: the windows
-        # used to be shifted by one sample and interpolated onto 12 bin edges
-        expected = np.tile(np.arange(7.0)[:, None], (1, 11))
-        expected[1, 4] = np.nan
+        # One row per complete spin, at its first sample, on the PAD bins: the
+        # windows used to be shifted by one sample and interpolated onto 12 bin
+        # edges, and the partial spins were kept
+        expected = np.tile(np.arange(1.0, 6.0)[:, None], (1, 11))
+        expected[0, 4] = np.nan
         np.testing.assert_array_equal(result.data, expected)
         np.testing.assert_array_equal(result.theta.data, theta)
         np.testing.assert_array_equal(
-            result.time.data, pad.time.data[[0, 3, 11, 19, 27, 35, 43]]
+            result.time.data, pad.time.data[[3, 11, 19, 27, 35]]
         )
 
         with self.assertWarns(FutureWarning):
@@ -5235,8 +5237,9 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
         feeps_omni = mms.feeps_omni(feeps_alle)
 
-        # Spin sectors 0..11 repeated: spins start at 0, 12, ..., 96
-        spin_starts = np.arange(0, 100, 12)
+        # Spin sectors 0..11 repeated: complete spins start at 0, 12, ..., 84
+        # (the partial last one, 96-99, was kept)
+        spin_starts = np.arange(0, 96, 12)
 
         # A DataArray used to give one row per sample (aligned on time)
         result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
@@ -5255,18 +5258,35 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
 
         result = mms.feeps_spin_avg(flux, spin_sectors)
 
-        # One row per spin, at its first sample: the windows used to be
-        # shifted by one sample and the last two spins set to 0
-        expected = np.array([0.0, np.nan, 2.0, 3.0, 4.0, 5.0, 6.0])
+        # One row per complete spin, at its first sample: the windows used to
+        # be shifted by one sample and the last two spins set to 0, and the
+        # partial spins were kept
+        expected = np.array([np.nan, 2.0, 3.0, 4.0, 5.0])
         np.testing.assert_array_equal(result.data[:, 0], expected)
         np.testing.assert_array_equal(result.data[:, 1], expected)
         np.testing.assert_array_equal(
-            result.time.data, flux.time.data[[0, 3, 11, 19, 27, 35, 43]]
+            result.time.data, flux.time.data[[3, 11, 19, 27, 35]]
         )
         self.assertDictEqual(result.attrs, flux.attrs)
 
         with self.assertRaises(ValueError):
             mms.feeps_spin_avg(flux, spin_sectors[:-1])
+
+    def test_feeps_spin_avg_gap_and_errors(self):
+        # A spin cut by a data gap is left out; ValueError without a complete
+        # spin
+        spin_sectors, flux = _spin_avg_case("energy", [100.0, 200.0])
+        keep = np.r_[0:13, 16 : len(flux)]  # samples 13-15 of spin 2 missing
+        result = mms.feeps_spin_avg(flux[keep], spin_sectors[keep])
+
+        np.testing.assert_array_equal(result.data[:, 0], [1.0, 3.0, 4.0, 5.0])
+
+        # A single complete spin (sectors 0-7) is kept
+        result = mms.feeps_spin_avg(flux[3:11], spin_sectors[3:11])
+        np.testing.assert_array_equal(result.time.data, flux.time.data[[3]])
+
+        with self.assertRaisesRegex(ValueError, "no complete spin"):
+            mms.feeps_spin_avg(flux[:10], spin_sectors[:10])
 
 
 class FeepsSectorSpecTestCase(unittest.TestCase):
@@ -6102,7 +6122,7 @@ class GetFeepsTestCase(unittest.TestCase):
 
         expected_spin = mms.feeps_spin_avg(expected, feeps_ref.spinsectnum.data)
         xr.testing.assert_identical(result_spin, expected_spin)
-        self.assertEqual(len(result_spin.time), 9)
+        self.assertEqual(len(result_spin.time), 8)
 
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 

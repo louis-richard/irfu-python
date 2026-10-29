@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from .feeps_spin_avg import _spin_bounds
+from .feeps_spin_avg import _complete_spins
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -37,19 +37,22 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     Returns
     -------
     out : xarray.DataArray
-        Spin averaged pitch angle distribution.
+        Spin averaged pitch angle distribution, one per complete spin at the
+        time of its first sample.
 
     Raises
     ------
     ValueError
-        If `spin_sectors` and `pad` don't have the same number of times.
+        If `spin_sectors` and `pad` don't have the same number of times, or if
+        the interval has no complete spin.
 
     Notes
     -----
-    The spins are the same as in :func:`pyrfu.mms.feeps_spin_avg`: each spin is averaged
-    from its first sample up to (not including) the first sample of the next
-    spin and is time stamped at its first sample, the partial spins at the
-    start and end of the interval are kept, and a spin without data is NaN.
+    The spins are the same as in :func:`pyrfu.mms.feeps_spin_avg`: each
+    complete spin is averaged from its first sample up to (not including) the
+    first sample of the next spin and is time stamped at its first sample, the
+    partial spins at the start and end of the interval and the spins cut by
+    data gaps are left out (they were kept), and a spin without data is NaN.
 
     IDL SPEDAS and pyspedas instead average from the second sample of a spin
     to the first sample of the next one, and interpolate the result from the
@@ -71,19 +74,19 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     if len(spin_sectors) != len(pad.time):
         raise ValueError("spin_sectors must have one value per time of pad")
 
-    bounds = _spin_bounds(spin_sectors)
+    spin_starts, spin_stops = _complete_spins(spin_sectors)
 
     data = pad.data
-    spin_avg_flux = np.full([len(bounds) - 1, len(pad.theta)], np.nan)
+    spin_avg_flux = np.full([len(spin_starts), len(pad.theta)], np.nan)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        for i, (i_start, i_stop) in enumerate(zip(bounds[:-1], bounds[1:])):
+        for i, (i_start, i_stop) in enumerate(zip(spin_starts, spin_stops)):
             spin_avg_flux[i, :] = np.nanmean(data[i_start:i_stop, :], axis=0)
 
     out = xr.DataArray(
         spin_avg_flux,
-        coords=[pad.time.data[bounds[:-1]], pad.theta.data],
+        coords=[pad.time.data[spin_starts], pad.theta.data],
         dims=["time", "theta"],
         attrs={**pad.attrs},
     )
