@@ -1945,6 +1945,16 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_spec_combine_sc([ref, other], "median")
 
+    def test_eis_spec_combine_sc_sum_without_data(self):
+        # NaN where no spacecraft has data, as the mean (the sum was 0)
+        ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)
+        other = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 3.0)
+        ref.data[0], other.data[0] = np.nan, np.nan
+        result = mms.eis_spec_combine_sc([ref, other], "sum")
+
+        self.assertTrue(np.all(np.isnan(result.data[0])))
+        np.testing.assert_allclose(result.data[1:], 4.0)
+
 
 @ddt
 class EisPadTestCase(unittest.TestCase):
