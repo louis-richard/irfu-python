@@ -16,22 +16,28 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _check_spin(spin):
-    _, spin_inds = np.unique(spin, return_index=True)
+def _spin_segments(spin):
+    r"""Start and stop indices of the complete spins: the runs of samples with
+    the same spin number, in time order, with the full number of samples (that
+    of the longest spin between two spin boundaries)."""
+    # Runs in time order (np.unique ordered the spins by number, which the
+    # wrap of the uint16 spin counter reorders)
+    spin = np.asarray(spin).astype(np.int64)
+    bounds = np.r_[0, np.flatnonzero(np.diff(spin) != 0) + 1, len(spin)]
 
-    len_spin = np.max(np.diff(spin_inds))
+    if len(bounds) < 4:
+        raise ValueError(
+            "no complete spin: the interval must hold a spin between two spin "
+            "boundaries"
+        )
 
-    # Check to see if we have a complete first spin,
-    # if not then go to the second spin
-    if np.where(spin == spin[spin_inds[0]])[0].size != len_spin:
-        spin_inds = spin_inds[1:]
+    lengths = np.diff(bounds)
 
-    # Check to see if the last one is complete,
-    # if not then go to the second spin
-    if np.where(spin == spin[spin_inds[-1]])[0].size != len_spin:
-        spin_inds = spin_inds[:-1]
+    # The partial first and last spins and the spins cut by data gaps are left
+    # out
+    complete = lengths == np.max(lengths[1:-1])
 
-    return spin_inds, len_spin
+    return bounds[:-1][complete], bounds[1:][complete]
 
 
 def eis_spin_avg(eis_allt, method: str = "mean"):
@@ -46,7 +52,25 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
     Returns
     -------
     spin_avg_fluxes : xarray.Dataset
-        Spin-averaged fluxes for all 6 telescopes.
+        Spin-averaged fluxes for all 6 telescopes, one per complete spin at the
+        time of its first sample.
+
+    Raises
+    ------
+    ValueError
+        If method is not "mean" or "sum", or if the interval has no complete
+        spin.
+
+    Notes
+    -----
+    A spin is a run of samples with the same spin number, in time order (the
+    spin counter wraps about every 15 days). Only the complete spins are
+    averaged: the partial first and last spins and the spins cut by data gaps
+    are left out. Each spin is time stamped at its first sample, as
+    :func:`pyrfu.mms.hpca_spin_sum`, the FEEPS spin averages and IDL SPEDAS
+    ``mms_eis_pad_spinavg``; IDL SPEDAS and pySPEDAS stamp the spin-averaged
+    spectra at the last sample. The time stamp was the 5th of the 8 survey
+    samples.
 
     See Also
     --------
@@ -71,11 +95,12 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
 
     """
 
-    assert method.lower() in ["mean", "sum"]
+    if method.lower() not in ["mean", "sum"]:
+        raise ValueError(f"method must be mean or sum, not {method}")
 
     spin_nums = eis_allt.spin
 
-    spin_starts, len_spin = _check_spin(spin_nums.data)
+    spin_starts, spin_stops = _spin_segments(spin_nums.data)
 
     scopes = list(filter(lambda x: x[0] == "t", eis_allt))
 
@@ -84,26 +109,24 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
     for scope in scopes:
         scope_data = eis_allt[scope]
 
-        time_recs = scope_data.time.data[spin_starts + len_spin // 2]
+        time_recs = scope_data.time.data[spin_starts]
         energies_ = scope_data.energy.data
         flux_data = scope_data.data
 
         flux_avg = np.zeros([len(spin_starts), len(energies_)])
 
-        for i, spin_strt in enumerate(spin_starts):
-            t_inds = np.where(spin_nums.data == spin_nums.data[spin_strt])[0]
-
+        for i, (spin_strt, spin_stop) in enumerate(zip(spin_starts, spin_stops)):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
 
                 if method.lower() == "sum":
                     # Sum (for counts)
-                    flux_avg[i, :] = np.nansum(flux_data[t_inds, :], axis=0)
+                    flux_avg[i, :] = np.nansum(flux_data[spin_strt:spin_stop], axis=0)
 
                 else:
                     # Average (for differential partile flux, differential
                     # energy flux, phase-space density, etc.)
-                    flux_avg[i, :] = np.nanmean(flux_data[t_inds, :], axis=0)
+                    flux_avg[i, :] = np.nanmean(flux_data[spin_strt:spin_stop], axis=0)
 
         spin_avg_flux[scope] = xr.DataArray(
             flux_avg,
@@ -113,7 +136,7 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
         )
 
     # Get spin index
-    spin_avg_flux["spin"] = eis_allt["spin"][spin_starts + len_spin // 2]
+    spin_avg_flux["spin"] = eis_allt["spin"][spin_starts]
 
     # Construct Dataset
     out = xr.Dataset(spin_avg_flux, attrs=eis_allt.attrs)

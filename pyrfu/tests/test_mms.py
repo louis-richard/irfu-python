@@ -1691,6 +1691,67 @@ class EisSpinAvgTestCase(unittest.TestCase):
         result = mms.eis_spin_avg(eis_allt, method)
         self.assertIsInstance(result, xr.Dataset)
 
+    @staticmethod
+    def _eis(spin):
+        # One telescope with flux = sample index, at 1 s, with the spin numbers
+        time = generate_timeline(1.0, len(spin))
+        flux = np.tile(np.arange(len(spin), dtype=float)[:, None], (1, 2))
+        eis = {
+            "t0": xr.DataArray(
+                flux, coords=[time, [50.0, 80.0]], dims=["time", "energy"]
+            ),
+            "spin": pyrf.ts_scalar(time, np.asarray(spin, dtype=np.uint16)),
+        }
+        return xr.Dataset(eis)
+
+    def test_eis_spin_avg_complete_spins(self):
+        # Complete spins only (4 samples), stamped at their first sample: the
+        # partial first and last spins and the spin cut by a gap are left out
+        spin = [10] * 2 + [11] * 4 + [12] * 4 + [13] * 2 + [14] * 4 + [15] * 3
+        eis = self._eis(spin)
+        result = mms.eis_spin_avg(eis)
+
+        np.testing.assert_array_equal(result.time.data, eis.time.data[[2, 6, 12]])
+        np.testing.assert_array_equal(result.spin.data, [11, 12, 14])
+        np.testing.assert_allclose(result.t0.data[:, 0], [3.5, 7.5, 13.5])
+        np.testing.assert_allclose(
+            mms.eis_spin_avg(eis, "sum").t0.data[:, 0], [14, 30, 54]
+        )
+
+    def test_eis_spin_avg_counter_wrap(self):
+        # The spins in time order across the wrap of the uint16 counter (they
+        # were ordered by number)
+        spin = [65533] * 2 + [65534] * 4 + [65535] * 4 + [0] * 4 + [1] * 4 + [2]
+        result = mms.eis_spin_avg(self._eis(spin))
+
+        np.testing.assert_array_equal(result.spin.data, [65534, 65535, 0, 1])
+        self.assertTrue(np.all(np.diff(result.time.data) > np.timedelta64(0, "ns")))
+
+    def test_eis_spin_avg_errors(self):
+        with self.assertRaisesRegex(ValueError, "no complete spin"):
+            mms.eis_spin_avg(self._eis([3] * 5 + [4] * 2))
+
+        with self.assertRaises(ValueError):
+            mms.eis_spin_avg(self._eis([1] * 2 + [2] * 4 + [3]), "median")
+
+    def test_eis_pad_spinavg_spins(self):
+        # Same spins as eis_spin_avg, stamped at their first sample (they were
+        # stamped one spin early, partial spins kept)
+        spin = [10] * 2 + [11] * 4 + [12] * 4 + [13] * 3
+        eis = self._eis(spin)
+        pad = xr.DataArray(
+            np.tile(np.arange(13.0)[:, None, None], (1, 12, 2)),
+            coords=[eis.time.data, 7.5 + 15 * np.arange(12), [50.0, 80.0]],
+            dims=["time", "theta", "energy"],
+        )
+        result = mms.eis_pad_spinavg(pad, eis.spin)
+
+        np.testing.assert_array_equal(result.time.data, eis.time.data[[2, 6]])
+        np.testing.assert_allclose(result.data[:, 0, 0], [3.5, 7.5])
+
+        with self.assertRaises(ValueError):
+            mms.eis_pad_spinavg(pad, eis.spin[:-1])
+
 
 def _lh_wave(v_ph, theta, f_s=1024.0, f_w=40.0):
     # Potential phi(x - v t) along d (perpendicular to B = 40 nT z): at the
