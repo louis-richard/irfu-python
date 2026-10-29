@@ -4312,6 +4312,28 @@ class Iso86012DatetimeTestCase(unittest.TestCase):
         result = pyrf.iso86012datetime(value)
         self.assertIsInstance(result, list)
 
+    def test_iso86012datetime_values(self):
+        # Truncated to microseconds, also before 1970; tuples and datetime64
+        # (tuples raised TypeError)
+        time = (
+            "1969-12-31T23:59:59.999999999",
+            "2019-09-14T07:54:00.123456789",
+        )
+        expected = [
+            datetime.datetime(1969, 12, 31, 23, 59, 59, 999999),
+            datetime.datetime(2019, 9, 14, 7, 54, 0, 123456),
+        ]
+
+        for value in [time, np.array(time, dtype="datetime64[ns]")]:
+            self.assertListEqual(pyrf.iso86012datetime(value), expected)
+
+    def test_iso86012datetime_errors(self):
+        with self.assertRaises(TypeError):
+            pyrf.iso86012datetime("2019-01-01T00:00:00")
+
+        with self.assertRaisesRegex(ValueError, "NaT"):
+            pyrf.iso86012datetime(["2019-01-01T00:00:00", "NaT"])
+
 
 @ddt
 class Iso86012Datetime64TestCase(unittest.TestCase):
