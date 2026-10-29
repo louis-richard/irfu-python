@@ -179,6 +179,28 @@ class AutoCorrTestCase(unittest.TestCase):
         self.assertEqual(result.shape[0], 100)
         self.assertEqual(result.shape[1], 3)
 
+    def test_autocorr_values(self):
+        # sum_k x[k] x[k + lag], normalised by the lag 0, at the lags in s; in
+        # double precision (float32 lost precision, integers failed)
+        inp = generate_ts(64.0, 2000, tensor_order=1)
+        data = inp.data.astype(np.float64)
+        result = pyrf.autocorr(inp, 25)
+        expected = [
+            [data[: len(data) - lag, i] @ data[lag:, i] for i in range(3)]
+            for lag in range(26)
+        ]
+
+        np.testing.assert_allclose(result.data, expected / np.sum(data**2, axis=0))
+        np.testing.assert_allclose(result.lag.data, np.arange(26) / 64.0)
+
+        result = pyrf.autocorr(inp, 25, normed=False)
+        np.testing.assert_allclose(result.data, expected, rtol=1e-12)
+
+        # integers
+        inp = xr.DataArray(np.arange(1, 5), coords=[inp.time.data[:4]], dims=["time"])
+        expected = np.array([30, 20, 11, 4]) / 30
+        np.testing.assert_allclose(pyrf.autocorr(inp).data, expected)
+
 
 @ddt
 class AverageVDFTestCase(unittest.TestCase):
