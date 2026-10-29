@@ -1650,6 +1650,95 @@ class EisOmniTestCase(unittest.TestCase):
         self.assertNotIn("new", eis.t0.attrs)
 
 
+class EisAngAngTestCase(unittest.TestCase):
+    # Telescope polar angles (degrees from +z) and 8 samples per spin, the
+    # look direction turning by 45 degrees per sample (sectors 0, 4, ..., 28)
+    POLAR = np.array([28.9, 55.5, 81.0, 110.0, 135.6, 162.2])
+
+    def _allt(self, n_spins=3):
+        n_t = 8 * n_spins
+        time = generate_timeline(2.5, n_t)
+        azimuth = np.deg2rad(22.5 + 45.0 * (np.arange(n_t) % 8))
+        energy = np.array([60.0, 120.0])
+        allt = {}
+        for i, polar in enumerate(np.deg2rad(self.POLAR)):
+            look = np.stack(
+                [
+                    np.sin(polar) * np.cos(azimuth),
+                    np.sin(polar) * np.sin(azimuth),
+                    np.full(n_t, np.cos(polar)),
+                ],
+                axis=1,
+            )
+            allt[f"look_t{i:d}"] = pyrf.ts_vec_xyz(time, look)
+            flux = np.tile([[10.0 * (i + 1), 1.0]], (n_t, 1))
+            allt[f"t{i:d}"] = xr.DataArray(
+                flux, coords=[time, energy], dims=["time", "energy"]
+            )
+        allt["spin"] = pyrf.ts_scalar(time, np.arange(n_t) // 8)
+        allt["sector"] = pyrf.ts_scalar(time, 4 * (np.arange(n_t) % 8))
+        attrs = {
+            "species": "proton",
+            "delta_energy_minus": np.array([5.0, 10.0]),
+            "delta_energy_plus": np.array([6.0, 12.0]),
+        }
+        return xr.Dataset(allt, attrs=attrs)
+
+    def test_eis_ang_ang_look_directions(self):
+        # Every sample in the cell of its look direction (azimuth in [0, 360),
+        # polar angle): all cells filled (about 19 % of the samples were
+        # binned, at the polar angle + 90 degrees)
+        result = mms.eis_ang_ang(self._allt(), frame="gse")
+
+        self.assertTupleEqual(result.shape, (3, 2, 8, 6))
+        np.testing.assert_allclose(result.phi.data, 22.5 + 45.0 * np.arange(8))
+        np.testing.assert_allclose(
+            result.theta.data, 10.0 + 160.0 / 6 * (np.arange(6) + 0.5)
+        )
+        np.testing.assert_allclose(
+            result.data[:, 0], np.broadcast_to(10.0 * np.arange(1, 7), (3, 8, 6))
+        )
+        self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "GSE")
+        np.testing.assert_array_equal(result.time.data, self._allt().time.data[::8])
+
+    def test_eis_ang_ang_mean_and_channels(self):
+        # Two telescopes in the same cell: their mean (the last one was kept);
+        # empty cells NaN (they were 0); widths of the channels used
+        allt = self._allt()
+        allt["look_t1"] = allt["look_t0"].copy()
+        result = mms.eis_ang_ang(allt, en_chan=[0], frame="gse")
+
+        np.testing.assert_allclose(result.data[:, 0, :, 0], 15.0)
+        self.assertTrue(np.all(np.isnan(result.data[:, 0, :, 1])))
+        np.testing.assert_array_equal(result.attrs["delta_energy_minus"], [5.0])
+
+    def test_eis_ang_ang_dbcs(self):
+        # DBCS: the GSE look directions rotated with the attitude
+        allt = self._allt()
+        time = allt.time.data
+        defatt = xr.Dataset(
+            {
+                "z_ra": pyrf.ts_scalar(time, np.linspace(268.0, 272.0, len(time))),
+                "z_dec": pyrf.ts_scalar(time, np.linspace(65.0, 67.0, len(time))),
+            }
+        )
+        result = mms.eis_ang_ang(allt, defatt=defatt)
+
+        rotated = allt.copy()
+        for i in range(6):
+            rotated[f"look_t{i:d}"] = mms.dsl2gse(allt[f"look_t{i:d}"], defatt, -1)
+        expected = mms.eis_ang_ang(rotated, frame="gse")
+
+        np.testing.assert_array_equal(result.data, expected.data)
+        self.assertEqual(result.theta.attrs["COORDINATE_SYSTEM"], "DBCS")
+
+        with self.assertRaisesRegex(ValueError, "defatt"):
+            mms.eis_ang_ang(allt)
+
+        with self.assertRaises(ValueError):
+            mms.eis_ang_ang(allt, frame="gsm")
+
+
 class EisPadCombineScTestCase(unittest.TestCase):
     @staticmethod
     def _pad(t_0, n_pts, value, energies=(50.0, 80.0, 120.0)):
