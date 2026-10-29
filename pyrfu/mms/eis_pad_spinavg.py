@@ -39,8 +39,8 @@ def eis_pad_spinavg(inp, spin_nums):
     Raises
     ------
     ValueError
-        If `spin_nums` and `inp` don't have the same number of times, or if
-        the interval has no complete spin.
+        If `spin_nums` is not on the times of `inp`, or if the interval has
+        no complete spin.
 
     Notes
     -----
@@ -53,8 +53,14 @@ def eis_pad_spinavg(inp, spin_nums):
     pyrfu.mms.get_eis_allt, pyrfu.mms.eis_pad
 
     """
-    if len(spin_nums) != len(inp.time):
-        raise ValueError("spin_nums must have one value per time of inp")
+    # On the times of inp (a PAD of a sub-interval was misaligned silently)
+    same_times = len(spin_nums) == len(inp.time)
+
+    if same_times and "time" in getattr(spin_nums, "coords", {}):
+        same_times = np.array_equal(spin_nums.time.data, inp.time.data)
+
+    if not same_times:
+        raise ValueError("spin_nums must be on the times of inp")
 
     spin_starts, spin_stops = _spin_segments(spin_nums.data)
 

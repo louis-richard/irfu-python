@@ -2173,6 +2173,13 @@ class EisSpinAvgTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_pad_spinavg(pad, eis.spin[:-1])
 
+        # Spin numbers of other times (misaligned silently)
+        shifted = eis.spin.assign_coords(
+            time=eis.spin.time.data + np.timedelta64(1, "s")
+        )
+        with self.assertRaisesRegex(ValueError, "times of inp"):
+            mms.eis_pad_spinavg(pad, shifted)
+
 
 def _lh_wave(v_ph, theta, f_s=1024.0, f_w=40.0):
     # Potential phi(x - v t) along d (perpendicular to B = 40 nT z): at the
