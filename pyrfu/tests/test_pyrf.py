@@ -7283,25 +7283,27 @@ class WaveletTestCase(unittest.TestCase):
             _ww.__wrapped__(s_ww, scales_mat, sigma, frequencies_mat, f_nyq)
         )
 
-    @data(
-        (
-            np.random.random((100, 3)) + np.random.random((100, 3)) * 1j,
-            np.random.random((100, 3)),
-        )
-    )
-    @unpack
-    def test_power_r(self, power, new_freq_mat):
-        self.assertIsNotNone(_power_r.__wrapped__(power, new_freq_mat))
+    def test_power(self):
+        # 2 pi |power|^2 / f and sqrt(2 pi / f) power, with the frequencies of
+        # the columns broadcast along time (as wavelet calls them; they were
+        # tiled to the size of power), jitted and not
+        power = np.random.random((100, 3)) + np.random.random((100, 3)) * 1j
+        frequencies = np.array([1.0, 2.0, 4.0])
 
-    @data(
-        (
-            np.random.random((100, 3)) + np.random.random((100, 3)) * 1j,
-            np.random.random((100, 3)),
-        )
-    )
-    @unpack
-    def test_power_c(self, power, new_freq_mat):
-        self.assertIsNotNone(_power_c.__wrapped__(power, new_freq_mat))
+        for power_r, power_c in [
+            (_power_r, _power_c),
+            (_power_r.__wrapped__, _power_c.__wrapped__),
+        ]:
+            np.testing.assert_allclose(
+                power_r(power, frequencies),
+                2 * np.pi * np.abs(power) ** 2 / frequencies,
+                rtol=1e-12,
+            )
+            np.testing.assert_allclose(
+                power_c(power, frequencies),
+                np.sqrt(2 * np.pi / frequencies) * power,
+                rtol=1e-12,
+            )
 
 
 @ddt
