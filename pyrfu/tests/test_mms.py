@@ -5047,6 +5047,16 @@ class FeepsSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "DMPA")
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_skymap_complete_spins(self):
+        # Partial spin (sectors 31-63), a complete spin, partial spin (7-47):
+        # one skymap, at the first sample of the complete spin (the partial
+        # spins gave skymaps too)
+        feeps_alle = _feeps_skymap_case("srvy", 24).isel(time=slice(3, 22))
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        np.testing.assert_array_equal(result.time.data, feeps_alle.time.data[[5]])
+        np.testing.assert_array_equal(result.data.data, 2.0)
+
     @data(("brst", 10, 32, 10.0), ("srvy", 1, 8, 15.0 - 3.5))
     @unpack
     def test_feeps_skymap_direction(self, data_rate, i_sample, n_phi, sector):
@@ -5314,20 +5324,19 @@ class FeepsSectorSpecTestCase(unittest.TestCase):
 
         result = mms.feeps_sector_spec(feeps_alle)
 
-        # One row per spin at its first sample (the spectra used to be padded
-        # with NaN to every sample, row 0 empty and spins one row late)
+        # One row per complete spin at its first sample (the spectra used to be
+        # padded with NaN to every sample, row 0 empty and spins one row late,
+        # and the partial spins were kept)
         self.assertListEqual(sorted(result.data_vars), ["bottom-1", "top-1"])
-        np.testing.assert_array_equal(result.time.data, time[[0, 2, 66, 130]])
+        np.testing.assert_array_equal(result.time.data, time[[2, 66]])
         self.assertEqual(result.sizes["sectornum"], 64)
 
-        expected = np.full((4, 64), np.nan)
-        expected[0, 62:] = [62.0, 63.0]
-        expected[1] = 100.0 + np.arange(64)
-        expected[2] = 200.0 + np.arange(64)
-        expected[3, :3] = 300.0 + np.arange(3)
+        expected = np.full((2, 64), np.nan)
+        expected[0] = 100.0 + np.arange(64)
+        expected[1] = 200.0 + np.arange(64)
         np.testing.assert_array_equal(result["top-1"].data, expected)
 
-        expected[1, 8] = np.nan
+        expected[0, 8] = np.nan
         np.testing.assert_array_equal(result["bottom-1"].data, expected)
         self.assertDictEqual(result.attrs, feeps_alle.attrs)
 
