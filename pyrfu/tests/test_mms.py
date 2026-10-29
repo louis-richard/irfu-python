@@ -1390,6 +1390,80 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         result = mms.eis_combine_proton_spec(phxtof_allt, extof_allt)
         self.assertIsInstance(result, xr.Dataset)
 
+    @staticmethod
+    def _allt(energy, seconds, factor):
+        # 6 telescopes with flux factor * second + channel index, widths 0.1 E
+        # below and 0.2 E above
+        time = np.datetime64("2021-07-11T00:00:00", "ns") + (
+            np.asarray(seconds) * 1e9
+        ).astype("timedelta64[ns]")
+        flux = factor * np.asarray(seconds, dtype=float)[:, None] + np.arange(
+            len(energy)
+        )
+        allt = {
+            f"t{i:d}": xr.DataArray(
+                flux, coords=[time, energy], dims=["time", "energy"]
+            )
+            for i in range(6)
+        }
+        allt["spin"] = pyrf.ts_scalar(time, np.zeros(len(time)))
+        attrs = {"delta_energy_minus": 0.1 * energy, "delta_energy_plus": 0.2 * energy}
+        return xr.Dataset(allt, attrs=attrs)
+
+    def test_eis_combine_proton_spec_channels(self):
+        # Channels of IDL 6.1 on the 2021 tables: all the PHxTOF channels and
+        # the ExTOF ones but the lowest (it was kept and the top PHxTOF one
+        # left out), with their widths (they were stored as edges)
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, [0, 1, 2], 100), self._allt(e_ex, [0, 1, 2], 1000)
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        energy = np.hstack([e_phx, e_ex[1:]])
+        np.testing.assert_array_equal(result.energy.data, energy)
+        np.testing.assert_allclose(result.attrs["delta_energy_minus"], 0.1 * energy)
+        np.testing.assert_allclose(result.attrs["delta_energy_plus"], 0.2 * energy)
+        np.testing.assert_array_equal(result.t3.data[:, :7], phx.t3.data)
+        np.testing.assert_array_equal(result.t3.data[:, 7:], ext.t3.data[:, 1:])
+
+    def test_eis_combine_proton_spec_cross_over(self):
+        # PHxTOF channels above the second ExTOF one averaged with the ExTOF
+        # ones below the top PHxTOF one, at the geometric mean of their edges
+        e_phx = np.array([20.0, 40.0, 60.0, 80.0])
+        e_ex = np.array([45.0, 50.0, 70.0, 120.0])
+        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        low = [min(0.9 * 60.0, 0.9 * 50.0), min(0.9 * 80.0, 0.9 * 70.0)]
+        high = [max(1.2 * 60.0, 1.2 * 50.0), max(1.2 * 80.0, 1.2 * 70.0)]
+        np.testing.assert_allclose(
+            result.energy.data, [20.0, 40.0, *np.sqrt(np.multiply(low, high)), 120.0]
+        )
+        np.testing.assert_allclose(
+            result.t0.data[:, 2:4],
+            (phx.t0.data[:, 2:4] + ext.t0.data[:, 1:3]) / 2,
+        )
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_minus"][2:4], result.energy.data[2:4] - low
+        )
+
+    def test_eis_combine_proton_spec_times(self):
+        # Only the times of both instruments, paired by time (samples of
+        # different times could be averaged)
+        e_phx = np.array([20.0, 40.0])
+        e_ex = np.array([45.0, 50.0, 120.0])
+        phx = self._allt(e_phx, [0, 1, 2, 3, 5], 100)
+        ext = self._allt(e_ex, [1, 2, 3, 4, 5], 1000)
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        np.testing.assert_array_equal(result.time.data, ext.time.data[[0, 1, 2, 4]])
+        np.testing.assert_array_equal(result.t0.data[:, 0], [100, 200, 300, 500])
+        np.testing.assert_array_equal(result.t0.data[:, 2], [1001, 2001, 3001, 5001])
+        self.assertEqual(len(result.spin), 4)
+
+        with self.assertRaises(ValueError):
+            mms.eis_combine_proton_spec(phx.drop_vars("t5"), ext)
+
 
 @ddt
 class EisMomentsTestCase(unittest.TestCase):
