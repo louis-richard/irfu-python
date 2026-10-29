@@ -38,6 +38,21 @@ def _angle(u_vec, v_vec):
     return np.rad2deg(np.arccos(np.clip(cos_angle, -1.0, 1.0)))
 
 
+def _rotate_perp(tensor, thetas):
+    r"""Rotates the tensors about the first axis by the angles thetas, all at
+    once (it was a loop over the times)."""
+    cos_t, sin_t = np.cos(thetas), np.sin(thetas)
+    rot_mat = np.zeros((len(thetas), 3, 3), dtype=np.float64)
+    rot_mat[:, 0, 0] = 1.0
+    rot_mat[:, 1, 1], rot_mat[:, 1, 2] = cos_t, sin_t
+    rot_mat[:, 2, 1], rot_mat[:, 2, 2] = -sin_t, cos_t
+
+    # In double precision, with the precision of tensor in output
+    out = (rot_mat @ tensor) @ np.transpose(rot_mat, [0, 2, 1])
+
+    return out.astype(tensor.dtype)
+
+
 def rotate_tensor(
     inp: DataArray,
     rot_flag: str,
@@ -270,15 +285,9 @@ def rotate_tensor(
     else:
         raise NotImplementedError(f"{rot_flag} method is not implemented.")
 
-    p_tensor_p: NDArrayFloats = np.zeros((n_t, 3, 3), dtype=precision)
-
-    for i in range(n_t):
-        rot_temp: NDArrayFloats = np.squeeze(rot_mat[i, :, :].astype(precision))
-
-        p_tensor_p[i, :, :] = np.matmul(
-            np.matmul(rot_temp, np.squeeze(inp_data[i, :, :])),
-            np.transpose(rot_temp),
-        )
+    # R P R^T at all times at once (it was a loop over the times)
+    rot_mat = rot_mat.astype(precision)
+    p_tensor_p: NDArrayFloats = (rot_mat @ inp_data) @ np.transpose(rot_mat, [0, 2, 1])
 
     if perp.lower() == "":
         logger.info("No additional rotation applied.")
@@ -295,19 +304,7 @@ def rotate_tensor(
             )
         thetas[np.isnan(thetas)] = 0.0
 
-        for i, theta in enumerate(thetas):
-            rot_temp = np.array(
-                [
-                    [1, 0, 0],
-                    [0, np.cos(theta), np.sin(theta)],
-                    [0, -np.sin(theta), np.cos(theta)],
-                ],
-            )
-
-            p_tensor_p[i, :, :] = np.matmul(
-                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])),
-                np.transpose(rot_temp),
-            )
+        p_tensor_p = _rotate_perp(p_tensor_p, thetas)
 
     elif perp.lower() == "qq":
 
@@ -323,19 +320,7 @@ def rotate_tensor(
             )
         thetas[np.isnan(thetas)] = 0.0
 
-        for i, theta in enumerate(thetas):
-            rot_temp = np.array(
-                [
-                    [1, 0, 0],
-                    [0, np.cos(theta), -np.sin(theta)],
-                    [0, np.sin(theta), np.cos(theta)],
-                ],
-            )
-
-            p_tensor_p[i, :, :] = np.matmul(
-                np.matmul(rot_temp, np.squeeze(p_tensor_p[i, :, :])),
-                np.transpose(rot_temp),
-            )
+        p_tensor_p = _rotate_perp(p_tensor_p, -thetas)
     else:
         raise NotImplementedError(f"{perp} method is not implemented.")
 

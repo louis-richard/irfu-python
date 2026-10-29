@@ -7065,6 +7065,32 @@ class RotateTensorTestCase(unittest.TestCase):
             result = mms.rotate_tensor(p_xyz, "fac", b_xyz, "pp")
         np.testing.assert_allclose(np.diag(result.data[0]), [3.0, 1.5, 1.5])
 
+    def test_rotate_tensor_fac_time_varying(self):
+        # A different tensor and B at each time (rotated at all times at once;
+        # it was a loop): P_par = b.P.b, trace kept, equal perpendicular
+        # diagonal terms for "pp", no perpendicular off-diagonal term for "qq"
+        time = generate_timeline(1.0, 50)
+        rng = np.random.default_rng(3)
+        a_mat = rng.standard_normal((50, 3, 3))
+        p_xyz = pyrf.ts_tensor_xyz(time, a_mat @ np.transpose(a_mat, [0, 2, 1]))
+        b_xyz = pyrf.ts_vec_xyz(time, rng.standard_normal((50, 3)))
+        b_hat = b_xyz.data / np.linalg.norm(b_xyz.data, axis=1, keepdims=True)
+        p_par = np.einsum("ti,tij,tj->t", b_hat, p_xyz.data, b_hat)
+
+        for perp in ["pp", "qq"]:
+            result = mms.rotate_tensor(p_xyz, "fac", b_xyz, perp).data
+            np.testing.assert_allclose(result[:, 0, 0], p_par, rtol=1e-12)
+            np.testing.assert_allclose(
+                np.trace(result, axis1=1, axis2=2),
+                np.trace(p_xyz.data, axis1=1, axis2=2),
+                rtol=1e-12,
+            )
+
+            if perp == "pp":
+                np.testing.assert_allclose(result[:, 1, 1], result[:, 2, 2])
+            else:
+                np.testing.assert_allclose(result[:, 1, 2], 0.0, atol=1e-12)
+
     @data(
         (
             generate_data(100, tensor_order=1),
