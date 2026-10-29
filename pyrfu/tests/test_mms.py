@@ -1517,9 +1517,20 @@ class EisMomentsTestCase(unittest.TestCase):
         flux = 2 * e_j / mass**2 * vdf * 1e3 * constants.e / 1e4
         times = generate_timeline(1.0, n_t)
         flux = np.tile(flux, (n_t, 1))
-        return xr.DataArray(flux, coords=[times, energy], dims=["time", "energy"])
+        # channel widths: to the geometric means of the neighbouring energies
+        edges = np.sqrt(energy[1:] * energy[:-1])
+        edges = np.hstack(
+            [energy[0] ** 2 / edges[0], edges, energy[-1] ** 2 / edges[-1]]
+        )
+        attrs = {
+            "delta_energy_minus": energy - edges[:-1],
+            "delta_energy_plus": edges[1:] - energy,
+        }
+        return xr.DataArray(
+            flux, coords=[times, energy], dims=["time", "energy"], attrs=attrs
+        )
 
-    @data(("proton", 1), ("alpha", 4), ("oxygen", 16))
+    @data(("proton", 1), ("alpha", 4), ("helium", 4), ("oxygen", 16))
     @unpack
     def test_eis_moments_maxwellian(self, specie, mass_number):
         # n = 1 cm^-3, kT = 10 keV: P = n kT = 1.602 nPa (the 2nd order integral
@@ -1544,8 +1555,63 @@ class EisMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(n_i.data[[0, 2]], 1.0, rtol=1e-4)
 
     def test_eis_moments_input(self):
+        flux = self._maxwellian_flux(constants.proton_mass)
+
         with self.assertRaises(ValueError):
-            mms.eis_moments(self._maxwellian_flux(constants.proton_mass), "helium")
+            mms.eis_moments(flux, "electron")
+
+        flux.attrs = {}
+        with self.assertRaisesRegex(ValueError, "energy widths"):
+            mms.eis_moments(flux)
+
+    def test_eis_moments_channel_sum(self):
+        # Sums over the channels and their widths (Simpson's rule from the first
+        # to the last channel centre left out the half channels at both ends)
+        energy = np.array([50.0, 80.0, 120.0])
+        attrs = {
+            "delta_energy_minus": np.array([10.0, 15.0, 20.0]),
+            "delta_energy_plus": np.array([15.0, 20.0, 30.0]),
+        }
+        flux = xr.DataArray(
+            np.array([[3.0, 2.0, 1.0]]),
+            coords=[generate_timeline(1.0, 1), energy],
+            dims=["time", "energy"],
+            attrs=attrs,
+        )
+        n_i, v_i, p_i, t_i = mms.eis_moments(flux)
+
+        kev = 1e3 * constants.e
+        e_j, w_j = energy * kev, np.array([25.0, 35.0, 50.0]) * kev
+        j_si = 1e4 * flux.data[0] / kev
+        fact = 4 * np.pi * np.sqrt(constants.proton_mass / 2)
+        n_si = fact * np.sum(j_si / np.sqrt(e_j) * w_j)
+        p_si = 2 / 3 * fact * np.sum(j_si * np.sqrt(e_j) * w_j)
+
+        np.testing.assert_allclose(n_i.data, 1e-6 * n_si, rtol=1e-12)
+        np.testing.assert_allclose(p_i.data, 1e9 * p_si, rtol=1e-12)
+        np.testing.assert_allclose(t_i.data, p_si / (n_si * constants.e), rtol=1e-12)
+        np.testing.assert_allclose(
+            v_i.data,
+            1e-3
+            * fact
+            * np.sum(j_si * w_j)
+            / (n_si * np.sqrt(constants.proton_mass / 2)),
+            rtol=1e-12,
+        )
+
+    def test_eis_moments_background(self):
+        # n - n_bg and P - p_bg, T from them (P was reduced by 3 p_bg)
+        flux = self._maxwellian_flux(constants.proton_mass)
+        n_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.2))
+        p_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.4))
+        n_0, _, p_0, _ = mms.eis_moments(flux)
+        n_i, _, p_i, t_i = mms.eis_moments(flux, n_bg=n_bg, p_bg=p_bg)
+
+        np.testing.assert_allclose(n_i.data, n_0.data - 0.2)
+        np.testing.assert_allclose(p_i.data, p_0.data - 0.4)
+        np.testing.assert_allclose(
+            t_i.data, 1e-9 * p_i.data / (1e6 * n_i.data * constants.e)
+        )
 
 
 @ddt
