@@ -1584,6 +1584,53 @@ class EisOmniTestCase(unittest.TestCase):
         self.assertNotIn("new", eis.t0.attrs)
 
 
+class EisPadCombineScTestCase(unittest.TestCase):
+    @staticmethod
+    def _pad(t_0, n_pts, value, energies=(50.0, 80.0, 120.0)):
+        # PADs at 2.5 s, 12 pitch angle bins, value at every bin and energy
+        time = np.datetime64(t_0, "ns") + (np.arange(n_pts) * 2.5e9).astype(
+            "timedelta64[ns]"
+        )
+        theta = 7.5 + 15.0 * np.arange(12)
+        data = np.full((n_pts, 12, len(energies)), float(value))
+        return xr.DataArray(
+            data,
+            coords=[time, theta, np.asarray(energies)],
+            dims=["time", "theta", "energy"],
+        )
+
+    def test_eis_pad_combine_sc_channels(self):
+        # Different numbers of channels (ValueError in both directions), at the
+        # closest channels, on the energies of the spacecraft with the fewest
+        ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
+        more = self._pad(
+            "2017-07-11T22:00:00", 12, 3.0, energies=(48.0, 60.0, 81.0, 119.0)
+        )
+        more.data[..., 1] = np.nan  # 60 keV: not a closest channel
+
+        for pads in [[ref, more], [more, ref]]:
+            result = mms.eis_pad_combine_sc(pads)
+            np.testing.assert_array_equal(result.energy.data, [50.0, 80.0, 120.0])
+            np.testing.assert_array_equal(result.time.data, ref.time.data)
+            np.testing.assert_allclose(result.data, 2.0)
+
+    def test_eis_pad_combine_sc_times(self):
+        # At the nearest time (by index, a spacecraft starting a sample later
+        # was paired with the next times); none within half a step: left out
+        ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
+        late = self._pad("2017-07-11T22:00:02.6", 10, 3.0)
+        late.data[:] = 3.0 + np.arange(10)[:, None, None]
+        result = mms.eis_pad_combine_sc([ref, late])
+
+        np.testing.assert_allclose(result.data[0], 1.0)
+        np.testing.assert_allclose(
+            result.data[1:, 0, 0], (1.0 + late.data[:9, 0, 0]) / 2
+        )
+
+        with self.assertRaises(ValueError):
+            mms.eis_pad_combine_sc([ref, ref.assign_coords(theta=ref.theta + 1)])
+
+
 class EisSpecCombineScTestCase(unittest.TestCase):
     @staticmethod
     def _omni(t_0, n_pts, first_sector, value, energies=None, spin_avg=False):
