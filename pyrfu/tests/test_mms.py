@@ -3940,8 +3940,9 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
                 self.assertDictEqual(result, expected)
 
     def test_feeps_active_eyes_sitl(self):
-        # SITL: top eyes 5, 11 and 12 only, as IDL SPEDAS; after 2017-08-16 in
-        # survey, those of them that are active
+        # SITL: top eyes 5, 11 and 12 only, as IDL SPEDAS and pySPEDAS (also for
+        # the ions); after 2017-08-16 in survey, those of them that are active,
+        # sorted
         for dtype in ["electron", "ion"]:
             var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
             result = mms.feeps_active_eyes(var, ["2017-08-01", "2017-08-02"], 1)
@@ -3956,7 +3957,7 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
         ]:
             var = {"tmmode": "srvy", "dtype": dtype, "lev": "sitl"}
             result = mms.feeps_active_eyes(var, tint, mms_id)
-            self.assertListEqual(sorted(result["top"]), top)
+            self.assertListEqual(result["top"], top)
             self.assertListEqual(result["bottom"], [])
 
 
