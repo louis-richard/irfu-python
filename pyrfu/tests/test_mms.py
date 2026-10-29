@@ -1739,6 +1739,75 @@ class EisAngAngTestCase(unittest.TestCase):
             mms.eis_ang_ang(allt, frame="gsm")
 
 
+class EisSkymapTestCase(unittest.TestCase):
+    @staticmethod
+    def _ang_ang(seconds, value=1.0, units="1/(cm^2 s sr keV)"):
+        # Angle-angle distributions at the given times (one per spin), 2
+        # energies (keV) with their widths, 8 azimuths and 6 polar angles
+        time = np.datetime64("2017-07-11T22:00:00", "ns") + (
+            np.asarray(seconds) * 1e9
+        ).astype("timedelta64[ns]")
+        energy = np.array([60.0, 120.0])
+        out = xr.DataArray(
+            np.full((len(time), 2, 8, 6), float(value)),
+            coords=[
+                time,
+                energy,
+                22.5 + 45.0 * np.arange(8),
+                23.3 + 26.7 * np.arange(6),
+            ],
+            dims=["time", "energy", "phi", "theta"],
+            attrs={
+                "species": "proton",
+                "delta_energy_minus": np.array([5.0, 10.0]),
+                "delta_energy_plus": np.array([6.0, 12.0]),
+                "UNITS": units,
+                "GLOBAL": {},
+            },
+        )
+        out.energy.attrs = {"UNITS": "keV"}
+        return out
+
+    def test_eis_skymap_units(self):
+        # Energies and widths in eV (the widths stayed in keV, labelled keV);
+        # a single time (IndexError)
+        result = mms.eis_skymap(self._ang_ang([0.0]), to_psd=False)
+
+        np.testing.assert_array_equal(result.energy.data[0], [6e4, 1.2e5])
+        self.assertEqual(result.energy.attrs["UNITS"], "eV")
+        np.testing.assert_array_equal(result.attrs["delta_energy_minus"], [5e3, 1e4])
+        np.testing.assert_array_equal(result.attrs["delta_energy_plus"], [6e3, 1.2e4])
+
+    def test_eis_skymap_combine_sc(self):
+        # Combined at the nearest spin (by index, a missing spin shifted the
+        # next ones), with the widths per channel (repeated for every time) and
+        # NaN where no spacecraft has data (the sum was 0)
+        ref = mms.eis_skymap(self._ang_ang([0, 20, 40, 60]), to_psd=False)
+        other = self._ang_ang([1, 21, 41, 61, 81], value=3.0)
+        other.data[3:] = 5.0
+        other = mms.eis_skymap(other.drop_isel(time=2), to_psd=False)
+        ref.data.data[0, 0, 0, 0] = np.nan
+        other.data.data[0, 0, 0, 0] = np.nan
+        result = mms.eis_skymap_combine_sc([ref, other])
+
+        np.testing.assert_array_equal(result.time.data, ref.time.data)
+        np.testing.assert_allclose(result.data.data[1, 1], 2.0)
+        np.testing.assert_allclose(result.data.data[2, 1], 1.0)
+        np.testing.assert_allclose(result.data.data[3, 1], 3.0)
+        np.testing.assert_array_equal(result.attrs["delta_energy_plus"], [6e3, 1.2e4])
+
+        summed = mms.eis_skymap_combine_sc([ref, other], "sum")
+        self.assertTrue(np.isnan(summed.data.data[0, 0, 0, 0]))
+        np.testing.assert_allclose(summed.data.data[1, 1], 4.0)
+
+        with self.assertRaises(ValueError):
+            mms.eis_skymap_combine_sc([ref, other], "median")
+
+        psd = mms.eis_skymap(self._ang_ang([0, 20], units="s^3/cm^6"), to_psd=False)
+        with self.assertRaisesRegex(ValueError, "UNITS"):
+            mms.eis_skymap_combine_sc([ref, psd])
+
+
 class EisPadCombineScTestCase(unittest.TestCase):
     @staticmethod
     def _pad(t_0, n_pts, value, energies=(50.0, 80.0, 120.0)):

@@ -30,7 +30,8 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     Returns
     -------
     out : xarray.Dataset
-        EIS skymap distribution.
+        EIS skymap distribution, with the energies and their widths
+        (``delta_energy_minus``, ``delta_energy_plus``) in eV.
 
     See Also
     --------
@@ -51,17 +52,22 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
         ),
     )
     attrs = {k: inp_ang_ang.attrs[k] for k in a}
-    coords_attrs = {k: inp_ang_ang[k].attrs for k in ["time", "energy", "phi", "theta"]}
+    coords_attrs = {
+        k: {**inp_ang_ang[k].attrs} for k in ["time", "energy", "phi", "theta"]
+    }
+    coords_attrs["energy"]["UNITS"] = "eV"
 
     glob_attrs = inp_ang_ang.attrs["GLOBAL"]
+    # Energy widths in eV, as the energies (they were left in keV)
     glob_attrs = {
-        "delta_energy_plus": inp_ang_ang.attrs["delta_energy_plus"],
-        "delta_energy_minus": inp_ang_ang.attrs["delta_energy_minus"],
+        "delta_energy_plus": 1e3 * np.asarray(inp_ang_ang.attrs["delta_energy_plus"]),
+        "delta_energy_minus": 1e3 * np.asarray(inp_ang_ang.attrs["delta_energy_minus"]),
         "species": inp_ang_ang.attrs["species"],
         **glob_attrs,
     }
 
-    energy0, energy1 = [energy[i, :] for i in range(2)]
+    # Same energy table at all times (a single time raised IndexError)
+    energy0, energy1 = energy[0, :], energy[0, :]
     e_step_table = np.zeros(len(time_data))
 
     out = ts_skymap(
