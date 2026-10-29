@@ -51,20 +51,24 @@ def eis_pad(
         Energy range to include in the calculation: the channels with their
         lower or upper edge in it. Default is all the channels.
     pa_width : int, Optional
-        Size of the pitch angle bins, in degrees. Default is 15.
+        Size of the pitch angle bins, in degrees, a divisor of 180. Default is
+        15.
 
     Returns
     -------
     pa_flux : xarray.DataArray
         Pitch-angle angle distribution for every energy channels in the
-        `energy` range.
+        `energy` range, with the units, species, energy widths of these
+        channels (``delta_energy_minus``, ``delta_energy_plus``) and
+        ``pa_width`` in its attributes (it had none).
 
     Raises
     ------
     ValueError
         If `vec` is not given (the pitch angles were taken from X-GSE), is
-        neither a time series nor a direction, or if no channel is in the
-        `energy` range.
+        neither a time series nor a direction, if no channel is in the
+        `energy` range, or if `pa_width` doesn't divide 180 (the bins had
+        gaps).
 
     Notes
     -----
@@ -84,6 +88,9 @@ def eis_pad(
     """
 
     time_ = inp_allt.time.data
+
+    if not np.isclose(180.0 / pa_width, round(180.0 / pa_width)):
+        raise ValueError(f"pa_width must divide 180, not {pa_width}")
 
     if vec is None:
         raise ValueError(
@@ -117,8 +124,10 @@ def eis_pad(
     pa_file = np.zeros([len(time_), len(scopes)])
 
     # Lower and upper edges of the channels (the lower one was E + delta_minus)
-    e_minu = inp_allt.energy.data - inp_allt.delta_energy_minus
-    e_plus = inp_allt.energy.data + inp_allt.delta_energy_plus
+    e_minu_w = np.asarray(inp_allt.delta_energy_minus, dtype=np.float64)
+    e_plus_w = np.asarray(inp_allt.delta_energy_plus, dtype=np.float64)
+    e_minu = inp_allt.energy.data - e_minu_w
+    e_plus = inp_allt.energy.data + e_plus_w
 
     cond_low = np.logical_and(e_minu >= energy[0], e_minu <= energy[1])
     cond_hig = np.logical_and(e_plus >= energy[0], e_plus <= energy[1])
@@ -157,10 +166,19 @@ def eis_pad(
                 warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
                 pa_flux[i, j, :] = np.nanmean(flux_file[i, ind, :], axis=0)
 
+    attrs = {
+        "UNITS": inp_allt[scopes[0]].attrs.get("UNITS", ""),
+        "species": inp_allt.attrs.get("species", ""),
+        "delta_energy_minus": np.broadcast_to(e_minu_w, e_minu.shape)[ener_idx],
+        "delta_energy_plus": np.broadcast_to(e_plus_w, e_plus.shape)[ener_idx],
+        "pa_width": pa_width,
+    }
+
     pa_flux = xr.DataArray(
         pa_flux,
         coords=[time_, pa_label, inp_allt.energy.data[ener_idx]],
         dims=["time", "theta", "energy"],
+        attrs=attrs,
     )
 
     return pa_flux

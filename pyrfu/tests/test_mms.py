@@ -2025,6 +2025,24 @@ class EisPadTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "No energy channel"):
             mms.eis_pad(eis, [1, 0, 0], energy=[5000, 6000])
 
+        # Bins with gaps for a width that doesn't divide 180
+        with self.assertRaisesRegex(ValueError, "pa_width"):
+            mms.eis_pad(eis, [1, 0, 0], pa_width=25)
+
+    def test_eis_pad_attrs(self):
+        # Units, species, widths of the channels used and bin width (no attrs)
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        eis["t0"].attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        result = mms.eis_pad(eis, [1, 0, 0], energy=[100, 200])
+        i_e = np.flatnonzero(np.isin(eis.energy.data, result.energy.data))
+
+        self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertEqual(result.attrs["species"], "proton")
+        self.assertEqual(result.attrs["pa_width"], 15)
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_minus"], eis.attrs["delta_energy_minus"][i_e]
+        )
+
 
 @ddt
 class EisPadSpinAvgTestCase(unittest.TestCase):
