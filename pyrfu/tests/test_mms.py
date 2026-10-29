@@ -1649,6 +1649,10 @@ class EisOmniTestCase(unittest.TestCase):
         result.attrs["new"] = 1
         self.assertNotIn("new", eis.t0.attrs)
 
+        # ValueError (was AssertionError)
+        with self.assertRaises(ValueError):
+            mms.eis_omni(eis, "median")
+
 
 class EisAngAngTestCase(unittest.TestCase):
     # Telescope polar angles (degrees from +z) and 8 samples per spin, the

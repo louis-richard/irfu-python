@@ -30,6 +30,17 @@ def eis_omni(eis_allt, method: str = "mean"):
         species of `eis_allt` in its attributes (``delta_energy_plus``,
         ``delta_energy_minus``, ``species``).
 
+    Raises
+    ------
+    ValueError
+        If method is not "mean" or "sum".
+
+    Notes
+    -----
+    The omni-directional flux is the plain mean (or sum) of the telescopes, as
+    IDL SPEDAS ``mms_eis_omni`` and pySPEDAS: a NaN in one telescope gives NaN,
+    and zeros count.
+
     See Also
     --------
     pyrfu.mms.get_eis_allt
@@ -53,7 +64,8 @@ def eis_omni(eis_allt, method: str = "mean"):
 
     """
 
-    assert method.lower() in ["mean", "sum"]
+    if method.lower() not in ["mean", "sum"]:
+        raise ValueError(f"method must be mean or sum, not {method}")
 
     scopes = list(filter(lambda x: x[0] == "t", eis_allt))
 
