@@ -31,6 +31,7 @@ from scipy import constants, interpolate, signal
 # Local imports
 from .. import pyrf
 from ..constants import R_E
+from ..pyrf._units import _attrs, _check_units, _power, _product, _ratio, _units
 from ..pyrf.c_4_v_xcorr import _BandLimited as _C4VXcorrBandLimited
 from ..pyrf.c_4_v_xcorr import _corr_h as _c_4_v_xcorr_corr_h
 from ..pyrf.c_4_v_xcorr import _get_disc_vel as _c_4_v_xcorr_get_disc_vel
@@ -965,6 +966,42 @@ class C4VXcorrTestCase(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, message):
                 pyrf.c_4_v_xcorr(**inputs)
+
+
+class UnitsTestCase(unittest.TestCase):
+    def test_units_strings(self):
+        # Products, ratios and powers in the notation of the MMS files, composed
+        # (not simplified), None without units
+        self.assertEqual(_product("mV/m", "nT"), "(mV/m) nT")
+        self.assertEqual(_product("nT", "nT"), "nT^2")
+        self.assertEqual(_product("nT", "", "s"), "nT s")
+        self.assertIsNone(_product("nT", None))
+        self.assertEqual(_ratio("nT", "km"), "nT/km")
+        self.assertEqual(_ratio("km/s", "km"), "(km/s)/km")
+        self.assertEqual(_ratio("nT^2", "Hz"), "nT^2/Hz")
+        self.assertEqual(_ratio("", "s"), "1/s")
+        self.assertEqual(_ratio("nT", "cm^2 s"), "nT/(cm^2 s)")
+        self.assertEqual(_ratio("nT", ""), "nT")
+        self.assertEqual(_power("mV/m", 2), "(mV/m)^2")
+        self.assertEqual(_power("nT^2", 2), "(nT^2)^2")
+        self.assertEqual(_power("Hz", 0.5), "Hz^0.5")
+        self.assertEqual(_power("", 2), "")
+        self.assertIsNone(_power(None, 2))
+
+    def test_units_attrs_check(self):
+        inp = pyrf.ts_scalar(generate_timeline(1.0, 3), np.ones(3), {"UNITS": "nT"})
+        self.assertEqual(_units(inp), "nT")
+        self.assertDictEqual(_attrs(inp.attrs, None), {"TENSOR_ORDER": 0})
+        self.assertEqual(_attrs(inp.attrs, "nT/s")["UNITS"], "nT/s")
+
+        with self.assertWarnsRegex(UserWarning, "assumed in km"):
+            _check_units(inp, "km", "r")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            _check_units(inp, ["nT", "nt"], "B")
+            inp.attrs = {}
+            _check_units(inp, "km", "r")
 
 
 class C4GradTestCase(unittest.TestCase):
@@ -3348,6 +3385,11 @@ class GradientTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["UNITS"], "nT/s")
         self.assertEqual(inp.attrs["UNITS"], "nT")
 
+        # Compound and dimensionless units ("mV/m/s" and "/s")
+        for units, expected in [("mV/m", "(mV/m)/s"), ("", "1/s")]:
+            inp.attrs["UNITS"] = units
+            self.assertEqual(pyrf.gradient(inp).attrs["UNITS"], expected)
+
     def test_gradient_gaps(self):
         # Segments between gaps (steps over 3 time_step) differentiated
         # separately, as irf_gradient; a single sample between gaps is NaN; a
@@ -4321,7 +4363,7 @@ class IntegrateTestCase(unittest.TestCase):
         np.testing.assert_allclose(pyrf.integrate(inp).data[:, 1, 2], [0.0, 0.5, 1.0])
 
         inp = pyrf.ts_vec_xyz(time, np.ones((3, 3)), attrs={"UNITS": "mV/m"})
-        self.assertEqual(pyrf.integrate(inp).attrs["UNITS"], "(mV/m)*s")
+        self.assertEqual(pyrf.integrate(inp).attrs["UNITS"], "(mV/m) s")
 
         with self.assertRaises(TypeError):
             pyrf.integrate(inp.data)
