@@ -2108,6 +2108,24 @@ class EisProtonCorrectionTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             mms.eis_proton_correction(np.ones((3, 16)))
 
+    def test_eis_proton_correction_units(self):
+        # Fluxes only (counts and cps were corrected)
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "cps", 1)
+
+        for i in range(6):
+            eis[f"t{i:d}"].attrs["UNITS"] = "1/s"
+
+        with self.assertRaisesRegex(ValueError, "flux"):
+            mms.eis_proton_correction(eis)
+
+        with self.assertRaisesRegex(ValueError, "flux"):
+            mms.eis_proton_correction(mms.eis_omni(eis))
+
+        for i in range(6):
+            eis[f"t{i:d}"].attrs["UNITS"] = "1/(cm^2 s sr keV)"
+
+        self.assertIsInstance(mms.eis_proton_correction(eis), xr.Dataset)
+
     def test_eis_proton_correction_dataarray(self):
         flux_eis = generate_spectr(64, 100, 16, "energy")
         result = mms.eis_proton_correction(flux_eis)
