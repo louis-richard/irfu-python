@@ -87,7 +87,8 @@ def eis_moments(
     last channel centre, which left out the half channels at both ends: for
     an isotropic proton Maxwellian on the ExTOF channels, n was 0.39 (kT = 10
     keV) to 0.94 (100 keV) of the partial density over the channels, against
-    0.93 to 1.01 now.
+    0.93 to 1.01 now. The outputs have their units in ``UNITS`` (they had
+    none).
 
     With `n_bg` and `p_bg`, the background density and pressure are
     subtracted, and the temperature computed from the difference; the mean
@@ -161,13 +162,14 @@ def eis_moments(
     t_i = p_i / (n_i * constants.Boltzmann)  # K
 
     # Convert to usual units
-    n_i = ts_scalar(inp.time.data, n_i * 1e-6)  # cm^-3
-    v_i = ts_scalar(inp.time.data, v_i * 1e-3)  # mean speed, km s^-1
-    p_i = ts_scalar(inp.time.data, p_i * 1e9)  # nPa
+    n_i = ts_scalar(inp.time.data, n_i * 1e-6, {"UNITS": "cm^-3"})
+    v_i = ts_scalar(inp.time.data, v_i * 1e-3, {"UNITS": "km/s"})  # mean speed
+    p_i = ts_scalar(inp.time.data, p_i * 1e9, {"UNITS": "nPa"})
     t_i = ts_scalar(
         inp.time.data,
         t_i * constants.Boltzmann / constants.elementary_charge,
-    )  # eV
+        {"UNITS": "eV"},
+    )
 
     if n_bg is not None and p_bg is not None:
         # Resample background to differential particle flux sampling

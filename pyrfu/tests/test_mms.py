@@ -1668,6 +1668,18 @@ class EisMomentsTestCase(unittest.TestCase):
             t_i.data, 1e-9 * p_i.data / (1e6 * n_i.data * constants.e)
         )
 
+    def test_eis_moments_units_attrs(self):
+        # Units of the moments in UNITS (none), kept with a background
+        flux = self._maxwellian_flux(constants.proton_mass)
+        n_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.2))
+        units = ["cm^-3", "km/s", "nPa", "eV"]
+
+        for kwargs in [{}, {"n_bg": n_bg, "p_bg": 2 * n_bg}]:
+            result = mms.eis_moments(flux, **kwargs)
+
+            with self.subTest(background=bool(kwargs)):
+                self.assertListEqual([r.attrs["UNITS"] for r in result], units)
+
 
 @ddt
 class EisOmniTestCase(unittest.TestCase):
