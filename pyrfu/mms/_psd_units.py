@@ -75,15 +75,24 @@ def _relativistic_factor(inp, data):
     return 2.0 * gamma**5 / (gamma + 1.0)
 
 
+def _attrs(attrs, units):
+    r"""Attributes with the new units, without the label of the old ones
+    (LABLAXIS, e.g. "Intensity" for a phase-space density) if they changed."""
+    if attrs.get("UNITS") != units:
+        attrs = {k: v for k, v in attrs.items() if k != "LABLAXIS"}
+
+    return {**attrs, "UNITS": units}
+
+
 def _output(inp, data, units):
     r"""Copy of the input with the converted data and units, without changing
     the input or its attributes."""
     if isinstance(inp, Dataset):
         out = inp.copy()
         out["data"] = inp.data.copy(data=data)
-        out.data.attrs = {**inp.data.attrs, "UNITS": units}
+        out.data.attrs = _attrs(inp.data.attrs, units)
     else:
         out = inp.copy(data=data)
-        out.attrs = {**inp.attrs, "UNITS": units}
+        out.attrs = _attrs(inp.attrs, units)
 
     return out

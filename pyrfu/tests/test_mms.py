@@ -1215,6 +1215,24 @@ class Dpf2PsdTestCase(unittest.TestCase):
         result = mms.dpf2psd(spectr)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_dpf2psd_lablaxis(self):
+        # Label of the flux dropped with its units ("Intensity" for the PSD)
+        attrs = {
+            "species": "ions",
+            "UNITS": "1/(cm^2 s sr keV)",
+            "LABLAXIS": "Intensity",
+        }
+        spectr = generate_spectr(64.0, 100, 32, attrs)
+        result = mms.dpf2psd(spectr)
+
+        self.assertEqual(result.attrs["UNITS"], "s^3/m^6")
+        self.assertNotIn("LABLAXIS", result.attrs)
+        self.assertEqual(spectr.attrs["LABLAXIS"], "Intensity")
+
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, "ions", attrs["UNITS"])
+        vdf.data.attrs["LABLAXIS"] = "Intensity"
+        self.assertNotIn("LABLAXIS", mms.dpf2psd(vdf).data.attrs)
+
     def test_dpf2psd_relativistic(self):
         # f = gamma^3 m J / v^2 with the relativistic speed: 2 gamma^5 /
         # (gamma + 1) times the non-relativistic f = m J / v^2
