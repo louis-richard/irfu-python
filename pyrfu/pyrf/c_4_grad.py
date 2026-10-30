@@ -75,12 +75,16 @@ def c_4_grad(
     r_list : list of DataArray
         Time series of the positions of the spacecraft
     b_list : list of DataArray
-        Time series of the magnetic field at the corresponding positions
+        Time series of the magnetic field at the corresponding positions, or
+        of any scalar or vector field, or of a tensor field (time, 3, 3) for
+        "div" only.
     method : {"grad", "div", "curl", "bdivb", "curv"}, Optional
         Method flag :
             * "grad" : compute gradient (default), d B_j / d x_i at
               [time, j, i] for a vector field
-            * "div" : compute divergence
+            * "div" : compute divergence; for a tensor field T, the vector
+              d T_ij / d x_i (summed over i, the divergence of each column),
+              e.g. of a pressure tensor
             * "curl" : compute curl
             * "bdivb" : compute (B.grad) B, with B the average of the four
               fields
@@ -91,6 +95,15 @@ def c_4_grad(
     -------
     DataArray
         Time series of the derivative of the input field corresponding to the method
+
+    Raises
+    ------
+    TypeError
+        If r_list or b_list is not a list or tuple of DataArray.
+    ValueError
+        If r_list or b_list doesn't have 4 elements, if method is not one of
+        the above, or if the field is a tensor and method is not "div" (all
+        the methods raised a broadcasting ValueError for a tensor).
 
     Notes
     -----
@@ -153,6 +166,14 @@ def c_4_grad(
             "Invalid method. Must be one of 'grad', 'div', 'curl', 'bdivb', 'curv'"
         )
 
+    # A tensor field has only its divergence
+    is_tensor = b_list[0].ndim == 3
+
+    if is_tensor and method != "div":
+        raise ValueError(
+            f"a tensor field has only the divergence (method 'div'), not '{method}'"
+        )
+
     # Resample with respect to 1st spacecraft
     r_list = [resample(r, b_list[0]) for r in r_list]
     b_list = [resample(b, b_list[0]) for b in b_list]
@@ -167,6 +188,17 @@ def c_4_grad(
     k_dict = {"1": k_list[0], "2": k_list[1], "3": k_list[2], "4": k_list[3]}
 
     mms_list = b_dict.keys()
+
+    # Divergence of a tensor: d T_ij / d x_i
+    if is_tensor:
+        out_data = np.zeros((len(b_dict["1"]), 3))
+
+        for mms_id in mms_list:
+            out_data += np.einsum(
+                "ti,tij->tj", k_dict[mms_id].data, b_dict[mms_id].data
+            )
+
+        return _to_ts(out_data, b_dict)
 
     # Gradient of scalar/vector
     if len(b_dict["1"].shape) == 1:

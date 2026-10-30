@@ -1022,6 +1022,38 @@ class C4GradTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
 
+    def test_c_4_grad_tensor_divergence(self):
+        # Linear tensor field T_ij(r) = T0_ij + A_ijk r_k: the divergence
+        # d T_ij / d x_i is sum_i A_iji (exact for a linear field), the
+        # divergence of each column; the other methods raise ValueError (all
+        # raised a broadcasting ValueError)
+        rng = np.random.default_rng(0)
+        time = generate_timeline(1.0, 4)
+        tetrahedron = np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+        tetrahedron = 30.0 * tetrahedron + rng.normal(0.0, 5.0, (4, 3))
+        t_0, a_ijk = rng.normal(size=(3, 3)), rng.normal(size=(3, 3, 3))
+        r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (4, 1))) for r in tetrahedron]
+        t_mms = [
+            pyrf.ts_tensor_xyz(time, np.tile(t_0 + a_ijk @ r, (4, 1, 1)))
+            for r in tetrahedron
+        ]
+        result = pyrf.c_4_grad(r_mms, t_mms, "div")
+
+        self.assertTupleEqual(result.dims, ("time", "comp"))
+        np.testing.assert_allclose(
+            result.data, np.tile(np.einsum("iji->j", a_ijk), (4, 1))
+        )
+
+        for j in range(3):
+            column = [pyrf.ts_vec_xyz(time, t.data[:, :, j]) for t in t_mms]
+            np.testing.assert_allclose(
+                result.data[:, j], pyrf.c_4_grad(r_mms, column, "div").data
+            )
+
+        for method in ["grad", "curl", "bdivb", "curv"]:
+            with self.assertRaisesRegex(ValueError, "divergence"):
+                pyrf.c_4_grad(r_mms, t_mms, method)
+
     def test_c_4_grad_curvature(self):
         # Circular field lines of radius R_c about z: the curvature is 1 / R_c
         # towards the centre, the average of the four unit vectors not
