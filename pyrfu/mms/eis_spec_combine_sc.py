@@ -74,8 +74,11 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     omni_vars : list of xarray.DataArray
         Omni-directional energy spectrograms of all spacecraft (from
         :func:`pyrfu.mms.eis_omni`).
-    method : str, Optional
-        Method to combine spectra, "mean" or "sum"
+    method : {"mean", "sum"}, Optional
+        Method to combine spectra. Default is "mean". For counts, "sum"
+        gives the total counts of the spacecraft, but drops where a
+        spacecraft has no data. IDL SPEDAS sums counts and averages cps and
+        fluxes; pySPEDAS averages every unit.
 
     Returns
     -------
