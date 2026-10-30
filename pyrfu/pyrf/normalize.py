@@ -61,6 +61,8 @@ def normalize(inp: DataArray) -> DataArray:
     if inp.data.ndim == 2:
         out_data = inp.data / np.linalg.norm(inp.data, axis=1, keepdims=True)
         out = inp.copy(data=out_data)
+        # Unit vectors, dimensionless (the input's units were kept)
+        out.attrs["UNITS"] = ""
     else:
         raise ValueError("Input must be a 2D DataArray")
 

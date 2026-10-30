@@ -6,6 +6,7 @@ import numpy as np
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _product, _units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
@@ -85,6 +86,9 @@ def cross(inp1: DataArray, inp2: DataArray) -> DataArray:
 
     out_data = np.cross(inp1.data, inp2.data, axis=1)
 
-    out = ts_vec_xyz(inp1.time.data, out_data)
+    # Product of the units (none)
+    out = ts_vec_xyz(
+        inp1.time.data, out_data, attrs=_attrs({}, _product(_units(inp1), _units(inp2)))
+    )
 
     return out

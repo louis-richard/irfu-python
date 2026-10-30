@@ -1099,6 +1099,53 @@ class UnitsSpectraTestCase(unittest.TestCase):
             pyrf.ebsp(e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0])
 
 
+class UnitsVectorTestCase(unittest.TestCase):
+    # UNITS of the vector algebra: products of the input units, dimensionless
+    # unit vectors and matrices, components in the input units
+    def setUp(self):
+        rng = np.random.default_rng(0)
+        self.time = generate_timeline(64.0, 64)
+        self.b_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(64, 3)) + [5, 1, 1], {"UNITS": "nT"}
+        )
+        self.e_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(64, 3)), {"UNITS": "mV/m"}
+        )
+
+    def test_units_vector_algebra(self):
+        n_s = pyrf.ts_scalar(self.time, np.ones(64), {"UNITS": "cm^-3"})
+        r_xyz = pyrf.ts_vec_xyz(self.time, np.tile([1.0, 0.0, 0.0], (64, 1)))
+        cases = [
+            (pyrf.dot(self.e_xyz, self.b_xyz), "(mV/m) nT"),
+            (pyrf.dot(self.b_xyz, self.b_xyz), "nT^2"),
+            (pyrf.cross(self.e_xyz, self.b_xyz), "(mV/m) nT"),
+            (pyrf.normalize(self.b_xyz), ""),
+            (pyrf.convert_fac(n_s, self.b_xyz, r_xyz), "cm^-3"),
+            (pyrf.cotrans(self.b_xyz[:, 0], "gse>gsm"), ""),
+            (pyrf.cotrans(self.b_xyz, "dipoledirectiongse"), ""),
+        ]
+        a_para, a_perp, alpha = pyrf.dec_par_perp(self.e_xyz, self.b_xyz)
+        cases += [(a_para, "mV/m"), (a_perp, "mV/m"), (alpha, "rad")]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        # No UNITS without input UNITS
+        bare = pyrf.ts_vec_xyz(self.time, self.b_xyz.data)
+        self.assertNotIn("UNITS", pyrf.dot(self.e_xyz, bare).attrs)
+
+    def test_units_cart2sph_ts(self):
+        # [r, theta, phi] without UNITS (km/s was copied onto the angles),
+        # [x, y, z] in the units of r
+        v_xyz = pyrf.ts_vec_xyz(self.time, self.b_xyz.data, {"UNITS": "km/s"})
+        r_tp = pyrf.cart2sph_ts(v_xyz)
+        self.assertNotIn("UNITS", r_tp.attrs)
+
+        r_tp.attrs["UNITS"] = "km/s"
+        self.assertEqual(pyrf.cart2sph_ts(r_tp, -1).attrs["UNITS"], "km/s")
+
+
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
         with self.assertRaises(TypeError):

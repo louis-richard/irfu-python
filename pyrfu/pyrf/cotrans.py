@@ -71,6 +71,9 @@ def _dipole_direction_gse(time, flag: str = "dipole"):
         "geo>gse",
     )
 
+    # Unit vector, dimensionless
+    dipole_direction_gse_.attrs["UNITS"] = ""
+
     return dipole_direction_gse_
 
 
@@ -345,7 +348,7 @@ def cotrans(inp, flag, hapgood: bool = True):
     transf_mat = _transformation_matrix(t, tind, hapgood, *args_trans_mat)
 
     if inp.ndim == 1:
-        out = ts_tensor_xyz(inp_ts.time.data, transf_mat)
+        out = ts_tensor_xyz(inp_ts.time.data, transf_mat, attrs={"UNITS": ""})
 
     else:
         out_data = np.einsum("kji,ki->kj", transf_mat, inp)
