@@ -1465,6 +1465,30 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.t3.data[:, :7], phx.t3.data)
         np.testing.assert_array_equal(result.t3.data[:, 7:], ext.t3.data[:, 1:])
 
+    def test_eis_combine_proton_spec_units(self):
+        # Fluxes only, in the same units, as IDL (counts and cps were combined,
+        # different units became a list)
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        flux = "1/(cm^2 s sr keV)"
+
+        for units in [("1/s", "1/s"), (" ", " "), (flux, "1/s")]:
+            phx = self._allt(e_phx, [0, 1, 2], 100)
+            ext = self._allt(e_ex, [0, 1, 2], 1000)
+
+            for i in range(6):
+                phx[f"t{i:d}"].attrs["UNITS"] = units[0]
+                ext[f"t{i:d}"].attrs["UNITS"] = units[1]
+
+            with self.subTest(units=units), self.assertRaises(ValueError):
+                mms.eis_combine_proton_spec(phx, ext)
+
+        for i in range(6):
+            ext[f"t{i:d}"].attrs["UNITS"] = flux
+
+        result = mms.eis_combine_proton_spec(phx, ext)
+        self.assertEqual(result.t0.attrs["UNITS"], flux)
+
     def test_eis_combine_proton_spec_cross_over(self):
         # PHxTOF channels above the second ExTOF one averaged with the ExTOF
         # ones below the top PHxTOF one, at the geometric mean of their edges

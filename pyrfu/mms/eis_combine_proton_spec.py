@@ -8,6 +8,9 @@ import warnings
 import numpy as np
 import xarray as xr
 
+# Local imports
+from ._eis_units import _check_flux
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -71,8 +74,9 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     Raises
     ------
     ValueError
-        If the telescopes of the two datasets differ, or if the cross-over
-        channels don't pair.
+        If the telescopes of the two datasets differ, if the cross-over
+        channels don't pair, or if the data are not fluxes in the same units
+        (the ``UNITS`` of the telescopes, when they have them).
 
     Notes
     -----
@@ -85,7 +89,10 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     channel and left out the top PHxTOF one. The samples are those at the
     times of both instruments (they could be paired across times). The energy
     widths are E minus the lower edge and the upper edge minus E (they were
-    the edges). Unlike IDL, NaN are kept (IDL sets them to zero).
+    the edges). Unlike IDL, NaN are kept (IDL sets them to zero). As IDL, only
+    fluxes are combined: counts and count rates are not divided by the
+    geometric factors and the energy widths of the two instruments (counts and
+    cps were combined, and the units became a list when they differed).
 
     """
 
@@ -97,6 +104,10 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
             f"PHxTOF and ExTOF have different telescopes: {scopes_phxtof} and "
             f"{scopes_extof}"
         )
+
+    _check_flux(
+        *[phxtof_allt[s] for s in scopes_phxtof], *[extof_allt[s] for s in scopes_extof]
+    )
 
     # Channels and energy widths, the lowest ExTOF channel left out
     energy_phxtof = phxtof_allt[scopes_phxtof[0]].energy.data
