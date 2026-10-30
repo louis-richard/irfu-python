@@ -3608,6 +3608,10 @@ class GetOmniDataTestCase(unittest.TestCase):
         self.assertEqual(int(np.isnan(out.to_array()).sum()), 2)
         self.assertAlmostEqual(float(out.b.data[4]), 3.4)
 
+        # Units of each variable (none)
+        for var, units in [("b", "nT"), ("v", "km/s"), ("ae", "nT")]:
+            self.assertEqual(out[var].attrs["UNITS"], units)
+
     def test_get_omni_data_minute(self):
         # 1-minute data: minute codes, "YYYY DOY HR MN" header, minute times
         rows = [
