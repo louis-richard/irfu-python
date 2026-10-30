@@ -11,6 +11,7 @@ from xarray.core.dataset import Dataset
 
 # Local imports
 from pyrfu.mms._psd_units import (
+    _MASS_FACTOR,
     _data_and_units,
     _energy,
     _mass_ratio,
@@ -51,7 +52,7 @@ def _convert(inp: np.ndarray, units: str, mass_ratio: float) -> np.ndarray:
         If the input unit is not supported.
 
     """
-    fact = 1e6 * 0.53707 * mass_ratio**2
+    fact = 1e6 * _MASS_FACTOR * mass_ratio**2
 
     if units.lower() == "1/(cm^2 s sr kev)":
         tmp_data = inp * 1e-3 / 1e18 * fact
@@ -91,6 +92,12 @@ def dpf2psd(
     ------
     TypeError
         If the input type is not supported.
+
+    Notes
+    -----
+    The masses are in proton masses, as the FPI products: the constant
+    m_p^2 / (2 e^2) was 0.53707, with the atomic mass unit as irfu-matlab, and
+    the phase-space densities were 1.46 % too small.
 
     """
 

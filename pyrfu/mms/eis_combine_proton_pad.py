@@ -1,18 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import warnings
-
 # 3rd party imports
-import numpy as np
 import xarray as xr
 
-from .eis_combine_proton_spec import eis_combine_proton_spec
-from .eis_omni import eis_omni
-
 # Local imports
+from .eis_combine_proton_spec import eis_combine_proton_spec
 from .eis_pad import eis_pad
+from .eis_pad_spinavg import eis_pad_spinavg
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -20,32 +15,6 @@ __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
 __version__ = "2.4.2"
 __status__ = "Prototype"
-
-
-def _despin(inp, spin_nums):
-    spin_starts = np.where(spin_nums[1:] > spin_nums[:-1])[0]
-    time_rec = inp.time.data[spin_starts]
-
-    pad_ds = np.zeros([len(spin_starts), len(inp.theta), len(inp.energy)])
-
-    c_strt = 0
-
-    for i, spin_strt in enumerate(spin_starts):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            pad_ds[i, :, :] = np.nanmean(
-                inp.data[c_strt : spin_strt + 1, :, :],
-                axis=0,
-            )
-        c_strt = spin_strt + 1
-
-    out = xr.DataArray(
-        pad_ds,
-        coords=[time_rec, inp.theta.data, inp.energy.data],
-        dims=["time", "theta", "energy"],
-    )
-
-    return out
 
 
 def eis_combine_proton_pad(
@@ -68,110 +37,57 @@ def eis_combine_proton_pad(
     extof_allt : xarray.Dataset
         Dataset containing the energy spectrum of the 6 telescopes of the
         Energy Ion Spectrometer (EIS) for Energy by Time Of Flight (ExTOF).
-    vec : xarray.DataArray, Optional
-        Axis with to compute pitch-angle. Default is X-GSE.
+    vec : xarray.DataArray or array_like
+        Magnetic field in GSE (see :func:`pyrfu.mms.eis_pad`).
     energy : array_like, Optional
-        Energy range to include in the calculation. Default is [55, 800].
+        Energy range to include in the calculation (see
+        :func:`pyrfu.mms.eis_pad`). Default is all the combined channels.
     pa_width : int, Optional
         Size of the pitch angle bins, in degrees. Default is 15.
     despin : bool, Optional
-        Remove spintone. Default is False.
+        Spin average (:func:`pyrfu.mms.eis_pad_spinavg`). Default is False.
 
     Returns
     -------
     out : xarray.DataArray
         Combined PHxTOF and ExTOF proton PADs.
 
+    Raises
+    ------
+    ValueError
+        As :func:`pyrfu.mms.eis_combine_proton_spec`,
+        :func:`pyrfu.mms.eis_pad` and :func:`pyrfu.mms.eis_pad_spinavg`.
+
     See Also
     --------
     pyrfu.mms.get_eis_allt, pyrfu.mms.eis_pad, pyrfu.mms.eis_omni,
     pyrfu.mms.eis_combine_proton_spec
 
+    Notes
+    -----
+    The PADs are those of the combined spectra,
+    ``eis_pad(eis_combine_proton_spec(phxtof_allt, extof_allt), ...)``: one
+    channel table and its energies as labels (the columns were stitched from
+    three channel selections: they could be mislabelled, and the default
+    arguments could raise). The channels are those of
+    :func:`pyrfu.mms.eis_combine_proton_spec`, as IDL SPEDAS
+    ``mms_eis_combine_proton_spec``: the lowest ExTOF channel is left out and
+    the PHxTOF and ExTOF channels are kept separately. IDL SPEDAS
+    ``mms_eis_combine_proton_pad`` instead averages PHxTOF and ExTOF channels
+    around 50 to 80 keV, selected with fixed 10, 52 and 82 keV limits: it
+    re-uses the lowest ExTOF channel and labels the means with the arithmetic
+    mean of the two energies (e.g., 75.4 keV for 70.6 and 80.2 keV). The other
+    channels are the same.
 
     """
 
-    if energy is None:
-        energy = [phxtof_allt.energy.data[0], extof_allt.energy.data[-1]]
+    # Combined PHxTOF and ExTOF spectra, with the ExTOF look directions and
+    # spin numbers
+    proton_allt = eis_combine_proton_spec(phxtof_allt, extof_allt)
 
-    # set up the number of pa bins to create
-    n_pabins = int(180.0 / pa_width)
-    pa_label = 180.0 * np.arange(n_pabins) / n_pabins + pa_width / 2.0
-
-    # Compute Pulse-Height x Time Of Flight (PHxTOF) Pitch-Angle
-    # Distribution (PAD)
-    phxtof_pad = eis_pad(phxtof_allt, vec, energy, pa_width)
-
-    # Compute Energy x Time Of Flight (ExTOF) Pitch-Angle Distribution (PAD)
-    extof_pad = eis_pad(extof_allt, vec, energy, pa_width)
-
-    # Compute combined PHxTOF and ExTOF omni-directional energy spectrum.
-    proton_combined_spec = eis_omni(
-        eis_combine_proton_spec(phxtof_allt, extof_allt),
-    )
-
-    data_size = [len(phxtof_pad), len(extof_pad)]
-
-    if data_size[0] > data_size[1]:
-        time_data = extof_pad.time.data
-        phxtof_pad_data = phxtof_pad.data[: data_size[1], ...]
-        extof_pad_data = extof_pad.data
-    elif data_size[0] < data_size[1]:
-        time_data = phxtof_pad.time.data
-        phxtof_pad_data = phxtof_pad.data
-        extof_pad_data = extof_pad.data[: data_size[0], ...]
-    else:
-        time_data = phxtof_pad.time.data
-        phxtof_pad_data = phxtof_pad.data
-        extof_pad_data = extof_pad.data
-
-    cond_ = np.logical_and(
-        proton_combined_spec.energy.data > energy[0],
-        proton_combined_spec.energy.data < energy[1],
-    )
-    energy_size = np.where(cond_)[0]
-
-    proton_pad = np.zeros((len(time_data), n_pabins, len(energy_size)))
-
-    cond_phxtof = np.logical_and(
-        phxtof_pad.energy.data > 14,
-        phxtof_pad.energy.data < 52,
-        phxtof_pad.energy.data > energy[0],
-    )
-    cond_extof = np.logical_and(
-        extof_pad.energy.data > 82,
-        extof_pad.energy.data < energy[1],
-    )
-
-    phxtof_taren = np.where(cond_phxtof)[0]
-    phxtof_taren_cross = np.where(phxtof_pad.energy.data > 52)[0]
-    extof_taren_cross = np.where(extof_pad.energy.data < 82)[0]
-    extof_taren = np.where(cond_extof)[0]
-
-    proton_pad[..., : phxtof_taren.size] = phxtof_pad_data[..., phxtof_taren]
-
-    for (i, phxtof_en), extof_en in zip(
-        enumerate(phxtof_taren_cross),
-        extof_taren_cross,
-    ):
-        temp_ = np.stack(
-            [phxtof_pad_data[..., phxtof_en], extof_pad_data[..., extof_en]],
-        )
-        idx_l, idx_r = [phxtof_taren.size, phxtof_taren.size + i + 1]
-        proton_pad[..., idx_l:idx_r] = np.nanmean(temp_, axis=0)[:, :, None]
-
-    idx_l = len(phxtof_pad.energy.data)
-    idx_r = len(phxtof_pad.energy.data) + len(extof_taren)
-    proton_pad[..., idx_l:idx_r] = extof_pad_data[..., extof_taren]
-
-    energy = proton_combined_spec.energy.data[cond_]
-
-    out = xr.DataArray(
-        proton_pad,
-        coords=[time_data, pa_label, energy],
-        dims=["time", "theta", "energy"],
-    )
+    out = eis_pad(proton_allt, vec, energy, pa_width)
 
     if despin:
-        out = _despin(out, phxtof_allt.spin.data)
+        out = eis_pad_spinavg(out, proton_allt.spin)
 
     return out

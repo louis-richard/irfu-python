@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import warnings
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+
+# Local imports
+from ._eis_units import _check_flux
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -13,114 +19,22 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _check_time(proton_phxtof, proton_extof):
-    data_size = [len(proton_phxtof), len(proton_extof)]
+def _channels(energy_phxtof, energy_extof):
+    r"""Indices of the PHxTOF channels kept, of the cross-over pairs (PHxTOF,
+    ExTOF) averaged and of the ExTOF channels kept, as IDL SPEDAS 6.1
+    mms_eis_combine_proton_spec (energy_extof without its lowest channel)."""
+    idx_phxtof = np.flatnonzero(energy_phxtof < energy_extof[0])
+    idx_phxtof_cross = np.flatnonzero(energy_phxtof > energy_extof[0])
+    idx_extof_cross = np.flatnonzero(energy_extof < energy_phxtof[-1])
+    idx_extof = np.flatnonzero(energy_extof > energy_phxtof[-1])
 
-    if data_size[0] == data_size[1]:
-        # identify mismatching timesteps
-        cond = proton_phxtof.time.data != proton_extof.time.data
-        bad_inds = np.where(cond)[0]
+    if len(idx_phxtof_cross) != len(idx_extof_cross):
+        raise ValueError(
+            "The PHxTOF and ExTOF cross-over channels don't pair: "
+            f"{energy_phxtof[idx_phxtof_cross]} and {energy_extof[idx_extof_cross]}"
+        )
 
-        if bad_inds.size:
-            extof_inds = []
-            phxtof_inds = []
-            for i_t in range(data_size[1]):
-                dt_dummy = np.min(
-                    np.abs(
-                        proton_extof.time.data[i_t] - proton_extof.time.data,
-                    ),
-                )
-                t_ind = np.argmin(
-                    np.abs(
-                        proton_extof.time.data[i_t] - proton_extof.time.data,
-                    ),
-                )
-                if dt_dummy == 0:
-                    extof_inds.append(i_t)
-                    if not phxtof_inds:
-                        phxtof_inds.append(i_t)
-                    else:
-                        phxtof_inds.append(t_ind)
-
-            time_data = proton_extof.time.data[extof_inds]
-            phxtof_data = proton_phxtof.data[phxtof_inds, ...]
-            extof_data = proton_extof.data[extof_inds, ...]
-        else:
-            time_data = proton_extof.time.data
-            phxtof_data = proton_phxtof.data
-            extof_data = proton_extof.data
-
-    elif data_size[0] > data_size[1]:
-        cond = proton_phxtof.time.data[: data_size[1]] != proton_extof.time.data
-        bad_inds = np.where(cond)[0]
-
-        if bad_inds.size:
-            extof_inds = []
-            phxtof_inds = []
-            for i_t in range(data_size[1]):
-                dt_dummy = np.min(
-                    np.abs(
-                        proton_extof.time.data[i_t] - proton_phxtof.time.data,
-                    ),
-                )
-                t_ind = np.argmin(
-                    np.abs(
-                        proton_extof.time.data[i_t] - proton_phxtof.time.data,
-                    ),
-                )
-                if dt_dummy == 0:
-                    extof_inds.append(i_t)
-                    if not phxtof_inds:
-                        phxtof_inds.append(i_t)
-                    else:
-                        phxtof_inds.append(t_ind)
-
-            time_data = proton_extof.time.data[extof_inds]
-            phxtof_data = proton_phxtof.data[phxtof_inds, ...]
-            extof_data = proton_extof.data[extof_inds, ...]
-        else:
-            time_data = proton_extof.time.data
-            phxtof_data = proton_phxtof.data[: data_size[1], ...]
-            extof_data = proton_extof.data
-
-    elif data_size[0] < data_size[1]:
-        cond = proton_phxtof.time.data != proton_extof.time.data[: data_size[0]]
-        bad_inds = np.where(cond)[0]
-
-        if bad_inds.size:
-            extof_inds = []
-            phxtof_inds = []
-            for i_t in range(data_size[0]):
-                dt_dummy = np.min(
-                    np.abs(
-                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data,
-                    ),
-                )
-                t_ind = np.argmin(
-                    np.abs(
-                        proton_phxtof.time.data[i_t] - proton_phxtof.time.data,
-                    ),
-                )
-                if dt_dummy == 0:
-                    phxtof_inds.append(i_t)
-                    if not phxtof_inds:
-                        extof_inds.append(i_t)
-                    else:
-                        extof_inds.append(t_ind)
-
-            time_data = proton_phxtof.time.data[phxtof_inds]
-            phxtof_data = proton_phxtof.data[phxtof_inds, ...]
-            extof_data = proton_extof.data[extof_inds, ...]
-
-        else:
-            time_data = proton_phxtof.time.data
-            phxtof_data = proton_phxtof.data
-            extof_data = proton_extof.data[: data_size[0], ...]
-
-    else:
-        raise ValueError
-
-    return time_data, phxtof_data, extof_data
+    return idx_phxtof, list(zip(idx_phxtof_cross, idx_extof_cross)), idx_extof
 
 
 def _combine_attrs(attrs1, attrs2):
@@ -154,125 +68,128 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     -------
     comb_allt : xarray.Dataset
         Dataset containing the combined PHxTOF and ExTOF energy spectrum of
-        the 6 telescopes.
+        the 6 telescopes, at the times of both, with the energy widths of the
+        combined channels (``delta_energy_minus``, ``delta_energy_plus``).
+
+    Raises
+    ------
+    ValueError
+        If the telescopes of the two datasets differ, if the cross-over
+        channels don't pair, or if the data are not fluxes in the same units
+        (the ``UNITS`` of the telescopes, when they have them).
+
+    Notes
+    -----
+    The channels are those of IDL SPEDAS 6.1 ``mms_eis_combine_proton_spec``:
+    the lowest ExTOF channel is left out (noise near the detector threshold),
+    the PHxTOF channels below the next ExTOF one are kept, the PHxTOF channels
+    above it are averaged with the ExTOF channels below the top PHxTOF one
+    (pairwise, at the geometric mean of their combined edges), and the ExTOF
+    channels above the top PHxTOF one are kept. pyrfu kept the lowest ExTOF
+    channel and left out the top PHxTOF one. The samples are those at the
+    times of both instruments (they could be paired across times). The energy
+    widths are E minus the lower edge and the upper edge minus E (they were
+    the edges). Unlike IDL, NaN are kept (IDL sets them to zero). As IDL, only
+    fluxes are combined: counts and count rates are not divided by the
+    geometric factors and the energy widths of the two instruments (counts and
+    cps were combined, and the units became a list when they differed).
 
     """
 
     scopes_phxtof = list(filter(lambda x: x[0] == "t", phxtof_allt))
     scopes_extof = list(filter(lambda x: x[0] == "t", extof_allt))
-    assert scopes_extof == scopes_phxtof
 
-    # Get energy deltas for PHxTOF and ExTOF
-    delta_energy_plus_phxtof = phxtof_allt.attrs["delta_energy_plus"]
-    delta_energy_minus_phxtof = phxtof_allt.attrs["delta_energy_minus"]
+    if scopes_extof != scopes_phxtof:
+        raise ValueError(
+            f"PHxTOF and ExTOF have different telescopes: {scopes_phxtof} and "
+            f"{scopes_extof}"
+        )
 
-    delta_energy_plus_extof = extof_allt.attrs["delta_energy_plus"]
-    delta_energy_minus_extof = extof_allt.attrs["delta_energy_minus"]
+    _check_flux(
+        *[phxtof_allt[s] for s in scopes_phxtof], *[extof_allt[s] for s in scopes_extof]
+    )
 
+    # Channels and energy widths, the lowest ExTOF channel left out
+    energy_phxtof = phxtof_allt[scopes_phxtof[0]].energy.data
+    energy_extof = extof_allt[scopes_extof[0]].energy.data[1:]
+    dminus_phxtof = np.asarray(phxtof_allt.attrs["delta_energy_minus"])
+    dplus_phxtof = np.asarray(phxtof_allt.attrs["delta_energy_plus"])
+    dminus_extof = np.asarray(extof_allt.attrs["delta_energy_minus"])[1:]
+    dplus_extof = np.asarray(extof_allt.attrs["delta_energy_plus"])[1:]
+
+    idx_phxtof, cross, idx_extof = _channels(energy_phxtof, energy_extof)
+
+    # Lower and upper edges of the combined channels
+    low = np.hstack(
+        [
+            energy_phxtof[idx_phxtof] - dminus_phxtof[idx_phxtof],
+            [
+                min(
+                    energy_phxtof[i] - dminus_phxtof[i],
+                    energy_extof[j] - dminus_extof[j],
+                )
+                for i, j in cross
+            ],
+            energy_extof[idx_extof] - dminus_extof[idx_extof],
+        ]
+    )
+    high = np.hstack(
+        [
+            energy_phxtof[idx_phxtof] + dplus_phxtof[idx_phxtof],
+            [
+                max(
+                    energy_phxtof[i] + dplus_phxtof[i], energy_extof[j] + dplus_extof[j]
+                )
+                for i, j in cross
+            ],
+            energy_extof[idx_extof] + dplus_extof[idx_extof],
+        ]
+    )
+    energy_combined = np.hstack(
+        [
+            energy_phxtof[idx_phxtof],
+            np.sqrt(low * high)[len(idx_phxtof) : len(idx_phxtof) + len(cross)],
+            energy_extof[idx_extof],
+        ]
+    )
+
+    # Samples at the times of both instruments (they could be paired across
+    # times)
+    time_data, i_phx, i_ex = np.intersect1d(
+        phxtof_allt.time.data, extof_allt.time.data, return_indices=True
+    )
+
+    # The other ExTOF variables (spin, sector, look directions, ...) at those
+    # times
     out_keys = list(filter(lambda x: x not in scopes_extof, extof_allt))
-    out_dict = {k: extof_allt[k] for k in out_keys if k != "sector"}
-
-    energy_combined_low, energy_combined_hig = [None] * 2
-
-    time_sect, _, extof_sect = _check_time(
-        phxtof_allt["sector"],
-        extof_allt["sector"],
-    )
-    sect = xr.DataArray(
-        extof_sect,
-        coords=[time_sect],
-        dims=["time"],
-        attrs=extof_allt["sector"].attrs,
-    )
-
-    _, _, extof_spin = _check_time(phxtof_allt["spin"], extof_allt["spin"])
-
-    spin = xr.DataArray(
-        extof_spin,
-        coords=[time_sect],
-        dims=["time"],
-        attrs=extof_allt["spin"].attrs,
-    )
+    out_dict = {
+        k: (
+            extof_allt[k].isel(time=i_ex)
+            if "time" in extof_allt[k].dims
+            else extof_allt[k]
+        )
+        for k in out_keys
+    }
 
     for scope in scopes_phxtof:
-        proton_phxtof = phxtof_allt[scope]
-        proton_extof = extof_allt[scope]
+        phxtof_data = phxtof_allt[scope].data[i_phx]
+        extof_data = extof_allt[scope].data[i_ex][:, 1:]
 
-        time_data, phxtof_data, extof_data = _check_time(
-            proton_phxtof,
-            proton_extof,
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            cross_data = [
+                np.nanmean(np.stack([phxtof_data[:, i], extof_data[:, j]]), axis=0)
+                for i, j in cross
+            ]
 
-        energy_phxtof = proton_phxtof.energy.data
-        energy_extof = proton_extof.energy.data
+        blocks = [phxtof_data[:, idx_phxtof], extof_data[:, idx_extof]]
 
-        idx_phxtof = np.where(energy_phxtof < energy_extof[0])[0]
-        cond_ = np.logical_and(
-            energy_phxtof > energy_extof[0],
-            energy_phxtof < energy_phxtof[-1],
-        )
-        idx_phxtof_cross = np.where(cond_)[0]
+        if cross_data:
+            blocks.insert(1, np.stack(cross_data, axis=1))
 
-        idx_extof_cross = np.where(energy_extof < energy_phxtof[-2])[0]
-        idx_extof = np.where(energy_extof > energy_phxtof[-2])[0]
+        data_combined = np.hstack(blocks)
 
-        n_phxtof = idx_phxtof.size
-        n_phxtof_cross = idx_phxtof_cross.size
-        n_extof = idx_extof.size
-
-        n_en = n_phxtof + n_phxtof_cross + n_extof
-
-        energy_combined = np.zeros(n_en)
-        energy_combined_low, energy_combined_hig = [np.zeros(n_en) for _ in range(2)]
-
-        data_combined = np.zeros((len(time_data), n_en))
-        data_combined[:, :n_phxtof] = phxtof_data[:, idx_phxtof]
-        energy_combined[:n_phxtof] = energy_phxtof[idx_phxtof]
-        energy_combined_low[:n_phxtof] = (
-            energy_combined[:n_phxtof] - delta_energy_minus_phxtof[idx_phxtof]
-        )
-        energy_combined_hig[:n_phxtof] = (
-            energy_combined[:n_phxtof] + delta_energy_plus_phxtof[idx_phxtof]
-        )
-
-        for (i, i_phx), i_ex in zip(
-            enumerate(idx_phxtof_cross),
-            idx_extof_cross,
-        ):
-            idx_ = n_phxtof + i
-            data_combined[:, idx_] = np.nanmean(
-                np.vstack([phxtof_data[:, i_phx], extof_data[:, i_ex]]),
-                axis=0,
-            )
-            energy_combined_low[idx_] = np.nanmin(
-                [
-                    energy_phxtof[idx_] - delta_energy_minus_phxtof[idx_],
-                    energy_extof[i] - delta_energy_minus_extof[i],
-                ],
-            )
-            energy_combined_hig[idx_] = np.nanmax(
-                [
-                    energy_phxtof[idx_] + delta_energy_plus_phxtof[idx_],
-                    energy_extof[i] + delta_energy_plus_extof[i],
-                ],
-            )
-            energy_combined[idx_] = np.sqrt(
-                energy_combined_low[idx_] * energy_combined_hig[idx_],
-            )
-
-        data_combined[:, -n_extof:] = extof_data[:, idx_extof]
-        energy_combined[-n_extof:] = energy_extof[idx_extof]
-        energy_combined_low[-n_extof:] = (
-            energy_extof[idx_extof] - delta_energy_minus_extof[idx_extof]
-        )
-        energy_combined_hig[-n_extof:] = (
-            energy_extof[idx_extof] + delta_energy_plus_extof[idx_extof]
-        )
-
-        attrs = _combine_attrs(
-            phxtof_allt[scope].attrs,
-            extof_allt[scope].attrs,
-        )
+        attrs = _combine_attrs(phxtof_allt[scope].attrs, extof_allt[scope].attrs)
 
         out_dict[scope] = xr.DataArray(
             data_combined,
@@ -281,14 +198,11 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
             attrs=attrs,
         )
 
-    out_dict["sector"] = sect
-    out_dict["spin"] = spin
-
-    # Combine attributes for all telescopes and set energy deltas as attributes
+    # Combine attributes for all telescopes and set energy widths as attributes
     attrs = _combine_attrs(phxtof_allt.attrs, extof_allt.attrs)
     attrs = {
-        "delta_energy_minus": energy_combined_low,
-        "delta_energy_plus": energy_combined_hig,
+        "delta_energy_minus": energy_combined - low,
+        "delta_energy_plus": high - energy_combined,
         **attrs,
     }
 

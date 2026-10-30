@@ -13,7 +13,7 @@ from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
 from .feeps_omni import _eyes_on_omni_energies
 from .feeps_pitch_angles import t_bot, t_top, v_fcs
-from .feeps_spin_avg import _spin_bounds
+from .feeps_spin_avg import _complete_spins, _spin_bounds
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -246,8 +246,10 @@ def feeps_skymap(
 
     Notes
     -----
-    Each spin, from its first sample up to the first sample of the next one
-    (as `feeps_spin_avg`), gives one skymap time stamped at its first sample.
+    Each complete spin, from its first sample up to the first sample of the
+    next one (as `feeps_spin_avg`), gives one skymap time stamped at its first
+    sample: the partial spins at the start and end of the interval and the
+    spins cut by data gaps are left out (they were kept).
     The eyes are put on the omni-directional energies as in `feeps_omni` (10 %
     check and correction factor); the energy widths are the mean of the
     channel bounds of the eyes (`get_feeps_alleyes`), if available.
@@ -311,11 +313,16 @@ def feeps_skymap(
         n_phi = 32 if tmmode == "brst" else 8
 
     psi, phase_source = _spin_phase(inp_dataset, b_bcs, b_dmpa)
-    bounds = _spin_bounds(np.asarray(inp_dataset.spinsectnum.data))
+    spin_sectors = np.asarray(inp_dataset.spinsectnum.data)
+    bounds = _spin_bounds(spin_sectors)
     rings = _RINGS[d_type]
     phi_edges = np.linspace(0.0, 360.0, n_phi + 1)
 
     sums, counts = _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges)
+
+    # The complete spins only
+    complete = np.isin(bounds[:-1], _complete_spins(spin_sectors)[0])
+    sums, counts = sums[complete], counts[complete]
 
     with np.errstate(invalid="ignore"):
         data = g_fact * sums / counts
@@ -326,7 +333,7 @@ def feeps_skymap(
     if fill_empty is not None:
         data = _fill_empty(data, g_fact * sums, counts, fill_empty)
 
-    time = inp_dataset.time.data[bounds[:-1]]
+    time = inp_dataset.time.data[bounds[:-1][complete]]
     n_spins = len(time)
     phi = np.tile(phi_edges[:-1] + np.diff(phi_edges) / 2.0, (n_spins, 1))
 

@@ -9,7 +9,13 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units, _energy, _mass_ratio, _output
+from pyrfu.mms._psd_units import (
+    _MASS_FACTOR,
+    _data_and_units,
+    _energy,
+    _mass_ratio,
+    _output,
+)
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -20,7 +26,7 @@ __status__ = "Prototype"
 
 
 def _convert(inp, units, mass_ratio):
-    fact = 1e6 * 0.53707 * mass_ratio**2
+    fact = 1e6 * _MASS_FACTOR * mass_ratio**2
 
     if units.lower() in ["kev/(cm^2 s sr kev)", "ev/(cm^2 s sr ev)", "1/(cm^2 s sr)"]:
         tmp_data = inp / 1e18 * fact
@@ -37,11 +43,13 @@ def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
 
     .. math:
 
-        f(E) = m^2 \frac{DEF}{E^2} * 0.53707,
+        f(E) = m^2 \frac{DEF}{E^2} * 0.54494,
 
-    where :math:`m` is the particle mass in atomic mass unit, :math:`DEF` is
+    where :math:`m` is the particle mass in proton masses, :math:`DEF` is
     the differential energy flux in 1/(cm sr s) and :math:`E` is the energy
-    in eV.
+    in eV. The constant, m_p^2 / (2 e^2), was 0.53707 with the atomic mass
+    unit, as irfu-matlab: the phase-space densities were 1.46 % too small
+    (the FPI products use the proton mass).
 
     Parameters
     ----------

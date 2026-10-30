@@ -1,6 +1,156 @@
 Changelog
 =========
 
+2.5.8 (2026-10-30)
+------------------
+
+This release fixes the MMS EIS routines, checked against pySPEDAS, the IDL
+SPEDAS source and FPI-DIS: the pitch angle distributions keep the zero
+fluxes, the spin averages keep the complete spins only, the spacecraft are
+combined at the same look directions and times, the PHxTOF and ExTOF
+channels are combined as IDL SPEDAS 6.1, the angle-angle distributions bin
+every sample, and the partial moments integrate over the channel widths.
+The conversions between phase-space density and fluxes use the proton
+mass, as the FPI products (1.46 % for protons and electrons), and He2+ for
+the alphas. The FEEPS spin averages, skymaps and sector spectrograms also keep
+the complete spins only.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``mms.eis_ang_ang`` gives the look directions in DBCS by default
+  (``frame="dbcs"``) and raises ``ValueError`` without ``defatt``; it gave
+  them in GSE without ``defatt``. Use ``frame="gse"`` for GSE.
+  ``mms.eis_combine_proton_skymap`` passes ``defatt`` and ``frame``.
+- Spin averages keep the complete spins only (the partial first and last
+  spins and the spins cut by data gaps were kept), each at the time of its
+  first sample, and raise ``ValueError`` without a complete spin:
+  ``mms.eis_spin_avg``, ``mms.eis_pad_spinavg``, ``mms.eis_ang_ang``,
+  ``mms.feeps_spin_avg``, ``mms.feeps_pad_spinavg``, ``mms.feeps_skymap``,
+  ``mms.feeps_sector_spec`` and ``mms.get_feeps_omni(spin_avg=True)``.
+  ``mms.eis_spin_avg`` was at the 5th of the 8 survey samples of a spin, and
+  ``mms.eis_pad_spinavg`` one spin early.
+- ``mms.eis_pad`` raises ``ValueError`` without ``vec`` (the pitch angles
+  were taken from X-GSE), for a ``vec`` that is neither a time series nor a
+  direction, when no channel is in ``energy``, and for a ``pa_width`` that
+  doesn't divide 180 (the bins had gaps).
+- ``mms.eis_combine_proton_spec``, ``mms.eis_moments`` and
+  ``mms.eis_proton_correction`` take fluxes only, as IDL SPEDAS: they raise
+  ``ValueError`` for counts and count rates (``UNITS`` of the CDF), and
+  ``mms.eis_combine_proton_spec`` for PHxTOF and ExTOF in different units.
+  Data without ``UNITS`` are not checked.
+- ``ValueError`` for invalid inputs: ``mms.eis_omni`` and
+  ``mms.eis_spec_combine_sc`` (unknown method, was ``AssertionError`` in
+  ``mms.eis_omni``), ``mms.eis_pad_spinavg`` (spin numbers not on the times
+  of the PAD: a PAD of a sub-interval was misaligned without warning),
+  ``mms.eis_combine_proton_spec`` (different telescopes, cross-over channels
+  that don't pair), ``mms.eis_pad_combine_sc`` (different pitch angle bins),
+  ``mms.eis_skymap_combine_sc`` (different units or species, unknown
+  method) and ``mms.eis_moments`` (no energy widths).
+  ``mms.eis_proton_correction`` raises ``TypeError`` (was
+  ``AssertionError``) for an input that isn't xarray.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.eis_ang_ang`` and ``mms.eis_combine_proton_skymap``: ``frame``,
+  ``"dbcs"`` or ``"gse"``.
+- ``mms.eis_pad`` accepts a direction as a NumPy array (``TypeError``).
+- ``mms.eis_moments`` accepts ``"helium"``.
+- Attributes: ``mms.eis_omni`` keeps the energy widths and the species, and
+  the spin numbers and sectors as coordinates; ``mms.eis_pad`` gives the
+  units (``UNITS``, ``LABLAXIS``), species, energy widths of the channels
+  used and ``pa_width`` (it had none), and ``mms.eis_pad_spinavg`` keeps
+  them; the outputs of ``mms.eis_moments`` have their units.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``mms.psd2def``, ``mms.psd2dpf``, ``mms.def2psd``, ``mms.dpf2psd`` and
+  ``mms.vdf_convert`` use the proton mass, as the FPI products: the
+  constant m_p^2 / (2 e^2) is 0.54494. It was 0.53707, with the atomic mass
+  unit as irfu-matlab: for protons and electrons, the fluxes were 1.46 %
+  too large and the phase-space densities 1.46 % too small (FPI-DIS
+  ``defi`` / ``psd2def(vdf_omni(pdi))`` was 0.985, now 0.9993). The alphas
+  (``"alpha"``, ``"alphas"``, ``"helium"``) are He2+ ions, 3.9726 proton
+  masses (they were 4): their conversions change by 0.08 % (4 atomic mass
+  units were close to He2+), and their speeds in the ``vdf_*`` routines by
+  0.35 %.
+- ``mms.eis_pad`` keeps the zero fluxes, as IDL SPEDAS and pySPEDAS (they
+  were left out: the PADs were biased high, and the bins without counts
+  NaN), and selects the channels with their lower edge at E -
+  ``delta_energy_minus`` (it was E +). With the pitch angles of the files,
+  the PADs equal pySPEDAS's.
+- ``mms.eis_ang_ang`` bins the look directions on their own domains: the
+  azimuth in [0, 360) and the polar angle in 6 bins from 10 to 170 deg,
+  labelled at the bin centres. They were binned on [-180, 180] and [-80,
+  80]: about 19 % of the samples were binned, at the polar angle + 90 deg.
+  Each cell is the mean of its samples (the last sample was kept), NaN when
+  empty (zeros).
+- ``mms.eis_combine_proton_spec`` uses the channels of IDL SPEDAS 6.1: the
+  lowest ExTOF channel is left out and every PHxTOF channel kept (it kept
+  the lowest ExTOF channel and left out the top PHxTOF one). The energy
+  widths are E minus the lower edge and the upper edge minus E (the edges
+  were stored), and the samples are those at the times of both instruments
+  (they could be paired across times).
+- ``mms.eis_combine_proton_pad`` gives the PADs of the combined spectra,
+  ``mms.eis_pad(mms.eis_combine_proton_spec(...))``, labelled with their
+  energies (the columns were stitched from three channel selections and
+  mislabelled, and the defaults raised on the 2016 tables); ``despin`` uses
+  ``mms.eis_pad_spinavg`` (the PHxTOF spins were used on the ExTOF times).
+- ``mms.eis_spec_combine_sc`` pairs the full-resolution spectra of the
+  spacecraft at the same sector, nearest in time within half a spin (the
+  sector gives the look direction), and the spin averages at the nearest
+  time. They were paired by index, as IDL SPEDAS and pySPEDAS, which matches
+  neither the times nor the look directions (61 to 86 deg apart on MMS2-4,
+  2017-07-11). The sum is NaN where no spacecraft has data (it was 0).
+- ``mms.eis_pad_combine_sc`` pairs the PADs at the nearest time and the
+  closest energy channel, on the energies of the spacecraft with the fewest
+  channels. They were paired by index, at the means of the energies of the
+  same index, and different numbers of channels raised ``ValueError``. NaN
+  without data (it was 0).
+- ``mms.eis_skymap_combine_sc`` combines the skymaps at the nearest spin of
+  each spacecraft (by index, one missing spin shifted the next ones), with
+  the energy widths per channel; NaN where no spacecraft has data (the sum
+  was 0). ``mms.eis_skymap`` gives the energy widths in eV, as the energies
+  (they stayed in keV).
+- ``mms.eis_moments`` sums over the energy channels and their widths: the
+  integral by Simpson's rule from the first to the last channel centre left
+  out the half channels at both ends (n was 0.39 to 0.94 of the partial
+  density for 10 to 100 keV protons, 0.93 to 1.01 now; checked against
+  ``mms.psd_moments`` on FPI-DIS, 0.996). With a background, the pressure is
+  P - ``p_bg`` (it was reduced by 3 ``p_bg``).
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.eis_spec_combine_sc`` works on the outputs of ``mms.eis_omni``
+  (``KeyError: 'energy_dplus'``) and with a sector without samples on a
+  spacecraft (``IndexError``).
+- ``mms.eis_skymap`` works with a single time (``IndexError``).
+- The spin averages order the spins in time across the wrap of the spin
+  counter (about every 15 days; ``numpy.unique`` reordered them).
+- ``mms.dpf2psd``, ``mms.def2psd``, ``mms.psd2def``, ``mms.psd2dpf`` and the
+  ``vdf_*`` conversions leave out ``LABLAXIS`` when the units change (a PSD
+  kept the "Intensity" label of the flux).
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.eis_pad``: ``vec`` is the magnetic field in GSE, the frame of the
+  look directions; the pitch angles are those of the particles (180 deg
+  minus the angle between the look direction and the field); the bins are
+  means for every unit (a telescope is in up to three bins).
+- ``mms.eis_omni``: ``method``, "sum" for counts and "mean" for everything
+  else, as ``mms.vdf_omni``; the plain mean of the telescopes, as IDL SPEDAS
+  and pySPEDAS (a NaN in one telescope gives NaN, zeros count).
+- ``mms.eis_spec_combine_sc``: ``method``; IDL SPEDAS sums counts.
+- ``mms.eis_combine_proton_pad``: the difference with IDL SPEDAS
+  ``mms_eis_combine_proton_pad`` (which averages the cross-over channels).
+- ``mms.eis_moments``: ``n_bg`` and ``p_bg`` must be the background of EIS
+  in the same partial moments, not the FPI-DIS background; they will be
+  deprecated, as the EIS files have no background product.
+
 2.5.7 (2026-10-29)
 ------------------
 

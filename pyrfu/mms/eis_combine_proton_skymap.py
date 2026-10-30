@@ -20,6 +20,8 @@ def eis_combine_proton_skymap(
     extof_allt,
     en_chan: list = None,
     to_psd: bool = True,
+    defatt=None,
+    frame: str = "dbcs",
 ):
     r"""Combines ExTOF and PHxTOF proton energy spectra and generate proton
     skymap distribution.
@@ -34,6 +36,12 @@ def eis_combine_proton_skymap(
         Energy channels to use. Default use all energy channels.
     to_psd : bool, Optional
         Flag to convert differential particle flux to phase space density.
+    defatt : xarray.Dataset, Optional
+        Spacecraft attitude, for `frame` "dbcs" (see
+        :func:`pyrfu.mms.eis_ang_ang`).
+    frame : {"dbcs", "gse"}, Optional
+        Frame of the look directions (see :func:`pyrfu.mms.eis_ang_ang`).
+        Default is "dbcs".
 
     Returns
     -------
@@ -46,7 +54,7 @@ def eis_combine_proton_skymap(
     eis_allt = eis_combine_proton_spec(phxtof_allt, extof_allt)
 
     # Compute EIS angle-angle (azimuth-elevation) distribution.
-    eis_ang_ = eis_ang_ang(eis_allt, en_chan=en_chan)
+    eis_ang_ = eis_ang_ang(eis_allt, en_chan=en_chan, defatt=defatt, frame=frame)
 
     # Convert to skymap format
     eis_skymap_ = eis_skymap(eis_ang_, to_psd=to_psd)

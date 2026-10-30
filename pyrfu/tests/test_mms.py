@@ -1075,31 +1075,37 @@ class UnitConversionsTestCase(unittest.TestCase):
                 np.testing.assert_allclose(self._values(result), self._values(inp))
 
     def test_unit_conversions_values(self):
-        # 1 s^3/km^6 of protons at E: DEF = E^2 / (1e6 * 0.53707) and
-        # DPF = 1e3 E / (1e6 * 0.53707)
+        # 1 s^3/km^6 of protons at E: DEF = E^2 / (1e6 k) and DPF = 1e3 E /
+        # (1e6 k), k = 1e16 m_p^2 / (2 e^2) = 0.54494 with the proton mass, as
+        # FPI (0.53707, the atomic mass unit, made the fluxes 1.46 % larger)
+        k = 1e16 * constants.m_p**2 / (2 * constants.e**2)
+        self.assertAlmostEqual(k, 0.54494, places=5)
         vdf = self.vdf.copy()
         vdf["data"] = vdf.data.copy(data=np.ones(vdf.data.shape))
         vdf.data.attrs = {"UNITS": "s^3/km^6"}
         e_mat = self.energy[:, :, None, None]
         np.testing.assert_allclose(
             mms.psd2def(vdf).data.data,
-            np.broadcast_to(e_mat**2 / 5.3707e5, vdf.data.shape),
+            np.broadcast_to(e_mat**2 / (1e6 * k), vdf.data.shape),
         )
         np.testing.assert_allclose(
             mms.psd2dpf(vdf).data.data,
-            np.broadcast_to(1e3 * e_mat / 5.3707e5, vdf.data.shape),
+            np.broadcast_to(1e3 * e_mat / (1e6 * k), vdf.data.shape),
         )
 
     def test_unit_conversions_species(self):
-        # DEF scales as 1 / m^2, for any spelling of the species
+        # DEF scales as 1 / m^2, for any spelling of the species; He2+ for the
+        # alphas (they were 4 proton masses)
         def_p = mms.psd2def(self.vdf).data.data
         m_e = constants.electron_mass / constants.proton_mass
+        m_a = 3.97259968
 
         for species, mass in [
             ("electron", m_e),
             ("Electrons", m_e),
             ("ion", 1.0),
-            ("alpha", 4.0),
+            ("alpha", m_a),
+            ("helium", m_a),
         ]:
             vdf = self.vdf.copy()
             vdf.attrs = {**self.vdf.attrs, "species": species}
@@ -1215,6 +1221,24 @@ class Dpf2PsdTestCase(unittest.TestCase):
         result = mms.dpf2psd(spectr)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_dpf2psd_lablaxis(self):
+        # Label of the flux dropped with its units ("Intensity" for the PSD)
+        attrs = {
+            "species": "ions",
+            "UNITS": "1/(cm^2 s sr keV)",
+            "LABLAXIS": "Intensity",
+        }
+        spectr = generate_spectr(64.0, 100, 32, attrs)
+        result = mms.dpf2psd(spectr)
+
+        self.assertEqual(result.attrs["UNITS"], "s^3/m^6")
+        self.assertNotIn("LABLAXIS", result.attrs)
+        self.assertEqual(spectr.attrs["LABLAXIS"], "Intensity")
+
+        vdf = generate_vdf(64.0, 100, (32, 32, 16), False, "ions", attrs["UNITS"])
+        vdf.data.attrs["LABLAXIS"] = "Intensity"
+        self.assertNotIn("LABLAXIS", mms.dpf2psd(vdf).data.attrs)
+
     def test_dpf2psd_relativistic(self):
         # f = gamma^3 m J / v^2 with the relativistic speed: 2 gamma^5 /
         # (gamma + 1) times the non-relativistic f = m J / v^2
@@ -1322,7 +1346,7 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
         extof_allt = generate_eis(
             64.0, 100, tmmode, "extof", "l2", specie, unit, mms_id
         )
-        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt)
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, [0, 0, 1])
         self.assertIsInstance(result, xr.DataArray)
 
     @idata(itertools.product([99, 100], repeat=2))
@@ -1334,10 +1358,10 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
         extof_allt = generate_eis(
             64.0, n_extof, "brst", "extof", "l2", "proton", "flux", 1
         )
-        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt)
+        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, [0, 0, 1])
         self.assertIsInstance(result, xr.DataArray)
 
-    @data(None, [1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
+    @data([1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
     def test_eis_combine_proton_pad_vec(self, vec):
         phxtof_allt = generate_eis(
             64.0, 100, "brst", "phxtof", "l2", "proton", "flux", 1
@@ -1351,8 +1375,49 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
             64.0, 100, "brst", "phxtof", "l2", "proton", "flux", 1
         )
         extof_allt = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
-        result = mms.eis_combine_proton_pad(phxtof_allt, extof_allt, None, despin=True)
+        result = mms.eis_combine_proton_pad(
+            phxtof_allt, extof_allt, [0, 0, 1], despin=True
+        )
         self.assertIsInstance(result, xr.DataArray)
+
+    @staticmethod
+    def _allt(energy, factor, n_t=12):
+        # 6 telescopes looking in different directions, flux factor * time
+        # index + channel index, spins of 4 samples, widths 0.1 E and 0.2 E
+        time = generate_timeline(1.0, n_t)
+        flux = factor * np.arange(n_t, dtype=float)[:, None] + np.arange(len(energy))
+        look = [[0, 0, -1], [0, 0, 1], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0]]
+        allt = {}
+        for i in range(6):
+            allt[f"t{i:d}"] = xr.DataArray(
+                flux * (i + 1), coords=[time, energy], dims=["time", "energy"]
+            )
+            allt[f"look_t{i:d}"] = pyrf.ts_vec_xyz(time, np.tile(look[i], (n_t, 1)))
+        allt["spin"] = pyrf.ts_scalar(time, np.arange(n_t) // 4)
+        attrs = {"delta_energy_minus": 0.1 * energy, "delta_energy_plus": 0.2 * energy}
+        return xr.Dataset(allt, attrs=attrs)
+
+    def test_eis_combine_proton_pad_channels(self):
+        # The PADs of the combined spectra, labelled with their energies (on
+        # the 2021 tables, the columns were stitched and mislabelled)
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, 100), self._allt(e_ex, 1000)
+        result = mms.eis_combine_proton_pad(phx, ext, [0, 0, 1])
+
+        np.testing.assert_array_equal(result.energy.data, np.hstack([e_phx, e_ex[1:]]))
+        np.testing.assert_array_equal(
+            result.data[..., :7], mms.eis_pad(phx, [0, 0, 1]).data
+        )
+        np.testing.assert_array_equal(
+            result.data[..., 7:], mms.eis_pad(ext, [0, 0, 1]).data[..., 1:]
+        )
+
+        # Spin average of the complete spins (the last one was dropped, the
+        # spins of PHxTOF used on the times of ExTOF)
+        despun = mms.eis_combine_proton_pad(phx, ext, [0, 0, 1], despin=True)
+        np.testing.assert_array_equal(despun.time.data, phx.time.data[[0, 4, 8]])
+        xr.testing.assert_identical(despun, mms.eis_pad_spinavg(result, ext.spin))
 
 
 @ddt
@@ -1388,6 +1453,124 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         result = mms.eis_combine_proton_spec(phxtof_allt, extof_allt)
         self.assertIsInstance(result, xr.Dataset)
 
+    @staticmethod
+    def _allt(energy, seconds, factor):
+        # 6 telescopes with flux factor * second + channel index, widths 0.1 E
+        # below and 0.2 E above
+        time = np.datetime64("2021-07-11T00:00:00", "ns") + (
+            np.asarray(seconds) * 1e9
+        ).astype("timedelta64[ns]")
+        flux = factor * np.asarray(seconds, dtype=float)[:, None] + np.arange(
+            len(energy)
+        )
+        allt = {
+            f"t{i:d}": xr.DataArray(
+                flux, coords=[time, energy], dims=["time", "energy"]
+            )
+            for i in range(6)
+        }
+        allt["spin"] = pyrf.ts_scalar(time, np.zeros(len(time)))
+        attrs = {"delta_energy_minus": 0.1 * energy, "delta_energy_plus": 0.2 * energy}
+        return xr.Dataset(allt, attrs=attrs)
+
+    def test_eis_combine_proton_spec_channels(self):
+        # Channels of IDL 6.1 on the 2021 tables: all the PHxTOF channels and
+        # the ExTOF ones but the lowest (it was kept and the top PHxTOF one
+        # left out), with their widths (they were stored as edges)
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, [0, 1, 2], 100), self._allt(e_ex, [0, 1, 2], 1000)
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        energy = np.hstack([e_phx, e_ex[1:]])
+        np.testing.assert_array_equal(result.energy.data, energy)
+        np.testing.assert_allclose(result.attrs["delta_energy_minus"], 0.1 * energy)
+        np.testing.assert_allclose(result.attrs["delta_energy_plus"], 0.2 * energy)
+        np.testing.assert_array_equal(result.t3.data[:, :7], phx.t3.data)
+        np.testing.assert_array_equal(result.t3.data[:, 7:], ext.t3.data[:, 1:])
+
+    def test_eis_combine_proton_spec_attrs(self):
+        # Cross-over channels that don't pair: ValueError; the GLOBAL
+        # attributes merged key by key
+        phx = self._allt(np.array([10.0, 20.0, 60.0, 70.0]), [0, 1], 100)
+        ext = self._allt(np.array([5.0, 50.0, 100.0, 200.0]), [0, 1], 1000)
+        with self.assertRaisesRegex(ValueError, "don't pair"):
+            mms.eis_combine_proton_spec(phx, ext)
+
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        phx.attrs["GLOBAL"] = {"Mission_group": "MMS", "Data_version": "v4.6.100"}
+        ext.attrs["GLOBAL"] = {"Mission_group": "MMS", "Data_version": "v4.6.101"}
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        self.assertDictEqual(
+            result.attrs["GLOBAL"],
+            {"Mission_group": "MMS", "Data_version": ["v4.6.100", "v4.6.101"]},
+        )
+
+    def test_eis_combine_proton_spec_units(self):
+        # Fluxes only, in the same units, as IDL (counts and cps were combined,
+        # different units became a list)
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        flux = "1/(cm^2 s sr keV)"
+
+        for units in [("1/s", "1/s"), (" ", " "), (flux, "1/s")]:
+            phx = self._allt(e_phx, [0, 1, 2], 100)
+            ext = self._allt(e_ex, [0, 1, 2], 1000)
+
+            for i in range(6):
+                phx[f"t{i:d}"].attrs["UNITS"] = units[0]
+                ext[f"t{i:d}"].attrs["UNITS"] = units[1]
+
+            with self.subTest(units=units), self.assertRaises(ValueError):
+                mms.eis_combine_proton_spec(phx, ext)
+
+        for i in range(6):
+            ext[f"t{i:d}"].attrs["UNITS"] = flux
+
+        result = mms.eis_combine_proton_spec(phx, ext)
+        self.assertEqual(result.t0.attrs["UNITS"], flux)
+
+    def test_eis_combine_proton_spec_cross_over(self):
+        # PHxTOF channels above the second ExTOF one averaged with the ExTOF
+        # ones below the top PHxTOF one, at the geometric mean of their edges
+        e_phx = np.array([20.0, 40.0, 60.0, 80.0])
+        e_ex = np.array([45.0, 50.0, 70.0, 120.0])
+        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        low = [min(0.9 * 60.0, 0.9 * 50.0), min(0.9 * 80.0, 0.9 * 70.0)]
+        high = [max(1.2 * 60.0, 1.2 * 50.0), max(1.2 * 80.0, 1.2 * 70.0)]
+        np.testing.assert_allclose(
+            result.energy.data, [20.0, 40.0, *np.sqrt(np.multiply(low, high)), 120.0]
+        )
+        np.testing.assert_allclose(
+            result.t0.data[:, 2:4],
+            (phx.t0.data[:, 2:4] + ext.t0.data[:, 1:3]) / 2,
+        )
+        np.testing.assert_allclose(
+            result.attrs["delta_energy_minus"][2:4], result.energy.data[2:4] - low
+        )
+
+    def test_eis_combine_proton_spec_times(self):
+        # Only the times of both instruments, paired by time (samples of
+        # different times could be averaged)
+        e_phx = np.array([20.0, 40.0])
+        e_ex = np.array([45.0, 50.0, 120.0])
+        phx = self._allt(e_phx, [0, 1, 2, 3, 5], 100)
+        ext = self._allt(e_ex, [1, 2, 3, 4, 5], 1000)
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        np.testing.assert_array_equal(result.time.data, ext.time.data[[0, 1, 2, 4]])
+        np.testing.assert_array_equal(result.t0.data[:, 0], [100, 200, 300, 500])
+        np.testing.assert_array_equal(result.t0.data[:, 2], [1001, 2001, 3001, 5001])
+        self.assertEqual(len(result.spin), 4)
+
+        with self.assertRaises(ValueError):
+            mms.eis_combine_proton_spec(phx.drop_vars("t5"), ext)
+
 
 @ddt
 class EisMomentsTestCase(unittest.TestCase):
@@ -1402,9 +1585,20 @@ class EisMomentsTestCase(unittest.TestCase):
         flux = 2 * e_j / mass**2 * vdf * 1e3 * constants.e / 1e4
         times = generate_timeline(1.0, n_t)
         flux = np.tile(flux, (n_t, 1))
-        return xr.DataArray(flux, coords=[times, energy], dims=["time", "energy"])
+        # channel widths: to the geometric means of the neighbouring energies
+        edges = np.sqrt(energy[1:] * energy[:-1])
+        edges = np.hstack(
+            [energy[0] ** 2 / edges[0], edges, energy[-1] ** 2 / edges[-1]]
+        )
+        attrs = {
+            "delta_energy_minus": energy - edges[:-1],
+            "delta_energy_plus": edges[1:] - energy,
+        }
+        return xr.DataArray(
+            flux, coords=[times, energy], dims=["time", "energy"], attrs=attrs
+        )
 
-    @data(("proton", 1), ("alpha", 4), ("oxygen", 16))
+    @data(("proton", 1), ("alpha", 4), ("helium", 4), ("oxygen", 16))
     @unpack
     def test_eis_moments_maxwellian(self, specie, mass_number):
         # n = 1 cm^-3, kT = 10 keV: P = n kT = 1.602 nPa (the 2nd order integral
@@ -1429,8 +1623,88 @@ class EisMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(n_i.data[[0, 2]], 1.0, rtol=1e-4)
 
     def test_eis_moments_input(self):
+        flux = self._maxwellian_flux(constants.proton_mass)
+
         with self.assertRaises(ValueError):
-            mms.eis_moments(self._maxwellian_flux(constants.proton_mass), "helium")
+            mms.eis_moments(flux, "electron")
+
+        flux.attrs = {}
+        with self.assertRaisesRegex(ValueError, "energy widths"):
+            mms.eis_moments(flux)
+
+    def test_eis_moments_units(self):
+        # Fluxes only (counts and cps were accepted)
+        flux = self._maxwellian_flux(constants.proton_mass)
+
+        for units in ["1/s", " "]:
+            flux.attrs["UNITS"] = units
+
+            with self.subTest(units=units), self.assertRaisesRegex(ValueError, "flux"):
+                mms.eis_moments(flux)
+
+        flux.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        np.testing.assert_allclose(mms.eis_moments(flux)[0].data, 1.0, rtol=1e-4)
+
+    def test_eis_moments_channel_sum(self):
+        # Sums over the channels and their widths (Simpson's rule from the first
+        # to the last channel centre left out the half channels at both ends)
+        energy = np.array([50.0, 80.0, 120.0])
+        attrs = {
+            "delta_energy_minus": np.array([10.0, 15.0, 20.0]),
+            "delta_energy_plus": np.array([15.0, 20.0, 30.0]),
+        }
+        flux = xr.DataArray(
+            np.array([[3.0, 2.0, 1.0]]),
+            coords=[generate_timeline(1.0, 1), energy],
+            dims=["time", "energy"],
+            attrs=attrs,
+        )
+        n_i, v_i, p_i, t_i = mms.eis_moments(flux)
+
+        kev = 1e3 * constants.e
+        e_j, w_j = energy * kev, np.array([25.0, 35.0, 50.0]) * kev
+        j_si = 1e4 * flux.data[0] / kev
+        fact = 4 * np.pi * np.sqrt(constants.proton_mass / 2)
+        n_si = fact * np.sum(j_si / np.sqrt(e_j) * w_j)
+        p_si = 2 / 3 * fact * np.sum(j_si * np.sqrt(e_j) * w_j)
+
+        np.testing.assert_allclose(n_i.data, 1e-6 * n_si, rtol=1e-12)
+        np.testing.assert_allclose(p_i.data, 1e9 * p_si, rtol=1e-12)
+        np.testing.assert_allclose(t_i.data, p_si / (n_si * constants.e), rtol=1e-12)
+        np.testing.assert_allclose(
+            v_i.data,
+            1e-3
+            * fact
+            * np.sum(j_si * w_j)
+            / (n_si * np.sqrt(constants.proton_mass / 2)),
+            rtol=1e-12,
+        )
+
+    def test_eis_moments_background(self):
+        # n - n_bg and P - p_bg, T from them (P was reduced by 3 p_bg)
+        flux = self._maxwellian_flux(constants.proton_mass)
+        n_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.2))
+        p_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.4))
+        n_0, _, p_0, _ = mms.eis_moments(flux)
+        n_i, _, p_i, t_i = mms.eis_moments(flux, n_bg=n_bg, p_bg=p_bg)
+
+        np.testing.assert_allclose(n_i.data, n_0.data - 0.2)
+        np.testing.assert_allclose(p_i.data, p_0.data - 0.4)
+        np.testing.assert_allclose(
+            t_i.data, 1e-9 * p_i.data / (1e6 * n_i.data * constants.e)
+        )
+
+    def test_eis_moments_units_attrs(self):
+        # Units of the moments in UNITS (none), kept with a background
+        flux = self._maxwellian_flux(constants.proton_mass)
+        n_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.2))
+        units = ["cm^-3", "km/s", "nPa", "eV"]
+
+        for kwargs in [{}, {"n_bg": n_bg, "p_bg": 2 * n_bg}]:
+            result = mms.eis_moments(flux, **kwargs)
+
+            with self.subTest(background=bool(kwargs)):
+                self.assertListEqual([r.attrs["UNITS"] for r in result], units)
 
 
 @ddt
@@ -1451,14 +1725,497 @@ class EisOmniTestCase(unittest.TestCase):
         result = mms.eis_omni(eis, "mean")
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_eis_omni_sum_bare(self):
+        # Sum of the telescopes; a Dataset without widths, species, spin numbers
+        # or sectors gives none
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
+        result = mms.eis_omni(eis, "sum")
+        np.testing.assert_allclose(
+            result.data, np.sum([eis[f"t{i:d}"].data for i in range(6)], axis=0)
+        )
+
+        bare = eis.drop_vars(["spin", "sector"])
+        bare.attrs = {}
+        result = mms.eis_omni(bare)
+
+        self.assertNotIn("species", result.attrs)
+        self.assertNotIn("spin", result.coords)
+
+    def test_eis_omni_spin_sector_attrs(self):
+        # The spin numbers and sectors as coordinates and the energy widths and
+        # species in the attributes (left out: KeyError in eis_spec_combine_sc)
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
+        result = mms.eis_omni(eis)
+
+        np.testing.assert_array_equal(result.spin.data, eis.spin.data)
+        np.testing.assert_array_equal(result.sector.data, eis.sector.data)
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_plus"], eis.attrs["delta_energy_plus"]
+        )
+        self.assertEqual(result.attrs["species"], "proton")
+
+        # attributes not shared with the telescope
+        result.attrs["new"] = 1
+        self.assertNotIn("new", eis.t0.attrs)
+
+        # ValueError (was AssertionError)
+        with self.assertRaises(ValueError):
+            mms.eis_omni(eis, "median")
+
+
+class EisAngAngTestCase(unittest.TestCase):
+    # Telescope polar angles (degrees from +z) and 8 samples per spin, the
+    # look direction turning by 45 degrees per sample (sectors 0, 4, ..., 28)
+    POLAR = np.array([28.9, 55.5, 81.0, 110.0, 135.6, 162.2])
+
+    def _allt(self, n_spins=3):
+        n_t = 8 * n_spins
+        time = generate_timeline(2.5, n_t)
+        azimuth = np.deg2rad(22.5 + 45.0 * (np.arange(n_t) % 8))
+        energy = np.array([60.0, 120.0])
+        allt = {}
+        for i, polar in enumerate(np.deg2rad(self.POLAR)):
+            look = np.stack(
+                [
+                    np.sin(polar) * np.cos(azimuth),
+                    np.sin(polar) * np.sin(azimuth),
+                    np.full(n_t, np.cos(polar)),
+                ],
+                axis=1,
+            )
+            allt[f"look_t{i:d}"] = pyrf.ts_vec_xyz(time, look)
+            flux = np.tile([[10.0 * (i + 1), 1.0]], (n_t, 1))
+            allt[f"t{i:d}"] = xr.DataArray(
+                flux, coords=[time, energy], dims=["time", "energy"]
+            )
+        allt["spin"] = pyrf.ts_scalar(time, np.arange(n_t) // 8)
+        allt["sector"] = pyrf.ts_scalar(time, 4 * (np.arange(n_t) % 8))
+        attrs = {
+            "species": "proton",
+            "delta_energy_minus": np.array([5.0, 10.0]),
+            "delta_energy_plus": np.array([6.0, 12.0]),
+        }
+        return xr.Dataset(allt, attrs=attrs)
+
+    def test_eis_ang_ang_look_directions(self):
+        # Every sample in the cell of its look direction (azimuth in [0, 360),
+        # polar angle): all cells filled (about 19 % of the samples were
+        # binned, at the polar angle + 90 degrees)
+        result = mms.eis_ang_ang(self._allt(), frame="gse")
+
+        self.assertTupleEqual(result.shape, (3, 2, 8, 6))
+        np.testing.assert_allclose(result.phi.data, 22.5 + 45.0 * np.arange(8))
+        np.testing.assert_allclose(
+            result.theta.data, 10.0 + 160.0 / 6 * (np.arange(6) + 0.5)
+        )
+        np.testing.assert_allclose(
+            result.data[:, 0], np.broadcast_to(10.0 * np.arange(1, 7), (3, 8, 6))
+        )
+        self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "GSE")
+        np.testing.assert_array_equal(result.time.data, self._allt().time.data[::8])
+
+    def test_eis_ang_ang_mean_and_channels(self):
+        # Two telescopes in the same cell: their mean (the last one was kept);
+        # empty cells NaN (they were 0); widths of the channels used
+        allt = self._allt()
+        allt["look_t1"] = allt["look_t0"].copy()
+        result = mms.eis_ang_ang(allt, en_chan=[0], frame="gse")
+
+        np.testing.assert_allclose(result.data[:, 0, :, 0], 15.0)
+        self.assertTrue(np.all(np.isnan(result.data[:, 0, :, 1])))
+        np.testing.assert_array_equal(result.attrs["delta_energy_minus"], [5.0])
+
+    def test_eis_ang_ang_dbcs(self):
+        # DBCS: the GSE look directions rotated with the attitude
+        allt = self._allt()
+        time = allt.time.data
+        defatt = xr.Dataset(
+            {
+                "z_ra": pyrf.ts_scalar(time, np.linspace(268.0, 272.0, len(time))),
+                "z_dec": pyrf.ts_scalar(time, np.linspace(65.0, 67.0, len(time))),
+            }
+        )
+        result = mms.eis_ang_ang(allt, defatt=defatt)
+
+        rotated = allt.copy()
+        for i in range(6):
+            rotated[f"look_t{i:d}"] = mms.dsl2gse(allt[f"look_t{i:d}"], defatt, -1)
+        expected = mms.eis_ang_ang(rotated, frame="gse")
+
+        np.testing.assert_array_equal(result.data, expected.data)
+        self.assertEqual(result.theta.attrs["COORDINATE_SYSTEM"], "DBCS")
+
+        with self.assertRaisesRegex(ValueError, "defatt"):
+            mms.eis_ang_ang(allt)
+
+        with self.assertRaises(ValueError):
+            mms.eis_ang_ang(allt, frame="gsm")
+
+    def test_eis_ang_ang_attrs(self):
+        # Attributes of the telescopes kept where they are the same in all
+        allt = self._allt()
+        for i in range(6):
+            allt[f"t{i:d}"].attrs = {
+                "UNITS": "1/(cm^2 s sr keV)",
+                "FIELDNAM": f"t{i:d}",
+            }
+        result = mms.eis_ang_ang(allt, frame="gse")
+
+        self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertNotIn("FIELDNAM", result.attrs)
+
+    def test_eis_combine_proton_skymap(self):
+        # The skymap of the angle-angle distribution of the combined spectra
+        phx = self._allt().assign_coords(energy=[20.0, 40.0])
+        ext = self._allt().assign_coords(energy=[30.0, 60.0])
+        for allt in [phx, ext]:
+            for i in range(6):
+                allt[f"t{i:d}"].attrs = {"GLOBAL": {}}
+        result = mms.eis_combine_proton_skymap(phx, ext, frame="gse", to_psd=False)
+        combined = mms.eis_combine_proton_spec(phx, ext)
+        expected = mms.eis_skymap(mms.eis_ang_ang(combined, frame="gse"), to_psd=False)
+
+        np.testing.assert_array_equal(result.energy.data[0], [2e4, 4e4, 6e4])
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+
+class EisSkymapTestCase(unittest.TestCase):
+    @staticmethod
+    def _ang_ang(seconds, value=1.0, units="1/(cm^2 s sr keV)"):
+        # Angle-angle distributions at the given times (one per spin), 2
+        # energies (keV) with their widths, 8 azimuths and 6 polar angles
+        time = np.datetime64("2017-07-11T22:00:00", "ns") + (
+            np.asarray(seconds) * 1e9
+        ).astype("timedelta64[ns]")
+        energy = np.array([60.0, 120.0])
+        out = xr.DataArray(
+            np.full((len(time), 2, 8, 6), float(value)),
+            coords=[
+                time,
+                energy,
+                22.5 + 45.0 * np.arange(8),
+                23.3 + 26.7 * np.arange(6),
+            ],
+            dims=["time", "energy", "phi", "theta"],
+            attrs={
+                "species": "proton",
+                "delta_energy_minus": np.array([5.0, 10.0]),
+                "delta_energy_plus": np.array([6.0, 12.0]),
+                "UNITS": units,
+                "GLOBAL": {},
+            },
+        )
+        out.energy.attrs = {"UNITS": "keV"}
+        return out
+
+    def test_eis_skymap_units(self):
+        # Energies and widths in eV (the widths stayed in keV, labelled keV);
+        # a single time (IndexError)
+        result = mms.eis_skymap(self._ang_ang([0.0]), to_psd=False)
+
+        np.testing.assert_array_equal(result.energy.data[0], [6e4, 1.2e5])
+        self.assertEqual(result.energy.attrs["UNITS"], "eV")
+        np.testing.assert_array_equal(result.attrs["delta_energy_minus"], [5e3, 1e4])
+        np.testing.assert_array_equal(result.attrs["delta_energy_plus"], [6e3, 1.2e4])
+
+    def test_eis_skymap_psd(self):
+        # Phase-space density of the flux, without the label of the flux
+        ang_ang = self._ang_ang([0.0, 20.0])
+        ang_ang.attrs["LABLAXIS"] = "Intensity"
+        flux = mms.eis_skymap(ang_ang, to_psd=False)
+        result = mms.eis_skymap(ang_ang)
+
+        np.testing.assert_allclose(result.data.data, mms.dpf2psd(flux).data.data)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/m^6")
+        self.assertNotIn("LABLAXIS", result.data.attrs)
+
+    def test_eis_skymap_combine_sc_attrs(self):
+        # Attributes kept where they are the same on all the spacecraft
+        # (different values and arrays dropped)
+        ref = mms.eis_skymap(self._ang_ang([0, 20]), to_psd=False)
+        other = mms.eis_skymap(self._ang_ang([1, 21]), to_psd=False)
+        ref.data.attrs["VALIDMIN"] = np.array([1.0, 0.0])
+        other.data.attrs["VALIDMIN"] = np.array([2.0, 0.0])
+        ref.data.attrs["FIELDNAM"], other.data.attrs["FIELDNAM"] = "mms2", "mms3"
+        result = mms.eis_skymap_combine_sc([ref, other])
+
+        self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertNotIn("VALIDMIN", result.data.attrs)
+        self.assertNotIn("FIELDNAM", result.data.attrs)
+
+    def test_eis_skymap_combine_sc(self):
+        # Combined at the nearest spin (by index, a missing spin shifted the
+        # next ones), with the widths per channel (repeated for every time) and
+        # NaN where no spacecraft has data (the sum was 0)
+        ref = mms.eis_skymap(self._ang_ang([0, 20, 40, 60]), to_psd=False)
+        other = self._ang_ang([1, 21, 41, 61, 81], value=3.0)
+        other.data[3:] = 5.0
+        other = mms.eis_skymap(other.drop_isel(time=2), to_psd=False)
+        ref.data.data[0, 0, 0, 0] = np.nan
+        other.data.data[0, 0, 0, 0] = np.nan
+        result = mms.eis_skymap_combine_sc([ref, other])
+
+        np.testing.assert_array_equal(result.time.data, ref.time.data)
+        np.testing.assert_allclose(result.data.data[1, 1], 2.0)
+        np.testing.assert_allclose(result.data.data[2, 1], 1.0)
+        np.testing.assert_allclose(result.data.data[3, 1], 3.0)
+        np.testing.assert_array_equal(result.attrs["delta_energy_plus"], [6e3, 1.2e4])
+
+        summed = mms.eis_skymap_combine_sc([ref, other], "sum")
+        self.assertTrue(np.isnan(summed.data.data[0, 0, 0, 0]))
+        np.testing.assert_allclose(summed.data.data[1, 1], 4.0)
+
+        with self.assertRaises(ValueError):
+            mms.eis_skymap_combine_sc([ref, other], "median")
+
+        psd = mms.eis_skymap(self._ang_ang([0, 20], units="s^3/cm^6"), to_psd=False)
+        with self.assertRaisesRegex(ValueError, "UNITS"):
+            mms.eis_skymap_combine_sc([ref, psd])
+
+
+class EisPadCombineScTestCase(unittest.TestCase):
+    @staticmethod
+    def _pad(t_0, n_pts, value, energies=(50.0, 80.0, 120.0)):
+        # PADs at 2.5 s, 12 pitch angle bins, value at every bin and energy
+        time = np.datetime64(t_0, "ns") + (np.arange(n_pts) * 2.5e9).astype(
+            "timedelta64[ns]"
+        )
+        theta = 7.5 + 15.0 * np.arange(12)
+        data = np.full((n_pts, 12, len(energies)), float(value))
+        return xr.DataArray(
+            data,
+            coords=[time, theta, np.asarray(energies)],
+            dims=["time", "theta", "energy"],
+        )
+
+    def test_eis_pad_combine_sc_channels(self):
+        # Different numbers of channels (ValueError in both directions), at the
+        # closest channels, on the energies of the spacecraft with the fewest
+        ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
+        more = self._pad(
+            "2017-07-11T22:00:00", 12, 3.0, energies=(48.0, 60.0, 81.0, 119.0)
+        )
+        more.data[..., 1] = np.nan  # 60 keV: not a closest channel
+
+        for pads in [[ref, more], [more, ref]]:
+            result = mms.eis_pad_combine_sc(pads)
+            np.testing.assert_array_equal(result.energy.data, [50.0, 80.0, 120.0])
+            np.testing.assert_array_equal(result.time.data, ref.time.data)
+            np.testing.assert_allclose(result.data, 2.0)
+
+    def test_eis_pad_combine_sc_times(self):
+        # At the nearest time (by index, a spacecraft starting a sample later
+        # was paired with the next times); none within half a step: left out
+        ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
+        late = self._pad("2017-07-11T22:00:02.6", 10, 3.0)
+        late.data[:] = 3.0 + np.arange(10)[:, None, None]
+        result = mms.eis_pad_combine_sc([ref, late])
+
+        np.testing.assert_allclose(result.data[0], 1.0)
+        np.testing.assert_allclose(
+            result.data[1:, 0, 0], (1.0 + late.data[:9, 0, 0]) / 2
+        )
+
+        with self.assertRaises(ValueError):
+            mms.eis_pad_combine_sc([ref, ref.assign_coords(theta=ref.theta + 1)])
+
+
+class EisSpecCombineScTestCase(unittest.TestCase):
+    @staticmethod
+    def _omni(t_0, n_pts, first_sector, value, energies=None, spin_avg=False):
+        # Survey-like omni spectrum: a sample every 2.5 s, 8 sectors per spin
+        # (0, 4, ..., 28), flux value(sector) at every energy
+        energies = np.array([50.0, 80.0, 120.0]) if energies is None else energies
+        time = np.datetime64(t_0, "ns") + (
+            np.arange(n_pts) * 2.5e9 * (8 if spin_avg else 1)
+        ).astype("timedelta64[ns]")
+        sector = (first_sector + 4 * np.arange(n_pts)) % 32
+        flux = np.tile(value(sector)[:, None], (1, len(energies)))
+        out = xr.DataArray(
+            flux,
+            coords=[time, energies],
+            dims=["time", "energy"],
+            attrs={"delta_energy_plus": energies / 10, "UNITS": "1/(cm^2 s sr keV)"},
+        )
+        return out if spin_avg else out.assign_coords(sector=("time", sector))
+
+    def test_eis_spec_combine_sc_documented_chain(self):
+        # get_eis_allt -> eis_omni -> eis_spec_combine_sc (KeyError: 'energy_dplus')
+        omnis = [
+            mms.eis_omni(
+                generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", ic)
+            )
+            for ic in range(2, 5)
+        ]
+        result = mms.eis_spec_combine_sc(omnis)
+
+        np.testing.assert_allclose(
+            result.data, np.mean([o.data for o in omnis], axis=0), rtol=1e-12
+        )
+        self.assertIn("delta_energy_minus", result.attrs)
+
+    def test_eis_spec_combine_sc_sectors(self):
+        # Paired at the same sector (look direction), not by index: a flux that
+        # depends on the sector only gives back the value of each sector
+        def value(sector):
+            return 1.0 + sector.astype(float)
+
+        ref = self._omni("2017-07-11T22:00:01.0", 40, 4, value)
+        other = self._omni("2017-07-11T22:00:00.1", 41, 28, value)
+        result = mms.eis_spec_combine_sc([ref, other])
+
+        np.testing.assert_array_equal(result.time.data, ref.time.data)
+        np.testing.assert_array_equal(result.sector.data, ref.sector.data)
+        np.testing.assert_allclose(result.data, ref.data)
+
+        result = mms.eis_spec_combine_sc([ref, other], "sum")
+        np.testing.assert_allclose(result.data[2:-2], 2 * ref.data[2:-2])
+
+    def test_eis_spec_combine_sc_spin_averages(self):
+        # Spin averages paired by time: a spin missing on one spacecraft is
+        # left out there (by index, all the next ones were shifted by a spin)
+        ref = self._omni(
+            "2017-07-11T22:00:00", 10, 0, lambda s: 0 * s + 1.0, spin_avg=True
+        )
+        other = self._omni(
+            "2017-07-11T22:00:00.5", 11, 0, lambda s: 0 * s + 3.0, spin_avg=True
+        )
+        other.data[np.arange(11) > 4] = 5.0
+        other = other.drop_isel(time=4)
+        result = mms.eis_spec_combine_sc([ref, other])
+
+        np.testing.assert_allclose(result.data[:4], 2.0)
+        np.testing.assert_allclose(result.data[4], 1.0)
+        np.testing.assert_allclose(result.data[5:], 3.0)
+
+    def test_eis_spec_combine_sc_energies_method(self):
+        # Energies of the spacecraft with the fewest channels, the others at
+        # their closest channels; ValueError for an unknown method
+        ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)
+        other = self._omni(
+            "2017-07-11T22:00:00",
+            16,
+            0,
+            lambda s: 0 * s + 3.0,
+            energies=np.array([48.0, 60.0, 81.0, 119.0]),
+        )
+        result = mms.eis_spec_combine_sc([other, ref])
+
+        np.testing.assert_array_equal(result.energy.data, ref.energy.data)
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_plus"], ref.attrs["delta_energy_plus"]
+        )
+        np.testing.assert_allclose(result.data, 2.0)
+
+        with self.assertRaises(ValueError):
+            mms.eis_spec_combine_sc([ref, other], "median")
+
+    def test_eis_spec_combine_sc_missing_sector(self):
+        # A sector without samples on a spacecraft: left out there
+        ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)
+        other = self._omni("2017-07-11T22:00:00", 24, 0, lambda s: 0 * s + 3.0)
+        other = other.isel(time=np.flatnonzero(other.sector.data != 4))
+        result = mms.eis_spec_combine_sc([ref, other])
+        at_4 = ref.sector.data == 4
+
+        np.testing.assert_allclose(result.data[at_4], 1.0)
+        np.testing.assert_allclose(result.data[~at_4], 2.0)
+
+    def test_eis_spec_combine_sc_sum_without_data(self):
+        # NaN where no spacecraft has data, as the mean (the sum was 0)
+        ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)
+        other = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 3.0)
+        ref.data[0], other.data[0] = np.nan, np.nan
+        result = mms.eis_spec_combine_sc([ref, other], "sum")
+
+        self.assertTrue(np.all(np.isnan(result.data[0])))
+        np.testing.assert_allclose(result.data[1:], 4.0)
+
 
 @ddt
 class EisPadTestCase(unittest.TestCase):
-    @data(None, [1, 0, 0], generate_ts(64.0, 10, tensor_order=1))
+    @data([1, 0, 0], np.array([1, 0, 0]), generate_ts(64.0, 10, tensor_order=1))
     def test_eis_pad_output(self, vec):
+        # NumPy directions raised TypeError
         eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
         result = mms.eis_pad(eis, vec)
         self.assertIsInstance(result, xr.DataArray)
+
+    @staticmethod
+    def _eis(flux, look, energies, delta_minus, delta_plus):
+        # Telescope fluxes flux[telescope] (time x energy) and look directions
+        time = generate_timeline(1.0, flux.shape[1])
+        eis = {}
+        for i in range(6):
+            eis[f"t{i:d}"] = xr.DataArray(
+                flux[i], coords=[time, energies], dims=["time", "energy"]
+            )
+            eis[f"look_t{i:d}"] = pyrf.ts_vec_xyz(
+                time, np.tile(look[i], (flux.shape[1], 1))
+            )
+        attrs = {"delta_energy_minus": delta_minus, "delta_energy_plus": delta_plus}
+        return xr.Dataset(eis, attrs=attrs)
+
+    def test_eis_pad_values(self):
+        # B along z: telescopes looking along -z (pitch angle 0), +z (180) and
+        # x (90); the zeros are averaged, as IDL and pySPEDAS (they were NaN)
+        look = np.array(
+            [[0, 0, -1], [0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
+        )
+        flux = np.zeros((6, 3, 2))
+        flux[0], flux[3] = 4.0, 6.0
+        eis = self._eis(flux, look, np.array([100.0, 200.0]), 10.0, 10.0)
+        result = mms.eis_pad(eis, [0, 0, 1])
+
+        np.testing.assert_array_equal(result.theta.data[[0, 6, 11]], [7.5, 97.5, 172.5])
+        np.testing.assert_allclose(result.data[:, 0, :], 2.0)
+        np.testing.assert_allclose(result.data[:, 6, :], 2.0)
+        np.testing.assert_allclose(result.data[:, 11, :], 0.0)
+        self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
+
+    def test_eis_pad_energy_edges(self):
+        # Channels with a lower (E - delta_minus, it was E + delta_minus) or
+        # upper edge in the range
+        look = np.tile([0, 0, -1], (6, 1))
+        eis = self._eis(np.ones((6, 3, 2)), look, np.array([100.0, 200.0]), 40.0, 5.0)
+        result = mms.eis_pad(eis, [0, 0, 1], energy=[150, 180])
+
+        np.testing.assert_array_equal(result.energy.data, [200.0])
+        np.testing.assert_array_equal(
+            mms.eis_pad(eis, [0, 0, 1]).energy.data, [100.0, 200.0]
+        )
+
+    def test_eis_pad_errors(self):
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+
+        with self.assertRaisesRegex(ValueError, "magnetic field"):
+            mms.eis_pad(eis)
+
+        with self.assertRaises(ValueError):
+            mms.eis_pad(eis, [1, 0])
+
+        with self.assertRaisesRegex(ValueError, "No energy channel"):
+            mms.eis_pad(eis, [1, 0, 0], energy=[5000, 6000])
+
+        # Bins with gaps for a width that doesn't divide 180
+        with self.assertRaisesRegex(ValueError, "pa_width"):
+            mms.eis_pad(eis, [1, 0, 0], pa_width=25)
+
+    def test_eis_pad_attrs(self):
+        # Units, species, widths of the channels used and bin width (no attrs)
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        eis["t0"].attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        eis["t0"].attrs["LABLAXIS"] = "Intensity"
+        result = mms.eis_pad(eis, [1, 0, 0], energy=[100, 200])
+        i_e = np.flatnonzero(np.isin(eis.energy.data, result.energy.data))
+
+        self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertEqual(result.attrs["LABLAXIS"], "Intensity")
+        self.assertEqual(result.attrs["species"], "proton")
+        self.assertEqual(result.attrs["pa_width"], 15)
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_minus"], eis.attrs["delta_energy_minus"][i_e]
+        )
 
 
 @ddt
@@ -1476,13 +2233,36 @@ class EisPadSpinAvgTestCase(unittest.TestCase):
         eis = generate_eis(
             64.0, 100, tmmode, dtype, "l2", specie, unit, random.randint(1, 4)
         )
-        eis_pad = mms.eis_pad(eis)
+        eis_pad = mms.eis_pad(eis, [0, 0, 1])
         result = mms.eis_pad_spinavg(eis_pad, eis.spin)
         self.assertIsInstance(result, xr.DataArray)
 
 
 @ddt
 class EisProtonCorrectionTestCase(unittest.TestCase):
+    def test_eis_proton_correction_type(self):
+        # TypeError (was AssertionError)
+        with self.assertRaises(TypeError):
+            mms.eis_proton_correction(np.ones((3, 16)))
+
+    def test_eis_proton_correction_units(self):
+        # Fluxes only (counts and cps were corrected)
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "cps", 1)
+
+        for i in range(6):
+            eis[f"t{i:d}"].attrs["UNITS"] = "1/s"
+
+        with self.assertRaisesRegex(ValueError, "flux"):
+            mms.eis_proton_correction(eis)
+
+        with self.assertRaisesRegex(ValueError, "flux"):
+            mms.eis_proton_correction(mms.eis_omni(eis))
+
+        for i in range(6):
+            eis[f"t{i:d}"].attrs["UNITS"] = "1/(cm^2 s sr keV)"
+
+        self.assertIsInstance(mms.eis_proton_correction(eis), xr.Dataset)
+
     def test_eis_proton_correction_dataarray(self):
         flux_eis = generate_spectr(64, 100, 16, "energy")
         result = mms.eis_proton_correction(flux_eis)
@@ -1523,6 +2303,77 @@ class EisSpinAvgTestCase(unittest.TestCase):
         )
         result = mms.eis_spin_avg(eis_allt, method)
         self.assertIsInstance(result, xr.Dataset)
+
+    @staticmethod
+    def _eis(spin):
+        # One telescope with flux = sample index, at 1 s, with the spin numbers
+        time = generate_timeline(1.0, len(spin))
+        flux = np.tile(np.arange(len(spin), dtype=float)[:, None], (1, 2))
+        eis = {
+            "t0": xr.DataArray(
+                flux, coords=[time, [50.0, 80.0]], dims=["time", "energy"]
+            ),
+            "spin": pyrf.ts_scalar(time, np.asarray(spin, dtype=np.uint16)),
+        }
+        return xr.Dataset(eis)
+
+    def test_eis_spin_avg_complete_spins(self):
+        # Complete spins only (4 samples), stamped at their first sample: the
+        # partial first and last spins and the spin cut by a gap are left out
+        spin = [10] * 2 + [11] * 4 + [12] * 4 + [13] * 2 + [14] * 4 + [15] * 3
+        eis = self._eis(spin)
+        result = mms.eis_spin_avg(eis)
+
+        np.testing.assert_array_equal(result.time.data, eis.time.data[[2, 6, 12]])
+        np.testing.assert_array_equal(result.spin.data, [11, 12, 14])
+        np.testing.assert_allclose(result.t0.data[:, 0], [3.5, 7.5, 13.5])
+        np.testing.assert_allclose(
+            mms.eis_spin_avg(eis, "sum").t0.data[:, 0], [14, 30, 54]
+        )
+
+    def test_eis_spin_avg_counter_wrap(self):
+        # The spins in time order across the wrap of the uint16 counter (they
+        # were ordered by number)
+        spin = [65533] * 2 + [65534] * 4 + [65535] * 4 + [0] * 4 + [1] * 4 + [2]
+        result = mms.eis_spin_avg(self._eis(spin))
+
+        np.testing.assert_array_equal(result.spin.data, [65534, 65535, 0, 1])
+        self.assertTrue(np.all(np.diff(result.time.data) > np.timedelta64(0, "ns")))
+
+    def test_eis_spin_avg_errors(self):
+        with self.assertRaisesRegex(ValueError, "no complete spin"):
+            mms.eis_spin_avg(self._eis([3] * 5 + [4] * 2))
+
+        with self.assertRaises(ValueError):
+            mms.eis_spin_avg(self._eis([1] * 2 + [2] * 4 + [3]), "median")
+
+    def test_eis_pad_spinavg_spins(self):
+        # Same spins as eis_spin_avg, stamped at their first sample (they were
+        # stamped one spin early, partial spins kept)
+        spin = [10] * 2 + [11] * 4 + [12] * 4 + [13] * 3
+        eis = self._eis(spin)
+        pad = xr.DataArray(
+            np.tile(np.arange(13.0)[:, None, None], (1, 12, 2)),
+            coords=[eis.time.data, 7.5 + 15 * np.arange(12), [50.0, 80.0]],
+            dims=["time", "theta", "energy"],
+            attrs={"UNITS": "1/s", "LABLAXIS": "CPS", "pa_width": 15},
+        )
+        result = mms.eis_pad_spinavg(pad, eis.spin)
+
+        # Attributes of the PAD kept (none)
+        self.assertDictEqual(result.attrs, pad.attrs)
+        np.testing.assert_array_equal(result.time.data, eis.time.data[[2, 6]])
+        np.testing.assert_allclose(result.data[:, 0, 0], [3.5, 7.5])
+
+        with self.assertRaises(ValueError):
+            mms.eis_pad_spinavg(pad, eis.spin[:-1])
+
+        # Spin numbers of other times (misaligned silently)
+        shifted = eis.spin.assign_coords(
+            time=eis.spin.time.data + np.timedelta64(1, "s")
+        )
+        with self.assertRaisesRegex(ValueError, "times of inp"):
+            mms.eis_pad_spinavg(pad, shifted)
 
 
 def _lh_wave(v_ph, theta, f_s=1024.0, f_w=40.0):
@@ -4404,11 +5255,12 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
         feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
 
-        # A NumPy array used to raise TypeError
+        # A NumPy array used to raise TypeError; the 8 complete spins (the
+        # partial last one was kept)
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         result_np = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum.data)
 
-        self.assertEqual(len(result.time), 9)
+        self.assertEqual(len(result.time), 8)
         xr.testing.assert_identical(result, result_np)
 
     def test_feeps_pad_spin_avg_windows(self):
@@ -4419,14 +5271,15 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
 
         result = mms.feeps_pad_spinavg(pad, spin_sectors)
 
-        # One row per spin, at its first sample, on the PAD bins: the windows
-        # used to be shifted by one sample and interpolated onto 12 bin edges
-        expected = np.tile(np.arange(7.0)[:, None], (1, 11))
-        expected[1, 4] = np.nan
+        # One row per complete spin, at its first sample, on the PAD bins: the
+        # windows used to be shifted by one sample and interpolated onto 12 bin
+        # edges, and the partial spins were kept
+        expected = np.tile(np.arange(1.0, 6.0)[:, None], (1, 11))
+        expected[0, 4] = np.nan
         np.testing.assert_array_equal(result.data, expected)
         np.testing.assert_array_equal(result.theta.data, theta)
         np.testing.assert_array_equal(
-            result.time.data, pad.time.data[[0, 3, 11, 19, 27, 35, 43]]
+            result.time.data, pad.time.data[[3, 11, 19, 27, 35]]
         )
 
         with self.assertWarns(FutureWarning):
@@ -4817,6 +5670,16 @@ class FeepsSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "DMPA")
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_skymap_complete_spins(self):
+        # Partial spin (sectors 31-63), a complete spin, partial spin (7-47):
+        # one skymap, at the first sample of the complete spin (the partial
+        # spins gave skymaps too)
+        feeps_alle = _feeps_skymap_case("srvy", 24).isel(time=slice(3, 22))
+        result = mms.feeps_skymap(feeps_alle, to_psd=False)
+
+        np.testing.assert_array_equal(result.time.data, feeps_alle.time.data[[5]])
+        np.testing.assert_array_equal(result.data.data, 2.0)
+
     @data(("brst", 10, 32, 10.0), ("srvy", 1, 8, 15.0 - 3.5))
     @unpack
     def test_feeps_skymap_direction(self, data_rate, i_sample, n_phi, sector):
@@ -5007,8 +5870,9 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
         feeps_omni = mms.feeps_omni(feeps_alle)
 
-        # Spin sectors 0..11 repeated: spins start at 0, 12, ..., 96
-        spin_starts = np.arange(0, 100, 12)
+        # Spin sectors 0..11 repeated: complete spins start at 0, 12, ..., 84
+        # (the partial last one, 96-99, was kept)
+        spin_starts = np.arange(0, 96, 12)
 
         # A DataArray used to give one row per sample (aligned on time)
         result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
@@ -5027,18 +5891,35 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
 
         result = mms.feeps_spin_avg(flux, spin_sectors)
 
-        # One row per spin, at its first sample: the windows used to be
-        # shifted by one sample and the last two spins set to 0
-        expected = np.array([0.0, np.nan, 2.0, 3.0, 4.0, 5.0, 6.0])
+        # One row per complete spin, at its first sample: the windows used to
+        # be shifted by one sample and the last two spins set to 0, and the
+        # partial spins were kept
+        expected = np.array([np.nan, 2.0, 3.0, 4.0, 5.0])
         np.testing.assert_array_equal(result.data[:, 0], expected)
         np.testing.assert_array_equal(result.data[:, 1], expected)
         np.testing.assert_array_equal(
-            result.time.data, flux.time.data[[0, 3, 11, 19, 27, 35, 43]]
+            result.time.data, flux.time.data[[3, 11, 19, 27, 35]]
         )
         self.assertDictEqual(result.attrs, flux.attrs)
 
         with self.assertRaises(ValueError):
             mms.feeps_spin_avg(flux, spin_sectors[:-1])
+
+    def test_feeps_spin_avg_gap_and_errors(self):
+        # A spin cut by a data gap is left out; ValueError without a complete
+        # spin
+        spin_sectors, flux = _spin_avg_case("energy", [100.0, 200.0])
+        keep = np.r_[0:13, 16 : len(flux)]  # samples 13-15 of spin 2 missing
+        result = mms.feeps_spin_avg(flux[keep], spin_sectors[keep])
+
+        np.testing.assert_array_equal(result.data[:, 0], [1.0, 3.0, 4.0, 5.0])
+
+        # A single complete spin (sectors 0-7) is kept
+        result = mms.feeps_spin_avg(flux[3:11], spin_sectors[3:11])
+        np.testing.assert_array_equal(result.time.data, flux.time.data[[3]])
+
+        with self.assertRaisesRegex(ValueError, "no complete spin"):
+            mms.feeps_spin_avg(flux[:10], spin_sectors[:10])
 
 
 class FeepsSectorSpecTestCase(unittest.TestCase):
@@ -5066,20 +5947,19 @@ class FeepsSectorSpecTestCase(unittest.TestCase):
 
         result = mms.feeps_sector_spec(feeps_alle)
 
-        # One row per spin at its first sample (the spectra used to be padded
-        # with NaN to every sample, row 0 empty and spins one row late)
+        # One row per complete spin at its first sample (the spectra used to be
+        # padded with NaN to every sample, row 0 empty and spins one row late,
+        # and the partial spins were kept)
         self.assertListEqual(sorted(result.data_vars), ["bottom-1", "top-1"])
-        np.testing.assert_array_equal(result.time.data, time[[0, 2, 66, 130]])
+        np.testing.assert_array_equal(result.time.data, time[[2, 66]])
         self.assertEqual(result.sizes["sectornum"], 64)
 
-        expected = np.full((4, 64), np.nan)
-        expected[0, 62:] = [62.0, 63.0]
-        expected[1] = 100.0 + np.arange(64)
-        expected[2] = 200.0 + np.arange(64)
-        expected[3, :3] = 300.0 + np.arange(3)
+        expected = np.full((2, 64), np.nan)
+        expected[0] = 100.0 + np.arange(64)
+        expected[1] = 200.0 + np.arange(64)
         np.testing.assert_array_equal(result["top-1"].data, expected)
 
-        expected[1, 8] = np.nan
+        expected[0, 8] = np.nan
         np.testing.assert_array_equal(result["bottom-1"].data, expected)
         self.assertDictEqual(result.attrs, feeps_alle.attrs)
 
@@ -5874,7 +6754,7 @@ class GetFeepsTestCase(unittest.TestCase):
 
         expected_spin = mms.feeps_spin_avg(expected, feeps_ref.spinsectnum.data)
         xr.testing.assert_identical(result_spin, expected_spin)
-        self.assertEqual(len(result_spin.time), 9)
+        self.assertEqual(len(result_spin.time), 8)
 
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
@@ -6392,6 +7272,32 @@ class GetEisAlltTestCase(unittest.TestCase):
             ValueError, "species in the file are oxygen, proton"
         ):
             self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
+
+    def test_get_eis_allt_no_files(self):
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=([], None, {})
+        ):
+            with self.assertRaises(FileNotFoundError):
+                mms.get_eis_allt(
+                    "flux_extof_proton_srvy_l2", self.tint, 1, source="sdc"
+                )
+
+    def test_get_eis_allt_verbose(self):
+        content = _cdf_eis(
+            "mms1_epd_eis_srvy_l2_extof", ["proton"], 4, "2021-07-11T00:10:00"
+        )
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=(["file_0"], None, {})
+        ):
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=content
+            ):
+                with self.assertLogs(self.module.logger, "INFO") as logs:
+                    mms.get_eis_allt(
+                        "flux_extof_proton_srvy_l2", self.tint, 1, source="sdc"
+                    )
+
+        self.assertTrue(any("proton_P4_flux_t0" in line for line in logs.output))
 
     def test_get_eis_allt_unit(self):
         with self.assertRaisesRegex(ValueError, "Invalid data unit"):

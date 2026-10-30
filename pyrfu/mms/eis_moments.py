@@ -4,11 +4,12 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from scipy import constants, integrate
+from scipy import constants
 
 # Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
+from ._eis_units import _check_flux
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -30,30 +31,33 @@ def eis_moments(
 
     .. math::
 
-        n = 4 \pi \sqrt{\frac{m_i}{2}} \int J E^{-1/2} \textrm{d}E
+        n = 4 \pi \sqrt{\frac{m_i}{2}} \sum_k J_k E_k^{-1/2} \Delta E_k
 
-        \langle |v| \rangle = \frac{4 \pi}{n} \int J \textrm{d}E
+        \langle |v| \rangle = \frac{4 \pi}{n} \sum_k J_k \Delta E_k
 
-        P = \frac{2}{3} 4 \pi \sqrt{\frac{m_i}{2}} \int J E^{1/2}
-        \textrm{d}E
+        P = \frac{2}{3} 4 \pi \sqrt{\frac{m_i}{2}} \sum_k J_k E_k^{1/2}
+        \Delta E_k
 
         T = \frac{P}{n k_B}
 
-    where :math:`J` is the differential particle flux and :math:`E` the energy
-    (the integral in :math:`P` is the energy density).
+    where :math:`J_k` is the differential particle flux, :math:`E_k` the energy
+    and :math:`\Delta E_k` the width of the channel k (the sum in :math:`P` is
+    the energy density).
 
     Parameters
     ----------
     inp : xarray.DataArray
-        Omni-directional differential particle flux.
-    specie : {"proton", "alpha", "oxygen"}, Optional
-        Particle specie. Default is "proton".
+        Omni-directional differential particle flux, with the energy widths of
+        the channels in its attributes (``delta_energy_minus`` and
+        ``delta_energy_plus``, as :func:`pyrfu.mms.eis_omni` gives them).
+    specie : {"proton", "helium", "alpha", "oxygen"}, Optional
+        Particle specie ("alpha" is "helium"). Default is "proton".
     n_bg : xarray.DataArray, Optional
-        Time series of the background density. If None do not remove
-        penetrating radiations.
+        Time series of the background density of EIS in cm^-3, to subtract.
+        If None (default), no background is removed.
     p_bg : xarray.DataArray, Optional
-        Time series of the background pressure. If None do not remove the
-        penetrating radiations.
+        Time series of the background pressure of EIS in nPa, to subtract.
+        If None (default), no background is removed.
 
     Returns
     -------
@@ -70,15 +74,30 @@ def eis_moments(
     Raises
     ------
     ValueError
-        If the specie is not supported.
+        If the specie is not supported, if `inp` has no energy widths, or if
+        its ``UNITS`` are not those of a flux (counts and cps were accepted).
 
     Notes
     -----
     The input omni-directional differential particle flux must be given in
-    [1/(cm^2 s sr keV)], and the energy must be in [keV]. The integration is
-    performed over the energy channels using the composite Simpson's rule, so
-    these are partial moments, and an energy channel with NaN flux gives NaN
-    moments at that time.
+    [1/(cm^2 s sr keV)], and the energy and its widths must be in [keV]. The
+    moments are sums over the energy channels, each over its width: they are
+    partial moments, and an energy channel with NaN flux gives NaN moments at
+    that time. They were computed with Simpson's rule from the first to the
+    last channel centre, which left out the half channels at both ends: for
+    an isotropic proton Maxwellian on the ExTOF channels, n was 0.39 (kT = 10
+    keV) to 0.94 (100 keV) of the partial density over the channels, against
+    0.93 to 1.01 now. The outputs have their units in ``UNITS`` (they had
+    none).
+
+    With `n_bg` and `p_bg`, the background density and pressure are
+    subtracted, and the temperature computed from the difference; the mean
+    speed is not corrected. The pressure was reduced by 3 `p_bg`, as the trace
+    of the pressure tensor in the correction of the FPI moments
+    (:func:`pyrfu.mms.remove_imoms_background`). They must be the background
+    of EIS, in the same partial moments: not the FPI-DIS background
+    (``nbgi``, ``pbgi``), the penetrating radiation in FPI below 30 keV. The EIS
+    files have no background product; `n_bg` and `p_bg` will be deprecated.
 
     References
     ----------
@@ -90,65 +109,79 @@ def eis_moments(
 
     """
 
-    if specie not in ["proton", "alpha", "oxygen"]:
+    masses = {"proton": 1, "helium": 4, "alpha": 4, "oxygen": 16}
+
+    if specie not in masses:
         raise ValueError(
-            f"Invalid specie {specie}. Must be 'proton', 'alpha' or 'oxygen'"
+            f"Invalid specie {specie}. Must be 'proton', 'helium', 'alpha' or "
+            "'oxygen'"
         )
 
-    if specie == "proton":
-        mass = constants.proton_mass
-    elif specie == "alpha":
-        mass = constants.proton_mass * 4
-    else:
-        mass = constants.proton_mass * 16
+    mass = constants.proton_mass * masses[specie]
 
-    # Convert energy and differential particle flux to SI units keV -> J and
-    # 1/(cm^2 s sr keV) -> 1/(m^2 s sr J)
+    _check_flux(inp)
+
+    if not {"delta_energy_minus", "delta_energy_plus"} <= set(inp.attrs):
+        raise ValueError(
+            "inp must have the energy widths of the channels in its attributes "
+            "(delta_energy_minus, delta_energy_plus), as eis_omni gives them"
+        )
+
+    # Convert energy, channel widths and differential particle flux to SI units
+    # keV -> J and 1/(cm^2 s sr keV) -> 1/(m^2 s sr J)
     energy = 1e3 * constants.electron_volt * inp.energy.data.copy()
+    delta_energy = (
+        1e3
+        * constants.electron_volt
+        * (
+            np.asarray(inp.attrs["delta_energy_minus"])
+            + np.asarray(inp.attrs["delta_energy_plus"])
+        )
+    )
     intensity = 1e4 * inp.data.copy() / (1e3 * constants.electron_volt)
 
     fact = 4 * np.pi * np.sqrt(mass / 2)
 
-    # Define the integrand as a function of the differential particle flux,
-    # the energy and the moment order
-    def _int(flux_c, energy_c, order):
-        return np.sqrt(energy_c) ** order * (flux_c / energy_c) * np.sqrt(energy_c)
+    # Sum over the channels, each over its width (Simpson's rule from the first
+    # to the last channel centre left out the half channels at both ends)
+    def _sum(order):
+        integrand = energy ** (order / 2) * (intensity / energy) * np.sqrt(energy)
+        return np.sum(integrand * delta_energy, axis=1)
 
     # Zeroth order moment number density m^-3
-    n_i = fact * integrate.simpson(_int(intensity, energy, 0), x=energy, axis=1)
+    n_i = fact * _sum(0)
 
     # First order moment: mean speed <|v|> in m s^-1 (not the bulk velocity)
-    v_i = fact * integrate.simpson(_int(intensity, energy, 1), x=energy, axis=1)
+    v_i = fact * _sum(1)
     v_i /= n_i * np.sqrt(mass / 2)
 
-    # Second order moment: the integral is the energy density u, and the pressure
-    # of an isotropic distribution is P = 2 u / 3, in N m^-2 (Pa)
-    u_i = fact * integrate.simpson(_int(intensity, energy, 2), x=energy, axis=1)
+    # Second order moment: the sum is the energy density u, and the pressure of
+    # an isotropic distribution is P = 2 u / 3, in N m^-2 (Pa)
+    u_i = fact * _sum(2)
     p_i = 2.0 * u_i / 3.0
     t_i = p_i / (n_i * constants.Boltzmann)  # K
 
     # Convert to usual units
-    n_i = ts_scalar(inp.time.data, n_i * 1e-6)  # cm^-3
-    v_i = ts_scalar(inp.time.data, v_i * 1e-3)  # mean speed, km s^-1
-    p_i = ts_scalar(inp.time.data, p_i * 1e9)  # nPa
+    n_i = ts_scalar(inp.time.data, n_i * 1e-6, {"UNITS": "cm^-3"})
+    v_i = ts_scalar(inp.time.data, v_i * 1e-3, {"UNITS": "km/s"})  # mean speed
+    p_i = ts_scalar(inp.time.data, p_i * 1e9, {"UNITS": "nPa"})
     t_i = ts_scalar(
         inp.time.data,
         t_i * constants.Boltzmann / constants.elementary_charge,
-    )  # eV
+        {"UNITS": "eV"},
+    )
 
     if n_bg is not None and p_bg is not None:
         # Resample background to differential particle flux sampling
         n_bg = resample(n_bg, n_i)
         p_bg = resample(p_bg, p_i)
 
-        # Remove background density
+        # Remove the background density and pressure (the pressure was reduced
+        # by 3 p_bg, plus a term in m_p n v^2 of about 1e-27 nPa)
         n_i.data -= n_bg.data
+        p_i.data -= p_bg.data
 
-        # Remove background pressure
-        p_i.data -= 3.0 * p_bg
-        p_i.data += constants.proton_mass * n_i * v_i**2 * (n_bg / (n_i - n_bg))
-
-        # Update temperature
+        # Update temperature (eV)
         t_i.data = 1e-9 * p_i.data / (1e6 * n_i.data * constants.electron_volt)
 
     return n_i, v_i, p_i, t_i
