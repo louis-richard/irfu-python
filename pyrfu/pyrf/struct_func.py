@@ -5,6 +5,9 @@
 import numpy as np
 import xarray as xr
 
+# Local imports
+from ._units import _attrs, _power, _units
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -80,7 +83,7 @@ def struct_func(inp, scales, order):
         np.stack(result).reshape(len(scales), *inp.shape[1:]),
         coords=[scales, *comp],
         dims=["scales", *inp.dims[1:]],
-        attrs=inp.attrs,
+        attrs=_attrs(inp.attrs, _power(_units(inp), order)),
     )
 
     result.attrs["order"] = order

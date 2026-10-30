@@ -988,6 +988,11 @@ class UnitsTestCase(unittest.TestCase):
         self.assertEqual(_power("", 2), "")
         self.assertIsNone(_power(None, 2))
 
+        # Separators inside parentheses don't make a unit compound
+        self.assertEqual(_ratio(_power("mV/m", 2), "Hz"), "(mV/m)^2/Hz")
+        self.assertEqual(_product("(mV/m)^2", "s"), "(mV/m)^2 s")
+        self.assertEqual(_ratio("1/(cm^2 s sr keV)", "s"), "(1/(cm^2 s sr keV))/s")
+
     def test_units_attrs_check(self):
         inp = pyrf.ts_scalar(generate_timeline(1.0, 3), np.ones(3), {"UNITS": "nT"})
         self.assertEqual(_units(inp), "nT")
@@ -1002,6 +1007,96 @@ class UnitsTestCase(unittest.TestCase):
             _check_units(inp, ["nT", "nt"], "B")
             inp.attrs = {}
             _check_units(inp, "km", "r")
+
+
+class UnitsSpectraTestCase(unittest.TestCase):
+    # UNITS of the derivatives and spectra: converted from the input's (they
+    # had none, kept the input's, or replaced all the attributes)
+    def setUp(self):
+        rng = np.random.default_rng(0)
+        self.time = generate_timeline(64.0, 1024)
+        self.b_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(1024, 3)), {"UNITS": "nT"}
+        )
+        self.e_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(1024, 3)), {"UNITS": "mV/m"}
+        )
+
+    def test_units_derivatives_spectra(self):
+        b_x, e_x = self.b_xyz[:, 0], self.e_xyz[:, 0]
+        cases = [
+            (pyrf.sliding_derivative(self.b_xyz), "nT/s"),
+            (pyrf.psd(b_x), "nT^2/Hz"),
+            (pyrf.psd(b_x, scaling="spectrum"), "nT^2"),
+            (pyrf.autocorr(b_x), ""),
+            (pyrf.autocorr(b_x, normed=False), "nT^2"),
+            (pyrf.struct_func(self.b_xyz, None, 3), "nT^3"),
+            (pyrf.histogram(b_x), "1/nT"),
+            (pyrf.histogram(b_x, density=False), ""),
+            (pyrf.histogram2d(b_x, e_x), "1/(nT (mV/m))"),
+            (pyrf.histogram2d(b_x, e_x, density=False), ""),
+            (pyrf.wavelet(b_x, f=[1, 10]), "nT^2/Hz"),
+            (pyrf.wavelet(b_x, f=[1, 10], return_power=False), "nT/Hz^0.5"),
+            (pyrf.wavelet(self.e_xyz, f=[1, 10]).y, "(mV/m)^2/Hz"),
+        ]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        # Other attributes kept, coordinates in the input units
+        self.assertEqual(pyrf.sliding_derivative(self.b_xyz).attrs["TENSOR_ORDER"], 1)
+        self.assertEqual(pyrf.struct_func(self.b_xyz, None, 3).attrs["order"], 3)
+        self.assertEqual(pyrf.histogram(b_x).bins.attrs["UNITS"], "nT")
+        self.assertEqual(pyrf.histogram2d(b_x, e_x).y_bins.attrs["UNITS"], "mV/m")
+
+        # No UNITS without input UNITS (but normed is dimensionless)
+        bare = pyrf.ts_scalar(self.time, b_x.data)
+        self.assertNotIn("UNITS", pyrf.psd(bare).attrs)
+        self.assertNotIn("UNITS", pyrf.wavelet(bare, f=[1, 10]).attrs)
+        self.assertEqual(pyrf.autocorr(bare).attrs["UNITS"], "")
+
+    def test_units_wavepolarize_means(self):
+        _, _, b_wave, b_bgd = _polarized_wave(4096, 0.0, 1e-3)
+        b_wave.attrs["UNITS"] = "nT"
+        outs = pyrf.wavepolarize_means(b_wave, b_bgd)
+
+        for out, units in zip(outs, ["nT^2/Hz", "deg", "", "", ""]):
+            self.assertEqual(out.attrs["UNITS"], units)
+
+    def test_units_ebsp(self):
+        t_sec = np.arange(1024) / 64.0
+        b_0 = pyrf.ts_vec_xyz(self.time, np.tile([10.0, 0.0, 5.0], (1024, 1)))
+        wave = np.stack([np.cos(8 * np.pi * t_sec), -np.sin(8 * np.pi * t_sec)], 1)
+        d_b = pyrf.ts_vec_xyz(
+            self.time,
+            0.01 * np.hstack([wave[:, ::-1], 0 * wave[:, :1]]),
+            {"UNITS": "nT"},
+        )
+        e_xyz = pyrf.ts_vec_xyz(
+            self.time, np.hstack([wave, 0 * wave[:, :1]]), {"UNITS": "mV/m"}
+        )
+        res = pyrf.ebsp(
+            e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0], polarization=True
+        )
+
+        for key, units in [
+            ("bb_xxyyzzss", "nT^2/Hz"),
+            ("ee_xxyyzzss", "(mV/m)^2/Hz"),
+            ("ee_ss", "(mV/m)^2/Hz"),
+            ("pf_xyz", "uW/(m^2 Hz)"),
+            ("dop", ""),
+            ("planarity", ""),
+            ("k_tp", "deg"),
+        ]:
+            self.assertEqual(res[key].attrs["UNITS"], units)
+
+        self.assertNotIn("UNITS", res["pf_rtp"].attrs)
+
+        # The Poynting flux assumes mV/m and nT
+        e_xyz.attrs["UNITS"] = "V/m"
+        with self.assertWarnsRegex(UserWarning, "e_xyz is assumed in mV/m"):
+            pyrf.ebsp(e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0])
 
 
 class C4GradTestCase(unittest.TestCase):

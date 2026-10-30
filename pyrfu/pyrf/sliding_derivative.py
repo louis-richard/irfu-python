@@ -4,6 +4,9 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from ._units import _attrs, _ratio, _units
+
 __author__ = "Apostolos Kolokotronis"
 __email__ = "apostolos.kolokotronis@irf.se"
 __copyright__ = "Copyright 2020-2024"
@@ -126,6 +129,8 @@ def sliding_derivative(
             ) / ((time[i + 4] - time[i - 4]) * 1 / 8)
 
     out = time_series.copy(data=derivative)
-    out.attrs = {"TENSOR_ORDER": data.ndim - 1}
+    # Attributes of the input, its units per s (they were replaced)
+    out.attrs = _attrs(time_series.attrs, _ratio(_units(time_series), "s"))
+    out.attrs["TENSOR_ORDER"] = data.ndim - 1
 
     return out

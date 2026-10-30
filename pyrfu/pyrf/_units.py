@@ -29,10 +29,23 @@ def _units(inp):
     return getattr(inp, "attrs", {}).get("UNITS")
 
 
+def _outside(units, chars):
+    r"""Whether units has one of chars outside parentheses."""
+    depth = 0
+
+    for char in units:
+        depth += {"(": 1, ")": -1}.get(char, 0)
+
+        if depth == 0 and char in chars:
+            return True
+
+    return False
+
+
 def _wrap(units, power=False):
     r"""Units in parentheses when compound (and, for a power, when they have
-    one already)."""
-    if " " in units or "/" in units or (power and "^" in units):
+    one already), "(mV/m)^2" not being compound."""
+    if _outside(units, " /^" if power else " /"):
         return f"({units})"
 
     return units
@@ -63,7 +76,7 @@ def _ratio(numerator, denominator):
     if not denominator:
         return numerator
 
-    numerator = f"({numerator})" if "/" in numerator else numerator or "1"
+    numerator = f"({numerator})" if _outside(numerator, "/") else numerator or "1"
 
     return f"{numerator}/{_wrap(denominator)}"
 
