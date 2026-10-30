@@ -1256,6 +1256,73 @@ class UnitsMeansTestCase(unittest.TestCase):
                 self.assertEqual(out.attrs["UNITS"], units)
 
 
+class UnitsPlasmaTestCase(unittest.TestCase):
+    # UNITS of the plasma parameters (none), and a warning when an input is not
+    # in the units the factors assume
+    def setUp(self):
+        self.time = generate_timeline(1.0, 8)
+        self.b_xyz = pyrf.ts_vec_xyz(
+            self.time, np.tile([10.0, 2.0, 1.0], (8, 1)), {"UNITS": "nT"}
+        )
+        self.e_xyz = pyrf.ts_vec_xyz(
+            self.time, np.tile([1.0, 0.5, 0.0], (8, 1)), {"UNITS": "mV/m"}
+        )
+        p_xyz = np.tile(np.diag([1.0, 0.8, 0.6]), (8, 1, 1))
+        p_xyz[:, 0, 1] = p_xyz[:, 1, 0] = 0.1
+        self.p_xyz = pyrf.ts_tensor_xyz(self.time, p_xyz, {"UNITS": "nPa"})
+
+    def test_units_plasma(self):
+        n_s = pyrf.ts_scalar(self.time, np.full(8, 1.0), {"UNITS": "cm^-3"})
+        t_s = pyrf.ts_scalar(self.time, np.full(8, 1e3), {"UNITS": "eV"})
+        params = pyrf.plasma_calc(self.b_xyz, t_s, t_s, n_s, n_s)
+        thresholds = pyrf.anisotropy_thresholds(xr.DataArray(np.array([0.5, 1.0])))
+        counts, _ = pyrf.brazil(
+            np.geomspace(0.1, 10.0, 200), np.geomspace(0.5, 2.0, 200)
+        )
+        cases = [
+            (params.w_pe, "rad/s"),
+            (params.f_lh, "Hz"),
+            (params.v_a, "m/s"),
+            (params.l_i, "m"),
+            (params.rho_s, "m"),
+            (params.gamma_e, ""),
+            (params.n_d, ""),
+            (pyrf.plasma_beta(self.b_xyz, self.p_xyz), ""),
+            (pyrf.pres_anis(self.p_xyz, self.b_xyz), ""),
+            (pyrf.calc_ag(self.p_xyz), ""),
+            (pyrf.calc_agyro(self.p_xyz), ""),
+            (pyrf.calc_dng(self.p_xyz), ""),
+            (pyrf.calc_sqrtq(self.p_xyz), ""),
+            (pyrf.edb(self.e_xyz, self.b_xyz)[1], "deg"),
+            (pyrf.pvi(self.b_xyz[:, 0], 2), ""),
+            (thresholds["mirror mode"], ""),
+            (counts, ""),
+        ]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        self.assertNotIn("units", pyrf.pvi(self.b_xyz[:, 0], 2).attrs)
+
+    def test_units_assumed_inputs(self):
+        # The factors assume nT, nPa, mV/m, km/s, cm^-3 and eV
+        b_si = pyrf.ts_vec_xyz(self.time, self.b_xyz.data * 1e-9, {"UNITS": "T"})
+        v_xyz = pyrf.ts_vec_xyz(self.time, self.e_xyz.data, {"UNITS": "m/s"})
+        n_si = pyrf.ts_scalar(self.time, np.full(8, 1e6), {"UNITS": "m^-3"})
+        calls = [
+            (lambda: pyrf.plasma_beta(b_si, self.p_xyz), "b_xyz is assumed in nT"),
+            (lambda: pyrf.pres_anis(self.p_xyz, b_si), "b_xyz is assumed in nT"),
+            (lambda: pyrf.e_vxb(v_xyz, self.b_xyz), "v_xyz is assumed in km/s"),
+            (lambda: pyrf.dynamic_press(n_si, self.e_xyz), "n_s is assumed in cm"),
+            (lambda: pyrf.poynting_flux(self.e_xyz, b_si), "b_xyz is assumed in nT"),
+        ]
+
+        for i, (call, message) in enumerate(calls):
+            with self.subTest(i=i), self.assertWarnsRegex(UserWarning, message):
+                call()
+
+
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
         with self.assertRaises(TypeError):
@@ -6052,7 +6119,7 @@ class PviTestCase(unittest.TestCase):
         result = pyrf.pvi(inp, 2)
         np.testing.assert_allclose(result.data, np.ones(4))
         np.testing.assert_array_equal(result.time.data, time[:4])
-        self.assertNotIn("UNITS", result.attrs)
+        self.assertEqual(result.attrs["UNITS"], "")
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
         self.assertEqual(inp.attrs["UNITS"], "nT")
 

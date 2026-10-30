@@ -97,6 +97,7 @@ def calc_dng(p_xyz: DataArray) -> DataArray:
 
     d_ng: np.ndarray = np.sqrt(8 * (p_12**2 + p_13**2 + p_23**2))
     d_ng /= p_para + 2 * p_perp
-    d_ng_ts: DataArray = ts_scalar(p_xyz.time.data, d_ng)
+    # Dimensionless (no UNITS)
+    d_ng_ts: DataArray = ts_scalar(p_xyz.time.data, d_ng, {"UNITS": ""})
 
     return d_ng_ts

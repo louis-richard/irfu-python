@@ -80,6 +80,7 @@ def calc_agyro(p_xyz: DataArray) -> DataArray:
     p_perp_1, p_perp_2 = [p_xyz.data[:, 1, 1], p_xyz.data[:, 2, 2]]
 
     agyrotropy = np.abs(p_perp_1 - p_perp_2) / (p_perp_1 + p_perp_2)
-    agyrotropy = ts_scalar(p_xyz.time.data, agyrotropy)
+    # Dimensionless (no UNITS)
+    agyrotropy = ts_scalar(p_xyz.time.data, agyrotropy, {"UNITS": ""})
 
     return agyrotropy

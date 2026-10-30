@@ -95,7 +95,13 @@ def brazil(
     bin_area = np.outer(np.diff(x_edges), np.diff(y_edges))
     pdf = counts / np.sum(counts) / bin_area
 
-    attrs = {"x_edges": x_edges, "y_edges": y_edges, "n_samples": int(np.sum(valid))}
+    # Counts and a density per unit beta and anisotropy, both dimensionless
+    attrs = {
+        "x_edges": x_edges,
+        "y_edges": y_edges,
+        "n_samples": int(np.sum(valid)),
+        "UNITS": "",
+    }
     n = xr.DataArray(
         np.where(counts > 0, counts, np.nan),
         coords=[x_centers, y_centers],

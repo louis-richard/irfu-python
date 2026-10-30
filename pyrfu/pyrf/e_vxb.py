@@ -6,6 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ._units import _check_units
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
@@ -59,6 +60,10 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
     >>> v_xyz_exb = pyrf.e_vxb(e_xyz, b_xyz,"ExB")
 
     """
+
+    # The factors assume V in km/s (E in mV/m for "exb") and B in nT
+    _check_units(v_xyz, "mV/m" if str(flag).lower() == "exb" else "km/s", "v_xyz")
+    _check_units(b_xyz, "nT", "b_xyz")
 
     assert isinstance(flag, str) and flag.lower() in ["exb", "vxb"], "Invalid flag"
     assert isinstance(b_xyz, xr.DataArray), "b_xyz must be a xarray.DataArray"

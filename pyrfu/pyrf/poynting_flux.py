@@ -5,6 +5,7 @@
 import numpy as np
 
 # Local imports
+from ._units import _check_units
 from .calc_fs import calc_fs
 from .cross import cross
 from .dot import dot
@@ -58,6 +59,10 @@ def poynting_flux(e_xyz, b_xyz, b_hat=None):
     same number of samples but different times).
 
     """
+
+    # The factors assume E in mV/m and B in nT
+    _check_units(e_xyz, "mV/m", "e_xyz")
+    _check_units(b_xyz, "nT", "b_xyz")
 
     # interval where both E & B exist
     tint = [

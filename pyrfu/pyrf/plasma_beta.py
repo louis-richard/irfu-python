@@ -6,6 +6,7 @@ import numpy as np
 from scipy import constants
 
 # Local imports
+from ._units import _check_units
 from .resample import resample
 from .ts_scalar import ts_scalar
 
@@ -41,6 +42,10 @@ def plasma_beta(b_xyz, p_xyz):
 
     """
 
+    # The factors assume B in nT and P in nPa
+    _check_units(b_xyz, "nT", "b_xyz")
+    _check_units(p_xyz, "nPa", "p_xyz")
+
     p_xyz = resample(p_xyz, b_xyz)
 
     # Scalar pressure (the trace is invariant under rotation) in nPa
@@ -51,6 +56,6 @@ def plasma_beta(b_xyz, p_xyz):
     p_mag = 1e-9 * b_mag**2 / (2 * constants.mu_0)
 
     # Compute plasma beta
-    beta = ts_scalar(b_xyz.time.data, p_tot / p_mag)
+    beta = ts_scalar(b_xyz.time.data, p_tot / p_mag, {"UNITS": ""})
 
     return beta

@@ -11,6 +11,7 @@ from scipy import constants
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _check_units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
@@ -75,6 +76,10 @@ def dynamic_press(
     >>> p = pyrf.dynamic_press(n_i, v_xyz_i, specie="ions")
 
     """
+
+    # The factors assume n in cm^-3 and V in km/s
+    _check_units(n_s, "cm^-3", "n_s")
+    _check_units(v_xyz, "km/s", "v_xyz")
 
     # Check input
     if not isinstance(n_s, xr.DataArray):

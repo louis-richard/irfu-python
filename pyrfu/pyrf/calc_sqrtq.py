@@ -95,6 +95,7 @@ def calc_sqrtq(p_xyz: DataArray) -> DataArray:
 
     sqrt_q: np.ndarray = np.sqrt(p_12**2 + p_13**2 + p_23**2)
     sqrt_q /= np.sqrt(p_perp**2 + 2 * p_perp * p_para)
-    sqrt_q_ts: DataArray = ts_scalar(p_xyz.time.data, sqrt_q)
+    # Dimensionless (no UNITS)
+    sqrt_q_ts: DataArray = ts_scalar(p_xyz.time.data, sqrt_q, {"UNITS": ""})
 
     return sqrt_q_ts
