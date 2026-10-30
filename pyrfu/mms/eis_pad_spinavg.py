@@ -34,7 +34,7 @@ def eis_pad_spinavg(inp, spin_nums):
     -------
     out : xarray.DataArray
         Spin-averaged PAD, one per complete spin at the time of its first
-        sample.
+        sample, with the attributes of `inp` (it had none).
 
     Raises
     ------
@@ -81,6 +81,7 @@ def eis_pad_spinavg(inp, spin_nums):
         spin_sum_flux,
         coords=[inp.time.data[spin_starts], inp.theta.data, inp.energy.data],
         dims=["time", "theta", "energy"],
+        attrs={**inp.attrs},
     )
 
     return out

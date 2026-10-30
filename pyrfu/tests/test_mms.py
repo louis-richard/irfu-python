@@ -2221,9 +2221,12 @@ class EisSpinAvgTestCase(unittest.TestCase):
             np.tile(np.arange(13.0)[:, None, None], (1, 12, 2)),
             coords=[eis.time.data, 7.5 + 15 * np.arange(12), [50.0, 80.0]],
             dims=["time", "theta", "energy"],
+            attrs={"UNITS": "1/s", "LABLAXIS": "CPS", "pa_width": 15},
         )
         result = mms.eis_pad_spinavg(pad, eis.spin)
 
+        # Attributes of the PAD kept (none)
+        self.assertDictEqual(result.attrs, pad.attrs)
         np.testing.assert_array_equal(result.time.data, eis.time.data[[2, 6]])
         np.testing.assert_allclose(result.data[:, 0, 0], [3.5, 7.5])
 
