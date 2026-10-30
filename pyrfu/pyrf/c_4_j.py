@@ -9,6 +9,7 @@ from scipy import constants
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _check_units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_grad import c_4_grad
 from pyrfu.pyrf.cross import cross
@@ -57,7 +58,8 @@ def c_4_j(
     Returns
     -------
     j : DataArray
-        Time series of the current density [A.m^{-2}].
+        Time series of the current density [A.m^{-2}], for r_list in km and
+        b_list in nT (a warning for other ``UNITS``), as the other outputs.
     div_b : DataArray
         Time series of the divergence of the magnetic field [A.m^{-2}].
     b_avg : DataArray
@@ -118,6 +120,10 @@ def c_4_j(
     assert isinstance(r_list, (list, tuple)) and len(r_list) == 4, f"r_list {message}"
     assert isinstance(b_list, (list, tuple)) and len(b_list) == 4, f"b_list {message}"
 
+    # The factors assume positions in km and fields in nT
+    _check_units(r_list[0], "km", "r_list")
+    _check_units(b_list[0], "nT", "b_list")
+
     # Magnetic field at the center of the tetrahedron [nT]
     b_avg = avg_4sc(b_list)
 
@@ -142,5 +148,12 @@ def c_4_j(
     # estimate divPb = (1/muo) grad (B^2/2) = divTshear-jxB
     div_pb = div_t_shear.copy()
     div_pb.data -= jxb.data
+
+    # SI units (they had none)
+    for out, units in zip(
+        [j, div_b, jxb, div_t_shear, div_pb],
+        ["A/m^2", "A/m^2", "N/m^3", "N/m^3", "N/m^3"],
+    ):
+        out.attrs["UNITS"] = units
 
     return j, div_b, b_avg, jxb, div_t_shear, div_pb

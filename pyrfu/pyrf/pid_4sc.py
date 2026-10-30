@@ -5,6 +5,7 @@
 import numpy as np
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _product, _ratio, _units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_grad import c_4_grad
 from pyrfu.pyrf.c_4_k import c_4_k
@@ -126,6 +127,17 @@ def pid_4sc(r_mms, v_mms, p_mms):
     # Compute Pi-D
     pid = -np.sum(np.sum(pi_xyz.data * d_xyz.data, axis=1), axis=1)
     pid = ts_scalar(v_mms[0].time.data, pid)
+
+    # Units composed from the inputs, e.g. (km/s)/km and nPa ((km/s)/km), that
+    # is 1/s and nW/m^3 (none)
+    units_d = _ratio(_units(v_mms[0]), _units(r_mms[0]))
+    units_p = _units(p_mms[0])
+
+    for out, units in zip(
+        [d_xyz, pi_xyz, ptheta, pid],
+        [units_d, units_p, _product(units_p, units_d), _product(units_p, units_d)],
+    ):
+        out.attrs = _attrs(out.attrs, units)
 
     return d_xyz, pi_xyz, ptheta, pid
 
@@ -298,5 +310,9 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
         + 4 * sigma_pid_xyz[:, 1, 2] ** 2
     )
     sigma_pid = ts_scalar(v_mms[0].time.data, sigma_pid)
+
+    # The units of Pi-D (none)
+    units = _product(_units(p_mms[0]), _ratio(_units(v_mms[0]), _units(r_mms[0])))
+    sigma_pid.attrs = _attrs(sigma_pid.attrs, units)
 
     return sigma_pid

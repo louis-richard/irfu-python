@@ -1146,6 +1146,91 @@ class UnitsVectorTestCase(unittest.TestCase):
         self.assertEqual(pyrf.cart2sph_ts(r_tp, -1).attrs["UNITS"], "km/s")
 
 
+class UnitsFourSpacecraftTestCase(unittest.TestCase):
+    # UNITS of the four-spacecraft derivatives: the field per the positions
+    # (none), SI for c_4_j, PVI dimensionless and shear angles in rad (nT)
+    def setUp(self):
+        rng = np.random.default_rng(0)
+        self.time = generate_timeline(4.0, 16)
+        tetrahedron = 30.0 * np.array(
+            [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]], dtype=float
+        )
+        self.r_mms = [
+            pyrf.ts_vec_xyz(self.time, np.tile(r, (16, 1)), {"UNITS": "km"})
+            for r in tetrahedron
+        ]
+        self.b_mms = [
+            pyrf.ts_vec_xyz(
+                self.time, rng.normal(size=(16, 3)) + [10, 2, 1], {"UNITS": "nT"}
+            )
+            for _ in range(4)
+        ]
+
+    def test_units_c_4(self):
+        r_mms, b_mms = self.r_mms, self.b_mms
+        p_mms = [
+            pyrf.ts_tensor_xyz(
+                self.time, np.tile(np.eye(3), (16, 1, 1)) * (1 + i), {"UNITS": "nPa"}
+            )
+            for i in range(4)
+        ]
+        v_mms = [
+            pyrf.ts_vec_xyz(self.time, b.data * 10, {"UNITS": "km/s"}) for b in b_mms
+        ]
+        cases = [
+            (pyrf.c_4_grad(r_mms, b_mms), "nT/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "div"), "nT/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "curl"), "nT/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "bdivb"), "nT^2/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "curv"), "1/km"),
+            (pyrf.c_4_grad(r_mms, p_mms, "div"), "nPa/km"),
+            (pyrf.c_4_k(r_mms)[0], "1/km"),
+        ]
+        j, div_b, b_avg, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
+        cases += [
+            (j, "A/m^2"),
+            (div_b, "A/m^2"),
+            (b_avg, "nT"),
+            (jxb, "N/m^3"),
+            (div_t_shear, "N/m^3"),
+            (div_pb, "N/m^3"),
+        ]
+        d_xyz, pi_xyz, ptheta, pid = pyrf.pid_4sc(r_mms, v_mms, p_mms)
+        cases += [
+            (d_xyz, "(km/s)/km"),
+            (pi_xyz, "nPa"),
+            (ptheta, "nPa ((km/s)/km)"),
+            (pid, "nPa ((km/s)/km)"),
+        ]
+        pvi_ij, theta_ij = pyrf.pvi_4sc(b_mms)
+        cases += [(pvi_ij[0], ""), (theta_ij[0], "rad")]
+        cases += [(pyrf.st_diff(r_mms, b_mms, np.eye(3)), "km/s")]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        # c_4_j assumes km and nT
+        b_si = [
+            pyrf.ts_vec_xyz(self.time, b.data * 1e-9, {"UNITS": "T"}) for b in b_mms
+        ]
+        with self.assertWarnsRegex(UserWarning, "b_list is assumed in nT"):
+            pyrf.c_4_j(r_mms, b_si)
+
+        # No UNITS without input UNITS
+        bare = [pyrf.ts_vec_xyz(self.time, b.data) for b in b_mms]
+        self.assertNotIn("UNITS", pyrf.c_4_grad(r_mms, bare).attrs)
+
+    def test_units_avg_4sc_distributions(self):
+        # Data and coordinate attributes of the first skymap (they were lost)
+        vdfs = [generate_vdf(64.0, 10, (8, 8, 4), False, "ions", "s^3/cm^6")] * 4
+        vdfs[0].energy.attrs["UNITS"] = "eV"
+        result = pyrf.avg_4sc(vdfs)
+
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        self.assertEqual(result.energy.attrs["UNITS"], "eV")
+
+
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
         with self.assertRaises(TypeError):

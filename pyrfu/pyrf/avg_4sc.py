@@ -117,5 +117,9 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
             coords=b_list_r[0].coords,
             attrs=b_list_r[0].attrs,
         )
+
+        # Attributes of the data and coordinates of the first one (lost)
+        for name in [*data_vars_names, *b_avg.coords]:
+            b_avg[name].attrs = dict(b_list_r[0][name].attrs)
     # return data_vars_dict
     return b_avg

@@ -10,13 +10,14 @@ import xarray as xr
 from numpy.typing import NDArray
 from xarray.core.dataarray import DataArray
 
+# Local imports
+from pyrfu.pyrf._units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_k import c_4_k
 from pyrfu.pyrf.cross import cross
 from pyrfu.pyrf.dot import dot
 from pyrfu.pyrf.normalize import normalize
 
-# Local imports
 from .resample import resample
 
 __author__ = "Louis Richard"
@@ -169,6 +170,14 @@ def c_4_grad(
     # A tensor field has only its divergence
     is_tensor = b_list[0].ndim == 3
 
+    # Units: those of the field per those of the positions, the field squared
+    # for (B.grad)B, per those of the positions for the curvature (none)
+    units_b, units_r = _units(b_list[0]), _units(r_list[0])
+    units = {
+        "bdivb": _ratio(_power(units_b, 2), units_r),
+        "curv": _ratio("", units_r),
+    }.get(method, _ratio(units_b, units_r))
+
     if is_tensor and method != "div":
         raise ValueError(
             f"a tensor field has only the divergence (method 'div'), not '{method}'"
@@ -198,7 +207,10 @@ def c_4_grad(
                 "ti,tij->tj", k_dict[mms_id].data, b_dict[mms_id].data
             )
 
-        return _to_ts(out_data, b_dict)
+        out = _to_ts(out_data, b_dict)
+        out.attrs = _attrs({}, units)
+
+        return out
 
     # Gradient of scalar/vector
     if len(b_dict["1"].shape) == 1:
@@ -245,5 +257,6 @@ def c_4_grad(
         out_data = c_4_grad(r_list, b_hat_list, method="bdivb").data
 
     out = _to_ts(out_data, b_dict)
+    out.attrs = _attrs({}, units)
 
     return out

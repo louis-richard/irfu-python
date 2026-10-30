@@ -88,4 +88,8 @@ def pvi_4sc(b_mms):
     for i, j in zip(i_indices, j_indices):
         theta_ij.append(shear_angle(b_mms[i], b_mms[j]))
 
+    # PVI dimensionless, shear angles in rad (they kept the units of b)
+    for pvi_, theta_ in zip(pvi_ij, theta_ij):
+        pvi_.attrs["UNITS"], theta_.attrs["UNITS"] = "", "rad"
+
     return pvi_ij, theta_ij
