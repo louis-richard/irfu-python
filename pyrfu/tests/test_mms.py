@@ -1489,6 +1489,26 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.t3.data[:, :7], phx.t3.data)
         np.testing.assert_array_equal(result.t3.data[:, 7:], ext.t3.data[:, 1:])
 
+    def test_eis_combine_proton_spec_attrs(self):
+        # Cross-over channels that don't pair: ValueError; the GLOBAL
+        # attributes merged key by key
+        phx = self._allt(np.array([10.0, 20.0, 60.0, 70.0]), [0, 1], 100)
+        ext = self._allt(np.array([5.0, 50.0, 100.0, 200.0]), [0, 1], 1000)
+        with self.assertRaisesRegex(ValueError, "don't pair"):
+            mms.eis_combine_proton_spec(phx, ext)
+
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        phx.attrs["GLOBAL"] = {"Mission_group": "MMS", "Data_version": "v4.6.100"}
+        ext.attrs["GLOBAL"] = {"Mission_group": "MMS", "Data_version": "v4.6.101"}
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        self.assertDictEqual(
+            result.attrs["GLOBAL"],
+            {"Mission_group": "MMS", "Data_version": ["v4.6.100", "v4.6.101"]},
+        )
+
     def test_eis_combine_proton_spec_units(self):
         # Fluxes only, in the same units, as IDL (counts and cps were combined,
         # different units became a list)
@@ -1705,6 +1725,22 @@ class EisOmniTestCase(unittest.TestCase):
         result = mms.eis_omni(eis, "mean")
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_eis_omni_sum_bare(self):
+        # Sum of the telescopes; a Dataset without widths, species, spin numbers
+        # or sectors gives none
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
+        result = mms.eis_omni(eis, "sum")
+        np.testing.assert_allclose(
+            result.data, np.sum([eis[f"t{i:d}"].data for i in range(6)], axis=0)
+        )
+
+        bare = eis.drop_vars(["spin", "sector"])
+        bare.attrs = {}
+        result = mms.eis_omni(bare)
+
+        self.assertNotIn("species", result.attrs)
+        self.assertNotIn("spin", result.coords)
+
     def test_eis_omni_spin_sector_attrs(self):
         # The spin numbers and sectors as coordinates and the energy widths and
         # species in the attributes (left out: KeyError in eis_spec_combine_sc)
@@ -1815,6 +1851,33 @@ class EisAngAngTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_ang_ang(allt, frame="gsm")
 
+    def test_eis_ang_ang_attrs(self):
+        # Attributes of the telescopes kept where they are the same in all
+        allt = self._allt()
+        for i in range(6):
+            allt[f"t{i:d}"].attrs = {
+                "UNITS": "1/(cm^2 s sr keV)",
+                "FIELDNAM": f"t{i:d}",
+            }
+        result = mms.eis_ang_ang(allt, frame="gse")
+
+        self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertNotIn("FIELDNAM", result.attrs)
+
+    def test_eis_combine_proton_skymap(self):
+        # The skymap of the angle-angle distribution of the combined spectra
+        phx = self._allt().assign_coords(energy=[20.0, 40.0])
+        ext = self._allt().assign_coords(energy=[30.0, 60.0])
+        for allt in [phx, ext]:
+            for i in range(6):
+                allt[f"t{i:d}"].attrs = {"GLOBAL": {}}
+        result = mms.eis_combine_proton_skymap(phx, ext, frame="gse", to_psd=False)
+        combined = mms.eis_combine_proton_spec(phx, ext)
+        expected = mms.eis_skymap(mms.eis_ang_ang(combined, frame="gse"), to_psd=False)
+
+        np.testing.assert_array_equal(result.energy.data[0], [2e4, 4e4, 6e4])
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
 
 class EisSkymapTestCase(unittest.TestCase):
     @staticmethod
@@ -1854,6 +1917,31 @@ class EisSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.energy.attrs["UNITS"], "eV")
         np.testing.assert_array_equal(result.attrs["delta_energy_minus"], [5e3, 1e4])
         np.testing.assert_array_equal(result.attrs["delta_energy_plus"], [6e3, 1.2e4])
+
+    def test_eis_skymap_psd(self):
+        # Phase-space density of the flux, without the label of the flux
+        ang_ang = self._ang_ang([0.0, 20.0])
+        ang_ang.attrs["LABLAXIS"] = "Intensity"
+        flux = mms.eis_skymap(ang_ang, to_psd=False)
+        result = mms.eis_skymap(ang_ang)
+
+        np.testing.assert_allclose(result.data.data, mms.dpf2psd(flux).data.data)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/m^6")
+        self.assertNotIn("LABLAXIS", result.data.attrs)
+
+    def test_eis_skymap_combine_sc_attrs(self):
+        # Attributes kept where they are the same on all the spacecraft
+        # (different values and arrays dropped)
+        ref = mms.eis_skymap(self._ang_ang([0, 20]), to_psd=False)
+        other = mms.eis_skymap(self._ang_ang([1, 21]), to_psd=False)
+        ref.data.attrs["VALIDMIN"] = np.array([1.0, 0.0])
+        other.data.attrs["VALIDMIN"] = np.array([2.0, 0.0])
+        ref.data.attrs["FIELDNAM"], other.data.attrs["FIELDNAM"] = "mms2", "mms3"
+        result = mms.eis_skymap_combine_sc([ref, other])
+
+        self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertNotIn("VALIDMIN", result.data.attrs)
+        self.assertNotIn("FIELDNAM", result.data.attrs)
 
     def test_eis_skymap_combine_sc(self):
         # Combined at the nearest spin (by index, a missing spin shifted the
@@ -7184,6 +7272,32 @@ class GetEisAlltTestCase(unittest.TestCase):
             ValueError, "species in the file are oxygen, proton"
         ):
             self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
+
+    def test_get_eis_allt_no_files(self):
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=([], None, {})
+        ):
+            with self.assertRaises(FileNotFoundError):
+                mms.get_eis_allt(
+                    "flux_extof_proton_srvy_l2", self.tint, 1, source="sdc"
+                )
+
+    def test_get_eis_allt_verbose(self):
+        content = _cdf_eis(
+            "mms1_epd_eis_srvy_l2_extof", ["proton"], 4, "2021-07-11T00:10:00"
+        )
+        with mock.patch.object(
+            self.module, "_list_files_sources", return_value=(["file_0"], None, {})
+        ):
+            with mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=content
+            ):
+                with self.assertLogs(self.module.logger, "INFO") as logs:
+                    mms.get_eis_allt(
+                        "flux_extof_proton_srvy_l2", self.tint, 1, source="sdc"
+                    )
+
+        self.assertTrue(any("proton_P4_flux_t0" in line for line in logs.output))
 
     def test_get_eis_allt_unit(self):
         with self.assertRaisesRegex(ValueError, "Invalid data unit"):
