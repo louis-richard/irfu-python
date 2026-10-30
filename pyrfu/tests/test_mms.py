@@ -2070,10 +2070,12 @@ class EisPadTestCase(unittest.TestCase):
         # Units, species, widths of the channels used and bin width (no attrs)
         eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
         eis["t0"].attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        eis["t0"].attrs["LABLAXIS"] = "Intensity"
         result = mms.eis_pad(eis, [1, 0, 0], energy=[100, 200])
         i_e = np.flatnonzero(np.isin(eis.energy.data, result.energy.data))
 
         self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertEqual(result.attrs["LABLAXIS"], "Intensity")
         self.assertEqual(result.attrs["species"], "proton")
         self.assertEqual(result.attrs["pa_width"], 15)
         np.testing.assert_array_equal(

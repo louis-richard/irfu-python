@@ -58,9 +58,10 @@ def eis_pad(
     -------
     pa_flux : xarray.DataArray
         Pitch-angle angle distribution for every energy channels in the
-        `energy` range, with the units, species, energy widths of these
-        channels (``delta_energy_minus``, ``delta_energy_plus``) and
-        ``pa_width`` in its attributes (it had none).
+        `energy` range, with the units (``UNITS``, ``LABLAXIS``), species,
+        energy widths of these channels (``delta_energy_minus``,
+        ``delta_energy_plus``) and ``pa_width`` in its attributes (it had
+        none).
 
     Raises
     ------
@@ -80,6 +81,10 @@ def eis_pad(
     averages the telescopes whose field of view (+-10 deg) overlaps it, zero
     fluxes included, as IDL SPEDAS ``mms_eis_pad`` and pySPEDAS: the zeros were
     left out, which biased the PADs high and left the bins without counts NaN.
+    The bins are means for every unit, counts included: a telescope is in up
+    to three bins, so a sum would count its particles up to three times (a
+    sum, as :func:`pyrfu.mms.get_pitch_angle_dist`, needs each telescope in
+    the bin of its centre).
 
     See Also
     --------
@@ -173,6 +178,9 @@ def eis_pad(
         "delta_energy_plus": np.broadcast_to(e_plus_w, e_plus.shape)[ener_idx],
         "pa_width": pa_width,
     }
+
+    if "LABLAXIS" in inp_allt[scopes[0]].attrs:
+        attrs["LABLAXIS"] = inp_allt[scopes[0]].attrs["LABLAXIS"]
 
     pa_flux = xr.DataArray(
         pa_flux,
