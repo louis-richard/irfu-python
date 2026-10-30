@@ -1075,31 +1075,37 @@ class UnitConversionsTestCase(unittest.TestCase):
                 np.testing.assert_allclose(self._values(result), self._values(inp))
 
     def test_unit_conversions_values(self):
-        # 1 s^3/km^6 of protons at E: DEF = E^2 / (1e6 * 0.53707) and
-        # DPF = 1e3 E / (1e6 * 0.53707)
+        # 1 s^3/km^6 of protons at E: DEF = E^2 / (1e6 k) and DPF = 1e3 E /
+        # (1e6 k), k = 1e16 m_p^2 / (2 e^2) = 0.54494 with the proton mass, as
+        # FPI (0.53707, the atomic mass unit, made the fluxes 1.46 % larger)
+        k = 1e16 * constants.m_p**2 / (2 * constants.e**2)
+        self.assertAlmostEqual(k, 0.54494, places=5)
         vdf = self.vdf.copy()
         vdf["data"] = vdf.data.copy(data=np.ones(vdf.data.shape))
         vdf.data.attrs = {"UNITS": "s^3/km^6"}
         e_mat = self.energy[:, :, None, None]
         np.testing.assert_allclose(
             mms.psd2def(vdf).data.data,
-            np.broadcast_to(e_mat**2 / 5.3707e5, vdf.data.shape),
+            np.broadcast_to(e_mat**2 / (1e6 * k), vdf.data.shape),
         )
         np.testing.assert_allclose(
             mms.psd2dpf(vdf).data.data,
-            np.broadcast_to(1e3 * e_mat / 5.3707e5, vdf.data.shape),
+            np.broadcast_to(1e3 * e_mat / (1e6 * k), vdf.data.shape),
         )
 
     def test_unit_conversions_species(self):
-        # DEF scales as 1 / m^2, for any spelling of the species
+        # DEF scales as 1 / m^2, for any spelling of the species; He2+ for the
+        # alphas (they were 4 proton masses)
         def_p = mms.psd2def(self.vdf).data.data
         m_e = constants.electron_mass / constants.proton_mass
+        m_a = 3.97259968
 
         for species, mass in [
             ("electron", m_e),
             ("Electrons", m_e),
             ("ion", 1.0),
-            ("alpha", 4.0),
+            ("alpha", m_a),
+            ("helium", m_a),
         ]:
             vdf = self.vdf.copy()
             vdf.attrs = {**self.vdf.attrs, "species": species}

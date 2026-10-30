@@ -2,7 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units, _energy, _mass_ratio, _output
+from pyrfu.mms._psd_units import (
+    _MASS_FACTOR,
+    _data_and_units,
+    _energy,
+    _mass_ratio,
+    _output,
+)
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -13,7 +19,7 @@ __status__ = "Prototype"
 
 
 def _convert(inp, units, mass_ratio):
-    fact = 1 / (1e6 * 0.53707 * mass_ratio**2)
+    fact = 1 / (1e6 * _MASS_FACTOR * mass_ratio**2)
 
     if units.lower() == "s^3/cm^6":
         out = inp * 1e30 * fact
@@ -50,6 +56,12 @@ def psd2def(inp):
         If inp is not a xarray.Dataset or xarray.DataArray.
     ValueError
         If the species or the units are not supported.
+
+    Notes
+    -----
+    The masses are in proton masses, as the FPI products: the constant
+    m_p^2 / (2 e^2) was 0.53707, with the atomic mass unit as irfu-matlab, and
+    the fluxes were 1.46 % too large.
 
     """
 

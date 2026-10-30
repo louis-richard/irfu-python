@@ -17,13 +17,23 @@ __status__ = "Prototype"
 # Shared by the PSD, DEF and DPF unit conversions (def2psd, dpf2psd, psd2def,
 # psd2dpf)
 
+# Masses in proton masses; the alphas (helium) are He2+ ions, 3.9726 (they
+# were 4, 0.7 % heavier)
 _MASS_RATIOS = {
     **dict.fromkeys(["ions", "ion", "protons", "proton"], 1.0),
-    **dict.fromkeys(["alphas", "alpha", "helium"], 4.0),
+    **dict.fromkeys(
+        ["alphas", "alpha", "helium"],
+        constants.physical_constants["alpha particle mass"][0] / constants.proton_mass,
+    ),
     **dict.fromkeys(
         ["electrons", "electron", "e"], constants.electron_mass / constants.proton_mass
     ),
 }
+
+# m_p^2 / (2 e^2) in the units of the conversions, 0.54494: the masses are in
+# proton masses, as the FPI products. The constant was 0.53707, with the atomic
+# mass unit as irfu-matlab: the fluxes were 1.46 % too large.
+_MASS_FACTOR = 1e16 * constants.proton_mass**2 / (2 * constants.elementary_charge**2)
 
 
 def _mass_ratio(inp):
