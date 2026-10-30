@@ -20,6 +20,10 @@ def eis_omni(eis_allt, method: str = "mean"):
     ----------
     eis_allt : xarray.Dataset
         Dataset of the fluxes of all 6 telescopes.
+    method : {"mean", "sum"}, Optional
+        Method over the telescopes. Use "sum" for counts (the total counts,
+        for their statistics) and "mean" for everything else, as
+        :func:`pyrfu.mms.vdf_omni`. Default is "mean".
 
     Returns
     -------
