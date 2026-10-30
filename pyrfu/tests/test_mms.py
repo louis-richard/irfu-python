@@ -1588,6 +1588,19 @@ class EisMomentsTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "energy widths"):
             mms.eis_moments(flux)
 
+    def test_eis_moments_units(self):
+        # Fluxes only (counts and cps were accepted)
+        flux = self._maxwellian_flux(constants.proton_mass)
+
+        for units in ["1/s", " "]:
+            flux.attrs["UNITS"] = units
+
+            with self.subTest(units=units), self.assertRaisesRegex(ValueError, "flux"):
+                mms.eis_moments(flux)
+
+        flux.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+        np.testing.assert_allclose(mms.eis_moments(flux)[0].data, 1.0, rtol=1e-4)
+
     def test_eis_moments_channel_sum(self):
         # Sums over the channels and their widths (Simpson's rule from the first
         # to the last channel centre left out the half channels at both ends)

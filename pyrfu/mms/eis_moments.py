@@ -9,6 +9,7 @@ from scipy import constants
 # Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
+from ._eis_units import _check_flux
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -73,7 +74,8 @@ def eis_moments(
     Raises
     ------
     ValueError
-        If the specie is not supported, or if `inp` has no energy widths.
+        If the specie is not supported, if `inp` has no energy widths, or if
+        its ``UNITS`` are not those of a flux (counts and cps were accepted).
 
     Notes
     -----
@@ -115,6 +117,8 @@ def eis_moments(
         )
 
     mass = constants.proton_mass * masses[specie]
+
+    _check_flux(inp)
 
     if not {"delta_energy_minus", "delta_energy_plus"} <= set(inp.attrs):
         raise ValueError(
