@@ -2022,6 +2022,17 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_spec_combine_sc([ref, other], "median")
 
+    def test_eis_spec_combine_sc_missing_sector(self):
+        # A sector without samples on a spacecraft: left out there
+        ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)
+        other = self._omni("2017-07-11T22:00:00", 24, 0, lambda s: 0 * s + 3.0)
+        other = other.isel(time=np.flatnonzero(other.sector.data != 4))
+        result = mms.eis_spec_combine_sc([ref, other])
+        at_4 = ref.sector.data == 4
+
+        np.testing.assert_allclose(result.data[at_4], 1.0)
+        np.testing.assert_allclose(result.data[~at_4], 2.0)
+
     def test_eis_spec_combine_sc_sum_without_data(self):
         # NaN where no spacecraft has data, as the mean (the sum was 0)
         ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)

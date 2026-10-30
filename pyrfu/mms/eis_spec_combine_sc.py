@@ -59,8 +59,9 @@ def _paired_samples(ref, inp):
     for sector in np.unique(sec_ref):
         i_ref = np.flatnonzero(sec_ref == sector)
         i_inp = np.flatnonzero(sec_inp == sector)
+        # None for a sector without samples in inp (IndexError)
         idx = _nearest(t_ref[i_ref], t_inp[i_inp], tol)
-        out[i_ref] = np.where(idx >= 0, i_inp[idx.clip(0)], -1)
+        out[i_ref[idx >= 0]] = i_inp[idx[idx >= 0]]
 
     return out
 
