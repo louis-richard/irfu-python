@@ -77,8 +77,8 @@ def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
     # Wave field
     inp_wave: NDArray[np.float64] = data - inp_mean
 
-    # Time series
-    inp_mean_ts: DataArray = ts_vec_xyz(inp.time.data, inp_mean)
-    inp_wave_ts: DataArray = ts_vec_xyz(inp.time.data, inp_wave)
+    # Time series, with the attributes of inp (they had none)
+    inp_mean_ts: DataArray = ts_vec_xyz(inp.time.data, inp_mean, dict(inp.attrs))
+    inp_wave_ts: DataArray = ts_vec_xyz(inp.time.data, inp_wave, dict(inp.attrs))
 
     return inp_mean_ts, inp_wave_ts

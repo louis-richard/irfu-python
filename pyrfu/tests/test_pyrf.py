@@ -1231,6 +1231,31 @@ class UnitsFourSpacecraftTestCase(unittest.TestCase):
         self.assertEqual(result.energy.attrs["UNITS"], "eV")
 
 
+class UnitsMeansTestCase(unittest.TestCase):
+    # The means and evaluations keep the input UNITS (they had none)
+    def test_units_means(self):
+        rng = np.random.default_rng(0)
+        time = generate_timeline(64.0, 256)
+        b_xyz = pyrf.ts_vec_xyz(time, rng.normal(size=(256, 3)), {"UNITS": "nT"})
+        n_s = pyrf.ts_scalar(time, rng.normal(size=256), {"UNITS": "cm^-3"})
+        b_mean, b_wave = pyrf.mean_field(b_xyz, 3)
+        stats = pyrf.mean_bins(b_xyz[:, 0], n_s, 5)
+        cases = [
+            (b_mean, "nT"),
+            (b_wave, "nT"),
+            (pyrf.t_eval(b_xyz, time[10:20]), "nT"),
+            (pyrf.t_eval(n_s, time[10:20]), "cm^-3"),
+            (stats.data, "cm^-3"),
+            (stats.sigma, "cm^-3"),
+            (stats.bins, "nT"),
+            (pyrf.median_bins(b_xyz[:, 0], n_s, 5).data, "cm^-3"),
+        ]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
         with self.assertRaises(TypeError):
@@ -5692,13 +5717,16 @@ class ReadCdfTestCase(unittest.TestCase):
         time = time + np.arange(3) * np.timedelta64(1, "s")
         cdf = pycdfpp.CDF()
         cdf.add_variable("Epoch", time)
-        cdf.add_variable("DENSITY", np.array([[1.0], [2.0], [3.0]]))
+        cdf.add_variable(
+            "DENSITY", np.array([[1.0], [2.0], [3.0]]), attributes={"UNITS": ["cm^-3"]}
+        )
         path = os.path.join(self.directory, "density.cdf")
         pycdfpp.save(cdf, path)
 
         result = pyrf.read_cdf(path)
 
         self.assertListEqual(sorted(result), ["density", "epoch"])
+        self.assertEqual(result["density"].attrs["UNITS"], "cm^-3")
         np.testing.assert_array_equal(result["density"].data, [1.0, 2.0, 3.0])
         np.testing.assert_array_equal(pycdfpp.to_datetime64(result["epoch"].data), time)
 

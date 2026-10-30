@@ -26,7 +26,8 @@ def read_cdf(path: str) -> dict:
     Returns
     -------
     dict
-        Hash table with fields contained in the .cdf file.
+        Hash table with fields contained in the .cdf file, with their
+        attributes (``UNITS``, ...).
 
     Raises
     ------
@@ -41,6 +42,10 @@ def read_cdf(path: str) -> dict:
     are numbered (``dim_0``, ``dim_1``, ...) without the CDF attributes.
 
     """
+
+    # Local import: pyrfu.mms imports pyrfu.pyrf
+    # pylint: disable-next=import-outside-toplevel
+    from ..mms.get_variable import _pycdfpp_attributes_to_dict
 
     # Initialize output dictionary
     out_dict = {}
@@ -64,7 +69,10 @@ def read_cdf(path: str) -> dict:
         data = np.squeeze(file[key].values)
         coords = [np.arange(dim_size) for dim_size in data.shape]
 
-        # Construct xarray DataArray
-        out_dict[key.lower()] = xr.DataArray(data, coords=coords)
+        # Construct xarray DataArray, with the attributes of the variable (they
+        # were not read)
+        out_dict[key.lower()] = xr.DataArray(
+            data, coords=coords, attrs=_pycdfpp_attributes_to_dict(file[key].attributes)
+        )
 
     return out_dict
