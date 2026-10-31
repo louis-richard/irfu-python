@@ -330,6 +330,7 @@ class CalcEpsilonTestCase(unittest.TestCase):
 
         eps = mms.calculate_epsilon(vdf, vdf.copy(deep=True), n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.0, atol=1e-12)
+        self.assertEqual(eps.attrs["UNITS"], "")
 
         model = vdf.copy(deep=True)
         model.data.data[...] = 0.0
@@ -7500,6 +7501,9 @@ class ReduceTestCase(unittest.TestCase):
         vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01, species)
         result = mms.reduce(vdf, xyz, dim, base)
         self.assertIsInstance(result, xr.DataArray)
+        # SI units on velocities in km/s (none)
+        self.assertEqual(result.attrs["UNITS"], "s/m^4")
+        self.assertEqual(result.vx.attrs["UNITS"], "km/s")
 
     @data(
         ("2d", "cart", {}),
@@ -8160,6 +8164,35 @@ class RotateTensorTestCase(unittest.TestCase):
         )
 
 
+class UnitsMomentsTestCase(unittest.TestCase):
+    # UNITS of the moments and reductions (they had none)
+    def test_units_psd_moments(self):
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], False, "ions", "s^3/cm^6")
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(10))
+        moments = mms.psd_moments(vdf, sc_pot)
+        units = ["cm^-3", "km/s", "nPa", "nPa", "eV", "mW/m^2"]
+
+        self.assertListEqual([out.attrs["UNITS"] for out in moments], units)
+
+    def test_units_spectr_to_dataset(self):
+        # UNITS on the data (only on the Dataset, so that the unit conversions
+        # raised KeyError), attributes not shared with the spectrum
+        spectr = generate_spectr(64.0, 10, 32, "energy")
+        spectr.attrs = {"UNITS": "1/(cm^2 s sr keV)", "species": "ions"}
+        result = mms.spectr_to_dataset(spectr)
+
+        self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertEqual(mms.dpf2psd(result).data.attrs["UNITS"], "s^3/m^6")
+        result.attrs["new"] = 1
+        self.assertNotIn("new", spectr.attrs)
+
+    def test_units_vdf_find_low_counts(self):
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], False, "ions", "s^3/cm^6")
+        mask = mms.vdf_find_low_counts(vdf, 5, output="mat")
+
+        self.assertEqual(mask.attrs["UNITS"], "")
+
+
 @ddt
 class SpectrToDatasetTestCase(unittest.TestCase):
     @data(generate_spectr(64.0, 100, 10))
@@ -8179,6 +8212,7 @@ class Scpot2NeTestCase(unittest.TestCase):
             i_aspoc,
         )
         self.assertIsInstance(result[0], xr.DataArray)
+        self.assertEqual(result[0].attrs["UNITS"], "cm^-3")
         self.assertIsInstance(result[1], float)
         self.assertIsInstance(result[2], float)
         self.assertIsInstance(result[3], float)

@@ -904,12 +904,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
     t_psd *= k_b / q_e
     h_psd *= 1e3
 
-    # Construct TSeries
-    n_psd = ts_scalar(vdf.time.data, n_psd)
-    v_psd = ts_vec_xyz(vdf.time.data, v_psd)
-    p_psd = ts_tensor_xyz(vdf.time.data, p_psd)
-    p2_psd = ts_tensor_xyz(vdf.time.data, p2_psd)
-    t_psd = ts_tensor_xyz(vdf.time.data, t_psd)
-    h_psd = ts_vec_xyz(vdf.time.data, h_psd)
+    # Construct TSeries, with their units (they had none)
+    n_psd = ts_scalar(vdf.time.data, n_psd, {"UNITS": "cm^-3"})
+    v_psd = ts_vec_xyz(vdf.time.data, v_psd, {"UNITS": "km/s"})
+    p_psd = ts_tensor_xyz(vdf.time.data, p_psd, {"UNITS": "nPa"})
+    p2_psd = ts_tensor_xyz(vdf.time.data, p2_psd, {"UNITS": "nPa"})
+    t_psd = ts_tensor_xyz(vdf.time.data, t_psd, {"UNITS": "eV"})
+    h_psd = ts_vec_xyz(vdf.time.data, h_psd, {"UNITS": "mW/m^2"})
 
     return n_psd, v_psd, p_psd, p2_psd, t_psd, h_psd

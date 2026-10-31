@@ -90,7 +90,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     Returns
     -------
     out : xarray.DataArray
-        Time series of reduced velocity distribution function.
+        Time series of reduced velocity distribution function, in SI units
+        (``UNITS`` s/m^4 for 1d, s^2/m^5 for 2d), on velocities in km/s.
 
     Notes
     -----
@@ -413,6 +414,16 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         *[all_v[f"v{chr(120 + i)}"][i_grid, :] for i in range(ndim)],
     ]
     dims = ["time", *[f"v{chr(120 + i)}" for i in range(ndim)]]
-    out = xr.DataArray(f_g, coords=coords, dims=dims)
+    # SI units, s^3/m^6 integrated over 3 - ndim velocity components in m/s;
+    # velocities in km/s (none)
+    out = xr.DataArray(
+        f_g,
+        coords=coords,
+        dims=dims,
+        attrs={"UNITS": {1: "s/m^4", 2: "s^2/m^5", 3: "s^3/m^6"}[ndim]},
+    )
+
+    for v_dim in dims[1:]:
+        out[v_dim].attrs["UNITS"] = "km/s"
 
     return out
