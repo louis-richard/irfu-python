@@ -1926,8 +1926,11 @@ class EisSkymapTestCase(unittest.TestCase):
         flux = mms.eis_skymap(ang_ang, to_psd=False)
         result = mms.eis_skymap(ang_ang)
 
-        np.testing.assert_allclose(result.data.data, mms.dpf2psd(flux).data.data)
-        self.assertEqual(result.data.attrs["UNITS"], "s^3/m^6")
+        # In s^3/cm^6, as FPI and feeps_skymap (s^3/m^6)
+        np.testing.assert_allclose(
+            result.data.data, mms.vdf_convert(flux, "s^3/cm^6").data.data
+        )
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
         self.assertNotIn("LABLAXIS", result.data.attrs)
 
     def test_eis_skymap_combine_sc_attrs(self):
@@ -1972,6 +1975,31 @@ class EisSkymapTestCase(unittest.TestCase):
         psd = mms.eis_skymap(self._ang_ang([0, 20], units="s^3/cm^6"), to_psd=False)
         with self.assertRaisesRegex(ValueError, "UNITS"):
             mms.eis_skymap_combine_sc([ref, psd])
+
+
+class UnitsEisTestCase(unittest.TestCase):
+    def test_units_eis(self):
+        # eis_pad without units gives none ("") and pitch angles in deg;
+        # eis_proton_correction keeps the attributes of a Dataset (lost);
+        # spacecraft in different units can't be combined
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        pad = mms.eis_pad(eis, [1, 0, 0])
+        self.assertNotIn("UNITS", pad.attrs)
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+
+        corrected = mms.eis_proton_correction(eis)
+        self.assertDictEqual(corrected.attrs, eis.attrs)
+        mms.eis_moments(mms.eis_omni(corrected))  # the widths (ValueError)
+
+        omni, omni_cps = mms.eis_omni(eis), mms.eis_omni(eis)
+        omni.attrs["UNITS"], omni_cps.attrs["UNITS"] = "1/(cm^2 s sr keV)", "1/s"
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            mms.eis_spec_combine_sc([omni, omni_cps])
+
+        pad_cps = pad.copy()
+        pad.attrs["UNITS"], pad_cps.attrs["UNITS"] = "1/(cm^2 s sr keV)", "1/s"
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            mms.eis_pad_combine_sc([pad, pad_cps])
 
 
 class EisPadCombineScTestCase(unittest.TestCase):

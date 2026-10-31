@@ -7,7 +7,7 @@ import numpy as np
 from ..pyrf.ts_skymap import ts_skymap
 
 # Local imports
-from .dpf2psd import dpf2psd
+from .vdf_convert import vdf_convert
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -25,7 +25,9 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     inp_ang_ang : xarray.DataArray
         EIS angle-angle distribution.
     to_psd : bool, Optional
-        Flag to convert differential particle flux to phase space density.
+        Flag to convert differential particle flux to phase space density, in
+        s^3/cm^6 as the FPI distributions and :func:`pyrfu.mms.feeps_skymap`
+        (it was in s^3/m^6). Default is True.
 
     Returns
     -------
@@ -88,7 +90,9 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
 
     out.energy.data *= 1e3
 
+    # Phase-space density in s^3/cm^6, as FPI and feeps_skymap (it was in
+    # s^3/m^6, from dpf2psd)
     if to_psd:
-        out = dpf2psd(out)
+        out = vdf_convert(out, "s^3/cm^6")
 
     return out

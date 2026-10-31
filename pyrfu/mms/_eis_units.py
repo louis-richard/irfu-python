@@ -9,7 +9,7 @@ __version__ = "2.5.8"
 __status__ = "Prototype"
 
 # Shared by the EIS routines for fluxes only (eis_combine_proton_spec,
-# eis_moments, eis_proton_correction)
+# eis_moments, eis_proton_correction) and by the combinations of spacecraft
 
 
 def _check_flux(*inps):
@@ -26,3 +26,12 @@ def _check_flux(*inps):
         raise ValueError(
             f"the data must be a flux, 1/(cm^2 s sr keV), not {units[0]!r}"
         )
+
+
+def _check_same_units(inps, name):
+    r"""ValueError unless the inputs (DataArrays) have the same UNITS, or none
+    (the units of the first one were taken)."""
+    units = sorted({str(inp.attrs.get("UNITS")) for inp in inps})
+
+    if len(units) > 1:
+        raise ValueError(f"The {name} have different UNITS: {units}")

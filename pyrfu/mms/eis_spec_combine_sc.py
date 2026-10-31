@@ -8,6 +8,9 @@ import warnings
 import numpy as np
 import xarray as xr
 
+# Local imports
+from ._eis_units import _check_same_units
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -91,7 +94,8 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     Raises
     ------
     ValueError
-        If method is not "mean" or "sum".
+        If method is not "mean" or "sum", or if the spectra have different
+        ``UNITS``.
 
     Notes
     -----
@@ -139,6 +143,9 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
 
     if method.lower() not in ["mean", "sum"]:
         raise ValueError(f"method must be mean or sum, not {method}")
+
+    # The units of the reference spacecraft were taken
+    _check_same_units(omni_vars, "spectra")
 
     reftime_sc_loc = np.argmin([len(x_.time.data) for x_ in omni_vars])
     refener_sc_loc = np.argmin([len(x_.energy.data) for x_ in omni_vars])

@@ -172,15 +172,16 @@ def eis_pad(
                 pa_flux[i, j, :] = np.nanmean(flux_file[i, ind, :], axis=0)
 
     attrs = {
-        "UNITS": inp_allt[scopes[0]].attrs.get("UNITS", ""),
         "species": inp_allt.attrs.get("species", ""),
         "delta_energy_minus": np.broadcast_to(e_minu_w, e_minu.shape)[ener_idx],
         "delta_energy_plus": np.broadcast_to(e_plus_w, e_plus.shape)[ener_idx],
         "pa_width": pa_width,
     }
 
-    if "LABLAXIS" in inp_allt[scopes[0]].attrs:
-        attrs["LABLAXIS"] = inp_allt[scopes[0]].attrs["LABLAXIS"]
+    # Units of the telescopes (none without, they were "")
+    for key in ["UNITS", "LABLAXIS"]:
+        if key in inp_allt[scopes[0]].attrs:
+            attrs[key] = inp_allt[scopes[0]].attrs[key]
 
     pa_flux = xr.DataArray(
         pa_flux,
@@ -188,5 +189,7 @@ def eis_pad(
         dims=["time", "theta", "energy"],
         attrs=attrs,
     )
+    pa_flux.theta.attrs["UNITS"] = "deg"
+    pa_flux.energy.attrs = dict(inp_allt.energy.attrs)
 
     return pa_flux

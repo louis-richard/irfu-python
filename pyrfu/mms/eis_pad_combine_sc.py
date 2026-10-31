@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ._eis_units import _check_same_units
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
 __author__ = "Louis Richard"
@@ -39,7 +40,7 @@ def eis_pad_combine_sc(pads):
     Raises
     ------
     ValueError
-        If the pitch angle bins differ.
+        If the pitch angle bins or the ``UNITS`` differ.
 
     Notes
     -----
@@ -59,6 +60,9 @@ def eis_pad_combine_sc(pads):
     # fewest energy channels (reference energies)
     ref_probe = pads[np.argmin([len(probe.time.data) for probe in pads])]
     ener_probe = pads[np.argmin([len(probe.energy.data) for probe in pads])]
+
+    # The units of the reference spacecraft were taken
+    _check_same_units(pads, "PADs")
 
     for pad_ in pads:
         if not np.array_equal(pad_.theta.data, ref_probe.theta.data):
