@@ -63,6 +63,7 @@ from .get_variable import get_variable
 from .hpca_calc_anodes import hpca_calc_anodes
 from .hpca_energies import hpca_energies
 from .hpca_pad import hpca_pad
+from .hpca_skymap import hpca_skymap
 from .hpca_spin_sum import hpca_spin_sum
 from .lh_wave_analysis import lh_wave_analysis
 from .list_files import list_files
@@ -184,6 +185,7 @@ __all__ = [
     "hpca_calc_anodes",
     "hpca_energies",
     "hpca_pad",
+    "hpca_skymap",
     "hpca_spin_sum",
     "lh_wave_analysis",
     "list_files",

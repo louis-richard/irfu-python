@@ -3296,6 +3296,109 @@ class GetHpcaDistTestCase(unittest.TestCase):
             mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
 
 
+class HpcaSkymapTestCase(unittest.TestCase):
+    # 4 azimuths per half-spin, 4 anodes (two sides 180 degrees apart, two
+    # polar angles each), 2 energies, 1 s samples
+    ELEVATION = np.array([45.0, 135.0, 135.0, 45.0])
+
+    def _inputs(self, fieldnam="Helium++ Flux"):
+        # 10 samples, half-spins from samples 0, 4 and 8 (incomplete); value
+        # 100 * sample + 10 * anode + energy; azimuths of the particles
+        # 45 * step + 2 * half-spin (side A, anodes 0 and 1) and 180 more
+        # (side B), drifting by 2 degrees over the energies
+        t_vdf = np.datetime64("2019-09-14T07:54:00", "ns")
+        t_vdf += ((np.arange(10) + 0.5) * 1e9).astype("timedelta64[ns]")
+        sample, anode, energy = np.meshgrid(
+            np.arange(10), np.arange(4), np.arange(2), indexing="ij"
+        )
+        vdf = xr.DataArray(
+            100.0 * sample + 10 * anode + energy,
+            coords=[t_vdf, np.arange(4), [1.0, 2.0]],
+            dims=["time", "rcomp", "ccomp"],
+            attrs={"FIELDNAM": fieldnam, "UNITS": "1/(cm^2 s sr eV)"},
+        )
+
+        t_aze = t_vdf[0::4] + np.timedelta64(1500, "ms")
+        phi = 45.0 * np.arange(4)[None, :] + 2.0 * np.arange(3)[:, None]
+        phi = phi[:, :, None, None] + np.array([0.0, 0.0, 180.0, 180.0])[:, None]
+        phi = (phi + np.array([0.0, 2.0]) - 1.0) % 360.0
+        aze = xr.DataArray(
+            phi,
+            coords=[t_aze, np.arange(4), np.arange(4), [0, 1]],
+            dims=["time", "az", "po", "en"],
+            attrs={"COORDINATE_SYSTEM": "DBCS"},
+        )
+
+        return vdf, aze
+
+    def test_hpca_skymap_bins(self):
+        # Look directions (opposite to the particles), 8 azimuths and 2 polar
+        # angles; kinetic energies and fluxes per unit kinetic energy (q = 2)
+        vdf, aze = self._inputs()
+        out = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION, to_psd=False)
+
+        self.assertEqual(out.data.shape, (3, 2, 8, 2))
+        self.assertEqual((out.attrs["species"], out.attrs["charge"]), ("helium++", 2))
+        self.assertEqual(out.data.attrs["UNITS"], "1/(cm^2 s sr eV)")
+        self.assertEqual(out.data.attrs["COORDINATE_SYSTEM"], "DBCS")
+        np.testing.assert_array_equal(out.energy.data, [[2.0, 4.0]] * 3)
+        np.testing.assert_array_equal(out.theta.data, [45.0, 135.0])
+
+        for i in range(2):
+            # side B looks at 45 * step + 2 i, side A at 180 more (the
+            # circular mean over the energies)
+            np.testing.assert_allclose(
+                out.phi.data[i], np.arange(8) * 45.0 + 2.0 * i, atol=1e-12
+            )
+            # look phi 45 * step (side B, anodes 2 and 3), theta 45 (particle
+            # polar angle 135: anode 2)
+            for step in range(4):
+                np.testing.assert_array_equal(
+                    out.data.data[i, :, step, 0],
+                    (100.0 * (4 * i + step) + 20.0 + np.arange(2)) / 2.0,
+                )
+                np.testing.assert_array_equal(
+                    out.data.data[i, :, step + 4, 1],
+                    (100.0 * (4 * i + step) + 0.0 + np.arange(2)) / 2.0,
+                )
+
+        self.assertTrue(np.all(np.isnan(out.data.data[2])))
+        np.testing.assert_allclose(out.attrs["delta_phi_minus"][:2], 22.5)
+        np.testing.assert_array_equal(out.attrs["delta_theta_plus"], 11.25)
+
+    def test_hpca_skymap_velocities(self):
+        # Particles of anode 0, side A, step 0 at half-spin 0 move along
+        # (phi 0, polar angle 45): positive vx and vz, vy 0
+        vdf, aze = self._inputs("Oxygen+ Flux")
+        vdf.data[:] = 0.0
+        vdf.data[0, 0, :] = 1.0
+        aze.data[0, 0, [0, 1]] = 0.0
+        aze.data[0, 0, [2, 3]] = 180.0
+        out = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION)
+
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+        self.assertEqual(out.attrs["species"], "oxygen+")
+        flux = [np.nansum(mms.vdf_partial_density(out, c).data.data[0]) for c in "xyz"]
+        self.assertGreater(flux[0], 0.0)
+        self.assertAlmostEqual(flux[1] / flux[0], 0.0, places=6)
+        self.assertAlmostEqual(flux[2] / flux[0], 1.0, places=6)
+
+        # The phase-space densities of the fluxes, with the oxygen mass
+        flux_sky = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION, to_psd=False)
+        np.testing.assert_allclose(
+            out.data.data,
+            mms.vdf_convert(flux_sky, "s^3/cm^6").data.data,
+            rtol=1e-12,
+        )
+
+    def test_hpca_skymap_sides(self):
+        # The two sides must have the same polar angles
+        vdf, aze = self._inputs()
+
+        with self.assertRaisesRegex(ValueError, "different anode elevations"):
+            mms.hpca_skymap(vdf, aze, elevation=[45.0, 135.0, 135.0, 90.0])
+
+
 @ddt
 class MakeModelKappaTestCase(unittest.TestCase):
     @staticmethod

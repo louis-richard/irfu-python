@@ -219,3 +219,4 @@ Hot Plasma Composition Analyzer (HPCA)
    hpca_calc_anodes
    hpca_spin_sum
    hpca_pad
+   hpca_skymap
