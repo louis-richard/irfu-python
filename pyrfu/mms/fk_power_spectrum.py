@@ -122,8 +122,8 @@ def fk_power_spectrum(
     xarray.DataArray
         Power (f, k) normalised to its maximum, NaN in the bins without
         power and at least 1e-3 elsewhere, with the frequencies f in Hz and
-        the wave numbers k in rad/m (left edges of the bins, as irfu-matlab),
-        positive along B.
+        the wave numbers k = 2 pi / lambda in 1/m (left edges of the bins, as
+        irfu-matlab), positive along B.
 
     Raises
     ------
@@ -262,9 +262,9 @@ def fk_power_spectrum(
         f_k_power.T,
         coords=[freq, k_vec],
         dims=["f", "k"],
-        attrs={"probe": probe, "cav": cav, "field": int(field)},
+        attrs={"probe": probe, "cav": cav, "field": int(field), "UNITS": ""},
     )
     out.f.attrs["UNITS"] = "Hz"
-    out.k.attrs["UNITS"] = "rad/m"
+    out.k.attrs["UNITS"] = "1/m"
 
     return out

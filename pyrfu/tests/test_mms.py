@@ -2418,6 +2418,7 @@ class LhWaveAnalysisTestCase(unittest.TestCase):
         self.assertAlmostEqual(v_best, v_ph, delta=1.0)
         self.assertGreater(np.max(corrs), 0.99)
         self.assertListEqual(list(phi_eb.comp.data), ["Ebest", "Bs"])
+        self.assertEqual(phi_eb.attrs["UNITS"], "V")
 
     @data([1.0, 0.0, 0.0], [-1.0, 0.0, 0.0])
     def test_lh_wave_analysis_b_along_x(self, b_hat):
@@ -6145,7 +6146,8 @@ class FkPowerSpectrumTestCase(unittest.TestCase):
         self.assertAlmostEqual(power.k.data[0], -np.pi / 29.2)
         self.assertEqual(np.nanmax(power.data), 1.0)
         self.assertGreaterEqual(np.nanmin(power.data), 1e-3)
-        self.assertEqual(power.k.attrs["UNITS"], "rad/m")
+        self.assertEqual(power.k.attrs["UNITS"], "1/m")
+        self.assertEqual(power.attrs["UNITS"], "")
 
     def test_fk_power_spectrum_spin_plane(self):
         # Probes 1 and 2 (3 and 4) along x at 1.25 s, k and B along x: the
@@ -6223,7 +6225,7 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         return e_mms, r_mms, b_mms, tint
 
     def test_fk_power_spectrum_4sc_plane_wave(self):
-        # k in rad/km in, rad/m out; recovered within one k bin
+        # k in 1/km in, 1/m out; recovered within one k bin
         k_vec = np.array([0.04, -0.02, 0.03])
         e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
         result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint, f_range=[3, 5])
@@ -6238,6 +6240,17 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         for key, value in k_ref.items():
             self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
         self.assertAlmostEqual(result.attrs["f_avg"], 4.0, delta=0.1)
+
+        # Normalised powers, wave numbers in 1/m and frequencies in Hz (none)
+        self.assertEqual(result.k_x_f.attrs["UNITS"], "")
+        self.assertEqual(result.k_x.attrs["UNITS"], "1/m")
+        self.assertEqual(result.f.attrs["UNITS"], "Hz")
+
+        # The wave numbers assume positions in km
+        r_m = [r.copy() for r in r_mms]
+        r_m[0].attrs["UNITS"] = "m"
+        with self.assertWarnsRegex(UserWarning, "r is assumed in km"):
+            mms.fk_power_spectrum_4sc(e_mms, r_m, b_mms, tint, f_range=[3, 5])
 
     def test_fk_power_spectrum_4sc_k_bins(self):
         # The wave numbers are the centres of the bins of the power maps
@@ -10757,6 +10770,12 @@ class WhistlerB2ETestCase(unittest.TestCase):
 
         self.assertIsInstance(result, xr.DataArray)
         self.assertTupleEqual(result.dims, ("time", "frequency"))
+        self.assertEqual(result.attrs["UNITS"], "(mV/m)^2/Hz")  # "(mV/m)^2 Hz^-1"
+
+        # The factors assume nT^2/Hz, nT and cm^-3
+        b2.attrs["UNITS"] = "T^2/Hz"
+        with self.assertWarnsRegex(UserWarning, "b2 is assumed in nT"):
+            mms.whistler_b2e(b2, freq, theta_k, b_mag, n_e)
         for i in range(3):
             expected = mms.whistler_b2e(
                 b2_data[i], freq, theta_k, b_mag.data[i], n_e.data[i]
