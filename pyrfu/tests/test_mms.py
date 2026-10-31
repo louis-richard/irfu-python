@@ -1599,12 +1599,17 @@ class EisMomentsTestCase(unittest.TestCase):
             flux, coords=[times, energy], dims=["time", "energy"], attrs=attrs
         )
 
-    @data(("proton", 1), ("alpha", 4), ("helium", 4), ("oxygen", 16))
+    @data(
+        ("proton", constants.proton_mass),
+        ("alpha", constants.physical_constants["alpha particle mass"][0]),
+        ("helium", constants.physical_constants["alpha particle mass"][0]),
+        ("oxygen", 15.99491461957 * constants.atomic_mass - constants.electron_mass),
+    )
     @unpack
-    def test_eis_moments_maxwellian(self, specie, mass_number):
+    def test_eis_moments_maxwellian(self, specie, mass):
         # n = 1 cm^-3, kT = 10 keV: P = n kT = 1.602 nPa (the 2nd order integral
-        # is the energy density, 1.5 times larger), <|v|> = sqrt(8 kT / (pi m))
-        mass = mass_number * constants.proton_mass
+        # is the energy density, 1.5 times larger), <|v|> = sqrt(8 kT / (pi m)),
+        # with the He2+ and O+ masses (they were 4 and 16 proton masses)
         n_i, v_i, p_i, t_i = mms.eis_moments(self._maxwellian_flux(mass), specie)
         k_t = 1e4 * constants.e
 
