@@ -11,7 +11,13 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from pyrfu.mms._vdf_bins import _bin_pitch_angles, _phi_edges, _theta_edges
+from pyrfu.mms._vdf_bins import (
+    _bin_pitch_angles,
+    _charge_sign,
+    _mass,
+    _phi_edges,
+    _theta_edges,
+)
 from pyrfu.mms.vdf_convert import _PSD, vdf_convert
 from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
@@ -498,9 +504,13 @@ def psd_moments(vdf, sc_pot, **kwargs):
         from the spacing of the phi and theta grids. The data are in the
         units of their ``UNITS`` attribute (s^3/cm^6, as FPI, if missing): a
         phase-space density or a differential energy or particle flux, see
-        `vdf_convert`.
+        `vdf_convert`. The ``species`` attribute gives the mass (e.g. "ions",
+        "electrons", "oxygen+", "helium++") and the optional ``charge``
+        attribute the charge of the ions (1 by default, e.g. 2 for the HPCA
+        He++ skymaps).
     sc_pot : xarray.DataArray
-        Time series of the spacecraft potential.
+        Time series of the spacecraft potential. The ions gain q V and the
+        electrons lose e V.
 
     Returns
     -------
@@ -655,8 +665,12 @@ def psd_moments(vdf, sc_pot, **kwargs):
             logger.info("%s resolution data is used", rate)
 
     theta = vdf.theta.data
-    particle_type = vdf.attrs["species"]
-    assert particle_type[0].lower() in ["e", "i"], "invalid particle type"
+
+    # Mass and charge of the species (ValueError if not supported). All the
+    # ions were protons and the species not starting with "e" or "i" raised
+    # AssertionError.
+    p_mass, is_electron = _mass(vdf), _charge_sign(vdf) < 0.0
+    charge = 1.0 if is_electron else float(vdf.attrs.get("charge", 1))
 
     # In SI units (s^3/m^6)
     relativistic = bool(
@@ -705,19 +719,18 @@ def psd_moments(vdf, sc_pot, **kwargs):
             )
 
     tmp_ = kwargs.get("inner_electron", "")
-    flag_inner_electron = tmp_ == "on" and particle_type[0] == "e"
+    flag_inner_electron = tmp_ == "on" and is_electron
 
     # Define constants
     q_e = constants.elementary_charge
     k_b = constants.Boltzmann
 
-    if particle_type[0] == "e":
-        p_mass = constants.electron_mass
+    if is_electron:
         logger.info("Particles are electrons")
     else:
-        p_mass = constants.proton_mass
-        sc_pot *= -1.0
-        logger.info("Particles are ions")
+        # Ions of charge q gain q V (eV)
+        sc_pot *= -charge
+        logger.info("Particles are %s", vdf.attrs["species"])
 
     # angle between theta and phi points is 360/32 = 11.25 degrees
     phi = vdf.phi.data

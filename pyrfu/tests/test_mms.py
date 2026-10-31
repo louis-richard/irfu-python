@@ -4079,6 +4079,44 @@ class PsdMomentsTestCase(unittest.TestCase):
             p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
         )
 
+    def test_psd_moments_species_mass(self):
+        # O+ Maxwellian with the speeds of the proton one: same n and V, T
+        # times the mass ratio (AssertionError, and the proton mass for all
+        # the ions)
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, v_kms)
+        m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
+        ratio = m_o / constants.proton_mass
+        vdf = vdf.assign(energy=vdf.energy * ratio)
+        for key in ["energy0", "energy1", "delta_energy_plus", "delta_energy_minus"]:
+            vdf.attrs[key] = vdf.attrs[key] * ratio
+
+        vdf.attrs["species"] = "oxygen+"
+        n, v, _, _, t, _ = mms.psd_moments(vdf, sc_pot)
+
+        self.assertAlmostEqual(float(n.data[0]), 1.0, delta=0.01)
+        np.testing.assert_allclose(v.data[0], v_kms, atol=2.0)
+        np.testing.assert_allclose(np.diag(t.data[0]), 1000.0 * ratio, rtol=0.01)
+
+    def test_psd_moments_charge(self):
+        # Ions of charge q gain q V: He++ (charge 2) at V is He at 2 V
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.attrs["species"] = "helium++"
+        sc_pot.data[:] = 20.0
+        vdf_2 = vdf.copy()
+        vdf_2.attrs = {**vdf.attrs, "charge": 2}
+        n_2 = mms.psd_moments(vdf_2, sc_pot)[0]
+        n_1 = mms.psd_moments(vdf, 2.0 * sc_pot)[0]
+
+        np.testing.assert_allclose(n_2.data, n_1.data, rtol=1e-12)
+        self.assertFalse(
+            np.allclose(n_2.data, mms.psd_moments(vdf, sc_pot)[0].data, rtol=1e-6)
+        )
+
+        vdf.attrs["species"] = "bazinga"
+        with self.assertRaisesRegex(ValueError, "Invalid species"):
+            mms.psd_moments(vdf, sc_pot)
+
     @data(False, True)
     def test_psd_moments_no_warnings(self, relativistic):
         # Electrons with V_sc above the lowest channel (unused speeds warned
