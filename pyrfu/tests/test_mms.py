@@ -7602,6 +7602,19 @@ class GetEisAlltTestCase(unittest.TestCase):
         ):
             self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
 
+    def test_get_eis_allt_single_channel(self):
+        # PHxTOF oxygen: one channel per telescope without energy table
+        # (KeyError), as the v4.2.100 files
+        pref = "mms1_epd_eis_srvy_l2_phxtof"
+        cdf = pycdfpp.load(_cdf_eis(pref, ["proton"], 4, "2021-07-11T00:10:00"))
+        for i in range(6):
+            name = f"{pref}_oxygen_P4_flux_t{i:d}"
+            cdf.add_variable(name, values=np.ones(4))
+            cdf[name].add_attribute("DEPEND_0", "Epoch")
+
+        with self.assertRaisesRegex(ValueError, "No energy table of oxygen"):
+            self._get_eis_allt("flux_phxtof_oxygen_srvy_l2", [bytes(pycdfpp.save(cdf))])
+
     def test_get_eis_allt_no_files(self):
         with mock.patch.object(
             self.module, "_list_files_sources", return_value=([], None, {})
