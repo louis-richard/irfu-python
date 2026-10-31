@@ -10308,6 +10308,10 @@ class LoadAncillaryTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             result.x.data, [-10539.488308885, -10639.511569375, -10736.816612409]
         )
+        # The units of the header (they had no UNITS)
+        self.assertEqual(result.epoch_mms_tai.attrs["UNITS"], "d")
+        self.assertEqual(result.x.attrs["UNITS"], "km")
+        self.assertEqual(result.vz.attrs["UNITS"], "km/s")
 
     def test_load_ancillary_defatt(self):
         # The DATA_STOP footer is not data
@@ -10321,6 +10325,12 @@ class LoadAncillaryTestCase(unittest.TestCase):
 
         self.assertEqual(len(result.time), 2)
         np.testing.assert_allclose(result.z_dec.data, [66.080, 66.086])
+        self.assertEqual(result.elapsed_sec.attrs["UNITS"], "s")
+        self.assertEqual(result.qc.attrs["UNITS"], "")
+        self.assertEqual(result.wz.attrs["UNITS"], "deg/s")
+        self.assertEqual(result.z_dec.attrs["UNITS"], "deg")
+        self.assertEqual(result.nut.attrs["UNITS"], "deg")
+        self.assertNotIn("UNITS", result.qf.attrs)
 
     def test_load_ancillary_defatt_repeats_and_overlap(self):
         # DEFATT repeats times by design and consecutive files overlap: the
@@ -10396,6 +10406,8 @@ class LoadAncillaryTestCase(unittest.TestCase):
             self.assertEqual(
                 result.time.data[0], np.datetime64("2017-07-06T13:50:23.151", "ns")
             )
+            self.assertEqual(result.q.attrs["UNITS"], "")
+            self.assertEqual(result.scale.attrs["UNITS"], "km")
 
         with self.assertRaisesRegex(FileNotFoundError, "for MMS in"):
             mms.load_ancillary("defq", self.tint, 1, False, self.root, "local")

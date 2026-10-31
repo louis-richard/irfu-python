@@ -37,6 +37,26 @@ logger = logging.getLogger(__name__)
 # 362T15:54; 2017: 00:00 to 00:05 the day after)
 _END_MARGIN = np.timedelta64(1, "D")
 
+# Units of the columns (DEFEPH as its header and IDL SPEDAS; DEFATT from the
+# values: wZ of about 18 deg/s for the spin period of 20 s; the DEFATT quality
+# flag is a string, without units)
+_ANGLES = ["w_phase", "z_ra", "z_dec", "z_phase", "l_ra", "l_dec", "l_phase"]
+_ANGLES += ["p_ra", "p_dec", "p_phase", "nut"]
+_UNITS = {
+    "defatt": {
+        "elapsed_sec": "s",
+        **dict.fromkeys(["q1", "q2", "q3", "qc"], ""),
+        **dict.fromkeys(["wx", "wy", "wz"], "deg/s"),
+        **dict.fromkeys(_ANGLES, "deg"),
+    },
+    "defeph": {
+        "epoch_mms_tai": "d",
+        **dict.fromkeys(["x", "y", "z"], "km"),
+        **dict.fromkeys(["vx", "vy", "vz"], "km/s"),
+    },
+    "defq": {"epoch_mms_tai": "d", "q": "", "scale": "km", "maneuver_flag": ""},
+}
+
 
 def _list_files_sdc(tint, mms_id, product):
     r"""Ancillary files of the SDC covering tint, the latest version of each
@@ -121,10 +141,16 @@ def load_ancillary(
     Returns
     -------
     out : xarray.Dataset
-        Time series of the ancillary data, with strictly increasing times. For
-        "defq", every 30 s: the tetrahedron quality factor q (1 for a regular
-        tetrahedron), the scale of the file, and the maneuver flag (NaN when
-        not set).
+        Time series of the ancillary data, with strictly increasing times, and
+        the units of the columns in their UNITS attribute. "defeph": the
+        position (km) and velocity (km/s), in GEI J2000 as the file headers.
+        "defatt": the quaternion (""), the angular velocity (deg/s),
+        the right ascensions, declinations, phases and nutation angle (deg),
+        and the quality flag (a string, no UNITS). "defq", every 30 s: the
+        tetrahedron quality factor q ("", 1 for a regular tetrahedron), the
+        scale of the file (km), and the maneuver flag ("", NaN when not set).
+        epoch_mms_tai is in days and elapsed_sec in seconds since
+        1958-01-01 (TAI).
 
     Raises
     ------
@@ -219,5 +245,8 @@ def load_ancillary(
     dataset_out = data_frame.to_xarray()
 
     dataset_out = dataset_out.assign_coords(time=dataset_out.time.astype("<M8[ns]"))
+
+    for name, units in _UNITS[product].items():
+        dataset_out[name].attrs["UNITS"] = units
 
     return dataset_out
