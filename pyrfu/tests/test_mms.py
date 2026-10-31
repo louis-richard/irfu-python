@@ -2751,6 +2751,59 @@ def _b_const(b_xyz, n_t=2):
     return pyrf.ts_vec_xyz(generate_timeline(1.0, n_t), np.tile(b_xyz, (n_t, 1)))
 
 
+class UnitsDistributionsTestCase(unittest.TestCase):
+    # The distributions keep the attributes of the input data, angles in deg,
+    # no invented UNITS
+    def setUp(self):
+        self.vdf = _gyro_skymap(lambda p, t: 1.0 + np.cos(np.deg2rad(t)) ** 2 + 0 * p)
+        self.vdf.data.attrs = {"UNITS": "s^3/cm^6", "LABLAXIS": "f", "FIELDNAM": "f"}
+        self.vdf.attrs["species"] = "ions"
+        self.b_z = _b_const([0.0, 0.0, 10.0])
+
+    def test_units_pad_gyrophase(self):
+        pad = mms.get_pitch_angle_dist(self.vdf, self.b_z, angles=12, verbose=False)
+        gpd = mms.get_gyrophase_dist(self.vdf, self.b_z)
+
+        for out in [pad, gpd]:
+            self.assertDictEqual(out.data.attrs, self.vdf.data.attrs)
+
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+        self.assertEqual(gpd.gyrophase.attrs["UNITS"], "deg")
+
+        # pad_diffusion: the units of the PAD per s (they were "s^3/cm^6/s")
+        df_dt = mms.pad_diffusion(pad, 1e-2)
+        self.assertEqual(df_dt.data.attrs["UNITS"], "(s^3/cm^6)/s")
+
+        # No UNITS without input UNITS (KeyError, "" and "1/s")
+        self.vdf.data.attrs = {}
+        pad = mms.get_pitch_angle_dist(self.vdf, self.b_z, angles=12, verbose=False)
+        gpd = mms.get_gyrophase_dist(self.vdf, self.b_z)
+
+        for out in [pad, gpd, mms.pad_diffusion(pad, 1e-2)]:
+            self.assertNotIn("UNITS", out.data.attrs)
+
+    def test_units_shift_rebin_models(self):
+        # vdf_shift and vdf_rebin keep LABLAXIS and the coordinate attributes
+        # (lost through s^3/m^6), the models drop the label of other units
+        self.vdf.energy.attrs["UNITS"] = "eV"
+        shifted = mms.vdf_shift(self.vdf, [10.0, 0.0, 0.0], n_mc=2, random_state=0)
+        self.assertDictEqual(shifted.data.attrs, self.vdf.data.attrs)
+        self.assertEqual(shifted.energy.attrs["UNITS"], "eV")
+
+        grid = [np.linspace(-500.0, 500.0, 5)] * 3
+        cart = mms.vdf_rebin(self.vdf, grid, "cart", n_mc=2, random_state=0)
+        self.assertEqual(cart.data.attrs["FIELDNAM"], "f")
+
+        time = self.vdf.time.data
+        n_s = pyrf.ts_scalar(time, np.ones(len(time)))
+        v_xyz = pyrf.ts_vec_xyz(time, np.zeros((len(time), 3)))
+        t_s = pyrf.ts_scalar(time, np.full(len(time), 100.0))
+        self.vdf.data.attrs = {"UNITS": "keV/(cm^2 s sr keV)", "LABLAXIS": "DEF"}
+        model = mms.make_model_kappa(self.vdf, n_s, v_xyz, t_s)
+        self.assertEqual(model.data.attrs["UNITS"], "s^3/m^6")
+        self.assertNotIn("LABLAXIS", model.data.attrs)
+
+
 class GetGyrophaseDistTestCase(unittest.TestCase):
     def test_get_gyrophase_dist_gyrotropic(self):
         # f(pitch angle) with B along z: the same in every gyrophase bin. The
@@ -3412,7 +3465,7 @@ class PadDiffusionTestCase(unittest.TestCase):
         alpha = np.deg2rad(7.5 + 15.0 * np.arange(12))
         pad = _pad_case(np.tile(np.cos(alpha), (2, 3, 1)))
         result = mms.pad_diffusion(pad, 0.1)
-        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6/s")
+        self.assertEqual(result.data.attrs["UNITS"], "(s^3/cm^6)/s")
 
         step = np.deg2rad(15.0)
         factor = np.sin(step) / step * np.sin(2 * step) / (2 * step)

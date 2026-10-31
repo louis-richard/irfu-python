@@ -8,6 +8,7 @@ import xarray as xr
 # Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_skymap import ts_skymap
+from ._psd_units import _attrs
 from ._vdf_bins import _is_skymap, _mass, _relativistic, _speed
 from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins, _speed_to_energy
 from .vdf_convert import vdf_convert
@@ -170,6 +171,9 @@ def _shift(
         energy1=energy[0],
         esteptable=np.zeros(n_t, dtype=np.uint8),
         attrs={**vdf.data.attrs, "UNITS": "s^3/m^6"},
+        coords_attrs={
+            k: dict(vdf[k].attrs) for k in ["time", "energy", "phi", "theta"]
+        },
         glob_attrs={
             **{
                 k: v
@@ -187,7 +191,12 @@ def _shift(
             "lost": lost,
         },
     )
-    return vdf_convert(out, units)
+    # Back in the units of vdf, with the attributes of its data (LABLAXIS was
+    # dropped through s^3/m^6)
+    out = vdf_convert(out, units)
+    out.data.attrs = _attrs(vdf.data.attrs, out.data.attrs["UNITS"])
+
+    return out
 
 
 def vdf_shift(

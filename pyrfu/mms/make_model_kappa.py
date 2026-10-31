@@ -7,6 +7,7 @@ from scipy import constants, special
 
 # Local imports
 from ..pyrf.resample import resample
+from ._psd_units import _attrs
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -121,6 +122,7 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
 
     model_vdf = vdf.copy()
     model_vdf["data"] = vdf.data.copy(data=model)
-    model_vdf.data.attrs = {**vdf.data.attrs, "UNITS": "s^3/m^6"}
+    # Without the label of the input units if they differ (e.g. a DEF)
+    model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/m^6")
 
     return model_vdf

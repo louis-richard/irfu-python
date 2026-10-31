@@ -5,6 +5,7 @@
 import numpy as np
 
 # Local imports
+from ..pyrf._units import _ratio, _units
 from ._psd_units import _output
 from ._vdf_bins import _is_skymap, _pitch_angles
 
@@ -72,5 +73,11 @@ def pad_diffusion(pad, d_aa):
     flux = d_aa * np.sin(alpha) * df_da
     df_dt = np.gradient(flux, alpha, axis=2, edge_order=1) / np.sin(alpha)
 
-    units = pad.data.attrs.get("UNITS", "")
-    return _output(pad, df_dt, f"{units}/s" if units else "1/s")
+    # Units of the PAD per s (they were "s^3/cm^6/s", and "1/s" without)
+    units = _ratio(_units(pad), "s")
+    out = _output(pad, df_dt, "" if units is None else units)
+
+    if units is None:
+        del out.data.attrs["UNITS"]
+
+    return out

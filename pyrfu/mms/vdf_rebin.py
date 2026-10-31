@@ -6,6 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ._psd_units import _attrs
 from ._vdf_bins import _is_skymap
 from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins
 from .vdf_convert import _PSD, vdf_convert
@@ -188,7 +189,13 @@ def vdf_rebin(
     centres = [(e[:-1] + e[1:]) / 2e3 for e in edges]
 
     out = xr.Dataset(
-        {"data": (["time", "vx", "vy", "vz"], data, {"UNITS": units})},
+        {
+            "data": (
+                ["time", "vx", "vy", "vz"],
+                data,
+                _attrs(vdf.data.attrs, units),  # the other attributes were lost
+            )
+        },
         coords={
             "time": vdf.time.data,
             "vx": ("vx", centres[0], {"UNITS": "km/s"}),
