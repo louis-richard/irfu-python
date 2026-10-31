@@ -70,10 +70,13 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
     else:
         updated_spectra = inp.data[:, anodes_in_fov, :].sum(axis=1)
 
+    # The attributes of inp and of its energies (lost)
     out = xr.DataArray(
         updated_spectra,
         coords=[times, energies],
         dims=["time", "energy"],
+        attrs=dict(inp.attrs),
     )
+    out.energy.attrs = dict(inp.ccomp.attrs)
 
     return out

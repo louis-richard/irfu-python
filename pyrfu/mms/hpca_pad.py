@@ -243,4 +243,10 @@ def hpca_pad(
     dims = ["time", "theta"]
     pad_spec = xr.DataArray(padd_, coords=coords, dims=dims)
 
+    # Units of vdf (none), pitch angles in deg
+    if "UNITS" in vdf.attrs:
+        pad_spec.attrs["UNITS"] = vdf.attrs["UNITS"]
+
+    pad_spec.theta.attrs["UNITS"] = "deg"
+
     return pad_spec

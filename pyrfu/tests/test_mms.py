@@ -3086,7 +3086,19 @@ class HpcaPadTestCase(unittest.TestCase):
         # so each sample must get the azimuths of its own half-spin and step.
         aze_deg = np.zeros((2, self.N_AZ))
         aze_deg[0, ::2] = 180.0
-        pad = self._pad(*self._inputs(aze_deg, centred=centred))
+        vdf, saz, aze, b_xyz = self._inputs(aze_deg, centred=centred)
+        vdf.attrs["UNITS"] = "cm^-6 s^3"
+        pad = self._pad(vdf, saz, aze, b_xyz)
+
+        # Units of vdf and pitch angles in deg (none)
+        self.assertEqual(pad.attrs["UNITS"], "cm^-6 s^3")
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+
+        # hpca_calc_anodes keeps the attributes of vdf and its energies (lost)
+        vdf.ccomp.attrs["UNITS"] = "eV"
+        spec = mms.hpca_calc_anodes(vdf)
+        self.assertEqual(spec.attrs["UNITS"], "cm^-6 s^3")
+        self.assertEqual(spec.energy.attrs["UNITS"], "eV")
 
         is_par = np.zeros(32, dtype=bool)
         is_par[0:16:2] = True
@@ -3246,6 +3258,12 @@ class GetHpcaDistTestCase(unittest.TestCase):
         np.testing.assert_array_equal(out["energy"][:, 0, 0], [1.0, 2.0])
         np.testing.assert_array_equal(out["bins"], 1.0)
         self.assertEqual((out["species"], out["charge"]), ("hydrogen+", 1))
+
+        # Units name from the UNITS of vdf, as IDL SPEDAS (always "df_cm")
+        self.assertEqual(out["units_name"], "df_cm")
+        vdf.attrs["UNITS"] = "1/(cm^2 s sr eV)"
+        out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
+        self.assertEqual(out["units_name"], "flux")
 
     def test_get_hpca_dist_elevation_from_file(self):
         module = importlib.import_module("pyrfu.mms.get_hpca_dist")
