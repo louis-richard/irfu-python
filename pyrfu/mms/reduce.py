@@ -96,7 +96,10 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         Keyword arguments, among which:
 
         * sc_pot : xarray.DataArray, the spacecraft potential (V), 0 V by
-          default.
+          default. As in irfu-matlab, where it is for the electrons only,
+          the energies are corrected as those of electrons, E - e V, for all
+          the species (the ions gain q V in `psd_moments` and
+          `vdf_velocity`).
         * lower_e_lim : float or xarray.DataArray, the threshold energy
           (eV), 0 eV by default. The channels below max(sc_pot,
           lower_e_lim) are set to zero; a time step without any channel
