@@ -7714,6 +7714,34 @@ class ReduceTestCase(unittest.TestCase):
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
 
+    def test_reduce_species_mass(self):
+        # The speeds of the channels with the mass of the species (oxygen
+        # raised ValueError, the ions were protons); energy widths per channel,
+        # as the EIS skymaps (ValueError)
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+        energy = vdf.energy.data[0].astype(np.float64)
+        speeds = {}
+
+        for species in ["ions", "oxygen"]:
+            vdf.attrs["species"] = species
+            result = mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+            speeds[species] = result.vx.data[len(energy) :]
+
+        m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
+        for species, mass in [("ions", constants.proton_mass), ("oxygen", m_o)]:
+            np.testing.assert_allclose(
+                speeds[species],
+                np.sqrt(2 * constants.electron_volt * energy / mass) / 1e3,
+                rtol=1e-5,
+            )
+
+        vdf.attrs["delta_energy_minus"] = 0.1 * energy
+        vdf.attrs["delta_energy_plus"] = 0.1 * energy
+        result = mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+        np.testing.assert_allclose(result.vx.data[len(energy) :], speeds["oxygen"])
+        self.assertTrue(np.all(np.isfinite(result.data)))
+
     def test_reduce_input_handling(self):
         # lower_e_lim as an int (TypeError), base and dim in capitals (base
         # was compared case-sensitively), no progress bar with verbose=False

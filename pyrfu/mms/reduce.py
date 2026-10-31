@@ -8,9 +8,10 @@ import numbers
 import numpy as np
 import tqdm
 import xarray as xr
-from scipy.constants import electron_mass, electron_volt, proton_mass, speed_of_light
+from scipy.constants import electron_volt, speed_of_light
 
 # Local imports
+from pyrfu.mms._vdf_bins import _mass
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
 from pyrfu.pyrf.resample import resample
@@ -29,6 +30,19 @@ def _energy2speed(energy, mass):
     r"""Convert energy (eV) to speed (m/s), relativistically correct."""
     gamma = 1 + electron_volt * energy / (mass * speed_of_light**2)
     return speed_of_light * np.sqrt(1 - 1 / gamma**2)
+
+
+def _energy_widths(vdf, key):
+    r"""Energy widths of the channels (time, energy): the attribute `key`, the
+    same at all times if given per channel (e.g. the EIS skymaps), else 0."""
+    shape = (len(vdf.time.data), len(vdf.idx0.data))
+    widths = np.asarray(vdf.attrs.get(key, 0.0), dtype=np.float64)
+
+    return xr.DataArray(
+        np.broadcast_to(widths, shape).copy(),
+        coords=[vdf.time.data, vdf.idx0.data],
+        dims=["time", "idx0"],
+    )
 
 
 def _angle_widths(vdf, theta, tint):
@@ -67,7 +81,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     Parameters
     ----------
     vdf : xarray.Dataset
-        3D skymap velocity distribution function.
+        3D skymap velocity distribution function, with the ``species``
+        attribute (the speeds of the channels with its mass, e.g. "ions",
+        "oxygen", "helium++").
     xyz : xarray.DataArray or numpy.ndarray
         Transformation matrix from instrument frame to desired frame.
     dim : {"1d", "2d", "3d"}, Optional
@@ -133,20 +149,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     vdf_data = time_clip(vdf.data, tint).copy()
 
     # Lower energy bound of instrument bins. If not provided set to 0 eV.
-    if "delta_energy_minus" in vdf.attrs:
-        delta_energy_minu = xr.DataArray(
-            vdf.attrs["delta_energy_minus"],
-            coords=[vdf.time.data, vdf.idx0.data],
-            dims=["time", "idx0"],
-        )
-    else:
-        delta_energy_minu = xr.DataArray(
-            np.zeros((len(vdf.time.data), len(vdf.idx0.data))),
-            coords=[vdf.time.data, vdf.idx0.data],
-            dims=["time", "idx0"],
-        )
-
-    delta_energy_minu = time_clip(delta_energy_minu, tint)
+    delta_energy_minu = time_clip(_energy_widths(vdf, "delta_energy_minus"), tint)
 
     # Upper energy bound of instrument bins. The energy widths define the speed
     # bins used for the Monte-Carlo integration; if either is missing, the
@@ -156,12 +159,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     )
 
     if has_energy_widths:
-        delta_energy_plus = xr.DataArray(
-            vdf.attrs["delta_energy_plus"],
-            coords=[vdf.time.data, vdf.idx0.data],
-            dims=["time", "idx0"],
-        )
-        delta_energy_plus = time_clip(delta_energy_plus, tint)
+        delta_energy_plus = time_clip(_energy_widths(vdf, "delta_energy_plus"), tint)
 
     # Angular widths of the bins (degrees), e.g. the FEEPS skymaps. The
     # Monte-Carlo particles are drawn over the band between the edges of each
@@ -252,19 +250,16 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     else:
         raise TypeError("Invalid lower_e_lim!!")
 
-    # Set particle specie mass from VDF's attribute "species"
-    if vdf.species.lower() == "electrons":
-        m_p = electron_mass
-    elif vdf.species.lower() == "ions":
-        m_p = proton_mass
-    else:
-        raise ValueError("Invalid species!!")
+    # Mass of the species of the VDF (attribute "species"); it was the proton
+    # mass for all the ions (and other species than "ions" raised)
+    m_p = _mass(vdf)
 
     # Maximum speed of the instrument (relativistically correct): the upper
     # energy edge of the top channel, or without delta_energy_plus the upper
     # edge of the speed bins inferred in int_sph_dist
     if "delta_energy_plus" in vdf.attrs:
-        e_max = vdf_energy.data[0, -1] + vdf.attrs["delta_energy_plus"][0, -1]
+        e_max = vdf_energy.data[0, -1]
+        e_max += time_clip(_energy_widths(vdf, "delta_energy_plus"), tint).data[0, -1]
         v_max = _energy2speed(e_max, m_p)  # m/s
     else:
         energy = vdf_energy.data[0, :].astype(np.float64)
