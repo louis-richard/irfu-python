@@ -8792,6 +8792,35 @@ class VdfConvertTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.data.data, vdf.data.data)
         self.assertIsNot(result.data.data, vdf.data.data)
 
+    def test_vdf_convert_species_masses(self):
+        # The fluxes of the same phase-space density scale as 1 / m^2: oxygen
+        # (EIS) and the HPCA species (they raised ValueError), the 16O and 4He
+        # ions from their atomic masses
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+        flux_p = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+        m_e, u_m = constants.electron_mass, constants.atomic_mass
+        m_o, m_he = 15.99491461957 * u_m, 4.00260325413 * u_m
+        alpha = constants.physical_constants["alpha particle mass"][0]
+        masses = {
+            "hydrogen+": constants.proton_mass,
+            "oxygen": m_o - m_e,
+            "oxygen+": m_o - m_e,
+            "oxygen++": m_o - 2 * m_e,
+            "helium+": m_he - m_e,
+            "helium++": alpha,
+        }
+
+        for species, mass in masses.items():
+            vdf.attrs["species"] = species
+            flux = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+            np.testing.assert_allclose(
+                flux, flux_p * (constants.proton_mass / mass) ** 2, rtol=1e-12
+            )
+
+        # He2+ from the atomic mass, as the alpha particle mass
+        self.assertAlmostEqual((m_he - 2 * m_e) / alpha, 1.0, places=7)
+
     def test_vdf_convert_relativistic(self):
         # Electrons at 100 keV: the relativistic attribute is used by default
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "electrons")
