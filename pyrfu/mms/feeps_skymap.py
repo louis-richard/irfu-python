@@ -238,7 +238,8 @@ def feeps_skymap(
     ------
     ValueError
         If the integral channel of the eyes is not split, if `to_psd` is True
-        and the data are not intensities, or if `fill_empty` is invalid.
+        and the data are not intensities (or have no ``UNITS``), or if
+        `fill_empty` is invalid.
 
     See Also
     --------
@@ -301,9 +302,10 @@ def feeps_skymap(
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
     attrs = inp_dataset.attrs
     tmmode, d_type, mms_id = attrs["tmmode"], attrs["dtype"], attrs["mmsId"]
-    units = inp_dataset[eyes[0]].attrs.get("UNITS", "1/(cm^2 s sr keV)")
+    # Units of the eyes, none without (they were taken as intensities)
+    units = inp_dataset[eyes[0]].attrs.get("UNITS")
 
-    if to_psd and units.lower() != "1/(cm^2 s sr kev)":
+    if to_psd and str(units).lower() != "1/(cm^2 s sr kev)":
         raise ValueError(f"Phase-space density needs intensities, not {units}")
 
     if fill_empty not in [None, "ring", "omni"]:
@@ -377,7 +379,7 @@ def feeps_skymap(
         energy1=energy[0],
         esteptable=np.zeros(n_spins, dtype=np.uint8),
         attrs={
-            "UNITS": units,
+            **({} if units is None else {"UNITS": units}),
             "FIELDNAM": f"mms{mms_id:d}_feeps_{tmmode}_{d_type}_skymap",
         },
         glob_attrs=glob_attrs,

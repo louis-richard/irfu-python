@@ -5731,6 +5731,76 @@ def _feeps_skymap_case(data_rate, n_pts, value=2.0, mms_id=1):
     return feeps_alle
 
 
+class UnitsFeepsTestCase(unittest.TestCase):
+    # UNITS of the FEEPS products: those of the eyes (none without them, an
+    # intensity was invented), pitch angles in deg, energies in keV
+    def test_units_feeps(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        b_bcs = generate_ts(64.0, 100, tensor_order=1)
+        units = feeps_alle["top-1"].attrs["UNITS"]
+
+        with warnings.catch_warnings():
+            # Synthetic energies outside the default range: NaN PADs
+            warnings.simplefilter("ignore", UserWarning)
+            pad = mms.feeps_pad(feeps_alle, b_bcs)
+            omni = mms.feeps_omni(feeps_alle)
+
+        self.assertEqual(pad.attrs["UNITS"], units)
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+        self.assertEqual(omni.attrs["UNITS"], units)
+        self.assertEqual(omni.energy.attrs["UNITS"], "keV")
+        self.assertEqual(
+            mms.feeps_pitch_angles(feeps_alle, b_bcs)[0].attrs["UNITS"], "deg"
+        )
+
+        for eye in [k for k in feeps_alle if k[:3] in ["top", "bot"]]:
+            feeps_alle[eye].attrs.pop("UNITS")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            self.assertNotIn("UNITS", mms.feeps_pad(feeps_alle, b_bcs).attrs)
+
+        self.assertNotIn("UNITS", mms.feeps_omni(feeps_alle).attrs)
+
+    def test_units_feeps_energies_sectors(self):
+        # Energies keep their attributes (keV), sector spectrograms the units
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 2)
+        eye = "top-1"
+        dim = feeps_alle[eye].dims[1]
+        feeps_alle[eye][dim].attrs["UNITS"] = "keV"
+        result = mms.feeps_correct_energies(feeps_alle)
+        self.assertEqual(result[eye][f"energy_{eye}"].attrs["UNITS"], "keV")
+
+        spec = mms.feeps_sector_spec(_feeps_skymap_case("srvy", 24))
+        name = list(spec.data_vars)[0]
+        self.assertIn("UNITS", spec[name].attrs)
+
+    def test_units_feeps_skymap_avg_4sc(self):
+        # No UNITS without input UNITS (taken as an intensity), and no PSD;
+        # spacecraft in different units can't be averaged
+        feeps_alle = _feeps_skymap_case("srvy", 16)
+        for eye in [k for k in feeps_alle if k[:3] in ["top", "bot"]]:
+            feeps_alle[eye].attrs.pop("UNITS", None)
+
+        self.assertNotIn("UNITS", mms.feeps_skymap(feeps_alle, to_psd=False).data.attrs)
+        with self.assertRaisesRegex(ValueError, "intensities"):
+            mms.feeps_skymap(feeps_alle)
+
+        time = generate_timeline(1.0, 4)
+        pads = [
+            xr.DataArray(
+                np.ones((4, 3)),
+                coords=[time, [10.0, 90.0, 170.0]],
+                dims=["time", "theta"],
+                attrs={"UNITS": units},
+            )
+            for units in ["1/(cm^2 s sr keV)", "1/s", "1/s", "1/s"]
+        ]
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            mms.feeps_avg_4sc(pads, flag="pad")
+
+
 @ddt
 class FeepsSkymapTestCase(unittest.TestCase):
     @data(("brst", 128, 32), ("srvy", 16, 8))

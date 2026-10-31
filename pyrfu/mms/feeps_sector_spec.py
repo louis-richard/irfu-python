@@ -88,6 +88,7 @@ def feeps_sector_spec(inp_alle):
             sector_spec,
             coords=[sector_time[spin_starts], np.arange(64)],
             dims=["time", "sectornum"],
+            attrs=dict(inp_alle[sensors_eye].attrs),  # the units (lost)
         )
 
     out = xr.Dataset(out_dict, attrs={**inp_alle.attrs})

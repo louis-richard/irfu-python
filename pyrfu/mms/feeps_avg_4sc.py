@@ -12,6 +12,7 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from ..pyrf.calc_fs import calc_fs
 from ..pyrf.resample import resample
+from ._eis_units import _check_same_units
 
 __author__ = "Apostolos Kolokotronis"
 __email__ = "apostolos.kolokotronis@irf.se"
@@ -80,7 +81,8 @@ def feeps_avg_4sc(
         If b_list is not a list (or tuple) of DataArray, or combined_energies
         is not a dict.
     ValueError
-        If flag is not "omni" or "pad".
+        If flag is not "omni" or "pad", or if the spacecraft have different
+        ``UNITS``.
 
     Notes
     -----
@@ -101,6 +103,9 @@ def feeps_avg_4sc(
             b_list_r.append(resample(b, b_list[0], f_s=calc_fs(b_list[0])))
         else:
             raise TypeError("elements of b_list must be DataArray")
+
+    # The units of the first spacecraft were taken
+    _check_same_units(b_list, "spacecraft")
 
     b_list_count_nans = deepcopy(b_list_r)
     b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
