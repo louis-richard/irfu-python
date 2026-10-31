@@ -10963,6 +10963,33 @@ class VdfProjectionTestCase(unittest.TestCase):
         self.assertAlmostEqual(peak_angle, 5.625, delta=0.1)
         self.assertAlmostEqual(speed, 400.0, delta=30.0)
 
+    def test_vdf_projection_species(self):
+        # O+ Maxwellian with the speeds of the proton one: the same peak
+        # speed (the mass was the proton mass for all the ions, 4 times
+        # larger speeds). He++ (charge 2) at V is He at 2 V.
+        vdf = self._maxwellian([400.0, 0.0, 0.0])
+        m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
+        ratio = m_o / constants.proton_mass
+        vdf = vdf.assign(energy=vdf.energy * ratio)
+        for key in ["energy0", "energy1"]:
+            vdf.attrs[key] = vdf.attrs[key] * ratio
+        vdf.attrs["species"] = "oxygen+"
+        tint = [pyrf.datetime642iso8601(vdf.time.data[0])]
+        speed, _ = self._peak(*mms.vdf_projection(vdf, tint))
+        self.assertAlmostEqual(speed, 400.0, delta=30.0)
+
+        vdf.attrs["species"] = "helium++"
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(2, 20.0))
+        v_1 = mms.vdf_projection(vdf, tint, sc_pot=2.0 * sc_pot)[0]
+        vdf.attrs["charge"] = 2
+        np.testing.assert_allclose(
+            mms.vdf_projection(vdf, tint, sc_pot=sc_pot)[0], v_1, rtol=1e-12
+        )
+
+        vdf.attrs["species"] = "bazinga"
+        with self.assertRaisesRegex(ValueError, "Invalid species"):
+            mms.vdf_projection(vdf, tint)
+
     def test_vdf_projection_sc_pot(self):
         # Energy edges below the spacecraft potential gave NaN speeds
         vdf = self._maxwellian([400.0, 0.0, 0.0])

@@ -12,6 +12,7 @@ from scipy import constants
 from xarray.core.dataset import Dataset
 
 # Local imports
+from pyrfu.mms._vdf_bins import _charge_sign, _mass
 from pyrfu.mms.psd_rebin import psd_rebin
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 from pyrfu.pyrf.time_clip import time_clip
@@ -273,7 +274,10 @@ def vdf_projection(
     Parameters
     ----------
     vdf : xarray.Dataset
-        Electron or ion 3D skymap velocity distribution function.
+        Electron or ion 3D skymap velocity distribution function. The
+        ``species`` attribute gives the mass (e.g. "ions", "electrons",
+        "oxygen+", "helium++"; electrons without it) and the optional
+        ``charge`` attribute the charge of the ions (1 by default).
     tint : list of str
         Computes data for time interval if len(tint) = 2 or closest time if
         len(tint) = 1. For tint includes two or more distributions the
@@ -284,10 +288,10 @@ def vdf_projection(
         z and each other if they are not already. Default is np.eye(3)
         (project onto spacecraft spin plane).
     sc_pot : xarray.DataArray, Optional
-        Spacecraft potential to correct velocities. For a single value of tint
-        the closest potential is used. For an interval the spacecraft
-        potential is average over that interval. Default is None (no
-        correction).
+        Spacecraft potential to correct velocities (the ions gain q V and the
+        electrons lose e V). For a single value of tint the closest potential
+        is used. For an interval the spacecraft potential is average over
+        that interval. Default is None (no correction).
     e_lim : float, Optional
         Elevation angle limit in degrees above/below projection plane to
         include in projection. Default is e_lim = 20.
@@ -304,8 +308,13 @@ def vdf_projection(
         2D projection of the velocity distribution onto the specified plane
 
     """
-    specie = vdf.attrs.get("species", "electrons")
-    is_des = specie.lower().startswith("e")
+    # Mass and charge of the species (electrons without species attribute).
+    # All the species not starting with "e" were protons.
+    if "species" not in vdf.attrs:
+        vdf = vdf.assign_attrs(species="electrons")
+
+    mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
+    charge = 1.0 if is_des else float(vdf.attrs.get("charge", 1))
 
     dist, polar, azimuthal, energy_edges, _ = _init(vdf, tint)
     x_vec, y_vec, z_vec, _ = _coord_sys(coord_sys)
@@ -339,11 +348,9 @@ def vdf_projection(
     else:
         sc_pot = 0.0
 
-    if is_des:
-        mass = constants.electron_mass
-    else:
-        mass = constants.proton_mass
-        sc_pot *= -1
+    if not is_des:
+        # Ions of charge q gain q V (eV)
+        sc_pot *= -charge
 
     q_e = constants.elementary_charge
 
