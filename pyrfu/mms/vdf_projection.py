@@ -12,7 +12,7 @@ from scipy import constants
 from xarray.core.dataset import Dataset
 
 # Local imports
-from pyrfu.mms._vdf_bins import _charge_sign, _mass
+from pyrfu.mms._vdf_bins import _charge_sign, _energy_edges, _mass
 from pyrfu.mms.psd_rebin import psd_rebin
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 from pyrfu.pyrf.time_clip import time_clip
@@ -59,12 +59,57 @@ def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, li
     return x_vec, y_vec, z_vec, changed_xyz
 
 
+def _width_edges(vdf: Dataset, i_t: int):
+    r"""Energy edges (eV) from the channel widths (delta_energy_minus/plus) at
+    the time index i_t: the lower edge of the first channel, the geometric
+    means of the upper edges and the lower edges of the next channels, and
+    the upper edge of the last channel. None without the widths."""
+    if not {"delta_energy_minus", "delta_energy_plus"} <= set(vdf.attrs):
+        return None
+
+    lower, upper = (edges[i_t] for edges in _energy_edges(vdf))
+
+    return np.hstack([lower[0], np.sqrt(upper[:-1] * lower[1:]), upper[-1]])
+
+
+def _angle_widths(vdf: Dataset, i_times: np.ndarray, n_t: int):
+    r"""Angular widths (radians) of the bins from the delta_phi_* (time, phi)
+    and delta_theta_* (theta) attributes at the times i_times (those of the
+    first one if the distribution was rebinned to n_t other times), or None
+    without them."""
+    keys = ["delta_phi_minus", "delta_phi_plus"]
+    keys += ["delta_theta_minus", "delta_theta_plus"]
+
+    if not all(k in vdf.attrs for k in keys):
+        return None
+
+    n_phi = vdf.phi.shape[-1]
+    phi_widths = []
+
+    for key in keys[:2]:
+        width = np.broadcast_to(vdf.attrs[key], (len(vdf.time), n_phi))[i_times]
+        width = width if len(width) == n_t else np.tile(width[:1], (n_t, 1))
+        phi_widths.append(np.deg2rad(width))
+
+    theta_widths = [np.deg2rad(np.asarray(vdf.attrs[k], float)) for k in keys[2:]]
+
+    return (*phi_widths, *theta_widths)
+
+
+def _sub_angles(centres, minus, plus, n_sub):
+    r"""n_sub angles evenly spaced across each bin [centre - minus, centre +
+    plus], bin after bin."""
+    frac = (np.arange(n_sub) + 0.5) / n_sub
+    sub = (centres - minus)[:, None] + (minus + plus)[:, None] * frac[None, :]
+    return sub.ravel()
+
+
 def _init(vdf: Dataset, tint: list):
 
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
 
-    len_e = 32
+    len_e, rebinned = 32, False
 
     if vdf.phi.data.ndim == 1:
         phi = xr.DataArray(
@@ -113,8 +158,11 @@ def _init(vdf: Dataset, tint: list):
         else:
             energy_edges = energy0_edges
 
+        i_times = np.array([t_id])
+
     elif tint is not None and len(tint) == 2:
         dist = time_clip(vdf.data, tint)
+        i_times = np.flatnonzero(np.isin(vdf.time.data, dist.time.data))
         step_table = time_clip(ts_scalar(vdf.time.data, step_table), tint)
         step_table = step_table.data
         azimuthal = time_clip(azimuthal, tint)
@@ -152,7 +200,7 @@ def _init(vdf: Dataset, tint: list):
                 dims=["time", "idx"],
             )
             azimuthal = time_clip(azimuthal, tint).data
-            len_e = dist.shape[1]
+            len_e, rebinned = dist.shape[1], True
             energy_edges = np.hstack(
                 [
                     10 ** (np.log10(energy) - diff_energ / 2),
@@ -169,10 +217,17 @@ def _init(vdf: Dataset, tint: list):
     else:
         raise ValueError("Invalid time interval")
 
-    return dist, polar, azimuthal, energy_edges, len_e
+    # Edges from the channel widths if any (e.g. EIS, FEEPS); not for the
+    # rebinned alternating tables
+    if not rebinned:
+        width_edges = _width_edges(vdf, i_times[0])
+        if width_edges is not None and len(width_edges) == len(energy_edges):
+            energy_edges = width_edges
+
+    return dist, polar, azimuthal, energy_edges, len_e, i_times
 
 
-def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
+def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr, widths=None):
     # Construct polar and azimuthal angle matrices
     polar = np.ones((len(dist), 1)) * polar
 
@@ -180,8 +235,21 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
     # azimuthal, energy
     edges_az = np.linspace(0, 2 * np.pi, azimuthal.shape[1] + 1)
 
+    # With angular widths, each bin is sampled at n_sub x n_sub directions
+    # across its extent, so that a bin crossing the elevation limit or two
+    # azimuthal sectors counts in proportion (its centre only without)
+    n_sub = 5
+
     for i in range(len(dist)):
-        pol_mat, azm_mat = np.meshgrid(polar[i, :], azimuthal[i, :])
+        pol_i, azm_i, dist_i = polar[i, :], azimuthal[i, :], dist[i, ...]
+
+        if widths is not None:
+            phi_m, phi_p, theta_m, theta_p = widths
+            pol_i = _sub_angles(pol_i, theta_m, theta_p, n_sub)
+            azm_i = _sub_angles(azm_i, phi_m[i], phi_p[i], n_sub)
+            dist_i = np.repeat(np.repeat(dist_i, n_sub, axis=1), n_sub, axis=2)
+
+        pol_mat, azm_mat = np.meshgrid(pol_i, azm_i)
 
         # '-' because the data shows which direction the particles were
         # coming from
@@ -219,7 +287,7 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr):
             geo_factor_bin_size = np.ones(pol_mat.shape)
 
         f_mat[i, ...] = _cotrans_jit(
-            dist[i, ...],
+            dist_i,
             elevation_angle,
             e_lim,
             plane_az,
@@ -307,6 +375,21 @@ def vdf_projection(
     f_mat : numpy.ndarray
         2D projection of the velocity distribution onto the specified plane
 
+    Notes
+    -----
+    As irfu-matlab mms.plot_projection, each in-plane azimuthal sector and
+    energy is the mean of f cos(elevation) over the bins within `e_lim` of
+    the plane. The energy edges are those of the channel widths
+    (``delta_energy_minus`` and ``delta_energy_plus``) when `vdf` has them
+    (e.g. EIS, FEEPS, FPI burst), else halfway between the channels in
+    log(E), as irfu-matlab (which uses them for all the instruments; within
+    1 % of the FPI burst widths, apart from the first ion channel). With the
+    angular widths of the bins (``delta_phi_*`` and ``delta_theta_*``, e.g.
+    FEEPS, HPCA), each bin is sampled at 5 x 5 directions across its extent,
+    so that a bin crossing the elevation limit or two sectors counts in
+    proportion; without them (e.g. FPI), the bins are placed by their
+    centres.
+
     """
     # Mass and charge of the species (electrons without species attribute).
     # All the species not starting with "e" were protons.
@@ -316,11 +399,13 @@ def vdf_projection(
     mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
     charge = 1.0 if is_des else float(vdf.attrs.get("charge", 1))
 
-    dist, polar, azimuthal, energy_edges, _ = _init(vdf, tint)
+    dist, polar, azimuthal, energy_edges, _, i_times = _init(vdf, tint)
     x_vec, y_vec, z_vec, _ = _coord_sys(coord_sys)
 
     if azimuthal.ndim == 1:
         azimuthal = np.ones((len(dist), 1)) * azimuthal
+
+    widths = _angle_widths(vdf, i_times, len(dist))
 
     f_mat = _cotrans(
         dist,
@@ -331,6 +416,7 @@ def vdf_projection(
         z_vec,
         e_lim,
         bins_correction,
+        widths,
     )
     if len(dist) == 1:
         f_mat = np.squeeze(f_mat)

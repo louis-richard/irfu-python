@@ -10868,6 +10868,10 @@ class VdfProjectionTestCase(unittest.TestCase):
             ("time", "idx1"),
             (np.arange(32) * 11.25)[None, :] + 0.1 * np.arange(42)[:, None],
         )
+        # Without channel widths: edges halfway between the channels in log(E)
+        for key in ["delta_energy_minus", "delta_energy_plus"]:
+            del vdf.attrs[key]
+
         return vdf
 
     def test_vdf_projection_phi_clipped(self):
@@ -10899,6 +10903,48 @@ class VdfProjectionTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             np.sqrt(energy_edges[:-1] * energy_edges[1:]), energy, rtol=1e-6
         )
+
+    @data(0, 1)
+    def test_vdf_projection_energy_widths(self, step):
+        # Edges from the channel widths of the time (they were halfway between
+        # the channels in log(E), wrong for EIS and FEEPS), and the speeds of
+        # the grid from them
+        vdf = self._vdf()
+        vdf.attrs["delta_energy_minus"] = 0.1 * vdf.energy.data
+        vdf.attrs["delta_energy_plus"] = 0.2 * vdf.energy.data
+        t_id = int(np.flatnonzero(vdf.attrs["esteptable"] == step)[0])
+        tint = [pyrf.datetime642iso8601(vdf.time.data[t_id])]
+
+        energy = vdf.attrs[f"energy{step}"]
+        lower, upper = 0.9 * energy, 1.2 * energy
+        expected = np.hstack([lower[0], np.sqrt(upper[:-1] * lower[1:]), upper[-1]])
+        module = importlib.import_module("pyrfu.mms.vdf_projection")
+        np.testing.assert_allclose(module._init(vdf, tint)[3], expected, rtol=1e-6)
+
+        v_x, v_y, _ = mms.vdf_projection(vdf, tint)
+        speed = np.sqrt(2 * constants.e * expected / constants.proton_mass) / 1e3
+        np.testing.assert_allclose(np.hypot(v_x, v_y)[:, 0], speed, rtol=1e-6)
+
+    def test_vdf_projection_angle_widths(self):
+        # A polar band centred 28.1 degrees from the plane, 22.5 degrees wide:
+        # outside e_lim = 20 by its centre (all NaN, the widths were ignored),
+        # inside by its lower part
+        vdf = self._maxwellian([0.0, 0.0, 0.0])
+        vdf.data.data[:] = 0.0
+        vdf.data.data[:, :, :, 5] = 1.0  # theta 61.875
+        tint = [pyrf.datetime642iso8601(vdf.time.data[0])]
+        self.assertTrue(np.all(np.isnan(mms.vdf_projection(vdf, tint)[2])))
+
+        vdf.attrs["delta_theta_minus"] = np.full(16, 11.25)
+        vdf.attrs["delta_theta_plus"] = np.full(16, 11.25)
+        vdf.attrs["delta_phi_minus"] = np.full((2, 32), 5.625)
+        vdf.attrs["delta_phi_plus"] = np.full((2, 32), 5.625)
+        f_mat = mms.vdf_projection(vdf, tint)[2]
+
+        # one of the 5 polar samples (19.1 degrees) is within e_lim, in every
+        # sector, averaged with the zeros of the other bands within e_lim
+        self.assertTrue(np.all(np.isfinite(f_mat)))
+        self.assertTrue(np.all(f_mat > 0.0))
 
     @staticmethod
     def _maxwellian(v_kms, n_t=2, alternating=False):
