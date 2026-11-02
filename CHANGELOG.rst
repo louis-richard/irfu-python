@@ -1,6 +1,200 @@
 Changelog
 =========
 
+2.5.9 (2026-11-02)
+------------------
+
+This release gives units to the outputs of the ``pyrf`` and ``mms``
+routines, in the notation of the MMS files: ``UNITS`` is kept, converted or
+composed from the units of the inputs (products, ratios and powers, not
+simplified), outputs of inputs without ``UNITS`` have none, and a warning
+is raised when an input is not in the units a routine assumes. It adds
+``mms.hpca_skymap``, the HPCA ion distributions as skymaps for
+``mms.reduce``, ``mms.psd_moments`` and the ``vdf_*`` routines, which take
+the mass of each species (O+, He++, ...). ``mms.vdf_projection`` takes the
+energy edges of the channels from their widths. On the FPI distributions,
+checked against 2.5.8 on burst and fast survey ions and electrons, the
+values of the distribution routines are unchanged except for these energy
+edges and the default Cartesian grid of ``mms.reduce`` (see below).
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- Units are no longer set for inputs without units: ``mms.eis_pad``,
+  ``mms.feeps_pad``, ``mms.feeps_skymap`` and ``mms.get_gyrophase_dist``
+  give no ``UNITS`` without input ``UNITS`` (they set "" or an intensity).
+  ``mms.feeps_skymap(to_psd=True)`` raises ``ValueError`` for eyes without
+  ``UNITS`` (they were taken as intensities).
+- ``mms.eis_skymap`` gives phase-space densities in s^3/cm^6, as the FPI
+  distributions and ``mms.feeps_skymap``; they were in s^3/m^6 (the values
+  are 1e-12 times the previous ones).
+- ``ValueError`` for spacecraft in different ``UNITS``:
+  ``mms.eis_spec_combine_sc``, ``mms.eis_pad_combine_sc`` and
+  ``mms.feeps_avg_4sc`` (the units of the reference spacecraft were taken).
+- ``UserWarning`` when an input carries ``UNITS`` other than those the
+  factors of a routine assume (the values are unchanged): ``pyrf.c_4_j``
+  (positions in km, fields in nT), ``pyrf.plasma_calc``,
+  ``pyrf.plasma_beta``, ``pyrf.pres_anis``, ``pyrf.e_vxb``,
+  ``pyrf.dynamic_press``, ``pyrf.poynting_flux``, ``pyrf.vht``,
+  ``pyrf.ebsp`` (E in mV/m, B in nT), ``mms.fk_power_spectrum``,
+  ``mms.fk_power_spectrum_4sc``, ``mms.lh_wave_analysis`` and
+  ``mms.whistler_b2e``.
+- The units are written as in the MMS files: ``pyrf.integrate`` "(mV/m) s"
+  (was "(mV/m)*s"), ``pyrf.gradient`` "(mV/m)/s" and "1/s" for
+  dimensionless inputs (were "mV/m/s" and "/s"), ``pyrf.edb`` "deg" (was
+  "degrees"), ``pyrf.pvi`` ``UNITS`` "" (it set a lowercase ``units``,
+  "dimensionless"), ``mms.whistler_b2e`` "(mV/m)^2/Hz" (was "(mV/m)^2
+  Hz^-1") and ``mms.pad_diffusion`` "(s^3/cm^6)/s" (was "s^3/cm^6/s", and
+  "1/s" for inputs without units).
+- ``mms.fk_power_spectrum`` labels the wave numbers (2 pi / lambda, as
+  irfu-matlab) in 1/m; they were labelled rad/m (the values are unchanged).
+- ``mms.psd_moments`` raises ``ValueError`` for an unknown species
+  (``AssertionError`` for species not starting with "e" or "i"); so do
+  ``mms.reduce`` and ``mms.vdf_projection``.
+- ``mms.get_eis_allt`` raises ``ValueError`` for a species without energy
+  table, the PHxTOF oxygen (a single channel, not loaded by IDL SPEDAS); it
+  raised ``KeyError``.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.hpca_skymap``: the HPCA ion distributions as skymaps, one per
+  half-spin, for ``mms.reduce``, ``mms.psd_moments``, ``mms.vdf_omni``,
+  ``mms.vdf_shift`` and the other skymap routines. The look directions are
+  in DBCS, as FPI (the angles of the files are the particle directions),
+  with the two anode fans 180 deg apart as 32 azimuths and 8 polar angles,
+  and the kinetic energies and fluxes per unit kinetic energy (the files are
+  per charge), with the species and charge. Phase-space densities are in
+  s^3/cm^6 by default.
+- Species: ``mms.reduce``, ``mms.psd_moments``, ``mms.vdf_projection`` and
+  the conversions between phase-space density and fluxes take the mass of
+  the species of the distribution: oxygen (EIS), O+ and O++ (from the 16O
+  atomic mass, 15.879 proton masses), He+ (4He), He++ and the HPCA names
+  (``"hydrogen+"``, ``"helium++"``). They used the proton mass for all the
+  ions (``mms.reduce`` and ``mms.psd_moments`` raised for other species
+  than ions and electrons, and the conversions for these). In
+  ``mms.psd_moments`` and ``mms.vdf_projection``, ions of charge q
+  (``charge`` attribute, 1 by default) gain q V from the spacecraft
+  potential. ``mms.psd_moments`` accepts the electrons in any case.
+- ``mms.reduce`` accepts energy widths per channel, as those of the EIS
+  skymaps (``ValueError``).
+- ``pyrf.c_4_grad``: the divergence of a tensor field (time, 3, 3),
+  d T_ij / d x_i (e.g. of a pressure tensor); ``ValueError`` for a tensor
+  with the other methods (they raised a broadcasting ``ValueError``).
+- ``UNITS`` for outputs that had none:
+
+  - Vector algebra: ``pyrf.dot`` and ``pyrf.cross`` (the product of the
+    units), ``pyrf.dec_par_perp`` (the input units, alpha in rad),
+    ``pyrf.convert_fac`` of a scalar (its units), the ``pyrf.cotrans``
+    matrices and dipole direction ("").
+  - Derivatives and spectra: ``pyrf.sliding_derivative`` (units/s),
+    ``pyrf.psd`` (units^2/Hz, or units^2), ``pyrf.wavelet`` (units^2/Hz,
+    units/Hz^0.5 for the complex coefficients, frequencies in Hz),
+    ``pyrf.autocorr`` ("" or units^2), ``pyrf.struct_func`` (units^order),
+    ``pyrf.histogram`` and ``pyrf.histogram2d`` ("" for counts, 1/units for
+    densities), ``pyrf.wavepolarize_means``, the ``pyrf.ebsp`` spectra and
+    Poynting flux (uW/(m^2 Hz)).
+  - Four spacecraft: ``pyrf.c_4_grad`` (units of the field per unit of the
+    positions: nT/km, nT^2/km for ``bdivb``, 1/km for ``curv``, nPa/km for a
+    tensor), ``pyrf.c_4_k`` (1/km), ``pyrf.c_4_j`` (A/m^2, N/m^3),
+    ``pyrf.pid_4sc`` and its error ((km/s)/km, nPa ((km/s)/km)),
+    ``pyrf.st_diff`` (km/s).
+  - Statistics: ``pyrf.mean_bins`` and ``pyrf.median_bins`` (the units of
+    ``inp1`` for the statistics and of ``inp0`` for the bins).
+  - Plasma parameters: ``pyrf.plasma_calc`` (SI: rad/s, Hz, m/s, m, ""),
+    ``pyrf.plasma_beta``, ``pyrf.pres_anis``, ``pyrf.calc_ag``,
+    ``pyrf.calc_agyro``, ``pyrf.calc_dng``, ``pyrf.calc_sqrtq``,
+    ``pyrf.anisotropy_thresholds`` and ``pyrf.brazil`` (""), ``pyrf.vht``
+    (E_HT in mV/m).
+  - ``pyrf.get_omni_data``: the units of each variable, as OMNIWeb (nT,
+    km/s, cm^-3, K, nPa, mV/m, deg, R_E, s, sfu, "" for the indices and
+    ratios). ``pyrf.read_cdf`` reads the attributes of the CDF variables.
+  - MMS moments and reductions: ``mms.psd_moments`` (cm^-3, km/s, nPa, eV,
+    mW/m^2), ``mms.reduce`` (SI, s/m^4 in 1D and s^2/m^5 in 2D, on velocities
+    in km/s), ``mms.calculate_epsilon`` and the ``mms.vdf_find_low_counts``
+    mask (""), ``mms.scpot2ne`` (cm^-3).
+  - MMS waves: ``mms.fk_power_spectrum_4sc`` (normalised powers "", wave
+    numbers in 1/m, frequencies in Hz), ``mms.lh_wave_analysis`` (phi_eb in
+    V).
+  - Angles in deg: the pitch angles and gyrophases of
+    ``mms.get_pitch_angle_dist``, ``mms.get_gyrophase_dist``,
+    ``mms.feeps_pitch_angles``, ``mms.feeps_pad``, ``mms.eis_pad`` and
+    ``mms.hpca_pad``; the ``mms.feeps_omni`` energies are in keV.
+  - ``mms.load_ancillary``: the DEFEPH, DEFATT and DEFQ columns (positions
+    in km and velocities in km/s, as the file headers and IDL SPEDAS;
+    angular velocities in deg/s, angles in deg, quaternions "",
+    ``elapsed_sec`` in s, ``epoch_mms_tai`` in d; DEFQ ``q`` "" and
+    ``scale`` in km).
+
+- Attributes kept (they were lost): ``pyrf.mean_field``, ``pyrf.t_eval``,
+  ``pyrf.avg_4sc`` of distributions (data and coordinates),
+  ``mms.get_pitch_angle_dist`` and ``mms.get_gyrophase_dist`` (the
+  attributes of the data; only ``UNITS`` was kept), ``mms.vdf_shift`` and
+  ``mms.vdf_rebin`` (``LABLAXIS`` and the coordinate attributes; the other
+  data attributes for ``base="cart"``), ``mms.hpca_calc_anodes`` (the
+  attributes and energies of the input), ``mms.hpca_pad`` (the units of
+  ``vdf``), ``mms.feeps_sector_spec`` (the attributes of the eyes),
+  ``mms.feeps_correct_energies`` (the energy attributes),
+  ``mms.eis_proton_correction`` (the attributes of a Dataset: energy widths
+  and species). ``mms.spectr_to_dataset`` copies the attributes (they were
+  shared with the spectrum).
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``mms.vdf_projection`` takes the energy edges of the channels from their
+  widths (``delta_energy_minus`` and ``delta_energy_plus``) when the skymap
+  has them: FPI (fast survey, and burst with a single energy table), EIS
+  and FEEPS. They were halfway between the channels in log(E), as
+  irfu-matlab, which is wrong for EIS and FEEPS. The distribution values are
+  unchanged; on FPI, the grid edges move by up to 3.5 % (burst) and 6 %
+  (fast) in the lowest channels and by 1 % at the top. Two or more burst
+  distributions with alternating energy tables are rebinned to 64 channels
+  and keep the log(E) edges. With angular widths (``delta_phi_*``,
+  ``delta_theta_*``: FEEPS, HPCA), each bin is sampled at 5 x 5 directions,
+  so that a bin crossing the elevation limit or two sectors counts in
+  proportion (its centre only was used).
+- ``mms.vdf_projection`` uses the mass of the species: the electron mass
+  for species starting with "e" and the proton mass for all the others,
+  so the speeds of O+ were 4 times too large.
+- ``mms.reduce``: the default Cartesian grid (``base="cart"``) spans the
+  upper energy edge of the top channel in double precision. The float32
+  energies of the files made the relativistic speed of the ions 0.05 % too
+  small (2484.20 km/s for 2485.49 km/s at 32 keV), and the grid as much too
+  narrow. The upper edge is taken at the start of ``tint`` (it was the
+  first time of the distribution).
+- ``mms.eis_moments`` uses the masses of He2+ (3.9726 proton masses) and O+
+  (15.879) in the conversions between phase-space density and fluxes; they
+  were 4 and 16, so the densities and pressures were 0.34 % and 0.38 % too
+  large and the mean speeds as much too small.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.eis_proton_correction`` keeps the attributes of a Dataset: without
+  the energy widths, ``mms.eis_moments`` raised on ``mms.eis_omni`` of its
+  output.
+- ``mms.feeps_omni`` works on eyes without ``UNITS``, and
+  ``mms.get_pitch_angle_dist`` on distributions without ``UNITS``
+  (``KeyError``).
+- ``mms.spectr_to_dataset`` sets ``UNITS`` on the data variable (only on the
+  Dataset: the unit conversions raised ``KeyError``).
+- ``mms.get_hpca_dist`` gives ``units_name`` "flux" for fluxes and "df_cm"
+  for phase-space densities, from the ``UNITS`` (IDL SPEDAS takes it from
+  the variable name; it was always "df_cm").
+- Wrong units: ``pyrf.normalize`` gives "" (it kept the input units),
+  ``pyrf.cart2sph_ts`` gives no ``UNITS`` (the input units were copied onto
+  the angles), and ``pyrf.pvi_4sc`` gives "" and rad (it kept nT).
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.reduce``: as irfu-matlab, where the correction is for the electrons
+  only, ``sc_pot`` corrects the energies as those of electrons, E - e V, for
+  all the species (the ions gain q V in ``mms.psd_moments`` and
+  ``mms.vdf_velocity``). The ``species`` attribute gives the mass.
+- ``pyrf.get_omni_data``: Kp is times 10, as OMNIWeb.
+
 2.5.8 (2026-10-30)
 ------------------
 
