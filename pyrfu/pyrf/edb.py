@@ -134,7 +134,7 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
             e_data[ind, 2] *= b_data[ind, 2]
             e_data[ind, 2] /= np.linalg.norm(b_data[ind, :2], axis=1) ** 2
 
-    b_angle = ts_scalar(e_xyz.time.data, b_angle, {"UNITS": "degrees"})
+    b_angle = ts_scalar(e_xyz.time.data, b_angle, {"UNITS": "deg"})
     e_data = ts_vec_xyz(
         e_xyz.time.data,
         e_data,

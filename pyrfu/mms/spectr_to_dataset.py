@@ -43,6 +43,11 @@ def spectr_to_dataset(spectr):
 
     out = xr.Dataset(out_dict)
 
-    out.attrs = spectr.attrs
+    # The attributes of the spectrum on the data (UNITS for the conversions) and
+    # on the Dataset, the energy ones on the energy (only on the Dataset, shared
+    # with the spectrum)
+    out.attrs = dict(spectr.attrs)
+    out.data.attrs = dict(spectr.attrs)
+    out.energy.attrs = dict(spectr.energy.attrs)
 
     return out

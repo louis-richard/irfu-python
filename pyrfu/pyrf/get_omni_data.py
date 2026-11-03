@@ -202,6 +202,25 @@ def _parse_omni(text, n_codes):
     return times, rows[:, n_time:]
 
 
+# Units of the variables, as OMNIWeb (Kp is stored times 10, as in OMNI2)
+_UNITS = {
+    **dict.fromkeys(
+        "b avgb bx bxgse bxgsm by bygse bz bzgse bygsm bzgsm dst ae al au".split(),
+        "nT",
+    ),
+    **dict.fromkeys(["blat", "blong", "vlon", "vlat"], "deg"),
+    **dict.fromkeys(["v", "vx", "vy", "vz"], "km/s"),
+    **dict.fromkeys(["bsnx", "bsny", "bsnz"], "R_E"),
+    **dict.fromkeys(["ts", "rmsts"], "s"),
+    **dict.fromkeys("nanp beta ma ms ssn kp pc imfid swid".split(), ""),
+    "t": "K",
+    "n": "cm^-3",
+    "p": "nPa",
+    "e": "mV/m",
+    "f10.7": "sfu",
+}
+
+
 def get_omni_data(variables, tint, database: str = "omni_hour"):
     r"""Downloads OMNI data.
 
@@ -219,6 +238,9 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     data : xarray.Dataset
         OMNI data, at the times whose averaging interval (hour or minute,
         starting at the time) overlaps `tint`. Fill values are replaced by NaN.
+        Each variable has its ``UNITS`` (as OMNIWeb: nT, km/s, cm^-3, K, nPa,
+        mV/m, deg, R_E, s, sfu, "" for the indices and ratios; Kp is Kp times
+        10, as in OMNI2).
 
     Raises
     ------
@@ -269,5 +291,9 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     t_start, t_end = [pd.Timestamp(t_) for t_ in tint]
     in_tint = (data.index > t_start - resolution) & (data.index <= t_end)
     data = data.loc[in_tint].to_xarray()
+
+    # Units of each variable (none)
+    for var in data.data_vars:
+        data[var].attrs["UNITS"] = _UNITS[var]
 
     return data

@@ -4,9 +4,9 @@
 # 3rd party imports
 import numpy as np
 
-from .avg_4sc import avg_4sc
-
 # Local imports
+from ._units import _ratio, _units
+from .avg_4sc import avg_4sc
 from .c_4_grad import c_4_grad
 from .gradient import gradient
 from .ts_vec_xyz import ts_vec_xyz
@@ -99,5 +99,9 @@ def st_diff(r_mms, b_mms, lmn):
 
     # To time series, in the LMN coordinates system
     v_str_xyz = ts_vec_xyz(b_xyz.time.data, -v_str, {"COORDINATE_SYSTEM": "lmn"})
+
+    # In the units of the positions per s (none)
+    if _units(r_mms[0]) is not None:
+        v_str_xyz.attrs["UNITS"] = _ratio(_units(r_mms[0]), "s")
 
     return v_str_xyz

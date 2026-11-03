@@ -194,6 +194,7 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         new_pas,
         coords=[b_bcs.time.data, np.arange(new_pas.shape[1])],
         dims=["time", "idx"],
+        attrs={"UNITS": "deg"},  # they had none
     )
 
     # interpolate the instantaneous angles (not averaged over the accumulation)

@@ -11,6 +11,7 @@ from scipy import signal
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _power, _units
 from pyrfu.pyrf.calc_dt import calc_dt
 
 __author__ = "Louis Richard"
@@ -101,4 +102,9 @@ def autocorr(
         coords = [lags, inp[inp.dims[1]].data]
         dims = ["lag", str(inp.dims[1])]
 
-    return xr.DataArray(np.squeeze(out_data), coords=coords, dims=dims)
+    # Dimensionless when normed, the units squared otherwise (none)
+    units = "" if normed else _power(_units(inp), 2)
+
+    return xr.DataArray(
+        np.squeeze(out_data), coords=coords, dims=dims, attrs=_attrs({}, units)
+    )

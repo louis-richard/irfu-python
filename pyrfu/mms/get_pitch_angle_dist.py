@@ -216,6 +216,9 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
 
     pad.time.attrs = dict(vdf.time.attrs)
     pad.energy.attrs = dict(vdf.energy.attrs)
-    pad.data.attrs["UNITS"] = vdf.data.attrs["UNITS"]
+    # The attributes of the data (only UNITS, KeyError without), pitch angles
+    # in deg
+    pad.data.attrs = dict(vdf.data.attrs)
+    pad.theta.attrs["UNITS"] = "deg"
 
     return pad

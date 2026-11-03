@@ -107,7 +107,9 @@ def eis_proton_correction(flux_eis):
             out_dict[scope] = flux_eis[scope].copy()
             out_dict[scope].data *= eis_corr
 
-        flux_eis_corr = xr.Dataset(out_dict)
+        # With the attributes of the Dataset (lost: the energy widths, on which
+        # eis_omni then eis_moments raised, and the species)
+        flux_eis_corr = xr.Dataset(out_dict, attrs=dict(flux_eis.attrs))
     else:
         # Apply correction to omni-directional energy spectrum
         flux_eis_corr = flux_eis.copy()

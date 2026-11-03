@@ -9,6 +9,7 @@ import numpy as np
 from scipy import ndimage
 
 # Local imports
+from ._units import _power, _ratio, _units
 from .resample import resample
 from .ts_spectr import ts_spectr
 
@@ -242,5 +243,13 @@ def wavepolarize_means(
             helicity,
         ]
     ]
+
+    # Units: b_wave squared per Hz, deg and dimensionless (none)
+    for out, units in zip(
+        [b_psd, wave_angle, deg_pol, ellipticity, helicity],
+        [_ratio(_power(_units(b_wave), 2), "Hz"), "deg", "", "", ""],
+    ):
+        if units is not None:
+            out.attrs["UNITS"] = units
 
     return b_psd, wave_angle, deg_pol, ellipticity, helicity

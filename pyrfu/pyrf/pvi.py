@@ -74,7 +74,7 @@ def pvi(inp, scale: int = 10):
         attrs=attrs,
     )
 
-    result.attrs["units"] = "dimensionless"
+    result.attrs["UNITS"] = ""
     result.attrs["TENSOR_ORDER"] = 0
 
     return result

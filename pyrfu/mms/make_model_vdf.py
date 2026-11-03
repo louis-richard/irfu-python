@@ -11,6 +11,7 @@ from ..pyrf.resample import resample
 from ..pyrf.trace import trace
 
 # Local imports
+from ._psd_units import _attrs
 from .rotate_tensor import rotate_tensor
 
 __author__ = "Louis Richard"
@@ -211,6 +212,7 @@ def make_model_vdf(
     # Make modelPDist file for output, in s^3/km^6
     model_vdf = vdf.copy()
     model_vdf["data"] = vdf.data.copy(data=bi_max_dist * 1e18)
-    model_vdf.data.attrs = {**vdf.data.attrs, "UNITS": "s^3/km^6"}
+    # Without the label of the input units if they differ (e.g. a DEF)
+    model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/km^6")
 
     return model_vdf

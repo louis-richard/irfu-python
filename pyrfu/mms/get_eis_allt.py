@@ -53,6 +53,14 @@ def _eis_names(cdf, pref, specie, data_unit, file_name):
             f"{', '.join(sorted(species - {'dump'}))}"
         )
 
+    # The PHxTOF oxygen is a single "dump" channel without energy table
+    # (KeyError), not loaded by IDL SPEDAS (unverified)
+    if f"{pref}_{specie}_t0_energy" not in names:
+        raise ValueError(
+            f"No energy table of {specie} in {file_name}: a single channel without "
+            "energies (e.g., oxygen in PHxTOF, not loaded by IDL SPEDAS)"
+        )
+
     cdf_names = {
         "spin": f"{pref}_spin",
         "sector": f"{pref}_sector",
@@ -111,7 +119,8 @@ def get_eis_allt(
     ------
     ValueError
         If the data unit is not one of flux, counts and cps, if the files don't
-        have the specie (e.g., helium in PHxTOF), if they are not reprocessed
+        have the specie (e.g., helium in PHxTOF) or its energy table (oxygen in
+        PHxTOF, a single channel), if they are not reprocessed
         (v3.0.0, 2015-2016) or if the energy table changes in the time
         interval (split the time interval).
 

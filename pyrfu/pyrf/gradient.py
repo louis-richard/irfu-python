@@ -8,6 +8,9 @@ from typing import Optional
 import numpy as np
 import xarray as xr
 
+# Local imports
+from ._units import _ratio, _units
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -32,7 +35,8 @@ def gradient(inp, time_step: Optional[float] = None):
     Returns
     -------
     out : xarray.DataArray
-        Time series of the time derivative of the input variable, per second.
+        Time series of the time derivative of the input variable, per second
+        (``UNITS`` "(mV/m)/s" for mV/m; it was "mV/m/s").
 
     Notes
     -----
@@ -97,7 +101,8 @@ def gradient(inp, time_step: Optional[float] = None):
         attrs=inp.attrs,
     )
 
+    # Units per s ("mV/m" gave "mV/m/s", "" gave "/s")
     if "UNITS" in out.attrs:
-        out.attrs["UNITS"] += "/s"
+        out.attrs["UNITS"] = _ratio(_units(inp), "s")
 
     return out

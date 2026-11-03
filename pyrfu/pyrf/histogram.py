@@ -5,6 +5,9 @@
 import numpy as np
 import xarray as xr
 
+# Local imports
+from ._units import _attrs, _ratio, _units
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -85,6 +88,12 @@ def histogram(inp, bins=100, y_range=None, weights=None, density=True):
     )
     bin_center = (bins[1:] + bins[:-1]) * 0.5
 
-    out = xr.DataArray(hist, coords=[bin_center], dims=["bins"])
+    # Counts (dimensionless) or a density per unit of inp; weights of unknown
+    # units without UNITS
+    units = _ratio("", _units(inp)) if density else ("" if weights is None else None)
+    out = xr.DataArray(
+        hist, coords=[bin_center], dims=["bins"], attrs=_attrs({}, units)
+    )
+    out.bins.attrs = _attrs({}, _units(inp))
 
     return out

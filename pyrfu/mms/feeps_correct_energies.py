@@ -72,6 +72,11 @@ def feeps_correct_energies(feeps_alle):
             .rename({dim: f"energy_{sensors_eye}"})
         )
 
+        # The attributes of the energies (UNITS keV, lost)
+        out_dict[sensors_eye][f"energy_{sensors_eye}"].attrs = dict(
+            feeps_alle[sensors_eye][dim].attrs
+        )
+
     out = xr.Dataset(out_dict)
     out.attrs = dict(feeps_alle.attrs)
 

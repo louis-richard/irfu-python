@@ -8,6 +8,7 @@ import numpy as np
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _ratio, _units
 from pyrfu.pyrf.cross import cross
 from pyrfu.pyrf.dot import dot
 
@@ -64,5 +65,6 @@ def c_4_k(r_list: Sequence[DataArray]) -> Sequence[DataArray]:
         dr12 = r_list[i] - r_list[alpha]
 
         k_list[i] = dr_jk_x_dr_jm / dot(dr_jk_x_dr_jm, dr12)
+        k_list[i].attrs = _attrs(k_list[i].attrs, _ratio("", _units(r_list[0])))
 
     return k_list

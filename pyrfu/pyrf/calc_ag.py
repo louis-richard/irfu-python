@@ -106,6 +106,7 @@ def calc_ag(p_xyz: DataArray) -> DataArray:
     det_g = p_11 * ((p_22 + p_33) / 2) ** 2
 
     agyrotropy = np.abs(det_p - det_g) / (det_p + det_g)
-    agyrotropy = ts_scalar(p_xyz.time.data, agyrotropy)
+    # Dimensionless (no UNITS)
+    agyrotropy = ts_scalar(p_xyz.time.data, agyrotropy, {"UNITS": ""})
 
     return agyrotropy

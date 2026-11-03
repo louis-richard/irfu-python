@@ -330,6 +330,7 @@ class CalcEpsilonTestCase(unittest.TestCase):
 
         eps = mms.calculate_epsilon(vdf, vdf.copy(deep=True), n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.0, atol=1e-12)
+        self.assertEqual(eps.attrs["UNITS"], "")
 
         model = vdf.copy(deep=True)
         model.data.data[...] = 0.0
@@ -1598,12 +1599,17 @@ class EisMomentsTestCase(unittest.TestCase):
             flux, coords=[times, energy], dims=["time", "energy"], attrs=attrs
         )
 
-    @data(("proton", 1), ("alpha", 4), ("helium", 4), ("oxygen", 16))
+    @data(
+        ("proton", constants.proton_mass),
+        ("alpha", constants.physical_constants["alpha particle mass"][0]),
+        ("helium", constants.physical_constants["alpha particle mass"][0]),
+        ("oxygen", 15.99491461957 * constants.atomic_mass - constants.electron_mass),
+    )
     @unpack
-    def test_eis_moments_maxwellian(self, specie, mass_number):
+    def test_eis_moments_maxwellian(self, specie, mass):
         # n = 1 cm^-3, kT = 10 keV: P = n kT = 1.602 nPa (the 2nd order integral
-        # is the energy density, 1.5 times larger), <|v|> = sqrt(8 kT / (pi m))
-        mass = mass_number * constants.proton_mass
+        # is the energy density, 1.5 times larger), <|v|> = sqrt(8 kT / (pi m)),
+        # with the He2+ and O+ masses (they were 4 and 16 proton masses)
         n_i, v_i, p_i, t_i = mms.eis_moments(self._maxwellian_flux(mass), specie)
         k_t = 1e4 * constants.e
 
@@ -1925,8 +1931,11 @@ class EisSkymapTestCase(unittest.TestCase):
         flux = mms.eis_skymap(ang_ang, to_psd=False)
         result = mms.eis_skymap(ang_ang)
 
-        np.testing.assert_allclose(result.data.data, mms.dpf2psd(flux).data.data)
-        self.assertEqual(result.data.attrs["UNITS"], "s^3/m^6")
+        # In s^3/cm^6, as FPI and feeps_skymap (s^3/m^6)
+        np.testing.assert_allclose(
+            result.data.data, mms.vdf_convert(flux, "s^3/cm^6").data.data
+        )
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
         self.assertNotIn("LABLAXIS", result.data.attrs)
 
     def test_eis_skymap_combine_sc_attrs(self):
@@ -1971,6 +1980,31 @@ class EisSkymapTestCase(unittest.TestCase):
         psd = mms.eis_skymap(self._ang_ang([0, 20], units="s^3/cm^6"), to_psd=False)
         with self.assertRaisesRegex(ValueError, "UNITS"):
             mms.eis_skymap_combine_sc([ref, psd])
+
+
+class UnitsEisTestCase(unittest.TestCase):
+    def test_units_eis(self):
+        # eis_pad without units gives none ("") and pitch angles in deg;
+        # eis_proton_correction keeps the attributes of a Dataset (lost);
+        # spacecraft in different units can't be combined
+        eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
+        pad = mms.eis_pad(eis, [1, 0, 0])
+        self.assertNotIn("UNITS", pad.attrs)
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+
+        corrected = mms.eis_proton_correction(eis)
+        self.assertDictEqual(corrected.attrs, eis.attrs)
+        mms.eis_moments(mms.eis_omni(corrected))  # the widths (ValueError)
+
+        omni, omni_cps = mms.eis_omni(eis), mms.eis_omni(eis)
+        omni.attrs["UNITS"], omni_cps.attrs["UNITS"] = "1/(cm^2 s sr keV)", "1/s"
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            mms.eis_spec_combine_sc([omni, omni_cps])
+
+        pad_cps = pad.copy()
+        pad.attrs["UNITS"], pad_cps.attrs["UNITS"] = "1/(cm^2 s sr keV)", "1/s"
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            mms.eis_pad_combine_sc([pad, pad_cps])
 
 
 class EisPadCombineScTestCase(unittest.TestCase):
@@ -2417,6 +2451,7 @@ class LhWaveAnalysisTestCase(unittest.TestCase):
         self.assertAlmostEqual(v_best, v_ph, delta=1.0)
         self.assertGreater(np.max(corrs), 0.99)
         self.assertListEqual(list(phi_eb.comp.data), ["Ebest", "Bs"])
+        self.assertEqual(phi_eb.attrs["UNITS"], "V")
 
     @data([1.0, 0.0, 0.0], [-1.0, 0.0, 0.0])
     def test_lh_wave_analysis_b_along_x(self, b_hat):
@@ -2750,6 +2785,59 @@ def _b_const(b_xyz, n_t=2):
     return pyrf.ts_vec_xyz(generate_timeline(1.0, n_t), np.tile(b_xyz, (n_t, 1)))
 
 
+class UnitsDistributionsTestCase(unittest.TestCase):
+    # The distributions keep the attributes of the input data, angles in deg,
+    # no invented UNITS
+    def setUp(self):
+        self.vdf = _gyro_skymap(lambda p, t: 1.0 + np.cos(np.deg2rad(t)) ** 2 + 0 * p)
+        self.vdf.data.attrs = {"UNITS": "s^3/cm^6", "LABLAXIS": "f", "FIELDNAM": "f"}
+        self.vdf.attrs["species"] = "ions"
+        self.b_z = _b_const([0.0, 0.0, 10.0])
+
+    def test_units_pad_gyrophase(self):
+        pad = mms.get_pitch_angle_dist(self.vdf, self.b_z, angles=12, verbose=False)
+        gpd = mms.get_gyrophase_dist(self.vdf, self.b_z)
+
+        for out in [pad, gpd]:
+            self.assertDictEqual(out.data.attrs, self.vdf.data.attrs)
+
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+        self.assertEqual(gpd.gyrophase.attrs["UNITS"], "deg")
+
+        # pad_diffusion: the units of the PAD per s (they were "s^3/cm^6/s")
+        df_dt = mms.pad_diffusion(pad, 1e-2)
+        self.assertEqual(df_dt.data.attrs["UNITS"], "(s^3/cm^6)/s")
+
+        # No UNITS without input UNITS (KeyError, "" and "1/s")
+        self.vdf.data.attrs = {}
+        pad = mms.get_pitch_angle_dist(self.vdf, self.b_z, angles=12, verbose=False)
+        gpd = mms.get_gyrophase_dist(self.vdf, self.b_z)
+
+        for out in [pad, gpd, mms.pad_diffusion(pad, 1e-2)]:
+            self.assertNotIn("UNITS", out.data.attrs)
+
+    def test_units_shift_rebin_models(self):
+        # vdf_shift and vdf_rebin keep LABLAXIS and the coordinate attributes
+        # (lost through s^3/m^6), the models drop the label of other units
+        self.vdf.energy.attrs["UNITS"] = "eV"
+        shifted = mms.vdf_shift(self.vdf, [10.0, 0.0, 0.0], n_mc=2, random_state=0)
+        self.assertDictEqual(shifted.data.attrs, self.vdf.data.attrs)
+        self.assertEqual(shifted.energy.attrs["UNITS"], "eV")
+
+        grid = [np.linspace(-500.0, 500.0, 5)] * 3
+        cart = mms.vdf_rebin(self.vdf, grid, "cart", n_mc=2, random_state=0)
+        self.assertEqual(cart.data.attrs["FIELDNAM"], "f")
+
+        time = self.vdf.time.data
+        n_s = pyrf.ts_scalar(time, np.ones(len(time)))
+        v_xyz = pyrf.ts_vec_xyz(time, np.zeros((len(time), 3)))
+        t_s = pyrf.ts_scalar(time, np.full(len(time), 100.0))
+        self.vdf.data.attrs = {"UNITS": "keV/(cm^2 s sr keV)", "LABLAXIS": "DEF"}
+        model = mms.make_model_kappa(self.vdf, n_s, v_xyz, t_s)
+        self.assertEqual(model.data.attrs["UNITS"], "s^3/m^6")
+        self.assertNotIn("LABLAXIS", model.data.attrs)
+
+
 class GetGyrophaseDistTestCase(unittest.TestCase):
     def test_get_gyrophase_dist_gyrotropic(self):
         # f(pitch angle) with B along z: the same in every gyrophase bin. The
@@ -3003,7 +3091,19 @@ class HpcaPadTestCase(unittest.TestCase):
         # so each sample must get the azimuths of its own half-spin and step.
         aze_deg = np.zeros((2, self.N_AZ))
         aze_deg[0, ::2] = 180.0
-        pad = self._pad(*self._inputs(aze_deg, centred=centred))
+        vdf, saz, aze, b_xyz = self._inputs(aze_deg, centred=centred)
+        vdf.attrs["UNITS"] = "cm^-6 s^3"
+        pad = self._pad(vdf, saz, aze, b_xyz)
+
+        # Units of vdf and pitch angles in deg (none)
+        self.assertEqual(pad.attrs["UNITS"], "cm^-6 s^3")
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+
+        # hpca_calc_anodes keeps the attributes of vdf and its energies (lost)
+        vdf.ccomp.attrs["UNITS"] = "eV"
+        spec = mms.hpca_calc_anodes(vdf)
+        self.assertEqual(spec.attrs["UNITS"], "cm^-6 s^3")
+        self.assertEqual(spec.energy.attrs["UNITS"], "eV")
 
         is_par = np.zeros(32, dtype=bool)
         is_par[0:16:2] = True
@@ -3164,6 +3264,12 @@ class GetHpcaDistTestCase(unittest.TestCase):
         np.testing.assert_array_equal(out["bins"], 1.0)
         self.assertEqual((out["species"], out["charge"]), ("hydrogen+", 1))
 
+        # Units name from the UNITS of vdf, as IDL SPEDAS (always "df_cm")
+        self.assertEqual(out["units_name"], "df_cm")
+        vdf.attrs["UNITS"] = "1/(cm^2 s sr eV)"
+        out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
+        self.assertEqual(out["units_name"], "flux")
+
     def test_get_hpca_dist_elevation_from_file(self):
         module = importlib.import_module("pyrfu.mms.get_hpca_dist")
         vdf, aze = self._inputs()
@@ -3193,6 +3299,121 @@ class GetHpcaDistTestCase(unittest.TestCase):
         aze_bad = aze.assign_coords(time=aze.time.data + np.timedelta64(100, "s"))
         with self.assertRaisesRegex(ValueError, "no complete half-spin"):
             mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
+
+
+class HpcaSkymapTestCase(unittest.TestCase):
+    # 4 azimuths per half-spin, 4 anodes (two sides 180 degrees apart, two
+    # polar angles each), 2 energies, 1 s samples
+    ELEVATION = np.array([45.0, 135.0, 135.0, 45.0])
+
+    def _inputs(self, fieldnam="Helium++ Flux"):
+        # 10 samples, half-spins from samples 0, 4 and 8 (incomplete); value
+        # 100 * sample + 10 * anode + energy; azimuths of the particles
+        # 45 * step + 2 * half-spin (side A, anodes 0 and 1) and 180 more
+        # (side B), drifting by 2 degrees over the energies
+        t_vdf = np.datetime64("2019-09-14T07:54:00", "ns")
+        t_vdf += ((np.arange(10) + 0.5) * 1e9).astype("timedelta64[ns]")
+        sample, anode, energy = np.meshgrid(
+            np.arange(10), np.arange(4), np.arange(2), indexing="ij"
+        )
+        vdf = xr.DataArray(
+            100.0 * sample + 10 * anode + energy,
+            coords=[t_vdf, np.arange(4), [1.0, 2.0]],
+            dims=["time", "rcomp", "ccomp"],
+            attrs={"FIELDNAM": fieldnam, "UNITS": "1/(cm^2 s sr eV)"},
+        )
+
+        t_aze = t_vdf[0::4] + np.timedelta64(1500, "ms")
+        phi = 45.0 * np.arange(4)[None, :] + 2.0 * np.arange(3)[:, None]
+        phi = phi[:, :, None, None] + np.array([0.0, 0.0, 180.0, 180.0])[:, None]
+        phi = (phi + np.array([0.0, 2.0]) - 1.0) % 360.0
+        aze = xr.DataArray(
+            phi,
+            coords=[t_aze, np.arange(4), np.arange(4), [0, 1]],
+            dims=["time", "az", "po", "en"],
+            attrs={"COORDINATE_SYSTEM": "DBCS"},
+        )
+
+        return vdf, aze
+
+    def test_hpca_skymap_bins(self):
+        # Look directions (opposite to the particles), 8 azimuths and 2 polar
+        # angles; kinetic energies and fluxes per unit kinetic energy (q = 2)
+        vdf, aze = self._inputs()
+        out = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION, to_psd=False)
+
+        self.assertEqual(out.data.shape, (3, 2, 8, 2))
+        self.assertEqual((out.attrs["species"], out.attrs["charge"]), ("helium++", 2))
+        self.assertEqual(out.data.attrs["UNITS"], "1/(cm^2 s sr eV)")
+        self.assertEqual(out.data.attrs["COORDINATE_SYSTEM"], "DBCS")
+        np.testing.assert_array_equal(out.energy.data, [[2.0, 4.0]] * 3)
+        np.testing.assert_array_equal(out.theta.data, [45.0, 135.0])
+
+        for i in range(2):
+            # side B looks at 45 * step + 2 i, side A at 180 more (the
+            # circular mean over the energies)
+            np.testing.assert_allclose(
+                out.phi.data[i], np.arange(8) * 45.0 + 2.0 * i, atol=1e-12
+            )
+            # look phi 45 * step (side B, anodes 2 and 3), theta 45 (particle
+            # polar angle 135: anode 2)
+            for step in range(4):
+                np.testing.assert_array_equal(
+                    out.data.data[i, :, step, 0],
+                    (100.0 * (4 * i + step) + 20.0 + np.arange(2)) / 2.0,
+                )
+                np.testing.assert_array_equal(
+                    out.data.data[i, :, step + 4, 1],
+                    (100.0 * (4 * i + step) + 0.0 + np.arange(2)) / 2.0,
+                )
+
+        self.assertTrue(np.all(np.isnan(out.data.data[2])))
+        np.testing.assert_allclose(out.attrs["delta_phi_minus"][:2], 22.5)
+        np.testing.assert_array_equal(out.attrs["delta_theta_plus"], 11.25)
+
+    def test_hpca_skymap_global_attrs(self):
+        # The global attributes of the file are kept, under the species,
+        # charge and angular widths of the skymap
+        vdf, aze = self._inputs()
+        vdf.attrs["GLOBAL"] = {"Mission_group": "MMS", "species": "file"}
+        out = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION, to_psd=False)
+
+        self.assertEqual(out.attrs["Mission_group"], "MMS")
+        self.assertEqual(out.attrs["species"], "helium++")
+        self.assertIn("delta_phi_minus", out.attrs)
+        self.assertNotIn("GLOBAL", out.data.attrs)
+
+    def test_hpca_skymap_velocities(self):
+        # Particles of anode 0, side A, step 0 at half-spin 0 move along
+        # (phi 0, polar angle 45): positive vx and vz, vy 0
+        vdf, aze = self._inputs("Oxygen+ Flux")
+        vdf.data[:] = 0.0
+        vdf.data[0, 0, :] = 1.0
+        aze.data[0, 0, [0, 1]] = 0.0
+        aze.data[0, 0, [2, 3]] = 180.0
+        out = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION)
+
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+        self.assertEqual(out.attrs["species"], "oxygen+")
+        flux = [np.nansum(mms.vdf_partial_density(out, c).data.data[0]) for c in "xyz"]
+        self.assertGreater(flux[0], 0.0)
+        self.assertAlmostEqual(flux[1] / flux[0], 0.0, places=6)
+        self.assertAlmostEqual(flux[2] / flux[0], 1.0, places=6)
+
+        # The phase-space densities of the fluxes, with the oxygen mass
+        flux_sky = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION, to_psd=False)
+        np.testing.assert_allclose(
+            out.data.data,
+            mms.vdf_convert(flux_sky, "s^3/cm^6").data.data,
+            rtol=1e-12,
+        )
+
+    def test_hpca_skymap_sides(self):
+        # The two sides must have the same polar angles
+        vdf, aze = self._inputs()
+
+        with self.assertRaisesRegex(ValueError, "different anode elevations"):
+            mms.hpca_skymap(vdf, aze, elevation=[45.0, 135.0, 135.0, 90.0])
 
 
 @ddt
@@ -3411,7 +3632,7 @@ class PadDiffusionTestCase(unittest.TestCase):
         alpha = np.deg2rad(7.5 + 15.0 * np.arange(12))
         pad = _pad_case(np.tile(np.cos(alpha), (2, 3, 1)))
         result = mms.pad_diffusion(pad, 0.1)
-        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6/s")
+        self.assertEqual(result.data.attrs["UNITS"], "(s^3/cm^6)/s")
 
         step = np.deg2rad(15.0)
         factor = np.sin(step) / step * np.sin(2 * step) / (2 * step)
@@ -3874,6 +4095,44 @@ class PsdMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             p2.data[0][i_row, i_col], p2_expected[i_row, i_col], rtol=0.02
         )
+
+    def test_psd_moments_species_mass(self):
+        # O+ Maxwellian with the speeds of the proton one: same n and V, T
+        # times the mass ratio (AssertionError, and the proton mass for all
+        # the ions)
+        v_kms = [200.0, 150.0, -250.0]
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, v_kms)
+        m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
+        ratio = m_o / constants.proton_mass
+        vdf = vdf.assign(energy=vdf.energy * ratio)
+        for key in ["energy0", "energy1", "delta_energy_plus", "delta_energy_minus"]:
+            vdf.attrs[key] = vdf.attrs[key] * ratio
+
+        vdf.attrs["species"] = "oxygen+"
+        n, v, _, _, t, _ = mms.psd_moments(vdf, sc_pot)
+
+        self.assertAlmostEqual(float(n.data[0]), 1.0, delta=0.01)
+        np.testing.assert_allclose(v.data[0], v_kms, atol=2.0)
+        np.testing.assert_allclose(np.diag(t.data[0]), 1000.0 * ratio, rtol=0.01)
+
+    def test_psd_moments_charge(self):
+        # Ions of charge q gain q V: He++ (charge 2) at V is He at 2 V
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
+        vdf.attrs["species"] = "helium++"
+        sc_pot.data[:] = 20.0
+        vdf_2 = vdf.copy()
+        vdf_2.attrs = {**vdf.attrs, "charge": 2}
+        n_2 = mms.psd_moments(vdf_2, sc_pot)[0]
+        n_1 = mms.psd_moments(vdf, 2.0 * sc_pot)[0]
+
+        np.testing.assert_allclose(n_2.data, n_1.data, rtol=1e-12)
+        self.assertFalse(
+            np.allclose(n_2.data, mms.psd_moments(vdf, sc_pot)[0].data, rtol=1e-6)
+        )
+
+        vdf.attrs["species"] = "bazinga"
+        with self.assertRaisesRegex(ValueError, "Invalid species"):
+            mms.psd_moments(vdf, sc_pot)
 
     @data(False, True)
     def test_psd_moments_no_warnings(self, relativistic):
@@ -5648,6 +5907,76 @@ def _feeps_skymap_case(data_rate, n_pts, value=2.0, mms_id=1):
     return feeps_alle
 
 
+class UnitsFeepsTestCase(unittest.TestCase):
+    # UNITS of the FEEPS products: those of the eyes (none without them, an
+    # intensity was invented), pitch angles in deg, energies in keV
+    def test_units_feeps(self):
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        b_bcs = generate_ts(64.0, 100, tensor_order=1)
+        units = feeps_alle["top-1"].attrs["UNITS"]
+
+        with warnings.catch_warnings():
+            # Synthetic energies outside the default range: NaN PADs
+            warnings.simplefilter("ignore", UserWarning)
+            pad = mms.feeps_pad(feeps_alle, b_bcs)
+            omni = mms.feeps_omni(feeps_alle)
+
+        self.assertEqual(pad.attrs["UNITS"], units)
+        self.assertEqual(pad.theta.attrs["UNITS"], "deg")
+        self.assertEqual(omni.attrs["UNITS"], units)
+        self.assertEqual(omni.energy.attrs["UNITS"], "keV")
+        self.assertEqual(
+            mms.feeps_pitch_angles(feeps_alle, b_bcs)[0].attrs["UNITS"], "deg"
+        )
+
+        for eye in [k for k in feeps_alle if k[:3] in ["top", "bot"]]:
+            feeps_alle[eye].attrs.pop("UNITS")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            self.assertNotIn("UNITS", mms.feeps_pad(feeps_alle, b_bcs).attrs)
+
+        self.assertNotIn("UNITS", mms.feeps_omni(feeps_alle).attrs)
+
+    def test_units_feeps_energies_sectors(self):
+        # Energies keep their attributes (keV), sector spectrograms the units
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 2)
+        eye = "top-1"
+        dim = feeps_alle[eye].dims[1]
+        feeps_alle[eye][dim].attrs["UNITS"] = "keV"
+        result = mms.feeps_correct_energies(feeps_alle)
+        self.assertEqual(result[eye][f"energy_{eye}"].attrs["UNITS"], "keV")
+
+        spec = mms.feeps_sector_spec(_feeps_skymap_case("srvy", 24))
+        name = list(spec.data_vars)[0]
+        self.assertIn("UNITS", spec[name].attrs)
+
+    def test_units_feeps_skymap_avg_4sc(self):
+        # No UNITS without input UNITS (taken as an intensity), and no PSD;
+        # spacecraft in different units can't be averaged
+        feeps_alle = _feeps_skymap_case("srvy", 16)
+        for eye in [k for k in feeps_alle if k[:3] in ["top", "bot"]]:
+            feeps_alle[eye].attrs.pop("UNITS", None)
+
+        self.assertNotIn("UNITS", mms.feeps_skymap(feeps_alle, to_psd=False).data.attrs)
+        with self.assertRaisesRegex(ValueError, "intensities"):
+            mms.feeps_skymap(feeps_alle)
+
+        time = generate_timeline(1.0, 4)
+        pads = [
+            xr.DataArray(
+                np.ones((4, 3)),
+                coords=[time, [10.0, 90.0, 170.0]],
+                dims=["time", "theta"],
+                attrs={"UNITS": units},
+            )
+            for units in ["1/(cm^2 s sr keV)", "1/s", "1/s", "1/s"]
+        ]
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            mms.feeps_avg_4sc(pads, flag="pad")
+
+
 @ddt
 class FeepsSkymapTestCase(unittest.TestCase):
     @data(("brst", 128, 32), ("srvy", 16, 8))
@@ -6091,7 +6420,8 @@ class FkPowerSpectrumTestCase(unittest.TestCase):
         self.assertAlmostEqual(power.k.data[0], -np.pi / 29.2)
         self.assertEqual(np.nanmax(power.data), 1.0)
         self.assertGreaterEqual(np.nanmin(power.data), 1e-3)
-        self.assertEqual(power.k.attrs["UNITS"], "rad/m")
+        self.assertEqual(power.k.attrs["UNITS"], "1/m")
+        self.assertEqual(power.attrs["UNITS"], "")
 
     def test_fk_power_spectrum_spin_plane(self):
         # Probes 1 and 2 (3 and 4) along x at 1.25 s, k and B along x: the
@@ -6169,7 +6499,7 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         return e_mms, r_mms, b_mms, tint
 
     def test_fk_power_spectrum_4sc_plane_wave(self):
-        # k in rad/km in, rad/m out; recovered within one k bin
+        # k in 1/km in, 1/m out; recovered within one k bin
         k_vec = np.array([0.04, -0.02, 0.03])
         e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
         result = mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint, f_range=[3, 5])
@@ -6184,6 +6514,17 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         for key, value in k_ref.items():
             self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
         self.assertAlmostEqual(result.attrs["f_avg"], 4.0, delta=0.1)
+
+        # Normalised powers, wave numbers in 1/m and frequencies in Hz (none)
+        self.assertEqual(result.k_x_f.attrs["UNITS"], "")
+        self.assertEqual(result.k_x.attrs["UNITS"], "1/m")
+        self.assertEqual(result.f.attrs["UNITS"], "Hz")
+
+        # The wave numbers assume positions in km
+        r_m = [r.copy() for r in r_mms]
+        r_m[0].attrs["UNITS"] = "m"
+        with self.assertWarnsRegex(UserWarning, "r is assumed in km"):
+            mms.fk_power_spectrum_4sc(e_mms, r_m, b_mms, tint, f_range=[3, 5])
 
     def test_fk_power_spectrum_4sc_k_bins(self):
         # The wave numbers are the centres of the bins of the power maps
@@ -7273,6 +7614,19 @@ class GetEisAlltTestCase(unittest.TestCase):
         ):
             self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
 
+    def test_get_eis_allt_single_channel(self):
+        # PHxTOF oxygen: one channel per telescope without energy table
+        # (KeyError), as the v4.2.100 files
+        pref = "mms1_epd_eis_srvy_l2_phxtof"
+        cdf = pycdfpp.load(_cdf_eis(pref, ["proton"], 4, "2021-07-11T00:10:00"))
+        for i in range(6):
+            name = f"{pref}_oxygen_P4_flux_t{i:d}"
+            cdf.add_variable(name, values=np.ones(4))
+            cdf[name].add_attribute("DEPEND_0", "Epoch")
+
+        with self.assertRaisesRegex(ValueError, "No energy table of oxygen"):
+            self._get_eis_allt("flux_phxtof_oxygen_srvy_l2", [bytes(pycdfpp.save(cdf))])
+
     def test_get_eis_allt_no_files(self):
         with mock.patch.object(
             self.module, "_list_files_sources", return_value=([], None, {})
@@ -7500,6 +7854,9 @@ class ReduceTestCase(unittest.TestCase):
         vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01, species)
         result = mms.reduce(vdf, xyz, dim, base)
         self.assertIsInstance(result, xr.DataArray)
+        # SI units on velocities in km/s (none)
+        self.assertEqual(result.attrs["UNITS"], "s/m^4")
+        self.assertEqual(result.vx.attrs["UNITS"], "km/s")
 
     @data(
         ("2d", "cart", {}),
@@ -7527,6 +7884,34 @@ class ReduceTestCase(unittest.TestCase):
         vdf.data.attrs["UNITS"] = units
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
+
+    def test_reduce_species_mass(self):
+        # The speeds of the channels with the mass of the species (oxygen
+        # raised ValueError, the ions were protons); energy widths per channel,
+        # as the EIS skymaps (ValueError)
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+        energy = vdf.energy.data[0].astype(np.float64)
+        speeds = {}
+
+        for species in ["ions", "oxygen"]:
+            vdf.attrs["species"] = species
+            result = mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+            speeds[species] = result.vx.data[len(energy) :]
+
+        m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
+        for species, mass in [("ions", constants.proton_mass), ("oxygen", m_o)]:
+            np.testing.assert_allclose(
+                speeds[species],
+                np.sqrt(2 * constants.electron_volt * energy / mass) / 1e3,
+                rtol=1e-5,
+            )
+
+        vdf.attrs["delta_energy_minus"] = 0.1 * energy
+        vdf.attrs["delta_energy_plus"] = 0.1 * energy
+        result = mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+        np.testing.assert_allclose(result.vx.data[len(energy) :], speeds["oxygen"])
+        self.assertTrue(np.all(np.isfinite(result.data)))
 
     def test_reduce_input_handling(self):
         # lower_e_lim as an int (TypeError), base and dim in capitals (base
@@ -8160,6 +8545,35 @@ class RotateTensorTestCase(unittest.TestCase):
         )
 
 
+class UnitsMomentsTestCase(unittest.TestCase):
+    # UNITS of the moments and reductions (they had none)
+    def test_units_psd_moments(self):
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], False, "ions", "s^3/cm^6")
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(10))
+        moments = mms.psd_moments(vdf, sc_pot)
+        units = ["cm^-3", "km/s", "nPa", "nPa", "eV", "mW/m^2"]
+
+        self.assertListEqual([out.attrs["UNITS"] for out in moments], units)
+
+    def test_units_spectr_to_dataset(self):
+        # UNITS on the data (only on the Dataset, so that the unit conversions
+        # raised KeyError), attributes not shared with the spectrum
+        spectr = generate_spectr(64.0, 10, 32, "energy")
+        spectr.attrs = {"UNITS": "1/(cm^2 s sr keV)", "species": "ions"}
+        result = mms.spectr_to_dataset(spectr)
+
+        self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
+        self.assertEqual(mms.dpf2psd(result).data.attrs["UNITS"], "s^3/m^6")
+        result.attrs["new"] = 1
+        self.assertNotIn("new", spectr.attrs)
+
+    def test_units_vdf_find_low_counts(self):
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], False, "ions", "s^3/cm^6")
+        mask = mms.vdf_find_low_counts(vdf, 5, output="mat")
+
+        self.assertEqual(mask.attrs["UNITS"], "")
+
+
 @ddt
 class SpectrToDatasetTestCase(unittest.TestCase):
     @data(generate_spectr(64.0, 100, 10))
@@ -8179,6 +8593,7 @@ class Scpot2NeTestCase(unittest.TestCase):
             i_aspoc,
         )
         self.assertIsInstance(result[0], xr.DataArray)
+        self.assertEqual(result[0].attrs["UNITS"], "cm^-3")
         self.assertIsInstance(result[1], float)
         self.assertIsInstance(result[2], float)
         self.assertIsInstance(result[3], float)
@@ -8575,6 +8990,35 @@ class VdfConvertTestCase(unittest.TestCase):
         result = mms.vdf_convert(vdf, "S^3/CM^6")
         np.testing.assert_array_equal(result.data.data, vdf.data.data)
         self.assertIsNot(result.data.data, vdf.data.data)
+
+    def test_vdf_convert_species_masses(self):
+        # The fluxes of the same phase-space density scale as 1 / m^2: oxygen
+        # (EIS) and the HPCA species (they raised ValueError), the 16O and 4He
+        # ions from their atomic masses
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+        flux_p = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+        m_e, u_m = constants.electron_mass, constants.atomic_mass
+        m_o, m_he = 15.99491461957 * u_m, 4.00260325413 * u_m
+        alpha = constants.physical_constants["alpha particle mass"][0]
+        masses = {
+            "hydrogen+": constants.proton_mass,
+            "oxygen": m_o - m_e,
+            "oxygen+": m_o - m_e,
+            "oxygen++": m_o - 2 * m_e,
+            "helium+": m_he - m_e,
+            "helium++": alpha,
+        }
+
+        for species, mass in masses.items():
+            vdf.attrs["species"] = species
+            flux = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+            np.testing.assert_allclose(
+                flux, flux_p * (constants.proton_mass / mass) ** 2, rtol=1e-12
+            )
+
+        # He2+ from the atomic mass, as the alpha particle mass
+        self.assertAlmostEqual((m_he - 2 * m_e) / alpha, 1.0, places=7)
 
     def test_vdf_convert_relativistic(self):
         # Electrons at 100 keV: the relativistic attribute is used by default
@@ -10092,6 +10536,10 @@ class LoadAncillaryTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             result.x.data, [-10539.488308885, -10639.511569375, -10736.816612409]
         )
+        # The units of the header (they had no UNITS)
+        self.assertEqual(result.epoch_mms_tai.attrs["UNITS"], "d")
+        self.assertEqual(result.x.attrs["UNITS"], "km")
+        self.assertEqual(result.vz.attrs["UNITS"], "km/s")
 
     def test_load_ancillary_defatt(self):
         # The DATA_STOP footer is not data
@@ -10105,6 +10553,12 @@ class LoadAncillaryTestCase(unittest.TestCase):
 
         self.assertEqual(len(result.time), 2)
         np.testing.assert_allclose(result.z_dec.data, [66.080, 66.086])
+        self.assertEqual(result.elapsed_sec.attrs["UNITS"], "s")
+        self.assertEqual(result.qc.attrs["UNITS"], "")
+        self.assertEqual(result.wz.attrs["UNITS"], "deg/s")
+        self.assertEqual(result.z_dec.attrs["UNITS"], "deg")
+        self.assertEqual(result.nut.attrs["UNITS"], "deg")
+        self.assertNotIn("UNITS", result.qf.attrs)
 
     def test_load_ancillary_defatt_repeats_and_overlap(self):
         # DEFATT repeats times by design and consecutive files overlap: the
@@ -10180,6 +10634,8 @@ class LoadAncillaryTestCase(unittest.TestCase):
             self.assertEqual(
                 result.time.data[0], np.datetime64("2017-07-06T13:50:23.151", "ns")
             )
+            self.assertEqual(result.q.attrs["UNITS"], "")
+            self.assertEqual(result.scale.attrs["UNITS"], "km")
 
         with self.assertRaisesRegex(FileNotFoundError, "for MMS in"):
             mms.load_ancillary("defq", self.tint, 1, False, self.root, "local")
@@ -10424,6 +10880,10 @@ class VdfProjectionTestCase(unittest.TestCase):
             ("time", "idx1"),
             (np.arange(32) * 11.25)[None, :] + 0.1 * np.arange(42)[:, None],
         )
+        # Without channel widths: edges halfway between the channels in log(E)
+        for key in ["delta_energy_minus", "delta_energy_plus"]:
+            del vdf.attrs[key]
+
         return vdf
 
     def test_vdf_projection_phi_clipped(self):
@@ -10455,6 +10915,48 @@ class VdfProjectionTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             np.sqrt(energy_edges[:-1] * energy_edges[1:]), energy, rtol=1e-6
         )
+
+    @data(0, 1)
+    def test_vdf_projection_energy_widths(self, step):
+        # Edges from the channel widths of the time (they were halfway between
+        # the channels in log(E), wrong for EIS and FEEPS), and the speeds of
+        # the grid from them
+        vdf = self._vdf()
+        vdf.attrs["delta_energy_minus"] = 0.1 * vdf.energy.data
+        vdf.attrs["delta_energy_plus"] = 0.2 * vdf.energy.data
+        t_id = int(np.flatnonzero(vdf.attrs["esteptable"] == step)[0])
+        tint = [pyrf.datetime642iso8601(vdf.time.data[t_id])]
+
+        energy = vdf.attrs[f"energy{step}"]
+        lower, upper = 0.9 * energy, 1.2 * energy
+        expected = np.hstack([lower[0], np.sqrt(upper[:-1] * lower[1:]), upper[-1]])
+        module = importlib.import_module("pyrfu.mms.vdf_projection")
+        np.testing.assert_allclose(module._init(vdf, tint)[3], expected, rtol=1e-6)
+
+        v_x, v_y, _ = mms.vdf_projection(vdf, tint)
+        speed = np.sqrt(2 * constants.e * expected / constants.proton_mass) / 1e3
+        np.testing.assert_allclose(np.hypot(v_x, v_y)[:, 0], speed, rtol=1e-6)
+
+    def test_vdf_projection_angle_widths(self):
+        # A polar band centred 28.1 degrees from the plane, 22.5 degrees wide:
+        # outside e_lim = 20 by its centre (all NaN, the widths were ignored),
+        # inside by its lower part
+        vdf = self._maxwellian([0.0, 0.0, 0.0])
+        vdf.data.data[:] = 0.0
+        vdf.data.data[:, :, :, 5] = 1.0  # theta 61.875
+        tint = [pyrf.datetime642iso8601(vdf.time.data[0])]
+        self.assertTrue(np.all(np.isnan(mms.vdf_projection(vdf, tint)[2])))
+
+        vdf.attrs["delta_theta_minus"] = np.full(16, 11.25)
+        vdf.attrs["delta_theta_plus"] = np.full(16, 11.25)
+        vdf.attrs["delta_phi_minus"] = np.full((2, 32), 5.625)
+        vdf.attrs["delta_phi_plus"] = np.full((2, 32), 5.625)
+        f_mat = mms.vdf_projection(vdf, tint)[2]
+
+        # one of the 5 polar samples (19.1 degrees) is within e_lim, in every
+        # sector, averaged with the zeros of the other bands within e_lim
+        self.assertTrue(np.all(np.isfinite(f_mat)))
+        self.assertTrue(np.all(f_mat > 0.0))
 
     @staticmethod
     def _maxwellian(v_kms, n_t=2, alternating=False):
@@ -10518,6 +11020,41 @@ class VdfProjectionTestCase(unittest.TestCase):
         speed, peak_angle = self._peak(v_x, v_y, f_mat)
         self.assertAlmostEqual(peak_angle, 5.625, delta=0.1)
         self.assertAlmostEqual(speed, 400.0, delta=30.0)
+
+    def test_vdf_projection_species(self):
+        # O+ Maxwellian with the speeds of the proton one: the same peak
+        # speed (the mass was the proton mass for all the ions, 4 times
+        # larger speeds). He++ (charge 2) at V is He at 2 V.
+        vdf = self._maxwellian([400.0, 0.0, 0.0])
+        m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
+        ratio = m_o / constants.proton_mass
+        vdf = vdf.assign(energy=vdf.energy * ratio)
+        for key in ["energy0", "energy1"]:
+            vdf.attrs[key] = vdf.attrs[key] * ratio
+        vdf.attrs["species"] = "oxygen+"
+        tint = [pyrf.datetime642iso8601(vdf.time.data[0])]
+        speed, _ = self._peak(*mms.vdf_projection(vdf, tint))
+        self.assertAlmostEqual(speed, 400.0, delta=30.0)
+
+        vdf.attrs["species"] = "helium++"
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(2, 20.0))
+        v_1 = mms.vdf_projection(vdf, tint, sc_pot=2.0 * sc_pot)[0]
+        vdf.attrs["charge"] = 2
+        np.testing.assert_allclose(
+            mms.vdf_projection(vdf, tint, sc_pot=sc_pot)[0], v_1, rtol=1e-12
+        )
+
+        vdf.attrs["species"] = "bazinga"
+        with self.assertRaisesRegex(ValueError, "Invalid species"):
+            mms.vdf_projection(vdf, tint)
+
+        # Without a species attribute, the electrons (the input is unchanged)
+        vdf.attrs["species"] = "electrons"
+        ref = mms.vdf_projection(vdf, tint)
+        del vdf.attrs["species"]
+        for out, exp in zip(mms.vdf_projection(vdf, tint), ref):
+            np.testing.assert_array_equal(out, exp)
+        self.assertNotIn("species", vdf.attrs)
 
     def test_vdf_projection_sc_pot(self):
         # Energy edges below the spacecraft potential gave NaN speeds
@@ -10670,6 +11207,12 @@ class WhistlerB2ETestCase(unittest.TestCase):
 
         self.assertIsInstance(result, xr.DataArray)
         self.assertTupleEqual(result.dims, ("time", "frequency"))
+        self.assertEqual(result.attrs["UNITS"], "(mV/m)^2/Hz")  # "(mV/m)^2 Hz^-1"
+
+        # The factors assume nT^2/Hz, nT and cm^-3
+        b2.attrs["UNITS"] = "T^2/Hz"
+        with self.assertWarnsRegex(UserWarning, "b2 is assumed in nT"):
+            mms.whistler_b2e(b2, freq, theta_k, b_mag, n_e)
         for i in range(3):
             expected = mms.whistler_b2e(
                 b2_data[i], freq, theta_k, b_mag.data[i], n_e.data[i]

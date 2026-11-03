@@ -54,6 +54,16 @@ def _half_spins(inp, azimuth):
     return i_start, complete
 
 
+def _units_name(inp):
+    r"""Units name of the SPEDAS structure from the UNITS of inp, as IDL SPEDAS
+    from the variable name: "df_cm" for a phase-space density (cm^-6 s^3) and
+    without UNITS, "flux" for a flux (1/(cm^2 s sr eV)); it was always
+    "df_cm"."""
+    units = str(inp.attrs.get("UNITS", "s^3"))
+
+    return "flux" if "sr" in units else "df_cm"
+
+
 def get_hpca_dist(
     inp,
     azimuth,
@@ -87,7 +97,8 @@ def get_hpca_dist(
         HPCA distribution: one distribution per half-spin of `azimuth` (data,
         phi and dphi of shape [nT, ner63, naz16, npo16]), with the times of
         `azimuth` (time), NaN for the half-spins not complete in `inp` or
-        without azimuths.
+        without azimuths. ``units_name`` is "flux" for fluxes and "df_cm" for
+        phase-space densities, from the ``UNITS`` of `inp`.
 
     Raises
     ------
@@ -171,7 +182,7 @@ def get_hpca_dist(
         "project_name": "MMS",
         "species": specie,
         "charge": charge,
-        "units_name": "df_cm",
+        "units_name": _units_name(inp),
         "mass": mass,
     }
 

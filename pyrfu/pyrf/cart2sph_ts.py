@@ -6,6 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ._units import _attrs
 from .ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
@@ -34,7 +35,8 @@ def cart2sph_ts(inp, direction_flag: int = 1):
     Returns
     -------
     out : xarray.DataArray
-        Input field in spherical/cartesian coordinate system.
+        Input field in spherical/cartesian coordinate system. [r, theta, phi]
+        has no ``UNITS``: r is in the units of inp, the angles in degrees.
 
     """
 
@@ -70,6 +72,9 @@ def cart2sph_ts(inp, direction_flag: int = 1):
 
         out_data = np.transpose(np.vstack([r_data, theta, phi]))
 
-    out = ts_vec_xyz(inp.time.data, out_data, inp.attrs)
+    # [r, theta, phi] has no UNITS (r in those of inp, the angles in deg: the
+    # units of inp were copied onto the angles); [x, y, z] in the units of r
+    attrs = inp.attrs if direction_flag == -1 else _attrs(inp.attrs, None)
+    out = ts_vec_xyz(inp.time.data, out_data, attrs)
 
     return out

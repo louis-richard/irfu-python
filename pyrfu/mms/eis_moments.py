@@ -10,6 +10,7 @@ from scipy import constants
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
 from ._eis_units import _check_flux
+from ._psd_units import _MASS_RATIOS
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -51,7 +52,8 @@ def eis_moments(
         the channels in its attributes (``delta_energy_minus`` and
         ``delta_energy_plus``, as :func:`pyrfu.mms.eis_omni` gives them).
     specie : {"proton", "helium", "alpha", "oxygen"}, Optional
-        Particle specie ("alpha" is "helium"). Default is "proton".
+        Particle specie ("alpha" is "helium", He2+; "oxygen" is O+). Default
+        is "proton".
     n_bg : xarray.DataArray, Optional
         Time series of the background density of EIS in cm^-3, to subtract.
         If None (default), no background is removed.
@@ -109,15 +111,15 @@ def eis_moments(
 
     """
 
-    masses = {"proton": 1, "helium": 4, "alpha": 4, "oxygen": 16}
-
-    if specie not in masses:
+    if specie not in ["proton", "helium", "alpha", "oxygen"]:
         raise ValueError(
             f"Invalid specie {specie}. Must be 'proton', 'helium', 'alpha' or "
             "'oxygen'"
         )
 
-    mass = constants.proton_mass * masses[specie]
+    # Masses of the PSD/flux conversions, 3.9726 (He2+) and 15.879 (O+) proton
+    # masses (they were 4 and 16)
+    mass = constants.proton_mass * _MASS_RATIOS[specie]
 
     _check_flux(inp)
 

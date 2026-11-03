@@ -7,6 +7,7 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
+from ..pyrf._units import _check_units
 from ..pyrf.resample import resample
 
 __author__ = "Louis Richard"
@@ -79,6 +80,14 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
 
     """
 
+    # The factors assume b2 in nT^2/Hz, B in nT and n in cm^-3
+    for inp, units, name in [
+        (b2, "nT^2/Hz", "b2"),
+        (b_mag, "nT", "b_mag"),
+        (n_e, "cm^-3", "n_e"),
+    ]:
+        _check_units(inp, units, name)
+
     freq = np.asarray(freq, dtype=float)
     is_spectrogram = isinstance(b2, xr.DataArray) and b2.ndim == 2
     b2_data = b2.data if isinstance(b2, xr.DataArray) else np.asarray(b2)
@@ -117,7 +126,7 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
 
     if is_spectrogram:
         e2 = xr.DataArray(
-            e2, coords=b2.coords, dims=b2.dims, attrs={"UNITS": "(mV/m)^2 Hz^-1"}
+            e2, coords=b2.coords, dims=b2.dims, attrs={"UNITS": "(mV/m)^2/Hz"}
         )
 
     return e2

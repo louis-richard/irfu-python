@@ -9,6 +9,9 @@ import numpy as np
 import xarray as xr
 from xarray.core.dataarray import DataArray
 
+# Local imports
+from ._units import _product, _units
+
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
 __copyright__ = "Copyright 2020-2023"
@@ -33,7 +36,8 @@ def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
     -------
     out : xarray.DataArray
         Time series of the time integral of inp, zero at the first time, with
-        the attributes of inp (the units times s).
+        the attributes of inp and its units times s (``UNITS`` "(mV/m) s" for
+        mV/m; it was "(mV/m)*s").
 
     Raises
     ------
@@ -79,10 +83,11 @@ def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
     out_data = np.cumsum(np.where(is_nan, 0.0, data * delta_t[:, None]), axis=0)
     out_data[is_nan] = np.nan
 
+    # Units times s (they were "(nT)*s")
     attrs = dict(inp.attrs)
 
     if "UNITS" in attrs:
-        attrs["UNITS"] = f"({attrs['UNITS']})*s"
+        attrs["UNITS"] = _product(_units(inp), "s")
 
     out = xr.DataArray(
         out_data.reshape(inp.shape), coords=inp.coords, dims=inp.dims, attrs=attrs

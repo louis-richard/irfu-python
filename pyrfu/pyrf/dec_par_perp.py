@@ -10,6 +10,7 @@ import xarray as xr
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
@@ -142,5 +143,11 @@ def dec_par_perp(
 
         alpha_arr = np.arctan2(b_bgd_data[:, 2], b_tot)
         alpha = ts_scalar(inp_time, alpha_arr)
+
+    # Components in the units of inp, alpha in rad (they had none)
+    for out in [a_para, a_perp]:
+        out.attrs = _attrs(out.attrs, _units(inp))
+
+    alpha.attrs["UNITS"] = "rad"
 
     return a_para, a_perp, alpha

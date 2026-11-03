@@ -6,6 +6,7 @@ import numpy as np
 from scipy import constants
 
 # Local imports
+from ._units import _check_units
 from .resample import resample
 from .ts_scalar import ts_scalar
 
@@ -70,6 +71,10 @@ def pres_anis(p_fac, b_xyz):
 
     """
 
+    # The factors assume P in nPa and B in nT
+    _check_units(p_fac, "nPa", "p_fac")
+    _check_units(b_xyz, "nT", "b_xyz")
+
     # Get parallel and perpendicular pressure
     p_para = p_fac.data[:, 0, 0]
     p_perp = (p_fac.data[:, 1, 1] + p_fac.data[:, 2, 2]) / 2
@@ -81,6 +86,6 @@ def pres_anis(p_fac, b_xyz):
 
     # Compute pressure anistropy
     p_anis = (1e-9 * (p_para - p_perp) / 2) / p_mag
-    p_anis = ts_scalar(p_fac.time.data, p_anis)
+    p_anis = ts_scalar(p_fac.time.data, p_anis, {"UNITS": ""})
 
     return p_anis

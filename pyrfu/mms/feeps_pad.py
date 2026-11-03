@@ -261,9 +261,11 @@ def feeps_pad(
         attrs=attrs,
     )
 
-    # units of the eyes (intensity, count rate, ...)
-    pad.attrs["UNITS"] = inp_dataset[eye_names[0]].attrs.get(
-        "UNITS", "1/(cm^2 s sr keV)"
-    )
+    # Units of the eyes (intensity, count rate, ...), none without (it was set
+    # to an intensity); pitch angles in deg
+    if "UNITS" in inp_dataset[eye_names[0]].attrs:
+        pad.attrs["UNITS"] = inp_dataset[eye_names[0]].attrs["UNITS"]
+
+    pad.theta.attrs["UNITS"] = "deg"
 
     return pad

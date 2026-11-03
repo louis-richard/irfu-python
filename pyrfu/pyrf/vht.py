@@ -7,6 +7,7 @@ import logging
 import numpy as np
 
 # Local imports
+from ._units import _check_units
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
@@ -64,6 +65,10 @@ def vht(e, b, no_ez: bool = False):
 
     """
 
+    # The factor of E_HT assumes E in mV/m and B in nT
+    _check_units(e, "mV/m", "e")
+    _check_units(b, "nT", "b")
+
     # Resample magnetic field to electric field sampling (usually higher)
     if not np.array_equal(e.time.data, b.time.data):
         b = resample(b, e)
@@ -107,7 +112,7 @@ def vht(e, b, no_ez: bool = False):
 
     # Calculate the goodness of the Hoffman Teller frame
     # e_ht = e_vxb(v_ht, b)
-    e_ht = ts_vec_xyz(b.time.data, -1e-3 * np.cross(v_ht, b.data))
+    e_ht = ts_vec_xyz(b.time.data, -1e-3 * np.cross(v_ht, b.data), {"UNITS": "mV/m"})
 
     e_ht_p = e_ht.data[valid]
     e_ht_p[:, n_comp:] = 0.0

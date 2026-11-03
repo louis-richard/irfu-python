@@ -10,6 +10,7 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
+from ..pyrf._units import _check_units
 from ..pyrf.calc_dt import calc_dt
 from ..pyrf.convert_fac import convert_fac
 from ..pyrf.extend_tint import extend_tint
@@ -107,6 +108,15 @@ def lh_wave_analysis(
     >>> res = lh_wave_analysis(tint_zoom, e_gse, b_scm, b_gse, n_e, **opt)
 
     """
+
+    # The factors assume E in mV/m, B in nT and n in cm^-3
+    for inp, units, name in [
+        (e_xyz, "mV/m", "e_xyz"),
+        (b_scm, "nT", "b_scm"),
+        (b_xyz, "nT", "b_xyz"),
+        (n_e, "cm^-3", "n_e"),
+    ]:
+        _check_units(inp, units, name)
 
     # Bandpass filter data
     b_xyz = filt(b_xyz, 0, lowpass_b_xyz, 5)
@@ -208,6 +218,7 @@ def lh_wave_analysis(
     phi_eb = xr.DataArray(
         np.vstack([phi_e_best.data, phi_bs.data]).T,
         **options,
+        attrs={"UNITS": "V"},
     )
 
     return phi_eb, v_best, dir_best, thetas, corrs

@@ -9,6 +9,9 @@ import numpy as np
 import xarray as xr
 from scipy import signal
 
+# Local imports
+from ._units import _attrs, _power, _ratio, _units
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -103,6 +106,11 @@ def psd(
 
     # Frequency first, then the other dimensions (components) of the input
     coords = [freqs, *[inp.coords[dim].data for dim in inp.dims[1:]]]
-    out = xr.DataArray(p_xx, coords=coords, dims=["f", *inp.dims[1:]])
+    # Units squared, per Hz for a density (none)
+    units = _power(_units(inp), 2)
+    units = _ratio(units, "Hz") if scaling == "density" else units
+    out = xr.DataArray(
+        p_xx, coords=coords, dims=["f", *inp.dims[1:]], attrs=_attrs({}, units)
+    )
 
     return out

@@ -17,14 +17,29 @@ __status__ = "Prototype"
 # Shared by the PSD, DEF and DPF unit conversions (def2psd, dpf2psd, psd2def,
 # psd2dpf)
 
+# Masses of the 4He and 16O atoms (u, AME2020)
+_HE_ATOM = 4.00260325413 * constants.atomic_mass
+_O_ATOM = 15.99491461957 * constants.atomic_mass
+
+
+def _ion_mass(atom, charge):
+    r"""Mass (proton masses) of the ion of charge `charge` of an atom of mass
+    `atom` (kg)."""
+    return (atom - charge * constants.electron_mass) / constants.proton_mass
+
+
 # Masses in proton masses; the alphas (helium) are He2+ ions, 3.9726 (they
-# were 4, 0.7 % heavier)
+# were 4, 0.7 % heavier). Oxygen (EIS) is O+ (that of O2+ is 0.003 % lower),
+# and the HPCA species are named as get_hpca_dist.
 _MASS_RATIOS = {
-    **dict.fromkeys(["ions", "ion", "protons", "proton"], 1.0),
+    **dict.fromkeys(["ions", "ion", "protons", "proton", "hydrogen+"], 1.0),
     **dict.fromkeys(
-        ["alphas", "alpha", "helium"],
+        ["alphas", "alpha", "helium", "helium++"],
         constants.physical_constants["alpha particle mass"][0] / constants.proton_mass,
     ),
+    "helium+": _ion_mass(_HE_ATOM, 1),
+    **dict.fromkeys(["oxygen", "oxygen+"], _ion_mass(_O_ATOM, 1)),
+    "oxygen++": _ion_mass(_O_ATOM, 2),
     **dict.fromkeys(
         ["electrons", "electron", "e"], constants.electron_mass / constants.proton_mass
     ),

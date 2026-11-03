@@ -13,6 +13,7 @@ import xarray as xr
 from scipy import fft
 
 # Local imports
+from pyrfu.pyrf._units import _check_units, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.cart2sph import cart2sph
 from pyrfu.pyrf.convert_fac import convert_fac
@@ -223,6 +224,30 @@ def _censure_plot(inp, idx_nan, censure, n_data, a_):
     return out
 
 
+def _set_units(res, keys, units):
+    r"""Sets UNITS on the outputs `keys` of `res` (none for None)."""
+    if units is None:
+        return
+
+    for key in keys:
+        res[key].attrs["UNITS"] = units
+
+
+def _spectra_units(e_xyz, db_xyz):
+    r"""Units of the B and E spectra (None for E without E). Warns when E is
+    not in mV/m or delta_b not in nT, the units the Poynting flux assumes."""
+    units_b = _ratio(_power(_units(db_xyz), 2), "Hz")
+
+    if e_xyz is None:
+        return units_b, None
+
+    units_e = _ratio(_power(_units(e_xyz), 2), "Hz")
+    _check_units(e_xyz, "mV/m", "e_xyz")
+    _check_units(db_xyz, "nT", "db_xyz")
+
+    return units_b, units_e
+
+
 def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     """Calculates wavelet spectra of E&B and Poynting flux using wavelets
     (Morlet wavelet). Also computes polarization parameters of B using SVD
@@ -273,9 +298,11 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             * ee_ss : xarray.DataArray
                 E power spectrum (xx+yy spacecraft coordinates, e.g. ISR2).
             * pf_xyz : xarray.DataArray
-                Poynting flux (xyz).
+                Poynting flux (xyz) [uW/(m^2 Hz), for E in mV/m and delta_b
+                in nT; a warning for other ``UNITS``].
             * pf_rtp : xarray.DataArray
-                Poynting flux (r, theta, phi) [angles in degrees].
+                Poynting flux (r, theta, phi) [r in uW/(m^2 Hz), angles in
+                degrees: no ``UNITS``, as they differ].
             * dop : xarray.DataArray
                 3D degree of polarization.
             * dop2d : xarray.DataArray
@@ -355,6 +382,10 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     >>>                          freq_int=[10, 4000], **options)
 
     """
+
+    # Units of the spectra (the inputs are converted below); the Poynting flux
+    # assumes E in mV/m and B in nT (10 / (4 pi) gives uW/m^2)
+    units_b, units_e = _spectra_units(e_xyz, db_xyz)
 
     assert isinstance(db_xyz, xr.DataArray), "delta_b must be a DataArray"
     assert isinstance(b_xyz, xr.DataArray), "full_b must be a DataArray"
@@ -935,6 +966,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         coords=[res["t"], res["f"], ["xx", "yy", "zz", "ss"]],
         dims=["time", "frequency", "comp"],
     )
+    _set_units(res, ["bb_xxyyzzss"], units_b)
 
     if want_ee:
         power_ex_plot = _average_data(power_ex_plot, in_time, out_time)
@@ -994,6 +1026,11 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             dims=["time", "frequency", "comp"],
         )
 
+        # pf_rtp has no UNITS (rho in uW/(m^2 Hz), the angles in deg)
+        _set_units(res, ["ee_ss", "ee_xxyyzzss"], units_e)
+
+        _set_units(res, ["pf_xyz"], "uW/(m^2 Hz)")
+
     if want_polarization:
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=RuntimeWarning)
@@ -1037,5 +1074,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             coords=[res["t"], res["f"], ["theta", "phi"]],
             dims=["time", "frequency", "comp"],
         )
+
+        _set_units(res, ["dop", "dop2d", "planarity", "ellipticity"], "")
+
+        _set_units(res, ["k_tp"], "deg")
 
     return res

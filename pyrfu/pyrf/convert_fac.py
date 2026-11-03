@@ -10,6 +10,7 @@ import xarray as xr
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
@@ -154,8 +155,12 @@ def convert_fac(
         out_data[:, 0] = inp * np.sum(r_perp_x * r_xyz_data, axis=1)
         out_data[:, 1] = inp * np.sum(r_para * r_xyz_data, axis=1)
 
+        # In the units of inp (they had none)
         out = xr.DataArray(
-            out_data, coords=[time, ["perp", "para"]], dims=["time", "comp"]
+            out_data,
+            coords=[time, ["perp", "para"]],
+            dims=["time", "comp"],
+            attrs=_attrs({}, _units(inp)),
         )
     else:
         raise ValueError(

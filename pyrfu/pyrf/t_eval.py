@@ -58,4 +58,7 @@ def t_eval(inp, times):
     else:
         out = xr.DataArray(inp.data[idx], coords=[times], dims=["time"])
 
+    # Attributes of inp (they were lost)
+    out.attrs = dict(inp.attrs)
+
     return out

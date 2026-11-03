@@ -143,6 +143,6 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     n_esc = i_ph0 * np.exp(-v_sc / t_ph0) + i_ph1 * np.exp(-v_sc / t_ph1)
     n_esc /= s_surf * q_e * v_eth * (1 + v_sc / t_e)
     n_esc *= 2 * np.sqrt(np.pi) * 1e-12
-    n_esc = ts_scalar(sc_pot.time.data, n_esc)
+    n_esc = ts_scalar(sc_pot.time.data, n_esc, {"UNITS": "cm^-3"})
 
     return n_esc, i_ph0, t_ph0, i_ph1, t_ph1

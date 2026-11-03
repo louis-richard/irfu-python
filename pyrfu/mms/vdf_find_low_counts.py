@@ -92,6 +92,7 @@ def vdf_find_low_counts(
             (summed < counts).astype(int),
             coords=[vdf_counts.time.data, np.arange(data.shape[1])],
             dims=["time", "idx0"],
+            attrs={"UNITS": ""},
         )
 
     energy = np.broadcast_to(

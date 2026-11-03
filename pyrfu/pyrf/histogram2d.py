@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _product, _ratio, _units
 from pyrfu.pyrf.resample import resample
 
 __author__ = "Louis Richard"
@@ -280,5 +281,16 @@ def histogram2d(
             "y_edges": y_edges,
         },
     )
+
+    # Counts (dimensionless) or a density per unit of inp1 and inp2; weights of
+    # unknown units without UNITS
+    if density:
+        units = _ratio("", _product(_units(inp1), _units(inp2)))
+    else:
+        units = "" if weights is None else None
+
+    out.attrs = _attrs(out.attrs, units)
+    out.x_bins.attrs = _attrs({}, _units(inp1))
+    out.y_bins.attrs = _attrs({}, _units(inp2))
 
     return out

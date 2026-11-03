@@ -172,7 +172,6 @@ def feeps_omni(inp_dataset):
 
     attrs = {
         "dtype": inp_dataset.attrs["dtype"],
-        "UNITS": inp_dataset[eyes[0]].attrs["UNITS"],
         "species": inp_dataset.attrs["species"],
         "mmsId": inp_dataset.attrs["mmsId"],
         "units_name": inp_dataset.attrs["units_name"],
@@ -184,5 +183,11 @@ def feeps_omni(inp_dataset):
         dims=["time", "energy"],
         attrs=attrs,
     )
+
+    # Units of the eyes, none without (KeyError); energies in keV (none)
+    if "UNITS" in inp_dataset[eyes[0]].attrs:
+        flux_omni.attrs["UNITS"] = inp_dataset[eyes[0]].attrs["UNITS"]
+
+    flux_omni.energy.attrs["UNITS"] = "keV"
 
     return flux_omni

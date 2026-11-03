@@ -270,6 +270,8 @@ def get_gyrophase_dist(
 
     gpd.time.attrs = dict(vdf.time.attrs)
     gpd.energy.attrs = dict(vdf.energy.attrs)
-    gpd.data.attrs["UNITS"] = vdf.data.attrs.get("UNITS", "")
+    # The attributes of the data (only UNITS, "" without), gyrophases in deg
+    gpd.data.attrs = dict(vdf.data.attrs)
+    gpd.gyrophase.attrs["UNITS"] = "deg"
 
     return gpd

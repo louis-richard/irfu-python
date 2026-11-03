@@ -12,6 +12,7 @@ import xarray as xr
 from scipy import linalg
 
 # Local imports
+from pyrfu.pyrf._units import _check_units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip
@@ -216,7 +217,8 @@ def fk_power_spectrum_4sc(
     out : xarray.Dataset
         Dataset of array of powers as a function of frequency and
         wavenumber. Power is normalized to the maximum value. The wave
-        numbers are in rad/m for positions in km.
+        numbers, k = 2 pi / lambda, are in 1/m (as irfu-matlab) for positions
+        in km.
 
     Raises
     ------
@@ -267,6 +269,9 @@ def fk_power_spectrum_4sc(
     ... 10, 2)
 
     """
+
+    # The wave numbers are in 1/m for positions in km
+    _check_units(r[0], "km", "r")
 
     ic = np.arange(1, 5)
 
@@ -617,5 +622,15 @@ def fk_power_spectrum_4sc(
     }
 
     out = xr.Dataset(out_dict, attrs=attrs)
+
+    # Normalised powers, wave numbers (2 pi / lambda) in 1/m, as irfu-matlab,
+    # and frequencies in Hz (none)
+    for name in out.data_vars:
+        out[name].attrs["UNITS"] = ""
+
+    for name in ["k_x", "k_y", "k_z", "k_mag", "k_perp", "k_para"]:
+        out[name].attrs["UNITS"] = "1/m"
+
+    out.f.attrs["UNITS"] = "Hz"
 
     return out

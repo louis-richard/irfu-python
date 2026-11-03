@@ -31,6 +31,7 @@ from scipy import constants, interpolate, signal
 # Local imports
 from .. import pyrf
 from ..constants import R_E
+from ..pyrf._units import _attrs, _check_units, _power, _product, _ratio, _units
 from ..pyrf.c_4_v_xcorr import _BandLimited as _C4VXcorrBandLimited
 from ..pyrf.c_4_v_xcorr import _corr_h as _c_4_v_xcorr_corr_h
 from ..pyrf.c_4_v_xcorr import _get_disc_vel as _c_4_v_xcorr_get_disc_vel
@@ -967,6 +968,361 @@ class C4VXcorrTestCase(unittest.TestCase):
                 pyrf.c_4_v_xcorr(**inputs)
 
 
+class UnitsTestCase(unittest.TestCase):
+    def test_units_strings(self):
+        # Products, ratios and powers in the notation of the MMS files, composed
+        # (not simplified), None without units
+        self.assertEqual(_product("mV/m", "nT"), "(mV/m) nT")
+        self.assertEqual(_product("nT", "nT"), "nT^2")
+        self.assertEqual(_product("nT", "", "s"), "nT s")
+        self.assertIsNone(_product("nT", None))
+        self.assertEqual(_ratio("nT", "km"), "nT/km")
+        self.assertEqual(_ratio("km/s", "km"), "(km/s)/km")
+        self.assertEqual(_ratio("nT^2", "Hz"), "nT^2/Hz")
+        self.assertEqual(_ratio("", "s"), "1/s")
+        self.assertEqual(_ratio("nT", "cm^2 s"), "nT/(cm^2 s)")
+        self.assertEqual(_ratio("nT", ""), "nT")
+        self.assertEqual(_power("mV/m", 2), "(mV/m)^2")
+        self.assertEqual(_power("nT^2", 2), "(nT^2)^2")
+        self.assertEqual(_power("Hz", 0.5), "Hz^0.5")
+        self.assertEqual(_power("", 2), "")
+        self.assertIsNone(_power(None, 2))
+
+        # Separators inside parentheses don't make a unit compound
+        self.assertEqual(_ratio(_power("mV/m", 2), "Hz"), "(mV/m)^2/Hz")
+        self.assertEqual(_product("(mV/m)^2", "s"), "(mV/m)^2 s")
+        self.assertEqual(_ratio("1/(cm^2 s sr keV)", "s"), "(1/(cm^2 s sr keV))/s")
+
+    def test_units_attrs_check(self):
+        inp = pyrf.ts_scalar(generate_timeline(1.0, 3), np.ones(3), {"UNITS": "nT"})
+        self.assertEqual(_units(inp), "nT")
+        self.assertDictEqual(_attrs(inp.attrs, None), {"TENSOR_ORDER": 0})
+        self.assertEqual(_attrs(inp.attrs, "nT/s")["UNITS"], "nT/s")
+
+        with self.assertWarnsRegex(UserWarning, "assumed in km"):
+            _check_units(inp, "km", "r")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            _check_units(inp, ["nT", "nt"], "B")
+            inp.attrs = {}
+            _check_units(inp, "km", "r")
+
+
+class UnitsSpectraTestCase(unittest.TestCase):
+    # UNITS of the derivatives and spectra: converted from the input's (they
+    # had none, kept the input's, or replaced all the attributes)
+    def setUp(self):
+        rng = np.random.default_rng(0)
+        self.time = generate_timeline(64.0, 1024)
+        self.b_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(1024, 3)), {"UNITS": "nT"}
+        )
+        self.e_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(1024, 3)), {"UNITS": "mV/m"}
+        )
+
+    def test_units_derivatives_spectra(self):
+        b_x, e_x = self.b_xyz[:, 0], self.e_xyz[:, 0]
+        cases = [
+            (pyrf.sliding_derivative(self.b_xyz), "nT/s"),
+            (pyrf.psd(b_x), "nT^2/Hz"),
+            (pyrf.psd(b_x, scaling="spectrum"), "nT^2"),
+            (pyrf.autocorr(b_x), ""),
+            (pyrf.autocorr(b_x, normed=False), "nT^2"),
+            (pyrf.struct_func(self.b_xyz, None, 3), "nT^3"),
+            (pyrf.histogram(b_x), "1/nT"),
+            (pyrf.histogram(b_x, density=False), ""),
+            (pyrf.histogram2d(b_x, e_x), "1/(nT (mV/m))"),
+            (pyrf.histogram2d(b_x, e_x, density=False), ""),
+            (pyrf.wavelet(b_x, f=[1, 10]), "nT^2/Hz"),
+            (pyrf.wavelet(b_x, f=[1, 10], return_power=False), "nT/Hz^0.5"),
+            (pyrf.wavelet(self.e_xyz, f=[1, 10]).y, "(mV/m)^2/Hz"),
+        ]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        # Other attributes kept, coordinates in the input units
+        self.assertEqual(pyrf.sliding_derivative(self.b_xyz).attrs["TENSOR_ORDER"], 1)
+        self.assertEqual(pyrf.struct_func(self.b_xyz, None, 3).attrs["order"], 3)
+        self.assertEqual(pyrf.histogram(b_x).bins.attrs["UNITS"], "nT")
+        self.assertEqual(pyrf.histogram2d(b_x, e_x).y_bins.attrs["UNITS"], "mV/m")
+
+        # No UNITS without input UNITS (but normed is dimensionless)
+        bare = pyrf.ts_scalar(self.time, b_x.data)
+        self.assertNotIn("UNITS", pyrf.psd(bare).attrs)
+        self.assertNotIn("UNITS", pyrf.wavelet(bare, f=[1, 10]).attrs)
+        self.assertEqual(pyrf.autocorr(bare).attrs["UNITS"], "")
+
+    def test_units_wavepolarize_means(self):
+        _, _, b_wave, b_bgd = _polarized_wave(4096, 0.0, 1e-3)
+        b_wave.attrs["UNITS"] = "nT"
+        outs = pyrf.wavepolarize_means(b_wave, b_bgd)
+
+        for out, units in zip(outs, ["nT^2/Hz", "deg", "", "", ""]):
+            self.assertEqual(out.attrs["UNITS"], units)
+
+    def test_units_ebsp(self):
+        t_sec = np.arange(1024) / 64.0
+        b_0 = pyrf.ts_vec_xyz(self.time, np.tile([10.0, 0.0, 5.0], (1024, 1)))
+        wave = np.stack([np.cos(8 * np.pi * t_sec), -np.sin(8 * np.pi * t_sec)], 1)
+        d_b = pyrf.ts_vec_xyz(
+            self.time,
+            0.01 * np.hstack([wave[:, ::-1], 0 * wave[:, :1]]),
+            {"UNITS": "nT"},
+        )
+        e_xyz = pyrf.ts_vec_xyz(
+            self.time, np.hstack([wave, 0 * wave[:, :1]]), {"UNITS": "mV/m"}
+        )
+        res = pyrf.ebsp(
+            e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0], polarization=True
+        )
+
+        for key, units in [
+            ("bb_xxyyzzss", "nT^2/Hz"),
+            ("ee_xxyyzzss", "(mV/m)^2/Hz"),
+            ("ee_ss", "(mV/m)^2/Hz"),
+            ("pf_xyz", "uW/(m^2 Hz)"),
+            ("dop", ""),
+            ("planarity", ""),
+            ("k_tp", "deg"),
+        ]:
+            self.assertEqual(res[key].attrs["UNITS"], units)
+
+        self.assertNotIn("UNITS", res["pf_rtp"].attrs)
+
+        # The Poynting flux assumes mV/m and nT
+        e_xyz.attrs["UNITS"] = "V/m"
+        with self.assertWarnsRegex(UserWarning, "e_xyz is assumed in mV/m"):
+            pyrf.ebsp(e_xyz, d_b, b_0 + d_b, b_0, None, [1.0, 10.0])
+
+
+class UnitsVectorTestCase(unittest.TestCase):
+    # UNITS of the vector algebra: products of the input units, dimensionless
+    # unit vectors and matrices, components in the input units
+    def setUp(self):
+        rng = np.random.default_rng(0)
+        self.time = generate_timeline(64.0, 64)
+        self.b_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(64, 3)) + [5, 1, 1], {"UNITS": "nT"}
+        )
+        self.e_xyz = pyrf.ts_vec_xyz(
+            self.time, rng.normal(size=(64, 3)), {"UNITS": "mV/m"}
+        )
+
+    def test_units_vector_algebra(self):
+        n_s = pyrf.ts_scalar(self.time, np.ones(64), {"UNITS": "cm^-3"})
+        r_xyz = pyrf.ts_vec_xyz(self.time, np.tile([1.0, 0.0, 0.0], (64, 1)))
+        cases = [
+            (pyrf.dot(self.e_xyz, self.b_xyz), "(mV/m) nT"),
+            (pyrf.dot(self.b_xyz, self.b_xyz), "nT^2"),
+            (pyrf.cross(self.e_xyz, self.b_xyz), "(mV/m) nT"),
+            (pyrf.normalize(self.b_xyz), ""),
+            (pyrf.convert_fac(n_s, self.b_xyz, r_xyz), "cm^-3"),
+            (pyrf.cotrans(self.b_xyz[:, 0], "gse>gsm"), ""),
+            (pyrf.cotrans(self.b_xyz, "dipoledirectiongse"), ""),
+        ]
+        a_para, a_perp, alpha = pyrf.dec_par_perp(self.e_xyz, self.b_xyz)
+        cases += [(a_para, "mV/m"), (a_perp, "mV/m"), (alpha, "rad")]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        # No UNITS without input UNITS
+        bare = pyrf.ts_vec_xyz(self.time, self.b_xyz.data)
+        self.assertNotIn("UNITS", pyrf.dot(self.e_xyz, bare).attrs)
+
+    def test_units_cart2sph_ts(self):
+        # [r, theta, phi] without UNITS (km/s was copied onto the angles),
+        # [x, y, z] in the units of r
+        v_xyz = pyrf.ts_vec_xyz(self.time, self.b_xyz.data, {"UNITS": "km/s"})
+        r_tp = pyrf.cart2sph_ts(v_xyz)
+        self.assertNotIn("UNITS", r_tp.attrs)
+
+        r_tp.attrs["UNITS"] = "km/s"
+        self.assertEqual(pyrf.cart2sph_ts(r_tp, -1).attrs["UNITS"], "km/s")
+
+
+class UnitsFourSpacecraftTestCase(unittest.TestCase):
+    # UNITS of the four-spacecraft derivatives: the field per the positions
+    # (none), SI for c_4_j, PVI dimensionless and shear angles in rad (nT)
+    def setUp(self):
+        rng = np.random.default_rng(0)
+        self.time = generate_timeline(4.0, 16)
+        tetrahedron = 30.0 * np.array(
+            [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]], dtype=float
+        )
+        self.r_mms = [
+            pyrf.ts_vec_xyz(self.time, np.tile(r, (16, 1)), {"UNITS": "km"})
+            for r in tetrahedron
+        ]
+        self.b_mms = [
+            pyrf.ts_vec_xyz(
+                self.time, rng.normal(size=(16, 3)) + [10, 2, 1], {"UNITS": "nT"}
+            )
+            for _ in range(4)
+        ]
+
+    def test_units_c_4(self):
+        r_mms, b_mms = self.r_mms, self.b_mms
+        p_mms = [
+            pyrf.ts_tensor_xyz(
+                self.time, np.tile(np.eye(3), (16, 1, 1)) * (1 + i), {"UNITS": "nPa"}
+            )
+            for i in range(4)
+        ]
+        v_mms = [
+            pyrf.ts_vec_xyz(self.time, b.data * 10, {"UNITS": "km/s"}) for b in b_mms
+        ]
+        cases = [
+            (pyrf.c_4_grad(r_mms, b_mms), "nT/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "div"), "nT/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "curl"), "nT/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "bdivb"), "nT^2/km"),
+            (pyrf.c_4_grad(r_mms, b_mms, "curv"), "1/km"),
+            (pyrf.c_4_grad(r_mms, p_mms, "div"), "nPa/km"),
+            (pyrf.c_4_k(r_mms)[0], "1/km"),
+        ]
+        j, div_b, b_avg, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
+        cases += [
+            (j, "A/m^2"),
+            (div_b, "A/m^2"),
+            (b_avg, "nT"),
+            (jxb, "N/m^3"),
+            (div_t_shear, "N/m^3"),
+            (div_pb, "N/m^3"),
+        ]
+        d_xyz, pi_xyz, ptheta, pid = pyrf.pid_4sc(r_mms, v_mms, p_mms)
+        cases += [
+            (d_xyz, "(km/s)/km"),
+            (pi_xyz, "nPa"),
+            (ptheta, "nPa ((km/s)/km)"),
+            (pid, "nPa ((km/s)/km)"),
+        ]
+        pvi_ij, theta_ij = pyrf.pvi_4sc(b_mms)
+        cases += [(pvi_ij[0], ""), (theta_ij[0], "rad")]
+        cases += [(pyrf.st_diff(r_mms, b_mms, np.eye(3)), "km/s")]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        # c_4_j assumes km and nT
+        b_si = [
+            pyrf.ts_vec_xyz(self.time, b.data * 1e-9, {"UNITS": "T"}) for b in b_mms
+        ]
+        with self.assertWarnsRegex(UserWarning, "b_list is assumed in nT"):
+            pyrf.c_4_j(r_mms, b_si)
+
+        # No UNITS without input UNITS
+        bare = [pyrf.ts_vec_xyz(self.time, b.data) for b in b_mms]
+        self.assertNotIn("UNITS", pyrf.c_4_grad(r_mms, bare).attrs)
+
+    def test_units_avg_4sc_distributions(self):
+        # Data and coordinate attributes of the first skymap (they were lost)
+        vdfs = [generate_vdf(64.0, 10, (8, 8, 4), False, "ions", "s^3/cm^6")] * 4
+        vdfs[0].energy.attrs["UNITS"] = "eV"
+        result = pyrf.avg_4sc(vdfs)
+
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+        self.assertEqual(result.energy.attrs["UNITS"], "eV")
+
+
+class UnitsMeansTestCase(unittest.TestCase):
+    # The means and evaluations keep the input UNITS (they had none)
+    def test_units_means(self):
+        rng = np.random.default_rng(0)
+        time = generate_timeline(64.0, 256)
+        b_xyz = pyrf.ts_vec_xyz(time, rng.normal(size=(256, 3)), {"UNITS": "nT"})
+        n_s = pyrf.ts_scalar(time, rng.normal(size=256), {"UNITS": "cm^-3"})
+        b_mean, b_wave = pyrf.mean_field(b_xyz, 3)
+        stats = pyrf.mean_bins(b_xyz[:, 0], n_s, 5)
+        cases = [
+            (b_mean, "nT"),
+            (b_wave, "nT"),
+            (pyrf.t_eval(b_xyz, time[10:20]), "nT"),
+            (pyrf.t_eval(n_s, time[10:20]), "cm^-3"),
+            (stats.data, "cm^-3"),
+            (stats.sigma, "cm^-3"),
+            (stats.bins, "nT"),
+            (pyrf.median_bins(b_xyz[:, 0], n_s, 5).data, "cm^-3"),
+        ]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+
+class UnitsPlasmaTestCase(unittest.TestCase):
+    # UNITS of the plasma parameters (none), and a warning when an input is not
+    # in the units the factors assume
+    def setUp(self):
+        self.time = generate_timeline(1.0, 8)
+        self.b_xyz = pyrf.ts_vec_xyz(
+            self.time, np.tile([10.0, 2.0, 1.0], (8, 1)), {"UNITS": "nT"}
+        )
+        self.e_xyz = pyrf.ts_vec_xyz(
+            self.time, np.tile([1.0, 0.5, 0.0], (8, 1)), {"UNITS": "mV/m"}
+        )
+        p_xyz = np.tile(np.diag([1.0, 0.8, 0.6]), (8, 1, 1))
+        p_xyz[:, 0, 1] = p_xyz[:, 1, 0] = 0.1
+        self.p_xyz = pyrf.ts_tensor_xyz(self.time, p_xyz, {"UNITS": "nPa"})
+
+    def test_units_plasma(self):
+        n_s = pyrf.ts_scalar(self.time, np.full(8, 1.0), {"UNITS": "cm^-3"})
+        t_s = pyrf.ts_scalar(self.time, np.full(8, 1e3), {"UNITS": "eV"})
+        params = pyrf.plasma_calc(self.b_xyz, t_s, t_s, n_s, n_s)
+        thresholds = pyrf.anisotropy_thresholds(xr.DataArray(np.array([0.5, 1.0])))
+        counts, _ = pyrf.brazil(
+            np.geomspace(0.1, 10.0, 200), np.geomspace(0.5, 2.0, 200)
+        )
+        cases = [
+            (params.w_pe, "rad/s"),
+            (params.f_lh, "Hz"),
+            (params.v_a, "m/s"),
+            (params.l_i, "m"),
+            (params.rho_s, "m"),
+            (params.gamma_e, ""),
+            (params.n_d, ""),
+            (pyrf.plasma_beta(self.b_xyz, self.p_xyz), ""),
+            (pyrf.pres_anis(self.p_xyz, self.b_xyz), ""),
+            (pyrf.calc_ag(self.p_xyz), ""),
+            (pyrf.calc_agyro(self.p_xyz), ""),
+            (pyrf.calc_dng(self.p_xyz), ""),
+            (pyrf.calc_sqrtq(self.p_xyz), ""),
+            (pyrf.edb(self.e_xyz, self.b_xyz)[1], "deg"),
+            (pyrf.pvi(self.b_xyz[:, 0], 2), ""),
+            (thresholds["mirror mode"], ""),
+            (counts, ""),
+        ]
+
+        for i, (out, units) in enumerate(cases):
+            with self.subTest(i=i, units=units):
+                self.assertEqual(out.attrs["UNITS"], units)
+
+        self.assertNotIn("units", pyrf.pvi(self.b_xyz[:, 0], 2).attrs)
+
+    def test_units_assumed_inputs(self):
+        # The factors assume nT, nPa, mV/m, km/s, cm^-3 and eV
+        b_si = pyrf.ts_vec_xyz(self.time, self.b_xyz.data * 1e-9, {"UNITS": "T"})
+        v_xyz = pyrf.ts_vec_xyz(self.time, self.e_xyz.data, {"UNITS": "m/s"})
+        n_si = pyrf.ts_scalar(self.time, np.full(8, 1e6), {"UNITS": "m^-3"})
+        calls = [
+            (lambda: pyrf.plasma_beta(b_si, self.p_xyz), "b_xyz is assumed in nT"),
+            (lambda: pyrf.pres_anis(self.p_xyz, b_si), "b_xyz is assumed in nT"),
+            (lambda: pyrf.e_vxb(v_xyz, self.b_xyz), "v_xyz is assumed in km/s"),
+            (lambda: pyrf.dynamic_press(n_si, self.e_xyz), "n_s is assumed in cm"),
+            (lambda: pyrf.poynting_flux(self.e_xyz, b_si), "b_xyz is assumed in nT"),
+        ]
+
+        for i, (call, message) in enumerate(calls):
+            with self.subTest(i=i), self.assertWarnsRegex(UserWarning, message):
+                call()
+
+
 class C4GradTestCase(unittest.TestCase):
     def test_c_4_grad_input(self):
         with self.assertRaises(TypeError):
@@ -1021,6 +1377,38 @@ class C4GradTestCase(unittest.TestCase):
         result = pyrf.c_4_grad(r_mms, n_mms, "grad")
         self.assertIsInstance(result, xr.DataArray)
         self.assertListEqual(list(result.shape), [100, 3])
+
+    def test_c_4_grad_tensor_divergence(self):
+        # Linear tensor field T_ij(r) = T0_ij + A_ijk r_k: the divergence
+        # d T_ij / d x_i is sum_i A_iji (exact for a linear field), the
+        # divergence of each column; the other methods raise ValueError (all
+        # raised a broadcasting ValueError)
+        rng = np.random.default_rng(0)
+        time = generate_timeline(1.0, 4)
+        tetrahedron = np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+        tetrahedron = 30.0 * tetrahedron + rng.normal(0.0, 5.0, (4, 3))
+        t_0, a_ijk = rng.normal(size=(3, 3)), rng.normal(size=(3, 3, 3))
+        r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (4, 1))) for r in tetrahedron]
+        t_mms = [
+            pyrf.ts_tensor_xyz(time, np.tile(t_0 + a_ijk @ r, (4, 1, 1)))
+            for r in tetrahedron
+        ]
+        result = pyrf.c_4_grad(r_mms, t_mms, "div")
+
+        self.assertTupleEqual(result.dims, ("time", "comp"))
+        np.testing.assert_allclose(
+            result.data, np.tile(np.einsum("iji->j", a_ijk), (4, 1))
+        )
+
+        for j in range(3):
+            column = [pyrf.ts_vec_xyz(time, t.data[:, :, j]) for t in t_mms]
+            np.testing.assert_allclose(
+                result.data[:, j], pyrf.c_4_grad(r_mms, column, "div").data
+            )
+
+        for method in ["grad", "curl", "bdivb", "curv"]:
+            with self.assertRaisesRegex(ValueError, "divergence"):
+                pyrf.c_4_grad(r_mms, t_mms, method)
 
     def test_c_4_grad_curvature(self):
         # Circular field lines of radius R_c about z: the curvature is 1 / R_c
@@ -3220,6 +3608,10 @@ class GetOmniDataTestCase(unittest.TestCase):
         self.assertEqual(int(np.isnan(out.to_array()).sum()), 2)
         self.assertAlmostEqual(float(out.b.data[4]), 3.4)
 
+        # Units of each variable (none)
+        for var, units in [("b", "nT"), ("v", "km/s"), ("ae", "nT")]:
+            self.assertEqual(out[var].attrs["UNITS"], units)
+
     def test_get_omni_data_minute(self):
         # 1-minute data: minute codes, "YYYY DOY HR MN" header, minute times
         rows = [
@@ -3315,6 +3707,11 @@ class GradientTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.comp.data, inp.comp.data)
         self.assertEqual(result.attrs["UNITS"], "nT/s")
         self.assertEqual(inp.attrs["UNITS"], "nT")
+
+        # Compound and dimensionless units ("mV/m/s" and "/s")
+        for units, expected in [("mV/m", "(mV/m)/s"), ("", "1/s")]:
+            inp.attrs["UNITS"] = units
+            self.assertEqual(pyrf.gradient(inp).attrs["UNITS"], expected)
 
     def test_gradient_gaps(self):
         # Segments between gaps (steps over 3 time_step) differentiated
@@ -4289,7 +4686,7 @@ class IntegrateTestCase(unittest.TestCase):
         np.testing.assert_allclose(pyrf.integrate(inp).data[:, 1, 2], [0.0, 0.5, 1.0])
 
         inp = pyrf.ts_vec_xyz(time, np.ones((3, 3)), attrs={"UNITS": "mV/m"})
-        self.assertEqual(pyrf.integrate(inp).attrs["UNITS"], "(mV/m)*s")
+        self.assertEqual(pyrf.integrate(inp).attrs["UNITS"], "(mV/m) s")
 
         with self.assertRaises(TypeError):
             pyrf.integrate(inp.data)
@@ -5391,13 +5788,18 @@ class ReadCdfTestCase(unittest.TestCase):
         time = time + np.arange(3) * np.timedelta64(1, "s")
         cdf = pycdfpp.CDF()
         cdf.add_variable("Epoch", time)
-        cdf.add_variable("DENSITY", np.array([[1.0], [2.0], [3.0]]))
+        # A string attribute: pycdfpp 0.9 (the lowest supported) can't store a
+        # list of strings
+        cdf.add_variable(
+            "DENSITY", np.array([[1.0], [2.0], [3.0]]), attributes={"UNITS": "cm^-3"}
+        )
         path = os.path.join(self.directory, "density.cdf")
         pycdfpp.save(cdf, path)
 
         result = pyrf.read_cdf(path)
 
         self.assertListEqual(sorted(result), ["density", "epoch"])
+        self.assertEqual(result["density"].attrs["UNITS"], "cm^-3")
         np.testing.assert_array_equal(result["density"].data, [1.0, 2.0, 3.0])
         np.testing.assert_array_equal(pycdfpp.to_datetime64(result["epoch"].data), time)
 
@@ -5723,7 +6125,7 @@ class PviTestCase(unittest.TestCase):
         result = pyrf.pvi(inp, 2)
         np.testing.assert_allclose(result.data, np.ones(4))
         np.testing.assert_array_equal(result.time.data, time[:4])
-        self.assertNotIn("UNITS", result.attrs)
+        self.assertEqual(result.attrs["UNITS"], "")
         self.assertEqual(result.attrs["TENSOR_ORDER"], 0)
         self.assertEqual(inp.attrs["UNITS"], "nT")
 

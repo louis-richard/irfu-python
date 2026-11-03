@@ -137,7 +137,11 @@ def anisotropy_thresholds(
     if isinstance(beta_para, xr.DataArray):
         out = {
             name: xr.DataArray(
-                value, coords=beta_para.coords, dims=beta_para.dims, name=name
+                value,
+                coords=beta_para.coords,
+                dims=beta_para.dims,
+                name=name,
+                attrs={"UNITS": ""},
             )
             for name, value in out.items()
         }

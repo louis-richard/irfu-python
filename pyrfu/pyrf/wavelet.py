@@ -16,6 +16,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
+from pyrfu.pyrf._units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 
 __author__ = "Louis Richard"
@@ -285,5 +286,17 @@ def wavelet(
             out_dict,
             coords={"time": time, "frequency": np.flip(freqs_cwt)},
         )
+
+    # Units squared per Hz for the power, per square root of Hz for the complex
+    # coefficients (none)
+    if return_power:
+        units = _ratio(_power(_units(inp), 2), "Hz")
+    else:
+        units = _ratio(_units(inp), _power("Hz", 0.5))
+
+    for var in [out] if isinstance(out, DataArray) else out.data_vars.values():
+        var.attrs = _attrs(var.attrs, units)
+
+    out.frequency.attrs = {"UNITS": "Hz"}
 
     return out

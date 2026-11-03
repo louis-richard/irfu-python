@@ -7,6 +7,7 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
+from ._units import _check_units
 from .resample import resample
 
 __author__ = "Louis Richard"
@@ -90,6 +91,16 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
 
     """
 
+    # The factors assume B in nT, T in eV and n in cm^-3
+    for inp, units, name in [
+        (b_xyz, "nT", "b_xyz"),
+        (t_i, "eV", "t_i"),
+        (t_e, "eV", "t_e"),
+        (n_i, "cm^-3", "n_i"),
+        (n_e, "cm^-3", "n_e"),
+    ]:
+        _check_units(inp, units, name)
+
     # Get constants
     q_e = constants.elementary_charge
     cel = constants.speed_of_light
@@ -171,5 +182,17 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
             "rho_s": (["time"], rho_s),
         },
     )
+
+    # SI units (they had none)
+    units = {
+        **dict.fromkeys(["w_pe", "w_ce", "w_pp"], "rad/s"),
+        **dict.fromkeys(["f_pe", "f_ce", "f_uh", "f_pp", "f_cp", "f_lh"], "Hz"),
+        **dict.fromkeys(["v_a", "v_ae", "v_te", "v_tp", "v_ts"], "m/s"),
+        **dict.fromkeys(["l_e", "l_i", "l_d", "rho_e", "rho_p", "rho_s"], "m"),
+        **dict.fromkeys(["gamma_e", "gamma_p", "n_d"], ""),
+    }
+
+    for name in out.data_vars:
+        out[name].attrs["UNITS"] = units[name]
 
     return out
