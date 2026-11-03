@@ -5,6 +5,7 @@
 import json
 import logging
 import os
+import posixpath
 from typing import Mapping, Optional, Tuple, Union
 
 # 3rd party imports
@@ -15,11 +16,12 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
-from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms import _cache
+from pyrfu.mms.db_init import MMS_CFG_PATH, _read_config
 from pyrfu.mms.get_dist import get_dist
 from pyrfu.mms.get_ts import get_ts
 from pyrfu.mms.list_files import list_files
-from pyrfu.mms.list_files_aws import list_files_aws
+from pyrfu.mms.list_files_aws import _s3_resource, list_files_aws
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 from pyrfu.mms.tokenize import tokenize
 from pyrfu.pyrf.dist_append import dist_append
@@ -69,6 +71,51 @@ def _check_times(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
     return out
 
 
+def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
+    r"""Key of the listing of the files of `var` in `tint` in the cache: the
+    source and its settings (bucket, SDC rights and user), the spacecraft, the
+    instrument, rate, level and data type, and the time interval."""
+    config = _read_config()
+    where = config["aws"] if source == "aws" else config["sdc"]
+    product = {k: var.get(k) or "" for k in ["inst", "tmmode", "lev", "dtype"]}
+
+    return {
+        "source": source,
+        "where": where,
+        "mms_id": mms_id,
+        **product,
+        "tint": [str(t) for t in tint],
+    }
+
+
+def _remote_files(source: str, tint: list, mms_id: str, var: Mapping) -> list:
+    r"""Files of `var` in `tint` on the SDC or AWS, as items of a listing of the
+    cache (see :class:`pyrfu.mms._cache.RemoteFile`)."""
+    if source == "aws":
+        return [
+            {
+                "source": "aws",
+                "path": _cache.mms_path(
+                    mms_id, var, posixpath.basename(file["full_name"])
+                ),
+                "size": _cache.file_size(file["file_size"]),
+                "bucket": file["s3_obj"].bucket_name,
+                "key": file["s3_obj"].key,
+            }
+            for file in list_files_aws(tint, mms_id, var)
+        ]
+
+    return [
+        {
+            "source": "sdc",
+            "path": _cache.mms_path(mms_id, var, file["file_name"]),
+            "size": _cache.file_size(file.get("size")),
+            "url": file["url"],
+        }
+        for file in list_files_sdc(tint, mms_id, var)
+    ]
+
+
 def _list_files_sources(
     source: str,
     tint: list[str],
@@ -78,6 +125,14 @@ def _list_files_sources(
 ):
     if source == "local":
         file_names = list_files(tint, mms_id, var, data_path)
+        sdc_session, headers = None, {}
+    elif source in ["sdc", "aws"] and _cache.enabled():
+        # Files of the cache listing (the SDC login only if a file is read)
+        items = _cache.listing(
+            _listing_key(source, tint, mms_id, var),
+            lambda: _remote_files(source, tint, mms_id, var),
+        )
+        file_names = [_cache.RemoteFile(**item) for item in items]
         sdc_session, headers = None, {}
     elif source == "sdc":
         file_names = [file.get("url") for file in list_files_sdc(tint, mms_id, var)]
@@ -116,6 +171,11 @@ def _get_file_content_sources(
         File content.
 
     """
+    if isinstance(file_name, _cache.RemoteFile):
+        return _cache.read(
+            file_name, lambda: _download(file_name, sdc_session, headers)
+        )
+
     if source == "local":
         file_path = os.path.normpath(file_name)
         with open(file_path, "rb") as file:
@@ -148,6 +208,20 @@ def _get_file_content_sources(
         raise NotImplementedError(f"Resource {source} is not yet implemented!!")
 
     return file_content
+
+
+def _download(remote, sdc_session=None, headers=None) -> bytes:
+    r"""Content of a file of the cache listing, from AWS or the SDC (logged in
+    if no session is given)."""
+    if remote.source == "aws":
+        return _get_file_content_sources(
+            "aws", _s3_resource().Object(remote.bucket, remote.key)
+        )
+
+    if sdc_session is None:
+        sdc_session, headers, _ = _login_lasp()
+
+    return _get_file_content_sources("sdc", remote.url, sdc_session, headers)
 
 
 def get_data(

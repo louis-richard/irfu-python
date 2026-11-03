@@ -4,6 +4,7 @@
 # Built-in imports
 import json
 import logging
+import math
 import os
 import shutil
 from typing import Literal, Optional
@@ -108,6 +109,9 @@ _DEFAULT_CONFIG = {
     "local": ".",
     "sdc": {"rights": "public", "username": "username"},
     "aws": "",
+    # Cache of the files read from the SDC and AWS: on, 1 GB, files removed 4 h
+    # after their last use, in the user cache directory ("")
+    "cache": {"enabled": True, "size": 1e9, "max_age": 4.0, "dir": ""},
 }
 
 
@@ -130,7 +134,28 @@ def _read_config() -> dict:
             {k: v for k, v in current["sdc"].items() if k in ["rights", "username"]}
         )
 
+    if isinstance(current.get("cache"), dict):
+        config["cache"].update(
+            {k: v for k, v in current["cache"].items() if k in config["cache"]}
+        )
+
     return config
+
+
+def _set_cache(config, enabled, size, max_age, directory):
+    r"""Sets the given cache settings of `config` (checked)."""
+    for name, value in [("cache_size", size), ("cache_max_age", max_age)]:
+        if value is not None and (math.isnan(float(value)) or float(value) <= 0.0):
+            raise ValueError(f"{name} must be positive")
+
+    for key, value in [
+        ("enabled", None if enabled is None else bool(enabled)),
+        ("size", None if size is None else float(size)),
+        ("max_age", None if max_age is None else float(max_age)),
+        ("dir", directory),
+    ]:
+        if value is not None:
+            config[key] = value
 
 
 def db_init(
@@ -140,6 +165,10 @@ def db_init(
     sdc_username: Optional[str] = None,
     sdc_password: Optional[str] = None,
     aws: Optional[str] = None,
+    cache: Optional[bool] = None,
+    cache_size: Optional[float] = None,
+    cache_max_age: Optional[float] = None,
+    cache_dir: Optional[str] = None,
     reset: bool = False,
 ) -> None:
     r"""Manage the MMS data access configuration.
@@ -175,6 +204,21 @@ def db_init(
         Bucket name and prefix to MMS data in AWS S3, as "bucket/prefix". Empty
         (the default) uses the public MMS archive on NASA HelioCloud
         ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms", no AWS credentials needed).
+    cache : bool, Optional
+        Keep the files read from the SDC and AWS, and the file listings for
+        `cache_max_age`, in a cache, so that reading them again needs no
+        network. Default is True. A file reprocessed on the SDC or AWS is seen
+        when the listing expires, or after :func:`pyrfu.mms.clear_cache`.
+    cache_size : float, Optional
+        Maximum size of the cache (bytes): the least recently used files are
+        removed above it, and larger files are not cached. Default is 1e9.
+    cache_max_age : float, Optional
+        Hours after their last use when the cached files are removed, and
+        after which the file listings are made again. Default is 4.
+    cache_dir : str, Optional
+        Directory of the cache, in the layout of the SDC (that of a `local`
+        directory). Empty (the default) uses the user cache directory, e.g.
+        ~/Library/Caches/pyrfu/mms on macOS, ~/.cache/pyrfu/mms on Linux.
     reset : bool, Optional
         Start from the default settings instead of the current ones. The
         keyring is not changed. Default is False.
@@ -186,8 +230,9 @@ def db_init(
     FileNotFoundError
         If the local path doesn't exist.
     ValueError
-        If the SDC rights are not "public" or "sitl", or if `sdc_password` is
-        given without `sdc_username`.
+        If the SDC rights are not "public" or "sitl", if `sdc_password` is
+        given without `sdc_username`, or if `cache_size` or `cache_max_age` is
+        not positive.
 
     Examples
     --------
@@ -200,6 +245,11 @@ def db_init(
     Save the MMS SDC team credentials and use them
 
     >>> mms.db_init(sdc="sitl", sdc_username="user", sdc_password="password")
+
+    Keep up to 5 GB of files for a day, or turn the cache off
+
+    >>> mms.db_init(cache_size=5e9, cache_max_age=24)
+    >>> mms.db_init(cache=False)
 
     """
     config = json.loads(json.dumps(_DEFAULT_CONFIG)) if reset else _read_config()
@@ -236,6 +286,8 @@ def db_init(
 
     if aws is not None:
         config["aws"] = aws
+
+    _set_cache(config["cache"], cache, cache_size, cache_max_age, cache_dir)
 
     # First configuration: the current directory, as an absolute path
     if not os.path.isabs(config["local"]):

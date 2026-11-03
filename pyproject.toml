@@ -188,6 +188,7 @@ ignore = """
     test_maven.py,
     test_solo.py,
     test_mms.py,
+    test_mms_cache.py,
     test_models.py,
     test_plot.py,
 """

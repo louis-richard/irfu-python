@@ -14,7 +14,9 @@ import pandas as pd
 import requests
 
 # Local imports
+from pyrfu.mms import _cache
 from pyrfu.mms.db_get_ts import _resolve_source
+from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.list_files_ancillary import _sc_name, list_files_ancillary
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp
@@ -62,7 +64,21 @@ def _list_files_sdc(tint, mms_id, product):
     r"""Ancillary files of the SDC covering tint, the latest version of each
     period, in time order (as list_files_ancillary for the local files)."""
     tint_0, tint_1 = iso86012datetime64(np.array(tint))
-    files = list_files_ancillary_sdc(extend_tint(tint, [-86400, 0]), mms_id, product)
+    tint_long = extend_tint(tint, [-86400, 0])
+
+    if _cache.enabled():
+        key = {
+            "source": "sdc",
+            "where": _read_config()["sdc"],
+            "ancillary": product,
+            "mms_id": str(mms_id),
+            "tint": [str(t) for t in tint_long],
+        }
+        files = _cache.listing(
+            key, lambda: list_files_ancillary_sdc(tint_long, mms_id, product)
+        )
+    else:
+        files = list_files_ancillary_sdc(tint_long, mms_id, product)
 
     def covers(file):
         start, end = iso86012datetime64(
@@ -79,6 +95,38 @@ def _list_files_sdc(tint, mms_id, product):
             latest[period] = (version, file)
 
     return [latest[period][1] for period in sorted(latest)]
+
+
+def _sdc_content(url):
+    r"""Content of an ancillary file of the SDC."""
+    sdc_session, headers, _ = _login_lasp()
+
+    try:
+        response = sdc_session.get(url, timeout=SDC_TIMEOUT, headers=headers)
+        response.raise_for_status()
+    except requests.RequestException:
+        logger.error("Error retrieving file from %s", url)
+        raise
+
+    return response.content
+
+
+def _sdc_file(file, mms_id, product):
+    r"""Ancillary file of the SDC as a file object, from the cache if it is on
+    (in the layout of the local ancillary files: ancillary/sc/product)."""
+    if not _cache.enabled():
+        return io.BytesIO(_sdc_content(file["url"]))
+
+    remote = _cache.RemoteFile(
+        source="sdc",
+        path="/".join(
+            ["ancillary", _sc_name(product, mms_id), product, file["file_name"]]
+        ),
+        size=_cache.file_size(file.get("file_size")),
+        url=file["url"],
+    )
+
+    return io.BytesIO(_cache.read(remote, lambda: _sdc_content(file["url"])))
 
 
 def _read_file(file, product_info, tint):
@@ -196,15 +244,12 @@ def load_ancillary(
         logger.info("No ancillary files on AWS: %s read from the SDC", product)
         resource = "sdc"
 
-    # Files covering the time interval (and the SDC session to read them)
-    sdc_session, headers = None, None
-
+    # Files covering the time interval
     if resource == "local":
         tint_long = extend_tint(tint, [-86400, 86400])
         files_names = list_files_ancillary(tint_long, mms_id, product, data_path)
     else:
         files_names = _list_files_sdc(tint, mms_id, product)
-        sdc_session, headers, _ = _login_lasp()
 
     if not files_names:
         raise FileNotFoundError(
@@ -222,16 +267,7 @@ def load_ancillary(
 
     for i, file in enumerate(files_names):
         if resource == "sdc":
-            try:
-                response = sdc_session.get(
-                    file["url"], timeout=SDC_TIMEOUT, headers=headers
-                )
-                response.raise_for_status()
-            except requests.RequestException:
-                logger.error("Error retrieving file from %s", file["url"])
-                raise
-
-            file = io.BytesIO(response.content)
+            file = _sdc_file(file, mms_id, product)
 
         data_frame_dict[i] = _read_file(file, anc_dict[product], tint)
 

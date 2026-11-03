@@ -631,6 +631,7 @@ class DbInitCredentialsTestCase(unittest.TestCase):
                 "local": other,
                 "sdc": {"rights": "sitl", "username": "louis"},
                 "aws": "b/p",
+                "cache": {"enabled": True, "size": 1e9, "max_age": 4.0, "dir": ""},
             },
         )
 
@@ -675,6 +676,7 @@ class DbInitCredentialsTestCase(unittest.TestCase):
                 "local": root,
                 "sdc": {"rights": "public", "username": "username"},
                 "aws": "",
+                "cache": {"enabled": True, "size": 1e9, "max_age": 4.0, "dir": ""},
             },
         )
         self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "secret"})
@@ -981,6 +983,49 @@ class DbInitTestCase(unittest.TestCase):
 
     def test_db_init_output(self):
         self.assertIsNone(mms.db_init(local=os.getcwd()))
+
+    def _config(self):
+        with open(os.path.join(self.tmp_dir.name, "c.json"), encoding="utf-8") as file:
+            return json.load(file)
+
+    def test_db_init_cache(self):
+        # On by default (1 GB, 4 h, the user cache directory); the given
+        # settings only are changed; checked
+        module = importlib.import_module("pyrfu.mms.db_init")
+        mms.db_init(local=os.getcwd())
+        self.assertDictEqual(
+            self._config()["cache"],
+            {"enabled": True, "size": 1e9, "max_age": 4.0, "dir": ""},
+        )
+
+        mms.db_init(cache=False, cache_size=5e9, cache_max_age=24, cache_dir="/tmp/c")
+        mms.db_init(cache_size=2e9)
+        self.assertDictEqual(
+            self._config()["cache"],
+            {"enabled": False, "size": 2e9, "max_age": 24.0, "dir": "/tmp/c"},
+        )
+
+        for kwargs in [
+            {"cache_size": 0},
+            {"cache_max_age": -1.0},
+            {"cache_size": float("nan")},
+        ]:
+            with self.assertRaisesRegex(ValueError, "must be positive"):
+                mms.db_init(**kwargs)
+
+        mms.db_init(reset=True)
+        self.assertTrue(self._config()["cache"]["enabled"])
+
+        # A configuration of an earlier version (no cache, or part of it)
+        for cache, expected in [(None, True), ({"enabled": False, "x": 1}, False)]:
+            config = {"default": "aws"} if cache is None else {"cache": cache}
+            with open(module.MMS_CFG_PATH, "w", encoding="utf-8") as file:
+                json.dump(config, file)
+
+            self.assertDictEqual(
+                module._read_config()["cache"],
+                {"enabled": expected, "size": 1e9, "max_age": 4.0, "dir": ""},
+            )
 
 
 @ddt
@@ -10743,6 +10788,38 @@ class LoadAncillaryTestCase(unittest.TestCase):
                 [call.args[0] for call in session.get.call_args_list],
                 [files[0]["url"], files[1]["url"]],
             )
+
+    def test_load_ancillary_sdc_cache(self):
+        # Listed and read once from the SDC, then from the cache, in the layout
+        # of the local ancillary files
+        module = importlib.import_module("pyrfu.mms.load_ancillary")
+        cache = importlib.import_module("pyrfu.mms._cache")
+        settings = {"enabled": True, "size": 1e9, "max_age": 4.0}
+        settings["dir"] = os.path.join(self.root, "cache")
+        files, contents = self._defatt_files()
+        session = self._sdc(files, contents)
+
+        with mock.patch.object(cache, "_read_config", return_value={"cache": settings}):
+            results = [
+                mms.load_ancillary("defatt", self.tint, 1, False, source="sdc")
+                for _ in range(2)
+            ]
+
+        xr.testing.assert_identical(*results)
+        self.assertEqual(module.list_files_ancillary_sdc.call_count, 1)
+        self.assertEqual(session.get.call_count, 2)
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    settings["dir"],
+                    "sdc",
+                    "ancillary",
+                    "mms1",
+                    "defatt",
+                    files[1]["file_name"],
+                )
+            )
+        )
 
     def test_load_ancillary_sdc_files(self):
         # The files covering tint (with a day on their end, as

@@ -1,5 +1,11 @@
 {
   "aws": "",
+  "cache": {
+    "dir": "",
+    "enabled": true,
+    "max_age": 4.0,
+    "size": 1000000000.0
+  },
   "default": "local",
   "local": ".",
   "sdc": {
