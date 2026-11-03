@@ -2252,6 +2252,37 @@ class EisPadTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[:, 11, :], 0.0)
         self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
 
+    def test_eis_pad_sum(self):
+        # B along z: two telescopes at pitch angle 0, one at 180 and three at
+        # 90 (on the edge of bins 5 and 6: in bin 6 only). Each telescope is
+        # in the bin of its centre, so the bins hold all the counts once (the
+        # mean puts a telescope in up to three bins); NaN data are left out,
+        # a bin without telescope or with NaN only is NaN
+        look = np.array(
+            [[0, 0, -1], [0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
+        )
+        flux = np.zeros((6, 3, 2))
+        flux[:, :, 0] = np.array([4.0, 1.0, 2.0, 1.0, 1.0, np.nan])[:, None]
+        flux[:, :, 1] = np.array([1.0, 1.0, np.nan, 3.0, 0.0, 0.0])[:, None]
+        eis = self._eis(flux, look, np.array([100.0, 200.0]), 10.0, 10.0)
+        result = mms.eis_pad(eis, [0, 0, 1], method="sum")
+
+        self.assertEqual(result.attrs["method"], "sum")
+        np.testing.assert_array_equal(result.data[0, 0], [5.0, 2.0])
+        np.testing.assert_array_equal(result.data[0, 6], [2.0, 3.0])
+        np.testing.assert_array_equal(result.data[0, 11], [2.0, np.nan])
+        empty = np.setdiff1d(np.arange(12), [0, 6, 11])
+        self.assertTrue(np.all(np.isnan(result.data[:, empty])))
+        np.testing.assert_array_equal(np.nansum(result.data[0], axis=0), [9.0, 5.0])
+        self.assertEqual(mms.eis_pad(eis, [0, 0, 1]).attrs["method"], "mean")
+
+        # Pitch angles that can't be computed (no field): NaN
+        vec = pyrf.ts_vec_xyz(eis.time.data, np.tile([0.0, 0.0, 1.0], (3, 1)))
+        vec.data[1] = np.nan
+        result = mms.eis_pad(eis, vec, method="sum")
+        self.assertTrue(np.all(np.isnan(result.data[1])))
+        np.testing.assert_array_equal(result.data[2, 0], [5.0, 2.0])
+
     def test_eis_pad_energy_edges(self):
         # Channels with a lower (E - delta_minus, it was E + delta_minus) or
         # upper edge in the range
@@ -2279,6 +2310,9 @@ class EisPadTestCase(unittest.TestCase):
         # Bins with gaps for a width that doesn't divide 180
         with self.assertRaisesRegex(ValueError, "pa_width"):
             mms.eis_pad(eis, [1, 0, 0], pa_width=25)
+
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.eis_pad(eis, [1, 0, 0], method="median")
 
     def test_eis_pad_attrs(self):
         # Units, species, widths of the channels used and bin width (no attrs)
