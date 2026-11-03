@@ -5,6 +5,7 @@
 import json
 import logging
 import math
+import numbers
 import os
 import shutil
 from typing import Literal, Optional
@@ -143,16 +144,35 @@ def _read_config() -> dict:
 
 
 def _set_cache(config, enabled, size, max_age, directory):
-    r"""Sets the given cache settings of `config` (checked)."""
+    r"""Sets the given cache settings of `config` (checked). A directory is
+    saved as an absolute path, so that the cache is the same from every
+    working directory."""
+    if enabled is not None and not isinstance(enabled, bool):
+        raise TypeError(f"cache must be True or False, not {enabled!r}")
+
     for name, value in [("cache_size", size), ("cache_max_age", max_age)]:
-        if value is not None and (math.isnan(float(value)) or float(value) <= 0.0):
+        if value is None:
+            continue
+
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            raise TypeError(f"{name} must be a number, not {value!r}")
+
+        if math.isnan(value) or value <= 0.0:
             raise ValueError(f"{name} must be positive")
 
+    if directory is not None and not isinstance(directory, (str, os.PathLike)):
+        raise TypeError(f"cache_dir must be a path, not {directory!r}")
+
+    if directory:
+        directory = os.path.normpath(
+            os.path.abspath(os.path.expanduser(os.fspath(directory)))
+        )
+
     for key, value in [
-        ("enabled", None if enabled is None else bool(enabled)),
+        ("enabled", enabled),
         ("size", None if size is None else float(size)),
         ("max_age", None if max_age is None else float(max_age)),
-        ("dir", directory),
+        ("dir", None if directory is None else os.fspath(directory)),
     ]:
         if value is not None:
             config[key] = value
@@ -217,8 +237,9 @@ def db_init(
         after which the file listings are made again. Default is 4.
     cache_dir : str, Optional
         Directory of the cache, in the layout of the SDC (that of a `local`
-        directory). Empty (the default) uses the user cache directory, e.g.
-        ~/Library/Caches/pyrfu/mms on macOS, ~/.cache/pyrfu/mms on Linux.
+        directory), saved as an absolute path. Empty (the default) uses the
+        user cache directory, e.g. ~/Library/Caches/pyrfu/mms on macOS,
+        ~/.cache/pyrfu/mms on Linux.
     reset : bool, Optional
         Start from the default settings instead of the current ones. The
         keyring is not changed. Default is False.
@@ -229,6 +250,9 @@ def db_init(
         If the default resource is not implemented.
     FileNotFoundError
         If the local path doesn't exist.
+    TypeError
+        If `cache` is not a bool, `cache_size` or `cache_max_age` not a number,
+        or `cache_dir` not a path.
     ValueError
         If the SDC rights are not "public" or "sitl", if `sdc_password` is
         given without `sdc_username`, or if `cache_size` or `cache_max_age` is
@@ -264,7 +288,9 @@ def db_init(
     if local is not None or reset:
         # Normalize the path and make sure that it exists
         local = os.path.normpath(
-            os.path.abspath(config["local"] if local is None else local)
+            os.path.abspath(
+                os.path.expanduser(config["local"] if local is None else local)
+            )
         )
 
         if not os.path.exists(local):

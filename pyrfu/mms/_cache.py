@@ -106,10 +106,14 @@ def mms_path(mms_id: str, var: dict, file_name: str) -> str:
     return posixpath.join(*parts, file_name)
 
 
-def _ensure_dir(path: str) -> None:
-    r"""Creates a directory of the cache, readable by the user only (the cache
-    can hold SITL data)."""
-    os.makedirs(path, mode=0o700, exist_ok=True)
+def _ensure_dir(settings: dict, sub_dir: str, path: str) -> None:
+    r"""Creates a directory of the cache. The sub-directory of the cache it is
+    in (aws, sdc or listings) is readable by the user only, which protects all
+    the files below it (the cache can hold SITL data): os.makedirs gives its
+    mode to the last directory only. The cache directory itself is left as it
+    is (it can be a directory of the user)."""
+    os.makedirs(os.path.join(settings["dir"], sub_dir), mode=0o700, exist_ok=True)
+    os.makedirs(path, exist_ok=True)
 
 
 def _listing_path(settings: dict, key: dict) -> str:
@@ -139,7 +143,7 @@ def listing(key: dict, lister: Callable[[], list]) -> list:
         return items
 
     try:
-        _ensure_dir(os.path.dirname(path))
+        _ensure_dir(settings, _LISTINGS, os.path.dirname(path))
         _atomic_write(path, json.dumps({"created": time.time(), "items": items}))
     except OSError as err:
         logger.warning("Cannot write the MMS file listing to the cache: %s", err)
@@ -204,7 +208,7 @@ def read(remote: RemoteFile, fetch: Callable[[], bytes]) -> bytes:
         return content
 
     try:
-        _ensure_dir(os.path.dirname(path))
+        _ensure_dir(settings, remote.source, os.path.dirname(path))
         _atomic_write(path, content)
         _evict(settings)
     except OSError as err:

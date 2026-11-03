@@ -196,7 +196,11 @@ class CacheReadTestCase(_CacheTestCase):
 
     def test_read(self):
         # Fetched once, then from the cache, in the layout of the SDC; the
-        # directories are for the user only, and a read is a use
+        # sub-directory of the source is for the user only (all the levels
+        # below were 0755: os.makedirs gives its mode to the last one), the
+        # cache directory is left as it is; a read is a use
+        os.makedirs(self.dir, mode=0o755)
+        os.chmod(self.dir, 0o755)
         fetch = mock.Mock(return_value=b"cdf")
 
         self.assertEqual(_cache.read(self.remote, fetch), b"cdf")
@@ -212,7 +216,10 @@ class CacheReadTestCase(_CacheTestCase):
         )
 
         if sys.platform != "win32":
-            self.assertEqual(os.stat(os.path.dirname(self.path)).st_mode & 0o777, 0o700)
+            self.assertEqual(os.stat(self._path("aws")).st_mode & 0o777, 0o700)
+            self.assertEqual(os.stat(self.dir).st_mode & 0o777, 0o755)
+            _cache.listing({"k": 1}, lambda: [{"path": "a"}])
+            self.assertEqual(os.stat(self._path("listings")).st_mode & 0o777, 0o700)
 
     def test_read_incomplete(self):
         # A cached file of another size than listed is read again

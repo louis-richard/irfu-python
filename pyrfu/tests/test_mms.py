@@ -1013,6 +1013,38 @@ class DbInitTestCase(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must be positive"):
                 mms.db_init(**kwargs)
 
+        # Types: a string or a bool size was taken (cache="False" left the
+        # cache on, cache_size=True gave 1 byte, cache_dir=5 broke every read)
+        for kwargs in [
+            {"cache": "False"},
+            {"cache": 1},
+            {"cache_size": True},
+            {"cache_max_age": "4"},
+            {"cache_dir": 5},
+        ]:
+            with self.assertRaises(TypeError):
+                mms.db_init(**kwargs)
+
+        # The directory as an absolute path, ~ expanded (a relative one was a
+        # different cache in each working directory); the local path too
+        home = os.path.join(self.tmp_dir.name, "home")
+        os.makedirs(os.path.join(home, "data"))
+        with (
+            mock.patch.dict(os.environ, {"HOME": home}),
+            contextlib.chdir(self.tmp_dir.name),
+        ):
+            mms.db_init(local="~/data", cache_dir="cache")
+            self.assertEqual(self._config()["local"], os.path.join(home, "data"))
+            self.assertEqual(
+                self._config()["cache"]["dir"],
+                os.path.join(os.path.realpath(self.tmp_dir.name), "cache"),
+            )
+            mms.db_init(cache_dir="~/c")
+            self.assertEqual(self._config()["cache"]["dir"], os.path.join(home, "c"))
+
+        mms.db_init(cache_dir="")
+        self.assertEqual(self._config()["cache"]["dir"], "")
+
         mms.db_init(reset=True)
         self.assertTrue(self._config()["cache"]["enabled"])
 
