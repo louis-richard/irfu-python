@@ -5788,8 +5788,10 @@ class ReadCdfTestCase(unittest.TestCase):
         time = time + np.arange(3) * np.timedelta64(1, "s")
         cdf = pycdfpp.CDF()
         cdf.add_variable("Epoch", time)
+        # A string attribute: pycdfpp 0.9 (the lowest supported) can't store a
+        # list of strings
         cdf.add_variable(
-            "DENSITY", np.array([[1.0], [2.0], [3.0]]), attributes={"UNITS": ["cm^-3"]}
+            "DENSITY", np.array([[1.0], [2.0], [3.0]]), attributes={"UNITS": "cm^-3"}
         )
         path = os.path.join(self.directory, "density.cdf")
         pycdfpp.save(cdf, path)

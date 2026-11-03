@@ -3371,6 +3371,18 @@ class HpcaSkymapTestCase(unittest.TestCase):
         np.testing.assert_allclose(out.attrs["delta_phi_minus"][:2], 22.5)
         np.testing.assert_array_equal(out.attrs["delta_theta_plus"], 11.25)
 
+    def test_hpca_skymap_global_attrs(self):
+        # The global attributes of the file are kept, under the species,
+        # charge and angular widths of the skymap
+        vdf, aze = self._inputs()
+        vdf.attrs["GLOBAL"] = {"Mission_group": "MMS", "species": "file"}
+        out = mms.hpca_skymap(vdf, aze, elevation=self.ELEVATION, to_psd=False)
+
+        self.assertEqual(out.attrs["Mission_group"], "MMS")
+        self.assertEqual(out.attrs["species"], "helium++")
+        self.assertIn("delta_phi_minus", out.attrs)
+        self.assertNotIn("GLOBAL", out.data.attrs)
+
     def test_hpca_skymap_velocities(self):
         # Particles of anode 0, side A, step 0 at half-spin 0 move along
         # (phi 0, polar angle 45): positive vx and vz, vy 0
@@ -11035,6 +11047,14 @@ class VdfProjectionTestCase(unittest.TestCase):
         vdf.attrs["species"] = "bazinga"
         with self.assertRaisesRegex(ValueError, "Invalid species"):
             mms.vdf_projection(vdf, tint)
+
+        # Without a species attribute, the electrons (the input is unchanged)
+        vdf.attrs["species"] = "electrons"
+        ref = mms.vdf_projection(vdf, tint)
+        del vdf.attrs["species"]
+        for out, exp in zip(mms.vdf_projection(vdf, tint), ref):
+            np.testing.assert_array_equal(out, exp)
+        self.assertNotIn("species", vdf.attrs)
 
     def test_vdf_projection_sc_pot(self):
         # Energy edges below the spacecraft potential gave NaN speeds
