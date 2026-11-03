@@ -210,6 +210,21 @@ def _get_file_content_sources(
     return file_content
 
 
+def _file_label(file_name) -> str:
+    r"""Name of a file of the listings, for the messages: the base name of a
+    local path, of the key of an S3 object (the messages printed the object),
+    of a file of the cache, or the file of an SDC download URL."""
+    if isinstance(file_name, _cache.RemoteFile):
+        return str(file_name)
+
+    name = str(getattr(file_name, "key", file_name))
+
+    if "?file=" in name:
+        return name.rsplit("?file=", 1)[1]
+
+    return posixpath.basename(name.replace(os.sep, "/"))
+
+
 def _download(remote, sdc_session=None, headers=None) -> bytes:
     r"""Content of a file of the cache listing, from AWS or the SDC (logged in
     if no session is given)."""

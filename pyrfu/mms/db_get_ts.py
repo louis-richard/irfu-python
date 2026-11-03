@@ -16,6 +16,7 @@ from xarray.core.dataarray import DataArray
 from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.mms.get_data import (
     _check_times,
+    _file_label,
     _get_file_content_sources,
     _list_files_sources,
 )
@@ -144,7 +145,9 @@ def _db_get_ts_dict(
             try:
                 ts = get_ts(file_content, cdf_name, tint)
             except Exception:
-                logger.error("Failed to load %s from %s", cdf_name, file_name)
+                logger.error(
+                    "Failed to load %s from %s", cdf_name, _file_label(file_name)
+                )
                 raise
 
             out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts

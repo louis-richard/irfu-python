@@ -6708,6 +6708,20 @@ class GetDataDownloadTestCase(unittest.TestCase):
             with self.assertRaises(requests.ConnectionError):
                 self.module._get_file_content_sources("sdc", "url", session, {})
 
+    def test_file_label(self):
+        # The file name of every kind of listing entry, for the messages
+        cache = importlib.import_module("pyrfu.mms._cache")
+        name = "mms1_fgm_srvy_l2_20190914_v5.200.0.cdf"
+        for file_name in [
+            mock.Mock(key=f"spdf/cdaweb/data/mms/mms1/fgm/srvy/l2/2019/09/{name}"),
+            cache.RemoteFile("aws", f"mms1/fgm/srvy/l2/2019/09/{name}"),
+            f"https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
+            f"download/science?file={name}",
+            os.path.join("data", "mms1", "fgm", name),
+            name,
+        ]:
+            self.assertEqual(self.module._file_label(file_name), name)
+
     def test_get_file_content_sdc_timeout(self):
         # SDC downloads time out instead of hanging on a stalled connection
         session = mock.Mock()
@@ -7692,6 +7706,33 @@ class GetEisAlltTestCase(unittest.TestCase):
             ValueError, "species in the file are oxygen, proton"
         ):
             self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
+
+    def test_get_eis_allt_file_name_in_errors(self):
+        # The name of the file of an S3 object (the object was printed)
+        pref = "mms1_epd_eis_srvy_l2_phxtof"
+        cdf = pycdfpp.load(_cdf_eis(pref, ["proton"], 4, "2021-07-11T00:10:00"))
+        for i in range(6):
+            name = f"{pref}_oxygen_P4_flux_t{i:d}"
+            cdf.add_variable(name, values=np.ones(4))
+            cdf[name].add_attribute("DEPEND_0", "Epoch")
+
+        name = "mms1_epd-eis_srvy_l2_phxtof_20210711_v4.2.100.cdf"
+        s3_obj = mock.Mock(key=f"spdf/cdaweb/data/mms/mms1/epd-eis/{name}")
+        with (
+            mock.patch.object(
+                self.module, "_list_files_sources", return_value=([s3_obj], None, {})
+            ),
+            mock.patch.object(
+                self.module,
+                "_get_file_content_sources",
+                return_value=bytes(pycdfpp.save(cdf)),
+            ),
+        ):
+            with self.assertRaises(ValueError) as error:
+                mms.get_eis_allt("flux_phxtof_oxygen_srvy_l2", self.tint, 1, False)
+
+        self.assertIn(f"in {name}:", str(error.exception))
+        self.assertNotIn("Mock", str(error.exception))
 
     def test_get_eis_allt_single_channel(self):
         # PHxTOF oxygen: one channel per telescope without energy table
