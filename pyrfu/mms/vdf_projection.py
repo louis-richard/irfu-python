@@ -104,6 +104,72 @@ def _sub_angles(centres, minus, plus, n_sub):
     return sub.ravel()
 
 
+def _log_edges(energy, half_width):
+    r"""Energy edges `half_width` (in log10(E)) below each channel and above
+    the last one."""
+    log_energy = np.log10(energy)
+    return np.hstack(
+        [10 ** (log_energy - half_width), 10 ** (log_energy[-1] + half_width)]
+    )
+
+
+def _table_edges(step_table, energy0_edges, energy1_edges):
+    r"""Edges of the energy table of the distributions: table 1 if they all
+    use it (step table), else table 0."""
+    return energy1_edges if np.all(step_table) else energy0_edges
+
+
+def _channel_edges(vdf: Dataset, i_t: int, energy_edges):
+    r"""Edges from the channel widths at the time index i_t if the skymap has
+    them, as many as `energy_edges` (e.g. EIS, FEEPS), else `energy_edges`."""
+    width_edges = _width_edges(vdf, i_t)
+
+    if width_edges is None or len(width_edges) != len(energy_edges):
+        return energy_edges
+
+    return width_edges
+
+
+def _rebin_tables(
+    vdf: Dataset, dist, azimuthal, tint, theta, energy0, energy1, step_table
+):
+    r"""Distributions of `tint` with alternating energy tables rebinned to one
+    table of 64 channels (psd_rebin): data, azimuthal angles (radians) of the
+    look directions and energies (eV)."""
+    logger.info("Rebinning distribution.")
+    temp = ts_skymap(
+        dist.time.data,
+        dist.data,
+        time_clip(vdf.energy, tint).data,
+        np.rad2deg(azimuthal),
+        theta,
+    )
+    # phi clipped to tint, like the distribution
+    newt, dist, energy, phi = psd_rebin(
+        temp,
+        temp.phi.data,
+        energy0,
+        energy1,
+        step_table,
+    )
+    dist = ts_skymap(
+        newt,
+        dist,
+        np.tile(energy, (len(newt), 1)),
+        phi,
+        theta,
+    )
+    dist = time_clip(dist.data, tint)
+    # psd_rebin returns phi in degrees; azimuthal is in radians
+    azimuthal = xr.DataArray(
+        np.deg2rad(phi),
+        coords=[newt, np.arange(phi.shape[1])],
+        dims=["time", "idx"],
+    )
+
+    return dist, time_clip(azimuthal, tint).data, energy
+
+
 def _init(vdf: Dataset, tint: list):
 
     if not isinstance(vdf, Dataset):
@@ -130,18 +196,8 @@ def _init(vdf: Dataset, tint: list):
 
     diff_energ = np.median(np.diff(np.log10(energy0))) / 2
 
-    energy0_edges = np.hstack(
-        [
-            10 ** (np.log10(energy0) - diff_energ),
-            10 ** (np.log10(energy0[-1]) + diff_energ),
-        ],
-    )
-    energy1_edges = np.hstack(
-        [
-            10 ** (np.log10(energy1) - diff_energ),
-            10 ** (np.log10(energy1[-1]) + diff_energ),
-        ],
-    )
+    energy0_edges = _log_edges(energy0, diff_energ)
+    energy1_edges = _log_edges(energy1, diff_energ)
 
     if tint is not None and len(tint) == 1:
         t_id = np.argmin(
@@ -152,12 +208,7 @@ def _init(vdf: Dataset, tint: list):
         dist = dist[None, ...]
         step_table = step_table[t_id]
         azimuthal = azimuthal.data[t_id, ...]
-
-        if step_table:
-            energy_edges = energy1_edges
-        else:
-            energy_edges = energy0_edges
-
+        energy_edges = _table_edges(step_table, energy0_edges, energy1_edges)
         i_times = np.array([t_id])
 
     elif tint is not None and len(tint) == 2:
@@ -169,49 +220,13 @@ def _init(vdf: Dataset, tint: list):
         azimuthal = azimuthal.data
 
         if len(dist.time) > 1 and list(energy0) != list(energy1):
-            logger.info("Rebinning distribution.")
-            temp = ts_skymap(
-                dist.time.data,
-                dist.data,
-                time_clip(vdf.energy, tint).data,
-                np.rad2deg(azimuthal),
-                theta,
+            dist, azimuthal, energy = _rebin_tables(
+                vdf, dist, azimuthal, tint, theta, energy0, energy1, step_table
             )
-            # phi clipped to tint, like the distribution
-            newt, dist, energy, phi = psd_rebin(
-                temp,
-                temp.phi.data,
-                energy0,
-                energy1,
-                step_table,
-            )
-            dist = ts_skymap(
-                newt,
-                dist,
-                np.tile(energy, (len(newt), 1)),
-                phi,
-                theta,
-            )
-            dist = time_clip(dist.data, tint)
-            # psd_rebin returns phi in degrees; azimuthal is in radians
-            azimuthal = xr.DataArray(
-                np.deg2rad(phi),
-                coords=[newt, np.arange(phi.shape[1])],
-                dims=["time", "idx"],
-            )
-            azimuthal = time_clip(azimuthal, tint).data
             len_e, rebinned = dist.shape[1], True
-            energy_edges = np.hstack(
-                [
-                    10 ** (np.log10(energy) - diff_energ / 2),
-                    10 ** (np.log10(energy[-1]) + diff_energ / 2),
-                ],
-            )
+            energy_edges = _log_edges(energy, diff_energ / 2)
         else:
-            if all(step_table):
-                energy_edges = energy1_edges
-            else:
-                energy_edges = energy0_edges
+            energy_edges = _table_edges(step_table, energy0_edges, energy1_edges)
 
         dist = dist.data
     else:
@@ -220,9 +235,7 @@ def _init(vdf: Dataset, tint: list):
     # Edges from the channel widths if any (e.g. EIS, FEEPS); not for the
     # rebinned alternating tables
     if not rebinned:
-        width_edges = _width_edges(vdf, i_times[0])
-        if width_edges is not None and len(width_edges) == len(energy_edges):
-            energy_edges = width_edges
+        energy_edges = _channel_edges(vdf, i_times[0], energy_edges)
 
     return dist, polar, azimuthal, energy_edges, len_e, i_times
 
