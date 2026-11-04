@@ -3198,10 +3198,12 @@ class HpcaPadTestCase(unittest.TestCase):
     def test_hpca_pad_look_direction_and_pairing(self, centred):
         # Looking along -x (azimuth 180) with B along +x: particles along B,
         # pitch angle 0; looking along +x (azimuth 0): 180. The look direction
-        # alternates with the azimuth step in half-spin 0 and is 0 in half-spin 1,
-        # so each sample must get the azimuths of its own half-spin and step.
+        # alternates with the azimuth step in half-spin 0 and is +x in half-spin
+        # 1, so each sample must get the azimuths of its own half-spin and step.
+        # (360, not 0: a half-spin with zero azimuths has none, as IDL SPEDAS.)
         aze_deg = np.zeros((2, self.N_AZ))
         aze_deg[0, ::2] = 180.0
+        aze_deg[1] = 360.0
         vdf, saz, aze, b_xyz = self._inputs(aze_deg, centred=centred)
         vdf.attrs["UNITS"] = "cm^-6 s^3"
         pad = self._pad(vdf, saz, aze, b_xyz)
@@ -3268,11 +3270,54 @@ class HpcaPadTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._pad(vdf, saz, aze_shifted, b_xyz)
 
-        # start azimuths of a half-spin not 0..15
+        # start azimuths of a half-spin not 0..15: that half-spin is NaN (the
+        # whole PAD raised), all of them: ValueError
         saz_bad = saz.copy()
         saz_bad.data[20] = 7
-        with self.assertRaises(ValueError):
+        pad = self._pad(vdf, saz_bad, aze, b_xyz)
+        np.testing.assert_array_equal(pad.data[:16, 0], 1.0)
+        self.assertTrue(np.all(np.isnan(pad.data[16:])))
+
+        saz_bad.data[4] = 7
+        with self.assertRaisesRegex(ValueError, "no half-spin"):
             self._pad(vdf, saz_bad, aze, b_xyz)
+
+        # saz not at the times of vdf
+        with self.assertRaisesRegex(ValueError, "same times"):
+            self._pad(vdf, saz.isel(time=slice(1, None)), aze, b_xyz)
+
+    @data(True, False)
+    def test_hpca_pad_half_spins_by_time(self, centred):
+        # Looking along -x with B along +x: pitch angle 0 (bin 0). Each
+        # half-spin is matched with its samples by time, as get_hpca_dist:
+        # - half-spin 1 without azimuths (zeros): NaN, as IDL SPEDAS (the
+        #   zeros were azimuths: looking along +x, bin 11);
+        # - aze record 1 missing: half-spin 1 NaN, half-spin 2 with its own
+        #   record (it got the next one, 180 deg away);
+        # - a gap in vdf (3 samples of half-spin 1): half-spin 1 NaN (it
+        #   raised ValueError)
+        aze_deg = np.full((3, self.N_AZ), 180.0)
+        aze_deg[2] = 360.0  # half-spin 2 looks along +x: bin 11
+        vdf, saz, aze, b_xyz = self._inputs(aze_deg, n_spins=3, centred=centred)
+
+        zeros = aze.copy()
+        zeros.data[1] = 0.0
+        missing = aze.isel(time=[0, 2])
+        keep = np.r_[0:20, 23:48]
+
+        for case_aze, case_vdf, case_saz in [
+            (zeros, vdf, saz),
+            (missing, vdf, saz),
+            (aze, vdf.isel(time=keep), saz.isel(time=keep)),
+        ]:
+            pad = self._pad(case_vdf, case_saz, case_aze, b_xyz)
+            n_1 = len(case_vdf) - 32  # samples of half-spin 1 in vdf
+
+            self.assertEqual(len(pad.time), len(case_vdf))
+            np.testing.assert_array_equal(pad.data[:16, 0], 1.0)
+            self.assertTrue(np.all(np.isnan(pad.data[16 : 16 + n_1])))
+            np.testing.assert_array_equal(pad.data[16 + n_1 :, -1], 1.0)
+            self.assertTrue(np.all(np.isnan(pad.data[16 + n_1 :, :-1])))
 
     def test_hpca_pad_elevation_from_file(self):
         # mms?_hpca_centroid_elevation_angle read from the dataset of vdf
