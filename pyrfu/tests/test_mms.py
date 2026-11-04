@@ -5169,6 +5169,40 @@ class PsdRebinTestCase(unittest.TestCase):
         np.testing.assert_array_equal(vdf_r[:, 1:64:2, 0, 0].min(axis=1), from_energy1)
         np.testing.assert_array_equal(energy_r[0:63:2], vdf.attrs["energy0"])
 
+    def test_psd_rebin_channels(self):
+        # Twice the channels of a table (64 were assumed: the 15 channels kept
+        # by vdf_elim raised ValueError); each channel holds its energy
+        vdf = generate_vdf(64.0, 10, (32, 32, 16), energy01=True, species="ions")
+        vdf = vdf.assign(energy=vdf.energy + 1.0)
+        for key in ["energy0", "energy1"]:
+            vdf.attrs[key] = vdf.attrs[key] + 1.0
+
+        vdf.data.data[...] = vdf.energy.data[:, :, None, None]
+        sub = mms.vdf_elim(vdf, [5.0, 20.0])
+        n_e = sub.data.shape[1]
+        self.assertLess(n_e, 32)
+
+        _, vdf_r, energy_r, _ = mms.psd_rebin(
+            sub,
+            sub.phi.data,
+            sub.attrs["energy0"],
+            sub.attrs["energy1"],
+            sub.attrs["esteptable"],
+        )
+        self.assertEqual(vdf_r.shape, (5, 2 * n_e, 32, 16))
+        np.testing.assert_array_equal(
+            vdf_r, np.broadcast_to(energy_r[None, :, None, None], vdf_r.shape)
+        )
+
+        with self.assertRaisesRegex(ValueError, "one energy per channel"):
+            mms.psd_rebin(
+                sub,
+                sub.phi.data,
+                vdf.attrs["energy0"],
+                vdf.attrs["energy1"],
+                sub.attrs["esteptable"],
+            )
+
 
 class EstimatePhaseSpeedTestCase(unittest.TestCase):
     def test_estimate_phase_speed(self):
@@ -9032,6 +9066,29 @@ class VdfToE64TestCase(unittest.TestCase):
             np.testing.assert_array_equal(d_e, np.broadcast_to(d_e[0], d_e.shape))
         self.assertEqual(d_plus[0, -1], np.max(attrs["delta_energy_plus"][:, -1]))
         self.assertEqual(d_minus[0, 0], np.min(attrs["delta_energy_minus"][:, 0]))
+
+    def test_vdf_to_e64_elim(self):
+        # After vdf_elim (15 channels in each table): 30 channels, the union of
+        # the tables (ValueError, 64 channels were assumed), and vdf_projection
+        # of two times (rebinned in the same way)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True, species="ions")
+        vdf = vdf.assign(energy=vdf.energy + 1.0)
+        for key in ["energy0", "energy1"]:
+            vdf.attrs[key] = vdf.attrs[key] + 1.0
+
+        with self.assertLogs("pyrfu", level="INFO"):
+            sub = mms.vdf_elim(vdf, [5.0, 20.0])
+
+        result = mms.vdf_to_e64(sub)
+        self.assertEqual(result.data.shape, (5, 30, 32, 16))
+        np.testing.assert_array_equal(
+            result.energy.data[0],
+            np.sort(np.hstack([sub.attrs["energy0"], sub.attrs["energy1"]])),
+        )
+        self.assertEqual(result.attrs["delta_energy_plus"].shape, (5, 30))
+
+        tint = list(pyrf.datetime642iso8601(sub.time.data[[2, 5]]))
+        self.assertEqual(mms.vdf_projection(sub, tint)[2].shape, (32, 30))
 
     def test_vdf_to_e64_one_table(self):
         # energy0 equal to energy1: returned unchanged (a copy), as irfu-matlab

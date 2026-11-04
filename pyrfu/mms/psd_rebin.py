@@ -32,8 +32,9 @@ def psd_rebin(
     r"""Convert burst mode distribution into 64 energy channel distribution.
 
     Takes the burst mode distribution sampled in two energy tables and converts to a
-    single energy table with 64 energy channels. Time resolution is halved and phi
-    angles are averaged over adjacent times.
+    single energy table with twice the channels of a table (64 for the 32 FPI
+    channels, fewer after `vdf_elim`). Time resolution is halved and phi angles are
+    averaged over adjacent times.
 
     Parameters
     ----------
@@ -42,9 +43,9 @@ def psd_rebin(
     phi : numpy.ndarray
         Time series of the phi angles.
     energy0 : numpy.ndarray
-        Energy table 0.
+        Energy table 0, one energy per channel of `vdf`.
     energy1 : numpy.ndarray
-        Energy table 1.
+        Energy table 1, one energy per channel of `vdf`.
     esteptable : numpy.ndarray
         Time series of the stepping table between energies (burst).
 
@@ -66,6 +67,8 @@ def psd_rebin(
         If vdf is not a xarray.Dataset or if phi is not a numpy.ndarray or if energy0 is
         not a numpy.ndarray or if energy1 is not a numpy.ndarray or if esteptable is
         not a numpy.ndarray.
+    ValueError
+        If energy0 or energy1 does not have one energy per channel of vdf.
 
     Notes
     -----
@@ -101,6 +104,15 @@ def psd_rebin(
     vdf_time: NDArray[np.datetime64] = vdf.time.data
     vdf_data: NDArray[np.float64] = vdf.data.data.astype(np.float64)
 
+    # Channels of each table (32 for FPI; 64 were assumed, so that the channels
+    # kept by vdf_elim could not be rebinned)
+    n_e: int = vdf_data.shape[1]
+
+    if len(energy0) != n_e or len(energy1) != n_e:
+        raise ValueError(
+            f"energy0 and energy1 must have one energy per channel of vdf ({n_e})"
+        )
+
     # Sort energy levels
     energy_r: NDArray[np.float32] = np.sort(np.hstack([energy0, energy1]))
 
@@ -115,7 +127,7 @@ def psd_rebin(
 
     # Preallocate output arrays
     vdf_r: NDArray[np.float64] = np.zeros(
-        (len(time_r), 64, *vdf.data.shape[2:]), dtype=np.float64
+        (len(time_r), 2 * n_e, *vdf.data.shape[2:]), dtype=np.float64
     )
     phi_r: NDArray[np.float32] = np.zeros(
         (len(time_r), vdf.data.shape[2]), dtype=np.float32
@@ -136,22 +148,22 @@ def psd_rebin(
             vdf_temp: NDArray[np.float64] = np.roll(vdf_data[idx + 1, ...], -1, axis=1)
 
             if esteptable[idx]:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 0:63:2, ...] = vdf_temp
+                vdf_r[new_el_num, 1::2, ...] = vdf_data[idx, ...]
+                vdf_r[new_el_num, 0::2, ...] = vdf_temp
             else:
-                vdf_r[new_el_num, 0:63:2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 1:64:2, ...] = vdf_temp
+                vdf_r[new_el_num, 0::2, ...] = vdf_data[idx, ...]
+                vdf_r[new_el_num, 1::2, ...] = vdf_temp
 
         else:
             phi_r[new_el_num, :] = phi[idx, :] + phi[idx + 1, :]
             phi_r[new_el_num, :] /= 2
 
             if esteptable[idx]:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 0:63:2, ...] = vdf_data[idx + 1, ...]
+                vdf_r[new_el_num, 1::2, ...] = vdf_data[idx, ...]
+                vdf_r[new_el_num, 0::2, ...] = vdf_data[idx + 1, ...]
             else:
-                vdf_r[new_el_num, 1:64:2, ...] = vdf_data[idx + 1, ...]
-                vdf_r[new_el_num, 0:63:2, ...] = vdf_data[idx, ...]
+                vdf_r[new_el_num, 1::2, ...] = vdf_data[idx + 1, ...]
+                vdf_r[new_el_num, 0::2, ...] = vdf_data[idx, ...]
 
     out = (time_r, vdf_r.astype(vdf.data.data.dtype), energy_r, phi_r)
     return out
