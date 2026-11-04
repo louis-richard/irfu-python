@@ -11,8 +11,10 @@ from ..pyrf.resample import resample
 from ..pyrf.trace import trace
 
 # Local imports
-from ._psd_units import _attrs
+from ._psd_units import _attrs, _is_relativistic
+from ._vdf_bins import _speed
 from .rotate_tensor import rotate_tensor
+from .vdf_convert import _in_convention
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -194,7 +196,8 @@ def make_model_vdf(
     # Speeds corrected for the spacecraft potential, (time, energy, 1, 1)
     energy = vdf.energy.data.astype(np.float64) - sc_pot[:, None]
     below = energy < 0
-    speed = np.sqrt(2 * np.clip(energy, 0.0, None) * q_e / p_mass)[..., None, None]
+    # Relativistic speeds (they were non-relativistic)
+    speed = _speed(np.clip(energy, 0.0, None), p_mass)[..., None, None]
 
     # Bi-Maxwellian distribution function
     def _col(x):
@@ -215,4 +218,7 @@ def make_model_vdf(
     # Without the label of the input units if they differ (e.g. a DEF)
     model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/km^6")
 
-    return model_vdf
+    # The bi-Maxwellian at the relativistic speeds is the relativistic
+    # phase-space density: in the convention of vdf (that of the FPI, HPCA and
+    # EIS files, divided by 2 gamma^5 / (gamma + 1)), comparable with it
+    return _in_convention(model_vdf, _is_relativistic(vdf))

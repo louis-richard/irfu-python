@@ -27,23 +27,26 @@ def eis_moments(
     p_bg: xr.DataArray = None,
 ):
     r"""Computes the partial moments given the omni-directional differential
-    particle flux and the ion specie under the assumption of angular isotropy
-    and non-relativistic ions using the formula from [1]_
+    particle flux and the ion specie under the assumption of angular isotropy,
+    with the relativistic speeds and momenta (as [1]_ for non-relativistic
+    ions, which it gives below 1 MeV to 0.1 %)
 
     .. math::
 
-        n = 4 \pi \sqrt{\frac{m_i}{2}} \sum_k J_k E_k^{-1/2} \Delta E_k
+        n = 4 \pi \sum_k \frac{J_k}{v_k} \Delta E_k
 
         \langle |v| \rangle = \frac{4 \pi}{n} \sum_k J_k \Delta E_k
 
-        P = \frac{2}{3} 4 \pi \sqrt{\frac{m_i}{2}} \sum_k J_k E_k^{1/2}
-        \Delta E_k
+        P = \frac{4 \pi}{3} \sum_k J_k p_k \Delta E_k
 
         T = \frac{P}{n k_B}
 
-    where :math:`J_k` is the differential particle flux, :math:`E_k` the energy
-    and :math:`\Delta E_k` the width of the channel k (the sum in :math:`P` is
-    the energy density).
+    where :math:`J_k` is the differential particle flux, :math:`E_k` the energy,
+    :math:`v_k` and :math:`p_k` the relativistic speed and momentum and
+    :math:`\Delta E_k` the width of the channel k. With the non-relativistic
+    :math:`v_k = \sqrt{2 E_k / m}` and :math:`p_k = \sqrt{2 m E_k}` (it was
+    non-relativistic), :math:`n = 4 \pi \sqrt{m / 2} \sum_k J_k E_k^{-1/2}
+    \Delta E_k` and :math:`P = 2 / 3` of the energy density.
 
     Parameters
     ----------
@@ -142,25 +145,27 @@ def eis_moments(
     )
     intensity = 1e4 * inp.data.copy() / (1e3 * constants.electron_volt)
 
-    fact = 4 * np.pi * np.sqrt(mass / 2)
+    # Relativistic speeds and momenta of the channels (they were
+    # non-relativistic), without cancellation: eps = E / (m c^2)
+    eps = energy / (mass * constants.c**2)
+    speed = constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
+    momentum = mass * constants.c * np.sqrt(eps * (2.0 + eps))
 
-    # Sum over the channels, each over its width (Simpson's rule from the first
-    # to the last channel centre left out the half channels at both ends)
-    def _sum(order):
-        integrand = energy ** (order / 2) * (intensity / energy) * np.sqrt(energy)
-        return np.sum(integrand * delta_energy, axis=1)
+    # Sums over the channels, each over its width (Simpson's rule from the
+    # first to the last channel centre left out the half channels at both
+    # ends): the particles of a channel are 4 pi J / v dE
+    def _sum(weight):
+        return 4 * np.pi * np.sum(intensity * weight * delta_energy, axis=1)
 
     # Zeroth order moment number density m^-3
-    n_i = fact * _sum(0)
+    n_i = _sum(1.0 / speed)
 
     # First order moment: mean speed <|v|> in m s^-1 (not the bulk velocity)
-    v_i = fact * _sum(1)
-    v_i /= n_i * np.sqrt(mass / 2)
+    v_i = _sum(1.0) / n_i
 
-    # Second order moment: the sum is the energy density u, and the pressure of
-    # an isotropic distribution is P = 2 u / 3, in N m^-2 (Pa)
-    u_i = fact * _sum(2)
-    p_i = 2.0 * u_i / 3.0
+    # Second order moment: the pressure of an isotropic distribution, the
+    # momentum flux p v / 3, in N m^-2 (Pa)
+    p_i = _sum(momentum) / 3.0
     t_i = p_i / (n_i * constants.Boltzmann)  # K
 
     # Convert to usual units

@@ -8,10 +8,10 @@ import xarray as xr
 # Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_skymap import ts_skymap
-from ._psd_units import _attrs
-from ._vdf_bins import _is_skymap, _mass, _relativistic, _speed
+from ._psd_units import _attrs, _is_relativistic
+from ._vdf_bins import _is_skymap, _mass, _speed
 from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins, _speed_to_energy
-from .vdf_convert import vdf_convert
+from .vdf_convert import _in_convention, _relativistic_psd, vdf_convert
 from .vdf_velocity import _rotation_matrices
 
 __author__ = "Louis Richard"
@@ -94,9 +94,10 @@ def _shift(
 ):
     # Monte-Carlo rebinning of the skymap in the frame moving with v_frame and
     # the rotated coordinates (vdf_shift and vdf_rebin)
-    relativistic = _relativistic(vdf, None)
+    # The particles of the bins with the relativistic phase-space density and
+    # speeds (they were non-relativistic without the relativistic attribute)
     units = vdf.data.attrs["UNITS"]
-    f_si = np.nan_to_num(vdf_convert(vdf, "s^3/m^6").data.data)
+    f_si = np.nan_to_num(_relativistic_psd(vdf))
     v_frame = _frame_velocity(vdf, v_frame)
     rotations = _rotation_matrices(rotation, len(vdf.time))
     mass, rng = _mass(vdf), _rng(random_state)
@@ -125,7 +126,7 @@ def _shift(
 
     for i_t in range(len(vdf.time)):
         if energy_grid is not None:
-            v_edges = _speed(energy_grid, mass, relativistic)
+            v_edges = _speed(energy_grid, mass)
         else:
             v_edges = _default_speed_edges(bins, i_t, v_frame[i_t])
 
@@ -147,7 +148,7 @@ def _shift(
             * -np.diff(np.cos(np.deg2rad(theta_edges)))[None, None, :]
         )
         out_f.append(summed / new_d3v)
-        energy_edges.append(_speed_to_energy(v_edges, mass, relativistic))
+        energy_edges.append(_speed_to_energy(v_edges, mass))
         total = np.sum(f_d3v)
         lost[i_t] = lost_t / total if total > 0 else 0.0
 
@@ -191,9 +192,9 @@ def _shift(
             "lost": lost,
         },
     )
-    # Back in the units of vdf, with the attributes of its data (LABLAXIS was
-    # dropped through s^3/m^6)
-    out = vdf_convert(out, units)
+    # Back in the convention and the units of vdf, with the attributes of its
+    # data (LABLAXIS was dropped through s^3/m^6)
+    out = vdf_convert(_in_convention(out, _is_relativistic(vdf)), units)
     out.data.attrs = _attrs(vdf.data.attrs, out.data.attrs["UNITS"])
 
     return out

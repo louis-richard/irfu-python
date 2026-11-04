@@ -18,7 +18,7 @@ from pyrfu.mms._vdf_bins import (
     _phi_edges,
     _theta_edges,
 )
-from pyrfu.mms.vdf_convert import _PSD, vdf_convert
+from pyrfu.mms.vdf_convert import _relativistic_psd
 from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
@@ -250,9 +250,11 @@ def _exact_kernels(
 
 
 def _speed_relativistic(energy, p_mass):
-    # Relativistic speed (m/s) of particles of kinetic energy (eV)
-    gamma = 1.0 + constants.elementary_charge * energy / (p_mass * constants.c**2)
-    return constants.c * np.sqrt(1.0 - 1.0 / gamma**2)
+    # Relativistic speed (m/s) of particles of kinetic energy (eV), from
+    # eps = gamma - 1 (c sqrt(1 - 1 / gamma^2) loses digits at low energies:
+    # 1e-8 for 1 eV protons)
+    eps = constants.elementary_charge * energy / (p_mass * constants.c**2)
+    return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
 
 
 def _energy_edges(vdf, energy, energy0, energy1, step_table, flag_same_e):
@@ -384,13 +386,12 @@ def _moms_relativistic(moms_args, sc_pot, p_mass):
     q_e, c_light = constants.elementary_charge, constants.c
 
     energy_correct = energy - sc_pot[:, np.newaxis]
-    gamma = 1.0 + q_e * energy_correct / (p_mass * c_light**2)
+    eps = q_e * energy_correct / (p_mass * c_light**2)  # gamma - 1
+    gamma = 1.0 + eps
 
     with np.errstate(divide="ignore", invalid="ignore"):
         velocity = _speed_relativistic(energy_correct, p_mass)
-        kinetic = np.where(
-            velocity > 0.0, 2 * (gamma - 1) * c_light**2 / velocity**2, 1.0
-        )
+        kinetic = np.where(velocity > 0.0, 2 * eps * c_light**2 / velocity**2, 1.0)
 
     # Raw energies where the kernel sets the speed to zero (inner electron
     # energies) or where it is undefined (below the spacecraft potential)
@@ -415,20 +416,18 @@ def _moms_relativistic(moms_args, sc_pot, p_mass):
 _N_SUB = 8
 
 
-def _psd_si(vdf, relativistic):
-    r"""Phase-space density in s^3/m^6, as a new C-contiguous float64 array
-    (get_dist returns a transposed view, which the numba kernels can't
-    reshape), from the units of `vdf` (``UNITS``, s^3/cm^6 if missing)."""
-    units = str(vdf.data.attrs.get("UNITS", "s^3/cm^6"))
+def _psd_si(vdf):
+    r"""Relativistic phase-space density in s^3/m^6, as a new C-contiguous
+    float64 array (get_dist returns a transposed view, which the numba
+    kernels can't reshape), from the units of `vdf` (``UNITS``, s^3/cm^6 if
+    missing; differential fluxes as irfu-matlab PDist.convertto): that of the
+    FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)."""
+    if "UNITS" not in vdf.data.attrs:
+        vdf = vdf.copy()
+        vdf["data"] = vdf.data.copy()
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
 
-    if units.lower() in _PSD:
-        factor = _PSD[units.lower()]
-        return np.multiply(vdf.data.data, factor, dtype=np.float64, order="C")
-
-    # Differential energy or particle fluxes, as irfu-matlab
-    # (PDist.convertto)
-    vdf_si = vdf_convert(vdf, "s^3/m^6", relativistic=relativistic)
-    return np.ascontiguousarray(vdf_si.data.data, dtype=np.float64)
+    return np.array(_relativistic_psd(vdf), dtype=np.float64, order="C")
 
 
 def _pitch_angle_args(kwargs):
@@ -575,13 +574,6 @@ def psd_moments(vdf, sc_pot, **kwargs):
         FEEPS skymaps), else "midpoint". On the 11.25 degree FPI grid, "exact"
         changes the moments by less than 1 %; on wide bins "midpoint"
         underestimates the density (8 % on the FEEPS polar bins).
-    relativistic : bool
-        Relativistic speeds, momentum flux (pressure, gamma m v v) and kinetic
-        energy (heat flux), for a relativistic phase-space density (`dpf2psd`
-        with ``relativistic=True``). Default is the ``relativistic``
-        attribute of `vdf` if any (True for the FEEPS skymaps), else False, as
-        FPI and irfu-matlab. The bulk-flow corrections of the pressure and heat
-        flux are non-relativistic.
     pitch_angle_range : array_like
         Range of pitch angles [min, max] (degrees, inclusive) of the particles
         used, with `b_xyz`: the moments are those of the particles in the
@@ -607,9 +599,21 @@ def psd_moments(vdf, sc_pot, **kwargs):
         b_xyz, is not [min, max] within [0, 180], pitch_angle_weight is not
         "centre" or "fraction", the units of `vdf` are not supported, or
         en_channels as a time series is not of channel indices.
+    TypeError
+        If ``relativistic`` is given (the argument was removed).
 
     Notes
     -----
+    The moments are relativistic for all the species: relativistic speeds,
+    momentum flux (pressure, gamma m v v) and kinetic energy (heat flux), with
+    the relativistic phase-space density (that of the FPI, HPCA and EIS
+    files, non-relativistic, times 2 gamma^5 / (gamma + 1); that of the FEEPS
+    skymaps as it is). They were non-relativistic without the
+    ``relativistic`` attribute or argument: for FPI electrons below 30 keV,
+    the density changes by 0.25 % at most and the ion moments by less than
+    0.001 %. The bulk-flow corrections of the pressure and heat flux are
+    non-relativistic.
+
     The speed widths of the energy channels follow irfu-matlab
     `mms.psd_moments`: the channel edges are E + delta_energy_plus and
     E - delta_energy_minus (attributes) when there is one energy table, and
@@ -672,11 +676,15 @@ def psd_moments(vdf, sc_pot, **kwargs):
     p_mass, is_electron = _mass(vdf), _charge_sign(vdf) < 0.0
     charge = 1.0 if is_electron else float(vdf.attrs.get("charge", 1))
 
-    # In SI units (s^3/m^6)
-    relativistic = bool(
-        kwargs.get("relativistic", vdf.attrs.get("relativistic", False))
-    )
-    vdf_data = _psd_si(vdf, relativistic)
+    # Relativistic speeds, momentum flux and kinetic energy, for all the
+    # species: the relativistic phase-space density in SI units (s^3/m^6)
+    if "relativistic" in kwargs:
+        raise TypeError(
+            "relativistic was removed: the moments are always relativistic, and "
+            "the convention of the phase-space density is that of the data"
+        )
+
+    vdf_data = _psd_si(vdf)
 
     step_table = vdf.attrs["esteptable"]
     energy = vdf.energy.data
@@ -818,11 +826,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     sc_pot_2d = sc_pot[:, np.newaxis]
     e_upper = np.clip(energy_upper - sc_pot_2d, 0.0, None)
     e_lower = np.clip(energy_lower - sc_pot_2d, 0.0, None)
-    if relativistic:
-        v_upper, v_lower = [_speed_relativistic(e, p_mass) for e in [e_upper, e_lower]]
-    else:
-        v_upper = np.sqrt(2 * q_e * e_upper / p_mass)
-        v_lower = np.sqrt(2 * q_e * e_lower / p_mass)
+    v_upper, v_lower = [_speed_relativistic(e, p_mass) for e in [e_upper, e_lower]]
     delta_v = np.ascontiguousarray(v_upper - v_lower)
 
     # Clean up NaN values in the input VDF data before passing to the numba kernel.
@@ -848,10 +852,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         use_exact,
     ]
 
-    if relativistic:
-        n_psd, v_psd, p_psd, h_psd = _moms_relativistic(moms_args, sc_pot, p_mass)
-    else:
-        n_psd, v_psd, p_psd, h_psd = _moms(*moms_args)
+    n_psd, v_psd, p_psd, h_psd = _moms_relativistic(moms_args, sc_pot, p_mass)
 
     # No energy channel at these time steps (time dependent energy_range)
     no_energy = ~np.any(use_energy, axis=1) | no_b

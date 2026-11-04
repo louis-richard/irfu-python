@@ -527,8 +527,10 @@ class PlotPadPolarTestCase(unittest.TestCase):
 
     @staticmethod
     def _speed(energy, mass=constants.proton_mass):
-        # Speed (km/s) of energy (eV)
-        return np.sqrt(2 * constants.elementary_charge * energy / mass) / 1e3
+        # Relativistic speed (km/s) of energy (eV)
+        eps = constants.elementary_charge * np.asarray(energy, dtype=np.float64)
+        eps = eps / (mass * constants.c**2)
+        return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps) / 1e3
 
     @staticmethod
     def _mesh(ax, i=0):

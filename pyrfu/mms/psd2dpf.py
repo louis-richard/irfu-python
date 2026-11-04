@@ -6,6 +6,7 @@ from pyrfu.mms._psd_units import (
     _MASS_FACTOR,
     _data_and_units,
     _energy,
+    _is_relativistic,
     _mass_ratio,
     _output,
     _relativistic_factor,
@@ -34,7 +35,7 @@ def _convert(inp, units, mass_ratio):
     return out
 
 
-def psd2dpf(inp, relativistic: bool = False):
+def psd2dpf(inp):
     r"""Compute differential particle flux from phase density.
 
     Parameters
@@ -44,9 +45,6 @@ def psd2dpf(inp, relativistic: bool = False):
         (Dataset with a data variable, e.g. a skymap or a pitch-angle
         distribution) or a spectrum (DataArray), with (energy,) or
         (time, energy) energies in eV.
-    relativistic : bool, Optional
-        The phase-space density is the relativistic one (`dpf2psd` with
-        ``relativistic=True``). Default is False.
 
     Returns
     -------
@@ -67,12 +65,21 @@ def psd2dpf(inp, relativistic: bool = False):
     m_p^2 / (2 e^2) was 0.53707, with the atomic mass unit as irfu-matlab, and
     the fluxes were 1.46 % too large.
 
+    The phase-space density is in the convention of its ``relativistic``
+    attribute: the relativistic one, f = gamma^3 m J / v^2 with the
+    relativistic speed (the FEEPS skymaps), or without it the
+    non-relativistic one, f = m J / v^2 with v^2 = 2 E / m, as in the FPI,
+    HPCA and EIS files and irfu-matlab. The attribute is kept, so that the
+    conversions are inverse of each other.
+    The ``relativistic`` argument was removed: the convention is that of the
+    data.
+
     """
 
     data, units = _data_and_units(inp)
     data = _convert(data, units, _mass_ratio(inp)) * _energy(inp, data) * 1e3
 
-    if relativistic:
+    if _is_relativistic(inp):
         data = data / _relativistic_factor(inp, data)
 
     return _output(inp, data, "1/(cm^2 s sr keV)")

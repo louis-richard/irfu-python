@@ -9,7 +9,6 @@ import xarray as xr
 from ._vdf_bins import (
     _kinetic_energy,
     _mass,
-    _relativistic,
     _sc_pot,
     _speed,
 )
@@ -38,7 +37,7 @@ def _rotation_matrices(rotation, n_t):
     raise ValueError("rotation must be a 3x3 matrix or (time, 3, 3) matrices")
 
 
-def vdf_velocity(vdf, sc_pot=None, rotation=None, relativistic: bool = None):
+def vdf_velocity(vdf, sc_pot=None, rotation=None):
     r"""Velocity of the particles of each bin of a skymap, as irfu-matlab
     PDist.v.
 
@@ -57,15 +56,14 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None, relativistic: bool = None):
         3x3 matrix, or (time, 3, 3) matrices, whose rows are the new unit
         vectors in the coordinate system of `vdf`, e.g. [e_perp1, e_perp2, b]
         for field-aligned coordinates. Default is no rotation.
-    relativistic : bool, Optional
-        Relativistic speeds. Default is the ``relativistic`` attribute of
-        `vdf` if any (True for the FEEPS skymaps), else False.
 
     Returns
     -------
     out : xarray.Dataset
         Velocities ``vx``, ``vy`` and ``vz`` (time, energy, phi, theta) in
-        km/s, at the energies of the bins. The direction of a bin is minus its
+        km/s, at the energies of the bins, with the relativistic speeds (they
+        were non-relativistic without the ``relativistic`` attribute, and the
+        argument was removed). The direction of a bin is minus its
         look direction; ``out / numpy.linalg.norm`` gives the unit vectors of
         irfu-matlab PDist.xyz.
 
@@ -91,7 +89,7 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None, relativistic: bool = None):
         np.asarray(vdf.energy.data, dtype=np.float64), vdf.data.shape[:2]
     )
     energy = _kinetic_energy(vdf, energy, _sc_pot(vdf, sc_pot))
-    speed = _speed(energy, _mass(vdf), _relativistic(vdf, relativistic)) / 1e3
+    speed = _speed(energy, _mass(vdf)) / 1e3
 
     phi = np.deg2rad(np.broadcast_to(vdf.phi.data, (n_t, vdf.data.shape[2])))
     theta = np.deg2rad(np.asarray(vdf.theta.data, dtype=np.float64))

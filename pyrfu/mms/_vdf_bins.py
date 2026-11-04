@@ -32,14 +32,6 @@ def _charge_sign(vdf):
     return -1.0 if is_electron else 1.0
 
 
-def _relativistic(vdf, relativistic):
-    r"""Relativistic speeds: the argument, else the attribute, else False."""
-    if relativistic is None:
-        relativistic = vdf.attrs.get("relativistic", False)
-
-    return bool(relativistic)
-
-
 def _sc_pot(vdf, sc_pot):
     r"""Spacecraft potential (V) at the times of the distribution (time,)."""
     n_t = len(vdf.time)
@@ -100,14 +92,13 @@ def _kinetic_energy(vdf, energy, sc_pot):
     return np.clip(energy + _charge_sign(vdf) * sc_pot, 0.0, None)
 
 
-def _speed(energy, mass, relativistic):
-    r"""Speed (m/s) of particles of kinetic energy (eV)."""
-    if relativistic:
-        # beta^2 = 1 - 1 / gamma^2 without cancellation, gamma = 1 + eps
-        eps = constants.elementary_charge * energy / (mass * constants.c**2)
-        return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
-
-    return np.sqrt(2.0 * constants.elementary_charge * energy / mass)
+def _speed(energy, mass):
+    r"""Relativistic speed (m/s) of particles of kinetic energy (eV); it was
+    non-relativistic without the ``relativistic`` attribute."""
+    # beta^2 = 1 - 1 / gamma^2 without cancellation, gamma = 1 + eps
+    eps = constants.elementary_charge * np.asarray(energy, dtype=np.float64)
+    eps = eps / (mass * constants.c**2)
+    return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
 
 
 def _phi_edges(vdf):
@@ -189,15 +180,13 @@ def _band_solid_angles(vdf):
     return 2 * np.pi * (np.cos(np.deg2rad(lower)) - np.cos(np.deg2rad(upper)))
 
 
-def _speed_edges(vdf, sc_pot, relativistic):
-    r"""Lower and upper speeds (m/s) of the energy channels (time, energy),
-    corrected for the spacecraft potential."""
+def _speed_edges(vdf, sc_pot):
+    r"""Lower and upper relativistic speeds (m/s) of the energy channels
+    (time, energy), corrected for the spacecraft potential."""
     sc_pot = _sc_pot(vdf, sc_pot)
     mass = _mass(vdf)
-    relativistic = _relativistic(vdf, relativistic)
     return [
-        _speed(_kinetic_energy(vdf, edge, sc_pot), mass, relativistic)
-        for edge in _energy_edges(vdf)
+        _speed(_kinetic_energy(vdf, edge, sc_pot), mass) for edge in _energy_edges(vdf)
     ]
 
 
@@ -215,10 +204,11 @@ def _broadcast_angles(values, data):
     return values[np.newaxis, np.newaxis, :]
 
 
-def _d3v(vdf, sc_pot, relativistic):
-    r"""Velocity-space volume (m^3/s^3) of each bin, shaped as the data."""
+def _d3v(vdf, sc_pot):
+    r"""Velocity-space volume (m^3/s^3) of each bin with the relativistic
+    speeds, shaped as the data."""
     data = vdf.data.data
-    v_lower, v_upper = _speed_edges(vdf, sc_pot, relativistic)
+    v_lower, v_upper = _speed_edges(vdf, sc_pot)
     d_v3 = _broadcast_energy((v_upper**3 - v_lower**3) / 3, data)
     d3v = d_v3 * _broadcast_angles(_band_solid_angles(vdf), data)
     return np.broadcast_to(d3v, data.shape)

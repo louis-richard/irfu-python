@@ -91,7 +91,8 @@ def vdf_macroparticles(
         bin ``df`` (units of `vdf`) and the volume ``dv`` (units of
         `vdf_d3v`). The bin's partial density and volume are shared equally by
         its macroparticles, so that ``dn`` summed over the macroparticles of a
-        time is the density (of the bins with particles).
+        time is the density (of the bins with particles). ``dn`` is the
+        relativistic phase-space density times ``dv`` (`vdf_partial_density`).
 
     Raises
     ------

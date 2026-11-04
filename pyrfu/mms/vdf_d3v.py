@@ -19,7 +19,7 @@ _VOLUME_UNITS = {
 }
 
 
-def vdf_d3v(vdf, sc_pot=None, relativistic: bool = None):
+def vdf_d3v(vdf, sc_pot=None):
     r"""Velocity-space volume of each bin of a skymap or a pitch-angle
     distribution, as irfu-matlab PDist.d3v.
 
@@ -32,17 +32,17 @@ def vdf_d3v(vdf, sc_pot=None, relativistic: bool = None):
     sc_pot : xarray.DataArray or float or array_like, Optional
         Spacecraft potential (V), see `vdf_velocity`. Default is no
         correction.
-    relativistic : bool, Optional
-        Relativistic speeds. Default is the ``relativistic`` attribute of
-        `vdf` if any (True for the FEEPS skymaps), else False.
 
     Returns
     -------
     out : xarray.Dataset
         Copy of `vdf` whose data are the volumes of the bins,
-        (v_2^3 - v_1^3) / 3 times their solid angle, in cm^3/s^3 for
-        phase-space densities in s^3/cm^6 (km^3/s^3 for s^3/km^6, else
-        m^3/s^3), so that ``vdf * d3v`` is the partial density of each bin.
+        (v_2^3 - v_1^3) / 3 times their solid angle with the relativistic
+        speeds, in cm^3/s^3 for phase-space densities in s^3/cm^6 (km^3/s^3
+        for s^3/km^6, else m^3/s^3). The partial density of each bin is the
+        relativistic phase-space density times d3v (`vdf_partial_density`):
+        ``vdf * d3v`` for a relativistic skymap (FEEPS), and to 0.2 % of the
+        density for FPI electrons below 30 keV.
 
     Notes
     -----
@@ -63,4 +63,4 @@ def vdf_d3v(vdf, sc_pot=None, relativistic: bool = None):
     _is_skymap(vdf)
     _, units = _data_and_units(vdf)
     new_units, factor = _VOLUME_UNITS.get(units.lower(), ("m^3/s^3", 1.0))
-    return _output(vdf, _d3v(vdf, sc_pot, relativistic) * factor, new_units)
+    return _output(vdf, _d3v(vdf, sc_pot) * factor, new_units)

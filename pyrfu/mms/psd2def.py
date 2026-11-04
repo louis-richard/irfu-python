@@ -6,8 +6,10 @@ from pyrfu.mms._psd_units import (
     _MASS_FACTOR,
     _data_and_units,
     _energy,
+    _is_relativistic,
     _mass_ratio,
     _output,
+    _relativistic_factor,
 )
 
 __author__ = "Louis Richard"
@@ -63,9 +65,21 @@ def psd2def(inp):
     m_p^2 / (2 e^2) was 0.53707, with the atomic mass unit as irfu-matlab, and
     the fluxes were 1.46 % too large.
 
+    The phase-space density is in the convention of its ``relativistic``
+    attribute: the relativistic one, f = gamma^3 m J / v^2 with the
+    relativistic speed (the FEEPS skymaps), or without it the
+    non-relativistic one, f = m J / v^2 with v^2 = 2 E / m, as in the FPI,
+    HPCA and EIS files and irfu-matlab. The attribute is kept, so that the
+    conversions are inverse of each other.
+
     """
 
     data, units = _data_and_units(inp)
+    # From the relativistic phase-space density of a relativistic skymap
+    # (FEEPS): the convention was ignored
+    if _is_relativistic(inp):
+        data = data / _relativistic_factor(inp, data)
+
     data = _convert(data, units, _mass_ratio(inp)) * _energy(inp, data) ** 2
 
     return _output(inp, data, "keV/(cm^2 s sr keV)")

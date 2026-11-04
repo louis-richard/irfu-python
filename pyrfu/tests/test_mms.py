@@ -71,6 +71,20 @@ data_units_keys = {
 }
 
 
+def _rel_speed(energy, mass=constants.proton_mass):
+    # Relativistic speed (m/s) of a particle of kinetic energy energy (eV)
+    eps = constants.elementary_charge * np.asarray(energy, dtype=np.float64)
+    eps = eps / (mass * constants.c**2)
+    return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
+
+
+def _rel_factor(energy, mass=constants.proton_mass):
+    # Relativistic over classical phase-space density at the same energy flux
+    energy = np.asarray(energy, dtype=np.float64)
+    gamma = 1.0 + constants.elementary_charge * energy / (mass * constants.c**2)
+    return 2.0 * gamma**5 / (gamma + 1.0)
+
+
 def generate_feeps(f_s, n_pts, data_rate, dtype, lev, units_name, mms_id):
 
     units_key = data_units_keys[units_name.lower()]
@@ -366,12 +380,12 @@ class CalcEpsilonTestCase(unittest.TestCase):
         self.assertTrue(np.any((energy - e_minus < 25.0) & (energy + e_plus > 25.0)))
 
         def speed(e_kin):
-            e_corr = np.clip(e_kin - 25.0, 0.0, None)
-            return np.sqrt(2 * constants.elementary_charge * e_corr / constants.m_p)
+            return _rel_speed(np.clip(e_kin - 25.0, 0.0, None))
 
         w_v = speed(energy) ** 2 * (speed(energy + e_plus) - speed(energy - e_minus))
         w_ang = np.sin(np.deg2rad(vdf.theta.data)) * np.deg2rad(11.25) ** 2
-        f_si = vdf.data.data[0] * 1e12
+        # The classical phase-space density, as relativistic (speeds and volumes)
+        f_si = vdf.data.data[0] * 1e12 * _rel_factor(energy)[:, None, None]
         expected = np.sum(f_si * w_v[:, None, None] * w_ang[None, None, :]) / 2e6
         np.testing.assert_allclose(eps.data, expected, rtol=1e-10)
 
@@ -1323,8 +1337,15 @@ class Dpf2PsdTestCase(unittest.TestCase):
         energy = np.array([1e3, 5e4, 5e5])  # eV
         attrs = {"species": "electrons", "UNITS": "1/(cm^2 s sr keV)"}
         spectr = pyrf.ts_spectr(generate_timeline(1.0, 2), energy, np.ones((2, 3)))
+
+        def ratio_of(inp):
+            # The relativistic attribute sets the convention
+            rel = inp.copy()
+            rel.attrs = {**inp.attrs, "relativistic": True}
+            return mms.dpf2psd(rel).data / mms.dpf2psd(inp).data
+
         spectr.attrs = attrs
-        ratio = mms.dpf2psd(spectr, relativistic=True).data / mms.dpf2psd(spectr).data
+        ratio = ratio_of(spectr)
         np.testing.assert_allclose(ratio[0], [1.0098, 1.5205, 20.36], rtol=1e-3)
 
         gamma = 1 + energy / 510998.95
@@ -1333,8 +1354,12 @@ class Dpf2PsdTestCase(unittest.TestCase):
         # Protons: 4.9 % at 10 MeV
         spectr.attrs = {**attrs, "species": "ions"}
         spectr = spectr.assign_coords(energy=energy * 20)
-        ratio = mms.dpf2psd(spectr, relativistic=True).data / mms.dpf2psd(spectr).data
+        ratio = ratio_of(spectr)
         self.assertAlmostEqual(float(ratio[0, -1]), 1.0488, delta=1e-4)
+
+        # The argument was removed
+        with self.assertRaises(TypeError):
+            mms.dpf2psd(spectr, relativistic=True)
 
 
 @ddt
@@ -1744,24 +1769,28 @@ class EisMomentsTestCase(unittest.TestCase):
         )
         n_i, v_i, p_i, t_i = mms.eis_moments(flux)
 
+        # Relativistic speeds v and momenta gamma m v
         kev = 1e3 * constants.e
-        e_j, w_j = energy * kev, np.array([25.0, 35.0, 50.0]) * kev
+        w_j = np.array([25.0, 35.0, 50.0]) * kev
         j_si = 1e4 * flux.data[0] / kev
-        fact = 4 * np.pi * np.sqrt(constants.proton_mass / 2)
-        n_si = fact * np.sum(j_si / np.sqrt(e_j) * w_j)
-        p_si = 2 / 3 * fact * np.sum(j_si * np.sqrt(e_j) * w_j)
+        speed = _rel_speed(energy * 1e3)
+        gamma = 1 + energy * kev / (constants.proton_mass * constants.c**2)
+        n_si = 4 * np.pi * np.sum(j_si / speed * w_j)
+        momentum = gamma * constants.proton_mass * speed
+        p_si = 4 * np.pi / 3 * np.sum(j_si * momentum * w_j)
 
         np.testing.assert_allclose(n_i.data, 1e-6 * n_si, rtol=1e-12)
         np.testing.assert_allclose(p_i.data, 1e9 * p_si, rtol=1e-12)
         np.testing.assert_allclose(t_i.data, p_si / (n_si * constants.e), rtol=1e-12)
         np.testing.assert_allclose(
-            v_i.data,
-            1e-3
-            * fact
-            * np.sum(j_si * w_j)
-            / (n_si * np.sqrt(constants.proton_mass / 2)),
-            rtol=1e-12,
+            v_i.data, 1e-3 * 4 * np.pi * np.sum(j_si * w_j) / n_si, rtol=1e-12
         )
+
+        # Classical to 1e-4 at 120 keV
+        fact = 4 * np.pi * np.sqrt(constants.proton_mass / 2)
+        n_cl = fact * np.sum(j_si / np.sqrt(energy * kev) * w_j)
+        np.testing.assert_allclose(n_i.data, 1e-6 * n_cl, rtol=1e-4)
+        self.assertNotEqual(float(n_i.data[0]), 1e-6 * n_cl)
 
     def test_eis_moments_background(self):
         # n - n_bg and P - p_bg, T from them (P was reduced by 3 p_bg)
@@ -2716,9 +2745,10 @@ class MakeModelVDFTestCase(unittest.TestCase):
     @staticmethod
     def _analytic(vdf, mass, sc_pot, n_cc, v_kms, t_par, t_perp):
         # Bi-Maxwellian (s^3/km^6) at the particle velocities (minus the look
-        # directions) with B along z
+        # directions, relativistic speeds) with B along z, as the classical
+        # phase-space density of the skymap
         q_e = constants.elementary_charge
-        speed = np.sqrt(2 * q_e * (vdf.energy.data - sc_pot) / mass)[..., None, None]
+        speed = _rel_speed(vdf.energy.data - sc_pot, mass)[..., None, None]
         phi = np.deg2rad(vdf.phi.data)[:, None, :, None]
         theta = np.deg2rad(vdf.theta.data)[None, None, None, :]
         v_x = -speed * np.sin(theta) * np.cos(phi)
@@ -2731,7 +2761,7 @@ class MakeModelVDFTestCase(unittest.TestCase):
             -((v_x - v_d[0]) ** 2 + (v_y - v_d[1]) ** 2) / vth_perp2
             - (v_z - v_d[2]) ** 2 / vth_par2
         )
-        return f_ * 1e18
+        return f_ * 1e18 / _rel_factor(vdf.energy.data, mass)[..., None, None]
 
     def test_make_model_vdf_phi_1d(self):
         # phi as (phi,) (IndexError): as with phi as (time, phi), phi unchanged
@@ -3661,9 +3691,17 @@ class MakeModelKappaTestCase(unittest.TestCase):
         valid = shifted.energy.data[0] >= 0
         shifted.energy.data[:] = np.clip(shifted.energy.data, 0.0, None)
         expected = mms.make_model_kappa(shifted, *moments)
-        np.testing.assert_allclose(
-            model.data.data[:, valid], expected.data.data[:, valid]
+
+        # As the classical phase-space density of the measured energies
+        mass = constants.electron_mass if sign > 0 else constants.proton_mass
+        expected = (
+            expected.data.data
+            * (
+                _rel_factor(shifted.energy.data, mass)
+                / _rel_factor(vdf.energy.data, mass)
+            )[..., None, None]
         )
+        np.testing.assert_allclose(model.data.data[:, valid], expected[:, valid])
         self.assertTrue(np.all(np.isnan(model.data.data[:, ~valid])))
         self.assertEqual(np.any(~valid), sign > 0)
 
@@ -4075,12 +4113,17 @@ class Psd2DpfTestCase(unittest.TestCase):
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 1e3)
 
         for relativistic in [False, True]:
-            psd = mms.dpf2psd(vdf, relativistic=relativistic)
-            result = mms.psd2dpf(psd, relativistic=relativistic)
+            vdf.attrs["relativistic"] = relativistic
+            result = mms.psd2dpf(mms.dpf2psd(vdf))
             np.testing.assert_allclose(result.data.data, vdf.data.data, rtol=1e-12)
 
-        psd = mms.dpf2psd(vdf, relativistic=True)
+        # The convention is that of the attribute
+        psd = mms.dpf2psd(vdf)
+        psd.attrs["relativistic"] = False
         self.assertTrue(np.all(mms.psd2dpf(psd).data.data > vdf.data.data))
+
+        with self.assertRaises(TypeError):
+            mms.psd2dpf(psd, relativistic=True)
 
 
 @ddt
@@ -4290,8 +4333,7 @@ class PsdMomentsTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid species"):
             mms.psd_moments(vdf, sc_pot)
 
-    @data(False, True)
-    def test_psd_moments_no_warnings(self, relativistic):
+    def test_psd_moments_no_warnings(self):
         # Electrons with V_sc above the lowest channel (unused speeds warned
         # "invalid value in sqrt"), and a time without particles: n = 0 and
         # NaN bulk velocity, pressure, temperature and heat flux (0 / 0
@@ -4303,7 +4345,7 @@ class PsdMomentsTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            n, v, p, p2, t, h = mms.psd_moments(vdf, sc_pot, relativistic=relativistic)
+            n, v, p, p2, t, h = mms.psd_moments(vdf, sc_pot)
 
         self.assertGreater(n.data[0], 0.0)
         self.assertEqual(n.data[1], 0.0)
@@ -4860,7 +4902,8 @@ class PsdMomentsTestCase(unittest.TestCase):
                 "delta_theta_plus": edges[1:] - theta,
             },
         )
-        vdf = mms.dpf2psd(flux, relativistic=True)
+        flux.attrs["relativistic"] = True
+        vdf = mms.dpf2psd(flux)
         vdf.data.data *= 1e-12
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
         sc_pot = pyrf.ts_scalar(time, np.zeros(n_t))
@@ -4889,7 +4932,7 @@ class PsdMomentsTestCase(unittest.TestCase):
         p2_zz = m_e * np.sum(gamma * f_v * v_e**2) * k_zz
         q_z = m_e * c_l**2 * np.sum((gamma - 1) * f_v * v_e) * k_z
 
-        n, v, p, p2, _, h = mms.psd_moments(vdf, sc_pot, relativistic=True)
+        n, v, p, p2, _, h = mms.psd_moments(vdf, sc_pot)
         np.testing.assert_allclose(n.data * 1e6, n_exp, rtol=1e-10)
         np.testing.assert_allclose(v.data[:, 2] * 1e3, f_z / n_exp, rtol=1e-10)
         np.testing.assert_allclose(v.data[:, :2], 0.0, atol=1e-6)
@@ -4907,31 +4950,42 @@ class PsdMomentsTestCase(unittest.TestCase):
         n_flux = np.sum(j_si * q_e * (delta_minus[0] + delta_plus[0]) / v_e) * omega
         np.testing.assert_allclose(n.data * 1e6, n_flux, rtol=0.02)
 
-        # The attribute sets the default, the argument has precedence
-        vdf.attrs["relativistic"] = True
-        n_attr = mms.psd_moments(vdf, sc_pot)[0].data
-        np.testing.assert_array_equal(n_attr, n.data)
-        n_nr = mms.psd_moments(vdf, sc_pot, relativistic=False)[0].data
-        del vdf.attrs["relativistic"]
-        np.testing.assert_array_equal(mms.psd_moments(vdf, sc_pot)[0].data, n_nr)
-        self.assertTrue(np.all(n_nr > 1.3 * n.data))
+        # The same intensities as a classical phase-space density (FPI, HPCA,
+        # EIS: no relativistic attribute) give the same moments
+        classical = flux.copy()
+        classical.attrs = {**flux.attrs, "relativistic": False}
+        classical = mms.dpf2psd(classical)
+        classical.data.data *= 1e-12
+        classical.data.attrs["UNITS"] = "s^3/cm^6"
+        self.assertTrue(np.all(classical.data.data[..., :2] < vdf.data.data[..., :2]))
+        for res, exp in zip(mms.psd_moments(classical, sc_pot), [n, v, p, p2, _, h]):
+            atol = 1e-12 * np.max(np.abs(exp.data))
+            np.testing.assert_allclose(res.data, exp.data, rtol=1e-10, atol=atol)
+
+        # The argument was removed
+        with self.assertRaisesRegex(TypeError, "relativistic was removed"):
+            mms.psd_moments(vdf, sc_pot, relativistic=True)
 
     def test_psd_moments_relativistic_low_energy(self):
-        # 1 keV protons: the relativistic moments are the non-relativistic ones
+        # 1 keV protons: the relativistic moments are the classical ones (the
+        # limit c -> infinity) to 1e-5
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
-        result = mms.psd_moments(vdf, sc_pot, relativistic=True)
-        expected = mms.psd_moments(vdf, sc_pot)
+        result = mms.psd_moments(vdf, sc_pot)
+        with mock.patch.object(constants, "c", 1e3 * constants.c):
+            expected = mms.psd_moments(vdf, sc_pot)
 
         # (the heat flux is a small difference of large terms)
-        for res, exp, rtol in zip(result, expected, [1e-4] * 5 + [1e-2]):
+        for res, exp, rtol in zip(result, expected, [1e-5] * 5 + [1e-2]):
             atol = 1e-5 * np.max(np.abs(exp.data))
             np.testing.assert_allclose(res.data, exp.data, rtol=rtol, atol=atol)
+            self.assertFalse(np.array_equal(res.data, exp.data))
 
-        # Below the spacecraft potential, as the non-relativistic moments
+        # Below the spacecraft potential, as the classical moments
         sc_pot.data[:] = 50.0
-        result = mms.psd_moments(vdf, sc_pot, relativistic=True)
-        expected = mms.psd_moments(vdf, sc_pot)
-        np.testing.assert_allclose(result[0].data, expected[0].data, rtol=1e-4)
+        result = mms.psd_moments(vdf, sc_pot)
+        with mock.patch.object(constants, "c", 1e3 * constants.c):
+            expected = mms.psd_moments(vdf, sc_pot)
+        np.testing.assert_allclose(result[0].data, expected[0].data, rtol=1e-5)
 
 
 @ddt
@@ -6372,12 +6426,12 @@ class FeepsSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
         np.testing.assert_allclose(
             result.data.data,
-            1e-12 * mms.dpf2psd(flux, relativistic=True).data.data,
+            1e-12 * mms.dpf2psd(flux).data.data,
             rtol=1e-12,
         )
         self.assertEqual(result.attrs["species"], "electrons")
         self.assertTrue(result.attrs["relativistic"])
-        self.assertFalse(flux.attrs["relativistic"])
+        self.assertTrue(flux.attrs["relativistic"])
 
         # Isotropic: psd_moments integrates the 4 rings exactly
         sc_pot = pyrf.ts_scalar(result.time.data, np.zeros(2))
@@ -9276,19 +9330,27 @@ class VdfConvertTestCase(unittest.TestCase):
         self.assertAlmostEqual((m_he - 2 * m_e) / alpha, 1.0, places=7)
 
     def test_vdf_convert_relativistic(self):
-        # Electrons at 100 keV: the relativistic attribute is used by default
+        # Electrons at 100 keV: the convention is that of the attribute
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "electrons")
         vdf.data.attrs["UNITS"] = "1/(cm^2 s sr keV)"
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 1e4)
         vdf.attrs["relativistic"] = True
 
         psd = mms.vdf_convert(vdf, "s^3/m^6")
-        expected = mms.dpf2psd(vdf, relativistic=True)
+        expected = mms.dpf2psd(vdf)
         np.testing.assert_allclose(psd.data.data, expected.data.data, rtol=1e-12)
-        non_rel = mms.vdf_convert(vdf, "s^3/m^6", relativistic=False)
+        classical = vdf.copy()
+        classical.attrs = {**vdf.attrs, "relativistic": False}
+        gamma = 1 + vdf.energy.data / 510998.95
         np.testing.assert_allclose(
-            non_rel.data.data, mms.dpf2psd(vdf).data.data, rtol=1e-12
+            mms.vdf_convert(classical, "s^3/m^6").data.data
+            * (2 * gamma**5 / (gamma + 1))[..., None, None],
+            psd.data.data,
+            rtol=1e-6,
         )
+
+        with self.assertRaises(TypeError):
+            mms.vdf_convert(vdf, "s^3/m^6", relativistic=False)
 
         # Energy fluxes: J = DEF / E, so the same factor
         def_e = mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)")
@@ -9324,7 +9386,7 @@ class VdfVelocityTestCase(unittest.TestCase):
 
         # Speed of the energy, along minus the look direction
         speed = np.sqrt(result.vx**2 + result.vy**2 + result.vz**2).data
-        expected = np.sqrt(2 * constants.e * vdf.energy.data / constants.m_p) / 1e3
+        expected = _rel_speed(vdf.energy.data) / 1e3
         np.testing.assert_allclose(
             speed, np.broadcast_to(expected[..., None, None], speed.shape)
         )
@@ -9356,9 +9418,7 @@ class VdfVelocityTestCase(unittest.TestCase):
             speed = np.abs(speed[:, :, 0, 8]) / np.sin(np.deg2rad(vdf.theta.data[8]))
             speed /= np.abs(np.cos(np.deg2rad(vdf.phi.data[:, :1])))
             energy = np.clip(vdf.energy.data + sign * 150.0, 0.0, None)
-            np.testing.assert_allclose(
-                speed, np.sqrt(2 * constants.e * energy / mass) / 1e3, rtol=1e-6
-            )
+            np.testing.assert_allclose(speed, _rel_speed(energy, mass) / 1e3, rtol=1e-6)
             for other in [150.0, np.full(4, 150.0)]:
                 np.testing.assert_array_equal(
                     mms.vdf_velocity(vdf, sc_pot=other).vx.data,
@@ -9369,26 +9429,26 @@ class VdfVelocityTestCase(unittest.TestCase):
             mms.vdf_velocity(vdf, sc_pot=np.ones(3))
 
     def test_vdf_velocity_relativistic(self):
+        # Always relativistic (the relativistic argument was removed): 10 keV
+        # to 3.2 MeV electrons below c (the classical speeds were above c)
         vdf = self._vdf("electrons")
         vdf = vdf.assign(energy=vdf.energy * 100.0)
         speed = np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0])
-        rel = np.abs(mms.vdf_velocity(vdf, relativistic=True).vz.data[:, -1, 0, 0])
-        self.assertTrue(np.all(speed > constants.c / 1e3))
-        self.assertTrue(np.all(rel < constants.c / 1e3))
+        e_max = vdf.energy.data[:, -1]
+        classical = np.sqrt(2 * constants.e * e_max / constants.m_e)
+        self.assertTrue(np.all(classical > constants.c / 1e3))
+        self.assertTrue(np.all(speed < constants.c / 1e3))
+        np.testing.assert_allclose(speed, _rel_speed(e_max, constants.m_e) / 1e3)
 
-        vdf.attrs["relativistic"] = True
-        np.testing.assert_array_equal(
-            np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0]), rel
-        )
+        with self.assertRaises(TypeError):
+            mms.vdf_velocity(vdf, relativistic=True)
 
         # 10 eV protons: v_rel / v = 1 - 3 eps / 4 (eps = E / m c^2 = 1e-8),
         # without cancellation errors
         vdf = self._vdf("ions")
         vdf = vdf.assign(energy=vdf.energy * 0.0 + 10.0)
-        ratio = (
-            mms.vdf_velocity(vdf, relativistic=True).vz.data[:, :, 0, 0]
-            / mms.vdf_velocity(vdf).vz.data[:, :, 0, 0]
-        )
+        classical = np.sqrt(2 * constants.e * 10.0 / constants.m_p) / 1e3
+        ratio = np.abs(mms.vdf_velocity(vdf).vz.data[:, :, 0, 0]) / classical
         eps = 10.0 * constants.e / (constants.m_p * constants.c**2)
         np.testing.assert_allclose(ratio, 1 - 3 * eps / 4, rtol=1e-12)
 
@@ -9441,9 +9501,7 @@ class VdfD3vTestCase(unittest.TestCase):
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
         lower = vdf.energy.data - vdf.attrs["delta_energy_minus"]
         upper = vdf.energy.data + vdf.attrs["delta_energy_plus"]
-        v_1, v_2 = (
-            np.sqrt(2 * constants.e * e / constants.m_p) for e in [lower, upper]
-        )
+        v_1, v_2 = (_rel_speed(e) for e in [lower, upper])
         expected = 4 * np.pi / 3 * (v_2**3 - v_1**3)
 
         result = mms.vdf_d3v(vdf)
@@ -9469,7 +9527,7 @@ class VdfD3vTestCase(unittest.TestCase):
         energy = vdf.energy.data[0]
         result = mms.vdf_d3v(vdf).data.data[0, 5].sum()
         e_1, e_2 = (energy[4] + energy[5]) / 2, (energy[5] + energy[6]) / 2
-        v_1, v_2 = (np.sqrt(2 * constants.e * e / constants.m_p) for e in [e_1, e_2])
+        v_1, v_2 = (_rel_speed(e) for e in [e_1, e_2])
         np.testing.assert_allclose(result, 4 * np.pi / 3 * (v_2**3 - v_1**3))
 
     def test_vdf_d3v_sc_pot_pad(self):
@@ -9479,18 +9537,13 @@ class VdfD3vTestCase(unittest.TestCase):
         result = mms.vdf_d3v(vdf, sc_pot=20.0).data.data[0, 3].sum()
         lower = vdf.energy.data[0, 3] - vdf.attrs["delta_energy_minus"][0, 3] + 20.0
         upper = vdf.energy.data[0, 3] + vdf.attrs["delta_energy_plus"][0, 3] + 20.0
-        v_1, v_2 = (
-            np.sqrt(2 * constants.e * e / constants.m_p) for e in [lower, upper]
-        )
+        v_1, v_2 = (_rel_speed(e) for e in [lower, upper])
         np.testing.assert_allclose(result, 4 * np.pi / 3 * (v_2**3 - v_1**3))
 
         pad = _pad_case(np.ones((3, 2, 12)))
         result = mms.vdf_d3v(pad)
         self.assertEqual(result.data.attrs["UNITS"], "cm^3/s^3")
-        v_1, v_2 = (
-            np.sqrt(2 * constants.e * f * pad.energy.data / constants.m_p)
-            for f in [0.75, 1.25]
-        )
+        v_1, v_2 = (_rel_speed(f * pad.energy.data) for f in [0.75, 1.25])
         np.testing.assert_allclose(
             result.data.data.sum(axis=2), 1e6 * 4 * np.pi / 3 * (v_2**3 - v_1**3)
         )
@@ -9509,9 +9562,10 @@ class VdfPartialDensityTestCase(unittest.TestCase):
         n_i = d_n.data.data.sum(axis=(1, 2, 3))
         np.testing.assert_allclose(n_i, 1.0, rtol=0.01)
 
-        # Equal to f d3v
+        # Equal to f d3v, with the relativistic f (classical skymap)
         d3v = mms.vdf_d3v(vdf).data.data
-        np.testing.assert_allclose(d_n.data.data, vdf.data.data * d3v, rtol=1e-12)
+        f_rel = vdf.data.data * _rel_factor(vdf.energy.data)[..., None, None]
+        np.testing.assert_allclose(d_n.data.data, f_rel * d3v, rtol=1e-12)
 
         for i, comp in enumerate("xyz"):
             d_j = mms.vdf_partial_density(vdf, comp)
@@ -9534,8 +9588,9 @@ class VdfPartialDensityTestCase(unittest.TestCase):
 
         pad = _pad_case(np.ones((3, 2, 12)))
         n_pad = mms.vdf_partial_density(pad).data.data
+        f_rel = pad.data.data * _rel_factor(pad.energy.data)[..., None]
         np.testing.assert_allclose(
-            n_pad, pad.data.data * mms.vdf_d3v(pad).data.data, rtol=1e-12
+            n_pad, f_rel * mms.vdf_d3v(pad).data.data, rtol=1e-12
         )
 
         with self.assertRaises(ValueError):
@@ -9567,13 +9622,12 @@ class VdfFluxTestCase(unittest.TestCase):
         )
 
     def test_vdf_flux_pad(self):
-        # (v_2^4 - v_1^4) / 4 f, the ion mass (irfu-matlab uses m_e)
+        # (v_2^4 - v_1^4) / 4 f, the ion mass (irfu-matlab uses m_e), the
+        # relativistic speeds and f
         pad = _pad_case(np.ones((3, 2, 12)))
-        v_1, v_2 = (
-            np.sqrt(2 * constants.e * f * pad.energy.data / constants.m_p)
-            for f in [0.75, 1.25]
-        )
+        v_1, v_2 = (_rel_speed(f * pad.energy.data) for f in [0.75, 1.25])
         expected = 1e12 * (v_2**4 - v_1**4) / 4 / 1e4
+        expected = expected * _rel_factor(pad.energy.data)
         np.testing.assert_allclose(
             mms.vdf_flux(pad).data.data[..., 4], expected, rtol=1e-12
         )
@@ -9709,7 +9763,12 @@ class VdfMacroparticlesTestCase(unittest.TestCase):
         self.assertEqual(result.sizes["particle"], np.sum(d_n > 0))
         n_t = result.dn.groupby("time").sum().data
         np.testing.assert_allclose(n_t, np.nansum(d_n, axis=(1, 2, 3)), rtol=1e-12)
-        np.testing.assert_allclose(result.dn, result.df * result.dv, rtol=1e-12)
+        # f d3v with the relativistic f (df is the data of the skymap)
+        i_t = np.searchsorted(vdf.time.data, result.time.data)
+        energy = vdf.energy.data[i_t, result.idx0.data]
+        np.testing.assert_allclose(
+            result.dn, result.df * _rel_factor(energy) * result.dv, rtol=1e-12
+        )
 
         # The velocities of the bins: speed and look direction in the bin
         v_xyz = np.stack([result[c].data for c in ["vx", "vy", "vz"]], axis=1)
@@ -9941,12 +10000,14 @@ class VdfRebinTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.attrs["lost"], 0.0)
         self.assertNotIn("frame_velocity", result.attrs)
 
-        v_3 = (2 * constants.e * edges / constants.m_p) ** 1.5
-        w_3 = np.diff(v_3)[None, :, None, None]
-        f_old = vdf.data.data
+        # The relativistic f and speeds, back to the classical f (as vdf) at
+        # the new energies
+        w_3 = np.diff(_rel_speed(edges) ** 3)[None, :, None, None]
+        f_old = vdf.data.data * _rel_factor(vdf.energy.data)[..., None, None]
         expected = (f_old[:, 0::2] * w_3[:, 0::2] + f_old[:, 1::2] * w_3[:, 1::2]) / (
             w_3[:, 0::2] + w_3[:, 1::2]
         )
+        expected /= _rel_factor(result.energy.data)[..., None, None]
         np.testing.assert_allclose(result.data.data, expected, rtol=1e-10)
 
     def test_vdf_rebin_energy_overlap(self):
@@ -10098,6 +10159,10 @@ class VdfCutsTestCase(unittest.TestCase):
     def test_vdf_cuts_distributions(self):
         vdf, f_si = self._bimaxwellian()
         dists, _ = mms.vdf_cuts(vdf)
+
+        # The relativistic f (the skymap is classical) and speeds
+        f_si = f_si * _rel_factor(vdf.energy.data[0])[:, None, None]
+        self.assertTrue(dists.attrs["relativistic"])
         self.assertEqual(dists.f_par.attrs["UNITS"], "s^3/m^6")
 
         # Along B: the look directions at theta = 174.375 (pitch angle 5.625),
@@ -10108,7 +10173,7 @@ class VdfCutsTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             dists.f_par.data[:, :32], np.tile(f_si[::-1, 0, 0], (2, 1)), rtol=1e-12
         )
-        speed = np.sqrt(2 * constants.e * vdf.energy.data[0] / constants.m_p) / 1e3
+        speed = _rel_speed(vdf.energy.data[0]) / 1e3
         np.testing.assert_allclose(
             dists.v_par.data[0], np.hstack([-speed[::-1], speed])
         )
@@ -11221,7 +11286,7 @@ class VdfProjectionTestCase(unittest.TestCase):
         np.testing.assert_allclose(module._init(vdf, tint)[3], expected, rtol=1e-6)
 
         v_x, v_y, _ = mms.vdf_projection(vdf, tint)
-        speed = np.sqrt(2 * constants.e * expected / constants.proton_mass) / 1e3
+        speed = _rel_speed(expected) / 1e3
         np.testing.assert_allclose(np.hypot(v_x, v_y)[:, 0], speed, rtol=1e-6)
 
     def test_vdf_projection_angle_widths(self):
