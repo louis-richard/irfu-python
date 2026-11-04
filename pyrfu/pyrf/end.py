@@ -31,6 +31,7 @@ def end(inp):
     message = "inp must be a xarray.DataArray or xarray.Dataset"
     assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
 
-    out = inp.time.data[-1].astype(np.int64) / 1e9
+    # From the time in ns (in us it was 1000 times too small)
+    out = inp.time.data[-1].astype("datetime64[ns]").astype(np.int64) / 1e9
 
     return out

@@ -3297,6 +3297,50 @@ class EbspTestCase(unittest.TestCase):
             run(fac_matrix=fac_matrix[:-1])
 
 
+class MicrosecondTimesTestCase(unittest.TestCase):
+    # xarray keeps datetime64[us] time coordinates (from datetime objects,
+    # pandas 3): the times were taken as ns, so the sampling frequencies came
+    # out 1000 times too large (psd, wave_fft), start and end 1000 times too
+    # small, and ebsp returned no times (or raised IndexError)
+    @staticmethod
+    def _series(unit, n_comp=None, n_t=2048, f_s=64.0):
+        rng = np.random.default_rng(0)
+        time = np.datetime64("2019-01-01T00:00:00", "ns")
+        time = time + (np.arange(n_t) / f_s * 1e9).astype("timedelta64[ns]")
+        shape = (n_t,) if n_comp is None else (n_t, n_comp)
+        dims = ["time"] if n_comp is None else ["time", "comp"]
+        coords = [time] if n_comp is None else [time, ["x", "y", "z"]]
+        out = xr.DataArray(rng.standard_normal(shape), coords=coords, dims=dims)
+        return out.assign_coords(time=time.astype(f"datetime64[{unit}]"))
+
+    def test_psd_wave_fft(self):
+        ref, inp = self._series("ns"), self._series("us")
+        xr.testing.assert_identical(pyrf.psd(inp, n_fft=256), pyrf.psd(ref, n_fft=256))
+
+        for out, expected in zip(
+            pyrf.wave_fft(inp, "hann", frame_overlap=1, frame_length=2),
+            pyrf.wave_fft(ref, "hann", frame_overlap=1, frame_length=2),
+        ):
+            np.testing.assert_array_equal(out, expected)
+
+    def test_start_end(self):
+        ref, inp = self._series("ns"), self._series("us")
+        self.assertEqual(pyrf.start(inp), pyrf.start(ref))
+        self.assertEqual(pyrf.end(inp), pyrf.end(ref))
+        self.assertEqual(pyrf.start(ref), 1546300800.0)
+
+    def test_ebsp(self):
+        ref = [self._series("ns", 3) for _ in range(3)]
+        inp = [self._series("us", 3) for _ in range(3)]
+        out = pyrf.ebsp(None, inp[0], inp[1], inp[2], None, [1, 10], fac=True)
+        expected = pyrf.ebsp(None, ref[0], ref[1], ref[2], None, [1, 10], fac=True)
+
+        np.testing.assert_array_equal(
+            out["bb_xxyyzzss"].data, expected["bb_xxyyzzss"].data
+        )
+        np.testing.assert_array_equal(out["t"], expected["t"])
+
+
 class EndTestCase(unittest.TestCase):
     def test_end_input(self):
         with self.assertRaises(AssertionError):

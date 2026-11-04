@@ -24,7 +24,7 @@ def start(inp):
     Returns
     -------
     out : float
-        Value of the first time in the desired format.
+        First time, in seconds since 1970-01-01 (unix time).
 
     """
 
@@ -34,6 +34,7 @@ def start(inp):
     # Make sure this is a time series
     assert list(inp.dims)[0] == "time", "inp must be a time series"
 
-    out = inp.time.data[0].astype(np.int64) * 1e-9
+    # From the time in ns (in us it was 1000 times too small)
+    out = inp.time.data[0].astype("datetime64[ns]").astype(np.int64) * 1e-9
 
     return out
