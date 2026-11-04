@@ -16,6 +16,51 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
+# Global attributes of the particle distributions (skymaps, pitch-angle and
+# gyrophase distributions) with one value (or row) per time, and their number
+# of dimensions when they do: the step table and the time widths (time,), the
+# energy widths (time, energy) for FPI and FEEPS (per channel, (energy,), for
+# EIS), the azimuthal widths (time, phi) and the FEEPS coverage (time, energy)
+_TIME_ATTRS = {
+    "esteptable": 1,
+    "delta_time_minus": 1,
+    "delta_time_plus": 1,
+    "delta_energy_minus": 2,
+    "delta_energy_plus": 2,
+    "delta_phi_minus": 2,
+    "delta_phi_plus": 2,
+    "coverage": 2,
+}
+
+# Attributes of the distributions per channel or angular bin, never clipped
+# (they were when their length was that of time, e.g. the energy tables of 32
+# channels with 32 times)
+_BIN_ATTRS = (
+    "energy0",
+    "energy1",
+    "delta_theta_minus",
+    "delta_theta_plus",
+    "delta_pitchangle_minus",
+    "delta_pitchangle_plus",
+    "delta_gyrophase_minus",
+    "delta_gyrophase_plus",
+)
+
+
+def _is_time_attr(key, attr, n_t):
+    r"""True if the global attribute `key` of a Dataset of `n_t` times has one
+    value (or row) per time: the per-time attributes of the distributions
+    with their number of dimensions, never their per-bin ones, else the
+    array_like attributes whose first dimension is the length of time."""
+    if key in _BIN_ATTRS or not isinstance(attr, np.ndarray) or attr.ndim == 0:
+        return False
+
+    if key in _TIME_ATTRS:
+        return attr.ndim == _TIME_ATTRS[key] and attr.shape[0] == n_t
+
+    return attr.shape[0] == n_t
+
+
 def _time_interval(tint):
     if isinstance(tint, xr.DataArray):
         t_start, t_stop = tint.time.data[[0, -1]]
@@ -48,8 +93,19 @@ def time_clip(inp, tint):
     out : xarray.DataArray or xarray.Dataset
         Time series of the time clipped input, with the times in
         [t_start, t_stop] (inclusive). All the coordinates are kept, and the
-        time dependent ones are clipped. For a Dataset, the array_like
-        attributes with a first dimension the length of time are clipped too.
+        time dependent ones are clipped. For a Dataset, the time dependent
+        attributes are clipped too: those of the particle distributions (step
+        table, energy, time and azimuthal widths, FEEPS coverage), not their
+        energy tables and polar, pitch-angle or gyrophase widths, and the
+        other array_like attributes with a first dimension the length of
+        time.
+
+    Notes
+    -----
+    To select times of a distribution, use time_clip rather than
+    ``Dataset.isel`` or ``Dataset.sel``, which keep the per-time attributes
+    at full length (the energy widths of `pyrfu.mms.vdf_d3v` then do not
+    match the times).
 
     """
     t_start, t_stop = _time_interval(tint)
@@ -59,19 +115,13 @@ def time_clip(inp, tint):
     out = inp.isel(time=slice(idx_min, idx_max))
 
     if isinstance(inp, xr.Dataset):
-        # If array_like attributes have one dimension equal to time length
-        # assume time dependent. One option would be move the time dependent
-        # array_like attributes to time series to zVaraibles to avoid confusion
+        # The time dependent attributes, see _is_time_attr
         out_attrs = {}
 
         for k in sorted(inp.attrs):
             attr = inp.attrs[k]
 
-            if (
-                isinstance(attr, np.ndarray)
-                and attr.ndim > 0
-                and attr.shape[0] == len(inp.time.data)
-            ):
+            if _is_time_attr(k, attr, len(inp.time.data)):
                 out_attrs[k] = attr[idx_min:idx_max, ...]
             else:
                 out_attrs[k] = attr

@@ -6951,6 +6951,47 @@ class TimeClipTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["name"], "test")
         self.assertEqual(inp.attrs["delta"].shape, (20, 2))
 
+    def test_time_clip_distribution_attrs(self):
+        # The per-time attributes of a distribution are clipped, its per-bin
+        # ones are not, whatever their length: 32 times, 32 energy channels and
+        # per-bin widths of 32 (the energy tables were clipped to the times kept)
+        vdf = generate_vdf(64.0, 32, (32, 32, 16), energy01=True)
+        widths = np.random.random((32, 32))
+        vdf.attrs = {
+            **vdf.attrs,
+            "delta_energy_minus": widths,
+            "delta_time_plus": np.arange(32.0),
+            "delta_phi_minus": np.ones((32, 32)),
+            "delta_theta_minus": np.full(32, 5.625),
+            "delta_pitchangle_minus": np.full(32, 7.5),
+            "label": np.arange(32.0),
+        }
+        result = pyrf.time_clip(vdf, vdf.time.data[[3, 10]])
+        self.assertEqual(len(result.time), 8)
+
+        for key in ["esteptable", "delta_energy_minus", "delta_time_plus"]:
+            np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key][3:11])
+
+        self.assertEqual(result.attrs["delta_phi_minus"].shape, (8, 32))
+
+        for key in [
+            "energy0",
+            "energy1",
+            "delta_theta_minus",
+            "delta_pitchangle_minus",
+        ]:
+            np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key])
+
+        # Other attributes: by their length, as before
+        np.testing.assert_array_equal(result.attrs["label"], np.arange(3.0, 11.0))
+
+        # Energy widths per channel (EIS, (energy,)) are not clipped
+        vdf.attrs["delta_energy_minus"] = np.arange(32.0)
+        result = pyrf.time_clip(vdf, vdf.time.data[[3, 10]])
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_minus"], np.arange(32.0)
+        )
+
 
 class TsConvolveTestCase(unittest.TestCase):
     def setUp(self):
