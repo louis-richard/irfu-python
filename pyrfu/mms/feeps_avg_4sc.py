@@ -18,7 +18,7 @@ __author__ = "Apostolos Kolokotronis"
 __email__ = "apostolos.kolokotronis@irf.se"
 __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.5.10"
 __status__ = "Prototype"
 
 
@@ -40,6 +40,39 @@ def _nan_count(inp):
     inp_to_counts = xr.where(np.isnan(inp), 0, 1)
 
     return inp_to_counts
+
+
+def _ns(time):
+    r"""Times as float nanoseconds."""
+    return time.astype("datetime64[ns]").astype(np.int64).astype(np.float64)
+
+
+def _without_gaps(inp, inp_r):
+    r"""`inp_r` (`inp` resampled) without the values invented by the
+    resampling. A time is covered if a sample of `inp` is within half its
+    sampling period (the median step); NaN otherwise (data gaps, before the
+    start and after the end of `inp`). A covered time that is not between two
+    samples of `inp` at most 1.5 periods apart (a gap edge, an end) takes the
+    nearest sample, not a value interpolated across the gap."""
+    time, ref = _ns(inp.time.data), _ns(inp_r.time.data)
+    steps = np.diff(time) if len(time) > 1 else np.diff(ref)
+    d_t = np.median(steps) if len(steps) else 0.0
+
+    i_r = np.searchsorted(time, ref)
+    i_l = np.clip(i_r - 1, 0, len(time) - 1)
+    i_rc = np.clip(i_r, 0, len(time) - 1)
+    dist_l, dist_r = np.abs(ref - time[i_l]), np.abs(time[i_rc] - ref)
+    i_near = np.where(dist_l <= dist_r, i_l, i_rc)
+
+    covered = np.minimum(dist_l, dist_r) <= d_t / 2.0
+    between = (i_r > 0) & (i_r < len(time)) & (time[i_rc] - time[i_l] <= 1.5 * d_t)
+    nearest = covered & ~between
+
+    data = inp_r.data.astype(np.float64)
+    data[nearest] = inp.data[i_near[nearest]]
+    data[~covered] = np.nan
+
+    return inp_r.copy(data=data)
 
 
 def feeps_avg_4sc(
@@ -86,7 +119,13 @@ def feeps_avg_4sc(
 
     Notes
     -----
-    Times where the quantity is NaN on all the spacecraft give NaN.
+    The spacecraft are resampled to the times of the first one. A spacecraft
+    is left out of the average where it has no data: in its data gaps (two
+    samples more than 1.5 sampling periods apart), and before the start and
+    after the end of its data (beyond half a sampling period). The resampling
+    filled the gaps by interpolation and extrapolated past the ends, which
+    were averaged as data. Times where the quantity is NaN on all the
+    spacecraft give NaN.
 
     """
     # Check input type
@@ -100,7 +139,11 @@ def feeps_avg_4sc(
 
     for b in b_list:
         if isinstance(b, xr.DataArray):
-            b_list_r.append(resample(b, b_list[0], f_s=calc_fs(b_list[0])))
+            # On the times of the first spacecraft, NaN where a spacecraft has
+            # no data (the resampling filled its gaps and extrapolated past its
+            # ends, averaged as data)
+            b_r = resample(b, b_list[0], f_s=calc_fs(b_list[0]))
+            b_list_r.append(_without_gaps(b, b_r))
         else:
             raise TypeError("elements of b_list must be DataArray")
 

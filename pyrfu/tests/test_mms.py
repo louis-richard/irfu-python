@@ -5218,6 +5218,64 @@ class FeepsAvg4scTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["mmsId"], "4sc_avg")
         self.assertEqual(omni[0].attrs["mmsId"], 1)
 
+    @staticmethod
+    def _omni(time, data, mms_id):
+        energy = np.array([50.0, 70.0])
+        return xr.DataArray(
+            np.tile(np.asarray(data, dtype=np.float64)[:, None], (1, 2)),
+            coords=[time, energy],
+            dims=["time", "energy"],
+            attrs={"mmsId": mms_id},
+        )
+
+    def test_feeps_avg_4sc_gaps(self):
+        # MMS1, 3 and 4 at 1; MMS2 at 10, a gap of 100 samples, then 30, and
+        # MMS4 stopping early: a spacecraft without data is left out (the
+        # resampling filled the gap from 10 to 30 and extrapolated past the
+        # end, averaged as data: 3.8 to 7.8 in the gap)
+        time = generate_timeline(0.05, 200)
+        ones = np.ones(200)
+        mms2 = np.r_[np.full(50, 10.0), np.full(50, 30.0)]
+        keep = np.r_[0:50, 150:200]
+        omni = [
+            self._omni(time, ones, 1),
+            self._omni(time[keep], mms2, 2),
+            self._omni(time, ones, 3),
+            self._omni(time[:120], ones[:120], 4),
+        ]
+        result = mms.feeps_avg_4sc(omni)
+
+        np.testing.assert_allclose(result.data[[0, 49], 0], 13.0 / 4.0)
+        np.testing.assert_allclose(result.data[[50, 100, 149], 0], 1.0)
+        np.testing.assert_allclose(result.data[[150, 199], 0], 32.0 / 3.0)
+
+    def test_feeps_avg_4sc_offset_times(self):
+        # Continuous data on offset times: interpolated as before; next to a
+        # gap and after the end, the nearest sample (not a value interpolated
+        # across the gap), within half a sampling period
+        time = generate_timeline(0.05, 20)
+        shift = np.timedelta64(6, "s")  # 0.3 sampling period
+        ramp = np.arange(20, dtype=np.float64)
+        omni = [self._omni(time, np.zeros(20), i) for i in [1, 3, 4]]
+        mms2 = self._omni(time - shift, 4.0 * ramp, 2)
+        result = mms.feeps_avg_4sc([omni[0], mms2, omni[1], omni[2]])
+
+        # MMS2 at t is 4 (t + 0.3 period) / period: interpolated; the last
+        # time is 0.3 period after MMS2's last sample: that sample (it was
+        # extrapolated, 19.3)
+        np.testing.assert_allclose(result.data[:-1, 0], (4.0 * ramp[:-1] + 1.2) / 4.0)
+        self.assertAlmostEqual(result.data[-1, 0], 19.0)
+
+        # MMS2 without samples 10 to 14: 0.3 period after its sample 9, then
+        # the gap: sample 9 (it was interpolated towards sample 15, 9.3), the
+        # gap without MMS2, interpolated again from sample 15
+        keep = np.r_[0:10, 15:20]
+        mms2 = self._omni(time[keep] - shift, 4.0 * ramp[keep], 2)
+        result = mms.feeps_avg_4sc([omni[0], mms2, omni[1], omni[2]])
+        self.assertAlmostEqual(result.data[9, 0], 9.0)
+        np.testing.assert_allclose(result.data[10:15, 0], 0.0)
+        self.assertAlmostEqual(result.data[15, 0], 15.3)
+
     def test_feeps_avg_4sc_combined_energies(self):
         # Output channel 0 = channel 1 of MMS1 and channel 2 of MMS2 (MMS3 and
         # MMS4 left out), channels 1 and 2 = the same channel on all
