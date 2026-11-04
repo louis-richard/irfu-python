@@ -2544,6 +2544,28 @@ class Datetime642UnixTestCase(unittest.TestCase):
                 pyrf.datetime642unix(value)
 
 
+class TimeUnitsTestCase(unittest.TestCase):
+    def test_datetime642iso8601_units(self):
+        # Any datetime64 unit (arrays in s, min, h or D raised TypeError), so
+        # also datetime2iso8601 of a scalar in s or D and the tint of get_ts
+        expected = "2019-01-01T00:00:00.000000000"
+        for unit in ["ns", "us", "ms", "s", "m", "h", "D"]:
+            time = np.array(["2019-01-01"], dtype=f"datetime64[{unit}]")
+            self.assertEqual(pyrf.datetime642iso8601(time)[0], expected)
+
+        self.assertEqual(pyrf.datetime2iso8601(np.datetime64("2019-01-01")), expected)
+        self.assertEqual(
+            pyrf.datetime2iso8601(np.datetime64("2019-01-01T00:00:00")), expected
+        )
+
+    def test_datetime642unix_nat(self):
+        # NaN for NaT, as iso86012unix (it was the int64 of NaT, -9.2e9 s)
+        time = np.array(["NaT", "2019-01-01"], dtype="datetime64[ns]")
+        np.testing.assert_array_equal(
+            pyrf.datetime642unix(time), [np.nan, 1546300800.0]
+        )
+
+
 class Unix2Datetime64TestCase(unittest.TestCase):
     def test_unix2datetime64_input(self):
         with self.assertRaises(TypeError):
@@ -3639,6 +3661,8 @@ class GetOmniDataTestCase(unittest.TestCase):
             hours, dtype="timedelta64[h]"
         )
         np.testing.assert_array_equal(out.time.data, expected)
+        # In ns, as the other time series (pandas 3 gave us)
+        self.assertEqual(out.time.dtype, np.dtype("datetime64[ns]"))
         self.assertListEqual(tint, tint_in)  # not modified
         self.assertIn("spacecraft=omni2&start_date=20190914&end_date=2019091", url)
         self.assertTrue(url.endswith("&vars=8&vars=24&vars=41"))

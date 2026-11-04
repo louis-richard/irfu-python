@@ -19,12 +19,13 @@ __status__ = "Prototype"
 def datetime642iso8601(
     time: Union[np.datetime64, NDArray[np.datetime64]],
 ) -> NDArray[np.str_]:
-    r"""Convert datetime64 in ns units to ISO 8601 time format .
+    r"""Convert datetime64 to ISO 8601 time format, with nanoseconds.
 
     Parameters
     ----------
     time : numpy.datetime64 or numpy.ndarray
-        Time in datetime64 in ns units.
+        Time in datetime64, in any unit (arrays in s, min, h or D raised
+        TypeError).
 
     Returns
     -------
@@ -38,11 +39,7 @@ def datetime642iso8601(
     """
     if isinstance(time, np.datetime64):
         time_datetime64 = np.atleast_1d(time).astype("datetime64[ns]")
-    elif isinstance(time, np.ndarray) and time.dtype in [
-        "<M8[ns]",
-        "<M8[us]",
-        "<M8[ms]",
-    ]:
+    elif isinstance(time, np.ndarray) and time.dtype.kind == "M":
         time_datetime64 = time.astype("datetime64[ns]")
     else:
         raise TypeError("time must be numpy.datetime64 or numpy.ndarray")

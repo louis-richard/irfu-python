@@ -29,7 +29,7 @@ def datetime642unix(
     Returns
     -------
     time_unix : ndarray
-        Time in unix format.
+        Time in unix format (seconds since 1970-01-01), NaN for NaT.
 
     Raises
     ------
@@ -61,7 +61,9 @@ def datetime642unix(
     # Make sure that time is in ns format
     time_datetime64 = time.astype("datetime64[ns]")
 
-    # Convert to unix
+    # Convert to unix, NaN for NaT (it was -9.2e9 s, the int64 of NaT), as
+    # iso86012unix
     time_unix = time_datetime64.astype(np.int64) / 1e9
+    time_unix[np.isnat(time_datetime64)] = np.nan
 
     return time_unix
