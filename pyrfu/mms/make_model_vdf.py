@@ -61,11 +61,11 @@ def make_model_vdf(
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
     n_s : xarray.DataArray
-        Time series of the number density of specie s.
+        Time series of the number density of specie s, at the times of `vdf`.
     v_xyz : xarray.DataArray
-        Time series of the bulk velocity.
+        Time series of the bulk velocity, at the times of `vdf`.
     t_xyz : xarray.DataArray
-        Time series of the temperature tensor.
+        Time series of the temperature tensor, at the times of `vdf`.
     isotropic : bool, Optional
         Flag to make an isotropic model distribution. Default is False.
 
@@ -81,8 +81,8 @@ def make_model_vdf(
     Raises
     ------
     ValueError
-        If the species is not ions or electrons, or if vdf and the moments
-        have different times.
+        If the species is not ions or electrons, or if the moments (`n_s`,
+        `v_xyz` and `t_xyz`) are not at the times of `vdf`.
 
     See also
     --------
@@ -128,13 +128,13 @@ def make_model_vdf(
     if species[:1] not in ["i", "e"]:
         raise ValueError(f"Invalid species {vdf.attrs['species']!r}")
 
-    # Check that VDF and moments have the same timeline
-    d_times = vdf.time.data - n_s.time.data if len(vdf.time) == len(n_s.time) else None
-
-    if d_times is None or (
-        len(d_times) > 1 and np.median(np.diff(d_times)) != np.timedelta64(0, "ns")
-    ):
-        raise ValueError("VDF and moments have different times.")
+    # The moments are used by position: at the times of the VDF, as
+    # calculate_epsilon (the times of n_s only had to differ by a constant, so
+    # that moments 1 h away were accepted, and those of v_xyz and t_xyz were
+    # not checked)
+    for name, moment in zip(["n_s", "v_xyz", "t_xyz"], [n_s, v_xyz, t_xyz]):
+        if not np.array_equal(moment.time.data, vdf.time.data):
+            raise ValueError(f"VDF and moments have different times ({name}).")
 
     # Resample b_xyz and sc_pot to particle data resolution
     b_xyz, sc_pot = [resample(b_xyz, n_s), resample(sc_pot, n_s)]

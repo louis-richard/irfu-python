@@ -2900,6 +2900,27 @@ class MakeModelVDFTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s[:2], v_xyz, t_xyz)
 
+    def test_make_model_vdf_moment_times(self):
+        # The moments at the times of the VDF: shifted by a constant (1 h)
+        # they were accepted and used by position, and the times of v_xyz and
+        # t_xyz were not checked
+        vdf = self._skymap("ions", 10.0, 3e4)
+        moments = self._moments(vdf.time.data, 2.0, [0.0] * 3, 1e3, 1e3)
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(len(vdf.time)))
+        hour = np.timedelta64(3600, "s")
+
+        for i, name in zip([1, 2, 3], ["n_s", "v_xyz", "t_xyz"]):
+            shifted = list(moments)
+            shifted[i] = shifted[i].assign_coords(time=vdf.time.data + hour)
+
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, name):
+                mms.make_model_vdf(vdf, shifted[0], sc_pot, *shifted[1:])
+
+        # B and the spacecraft potential are resampled
+        b_xyz = moments[0].assign_coords(time=vdf.time.data + np.timedelta64(1, "s"))
+        model = mms.make_model_vdf(vdf, b_xyz, sc_pot, *moments[1:])
+        np.testing.assert_array_equal(model.time.data, vdf.time.data)
+
 
 def _gyro_skymap(values=None, n_t=2):
     # FPI-like skymap (2 energies, 32 phi, 16 theta) of the look directions,
