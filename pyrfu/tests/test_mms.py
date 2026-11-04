@@ -3188,6 +3188,52 @@ class GetPitchAngleDistTestCase(unittest.TestCase):
         pad = mms.get_pitch_angle_dist(vdf, self.b_xyz, verbose=False)
         np.testing.assert_array_equal(pad.energy.data, vdf.energy.data)
 
+    def test_get_pitch_angle_dist_tint_attrs(self):
+        # With tint, the per-time attributes are those of the times kept (they
+        # were at full length: vdf_d3v of the PAD fell back to the midpoint
+        # energy edges), also for get_gyrophase_dist; 32 times and 32 energy
+        # channels: the energy tables are kept
+        n_t = 32
+        vdf = generate_vdf(64.0, n_t, [32, 32, 16], energy01=True, units="s^3/cm^6")
+        vdf = vdf.assign(energy=10.0 * 1.25**vdf.energy)
+        vdf["phi"], vdf["theta"] = self.vdf.phi[0], self.vdf.theta
+        for key in ["energy0", "energy1"]:
+            vdf.attrs[key] = 10.0 * 1.25 ** vdf.attrs[key]
+        vdf.attrs["delta_energy_minus"] = 0.1 * vdf.energy.data
+        vdf.attrs["delta_energy_plus"] = 0.2 * vdf.energy.data
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            vdf.attrs[key] = np.full(n_t, 0.01)
+        b_xyz = pyrf.ts_vec_xyz(vdf.time.data, np.tile([0.0, 0.0, 10.0], (n_t, 1)))
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[3, 10]]))
+
+        for func in [mms.get_pitch_angle_dist, mms.get_gyrophase_dist]:
+            with self.subTest(func=func.__name__):
+                full = func(vdf, b_xyz)
+                result = func(vdf, b_xyz, tint)
+                self.assertEqual(len(result.time), 8)
+
+                for key in ["esteptable", "delta_energy_minus", "delta_time_plus"]:
+                    np.testing.assert_array_equal(
+                        result.attrs[key], np.asarray(vdf.attrs[key])[3:11]
+                    )
+
+                for key in ["energy0", "energy1"]:
+                    np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key])
+
+                # The energy edges of the widths, as without tint
+                edges = sys.modules["pyrfu.mms._vdf_bins"]._energy_edges
+                for edge, edge_full in zip(edges(result), edges(full)):
+                    np.testing.assert_array_equal(edge, edge_full[3:11])
+
+        pad = mms.get_pitch_angle_dist(vdf, b_xyz, tint)
+        np.testing.assert_array_equal(
+            mms.vdf_d3v(pad).data.data,
+            mms.vdf_d3v(mms.get_pitch_angle_dist(vdf, b_xyz)).data.data[3:11],
+        )
+
+        # The attributes of vdf are unchanged
+        self.assertEqual(len(vdf.attrs["esteptable"]), n_t)
+
     def test_get_pitch_angle_dist_invalid(self):
         with self.assertRaises(ValueError):
             mms.get_pitch_angle_dist(self.vdf, self.b_xyz, meanorsum="bazinga")

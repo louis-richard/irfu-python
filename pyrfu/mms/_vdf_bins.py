@@ -32,6 +32,41 @@ def _charge_sign(vdf):
     return -1.0 if is_electron else 1.0
 
 
+# Global attributes of the distributions with one value (or row) per time
+# (FPI: step table, energy and time widths; FEEPS: azimuthal widths and
+# coverage); the others (energy tables, polar widths) are per channel or bin
+_TIME_ATTRS = (
+    "esteptable",
+    "delta_energy_minus",
+    "delta_energy_plus",
+    "delta_time_minus",
+    "delta_time_plus",
+    "delta_phi_minus",
+    "delta_phi_plus",
+    "coverage",
+)
+
+
+def _time_attrs(attrs, n_t, index):
+    r"""Copy of the global attributes of a distribution of `n_t` times, with
+    the per-time ones (`_TIME_ATTRS`, first dimension of length `n_t`) taken
+    at `index` (boolean mask or indices of the times kept)."""
+    out = dict(attrs)
+
+    for key in _TIME_ATTRS:
+        value = out.get(key)
+
+        if value is None or isinstance(value, str):
+            continue
+
+        value = np.asarray(value)
+
+        if value.ndim > 0 and value.shape[0] == n_t:
+            out[key] = value[index]
+
+    return out
+
+
 def _sc_pot(vdf, sc_pot):
     r"""Spacecraft potential (V) at the times of the distribution (time,)."""
     n_t = len(vdf.time)

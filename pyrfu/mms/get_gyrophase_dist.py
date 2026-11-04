@@ -12,6 +12,7 @@ import xarray as xr
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.time_clip import time_clip
+from ._vdf_bins import _time_attrs
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -180,6 +181,11 @@ def get_gyrophase_dist(
 
     solid_angles = _solid_angles(vdf, len(vdf.time))
 
+    # Times kept, also for the per-time attributes of vdf (step table, energy
+    # widths: they were kept at full length, so that the energy edges of
+    # vdf_d3v and vdf_flux of the output fell back to midpoints)
+    in_tint = np.ones(len(vdf.time), dtype=bool)
+
     if tint is not None:
         b_xyz = time_clip(b_xyz, tint)
         vdf_data = time_clip(vdf_data, tint)
@@ -255,7 +261,7 @@ def get_gyrophase_dist(
     )
 
     gpd.attrs = {
-        **vdf.attrs,
+        **_time_attrs(vdf.attrs, len(vdf.time), in_tint),
         "delta_gyrophase_minus": centres - edges[:-1],
         "delta_gyrophase_plus": edges[1:] - centres,
         "pitch_angle_range": (

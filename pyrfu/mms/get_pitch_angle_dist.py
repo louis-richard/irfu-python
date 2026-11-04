@@ -10,7 +10,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from pyrfu.mms._vdf_bins import _bin_pitch_angles
+from pyrfu.mms._vdf_bins import _bin_pitch_angles, _time_attrs
 from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip
@@ -157,6 +157,11 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
     if phi.ndim == 1:
         phi = np.broadcast_to(phi, (len(vdf.time), len(phi)))
 
+    # Times kept, also for the per-time attributes of vdf (step table, energy
+    # widths: they were kept at full length, so that the energy edges of
+    # vdf_d3v and vdf_flux of the output fell back to midpoints)
+    in_tint = np.ones(len(vdf.time), dtype=bool)
+
     if tint is not None:
         b_xyz = time_clip(b_xyz, tint)
         vdf_data = time_clip(vdf_data, tint)
@@ -208,7 +213,7 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
     )
 
     pad.attrs = {
-        **vdf.attrs,
+        **_time_attrs(vdf.attrs, len(vdf.time), in_tint),
         "mean_or_sum": mean_or_sum,
         "delta_pitchangle_minus": d_angles * 0.5,
         "delta_pitchangle_plus": d_angles * 0.5,
