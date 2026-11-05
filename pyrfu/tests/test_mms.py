@@ -8673,6 +8673,61 @@ class RemoveIdistBackgroundTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data.data, expected, rtol=1e-5, atol=1e-30)
         np.testing.assert_array_equal(vdf.data.data, vdf_in)
 
+    def test_remove_idist_background_units(self):
+        # The same background in any units of vdf (it was converted to
+        # s^3/cm^6 whatever the units: nothing removed in s^3/m^6), in the
+        # convention of vdf_convert; for an energy flux, the flux itself
+        vdf = generate_vdf(64.0, 4, [32, 32, 16], species="ions", units="s^3/cm^6")
+        vdf = vdf.assign(energy=vdf.energy + 10.0)
+        vdf.data.data[...] = 1e-21
+        def_bg = pyrf.ts_scalar(vdf.time.data, np.full(4, 1e3))
+        def_bg.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
+        expected = mms.remove_idist_background(vdf, def_bg)
+        self.assertTrue(np.any(expected.data.data > 0))
+        self.assertTrue(np.any(expected.data.data < vdf.data.data))
+
+        for units in ["s^3/m^6", "s^3/km^6", "1/(cm^2 s sr keV)"]:
+            with self.subTest(units=units):
+                other = mms.vdf_convert(vdf, units)
+                result = mms.remove_idist_background(other, def_bg)
+                self.assertEqual(result.data.attrs["UNITS"], units)
+                np.testing.assert_allclose(
+                    mms.vdf_convert(result, "s^3/cm^6").data.data,
+                    expected.data.data,
+                    rtol=1e-6,
+                )
+
+        flux = mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)")
+        result = mms.remove_idist_background(flux, def_bg)
+        np.testing.assert_allclose(
+            result.data.data, np.clip(flux.data.data - 1e3, 0.0, None), rtol=1e-6
+        )
+
+        # The background in eV/(cm^2 s sr eV), the same quantity
+        def_bg.attrs["UNITS"] = "eV/(cm^2 s sr eV)"
+        result = mms.remove_idist_background(vdf, def_bg)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+    def test_remove_idist_background_input(self):
+        # Electrons, a background at other times (used by position) or not an
+        # energy flux raise ValueError (they were accepted)
+        vdf = generate_vdf(64.0, 4, [32, 32, 16], species="ions", units="s^3/cm^6")
+        def_bg = pyrf.ts_scalar(vdf.time.data, np.full(4, 1e3))
+        shifted = def_bg.assign_coords(time=def_bg.time.data + np.timedelta64(1, "h"))
+        electrons = vdf.copy()
+        electrons.attrs = {**vdf.attrs, "species": "electrons"}
+        dpf = def_bg.copy()
+        dpf.attrs["UNITS"] = "1/(cm^2 s sr keV)"
+
+        for inp, bg, message in [
+            (electrons, def_bg, "ion distribution"),
+            (vdf, shifted, "times"),
+            (vdf, dpf, "energy flux"),
+        ]:
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValueError, message):
+                    mms.remove_idist_background(inp, bg)
+
 
 class RemoveImomsBackgroundTestCase(unittest.TestCase):
     @staticmethod
