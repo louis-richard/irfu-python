@@ -430,6 +430,31 @@ def _psd_si(vdf):
     return np.array(_relativistic_psd(vdf), dtype=np.float64, order="C")
 
 
+def _partial_moments_mask(vdf, mask, shape):
+    r"""The 0/1 (or boolean) array `partial_moments` of the bins used, of the
+    shape of the data and, for a DataArray, at the times of `vdf`. A wrong
+    mask raises ValueError: it was only logged (INFO) and the full moments
+    were returned, as irfu-matlab."""
+    if isinstance(mask, xr.DataArray):
+        if "time" in mask.coords and not np.array_equal(mask.time.data, vdf.time.data):
+            raise ValueError("partial_moments must be at the times of vdf")
+
+        mask = mask.data
+
+    mask = np.asarray(mask)
+
+    if mask.shape != shape:
+        raise ValueError(
+            f"partial_moments must have the shape of vdf.data {shape}, "
+            f"not {mask.shape}"
+        )
+
+    if not np.isin(mask, [0, 1]).all():
+        raise ValueError("partial_moments must be a binary array (1s and 0s)")
+
+    return mask
+
+
 def _pitch_angle_args(kwargs):
     # b_xyz, [min, max] and method of the pitch-angle range
     b_xyz = kwargs.get("b_xyz")
@@ -560,9 +585,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
         Can't be used with energy_range.
     partial_moments : numpy.ndarray or xarray.DataArray
         Use a binary array to select which psd points are used in the moments
-        calculation. `partial_moments` must be a binary array (1s and 0s,
-        1s correspond to points used). Array (or data of Dataarray) must be the same
-        size as vdf.data.
+        calculation. `partial_moments` must be a binary array (1s and 0s, or
+        booleans, 1s correspond to points used). Array (or data of DataArray)
+        must be the same size as vdf.data, and a DataArray at the times of
+        vdf.
     inner_electron : {"on", "off"}
         inner_electrontron potential for electron moments.
     angle_integration : {"midpoint", "exact"}
@@ -597,8 +623,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
         both energy_range and en_channels are given, if angle_integration
         is not "midpoint" or "exact", or if pitch_angle_range is given without
         b_xyz, is not [min, max] within [0, 180], pitch_angle_weight is not
-        "centre" or "fraction", the units of `vdf` are not supported, or
-        en_channels as a time series is not of channel indices.
+        "centre" or "fraction", the units of `vdf` are not supported,
+        en_channels as a time series is not of channel indices, or
+        partial_moments is not a binary array of the shape of vdf.data (at
+        the times of vdf for a DataArray).
     TypeError
         If ``relativistic`` is given (the argument was removed).
 
@@ -704,27 +732,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     use_energy = _energy_mask(vdf, energy, kwargs)
 
+    # The bins of partial_moments (a wrong mask gave the full moments)
     if "partial_moments" in kwargs:
-        partial_moments = kwargs["partial_moments"]
-        if isinstance(partial_moments, xr.DataArray):
-            partial_moments = partial_moments.data
-
-        # Check size of partial_moments
-        if partial_moments.shape == vdf_data.shape:
-            if np.isin(partial_moments, [0, 1]).all():
-                logger.info(
-                    "partial_moments is correct. Partial moments will be calculated"
-                )
-                vdf_data = vdf_data * partial_moments
-            else:
-                logger.info(
-                    "All values are not ones and zeros in partial_moments. "
-                    "Full moments will be calculated"
-                )
-        else:
-            logger.info(
-                "Size of partial_moments is wrong. Full moments will be calculated"
-            )
+        mask = _partial_moments_mask(vdf, kwargs["partial_moments"], vdf_data.shape)
+        vdf_data = vdf_data * mask
 
     tmp_ = kwargs.get("inner_electron", "")
     flag_inner_electron = tmp_ == "on" and is_electron

@@ -4914,11 +4914,6 @@ class PsdMomentsTestCase(unittest.TestCase):
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
         n_full = mms.psd_moments(vdf, sc_pot)[0].data
 
-        # Not a 0/1 mask -> ignored, full moments (it used to be applied as weights)
-        weights = 0.5 * np.ones(vdf.data.shape)
-        n_weights = mms.psd_moments(vdf, sc_pot, partial_moments=weights)[0].data
-        np.testing.assert_allclose(n_weights, n_full)
-
         # A 0/1 mask is applied: keeping all bins gives n, keeping none gives 0
         ones = np.ones(vdf.data.shape, dtype=int)
         n_ones = mms.psd_moments(vdf, sc_pot, partial_moments=ones)[0].data
@@ -4927,6 +4922,31 @@ class PsdMomentsTestCase(unittest.TestCase):
         mask[:, :, :16, :] = 0
         n_half = mms.psd_moments(vdf, sc_pot, partial_moments=mask)[0].data
         self.assertTrue(np.all(n_half < 0.9 * n_full))
+
+        # Booleans, and a DataArray at the times of vdf, as the 0/1 array
+        for same in [
+            mask.astype(bool),
+            xr.DataArray(mask, coords={"time": vdf.time.data}, dims=vdf.data.dims),
+        ]:
+            n_same = mms.psd_moments(vdf, sc_pot, partial_moments=same)[0].data
+            np.testing.assert_array_equal(n_same, n_half)
+
+        # A wrong mask raises ValueError (the full moments were returned, the
+        # error only logged at INFO): not 0/1 (it used to be applied as
+        # weights before), wrong shape, a DataArray at other times
+        shifted = xr.DataArray(
+            mask,
+            coords={"time": vdf.time.data + np.timedelta64(1, "s")},
+            dims=vdf.data.dims,
+        )
+        for wrong, message in [
+            (0.5 * np.ones(vdf.data.shape), "binary"),
+            (ones[:, :-1], "shape"),
+            (shifted, "times"),
+        ]:
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValueError, message):
+                    mms.psd_moments(vdf, sc_pot, partial_moments=wrong)
 
     def test_psd_moments_relativistic(self):
         # Electrons 30 keV to 500 keV moving downward (2 upper rings of 4, 8
