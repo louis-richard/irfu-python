@@ -14,6 +14,7 @@ from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
+from ._hpca import _half_spins
 from .db_get_variable import db_get_variable
 
 __author__ = "Louis Richard"
@@ -54,10 +55,6 @@ def _match_half_spins(vdf, saz, aze, n_az: int = 16):
     files), or its centre (as :func:`pyrfu.mms.get_data` gives it). The
     half-spins were paired by count after the first one: a missing aze record
     shifted all the next half-spins by 180 deg, and a gap in vdf raised."""
-    # Local import: get_hpca_dist imports hpca_pad
-    # pylint: disable-next=import-outside-toplevel
-    from .get_hpca_dist import _half_spins
-
     if len(saz) != len(vdf) or not np.array_equal(saz.time.data, vdf.time.data):
         raise ValueError("saz and vdf must have the same times")
 
