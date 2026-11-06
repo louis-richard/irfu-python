@@ -244,6 +244,34 @@ class AverageVDFTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["delta_energy_minus"].ndim, 2)
         self.assertEqual(len(result.attrs["delta_energy_minus"]), len(avg_inds))
 
+    def test_average_vdf_energy_widths(self):
+        # Without energy widths (get_dist leaves them out) or with None: the
+        # average without them (KeyError, TypeError); widths per channel
+        # (energy,) kept (they were sliced as times)
+        vdf = generate_vdf(64.0, 100, [32, 32, 16])
+        expected = pyrf.average_vdf(vdf, 3)
+
+        for widths in ["missing", None, np.arange(32.0)]:
+            other = vdf.copy()
+            other.attrs = {
+                k: v for k, v in vdf.attrs.items() if not k.startswith("delta_e")
+            }
+            if not isinstance(widths, str):
+                other.attrs["delta_energy_minus"] = widths
+                other.attrs["delta_energy_plus"] = widths
+
+            with self.subTest(widths=str(widths)[:10]):
+                result = pyrf.average_vdf(other, 3)
+                np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+                for key in ["delta_energy_minus", "delta_energy_plus"]:
+                    if isinstance(widths, str):
+                        self.assertNotIn(key, result.attrs)
+                    elif widths is None:
+                        self.assertIsNone(result.attrs[key])
+                    else:
+                        np.testing.assert_array_equal(result.attrs[key], widths)
+
     def test_average_vdf_delta_time(self):
         # A window spans its accumulations: n_pts times the sampling period
         vdf = generate_vdf(64.0, 100, [32, 32, 16])

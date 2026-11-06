@@ -40,7 +40,11 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
     Returns
     -------
     vdf_avg : xarray.Dataset
-        Time series of the time averaged velocity distribution function.
+        Time series of the time averaged velocity distribution function. The
+        energy widths (``delta_energy_minus`` and ``delta_energy_plus``, time
+        x energy) are averaged over each window, and the accumulation half
+        widths (``delta_time_minus`` and ``delta_time_plus``) span it, when
+        `vdf` has them.
 
     """
     # Check input type
@@ -100,10 +104,20 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
     for k in vdf:
         vdf_avg[k].attrs = vdf[k].attrs
 
+    # Energy widths (time, energy) averaged over each window; without them
+    # (get_dist leaves them out) or per channel (energy,), as they are (they
+    # raised KeyError or TypeError, and widths per channel were sliced as
+    # times)
     for k in ["delta_energy_minus", "delta_energy_plus"]:
-        vdf_avg.attrs[k] = np.stack(
-            [np.nanmean(vdf.attrs[k][i_l:i_r], axis=0) for i_l, i_r in bounds]
-        )
+        if vdf.attrs.get(k) is None:
+            continue
+
+        widths = np.asarray(vdf.attrs[k])
+
+        if widths.ndim == 2 and len(widths) == n_vdf:
+            vdf_avg.attrs[k] = np.stack(
+                [np.nanmean(widths[i_l:i_r], axis=0) for i_l, i_r in bounds]
+            )
 
     # Half widths of the accumulations: from the start of the first sample of
     # each window to the end of the last
