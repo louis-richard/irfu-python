@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import bisect
 import warnings
 
 import matplotlib.pyplot as plt
@@ -31,7 +30,11 @@ def _time_avg(vdf, tint):
         warnings.warn("Averages the entire time series", UserWarning)
 
     if len(tint) == 1:
-        idx = bisect.bisect_left(vdf.time.data, np.datetime64(tint[0]))
+        # The closest time (bisect gave the next one, and IndexError after the
+        # last sample)
+        time = vdf.time.data.astype("datetime64[ns]").astype(np.int64)
+        t_0 = np.datetime64(tint[0]).astype("datetime64[ns]").astype(np.int64)
+        idx = int(np.argmin(np.abs(time - t_0)))
         vdf_data = vdf.data.data[idx, ...]
         vdf_ener = vdf.energy.data[idx, ...]
         vdf_azim = vdf.phi.data[idx, ...] if vdf.phi.ndim == 2 else vdf.phi.data
