@@ -2159,6 +2159,40 @@ class EisPadCombineScTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_pad_combine_sc([ref, ref.assign_coords(theta=ref.theta + 1)])
 
+    def test_eis_pad_combine_sc_attrs(self):
+        # The energy widths and energy attributes of the spacecraft of the
+        # energies (they were those of the spacecraft of the times: 4 widths
+        # for 3 energies); different species or methods raise ValueError
+        ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
+        more = self._pad(
+            "2017-07-11T22:00:00", 12, 3.0, energies=(48.0, 60.0, 81.0, 119.0)
+        )
+        for pad_ in [ref, more]:
+            pad_.attrs = {
+                "species": "proton",
+                "method": "mean",
+                "delta_energy_minus": 0.1 * pad_.energy.data,
+                "delta_energy_plus": 0.2 * pad_.energy.data,
+            }
+            pad_.energy.attrs = {"UNITS": "keV", "FIELDNAM": len(pad_.energy)}
+
+        # ref has the fewest channels, more the fewest times
+        more = more.isel(time=slice(0, 8))
+        result = mms.eis_pad_combine_sc([ref, more])
+        np.testing.assert_array_equal(result.time.data, more.time.data)
+        np.testing.assert_array_equal(result.energy.data, ref.energy.data)
+
+        for key in ["delta_energy_minus", "delta_energy_plus"]:
+            np.testing.assert_array_equal(result.attrs[key], ref.attrs[key])
+
+        self.assertDictEqual(result.energy.attrs, ref.energy.attrs)
+
+        for key, value in [("species", "helium"), ("method", "sum")]:
+            other = ref.copy()
+            other.attrs = {**ref.attrs, key: value}
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
+                mms.eis_pad_combine_sc([other, more])
+
 
 class EisSpecCombineScTestCase(unittest.TestCase):
     @staticmethod
@@ -2178,6 +2212,20 @@ class EisSpecCombineScTestCase(unittest.TestCase):
             attrs={"delta_energy_plus": energies / 10, "UNITS": "1/(cm^2 s sr keV)"},
         )
         return out if spin_avg else out.assign_coords(sector=("time", sector))
+
+    def test_eis_spec_combine_sc_species(self):
+        # Spectra of different species raise ValueError (they were combined)
+        one = self._omni("2017-07-11T22:00:00", 16, 0, lambda x: np.ones(len(x)))
+        two = one.copy()
+        one.attrs = {**one.attrs, "species": "proton"}
+        two.attrs = {**two.attrs, "species": "oxygen"}
+
+        with self.assertRaisesRegex(ValueError, "species"):
+            mms.eis_spec_combine_sc([one, two])
+
+        two.attrs["species"] = "proton"
+        result = mms.eis_spec_combine_sc([one, two])
+        np.testing.assert_array_equal(result.time.data, one.time.data)
 
     def test_eis_spec_combine_sc_documented_chain(self):
         # get_eis_allt -> eis_omni -> eis_spec_combine_sc (KeyError: 'energy_dplus')
