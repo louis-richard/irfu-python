@@ -16,18 +16,27 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _spin_bounds(spin_sectors):
+def _spin_bounds(spin_sectors, time):
     r"""Start indices of the spins [s_k, s_k+1), from the decreases of the spin
-    sector, with the partial spins at both ends."""
+    sector and the data gaps (two samples more than 1.5 median sampling
+    periods apart), with the partial spins at both ends."""
     spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
+
+    # A gap of a whole number of spins starting mid-spin left the sectors
+    # increasing: the two partial spins around it made one complete spin
+    if len(time) > 2:
+        d_t = np.diff(np.asarray(time).astype("datetime64[ns]").astype(np.int64))
+        gaps = np.where(d_t > 1.5 * np.median(d_t))[0] + 1
+        spin_starts = np.hstack([spin_starts, gaps])
+
     return np.unique(np.hstack([0, spin_starts, len(spin_sectors)]))
 
 
-def _complete_spins(spin_sectors):
+def _complete_spins(spin_sectors, time):
     r"""Start and stop indices of the complete spins: the spins of
     `_spin_bounds` with all the sectors, i.e., as many samples as there are
     different sector numbers."""
-    bounds = _spin_bounds(spin_sectors)
+    bounds = _spin_bounds(spin_sectors, time)
     lengths = np.diff(bounds)
 
     # The partial first and last spins and the spins cut by data gaps are left
@@ -70,7 +79,9 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     stamped at its first sample, as the EIS spin averages and
     :func:`pyrfu.mms.hpca_spin_sum`. Only the complete spins are averaged: the
     partial spins at the start and end of the interval and the spins cut by
-    data gaps are left out (they were kept). A spin without data is NaN.
+    data gaps (two samples more than 1.5 median sampling periods apart) are
+    left out (they were kept, and two partial spins around a gap of a whole
+    number of spins made one). A spin without data is NaN.
 
     IDL SPEDAS and pyspedas instead average from the second sample of a spin
     to the first sample of the next one, and set the last spin(s) to zero.
@@ -83,7 +94,7 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     if len(spin_sectors) != len(flux_omni.time):
         raise ValueError("spin_sectors must have one value per time of flux_omni")
 
-    spin_starts, spin_stops = _complete_spins(spin_sectors)
+    spin_starts, spin_stops = _complete_spins(spin_sectors, flux_omni.time.data)
 
     energies = flux_omni.energy.data
     data = flux_omni.data

@@ -318,14 +318,16 @@ def feeps_skymap(
 
     psi, phase_source = _spin_phase(inp_dataset, b_bcs, b_dmpa)
     spin_sectors = np.asarray(inp_dataset.spinsectnum.data)
-    bounds = _spin_bounds(spin_sectors)
+    bounds = _spin_bounds(spin_sectors, inp_dataset.time.data)
     rings = _RINGS[d_type]
     phi_edges = np.linspace(0.0, 360.0, n_phi + 1)
 
     sums, counts = _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges)
 
     # The complete spins only
-    complete = np.isin(bounds[:-1], _complete_spins(spin_sectors)[0])
+    complete = np.isin(
+        bounds[:-1], _complete_spins(spin_sectors, inp_dataset.time.data)[0]
+    )
     sums, counts = sums[complete], counts[complete]
 
     with np.errstate(invalid="ignore"):

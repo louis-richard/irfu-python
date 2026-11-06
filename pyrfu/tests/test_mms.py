@@ -6639,6 +6639,26 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no complete spin"):
             mms.feeps_spin_avg(flux[:10], spin_sectors[:10])
 
+    def test_feeps_spin_avg_gap_whole_spins(self):
+        # A gap of a whole number of spins starting mid-spin: the sectors keep
+        # increasing across it, and the two partial spins (sectors 0-3 of spin
+        # 1, 4-7 of spin 3) made one complete spin of value 2 stamped before
+        # the gap; they are left out, also in feeps_pad_spinavg
+        for func, dim in [
+            (mms.feeps_spin_avg, "energy"),
+            (mms.feeps_pad_spinavg, "theta"),
+        ]:
+            with self.subTest(func=func.__name__):
+                spin_sectors, flux = _spin_avg_case(dim, [100.0, 200.0])
+                keep = np.r_[0:7, 23 : len(flux)]
+                self.assertTrue(np.all(np.diff(spin_sectors[keep][3:11]) > 0))
+
+                result = func(flux[keep], spin_sectors[keep])
+                np.testing.assert_array_equal(result.data[:, 0], [4.0, 5.0])
+                np.testing.assert_array_equal(
+                    result.time.data, flux.time.data[[27, 35]]
+                )
+
 
 class FeepsSectorSpecTestCase(unittest.TestCase):
     def test_feeps_sector_spec(self):
