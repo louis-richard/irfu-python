@@ -8648,6 +8648,32 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
         self.assertNotIn("test", vdf.attrs)
         self.assertNotIn("test", vdf_bkg.attrs)
 
+    def test_remove_edist_background_n_sec(self):
+        # The secondary electrons are n_sec times the model averaged over
+        # azimuth (phi), as irfu-matlab: it was averaged over the polar angle.
+        # Model (stored as record, phi, theta, energy) = i_phi + 100 i_theta
+        vdf, n_e, startdelphi, model = self._inputs()
+        i_phi = np.arange(32.0)[None, :, None, None]
+        i_theta = np.arange(16.0)[None, None, :, None]
+        records = (i_phi + 100.0 * i_theta) * np.ones((360, 1, 1, 32))
+        for key in ["mms_des_bgdist_p0_brst", "mms_des_bgdist_p1_brst"]:
+            model[key] = mock.Mock(values=records)
+
+        (_, vdf_bkg, _), _ = self._run(
+            vdf, n_e, startdelphi, model, n_art=0.0, n_sec=2.0
+        )
+        expected = 2.0 * (15.5 + 100.0 * np.arange(16.0))
+        np.testing.assert_allclose(
+            vdf_bkg.data.data, np.broadcast_to(expected, vdf_bkg.data.shape)
+        )
+
+        # Added to the photoelectrons (n_art times the model)
+        (_, vdf_bkg, _), _ = self._run(
+            vdf, n_e, startdelphi, model, n_art=1.0, n_sec=2.0
+        )
+        photo = np.arange(32.0)[:, None] + 100.0 * np.arange(16.0)[None, :]
+        np.testing.assert_allclose(vdf_bkg.data.data[0, 0], photo + expected)
+
 
 class RemoveIdistBackgroundTestCase(unittest.TestCase):
     def test_remove_idist_background(self):
