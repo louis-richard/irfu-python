@@ -11772,6 +11772,34 @@ class HpcaSpinSumTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid method"):
             mms.hpca_spin_sum(*self._inputs(np.arange(50) % 16), method="median")
 
+    def test_hpca_spin_sum_saz_times(self):
+        # saz is used by position: at other times than inp (inp clipped, saz
+        # not) the spins were misaligned
+        inp, saz = self._inputs(np.arange(64) % 16)
+
+        with self.assertRaisesRegex(ValueError, "times of inp"):
+            mms.hpca_spin_sum(inp[5:], saz)
+
+    def test_hpca_spin_sum_gaps(self):
+        # The spins cut by data gaps are left out (they were kept as partial
+        # sums), also the two partial spins around a gap of a whole spin
+        # (start azimuths 0-7, gap, 8-15)
+        inp, saz = self._inputs(np.arange(80) % 16)
+        inp.data[...] = 1.0
+
+        for keep, starts in [
+            (np.r_[0:24, 48:80], [0, 48]),
+            (np.r_[0:24, 40:80], [0, 48]),
+        ]:
+            result = mms.hpca_spin_sum(inp[keep], saz[keep], "sum")
+            np.testing.assert_array_equal(result.data[:, 0, 0], 16.0)
+            np.testing.assert_array_equal(result.time.data, inp.time.data[starts])
+
+        # No complete spin
+        with self.assertRaisesRegex(ValueError, "no complete spin"):
+            keep = np.r_[0:8, 16:24, 32:40]
+            mms.hpca_spin_sum(inp[keep], saz[keep])
+
 
 class WhistlerB2ETestCase(unittest.TestCase):
     b_mag, n_e = 50.0, 5.0  # nT, cm^-3
