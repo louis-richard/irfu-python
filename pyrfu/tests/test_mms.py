@@ -1043,17 +1043,18 @@ class DbInitTestCase(unittest.TestCase):
 
         # The directory as an absolute path, ~ expanded (a relative one was a
         # different cache in each working directory); the local path too
+        # (~ is USERPROFILE on Windows; the working directory as the OS gives
+        # it, which abspath uses: /private/var on macOS, short names on Windows)
         home = os.path.join(self.tmp_dir.name, "home")
         os.makedirs(os.path.join(home, "data"))
         with (
-            mock.patch.dict(os.environ, {"HOME": home}),
+            mock.patch.dict(os.environ, {"HOME": home, "USERPROFILE": home}),
             contextlib.chdir(self.tmp_dir.name),
         ):
             mms.db_init(local="~/data", cache_dir="cache")
             self.assertEqual(self._config()["local"], os.path.join(home, "data"))
             self.assertEqual(
-                self._config()["cache"]["dir"],
-                os.path.join(os.path.realpath(self.tmp_dir.name), "cache"),
+                self._config()["cache"]["dir"], os.path.join(os.getcwd(), "cache")
             )
             mms.db_init(cache_dir="~/c")
             self.assertEqual(self._config()["cache"]["dir"], os.path.join(home, "c"))
