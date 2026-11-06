@@ -5967,6 +5967,18 @@ class ResampleTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             pyrf.resample(inp, self._ts(np.arange(10) / 32.0, np.zeros(10)))
 
+        # The other way round, with any method: the numeric times of ref were
+        # cast to datetime64 (1970 epochs) and the values extrapolated
+        # decades away, or the default method raised RuntimeError
+        for method in ["", "linear", "nearest"]:
+            with self.subTest(method=method):
+                with self.assertRaisesRegex(TypeError, "both have datetime64"):
+                    pyrf.resample(
+                        self._ts(np.arange(10) / 32.0, np.arange(10.0)),
+                        ref,
+                        method=method,
+                    )
+
     def test_resample_extrapolation(self):
         # Linear extrapolation outside the time range of inp (as irf_resamp)
         inp = self._ts(np.arange(10.0), np.arange(10.0))

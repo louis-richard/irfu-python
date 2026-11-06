@@ -381,10 +381,16 @@ def resample(
             f"method must be one of {', '.join(_METHODS)}, not {method!r}{hint}"
         )
 
-    # Fix make sure that the time are in the same precision format
+    # Both datetime64 or both numeric, checked before the times are cast to
+    # datetime64[ns] (numeric ref times became 1970 epochs: values
+    # extrapolated decades away, or a RuntimeError on the sampling)
+    is_datetime = [np.issubdtype(x.time.dtype, np.datetime64) for x in [inp, ref]]
 
-    if np.issubdtype(inp.time.dtype, np.datetime64):
+    if is_datetime[0] != is_datetime[1]:
+        raise TypeError("inp and ref must both have datetime64 or numeric times")
 
+    # The times in the same precision
+    if is_datetime[0]:
         inp = inp.assign_coords(time=inp.time.astype("datetime64[ns]"))
         ref = ref.assign_coords(time=ref.time.astype("datetime64[ns]"))
 
