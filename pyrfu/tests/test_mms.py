@@ -7723,6 +7723,203 @@ class GetTsTestCase(unittest.TestCase):
             result.time.data, time + np.timedelta64(shift, "ms")
         )
 
+    @staticmethod
+    def _cdf(cdf_name, values, depends=None, epoch_type=None, n_t=3):
+        # In-memory CDF with one variable on an epoch (1 s steps) and its
+        # DEPEND_*/REPRESENTATION_* attributes: depends maps the attribute to
+        # a support variable (name, values, LABLAXIS or None), or to a string
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(n_t) * np.timedelta64(1, "s")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch",
+            values=time,
+            data_type=epoch_type or pycdfpp.DataType.CDF_TIME_TT2000,
+        )
+        cdf.add_variable(cdf_name, values=values)
+        cdf[cdf_name].add_attribute("DEPEND_0", "Epoch")
+
+        for key, depend in (depends or {}).items():
+            if isinstance(depend, str):
+                cdf[cdf_name].add_attribute(key, depend)
+                continue
+
+            name, dep_values, label = depend
+            if name not in cdf:
+                cdf.add_variable(name, values=dep_values)
+                if label is not None:
+                    cdf[name].add_attribute("LABLAXIS", label)
+            cdf[cdf_name].add_attribute(key, name)
+
+        return bytes(pycdfpp.save(cdf)), time
+
+    def test_get_ts_tensor(self):
+        # (time, 3, 3) with the representation "x,y,z" of both dimensions: rcomp
+        # and ccomp
+        content, time = self._cdf(
+            "mms1_dis_prestensor_dbcs_brst",
+            np.arange(27.0).reshape(3, 3, 3),
+            {"REPRESENTATION_1": "x,y,z", "REPRESENTATION_2": "x,y,z"},
+        )
+        result = get_ts(content, "mms1_dis_prestensor_dbcs_brst")
+        self.assertTupleEqual(result.dims, ("time", "rcomp", "ccomp"))
+        np.testing.assert_array_equal(result.rcomp.data, ["x", "y", "z"])
+        np.testing.assert_array_equal(result.data, np.arange(27.0).reshape(3, 3, 3))
+
+    def test_get_ts_four_dimensions(self):
+        # HPCA azimuths (time, azimuth, anode, energy) with blank labels of
+        # DEPEND_1 and DEPEND_3: distinct dimensions (they were ('time', '_',
+        # 'comp', '_'), on which isel selected both); DEPEND_2 and DEPEND_3
+        # with the same label: rcomp and ccomp; REPRESENTATION_3
+        values = np.arange(3 * 2 * 4 * 5, dtype=float).reshape(3, 2, 4, 5)
+        content, _ = self._cdf(
+            "mms1_hpca_azimuth_angles_per_ev_degrees",
+            values,
+            {
+                "DEPEND_1": ("mms1_hpca_azimuth_index", np.arange(2.0), " "),
+                "DEPEND_2": ("mms1_hpca_polar_anode_number", np.arange(4.0), None),
+                "DEPEND_3": ("mms1_hpca_energy_step_number", np.arange(5.0), " "),
+            },
+        )
+        result = get_ts(content, "mms1_hpca_azimuth_angles_per_ev_degrees")
+        self.assertTupleEqual(result.dims, ("time", "_1", "comp", "_3"))
+        np.testing.assert_array_equal(result.isel(_1=0).data, values[:, 0])
+
+        content, _ = self._cdf(
+            "mms1_x",
+            values,
+            {
+                "DEPEND_1": ("energy", np.arange(2.0), "energy"),
+                "DEPEND_2": ("phi", np.arange(4.0), None),
+                "REPRESENTATION_3": ("theta", np.arange(5.0), None),
+            },
+        )
+        result = get_ts(content, "mms1_x")
+        self.assertTupleEqual(result.dims, ("time", "energy", "rcomp", "ccomp"))
+        np.testing.assert_array_equal(result.ccomp.data, np.arange(5.0))
+
+    def test_get_ts_depend_tables(self):
+        # A (3, 1) table of DEPEND_1 is flattened; "Diffential" fixed in the
+        # label; afg/dfg and EDP DCE sensors without DEPEND_1 are x, y, z
+        content, _ = self._cdf(
+            "mms1_x",
+            np.ones((3, 3)),
+            {
+                "DEPEND_1": (
+                    "channels",
+                    np.array([[1.0], [2.0], [3.0]]),
+                    "Diffential energy channels",
+                )
+            },
+        )
+        result = get_ts(content, "mms1_x")
+        self.assertTupleEqual(result.dims, ("time", "Differential_energy_channels"))
+        np.testing.assert_array_equal(result[result.dims[1]].data, [1.0, 2.0, 3.0])
+
+        for cdf_name in ["mms1_dfg_srvy_l2pre_gse", "mms1_edp_dce_sensor_brst_l2"]:
+            depends = {"DEPEND_1": ("label", np.arange(3.0), "x")}
+            content, _ = self._cdf(
+                cdf_name,
+                np.ones((3, 3)),
+                depends if "edp" in cdf_name else None,
+            )
+            result = get_ts(content, cdf_name)
+            self.assertTupleEqual(result.dims, ("time", "comp"))
+            np.testing.assert_array_equal(result.comp.data, ["x", "y", "z"])
+
+        # Four columns without labels: kept (not a magnitude)
+        content, _ = self._cdf("mms1_y", np.ones((3, 4)))
+        self.assertTupleEqual(get_ts(content, "mms1_y").shape, (3, 4))
+
+        # No DEPEND_2 nor REPRESENTATION_2
+        module = importlib.import_module("pyrfu.mms.get_ts")
+        with self.assertRaisesRegex(KeyError, "DEPEND_2"):
+            module._get_depend(pycdfpp.load(content), "mms1_y", 2)
+
+    def test_get_ts_epoch_types(self):
+        # CDF_EPOCH and CDF_EPOCH16 epochs converted to datetime64 as TT2000
+        # (KeyError: 'attrs')
+        for epoch_type in [
+            pycdfpp.DataType.CDF_EPOCH,
+            pycdfpp.DataType.CDF_EPOCH16,
+        ]:
+            with self.subTest(epoch_type=str(epoch_type)):
+                content, time = self._cdf("mms1_x", np.arange(3.0), None, epoch_type)
+                result = get_ts(content, "mms1_x")
+                np.testing.assert_array_equal(result.time.data, time)
+
+        # Times that are not a CDF time (they were left as numbers)
+        cdf = pycdfpp.CDF()
+        cdf.add_variable("Epoch", values=np.arange(3.0))
+        cdf.add_variable("mms1_x", values=np.arange(3.0))
+        cdf["mms1_x"].add_attribute("DEPEND_0", "Epoch")
+        with self.assertRaisesRegex(TypeError, "not a CDF time"):
+            get_ts(bytes(pycdfpp.save(cdf)), "mms1_x")
+
+    def test_get_ts_tint_types(self):
+        # tint as datetime64 or str; other types raise TypeError
+        content, time = self._cdf("mms1_x", np.arange(5.0), n_t=5)
+        result = get_ts(content, "mms1_x", list(time[[1, 3]]))
+        np.testing.assert_array_equal(result.time.data, time[1:4])
+
+        for tint in [[1, 3], "2019-09-14T07:54:01"]:
+            with self.subTest(tint=tint), self.assertRaises(TypeError):
+                get_ts(content, "mms1_x", tint)
+
+    @data(
+        ("s", 0.0, 0.03, None),
+        ("min", 0.0, 0.0005, UserWarning),
+        (None, 0.0, 0.03, UserWarning),
+    )
+    @unpack
+    def test_get_ts_fpi_epoch_units(self, units, d_minus, d_plus, warning):
+        # Delta variables in s (or with unclear units, taken as s, with a
+        # warning) for the shift of the FPI epochs to the centre
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(30, "ms")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", d_minus), ("Epoch_plus_var", d_plus)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            if units is not None:
+                cdf[name].add_attribute("UNITS", units)
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(3))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+        content = bytes(pycdfpp.save(cdf))
+
+        with self.assertWarns(warning) if warning else warnings.catch_warnings():
+            if warning is None:
+                warnings.simplefilter("error")
+            result = get_ts(content, "mms1_des_numberdensity_brst")
+
+        np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
+
+    def test_get_ts_fpi_epoch_small_mismatch(self):
+        # Deltas within 1 % of the sampling period: half the sampling period
+        # without warning, as irfu-matlab mms.variable2ts (any mismatch)
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(30, "ms")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", 0.0), ("Epoch_plus_var", 30.1)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            cdf[name].add_attribute("UNITS", "ms")
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(3))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+
+        with self.assertNoLogs("pyrfu", level="WARNING"):
+            result = get_ts(bytes(pycdfpp.save(cdf)), "mms1_des_numberdensity_brst")
+
+        np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
+
 
 def _cdf_fpi_brst_spectr(n_records, t_start="2019-09-14T07:54:00", offset=0.0):
     # In-memory FPI burst electron omni spectrogram as in the L2 moments files:

@@ -28,6 +28,10 @@ __status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
 
+# Time types of the epochs converted to datetime64 (CDF_EPOCH and CDF_EPOCH16
+# epochs were left as structured arrays, and raised KeyError)
+_EPOCH_TYPES = (DataType.CDF_TIME_TT2000, DataType.CDF_EPOCH, DataType.CDF_EPOCH16)
+
 
 def _shift_epochs(file, epoch):
     r"""Shift times for particles."""
@@ -117,30 +121,20 @@ def _get_epochs(file, cdf_name):
 
     out = {
         "data": file[depend0_key].values,
+        "attrs": _pycdfpp_attributes_to_dict(file[depend0_key].attributes),
     }
 
-    if file[depend0_key].type == DataType.CDF_TIME_TT2000:
-        try:
-            out["data"] = to_datetime64(out["data"])
+    if file[depend0_key].type not in _EPOCH_TYPES:
+        raise TypeError(
+            f"{depend0_key} is not a CDF time (TT2000, EPOCH or EPOCH16): "
+            f"{file[depend0_key].type}"
+        )
 
-            # Get epoch attributes
-            out["attrs"] = _pycdfpp_attributes_to_dict(file[depend0_key].attributes)
+    out["data"] = to_datetime64(out["data"])
 
-            # Shift times if particle data
-            is_part = re.search(
-                "^mms[1-4]_d[ei]s_",
-                cdf_name,
-            )  # Is it FPI data?
-            is_part = is_part or re.search(
-                "^mms[1-4]_hpca_",
-                cdf_name,
-            )  # Is it HPCA data?
-
-            if is_part:
-                out = _shift_epochs(file, out)
-
-        except TypeError:
-            pass
+    # Shift times if particle data (FPI or HPCA)
+    if re.search("^mms[1-4]_(d[ei]s|hpca)_", cdf_name):
+        out = _shift_epochs(file, out)
 
     return out
 
@@ -226,6 +220,18 @@ def _get_depend(file, cdf_name, dep_num=1):
         out["attrs"] = _get_depend_attributes(file, depend_key)
 
     return out
+
+
+def _unique_labels(depends):
+    r"""Dimension names of the depends made distinct: a label used by more
+    than one depend gets the number of its DEPEND (the blank labels of
+    DEPEND_1 and DEPEND_3 of the HPCA azimuths gave the duplicate dimensions
+    ('time', '_', 'comp', '_'), on which xarray selects both or raises)."""
+    labels = [dep["attrs"]["LABLAXIS"] if dep else None for dep in depends]
+
+    for i, (dep, label) in enumerate(zip(depends, labels), start=1):
+        if dep and labels.count(label) > 1:
+            dep["attrs"] = {**dep["attrs"], "LABLAXIS": f"{label}{i:d}"}
 
 
 def get_ts(
@@ -341,47 +347,13 @@ def get_ts(
         depend_1["data"] = np.arange(out_dict["data"].shape[1])
         depend_1["attrs"] = {"LABLAXIS": "idx"}
 
-    if time and not depend_1 and not depend_2 and not depend_3:
-        dims = ["time"]
-        coords_data = [time["data"]]
-        coords_attrs = [time["attrs"]]
+    _unique_labels([depend_1, depend_2, depend_3])
 
-    elif time and depend_1 and not depend_2 and not depend_3:
-        dims = ["time", depend_1["attrs"]["LABLAXIS"]]
-        coords_data = [time["data"], depend_1["data"]]
-        coords_attrs = [time["attrs"], depend_1["attrs"]]
-
-    elif time and depend_1 and depend_2 and not depend_3:
-        dims = [
-            "time",
-            depend_1["attrs"]["LABLAXIS"],
-            depend_2["attrs"]["LABLAXIS"],
-        ]
-        coords_data = [time["data"], depend_1["data"], depend_2["data"]]
-        coords_attrs = [time["attrs"], depend_1["attrs"], depend_2["attrs"]]
-
-    elif time and depend_1 and depend_2 and depend_3:
-        dims = [
-            "time",
-            depend_1["attrs"]["LABLAXIS"],
-            depend_2["attrs"]["LABLAXIS"],
-            depend_3["attrs"]["LABLAXIS"],
-        ]
-        coords_data = [
-            time["data"],
-            depend_1["data"],
-            depend_2["data"],
-            depend_3["data"],
-        ]
-        coords_attrs = [
-            time["attrs"],
-            depend_1["attrs"],
-            depend_2["attrs"],
-            depend_3["attrs"],
-        ]
-
-    else:
-        raise NotImplementedError
+    # The dimensions of the depends present, in order
+    depends = [dep for dep in [depend_1, depend_2, depend_3] if dep]
+    dims = ["time", *[dep["attrs"]["LABLAXIS"] for dep in depends]]
+    coords_data = [time["data"], *[dep["data"] for dep in depends]]
+    coords_attrs = [time["attrs"], *[dep["attrs"] for dep in depends]]
 
     out = xr.DataArray(
         out_dict["data"],
