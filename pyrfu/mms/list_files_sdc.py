@@ -10,7 +10,7 @@ import re
 import urllib.parse
 import warnings
 from bisect import bisect_left
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 # 3rd party imports
 import numpy as np
@@ -22,6 +22,7 @@ from urllib3.util.retry import Retry
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from .db_init import MMS_CFG_PATH, _get_credential
+from .list_files_aws import _tint_bounds
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -110,9 +111,11 @@ def _construct_url_json_list(tint, mms_id, var, lasp_url):
     https://lasp.colorado.edu/mms/sdc/team/about/how-to/
     """
 
-    tint = [datetime.strptime(t_[:-3], "%Y-%m-%dT%H:%M:%S.%f") for t_ in tint]
-    start_date = tint[0].strftime("%Y-%m-%d")
-    end_date = (tint[1] - timedelta(seconds=1)).strftime("%Y-%m-%d-%H-%M-%S")
+    # Files starting before the end (the query end is inclusive), to the second
+    # above (a file starting in its last fraction of a second was left out)
+    t_start, t_end = _tint_bounds(tint)
+    start_date = t_start.strftime("%Y-%m-%d")
+    end_date = (t_end - timedelta(seconds=1)).strftime("%Y-%m-%d-%H-%M-%S")
 
     # lasp_url ends with "/" (it was doubled)
     url = f"{lasp_url}file_info/science"

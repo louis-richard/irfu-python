@@ -3,7 +3,6 @@
 
 # Built-in imports
 import datetime
-import json
 import os
 import re
 from typing import Mapping, Optional, Union
@@ -11,11 +10,9 @@ from typing import Mapping, Optional, Union
 # 3rd party imports
 import numpy as np
 
-from pyrfu.mms.db_init import MMS_CFG_PATH
-
 # Local imports
-from pyrfu.mms.list_files_aws import _file_time
-from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
+from pyrfu.mms.db_init import _read_config
+from pyrfu.mms.list_files_aws import _file_time, _tint_bounds
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
@@ -47,7 +44,8 @@ def list_files(
             * var["lev"] : data level
             * var["dtype"] : data type
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     Returns
     -------
@@ -57,14 +55,7 @@ def list_files(
 
     """
     # Check path
-    if not data_path:
-        # Read the current version of the MMS configuration file
-        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        root_path = os.path.normpath(config["local"])
-    else:
-        root_path = os.path.normpath(data_path)
+    root_path = os.path.normpath(data_path or _read_config()["local"])
 
     # Make sure that the data path exists
     assert os.path.exists(root_path), f"{root_path} doesn't exist!!"
@@ -75,16 +66,12 @@ def list_files(
     else:
         raise TypeError("tint must be a list!!")
 
-    # Convert time interval to ISO 8601
     if isinstance(tint_array[0], str):
-        tint_iso8601 = datetime642iso8601(iso86012datetime64(tint_array))
+        t_start, t_end = _tint_bounds(iso86012datetime64(tint_array))
     else:
         raise TypeError("Values must be in str!!")
 
-    if not isinstance(mms_id, str):
-        mms_id = str(mms_id)
-
-    t_start, t_end = [_file_time(re.sub(r"\D", "", t)[:14]) for t in tint_iso8601]
+    mms_id = str(mms_id)
 
     # directory and file name search patterns:
     # - assume directories are of the form:

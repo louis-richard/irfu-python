@@ -8648,6 +8648,25 @@ class ListFilesAwsTestCase(unittest.TestCase):
         self.assertEqual(out[0]["timetag"], "2019-09-14T07:50:43")
         self.assertEqual(out[0]["file_size"], len(keys[1]))
 
+    @data(
+        ("2019-09-14T08:07:03", 2),
+        ("2019-09-14T08:07:03.000000001", 3),
+        ("2019-09-14T08:07:03.500", 3),
+        ("2019-09-14T08:07:04", 3),
+    )
+    @unpack
+    def test_list_files_aws_end_fraction(self, t_end, n_files):
+        # A file starting in the last fraction of a second of the interval (the
+        # end was cut to the second below: the 08:07:03 file was left out)
+        directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
+        times = ["075043", "075403", "080703"]
+        keys = [f"{directory}/mms1_fgm_brst_l2_20190914{t}_v5.207.0.cdf" for t in times]
+        tint = ["2019-09-14T07:54:00", t_end]
+
+        out, _, _ = self._list(keys, tint, self.FGM_BRST, f"{self.BUCKET}/{self.HELIO}")
+
+        self.assertListEqual([f["full_name"] for f in out], keys[:n_files])
+
     def test_list_files_aws_brst_day_directory(self):
         # SDC layout: burst files in a day directory, looked at only if there is
         # no file in the month directory. Keys are built with "/" on all systems.
@@ -11298,6 +11317,79 @@ class ListFilesTestCase(unittest.TestCase):
             ["mms1_fgm_srvy_l2_20190912_v5.211.0.cdf"],
         )
 
+    @data(
+        ("2019-09-14T07:53:43", 1),
+        ("2019-09-14T07:53:43.000000001", 2),
+        ("2019-09-14T07:53:43.500", 2),
+        ("2019-09-14T07:53:44", 2),
+    )
+    @unpack
+    def test_list_files_end_fraction(self, t_end, n_files):
+        # A file starting in the last fraction of a second of the interval (the
+        # end was cut to the second below: the 07:53:43 file was left out)
+        names = [
+            "mms1_fgm_brst_l2_20190914075000_v5.214.0.cdf",
+            "mms1_fgm_brst_l2_20190914075343_v5.214.0.cdf",
+        ]
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(root, "mms1/fgm/brst/l2/2019/09/14", names)
+            var = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
+            tint = ["2019-09-14T07:53:00", t_end]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual([os.path.basename(f) for f in result], names[:n_files])
+
+    def test_list_files_end_fraction_next_day(self):
+        # A file starting at midnight, before an end a fraction of a second
+        # after: the day directory of the end is listed
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fgm/brst/l2/2019/09/15",
+                ["mms1_fgm_brst_l2_20190915000000_v5.214.0.cdf"],
+            )
+            var = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
+            tint = ["2019-09-14T23:59:00", "2019-09-15T00:00:00.5"]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["mms1_fgm_brst_l2_20190915000000_v5.214.0.cdf"],
+        )
+
+    def test_list_files_config_path(self):
+        # Without data_path, the local path of the MMS configuration; other
+        # file names are ignored; the spacecraft as int or str
+        module = sys.modules["pyrfu.mms.list_files"]
+        name = "mms2_fgm_srvy_l2_20190914_v5.211.0.cdf"
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms2/fgm/srvy/l2/2019/09",
+                [name, f"{name}.part", "readme.txt", f"mms1{name[4:]}"],
+            )
+            var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": None}
+            tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+            with mock.patch.object(
+                module, "_read_config", return_value={"local": root}
+            ):
+                results = [mms.list_files(tint, mms_id, var) for mms_id in [2, "2"]]
+
+        for result in results:
+            self.assertListEqual([os.path.basename(f) for f in result], [name])
+
+    def test_list_files_input(self):
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaises(TypeError):
+                mms.list_files(tuple(tint), 1, var, root)
+
+            with self.assertRaises(TypeError):
+                mms.list_files(
+                    list(pyrf.iso86012datetime64(np.array(tint))), 1, var, root
+                )
+
 
 class _FakeSdcResponse:
     def __init__(self, files, error=None):
@@ -11392,6 +11484,21 @@ class ListFilesSdcTestCase(unittest.TestCase):
             [file["url"] for file in result],
             [f"{_SDC_URL}download/science?file={name}" for name in expected],
         )
+
+    def test_list_files_sdc_end_fraction(self):
+        # The query ends at the last second at or before which a file starting
+        # before the end of the interval starts (an end in the last fraction of
+        # a second left out the file starting then)
+        for t_end, end_date in [
+            ("2019-09-14T08:11:00", "2019-09-14-08-10-59"),
+            ("2019-09-14T08:11:00.000000001", "2019-09-14-08-11-00"),
+            ("2019-09-14T08:11:00.500", "2019-09-14-08-11-00"),
+        ]:
+            tint = ["2019-09-14T07:54:00.5", t_end]
+            _, session = self._list(tint, 1, "b_gse_fgm_brst_l2", [])
+            _, query = _sdc_query(session.urls[0])
+            self.assertEqual(query["start_date"], "2019-09-14")
+            self.assertEqual(query["end_date"], end_date)
 
     def test_list_files_sdc_http_error(self):
         with self.assertRaises(requests.exceptions.HTTPError):
