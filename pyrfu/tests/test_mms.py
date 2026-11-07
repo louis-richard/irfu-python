@@ -7139,6 +7139,90 @@ class GetDataDownloadTestCase(unittest.TestCase):
 
         session.close.assert_not_called()  # shared, cached session
 
+    def test_get_data_local(self):
+        # Files of the local data path, read from the disk
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        content = _cdf_four_columns("2019-09-14T07:54:10")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "mms1_fgm_srvy_l2_20190914_v5.200.0.cdf")
+            with open(path, "wb") as file:
+                file.write(content)
+
+            with mock.patch.object(
+                self.module, "list_files", return_value=[path]
+            ) as list_files:
+                result = mms.get_data(
+                    "b_gse_fgm_srvy_l2", tint, 1, False, root, source="local"
+                )
+
+        self.assertEqual(list_files.call_args.args[0], tint)
+        self.assertEqual(list_files.call_args.args[1], "1")
+        self.assertEqual(list_files.call_args.args[3], root)
+        expected = mms.get_ts(content, "mms1_fgm_b_gse_srvy_l2", tint)
+        xr.testing.assert_identical(result, expected)
+        self.assertEqual(result.time.dtype, np.dtype("datetime64[ns]"))
+
+    @data(
+        ("SDC", "sdc"),
+        ("Local", "local"),
+        ("AWS", "aws"),
+        ("default", "aws"),
+        ("Default", "aws"),
+        ("", "aws"),
+        (None, "aws"),
+    )
+    @unpack
+    def test_get_data_source(self, source, expected):
+        # The source in any case, the default of the configuration if empty or
+        # "default", as db_get_ts ("SDC" and "default" raised
+        # NotImplementedError)
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        with (
+            mock.patch.object(
+                self.module, "_read_config", return_value={"default": "aws"}
+            ),
+            mock.patch.object(
+                self.module, "_list_files_sources", return_value=([], None, {})
+            ) as list_files_sources,
+        ):
+            with self.assertRaises(FileNotFoundError):
+                mms.get_data("b_gse_fgm_srvy_l2", tint, 1, source=source)
+
+        self.assertEqual(list_files_sources.call_args.args[0], expected)
+
+    def test_list_files_sources_sdc(self):
+        # Without the cache: the download URLs, with a logged-in session
+        session = mock.Mock()
+        files = [{"url": "url_0"}, {"url": "url_1"}]
+        with (
+            mock.patch.object(self.module, "list_files_sdc", return_value=files),
+            mock.patch.object(
+                self.module, "_login_lasp", return_value=(session, {"a": "b"}, None)
+            ),
+        ):
+            result = self.module._list_files_sources("sdc", [], "1", {})
+
+        self.assertEqual(result, (["url_0", "url_1"], session, {"a": "b"}))
+
+    def test_list_files_sources_local(self):
+        with mock.patch.object(
+            self.module, "list_files", return_value=["file.cdf"]
+        ) as list_files:
+            result = self.module._list_files_sources("local", [], "1", {}, "root")
+
+        self.assertEqual(result, (["file.cdf"], None, {}))
+        list_files.assert_called_once_with([], "1", {}, "root")
+
+    def test_source_not_implemented(self):
+        with self.assertRaises(NotImplementedError):
+            mms.get_data("b_gse_fgm_srvy_l2", [], 1, source="cdaweb")
+
+        with self.assertRaises(NotImplementedError):
+            self.module._list_files_sources("cdaweb", [], "1", {})
+
+        with self.assertRaises(NotImplementedError):
+            self.module._get_file_content_sources("cdaweb", "file.cdf")
+
 
 def _sdc_session(chunks=(b"cdf", b"data"), status_error=None, stream_error=None):
     # Mocked SDC session whose get() returns a streamed response

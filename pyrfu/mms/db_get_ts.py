@@ -15,7 +15,6 @@ from xarray.core.dataarray import DataArray
 
 from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.mms.get_data import (
-    _check_times,
     _file_label,
     _get_file_content_sources,
     _list_files_sources,
@@ -152,7 +151,7 @@ def _db_get_ts_dict(
 
             out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
 
-    return {cdf_name: _check_times(ts) for cdf_name, ts in out.items()} | support
+    return out | support
 
 
 def db_get_ts(
