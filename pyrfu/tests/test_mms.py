@@ -8106,6 +8106,157 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
         self.assertListEqual(list(result.shape), [5, 3])
 
 
+_FPI_TABLES = np.array(
+    [[10.0, 20.0, 40.0, 80.0, 160.0], [12.0, 24.0, 48.0, 96.0, 192.0]]
+)
+
+
+def _cdf_fpi_dist(
+    n_records,
+    mode="brst",
+    species="dis",
+    parity=None,
+    energy_nrv=False,
+    energy_tables=False,
+):
+    # In-memory FPI distribution of either mode (non-record-varying phi and
+    # theta): energies of the stepping table parity of each record (all 0 in
+    # fast) or a single non-record-varying table, and optionally the energy0
+    # and energy1 variables (twice the energies)
+    time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(
+        n_records
+    ) * np.timedelta64(150, "ms")
+    if parity is None:
+        parity = np.arange(n_records) % 2 if mode == "brst" else np.zeros(n_records)
+    parity = np.asarray(parity, dtype=np.uint8)
+    pre, suf = f"mms1_{species}", f"_{mode}"
+    names = [f"{pre}_{q}{suf}" for q in ["phi", "theta", "energy", "dist"]]
+
+    cdf = pycdfpp.CDF()
+    cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    cdf.add_variable(names[0], values=np.arange(4.0)[None], is_nrv=True)
+    cdf.add_variable(names[1], values=np.arange(3.0)[None], is_nrv=True)
+    if energy_nrv:
+        cdf.add_variable(names[2], values=_FPI_TABLES[:1], is_nrv=True)
+    else:
+        cdf.add_variable(names[2], values=_FPI_TABLES[parity].reshape(-1, 5))
+    if energy_tables:
+        for i in range(2):
+            cdf.add_variable(
+                f"{pre}_energy{i:d}{suf}", values=2 * _FPI_TABLES[i], is_nrv=True
+            )
+    if mode == "brst":
+        cdf.add_variable(f"{pre}_steptable_parity{suf}", values=parity)
+    cdf.add_variable(
+        names[3],
+        values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
+    )
+    for i, dep in enumerate(["Epoch", *names[:3]]):
+        cdf[names[3]].add_attribute(f"DEPEND_{i:d}", dep)
+
+    return bytes(pycdfpp.save(cdf))
+
+
+@ddt
+class GetDistTestCase(unittest.TestCase):
+    def _check(self, result, n_records, table0, table1, parity):
+        # Skymap (time, energy, phi, theta) whose energies are the tables of
+        # the stepping table parity of each record
+        self.assertTupleEqual(tuple(result.data.shape), (n_records, 5, 4, 3))
+        self.assertTupleEqual(tuple(result.phi.shape), (n_records, 4))
+        np.testing.assert_array_equal(result.attrs["energy0"], table0)
+        np.testing.assert_array_equal(result.attrs["energy1"], table1)
+        np.testing.assert_array_equal(result.attrs["esteptable"], parity)
+        np.testing.assert_array_equal(
+            result.energy.data, np.where(np.c_[parity] == 1, table1, table0)
+        )
+
+    @data(("dis", "ions"), ("des", "electrons"))
+    @unpack
+    def test_get_dist_fast(self, species, name):
+        # A single table, energy0 = energy1 (energy0 was the energies of the
+        # second record, the same in the files), no stepping
+        cdf_name = f"mms1_{species}_dist_fast"
+        result = mms.get_dist(_cdf_fpi_dist(3, "fast", species), cdf_name)
+        self._check(result, 3, _FPI_TABLES[0], _FPI_TABLES[0], np.zeros(3))
+        self.assertEqual(result.attrs["species"], name)
+        self.assertEqual(result.attrs["tmmode"], "fast")
+        np.testing.assert_array_equal(
+            result.data.data[1],
+            np.moveaxis(np.arange(60.0, 120.0).reshape(4, 3, 5), -1, 0),
+        )
+
+    @data("brst", "fast")
+    def test_get_dist_single_record(self, mode):
+        # Tables of a file of a single record (were squeezed to 1-D: fast
+        # raised IndexError)
+        result = mms.get_dist(_cdf_fpi_dist(1, mode), f"mms1_dis_dist_{mode}")
+        self._check(result, 1, _FPI_TABLES[0], _FPI_TABLES[0], [0])
+
+        if mode == "brst":
+            # Of the parity 1: no table 0 in the file, the table 1 for both
+            result = mms.get_dist(_cdf_fpi_dist(1, parity=[1]), "mms1_dis_dist_brst")
+            self._check(result, 1, _FPI_TABLES[1], _FPI_TABLES[1], [1])
+
+    @data("brst", "fast")
+    def test_get_dist_energy_nrv(self, mode):
+        # A non-record-varying energy table, at all times (fast raised
+        # IndexError)
+        content = _cdf_fpi_dist(4, mode, energy_nrv=True)
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
+        parity = np.arange(4) % 2 if mode == "brst" else np.zeros(4)
+        self._check(result, 4, _FPI_TABLES[0], _FPI_TABLES[0], parity)
+
+    def test_get_dist_brst_one_parity(self):
+        # Burst records of one parity only (IndexError): the table of the
+        # first record for the other
+        content = _cdf_fpi_dist(3, parity=[0, 0, 0])
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        self._check(result, 3, _FPI_TABLES[0], _FPI_TABLES[0], np.zeros(3))
+
+        content = _cdf_fpi_dist(3, parity=[1, 1, 1])
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        self._check(result, 3, _FPI_TABLES[1], _FPI_TABLES[1], np.ones(3))
+
+    def test_get_dist_brst_energy_tables(self):
+        # The energy0 and energy1 variables, when in the file, rather than the
+        # energies of the records (energy0 and energy1 were 2-D)
+        content = _cdf_fpi_dist(4, energy_tables=True)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        self._check(result, 4, 2 * _FPI_TABLES[0], 2 * _FPI_TABLES[1], [0, 1, 0, 1])
+
+    @data(
+        ["2019-09-14T07:54:10.100", "2019-09-14T07:54:10.400"],
+        np.array(["2019-09-14T07:54:10.1", "2019-09-14T07:54:10.4"], "datetime64[ns]"),
+        list(
+            np.array(["2019-09-14T07:54:10.1", "2019-09-14T07:54:10.4"], "datetime64")
+        ),
+    )
+    def test_get_dist_tint(self, tint):
+        # Records in tint, with their stepping table parity, from strings or
+        # datetime64
+        result = mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", tint)
+        self._check(result, 2, _FPI_TABLES[0], _FPI_TABLES[1], [1, 0])
+        np.testing.assert_array_equal(
+            result.time.data,
+            np.array(["2019-09-14T07:54:10.15", "2019-09-14T07:54:10.3"], "<M8[ns]"),
+        )
+
+    @data("2019-09-14T07:54:10", [0, 1])
+    def test_get_dist_tint_type_error(self, tint):
+        with self.assertRaises(TypeError):
+            mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", tint)
+
+    def test_get_dist_species_error(self):
+        with self.assertRaises(AttributeError):
+            mms.get_dist(_cdf_fpi_dist(4), "mms1_hpca_hplus_phase_space_density")
+
+    def test_get_dist_mode_error(self):
+        content = _cdf_fpi_dist(4, "srvy")
+        with self.assertRaises(ValueError):
+            mms.get_dist(content, "mms1_dis_dist_srvy")
+
+
 def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120.0)):
     # In-memory EIS L2 file named as the reprocessed (v*.100) files, e.g.
     # mms1_epd_eis_brst_l2_extof_proton_P5_flux_t0, with the non-record-varying
