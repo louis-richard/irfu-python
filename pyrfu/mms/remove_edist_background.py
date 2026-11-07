@@ -110,7 +110,9 @@ def remove_edist_background(
     vdf : xarray.Dataset
         Measured electron velocity distribution function.
     n_sec : float, Optional
-        Artificial secondary electron density (isotropic). Default is 0.
+        Artificial secondary electron density (isotropic): `n_sec` times the
+        photoelectron model averaged over azimuth (NaN bins left out) is also
+        removed. Default is 0.
     n_art : float, Optional
         Artificial photoelectron density (sun-angle dependant). 0 removes no
         photoelectrons. Default is None, which uses the photoelectron scaling
@@ -239,11 +241,11 @@ def remove_edist_background(
         vdf_bkg_tmp = n_photo * vdf_bkg_tmp_data
 
         if n_sec > 0:
-            vdf_bkg_av = np.nanmean(vdf_bkg_tmp_data, axis=2)
-            vdf_bkg_av = np.tile(vdf_bkg_av, (vdf_bkg_tmp_data.shape[2], 1, 1))
-            vdf_bkg_av = np.transpose(vdf_bkg_av, [1, 2, 0])
-
-            vdf_bkg_tmp += n_sec * vdf_bkg_av
+            # Isotropic secondary electrons: the model averaged over azimuth
+            # (axis 1 of energy, phi, theta), as irfu-matlab (it was averaged
+            # over the polar angle)
+            vdf_bkg_av = np.nanmean(vdf_bkg_tmp_data, axis=1, keepdims=True)
+            vdf_bkg_tmp = vdf_bkg_tmp + n_sec * vdf_bkg_av
 
         vdf_new_tmp = vdf.data.data[i, ...] - vdf_bkg_tmp
         vdf_new_tmp[vdf_new_tmp < 0] = 0.0

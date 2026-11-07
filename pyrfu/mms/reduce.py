@@ -11,6 +11,7 @@ import xarray as xr
 from scipy.constants import electron_volt, speed_of_light
 
 # Local imports
+from pyrfu.mms._psd_units import _factor, _is_relativistic, _mass_ratio
 from pyrfu.mms._vdf_bins import _mass
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
@@ -110,7 +111,12 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     -------
     out : xarray.DataArray
         Time series of reduced velocity distribution function, in SI units
-        (``UNITS`` s/m^4 for 1d, s^2/m^5 for 2d), on velocities in km/s.
+        (``UNITS`` s/m^4 for 1d, s^2/m^5 for 2d), on velocities in km/s: of
+        the relativistic phase-space density (``relativistic`` attribute), at
+        the relativistic speeds. For the FPI, HPCA and EIS skymaps, whose
+        phase-space density is the non-relativistic one, it is that of the
+        files times 2 gamma^5 / (gamma + 1) (+5 % for electrons at 5 keV,
+        +27 % at 27 keV); it was integrated as it is.
 
     Notes
     -----
@@ -180,6 +186,14 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         vdf_data *= 1e-18
     else:
         raise ValueError("Invalid units!!")
+
+    # The relativistic phase-space density, integrated with the relativistic
+    # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
+    # (it was integrated as it is, slightly inconsistent for the electrons)
+    if not _is_relativistic(vdf):
+        energy_tv = np.asarray(vdf_energy.data, dtype=np.float64)
+        energy_tv = np.broadcast_to(energy_tv, vdf_data.shape[:2])
+        vdf_data = vdf_data * _factor(energy_tv, _mass_ratio(vdf))[:, :, None, None]
 
     # Get VDF dimension (time, energy, phi, theta)
     # n_t, _, n_ph, _ = vdf_data.shape
@@ -418,7 +432,10 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         f_g,
         coords=coords,
         dims=dims,
-        attrs={"UNITS": {1: "s/m^4", 2: "s^2/m^5", 3: "s^3/m^6"}[ndim]},
+        attrs={
+            "UNITS": {1: "s/m^4", 2: "s^2/m^5", 3: "s^3/m^6"}[ndim],
+            "relativistic": True,
+        },
     )
 
     for v_dim in dims[1:]:

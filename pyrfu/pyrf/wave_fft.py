@@ -48,7 +48,9 @@ def wave_fft(
     """
 
     if f_sampling is None:
-        delta_t = np.median(np.diff(inp.time.data).astype(np.float64)) * 1e-9
+        # Time step from the times in ns (they were taken as ns in any unit)
+        time = inp.time.data.astype("datetime64[ns]")
+        delta_t = np.median(np.diff(time).astype(np.float64)) * 1e-9
         f_sampling = 1 / delta_t
 
     # convert ms to points

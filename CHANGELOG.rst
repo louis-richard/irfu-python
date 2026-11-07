@@ -1,6 +1,212 @@
 Changelog
 =========
 
+2.5.10 (2026-11-06)
+-------------------
+
+This release keeps the MMS files read from the SDC and AWS in a cache, so that
+reading the same data again needs no network, and makes the speeds of the
+distribution routines always relativistic: the ``relativistic`` arguments are
+removed. It fixes the FEEPS and HPCA spins across data gaps, the HPCA
+pitch-angle distributions with a missing azimuth record, the time series with
+times in microseconds (as xarray now keeps them), the per-time attributes of
+the distributions cut in time, and a series of checks on the inputs of the
+distribution routines. It adds the sum of the telescopes to ``mms.eis_pad``
+for counts.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- The files read from the SDC and AWS are kept in a cache, on by default:
+  ``mms.get_data``, ``mms.db_get_ts``, ``mms.db_get_variable``,
+  ``mms.get_eis_allt`` and ``mms.load_ancillary`` (SITL data included) read
+  them again from the cache, and from the network only once. The cache is in
+  the user cache directory (e.g. ``~/Library/Caches/pyrfu/mms`` on macOS,
+  ``~/.cache/pyrfu/mms`` on Linux), in the layout of the SDC, readable by the
+  user only. It holds up to 1 GB: each file is removed 4 h after its last use,
+  then the least recently used ones above the size, and larger files are not
+  kept. The file listings are kept for 4 h, so a file reprocessed meanwhile is
+  read after that, or after ``mms.clear_cache()``. The SDC login happens only
+  when a file is downloaded. A failure of the cache (full or read-only disk)
+  gives a warning and the file is read from the network. ``mms.db_init``
+  sets the cache, or turns it off (``cache=False``); local data
+  (``source="local"``) are not cached.
+- The speeds of the distribution routines are always relativistic, and the
+  ``relativistic`` arguments are removed (``TypeError``): ``mms.dpf2psd``,
+  ``mms.psd2dpf``, ``mms.vdf_convert``, ``mms.psd_moments``,
+  ``mms.vdf_velocity``, ``mms.vdf_d3v``, ``mms.vdf_flux`` and
+  ``mms.vdf_partial_density``. The phase-space density keeps the convention
+  of its data, given by the ``relativistic`` attribute: relativistic,
+  f = gamma^3 m J / v^2, for the FEEPS skymaps (now also the intensity
+  skymaps of ``mms.feeps_skymap(to_psd=False)``), non-relativistic,
+  f = m J / v^2 with v^2 = 2 E / m, for the FPI, HPCA and EIS files. Where
+  it is integrated over the velocities, a non-relativistic one is first
+  multiplied by 2 gamma^5 / (gamma + 1) (+5 % at 5 keV and +27 % at 27 keV
+  for electrons, less than 0.01 % for ions), so that the results do not
+  depend on the convention:
+
+  - ``mms.psd_moments``, ``mms.vdf_partial_density``, ``mms.vdf_flux``,
+    ``mms.vdf_macroparticles``, ``mms.calculate_epsilon`` and
+    ``mms.eis_moments`` (relativistic speeds and momenta): FPI electron
+    densities up to 0.24 % higher, bulk speeds up to 0.5 % lower, ions
+    unchanged to 2e-6;
+  - ``mms.reduce``, ``mms.vdf_cuts``, ``mms.vdf_projection`` and
+    ``mms.vdf_rebin(base="cart")`` give the relativistic phase-space density
+    (``relativistic`` attribute) at the relativistic speeds: for FPI
+    electrons, f up to 27 % higher and speeds up to 3.8 % lower at 30 keV;
+  - ``mms.vdf_shift``, ``mms.vdf_rebin`` (energy grids), ``mms.vdf_omni``,
+    ``mms.make_model_vdf`` and ``mms.make_model_kappa`` give their result in
+    the convention of the input, from the relativistic speeds and volumes;
+  - ``mms.vdf_velocity``, ``mms.vdf_d3v`` and ``plot.plot_pad_polar``:
+    relativistic speeds.
+
+  The thermal speeds of the model distributions, ``mms.scpot2ne`` and the
+  Langmuir-probe currents keep their (non-relativistic) definitions.
+- ``mms.psd_moments`` raises ``ValueError`` when ``partial_moments`` is not
+  0/1 (or boolean), not of the shape of the data, or a DataArray at other
+  times than the distribution. The full moments were returned and the
+  problem only logged at INFO, as irfu-matlab.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.db_init``: ``cache``, ``cache_size`` (bytes, 1e9 by default),
+  ``cache_max_age`` (hours, 4 by default) and ``cache_dir`` (the user cache
+  directory by default, saved as an absolute path); ``TypeError`` for a
+  ``cache`` that is not ``True`` or ``False``, a size or an age that is not a
+  number, or a directory that is not a path, ``ValueError`` for a size or an
+  age that is not positive. The configurations of earlier versions get the
+  default cache.
+- ``mms.cache_info``: the settings, number and size of the cached files, and
+  the number of listings. ``mms.clear_cache``: empties the cache (its own
+  directories only).
+- ``mms.eis_pad``: ``method="sum"`` for counts. Each telescope is in the bin
+  of its centre pitch angle, [k ``pa_width``, (k + 1) ``pa_width``), 180 deg
+  in the last bin, and the bins are the sums of their telescopes, as
+  ``mms.get_pitch_angle_dist(meanorsum="sum")``: they hold all the counts
+  once (the mean puts a telescope in up to three bins). A bin without
+  telescope or data is NaN. ``method="mean"`` (the default) is unchanged;
+  ``ValueError`` for another method; the method is in the attributes.
+- ``maven.download_data``: the optional keys ``plan`` (MAG coordinates, e.g.
+  "pl" or "ss") and ``file_extension`` are documented. Without them, all the
+  files found are downloaded; with a plan, the MAG .sts files unless
+  ``file_extension`` is given.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``mms.feeps_avg_4sc`` leaves a spacecraft out of the average where it has
+  no data: in its data gaps (two samples more than 1.5 sampling periods
+  apart), and before the start and after the end of its data (beyond half a
+  sampling period). The resampling to the times of the first spacecraft
+  filled the gaps by interpolation and extrapolated past the ends, which
+  were averaged as data: with 5 min of MMS3 data missing (2017-07-11), the
+  average was 73 % off in the gap, and 27 % at the last time where a
+  spacecraft's data ended one sample early. Where the data are continuous,
+  the averages are unchanged.
+- ``mms.feeps_spin_avg``, ``mms.feeps_pad_spinavg``,
+  ``mms.feeps_sector_spec`` and ``mms.feeps_skymap`` also end a spin at a
+  data gap (two samples more than 1.5 median sampling periods apart). The
+  two partial spins around a gap of a whole number of spins counted as one
+  complete spin, stamped before the gap: 235 of 2591 MMS1 ion survey spins on
+  2015-10-16. The other days checked (2017, 2020, 2024) are unchanged.
+- ``mms.hpca_pad`` matches each half-spin of ``aze`` with its samples of the
+  distribution by time, as ``mms.get_hpca_dist``. The half-spins were paired
+  by count after the first one: a missing ``aze`` record gave every later
+  half-spin the azimuths of the next one (MMS1 2017-07-11 22:33-22:36 burst
+  has one: the peak pitch-angle bin was wrong at 59 % of the samples after
+  22:33:15). The half-spins not complete in the distribution (data gaps,
+  start azimuths not 0 to 15) or without azimuths (zeros, as IDL SPEDAS) are
+  NaN: zero azimuths were used as azimuths, and a gap or one bad half-spin
+  raised ``ValueError``.
+- ``mms.hpca_spin_sum`` uses only the complete spins (the 16 start azimuths
+  in order, no data gap): the spins cut by data gaps were kept as partial
+  sums or means. ``ValueError`` when ``saz`` is not at the times of the data
+  (misaligned spins were used).
+- Times in microseconds, as xarray now keeps them (from datetime objects or
+  pandas 3): ``pyrf.psd`` and ``pyrf.wave_fft`` gave frequencies 1000 times
+  too large, ``pyrf.start`` and ``pyrf.end`` times 1000 times too small, and
+  ``pyrf.ebsp`` no times or ``IndexError``. Times in nanoseconds are
+  unchanged.
+- ``mms.get_pitch_angle_dist`` and ``mms.get_gyrophase_dist`` with ``tint``
+  keep the step table and the energy and time widths of the times kept
+  (``pyrf.time_clip`` of the distribution). They were at full length, so
+  the energy edges of ``mms.vdf_d3v`` and ``mms.vdf_flux`` of the output
+  were midpoints: -22 % to +47 % per bin on FPI burst.
+- ``pyrf.time_clip`` clips the attributes of the particle distributions by
+  name: the per-time ones (step table, time, energy and azimuthal widths,
+  FEEPS coverage) with their number of dimensions, never the per-bin ones
+  (energy tables, polar, pitch-angle and gyrophase widths). The energy tables
+  were clipped when there were as many times as channels (32), and the
+  per-channel EIS energy widths when there were as many times as channels.
+  The other array attributes are clipped by their length, as before.
+- ``mms.def2psd`` and ``mms.psd2def`` follow the ``relativistic`` attribute,
+  as ``mms.dpf2psd`` and ``mms.psd2dpf``: the energy fluxes of a
+  relativistic (FEEPS) skymap were converted as non-relativistic ones (off by
+  a factor 20 at 500 keV for electrons).
+- ``mms.remove_idist_background`` converts the background to the units of
+  the distribution with the mass of its species: it was converted to
+  s^3/cm^6 with the proton mass whatever the units, so nothing was removed
+  from a distribution in s^3/m^6. ``ValueError`` for an electron
+  distribution, a background at other times (it was used by position) or
+  one that is not an energy flux. FPI in s^3/cm^6 is unchanged to float32
+  rounding.
+- ``mms.remove_edist_background`` with ``n_sec`` removes the photoelectron
+  model averaged over azimuth, as irfu-matlab: it was averaged over the
+  polar angle, which gave a secondary population 55 % off per bin (median)
+  on the FPI model.
+- ``mms.make_model_vdf`` raises ``ValueError`` when ``n_s``, ``v_xyz`` or
+  ``t_xyz`` are not at the times of the distribution, as
+  ``mms.calculate_epsilon``: the times of ``n_s`` only had to differ by a
+  constant (moments 1 h away were accepted and used by position), and those
+  of ``v_xyz`` and ``t_xyz`` were not checked.
+- ``pyrf.datetime642unix`` gives NaN for NaT, as ``pyrf.iso86012unix`` (it
+  was -9.2e9 s).
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.vdf_projection`` of a skymap with a single time (``IndexError``).
+- ``mms.vdf_to_e64`` and ``mms.vdf_projection`` (``mms.psd_rebin``) work on
+  the channels kept by ``mms.vdf_elim``: twice the channels of a table (64
+  were assumed, ``ValueError``).
+- ``mms.eis_pad_combine_sc`` gives the energy widths and energy attributes
+  of the spacecraft of the energies (they were those of the spacecraft of
+  the times: 7 widths for 6 energies on MMS2-4 survey, energy attributes
+  dropped). ``ValueError`` for PADs of different species or methods, and in
+  ``mms.eis_spec_combine_sc`` for spectra of different species.
+- ``pyrf.resample`` raises ``TypeError`` for a datetime input with numeric
+  reference times: the reference became 1970 dates (values extrapolated
+  decades away, or a misleading ``RuntimeError``).
+- ``pyrf.average_vdf`` works without energy widths, or with ``None``
+  (``KeyError``, ``TypeError``), and keeps per-channel widths (they were
+  sliced as times).
+- ``plot.plot_ang_ang`` with one time plots the distribution at the closest
+  time, as documented: it took the next one, and raised ``IndexError`` after
+  the last sample.
+- ``maven.download_data`` without ``plan`` (``KeyError``) and for the
+  instruments other than MAG, which downloaded nothing, silently;
+  ``FileNotFoundError`` if no file matches.
+- ``pyrf.datetime642iso8601`` takes datetime64 in any unit (arrays in s,
+  min, h or D raised ``TypeError``), and so ``pyrf.datetime2iso8601`` of a
+  scalar in s or D and ``mms.get_ts`` and ``mms.get_dist`` with a ``tint``
+  in s; ``pyrf.get_omni_data`` gives times in ns, as the other time series
+  (with pandas 3 they were in us).
+- ``mms.get_eis_allt`` and ``mms.db_get_ts`` give the name of the file in
+  their messages (the S3 object was printed for the AWS files).
+- ``mms.db_init`` expands ``~`` in ``local`` (``local="~/data"`` raised
+  ``FileNotFoundError`` for ``<cwd>/~/data``).
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.def2psd``: the formula is rendered (``.. math::``) and the energy
+  flux is in keV/(cm^2 s sr keV).
+- ``pyrf.start``: the time is in seconds since 1970 (unix time).
+- ``pyrf.time_clip``: to select times of a distribution, use
+  ``pyrf.time_clip`` rather than ``Dataset.isel`` or ``Dataset.sel``, which
+  keep the per-time attributes at full length.
+
 2.5.9 (2026-11-02)
 ------------------
 

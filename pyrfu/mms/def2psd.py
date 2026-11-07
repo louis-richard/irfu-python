@@ -13,8 +13,10 @@ from pyrfu.mms._psd_units import (
     _MASS_FACTOR,
     _data_and_units,
     _energy,
+    _is_relativistic,
     _mass_ratio,
     _output,
+    _relativistic_factor,
 )
 
 __author__ = "Louis Richard"
@@ -41,12 +43,12 @@ def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
 
     The phase-space density is given by:
 
-    .. math:
+    .. math::
 
         f(E) = m^2 \frac{DEF}{E^2} * 0.54494,
 
     where :math:`m` is the particle mass in proton masses, :math:`DEF` is
-    the differential energy flux in 1/(cm sr s) and :math:`E` is the energy
+    the differential energy flux in keV/(cm^2 s sr keV) and :math:`E` is the energy
     in eV. The constant, m_p^2 / (2 e^2), was 0.53707 with the atomic mass
     unit, as irfu-matlab: the phase-space densities were 1.46 % too small
     (the FPI products use the proton mass).
@@ -66,9 +68,22 @@ def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
     TypeError
         If inp is not a xarray.Dataset or xarray.DataArray.
 
+    Notes
+    -----
+    The phase-space density is in the convention of the ``relativistic``
+    attribute of `inp`: the relativistic one, f = gamma^3 m J / v^2 with the
+    relativistic speed (the FEEPS skymaps), or without it the
+    non-relativistic one above, as in the FPI, HPCA and EIS files and
+    irfu-matlab (the attribute was ignored).
+
     """
 
     data, units = _data_and_units(inp)
     data = _convert(data, units, _mass_ratio(inp)) / _energy(inp, data) ** 2
+
+    # The relativistic phase-space density of a relativistic skymap (FEEPS):
+    # the convention was ignored
+    if _is_relativistic(inp):
+        data = data * _relativistic_factor(inp, data)
 
     return _output(inp, data, "s^3/m^6")

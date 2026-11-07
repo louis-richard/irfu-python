@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from ._cache import cache_info, clear_cache
 from .calculate_epsilon import calculate_epsilon
 from .copy_files import copy_files
 from .copy_files_ancillary import copy_files_ancillary
@@ -122,7 +123,9 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 __all__ = [
+    "cache_info",
     "calculate_epsilon",
+    "clear_cache",
     "copy_files",
     "copy_files_ancillary",
     "correct_edp_probe_timing",

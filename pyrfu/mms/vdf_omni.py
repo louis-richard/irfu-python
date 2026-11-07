@@ -10,16 +10,17 @@ import xarray as xr
 
 # Local imports
 from ..pyrf.ts_spectr import ts_spectr
+from ._psd_units import _factor, _is_relativistic, _mass_ratio, _relativistic_factor
 from ._vdf_bins import (
     _band_solid_angles,
     _mass,
     _phi_edges,
-    _relativistic,
     _speed,
     _speed_edges,
     _theta_edges,
 )
 from ._vdf_mc import _rng
+from .vdf_convert import _PSD
 from .vdf_shift import _frame_velocity
 
 __author__ = "Louis Richard"
@@ -43,7 +44,7 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
     # Spherical means of the skymap on spheres centred on v_frame, of radii
     # the speeds of the energies, as irfu-matlab get_omni_dist_framedep
     n_t = len(vdf.time)
-    mass, relativistic = _mass(vdf), _relativistic(vdf, None)
+    mass = _mass(vdf)
     v_frame = _frame_velocity(vdf, v_frame)
 
     if energy is None:
@@ -51,7 +52,8 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
     else:
         energy = np.asarray(energy, dtype=np.float64)
 
-    speed = _speed(np.broadcast_to(energy, (n_t, energy.shape[-1])), mass, relativistic)
+    energy_t = np.broadcast_to(energy, (n_t, energy.shape[-1]))
+    speed = _speed(energy_t, mass)
 
     # Points uniform on the unit sphere (Archimedes: z and phi uniform)
     rng = _rng(random_state)
@@ -62,10 +64,19 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
         axis=-1,
     )
 
-    v_lower, v_upper = _speed_edges(vdf, None, relativistic)
+    v_lower, v_upper = _speed_edges(vdf, None)
     phi_lower, phi_upper = _phi_edges(vdf)
     theta_lower, theta_upper = _theta_edges(vdf)
     data = vdf.data.data
+
+    # A non-relativistic phase-space density (FPI, HPCA, EIS) as the
+    # relativistic one at the energies of its bins, back at the new energies
+    convert = not _is_relativistic(vdf) and (
+        str(vdf.data.attrs.get("UNITS", "")).lower() in _PSD
+    )
+
+    if convert:
+        data = data * _relativistic_factor(vdf, data)
 
     omni = np.zeros(speed.shape)
     coverage = np.zeros(speed.shape)
@@ -93,6 +104,9 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
         # Points outside the bins or in bins without data count as zero
         omni[i_t] = np.sum(np.where(valid, values, 0.0), axis=1) / n_mc
         coverage[i_t] = np.sum(valid, axis=1) / n_mc
+
+    if convert:
+        omni = omni / _factor(energy_t, _mass_ratio(vdf))
 
     return omni, energy, coverage, v_frame / 1e3
 
@@ -185,9 +199,11 @@ def vdf_omni(
     count as zero, so that the distribution is a lower limit where the
     ``coverage`` attribute (fraction of the points in bins with data, time x
     energy) is below 1. The bin edges are those of `vdf_solid_angle` and
-    `vdf_d3v`; the speeds are relativistic if the ``relativistic`` attribute
-    of `vdf` is True. The energies of each time are used (irfu-matlab uses
-    those of the first time).
+    `vdf_d3v`; the speeds are relativistic (they were non-relativistic
+    without the ``relativistic`` attribute), and a non-relativistic
+    phase-space density (FPI, HPCA, EIS) is averaged as the relativistic one
+    and returned in its convention. The energies of each time are used
+    (irfu-matlab uses those of the first time).
 
     Examples
     --------

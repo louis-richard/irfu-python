@@ -8,12 +8,13 @@ import warnings
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from scipy import constants
 from xarray.core.dataset import Dataset
 
 # Local imports
-from pyrfu.mms._vdf_bins import _charge_sign, _energy_edges, _mass
+from pyrfu.mms._psd_units import _is_relativistic, _output, _relativistic_factor
+from pyrfu.mms._vdf_bins import _charge_sign, _energy_edges, _mass, _speed
 from pyrfu.mms.psd_rebin import psd_rebin
+from pyrfu.mms.vdf_convert import _PSD
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 from pyrfu.pyrf.time_clip import time_clip
 from pyrfu.pyrf.ts_scalar import ts_scalar
@@ -191,8 +192,14 @@ def _init(vdf: Dataset, tint: list):
     azimuthal = np.deg2rad(phi)
     step_table = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
 
-    energy0 = vdf.attrs.get("energy0", vdf.energy.data[0, :])
-    energy1 = vdf.attrs.get("energy1", vdf.energy.data[1, :])
+    # The energy tables, else the energies of the first two times (the default
+    # of attrs.get was evaluated even with the attribute: a single time raised
+    # IndexError)
+    energy = np.atleast_2d(vdf.energy.data)
+    energy0 = vdf.attrs["energy0"] if "energy0" in vdf.attrs else energy[0]
+    energy1 = (
+        vdf.attrs["energy1"] if "energy1" in vdf.attrs else energy[1 % len(energy)]
+    )
 
     diff_energ = np.median(np.diff(np.log10(energy0))) / 2
 
@@ -386,7 +393,13 @@ def vdf_projection(
     v_y : numpy.ndarray
         2D grid of the velocities in the y direction.
     f_mat : numpy.ndarray
-        2D projection of the velocity distribution onto the specified plane
+        2D projection of the velocity distribution onto the specified plane,
+        in the units of `vdf`: of the relativistic phase-space density, at the
+        relativistic speeds. For the FPI, HPCA and EIS skymaps, whose
+        phase-space density is the non-relativistic one, it is that of the
+        files times 2 gamma^5 / (gamma + 1) (+5 % for electrons at 5 keV,
+        +27 % at 27 keV); the speeds were non-relativistic (1.47 c for FEEPS
+        electrons of 500 keV).
 
     Notes
     -----
@@ -411,6 +424,13 @@ def vdf_projection(
 
     mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
     charge = 1.0 if is_des else float(vdf.attrs.get("charge", 1))
+
+    # The relativistic phase-space density, projected with the relativistic
+    # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
+    data, units = vdf.data.data, str(vdf.data.attrs.get("UNITS", ""))
+
+    if not _is_relativistic(vdf) and units.lower() in _PSD:
+        vdf = _output(vdf, data * _relativistic_factor(vdf, data), units)
 
     dist, polar, azimuthal, energy_edges, _, i_times = _init(vdf, tint)
     x_vec, y_vec, z_vec, _ = _coord_sys(coord_sys)
@@ -451,12 +471,10 @@ def vdf_projection(
         # Ions of charge q gain q V (eV)
         sc_pot *= -charge
 
-    q_e = constants.elementary_charge
-
     # Speeds of the energy edges after correction for the spacecraft potential
     # (0 below it, rather than NaN which breaks pcolormesh), in km/s
     energy_corr = np.clip(energy_edges - sc_pot, 0.0, None)
-    speed_table = np.sqrt(energy_corr * q_e * 2 / mass) * 1e-3
+    speed_table = _speed(energy_corr, mass) * 1e-3
 
     r_en = speed_table
     v_x = np.matmul(

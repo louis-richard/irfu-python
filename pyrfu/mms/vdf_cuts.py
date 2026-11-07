@@ -15,12 +15,11 @@ from ._vdf_bins import (
     _is_skymap,
     _mass,
     _phi_edges,
-    _relativistic,
     _speed,
     _speed_edges,
 )
 from .psd_moments import psd_moments
-from .vdf_convert import vdf_convert
+from .vdf_convert import _relativistic_psd, vdf_convert
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -85,7 +84,10 @@ def vdf_cuts(vdf_fac, par_width: float = 10.0, perp_width: float = 10.0):
     Returns
     -------
     dists : xarray.Dataset
-        Phase-space densities (s^3/m^6) of the cuts:
+        Relativistic phase-space densities (s^3/m^6) of the cuts, at the
+        relativistic speeds (``relativistic`` attribute; for the FPI, HPCA and
+        EIS skymaps, the densities of the files times 2 gamma^5 / (gamma + 1):
+        +5 % for electrons at 5 keV, +27 % at 27 keV):
 
         * ``f_par`` (time, v_par): along B, at the signed speeds ``v_par``
           (km/s, negative antiparallel), averaged over the azimuths and the
@@ -144,15 +146,16 @@ def vdf_cuts(vdf_fac, par_width: float = 10.0, perp_width: float = 10.0):
     if not _is_skymap(vdf_fac):
         raise ValueError("vdf_fac must be a skymap")
 
-    relativistic = _relativistic(vdf_fac, None)
     mass = _mass(vdf_fac)
     time = vdf_fac.time.data
     n_t = len(time)
 
-    f_si = vdf_convert(vdf_fac, "s^3/m^6", relativistic).data.data
+    # Relativistic phase-space density and speeds (they were non-relativistic
+    # without the relativistic attribute)
+    f_si = _relativistic_psd(vdf_fac)
     energy = np.broadcast_to(vdf_fac.energy.data, f_si.shape[:2])
-    speed = _speed(energy, mass, relativistic)
-    v_lower, v_upper = _speed_edges(vdf_fac, None, relativistic)
+    speed = _speed(energy, mass)
+    v_lower, v_upper = _speed_edges(vdf_fac, None)
     d_v = v_upper - v_lower
     phi_lower, phi_upper = _phi_edges(vdf_fac)
     d_phi = np.deg2rad(phi_upper - phi_lower)
@@ -204,14 +207,12 @@ def vdf_cuts(vdf_fac, par_width: float = 10.0, perp_width: float = 10.0):
         "species": vdf_fac.attrs.get("species"),
         "par_width": par_width,
         "perp_width": perp_width,
+        "relativistic": True,
     }
 
-    vdf_cm = vdf_convert(vdf_fac, "s^3/cm^6", relativistic)
+    vdf_cm = vdf_convert(vdf_fac, "s^3/cm^6")
     n_i, v_i, _, _, t_i, _ = psd_moments(
-        vdf_cm,
-        ts_scalar(time, np.zeros(n_t)),
-        angle_integration="exact",
-        relativistic=relativistic,
+        vdf_cm, ts_scalar(time, np.zeros(n_t)), angle_integration="exact"
     )
 
     fac = ["perp1", "perp2", "par"]

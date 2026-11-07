@@ -438,6 +438,23 @@ class PlotAngAngTestCase(unittest.TestCase):
             self.assertEqual(cax.get_ylabel(), "PSD [s$^3$ m$^{-6}$]")
             self.assertEqual(ax.get_title(), "5 keV $\\leq E \\leq$ 10 keV")
 
+    def test_plot_ang_ang_closest_time(self):
+        # One time: the closest sample (it was the next one, and IndexError
+        # after the last sample)
+        vdf = self.vdf.copy(deep=True)
+        vdf.data.data[:] = (np.arange(10.0) + 1.0)[:, None, None, None]
+        d_t = vdf.time.data[1] - vdf.time.data[0]
+
+        for t_0, value in [
+            (vdf.time.data[3] + 0.4 * d_t, 4.0),
+            (vdf.time.data[3] + 0.6 * d_t, 5.0),
+            (vdf.time.data[0] - 2 * d_t, 1.0),
+            (vdf.time.data[-1] + 2 * d_t, 10.0),
+        ]:
+            tint = [pyrf.datetime642iso8601(np.atleast_1d(t_0))[0]]
+            _, ax, _ = plot.plot_ang_ang(vdf, tint, [5.0, 10.0])
+            np.testing.assert_allclose(self._map(ax), value)
+
     def test_plot_ang_ang_defaults(self):
         # Whole interval and all the energies, including the end channels
         with self.assertWarns(UserWarning):
@@ -527,8 +544,10 @@ class PlotPadPolarTestCase(unittest.TestCase):
 
     @staticmethod
     def _speed(energy, mass=constants.proton_mass):
-        # Speed (km/s) of energy (eV)
-        return np.sqrt(2 * constants.elementary_charge * energy / mass) / 1e3
+        # Relativistic speed (km/s) of energy (eV)
+        eps = constants.elementary_charge * np.asarray(energy, dtype=np.float64)
+        eps = eps / (mass * constants.c**2)
+        return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps) / 1e3
 
     @staticmethod
     def _mesh(ax, i=0):

@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._eis_units import _check_same_units
+from ._eis_units import _check_same_attrs, _check_same_units
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
 __author__ = "Louis Richard"
@@ -35,12 +35,15 @@ def eis_pad_combine_sc(pads):
     allmms_pad_avg : xarray.DataArray
         Composite pitch angle distribution, on the times of the spacecraft with
         the fewest samples and the energies of the one with the fewest channels
-        (the others at their closest channels).
+        (the others at their closest channels), with the energy widths
+        (``delta_energy_minus`` and ``delta_energy_plus``) and the attributes
+        of the energies of the latter.
 
     Raises
     ------
     ValueError
-        If the pitch angle bins or the ``UNITS`` differ.
+        If the pitch angle bins, the ``UNITS``, the species or the method
+        (``method`` attribute of `pyrfu.mms.eis_pad`) differ.
 
     Notes
     -----
@@ -61,8 +64,9 @@ def eis_pad_combine_sc(pads):
     ref_probe = pads[np.argmin([len(probe.time.data) for probe in pads])]
     ener_probe = pads[np.argmin([len(probe.energy.data) for probe in pads])]
 
-    # The units of the reference spacecraft were taken
+    # The units (and species, method) of the reference spacecraft were taken
     _check_same_units(pads, "PADs")
+    _check_same_attrs(pads, ["species", "method"], "PADs")
 
     for pad_ in pads:
         if not np.array_equal(pad_.theta.data, ref_probe.theta.data):
@@ -94,5 +98,17 @@ def eis_pad_combine_sc(pads):
         dims=["time", "theta", "energy"],
         attrs={**ref_probe.attrs},
     )
+
+    # The energy widths and the attributes of the energies of the output:
+    # those of the spacecraft of the energies (they were those of the
+    # spacecraft of the times, 7 widths for 6 energies on MMS2-4 survey)
+    for key in ["delta_energy_minus", "delta_energy_plus"]:
+        if key in ener_probe.attrs:
+            allmms_pad_avg.attrs[key] = ener_probe.attrs[key]
+        else:
+            allmms_pad_avg.attrs.pop(key, None)
+
+    allmms_pad_avg.theta.attrs = dict(ref_probe.theta.attrs)
+    allmms_pad_avg.energy.attrs = dict(ener_probe.energy.attrs)
 
     return allmms_pad_avg

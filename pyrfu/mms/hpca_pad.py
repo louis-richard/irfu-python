@@ -14,13 +14,14 @@ from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
+from ._hpca import _half_spins
 from .db_get_variable import db_get_variable
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
 __license__ = "MIT"
-__version__ = "2.4.2"
+__version__ = "2.5.10"
 __status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
@@ -47,43 +48,24 @@ def _hpca_elevations(vdf, source: str = "default", data_path: str = ""):
 
 
 def _match_half_spins(vdf, saz, aze, n_az: int = 16):
-    r"""First sample of vdf and first record of aze of the matching half-spins,
-    and the number of complete half-spins.
-
-    Each aze record gives the azimuths of one half-spin, i.e., of n_az consecutive
-    samples of vdf with start azimuths 0, 1, ..., n_az - 1. The aze time is either
-    the start of the half-spin (time of the start azimuth 0 sample, as in the
-    files), or its centre (times shifted to the middle of the accumulations, as by
-    :func:`pyrfu.mms.get_data`: 7.5 samples later).
-
-    """
+    r"""First sample of vdf of each half-spin of aze, matched by time as in
+    :func:`pyrfu.mms.get_hpca_dist`, and whether it is complete: its n_az
+    samples in vdf with start azimuths 0, 1, ..., n_az - 1 and non-zero
+    azimuths. The aze time is either the start of the half-spin (as in the
+    files), or its centre (as :func:`pyrfu.mms.get_data` gives it). The
+    half-spins were paired by count after the first one: a missing aze record
+    shifted all the next half-spins by 180 deg, and a gap in vdf raised."""
     if len(saz) != len(vdf) or not np.array_equal(saz.time.data, vdf.time.data):
         raise ValueError("saz and vdf must have the same times")
 
-    t_vdf = vdf.time.data.astype("datetime64[ns]").astype(np.int64)
-    t_aze = aze.time.data.astype("datetime64[ns]").astype(np.int64)
-    d_t = np.median(np.diff(t_vdf))
-    starts = np.flatnonzero(saz.data == 0)
+    i_start, complete = _half_spins(vdf, aze)
+    i_samples = np.clip(i_start[:, None] + np.arange(n_az), 0, len(vdf) - 1)
+    complete &= np.all(saz.data[i_samples] == np.arange(n_az), axis=1)
 
-    for offset in [0.0, (n_az - 1) / 2 * d_t]:
-        for i_aze, t_rec in enumerate(t_aze):
-            if starts.size == 0:
-                break
+    if not np.any(complete):
+        raise ValueError("no half-spin of aze complete in vdf")
 
-            mismatch = np.abs(t_vdf[starts] + offset - t_rec)
-
-            if np.min(mismatch) < d_t / 2:
-                i_vdf = int(starts[np.argmin(mismatch)])
-                n_spins = min(len(aze) - i_aze, (len(vdf) - i_vdf) // n_az)
-                expected = np.tile(np.arange(n_az), n_spins)
-                start_az = saz.data[i_vdf : i_vdf + n_spins * n_az]
-
-                if n_spins < 1 or not np.array_equal(start_az, expected):
-                    raise ValueError("start azimuths of vdf don't match aze half-spins")
-
-                return i_vdf, i_aze, n_spins
-
-    raise ValueError("start times of aze and vdf don't match!")
+    return i_start, complete
 
 
 def hpca_pad(
@@ -129,7 +111,8 @@ def hpca_pad(
     Raises
     ------
     ValueError
-        If the half-spins of `aze` and the samples of `vdf` don't match.
+        If `saz` is not at the times of `vdf`, or if no half-spin of `aze` is
+        complete in `vdf`.
 
     Notes
     -----
@@ -140,6 +123,14 @@ def hpca_pad(
     official HPCA bulk velocity (to 3 deg in the spin plane on 2017-07-06, MMS1,
     22:36-22:47 UT), and the pitch angle asymmetry that of FPI. B is resampled to
     the time of each energy step.
+
+    Each half-spin of `aze` is matched with its samples of `vdf` by time, as in
+    :func:`pyrfu.mms.get_hpca_dist`. The PAD covers the samples from the first
+    to the last complete half-spin, and is NaN for the samples of the
+    half-spins that are not complete in `vdf` (data gaps, start azimuths not
+    0 to 15) or without azimuths (zeros, dropped as in IDL SPEDAS), and for
+    the samples without half-spin. The half-spins were paired by count after
+    the first one, and the zero azimuths were used as azimuths.
 
     Examples
     --------
@@ -165,10 +156,16 @@ def hpca_pad(
     if elim is None:
         elim = [ien.data[0], ien.data[-1]]
 
-    # 2. complete half-spins of aze and vdf
-    i_vdf, i_aze, n_spins = _match_half_spins(vdf, saz, aze, n_az)
-    vdf = vdf.isel(time=slice(i_vdf, i_vdf + n_spins * n_az))
-    aze_data = np.asarray(aze.data[i_aze : i_aze + n_spins], dtype=np.float64)
+    # 2. complete half-spins of aze, matched with vdf by time, from the first to
+    # the last one; the samples of the others are NaN
+    i_start, complete = _match_half_spins(vdf, saz, aze, n_az)
+    i_first = i_start[complete][0]
+    vdf = vdf.isel(time=slice(i_first, i_start[complete][-1] + n_az))
+    rows = (i_start[complete] - i_first)[:, None] + np.arange(n_az)
+    aze_data = np.full((len(vdf),) + aze.shape[2:], np.nan)
+    aze_data[rows.ravel()] = np.asarray(aze.data[complete], dtype=np.float64).reshape(
+        (-1,) + aze.shape[2:]
+    )
 
     # 3. compute PAD
     # 3.1. pitchangle
@@ -179,14 +176,14 @@ def hpca_pad(
     pitch_a = angle_vec - d_angle / 2
 
     # 3.2. data dimension
-    n_po, n_en, n_ti = len(elevation), len(ien), len(vdf)
+    n_en, n_ti = len(ien), len(vdf)
     tt_ = vdf.time.data
 
-    # 3.3. particle velocity directions [nt, npo, ner]: sample k is the azimuth
-    # step k % 16 of the half-spin k // 16, so aze [nT, naz, npo, ner] reshapes in
-    # this order. The azimuths are those of the look directions (velocity at
-    # azimuth + 180 deg), the elevations the polar angles of the velocities.
-    phi = np.deg2rad(aze_data.reshape(n_ti, n_po, n_en))
+    # 3.3. particle velocity directions [nt, npo, ner]: each sample has the
+    # azimuths of its step in its half-spin (NaN without). The azimuths are
+    # those of the look directions (velocity at azimuth + 180 deg), the
+    # elevations the polar angles of the velocities.
+    phi = np.deg2rad(aze_data)
     theta = np.deg2rad(elevation)[None, :, None]
     v_dir = np.stack(
         [
@@ -209,8 +206,9 @@ def hpca_pad(
     cos_pa = np.sum(v_dir * b_hat, axis=-1)
     theta_b = np.rad2deg(np.arccos(np.clip(cos_pa, -1.0, 1.0)))
 
-    # 3.5. select dist for PAD
-    vdfs_ = [vdf.data.copy() for _ in range(len(angle_vec))]
+    # 3.5. select dist for PAD (NaN for the samples without azimuths)
+    vdf_data = np.where(np.isnan(phi), np.nan, vdf.data)
+    vdfs_ = [vdf_data.copy() for _ in range(len(angle_vec))]
 
     vdfs_[0][theta_b > angle_vec[0]] = np.nan
 

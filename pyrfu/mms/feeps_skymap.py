@@ -219,7 +219,7 @@ def feeps_skymap(
         survey data (a survey sample spans 45 degrees of the spin).
     to_psd : bool, Optional
         Convert the intensity to the relativistic phase-space density
-        (`dpf2psd` with ``relativistic=True``) in s^3/cm^6, as the FPI
+        (`dpf2psd`, ``relativistic`` attribute) in s^3/cm^6, as the FPI
         distributions. Default is True.
     fill_empty : {None, "ring", "omni"}, Optional
         Bins without data: left NaN (None, default), filled with the mean of
@@ -278,9 +278,11 @@ def feeps_skymap(
     are lower limits where the ``coverage`` attribute (fraction of the sphere
     with data, per time and energy) is below 1; see `fill_empty`. The skymaps
     have ``angle_integration = "exact"``, so that `psd_moments` integrates the
-    wide bins exactly, and ``relativistic = True``, so that `psd_moments` uses
-    the relativistic speeds (the non-relativistic moments underestimate the
-    electron density by about 10 % at the FEEPS energies). The moments and the
+    wide bins exactly, and ``relativistic = True``: their phase-space density
+    is the relativistic one, also when an intensity skymap is converted later
+    (it was True only with `to_psd`). The speeds are relativistic in all the
+    vdf routines (the non-relativistic moments underestimated the electron
+    density by about 10 % at the FEEPS energies). The moments and the
     reduced distributions (`reduce`) of the phase-space density are then the
     integrals of the intensity over the energy and the solid angle.
 
@@ -316,14 +318,16 @@ def feeps_skymap(
 
     psi, phase_source = _spin_phase(inp_dataset, b_bcs, b_dmpa)
     spin_sectors = np.asarray(inp_dataset.spinsectnum.data)
-    bounds = _spin_bounds(spin_sectors)
+    bounds = _spin_bounds(spin_sectors, inp_dataset.time.data)
     rings = _RINGS[d_type]
     phi_edges = np.linspace(0.0, 360.0, n_phi + 1)
 
     sums, counts = _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges)
 
     # The complete spins only
-    complete = np.isin(bounds[:-1], _complete_spins(spin_sectors)[0])
+    complete = np.isin(
+        bounds[:-1], _complete_spins(spin_sectors, inp_dataset.time.data)[0]
+    )
     sums, counts = sums[complete], counts[complete]
 
     with np.errstate(invalid="ignore"):
@@ -345,7 +349,9 @@ def feeps_skymap(
         "tmmode": tmmode,
         "spin_phase": phase_source,
         "angle_integration": "exact",
-        "relativistic": bool(to_psd),
+        # The relativistic phase-space density (convention of the
+        # conversions), also for the intensities converted later
+        "relativistic": True,
         "coverage": coverage,
         "fill_empty": str(fill_empty),
         "delta_phi_minus": np.full(phi.shape, 180.0 / n_phi),
@@ -388,7 +394,7 @@ def feeps_skymap(
 
     if to_psd:
         # s^3/cm^6, as the FPI distributions
-        out = dpf2psd(out, relativistic=True)
+        out = dpf2psd(out)
         out.data.data *= 1e-12
         out.data.attrs["UNITS"] = "s^3/cm^6"
 

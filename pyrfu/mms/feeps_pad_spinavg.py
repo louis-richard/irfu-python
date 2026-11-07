@@ -74,7 +74,7 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     if len(spin_sectors) != len(pad.time):
         raise ValueError("spin_sectors must have one value per time of pad")
 
-    spin_starts, spin_stops = _complete_spins(spin_sectors)
+    spin_starts, spin_stops = _complete_spins(spin_sectors, pad.time.data)
 
     data = pad.data
     spin_avg_flux = np.full([len(spin_starts), len(pad.theta)], np.nan)

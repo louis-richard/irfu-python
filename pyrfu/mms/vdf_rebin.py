@@ -9,7 +9,7 @@ import xarray as xr
 from ._psd_units import _attrs
 from ._vdf_bins import _is_skymap
 from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins
-from .vdf_convert import _PSD, vdf_convert
+from .vdf_convert import _PSD, _relativistic_psd
 from .vdf_shift import _shift
 from .vdf_velocity import _rotation_matrices
 
@@ -27,7 +27,9 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
     shape = tuple(len(e) - 1 for e in edges)
     volume = np.einsum("i,j,k->ijk", *(np.diff(e) for e in edges))
 
-    f_si = np.nan_to_num(vdf_convert(vdf, "s^3/m^6").data.data)
+    # Relativistic phase-space density and speeds (they were non-relativistic
+    # without the relativistic attribute)
+    f_si = np.nan_to_num(_relativistic_psd(vdf))
     bins = _source_bins(vdf, sc_pot)
     d3v = _bins_d3v(bins)
     rotations = _rotation_matrices(rotation, len(vdf.time))
@@ -100,8 +102,12 @@ def vdf_rebin(
     -------
     out : xarray.Dataset
         ``base="sph"``: skymap on the new bins, in the units of `vdf`, as
-        `vdf_shift`. ``base="cart"``: phase-space density (time, vx, vy, vz),
-        in the units of `vdf` if a phase-space density, else s^3/m^6, with the
+        `vdf_shift` (in its convention, ``relativistic`` attribute).
+        ``base="cart"``: relativistic phase-space density (time, vx, vy, vz)
+        at the relativistic speeds (for the FPI, HPCA and EIS skymaps, the
+        densities of the files times 2 gamma^5 / (gamma + 1): +5 % for
+        electrons at 5 keV), in the units of `vdf` if a phase-space density,
+        else s^3/m^6, with the
         box centres (km/s) as coordinates and the edges in the attributes
         ``vx_edges``, ``vy_edges`` and ``vz_edges``. Both have ``lost`` (time,),
         the fraction of the density outside the new grid.
@@ -205,7 +211,7 @@ def vdf_rebin(
     )
     out.attrs = {
         "species": vdf.attrs.get("species"),
-        "relativistic": bool(vdf.attrs.get("relativistic", False)),
+        "relativistic": True,
         "vx_edges": edges[0] / 1e3,
         "vy_edges": edges[1] / 1e3,
         "vz_edges": edges[2] / 1e3,

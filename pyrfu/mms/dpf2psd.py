@@ -14,6 +14,7 @@ from pyrfu.mms._psd_units import (
     _MASS_FACTOR,
     _data_and_units,
     _energy,
+    _is_relativistic,
     _mass_ratio,
     _output,
     _relativistic_factor,
@@ -64,9 +65,7 @@ def _convert(inp: np.ndarray, units: str, mass_ratio: float) -> np.ndarray:
     return tmp_data
 
 
-def dpf2psd(
-    inp: Union[Dataset, DataArray], relativistic: bool = False
-) -> Union[Dataset, DataArray]:
+def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
     r"""Compute phase space density from differential particle flux.
 
     Parameters
@@ -74,15 +73,6 @@ def dpf2psd(
     inp : DataArray or Dataset
         Time series of the differential particle flux in
         [(cm^{2} s sr keV)^{-1}].
-    relativistic : bool, Optional
-        Phase-space density in velocity space with the relativistic speeds,
-        f = gamma^3 m J / v^2, whose integral over the velocities (with
-        relativistic speeds, e.g. `psd_moments` with ``relativistic=True`` or
-        `reduce`) is the density. Default is False: f = m J / v^2 with the
-        non-relativistic speed, as FPI and irfu-matlab. For electrons, f is
-        larger by 4.5 % at 5 keV, 52 % at 50 keV and a factor 2.2 at 100 keV
-        (the moments much less, as the speeds are smaller).
-
     Returns
     -------
     psd : DataArray or Dataset
@@ -99,12 +89,23 @@ def dpf2psd(
     m_p^2 / (2 e^2) was 0.53707, with the atomic mass unit as irfu-matlab, and
     the phase-space densities were 1.46 % too small.
 
+    The phase-space density is in the convention of its ``relativistic``
+    attribute: the relativistic one, f = gamma^3 m J / v^2 with the
+    relativistic speed (the FEEPS skymaps), or without it the
+    non-relativistic one, f = m J / v^2 with v^2 = 2 E / m, as in the FPI,
+    HPCA and EIS files and irfu-matlab. The attribute is kept, so that the
+    conversions are inverse of each other.
+    For electrons, the relativistic f is larger by 4.5 % at 5 keV, 52 % at
+    50 keV and a factor 2.2 at 100 keV (the moments much less, as the speeds
+    are smaller). The ``relativistic`` argument was removed: the convention
+    is that of the data.
+
     """
 
     data, units = _data_and_units(inp)
     data = _convert(data, units, _mass_ratio(inp)) / _energy(inp, data)
 
-    if relativistic:
+    if _is_relativistic(inp):
         data = data * _relativistic_factor(inp, data)
 
     return _output(inp, data, "s^3/m^6")

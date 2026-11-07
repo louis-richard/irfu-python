@@ -21,6 +21,14 @@ energetic particle instruments (EIS, FEEPS) and HPCA.
 Data access configuration
 -------------------------
 
+The files read from the SDC and AWS are kept in a cache, so that reading the
+same data again needs no network: up to 1 GB, each file removed 4 h after its
+last use, in the user cache directory (e.g. ``~/Library/Caches/pyrfu/mms`` on
+macOS, ``~/.cache/pyrfu/mms`` on Linux), in the layout of the SDC. The file
+listings are kept for 4 h, so a file reprocessed meanwhile is seen after that,
+or after :func:`clear_cache`. :func:`db_init` sets the size, the age and the
+directory, or turns the cache off (``mms.db_init(cache=False)``).
+
 .. autosummary::
    :toctree: generated/
    :nosignatures:
@@ -28,6 +36,8 @@ Data access configuration
    db_init
    db_get_ts
    db_get_variable
+   cache_info
+   clear_cache
 
 Finding and downloading files
 -----------------------------

@@ -7,7 +7,9 @@ from scipy import constants, special
 
 # Local imports
 from ..pyrf.resample import resample
-from ._psd_units import _attrs
+from ._psd_units import _attrs, _is_relativistic
+from ._vdf_bins import _speed
+from .vdf_convert import _in_convention
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -95,7 +97,8 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
         energy = energy - sign * resample(sc_pot, vdf.time).data[:, None]
 
     below = energy < 0
-    speed = np.sqrt(2 * q_e * np.clip(energy, 0.0, None) / mass)
+    # Relativistic speeds (they were non-relativistic)
+    speed = _speed(np.clip(energy, 0.0, None), mass)
     speed = speed[..., None, None]
 
     # Particle velocity directions (minus the look directions), each time
@@ -125,4 +128,7 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     # Without the label of the input units if they differ (e.g. a DEF)
     model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/m^6")
 
-    return model_vdf
+    # The kappa distribution at the relativistic speeds is the relativistic
+    # phase-space density: in the convention of vdf (that of the FPI, HPCA and
+    # EIS files, divided by 2 gamma^5 / (gamma + 1)), comparable with it
+    return _in_convention(model_vdf, _is_relativistic(vdf))

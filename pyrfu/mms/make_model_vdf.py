@@ -11,8 +11,10 @@ from ..pyrf.resample import resample
 from ..pyrf.trace import trace
 
 # Local imports
-from ._psd_units import _attrs
+from ._psd_units import _attrs, _is_relativistic
+from ._vdf_bins import _speed
 from .rotate_tensor import rotate_tensor
+from .vdf_convert import _in_convention
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -59,11 +61,11 @@ def make_model_vdf(
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential.
     n_s : xarray.DataArray
-        Time series of the number density of specie s.
+        Time series of the number density of specie s, at the times of `vdf`.
     v_xyz : xarray.DataArray
-        Time series of the bulk velocity.
+        Time series of the bulk velocity, at the times of `vdf`.
     t_xyz : xarray.DataArray
-        Time series of the temperature tensor.
+        Time series of the temperature tensor, at the times of `vdf`.
     isotropic : bool, Optional
         Flag to make an isotropic model distribution. Default is False.
 
@@ -79,8 +81,8 @@ def make_model_vdf(
     Raises
     ------
     ValueError
-        If the species is not ions or electrons, or if vdf and the moments
-        have different times.
+        If the species is not ions or electrons, or if the moments (`n_s`,
+        `v_xyz` and `t_xyz`) are not at the times of `vdf`.
 
     See also
     --------
@@ -126,13 +128,13 @@ def make_model_vdf(
     if species[:1] not in ["i", "e"]:
         raise ValueError(f"Invalid species {vdf.attrs['species']!r}")
 
-    # Check that VDF and moments have the same timeline
-    d_times = vdf.time.data - n_s.time.data if len(vdf.time) == len(n_s.time) else None
-
-    if d_times is None or (
-        len(d_times) > 1 and np.median(np.diff(d_times)) != np.timedelta64(0, "ns")
-    ):
-        raise ValueError("VDF and moments have different times.")
+    # The moments are used by position: at the times of the VDF, as
+    # calculate_epsilon (the times of n_s only had to differ by a constant, so
+    # that moments 1 h away were accepted, and those of v_xyz and t_xyz were
+    # not checked)
+    for name, moment in zip(["n_s", "v_xyz", "t_xyz"], [n_s, v_xyz, t_xyz]):
+        if not np.array_equal(moment.time.data, vdf.time.data):
+            raise ValueError(f"VDF and moments have different times ({name}).")
 
     # Resample b_xyz and sc_pot to particle data resolution
     b_xyz, sc_pot = [resample(b_xyz, n_s), resample(sc_pot, n_s)]
@@ -194,7 +196,8 @@ def make_model_vdf(
     # Speeds corrected for the spacecraft potential, (time, energy, 1, 1)
     energy = vdf.energy.data.astype(np.float64) - sc_pot[:, None]
     below = energy < 0
-    speed = np.sqrt(2 * np.clip(energy, 0.0, None) * q_e / p_mass)[..., None, None]
+    # Relativistic speeds (they were non-relativistic)
+    speed = _speed(np.clip(energy, 0.0, None), p_mass)[..., None, None]
 
     # Bi-Maxwellian distribution function
     def _col(x):
@@ -215,4 +218,7 @@ def make_model_vdf(
     # Without the label of the input units if they differ (e.g. a DEF)
     model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/km^6")
 
-    return model_vdf
+    # The bi-Maxwellian at the relativistic speeds is the relativistic
+    # phase-space density: in the convention of vdf (that of the FPI, HPCA and
+    # EIS files, divided by 2 gamma^5 / (gamma + 1)), comparable with it
+    return _in_convention(model_vdf, _is_relativistic(vdf))

@@ -244,6 +244,34 @@ class AverageVDFTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["delta_energy_minus"].ndim, 2)
         self.assertEqual(len(result.attrs["delta_energy_minus"]), len(avg_inds))
 
+    def test_average_vdf_energy_widths(self):
+        # Without energy widths (get_dist leaves them out) or with None: the
+        # average without them (KeyError, TypeError); widths per channel
+        # (energy,) kept (they were sliced as times)
+        vdf = generate_vdf(64.0, 100, [32, 32, 16])
+        expected = pyrf.average_vdf(vdf, 3)
+
+        for widths in ["missing", None, np.arange(32.0)]:
+            other = vdf.copy()
+            other.attrs = {
+                k: v for k, v in vdf.attrs.items() if not k.startswith("delta_e")
+            }
+            if not isinstance(widths, str):
+                other.attrs["delta_energy_minus"] = widths
+                other.attrs["delta_energy_plus"] = widths
+
+            with self.subTest(widths=str(widths)[:10]):
+                result = pyrf.average_vdf(other, 3)
+                np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+                for key in ["delta_energy_minus", "delta_energy_plus"]:
+                    if isinstance(widths, str):
+                        self.assertNotIn(key, result.attrs)
+                    elif widths is None:
+                        self.assertIsNone(result.attrs[key])
+                    else:
+                        np.testing.assert_array_equal(result.attrs[key], widths)
+
     def test_average_vdf_delta_time(self):
         # A window spans its accumulations: n_pts times the sampling period
         vdf = generate_vdf(64.0, 100, [32, 32, 16])
@@ -2544,6 +2572,28 @@ class Datetime642UnixTestCase(unittest.TestCase):
                 pyrf.datetime642unix(value)
 
 
+class TimeUnitsTestCase(unittest.TestCase):
+    def test_datetime642iso8601_units(self):
+        # Any datetime64 unit (arrays in s, min, h or D raised TypeError), so
+        # also datetime2iso8601 of a scalar in s or D and the tint of get_ts
+        expected = "2019-01-01T00:00:00.000000000"
+        for unit in ["ns", "us", "ms", "s", "m", "h", "D"]:
+            time = np.array(["2019-01-01"], dtype=f"datetime64[{unit}]")
+            self.assertEqual(pyrf.datetime642iso8601(time)[0], expected)
+
+        self.assertEqual(pyrf.datetime2iso8601(np.datetime64("2019-01-01")), expected)
+        self.assertEqual(
+            pyrf.datetime2iso8601(np.datetime64("2019-01-01T00:00:00")), expected
+        )
+
+    def test_datetime642unix_nat(self):
+        # NaN for NaT, as iso86012unix (it was the int64 of NaT, -9.2e9 s)
+        time = np.array(["NaT", "2019-01-01"], dtype="datetime64[ns]")
+        np.testing.assert_array_equal(
+            pyrf.datetime642unix(time), [np.nan, 1546300800.0]
+        )
+
+
 class Unix2Datetime64TestCase(unittest.TestCase):
     def test_unix2datetime64_input(self):
         with self.assertRaises(TypeError):
@@ -3297,6 +3347,50 @@ class EbspTestCase(unittest.TestCase):
             run(fac_matrix=fac_matrix[:-1])
 
 
+class MicrosecondTimesTestCase(unittest.TestCase):
+    # xarray keeps datetime64[us] time coordinates (from datetime objects,
+    # pandas 3): the times were taken as ns, so the sampling frequencies came
+    # out 1000 times too large (psd, wave_fft), start and end 1000 times too
+    # small, and ebsp returned no times (or raised IndexError)
+    @staticmethod
+    def _series(unit, n_comp=None, n_t=2048, f_s=64.0):
+        rng = np.random.default_rng(0)
+        time = np.datetime64("2019-01-01T00:00:00", "ns")
+        time = time + (np.arange(n_t) / f_s * 1e9).astype("timedelta64[ns]")
+        shape = (n_t,) if n_comp is None else (n_t, n_comp)
+        dims = ["time"] if n_comp is None else ["time", "comp"]
+        coords = [time] if n_comp is None else [time, ["x", "y", "z"]]
+        out = xr.DataArray(rng.standard_normal(shape), coords=coords, dims=dims)
+        return out.assign_coords(time=time.astype(f"datetime64[{unit}]"))
+
+    def test_psd_wave_fft(self):
+        ref, inp = self._series("ns"), self._series("us")
+        xr.testing.assert_identical(pyrf.psd(inp, n_fft=256), pyrf.psd(ref, n_fft=256))
+
+        for out, expected in zip(
+            pyrf.wave_fft(inp, "hann", frame_overlap=1, frame_length=2),
+            pyrf.wave_fft(ref, "hann", frame_overlap=1, frame_length=2),
+        ):
+            np.testing.assert_array_equal(out, expected)
+
+    def test_start_end(self):
+        ref, inp = self._series("ns"), self._series("us")
+        self.assertEqual(pyrf.start(inp), pyrf.start(ref))
+        self.assertEqual(pyrf.end(inp), pyrf.end(ref))
+        self.assertEqual(pyrf.start(ref), 1546300800.0)
+
+    def test_ebsp(self):
+        ref = [self._series("ns", 3) for _ in range(3)]
+        inp = [self._series("us", 3) for _ in range(3)]
+        out = pyrf.ebsp(None, inp[0], inp[1], inp[2], None, [1, 10], fac=True)
+        expected = pyrf.ebsp(None, ref[0], ref[1], ref[2], None, [1, 10], fac=True)
+
+        np.testing.assert_array_equal(
+            out["bb_xxyyzzss"].data, expected["bb_xxyyzzss"].data
+        )
+        np.testing.assert_array_equal(out["t"], expected["t"])
+
+
 class EndTestCase(unittest.TestCase):
     def test_end_input(self):
         with self.assertRaises(AssertionError):
@@ -3595,6 +3689,8 @@ class GetOmniDataTestCase(unittest.TestCase):
             hours, dtype="timedelta64[h]"
         )
         np.testing.assert_array_equal(out.time.data, expected)
+        # In ns, as the other time series (pandas 3 gave us)
+        self.assertEqual(out.time.dtype, np.dtype("datetime64[ns]"))
         self.assertListEqual(tint, tint_in)  # not modified
         self.assertIn("spacecraft=omni2&start_date=20190914&end_date=2019091", url)
         self.assertTrue(url.endswith("&vars=8&vars=24&vars=41"))
@@ -5899,6 +5995,18 @@ class ResampleTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             pyrf.resample(inp, self._ts(np.arange(10) / 32.0, np.zeros(10)))
 
+        # The other way round, with any method: the numeric times of ref were
+        # cast to datetime64 (1970 epochs) and the values extrapolated
+        # decades away, or the default method raised RuntimeError
+        for method in ["", "linear", "nearest"]:
+            with self.subTest(method=method):
+                with self.assertRaisesRegex(TypeError, "both have datetime64"):
+                    pyrf.resample(
+                        self._ts(np.arange(10) / 32.0, np.arange(10.0)),
+                        ref,
+                        method=method,
+                    )
+
     def test_resample_extrapolation(self):
         # Linear extrapolation outside the time range of inp (as irf_resamp)
         inp = self._ts(np.arange(10.0), np.arange(10.0))
@@ -6882,6 +6990,47 @@ class TimeClipTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["scalar"], 1.0)
         self.assertEqual(result.attrs["name"], "test")
         self.assertEqual(inp.attrs["delta"].shape, (20, 2))
+
+    def test_time_clip_distribution_attrs(self):
+        # The per-time attributes of a distribution are clipped, its per-bin
+        # ones are not, whatever their length: 32 times, 32 energy channels and
+        # per-bin widths of 32 (the energy tables were clipped to the times kept)
+        vdf = generate_vdf(64.0, 32, (32, 32, 16), energy01=True)
+        widths = np.random.random((32, 32))
+        vdf.attrs = {
+            **vdf.attrs,
+            "delta_energy_minus": widths,
+            "delta_time_plus": np.arange(32.0),
+            "delta_phi_minus": np.ones((32, 32)),
+            "delta_theta_minus": np.full(32, 5.625),
+            "delta_pitchangle_minus": np.full(32, 7.5),
+            "label": np.arange(32.0),
+        }
+        result = pyrf.time_clip(vdf, vdf.time.data[[3, 10]])
+        self.assertEqual(len(result.time), 8)
+
+        for key in ["esteptable", "delta_energy_minus", "delta_time_plus"]:
+            np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key][3:11])
+
+        self.assertEqual(result.attrs["delta_phi_minus"].shape, (8, 32))
+
+        for key in [
+            "energy0",
+            "energy1",
+            "delta_theta_minus",
+            "delta_pitchangle_minus",
+        ]:
+            np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key])
+
+        # Other attributes: by their length, as before
+        np.testing.assert_array_equal(result.attrs["label"], np.arange(3.0, 11.0))
+
+        # Energy widths per channel (EIS, (energy,)) are not clipped
+        vdf.attrs["delta_energy_minus"] = np.arange(32.0)
+        result = pyrf.time_clip(vdf, vdf.time.data[[3, 10]])
+        np.testing.assert_array_equal(
+            result.attrs["delta_energy_minus"], np.arange(32.0)
+        )
 
 
 class TsConvolveTestCase(unittest.TestCase):

@@ -69,7 +69,7 @@ def feeps_sector_spec(inp_alle):
 
     sector_time = inp_alle["spinsectnum"].time.data
     sector_data = inp_alle["spinsectnum"].data.astype(int)
-    spin_starts, spin_stops = _complete_spins(sector_data)
+    spin_starts, spin_stops = _complete_spins(sector_data, sector_time)
 
     out_dict = {}
 

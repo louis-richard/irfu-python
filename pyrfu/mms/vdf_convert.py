@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from ._psd_units import _data_and_units, _output, _relativistic_factor
-from ._vdf_bins import _relativistic
+from ._psd_units import _data_and_units, _is_relativistic, _output, _relativistic_factor
 from .def2psd import def2psd
 from .dpf2psd import dpf2psd
 from .psd2def import psd2def
@@ -44,26 +43,20 @@ def _check(units):
     return units.lower()
 
 
-def _to_psd_si(inp, units, relativistic):
-    # Phase-space density in s^3/m^6
+def _to_psd_si(inp, units):
+    # Phase-space density in s^3/m^6, in the convention of inp
     data, _ = _data_and_units(inp)
 
     if units in _PSD:
         return _output(inp, data * _PSD[units], "s^3/m^6")
 
     if units in _DEF:
-        out = def2psd(inp)
+        return def2psd(inp)
 
-        if relativistic:
-            data, _ = _data_and_units(out)
-            out = _output(out, data * _relativistic_factor(inp, data), "s^3/m^6")
-
-        return out
-
-    return dpf2psd(inp, relativistic=relativistic)
+    return dpf2psd(inp)
 
 
-def _from_psd_si(psd, units, relativistic):
+def _from_psd_si(psd, units):
     # From the phase-space density in s^3/m^6 to units
     data, _ = _data_and_units(psd)
 
@@ -71,17 +64,43 @@ def _from_psd_si(psd, units, relativistic):
         return _output(psd, data / _PSD[units], _NAMES[units])
 
     if units in _DEF:
-        if relativistic:
-            psd = _output(psd, data / _relativistic_factor(psd, data), "s^3/m^6")
-
         out = psd2def(psd)
         return _output(out, _data_and_units(out)[0], _NAMES[units])
 
-    out = psd2dpf(psd, relativistic=relativistic)
+    out = psd2dpf(psd)
     return _output(out, _data_and_units(out)[0] / _DPF[units], _NAMES[units])
 
 
-def vdf_convert(vdf, units: str, relativistic: bool = None):
+def _relativistic_psd(vdf):
+    r"""Relativistic phase-space density (s^3/m^6, array) of a distribution:
+    its data in s^3/m^6, times 2 gamma^5 / (gamma + 1) at the energies of its
+    bins if they are the non-relativistic one (FPI, HPCA, EIS), for the
+    integrals over the velocities with the relativistic speeds."""
+    data = _data_and_units(vdf_convert(vdf, "s^3/m^6"))[0]
+
+    if _is_relativistic(vdf):
+        return data
+
+    return data * _relativistic_factor(vdf, data)
+
+
+def _in_convention(out, relativistic: bool):
+    r"""Distribution `out` whose data are a relativistic phase-space density,
+    in the convention `relativistic` (divided by 2 gamma^5 / (gamma + 1) at
+    its energies for the non-relativistic one), with the attribute."""
+    data, units = _data_and_units(out)
+    out = out.copy()
+
+    if relativistic:
+        out.attrs["relativistic"] = True
+    else:
+        out = _output(out, data / _relativistic_factor(out, data), units)
+        out.attrs.pop("relativistic", None)
+
+    return out
+
+
+def vdf_convert(vdf, units: str):
     r"""Converts a distribution or a spectrum to other units, as irfu-matlab
     PDist.convertto.
 
@@ -97,11 +116,6 @@ def vdf_convert(vdf, units: str, relativistic: bool = None):
         "eV/(cm^2 s sr eV)") or a differential particle flux
         ("1/(cm^2 s sr keV)", "1/(cm^2 s sr eV)"). The input units are taken
         from ``UNITS`` and are one of these (case-insensitive).
-    relativistic : bool, Optional
-        The phase-space density is the relativistic one (see `dpf2psd`).
-        Default is the ``relativistic`` attribute of `vdf` if any (True for the
-        FEEPS skymaps), else False. It changes only the conversions between
-        phase-space densities and fluxes.
 
     Returns
     -------
@@ -112,6 +126,13 @@ def vdf_convert(vdf, units: str, relativistic: bool = None):
     ------
     ValueError
         If the input or new units, or the species, are not supported.
+
+    Notes
+    -----
+    The phase-space density is in the convention of the ``relativistic``
+    attribute of `vdf` (see `dpf2psd`), kept by the conversion: the
+    relativistic one for the FEEPS skymaps, the non-relativistic one for the
+    FPI, HPCA and EIS files. The ``relativistic`` argument was removed.
 
     See Also
     --------
@@ -128,10 +149,8 @@ def vdf_convert(vdf, units: str, relativistic: bool = None):
     _, old_units = _data_and_units(vdf)
     old_units, new_units = _check(old_units), _check(units)
 
-    relativistic = _relativistic(vdf, relativistic)
-
     if old_units == new_units:
         return _output(vdf, _data_and_units(vdf)[0].copy(), _NAMES[new_units])
 
-    psd = _to_psd_si(vdf, old_units, relativistic)
-    return _from_psd_si(psd, new_units, relativistic)
+    psd = _to_psd_si(vdf, old_units)
+    return _from_psd_si(psd, new_units)

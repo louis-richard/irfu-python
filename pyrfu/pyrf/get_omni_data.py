@@ -285,7 +285,9 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     columns = {
         var: values[:, codes_unique.index(code)] for var, code in zip(variables, codes)
     }
-    data = pd.DataFrame(columns, index=pd.DatetimeIndex(times, name="time"))
+    # Times in ns, as the other time series (pandas 3 gives us)
+    index = pd.DatetimeIndex(times, name="time").as_unit("ns")
+    data = pd.DataFrame(columns, index=index)
 
     # Times whose averaging interval [t, t + resolution) overlaps tint
     t_start, t_end = [pd.Timestamp(t_) for t_ in tint]

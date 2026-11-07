@@ -149,6 +149,13 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
 
     pitch_angles = angles_v - d_angles / 2
 
+    # The distribution of tint, with its per-time attributes (step table,
+    # energy widths: they were kept at full length, so that the energy edges
+    # of vdf_d3v and vdf_flux of the output fell back to midpoints)
+    if tint is not None:
+        b_xyz = time_clip(b_xyz, tint)
+        vdf = time_clip(vdf, tint)
+
     vdf_data = vdf.data
     energy = vdf.energy.data
 
@@ -156,12 +163,6 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
     phi = vdf.phi.data
     if phi.ndim == 1:
         phi = np.broadcast_to(phi, (len(vdf.time), len(phi)))
-
-    if tint is not None:
-        b_xyz = time_clip(b_xyz, tint)
-        vdf_data = time_clip(vdf_data, tint)
-        in_tint = np.isin(vdf.time.data, vdf_data.time.data)
-        energy, phi = energy[in_tint], phi[in_tint]
 
     time = vdf_data.time.data
     data = vdf_data.data

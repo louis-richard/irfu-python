@@ -111,7 +111,7 @@ def _binned(pad, sc_pot, scale):
     data[data <= 0] = np.nan
 
     v_lower, v_upper = (
-        np.mean(edge, axis=0) / scale for edge in _speed_edges(pad, sc_pot, None)
+        np.mean(edge, axis=0) / scale for edge in _speed_edges(pad, sc_pot)
     )
     a_lower, a_upper = _polar_edges(_pitch_angles(pad), pad.attrs, "pitchangle")
 
@@ -136,7 +136,7 @@ def _monte_carlo(pad, sc_pot, scale, n_mc, n_grid, random_state):
     n_valid = np.sum(valid, axis=0)
     data = np.where(valid & (data > 0), data, 0.0)
 
-    v_lower, v_upper = _speed_edges(pad, sc_pot, None)
+    v_lower, v_upper = _speed_edges(pad, sc_pot)
     a_lower, a_upper = _polar_edges(_pitch_angles(pad), pad.attrs, "pitchangle")
     # Bins of a skymap with B along z and one gyrophase bin
     n_t = len(pad.time)
@@ -291,7 +291,8 @@ def plot_pad_polar(
     The colour is the phase-space density averaged over gyrophase in each
     bin (`pyrfu.mms.get_pitch_angle_dist`), not a reduced distribution (the
     integral of f over v_perp dphi, see `pyrfu.mms.reduce`). The speeds are
-    in km/s, in 10^3 km/s for electrons.
+    relativistic (they were non-relativistic without the ``relativistic``
+    attribute), in km/s, in 10^3 km/s for electrons.
 
     By default the bins are drawn from their edges: the energy edges from
     the ``delta_energy_minus`` and ``delta_energy_plus`` attributes

@@ -27,10 +27,10 @@ def _rng(random_state):
     return np.random.default_rng(random_state)
 
 
-def _source_bins(vdf, sc_pot=None, relativistic=None):
+def _source_bins(vdf, sc_pot=None):
     r"""Edges of the bins of a skymap: speeds (m/s, time x energy), azimuths
     (degrees, time x phi) and cosines of the polar angles (theta,)."""
-    v_lower, v_upper = _speed_edges(vdf, sc_pot, relativistic)
+    v_lower, v_upper = _speed_edges(vdf, sc_pot)
     phi_lower, phi_upper = _phi_edges(vdf)
     theta_lower, theta_upper = _theta_edges(vdf)
     return {
@@ -77,14 +77,12 @@ def _sample(rng, bins, i_t, i_e, i_p, i_q):
     )
 
 
-def _speed_to_energy(speed, mass, relativistic):
-    r"""Kinetic energy (eV) of particles of speed (m/s)."""
-    if relativistic:
-        # gamma - 1 = beta^2 / (s (1 + s)), s = sqrt(1 - beta^2), without
-        # cancellation
-        beta2 = (speed / constants.c) ** 2
-        root = np.sqrt(1.0 - beta2)
-        gamma_1 = beta2 / (root * (1.0 + root))
-        return gamma_1 * mass * constants.c**2 / constants.elementary_charge
-
-    return 0.5 * mass * speed**2 / constants.elementary_charge
+def _speed_to_energy(speed, mass):
+    r"""Kinetic energy (eV) of particles of relativistic speed (m/s); it was
+    non-relativistic without the ``relativistic`` attribute."""
+    # gamma - 1 = beta^2 / (s (1 + s)), s = sqrt(1 - beta^2), without
+    # cancellation
+    beta2 = (np.asarray(speed) / constants.c) ** 2
+    root = np.sqrt(1.0 - beta2)
+    gamma_1 = beta2 / (root * (1.0 + root))
+    return gamma_1 * mass * constants.c**2 / constants.elementary_charge

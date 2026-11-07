@@ -106,6 +106,19 @@ def _make_path(file, var, lasp_url, data_path: str = ""):
     return out_path, out_file, download_url
 
 
+def _wanted(file_name: str, var: dict) -> bool:
+    r"""File of the request: of the plan (MAG coordinates, the end of the
+    fourth field of the MAG file names, e.g. "pl" in
+    mvn_mag_l2_2015001pl_20150101_v01_r01.sts) and of the file extension,
+    when var has them. With a plan and no extension, the .sts files (only the
+    MAG .sts files with the plan were downloaded, KeyError without it)."""
+    if "plan" in var and file_name.split("_")[3][7:] != var["plan"]:
+        return False
+
+    extension = var.get("file_extension", "sts" if "plan" in var else None)
+    return extension is None or file_name.endswith(f".{extension}")
+
+
 def download_data(var, tint, login: str = "", password: str = "", data_path: str = ""):
     r"""Downloads files containing field `var_str` over the time interval
     `tint`. The files are saved to `data_path`.
@@ -118,6 +131,13 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         - inst: instrument acronym (acc, euv, iuv, kp, lpw, mag, ngi, pfp, sep,
           sta, swe, swi)
         - level: data levels (l1a, l1b, l2, l3, insitu (KP only), iuv (KP only))
+        - plan (Optional): MAG coordinates, e.g. "pl" (planetocentric) or
+          "ss" (sun-state), the end of the fourth field of the MAG file names
+          (mvn_mag_l2_2015001pl_20150101_v01_r01.sts); with a plan, the .sts
+          files unless file_extension is given
+        - file_extension (Optional): e.g. "cdf" or "sts"
+
+        Without plan and file_extension, all the files found are downloaded.
 
     tint : list of str
         Time interval.
@@ -129,6 +149,13 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         https://lasp.colorado.edu/maven/sdc/public/
     data_path : str, Optional
         Path of MAVEN data. If None use `pyrfu/mms/config.json`
+
+    Raises
+    ------
+    FileNotFoundError
+        If no file is found, or none of the plan and file extension (only the
+        MAG .sts files of the plan were downloaded: the other instruments
+        downloaded nothing, silently).
 
     """
 
@@ -148,39 +175,37 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         warnings.simplefilter("ignore", category=ResourceWarning)
         http_json = sdc_session.get(url, verify=True, headers=headers).json()
 
-    if not http_json["files"]:
+    files = [f for f in http_json["files"] if _wanted(f["file_name"], var)]
+
+    if not files:
         raise FileNotFoundError("No files to download!!")
 
-    for file in http_json["files"]:
+    for file in files:
         out_path, out_file, dwl_url = _make_path(file, var, lasp_url, data_path)
-        plan = out_file.split("/")[-1].split("_")[3][7:]
-        if plan == var["plan"] and out_file[-3:] == "sts":
 
-            logger.info(
-                "Downloading %s from %s...", os.path.basename(out_file), dwl_url
-            )
+        logger.info("Downloading %s from %s...", file["file_name"], dwl_url)
 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=ResourceWarning)
-                with sdc_session.get(
-                    dwl_url,
-                    stream=True,
-                    verify=True,
-                    headers=headers,
-                ) as fsrc:
-                    with NamedTemporaryFile(delete=False) as ftmp:
-                        with tqdm.tqdm.wrapattr(
-                            fsrc.raw,
-                            "read",
-                            total=file["file_size"],
-                            ncols=60,
-                        ) as fsrc_raw:
-                            with open(ftmp.name, "wb") as fs:
-                                copyfileobj(fsrc_raw, fs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ResourceWarning)
+            with sdc_session.get(
+                dwl_url,
+                stream=True,
+                verify=True,
+                headers=headers,
+            ) as fsrc:
+                with NamedTemporaryFile(delete=False) as ftmp:
+                    with tqdm.tqdm.wrapattr(
+                        fsrc.raw,
+                        "read",
+                        total=file["file_size"],
+                        ncols=60,
+                    ) as fsrc_raw:
+                        with open(ftmp.name, "wb") as fs:
+                            copyfileobj(fsrc_raw, fs)
 
-                    os.makedirs(out_path, exist_ok=True)
+                os.makedirs(out_path, exist_ok=True)
 
-                    # if the download was successful, copy to data directory
-                    copy(ftmp.name, out_file)
+                # if the download was successful, copy to data directory
+                copy(ftmp.name, out_file)
 
     sdc_session.close()

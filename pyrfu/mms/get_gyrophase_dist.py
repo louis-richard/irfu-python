@@ -170,6 +170,13 @@ def get_gyrophase_dist(
     if pitch_angle_range is not None and len(pitch_angle_range) != 2:
         raise ValueError("pitch_angle_range must be [min, max] in degrees")
 
+    # The distribution of tint, with its per-time attributes (step table,
+    # energy and azimuthal widths: they were kept at full length, so that the
+    # energy edges of vdf_flux of the output fell back to midpoints)
+    if tint is not None:
+        b_xyz = time_clip(b_xyz, tint)
+        vdf = time_clip(vdf, tint)
+
     vdf_data = vdf.data
     energy = vdf.energy.data
 
@@ -179,13 +186,6 @@ def get_gyrophase_dist(
         phi = np.broadcast_to(phi, (len(vdf.time), len(phi)))
 
     solid_angles = _solid_angles(vdf, len(vdf.time))
-
-    if tint is not None:
-        b_xyz = time_clip(b_xyz, tint)
-        vdf_data = time_clip(vdf_data, tint)
-        in_tint = np.isin(vdf.time.data, vdf_data.time.data)
-        energy, phi = energy[in_tint], phi[in_tint]
-        solid_angles = solid_angles[in_tint]
 
     time = vdf_data.time.data
     data = vdf_data.data

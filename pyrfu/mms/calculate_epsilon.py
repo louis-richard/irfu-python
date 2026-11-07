@@ -6,11 +6,12 @@ from typing import Optional
 
 # 3rd party imports
 import numpy as np
-from scipy import constants
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
+from pyrfu.mms._psd_units import _is_relativistic, _relativistic_factor
+from pyrfu.mms._vdf_bins import _charge_sign, _mass, _speed
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
@@ -21,11 +22,11 @@ __license__ = "MIT"
 __version__ = "2.4.13"
 __status__ = "Prototype"
 
-q_e = constants.elementary_charge
-
 
 def _get_si_vdf(vdf: Dataset) -> np.ndarray:
-    r"""Convert vdf to SI units (s^3 m^-6).
+    r"""Relativistic phase-space density of vdf in SI units (s^3 m^-6): that
+    of the FPI, HPCA and EIS files (non-relativistic) times 2 gamma^5 /
+    (gamma + 1), so that the data and the model are in the same convention.
 
     Parameters
     ----------
@@ -46,6 +47,9 @@ def _get_si_vdf(vdf: Dataset) -> np.ndarray:
         out = vdf.data.data.copy() * 1e12
     else:
         raise ValueError("Invalid units for vdf.")
+
+    if not _is_relativistic(vdf):
+        out = out * _relativistic_factor(vdf, out)
 
     return out
 
@@ -120,14 +124,11 @@ def calculate_epsilon(
     # NaNs (e.g., fill values) don't contribute to the integral
     vdf_diff = np.nan_to_num(np.abs(vdf_data - model_vdf_data), nan=0.0)
 
-    if vdf.attrs["species"][0].lower() == "e":
-        m_s = constants.electron_mass
-        v_sc = sc_pot.data.astype(np.float64)
-    elif vdf.attrs["species"][0].lower() == "i":
-        m_s = constants.proton_mass
-        v_sc = -sc_pot.data.astype(np.float64)
-    else:
-        raise ValueError("Invalid specie")
+    # Mass of the species of the table of the vdf routines (the species was
+    # taken from its first letter: "protons" and "hydrogen+" raised)
+    m_s = _mass(vdf)
+    v_sc = sc_pot.data.astype(np.float64)
+    v_sc = v_sc if _charge_sign(vdf) < 0 else -v_sc
 
     if not np.array_equal(vdf.time.data, n_s.time.data):
         raise ValueError("vdf and moments have different times.")
@@ -169,15 +170,16 @@ def calculate_epsilon(
         energy_upper = np.where(step_table, energy_upper1, energy_upper0)
         energy_lower = np.where(step_table, energy_lower1, energy_lower0)
 
-    def _speed(energy_):
-        # Speed after correction for the spacecraft potential; zero below it
-        # (as MATLAB's real(sqrt(...)); numpy's sqrt would give NaN and drop the
-        # whole channel from the integral)
+    def _speed_corrected(energy_):
+        # Relativistic speed after correction for the spacecraft potential;
+        # zero below it (as MATLAB's real(sqrt(...)); numpy's sqrt would give
+        # NaN and drop the whole channel from the integral). It was
+        # non-relativistic.
         energy_corr = np.clip(energy_ - v_sc[:, None], 0.0, None)
-        return np.sqrt(2 * q_e * energy_corr / m_s)
+        return _speed(energy_corr, m_s)
 
-    velocity = _speed(energy)
-    delta_v = _speed(energy_upper) - _speed(energy_lower)
+    velocity = _speed_corrected(energy)
+    delta_v = _speed_corrected(energy_upper) - _speed_corrected(energy_lower)
 
     # Weights of the integral over velocity space: v^2 dv (time, energy) and
     # sin(theta) dphi dtheta (theta), broadcast instead of tiled; phi as

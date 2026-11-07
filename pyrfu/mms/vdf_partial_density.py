@@ -4,7 +4,7 @@
 # Local imports
 from ._psd_units import _output
 from ._vdf_bins import _d3v, _is_skymap
-from .vdf_convert import vdf_convert
+from .vdf_convert import _relativistic_psd
 from .vdf_velocity import vdf_velocity
 
 __author__ = "Louis Richard"
@@ -20,7 +20,6 @@ def vdf_partial_density(
     component: str = None,
     sc_pot=None,
     rotation=None,
-    relativistic: bool = None,
 ):
     r"""Partial density or particle flux of each bin of a distribution, as
     irfu-matlab PDist.dn and PDist.dj.
@@ -41,17 +40,16 @@ def vdf_partial_density(
     rotation : array_like, Optional
         Rotation of the velocities for the particle flux, see
         `vdf_velocity`.
-    relativistic : bool, Optional
-        Relativistic phase-space density and speeds. Default is the
-        ``relativistic`` attribute of `vdf` if any (True for the FEEPS
-        skymaps), else False.
 
     Returns
     -------
     out : xarray.Dataset
-        Copy of `vdf` with the partial densities or fluxes of the bins. Their
+        Copy of `vdf` with the partial densities or fluxes of the bins, with
+        the relativistic speeds and the relativistic phase-space density (that
+        of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)). Their
         sum over the energies and angles is the density (particle flux) of
-        `psd_moments` with the same energy and angular bins.
+        `psd_moments` with the same energy and angular bins, to the
+        quadrature (within 1 % on the FPI grids).
 
     Raises
     ------
@@ -78,15 +76,14 @@ def vdf_partial_density(
     if component is not None and not _is_skymap(vdf):
         raise ValueError("The particle flux needs a skymap")
 
-    if relativistic is None:
-        relativistic = vdf.attrs.get("relativistic", False)
-
-    f_si = vdf_convert(vdf, "s^3/m^6", relativistic).data.data
-    d_n = f_si * _d3v(vdf, sc_pot, relativistic)  # m^-3
+    # Relativistic speeds and phase-space density (they were non-relativistic
+    # without the relativistic attribute)
+    f_si = _relativistic_psd(vdf)
+    d_n = f_si * _d3v(vdf, sc_pot)  # m^-3
 
     if component is None:
         return _output(vdf, d_n / 1e6, "cm^-3")
 
-    velocity = vdf_velocity(vdf, sc_pot, rotation, relativistic)
+    velocity = vdf_velocity(vdf, sc_pot, rotation)
     d_j = d_n * velocity[f"v{component}"].data * 1e3  # m^-2 s^-1
     return _output(vdf, d_j / 1e4, "1/(cm^2 s)")

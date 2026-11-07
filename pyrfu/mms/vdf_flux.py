@@ -10,7 +10,7 @@ from ._vdf_bins import (
     _is_skymap,
     _speed_edges,
 )
-from .vdf_convert import vdf_convert
+from .vdf_convert import _relativistic_psd
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -20,7 +20,7 @@ __version__ = "2.5.1"
 __status__ = "Prototype"
 
 
-def vdf_flux(vdf, sc_pot=None, per_sr: bool = True, relativistic: bool = None):
+def vdf_flux(vdf, sc_pot=None, per_sr: bool = True):
     r"""Particle flux of each bin of a skymap or a pitch-angle distribution,
     as irfu-matlab PDist.flux.
 
@@ -36,17 +36,14 @@ def vdf_flux(vdf, sc_pot=None, per_sr: bool = True, relativistic: bool = None):
     per_sr : bool, Optional
         Flux per steradian, 1/(cm^2 s sr) (True, default), or flux through
         the solid angle of the bin, 1/(cm^2 s).
-    relativistic : bool, Optional
-        Relativistic phase-space density and speeds. Default is the
-        ``relativistic`` attribute of `vdf` if any (True for the FEEPS
-        skymaps), else False.
 
     Returns
     -------
     out : xarray.Dataset
         Copy of `vdf` with the flux of the particles of each bin, the integral
         of f v^3 dv over the energy channel, (v_2^4 - v_1^4) / 4 f (times the
-        solid angle if `per_sr` is False).
+        solid angle if `per_sr` is False), with the relativistic speeds and
+        phase-space density (`vdf_partial_density`).
 
     Notes
     -----
@@ -63,11 +60,10 @@ def vdf_flux(vdf, sc_pot=None, per_sr: bool = True, relativistic: bool = None):
     """
     _is_skymap(vdf)
 
-    if relativistic is None:
-        relativistic = vdf.attrs.get("relativistic", False)
-
-    f_si = vdf_convert(vdf, "s^3/m^6", relativistic).data.data
-    v_lower, v_upper = _speed_edges(vdf, sc_pot, relativistic)
+    # Relativistic speeds and phase-space density (they were non-relativistic
+    # without the relativistic attribute)
+    f_si = _relativistic_psd(vdf)
+    v_lower, v_upper = _speed_edges(vdf, sc_pot)
     flux = f_si * _broadcast_energy((v_upper**4 - v_lower**4) / 4, f_si) / 1e4
 
     if per_sr:

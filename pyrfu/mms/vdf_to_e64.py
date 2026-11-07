@@ -33,13 +33,15 @@ def vdf_to_e64(vdf_e32):
     Parameters
     ----------
     vdf_e32 : xarray.Dataset
-        Time series of the particle distribution with 32 energy channels.
+        Time series of the particle distribution with 32 energy channels (or
+        those kept by `vdf_elim`) in two alternating tables.
 
     Returns
     -------
     vdf_e64 : xarray.Dataset
-        Time series of the particle distribution with 64 energy channels, or
-        a copy of `vdf_e32` if its two energy tables are the same.
+        Time series of the particle distribution with 64 energy channels
+        (twice those of `vdf_e32`), or a copy of `vdf_e32` if its two energy
+        tables are the same.
 
     Notes
     -----

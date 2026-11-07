@@ -4,6 +4,8 @@
 # Built-in imports
 import json
 import logging
+import math
+import numbers
 import os
 import shutil
 from typing import Literal, Optional
@@ -108,6 +110,9 @@ _DEFAULT_CONFIG = {
     "local": ".",
     "sdc": {"rights": "public", "username": "username"},
     "aws": "",
+    # Cache of the files read from the SDC and AWS: on, 1 GB, files removed 4 h
+    # after their last use, in the user cache directory ("")
+    "cache": {"enabled": True, "size": 1e9, "max_age": 4.0, "dir": ""},
 }
 
 
@@ -130,7 +135,47 @@ def _read_config() -> dict:
             {k: v for k, v in current["sdc"].items() if k in ["rights", "username"]}
         )
 
+    if isinstance(current.get("cache"), dict):
+        config["cache"].update(
+            {k: v for k, v in current["cache"].items() if k in config["cache"]}
+        )
+
     return config
+
+
+def _set_cache(config, enabled, size, max_age, directory):
+    r"""Sets the given cache settings of `config` (checked). A directory is
+    saved as an absolute path, so that the cache is the same from every
+    working directory."""
+    if enabled is not None and not isinstance(enabled, bool):
+        raise TypeError(f"cache must be True or False, not {enabled!r}")
+
+    for name, value in [("cache_size", size), ("cache_max_age", max_age)]:
+        if value is None:
+            continue
+
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            raise TypeError(f"{name} must be a number, not {value!r}")
+
+        if math.isnan(value) or value <= 0.0:
+            raise ValueError(f"{name} must be positive")
+
+    if directory is not None and not isinstance(directory, (str, os.PathLike)):
+        raise TypeError(f"cache_dir must be a path, not {directory!r}")
+
+    if directory:
+        directory = os.path.normpath(
+            os.path.abspath(os.path.expanduser(os.fspath(directory)))
+        )
+
+    for key, value in [
+        ("enabled", enabled),
+        ("size", None if size is None else float(size)),
+        ("max_age", None if max_age is None else float(max_age)),
+        ("dir", None if directory is None else os.fspath(directory)),
+    ]:
+        if value is not None:
+            config[key] = value
 
 
 def db_init(
@@ -140,6 +185,10 @@ def db_init(
     sdc_username: Optional[str] = None,
     sdc_password: Optional[str] = None,
     aws: Optional[str] = None,
+    cache: Optional[bool] = None,
+    cache_size: Optional[float] = None,
+    cache_max_age: Optional[float] = None,
+    cache_dir: Optional[str] = None,
     reset: bool = False,
 ) -> None:
     r"""Manage the MMS data access configuration.
@@ -175,6 +224,22 @@ def db_init(
         Bucket name and prefix to MMS data in AWS S3, as "bucket/prefix". Empty
         (the default) uses the public MMS archive on NASA HelioCloud
         ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms", no AWS credentials needed).
+    cache : bool, Optional
+        Keep the files read from the SDC and AWS, and the file listings for
+        `cache_max_age`, in a cache, so that reading them again needs no
+        network. Default is True. A file reprocessed on the SDC or AWS is seen
+        when the listing expires, or after :func:`pyrfu.mms.clear_cache`.
+    cache_size : float, Optional
+        Maximum size of the cache (bytes): the least recently used files are
+        removed above it, and larger files are not cached. Default is 1e9.
+    cache_max_age : float, Optional
+        Hours after their last use when the cached files are removed, and
+        after which the file listings are made again. Default is 4.
+    cache_dir : str, Optional
+        Directory of the cache, in the layout of the SDC (that of a `local`
+        directory), saved as an absolute path. Empty (the default) uses the
+        user cache directory, e.g. ~/Library/Caches/pyrfu/mms on macOS,
+        ~/.cache/pyrfu/mms on Linux.
     reset : bool, Optional
         Start from the default settings instead of the current ones. The
         keyring is not changed. Default is False.
@@ -185,9 +250,13 @@ def db_init(
         If the default resource is not implemented.
     FileNotFoundError
         If the local path doesn't exist.
+    TypeError
+        If `cache` is not a bool, `cache_size` or `cache_max_age` not a number,
+        or `cache_dir` not a path.
     ValueError
-        If the SDC rights are not "public" or "sitl", or if `sdc_password` is
-        given without `sdc_username`.
+        If the SDC rights are not "public" or "sitl", if `sdc_password` is
+        given without `sdc_username`, or if `cache_size` or `cache_max_age` is
+        not positive.
 
     Examples
     --------
@@ -200,6 +269,11 @@ def db_init(
     Save the MMS SDC team credentials and use them
 
     >>> mms.db_init(sdc="sitl", sdc_username="user", sdc_password="password")
+
+    Keep up to 5 GB of files for a day, or turn the cache off
+
+    >>> mms.db_init(cache_size=5e9, cache_max_age=24)
+    >>> mms.db_init(cache=False)
 
     """
     config = json.loads(json.dumps(_DEFAULT_CONFIG)) if reset else _read_config()
@@ -214,7 +288,9 @@ def db_init(
     if local is not None or reset:
         # Normalize the path and make sure that it exists
         local = os.path.normpath(
-            os.path.abspath(config["local"] if local is None else local)
+            os.path.abspath(
+                os.path.expanduser(config["local"] if local is None else local)
+            )
         )
 
         if not os.path.exists(local):
@@ -236,6 +312,8 @@ def db_init(
 
     if aws is not None:
         config["aws"] = aws
+
+    _set_cache(config["cache"], cache, cache_size, cache_max_age, cache_dir)
 
     # First configuration: the current directory, as an absolute path
     if not os.path.isabs(config["local"]):

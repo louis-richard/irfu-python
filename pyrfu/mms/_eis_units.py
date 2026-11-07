@@ -35,3 +35,14 @@ def _check_same_units(inps, name):
 
     if len(units) > 1:
         raise ValueError(f"The {name} have different UNITS: {units}")
+
+
+def _check_same_attrs(inps, keys, name):
+    r"""ValueError unless the inputs (DataArrays) have the same attributes
+    `keys` (e.g. the species, the method of the PADs), or none of them (they
+    were combined whatever they were)."""
+    for key in keys:
+        values = sorted({str(inp.attrs.get(key)) for inp in inps})
+
+        if len(values) > 1:
+            raise ValueError(f"The {name} have different {key}: {values}")

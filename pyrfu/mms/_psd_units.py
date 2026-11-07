@@ -87,17 +87,30 @@ def _energy(inp, data):
     return energy.reshape(shape)
 
 
-def _relativistic_factor(inp, data):
+def _is_relativistic(inp):
+    r"""True if the phase-space density of `inp` is the relativistic one
+    (``relativistic`` attribute, the FEEPS skymaps), False for the
+    non-relativistic one (the FPI, HPCA and EIS files)."""
+    return bool(inp.attrs.get("relativistic", False))
+
+
+def _factor(energy, mass_ratio):
     r"""Ratio of the relativistic to the non-relativistic phase-space density
-    in velocity space for the same intensity, 2 gamma^5 / (gamma + 1), shaped
-    as the energies of `_energy`.
+    in velocity space for the same intensity, 2 gamma^5 / (gamma + 1), at the
+    kinetic energies (eV) of particles of mass `mass_ratio` (proton masses).
 
     The non-relativistic conversions use f = m J / v^2 with v^2 = 2 E / m. In
     velocity space, the phase-space density whose integral over d^3v is the
     density is f = gamma^3 m J / v^2 with the relativistic speed v."""
-    rest_energy = _mass_ratio(inp) * constants.proton_mass * constants.c**2
-    gamma = 1.0 + constants.elementary_charge * _energy(inp, data) / rest_energy
+    rest_energy = mass_ratio * constants.proton_mass * constants.c**2
+    energy = np.asarray(energy, dtype=np.float64)
+    gamma = 1.0 + constants.elementary_charge * energy / rest_energy
     return 2.0 * gamma**5 / (gamma + 1.0)
+
+
+def _relativistic_factor(inp, data):
+    r"""`_factor` at the energies of `inp`, shaped as those of `_energy`."""
+    return _factor(_energy(inp, data), _mass_ratio(inp))
 
 
 def _attrs(attrs, units):

@@ -13,7 +13,12 @@ from pycdfpp import load
 # Local imports
 from ..pyrf.ts_append import ts_append
 from .db_get_ts import _resolve_source
-from .get_data import _check_times, _get_file_content_sources, _list_files_sources
+from .get_data import (
+    _check_times,
+    _file_label,
+    _get_file_content_sources,
+    _list_files_sources,
+)
 from .get_ts import get_ts
 
 __author__ = "Louis Richard"
@@ -173,15 +178,17 @@ def get_eis_allt(
         file_content = _get_file_content_sources(
             resource, file_name, sdc_session, headers
         )
+        # The name of the file in the messages (the S3 object was printed)
+        label = _file_label(file_name)
         cdf_names, file_energy = _eis_names(
-            load(file_content), pref, specie, data_unit, file_name
+            load(file_content), pref, specie, data_unit, label
         )
 
         if energy is None:
             energy = file_energy
         elif not np.array_equal(energy[""], file_energy[""]):
             raise ValueError(
-                f"The energy table changes in {file_name}: split the time interval"
+                f"The energy table changes in {label}: split the time interval"
             )
 
         for key, cdf_name in cdf_names.items():

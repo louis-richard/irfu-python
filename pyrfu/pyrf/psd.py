@@ -89,7 +89,10 @@ def psd(
         n_fft = n_persegs
         logger.warning("nfft < n_persegs. set to n_persegs")
 
-    f_samp = 1e9 / np.median(np.diff(inp.time.data)).astype(np.float64)
+    # Sampling frequency from the time steps in ns (in us, as xarray keeps the
+    # times, the frequencies were 1000 times too large)
+    time = inp.time.data.astype("datetime64[ns]")
+    f_samp = 1e9 / np.median(np.diff(time)).astype(np.float64)
 
     freqs, p_xx = signal.welch(
         inp.data,

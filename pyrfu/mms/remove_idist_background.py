@@ -3,7 +3,10 @@
 
 # 3rd party imports
 import numpy as np
-from scipy import constants
+
+# Local imports
+from ._vdf_bins import _charge_sign
+from .vdf_convert import _DEF, vdf_convert
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -21,14 +24,34 @@ def remove_idist_background(vdf, def_bg):
     Parameters
     ----------
     vdf : xarray.Dataset
-        Ion velocity distribution function.
+        Ion velocity distribution function, in any units of `vdf_convert`
+        (``UNITS``, s^3/cm^6 if missing).
     def_bg : xarray.DataArray
-        Omni-directional ion differential energy flux.
+        Omni-directional ion differential energy flux of the background, at
+        the times of `vdf` (e.g. ``defbgi_fpi_brst_l2``), in
+        keV/(cm^2 s sr keV) (``UNITS``, the default) or eV/(cm^2 s sr eV).
 
     Returns
     -------
     vdf_new : xarray.Dataset
-        Ion velocity distribution function cleaned.
+        Ion velocity distribution function cleaned, in the units of `vdf`.
+
+    Raises
+    ------
+    ValueError
+        If `vdf` is an electron distribution (see `remove_edist_background`),
+        `def_bg` is not at the times of `vdf` or is not a differential energy
+        flux, or the units of `vdf` are not supported.
+
+    Notes
+    -----
+    The background flux is taken in all the directions and converted to the
+    units of `vdf` at its energies with the mass of its species
+    (`vdf_convert`): it was converted to s^3/cm^6 with the proton mass
+    whatever the units of `vdf` (nothing was removed from a distribution in
+    s^3/m^6), and used by position. As irfu-matlab
+    mms.remove_ion_penetrating_radiation_bg, the values that become negative
+    are set to 0.
 
     References
     ----------
@@ -39,27 +62,33 @@ def remove_idist_background(vdf, def_bg):
             Research: Space Physics, 124, https://doi.org/10.1029/2019JA026980
 
     """
+    if _charge_sign(vdf) < 0:
+        raise ValueError(
+            "vdf must be an ion distribution (electrons: remove_edist_background)"
+        )
 
-    # Tile background flux to number of energy channels of the
-    # FPI-DIS instrument
-    def_bg_tmp = np.tile(def_bg.data[:, np.newaxis], (1, vdf.energy.shape[1]))
+    if not np.array_equal(def_bg.time.data, vdf.time.data):
+        raise ValueError("def_bg must be at the times of vdf")
 
-    # Convert differential energy flux (cm^2 s sr)^{-1} of the background
-    # population (penetrating radiations) to phase-space density (s^3 m^{-6})
-    coeff = constants.proton_mass / (constants.elementary_charge * vdf.energy.data)
-    vdf_bg = def_bg_tmp.copy() * 1e4 / 2
-    vdf_bg *= coeff**2
-    vdf_bg /= 1e12
+    bg_units = str(def_bg.attrs.get("UNITS", "keV/(cm^2 s sr keV)"))
 
-    # Tile the background phase-space density to number of azimuthal
-    # and elevation angles channels of the FPI-DIS instrument
-    vdf_bg = np.tile(
-        vdf_bg[:, :, np.newaxis, np.newaxis],
-        (1, 1, vdf.phi.shape[1], vdf.theta.shape[0]),
-    )
+    if bg_units.lower() not in _DEF:
+        raise ValueError(f"def_bg must be a differential energy flux, not {bg_units}")
+
+    units = str(vdf.data.attrs.get("UNITS", "s^3/cm^6"))
+
+    # The background flux in all the directions, in the units of vdf
+    shape = (-1,) + (1,) * (vdf.data.ndim - 1)
+    flux = np.asarray(def_bg.data, dtype=np.float64).reshape(shape)
+    vdf_bg = vdf.copy()
+    vdf_bg["data"] = vdf.data.copy(data=np.broadcast_to(flux, vdf.data.shape))
+    vdf_bg.data.attrs = {"UNITS": bg_units}
+
+    with np.errstate(divide="ignore"):  # channels at 0 eV
+        vdf_bg = vdf_convert(vdf_bg, units)
 
     vdf_new = vdf.copy(deep=True)  # deep: the caller's VDF is unchanged
-    vdf_new.data.data -= vdf_bg.data
-    vdf_new.data.data[vdf_new.data.data < 0] = 0.0
+    data = vdf_new.data.data - vdf_bg.data.data
+    vdf_new.data.data[...] = np.where(data < 0, 0.0, data)
 
     return vdf_new
