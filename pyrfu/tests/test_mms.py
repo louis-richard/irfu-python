@@ -1012,10 +1012,11 @@ class DbInitTestCase(unittest.TestCase):
             {"enabled": True, "size": 1e9, "max_age": 4.0, "dir": ""},
         )
 
-        mms.db_init(cache=False, cache_size=5e9, cache_max_age=24, cache_dir="/tmp/c")
+        # A directory of the test (an absolute path, saved as is)
+        cache_dir = os.path.join(self.tmp_dir.name, "c")
+        mms.db_init(cache=False, cache_size=5e9, cache_max_age=24, cache_dir=cache_dir)
         mms.db_init(cache_size=2e9)
-        # cache_dir saved as an absolute path (D:\tmp\c on Windows)
-        cache_dir = os.path.normpath(os.path.abspath("/tmp/c"))
+        cache_dir = os.path.normpath(os.path.abspath(cache_dir))
         self.assertDictEqual(
             self._config()["cache"],
             {"enabled": False, "size": 2e9, "max_age": 24.0, "dir": cache_dir},

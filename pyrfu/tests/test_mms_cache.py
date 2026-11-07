@@ -198,9 +198,10 @@ class CacheReadTestCase(_CacheTestCase):
         # Fetched once, then from the cache, in the layout of the SDC; the
         # sub-directory of the source is for the user only (all the levels
         # below were 0755: os.makedirs gives its mode to the last one), the
-        # cache directory is left as it is; a read is a use
-        os.makedirs(self.dir, mode=0o755)
-        os.chmod(self.dir, 0o755)
+        # cache directory is left as it is (here readable by the group, in
+        # the private temporary directory of the test); a read is a use
+        os.makedirs(self.dir, mode=0o740)
+        os.chmod(self.dir, 0o740)
         fetch = mock.Mock(return_value=b"cdf")
 
         self.assertEqual(_cache.read(self.remote, fetch), b"cdf")
@@ -217,7 +218,7 @@ class CacheReadTestCase(_CacheTestCase):
 
         if sys.platform != "win32":
             self.assertEqual(os.stat(self._path("aws")).st_mode & 0o777, 0o700)
-            self.assertEqual(os.stat(self.dir).st_mode & 0o777, 0o755)
+            self.assertEqual(os.stat(self.dir).st_mode & 0o777, 0o740)
             _cache.listing({"k": 1}, lambda: [{"path": "a"}])
             self.assertEqual(os.stat(self._path("listings")).st_mode & 0o777, 0o700)
 
