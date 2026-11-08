@@ -3,22 +3,19 @@
 
 # Built-in imports
 import datetime
-import fnmatch
 import glob
-import json
 import os
 import re
 from typing import Optional, Union
 
 # 3rd party imports
 import numpy as np
-import pandas as pd
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime import iso86012datetime
 from ..pyrf.iso86012datetime64 import iso86012datetime64
-from .db_init import MMS_CFG_PATH
+from .db_init import _read_config
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -58,7 +55,8 @@ def list_files_ancillary(
         Ancillary type: {"predatt", "predeph", "predq", "defatt", "defeph",
         "defq"}.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu.mms.mms_config.py`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     Returns
     -------
@@ -68,20 +66,12 @@ def list_files_ancillary(
     """
 
     # Check path
-    if not data_path:
-        # Read the current version of the MMS configuration file
-        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        root_path = os.path.normpath(config["local"])
-    else:
-        root_path = os.path.normpath(data_path)
+    root_path = os.path.normpath(data_path or _read_config()["local"])
 
     # Make sure that the data path exists
     assert os.path.exists(root_path), f"{root_path} doesn't exist!!"
 
-    if isinstance(mms_id, int):
-        mms_id = str(mms_id)
+    mms_id = str(mms_id)
 
     # Check time interval
     if isinstance(tint, list):
@@ -92,13 +82,12 @@ def list_files_ancillary(
     # Convert time interval to ISO 8601
     if isinstance(tint_array[0], str):
         tint_iso8601 = datetime642iso8601(iso86012datetime64(tint_array))
-        tint_datetime = iso86012datetime(tint_iso8601)
+        t_start, t_end = iso86012datetime(tint_iso8601)
     else:
         raise TypeError("Values must be in str!!")
 
     # PAD time interval to handle ancillary file start after midnight
-    tint_datetime[0] = tint_datetime[0] - datetime.timedelta(days=1)
-    # tint_datetime[1] = tint_datetime[1] + datetime.timedelta(days=1)
+    t_start -= datetime.timedelta(days=1)
 
     # directory and file name search patterns
     # For now
@@ -113,47 +102,34 @@ def list_files_ancillary(
     #   and start/endDate is YYYYDOY
     #   and version is Vnn (.V00, .V01, etc..)
     sc_name = _sc_name(product, mms_id)
-    dir_pattern = os.sep.join([root_path, "ancillary", sc_name, product])
-    file_pattern = "_".join([sc_name.upper(), product.upper(), "???????_???????.V??"])
+    stem = f"{sc_name.upper()}_{product.upper()}"
+    directory = os.path.join(root_path, "ancillary", sc_name, product)
 
-    # find all files in the directory
-    files = glob.glob(os.sep.join([dir_pattern, file_pattern]))
+    # find all files in the directory (escaped: a data path with glob
+    # characters, e.g. mms_data[2], found no file)
+    files = glob.glob(os.path.join(glob.escape(directory), f"{stem}_*.V??"))
 
-    # find the files within the time interval
-    fname_fmt = (
-        f"{sc_name.upper()}_{product.upper()}_([0-9]{{7}})_([0-9]{{7}}).V[0-9]{{2}}"
+    # Latest version of each file in the time interval, the file names matched
+    # without the directory (the version was picked by fnmatch on the paths)
+    file_regex = re.compile(
+        rf"{re.escape(stem)}_([0-9]{{7}})_([0-9]{{7}})\.V([0-9]{{2}})"
     )
-
-    if os.name == "nt":
-        full_path = os.sep.join([re.escape(dir_pattern) + os.sep, fname_fmt])
-    else:
-        full_path = os.sep.join([re.escape(dir_pattern), fname_fmt])
-
-    file_regex = re.compile(full_path)
-
-    files_in_tint = []
+    latest = {}
 
     for file in files:
-        time_match = file_regex.match(file)
-        if time_match is not None:
-            start_time = pd.to_datetime(time_match.group(1), format="%Y%j")
-            end_time = pd.to_datetime(time_match.group(2), format="%Y%j")
-            if start_time < tint_datetime[1] and end_time >= tint_datetime[0]:
-                files_in_tint.append(file)
+        matches = file_regex.fullmatch(os.path.basename(file))
 
-    # ensure only the latest version of each file is loaded
-    out_files = []
+        if matches is None:
+            continue
 
-    for file_in_tint in files_in_tint:
-        this_file = file_in_tint[0:-3] + "V??"
-        versions = fnmatch.filter(files_in_tint, this_file)
-        if len(versions) > 1:
-            # only grab the latest version
-            out_files.append(sorted(versions)[-1])
-        else:
-            out_files.append(versions[0])
+        start, end, version = matches.groups()
+        start_time = datetime.datetime.strptime(start, "%Y%j")
+        end_time = datetime.datetime.strptime(end, "%Y%j")
 
-    file_names = list(set(out_files))
-    file_names.sort()
+        if start_time < t_end and end_time >= t_start:
+            if (start, end) not in latest or version > latest[start, end][0]:
+                latest[start, end] = (version, file)
+
+    file_names = sorted(file for _, file in latest.values())
 
     return file_names

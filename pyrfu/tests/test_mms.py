@@ -11994,7 +11994,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
         # The default resource of the configuration (a temporary one, also for
         # the local path of the local lister)
         db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
-        lister = importlib.import_module("pyrfu.mms.list_files_ancillary")
+        db_init = importlib.import_module("pyrfu.mms.db_init")
         files, contents = self._defatt_files()
         session = self._sdc(files, contents)
         self._write("defatt", files[1]["file_name"], contents[1].splitlines())
@@ -12008,7 +12008,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             session.get.reset_mock()
             with (
                 mock.patch.object(db_get_ts, "MMS_CFG_PATH", path),
-                mock.patch.object(lister, "MMS_CFG_PATH", path),
+                mock.patch.object(db_init, "MMS_CFG_PATH", path),
             ):
                 result = mms.load_ancillary("defatt", self.tint, 1, False)
             db_get_ts._load_config_cached.cache_clear()
@@ -12040,6 +12040,74 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
             )
 
         self.assertListEqual(result, [])
+
+    _TINT = ["2019-09-14T07:54:00", "2019-09-14T08:00:00"]  # day 257
+
+    @staticmethod
+    def _touch(directory, names):
+        os.makedirs(directory, exist_ok=True)
+        for name in names:
+            with open(os.path.join(directory, name), "wb"):
+                pass
+
+    @data(1, "1")
+    def test_list_files_ancillary_versions(self, mms_id):
+        # Files covering the interval padded by a day before, latest version of
+        # each, in time order; other file names are ignored
+        names = [
+            "MMS1_DEFATT_2019250_2019251.V00",  # before
+            "MMS1_DEFATT_2019256_2019257.V00",
+            "MMS1_DEFATT_2019256_2019257.V01",
+            "MMS1_DEFATT_2019257_2019258.V09",
+            "MMS1_DEFATT_2019257_2019258.V10",
+            "MMS1_DEFATT_2019258_2019259.V00",  # after
+            "MMS1_DEFATT_2019xyz_2019258.V00",  # not a date
+            "MMS1_DEFATT_2019257_2019258.V00.part",
+        ]
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(os.path.join(root, "ancillary", "mms1", "defatt"), names)
+            result = mms.list_files_ancillary(self._TINT, mms_id, "defatt", root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["MMS1_DEFATT_2019256_2019257.V01", "MMS1_DEFATT_2019257_2019258.V10"],
+        )
+
+    def test_list_files_ancillary_glob_characters(self):
+        # A data path with glob characters (nothing was found in mms_data[2])
+        name = "MMS_DEFQ_2019257_2019258.V00"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = os.path.join(tmp_dir, "mms_data[2]")
+            self._touch(os.path.join(root, "ancillary", "mms", "defq"), [name])
+            result = mms.list_files_ancillary(self._TINT, 3, "defq", root)
+
+        self.assertListEqual([os.path.basename(f) for f in result], [name])
+
+    def test_list_files_ancillary_config_path(self):
+        # Without data_path, the local path of the MMS configuration
+        module = sys.modules["pyrfu.mms.list_files_ancillary"]
+        name = "MMS2_DEFEPH_2019257_2019258.V00"
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(os.path.join(root, "ancillary", "mms2", "defeph"), [name])
+            with mock.patch.object(
+                module, "_read_config", return_value={"local": root}
+            ):
+                result = mms.list_files_ancillary(self._TINT, 2, "defeph")
+
+        self.assertListEqual([os.path.basename(f) for f in result], [name])
+
+    def test_list_files_ancillary_input(self):
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaises(TypeError):
+                mms.list_files_ancillary(tuple(self._TINT), 1, "defatt", root)
+
+            with self.assertRaises(TypeError):
+                mms.list_files_ancillary(
+                    list(pyrf.iso86012datetime64(np.array(self._TINT))),
+                    1,
+                    "defatt",
+                    root,
+                )
 
 
 @ddt
