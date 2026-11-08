@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import logging
 import os
 from typing import Literal, Optional, Union
 
 # Local imports
-from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.download_data import _download_file
 from pyrfu.mms.list_files_ancillary import _sc_name
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
@@ -48,7 +47,8 @@ def _make_path_local(
     mms_id : str or int
         Spacecraft index.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu/mms/config.json`.
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     Returns
     -------
@@ -61,14 +61,7 @@ def _make_path_local(
         If the local data directory doesn't exist.
 
     """
-    if not data_path:
-        # Read the current version of the MMS configuration file
-        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        data_path = os.path.normpath(config["local"])
-    else:
-        data_path = os.path.normpath(data_path)
+    data_path = os.path.normpath(data_path or _read_config()["local"])
 
     if not os.path.exists(data_path):
         raise FileNotFoundError("local data directory doesn't exist!")
@@ -104,7 +97,8 @@ def download_ancillary(
         Spacecraft index (not used for "defq" and "predq", which cover the
         four spacecraft: ancillary/mms/defq).
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu/mms/config.json`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     """
     # List files in MMS SDC that match the request

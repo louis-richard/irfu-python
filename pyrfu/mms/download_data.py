@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import logging
 import os
+import uuid
 from typing import Optional, Union
 
 # 3rd party imports
@@ -12,7 +12,7 @@ import tqdm
 from dateutil.parser import parse
 
 # Local imports
-from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_data import _var_and_cdf_name
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 
@@ -40,7 +40,8 @@ def _make_path_local(
     mms_id : str or int
         Spacecraft index.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu/mms/config.json`.
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     Returns
     -------
@@ -55,14 +56,7 @@ def _make_path_local(
     """
     file_date = parse(file["timetag"])
 
-    if not data_path:
-        # Read the current version of the MMS configuration file
-        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        data_path = os.path.normpath(config["local"])
-    else:
-        data_path = os.path.normpath(data_path)
+    data_path = os.path.normpath(data_path or _read_config()["local"])
 
     if not os.path.exists(data_path):
         raise FileNotFoundError("local data directory doesn't exist!")
@@ -87,9 +81,11 @@ def _download_file(
     session, url: str, headers: dict, out_file: str, size: Optional[int] = None
 ):
     r"""Download url to out_file, through a temporary file next to it so that a
-    failed or interrupted download never leaves a partial file."""
+    failed or interrupted download never leaves a partial file. The temporary
+    file is the download's own: concurrent downloads of a file shared
+    out_file.part, and the second one raised FileNotFoundError."""
     os.makedirs(os.path.dirname(out_file), exist_ok=True)
-    part_file = f"{out_file}.part"
+    part_file = f"{out_file}.{uuid.uuid4().hex}.part"
 
     try:
         with session.get(
@@ -98,7 +94,7 @@ def _download_file(
             response.raise_for_status()
 
             with (
-                open(part_file, "wb") as fs,
+                open(part_file, "xb") as fs,
                 tqdm.tqdm(total=size, unit="B", unit_scale=True, ncols=60) as progress,
             ):
                 for chunk in response.iter_content(chunk_size=1 << 20):
@@ -128,7 +124,8 @@ def download_data(
     mms_id : str or int
         Index of the target spacecraft.
     data_path : str, Optional
-        Path of MMS data. If None use `pyrfu/mms/config.json`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     """
     var, _ = _var_and_cdf_name(var_str, mms_id)

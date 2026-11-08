@@ -7284,7 +7284,8 @@ class DownloadAncillaryTestCase(unittest.TestCase):
     def test_download_ancillary_default_path(self):
         # The local data path of the configuration
         config = _write_config(self, self.root)
-        with mock.patch.object(self.module, "MMS_CFG_PATH", config):
+        db_init = importlib.import_module("pyrfu.mms.db_init")
+        with mock.patch.object(db_init, "MMS_CFG_PATH", config):
             tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
             self.module.download_ancillary("defatt", tint, 1)
         self._check()
@@ -7423,6 +7424,61 @@ class DownloadDataTestCase(unittest.TestCase):
                         _sdc_session(**error), "url", {}, out_file
                     )
                 self.assertListEqual(os.listdir(root), [])
+
+    def test_download_file_concurrent(self):
+        # A second download of the file while the first one is running (e.g.
+        # two notebooks on the same interval): both complete (they shared
+        # out_file.part, the first one raised FileNotFoundError at the end)
+        with tempfile.TemporaryDirectory() as root:
+            out_file = os.path.join(root, "file.cdf")
+
+            def first_chunks(chunk_size=1):
+                yield b"cdf"
+                self.module._download_file(_sdc_session(), "url", {}, out_file)
+                yield b"data"
+
+            session = _sdc_session()
+            session.get.return_value.iter_content.side_effect = first_chunks
+            self.module._download_file(session, "url", {}, out_file)
+
+            with open(out_file, "rb") as file:
+                self.assertEqual(file.read(), b"cdfdata")
+            self.assertListEqual(os.listdir(root), ["file.cdf"])
+
+    @unittest.skipIf(os.name == "nt", "POSIX file modes")
+    def test_download_file_mode(self):
+        # The downloaded file has the mode of the files created by the user
+        # (umask), as before: the temporary file is not created private
+        umask = os.umask(0o022)
+        try:
+            with tempfile.TemporaryDirectory() as root:
+                out_file = os.path.join(root, "file.cdf")
+                self.module._download_file(_sdc_session(), "url", {}, out_file)
+                mode = os.stat(out_file).st_mode & 0o777
+        finally:
+            os.umask(umask)
+
+        self.assertEqual(mode, 0o644)
+
+    def test_make_path_local(self):
+        # Burst files in a day directory, the local path of the configuration
+        # by default, FileNotFoundError for a missing data directory
+        var = {"inst": "fpi", "tmmode": "brst", "lev": "l2", "dtype": "des-moms"}
+        name = "mms2_fpi_brst_l2_des-moms_20190914075223_v3.4.0.cdf"
+        file = {"file_name": name, "timetag": "2019-09-14T07:52:23"}
+        with tempfile.TemporaryDirectory() as root:
+            with mock.patch.object(
+                self.module, "_read_config", return_value={"local": root}
+            ):
+                result = self.module._make_path_local(file, var, 2)
+
+            expected = os.path.join(
+                root, "mms2", "fpi", "brst", "l2", "des-moms", "2019", "09", "14", name
+            )
+            self.assertEqual(result, expected)
+
+            with self.assertRaises(FileNotFoundError):
+                self.module._make_path_local(file, var, 2, os.path.join(root, "x"))
 
     def test_download_data(self):
         files = [
