@@ -959,6 +959,45 @@ class DbGetVariableTestCase(unittest.TestCase):
         self.assertTupleEqual(out.dims, ("x", "y"))
         np.testing.assert_array_equal(out.data, variable.values)
 
+    def test_get_variable_attributes(self):
+        # Attributes of one entry as their value (a list for several values:
+        # it was a list of one list, e.g. VALIDMIN of the FGM vectors),
+        # datetime64 for times, the entries of the global attributes of several
+        times = np.array(["2019-09-14T07:54:00", "2019-09-14T08:11:00"], "<M8[ns]")
+        cdf = pycdfpp.CDF()
+        cdf.add_attribute("Logical_source", ["mms1_fgm_srvy_l2"])
+        cdf.add_attribute("Mods", ["v1", "v2"])
+        cdf.add_variable("b", values=np.ones((3, 4)))
+        for key, value, data_type in [
+            ("UNITS", "nT", None),
+            ("VALIDMIN", np.array([-17000.0, -17000.0, -17000.0, 0.0]), None),
+            ("FILLVAL", np.array([-1e31]), None),
+            ("T_START", times[:1], pycdfpp.DataType.CDF_TIME_TT2000),
+            ("T_RANGE", times, pycdfpp.DataType.CDF_TIME_TT2000),
+        ]:
+            if data_type is None:
+                cdf["b"].add_attribute(key, value)
+            else:
+                cdf["b"].add_attribute(key, value, data_type)
+        content = bytes(pycdfpp.save(cdf))
+
+        out = mms.get_variable(content, "b")
+        self.assertEqual(out.attrs["UNITS"], "nT")
+        self.assertListEqual(out.attrs["VALIDMIN"], [-17000.0, -17000.0, -17000.0, 0.0])
+        self.assertListEqual(out.attrs["FILLVAL"], [-1e31])
+        self.assertEqual(out.attrs["T_START"], times[0])
+        self.assertEqual(out.attrs["T_START"].dtype, np.dtype("<M8[ns]"))
+        np.testing.assert_array_equal(out.attrs["T_RANGE"], times)
+        self.assertTupleEqual(out.dims, ("x", "y"))
+
+        module = importlib.import_module("pyrfu.mms.get_variable")
+        glob_attrs = module._pycdfpp_attributes_to_dict(
+            pycdfpp.load(content).attributes
+        )
+        self.assertDictEqual(
+            glob_attrs, {"Logical_source": "mms1_fgm_srvy_l2", "Mods": ["v1", "v2"]}
+        )
+
 
 class DbInitTestCase(unittest.TestCase):
     # db_init writes to a temporary configuration file and in-memory keyrings,
