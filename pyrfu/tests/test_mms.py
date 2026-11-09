@@ -32,7 +32,12 @@ import pytest
 import requests
 import xarray as xr
 from botocore import UNSIGNED
-from botocore.exceptions import ClientError
+from botocore.exceptions import (
+    ClientError,
+    IncompleteReadError,
+    ReadTimeoutError,
+    ResponseStreamingError,
+)
 from ddt import data, ddt, idata, unpack
 from scipy import constants
 from scipy.special import gammainc
@@ -7173,6 +7178,59 @@ class GetDataDownloadTestCase(unittest.TestCase):
 
         with self.assertLogs("pyrfu", level="ERROR"), self.assertRaises(ClientError):
             self.module._get_file_content_sources("aws", s3_object)
+
+        s3_object.get.assert_called_once()  # not retried
+
+    @staticmethod
+    def _s3_object(reads):
+        # S3 object whose successive responses read the given contents, or
+        # raise the given errors
+        s3_object = mock.Mock(key="mms1/file.cdf")
+        responses = []
+        for read in reads:
+            body = mock.Mock()
+            body.read.side_effect = [read]
+            responses.append({"Body": body})
+        s3_object.get.side_effect = responses
+        return s3_object
+
+    _READ_ERRORS = [
+        ResponseStreamingError(error=ConnectionResetError("Connection reset by peer")),
+        ReadTimeoutError(endpoint_url="https://s3", error="timed out"),
+        IncompleteReadError(actual_bytes=1, expected_bytes=7),
+    ]
+
+    @idata(_READ_ERRORS)
+    def test_get_file_content_aws_retry(self, error):
+        # A connection reset (or timed out) while the file is received: the
+        # file is requested again (the error was raised at once)
+        s3_object = self._s3_object([error, b"cdfdata"])
+
+        with (
+            mock.patch.object(self.module.time, "sleep") as sleep,
+            self.assertLogs("pyrfu", level="WARNING") as logs,
+        ):
+            content = self.module._get_file_content_sources("aws", s3_object)
+
+        self.assertEqual(content, b"cdfdata")
+        self.assertEqual(s3_object.get.call_count, 2)
+        sleep.assert_called_once_with(1)
+        self.assertIn("mms1/file.cdf", logs.output[0])
+
+    def test_get_file_content_aws_retry_exhausted(self):
+        # Raised after three attempts, 1 s then 2 s apart
+        s3_object = self._s3_object(self._READ_ERRORS)
+
+        with (
+            mock.patch.object(self.module.time, "sleep") as sleep,
+            self.assertLogs("pyrfu", level="WARNING") as logs,
+        ):
+            with self.assertRaises(IncompleteReadError):
+                self.module._get_file_content_sources("aws", s3_object)
+
+        self.assertEqual(s3_object.get.call_count, 3)
+        self.assertListEqual(sleep.call_args_list, [mock.call(1), mock.call(2)])
+        self.assertTrue(logs.output[-1].startswith("ERROR"))
 
     def test_get_file_content_sdc_error(self):
         session = mock.Mock()

@@ -5,11 +5,17 @@
 import logging
 import os
 import posixpath
+import time
 from typing import Mapping, Optional, Tuple, Union
 
 # 3rd party imports
 import requests
-from botocore.exceptions import ClientError
+from botocore.exceptions import (
+    ClientError,
+    IncompleteReadError,
+    ReadTimeoutError,
+    ResponseStreamingError,
+)
 from requests.sessions import Session
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -34,6 +40,12 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
+
+# Attempts to read a file from S3: the reads of the body of the response (a
+# connection reset or timed out while the file is received) are not retried by
+# botocore, which retries the requests only
+_AWS_READ_ATTEMPTS = 3
+_AWS_READ_ERRORS = (IncompleteReadError, ReadTimeoutError, ResponseStreamingError)
 
 
 def _var_and_cdf_name(
@@ -179,25 +191,54 @@ def _get_file_content_sources(
             logger.error("Error retrieving file from %s", file_name)
             raise
     elif source == "aws":
-        try:
-            response = file_name.get()
-            file_content = response["Body"].read()
-        except ClientError as err:
-            error = err.response.get("Error", {})
-            response_meta = err.response.get("ResponseMetadata", {})
-            logger.error(
-                "Error retrieving %s from S3: %s (%s, request ID %s, HTTP code %s)",
-                getattr(file_name, "key", file_name),
-                error.get("Message"),
-                error.get("Code"),
-                response_meta.get("RequestId"),
-                response_meta.get("HTTPStatusCode"),
-            )
-            raise
+        file_content = _read_s3_object(file_name)
     else:
         raise NotImplementedError(f"Resource {source} is not yet implemented!!")
 
     return file_content
+
+
+def _get_s3_body(s3_object, label: str) -> bytes:
+    r"""Content of an S3 object (S3 errors logged and raised)."""
+    try:
+        return s3_object.get()["Body"].read()
+    except ClientError as err:
+        error = err.response.get("Error", {})
+        response_meta = err.response.get("ResponseMetadata", {})
+        logger.error(
+            "Error retrieving %s from S3: %s (%s, request ID %s, HTTP code %s)",
+            label,
+            error.get("Message"),
+            error.get("Code"),
+            response_meta.get("RequestId"),
+            response_meta.get("HTTPStatusCode"),
+        )
+        raise
+
+
+def _read_s3_object(s3_object) -> bytes:
+    r"""Content of an S3 object, the request made again (after 1 s, then 2 s)
+    if the connection is reset or times out while the file is received."""
+    label = getattr(s3_object, "key", s3_object)
+
+    for attempt in range(1, _AWS_READ_ATTEMPTS):
+        try:
+            return _get_s3_body(s3_object, label)
+        except _AWS_READ_ERRORS as err:
+            logger.warning(
+                "Reading %s from S3 failed (%s), trying again (%d/%d)",
+                label,
+                err,
+                attempt + 1,
+                _AWS_READ_ATTEMPTS,
+            )
+            time.sleep(attempt)
+
+    try:
+        return _get_s3_body(s3_object, label)
+    except _AWS_READ_ERRORS as err:
+        logger.error("Error reading %s from S3: %s", label, err)
+        raise
 
 
 def _file_label(file_name) -> str:
