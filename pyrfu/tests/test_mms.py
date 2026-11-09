@@ -2831,11 +2831,14 @@ class LoadBrstSegmentsTestCase(unittest.TestCase):
                 mms.load_brst_segments(self.tint)
 
     def test_load_brst_segments_deprecated_args(self):
+        # Each of the deprecated arguments (ignored) warns; the path is not
+        # used, so it needs not exist (no hard-coded /tmp)
         with mock.patch.object(
             requests, "get", return_value=_brst_segments_response([])
         ):
-            with self.assertWarns(FutureWarning):
-                mms.load_brst_segments(self.tint, data_path="/tmp", download=True)
+            for kwargs in [{"data_path": "mms_data"}, {"download": True}]:
+                with self.assertWarns(FutureWarning):
+                    mms.load_brst_segments(self.tint, **kwargs)
 
 
 @ddt
