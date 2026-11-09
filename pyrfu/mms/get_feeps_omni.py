@@ -35,7 +35,7 @@ def get_feeps_omni(
     ----------
     tar_var : str
         Key of the target variable like
-        {data_unit}_{specie}_{data_rate}_{data_lvl}.
+        {data_unit}{specie}_{data_rate}_{data_lvl}, e.g. "fluxe_srvy_l2".
     tint : list of str
         Time interval.
     mms_id : int or str
@@ -72,7 +72,7 @@ def get_feeps_omni(
     `feeps_corrections` and then `feeps_omni` (see Examples).
 
     The data are clipped to `tint` when they are read, so with `spin_avg` the
-    first and last spins can be partial (see `get_feeps_alleyes`).
+    partial first and last spins are left out (see `get_feeps_alleyes`).
 
     Examples
     --------

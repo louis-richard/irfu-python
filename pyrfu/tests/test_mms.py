@@ -5720,6 +5720,25 @@ class FeepsAvg4scTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), flag="gpd")
 
+    def test_feeps_avg_4sc_pad_bins(self):
+        # PADs of different pitch-angle bins (averaged by bin index)
+        time = generate_timeline(1.0, 4)
+        pads = [
+            xr.DataArray(
+                np.ones((4, n_pa)),
+                coords=[time, (np.arange(n_pa) + 0.5) * 180.0 / n_pa],
+                dims=["time", "theta"],
+            )
+            for n_pa in [11, 11, 12, 11]
+        ]
+
+        with self.assertRaisesRegex(ValueError, "pitch-angle bins"):
+            mms.feeps_avg_4sc(pads, flag="pad")
+
+        result = mms.feeps_avg_4sc([pads[0], pads[1], pads[3]], flag="pad")
+        np.testing.assert_array_equal(result.data, 1.0)
+        self.assertNotIn("mmsId", result.attrs)  # none in the inputs
+
 
 @ddt
 class FeepsCorrectEnergiesTestCase(unittest.TestCase):
@@ -6564,6 +6583,15 @@ class FeepsSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "DMPA")
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_skymap_n_phi(self):
+        # A given number of azimuth bins (32 in burst by default)
+        result = mms.feeps_skymap(
+            _feeps_skymap_case("brst", 128), n_phi=16, to_psd=False
+        )
+
+        self.assertTupleEqual(result.data.shape, (2, 15, 16, 4))
+        np.testing.assert_array_equal(result.data.data, 2.0)
+
     def test_feeps_skymap_complete_spins(self):
         # Partial spin (sectors 31-63), a complete spin, partial spin (7-47):
         # one skymap, at the first sample of the complete spin (the partial
@@ -6799,6 +6827,18 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.feeps_spin_avg(flux, spin_sectors[:-1])
 
+    def test_feeps_spin_bounds_two_samples(self):
+        # Two samples (no sampling period to find gaps from): spins from the
+        # sector decreases only
+        module = sys.modules["pyrfu.mms.feeps_spin_avg"]
+        time = generate_timeline(1.0, 2)
+        np.testing.assert_array_equal(
+            module._spin_bounds(np.array([0, 1]), time), [0, 2]
+        )
+        np.testing.assert_array_equal(
+            module._spin_bounds(np.array([63, 0]), time), [0, 1, 2]
+        )
+
     def test_feeps_spin_avg_gap_and_errors(self):
         # A spin cut by a data gap is left out; ValueError without a complete
         # spin
@@ -6922,6 +6962,10 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
         self.assertListEqual(
             sorted(out_500kev.data_vars), sorted([*eyes, "spinsectnum"])
         )
+
+        # Without spin sectors, the integral channels of the eyes only
+        _, out_500kev = mms.feeps_split_integral_ch(feeps_alle.drop_vars("spinsectnum"))
+        self.assertListEqual(sorted(out_500kev.data_vars), sorted(eyes))
 
 
 class FkPowerSpectrumTestCase(unittest.TestCase):
@@ -7950,6 +7994,18 @@ class GetFeepsTestCase(unittest.TestCase):
             out["top-3"]["energy_upper_bound_top-3"].data, [1.4, 2.4, 3.4]
         )
         self.assertNotIn("energy_lower_bound_top-3", mask["top-3"].coords)
+
+        # Files without the channel bounds: no bound coordinates
+        def read_no_bounds(*args, **kwargs):
+            out = self._fake_read(*args, **kwargs)
+            return {k: v for k, v in out.items() if "bound" not in k}
+
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=read_no_bounds
+        ):
+            out = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2)
+
+        self.assertListEqual(list(out["top-3"].coords), ["time", "energy_top-3"])
 
     def test_get_feeps_alleyes_ions(self):
         # Survey ions before 2017-08-16: eyes 6-8, from the ion dataset

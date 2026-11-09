@@ -48,7 +48,7 @@ def get_feeps_alleyes(
     ----------
     tar_var : str
         Key of the target variable like
-        {data_unit}{specie}_{data_rate}_{data_lvl}.
+        {data_unit}{specie}_{data_rate}_{data_lvl}, e.g. "fluxe_brst_l2".
     tint : list of str
         Time interval.
     mms_id : int or float or str
@@ -95,10 +95,11 @@ def get_feeps_alleyes(
 
     The data are clipped to `tint` when they are read, so the spin averages
     (`feeps_spin_avg`, `feeps_pad_spinavg`) and the sector spectrograms
-    (`feeps_sector_spec`) start and end with partial spins. IDL SPEDAS and
-    pyspedas make their products from the whole files and clip them only when
-    asked (``time_clip``). To get whole spins at the edges, read an interval
-    longer by one spin (about 20 s) on each side and clip the products with
+    (`feeps_sector_spec`), which use complete spins only, leave out the
+    partial spins at the start and end of `tint`. IDL SPEDAS and pyspedas make
+    their products from the whole files and clip them only when asked
+    (``time_clip``). To get the spins at the edges, read an interval longer by
+    one spin (about 20 s) on each side and clip the products with
     `pyrfu.pyrf.time_clip`.
 
     Examples
