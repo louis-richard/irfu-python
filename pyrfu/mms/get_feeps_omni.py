@@ -43,12 +43,13 @@ def get_feeps_omni(
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
     spin_avg : bool, Optional
         Spin average the omni-directional flux. Default is False.
     source : {"default", "local", "sdc", "aws"}, Optional
-        Resource to fetch the data from. Default uses default in
-        `pyrfu/mms/config.json`.
+        Resource to fetch the data from. Default uses the default resource of
+        the MMS configuration.
 
     Returns
     -------

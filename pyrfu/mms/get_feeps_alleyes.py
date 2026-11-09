@@ -56,10 +56,11 @@ def get_feeps_alleyes(
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
     source : {"default", "local", "sdc", "aws"}, Optional
-        Resource to fetch the data from. Default uses default in
-        `pyrfu/mms/config.json`. Each file is read (downloaded) once for all the
+        Resource to fetch the data from. Default uses the default resource of
+        the MMS configuration. Each file is read (downloaded) once for all the
         eyes.
     quality_flag : int or None, Optional
         The samples of an eye whose quality indicator is greater than or equal

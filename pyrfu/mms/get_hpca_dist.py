@@ -57,7 +57,8 @@ def get_hpca_dist(
         mms?_hpca_centroid_elevation_angle in the file of `inp`.
     source : {"default", "local", "sdc", "aws"}, Optional
         Resource to read the anode elevations from (if `elevation` is None).
-        Default uses default in `pyrfu/mms/config.json`.
+        Default uses the default resource of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
     data_path : str, Optional
         Path of MMS data (for `source` "local").
 

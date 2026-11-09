@@ -102,9 +102,9 @@ def list_files_aws(
             * var["dtype"] : data type
     bucket_prefix : str, Optional
         Bucket and key prefix of the MMS data, as "bucket/prefix" (or
-        "s3://bucket/prefix"). Default uses the "aws" entry of
-        `pyrfu/mms/config.json`, or HelioCloud
-        ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms") if it is empty.
+        "s3://bucket/prefix"). Default uses the "aws" entry of the MMS
+        configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`), or
+        HelioCloud ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms") if it is empty.
 
     Returns
     -------

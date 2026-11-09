@@ -196,9 +196,9 @@ def list_files_sdc(tint, mms_id, var):
             * var["tmmode"] : data rate
             * var["lev"] : data level
             * var["dtype"] : data type
-    username : str, Optional
-        Login to LASP MMS SITL. Default downloads from
-        https://lasp.colorado.edu/mms/sdc/public/
+
+    The SDC rights (public or SITL) and username are those of the MMS
+    configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     Returns
     -------

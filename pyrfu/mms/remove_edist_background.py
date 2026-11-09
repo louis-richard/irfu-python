@@ -121,8 +121,9 @@ def remove_edist_background(
         Resource to fetch the data (spin phase, moments) and the photoelectron
         model from. The model is read from ``<local>/models/fpi/`` for "local",
         from the SDC for "sdc", and from ``models/fpi/`` in the MMS bucket
-        (HelioCloud by default) for "aws". Default uses default in
-        `pyrfu/mms/config.json`.
+        (HelioCloud by default) for "aws". Default uses the default resource
+        of the MMS configuration (`pyrfu.mms.MMS_CFG_PATH`, set with
+        `mms.db_init`).
 
     Returns
     -------

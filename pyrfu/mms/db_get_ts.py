@@ -80,8 +80,8 @@ def _load_config_cached(config_path: str, config_mtime_ns: int) -> Mapping[str, 
 
 def _resolve_source(source: Optional[str] = "default") -> str:
     r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
-    case), or the default resource of `pyrfu/mms/config.json` if it is empty or
-    "default"."""
+    case), or the default resource of the MMS configuration
+    (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
     if not source or source.lower() == "default":
         return _load_config().get("default")
 
@@ -175,10 +175,11 @@ def db_get_ts(
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
     source : {"default", "local", "sdc", "aws"}, Optional
-        Resource to fetch the data from. Default uses default in
-        `pyrfu/mms/config.json`.
+        Resource to fetch the data from, in any case. Default uses the default
+        resource of the MMS configuration.
 
     Returns
     -------

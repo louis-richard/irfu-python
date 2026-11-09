@@ -109,8 +109,9 @@ def get_eis_allt(
     data_path : str, Optional
         Path of MMS data.
     source : {"default", "local", "sdc", "aws"}, Optional
-        Resource to fetch the data from. Default uses default in
-        `pyrfu/mms/config.json`. Each file is read (downloaded) once for all the
+        Resource to fetch the data from. Default uses the default resource of
+        the MMS configuration (`pyrfu.mms.MMS_CFG_PATH`, set with
+        `mms.db_init`). Each file is read (downloaded) once for all the
         telescopes.
 
     Returns
