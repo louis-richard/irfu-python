@@ -965,6 +965,24 @@ class DbGetVariableTestCase(unittest.TestCase):
         get_variable.assert_called_once_with(b"cdf", "sensor_ids")
         session.close.assert_not_called()  # shared, cached session
 
+    def test_db_get_variable_verbose(self):
+        # The variable read is logged (INFO) with verbose (the default)
+        with (
+            mock.patch.object(
+                self.module, "_list_files_sources", return_value=(["file0"], None, {})
+            ),
+            mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=b"cdf"
+            ),
+            mock.patch.object(self.module, "get_variable"),
+        ):
+            with self.assertLogs("pyrfu", level="INFO") as logs:
+                mms.db_get_variable(
+                    "mms1_fgm_srvy_l2", "label_b_gse", ["a", "b"], source="sdc"
+                )
+
+        self.assertTrue(any("Loading label_b_gse" in line for line in logs.output))
+
     def test_db_get_variable_no_file(self):
         session = mock.Mock()
 
