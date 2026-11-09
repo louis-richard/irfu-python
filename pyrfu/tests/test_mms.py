@@ -1484,6 +1484,10 @@ class Dsl2GseTestCase(unittest.TestCase):
                 generate_ts(64.0, 42, tensor_order=1), np.random.random((42, 3)), 1
             )
 
+    def test_dsl2gse_direction(self):
+        with self.assertRaises(ValueError):
+            mms.dsl2gse(generate_ts(64.0, 42, tensor_order=1), np.ones(3), 2)
+
     @data(
         xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
         np.random.random(3),
@@ -3479,6 +3483,13 @@ class HpcaPadTestCase(unittest.TestCase):
         spec = mms.hpca_calc_anodes(vdf)
         self.assertEqual(spec.attrs["UNITS"], "cm^-6 s^3")
         self.assertEqual(spec.energy.attrs["UNITS"], "eV")
+
+        # Field of view of 0-90 deg: the anodes 2 to 5 (78.75 to 11.25 deg),
+        # averaged or summed
+        anodes = vdf.copy(data=np.broadcast_to(np.arange(16.0)[:, None], vdf.shape))
+        for method, expected in [("mean", 3.5), ("sum", 14.0)]:
+            spec = mms.hpca_calc_anodes(anodes, fov=[0.0, 90.0], method=method)
+            np.testing.assert_array_equal(spec.data, expected)
 
         is_par = np.zeros(32, dtype=bool)
         is_par[0:16:2] = True
@@ -9922,6 +9933,44 @@ class RotateTensorTestCase(unittest.TestCase):
         # compared the new y axis with the x column of the input)
         with self.assertNoLogs("pyrfu.mms.rotate_tensor", "WARNING"):
             mms.rotate_tensor(self._rot_tensor(), "rot", np.eye(3))
+
+    @data("pp", "qq")
+    def test_rotate_tensor_verbose(self, perp):
+        # The additional rotation is logged with verbose
+        inp = self._rot_tensor()
+        b_xyz = pyrf.ts_vec_xyz(inp.time.data, np.tile([0.2, 0.3, 1.0], (5, 1)))
+
+        with self.assertLogs("pyrfu.mms.rotate_tensor", "INFO") as logs:
+            mms.rotate_tensor(inp, "fac", b_xyz, perp, verbose=True)
+
+        self.assertIn("perpendicular components", "".join(logs.output))
+
+    def test_rotate_tensor_coordinate_system(self):
+        # The coordinates of the output (the input ones were kept, e.g. "GSE"
+        # on a FAC tensor); none for an arbitrary system
+        inp = self._rot_tensor()
+        inp.attrs.update({"COORDINATE_SYSTEM": "GSE", "UNITS": "nPa"})
+        b_xyz = pyrf.ts_vec_xyz(inp.time.data, np.tile([0.2, 0.3, 1.0], (5, 1)))
+        defatt = xr.Dataset(
+            {
+                "z_ra": pyrf.ts_scalar(inp.time.data, np.full(5, 270.0)),
+                "z_dec": pyrf.ts_scalar(inp.time.data, np.full(5, 66.0)),
+            }
+        )
+        inp_dsl = inp.copy()
+        inp_dsl.attrs["COORDINATE_SYSTEM"] = "DSL"
+
+        for result, expected in [
+            (mms.rotate_tensor(inp, "fac", b_xyz), "FAC"),
+            (mms.rotate_tensor(inp_dsl, "gse", defatt), "GSE"),
+            (mms.rotate_tensor(inp_dsl, "GSM", defatt), "GSM"),
+        ]:
+            self.assertEqual(result.attrs["COORDINATE_SYSTEM"], expected)
+            self.assertEqual(result.attrs["UNITS"], "nPa")
+
+        result = mms.rotate_tensor(inp, "rot", np.eye(3))
+        self.assertNotIn("COORDINATE_SYSTEM", result.attrs)
+        self.assertEqual(inp.attrs["COORDINATE_SYSTEM"], "GSE")  # input kept
 
     def test_rotate_tensor_fac_default_pp(self):
         # "fac" keeps "pp" by default: equal perpendicular components

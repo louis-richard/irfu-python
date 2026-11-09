@@ -83,9 +83,12 @@ def rotate_tensor(
                         included y and z directions are orthogonal to xnew
                         and closest to the original y and z directions)
 
-            * "gse" :   GSE coordinates, requires MMS spacecraft attitude DEFATT.
+            * "gse" :   GSE coordinates, requires MMS spacecraft attitude DEFATT,
+                        from a tensor in DSL (despun) coordinates, as
+                        :func:`pyrfu.mms.dsl2gse`.
 
-            * "gsm" :   GSM coordinates, requires MMS spacecraft attitude DEFATT.
+            * "gsm" :   GSM coordinates, requires MMS spacecraft attitude DEFATT,
+                        from a tensor in DSL (despun) coordinates.
 
     vec : DataArray or numpy.ndarray or xarray.Dataset
         Vector or coordinates system to rotate the tensor. If vec is time series of a
@@ -110,9 +113,11 @@ def rotate_tensor(
     -------
     DataArray
         Time series of the pressure or temperature tensor in field-aligned,
-        user-defined, or GSE coordinates.
+        user-defined, GSE or GSM coordinates.
         For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
         For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
+        ``COORDINATE_SYSTEM`` is set to "FAC", "GSE" or "GSM", and removed for
+        "rot" (it was that of the input).
 
     Raises
     ------
@@ -324,7 +329,14 @@ def rotate_tensor(
     else:
         raise NotImplementedError(f"{perp} method is not implemented.")
 
-    # Construct output
-    p_new: DataArray = ts_tensor_xyz(inp_time, p_tensor_p, attrs=inp.attrs)
+    # Construct output, in the coordinates of rot_flag (the attributes of the
+    # input kept its COORDINATE_SYSTEM, e.g. "GSE" on a FAC tensor)
+    attrs = dict(inp.attrs)
+    attrs.pop("COORDINATE_SYSTEM", None)
+
+    if rot_flag.lower() != "rot":
+        attrs["COORDINATE_SYSTEM"] = rot_flag.upper()
+
+    p_new: DataArray = ts_tensor_xyz(inp_time, p_tensor_p, attrs=attrs)
 
     return p_new
