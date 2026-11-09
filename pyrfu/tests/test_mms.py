@@ -536,6 +536,11 @@ class LoginLaspCredentialsTestCase(unittest.TestCase):
         with self.assertRaises(EnvironmentError):
             self._login("sitl", None)
 
+    def test_login_lasp_invalid_rights(self):
+        # Rights of a configuration written by hand (db_init checks them)
+        with self.assertRaises(EnvironmentError):
+            self._login("team", None)
+
 
 class _MemoryKeyring:
     # In-memory keyring backend with a given priority (>= 1: system keyring)
@@ -8762,7 +8767,7 @@ class ListFilesAwsTestCase(unittest.TestCase):
     FGM_BRST = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
     FPI_FAST = {"inst": "fpi", "tmmode": "fast", "lev": "l2", "dtype": "des-moms"}
 
-    def _list(self, keys, tint, var, bucket_prefix="", error=None):
+    def _list(self, keys, tint, var, bucket_prefix="", error=None, mms_id=1):
         bucket = _FakeS3Bucket(keys, error)
         resource = mock.Mock()
         resource.Bucket.return_value = bucket
@@ -8770,7 +8775,7 @@ class ListFilesAwsTestCase(unittest.TestCase):
         with mock.patch.object(
             list_files_aws_module, "_s3_resource", return_value=resource
         ):
-            out = mms.list_files_aws(tint, 1, var, bucket_prefix=bucket_prefix)
+            out = mms.list_files_aws(tint, mms_id, var, bucket_prefix=bucket_prefix)
 
         return out, resource, bucket
 
@@ -8809,6 +8814,25 @@ class ListFilesAwsTestCase(unittest.TestCase):
         out, _, _ = self._list(keys, tint, self.FGM_BRST, f"{self.BUCKET}/{self.HELIO}")
 
         self.assertListEqual([f["full_name"] for f in out], keys[:n_files])
+
+    def test_list_files_aws_versions(self):
+        # The latest version of each file, whatever the listing order; other
+        # file names are ignored; the spacecraft as str
+        directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
+        stem = f"{directory}/mms1_fgm_brst_l2_20190914075403"
+        keys = [
+            f"{stem}_v5.207.0.cdf",
+            f"{stem}_v5.86.0.cdf",
+            f"{stem}_v5.207.0.cdf.md5",
+            f"{stem}_v5.300.0.cdf",
+            f"{stem}_v5.9.0.cdf",
+        ]
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        prefix = f"{self.BUCKET}/{self.HELIO}"
+
+        out, _, _ = self._list(keys, tint, self.FGM_BRST, prefix, mms_id="1")
+
+        self.assertListEqual([f["full_name"] for f in out], [keys[3]])
 
     def test_list_files_aws_brst_day_directory(self):
         # SDC layout: burst files in a day directory, looked at only if there is
