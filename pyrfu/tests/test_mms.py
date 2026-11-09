@@ -26,6 +26,7 @@ from unittest import mock
 import keyring
 import keyring.credentials
 import keyring.errors
+import numba
 import numpy as np
 import pycdfpp
 import pytest
@@ -1357,6 +1358,18 @@ class DftTimeShiftTestCase(unittest.TestCase):
         inp, sig = self._signal(8192)
         result = mms.dft_time_shift(inp, 2.5 / 8192)
         np.testing.assert_allclose(result.data, sig(np.arange(8192) + 2.5), atol=1e-8)
+
+    def test_dft_time_shift_complex(self):
+        # A complex signal stays complex: exp(2i pi 5 s / n) a quarter of a
+        # sample later
+        inp, _ = self._signal(128)
+        phase = 2j * np.pi * 5 * np.arange(128) / 128
+        inp = inp.copy(data=np.exp(phase))
+        result = mms.dft_time_shift(inp, 0.25 / 8192, f_s=8192.0)
+        self.assertTrue(np.iscomplexobj(result.data))
+        np.testing.assert_allclose(
+            result.data, np.exp(phase + 2j * np.pi * 5 * 0.25 / 128), atol=1e-12
+        )
 
     def test_dft_time_shift_vector(self):
         # Each component is shifted as a scalar; the input is unchanged and
@@ -7010,6 +7023,19 @@ class FkPowerSpectrumTestCase(unittest.TestCase):
                     self.assertLessEqual(k_peak, sign * k_vec[0])
                     self.assertLess(sign * k_vec[0], k_peak + d_k)
 
+    def test_fk_power_spectrum_linear_frequencies(self):
+        # Linear frequencies of step df (logarithmic by default)
+        k_vec = np.array([0.0, 0.0, 2 * np.pi / 200.0])
+        v6, b_xyz, _ = self._inputs(k_vec, 500.0, [0.0, 0.0, 20.0])
+
+        power = mms.fk_power_spectrum(v6, b_xyz, self._tint(1.0, 1.5), 5, df=50.0)
+        f_peak, k_peak, d_k = self._peak(power)
+
+        np.testing.assert_allclose(np.diff(power.f.data), 50.0)
+        self.assertAlmostEqual(f_peak, 500.0)
+        self.assertLessEqual(k_peak, k_vec[2])
+        self.assertLess(k_vec[2], k_peak + d_k)
+
     def test_fk_power_spectrum_errors(self):
         v6, b_xyz, z_phase = self._inputs(np.zeros(3), 200.0, [0.0, 0.0, 20.0])
         tint = self._tint(1.0, 1.5)
@@ -7153,6 +7179,108 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter("error", np.exceptions.ComplexWarning)
             mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
+
+    @data(4, 5, 8)
+    def test_fk_power_spectrum_4sc_average_windows(self, cav):
+        # Contiguous windows of cav samples, labelled by the sample before
+        # their centre (even cav) or their centre (odd cav): an odd cav used
+        # cav - 1 samples per window and skipped one
+        module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
+        starts, pos_av = module._average_windows(43, cav)
+
+        self.assertEqual(len(starts), 43 // cav)
+        np.testing.assert_array_equal(starts, np.arange(43 // cav) * cav)
+        np.testing.assert_array_equal(pos_av - starts, (cav - 1) // 2)
+        self.assertLessEqual(starts[-1] + cav, 43)
+
+    def test_fk_power_spectrum_4sc_odd_cav(self):
+        # A plane wave recovered with an odd cav, as with the default
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        result = mms.fk_power_spectrum_4sc(
+            e_mms, r_mms, b_mms, tint, cav=5, f_range=[3, 5]
+        )
+        d_k = float(result.k_x[1] - result.k_x[0])
+        for key, value in zip(["k_x_avg", "k_y_avg", "k_z_avg"], k_vec):
+            self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
+
+    @staticmethod
+    def _bins(k, k_min, dk, num_k):
+        # Bins of the wave numbers k, the out of range ones in the first or
+        # the last bin
+        return np.clip(np.floor((k - k_min) / dk).astype(int), 0, num_k - 1)
+
+    def _k_power(self):
+        # Wave numbers from -2.5 to 2.5 (out of the bins of [-2, 2[ on both
+        # sides) and powers, (time, frequency); the magnitudes shifted below 0
+        # for some, which go to the first bin
+        rng = np.random.default_rng(0)
+        k_x, k_y, k_z = 2.5 * (2 * rng.random((3, 30, 6)) - 1)
+        k_mag = np.sqrt(k_x**2 + k_y**2 + k_z**2) - 1.0
+        return k_x, k_y, k_z, k_mag, rng.random((30, 6))
+
+    def test_fk_power_spectrum_4sc_bin_power_vs_f(self):
+        # Power summed in its (k, f) bins, the out of range wave numbers in
+        # the edge bins; the Python function (covered) as the compiled one
+        module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
+        k_x, k_y, k_z, k_mag, power = self._k_power()
+        args = (k_x, k_y, k_z, k_mag, power, -2.0, 0.5, 0.25, 8)
+        result = module._bin_power_vs_f.py_func(*args)
+
+        f_idx = np.tile(np.arange(6), (30, 1))
+        for out, k_, k_min, dk in zip(
+            result,
+            [k_x, k_y, k_z, k_mag],
+            [-2.0, -2.0, -2.0, 0.0],
+            [0.5, 0.5, 0.5, 0.25],
+        ):
+            expected = np.zeros((6, 8))
+            np.add.at(expected, (f_idx, self._bins(k_, k_min, dk, 8)), power)
+            np.testing.assert_allclose(out, expected)
+
+        for out, out_jit in zip(result, module._bin_power_vs_f(*args)):
+            np.testing.assert_allclose(out_jit, out)
+
+    def test_fk_power_spectrum_4sc_bin_power_2d(self):
+        # Power summed in its (k_i, k_j) bins over the selected frequencies,
+        # for any number of threads
+        module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
+        k_x, k_y, k_z, k_mag, power = self._k_power()
+        idx_f = np.array([1, 2, 4], dtype=np.int64)
+        k_para, k_perp = k_z, np.hypot(k_x, k_y) - 0.5
+        b_x, b_y, b_z, b_perp = [
+            self._bins(k_[:, idx_f], -2.0, 0.5, 8) for k_ in [k_x, k_y, k_z]
+        ] + [self._bins(k_perp[:, idx_f], 0.0, 0.25, 8)]
+        p_f = power[:, idx_f]
+
+        expected = [np.zeros((8, 8)) for _ in range(4)]
+        np.add.at(expected[0], (b_y, b_x), p_f)
+        np.add.at(expected[1], (b_z, b_x), p_f)
+        np.add.at(expected[2], (b_z, b_y), p_f)
+        np.add.at(expected[3], (b_z, b_perp), p_f)
+
+        for n_threads in [1, 3]:
+            result = module._bin_power_2d_xyz.py_func(
+                k_x, k_y, k_z, power, idx_f, -2.0, 0.5, 8, n_threads
+            )
+            result += (
+                module._bin_power_kperp_kpara.py_func(
+                    k_para, k_perp, power, idx_f, -2.0, 0.5, 0.25, 8, n_threads
+                ),
+            )
+            for out, ref in zip(result, expected):
+                np.testing.assert_allclose(out, ref)
+
+        n_threads = numba.get_num_threads()
+        result_jit = module._bin_power_2d_xyz(
+            k_x, k_y, k_z, power, idx_f, -2.0, 0.5, 8, n_threads
+        ) + (
+            module._bin_power_kperp_kpara(
+                k_para, k_perp, power, idx_f, -2.0, 0.5, 0.25, 8, n_threads
+            ),
+        )
+        for out, ref in zip(result_jit, expected):
+            np.testing.assert_allclose(out, ref)
 
     def test_fk_power_spectrum_4sc_field_gap(self):
         # A NaN gap in the field made every wavelet coefficient NaN, so no
