@@ -596,6 +596,36 @@ class DbInitCredentialsTestCase(unittest.TestCase):
         self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "new"})
         self.assertDictEqual(self.plaintext.passwords, {})
 
+    def test_db_init_system_keyring_first_password(self):
+        # Saved in the system keyring when there is no plaintext copy to
+        # remove (the deletion raises PasswordDeleteError, which is ignored)
+        system = _MemoryKeyring(5)
+
+        credential = self._db_init(system, sdc_username="louis", sdc_password="pw")
+
+        self.assertEqual(credential.password, "pw")
+        self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "pw"})
+        self.assertDictEqual(self.plaintext.passwords, {})
+
+    def test_db_init_first_configuration(self):
+        # Without a configuration file nor local path, the current directory,
+        # saved as an absolute path (not ".")
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as root:
+            os.chdir(root)
+            try:
+                with contextlib.ExitStack() as stack:
+                    for patch in self._patched(root, _MemoryKeyring(5)):
+                        stack.enter_context(patch)
+                    self.module.db_init(default="aws")
+                    config = self._config(root)
+                expected = os.getcwd()
+            finally:
+                os.chdir(cwd)
+
+        self.assertEqual(config["default"], "aws")
+        self.assertEqual(config["local"], expected)
+
     def test_db_init_no_system_keyring(self):
         # Without system keyring, saved in plain text with a warning
         system = _MemoryKeyring(0)
