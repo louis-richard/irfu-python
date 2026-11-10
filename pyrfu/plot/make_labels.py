@@ -4,6 +4,9 @@
 # Built-in imports
 import string
 
+# 3rd party imports
+import numpy as np
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2023"
@@ -17,8 +20,9 @@ def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
 
     Parameters
     ----------
-    axs : ndarray
-        Array of subplots axes.
+    axs : array_like of matplotlib.axes.Axes
+        Subplots axes, a list or an array (e.g., the 2-D array of
+        plt.subplots(2, 2), labelled row by row).
     pos : array_like
         Position of the text in the axis.
     pref : str, Optional
@@ -30,15 +34,18 @@ def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
 
     Returns
     -------
-    axs : ndarray
-        Array of subplots axes with labels.
+    axs : array_like of matplotlib.axes.Axes
+        Subplots axes with labels (`axs` as given).
 
     """
 
-    if len(axs) + pad > 26:
+    # A 2-D array of axes raised AttributeError (its rows taken as axes)
+    axs_flat = np.ravel(axs)
+
+    if len(axs_flat) + pad > 26:
         raise ValueError("Number of subplots exceeds the number of labels available.")
 
-    lbl = string.ascii_lowercase[pad : len(axs) + pad]
+    lbl = string.ascii_lowercase[pad : len(axs_flat) + pad]
 
     if pref is not None:
         lbl = [f"{pref}{lbl[i]}" for i in range(len(lbl))]
@@ -46,7 +53,7 @@ def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
     if suff is not None:
         lbl = [f"{lbl[i]}{suff}" for i in range(len(lbl))]
 
-    for label, axis in zip(lbl, axs):
+    for label, axis in zip(lbl, axs_flat):
         if "proj" in axis.properties():
             axis.text2D(
                 pos[0],

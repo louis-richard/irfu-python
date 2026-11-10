@@ -101,6 +101,29 @@ class PlotLineTestCase(unittest.TestCase):
             axis.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
         )
 
+    def test_plot_line_3d(self):
+        # The last two dimensions flattened: one line per element
+        inp = xr.DataArray(
+            np.random.rand(10, 2, 3),
+            coords={"time": generate_timeline(64.0, 10)},
+            dims=["time", "i", "j"],
+        )
+        _, axis = plt.subplots(1)
+        plot.plot_line(axis, inp)
+
+        self.assertEqual(len(axis.lines), 6)
+        np.testing.assert_array_equal(axis.lines[5].get_ydata(), inp.data[:, 1, 2])
+
+    def test_plot_line_not_time(self):
+        # Another quantity than time on the x-axis: no date formatter
+        inp = xr.DataArray(np.random.rand(10), coords=[np.arange(10.0)], dims=["time"])
+        _, axis = plt.subplots(1)
+        plot.plot_line(axis, inp)
+
+        self.assertNotIsInstance(
+            axis.xaxis.get_major_formatter(), mpl.dates.ConciseDateFormatter
+        )
+
 
 @ddt
 class PlotClinesTestCase(unittest.TestCase):
@@ -138,6 +161,16 @@ class PlotClinesTestCase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             plot.plot_clines(plt.subplots(1)[1], inp, cscale="lin")
 
+    def test_plot_clines_yscale(self):
+        inp = xr.DataArray(
+            np.random.rand(10, 3),
+            coords=[generate_ts(64.0, 10).time.data, [1.0, 10.0, 100.0]],
+            dims=["time", "energy"],
+        )
+        _, axis = plt.subplots(1)
+        plot.plot_clines(axis, inp, yscale="linear")
+        self.assertEqual(axis.get_yscale(), "linear")
+
     def test_plot_clines_other_figure(self):
         # The colour bar goes in the figure of the axis, not the current figure
         inp = xr.DataArray(
@@ -151,6 +184,34 @@ class PlotClinesTestCase(unittest.TestCase):
 
         self.assertIn(cax, f.axes)
         self.assertEqual(len(f_current.axes), 0)
+
+    def test_plot_clines_energy_not_positive(self):
+        # A 0 or NaN energy raised Invalid vmin or vmax: those lines are left
+        # out, the colour scale from the positive energies
+        energy = np.array([0.0, 10.0, np.nan, 100.0, 1000.0])
+        inp = xr.DataArray(
+            np.random.rand(10, len(energy)),
+            coords=[generate_ts(64.0, 10).time.data, energy],
+            dims=["time", "energy"],
+        )
+        _, axis = plt.subplots(1)
+
+        with self.assertWarnsRegex(UserWarning, "2 line"):
+            _, cax = plot.plot_clines(axis, inp, cmap="jet")
+
+        self.assertEqual(len(axis.lines), 3)
+        for line, i in zip(axis.lines, [1, 3, 4]):
+            np.testing.assert_array_equal(line.get_ydata(), inp.data[:, i])
+
+        expected = plt.get_cmap("jet")(
+            LogNorm(vmin=10.0, vmax=1000.0)(energy[[1, 3, 4]])
+        )
+        colors = [to_rgba(line.get_color()) for line in axis.lines]
+        np.testing.assert_allclose(colors, expected)
+        np.testing.assert_allclose(cax.get_ylim(), [10.0, 1000.0])
+
+        with self.assertRaisesRegex(ValueError, "no positive energy"):
+            plot.plot_clines(axis, inp.assign_coords(energy=[0.0, np.nan] * 2 + [0.0]))
 
 
 @ddt
@@ -293,6 +354,20 @@ class ZoomTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], Axes)
         self.assertIsInstance(result[1], Axes)
 
+    def test_zoom_line_properties(self):
+        # The keyword arguments go to the connecting lines; the patches are
+        # transparent
+        _, (ax1, ax2) = plt.subplots(2)
+        plot.zoom(ax1, ax2, color="r", linestyle="--")
+
+        # ax2: the patch of the bbox, the two lines and the patch between
+        for connector in ax2.patches[1:3]:
+            self.assertEqual(connector.get_edgecolor(), to_rgba("r"))
+            self.assertEqual(connector.get_linestyle(), "--")
+
+        for patch in [ax1.patches[0], ax2.patches[0], ax2.patches[3]]:
+            self.assertEqual(patch.get_alpha(), 0)
+
 
 @ddt
 class SetColorCycleTestCase(unittest.TestCase):
@@ -303,6 +378,8 @@ class SetColorCycleTestCase(unittest.TestCase):
         ("Tableau", "Spectral_r"),
         ("mpl", "Spectral_r"),
         ("", "jet"),
+        ("series", "jet"),
+        ("PYRFU", "Spectral_r"),
     )
     @unpack
     def test_set_color_cycle_input(self, value, cmap):
@@ -314,6 +391,12 @@ class SetColorCycleTestCase(unittest.TestCase):
             self.assertListEqual(
                 mpl.rcParams["axes.prop_cycle"].by_key()["color"], colors
             )
+
+    def test_set_color_cycle_unknown(self):
+        # An unknown name was taken as "series"
+        for value in ["typo", "pyrfu "]:
+            with mpl.rc_context(), self.assertRaisesRegex(ValueError, "palette"):
+                plot.set_color_cycle(value)
 
 
 class UsePyrfuStyleTestCase(unittest.TestCase):
@@ -362,6 +445,27 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
             plot.use_pyrfu_style("classic", color_cycle="tab")
             self.assertEqual(mpl.rcParams["image.cmap"], "Spectral_r")
             self.assertTrue(mpl.rcParams["xtick.minor.visible"])
+
+    def test_use_pyrfu_style_fancy_legend(self):
+        # fancy_legend=True had no effect with the pyrfu sheet (frameless)
+        with mpl.rc_context():
+            plot.use_pyrfu_style(fancy_legend=True)
+            self.assertTrue(mpl.rcParams["legend.frameon"])
+            self.assertTrue(mpl.rcParams["legend.fancybox"])
+            self.assertEqual(mpl.rcParams["legend.framealpha"], 0.8)
+
+            plot.use_pyrfu_style()
+            self.assertFalse(mpl.rcParams["legend.frameon"])
+            self.assertFalse(mpl.rcParams["legend.fancybox"])
+            self.assertEqual(mpl.rcParams["legend.framealpha"], 0.75)
+
+    def test_register_cmap_registered(self):
+        # A colormap of the same name is not registered again
+        parula = mpl.colormaps["parula"]
+        plot._register_cmap(  # noqa
+            mpl.colors.LinearSegmentedColormap.from_list("parula", ["k", "w"])
+        )
+        self.assertEqual(mpl.colormaps["parula"], parula)
 
     def test_reload_pyrfu_plot(self):
         # Reloading pyrfu.plot (e.g., autoreload in notebooks) raised
@@ -721,6 +825,21 @@ class PlotPadPolarTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             plot.plot_pad_polar(ax, self.pad, colorbar="left")
 
+    def test_plot_pad_polar_contours_inside(self):
+        # Bins not reaching 0 and 180 deg: no contour values added there
+        contours = sys.modules["pyrfu.plot.plot_pad_polar"]._contours  # noqa
+        data = np.array([[10.0, 100.0], [1000.0, 1e4], [1.0, 1.0]])
+        radii = (np.array([1.0, 2.0, 3.0]), np.array([2.0, 3.0, 3.0]))
+        angles = (np.array([10.0, 90.0]), np.array([90.0, 170.0]))
+        x, y, values = contours(data, radii, angles)
+
+        np.testing.assert_allclose(values, [[1.0, 2.0], [3.0, 4.0]])
+        r_grid, a_grid = np.meshgrid(
+            [1.5, 2.5], np.deg2rad([50.0, 130.0]), indexing="ij"
+        )
+        np.testing.assert_allclose(x, r_grid * np.cos(a_grid))
+        np.testing.assert_allclose(y, r_grid * np.sin(a_grid))
+
 
 class PlScatterMatrixTestCase(unittest.TestCase):
     def setUp(self):
@@ -818,6 +937,18 @@ class PlotMagnetosphereTestCase(unittest.TestCase):
         self.assertEqual(len(ax.lines), 2)
         self.geopack.trace.assert_not_called()
 
+    def test_plot_magnetosphere_colors(self):
+        _, ax = plt.subplots(1)
+        plot.plot_magnetosphere(ax, self.tint, colors=["k", "r"], field_lines=False)
+
+        self.assertListEqual(
+            [to_rgba(line.get_color()) for line in ax.lines],
+            [to_rgba("k"), to_rgba("r")],
+        )
+        self.assertListEqual(
+            [line.get_label() for line in ax.lines], ["Magnetopause", "Bow Shock"]
+        )
+
 
 @ddt
 class PlotHeatmapTestCase(unittest.TestCase):
@@ -879,6 +1010,16 @@ class PlotHeatmapTestCase(unittest.TestCase):
         self.assertIsInstance(result[0], AxesImage)
         self.assertIsInstance(result[1], Colorbar)
 
+    def test_plot_heatmap_cbar_kw(self):
+        _, cbar = plot.plot_heatmap(
+            _axis("axis"),
+            np.random.rand(2, 2),
+            ["a", "b"],
+            ["c", "d"],
+            cbar_kw={"extend": "both"},
+        )
+        self.assertEqual(cbar.extend, "both")
+
 
 @ddt
 class AnnotateHeatmapTestCase(unittest.TestCase):
@@ -932,6 +1073,17 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
         # Test with no data provided
         plot.annotate_heatmap(im)
 
+    def test_annotate_heatmap_formatter(self):
+        # A formatter (callable) as valfmt
+        im, _ = plot.plot_heatmap(
+            _axis("axis"), np.array([[1.0, 2.0], [3.0, 4.0]]), ["a", "b"], ["c", "d"]
+        )
+        texts = plot.annotate_heatmap(im, valfmt=lambda x, _: f"{x:.0f} K")
+
+        self.assertListEqual(
+            [t.get_text() for t in texts], ["1 K", "2 K", "3 K", "4 K"]
+        )
+
 
 class MmsPlConfigTestCase(unittest.TestCase):
     def setUp(self):
@@ -970,6 +1122,22 @@ class MmsPlConfigTestCase(unittest.TestCase):
         r_mms = [r + 30 * R_E for r in self.r_mms]
         _, axs = plot.mms_pl_config(r_mms)
         self.assertGreater(axs[0].get_xlim()[0], 30 + np.max(self.r_mean) / R_E)
+
+    def test_mms_pl_config_nan(self):
+        # A NaN sample left the 3d panel empty: the positions averaged without it
+        self.r_mms[0].data[0] = np.nan
+        _, axs = plot.mms_pl_config(self.r_mms)
+
+        r_mean = self.r_mean.copy()
+        r_mean[0] += 0.5 * np.array([1.0, -1.0, 0.5])
+        offsets = np.vstack([c.get_offsets()[0] for c in axs[0].collections])
+        np.testing.assert_allclose(offsets, r_mean[:, [0, 2]] / R_E, rtol=1e-12)
+
+        delta_r = r_mean - np.mean(r_mean, axis=0)
+        points = np.array(
+            [np.ravel(c._offsets3d) for c in axs[3].collections[:4]]  # noqa
+        )
+        np.testing.assert_allclose(points, delta_r, atol=1e-9)
 
 
 class ColorbarTestCase(unittest.TestCase):
@@ -1086,6 +1254,17 @@ class MakeLabelsTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             plot.make_labels(axs, [0.1, 0.9], pad=24)
+
+    def test_make_labels_2d(self):
+        # A 2-D array of axes, labelled row by row (raised AttributeError)
+        _, axs = plt.subplots(2, 2)
+        result = plot.make_labels(axs, [0.1, 0.9])
+
+        self.assertIs(result, axs)
+        self.assertListEqual(
+            [axis.texts[0].get_text() for axis in axs.flat],
+            ["(a)", "(b)", "(c)", "(d)"],
+        )
 
 
 class PlotContourTestCase(unittest.TestCase):
@@ -1415,6 +1594,96 @@ class PlotSpectrTestCase(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             plot.plot_spectr(ax, self.data)
+
+    def test_plot_spectr_dataset_scalar_coordinate(self):
+        # A coordinate not along idx (e.g., left by sel) was taken as the
+        # y-axis: IndexError
+        energy = np.tile(self.energy, (50, 1))
+        datasets = [
+            xr.Dataset(
+                {"data": (["time", "idx"], self.data)},
+                coords={
+                    "time": self.time,
+                    "idx": np.arange(8),
+                    "en": (["time", "idx"], energy),
+                },
+            ),
+            xr.Dataset(
+                {
+                    "data": (["time", "idx"], self.data),
+                    "energy": (["time", "idx"], energy),
+                },
+                coords={"time": self.time, "idx": np.arange(8)},
+            ),
+        ]
+
+        for dataset in datasets:
+            dataset = dataset.assign_coords(sc="mms1", sc_pot=("time", np.ones(50)))
+            _, ax = plt.subplots(1)
+            plot.plot_spectr(ax, dataset, yscale="log")
+
+            np.testing.assert_allclose(
+                np.asarray(self._image(ax).get_array()).reshape(8, 50), self.data.T
+            )
+            np.testing.assert_allclose(ax.get_ylim(), [10.0, 1e4])
+
+    def test_plot_spectr_nan_energy(self):
+        # NaN energies raised ValueError in pcolormesh: those channels are left
+        # out
+        energy = self.energy.copy()
+        energy[[0, 5]] = np.nan
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, pyrf.ts_spectr(self.time, energy, self.data))
+
+        np.testing.assert_allclose(
+            np.asarray(self._image(ax).get_array()).reshape(6, 50),
+            self.data[:, [1, 2, 3, 4, 6, 7]].T,
+        )
+        np.testing.assert_allclose(ax.get_ylim(), self.energy[[1, 7]])
+
+        # Time-dependent table: a channel without energy, and times without
+        # table
+        energy = np.tile(self.energy, (50, 1))
+        energy[:, 0] = np.nan
+        energy[[3, 10], 4] = np.nan
+        dataset = xr.Dataset(
+            {"data": (["time", "idx"], self.data)},
+            coords={
+                "time": self.time,
+                "idx": np.arange(8),
+                "energy": (["time", "idx"], energy),
+            },
+        )
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, dataset)
+
+        times = np.delete(np.arange(50), [3, 10])
+        np.testing.assert_allclose(
+            np.asarray(self._image(ax).get_array()).reshape(7, 48),
+            self.data[times, 1:].T,
+        )
+        np.testing.assert_allclose(ax.get_ylim(), self.energy[[1, 7]])
+
+    def test_plot_spectr_log_no_positive_data(self):
+        # Invalid vmin or vmax without positive data (empty interval)
+        for values in [np.zeros_like(self.data), np.full_like(self.data, np.nan)]:
+            _, ax = plt.subplots(1)
+            inp = pyrf.ts_spectr(self.time, self.energy, values)
+
+            with self.assertWarnsRegex(UserWarning, "no positive data"):
+                plot.plot_spectr(ax, inp, cscale="log")
+
+            norm = self._image(ax).norm
+            self.assertIsInstance(norm, LogNorm)
+            self.assertEqual((norm.vmin, norm.vmax), (1.0, 10.0))
+
+    def test_plot_spectr_colormap(self):
+        # A Colormap object as cmap
+        cmap = mpl.colormaps["viridis"].with_extremes(bad="k")
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, self.inp, cmap=cmap)
+
+        self.assertIs(self._image(ax).get_cmap(), cmap)
 
 
 class PlotSurfTestCase(unittest.TestCase):
