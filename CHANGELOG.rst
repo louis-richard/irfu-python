@@ -11,13 +11,34 @@ statements and branches of ``pyrfu.lp``, ``pyrfu.maven``, ``pyrfu.models``,
 ``lp.LangmuirProbe`` follows irfu-matlab ``lp.lprobe`` (the wire had no area
 and no capacitance), the plotting routines take NaN and zero energies and
 2-D arrays of axes, and several routines raise a clear error for inputs they
-accepted silently, with wrong results. On the MMS data checked (FGM, MEC, EDP
-and FPI ions of 2017-07-11), the results of the routines changed are
-unchanged.
+accepted silently, with wrong results. The checks of the inputs raise
+``TypeError``, ``ValueError`` or ``FileNotFoundError`` instead of
+``AssertionError``, so that they also hold with ``python -O``. On the MMS
+data checked (FGM, MEC, EDP and FPI ions of 2017-07-11), the results of the
+routines changed are unchanged.
 
 Changed behaviour
 ^^^^^^^^^^^^^^^^^
 
+- The checks of the inputs raise ``TypeError`` (a wrong type),
+  ``ValueError`` (a wrong value, shape or flag) or ``FileNotFoundError``
+  (a data path that does not exist) instead of ``AssertionError``, in
+  ``pyrfu.pyrf`` (``c_4_j``, ``cart2sph_ts``, ``cotrans``, ``date_str``,
+  ``e_vxb``, ``eb_nrf``, ``ebsp``, ``edb``, ``filt``, ``gse2gsm``,
+  ``histogram``, ``mean_bins``, ``resample``, ``shock_normal``,
+  ``shock_parameters``, ``start``, ...), ``pyrfu.mms`` (``get_ts``,
+  ``hpca_calc_anodes``, ``list_files``, ``list_files_ancillary``,
+  ``reduce``), ``pyrfu.solo``, ``pyrfu.maven`` and ``lp.thermal_current``.
+  Asserts are removed by ``python -O``, which let wrong inputs through:
+  e.g., a path that does not exist was written to the configuration by
+  ``solo.db_init`` and ``maven.db_init``, an unknown ``p_type`` of
+  ``lp.thermal_current`` was computed as a cylinder, an unknown ``ref_sys``
+  of ``pyrf.shock_parameters`` was the spacecraft frame, and
+  ``pyrf.ebsp(no_resample=True)`` took E and delta_b at different sampling
+  frequencies. Code that catches ``AssertionError`` for these checks must
+  catch the new exceptions. ``pyrf.date_str`` with a single time raises
+  ``ValueError`` (``IndexError``), and ``pyrf.edb`` takes a numpy
+  ``angle_lim``.
 - ``solo.read_tnr`` and ``solo.read_lfr_density`` raise
   ``FileNotFoundError`` when no file covers the time interval: they returned
   None.
