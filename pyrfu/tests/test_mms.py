@@ -357,6 +357,40 @@ class CalcEpsilonTestCase(unittest.TestCase):
         eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
+    def test_calc_epsilon_units_and_channels(self):
+        # The same in any units of phase-space density (ValueError for
+        # others); fewer channels, less difference; a relativistic phase-space
+        # density as it is (FPI ones converted: 1e-4 for 1 keV protons)
+        vdf, n_s = self._maxwellian()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+        expected = mms.calculate_epsilon(vdf, model, n_s, sc_pot).data
+
+        for units, scale in [("s^3/m^6", 1e12), ("s^3/km^6", 1e30)]:
+            vdf_u, model_u = vdf.copy(deep=True), model.copy(deep=True)
+            vdf_u.data.data[...] *= scale
+            for inp in [vdf_u, model_u]:
+                inp.data.attrs["UNITS"] = units
+            eps = mms.calculate_epsilon(vdf_u, model_u, n_s, sc_pot)
+            np.testing.assert_allclose(eps.data, expected, rtol=1e-12)
+
+        model.data.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
+        with self.assertRaisesRegex(ValueError, "units"):
+            mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        model.data.attrs["UNITS"] = "s^3/cm^6"
+
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot, en_channels=[0, 16])
+        self.assertTrue(np.all((eps.data > 0) & (eps.data < expected)))
+        with self.assertRaises(TypeError):
+            mms.calculate_epsilon(vdf, model, n_s, sc_pot, en_channels=(0, 16))
+
+        for inp in [vdf, model]:
+            inp.attrs["relativistic"] = True
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        self.assertFalse(np.allclose(eps.data, expected, rtol=1e-6, atol=0.0))
+        np.testing.assert_allclose(eps.data, expected, rtol=1e-3)
+
     def test_calc_epsilon_phi_1d(self):
         # phi as (phi,) (IndexError): as with phi as (time, phi)
         vdf, n_s = self._maxwellian()
@@ -3319,6 +3353,27 @@ class GetPitchAngleDistTestCase(unittest.TestCase):
             ],
         }[method]
         return (np.arange(32.0) + 1)[:, None] * np.array(per_bin)[None, :]
+
+    def test_get_pitch_angle_dist_angles(self):
+        # Bin edges as a list or an array: the default edges give the default
+        # bins; a number of bins; both logged with verbose
+        default = mms.get_pitch_angle_dist(self.vdf, self.b_xyz, verbose=False)
+
+        for angles, n_pa in [(list(range(0, 181, 15)), 12), (12, 12), (4.0, 4)]:
+            with self.assertLogs("pyrfu.mms.get_pitch_angle_dist", "INFO") as logs:
+                pad = mms.get_pitch_angle_dist(
+                    self.vdf, self.b_xyz, angles=angles, verbose=True
+                )
+
+            self.assertIn("User defined", "".join(logs.output))
+            self.assertEqual(pad.data.shape, (4, 32, n_pa))
+            if n_pa == 12:
+                np.testing.assert_allclose(pad.data.data, default.data.data)
+
+        pad = mms.get_pitch_angle_dist(
+            self.vdf, self.b_xyz, angles=np.array([0.0, 90.0, 180.0]), verbose=False
+        )
+        np.testing.assert_allclose(pad.theta.data, [[45.0, 135.0]] * 4)
 
     def test_get_pitch_angle_dist_values(self):
         for method in ["mean", "sum", "sum_weighted"]:
@@ -9636,6 +9691,64 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
 
         expected = 0.5 * np.array([0.0, 1001.0, 2.0, 1003.0])
         np.testing.assert_allclose(vdf_bkg.data.data[:, 0, 0, 0], expected)
+
+    def test_remove_edist_background_metadata(self):
+        # Spacecraft and data rate from the attributes of the distribution
+        vdf, n_e, startdelphi, model = self._inputs()
+
+        vdf.data.attrs["CATDESC"] = "MMS5 DES burst distribution"
+        with self.assertRaisesRegex(ValueError, "spacecraft"):
+            self._run(vdf, n_e, startdelphi, model)
+
+        vdf.data.attrs["CATDESC"] = "MMS1 DES burst distribution"
+        vdf.data.attrs["FIELDNAM"] = "mms1_des_dist_srvy"
+        with self.assertRaisesRegex(TypeError, "fast or burst"):
+            self._run(vdf, n_e, startdelphi, model)
+
+    def test_remove_edist_background_fast(self):
+        # Fast survey: one model for all the samples (no energy stepping)
+        vdf, n_e, startdelphi, _ = self._inputs()
+        vdf.data.attrs["FIELDNAM"] = "mms1_des_dist_fast"
+        vdf.attrs["esteptable"] = np.zeros(4, dtype=np.uint8)
+        records = np.arange(360.0)[:, None, None, None] * np.ones((1, 32, 16, 32))
+        model = {
+            "mms_des_bgdist_fast": mock.Mock(values=records),
+            "mms_des_startdelphi_counts_fast": mock.Mock(
+                values=16 * np.arange(360) + 8
+            ),
+        }
+
+        with self.assertLogs("pyrfu", level="INFO"):
+            (_, vdf_bkg, _), (get_data, _, _) = self._run(vdf, n_e, startdelphi, model)
+
+        np.testing.assert_allclose(vdf_bkg.data.data[:, 0, 0, 0], 0.5 * np.arange(4))
+        self.assertEqual(get_data.call_args.args[0], "ne_fpi_fast_l2")
+
+    def test_remove_edist_background_spin_phase_missing(self):
+        # Spin phases far from the times of the distributions
+        vdf, n_e, startdelphi, model = self._inputs()
+        late = startdelphi.assign_coords(
+            time=startdelphi.time.data + np.timedelta64(10, "s")
+        )
+        with self.assertRaisesRegex(ValueError, "startdelphi_count"):
+            self._run(vdf, n_e, late, model)
+
+    def test_remove_edist_background_default_source(self):
+        # "default" (ValueError) and no source: the default of the
+        # configuration, as the other readers
+        db_get_ts_module = sys.modules["pyrfu.mms.db_get_ts"]
+        vdf, n_e, startdelphi, model = self._inputs()
+
+        for source in ["default", "Default", None]:
+            with mock.patch.object(
+                db_get_ts_module, "_load_config", return_value={"default": "aws"}
+            ):
+                _, (get_data, _, load_model) = self._run(
+                    vdf, n_e, startdelphi, model, source=source
+                )
+
+            self.assertEqual(get_data.call_args.kwargs["source"], "aws")
+            self.assertEqual(load_model.call_args.args[1], "aws")
 
     def test_remove_edist_background_n_art(self):
         # n_art = 0 removes no photoelectrons (it used to mean "default")

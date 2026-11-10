@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import logging
 import os
 import posixpath
@@ -16,8 +15,8 @@ from botocore.exceptions import ClientError
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.ts_skymap import ts_skymap
-from .db_get_ts import db_get_ts
-from .db_init import MMS_CFG_PATH
+from .db_get_ts import _resolve_source, db_get_ts
+from .db_init import _read_config
 from .get_data import get_data
 from .list_files_aws import _bucket_and_prefix, _s3_resource
 from .list_files_sdc import LASP_PUBL, SDC_TIMEOUT, _login_lasp
@@ -117,13 +116,13 @@ def remove_edist_background(
         Artificial photoelectron density (sun-angle dependant). 0 removes no
         photoelectrons. Default is None, which uses the photoelectron scaling
         factor from the des-moms global attributes.
-    source : {"local", "sdc", "aws"}, Optional
+    source : {"default", "local", "sdc", "aws"}, Optional
         Resource to fetch the data (spin phase, moments) and the photoelectron
-        model from. The model is read from ``<local>/models/fpi/`` for "local",
-        from the SDC for "sdc", and from ``models/fpi/`` in the MMS bucket
-        (HelioCloud by default) for "aws". Default uses the default resource
-        of the MMS configuration (`pyrfu.mms.MMS_CFG_PATH`, set with
-        `mms.db_init`).
+        model from, in any case. The model is read from ``<local>/models/fpi/``
+        for "local", from the SDC for "sdc", and from ``models/fpi/`` in the
+        MMS bucket (HelioCloud by default) for "aws". Default (or "default")
+        uses the default resource of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     Returns
     -------
@@ -166,15 +165,9 @@ def remove_edist_background(
     else:
         raise TypeError("Could not identify if data is fast or burst.")
 
-    # Read the current version of the MMS configuration file
-    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-        config = json.load(fs)
-
-    # Resource to read the data and the photoelectron model from
-    source = source.lower() if source else config.get("default")
-
-    if source not in ["local", "sdc", "aws"]:
-        raise ValueError("source must be 'local', 'sdc' or 'aws'")
+    # Resource to read the data and the photoelectron model from, as the other
+    # readers ("default" raised ValueError)
+    source = _resolve_source(source)
 
     vdf_new = np.zeros_like(vdf.data.data)
     vdf_bkg = np.zeros_like(vdf.data.data)
@@ -197,7 +190,7 @@ def remove_edist_background(
 
     # Load the model internal photoelectrons
     bkg_fname = n_e.attrs["GLOBAL"]["Photoelectron_model_filenames"]
-    data_path = os.path.normpath(config["local"])
+    data_path = os.path.normpath(_read_config()["local"])
     f = _load_bgdist_model(bkg_fname, source, data_path)
 
     # Burst: model for each energy table (steptable parity 0 and 1)
