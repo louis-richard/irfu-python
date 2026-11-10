@@ -7,7 +7,7 @@ import numpy as np
 from ..pyrf.ts_skymap import ts_skymap
 
 # Local imports
-from .vdf_convert import vdf_convert
+from .vdf_convert import _DPF, vdf_convert
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -35,11 +35,26 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
         EIS skymap distribution, with the energies and their widths
         (``delta_energy_minus``, ``delta_energy_plus``) in eV.
 
+    Raises
+    ------
+    ValueError
+        With `to_psd`, if `inp_ang_ang` is not a differential particle flux
+        (``UNITS``), as :func:`pyrfu.mms.feeps_skymap` (KeyError without
+        ``UNITS``).
+
     See Also
     --------
     pyrfu.mms.eis_ang_ang
 
     """
+
+    # Units of the distribution, none without (KeyError)
+    units = inp_ang_ang.attrs.get("UNITS")
+
+    if to_psd and str(units).lower() not in _DPF:
+        raise ValueError(
+            f"Phase-space density needs differential particle fluxes, not {units}"
+        )
 
     time_data = inp_ang_ang.time.data
     energy = np.tile(inp_ang_ang.energy.data, (len(time_data), 1))
@@ -59,7 +74,8 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     }
     coords_attrs["energy"]["UNITS"] = "eV"
 
-    glob_attrs = inp_ang_ang.attrs["GLOBAL"]
+    # The global attributes of the files, none without (KeyError)
+    glob_attrs = inp_ang_ang.attrs.get("GLOBAL", {})
     # Energy widths in eV, as the energies (they were left in keV)
     glob_attrs = {
         "delta_energy_plus": 1e3 * np.asarray(inp_ang_ang.attrs["delta_energy_plus"]),

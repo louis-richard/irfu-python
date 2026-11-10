@@ -2196,6 +2196,23 @@ class EisSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
         self.assertNotIn("LABLAXIS", result.data.attrs)
 
+    def test_eis_skymap_inputs(self):
+        # Without global attributes (KeyError); the phase-space density of
+        # differential particle fluxes only (KeyError without UNITS, a
+        # conversion error for counts)
+        ang_ang = self._ang_ang([0.0, 20.0])
+        del ang_ang.attrs["GLOBAL"]
+        result = mms.eis_skymap(ang_ang)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+
+        for units in [None, "counts"]:
+            ang_ang = self._ang_ang([0.0, 20.0], units=units)
+            if units is None:
+                del ang_ang.attrs["UNITS"]
+            with self.assertRaisesRegex(ValueError, "differential particle"):
+                mms.eis_skymap(ang_ang)
+            mms.eis_skymap(ang_ang, to_psd=False)
+
     def test_eis_skymap_combine_sc_attrs(self):
         # Attributes kept where they are the same on all the spacecraft
         # (different values and arrays dropped)
@@ -2757,6 +2774,24 @@ class EisSpinAvgTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.eis_pad_spinavg(pad, eis.spin[:-1])
+
+        # A counts PAD (method "sum" of eis_pad) summed over each spin (it was
+        # averaged, still labelled "sum"); NaN for a bin without data
+        counts = pad.copy(data=pad.data.copy())
+        counts.attrs["method"] = "sum"
+        counts.data[6:10, 1] = np.nan
+        counts.data[3, 2] = np.nan
+        result = mms.eis_pad_spinavg(counts, eis.spin)
+        np.testing.assert_allclose(result.data[:, 0, 0], [14.0, 30.0])
+        np.testing.assert_allclose(result.data[:, 2, 0], [11.0, 30.0])
+        self.assertTrue(np.all(np.isnan(result.data[1, 1])))
+        self.assertEqual(result.attrs["method"], "sum")
+
+        # Or as asked; ValueError for another method
+        result = mms.eis_pad_spinavg(counts, eis.spin, method="mean")
+        np.testing.assert_allclose(result.data[:, 0, 0], [3.5, 7.5])
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.eis_pad_spinavg(counts, eis.spin, method="median")
 
         # Spin numbers of other times (misaligned silently)
         shifted = eis.spin.assign_coords(
