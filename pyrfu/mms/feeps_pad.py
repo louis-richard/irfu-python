@@ -183,6 +183,11 @@ def feeps_pad(
     by default, and survey data the pitch angles computed from `b_bcs`
     (`feeps_pitch_angles`).
 
+    As in IDL SPEDAS (``mms_feeps_pad``), the zero fluxes are set to NaN
+    before averaging over the energy channels and the eyes: the PAD is the
+    mean of the non-zero fluxes, several times an average with the zeros when
+    few counts are measured, and a bin with zeros only is NaN.
+
     """
 
     eye_names = list(filter(lambda x: x.startswith(("top", "bottom")), inp_dataset))
