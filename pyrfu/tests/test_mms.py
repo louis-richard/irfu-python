@@ -1083,10 +1083,10 @@ class DbGetVariableTestCase(unittest.TestCase):
         np.testing.assert_array_equal(out.attrs["T_RANGE"], times)
         self.assertTupleEqual(out.dims, ("x", "y"))
 
+        # (the loaded file kept: pycdfpp 0.9 frees the attributes with it)
         module = importlib.import_module("pyrfu.mms.get_variable")
-        glob_attrs = module._pycdfpp_attributes_to_dict(
-            pycdfpp.load(content).attributes
-        )
+        file = pycdfpp.load(content)
+        glob_attrs = module._pycdfpp_attributes_to_dict(file.attributes)
         self.assertDictEqual(
             glob_attrs, {"Logical_source": "mms1_fgm_srvy_l2", "Mods": ["v1", "v2"]}
         )
@@ -8816,7 +8816,9 @@ def _cdf_fpi_dist(
     if energy_tables:
         for i in range(2):
             cdf.add_variable(
-                f"{pre}_energy{i:d}{suf}", values=2 * _FPI_TABLES[i], is_nrv=True
+                f"{pre}_energy{i:d}{suf}",
+                values=2 * _FPI_TABLES[i : i + 1],
+                is_nrv=True,
             )
     if mode == "brst":
         cdf.add_variable(f"{pre}_steptable_parity{suf}", values=parity)
