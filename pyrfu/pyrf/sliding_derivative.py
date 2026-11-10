@@ -112,7 +112,7 @@ def sliding_derivative(
                 + 2 / 3 * data[i + 1]
                 - 1 / 12 * data[i + 2]
             ) / ((time[i + 2] - time[i - 2]) * 0.25)
-    elif method == "9ps":
+    else:  # "9ps"
 
         for i in range(4, len(data) - 4):
 

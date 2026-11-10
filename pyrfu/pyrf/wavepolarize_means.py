@@ -119,7 +119,8 @@ def wavepolarize_means(
     ellipticity : xarray.DataArray
         Spectrogram of the ellipticity (form -1 to 1)
     helicity : xarray.DataArray
-        Spectrogram of the helicity (form -1 to 1)
+        Spectrogram of the helicity (from 0 to 1, \|Im\| / \|Re\| of the
+        eigenvectors, as irfu-matlab and IDL).
 
     Notes
     -----

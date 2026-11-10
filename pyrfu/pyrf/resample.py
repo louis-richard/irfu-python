@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import logging
 import warnings
 
 # 3rd party imports
@@ -34,8 +33,6 @@ _METHODS = (
 # spread to the whole output: each component is interpolated through its
 # finite samples, as MATLAB interp1 ("spline", "pchip")
 _GLOBAL_METHODS = ("quadratic", "cubic")
-
-logger = logging.getLogger(__name__)
 
 
 def _guess_sampling_frequency(ref_time):
@@ -126,7 +123,18 @@ def _interp_finite(inp_time, inp_data, ref_time, method):
     return out_data.reshape(len(ref_time), *np.shape(inp_data)[1:])
 
 
-def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
+def _like(inp, out_data, time):
+    r"""DataArray of out_data at the times time, with the dimensions, the
+    dimension coordinates and the attributes of inp. A dimension without
+    coordinate (e.g. dims ["time", "comp"], coords time only) raised
+    ValueError."""
+    coords = {inp.dims[0]: time}
+    coords.update({k: inp.coords[k].data for k in inp.dims[1:] if k in inp.coords})
+
+    return xr.DataArray(out_data, coords=coords, dims=inp.dims, attrs=inp.attrs)
+
+
+def _resample_dataarray(inp, ref, method, f_s, window, thresh):
     r"""Resample for time series (xarray.DataArray)"""
 
     flag_do = "check"
@@ -141,10 +149,8 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
     else:
         sfy = None
 
+    # Both datetime64 (checked in resample) or both numeric
     if np.issubdtype(inp.time.dtype, np.datetime64):
-        if not np.issubdtype(ref.time.dtype, np.datetime64):
-            raise TypeError("inp and ref must both have datetime64 or numeric times")
-
         # Integer nanoseconds for the averaging windows, float seconds otherwise
         inp_time_ns = inp.time.data.astype("datetime64[ns]").astype(np.int64)
         ref_time_ns = ref.time.data.astype("datetime64[ns]").astype(np.int64)
@@ -166,8 +172,6 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
 
             if len(inp_time) / (inp_time[-1] - inp_time[0]) > 2 * sfy:
                 flag_do = "average"
-                if verbose:
-                    logger.info("Using averages in resample")
             else:
                 flag_do = "interpolation"
         else:
@@ -176,10 +180,8 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
     assert flag_do in ["average", "interpolation"]
 
     if flag_do == "average":
+        # sfy is set: averages are chosen only from it, above
         assert not method, "cannot mix interpolation and averaging flags"
-
-        if not sfy:
-            sfy = _guess_sampling_frequency(ref_time)
 
         if np.issubdtype(inp.time.dtype, np.datetime64):
             dt2 = int(np.round(0.5e9 / sfy))  # half window in ns
@@ -196,21 +198,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
         if len(inp_time_ns) == len(ref_time_ns) and np.array_equal(
             inp_time_ns, ref_time_ns
         ):
-            out_data = inp.data.copy()
-            coord = [ref.coords["time"].data]
-
-            if len(inp.coords) > 1:
-                for k in list(inp.dims)[1:]:
-                    coord.append(inp.coords[k].data)
-
-            out = xr.DataArray(
-                out_data,
-                coords=coord,
-                dims=inp.dims,
-                attrs=inp.attrs,
-            )
-
-            return out
+            return _like(inp, inp.data.copy(), ref.coords["time"].data)
 
         # Extrapolation outside the time range of inp with the interpolant,
         # as irf_resamp (MATLAB interp1 with 'extrap')
@@ -226,15 +214,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, verbose=False):
             )
             out_data = tck(ref_time)
 
-    coord = [ref.coords["time"]]
-
-    if len(inp.coords) > 1:
-        for k in list(inp.dims)[1:]:
-            coord.append(inp.coords[k].data)
-
-    out = xr.DataArray(out_data, coords=coord, dims=inp.dims, attrs=inp.attrs)
-
-    return out
+    return _like(inp, out_data, ref.coords["time"])
 
 
 def _resample_dataset(inp, ref, **kwargs):

@@ -58,7 +58,7 @@ def ts_spectr(
         raise TypeError("time must be a numpy.ndarray")
 
     if not isinstance(energy, np.ndarray):
-        raise TypeError("time must be a numpy.ndarray")
+        raise TypeError("energy must be a numpy.ndarray")
 
     if not isinstance(data, np.ndarray):
         raise TypeError("data must be a numpy.ndarray")
@@ -79,8 +79,14 @@ def ts_spectr(
     if comp_name is None:
         comp_name = "energy"
 
-    if attrs is None or not isinstance(attrs, dict):
+    # As ts_scalar and ts_vec_xyz (attrs that were not a dict were replaced
+    # by {}); a copy, the caller's dict is unchanged
+    if attrs is None:
         attrs = {}
+    elif isinstance(attrs, dict):
+        attrs = dict(attrs)
+    else:
+        raise TypeError("attrs must be a dict")
 
     if energy.ndim == 2:
         is_all_energy_equal = np.all(energy == energy[0, :], axis=0).all()

@@ -65,6 +65,9 @@ def new_xyz(inp, trans_mat, coordinate_system: Optional[str] = None):
 
     """
 
+    # A list raised AttributeError (.T)
+    trans_mat = np.asarray(trans_mat)
+
     if inp.data.ndim == 3:
         out_data = np.matmul(np.matmul(trans_mat.T, inp.data), trans_mat)
     else:

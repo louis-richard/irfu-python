@@ -203,7 +203,7 @@ def generate_eis(f_s, n_pts, data_rate, dtype, lev, specie, data_unit, mms_id):
     eis_dict = {"spin": spin_nums, "sector": sectors}
 
     for i, k in enumerate(keys):
-        eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, len(energies), "energy")
+        eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, len(energies))
         eis_dict[f"look_t{i:d}"] = generate_ts(f_s, n_pts, tensor_order=1)
 
     # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
@@ -2674,7 +2674,7 @@ class EisProtonCorrectionTestCase(unittest.TestCase):
         self.assertIsInstance(mms.eis_proton_correction(eis), xr.Dataset)
 
     def test_eis_proton_correction_dataarray(self):
-        flux_eis = generate_spectr(64, 100, 16, "energy")
+        flux_eis = generate_spectr(64, 100, 16)
         result = mms.eis_proton_correction(flux_eis)
         self.assertIsInstance(result, xr.DataArray)
 
@@ -10344,7 +10344,7 @@ class UnitsMomentsTestCase(unittest.TestCase):
     def test_units_spectr_to_dataset(self):
         # UNITS on the data (only on the Dataset, so that the unit conversions
         # raised KeyError), attributes not shared with the spectrum
-        spectr = generate_spectr(64.0, 10, 32, "energy")
+        spectr = generate_spectr(64.0, 10, 32)
         spectr.attrs = {"UNITS": "1/(cm^2 s sr keV)", "species": "ions"}
         result = mms.spectr_to_dataset(spectr)
 

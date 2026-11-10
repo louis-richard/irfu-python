@@ -3,6 +3,7 @@
 
 # 3rd party imports
 import numpy as np
+import xarray as xr
 
 # Local imports
 from .ts_scalar import ts_scalar
@@ -21,12 +22,21 @@ def norm(inp):
     Parameters
     ----------
     inp : xarray.DataArray
-        Time series of the input field.
+        Time series of the input field, a vector (time, n) or a scalar (its
+        absolute value).
 
     Returns
     -------
     out : xarray.DataArray
         Time series of the magnitude of the input field.
+
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray.
+    ValueError
+        If inp is not a scalar or a vector (a scalar raised AxisError, a
+        tensor ValueError from ts_scalar).
 
     Examples
     --------
@@ -50,6 +60,16 @@ def norm(inp):
 
     """
 
-    out = ts_scalar(inp.time.data, np.linalg.norm(inp.data, axis=1), attrs=inp.attrs)
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
+
+    if inp.ndim == 1:
+        magnitude = np.abs(inp.data)
+    elif inp.ndim == 2:
+        magnitude = np.linalg.norm(inp.data, axis=1)
+    else:
+        raise ValueError("inp must be a scalar or a vector time series")
+
+    out = ts_scalar(inp.time.data, magnitude, attrs=inp.attrs)
 
     return out

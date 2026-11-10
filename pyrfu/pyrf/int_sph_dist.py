@@ -70,8 +70,9 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     Raises
     ------
     ValueError
-        If the speed widths are negative or extend below zero speed, or if a
-        cartesian projection grid is not uniform.
+        If the speed widths are negative or extend below zero speed, if only
+        one of `d_v_m` and `d_v_p` is given, if `weight` is not one of the
+        above, or if a cartesian projection grid is not uniform.
     NotImplementedError
         If the projection is not a 1d polar, or a 2d or 3d cartesian one.
 
@@ -109,6 +110,10 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     n_mc = kwargs.get("n_mc", 10)
     weight = kwargs.get("weight", None)
 
+    # Another weight (e.g. "linear") was taken as None
+    if weight not in (None, "lin", "log"):
+        raise ValueError(f'weight must be None, "lin" or "log", not {weight!r}')
+
     # limit on out-of-plane velocity
     v_lim = np.array(kwargs.get("v_int", [-np.inf, np.inf]), dtype=np.float64)
 
@@ -132,7 +137,11 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
 
     # Speed widths below (d_v_m) and above (d_v_p) the speed of each instrument
     # bin. The Monte-Carlo particles are drawn uniformly in [v - d_v_m, v + d_v_p].
-    if "d_v_m" in kwargs and "d_v_p" in kwargs:
+    # One of them alone was ignored
+    if ("d_v_m" in kwargs) != ("d_v_p" in kwargs):
+        raise ValueError("d_v_m and d_v_p must be given together")
+
+    if "d_v_m" in kwargs:
         d_v_m = np.asarray(kwargs["d_v_m"], dtype=np.float64)
         d_v_p = np.asarray(kwargs["d_v_p"], dtype=np.float64)
     else:
@@ -593,12 +602,8 @@ def _mc_pol_1d(
                     # gives the *opposite* convention (left-open/right-closed)
                     # and silently mis-bins any MC point landing exactly on an
                     # interior grid edge.
+                    # v_p >= vg_edges[0] here (vg_edges[0] in the first bin)
                     i_vxg = np.searchsorted(vg_edges, v_p, side="right") - 1
-
-                    # Special case for the first bin edge, which is the lower limit of
-                    # the first bin and should be included in the first bin
-                    if i_vxg == -1:
-                        i_vxg = 0
 
                     # Special case matching MATLAB discretize's last-bin
                     # exception: the last bin is closed on BOTH ends, so
@@ -813,16 +818,9 @@ def _mc_cart_2d(
                     # left-open/right-closed convention instead), which was
                     # backwards relative to MATLAB -- reverted to </>=.
                     if use_fast_index:
-                        i_vxg = int((v_x_p - v_g0) / v_step)
-                        i_vyg = int((v_y_p - v_g0) / v_step)
-                        if i_vxg < 0:
-                            i_vxg = 0
-                        elif i_vxg >= n_vg:
-                            i_vxg = n_vg - 1
-                        if i_vyg < 0:
-                            i_vyg = 0
-                        elif i_vyg >= n_vg:
-                            i_vyg = n_vg - 1
+                        # Non-negative: v >= v_g0 here
+                        i_vxg = min(int((v_x_p - v_g0) / v_step), n_vg - 1)
+                        i_vyg = min(int((v_y_p - v_g0) / v_step), n_vg - 1)
                         while i_vxg > 0 and v_x_p < vg_edges[i_vxg]:
                             i_vxg -= 1
                         while i_vxg < n_vg - 1 and v_x_p >= vg_edges[i_vxg + 1]:
@@ -838,16 +836,9 @@ def _mc_cart_2d(
                         # gives the opposite (left-open/right-closed) binning
                         # and silently mis-bins points exactly on an interior
                         # grid edge.
+                        # v >= vg_edges[0] here (vg_edges[0] in the first bin)
                         i_vxg = np.searchsorted(vg_edges, v_x_p, side="right") - 1
                         i_vyg = np.searchsorted(vg_edges, v_y_p, side="right") - 1
-
-                    # Special case for the first bin edge, which is the lower limit of
-                    # the first bin and should be included in the first bin
-                    if i_vxg == -1:
-                        i_vxg = 0
-
-                    if i_vyg == -1:
-                        i_vyg = 0
 
                     # Special case matching MATLAB discretize's last-bin
                     # exception (closed on both ends): v == vg_edges[-1]
@@ -1059,21 +1050,10 @@ def _mc_cart_3d(
                     # left-open/right-closed convention instead), which was
                     # backwards relative to MATLAB -- reverted to </>=.
                     if use_fast_index:
-                        i_vxg = int((v_x_p - v_g0) / v_step)
-                        i_vyg = int((v_y_p - v_g0) / v_step)
-                        i_vzg = int((v_z_p - v_g0) / v_step)
-                        if i_vxg < 0:
-                            i_vxg = 0
-                        elif i_vxg >= n_vg:
-                            i_vxg = n_vg - 1
-                        if i_vyg < 0:
-                            i_vyg = 0
-                        elif i_vyg >= n_vg:
-                            i_vyg = n_vg - 1
-                        if i_vzg < 0:
-                            i_vzg = 0
-                        elif i_vzg >= n_vg:
-                            i_vzg = n_vg - 1
+                        # Non-negative: v >= v_g0 here
+                        i_vxg = min(int((v_x_p - v_g0) / v_step), n_vg - 1)
+                        i_vyg = min(int((v_y_p - v_g0) / v_step), n_vg - 1)
+                        i_vzg = min(int((v_z_p - v_g0) / v_step), n_vg - 1)
                         while i_vxg > 0 and v_x_p < vg_edges[i_vxg]:
                             i_vxg -= 1
                         while i_vxg < n_vg - 1 and v_x_p >= vg_edges[i_vxg + 1]:
@@ -1093,20 +1073,10 @@ def _mc_cart_3d(
                         # gives the opposite (left-open/right-closed) binning
                         # and silently mis-bins points exactly on an interior
                         # grid edge.
+                        # v >= vg_edges[0] here (vg_edges[0] in the first bin)
                         i_vxg = np.searchsorted(vg_edges, v_x_p, side="right") - 1
                         i_vyg = np.searchsorted(vg_edges, v_y_p, side="right") - 1
                         i_vzg = np.searchsorted(vg_edges, v_z_p, side="right") - 1
-
-                    # Special case for the first bin edge, which is the lower limit of
-                    # the first bin and should be included in the first bin
-                    if i_vxg == -1:
-                        i_vxg = 0
-
-                    if i_vyg == -1:
-                        i_vyg = 0
-
-                    if i_vzg == -1:
-                        i_vzg = 0
 
                     # Special case matching MATLAB discretize's last-bin
                     # exception (closed on both ends): v == vg_edges[-1]

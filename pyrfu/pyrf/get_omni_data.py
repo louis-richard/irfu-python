@@ -278,9 +278,9 @@ def get_omni_data(variables, tint, database: str = "omni_hour"):
     times, values = _parse_omni(text, len(codes_unique))
 
     # Fill values to NaN
-    for i, code in enumerate(codes_unique):
-        if code in fill_values:
-            values[np.isclose(values[:, i], fill_values[code]), i] = np.nan
+    # (NaN, never close, for a code without fill value)
+    fills = np.array([fill_values.get(code, np.nan) for code in codes_unique])
+    values[np.isclose(values, fills[None, :])] = np.nan
 
     columns = {
         var: values[:, codes_unique.index(code)] for var, code in zip(variables, codes)

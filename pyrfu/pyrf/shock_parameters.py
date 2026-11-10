@@ -28,18 +28,39 @@ def shock_parameters(spec):
     spec : dict
         Hash table with parameters input with fixed names. After the parameter name,
         a name of the region can be given, e.g. "u" and "d". All parameters except b
-        are optional.
+        are optional. The keys (vectors as arrays or lists of 3 components):
+
+        * b : magnetic field [nT].
+        * n : density [cm^-3].
+        * v : bulk velocity [km/s].
+        * t_i, t_e : ion and electron temperatures [eV].
+        * ref_sys : frame of the Mach numbers, "sc" (spacecraft, default) or
+          "nif" (normal incidence frame, along nvec).
+        * nvec : shock normal (unit vector), default [1, 0, 0] with "nif".
+        * v_sh : shock speed along nvec [km/s], default 0 with "nif".
 
     Returns
     -------
     out : dict
         Hash table with derived plasma parameters from hash table spec with measured
-        plasma parameters.
+        plasma parameters, for each region (when their inputs are given):
+
+        * v_a, v_ts, v_f : Alfven, sound and fast speeds [m/s].
+        * v_nif, v_htf : normal incidence and de Hoffmann-Teller frame
+          velocities [m/s] (with nvec and v_sh).
+        * f_cp : proton gyrofrequency [Hz].
+        * l_i : ion inertial length [m].
+        * r_cp : proton gyroradius [m].
+        * m_a, m_s, m_f : Alfven, sonic and fast Mach numbers.
+        * beta_i, beta_e : ion and electron plasma betas.
 
     """
 
-    # Copy so that the defaults set below don't change the caller's dict
-    spec = dict(spec)
+    # Copy so that the defaults set below don't change the caller's dict;
+    # lists as arrays (b_u or v_u given as lists raised TypeError at 1e3 * v)
+    spec = {
+        k: np.asarray(v) if isinstance(v, (list, tuple)) else v for k, v in spec.items()
+    }
 
     id_b = list(filter(lambda x: x[0].lower() == "b", spec))
     regions = [id_[1:] for id_ in id_b if len(id_) > 1]
