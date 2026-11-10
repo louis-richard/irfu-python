@@ -74,10 +74,13 @@ class ThermalCurrentTestCase(unittest.TestCase):
             np.testing.assert_allclose(result, expected, rtol=1e-12)
 
     def test_thermal_current_no_plasma(self):
-        # No density or temperature: None; no charge: no current
+        # No density or temperature: no current, as irfu-matlab (it was
+        # None); no charge: no current
         args = (1e5, 9.109e-31, 0.0, -1, np.zeros(3), 0.1, "sphere")
-        self.assertIsNone(lp.thermal_current(0.0, *args))
-        self.assertIsNone(lp.thermal_current(1e6, 0.0, *args[1:]))
+        np.testing.assert_array_equal(lp.thermal_current(0.0, *args), np.zeros(3))
+        np.testing.assert_array_equal(
+            lp.thermal_current(1e6, 0.0, *args[1:]), np.zeros(3)
+        )
         for p_type in ["sphere", "cylinder"]:
             result = lp.thermal_current(
                 1e6, 1e5, 9.109e-31, 0.0, 0, np.ones(3), 0.1, p_type
