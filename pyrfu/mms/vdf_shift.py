@@ -207,6 +207,7 @@ def vdf_shift(
     n_mc: int = 100,
     grid: dict = None,
     random_state=None,
+    sc_pot=None,
 ):
     r"""Skymap distribution in a frame moving with velocity `v_frame` and in
     a rotated coordinate system, as irfu-matlab PDist.shift.
@@ -234,6 +235,9 @@ def vdf_shift(
         the shifted distribution, as irfu-matlab.
     random_state : int or numpy.random.Generator, Optional
         Seed or generator of the Monte-Carlo particles.
+    sc_pot : xarray.DataArray or float or array_like, Optional
+        Spacecraft potential (V), see `vdf_velocity`: the new grid is in the
+        energies at infinity, as `vdf_rebin`. Default is no correction.
 
     Returns
     -------
@@ -281,4 +285,4 @@ def vdf_shift(
     if not _is_skymap(vdf):
         raise ValueError("vdf must be a skymap")
 
-    return _shift(vdf, v_frame, rotation, n_mc, grid, random_state)
+    return _shift(vdf, v_frame, rotation, n_mc, grid, random_state, sc_pot)

@@ -10728,6 +10728,23 @@ class VdfOmniTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.vdf_omni(vdf, "sum", v_frame=[0.0, 0.0, 0.0])
 
+    def test_vdf_omni_frame_sc_pot(self):
+        # With the spacecraft potential, the omni-directional distribution at
+        # the energies at infinity E: that of the measured energies E + V for
+        # electrons (no sc_pot option); ValueError without v_frame (unused)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 100.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.attrs.update({"species": "electrons", "relativistic": True})
+        energy = vdf.energy.data[0]
+        options = {"v_frame": [0.0, 0.0, 0.0], "n_mc": 500, "random_state": 0}
+
+        result = mms.vdf_omni(vdf, sc_pot=10.0, **options)
+        expected = mms.vdf_omni(vdf, energy=energy + 10.0, **options)
+        np.testing.assert_array_equal(result.data, expected.data)
+
+        with self.assertRaisesRegex(ValueError, "sc_pot needs v_frame"):
+            mms.vdf_omni(vdf, sc_pot=10.0)
+
     def test_vdf_omni_frame_maxwellian(self):
         # Drifting Maxwellian in its frame: the Maxwellian at rest
         v_kms = np.array([200.0, 150.0, -250.0])
@@ -11450,6 +11467,28 @@ class VdfShiftTestCase(unittest.TestCase):
         )
         np.testing.assert_allclose(
             result.data.data[:, 1:-1], vdf.data.data[:, 1:-1], rtol=1e-9
+        )
+
+    def test_vdf_shift_sc_pot(self):
+        # With the spacecraft potential (no sc_pot option), the grid in the
+        # energies at infinity: the geometric means of the corrected channel
+        # edges, and the density corrected for it (vdf_partial_density)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 100.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.attrs["species"] = "electrons"
+        result = mms.vdf_shift(vdf, [0.0] * 3, n_mc=20, random_state=0, sc_pot=10.0)
+
+        lower = vdf.energy.data - vdf.attrs["delta_energy_minus"] - 10.0
+        upper = vdf.energy.data + vdf.attrs["delta_energy_plus"] - 10.0
+        np.testing.assert_allclose(
+            result.energy.data[:, 1:-1], np.sqrt(lower * upper)[:, 1:-1]
+        )
+
+        def density(inp, **kwargs):
+            return np.nansum(mms.vdf_partial_density(inp, **kwargs).data.data)
+
+        self.assertAlmostEqual(
+            density(result) / density(vdf, sc_pot=10.0), 1.0, places=12
         )
 
     def test_vdf_shift_bulk_frame(self):

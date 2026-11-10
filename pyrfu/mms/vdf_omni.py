@@ -40,7 +40,7 @@ def _bin_index(lower, upper, values):
     return np.where(inside, index, -1)
 
 
-def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
+def _omni_frame(vdf, v_frame, energy, n_mc, random_state, sc_pot):
     # Spherical means of the skymap on spheres centred on v_frame, of radii
     # the speeds of the energies, as irfu-matlab get_omni_dist_framedep
     n_t = len(vdf.time)
@@ -64,7 +64,7 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state):
         axis=-1,
     )
 
-    v_lower, v_upper = _speed_edges(vdf, None)
+    v_lower, v_upper = _speed_edges(vdf, sc_pot)
     phi_lower, phi_upper = _phi_edges(vdf)
     theta_lower, theta_upper = _theta_edges(vdf)
     data = vdf.data.data
@@ -136,6 +136,7 @@ def vdf_omni(
     energy=None,
     n_mc: int = 5000,
     random_state=None,
+    sc_pot=None,
 ):
     r"""Computes omni-directional distribution, without changing the units.
 
@@ -166,6 +167,10 @@ def vdf_omni(
         5000, as irfu-matlab.
     random_state : int or numpy.random.Generator, Optional
         With `v_frame`, seed or generator of the Monte-Carlo points.
+    sc_pot : xarray.DataArray or float or array_like, Optional
+        With `v_frame`, spacecraft potential (V), see `vdf_velocity`: the
+        energies of the omni-directional distribution are then at infinity.
+        Default is no correction.
 
     Returns
     -------
@@ -179,7 +184,8 @@ def vdf_omni(
     Raises
     ------
     ValueError
-        If method is not "mean" or "sum", or is "sum" with `v_frame`.
+        If method is not "mean" or "sum", or is "sum" with `v_frame`, or if
+        `sc_pot` is given without `v_frame`.
 
     Notes
     -----
@@ -222,12 +228,15 @@ def vdf_omni(
 
     frame_attrs = {}
 
+    if sc_pot is not None and v_frame is None:
+        raise ValueError("sc_pot needs v_frame (the speeds are not used without)")
+
     if v_frame is not None:
         if method.lower() != "mean":
             raise ValueError("v_frame needs method mean")
 
         omni, energy, coverage, v_frame = _omni_frame(
-            vdf, v_frame, energy, n_mc, random_state
+            vdf, v_frame, energy, n_mc, random_state, sc_pot
         )
         frame_attrs = {"frame_velocity": v_frame, "coverage": coverage, "n_mc": n_mc}
     else:
