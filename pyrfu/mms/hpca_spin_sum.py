@@ -82,7 +82,8 @@ def hpca_spin_sum(inp, saz, method: str = "mean"):
     median sampling periods apart): the spins cut by data gaps were kept as
     partial sums or means, as the EIS and FEEPS spin averages do not. saz is
     used by position, so it must be at the times of inp (misaligned spins
-    were used).
+    were used). The samples without data (NaN) are left out; a spin without
+    data is NaN.
 
     """
 
@@ -98,10 +99,11 @@ def hpca_spin_sum(inp, saz, method: str = "mean"):
     for start, stop in zip(starts, stops):
         spin_data = inp[start:stop]
 
+        # NaN for a spin without data (the sum was 0, as data)
         if method == "mean":
             out_data.append(spin_data.mean(dim="time").data)
         else:
-            out_data.append(spin_data.sum(dim="time").data)
+            out_data.append(spin_data.sum(dim="time", min_count=1).data)
 
     out_time = inp.time.data[starts]
     out_data = np.stack(out_data)

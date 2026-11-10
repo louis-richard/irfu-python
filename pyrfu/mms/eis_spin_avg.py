@@ -48,7 +48,9 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
     eis_allt : xarray.Dataset
         Dataset of the fluxes of all 6 telescopes.
     method : {"mean", "sum"}
-        Method.
+        Method. The samples without data (NaN) are left out; a spin without
+        data is NaN.
+
     Returns
     -------
     spin_avg_fluxes : xarray.Dataset
@@ -120,8 +122,14 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
                 warnings.simplefilter("ignore", category=RuntimeWarning)
 
                 if method.lower() == "sum":
-                    # Sum (for counts)
-                    flux_avg[i, :] = np.nansum(flux_data[spin_strt:spin_stop], axis=0)
+                    # Sum (for counts), NaN for a spin without data (it was 0,
+                    # as data)
+                    spin_data = flux_data[spin_strt:spin_stop]
+                    flux_avg[i, :] = np.where(
+                        np.isfinite(spin_data).any(axis=0),
+                        np.nansum(spin_data, axis=0),
+                        np.nan,
+                    )
 
                 else:
                     # Average (for differential partile flux, differential

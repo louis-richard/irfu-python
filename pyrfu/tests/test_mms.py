@@ -2705,6 +2705,22 @@ class EisSpinAvgTestCase(unittest.TestCase):
             mms.eis_spin_avg(eis, "sum").t0.data[:, 0], [14, 30, 54]
         )
 
+    def test_eis_spin_avg_nan(self):
+        # The samples without data are left out; a spin without data is NaN
+        # (its sum was 0, as data)
+        spin = [11] * 4 + [12] * 4 + [13] * 4
+        eis = self._eis(spin)
+        for scope in [k for k in eis if k.startswith("t")]:
+            eis[scope].data[4:8] = np.nan
+            eis[scope].data[9] = np.nan
+
+        for method, expected in [
+            ("sum", [6.0, np.nan, 29.0]),
+            ("mean", [1.5, np.nan, 29.0 / 3.0]),
+        ]:
+            result = mms.eis_spin_avg(eis, method)
+            np.testing.assert_allclose(result.t0.data[:, 0], expected)
+
     def test_eis_spin_avg_counter_wrap(self):
         # The spins in time order across the wrap of the uint16 counter (they
         # were ordered by number)
@@ -3545,6 +3561,18 @@ class HpcaPadTestCase(unittest.TestCase):
         for method, expected in [("mean", 3.5), ("sum", 14.0)]:
             spec = mms.hpca_calc_anodes(anodes, fov=[0.0, 90.0], method=method)
             np.testing.assert_array_equal(spec.data, expected)
+
+        # An anode without data is left out (it made the spectrum NaN); NaN
+        # without warning where no anode has data
+        anodes = anodes.copy(data=anodes.data.copy())
+        anodes.data[:, 3] = np.nan
+        anodes.data[0, 2:6] = np.nan
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for method, expected in [("mean", 11.0 / 3.0), ("sum", 11.0)]:
+                spec = mms.hpca_calc_anodes(anodes, fov=[0.0, 90.0], method=method)
+                np.testing.assert_allclose(spec.data[1:], expected)
+                self.assertTrue(np.all(np.isnan(spec.data[0])))
 
         is_par = np.zeros(32, dtype=bool)
         is_par[0:16:2] = True
@@ -13163,6 +13191,19 @@ class HpcaSpinSumTestCase(unittest.TestCase):
             np.testing.assert_array_equal(result.time.data, saz.time.data[[0, 16, 32]])
             self.assertEqual(result.dims, inp.dims)
             self.assertDictEqual(result.attrs, inp.attrs)
+
+    def test_hpca_spin_sum_nan(self):
+        # The samples without data are left out; a spin without data is NaN
+        # (its sum was 0, as data)
+        inp, saz = self._inputs(np.arange(48) % 16)
+        inp.data[16:32] = np.nan
+        inp.data[3] = np.nan
+
+        for method in ["mean", "sum"]:
+            result = mms.hpca_spin_sum(inp, saz, method)
+            expected = getattr(np, f"nan{method}")(inp.data[0:16], axis=0)
+            np.testing.assert_allclose(result.data[0], expected)
+            self.assertTrue(np.all(np.isnan(result.data[1])))
 
     def test_hpca_spin_sum_errors(self):
         # One spin start (it raised IndexError) or none: no complete spin
