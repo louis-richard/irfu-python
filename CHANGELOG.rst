@@ -23,10 +23,14 @@ Changed behaviour
   None.
 - ``lp.thermal_current`` returns zeros for a zero density or temperature, as
   irfu-matlab: it returned None.
+- ``pyrf.filt``: the default ``f_max`` is 0, as irfu-matlab ``irf_filt``,
+  so that ``filt(inp, f_min)`` is a high-pass, without warning. It was 1 Hz,
+  with a ``FutureWarning`` since 2.5.2 (planned for 3.0): ``filt(inp, f_min)``
+  was a band pass from ``f_min`` to 1 Hz, and filtered everything out for
+  ``f_min`` above 1 Hz. Give ``f_max=1`` for the former band pass;
+  ``filt(inp)`` raises ``ValueError`` (it was a 1 Hz low-pass).
 - ``pyrf.filt`` raises ``ValueError`` for a band pass with ``f_min`` not
-  below ``f_max``, which filtered everything out (about 1e-4 of the input):
-  also with the default ``f_max`` of 1 Hz, e.g. ``filt(inp, 4)``; give
-  ``f_max=0`` for a high-pass.
+  below ``f_max``, which filtered everything out (about 1e-4 of the input).
 - ``pyrf.dot`` raises ``TypeError`` or ``ValueError`` unless both inputs are
   vectors with the same number of components, as ``pyrf.cross``: a vector
   and a scalar were broadcast (wrong numbers for 3 samples).

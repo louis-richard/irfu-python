@@ -3811,24 +3811,18 @@ class FiltTestCase(unittest.TestCase):
         result = pyrf.filt(inp, f_min, f_max, order)
         self.assertIsInstance(result, xr.DataArray)
 
-    def test_filt_default_f_max_warns(self):
-        # The implicit f_max = 1 Hz low-pass warns that it changes in 3.0;
-        # the result is that of f_max=1 (unchanged)
-        inp = generate_ts(64.0, 1000)
-
-        with self.assertWarnsRegex(FutureWarning, "f_max=0") as context:
-            result = pyrf.filt(inp, 0.5)
-
-        self.assertEqual(context.filename, __file__)
-        xr.testing.assert_allclose(result, pyrf.filt(inp, 0.5, 1.0))
-
-    @data(0.0, 1.0, 10.0)
-    def test_filt_explicit_f_max_silent(self, f_max):
+    @data(0.5, 4.0)
+    def test_filt_default_high_pass(self, f_min):
+        # The default f_max is 0, a high-pass, without warning: it was 1 Hz
+        # (a band pass up to 1 Hz, filtering everything out above 1 Hz, with a
+        # FutureWarning)
         inp = generate_ts(64.0, 1000)
 
         with warnings.catch_warnings():
-            warnings.simplefilter("error", FutureWarning)
-            pyrf.filt(inp, 0.5 if f_max != 10.0 else 0.0, f_max)
+            warnings.simplefilter("error")
+            result = pyrf.filt(inp, f_min)
+
+        xr.testing.assert_identical(result, pyrf.filt(inp, f_min, 0.0))
 
     def test_filt_frequencies(self):
         inp = generate_ts(64.0, 1000)
@@ -3843,12 +3837,9 @@ class FiltTestCase(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, message):
                 pyrf.filt(inp, f_min, f_max)
 
-        # The default f_max (1 Hz) with f_min above it filtered everything out
-        with (
-            self.assertWarns(FutureWarning),
-            self.assertRaisesRegex(ValueError, "default f_max is 1 Hz"),
-        ):
-            pyrf.filt(inp, 4.0)
+        # Both defaults: nothing to filter
+        with self.assertRaisesRegex(ValueError, "both"):
+            pyrf.filt(inp)
 
         # f_max at or above the Nyquist frequency: a high-pass
         xr.testing.assert_allclose(pyrf.filt(inp, 4.0, 40.0), pyrf.filt(inp, 4.0, 0.0))

@@ -3,7 +3,6 @@
 
 # Built-in imports
 import numbers
-import warnings
 
 # 3rd party imports
 import numpy as np
@@ -76,7 +75,7 @@ def _sos_padlen(sos):
     return 3 * (2 * len(sos) - n_trailing)
 
 
-def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
+def filt(inp, f_min: float = 0.0, f_max: float = 0.0, order: int = -1):
     r"""Filters input quantity.
 
     Parameters
@@ -88,9 +87,9 @@ def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
         is 0.
     f_max : float, Optional
         Upper limit of the frequency range (Hz), 0 for no low-pass. Default
-        is 1 Hz, with a FutureWarning: it will be 0 (no low-pass) in 3.0, as
-        the fmax = 0 convention of irfu-matlab irf_filt. Give `f_max`
-        explicitly to keep the current behaviour without the warning.
+        is 0, as the fmax = 0 convention of irfu-matlab irf_filt:
+        ``filt(inp, f_min)`` is a high-pass (it was a band pass up to 1 Hz
+        until 2.5.11).
     order : int, Optional
         Order of the elliptic filter. Default is -1.
 
@@ -104,8 +103,7 @@ def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
     ValueError
         If f_min and f_max are both 0, if f_min is not below the Nyquist
         frequency, if f_max is at or above it with f_min = 0, if f_min is not
-        below f_max for a band pass (also with the default f_max, e.g.,
-        filt(inp, 4)), or if inp has more than 3 dimensions.
+        below f_max for a band pass, or if inp has more than 3 dimensions.
 
     Examples
     --------
@@ -140,16 +138,6 @@ def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
     # Data of the input
     inp_data = inp.data.astype(np.float64)
 
-    if f_max is None:
-        warnings.warn(
-            "filt: the default f_max=1 Hz adds a 1 Hz low-pass and will "
-            "change to f_max=0 (no low-pass) in pyrfu 3.0; give f_max "
-            "explicitly (e.g. f_max=0 for a high-pass)",
-            FutureWarning,
-            stacklevel=2,
-        )
-        f_max = 1.0
-
     # Any real number, including numpy scalars (np.int64, np.float32)
     assert isinstance(f_min, numbers.Real), "f_min must be a real number"
     assert isinstance(f_max, numbers.Real), "f_max must be a real number"
@@ -175,11 +163,11 @@ def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
             raise ValueError("f_max >= Nyquist frequency with f_min = 0 does nothing!")
 
     # A band pass with f_min above f_max filtered everything out (as
-    # irfu-matlab irf_filt), also with the default f_max of 1 Hz
+    # irfu-matlab irf_filt)
     if 0.0 < f_max <= f_min:
         raise ValueError(
             "f_min must be smaller than f_max for a band pass (f_max=0 for a "
-            "high-pass; the default f_max is 1 Hz)"
+            "high-pass)"
         )
 
     # Parameters of the elliptic filter. fact defines the width between
