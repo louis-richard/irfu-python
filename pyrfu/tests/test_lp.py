@@ -32,6 +32,13 @@ class ThermalCurrentTestCase(unittest.TestCase):
         for p_type, expected in [("Sphere", sphere), ("CYLINDER", cylinder)]:
             np.testing.assert_array_equal(lp.thermal_current(*args, p_type), expected)
 
+    def test_thermal_current_probe_type_invalid(self):
+        # ValueError (AssertionError; with python -O, computed as a cylinder)
+        with self.assertRaisesRegex(ValueError, "p_type"):
+            lp.thermal_current(
+                1e7, 1e5, constants.electron_mass, 0.0, -1, 0.0, 1.0, "disk"
+            )
+
     # irfu-matlab lp.thermal_current(p_type, 1e6, 1e5, 9.109e-31, v, z, U, 0.1)
     # at U = -5, -1, 0, 1, 5 V (R2024a)
     MATLAB = {

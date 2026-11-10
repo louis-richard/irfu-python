@@ -54,6 +54,16 @@ class DbInitTestCase(unittest.TestCase):
         with open(package_path, "rb") as file:
             self.assertEqual(file.read(), package_config)
 
+    def test_db_init_missing_path(self):
+        # FileNotFoundError (AssertionError; with python -O the path was
+        # written to the configuration)
+        with self.assertRaises(FileNotFoundError):
+            maven.db_init("/Volumes/maven/remote/data")
+
+        self.assertFalse(
+            os.path.exists(os.path.join(self.config_dir, "maven_config.json"))
+        )
+
 
 class DownloadDataTestCase(unittest.TestCase):
     FILES = [
@@ -183,6 +193,10 @@ class DownloadDataTestCase(unittest.TestCase):
 
             self.assertEqual(out_path, os.path.join(root, "swe", "l2", "2015", "01"))
             self.assertEqual(out_file, os.path.join(out_path, self.FILES[3]))
+
+        # A data path that doesn't exist (AssertionError)
+        with self.assertRaises(FileNotFoundError):
+            module._make_path(file, var, "url/", "/Volumes/maven/remote/data")
 
 
 if __name__ == "__main__":

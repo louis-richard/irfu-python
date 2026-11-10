@@ -105,7 +105,9 @@ class DbInitTestCase(unittest.TestCase):
             self.assertEqual(file.read(), package_config)
 
     def test_db_init_inpput(self):
-        with self.assertRaises(AssertionError):
+        # FileNotFoundError (AssertionError; with python -O the path was
+        # written to the configuration)
+        with self.assertRaises(FileNotFoundError):
             solo.db_init("/Volumes/solo/remote/data")
 
     def test_db_init_output(self):
@@ -115,15 +117,32 @@ class DbInitTestCase(unittest.TestCase):
 @ddt
 class ReadLFRDensityTestCase(unittest.TestCase):
     @data(
-        ([], ".", False),
-        ([np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"], ".", False),
-        (["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")], ".", False),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], "/bazinga", False),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], ".", "i am groot"),
+        ([], ".", False, ValueError),
+        (
+            [np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"],
+            ".",
+            False,
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")],
+            ".",
+            False,
+            TypeError,
+        ),
+        ("2023-01-01T00:00:00", ".", False, TypeError),
+        (
+            ["2023-01-01T00:00:00", "2023-01-01T00:10:00"],
+            "/bazinga",
+            False,
+            FileNotFoundError,
+        ),
+        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], ".", "i am groot", TypeError),
     )
     @unpack
-    def test_read_lfr_density_input(self, tint, data_path, tree):
-        with self.assertRaises(AssertionError):
+    def test_read_lfr_density_input(self, tint, data_path, tree, error):
+        # TypeError, ValueError and FileNotFoundError (AssertionError)
+        with self.assertRaises(error):
             solo.read_lfr_density(tint, data_path, tree)
 
     def test_read_lfr_density_output(self):
@@ -214,15 +233,36 @@ class ReadLFRDensityTestCase(unittest.TestCase):
 @ddt
 class ReadTNRTestCase(unittest.TestCase):
     @data(
-        ([], 1, "."),
-        ([np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"], 1, "."),
-        (["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")], 1, "."),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], random.random(), "."),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], 1, "/bazinga"),
+        ([], 1, ".", ValueError),
+        (
+            [np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"],
+            1,
+            ".",
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")],
+            1,
+            ".",
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", "2023-01-01T00:10:00"],
+            random.random(),
+            ".",
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", "2023-01-01T00:10:00"],
+            1,
+            "/bazinga",
+            FileNotFoundError,
+        ),
     )
     @unpack
-    def test_read_tnr_input(self, tint, sensor, data_path):
-        with self.assertRaises(AssertionError):
+    def test_read_tnr_input(self, tint, sensor, data_path, error):
+        # TypeError, ValueError and FileNotFoundError (AssertionError)
+        with self.assertRaises(error):
             solo.read_tnr(tint, sensor, data_path)
 
     @data(

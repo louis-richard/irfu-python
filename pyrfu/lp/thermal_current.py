@@ -90,10 +90,17 @@ def thermal_current(
         Current [A], zero without density or temperature, as irfu-matlab (it
         was None).
 
+    Raises
+    ------
+    ValueError
+        If p_type is not "sphere" or "cylinder".
+
     """
 
     p_type = p_type.lower()
-    assert p_type in ["sphere", "cylinder"]
+
+    if p_type not in ["sphere", "cylinder"]:
+        raise ValueError(f'p_type must be "sphere" or "cylinder", not {p_type!r}')
 
     u = np.atleast_1d(u)
 

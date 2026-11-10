@@ -67,10 +67,13 @@ def read_tnr(
 
     Raises
     ------
+    TypeError
+        If sensor is not an integer, tint not two strings or tree not a bool.
     FileNotFoundError
-        If no file covers the time interval.
+        If the data path doesn't exist, or no file covers the time interval.
     ValueError
-        If no file has data from the sensor selected.
+        If tint has not two elements, or no file has data from the sensor
+        selected.
 
     Notes
     -----
@@ -82,7 +85,8 @@ def read_tnr(
     """
 
     # Check input types (numpy integers, e.g. from an array, were rejected)
-    assert isinstance(sensor, numbers.Integral), "sensor must integer"
+    if not isinstance(sensor, numbers.Integral):
+        raise TypeError("sensor must be an integer")
 
     files = _list_files_tnr_l2(tint, data_path, tree)
 

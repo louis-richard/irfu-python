@@ -3616,6 +3616,10 @@ class HpcaPadTestCase(unittest.TestCase):
             spec = mms.hpca_calc_anodes(anodes, fov=[0.0, 90.0], method=method)
             np.testing.assert_array_equal(spec.data, expected)
 
+        # ValueError for another method (AssertionError)
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.hpca_calc_anodes(anodes, method="median")
+
         # An anode without data is left out (it made the spectrum NaN); NaN
         # without warning where no anode has data
         anodes = anodes.copy(data=anodes.data.copy())
@@ -8593,6 +8597,27 @@ class GetTsTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
 
+    def test_get_ts_not_supported(self):
+        # A variable that is not a time series (no epoch DEPEND_0): ValueError;
+        # a fourth dimension of components: NotImplementedError (both
+        # AssertionError)
+        cdf = pycdfpp.CDF()
+        cdf.add_variable("mms1_x", values=np.ones((3, 2)))
+        with self.assertRaisesRegex(ValueError, "not a time series"):
+            get_ts(bytes(pycdfpp.save(cdf)), "mms1_x")
+
+        content, _ = self._cdf(
+            "mms1_x",
+            np.ones((3, 2, 4, 3)),
+            {
+                "DEPEND_1": ("energy", np.arange(2.0), "energy"),
+                "DEPEND_2": ("phi", np.arange(4.0), None),
+                "REPRESENTATION_3": "x,y,z",
+            },
+        )
+        with self.assertRaises(NotImplementedError):
+            get_ts(content, "mms1_x")
+
 
 def _cdf_fpi_brst_spectr(n_records, t_start="2019-09-14T07:54:00", offset=0.0):
     # In-memory FPI burst electron omni spectrogram as in the L2 moments files:
@@ -9436,6 +9461,7 @@ class ReduceTestCase(unittest.TestCase):
 
     @data(
         ("ions", "s^3/m^6", np.array([1, 0, 0]), "1d", "pol", {}),
+        ("ions", "s^3/m^6", np.eye(2), "1d", "pol", {}),
         ("I AM GROOT", "s^3/m^6", np.eye(3), "1d", "pol", {}),
         ("ions", "bazinga", np.eye(3), "1d", "pol", {}),
         ("ions", "s^3/m^6", np.eye(3), "2d", "pol", {}),
@@ -12240,6 +12266,11 @@ class ListFilesTestCase(unittest.TestCase):
                     list(pyrf.iso86012datetime64(np.array(tint))), 1, var, root
                 )
 
+    def test_list_files_missing_path(self):
+        # FileNotFoundError (AssertionError)
+        with self.assertRaises(FileNotFoundError):
+            mms.list_files(TEST_TINT, 1, mms.tokenize("b_gse_fgm_srvy_l2"), "/bazinga")
+
 
 class _FakeSdcResponse:
     def __init__(self, files, error=None):
@@ -12958,6 +12989,11 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
                     "defatt",
                     root,
                 )
+
+    def test_list_files_ancillary_missing_path(self):
+        # FileNotFoundError (AssertionError)
+        with self.assertRaises(FileNotFoundError):
+            mms.list_files_ancillary(TEST_TINT, 1, "defatt", "/bazinga")
 
 
 @ddt

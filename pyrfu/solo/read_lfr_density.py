@@ -56,8 +56,13 @@ def read_lfr_density(
 
     Raises
     ------
+    TypeError
+        If tint is not two strings, or tree not a bool.
+    ValueError
+        If tint has not two elements.
     FileNotFoundError
-        If no file covers the time interval (None was returned).
+        If the data path doesn't exist, or no file covers the time interval
+        (None was returned).
 
     """
 

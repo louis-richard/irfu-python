@@ -78,7 +78,8 @@ def _make_path(file, var, lasp_url, data_path: str = ""):
     else:
         data_path = os.path.normpath(data_path)
 
-    assert os.path.exists(data_path), "local data directory doesn't exist!"
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"local data directory {data_path} doesn't exist")
 
     path_list = [
         data_path,  # root path to data
@@ -145,9 +146,9 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
     Raises
     ------
     FileNotFoundError
-        If no file is found, or none of the plan and file extension (only the
-        MAG .sts files of the plan were downloaded: the other instruments
-        downloaded nothing, silently).
+        If the data path doesn't exist, if no file is found, or none of the
+        plan and file extension (only the MAG .sts files of the plan were
+        downloaded: the other instruments downloaded nothing, silently).
     requests.HTTPError
         If the search or a download fails (the error page was saved as the
         file).

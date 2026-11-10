@@ -64,11 +64,17 @@ def _list_files(
     """
 
     # Check input types
-    assert isinstance(tint, (list, np.ndarray)), "tint must be array_like"
-    assert len(tint) == 2, "tint must contain two elements"
-    assert isinstance(tint[0], str), "tint[0] must be a string"
-    assert isinstance(tint[1], str), "tint[1] must be a string"
-    assert isinstance(tree, bool), "tree must be a boolean"
+    if not isinstance(tint, (list, np.ndarray)):
+        raise TypeError("tint must be array_like")
+
+    if len(tint) != 2:
+        raise ValueError("tint must contain two elements")
+
+    if not all(isinstance(t_, str) for t_ in tint):
+        raise TypeError("tint must contain strings")
+
+    if not isinstance(tree, bool):
+        raise TypeError("tree must be a boolean")
 
     # Check path
     if not data_path:
@@ -81,7 +87,8 @@ def _list_files(
         data_path = os.path.normpath(data_path)
 
     # Make sure that the data path exists
-    assert os.path.exists(data_path), f"{data_path} doesn't exist!!"
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"{data_path} doesn't exist")
 
     # Only this product: not the -10-seconds density, nor partial downloads
     file_regex = re.compile(

@@ -35,11 +35,18 @@ def db_init(local_data_dir):
     local_data_dir : str
         Path to the data.
 
+    Raises
+    ------
+    FileNotFoundError
+        If local_data_dir doesn't exist (it was not written to the
+        configuration, but with python -O it was).
+
     """
 
     # Normalize the path and make sure that it exists
     local_data_dir = os.path.normpath(local_data_dir)
-    assert os.path.exists(local_data_dir), f"{local_data_dir} doesn't exists!!"
+    if not os.path.exists(local_data_dir):
+        raise FileNotFoundError(f"{local_data_dir} doesn't exist")
 
     # Read the current version of the configuration (user directory)
     with open(config_path(), "r", encoding="utf-8") as fs:
