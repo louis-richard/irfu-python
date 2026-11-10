@@ -4421,6 +4421,50 @@ class PsdMomentsTestCase(unittest.TestCase):
         self.assertIsInstance(result[2], np.ndarray)
         self.assertIsInstance(result[3], np.ndarray)
 
+    def test_sanitize_nan_inplace(self):
+        # NaN set to 0 in place (the Python function, compiled otherwise)
+        module = sys.modules["pyrfu.mms.psd_moments"]
+        vdf = np.array([[1.0, np.nan], [np.nan, 4.0]])
+        result = module._sanitize_nan_inplace.py_func(vdf)
+        self.assertIs(result, vdf)
+        np.testing.assert_array_equal(vdf, [[1.0, 0.0], [0.0, 4.0]])
+
+    def test_moms_channels_and_nan(self):
+        # The channels not used and the NaN points count as zeros
+        rng = np.random.default_rng(1)
+        n_t, n_e, n_ph, n_th = 2, 4, 8, 6
+        vdf = rng.uniform(0.0, 1.0, (n_t, n_e, n_ph, n_th))
+        use_energy = np.ones((n_t, n_e), dtype=bool)
+        use_energy[:, 1] = False
+        vdf_nan = vdf.copy()
+        vdf_nan[0, 2, 3, 4] = np.nan
+
+        vdf_zero = vdf.copy()
+        vdf_zero[:, 1] = 0.0
+        vdf_zero[0, 2, 3, 4] = 0.0
+
+        args = [
+            np.tile(10.0 * 2.0 ** np.arange(n_e), (n_t, 1)),
+            rng.uniform(1.0, 2.0, (n_t, n_e)),
+            constants.e,
+            np.zeros(n_t),
+            constants.m_p,
+            False,
+            0.0,
+            rng.uniform(0, 360, (n_t, n_ph, n_th)),
+            rng.uniform(0, 180, (n_t, n_ph, n_th)),
+        ]
+        rest = [
+            rng.uniform(0.1, 0.2, (n_t, n_ph, n_th)),
+            np.zeros((1, 10, 1, 1)),
+            False,
+        ]
+        result = _moms.__wrapped__(*args, use_energy, vdf_nan, *rest)
+        expected = _moms.__wrapped__(*args, np.ones((n_t, n_e), bool), vdf_zero, *rest)
+
+        for res, exp in zip(result, expected):
+            np.testing.assert_allclose(res, exp, rtol=1e-12)
+
     def test_moms_exact_kernels(self):
         # The midpoint kernels passed as exact kernels (delta_ang = 1) give the
         # midpoint moments
@@ -5043,6 +5087,11 @@ class PsdMomentsTestCase(unittest.TestCase):
         result = self._moments(vdf, sc_pot, energy_range=e_range_ts)
         self._assert_moments_equal(result, fixed_1)
 
+        # On the times of the distribution (not resampled)
+        e_range_ts = e_range_ts.assign_coords(time=vdf.time.data)
+        result = self._moments(vdf, sc_pot, energy_range=e_range_ts)
+        self._assert_moments_equal(result, fixed_1)
+
         # Range changing halfway: each half has the moments of its range
         e_range[2:] = [50.0, 1e4]
         result = self._moments(vdf, sc_pot, energy_range=e_range)
@@ -5264,37 +5313,20 @@ class PsdRebinTestCase(unittest.TestCase):
                 vdf.attrs["esteptable"],
             )
 
-    @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
-    def test_psd_rebin_phi_type(self, vdf):
-        with self.assertRaises(TypeError):
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi,
-                vdf.attrs["energy0"],
-                vdf.attrs["energy1"],
-                vdf.attrs["esteptable"],
-            )
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi.data,
-                vdf.energy[0, :],
-                vdf.attrs["energy1"],
-                vdf.attrs["esteptable"],
-            )
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi.data,
-                vdf.attrs["energy0"],
-                vdf.energy[1, :],
-                vdf.attrs["esteptable"],
-            )
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi.data,
-                vdf.attrs["energy0"],
-                vdf.attrs["energy1"],
-                pyrf.ts_scalar(vdf.time.data, vdf.attrs["esteptable"]),
-            )
+    def test_psd_rebin_table_types(self):
+        # phi, energy0, energy1 and the stepping table as numpy arrays (the
+        # test of phi raised on its first argument, not a Dataset)
+        vdf = generate_vdf(64.0, 10, (32, 32, 16), energy01=True, species="ions")
+        args = [
+            vdf,
+            vdf.phi.data,
+            vdf.attrs["energy0"],
+            vdf.attrs["energy1"],
+            vdf.attrs["esteptable"],
+        ]
+        for i in [1, 2, 3, 4]:
+            with self.assertRaises(TypeError):
+                mms.psd_rebin(*args[:i], list(args[i]), *args[i + 1 :])
 
     @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
     def test_psd_rebin_output(self, vdf):
@@ -9306,6 +9338,31 @@ class ReduceTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "base must be"):
             mms.reduce(vdf, np.eye(3), "1d", "sph")
 
+    def test_reduce_dim_and_phi(self):
+        # ValueError for an invalid dimension; azimuths of all times (1-D, a
+        # dataset without time-dependent phi) as the same at every time
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+
+        with self.assertRaisesRegex(ValueError, "dim must be"):
+            mms.reduce(vdf, np.eye(3), "4d", "pol")
+
+        # (int_sph_dist given the same distributions and angles: the Monte
+        # Carlo of numba cannot be seeded)
+        vdf_1d = vdf.assign(phi=("idx1", vdf.phi.data[0]))
+        module = sys.modules["pyrfu.mms.reduce"]
+        calls = []
+        for inp in [vdf_1d, vdf]:
+            with mock.patch.object(
+                module, "int_sph_dist", wraps=module.int_sph_dist
+            ) as int_sph_dist:
+                mms.reduce(inp, np.eye(3), n_mc=5, verbose=False)
+            calls.append(int_sph_dist.call_args_list)
+
+        self.assertEqual(len(calls[0]), 3)
+        for call_1d, call in zip(*calls):
+            for arg_1d, arg in zip(call_1d.args, call.args):
+                np.testing.assert_array_equal(arg_1d, arg)
+
     def test_reduce_no_channel(self):
         # V_sc above every channel at the first time: NaN there (IndexError),
         # the grid from the next time; at all times: ValueError
@@ -10167,6 +10224,20 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
 
         self.assertEqual(context.filename, __file__)
 
+    def test_vdf_reduce_options(self):
+        # Velocity range, z direction and 2d (deprecated function); ValueError
+        # for another dimension
+        tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[0, -1]]))
+        kwargs = {"z_vec": [0, 0, 1], "v_int": [-2e5, 2e5], "n_vpt": 8}
+
+        with self.assertWarns(FutureWarning):
+            result = mms.vdf_reduce(self.vdf, tint, "2d", [1, 0, 0], **kwargs)
+            with self.assertRaises(ValueError):
+                mms.vdf_reduce(self.vdf, tint, "3d", [1, 0, 0], **kwargs)
+
+        self.assertTupleEqual(result.dims, ("vx", "vy"))
+        np.testing.assert_allclose(result.vx.data[[0, -1]], [-0.2, 0.2])
+
     def test_vdf_reduce_deprecated(self):
         tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[0, -1]]))
 
@@ -10232,6 +10303,19 @@ class VdfToE64TestCase(unittest.TestCase):
         xr.testing.assert_identical(result, vdf)
         self.assertIsNot(result.data.data, vdf.data.data)
 
+    def test_vdf_to_e64_no_energy_widths(self):
+        # Without energy widths, none in the output
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        for key in ["delta_energy_minus", "delta_energy_plus"]:
+            del vdf.attrs[key]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # zero energy channel
+            result = mms.vdf_to_e64(vdf)
+
+        self.assertEqual(result.data.shape, (5, 64, 32, 16))
+        self.assertNotIn("delta_energy_plus", result.attrs)
+
     def test_vdf_to_e64_delta_time(self):
         # A pair of samples spans the two accumulations: twice their half
         # widths for regular sampling, as irfu-matlab PDist.e64
@@ -10267,6 +10351,16 @@ class VdfElimTestCase(unittest.TestCase):
         self.vdf = generate_vdf(64.0, 10, [32, 32, 16])
         self.vdf.attrs["delta_energy_plus"] = np.tile(np.arange(32) * 0.1, (10, 1))
         self.vdf.attrs["delta_energy_minus"] = np.arange(32) * 0.2
+
+    def test_vdf_elim_input(self):
+        # ValueError for 3 energies; energy widths set to None are kept None
+        with self.assertRaises(ValueError):
+            mms.vdf_elim(self.vdf, [1.0, 2.0, 3.0])
+
+        self.vdf.attrs["delta_energy_minus"] = None
+        result = mms.vdf_elim(self.vdf, [5.0, 10.0])
+        self.assertIsNone(result.attrs["delta_energy_minus"])
+        self.assertEqual(result.attrs["delta_energy_plus"].shape, (10, 4))
 
     def test_vdf_elim_interval(self):
         result = mms.vdf_elim(self.vdf, [5.0, 10.0])
@@ -10339,6 +10433,28 @@ class VdfOmniTestCase(unittest.TestCase):
                 result.data, np.broadcast_to(self._expected(method.lower()), (4, 32))
             )
             self.assertEqual(result.attrs["UNITS"], "s^3/cm^6")
+
+    def test_vdf_omni_no_conversion(self):
+        # In a frame, a relativistic phase-space density and other units are
+        # averaged as they are, a non-relativistic phase-space density as the
+        # relativistic one (at the energies of the bins), back at the new
+        # energies (electrons: 2e-4 at 40 eV)
+        omni = {}
+        for name, relativistic, units in [
+            ("relativistic", True, "s^3/cm^6"),
+            ("flux", False, "1/(cm^2 s sr eV)"),
+            ("psd", False, "s^3/cm^6"),
+        ]:
+            vdf = self._vdf()
+            vdf.attrs.update({"species": "electrons", "relativistic": relativistic})
+            vdf.data.attrs["UNITS"] = units
+            omni[name] = mms.vdf_omni(
+                vdf, v_frame=[0.0] * 3, n_mc=200, random_state=0
+            ).data
+
+        np.testing.assert_array_equal(omni["flux"], omni["relativistic"])
+        self.assertFalse(np.allclose(omni["psd"], omni["flux"], rtol=1e-6, atol=0))
+        np.testing.assert_allclose(omni["psd"], omni["flux"], rtol=1e-3)
 
     def test_vdf_omni_angular_widths(self):
         # FEEPS-like rings of different widths (delta_theta_*): the mean is
@@ -12772,6 +12888,58 @@ class VdfProjectionTestCase(unittest.TestCase):
         for out, exp in zip(mms.vdf_projection(vdf, tint), ref):
             np.testing.assert_array_equal(out, exp)
         self.assertNotIn("species", vdf.attrs)
+
+    def test_vdf_projection_inputs(self):
+        # TypeError for a DataArray, ValueError for three times; azimuths of
+        # all times (1-D) as the same at every time; a frame not right handed
+        # orthogonal is corrected with a warning
+        vdf = self._maxwellian([400.0, 0.0, 0.0])
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[0, 1]]))
+
+        with self.assertRaises(TypeError):
+            mms.vdf_projection(vdf.data, tint)
+
+        with self.assertRaisesRegex(ValueError, "time interval"):
+            mms.vdf_projection(vdf, [*tint, tint[1]])
+
+        vdf_1d = vdf.assign(phi=("idx1", vdf.phi.data[0]))
+        vdf_2d = vdf.assign(phi=(("time", "idx1"), np.tile(vdf.phi.data[0], (2, 1))))
+        for out, ref in zip(
+            mms.vdf_projection(vdf_1d, tint), mms.vdf_projection(vdf_2d, tint)
+        ):
+            np.testing.assert_allclose(out, ref)
+
+        coord_sys = np.array([[1.0, 0.0, 0.0], [0.5, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        with self.assertLogs("pyrfu.mms.vdf_projection", "WARNING") as logs:
+            result = mms.vdf_projection(vdf, tint, coord_sys)
+        self.assertIn("right handed", "".join(logs.output))
+        for out, ref in zip(result, mms.vdf_projection(vdf, tint)):
+            np.testing.assert_allclose(out, ref, atol=0.0)
+
+    def test_vdf_projection_options(self):
+        # The bin correction weights the bins near the plane; a relativistic
+        # phase-space density is projected as it is (FPI one converted); the
+        # spacecraft potential averaged over a time interval
+        vdf = self._maxwellian([400.0, 0.0, 0.0])
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[0, 1]]))
+        ref = mms.vdf_projection(vdf, tint)[2]
+
+        # (values of 1e-23: relative differences only)
+        corrected = mms.vdf_projection(vdf, tint, bins_correction=True)[2]
+        self.assertFalse(np.allclose(corrected, ref, atol=0.0, equal_nan=True))
+
+        vdf_rel = vdf.copy()
+        vdf_rel.attrs["relativistic"] = True
+        relativistic = mms.vdf_projection(vdf_rel, tint)[2]
+        self.assertFalse(np.allclose(relativistic, ref, atol=0.0, equal_nan=True))
+        np.testing.assert_allclose(relativistic, ref, rtol=1e-3)
+
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.array([10.0, 30.0]))
+        v_x = mms.vdf_projection(vdf, tint, sc_pot=sc_pot)[0]
+        sc_pot_mean = pyrf.ts_scalar(vdf.time.data, np.full(2, 20.0))
+        np.testing.assert_allclose(
+            v_x, mms.vdf_projection(vdf, tint, sc_pot=sc_pot_mean)[0]
+        )
 
     def test_vdf_projection_sc_pot(self):
         # Energy edges below the spacecraft potential gave NaN speeds

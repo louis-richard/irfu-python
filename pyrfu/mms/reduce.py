@@ -153,7 +153,12 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     tint = kwargs.get("tint", list(datetime642iso8601(vdf_time.data[[0, -1]])))
     vdf_time = time_clip(vdf_time, tint)
     vdf_energy = time_clip(vdf.energy, tint).copy()
-    vdf_phi = time_clip(vdf.phi, tint).copy()
+    # Azimuths of each time, or of all times (1-D: time_clip raised
+    # AttributeError)
+    vdf_phi = vdf.phi.copy()
+
+    if "time" in vdf_phi.dims:
+        vdf_phi = time_clip(vdf_phi, tint).copy()
     vdf_theta = vdf.theta.copy()
     vdf_data = time_clip(vdf.data, tint).copy()
 
@@ -290,13 +295,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         velocity_grid = velocity_grid_edges[:-1] + 0.5 * np.diff(velocity_grid_edges)
     else:
         n_vg = 100
-        if base == "cart":
-            n_vg = 100
-        elif base == "pol":
-            if ndim == 1:
-                n_vg = 2 * n_en
-            else:
-                n_vg = n_en
+        if base == "pol":
+            n_vg = 2 * n_en if ndim == 1 else n_en
 
     # Initialize output arrays
     f_g = np.zeros([n_t, *[n_vg] * ndim])
@@ -378,14 +378,10 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         if velocity_grid is None:
             if base == "cart":
                 velocity_grid = np.linspace(-v_max, v_max, 100, endpoint=True)
-            elif base == "pol":
-                if ndim == 1:
-                    velocity_grid = np.hstack((-np.flip(velocity), velocity))
-                else:
-                    velocity_grid = velocity
-
-        else:
-            pass
+            elif ndim == 1:
+                velocity_grid = np.hstack((-np.flip(velocity), velocity))
+            else:
+                velocity_grid = velocity
 
         options = {
             "xyz": xyz_ts[i_t, ...],

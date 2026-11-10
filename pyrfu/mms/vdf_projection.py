@@ -172,10 +172,6 @@ def _rebin_tables(
 
 
 def _init(vdf: Dataset, tint: list):
-
-    if not isinstance(vdf, Dataset):
-        raise TypeError("vdf must be a xarray.Dataset")
-
     len_e, rebinned = 32, False
 
     if vdf.phi.data.ndim == 1:
@@ -421,6 +417,10 @@ def vdf_projection(
     # All the species not starting with "e" were protons.
     if "species" not in vdf.attrs:
         vdf = vdf.assign_attrs(species="electrons")
+
+    # (a DataArray raised AttributeError before the check, in _init)
+    if not isinstance(vdf, Dataset):
+        raise TypeError("vdf must be a xarray.Dataset")
 
     mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
     charge = 1.0 if is_des else float(vdf.attrs.get("charge", 1))
