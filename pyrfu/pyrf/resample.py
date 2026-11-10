@@ -177,10 +177,10 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
         else:
             flag_do = "interpolation"
 
+    # Internal: averages are chosen without method, and sfy is set then
     assert flag_do in ["average", "interpolation"]
 
     if flag_do == "average":
-        # sfy is set: averages are chosen only from it, above
         assert not method, "cannot mix interpolation and averaging flags"
 
         if np.issubdtype(inp.time.dtype, np.datetime64):
@@ -308,8 +308,8 @@ def resample(
     Raises
     ------
     TypeError
-        If the times of inp and ref are not both datetime64 or both numeric
-        (seconds).
+        If inp is not a xarray.DataArray or a xarray.Dataset, or if the times
+        of inp and ref are not both datetime64 or both numeric (seconds).
     ValueError
         If method is not one of the methods above.
 
@@ -352,8 +352,8 @@ def resample(
 
     """
 
-    message = "Invalid input type. Input must be xarray.DataArary or xarray.Dataset"
-    assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
+    if not isinstance(inp, (xr.DataArray, xr.Dataset)):
+        raise TypeError("inp must be a xarray.DataArray or xarray.Dataset")
 
     if method and method not in _METHODS:
         hint = ' (MATLAB "spline" is "cubic")' if method == "spline" else ""

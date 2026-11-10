@@ -30,17 +30,27 @@ def gse2gsm(inp, flag: str = "gse>gsm"):
     out : xarray.DataArray
         Time series of the input in GSM (GSE) coordinates.
 
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray.
+    ValueError
+        If inp is not a vector, or flag not "gse>gsm" or "gsm>gse".
+
     See Also
     --------
     pyrfu.pyrf.cotrans
 
     """
 
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
-    assert inp.ndim == 2 and inp.shape[1] == 3, "inp must be a vector"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
 
-    message = "flag must be a string gse>gsm or gsm>gse"
-    assert isinstance(flag, str) and flag.lower() in ["gse>gsm", "gsm>gse"], message
+    if inp.ndim != 2 or inp.shape[1] != 3:
+        raise ValueError("inp must be a vector")
+
+    if not isinstance(flag, str) or flag.lower() not in ["gse>gsm", "gsm>gse"]:
+        raise ValueError(f'flag must be "gse>gsm" or "gsm>gse", not {flag!r}')
 
     out = cotrans(inp, flag.lower())
 

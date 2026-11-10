@@ -150,8 +150,9 @@ def histogram2d(
     Raises
     ------
     ValueError
-        If no sample is left to compute the range of the bins, or if a range
-        along a logarithmic dimension is not strictly positive.
+        If scale is not one of the scales above, if no sample is left to
+        compute the range of the bins, or if a range along a logarithmic
+        dimension is not strictly positive.
 
     Notes
     -----
@@ -209,7 +210,8 @@ def histogram2d(
 
     """
 
-    assert scale in SCALES, f"scale must be one of {SCALES}"
+    if scale not in SCALES:
+        raise ValueError(f"scale must be one of {SCALES}, not {scale!r}")
 
     log_x, log_y = scale[:3] == "log", scale[3:] == "log"
 

@@ -3848,7 +3848,8 @@ class FiltTestCase(unittest.TestCase):
     )
     @unpack
     def test_filt_input(self, inp, f_min, f_max, order):
-        with self.assertRaises(AssertionError):
+        # TypeError (AssertionError)
+        with self.assertRaises(TypeError):
             pyrf.filt(inp, f_min, f_max, order)
 
     @data(
@@ -4220,13 +4221,15 @@ class GradientTestCase(unittest.TestCase):
 @ddt
 class Gse2GsmTestCase(unittest.TestCase):
     @data(
-        (generate_data(100, tensor_order=1), "gse>gsm"),
-        (generate_ts(64.0, 100, tensor_order=0), "gse>gsm"),
-        (generate_ts(64.0, 100, tensor_order=1), "bazinga"),
+        (generate_data(100, tensor_order=1), "gse>gsm", TypeError),
+        (generate_ts(64.0, 100, tensor_order=0), "gse>gsm", ValueError),
+        (generate_ts(64.0, 100, tensor_order=1), "bazinga", ValueError),
+        (generate_ts(64.0, 100, tensor_order=1), 1, ValueError),
     )
     @unpack
-    def test_gse2gsm_input(self, inp, flag):
-        with self.assertRaises(AssertionError):
+    def test_gse2gsm_input(self, inp, flag, error):
+        # TypeError and ValueError (AssertionError)
+        with self.assertRaises(error):
             pyrf.gse2gsm(inp, flag)
 
     @data(
@@ -4317,6 +4320,14 @@ class HistogramTestCase(unittest.TestCase):
         inp = self._series()
         expected, _ = np.histogram(inp.data, 30, density=True)
         np.testing.assert_array_equal(pyrf.histogram(inp, 30).data, expected)
+
+    def test_histogram_input(self):
+        # TypeError and ValueError (AssertionError)
+        with self.assertRaises(TypeError):
+            pyrf.histogram(np.ones(10))
+
+        with self.assertRaisesRegex(ValueError, "scalar"):
+            pyrf.histogram(generate_ts(64.0, 100, tensor_order=1))
 
 
 @ddt
@@ -4412,6 +4423,12 @@ class Histogram2DTestCase(unittest.TestCase):
             pyrf.histogram2d(
                 y_data, y_data, bins=10, y_range=[[0, 5], [0.1, 2]], scale="loglin"
             )
+
+    def test_histogram2d_scale(self):
+        # ValueError (AssertionError)
+        x, y = generate_ts(64.0, 100), generate_ts(64.0, 100)
+        with self.assertRaisesRegex(ValueError, "scale"):
+            pyrf.histogram2d(x, y, scale="lin")
 
 
 class BrazilTestCase(unittest.TestCase):
@@ -4513,6 +4530,19 @@ class IncrementsTestCase(unittest.TestCase):
         for scale in [0, -1, 1.5]:
             with self.assertRaises(ValueError):
                 pyrf.increments(inp, scale)
+
+    def test_increments_input(self):
+        # TypeError and ValueError (AssertionError)
+        with self.assertRaises(TypeError):
+            pyrf.increments(np.ones(10))
+
+        inp = xr.DataArray(
+            np.ones((10, 2, 2, 2)),
+            coords={"time": generate_timeline(64.0, 10)},
+            dims=["time", "a", "b", "c"],
+        )
+        with self.assertRaisesRegex(ValueError, "scalar, vector or tensor"):
+            pyrf.increments(inp)
 
 
 @ddt
@@ -5344,6 +5374,11 @@ class Iso86012Unix(unittest.TestCase):
             pyrf.datetime642unix(time.astype("datetime64[ns]")),
         )
 
+    def test_iso86012unix_input(self):
+        # TypeError (AssertionError)
+        with self.assertRaises(TypeError):
+            pyrf.iso86012unix(1.0)
+
 
 @ddt
 class Iso86012TimeVec(unittest.TestCase):
@@ -5606,6 +5641,12 @@ class MeanTestCase(unittest.TestCase):
         expected = np.array([[-1.0, -h, h]] * 3 + [[1.0, h, -h]] * 3)
         np.testing.assert_allclose(result.data, expected, atol=1e-12)
 
+    def test_mean_dipole_axis_type(self):
+        # TypeError (AssertionError)
+        vec = generate_ts(64.0, 100, tensor_order=1)
+        with self.assertRaisesRegex(TypeError, "dipole_axis"):
+            pyrf.mean(vec, vec, vec, vec.data)
+
 
 class MagnetosphereTestCase(unittest.TestCase):
     @staticmethod
@@ -5742,6 +5783,19 @@ class MeanBinsTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.data.data, [np.nan, np.nan, 4.5, np.nan])
         np.testing.assert_allclose(result.bins.data, [0.625, 0.875, 1.125, 1.375])
 
+    def test_mean_bins_input(self):
+        # TypeError and ValueError (AssertionError)
+        x = generate_ts(64.0, 100)
+
+        for inp0, inp1, error in [
+            (x.data, x, TypeError),
+            (x, x.data, TypeError),
+            (generate_ts(64.0, 100, tensor_order=1), x, ValueError),
+            (x, generate_ts(64.0, 100, tensor_order=1), ValueError),
+        ]:
+            with self.assertRaises(error):
+                pyrf.mean_bins(inp0, inp1)
+
 
 class MedianBinsTestCase(unittest.TestCase):
     def test_median_bins_output(self):
@@ -5766,6 +5820,19 @@ class MedianBinsTestCase(unittest.TestCase):
     def test_median_bins_no_finite_pair(self):
         with self.assertRaises(ValueError):
             pyrf.median_bins(*_xy_series([np.nan], [1.0]))
+
+    def test_median_bins_input(self):
+        # TypeError and ValueError (AssertionError)
+        x = generate_ts(64.0, 100)
+
+        for inp0, inp1, error in [
+            (x.data, x, TypeError),
+            (x, x.data, TypeError),
+            (generate_ts(64.0, 100, tensor_order=1), x, ValueError),
+            (x, generate_ts(64.0, 100, tensor_order=1), ValueError),
+        ]:
+            with self.assertRaises(error):
+                pyrf.median_bins(inp0, inp1)
 
 
 class MvaGuiTestCase(unittest.TestCase):
@@ -6580,6 +6647,11 @@ class ResampleTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(result.data[:, 1])))
         self.assertTrue(np.all(np.isfinite(result.data[:, [0, 2]])))
 
+    def test_resample_input_type(self):
+        # TypeError (AssertionError)
+        with self.assertRaises(TypeError):
+            pyrf.resample(np.ones(10), generate_ts(64.0, 10))
+
 
 @ddt
 class PoyntingFluxTestCase(unittest.TestCase):
@@ -6861,7 +6933,8 @@ class ShockNormalTestCase(unittest.TestCase):
             self.assertAlmostEqual(np.linalg.norm(result["n"][method]), 1.0)
 
     def test_shock_normal_input(self):
-        with self.assertRaises(AssertionError):
+        # TypeError (AssertionError; the following check never ran)
+        with self.assertRaisesRegex(TypeError, "dictionary"):
             pyrf.shock_normal([])
 
         with self.assertRaises(TypeError):
@@ -7081,7 +7154,8 @@ class ShockNormalTestCase(unittest.TestCase):
 @ddt
 class ShockParametersTestCase(unittest.TestCase):
     def test_shock_parameters_input(self):
-        with self.assertRaises(AssertionError):
+        # ValueError (AssertionError)
+        with self.assertRaisesRegex(ValueError, "ref_sys"):
             pyrf.shock_parameters(
                 {
                     "b": np.random.random(3),
@@ -7368,9 +7442,17 @@ class StartTestCase(unittest.TestCase):
         self.assertIsNotNone(pyrf.start(generate_ts(64.0, 100, tensor_order=1)))
         self.assertIsNotNone(pyrf.start(generate_ts(64.0, 100, tensor_order=2)))
 
-        with self.assertRaises(AssertionError):
+        # TypeError and ValueError (AssertionError, one call per check: only
+        # the first ran)
+        with self.assertRaises(TypeError):
             pyrf.start(0)
+
+        with self.assertRaises(TypeError):
             pyrf.start(generate_timeline(64.0, 100))
+
+        not_time = xr.DataArray(np.ones(3), coords=[np.arange(3.0)], dims=["x"])
+        with self.assertRaisesRegex(ValueError, "time series"):
+            pyrf.start(not_time)
 
     def test_start_output(self):
         result = pyrf.start(generate_ts(64.0, 100, tensor_order=0))
@@ -7664,7 +7746,8 @@ class TsConvolveTestCase(unittest.TestCase):
 @ddt
 class TsTimeTestCase(unittest.TestCase):
     def test_ts_skymap_input_type(self):
-        with self.assertRaises(AssertionError):
+        # TypeError (AssertionError)
+        with self.assertRaises(TypeError):
             pyrf.ts_time(np.datetime64("1789-07-14T00:00:00.000000000"), {})
 
     @data(generate_timeline(64.0, 100, dtype=np.int64))

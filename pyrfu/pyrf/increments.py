@@ -42,13 +42,19 @@ def increments(inp, scale: int = 10):
 
     Raises
     ------
+    TypeError
+        If inp is not a xarray.DataArray.
     ValueError
-        If scale is not a positive integer.
+        If inp is not a scalar, vector or tensor, or scale not a positive
+        integer.
 
     """
 
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
-    assert inp.ndim < 4, "inp must ber a scalar, vector or tensor"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
+
+    if inp.ndim >= 4:
+        raise ValueError("inp must be a scalar, vector or tensor")
 
     if not isinstance(scale, (int, np.integer)) or scale < 1:
         raise ValueError("scale must be a positive integer")

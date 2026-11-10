@@ -100,6 +100,9 @@ def filt(inp, f_min: float = 0.0, f_max: float = 0.0, order: int = -1):
 
     Raises
     ------
+    TypeError
+        If inp is not a xarray.DataArray, or f_min, f_max or order not a real
+        number.
     ValueError
         If f_min and f_max are both 0, if f_min is not below the Nyquist
         frequency, if f_max is at or above it with f_min = 0, if f_min is not
@@ -133,15 +136,16 @@ def filt(inp, f_min: float = 0.0, f_max: float = 0.0, order: int = -1):
 
     """
 
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
 
     # Data of the input
     inp_data = inp.data.astype(np.float64)
 
     # Any real number, including numpy scalars (np.int64, np.float32)
-    assert isinstance(f_min, numbers.Real), "f_min must be a real number"
-    assert isinstance(f_max, numbers.Real), "f_max must be a real number"
-    assert isinstance(order, numbers.Real), "order must be a real number"
+    for name, value in [("f_min", f_min), ("f_max", f_max), ("order", order)]:
+        if not isinstance(value, numbers.Real):
+            raise TypeError(f"{name} must be a real number")
 
     if f_min == 0.0 and f_max == 0.0:
         raise ValueError("f_min and f_max cannot both be 0.0!")

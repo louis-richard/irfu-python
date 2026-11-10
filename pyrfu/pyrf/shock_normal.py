@@ -111,7 +111,8 @@ def shock_normal(spec, leq90: bool = True):
         If the magnetic field, velocity and density time series of a side
         don't have the same number of samples.
     TypeError
-        If `r_xyz` is neither a time series nor a vector.
+        If `spec` is not a dict, or `r_xyz` neither a time series nor a
+        vector.
 
     References
     ----------
@@ -151,7 +152,8 @@ def shock_normal(spec, leq90: bool = True):
     """
 
     # Check input
-    assert isinstance(spec, dict), "spec must be a dictionary"
+    if not isinstance(spec, dict):
+        raise TypeError("spec must be a dictionary")
 
     # Work on a copy, with the fields and plasma parameters as arrays: lists
     # are accepted, and the caller's dict is not modified (delta_b and delta_v

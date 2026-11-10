@@ -54,8 +54,10 @@ def histogram(inp, bins=100, y_range=None, weights=None, density=True):
 
     Raises
     ------
+    TypeError
+        If `inp` is not a xarray.DataArray.
     ValueError
-        If `inp` has no finite value.
+        If `inp` is not a scalar time series, or has no finite value.
 
     Notes
     -----
@@ -66,8 +68,11 @@ def histogram(inp, bins=100, y_range=None, weights=None, density=True):
     """
 
     # Check input
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
-    assert inp.ndim == 1, "inp must be a scalar time series"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
+
+    if inp.ndim != 1:
+        raise ValueError("inp must be a scalar time series")
 
     # Finite samples only, as numpy.histogram with a range and MATLAB
     # histcounts (a NaN or an inf made the automatic range undefined)

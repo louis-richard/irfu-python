@@ -35,11 +35,12 @@ def ts_time(time, attrs: dict = None):
     Raises
     ------
     TypeError
-        If time is neither floats nor numpy.datetime64.
+        If time is not a numpy.ndarray of floats or numpy.datetime64.
 
     """
 
-    assert isinstance(time, np.ndarray)
+    if not isinstance(time, np.ndarray):
+        raise TypeError("time must be a numpy.ndarray")
 
     if np.issubdtype(time.dtype, np.floating):
         # Rounded to the ns (6.5e-5 * 1e9 = 64999.99999999999 was truncated)

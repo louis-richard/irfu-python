@@ -54,6 +54,11 @@ def shock_parameters(spec):
         * m_a, m_s, m_f : Alfven, sonic and fast Mach numbers.
         * beta_i, beta_e : ion and electron plasma betas.
 
+    Raises
+    ------
+    ValueError
+        If ref_sys is not "sc" or "nif".
+
     """
 
     # Copy so that the defaults set below don't change the caller's dict;
@@ -67,7 +72,8 @@ def shock_parameters(spec):
     regions = regions or [""]
 
     spec["ref_sys"] = spec.get("ref_sys", "sc")
-    assert spec["ref_sys"].lower() in ["sc", "nif"], "Invalid reference frame"
+    if spec["ref_sys"].lower() not in ["sc", "nif"]:
+        raise ValueError(f'ref_sys must be "sc" or "nif", not {spec["ref_sys"]!r}')
 
     if spec["ref_sys"].lower() == "nif":
         if "nvec" not in spec:

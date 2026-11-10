@@ -45,10 +45,17 @@ def mean(inp, r_xyz, b_xyz, dipole_axis: xr.DataArray = None):
     out : xarray.DataArray
         Input field in mean field coordinates.
 
+    Raises
+    ------
+    TypeError
+        If dipole_axis is given and is not a xarray.DataArray.
+
     """
 
     if dipole_axis is not None:
-        assert isinstance(dipole_axis, xr.DataArray)
+        if not isinstance(dipole_axis, xr.DataArray):
+            raise TypeError("dipole_axis must be a xarray.DataArray")
+
         flag_dipole = True
 
         dipole_axis = resample(dipole_axis, inp)
