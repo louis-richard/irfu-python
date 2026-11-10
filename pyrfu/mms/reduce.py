@@ -13,6 +13,7 @@ from scipy.constants import electron_volt, speed_of_light
 # Local imports
 from pyrfu.mms._psd_units import _factor, _is_relativistic, _mass_ratio
 from pyrfu.mms._vdf_bins import _mass
+from pyrfu.mms.vdf_convert import vdf_convert
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
 from pyrfu.pyrf.resample import resample
@@ -84,7 +85,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     vdf : xarray.Dataset
         3D skymap velocity distribution function, with the ``species``
         attribute (the speeds of the channels with its mass, e.g. "ions",
-        "oxygen", "helium++").
+        "oxygen", "helium++"), in any units of `vdf_convert` (phase-space
+        density, differential energy or particle flux; only s^3/cm^6, s^3/m^6
+        and s^3/km^6 were accepted).
     xyz : xarray.DataArray or numpy.ndarray
         Transformation matrix from instrument frame to desired frame.
     dim : {"1d", "2d", "3d"}, Optional
@@ -160,7 +163,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     if "time" in vdf_phi.dims:
         vdf_phi = time_clip(vdf_phi, tint).copy()
     vdf_theta = vdf.theta.copy()
-    vdf_data = time_clip(vdf.data, tint).copy()
+    # In SI units, s^3/m^6, from any units of vdf_convert (the convention of
+    # the phase-space density, the relativistic attribute, is kept)
+    vdf_data = time_clip(vdf_convert(vdf, "s^3/m^6").data, tint).copy()
 
     # Lower energy bound of instrument bins. If not provided set to 0 eV.
     delta_energy_minu = time_clip(_energy_widths(vdf, "delta_energy_minus"), tint)
@@ -181,16 +186,6 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     # angle (int_sph_dist uses cos(theta) d_theta at the centre of the band).
     # Without them, the widths are the spacing of the grids (FPI, EIS).
     angle_widths = _angle_widths(vdf, vdf_theta.data, tint)
-
-    # make input distribution to SI units, s^3/m^6
-    if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
-        vdf_data *= 1e12
-    elif vdf.data.attrs["UNITS"].lower() == "s^3/m^6":
-        vdf_data *= 1e0
-    elif vdf.data.attrs["UNITS"].lower() == "s^3/km^6":
-        vdf_data *= 1e-18
-    else:
-        raise ValueError("Invalid units!!")
 
     # The relativistic phase-space density, integrated with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)

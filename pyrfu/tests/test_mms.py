@@ -9516,6 +9516,27 @@ class ReduceTestCase(unittest.TestCase):
             for arg_1d, arg in zip(call_1d.args, call.args):
                 np.testing.assert_array_equal(arg_1d, arg)
 
+    def test_reduce_units_convert(self):
+        # Any units of vdf_convert: a differential energy or particle flux as
+        # its phase-space density ("Invalid units!!" for all but s^3/cm^6,
+        # s^3/m^6 and s^3/km^6); int_sph_dist given the same distributions
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        vdf["energy"] = vdf.energy + 10.0
+        module = sys.modules["pyrfu.mms.reduce"]
+        calls = []
+        for units in ["s^3/cm^6", "keV/(cm^2 s sr keV)", "1/(cm^2 s sr eV)"]:
+            with mock.patch.object(
+                module, "int_sph_dist", wraps=module.int_sph_dist
+            ) as int_sph_dist:
+                mms.reduce(
+                    mms.vdf_convert(vdf, units), np.eye(3), n_mc=5, verbose=False
+                )
+            calls.append(int_sph_dist.call_args_list)
+
+        for call_ref, call_1, call_2 in zip(*calls):
+            np.testing.assert_allclose(call_1.args[0], call_ref.args[0], rtol=1e-6)
+            np.testing.assert_allclose(call_2.args[0], call_ref.args[0], rtol=1e-6)
+
     def test_reduce_no_channel(self):
         # V_sc above every channel at the first time: NaN there (IndexError),
         # the grid from the next time; at all times: ValueError
