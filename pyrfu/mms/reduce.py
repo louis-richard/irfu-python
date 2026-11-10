@@ -108,6 +108,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
           (eV), 0 eV by default. The channels below max(sc_pot,
           lower_e_lim) are set to zero; a time step without any channel
           above it is NaN.
+        * vg, vg_edges : array_like, the speeds (m/s) of the grid, or the
+          edges of its bins, instead of the default one (see Notes).
         * verbose : bool, show a progress bar (default True).
 
     Returns
@@ -128,6 +130,13 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     the speed bins are edged at the geometric means of neighbouring channel
     speeds (see `pyrfu.pyrf.int_sph_dist`); without ``delta_energy_plus``,
     the default Cartesian grid extends to the upper edge of these bins.
+
+    The default polar grid (``"pol"``, without ``vg`` or ``vg_edges``) is
+    made of the speeds of the channels at the first time computed, corrected
+    for the spacecraft potential, as in irfu-matlab. The channels below
+    `sc_pot` are then at 0 eV, so that with a positive `sc_pot` the 1d grid
+    has several speeds of 0 (+0 and -0, not unique) where the distribution
+    is zero; give ``vg`` or ``vg_edges`` for a grid of distinct speeds.
 
     The Monte-Carlo options (``n_mc``, ``weight``, ...) are those of
     `pyrfu.pyrf.int_sph_dist`. ``weight="log"`` weights the particles by
