@@ -49,6 +49,7 @@ dependencies = [
     "requests>=2.32.0",
     "scipy>=1.14.0",
     "tqdm>=4.66.0",
+    "urllib3>=1.26.5",
     "xarray>=2024.10.0",
 ]
 requires-python = ">=3.12,<3.16"

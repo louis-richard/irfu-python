@@ -122,6 +122,12 @@ Other fixes
   ``ValueError`` (``TypeError``).
 - ``plot.plot_spectr`` of a Dataset with a coordinate that is not along the
   energies, e.g. a scalar coordinate left by ``sel`` (``IndexError``).
+- urllib3 >= 1.26.5 is a dependency: ``mms.list_files_sdc`` imports it (its
+  ``Retry`` with ``allowed_methods``), and it was only installed through
+  requests and botocore, which allow older versions (before 1.26.5, it
+  does not import with Python 3.12). ``requirements.txt`` (used by the
+  documentation build) takes ``keyrings.alt>=5.0.2``, as ``pyproject.toml``:
+  it was pinned to 5.0.2.
 
 Documentation
 ^^^^^^^^^^^^^
