@@ -15,7 +15,6 @@ from xarray.core.dataarray import DataArray
 
 from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.mms.get_data import (
-    _check_times,
     _file_label,
     _get_file_content_sources,
     _list_files_sources,
@@ -81,8 +80,8 @@ def _load_config_cached(config_path: str, config_mtime_ns: int) -> Mapping[str, 
 
 def _resolve_source(source: Optional[str] = "default") -> str:
     r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
-    case), or the default resource of `pyrfu/mms/config.json` if it is empty or
-    "default"."""
+    case), or the default resource of the MMS configuration
+    (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
     if not source or source.lower() == "default":
         return _load_config().get("default")
 
@@ -152,7 +151,7 @@ def _db_get_ts_dict(
 
             out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
 
-    return {cdf_name: _check_times(ts) for cdf_name, ts in out.items()} | support
+    return out | support
 
 
 def db_get_ts(
@@ -176,10 +175,11 @@ def db_get_ts(
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
     source : {"default", "local", "sdc", "aws"}, Optional
-        Resource to fetch the data from. Default uses default in
-        `pyrfu/mms/config.json`.
+        Resource to fetch the data from, in any case. Default uses the default
+        resource of the MMS configuration.
 
     Returns
     -------

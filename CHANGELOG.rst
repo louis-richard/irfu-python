@@ -1,6 +1,151 @@
 Changelog
 =========
 
+2.5.11 (2026-11-10)
+-------------------
+
+This release brings the tests of ``pyrfu.mms`` to full coverage (all the
+statements and branches), and fixes what that brought up: the readers of the
+MMS files (``mms.get_ts``, ``mms.get_dist``, ``mms.get_data`` and the file
+listings), the averaging windows of ``mms.fk_power_spectrum_4sc``, and the
+handling of missing data in the EIS, FEEPS and HPCA routines. The file
+listings no longer leave out a file starting in the last fraction of a second
+of the time interval, the AWS reads are retried when the connection breaks,
+and the pitch angles of ``mms.eis_pad`` and ``mms.hpca_pad`` are NaN where
+there is no magnetic field. On the FPI, FGM, HPCA, FEEPS and EIS files
+checked, the values read are unchanged.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- The attributes of several values of the CDF variables are lists of their
+  values (``mms.get_ts``, ``mms.get_dist``, ``mms.get_variable`` and
+  ``pyrf.read_cdf``): they were lists of one list, e.g. ``VALIDMIN`` and
+  ``VALIDMAX`` of the FGM vectors, ``[[-17000, -17000, -17000, 0]]`` (152 of
+  the 43572 attributes of 58 MMS files; the others are unchanged). An
+  attribute of several times is a datetime64 array (it was a list of raw
+  TT2000 values).
+- ``mms.get_ts`` gives distinct names to the dimensions whose DEPEND share a
+  label, with the number of the DEPEND: the 4-D HPCA azimuths are
+  ('time', '_1', 'comp', '_3'); they were ('time', '_', 'comp', '_'), with
+  which ``isel`` selected both and ``mean`` raised.
+- ``mms.rotate_tensor`` sets ``COORDINATE_SYSTEM`` to "FAC", "GSE" or "GSM",
+  and removes it for "rot": the output kept that of the input (e.g. "GSE"
+  on a tensor in field-aligned coordinates). The values are unchanged.
+- ``mms.eis_pad_spinavg`` sums a counts PAD (``method="sum"`` of
+  ``mms.eis_pad``) over each spin, by default (``method`` argument, the
+  ``method`` attribute of the PAD): it was averaged, still labelled "sum".
+- ``mms.feeps_avg_4sc(flag="pad")`` raises ``ValueError`` for PADs of
+  different pitch-angle bins (they were averaged by bin index), as
+  ``mms.eis_pad_combine_sc``.
+- ``mms.eis_skymap(to_psd=True)`` raises ``ValueError`` unless the
+  distribution is a differential particle flux, as ``mms.feeps_skymap``
+  (``KeyError`` without ``UNITS``, a conversion error for counts).
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.vdf_shift``: ``sc_pot``, the new grid in the energies at infinity,
+  as ``mms.vdf_rebin``. ``mms.vdf_omni``: ``sc_pot`` with ``v_frame``, the
+  energies of the omni-directional distribution at infinity (``ValueError``
+  without ``v_frame``).
+- ``mms.reduce`` takes the distributions in any units of
+  ``mms.vdf_convert`` (differential energy and particle fluxes too): only
+  s^3/cm^6, s^3/m^6 and s^3/km^6 were accepted ("Invalid units!!").
+- ``mms.get_data`` and ``mms.remove_edist_background`` take the source in
+  any case, and "default" for the default resource of the configuration, as
+  ``mms.db_get_ts``, ``mms.db_get_variable`` and ``mms.load_ancillary``:
+  "SDC" and "default" raised ``NotImplementedError`` or ``ValueError``.
+- The reads from AWS are made again (three attempts, 1 s then 2 s apart, with
+  a warning) when the connection is reset or times out while the file is
+  received, which botocore does not retry: they raised at once. The S3
+  errors (``ClientError``) are still raised at once.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``mms.list_files``, ``mms.list_files_aws`` and ``mms.list_files_sdc`` take
+  the end of the time interval to the second above: it was cut to the
+  second below, so a file starting in the last fraction of a second of the
+  interval was left out (the MMS1 FGM burst file of 2019-09-14 08:07:03 for
+  an end at 08:07:03.5), and the day directory of an end just after midnight
+  was not listed. The listings of whole-second intervals are unchanged.
+- ``mms.eis_pad`` and ``mms.hpca_pad`` give no pitch angle (NaN) outside the
+  time range of the magnetic field and in its gaps, as
+  ``mms.feeps_pitch_angles``: B was held at its last value and interpolated
+  across (with B ending early on MMS1 HPCA burst 2017-07-11, 70 % of the
+  values after its end were kept). In ``mms.hpca_pad``, a sample without
+  pitch angle was in every bin. Where B covers the data, the PADs are
+  unchanged.
+- ``mms.fk_power_spectrum_4sc`` averages over contiguous windows of ``cav``
+  samples, labelled by the sample before their centre (even ``cav``, as
+  irfu-matlab) or their centre (odd ``cav``): an odd ``cav`` used ``cav - 1``
+  samples per window and skipped one. The results for an even ``cav`` are
+  unchanged.
+- ``mms.eis_spin_avg`` and ``mms.hpca_spin_sum`` with ``method="sum"`` give
+  NaN for a spin without data (it was 0, as data), as the means.
+  ``mms.hpca_calc_anodes`` leaves out the anodes without data (one made the
+  spectrum NaN), NaN where no anode has data.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.get_ts``: times in CDF_EPOCH and CDF_EPOCH16 (``KeyError``);
+  ``TypeError`` for a DEPEND_0 that is not a time.
+- ``mms.get_dist``: fast files of a single record or with one energy table
+  for all records, and burst files with records of one stepping-table
+  parity only (``IndexError``); the ``energy0`` and ``energy1`` variables of
+  the files that have them are 1-D (they were (1, n)). Unchanged on the FPI
+  burst and fast files.
+- ``mms.list_files_ancillary`` with glob characters in the data path (e.g.
+  ``mms_data[2]``: no file was found).
+- ``mms.download_data`` and ``mms.download_ancillary``: each download writes
+  its own temporary file, so that two downloads of a file at once (e.g. two
+  notebooks) both complete; they shared it, and the second raised
+  ``FileNotFoundError``, which stopped the loop. The files keep the mode of
+  the files of the user.
+- ``mms.list_files``, ``mms.list_files_ancillary``, ``mms.download_data``,
+  ``mms.download_ancillary``, ``mms.get_data`` and
+  ``mms.remove_edist_background`` read the configuration with its defaults
+  (``FileNotFoundError`` without a configuration file).
+- ``mms.reduce`` of a distribution with azimuths of all times (1-D ``phi``,
+  ``AttributeError``).
+- ``mms.vdf_projection`` raises ``TypeError`` for an input that is not a
+  Dataset (``AttributeError``).
+- ``mms.eis_skymap`` without global attributes (``KeyError``).
+
+Documentation
+^^^^^^^^^^^^^
+
+- The MMS configuration (``pyrfu.mms.MMS_CFG_PATH``, set with
+  ``mms.db_init``) instead of ``pyrfu/mms/config.json`` and
+  ``pyrfu.mms.mms_config.py`` in the docstrings of the readers.
+- ``mms.read_feeps_sector_masks_csv``: the time interval in ISO 8601 (the
+  documented "YYYY-MM-DD/hh:mm:ss" raised ``ValueError``); ``mms.dsl2gsm``:
+  the direction and the example are those of GSM (they were of GSE);
+  ``mms.list_files_sdc``: the SDC rights and user are those of the
+  configuration (a ``username`` argument that does not exist was
+  documented).
+- ``mms.get_feeps_alleyes`` and ``mms.get_feeps_omni``: the partial spins at
+  the edges of the time interval are left out of the spin averages (since
+  2.5.8); the key of ``mms.get_feeps_omni`` is
+  ``{data_unit}{specie}_{data_rate}_{data_lvl}``, e.g. "fluxe_srvy_l2".
+- ``mms.feeps_pad``: the zero fluxes are set to NaN before averaging, as IDL
+  SPEDAS, so that the PAD is the mean of the non-zero fluxes.
+- ``mms.reduce``: the default polar grid, the speeds of the channels
+  corrected for the spacecraft potential as irfu-matlab, has several zero
+  speeds with a positive ``sc_pot``; the ``vg`` and ``vg_edges`` options.
+- ``mms.rotate_tensor``: "gse" and "gsm" rotate a tensor in DSL;
+  ``mms.eis_pad_combine_sc``: the PADs of counts are averaged over the
+  spacecraft too, as IDL SPEDAS.
+
+Development
+^^^^^^^^^^^
+
+- ``pyrfu.mms`` is tested to all its statements and branches, the numba
+  kernels of ``mms.psd_moments`` and ``mms.fk_power_spectrum_4sc`` through
+  their Python functions. The tests no longer use a hard-coded ``/tmp``.
+
 2.5.10 (2026-11-06)
 -------------------
 

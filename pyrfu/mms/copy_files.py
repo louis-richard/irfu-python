@@ -26,7 +26,7 @@ def copy_files(
     tar_path: str,
     data_path: Optional[str] = "",
 ) -> None:
-    r"""Copy files from local as defined in config.json to the target path.
+    r"""Copy files from the local data path to the target path.
 
     Parameters
     ----------
@@ -43,7 +43,8 @@ def copy_files(
     tar_path : str
         Target path to put files.
     data_path : str, Optional
-        Local path to MMS data. Default uses that provided in pyrfu.mms.config.json
+        Local path to MMS data. Default uses the local path of the MMS
+        configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     """
     # Normalize the target path and make sure it exists.

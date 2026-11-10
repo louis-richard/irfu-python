@@ -38,7 +38,7 @@ def dsl2gsm(
         Spacecraft attitude (DEFATT), or the spin axis in GSM as a 3-vector
         (normalised internally).
     direction : {1, -1}, Optional
-        Direction of transformation. +1 DSL -> GSE, -1 GSE -> DSL.
+        Direction of transformation. +1 DSL -> GSM, -1 GSM -> DSL.
         Default is 1.
 
     Returns
@@ -55,7 +55,7 @@ def dsl2gsm(
 
     Examples
     --------
-    >>> from pyrfu.mms import get_data, load_ancillary, dsl2gse
+    >>> from pyrfu.mms import get_data, load_ancillary, dsl2gsm
 
     Define time interval
 

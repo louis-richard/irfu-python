@@ -14,7 +14,6 @@ from pycdfpp import load
 from ..pyrf.ts_append import ts_append
 from .db_get_ts import _resolve_source
 from .get_data import (
-    _check_times,
     _file_label,
     _get_file_content_sources,
     _list_files_sources,
@@ -110,8 +109,9 @@ def get_eis_allt(
     data_path : str, Optional
         Path of MMS data.
     source : {"default", "local", "sdc", "aws"}, Optional
-        Resource to fetch the data from. Default uses default in
-        `pyrfu/mms/config.json`. Each file is read (downloaded) once for all the
+        Resource to fetch the data from. Default uses the default resource of
+        the MMS configuration (`pyrfu.mms.MMS_CFG_PATH`, set with
+        `mms.db_init`). Each file is read (downloaded) once for all the
         telescopes.
 
     Returns
@@ -197,8 +197,6 @@ def get_eis_allt(
 
             ts = get_ts(file_content, cdf_name, tint)
             outdict[key] = ts_append(outdict[key], ts) if key in outdict else ts
-
-    outdict = {key: _check_times(value) for key, value in outdict.items()}
 
     for i in range(6):
         outdict[f"t{i:d}"] = outdict[f"t{i:d}"].rename({"Energy": "energy"})

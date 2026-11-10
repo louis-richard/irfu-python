@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import warnings
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -50,7 +53,8 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
     -------
     out : xarray.DataArray
         HPCA ion flux averaged over the anodes within the selected field of
-        view.
+        view. The anodes without data (NaN) are left out (one made the
+        spectrum NaN); NaN where no anode has data.
 
     """
 
@@ -65,10 +69,17 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
     cond_ = np.logical_and(anodes_theta >= fov[0], anodes_theta <= fov[1])
     anodes_in_fov = np.where(cond_)[0]
 
-    if method == "mean":
-        updated_spectra = inp.data[:, anodes_in_fov, :].mean(axis=1)
-    else:
-        updated_spectra = inp.data[:, anodes_in_fov, :].sum(axis=1)
+    spectra = inp.data[:, anodes_in_fov, :]
+    has_data = np.isfinite(spectra).any(axis=1)
+
+    with warnings.catch_warnings():
+        # NaN without warning where no anode has data
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+
+        if method == "mean":
+            updated_spectra = np.nanmean(spectra, axis=1)
+        else:
+            updated_spectra = np.where(has_data, np.nansum(spectra, axis=1), np.nan)
 
     # The attributes of inp and of its energies (lost)
     out = xr.DataArray(

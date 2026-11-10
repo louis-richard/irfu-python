@@ -44,10 +44,11 @@ def db_get_variable(
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
     data_path : str, Optional
-        Path of MMS data. Default uses `pyrfu.mms.mms_config.py`
-    source: str, Optional
-        Resource to fetch data from: {"default", "local", "sdc", "aws"}. Default uses
-        default in `pyrfu/mms/config.json`
+        Path of MMS data. Default uses the local path of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
+    source : {"default", "local", "sdc", "aws"}, Optional
+        Resource to fetch the data from, in any case. Default uses the default
+        resource of the MMS configuration.
 
     Returns
     -------

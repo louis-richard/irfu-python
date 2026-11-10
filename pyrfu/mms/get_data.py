@@ -2,22 +2,27 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import logging
 import os
 import posixpath
+import time
 from typing import Mapping, Optional, Tuple, Union
 
 # 3rd party imports
 import requests
-from botocore.exceptions import ClientError
+from botocore.exceptions import (
+    ClientError,
+    IncompleteReadError,
+    ReadTimeoutError,
+    ResponseStreamingError,
+)
 from requests.sessions import Session
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
 from pyrfu.mms import _cache
-from pyrfu.mms.db_init import MMS_CFG_PATH, _read_config
+from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_dist import get_dist
 from pyrfu.mms.get_ts import get_ts
 from pyrfu.mms.list_files import list_files
@@ -26,7 +31,6 @@ from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 from pyrfu.mms.tokenize import tokenize
 from pyrfu.pyrf.dist_append import dist_append
 from pyrfu.pyrf.ts_append import ts_append
-from pyrfu.pyrf.ttns2datetime64 import ttns2datetime64
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -36,6 +40,12 @@ __version__ = "2.4.13"
 __status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
+
+# Attempts to read a file from S3: the reads of the body of the response (a
+# connection reset or timed out while the file is received) are not retried by
+# botocore, which retries the requests only
+_AWS_READ_ATTEMPTS = 3
+_AWS_READ_ERRORS = (IncompleteReadError, ReadTimeoutError, ResponseStreamingError)
 
 
 def _var_and_cdf_name(
@@ -61,14 +71,6 @@ def _var_and_cdf_name(
     var = tokenize(var_str)
     cdf_name = f"mms{mms_id}_{var['cdf_name']}"
     return var, cdf_name
-
-
-def _check_times(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
-    if inp.time.data.dtype == "int64":
-        out = inp.assign_coords(time=ttns2datetime64(inp.time.data))
-    else:
-        out = inp
-    return out
 
 
 def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
@@ -189,25 +191,54 @@ def _get_file_content_sources(
             logger.error("Error retrieving file from %s", file_name)
             raise
     elif source == "aws":
-        try:
-            response = file_name.get()
-            file_content = response["Body"].read()
-        except ClientError as err:
-            error = err.response.get("Error", {})
-            response_meta = err.response.get("ResponseMetadata", {})
-            logger.error(
-                "Error retrieving %s from S3: %s (%s, request ID %s, HTTP code %s)",
-                getattr(file_name, "key", file_name),
-                error.get("Message"),
-                error.get("Code"),
-                response_meta.get("RequestId"),
-                response_meta.get("HTTPStatusCode"),
-            )
-            raise
+        file_content = _read_s3_object(file_name)
     else:
         raise NotImplementedError(f"Resource {source} is not yet implemented!!")
 
     return file_content
+
+
+def _get_s3_body(s3_object, label: str) -> bytes:
+    r"""Content of an S3 object (S3 errors logged and raised)."""
+    try:
+        return s3_object.get()["Body"].read()
+    except ClientError as err:
+        error = err.response.get("Error", {})
+        response_meta = err.response.get("ResponseMetadata", {})
+        logger.error(
+            "Error retrieving %s from S3: %s (%s, request ID %s, HTTP code %s)",
+            label,
+            error.get("Message"),
+            error.get("Code"),
+            response_meta.get("RequestId"),
+            response_meta.get("HTTPStatusCode"),
+        )
+        raise
+
+
+def _read_s3_object(s3_object) -> bytes:
+    r"""Content of an S3 object, the request made again (after 1 s, then 2 s)
+    if the connection is reset or times out while the file is received."""
+    label = getattr(s3_object, "key", s3_object)
+
+    for attempt in range(1, _AWS_READ_ATTEMPTS):
+        try:
+            return _get_s3_body(s3_object, label)
+        except _AWS_READ_ERRORS as err:
+            logger.warning(
+                "Reading %s from S3 failed (%s), trying again (%d/%d)",
+                label,
+                err,
+                attempt + 1,
+                _AWS_READ_ATTEMPTS,
+            )
+            time.sleep(attempt)
+
+    try:
+        return _get_s3_body(s3_object, label)
+    except _AWS_READ_ERRORS as err:
+        logger.error("Error reading %s from S3: %s", label, err)
+        raise
 
 
 def _file_label(file_name) -> str:
@@ -393,9 +424,10 @@ def get_data(
     data_path : str, Optional
         Local path of MMS data. Default uses the local path of the MMS
         configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
-    source: {"local", "sdc", "aws"}, Optional
-        Resource to fetch data from. Default uses the default resource of the
-        MMS configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
+    source : {"local", "sdc", "aws", "default"}, Optional
+        Resource to fetch data from, in any case. Default (or "default") uses
+        the default resource of the MMS configuration (`pyrfu.mms.MMS_CFG_PATH`,
+        set with `mms.db_init`).
 
     Returns
     -------
@@ -430,11 +462,12 @@ def get_data(
 
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 
-    # Read the current version of the MMS configuration file
-    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-        config = json.load(fs)
+    # The source in any case, or the default of the MMS configuration if empty
+    # or "default", as db_get_ts, db_get_variable and load_ancillary
+    source = (source or "default").lower()
 
-    source = source if source else config.get("default")
+    if source == "default":
+        source = _read_config()["default"]
 
     file_names, sdc_session, headers = _list_files_sources(
         source, tint, mms_id, var, data_path
@@ -458,7 +491,5 @@ def get_data(
 
         else:
             out = ts_append(out, get_ts(file_content, cdf_name, tint))
-
-    out = _check_times(out)
 
     return out

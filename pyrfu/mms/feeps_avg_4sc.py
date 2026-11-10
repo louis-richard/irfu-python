@@ -114,8 +114,8 @@ def feeps_avg_4sc(
         If b_list is not a list (or tuple) of DataArray, or combined_energies
         is not a dict.
     ValueError
-        If flag is not "omni" or "pad", or if the spacecraft have different
-        ``UNITS``.
+        If flag is not "omni" or "pad", if the spacecraft have different
+        ``UNITS``, or with "pad" different pitch-angle bins.
 
     Notes
     -----
@@ -149,6 +149,12 @@ def feeps_avg_4sc(
 
     # The units of the first spacecraft were taken
     _check_same_units(b_list, "spacecraft")
+
+    # The PADs were averaged by bin index, whatever their pitch angles
+    if flag == "pad" and not all(
+        np.array_equal(b.theta.data, b_list[0].theta.data) for b in b_list
+    ):
+        raise ValueError("The PADs of the spacecraft have different pitch-angle bins")
 
     b_list_count_nans = deepcopy(b_list_r)
     b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
@@ -191,7 +197,7 @@ def feeps_avg_4sc(
         if combined_energies is None:
             energy = b_list[0].energy.data
         coords = {"time": b_list_r[0].time, "energy": energy}
-    elif flag == "pad":
+    else:
         coords = {"time": b_list_r[0].time, "theta": b_list_r[0].theta}
 
     # NaN (without warning) where no spacecraft has data

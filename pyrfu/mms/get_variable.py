@@ -19,20 +19,27 @@ __status__ = "Prototype"
 
 
 def _pycdfpp_attributes_to_dict(attributes):
+    r"""Attributes of a CDF file or variable as a dictionary: the value of the
+    attributes of one entry (as a list for several values, datetime64 for
+    times), the list of the entries of the others (global attributes)."""
     attributes_dict = {}
 
     for k in attributes:
-        tmp = [attributes[k][i] for i in range(len(attributes[k]))]
+        entries = [attributes[k][i] for i in range(len(attributes[k]))]
 
-        if np.size(tmp) == 1:
-            if isinstance(tmp[0], (list, np.ndarray)) and isinstance(
-                tmp[0][0], _pycdfpp.tt2000_t
-            ):
-                attributes_dict[k] = to_datetime64(tmp[0][0])
-            else:
-                attributes_dict[k] = tmp[0]
+        if len(entries) != 1:
+            attributes_dict[k] = entries
+            continue
+
+        value = entries[0]
+
+        # (an attribute of several values was a list of one list)
+        if isinstance(value, (list, np.ndarray)) and isinstance(
+            value[0], _pycdfpp.tt2000_t
+        ):
+            attributes_dict[k] = to_datetime64(value[0] if len(value) == 1 else value)
         else:
-            attributes_dict[k] = tmp[:]
+            attributes_dict[k] = value
 
     return attributes_dict
 

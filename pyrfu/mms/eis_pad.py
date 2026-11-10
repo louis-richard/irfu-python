@@ -13,6 +13,7 @@ import xarray as xr
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
+from .feeps_avg_4sc import _without_gaps
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -86,7 +87,9 @@ def eis_pad(
         (from :func:`pyrfu.mms.get_eis_allt`).
     vec : xarray.DataArray or array_like
         Magnetic field in GSE, the frame of the look directions: a time
-        series (resampled to the times of `inp_allt`) or a constant direction.
+        series (resampled to the times of `inp_allt`, none outside its time
+        range and in its data gaps, as :func:`pyrfu.mms.feeps_pitch_angles`)
+        or a constant direction.
     energy : array_like, Optional
         Energy range to include in the calculation: the channels with their
         lower or upper edge in it. Default is all the channels.
@@ -157,7 +160,9 @@ def eis_pad(
         )
 
     if isinstance(vec, xr.DataArray):
-        vec = resample(vec, inp_allt.time)
+        # No B (no pitch angle) outside the time range of vec and in its gaps
+        # (it was held at its last value and interpolated across)
+        vec = _without_gaps(vec, resample(vec, inp_allt.time))
     else:
         vec = np.asarray(vec, dtype=np.float64)
 

@@ -27,9 +27,9 @@ def read_feeps_sector_masks_csv(tint):
     Parameters
     ----------
     tint : list of str
-        Time range of interest [starttime, endtime] with the format
-        "YYYY-MM-DD", "YYYY-MM-DD" or to specify more or less than a day [
-        'YYYY-MM-DD/hh:mm:ss','YYYY-MM-DD/hh:mm:ss']
+        Time range of interest [starttime, endtime] in ISO 8601, e.g.
+        ["2017-07-11", "2017-07-12"] or ["2017-07-11T22:00:00",
+        "2017-07-12T00:00:00"]. The masks are those of the start time.
 
     Returns
     -------

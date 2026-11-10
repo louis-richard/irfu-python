@@ -49,10 +49,11 @@ def eis_pad_combine_sc(pads):
     -----
     The PADs are averaged at the nearest time of each spacecraft, within half a
     time step (a spacecraft without a sample there is left out), and at the
-    closest energy channel. IDL SPEDAS ``mms_eis_pad_combine_sc`` pairs the
-    samples and the channels by index; here they were too, and spacecraft with
-    different numbers of channels raised ValueError. The energies were the
-    means of the channels of the same index.
+    closest energy channel, also those of counts (``method="sum"``: the mean
+    of the spacecraft, as IDL SPEDAS). IDL SPEDAS ``mms_eis_pad_combine_sc``
+    pairs the samples and the channels by index; here they were too, and
+    spacecraft with different numbers of channels raised ValueError. The
+    energies were the means of the channels of the same index.
 
     See Also
     --------

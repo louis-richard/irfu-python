@@ -166,6 +166,16 @@ def _bin_power_kperp_kpara(
     return power_k_perp_k_para
 
 
+def _average_windows(n_t: int, cav: int):
+    r"""Start indices and time positions of the contiguous windows of `cav`
+    samples over which the cross spectra are averaged: the sample before the
+    centre of the window for an even `cav` (as irfu-matlab), its centre for an
+    odd one (the windows were then one sample short, and one sample in each
+    window was not used)."""
+    starts = np.arange(n_t // cav) * cav
+    return starts, starts + (cav - 1) // 2
+
+
 def fk_power_spectrum_4sc(
     e,
     r,
@@ -199,8 +209,8 @@ def fk_power_spectrum_4sc(
         Time interval over which the power spectrum is calculated. To avoid
         boundary effects use a longer time interval for e and b.
     cav : int, Optional
-        Number of points in time series used to estimate phase.
-        Default ``cav`` = 8.
+        Number of points in time series used to estimate phase (contiguous
+        windows of `cav` samples, odd or even). Default ``cav`` = 8.
     num_k : int, Optional
         Number of wave numbers used in spectrogram. Default ``num_k`` = 500.
     df : float, Optional
@@ -327,8 +337,8 @@ def fk_power_spectrum_4sc(
 
     # Find the time positions for averaging
     cav = int(cav)
-    n = int(np.floor(nt / cav) - 1)
-    pos_av = cav // 2 + np.arange(n + 1) * cav - 1
+    starts, pos_av = _average_windows(nt, cav)
+    n = len(starts) - 1
     av_times = times[pos_av]
 
     # Resample background magnetic field and spacecraft positions to
@@ -341,8 +351,8 @@ def fk_power_spectrum_4sc(
 
     power_avg = np.zeros((n + 1, num_f), dtype="float64")
 
-    for m, pos_avm in enumerate(pos_av):
-        lb, ub = [pos_avm - cav // 2 + 1, pos_avm + cav // 2 + 1]
+    for m, lb in enumerate(starts):
+        ub = lb + cav
 
         cx12[m, :] = np.nanmean(
             w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]),

@@ -17,7 +17,6 @@ from botocore.exceptions import ClientError
 
 # Local imports
 from pyrfu.mms.db_init import MMS_CFG_PATH
-from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
 __author__ = "Louis Richard"
@@ -64,6 +63,18 @@ def _file_time(time_tag: str) -> datetime.datetime:
     return datetime.datetime.strptime(time_tag.ljust(14, "0"), "%Y%m%d%H%M%S")
 
 
+def _tint_bounds(tint) -> tuple[datetime.datetime, datetime.datetime]:
+    r"""Start of the time interval `tint` to the second below and end to the
+    second above. The files start at whole seconds: those starting at or before
+    the start, and before the end, are the same as with the exact times (the
+    end was cut to the second below, which left out a file starting in its last
+    fraction of a second)."""
+    t_start, t_end = np.array(tint).astype("datetime64[ns]")
+    t_start = t_start.astype("datetime64[s]")
+    t_end = (t_end + np.timedelta64(999_999_999, "ns")).astype("datetime64[s]")
+    return t_start.item(), t_end.item()
+
+
 def list_files_aws(
     tint: list[str],
     mms_id: Union[str, int],
@@ -91,9 +102,9 @@ def list_files_aws(
             * var["dtype"] : data type
     bucket_prefix : str, Optional
         Bucket and key prefix of the MMS data, as "bucket/prefix" (or
-        "s3://bucket/prefix"). Default uses the "aws" entry of
-        `pyrfu/mms/config.json`, or HelioCloud
-        ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms") if it is empty.
+        "s3://bucket/prefix"). Default uses the "aws" entry of the MMS
+        configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`), or
+        HelioCloud ("gov-nasa-hdrl-data1/spdf/cdaweb/data/mms") if it is empty.
 
     Returns
     -------
@@ -124,13 +135,10 @@ def list_files_aws(
     else:
         raise TypeError("tint must be a list!!")
 
-    # Convert time interval to ISO 8601
     if isinstance(tint_array[0], str):
-        tint_iso8601 = datetime642iso8601(iso86012datetime64(tint_array))
+        t_start, t_end = _tint_bounds(iso86012datetime64(tint_array))
     else:
         raise TypeError("Values must be in str!!")
-
-    t_start, t_end = [_file_time(re.sub(r"\D", "", t)[:14]) for t in tint_iso8601]
 
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)

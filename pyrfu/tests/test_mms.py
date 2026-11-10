@@ -26,13 +26,19 @@ from unittest import mock
 import keyring
 import keyring.credentials
 import keyring.errors
+import numba
 import numpy as np
 import pycdfpp
 import pytest
 import requests
 import xarray as xr
 from botocore import UNSIGNED
-from botocore.exceptions import ClientError
+from botocore.exceptions import (
+    ClientError,
+    IncompleteReadError,
+    ReadTimeoutError,
+    ResponseStreamingError,
+)
 from ddt import data, ddt, idata, unpack
 from scipy import constants
 from scipy.special import gammainc
@@ -351,6 +357,40 @@ class CalcEpsilonTestCase(unittest.TestCase):
         eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
+    def test_calc_epsilon_units_and_channels(self):
+        # The same in any units of phase-space density (ValueError for
+        # others); fewer channels, less difference; a relativistic phase-space
+        # density as it is (FPI ones converted: 1e-4 for 1 keV protons)
+        vdf, n_s = self._maxwellian()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+        expected = mms.calculate_epsilon(vdf, model, n_s, sc_pot).data
+
+        for units, scale in [("s^3/m^6", 1e12), ("s^3/km^6", 1e30)]:
+            vdf_u, model_u = vdf.copy(deep=True), model.copy(deep=True)
+            vdf_u.data.data[...] *= scale
+            for inp in [vdf_u, model_u]:
+                inp.data.attrs["UNITS"] = units
+            eps = mms.calculate_epsilon(vdf_u, model_u, n_s, sc_pot)
+            np.testing.assert_allclose(eps.data, expected, rtol=1e-12)
+
+        model.data.attrs["UNITS"] = "keV/(cm^2 s sr keV)"
+        with self.assertRaisesRegex(ValueError, "units"):
+            mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        model.data.attrs["UNITS"] = "s^3/cm^6"
+
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot, en_channels=[0, 16])
+        self.assertTrue(np.all((eps.data > 0) & (eps.data < expected)))
+        with self.assertRaises(TypeError):
+            mms.calculate_epsilon(vdf, model, n_s, sc_pot, en_channels=(0, 16))
+
+        for inp in [vdf, model]:
+            inp.attrs["relativistic"] = True
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        self.assertFalse(np.allclose(eps.data, expected, rtol=1e-6, atol=0.0))
+        np.testing.assert_allclose(eps.data, expected, rtol=1e-3)
+
     def test_calc_epsilon_phi_1d(self):
         # phi as (phi,) (IndexError): as with phi as (time, phi)
         vdf, n_s = self._maxwellian()
@@ -536,6 +576,11 @@ class LoginLaspCredentialsTestCase(unittest.TestCase):
         with self.assertRaises(EnvironmentError):
             self._login("sitl", None)
 
+    def test_login_lasp_invalid_rights(self):
+        # Rights of a configuration written by hand (db_init checks them)
+        with self.assertRaises(EnvironmentError):
+            self._login("team", None)
+
 
 class _MemoryKeyring:
     # In-memory keyring backend with a given priority (>= 1: system keyring)
@@ -595,6 +640,36 @@ class DbInitCredentialsTestCase(unittest.TestCase):
         self.assertEqual(credential.password, "new")
         self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "new"})
         self.assertDictEqual(self.plaintext.passwords, {})
+
+    def test_db_init_system_keyring_first_password(self):
+        # Saved in the system keyring when there is no plaintext copy to
+        # remove (the deletion raises PasswordDeleteError, which is ignored)
+        system = _MemoryKeyring(5)
+
+        credential = self._db_init(system, sdc_username="louis", sdc_password="pw")
+
+        self.assertEqual(credential.password, "pw")
+        self.assertDictEqual(system.passwords, {("mms-sdc", "louis"): "pw"})
+        self.assertDictEqual(self.plaintext.passwords, {})
+
+    def test_db_init_first_configuration(self):
+        # Without a configuration file nor local path, the current directory,
+        # saved as an absolute path (not ".")
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as root:
+            os.chdir(root)
+            try:
+                with contextlib.ExitStack() as stack:
+                    for patch in self._patched(root, _MemoryKeyring(5)):
+                        stack.enter_context(patch)
+                    self.module.db_init(default="aws")
+                    config = self._config(root)
+                expected = os.getcwd()
+            finally:
+                os.chdir(cwd)
+
+        self.assertEqual(config["default"], "aws")
+        self.assertEqual(config["local"], expected)
 
     def test_db_init_no_system_keyring(self):
         # Without system keyring, saved in plain text with a warning
@@ -935,6 +1010,24 @@ class DbGetVariableTestCase(unittest.TestCase):
         get_variable.assert_called_once_with(b"cdf", "sensor_ids")
         session.close.assert_not_called()  # shared, cached session
 
+    def test_db_get_variable_verbose(self):
+        # The variable read is logged (INFO) with verbose (the default)
+        with (
+            mock.patch.object(
+                self.module, "_list_files_sources", return_value=(["file0"], None, {})
+            ),
+            mock.patch.object(
+                self.module, "_get_file_content_sources", return_value=b"cdf"
+            ),
+            mock.patch.object(self.module, "get_variable"),
+        ):
+            with self.assertLogs("pyrfu", level="INFO") as logs:
+                mms.db_get_variable(
+                    "mms1_fgm_srvy_l2", "label_b_gse", ["a", "b"], source="sdc"
+                )
+
+        self.assertTrue(any("Loading label_b_gse" in line for line in logs.output))
+
     def test_db_get_variable_no_file(self):
         session = mock.Mock()
 
@@ -958,6 +1051,45 @@ class DbGetVariableTestCase(unittest.TestCase):
 
         self.assertTupleEqual(out.dims, ("x", "y"))
         np.testing.assert_array_equal(out.data, variable.values)
+
+    def test_get_variable_attributes(self):
+        # Attributes of one entry as their value (a list for several values:
+        # it was a list of one list, e.g. VALIDMIN of the FGM vectors),
+        # datetime64 for times, the entries of the global attributes of several
+        times = np.array(["2019-09-14T07:54:00", "2019-09-14T08:11:00"], "<M8[ns]")
+        cdf = pycdfpp.CDF()
+        cdf.add_attribute("Logical_source", ["mms1_fgm_srvy_l2"])
+        cdf.add_attribute("Mods", ["v1", "v2"])
+        cdf.add_variable("b", values=np.ones((3, 4)))
+        for key, value, data_type in [
+            ("UNITS", "nT", None),
+            ("VALIDMIN", np.array([-17000.0, -17000.0, -17000.0, 0.0]), None),
+            ("FILLVAL", np.array([-1e31]), None),
+            ("T_START", times[:1], pycdfpp.DataType.CDF_TIME_TT2000),
+            ("T_RANGE", times, pycdfpp.DataType.CDF_TIME_TT2000),
+        ]:
+            if data_type is None:
+                cdf["b"].add_attribute(key, value)
+            else:
+                cdf["b"].add_attribute(key, value, data_type)
+        content = bytes(pycdfpp.save(cdf))
+
+        out = mms.get_variable(content, "b")
+        self.assertEqual(out.attrs["UNITS"], "nT")
+        self.assertListEqual(out.attrs["VALIDMIN"], [-17000.0, -17000.0, -17000.0, 0.0])
+        self.assertListEqual(out.attrs["FILLVAL"], [-1e31])
+        self.assertEqual(out.attrs["T_START"], times[0])
+        self.assertEqual(out.attrs["T_START"].dtype, np.dtype("<M8[ns]"))
+        np.testing.assert_array_equal(out.attrs["T_RANGE"], times)
+        self.assertTupleEqual(out.dims, ("x", "y"))
+
+        # (the loaded file kept: pycdfpp 0.9 frees the attributes with it)
+        module = importlib.import_module("pyrfu.mms.get_variable")
+        file = pycdfpp.load(content)
+        glob_attrs = module._pycdfpp_attributes_to_dict(file.attributes)
+        self.assertDictEqual(
+            glob_attrs, {"Logical_source": "mms1_fgm_srvy_l2", "Mods": ["v1", "v2"]}
+        )
 
 
 class DbInitTestCase(unittest.TestCase):
@@ -1261,6 +1393,18 @@ class DftTimeShiftTestCase(unittest.TestCase):
         result = mms.dft_time_shift(inp, 2.5 / 8192)
         np.testing.assert_allclose(result.data, sig(np.arange(8192) + 2.5), atol=1e-8)
 
+    def test_dft_time_shift_complex(self):
+        # A complex signal stays complex: exp(2i pi 5 s / n) a quarter of a
+        # sample later
+        inp, _ = self._signal(128)
+        phase = 2j * np.pi * 5 * np.arange(128) / 128
+        inp = inp.copy(data=np.exp(phase))
+        result = mms.dft_time_shift(inp, 0.25 / 8192, f_s=8192.0)
+        self.assertTrue(np.iscomplexobj(result.data))
+        np.testing.assert_allclose(
+            result.data, np.exp(phase + 2j * np.pi * 5 * 0.25 / 128), atol=1e-12
+        )
+
     def test_dft_time_shift_vector(self):
         # Each component is shifted as a scalar; the input is unchanged and
         # the attributes are kept
@@ -1373,6 +1517,10 @@ class Dsl2GseTestCase(unittest.TestCase):
             mms.dsl2gse(
                 generate_ts(64.0, 42, tensor_order=1), np.random.random((42, 3)), 1
             )
+
+    def test_dsl2gse_direction(self):
+        with self.assertRaises(ValueError):
+            mms.dsl2gse(generate_ts(64.0, 42, tensor_order=1), np.ones(3), 2)
 
     @data(
         xr.Dataset({"z_dec": generate_ts(64.0, 42), "z_ra": generate_ts(64.0, 42)}),
@@ -2048,6 +2196,23 @@ class EisSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
         self.assertNotIn("LABLAXIS", result.data.attrs)
 
+    def test_eis_skymap_inputs(self):
+        # Without global attributes (KeyError); the phase-space density of
+        # differential particle fluxes only (KeyError without UNITS, a
+        # conversion error for counts)
+        ang_ang = self._ang_ang([0.0, 20.0])
+        del ang_ang.attrs["GLOBAL"]
+        result = mms.eis_skymap(ang_ang)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+
+        for units in [None, "counts"]:
+            ang_ang = self._ang_ang([0.0, 20.0], units=units)
+            if units is None:
+                del ang_ang.attrs["UNITS"]
+            with self.assertRaisesRegex(ValueError, "differential particle"):
+                mms.eis_skymap(ang_ang)
+            mms.eis_skymap(ang_ang, to_psd=False)
+
     def test_eis_skymap_combine_sc_attrs(self):
         # Attributes kept where they are the same on all the spacecraft
         # (different values and arrays dropped)
@@ -2365,6 +2530,25 @@ class EisPadTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[:, 11, :], 0.0)
         self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
 
+    def test_eis_pad_b_coverage(self):
+        # No pitch angle (NaN) outside the time range of B and in its gaps (B
+        # was held at its last value and interpolated across), as
+        # feeps_pitch_angles; elsewhere as with B constant
+        look = np.array(
+            [[0, 0, -1], [0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
+        )
+        eis = self._eis(np.ones((6, 10, 2)), look, np.array([100.0, 200.0]), 10.0, 10.0)
+        # B at the rate of the data (interpolated, not averaged, onto its times)
+        t_b = eis.time.data[[0, 1, 2, 6, 7]]
+        b_xyz = pyrf.ts_vec_xyz(t_b, np.tile([0.0, 0.0, 1.0], (5, 1)))
+
+        result = mms.eis_pad(eis, b_xyz)
+        expected = mms.eis_pad(eis, [0, 0, 1])
+
+        covered = np.array([0, 1, 2, 6, 7])
+        np.testing.assert_array_equal(result.data[covered], expected.data[covered])
+        self.assertTrue(np.all(np.isnan(result.data[[3, 4, 5, 8, 9]])))
+
     def test_eis_pad_sum(self):
         # B along z: two telescopes at pitch angle 0, one at 180 and three at
         # 90 (on the edge of bins 5 and 6: in bin 6 only). Each telescope is
@@ -2557,6 +2741,22 @@ class EisSpinAvgTestCase(unittest.TestCase):
             mms.eis_spin_avg(eis, "sum").t0.data[:, 0], [14, 30, 54]
         )
 
+    def test_eis_spin_avg_nan(self):
+        # The samples without data are left out; a spin without data is NaN
+        # (its sum was 0, as data)
+        spin = [11] * 4 + [12] * 4 + [13] * 4
+        eis = self._eis(spin)
+        for scope in [k for k in eis if k.startswith("t")]:
+            eis[scope].data[4:8] = np.nan
+            eis[scope].data[9] = np.nan
+
+        for method, expected in [
+            ("sum", [6.0, np.nan, 29.0]),
+            ("mean", [1.5, np.nan, 29.0 / 3.0]),
+        ]:
+            result = mms.eis_spin_avg(eis, method)
+            np.testing.assert_allclose(result.t0.data[:, 0], expected)
+
     def test_eis_spin_avg_counter_wrap(self):
         # The spins in time order across the wrap of the uint16 counter (they
         # were ordered by number)
@@ -2593,6 +2793,24 @@ class EisSpinAvgTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.eis_pad_spinavg(pad, eis.spin[:-1])
+
+        # A counts PAD (method "sum" of eis_pad) summed over each spin (it was
+        # averaged, still labelled "sum"); NaN for a bin without data
+        counts = pad.copy(data=pad.data.copy())
+        counts.attrs["method"] = "sum"
+        counts.data[6:10, 1] = np.nan
+        counts.data[3, 2] = np.nan
+        result = mms.eis_pad_spinavg(counts, eis.spin)
+        np.testing.assert_allclose(result.data[:, 0, 0], [14.0, 30.0])
+        np.testing.assert_allclose(result.data[:, 2, 0], [11.0, 30.0])
+        self.assertTrue(np.all(np.isnan(result.data[1, 1])))
+        self.assertEqual(result.attrs["method"], "sum")
+
+        # Or as asked; ValueError for another method
+        result = mms.eis_pad_spinavg(counts, eis.spin, method="mean")
+        np.testing.assert_allclose(result.data[:, 0, 0], [3.5, 7.5])
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.eis_pad_spinavg(counts, eis.spin, method="median")
 
         # Spin numbers of other times (misaligned silently)
         shifted = eis.spin.assign_coords(
@@ -2734,11 +2952,14 @@ class LoadBrstSegmentsTestCase(unittest.TestCase):
                 mms.load_brst_segments(self.tint)
 
     def test_load_brst_segments_deprecated_args(self):
+        # Each of the deprecated arguments (ignored) warns; the path is not
+        # used, so it needs not exist (no hard-coded /tmp)
         with mock.patch.object(
             requests, "get", return_value=_brst_segments_response([])
         ):
-            with self.assertWarns(FutureWarning):
-                mms.load_brst_segments(self.tint, data_path="/tmp", download=True)
+            for kwargs in [{"data_path": "mms_data"}, {"download": True}]:
+                with self.assertWarns(FutureWarning):
+                    mms.load_brst_segments(self.tint, **kwargs)
 
 
 @ddt
@@ -3203,6 +3424,27 @@ class GetPitchAngleDistTestCase(unittest.TestCase):
         }[method]
         return (np.arange(32.0) + 1)[:, None] * np.array(per_bin)[None, :]
 
+    def test_get_pitch_angle_dist_angles(self):
+        # Bin edges as a list or an array: the default edges give the default
+        # bins; a number of bins; both logged with verbose
+        default = mms.get_pitch_angle_dist(self.vdf, self.b_xyz, verbose=False)
+
+        for angles, n_pa in [(list(range(0, 181, 15)), 12), (12, 12), (4.0, 4)]:
+            with self.assertLogs("pyrfu.mms.get_pitch_angle_dist", "INFO") as logs:
+                pad = mms.get_pitch_angle_dist(
+                    self.vdf, self.b_xyz, angles=angles, verbose=True
+                )
+
+            self.assertIn("User defined", "".join(logs.output))
+            self.assertEqual(pad.data.shape, (4, 32, n_pa))
+            if n_pa == 12:
+                np.testing.assert_allclose(pad.data.data, default.data.data)
+
+        pad = mms.get_pitch_angle_dist(
+            self.vdf, self.b_xyz, angles=np.array([0.0, 90.0, 180.0]), verbose=False
+        )
+        np.testing.assert_allclose(pad.theta.data, [[45.0, 135.0]] * 4)
+
     def test_get_pitch_angle_dist_values(self):
         for method in ["mean", "sum", "sum_weighted"]:
             pad = mms.get_pitch_angle_dist(
@@ -3367,12 +3609,47 @@ class HpcaPadTestCase(unittest.TestCase):
         self.assertEqual(spec.attrs["UNITS"], "cm^-6 s^3")
         self.assertEqual(spec.energy.attrs["UNITS"], "eV")
 
+        # Field of view of 0-90 deg: the anodes 2 to 5 (78.75 to 11.25 deg),
+        # averaged or summed
+        anodes = vdf.copy(data=np.broadcast_to(np.arange(16.0)[:, None], vdf.shape))
+        for method, expected in [("mean", 3.5), ("sum", 14.0)]:
+            spec = mms.hpca_calc_anodes(anodes, fov=[0.0, 90.0], method=method)
+            np.testing.assert_array_equal(spec.data, expected)
+
+        # An anode without data is left out (it made the spectrum NaN); NaN
+        # without warning where no anode has data
+        anodes = anodes.copy(data=anodes.data.copy())
+        anodes.data[:, 3] = np.nan
+        anodes.data[0, 2:6] = np.nan
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for method, expected in [("mean", 11.0 / 3.0), ("sum", 11.0)]:
+                spec = mms.hpca_calc_anodes(anodes, fov=[0.0, 90.0], method=method)
+                np.testing.assert_allclose(spec.data[1:], expected)
+                self.assertTrue(np.all(np.isnan(spec.data[0])))
+
         is_par = np.zeros(32, dtype=bool)
         is_par[0:16:2] = True
         np.testing.assert_array_equal(pad.data[is_par, 0], 1.0)
         self.assertTrue(np.all(np.isnan(pad.data[is_par, 1:])))
         np.testing.assert_array_equal(pad.data[~is_par, -1], 1.0)
         self.assertTrue(np.all(np.isnan(pad.data[~is_par, :-1])))
+
+    def test_hpca_pad_b_coverage(self):
+        # No pitch angle (NaN) after the end of B (it was held at its last
+        # value), as feeps_pitch_angles; before as with B to the end
+        aze_deg = np.full((2, self.N_AZ), 180.0)
+        vdf, saz, aze, b_xyz = self._inputs(aze_deg)
+        expected = self._pad(vdf, saz, aze, b_xyz)
+
+        end = vdf.time.data[self.N_AZ]
+        result = self._pad(vdf, saz, aze, b_xyz[b_xyz.time.data < end])
+
+        np.testing.assert_array_equal(
+            result.data[: self.N_AZ - 1], expected.data[: self.N_AZ - 1]
+        )
+        self.assertTrue(np.all(np.isnan(result.data[self.N_AZ + 1 :])))
+        self.assertTrue(np.all(np.isfinite(expected.data[self.N_AZ + 1 :, 0])))
 
     @data((0.0, 1.0, 0), (180.0, 1.0, -1), (0.0, -1.0, -1))
     @unpack
@@ -4297,6 +4574,50 @@ class PsdMomentsTestCase(unittest.TestCase):
         self.assertIsInstance(result[2], np.ndarray)
         self.assertIsInstance(result[3], np.ndarray)
 
+    def test_sanitize_nan_inplace(self):
+        # NaN set to 0 in place (the Python function, compiled otherwise)
+        module = sys.modules["pyrfu.mms.psd_moments"]
+        vdf = np.array([[1.0, np.nan], [np.nan, 4.0]])
+        result = module._sanitize_nan_inplace.py_func(vdf)
+        self.assertIs(result, vdf)
+        np.testing.assert_array_equal(vdf, [[1.0, 0.0], [0.0, 4.0]])
+
+    def test_moms_channels_and_nan(self):
+        # The channels not used and the NaN points count as zeros
+        rng = np.random.default_rng(1)
+        n_t, n_e, n_ph, n_th = 2, 4, 8, 6
+        vdf = rng.uniform(0.0, 1.0, (n_t, n_e, n_ph, n_th))
+        use_energy = np.ones((n_t, n_e), dtype=bool)
+        use_energy[:, 1] = False
+        vdf_nan = vdf.copy()
+        vdf_nan[0, 2, 3, 4] = np.nan
+
+        vdf_zero = vdf.copy()
+        vdf_zero[:, 1] = 0.0
+        vdf_zero[0, 2, 3, 4] = 0.0
+
+        args = [
+            np.tile(10.0 * 2.0 ** np.arange(n_e), (n_t, 1)),
+            rng.uniform(1.0, 2.0, (n_t, n_e)),
+            constants.e,
+            np.zeros(n_t),
+            constants.m_p,
+            False,
+            0.0,
+            rng.uniform(0, 360, (n_t, n_ph, n_th)),
+            rng.uniform(0, 180, (n_t, n_ph, n_th)),
+        ]
+        rest = [
+            rng.uniform(0.1, 0.2, (n_t, n_ph, n_th)),
+            np.zeros((1, 10, 1, 1)),
+            False,
+        ]
+        result = _moms.__wrapped__(*args, use_energy, vdf_nan, *rest)
+        expected = _moms.__wrapped__(*args, np.ones((n_t, n_e), bool), vdf_zero, *rest)
+
+        for res, exp in zip(result, expected):
+            np.testing.assert_allclose(res, exp, rtol=1e-12)
+
     def test_moms_exact_kernels(self):
         # The midpoint kernels passed as exact kernels (delta_ang = 1) give the
         # midpoint moments
@@ -4919,6 +5240,11 @@ class PsdMomentsTestCase(unittest.TestCase):
         result = self._moments(vdf, sc_pot, energy_range=e_range_ts)
         self._assert_moments_equal(result, fixed_1)
 
+        # On the times of the distribution (not resampled)
+        e_range_ts = e_range_ts.assign_coords(time=vdf.time.data)
+        result = self._moments(vdf, sc_pot, energy_range=e_range_ts)
+        self._assert_moments_equal(result, fixed_1)
+
         # Range changing halfway: each half has the moments of its range
         e_range[2:] = [50.0, 1e4]
         result = self._moments(vdf, sc_pot, energy_range=e_range)
@@ -5140,37 +5466,20 @@ class PsdRebinTestCase(unittest.TestCase):
                 vdf.attrs["esteptable"],
             )
 
-    @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
-    def test_psd_rebin_phi_type(self, vdf):
-        with self.assertRaises(TypeError):
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi,
-                vdf.attrs["energy0"],
-                vdf.attrs["energy1"],
-                vdf.attrs["esteptable"],
-            )
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi.data,
-                vdf.energy[0, :],
-                vdf.attrs["energy1"],
-                vdf.attrs["esteptable"],
-            )
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi.data,
-                vdf.attrs["energy0"],
-                vdf.energy[1, :],
-                vdf.attrs["esteptable"],
-            )
-            mms.psd_rebin(
-                vdf.data,
-                vdf.phi.data,
-                vdf.attrs["energy0"],
-                vdf.attrs["energy1"],
-                pyrf.ts_scalar(vdf.time.data, vdf.attrs["esteptable"]),
-            )
+    def test_psd_rebin_table_types(self):
+        # phi, energy0, energy1 and the stepping table as numpy arrays (the
+        # test of phi raised on its first argument, not a Dataset)
+        vdf = generate_vdf(64.0, 10, (32, 32, 16), energy01=True, species="ions")
+        args = [
+            vdf,
+            vdf.phi.data,
+            vdf.attrs["energy0"],
+            vdf.attrs["energy1"],
+            vdf.attrs["esteptable"],
+        ]
+        for i in [1, 2, 3, 4]:
+            with self.assertRaises(TypeError):
+                mms.psd_rebin(*args[:i], list(args[i]), *args[i + 1 :])
 
     @data(generate_vdf(64.0, 100, (32, 32, 16), energy01=True, species="ions"))
     def test_psd_rebin_output(self, vdf):
@@ -5595,6 +5904,25 @@ class FeepsAvg4scTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), flag="gpd")
+
+    def test_feeps_avg_4sc_pad_bins(self):
+        # PADs of different pitch-angle bins (averaged by bin index)
+        time = generate_timeline(1.0, 4)
+        pads = [
+            xr.DataArray(
+                np.ones((4, n_pa)),
+                coords=[time, (np.arange(n_pa) + 0.5) * 180.0 / n_pa],
+                dims=["time", "theta"],
+            )
+            for n_pa in [11, 11, 12, 11]
+        ]
+
+        with self.assertRaisesRegex(ValueError, "pitch-angle bins"):
+            mms.feeps_avg_4sc(pads, flag="pad")
+
+        result = mms.feeps_avg_4sc([pads[0], pads[1], pads[3]], flag="pad")
+        np.testing.assert_array_equal(result.data, 1.0)
+        self.assertNotIn("mmsId", result.attrs)  # none in the inputs
 
 
 @ddt
@@ -6440,6 +6768,15 @@ class FeepsSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.phi.attrs["COORDINATE_SYSTEM"], "DMPA")
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_skymap_n_phi(self):
+        # A given number of azimuth bins (32 in burst by default)
+        result = mms.feeps_skymap(
+            _feeps_skymap_case("brst", 128), n_phi=16, to_psd=False
+        )
+
+        self.assertTupleEqual(result.data.shape, (2, 15, 16, 4))
+        np.testing.assert_array_equal(result.data.data, 2.0)
+
     def test_feeps_skymap_complete_spins(self):
         # Partial spin (sectors 31-63), a complete spin, partial spin (7-47):
         # one skymap, at the first sample of the complete spin (the partial
@@ -6675,6 +7012,18 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.feeps_spin_avg(flux, spin_sectors[:-1])
 
+    def test_feeps_spin_bounds_two_samples(self):
+        # Two samples (no sampling period to find gaps from): spins from the
+        # sector decreases only
+        module = sys.modules["pyrfu.mms.feeps_spin_avg"]
+        time = generate_timeline(1.0, 2)
+        np.testing.assert_array_equal(
+            module._spin_bounds(np.array([0, 1]), time), [0, 2]
+        )
+        np.testing.assert_array_equal(
+            module._spin_bounds(np.array([63, 0]), time), [0, 1, 2]
+        )
+
     def test_feeps_spin_avg_gap_and_errors(self):
         # A spin cut by a data gap is left out; ValueError without a complete
         # spin
@@ -6799,6 +7148,10 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
             sorted(out_500kev.data_vars), sorted([*eyes, "spinsectnum"])
         )
 
+        # Without spin sectors, the integral channels of the eyes only
+        _, out_500kev = mms.feeps_split_integral_ch(feeps_alle.drop_vars("spinsectnum"))
+        self.assertListEqual(sorted(out_500kev.data_vars), sorted(eyes))
+
 
 class FkPowerSpectrumTestCase(unittest.TestCase):
     # A plane wave of potential cos(k.r - 2 pi f t) seen by the six probes of a
@@ -6909,6 +7262,19 @@ class FkPowerSpectrumTestCase(unittest.TestCase):
 
                     self.assertLessEqual(k_peak, sign * k_vec[0])
                     self.assertLess(sign * k_vec[0], k_peak + d_k)
+
+    def test_fk_power_spectrum_linear_frequencies(self):
+        # Linear frequencies of step df (logarithmic by default)
+        k_vec = np.array([0.0, 0.0, 2 * np.pi / 200.0])
+        v6, b_xyz, _ = self._inputs(k_vec, 500.0, [0.0, 0.0, 20.0])
+
+        power = mms.fk_power_spectrum(v6, b_xyz, self._tint(1.0, 1.5), 5, df=50.0)
+        f_peak, k_peak, d_k = self._peak(power)
+
+        np.testing.assert_allclose(np.diff(power.f.data), 50.0)
+        self.assertAlmostEqual(f_peak, 500.0)
+        self.assertLessEqual(k_peak, k_vec[2])
+        self.assertLess(k_vec[2], k_peak + d_k)
 
     def test_fk_power_spectrum_errors(self):
         v6, b_xyz, z_phase = self._inputs(np.zeros(3), 200.0, [0.0, 0.0, 20.0])
@@ -7054,6 +7420,108 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
             warnings.simplefilter("error", np.exceptions.ComplexWarning)
             mms.fk_power_spectrum_4sc(e_mms, r_mms, b_mms, tint)
 
+    @data(4, 5, 8)
+    def test_fk_power_spectrum_4sc_average_windows(self, cav):
+        # Contiguous windows of cav samples, labelled by the sample before
+        # their centre (even cav) or their centre (odd cav): an odd cav used
+        # cav - 1 samples per window and skipped one
+        module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
+        starts, pos_av = module._average_windows(43, cav)
+
+        self.assertEqual(len(starts), 43 // cav)
+        np.testing.assert_array_equal(starts, np.arange(43 // cav) * cav)
+        np.testing.assert_array_equal(pos_av - starts, (cav - 1) // 2)
+        self.assertLessEqual(starts[-1] + cav, 43)
+
+    def test_fk_power_spectrum_4sc_odd_cav(self):
+        # A plane wave recovered with an odd cav, as with the default
+        k_vec = np.array([0.04, -0.02, 0.03])
+        e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
+        result = mms.fk_power_spectrum_4sc(
+            e_mms, r_mms, b_mms, tint, cav=5, f_range=[3, 5]
+        )
+        d_k = float(result.k_x[1] - result.k_x[0])
+        for key, value in zip(["k_x_avg", "k_y_avg", "k_z_avg"], k_vec):
+            self.assertLess(abs(result.attrs[key] - value / 1e3), d_k, key)
+
+    @staticmethod
+    def _bins(k, k_min, dk, num_k):
+        # Bins of the wave numbers k, the out of range ones in the first or
+        # the last bin
+        return np.clip(np.floor((k - k_min) / dk).astype(int), 0, num_k - 1)
+
+    def _k_power(self):
+        # Wave numbers from -2.5 to 2.5 (out of the bins of [-2, 2[ on both
+        # sides) and powers, (time, frequency); the magnitudes shifted below 0
+        # for some, which go to the first bin
+        rng = np.random.default_rng(0)
+        k_x, k_y, k_z = 2.5 * (2 * rng.random((3, 30, 6)) - 1)
+        k_mag = np.sqrt(k_x**2 + k_y**2 + k_z**2) - 1.0
+        return k_x, k_y, k_z, k_mag, rng.random((30, 6))
+
+    def test_fk_power_spectrum_4sc_bin_power_vs_f(self):
+        # Power summed in its (k, f) bins, the out of range wave numbers in
+        # the edge bins; the Python function (covered) as the compiled one
+        module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
+        k_x, k_y, k_z, k_mag, power = self._k_power()
+        args = (k_x, k_y, k_z, k_mag, power, -2.0, 0.5, 0.25, 8)
+        result = module._bin_power_vs_f.py_func(*args)
+
+        f_idx = np.tile(np.arange(6), (30, 1))
+        for out, k_, k_min, dk in zip(
+            result,
+            [k_x, k_y, k_z, k_mag],
+            [-2.0, -2.0, -2.0, 0.0],
+            [0.5, 0.5, 0.5, 0.25],
+        ):
+            expected = np.zeros((6, 8))
+            np.add.at(expected, (f_idx, self._bins(k_, k_min, dk, 8)), power)
+            np.testing.assert_allclose(out, expected)
+
+        for out, out_jit in zip(result, module._bin_power_vs_f(*args)):
+            np.testing.assert_allclose(out_jit, out)
+
+    def test_fk_power_spectrum_4sc_bin_power_2d(self):
+        # Power summed in its (k_i, k_j) bins over the selected frequencies,
+        # for any number of threads
+        module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
+        k_x, k_y, k_z, k_mag, power = self._k_power()
+        idx_f = np.array([1, 2, 4], dtype=np.int64)
+        k_para, k_perp = k_z, np.hypot(k_x, k_y) - 0.5
+        b_x, b_y, b_z, b_perp = [
+            self._bins(k_[:, idx_f], -2.0, 0.5, 8) for k_ in [k_x, k_y, k_z]
+        ] + [self._bins(k_perp[:, idx_f], 0.0, 0.25, 8)]
+        p_f = power[:, idx_f]
+
+        expected = [np.zeros((8, 8)) for _ in range(4)]
+        np.add.at(expected[0], (b_y, b_x), p_f)
+        np.add.at(expected[1], (b_z, b_x), p_f)
+        np.add.at(expected[2], (b_z, b_y), p_f)
+        np.add.at(expected[3], (b_z, b_perp), p_f)
+
+        for n_threads in [1, 3]:
+            result = module._bin_power_2d_xyz.py_func(
+                k_x, k_y, k_z, power, idx_f, -2.0, 0.5, 8, n_threads
+            )
+            result += (
+                module._bin_power_kperp_kpara.py_func(
+                    k_para, k_perp, power, idx_f, -2.0, 0.5, 0.25, 8, n_threads
+                ),
+            )
+            for out, ref in zip(result, expected):
+                np.testing.assert_allclose(out, ref)
+
+        n_threads = numba.get_num_threads()
+        result_jit = module._bin_power_2d_xyz(
+            k_x, k_y, k_z, power, idx_f, -2.0, 0.5, 8, n_threads
+        ) + (
+            module._bin_power_kperp_kpara(
+                k_para, k_perp, power, idx_f, -2.0, 0.5, 0.25, 8, n_threads
+            ),
+        )
+        for out, ref in zip(result_jit, expected):
+            np.testing.assert_allclose(out, ref)
+
     def test_fk_power_spectrum_4sc_field_gap(self):
         # A NaN gap in the field made every wavelet coefficient NaN, so no
         # wave vector was left; the windows around the gap are left out
@@ -7081,6 +7549,59 @@ class GetDataDownloadTestCase(unittest.TestCase):
 
         with self.assertLogs("pyrfu", level="ERROR"), self.assertRaises(ClientError):
             self.module._get_file_content_sources("aws", s3_object)
+
+        s3_object.get.assert_called_once()  # not retried
+
+    @staticmethod
+    def _s3_object(reads):
+        # S3 object whose successive responses read the given contents, or
+        # raise the given errors
+        s3_object = mock.Mock(key="mms1/file.cdf")
+        responses = []
+        for read in reads:
+            body = mock.Mock()
+            body.read.side_effect = [read]
+            responses.append({"Body": body})
+        s3_object.get.side_effect = responses
+        return s3_object
+
+    _READ_ERRORS = [
+        ResponseStreamingError(error=ConnectionResetError("Connection reset by peer")),
+        ReadTimeoutError(endpoint_url="https://s3", error="timed out"),
+        IncompleteReadError(actual_bytes=1, expected_bytes=7),
+    ]
+
+    @idata(_READ_ERRORS)
+    def test_get_file_content_aws_retry(self, error):
+        # A connection reset (or timed out) while the file is received: the
+        # file is requested again (the error was raised at once)
+        s3_object = self._s3_object([error, b"cdfdata"])
+
+        with (
+            mock.patch.object(self.module.time, "sleep") as sleep,
+            self.assertLogs("pyrfu", level="WARNING") as logs,
+        ):
+            content = self.module._get_file_content_sources("aws", s3_object)
+
+        self.assertEqual(content, b"cdfdata")
+        self.assertEqual(s3_object.get.call_count, 2)
+        sleep.assert_called_once_with(1)
+        self.assertIn("mms1/file.cdf", logs.output[0])
+
+    def test_get_file_content_aws_retry_exhausted(self):
+        # Raised after three attempts, 1 s then 2 s apart
+        s3_object = self._s3_object(self._READ_ERRORS)
+
+        with (
+            mock.patch.object(self.module.time, "sleep") as sleep,
+            self.assertLogs("pyrfu", level="WARNING") as logs,
+        ):
+            with self.assertRaises(IncompleteReadError):
+                self.module._get_file_content_sources("aws", s3_object)
+
+        self.assertEqual(s3_object.get.call_count, 3)
+        self.assertListEqual(sleep.call_args_list, [mock.call(1), mock.call(2)])
+        self.assertTrue(logs.output[-1].startswith("ERROR"))
 
     def test_get_file_content_sdc_error(self):
         session = mock.Mock()
@@ -7138,6 +7659,90 @@ class GetDataDownloadTestCase(unittest.TestCase):
                     mms.get_data("b_gse_fgm_srvy_l2", tint, 1, source="sdc")
 
         session.close.assert_not_called()  # shared, cached session
+
+    def test_get_data_local(self):
+        # Files of the local data path, read from the disk
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        content = _cdf_four_columns("2019-09-14T07:54:10")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "mms1_fgm_srvy_l2_20190914_v5.200.0.cdf")
+            with open(path, "wb") as file:
+                file.write(content)
+
+            with mock.patch.object(
+                self.module, "list_files", return_value=[path]
+            ) as list_files:
+                result = mms.get_data(
+                    "b_gse_fgm_srvy_l2", tint, 1, False, root, source="local"
+                )
+
+        self.assertEqual(list_files.call_args.args[0], tint)
+        self.assertEqual(list_files.call_args.args[1], "1")
+        self.assertEqual(list_files.call_args.args[3], root)
+        expected = mms.get_ts(content, "mms1_fgm_b_gse_srvy_l2", tint)
+        xr.testing.assert_identical(result, expected)
+        self.assertEqual(result.time.dtype, np.dtype("datetime64[ns]"))
+
+    @data(
+        ("SDC", "sdc"),
+        ("Local", "local"),
+        ("AWS", "aws"),
+        ("default", "aws"),
+        ("Default", "aws"),
+        ("", "aws"),
+        (None, "aws"),
+    )
+    @unpack
+    def test_get_data_source(self, source, expected):
+        # The source in any case, the default of the configuration if empty or
+        # "default", as db_get_ts ("SDC" and "default" raised
+        # NotImplementedError)
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        with (
+            mock.patch.object(
+                self.module, "_read_config", return_value={"default": "aws"}
+            ),
+            mock.patch.object(
+                self.module, "_list_files_sources", return_value=([], None, {})
+            ) as list_files_sources,
+        ):
+            with self.assertRaises(FileNotFoundError):
+                mms.get_data("b_gse_fgm_srvy_l2", tint, 1, source=source)
+
+        self.assertEqual(list_files_sources.call_args.args[0], expected)
+
+    def test_list_files_sources_sdc(self):
+        # Without the cache: the download URLs, with a logged-in session
+        session = mock.Mock()
+        files = [{"url": "url_0"}, {"url": "url_1"}]
+        with (
+            mock.patch.object(self.module, "list_files_sdc", return_value=files),
+            mock.patch.object(
+                self.module, "_login_lasp", return_value=(session, {"a": "b"}, None)
+            ),
+        ):
+            result = self.module._list_files_sources("sdc", [], "1", {})
+
+        self.assertEqual(result, (["url_0", "url_1"], session, {"a": "b"}))
+
+    def test_list_files_sources_local(self):
+        with mock.patch.object(
+            self.module, "list_files", return_value=["file.cdf"]
+        ) as list_files:
+            result = self.module._list_files_sources("local", [], "1", {}, "root")
+
+        self.assertEqual(result, (["file.cdf"], None, {}))
+        list_files.assert_called_once_with([], "1", {}, "root")
+
+    def test_source_not_implemented(self):
+        with self.assertRaises(NotImplementedError):
+            mms.get_data("b_gse_fgm_srvy_l2", [], 1, source="cdaweb")
+
+        with self.assertRaises(NotImplementedError):
+            self.module._list_files_sources("cdaweb", [], "1", {})
+
+        with self.assertRaises(NotImplementedError):
+            self.module._get_file_content_sources("cdaweb", "file.cdf")
 
 
 def _sdc_session(chunks=(b"cdf", b"data"), status_error=None, stream_error=None):
@@ -7200,7 +7805,8 @@ class DownloadAncillaryTestCase(unittest.TestCase):
     def test_download_ancillary_default_path(self):
         # The local data path of the configuration
         config = _write_config(self, self.root)
-        with mock.patch.object(self.module, "MMS_CFG_PATH", config):
+        db_init = importlib.import_module("pyrfu.mms.db_init")
+        with mock.patch.object(db_init, "MMS_CFG_PATH", config):
             tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
             self.module.download_ancillary("defatt", tint, 1)
         self._check()
@@ -7339,6 +7945,61 @@ class DownloadDataTestCase(unittest.TestCase):
                         _sdc_session(**error), "url", {}, out_file
                     )
                 self.assertListEqual(os.listdir(root), [])
+
+    def test_download_file_concurrent(self):
+        # A second download of the file while the first one is running (e.g.
+        # two notebooks on the same interval): both complete (they shared
+        # out_file.part, the first one raised FileNotFoundError at the end)
+        with tempfile.TemporaryDirectory() as root:
+            out_file = os.path.join(root, "file.cdf")
+
+            def first_chunks(chunk_size=1):
+                yield b"cdf"
+                self.module._download_file(_sdc_session(), "url", {}, out_file)
+                yield b"data"
+
+            session = _sdc_session()
+            session.get.return_value.iter_content.side_effect = first_chunks
+            self.module._download_file(session, "url", {}, out_file)
+
+            with open(out_file, "rb") as file:
+                self.assertEqual(file.read(), b"cdfdata")
+            self.assertListEqual(os.listdir(root), ["file.cdf"])
+
+    @unittest.skipIf(os.name == "nt", "POSIX file modes")
+    def test_download_file_mode(self):
+        # The downloaded file has the mode of the files created by the user
+        # (umask), as before: the temporary file is not created private
+        umask = os.umask(0o022)
+        try:
+            with tempfile.TemporaryDirectory() as root:
+                out_file = os.path.join(root, "file.cdf")
+                self.module._download_file(_sdc_session(), "url", {}, out_file)
+                mode = os.stat(out_file).st_mode & 0o777
+        finally:
+            os.umask(umask)
+
+        self.assertEqual(mode, 0o644)
+
+    def test_make_path_local(self):
+        # Burst files in a day directory, the local path of the configuration
+        # by default, FileNotFoundError for a missing data directory
+        var = {"inst": "fpi", "tmmode": "brst", "lev": "l2", "dtype": "des-moms"}
+        name = "mms2_fpi_brst_l2_des-moms_20190914075223_v3.4.0.cdf"
+        file = {"file_name": name, "timetag": "2019-09-14T07:52:23"}
+        with tempfile.TemporaryDirectory() as root:
+            with mock.patch.object(
+                self.module, "_read_config", return_value={"local": root}
+            ):
+                result = self.module._make_path_local(file, var, 2)
+
+            expected = os.path.join(
+                root, "mms2", "fpi", "brst", "l2", "des-moms", "2019", "09", "14", name
+            )
+            self.assertEqual(result, expected)
+
+            with self.assertRaises(FileNotFoundError):
+                self.module._make_path_local(file, var, 2, os.path.join(root, "x"))
 
     def test_download_data(self):
         files = [
@@ -7518,6 +8179,18 @@ class GetFeepsTestCase(unittest.TestCase):
             out["top-3"]["energy_upper_bound_top-3"].data, [1.4, 2.4, 3.4]
         )
         self.assertNotIn("energy_lower_bound_top-3", mask["top-3"].coords)
+
+        # Files without the channel bounds: no bound coordinates
+        def read_no_bounds(*args, **kwargs):
+            out = self._fake_read(*args, **kwargs)
+            return {k: v for k, v in out.items() if "bound" not in k}
+
+        with mock.patch.object(
+            self.module, "_db_get_ts_dict", side_effect=read_no_bounds
+        ):
+            out = mms.get_feeps_alleyes("fluxe_brst_l2", self.TINT, 2)
+
+        self.assertListEqual(list(out["top-3"].coords), ["time", "energy_top-3"])
 
     def test_get_feeps_alleyes_ions(self):
         # Survey ions before 2017-08-16: eyes 6-8, from the ion dataset
@@ -7723,6 +8396,203 @@ class GetTsTestCase(unittest.TestCase):
             result.time.data, time + np.timedelta64(shift, "ms")
         )
 
+    @staticmethod
+    def _cdf(cdf_name, values, depends=None, epoch_type=None, n_t=3):
+        # In-memory CDF with one variable on an epoch (1 s steps) and its
+        # DEPEND_*/REPRESENTATION_* attributes: depends maps the attribute to
+        # a support variable (name, values, LABLAXIS or None), or to a string
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(n_t) * np.timedelta64(1, "s")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch",
+            values=time,
+            data_type=epoch_type or pycdfpp.DataType.CDF_TIME_TT2000,
+        )
+        cdf.add_variable(cdf_name, values=values)
+        cdf[cdf_name].add_attribute("DEPEND_0", "Epoch")
+
+        for key, depend in (depends or {}).items():
+            if isinstance(depend, str):
+                cdf[cdf_name].add_attribute(key, depend)
+                continue
+
+            name, dep_values, label = depend
+            if name not in cdf:
+                cdf.add_variable(name, values=dep_values)
+                if label is not None:
+                    cdf[name].add_attribute("LABLAXIS", label)
+            cdf[cdf_name].add_attribute(key, name)
+
+        return bytes(pycdfpp.save(cdf)), time
+
+    def test_get_ts_tensor(self):
+        # (time, 3, 3) with the representation "x,y,z" of both dimensions: rcomp
+        # and ccomp
+        content, time = self._cdf(
+            "mms1_dis_prestensor_dbcs_brst",
+            np.arange(27.0).reshape(3, 3, 3),
+            {"REPRESENTATION_1": "x,y,z", "REPRESENTATION_2": "x,y,z"},
+        )
+        result = get_ts(content, "mms1_dis_prestensor_dbcs_brst")
+        self.assertTupleEqual(result.dims, ("time", "rcomp", "ccomp"))
+        np.testing.assert_array_equal(result.rcomp.data, ["x", "y", "z"])
+        np.testing.assert_array_equal(result.data, np.arange(27.0).reshape(3, 3, 3))
+
+    def test_get_ts_four_dimensions(self):
+        # HPCA azimuths (time, azimuth, anode, energy) with blank labels of
+        # DEPEND_1 and DEPEND_3: distinct dimensions (they were ('time', '_',
+        # 'comp', '_'), on which isel selected both); DEPEND_2 and DEPEND_3
+        # with the same label: rcomp and ccomp; REPRESENTATION_3
+        values = np.arange(3 * 2 * 4 * 5, dtype=float).reshape(3, 2, 4, 5)
+        content, _ = self._cdf(
+            "mms1_hpca_azimuth_angles_per_ev_degrees",
+            values,
+            {
+                "DEPEND_1": ("mms1_hpca_azimuth_index", np.arange(2.0), " "),
+                "DEPEND_2": ("mms1_hpca_polar_anode_number", np.arange(4.0), None),
+                "DEPEND_3": ("mms1_hpca_energy_step_number", np.arange(5.0), " "),
+            },
+        )
+        result = get_ts(content, "mms1_hpca_azimuth_angles_per_ev_degrees")
+        self.assertTupleEqual(result.dims, ("time", "_1", "comp", "_3"))
+        np.testing.assert_array_equal(result.isel(_1=0).data, values[:, 0])
+
+        content, _ = self._cdf(
+            "mms1_x",
+            values,
+            {
+                "DEPEND_1": ("energy", np.arange(2.0), "energy"),
+                "DEPEND_2": ("phi", np.arange(4.0), None),
+                "REPRESENTATION_3": ("theta", np.arange(5.0), None),
+            },
+        )
+        result = get_ts(content, "mms1_x")
+        self.assertTupleEqual(result.dims, ("time", "energy", "rcomp", "ccomp"))
+        np.testing.assert_array_equal(result.ccomp.data, np.arange(5.0))
+
+    def test_get_ts_depend_tables(self):
+        # A (3, 1) table of DEPEND_1 is flattened; "Diffential" fixed in the
+        # label; afg/dfg and EDP DCE sensors without DEPEND_1 are x, y, z
+        content, _ = self._cdf(
+            "mms1_x",
+            np.ones((3, 3)),
+            {
+                "DEPEND_1": (
+                    "channels",
+                    np.array([[1.0], [2.0], [3.0]]),
+                    "Diffential energy channels",
+                )
+            },
+        )
+        result = get_ts(content, "mms1_x")
+        self.assertTupleEqual(result.dims, ("time", "Differential_energy_channels"))
+        np.testing.assert_array_equal(result[result.dims[1]].data, [1.0, 2.0, 3.0])
+
+        for cdf_name in ["mms1_dfg_srvy_l2pre_gse", "mms1_edp_dce_sensor_brst_l2"]:
+            depends = {"DEPEND_1": ("label", np.arange(3.0), "x")}
+            content, _ = self._cdf(
+                cdf_name,
+                np.ones((3, 3)),
+                depends if "edp" in cdf_name else None,
+            )
+            result = get_ts(content, cdf_name)
+            self.assertTupleEqual(result.dims, ("time", "comp"))
+            np.testing.assert_array_equal(result.comp.data, ["x", "y", "z"])
+
+        # Four columns without labels: kept (not a magnitude)
+        content, _ = self._cdf("mms1_y", np.ones((3, 4)))
+        self.assertTupleEqual(get_ts(content, "mms1_y").shape, (3, 4))
+
+        # No DEPEND_2 nor REPRESENTATION_2
+        module = importlib.import_module("pyrfu.mms.get_ts")
+        with self.assertRaisesRegex(KeyError, "DEPEND_2"):
+            module._get_depend(pycdfpp.load(content), "mms1_y", 2)
+
+    def test_get_ts_epoch_types(self):
+        # CDF_EPOCH and CDF_EPOCH16 epochs converted to datetime64 as TT2000
+        # (KeyError: 'attrs')
+        for epoch_type in [
+            pycdfpp.DataType.CDF_EPOCH,
+            pycdfpp.DataType.CDF_EPOCH16,
+        ]:
+            with self.subTest(epoch_type=str(epoch_type)):
+                content, time = self._cdf("mms1_x", np.arange(3.0), None, epoch_type)
+                result = get_ts(content, "mms1_x")
+                np.testing.assert_array_equal(result.time.data, time)
+
+        # Times that are not a CDF time (they were left as numbers)
+        cdf = pycdfpp.CDF()
+        cdf.add_variable("Epoch", values=np.arange(3.0))
+        cdf.add_variable("mms1_x", values=np.arange(3.0))
+        cdf["mms1_x"].add_attribute("DEPEND_0", "Epoch")
+        with self.assertRaisesRegex(TypeError, "not a CDF time"):
+            get_ts(bytes(pycdfpp.save(cdf)), "mms1_x")
+
+    def test_get_ts_tint_types(self):
+        # tint as datetime64 or str; other types raise TypeError
+        content, time = self._cdf("mms1_x", np.arange(5.0), n_t=5)
+        result = get_ts(content, "mms1_x", list(time[[1, 3]]))
+        np.testing.assert_array_equal(result.time.data, time[1:4])
+
+        for tint in [[1, 3], "2019-09-14T07:54:01"]:
+            with self.subTest(tint=tint), self.assertRaises(TypeError):
+                get_ts(content, "mms1_x", tint)
+
+    @data(
+        ("s", 0.0, 0.03, None),
+        ("min", 0.0, 0.0005, UserWarning),
+        (None, 0.0, 0.03, UserWarning),
+    )
+    @unpack
+    def test_get_ts_fpi_epoch_units(self, units, d_minus, d_plus, warning):
+        # Delta variables in s (or with unclear units, taken as s, with a
+        # warning) for the shift of the FPI epochs to the centre
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(30, "ms")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", d_minus), ("Epoch_plus_var", d_plus)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            if units is not None:
+                cdf[name].add_attribute("UNITS", units)
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(3))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+        content = bytes(pycdfpp.save(cdf))
+
+        with self.assertWarns(warning) if warning else warnings.catch_warnings():
+            if warning is None:
+                warnings.simplefilter("error")
+            result = get_ts(content, "mms1_des_numberdensity_brst")
+
+        np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
+
+    def test_get_ts_fpi_epoch_small_mismatch(self):
+        # Deltas within 1 % of the sampling period: half the sampling period
+        # without warning, as irfu-matlab mms.variable2ts (any mismatch)
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(30, "ms")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", 0.0), ("Epoch_plus_var", 30.1)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            cdf[name].add_attribute("UNITS", "ms")
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(3))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+
+        with self.assertNoLogs("pyrfu", level="WARNING"):
+            result = get_ts(bytes(pycdfpp.save(cdf)), "mms1_des_numberdensity_brst")
+
+        np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
+
 
 def _cdf_fpi_brst_spectr(n_records, t_start="2019-09-14T07:54:00", offset=0.0):
     # In-memory FPI burst electron omni spectrogram as in the L2 moments files:
@@ -7907,6 +8777,159 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
         result = self._get_data("b_gse_fgm_srvy_l2", contents)
         self.assertEqual(result.sizes["time"], 5)
         self.assertListEqual(list(result.shape), [5, 3])
+
+
+_FPI_TABLES = np.array(
+    [[10.0, 20.0, 40.0, 80.0, 160.0], [12.0, 24.0, 48.0, 96.0, 192.0]]
+)
+
+
+def _cdf_fpi_dist(
+    n_records,
+    mode="brst",
+    species="dis",
+    parity=None,
+    energy_nrv=False,
+    energy_tables=False,
+):
+    # In-memory FPI distribution of either mode (non-record-varying phi and
+    # theta): energies of the stepping table parity of each record (all 0 in
+    # fast) or a single non-record-varying table, and optionally the energy0
+    # and energy1 variables (twice the energies)
+    time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(
+        n_records
+    ) * np.timedelta64(150, "ms")
+    if parity is None:
+        parity = np.arange(n_records) % 2 if mode == "brst" else np.zeros(n_records)
+    parity = np.asarray(parity, dtype=np.uint8)
+    pre, suf = f"mms1_{species}", f"_{mode}"
+    names = [f"{pre}_{q}{suf}" for q in ["phi", "theta", "energy", "dist"]]
+
+    cdf = pycdfpp.CDF()
+    cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
+    cdf.add_variable(names[0], values=np.arange(4.0)[None], is_nrv=True)
+    cdf.add_variable(names[1], values=np.arange(3.0)[None], is_nrv=True)
+    if energy_nrv:
+        cdf.add_variable(names[2], values=_FPI_TABLES[:1], is_nrv=True)
+    else:
+        cdf.add_variable(names[2], values=_FPI_TABLES[parity].reshape(-1, 5))
+    if energy_tables:
+        for i in range(2):
+            cdf.add_variable(
+                f"{pre}_energy{i:d}{suf}",
+                values=2 * _FPI_TABLES[i : i + 1],
+                is_nrv=True,
+            )
+    if mode == "brst":
+        cdf.add_variable(f"{pre}_steptable_parity{suf}", values=parity)
+    cdf.add_variable(
+        names[3],
+        values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
+    )
+    for i, dep in enumerate(["Epoch", *names[:3]]):
+        cdf[names[3]].add_attribute(f"DEPEND_{i:d}", dep)
+
+    return bytes(pycdfpp.save(cdf))
+
+
+@ddt
+class GetDistTestCase(unittest.TestCase):
+    def _check(self, result, n_records, table0, table1, parity):
+        # Skymap (time, energy, phi, theta) whose energies are the tables of
+        # the stepping table parity of each record
+        self.assertTupleEqual(tuple(result.data.shape), (n_records, 5, 4, 3))
+        self.assertTupleEqual(tuple(result.phi.shape), (n_records, 4))
+        np.testing.assert_array_equal(result.attrs["energy0"], table0)
+        np.testing.assert_array_equal(result.attrs["energy1"], table1)
+        np.testing.assert_array_equal(result.attrs["esteptable"], parity)
+        np.testing.assert_array_equal(
+            result.energy.data, np.where(np.c_[parity] == 1, table1, table0)
+        )
+
+    @data(("dis", "ions"), ("des", "electrons"))
+    @unpack
+    def test_get_dist_fast(self, species, name):
+        # A single table, energy0 = energy1 (energy0 was the energies of the
+        # second record, the same in the files), no stepping
+        cdf_name = f"mms1_{species}_dist_fast"
+        result = mms.get_dist(_cdf_fpi_dist(3, "fast", species), cdf_name)
+        self._check(result, 3, _FPI_TABLES[0], _FPI_TABLES[0], np.zeros(3))
+        self.assertEqual(result.attrs["species"], name)
+        self.assertEqual(result.attrs["tmmode"], "fast")
+        np.testing.assert_array_equal(
+            result.data.data[1],
+            np.moveaxis(np.arange(60.0, 120.0).reshape(4, 3, 5), -1, 0),
+        )
+
+    @data("brst", "fast")
+    def test_get_dist_single_record(self, mode):
+        # Tables of a file of a single record (were squeezed to 1-D: fast
+        # raised IndexError)
+        result = mms.get_dist(_cdf_fpi_dist(1, mode), f"mms1_dis_dist_{mode}")
+        self._check(result, 1, _FPI_TABLES[0], _FPI_TABLES[0], [0])
+
+        if mode == "brst":
+            # Of the parity 1: no table 0 in the file, the table 1 for both
+            result = mms.get_dist(_cdf_fpi_dist(1, parity=[1]), "mms1_dis_dist_brst")
+            self._check(result, 1, _FPI_TABLES[1], _FPI_TABLES[1], [1])
+
+    @data("brst", "fast")
+    def test_get_dist_energy_nrv(self, mode):
+        # A non-record-varying energy table, at all times (fast raised
+        # IndexError)
+        content = _cdf_fpi_dist(4, mode, energy_nrv=True)
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
+        parity = np.arange(4) % 2 if mode == "brst" else np.zeros(4)
+        self._check(result, 4, _FPI_TABLES[0], _FPI_TABLES[0], parity)
+
+    def test_get_dist_brst_one_parity(self):
+        # Burst records of one parity only (IndexError): the table of the
+        # first record for the other
+        content = _cdf_fpi_dist(3, parity=[0, 0, 0])
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        self._check(result, 3, _FPI_TABLES[0], _FPI_TABLES[0], np.zeros(3))
+
+        content = _cdf_fpi_dist(3, parity=[1, 1, 1])
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        self._check(result, 3, _FPI_TABLES[1], _FPI_TABLES[1], np.ones(3))
+
+    def test_get_dist_brst_energy_tables(self):
+        # The energy0 and energy1 variables, when in the file, rather than the
+        # energies of the records (energy0 and energy1 were 2-D)
+        content = _cdf_fpi_dist(4, energy_tables=True)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        self._check(result, 4, 2 * _FPI_TABLES[0], 2 * _FPI_TABLES[1], [0, 1, 0, 1])
+
+    @data(
+        ["2019-09-14T07:54:10.100", "2019-09-14T07:54:10.400"],
+        np.array(["2019-09-14T07:54:10.1", "2019-09-14T07:54:10.4"], "datetime64[ns]"),
+        list(
+            np.array(["2019-09-14T07:54:10.1", "2019-09-14T07:54:10.4"], "datetime64")
+        ),
+    )
+    def test_get_dist_tint(self, tint):
+        # Records in tint, with their stepping table parity, from strings or
+        # datetime64
+        result = mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", tint)
+        self._check(result, 2, _FPI_TABLES[0], _FPI_TABLES[1], [1, 0])
+        np.testing.assert_array_equal(
+            result.time.data,
+            np.array(["2019-09-14T07:54:10.15", "2019-09-14T07:54:10.3"], "<M8[ns]"),
+        )
+
+    @data("2019-09-14T07:54:10", [0, 1])
+    def test_get_dist_tint_type_error(self, tint):
+        with self.assertRaises(TypeError):
+            mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", tint)
+
+    def test_get_dist_species_error(self):
+        with self.assertRaises(AttributeError):
+            mms.get_dist(_cdf_fpi_dist(4), "mms1_hpca_hplus_phase_space_density")
+
+    def test_get_dist_mode_error(self):
+        content = _cdf_fpi_dist(4, "srvy")
+        with self.assertRaises(ValueError):
+            mms.get_dist(content, "mms1_dis_dist_srvy")
 
 
 def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120.0)):
@@ -8187,7 +9210,7 @@ class ListFilesAwsTestCase(unittest.TestCase):
     FGM_BRST = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
     FPI_FAST = {"inst": "fpi", "tmmode": "fast", "lev": "l2", "dtype": "des-moms"}
 
-    def _list(self, keys, tint, var, bucket_prefix="", error=None):
+    def _list(self, keys, tint, var, bucket_prefix="", error=None, mms_id=1):
         bucket = _FakeS3Bucket(keys, error)
         resource = mock.Mock()
         resource.Bucket.return_value = bucket
@@ -8195,7 +9218,7 @@ class ListFilesAwsTestCase(unittest.TestCase):
         with mock.patch.object(
             list_files_aws_module, "_s3_resource", return_value=resource
         ):
-            out = mms.list_files_aws(tint, 1, var, bucket_prefix=bucket_prefix)
+            out = mms.list_files_aws(tint, mms_id, var, bucket_prefix=bucket_prefix)
 
         return out, resource, bucket
 
@@ -8215,6 +9238,44 @@ class ListFilesAwsTestCase(unittest.TestCase):
         self.assertListEqual([f["full_name"] for f in out], [keys[1], keys[2], keys[3]])
         self.assertEqual(out[0]["timetag"], "2019-09-14T07:50:43")
         self.assertEqual(out[0]["file_size"], len(keys[1]))
+
+    @data(
+        ("2019-09-14T08:07:03", 2),
+        ("2019-09-14T08:07:03.000000001", 3),
+        ("2019-09-14T08:07:03.500", 3),
+        ("2019-09-14T08:07:04", 3),
+    )
+    @unpack
+    def test_list_files_aws_end_fraction(self, t_end, n_files):
+        # A file starting in the last fraction of a second of the interval (the
+        # end was cut to the second below: the 08:07:03 file was left out)
+        directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
+        times = ["075043", "075403", "080703"]
+        keys = [f"{directory}/mms1_fgm_brst_l2_20190914{t}_v5.207.0.cdf" for t in times]
+        tint = ["2019-09-14T07:54:00", t_end]
+
+        out, _, _ = self._list(keys, tint, self.FGM_BRST, f"{self.BUCKET}/{self.HELIO}")
+
+        self.assertListEqual([f["full_name"] for f in out], keys[:n_files])
+
+    def test_list_files_aws_versions(self):
+        # The latest version of each file, whatever the listing order; other
+        # file names are ignored; the spacecraft as str
+        directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
+        stem = f"{directory}/mms1_fgm_brst_l2_20190914075403"
+        keys = [
+            f"{stem}_v5.207.0.cdf",
+            f"{stem}_v5.86.0.cdf",
+            f"{stem}_v5.207.0.cdf.md5",
+            f"{stem}_v5.300.0.cdf",
+            f"{stem}_v5.9.0.cdf",
+        ]
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        prefix = f"{self.BUCKET}/{self.HELIO}"
+
+        out, _, _ = self._list(keys, tint, self.FGM_BRST, prefix, mms_id="1")
+
+        self.assertListEqual([f["full_name"] for f in out], [keys[3]])
 
     def test_list_files_aws_brst_day_directory(self):
         # SDC layout: burst files in a day directory, looked at only if there is
@@ -8431,6 +9492,52 @@ class ReduceTestCase(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "base must be"):
             mms.reduce(vdf, np.eye(3), "1d", "sph")
+
+    def test_reduce_dim_and_phi(self):
+        # ValueError for an invalid dimension; azimuths of all times (1-D, a
+        # dataset without time-dependent phi) as the same at every time
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+
+        with self.assertRaisesRegex(ValueError, "dim must be"):
+            mms.reduce(vdf, np.eye(3), "4d", "pol")
+
+        # (int_sph_dist given the same distributions and angles: the Monte
+        # Carlo of numba cannot be seeded)
+        vdf_1d = vdf.assign(phi=("idx1", vdf.phi.data[0]))
+        module = sys.modules["pyrfu.mms.reduce"]
+        calls = []
+        for inp in [vdf_1d, vdf]:
+            with mock.patch.object(
+                module, "int_sph_dist", wraps=module.int_sph_dist
+            ) as int_sph_dist:
+                mms.reduce(inp, np.eye(3), n_mc=5, verbose=False)
+            calls.append(int_sph_dist.call_args_list)
+
+        self.assertEqual(len(calls[0]), 3)
+        for call_1d, call in zip(*calls):
+            for arg_1d, arg in zip(call_1d.args, call.args):
+                np.testing.assert_array_equal(arg_1d, arg)
+
+    def test_reduce_units_convert(self):
+        # Any units of vdf_convert: a differential energy or particle flux as
+        # its phase-space density ("Invalid units!!" for all but s^3/cm^6,
+        # s^3/m^6 and s^3/km^6); int_sph_dist given the same distributions
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        vdf["energy"] = vdf.energy + 10.0
+        module = sys.modules["pyrfu.mms.reduce"]
+        calls = []
+        for units in ["s^3/cm^6", "keV/(cm^2 s sr keV)", "1/(cm^2 s sr eV)"]:
+            with mock.patch.object(
+                module, "int_sph_dist", wraps=module.int_sph_dist
+            ) as int_sph_dist:
+                mms.reduce(
+                    mms.vdf_convert(vdf, units), np.eye(3), n_mc=5, verbose=False
+                )
+            calls.append(int_sph_dist.call_args_list)
+
+        for call_ref, call_1, call_2 in zip(*calls):
+            np.testing.assert_allclose(call_1.args[0], call_ref.args[0], rtol=1e-6)
+            np.testing.assert_allclose(call_2.args[0], call_ref.args[0], rtol=1e-6)
 
     def test_reduce_no_channel(self):
         # V_sc above every channel at the first time: NaN there (IndexError),
@@ -8705,6 +9812,64 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
 
         expected = 0.5 * np.array([0.0, 1001.0, 2.0, 1003.0])
         np.testing.assert_allclose(vdf_bkg.data.data[:, 0, 0, 0], expected)
+
+    def test_remove_edist_background_metadata(self):
+        # Spacecraft and data rate from the attributes of the distribution
+        vdf, n_e, startdelphi, model = self._inputs()
+
+        vdf.data.attrs["CATDESC"] = "MMS5 DES burst distribution"
+        with self.assertRaisesRegex(ValueError, "spacecraft"):
+            self._run(vdf, n_e, startdelphi, model)
+
+        vdf.data.attrs["CATDESC"] = "MMS1 DES burst distribution"
+        vdf.data.attrs["FIELDNAM"] = "mms1_des_dist_srvy"
+        with self.assertRaisesRegex(TypeError, "fast or burst"):
+            self._run(vdf, n_e, startdelphi, model)
+
+    def test_remove_edist_background_fast(self):
+        # Fast survey: one model for all the samples (no energy stepping)
+        vdf, n_e, startdelphi, _ = self._inputs()
+        vdf.data.attrs["FIELDNAM"] = "mms1_des_dist_fast"
+        vdf.attrs["esteptable"] = np.zeros(4, dtype=np.uint8)
+        records = np.arange(360.0)[:, None, None, None] * np.ones((1, 32, 16, 32))
+        model = {
+            "mms_des_bgdist_fast": mock.Mock(values=records),
+            "mms_des_startdelphi_counts_fast": mock.Mock(
+                values=16 * np.arange(360) + 8
+            ),
+        }
+
+        with self.assertLogs("pyrfu", level="INFO"):
+            (_, vdf_bkg, _), (get_data, _, _) = self._run(vdf, n_e, startdelphi, model)
+
+        np.testing.assert_allclose(vdf_bkg.data.data[:, 0, 0, 0], 0.5 * np.arange(4))
+        self.assertEqual(get_data.call_args.args[0], "ne_fpi_fast_l2")
+
+    def test_remove_edist_background_spin_phase_missing(self):
+        # Spin phases far from the times of the distributions
+        vdf, n_e, startdelphi, model = self._inputs()
+        late = startdelphi.assign_coords(
+            time=startdelphi.time.data + np.timedelta64(10, "s")
+        )
+        with self.assertRaisesRegex(ValueError, "startdelphi_count"):
+            self._run(vdf, n_e, late, model)
+
+    def test_remove_edist_background_default_source(self):
+        # "default" (ValueError) and no source: the default of the
+        # configuration, as the other readers
+        db_get_ts_module = sys.modules["pyrfu.mms.db_get_ts"]
+        vdf, n_e, startdelphi, model = self._inputs()
+
+        for source in ["default", "Default", None]:
+            with mock.patch.object(
+                db_get_ts_module, "_load_config", return_value={"default": "aws"}
+            ):
+                _, (get_data, _, load_model) = self._run(
+                    vdf, n_e, startdelphi, model, source=source
+                )
+
+            self.assertEqual(get_data.call_args.kwargs["source"], "aws")
+            self.assertEqual(load_model.call_args.args[1], "aws")
 
     def test_remove_edist_background_n_art(self):
         # n_art = 0 removes no photoelectrons (it used to mean "default")
@@ -9116,6 +10281,44 @@ class RotateTensorTestCase(unittest.TestCase):
         with self.assertNoLogs("pyrfu.mms.rotate_tensor", "WARNING"):
             mms.rotate_tensor(self._rot_tensor(), "rot", np.eye(3))
 
+    @data("pp", "qq")
+    def test_rotate_tensor_verbose(self, perp):
+        # The additional rotation is logged with verbose
+        inp = self._rot_tensor()
+        b_xyz = pyrf.ts_vec_xyz(inp.time.data, np.tile([0.2, 0.3, 1.0], (5, 1)))
+
+        with self.assertLogs("pyrfu.mms.rotate_tensor", "INFO") as logs:
+            mms.rotate_tensor(inp, "fac", b_xyz, perp, verbose=True)
+
+        self.assertIn("perpendicular components", "".join(logs.output))
+
+    def test_rotate_tensor_coordinate_system(self):
+        # The coordinates of the output (the input ones were kept, e.g. "GSE"
+        # on a FAC tensor); none for an arbitrary system
+        inp = self._rot_tensor()
+        inp.attrs.update({"COORDINATE_SYSTEM": "GSE", "UNITS": "nPa"})
+        b_xyz = pyrf.ts_vec_xyz(inp.time.data, np.tile([0.2, 0.3, 1.0], (5, 1)))
+        defatt = xr.Dataset(
+            {
+                "z_ra": pyrf.ts_scalar(inp.time.data, np.full(5, 270.0)),
+                "z_dec": pyrf.ts_scalar(inp.time.data, np.full(5, 66.0)),
+            }
+        )
+        inp_dsl = inp.copy()
+        inp_dsl.attrs["COORDINATE_SYSTEM"] = "DSL"
+
+        for result, expected in [
+            (mms.rotate_tensor(inp, "fac", b_xyz), "FAC"),
+            (mms.rotate_tensor(inp_dsl, "gse", defatt), "GSE"),
+            (mms.rotate_tensor(inp_dsl, "GSM", defatt), "GSM"),
+        ]:
+            self.assertEqual(result.attrs["COORDINATE_SYSTEM"], expected)
+            self.assertEqual(result.attrs["UNITS"], "nPa")
+
+        result = mms.rotate_tensor(inp, "rot", np.eye(3))
+        self.assertNotIn("COORDINATE_SYSTEM", result.attrs)
+        self.assertEqual(inp.attrs["COORDINATE_SYSTEM"], "GSE")  # input kept
+
     def test_rotate_tensor_fac_default_pp(self):
         # "fac" keeps "pp" by default: equal perpendicular components
         inp = self._rot_tensor()
@@ -9255,6 +10458,20 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
 
         self.assertEqual(context.filename, __file__)
 
+    def test_vdf_reduce_options(self):
+        # Velocity range, z direction and 2d (deprecated function); ValueError
+        # for another dimension
+        tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[0, -1]]))
+        kwargs = {"z_vec": [0, 0, 1], "v_int": [-2e5, 2e5], "n_vpt": 8}
+
+        with self.assertWarns(FutureWarning):
+            result = mms.vdf_reduce(self.vdf, tint, "2d", [1, 0, 0], **kwargs)
+            with self.assertRaises(ValueError):
+                mms.vdf_reduce(self.vdf, tint, "3d", [1, 0, 0], **kwargs)
+
+        self.assertTupleEqual(result.dims, ("vx", "vy"))
+        np.testing.assert_allclose(result.vx.data[[0, -1]], [-0.2, 0.2])
+
     def test_vdf_reduce_deprecated(self):
         tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[0, -1]]))
 
@@ -9320,6 +10537,19 @@ class VdfToE64TestCase(unittest.TestCase):
         xr.testing.assert_identical(result, vdf)
         self.assertIsNot(result.data.data, vdf.data.data)
 
+    def test_vdf_to_e64_no_energy_widths(self):
+        # Without energy widths, none in the output
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        for key in ["delta_energy_minus", "delta_energy_plus"]:
+            del vdf.attrs[key]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # zero energy channel
+            result = mms.vdf_to_e64(vdf)
+
+        self.assertEqual(result.data.shape, (5, 64, 32, 16))
+        self.assertNotIn("delta_energy_plus", result.attrs)
+
     def test_vdf_to_e64_delta_time(self):
         # A pair of samples spans the two accumulations: twice their half
         # widths for regular sampling, as irfu-matlab PDist.e64
@@ -9355,6 +10585,16 @@ class VdfElimTestCase(unittest.TestCase):
         self.vdf = generate_vdf(64.0, 10, [32, 32, 16])
         self.vdf.attrs["delta_energy_plus"] = np.tile(np.arange(32) * 0.1, (10, 1))
         self.vdf.attrs["delta_energy_minus"] = np.arange(32) * 0.2
+
+    def test_vdf_elim_input(self):
+        # ValueError for 3 energies; energy widths set to None are kept None
+        with self.assertRaises(ValueError):
+            mms.vdf_elim(self.vdf, [1.0, 2.0, 3.0])
+
+        self.vdf.attrs["delta_energy_minus"] = None
+        result = mms.vdf_elim(self.vdf, [5.0, 10.0])
+        self.assertIsNone(result.attrs["delta_energy_minus"])
+        self.assertEqual(result.attrs["delta_energy_plus"].shape, (10, 4))
 
     def test_vdf_elim_interval(self):
         result = mms.vdf_elim(self.vdf, [5.0, 10.0])
@@ -9428,6 +10668,28 @@ class VdfOmniTestCase(unittest.TestCase):
             )
             self.assertEqual(result.attrs["UNITS"], "s^3/cm^6")
 
+    def test_vdf_omni_no_conversion(self):
+        # In a frame, a relativistic phase-space density and other units are
+        # averaged as they are, a non-relativistic phase-space density as the
+        # relativistic one (at the energies of the bins), back at the new
+        # energies (electrons: 2e-4 at 40 eV)
+        omni = {}
+        for name, relativistic, units in [
+            ("relativistic", True, "s^3/cm^6"),
+            ("flux", False, "1/(cm^2 s sr eV)"),
+            ("psd", False, "s^3/cm^6"),
+        ]:
+            vdf = self._vdf()
+            vdf.attrs.update({"species": "electrons", "relativistic": relativistic})
+            vdf.data.attrs["UNITS"] = units
+            omni[name] = mms.vdf_omni(
+                vdf, v_frame=[0.0] * 3, n_mc=200, random_state=0
+            ).data
+
+        np.testing.assert_array_equal(omni["flux"], omni["relativistic"])
+        self.assertFalse(np.allclose(omni["psd"], omni["flux"], rtol=1e-6, atol=0))
+        np.testing.assert_allclose(omni["psd"], omni["flux"], rtol=1e-3)
+
     def test_vdf_omni_angular_widths(self):
         # FEEPS-like rings of different widths (delta_theta_*): the mean is
         # weighted by the solid angles of the bands, sum(f Omega) / 4 pi
@@ -9467,6 +10729,23 @@ class VdfOmniTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.vdf_omni(vdf, "sum", v_frame=[0.0, 0.0, 0.0])
+
+    def test_vdf_omni_frame_sc_pot(self):
+        # With the spacecraft potential, the omni-directional distribution at
+        # the energies at infinity E: that of the measured energies E + V for
+        # electrons (no sc_pot option); ValueError without v_frame (unused)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 100.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.attrs.update({"species": "electrons", "relativistic": True})
+        energy = vdf.energy.data[0]
+        options = {"v_frame": [0.0, 0.0, 0.0], "n_mc": 500, "random_state": 0}
+
+        result = mms.vdf_omni(vdf, sc_pot=10.0, **options)
+        expected = mms.vdf_omni(vdf, energy=energy + 10.0, **options)
+        np.testing.assert_array_equal(result.data, expected.data)
+
+        with self.assertRaisesRegex(ValueError, "sc_pot needs v_frame"):
+            mms.vdf_omni(vdf, sc_pot=10.0)
 
     def test_vdf_omni_frame_maxwellian(self):
         # Drifting Maxwellian in its frame: the Maxwellian at rest
@@ -10192,6 +11471,28 @@ class VdfShiftTestCase(unittest.TestCase):
             result.data.data[:, 1:-1], vdf.data.data[:, 1:-1], rtol=1e-9
         )
 
+    def test_vdf_shift_sc_pot(self):
+        # With the spacecraft potential (no sc_pot option), the grid in the
+        # energies at infinity: the geometric means of the corrected channel
+        # edges, and the density corrected for it (vdf_partial_density)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 100.0, [0.0] * 3)
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.attrs["species"] = "electrons"
+        result = mms.vdf_shift(vdf, [0.0] * 3, n_mc=20, random_state=0, sc_pot=10.0)
+
+        lower = vdf.energy.data - vdf.attrs["delta_energy_minus"] - 10.0
+        upper = vdf.energy.data + vdf.attrs["delta_energy_plus"] - 10.0
+        np.testing.assert_allclose(
+            result.energy.data[:, 1:-1], np.sqrt(lower * upper)[:, 1:-1]
+        )
+
+        def density(inp, **kwargs):
+            return np.nansum(mms.vdf_partial_density(inp, **kwargs).data.data)
+
+        self.assertAlmostEqual(
+            density(result) / density(vdf, sc_pot=10.0), 1.0, places=12
+        )
+
     def test_vdf_shift_bulk_frame(self):
         v_kms = np.array([200.0, 150.0, -250.0])
         vdf, sc_pot = self._vdf(list(v_kms))
@@ -10866,6 +12167,79 @@ class ListFilesTestCase(unittest.TestCase):
             ["mms1_fgm_srvy_l2_20190912_v5.211.0.cdf"],
         )
 
+    @data(
+        ("2019-09-14T07:53:43", 1),
+        ("2019-09-14T07:53:43.000000001", 2),
+        ("2019-09-14T07:53:43.500", 2),
+        ("2019-09-14T07:53:44", 2),
+    )
+    @unpack
+    def test_list_files_end_fraction(self, t_end, n_files):
+        # A file starting in the last fraction of a second of the interval (the
+        # end was cut to the second below: the 07:53:43 file was left out)
+        names = [
+            "mms1_fgm_brst_l2_20190914075000_v5.214.0.cdf",
+            "mms1_fgm_brst_l2_20190914075343_v5.214.0.cdf",
+        ]
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(root, "mms1/fgm/brst/l2/2019/09/14", names)
+            var = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
+            tint = ["2019-09-14T07:53:00", t_end]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual([os.path.basename(f) for f in result], names[:n_files])
+
+    def test_list_files_end_fraction_next_day(self):
+        # A file starting at midnight, before an end a fraction of a second
+        # after: the day directory of the end is listed
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms1/fgm/brst/l2/2019/09/15",
+                ["mms1_fgm_brst_l2_20190915000000_v5.214.0.cdf"],
+            )
+            var = {"inst": "fgm", "tmmode": "brst", "lev": "l2", "dtype": ""}
+            tint = ["2019-09-14T23:59:00", "2019-09-15T00:00:00.5"]
+            result = mms.list_files(tint, 1, var, root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["mms1_fgm_brst_l2_20190915000000_v5.214.0.cdf"],
+        )
+
+    def test_list_files_config_path(self):
+        # Without data_path, the local path of the MMS configuration; other
+        # file names are ignored; the spacecraft as int or str
+        module = sys.modules["pyrfu.mms.list_files"]
+        name = "mms2_fgm_srvy_l2_20190914_v5.211.0.cdf"
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(
+                root,
+                "mms2/fgm/srvy/l2/2019/09",
+                [name, f"{name}.part", "readme.txt", f"mms1{name[4:]}"],
+            )
+            var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": None}
+            tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+            with mock.patch.object(
+                module, "_read_config", return_value={"local": root}
+            ):
+                results = [mms.list_files(tint, mms_id, var) for mms_id in [2, "2"]]
+
+        for result in results:
+            self.assertListEqual([os.path.basename(f) for f in result], [name])
+
+    def test_list_files_input(self):
+        var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaises(TypeError):
+                mms.list_files(tuple(tint), 1, var, root)
+
+            with self.assertRaises(TypeError):
+                mms.list_files(
+                    list(pyrf.iso86012datetime64(np.array(tint))), 1, var, root
+                )
+
 
 class _FakeSdcResponse:
     def __init__(self, files, error=None):
@@ -10960,6 +12334,21 @@ class ListFilesSdcTestCase(unittest.TestCase):
             [file["url"] for file in result],
             [f"{_SDC_URL}download/science?file={name}" for name in expected],
         )
+
+    def test_list_files_sdc_end_fraction(self):
+        # The query ends at the last second at or before which a file starting
+        # before the end of the interval starts (an end in the last fraction of
+        # a second left out the file starting then)
+        for t_end, end_date in [
+            ("2019-09-14T08:11:00", "2019-09-14-08-10-59"),
+            ("2019-09-14T08:11:00.000000001", "2019-09-14-08-11-00"),
+            ("2019-09-14T08:11:00.500", "2019-09-14-08-11-00"),
+        ]:
+            tint = ["2019-09-14T07:54:00.5", t_end]
+            _, session = self._list(tint, 1, "b_gse_fgm_brst_l2", [])
+            _, query = _sdc_query(session.urls[0])
+            self.assertEqual(query["start_date"], "2019-09-14")
+            self.assertEqual(query["end_date"], end_date)
 
     def test_list_files_sdc_http_error(self):
         with self.assertRaises(requests.exceptions.HTTPError):
@@ -11455,7 +12844,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
         # The default resource of the configuration (a temporary one, also for
         # the local path of the local lister)
         db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
-        lister = importlib.import_module("pyrfu.mms.list_files_ancillary")
+        db_init = importlib.import_module("pyrfu.mms.db_init")
         files, contents = self._defatt_files()
         session = self._sdc(files, contents)
         self._write("defatt", files[1]["file_name"], contents[1].splitlines())
@@ -11469,7 +12858,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             session.get.reset_mock()
             with (
                 mock.patch.object(db_get_ts, "MMS_CFG_PATH", path),
-                mock.patch.object(lister, "MMS_CFG_PATH", path),
+                mock.patch.object(db_init, "MMS_CFG_PATH", path),
             ):
                 result = mms.load_ancillary("defatt", self.tint, 1, False)
             db_get_ts._load_config_cached.cache_clear()
@@ -11501,6 +12890,74 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
             )
 
         self.assertListEqual(result, [])
+
+    _TINT = ["2019-09-14T07:54:00", "2019-09-14T08:00:00"]  # day 257
+
+    @staticmethod
+    def _touch(directory, names):
+        os.makedirs(directory, exist_ok=True)
+        for name in names:
+            with open(os.path.join(directory, name), "wb"):
+                pass
+
+    @data(1, "1")
+    def test_list_files_ancillary_versions(self, mms_id):
+        # Files covering the interval padded by a day before, latest version of
+        # each, in time order; other file names are ignored
+        names = [
+            "MMS1_DEFATT_2019250_2019251.V00",  # before
+            "MMS1_DEFATT_2019256_2019257.V00",
+            "MMS1_DEFATT_2019256_2019257.V01",
+            "MMS1_DEFATT_2019257_2019258.V09",
+            "MMS1_DEFATT_2019257_2019258.V10",
+            "MMS1_DEFATT_2019258_2019259.V00",  # after
+            "MMS1_DEFATT_2019xyz_2019258.V00",  # not a date
+            "MMS1_DEFATT_2019257_2019258.V00.part",
+        ]
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(os.path.join(root, "ancillary", "mms1", "defatt"), names)
+            result = mms.list_files_ancillary(self._TINT, mms_id, "defatt", root)
+
+        self.assertListEqual(
+            [os.path.basename(f) for f in result],
+            ["MMS1_DEFATT_2019256_2019257.V01", "MMS1_DEFATT_2019257_2019258.V10"],
+        )
+
+    def test_list_files_ancillary_glob_characters(self):
+        # A data path with glob characters (nothing was found in mms_data[2])
+        name = "MMS_DEFQ_2019257_2019258.V00"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = os.path.join(tmp_dir, "mms_data[2]")
+            self._touch(os.path.join(root, "ancillary", "mms", "defq"), [name])
+            result = mms.list_files_ancillary(self._TINT, 3, "defq", root)
+
+        self.assertListEqual([os.path.basename(f) for f in result], [name])
+
+    def test_list_files_ancillary_config_path(self):
+        # Without data_path, the local path of the MMS configuration
+        module = sys.modules["pyrfu.mms.list_files_ancillary"]
+        name = "MMS2_DEFEPH_2019257_2019258.V00"
+        with tempfile.TemporaryDirectory() as root:
+            self._touch(os.path.join(root, "ancillary", "mms2", "defeph"), [name])
+            with mock.patch.object(
+                module, "_read_config", return_value={"local": root}
+            ):
+                result = mms.list_files_ancillary(self._TINT, 2, "defeph")
+
+        self.assertListEqual([os.path.basename(f) for f in result], [name])
+
+    def test_list_files_ancillary_input(self):
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaises(TypeError):
+                mms.list_files_ancillary(tuple(self._TINT), 1, "defatt", root)
+
+            with self.assertRaises(TypeError):
+                mms.list_files_ancillary(
+                    list(pyrf.iso86012datetime64(np.array(self._TINT))),
+                    1,
+                    "defatt",
+                    root,
+                )
 
 
 @ddt
@@ -11705,6 +13162,58 @@ class VdfProjectionTestCase(unittest.TestCase):
             np.testing.assert_array_equal(out, exp)
         self.assertNotIn("species", vdf.attrs)
 
+    def test_vdf_projection_inputs(self):
+        # TypeError for a DataArray, ValueError for three times; azimuths of
+        # all times (1-D) as the same at every time; a frame not right handed
+        # orthogonal is corrected with a warning
+        vdf = self._maxwellian([400.0, 0.0, 0.0])
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[0, 1]]))
+
+        with self.assertRaises(TypeError):
+            mms.vdf_projection(vdf.data, tint)
+
+        with self.assertRaisesRegex(ValueError, "time interval"):
+            mms.vdf_projection(vdf, [*tint, tint[1]])
+
+        vdf_1d = vdf.assign(phi=("idx1", vdf.phi.data[0]))
+        vdf_2d = vdf.assign(phi=(("time", "idx1"), np.tile(vdf.phi.data[0], (2, 1))))
+        for out, ref in zip(
+            mms.vdf_projection(vdf_1d, tint), mms.vdf_projection(vdf_2d, tint)
+        ):
+            np.testing.assert_allclose(out, ref)
+
+        coord_sys = np.array([[1.0, 0.0, 0.0], [0.5, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        with self.assertLogs("pyrfu.mms.vdf_projection", "WARNING") as logs:
+            result = mms.vdf_projection(vdf, tint, coord_sys)
+        self.assertIn("right handed", "".join(logs.output))
+        for out, ref in zip(result, mms.vdf_projection(vdf, tint)):
+            np.testing.assert_allclose(out, ref, atol=0.0)
+
+    def test_vdf_projection_options(self):
+        # The bin correction weights the bins near the plane; a relativistic
+        # phase-space density is projected as it is (FPI one converted); the
+        # spacecraft potential averaged over a time interval
+        vdf = self._maxwellian([400.0, 0.0, 0.0])
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[0, 1]]))
+        ref = mms.vdf_projection(vdf, tint)[2]
+
+        # (values of 1e-23: relative differences only)
+        corrected = mms.vdf_projection(vdf, tint, bins_correction=True)[2]
+        self.assertFalse(np.allclose(corrected, ref, atol=0.0, equal_nan=True))
+
+        vdf_rel = vdf.copy()
+        vdf_rel.attrs["relativistic"] = True
+        relativistic = mms.vdf_projection(vdf_rel, tint)[2]
+        self.assertFalse(np.allclose(relativistic, ref, atol=0.0, equal_nan=True))
+        np.testing.assert_allclose(relativistic, ref, rtol=1e-3)
+
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.array([10.0, 30.0]))
+        v_x = mms.vdf_projection(vdf, tint, sc_pot=sc_pot)[0]
+        sc_pot_mean = pyrf.ts_scalar(vdf.time.data, np.full(2, 20.0))
+        np.testing.assert_allclose(
+            v_x, mms.vdf_projection(vdf, tint, sc_pot=sc_pot_mean)[0]
+        )
+
     def test_vdf_projection_sc_pot(self):
         # Energy edges below the spacecraft potential gave NaN speeds
         vdf = self._maxwellian([400.0, 0.0, 0.0])
@@ -11814,6 +13323,19 @@ class HpcaSpinSumTestCase(unittest.TestCase):
             np.testing.assert_array_equal(result.time.data, saz.time.data[[0, 16, 32]])
             self.assertEqual(result.dims, inp.dims)
             self.assertDictEqual(result.attrs, inp.attrs)
+
+    def test_hpca_spin_sum_nan(self):
+        # The samples without data are left out; a spin without data is NaN
+        # (its sum was 0, as data)
+        inp, saz = self._inputs(np.arange(48) % 16)
+        inp.data[16:32] = np.nan
+        inp.data[3] = np.nan
+
+        for method in ["mean", "sum"]:
+            result = mms.hpca_spin_sum(inp, saz, method)
+            expected = getattr(np, f"nan{method}")(inp.data[0:16], axis=0)
+            np.testing.assert_allclose(result.data[0], expected)
+            self.assertTrue(np.all(np.isnan(result.data[1])))
 
     def test_hpca_spin_sum_errors(self):
         # One spin start (it raised IndexError) or none: no complete spin

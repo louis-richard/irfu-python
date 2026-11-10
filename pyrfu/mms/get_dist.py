@@ -31,6 +31,20 @@ Globkeys = [
 ]
 
 
+def _fpi_name(cdf_name, quantity):
+    # Name of the variable of the quantity of the FPI distribution cdf_name,
+    # e.g. mms1_dis_energy0_brst for mms1_dis_dist_brst
+    parts = cdf_name.split("_")
+    return "_".join([parts[0], parts[1], quantity, parts[-1]])
+
+
+def _first_table(energy, step_table, parity):
+    # Energy table of the first record of the stepping table parity, or of the
+    # first record if no record has it (e.g. a file of a single record)
+    idx = np.flatnonzero(step_table == parity)
+    return energy[idx[0] if idx.size else 0, :].copy()
+
+
 def get_dist(file_path, cdf_name, tint: list = None):
     r"""Read field named cdf_name in file and convert to velocity distribution
     function.
@@ -112,61 +126,38 @@ def get_dist(file_path, cdf_name, tint: list = None):
     epochs = _get_epochs(file, cdf_name)
     times = epochs["data"]
 
+    # (time, energy, phi, theta)
     dist = np.transpose(file[cdf_name].values, [0, 3, 1, 2])
-    phi, theta, energy = [np.squeeze(file[k].values) for k in depends_keys[1:]]
+    _, n_energy, n_phi, n_theta = dist.shape
+
+    # Tables of one record (non-record-varying) or of all records; reshaped
+    # rather than squeezed, which made those of a single record 1-D
+    phi = file[depends_keys[1]].values.reshape(-1, n_phi)
+    theta = file[depends_keys[2]].values.reshape(n_theta)
+    energy = file[depends_keys[3]].values.reshape(-1, n_energy)
 
     if times.size == 0:
         # File without records: empty skymap, without energy tables
-        phi = np.zeros((0, phi.shape[-1]))
-        energy = np.zeros((0, energy.shape[-1]))
-        energy0 = np.full(energy.shape[-1], np.nan)
-        energy1 = np.full(energy.shape[-1], np.nan)
+        phi = np.zeros((0, n_phi))
+        energy = np.zeros((0, n_energy))
+        energy0 = np.full(n_energy, np.nan)
+        energy1 = np.full(n_energy, np.nan)
         step_table = np.zeros(0)
 
     elif tmmode == "brst":
-        en0_name = "_".join(
-            [
-                cdf_name.split("_")[0],
-                cdf_name.split("_")[1],
-                "energy0",
-                cdf_name.split("_")[-1],
-            ],
-        )
-        en1_name = "_".join(
-            [
-                cdf_name.split("_")[0],
-                cdf_name.split("_")[1],
-                "energy1",
-                cdf_name.split("_")[-1],
-            ],
-        )
-
-        e_step_table_name = "_".join(
-            [
-                cdf_name.split("_")[0],
-                cdf_name.split("_")[1],
-                "steptable_parity",
-                cdf_name.split("_")[-1],
-            ],
-        )
+        e_step_table_name = _fpi_name(cdf_name, "steptable_parity")
+        en0_name = _fpi_name(cdf_name, "energy0")
+        en1_name = _fpi_name(cdf_name, "energy1")
 
         step_table = file[e_step_table_name].values
 
-        if en0_name not in z_vars:
-            if energy.ndim == 1:
-                energy0 = energy
-                energy1 = energy
-            elif energy.shape[0] == 1:
-                energy0 = energy[0, :]
-                energy1 = energy[0, :]
-            else:
-                idx_energy0 = np.where(step_table == 0)[0]
-                idx_energy1 = np.where(step_table == 1)[0]
-                energy0 = energy[idx_energy0[0], :]
-                energy1 = energy[idx_energy1[0], :]
+        if en0_name in z_vars:
+            energy0 = file[en0_name].values.reshape(n_energy)
+            energy1 = file[en1_name].values.reshape(n_energy)
         else:
-            energy0 = file[en0_name].values
-            energy1 = file[en1_name].values
+            energy = np.broadcast_to(energy, (len(times), n_energy))
+            energy0 = _first_table(energy, step_table, 0)
+            energy1 = _first_table(energy, step_table, 1)
 
         # Overwrite energy to make sure that energy0 and energy1
         # are used instead
@@ -174,31 +165,20 @@ def get_dist(file_path, cdf_name, tint: list = None):
         energy[step_table == 1] = np.tile(energy1, (int(np.sum(step_table)), 1))
 
     elif tmmode == "fast":
-        phi = np.tile(phi, (len(times), 1))
-
-        if energy.ndim == 1:
-            energy0 = energy
-            energy1 = energy
-        elif energy.shape[0] == 1:
-            energy0 = energy[0, :]
-            energy1 = energy[0, :]
-        else:
-            energy0 = energy[1, :]
-            energy1 = energy[0, :]
-
+        # No stepping: a single energy table (the energies of the first
+        # record; the records of the files have the same)
+        energy = np.broadcast_to(energy, (len(times), n_energy)).copy()
+        energy0 = energy[0, :].copy()
+        energy1 = energy[0, :].copy()
         step_table = np.zeros(len(times))
 
     else:
         raise ValueError("Invalid sampling mode!!")
 
-    d_en_name = "_".join(
-        [
-            cdf_name.split("_")[0],
-            cdf_name.split("_")[1],
-            "energy_delta",
-            cdf_name.split("_")[-1],
-        ],
-    )
+    if phi.shape[0] == 1:
+        phi = phi[0, :]
+
+    d_en_name = _fpi_name(cdf_name, "energy_delta")
 
     # Energy widths, left out of the files without them (they were None, which
     # the routines that check for the attribute, e.g. reduce, took as given)

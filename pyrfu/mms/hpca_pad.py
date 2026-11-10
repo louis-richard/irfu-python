@@ -16,6 +16,7 @@ from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
 from ._hpca import _half_spins
 from .db_get_variable import db_get_variable
+from .feeps_avg_4sc import _without_gaps
 
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
@@ -90,7 +91,9 @@ def hpca_pad(
         Azimuthal angle per energy; [nT, naz16, npo16, ner63], one record per
         half-spin.
     b_xyz : xarray.DataArray
-        B in dmpa coordinate
+        B in dmpa coordinate. No pitch angle (NaN) outside its time range and
+        in its data gaps, as :func:`pyrfu.mms.feeps_pitch_angles` (it was held
+        at its last value and interpolated across).
     elim : list, Optional
         [emin, emax], energy range for PAD. Default is the whole energy range.
     elevation : array_like, Optional
@@ -98,7 +101,8 @@ def hpca_pad(
         mms?_hpca_centroid_elevation_angle in the file of `vdf`.
     source : {"default", "local", "sdc", "aws"}, Optional
         Resource to read the anode elevations from (if `elevation` is None).
-        Default uses default in `pyrfu/mms/config.json`.
+        Default uses the default resource of the MMS configuration
+        (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
     data_path : str, Optional
         Path of MMS data (for `source` "local").
 
@@ -200,6 +204,7 @@ def hpca_pad(
     t1_tt = t0_[:, None] + np.arange(n_en)[None, :] * dt0[:, None] / n_en
     t1_tt = t1_tt.ravel().astype(np.int64).astype("datetime64[ns]")
     b_xyz_r = resample(b_xyz, ts_scalar(t1_tt, np.zeros(len(t1_tt))))
+    b_xyz_r = _without_gaps(b_xyz, b_xyz_r)
     b_hat = normalize(b_xyz_r).data.reshape(n_ti, n_en, 3)[:, None, :, :]
 
     # Pitch angle of the particles
@@ -207,7 +212,7 @@ def hpca_pad(
     theta_b = np.rad2deg(np.arccos(np.clip(cos_pa, -1.0, 1.0)))
 
     # 3.5. select dist for PAD (NaN for the samples without azimuths)
-    vdf_data = np.where(np.isnan(phi), np.nan, vdf.data)
+    vdf_data = np.where(np.isnan(phi) | np.isnan(theta_b), np.nan, vdf.data)
     vdfs_ = [vdf_data.copy() for _ in range(len(angle_vec))]
 
     vdfs_[0][theta_b > angle_vec[0]] = np.nan

@@ -13,6 +13,7 @@ from scipy.constants import electron_volt, speed_of_light
 # Local imports
 from pyrfu.mms._psd_units import _factor, _is_relativistic, _mass_ratio
 from pyrfu.mms._vdf_bins import _mass
+from pyrfu.mms.vdf_convert import vdf_convert
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
 from pyrfu.pyrf.resample import resample
@@ -84,7 +85,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     vdf : xarray.Dataset
         3D skymap velocity distribution function, with the ``species``
         attribute (the speeds of the channels with its mass, e.g. "ions",
-        "oxygen", "helium++").
+        "oxygen", "helium++"), in any units of `vdf_convert` (phase-space
+        density, differential energy or particle flux; only s^3/cm^6, s^3/m^6
+        and s^3/km^6 were accepted).
     xyz : xarray.DataArray or numpy.ndarray
         Transformation matrix from instrument frame to desired frame.
     dim : {"1d", "2d", "3d"}, Optional
@@ -105,6 +108,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
           (eV), 0 eV by default. The channels below max(sc_pot,
           lower_e_lim) are set to zero; a time step without any channel
           above it is NaN.
+        * vg, vg_edges : array_like, the speeds (m/s) of the grid, or the
+          edges of its bins, instead of the default one (see Notes).
         * verbose : bool, show a progress bar (default True).
 
     Returns
@@ -125,6 +130,13 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     the speed bins are edged at the geometric means of neighbouring channel
     speeds (see `pyrfu.pyrf.int_sph_dist`); without ``delta_energy_plus``,
     the default Cartesian grid extends to the upper edge of these bins.
+
+    The default polar grid (``"pol"``, without ``vg`` or ``vg_edges``) is
+    made of the speeds of the channels at the first time computed, corrected
+    for the spacecraft potential, as in irfu-matlab. The channels below
+    `sc_pot` are then at 0 eV, so that with a positive `sc_pot` the 1d grid
+    has several speeds of 0 (+0 and -0, not unique) where the distribution
+    is zero; give ``vg`` or ``vg_edges`` for a grid of distinct speeds.
 
     The Monte-Carlo options (``n_mc``, ``weight``, ...) are those of
     `pyrfu.pyrf.int_sph_dist`. ``weight="log"`` weights the particles by
@@ -153,9 +165,16 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     tint = kwargs.get("tint", list(datetime642iso8601(vdf_time.data[[0, -1]])))
     vdf_time = time_clip(vdf_time, tint)
     vdf_energy = time_clip(vdf.energy, tint).copy()
-    vdf_phi = time_clip(vdf.phi, tint).copy()
+    # Azimuths of each time, or of all times (1-D: time_clip raised
+    # AttributeError)
+    vdf_phi = vdf.phi.copy()
+
+    if "time" in vdf_phi.dims:
+        vdf_phi = time_clip(vdf_phi, tint).copy()
     vdf_theta = vdf.theta.copy()
-    vdf_data = time_clip(vdf.data, tint).copy()
+    # In SI units, s^3/m^6, from any units of vdf_convert (the convention of
+    # the phase-space density, the relativistic attribute, is kept)
+    vdf_data = time_clip(vdf_convert(vdf, "s^3/m^6").data, tint).copy()
 
     # Lower energy bound of instrument bins. If not provided set to 0 eV.
     delta_energy_minu = time_clip(_energy_widths(vdf, "delta_energy_minus"), tint)
@@ -176,16 +195,6 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     # angle (int_sph_dist uses cos(theta) d_theta at the centre of the band).
     # Without them, the widths are the spacing of the grids (FPI, EIS).
     angle_widths = _angle_widths(vdf, vdf_theta.data, tint)
-
-    # make input distribution to SI units, s^3/m^6
-    if vdf.data.attrs["UNITS"].lower() == "s^3/cm^6":
-        vdf_data *= 1e12
-    elif vdf.data.attrs["UNITS"].lower() == "s^3/m^6":
-        vdf_data *= 1e0
-    elif vdf.data.attrs["UNITS"].lower() == "s^3/km^6":
-        vdf_data *= 1e-18
-    else:
-        raise ValueError("Invalid units!!")
 
     # The relativistic phase-space density, integrated with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
@@ -290,13 +299,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         velocity_grid = velocity_grid_edges[:-1] + 0.5 * np.diff(velocity_grid_edges)
     else:
         n_vg = 100
-        if base == "cart":
-            n_vg = 100
-        elif base == "pol":
-            if ndim == 1:
-                n_vg = 2 * n_en
-            else:
-                n_vg = n_en
+        if base == "pol":
+            n_vg = 2 * n_en if ndim == 1 else n_en
 
     # Initialize output arrays
     f_g = np.zeros([n_t, *[n_vg] * ndim])
@@ -378,14 +382,10 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         if velocity_grid is None:
             if base == "cart":
                 velocity_grid = np.linspace(-v_max, v_max, 100, endpoint=True)
-            elif base == "pol":
-                if ndim == 1:
-                    velocity_grid = np.hstack((-np.flip(velocity), velocity))
-                else:
-                    velocity_grid = velocity
-
-        else:
-            pass
+            elif ndim == 1:
+                velocity_grid = np.hstack((-np.flip(velocity), velocity))
+            else:
+                velocity_grid = velocity
 
         options = {
             "xyz": xyz_ts[i_t, ...],
