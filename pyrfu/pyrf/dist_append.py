@@ -31,6 +31,11 @@ def dist_append(inp0, inp1):
     out : xarray.Dataset
         3D skymap of the concatenated 3D skymaps.
 
+    Raises
+    ------
+    TypeError
+        If inp1, or inp0 when given, is not a xarray.Dataset.
+
     Notes
     -----
     The time series have to be in the correct time order. The energy widths
@@ -42,12 +47,14 @@ def dist_append(inp0, inp1):
     """
 
     # Check input type
-    assert isinstance(inp1, xr.Dataset), "inp1 must be a xarray.Dataset"
+    if not isinstance(inp1, xr.Dataset):
+        raise TypeError("inp1 must be a xarray.Dataset")
 
     if inp0 is None:
         return inp1
 
-    assert isinstance(inp0, xr.Dataset), "inp0 must be a xarray.Dataset"
+    if not isinstance(inp0, xr.Dataset):
+        raise TypeError("inp0 must be a xarray.Dataset")
 
     # A skymap without records has no data nor energy tables: keep the other one
     if inp0.sizes["time"] == 0:

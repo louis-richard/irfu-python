@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import numbers
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -25,7 +28,10 @@ def _check_method(flag_method):
 
         flag_method = "e.b=0"
 
-    assert flag_method.lower() in ["e.b=0", "e_par"], "Invalid flag"
+    if flag_method.lower() not in ["e.b=0", "e_par"]:
+        raise ValueError(
+            f'flag_method must be "E.B=0", "e_par" or "e_perp+nan", not {flag_method!r}'
+        )
 
     return flag_method, default_value
 
@@ -66,6 +72,14 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
     d : xarray.DataArray
         Time series of the elevation of B above the spin plane, in degrees.
 
+    Raises
+    ------
+    TypeError
+        If e_xyz or b_bgd is not a xarray.DataArray, or angle_lim not a real
+        number.
+    ValueError
+        If flag_method is not "E.B=0", "e_par" or "e_perp+nan".
+
     Examples
     --------
     >>> from pyrfu import mms, pyrf
@@ -89,9 +103,13 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
 
     """
 
-    assert isinstance(e_xyz, xr.DataArray), "e_xyz must be a xarray.DataArray"
-    assert isinstance(b_bgd, xr.DataArray), "b_bgd must be a xarray.DataArray"
-    assert isinstance(angle_lim, (int, float)), "angle_lime must be int or float"
+    for name, inp in [("e_xyz", e_xyz), ("b_bgd", b_bgd)]:
+        if not isinstance(inp, xr.DataArray):
+            raise TypeError(f"{name} must be a xarray.DataArray")
+
+    # Any real number, numpy scalars too
+    if not isinstance(angle_lim, numbers.Real):
+        raise TypeError("angle_lim must be a real number")
 
     flag_method, default_value = _check_method(flag_method)
 

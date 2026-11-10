@@ -55,9 +55,15 @@ def compress_cwt(cwt, nc: int = 100):
     cwt_z : ndarray
         Compressed wavelet transform of the third component of the field.
 
+    Raises
+    ------
+    TypeError
+        If cwt is not a xarray.Dataset.
+
     """
 
-    assert isinstance(cwt, xr.Dataset), "cwt must be an xarray.Dataset"
+    if not isinstance(cwt, xr.Dataset):
+        raise TypeError("cwt must be an xarray.Dataset")
 
     # First time step of each block
     indices = np.arange(len(cwt.time.data) // nc, dtype=np.int64) * nc

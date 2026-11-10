@@ -1582,11 +1582,17 @@ class C4GradTestCase(unittest.TestCase):
 
 class C4JTestCase(unittest.TestCase):
     def test_c_4_j_input(self):
-        with self.assertRaises(AssertionError):
-            pyrf.c_4_j(
-                generate_ts(64.0, 100, tensor_order=1),
-                generate_ts(64.0, 100, tensor_order=1),
-            )
+        # TypeError and ValueError (AssertionError, one call per check: only
+        # the first ran)
+        vec = generate_ts(64.0, 100, tensor_order=1)
+
+        with self.assertRaises(TypeError):
+            pyrf.c_4_j(vec, [vec] * 4)
+
+        with self.assertRaises(TypeError):
+            pyrf.c_4_j([vec] * 4, vec)
+
+        with self.assertRaises(ValueError):
             pyrf.c_4_j([], [])
 
     def test_c_4_j_output(self):
@@ -1941,10 +1947,16 @@ class Cart2SphTestCase(unittest.TestCase):
 
 class Cart2SphTsTestCase(unittest.TestCase):
     def test_cart2sph_ts_input(self):
-        with self.assertRaises(AssertionError):
-            pyrf.cart2sph_ts(0.0)
-            pyrf.cart2sph_ts(generate_data(100, tensor_order=1))
+        # TypeError and ValueError (AssertionError, one call per check: only
+        # the first ran)
+        for inp in [0.0, generate_data(100, tensor_order=1)]:
+            with self.assertRaises(TypeError):
+                pyrf.cart2sph_ts(inp)
+
+        with self.assertRaisesRegex(ValueError, "vector"):
             pyrf.cart2sph_ts(generate_ts(64.0, 100, tensor_order=0))
+
+        with self.assertRaisesRegex(ValueError, "direction_flag"):
             pyrf.cart2sph_ts(generate_ts(64.0, 100, tensor_order=1), 2)
 
     def test_cart2sph_ts_output(self):
@@ -2056,7 +2068,8 @@ class CompressCwtTestCase(unittest.TestCase):
     @data(([], 10), (np.random.random((100, 100)), 100))
     @unpack
     def test_compress_cwt_input(self, cwt, nc):
-        with self.assertRaises(AssertionError):
+        # TypeError (AssertionError)
+        with self.assertRaises(TypeError):
             pyrf.compress_cwt(cwt, nc)
 
     def test_compress_cwt_output(self):
@@ -2281,7 +2294,7 @@ class CotransTestCase(unittest.TestCase):
     )
     @unpack
     def test_cotrans_input(self, inp, flag, hapgood):
-        with self.assertRaises((TypeError, IndexError, ValueError, AssertionError)):
+        with self.assertRaises((TypeError, IndexError, ValueError)):
             pyrf.cotrans(inp, flag, hapgood)
 
     @idata(itertools.product(["gei", "geo", "gse", "gsm", "mag", "sm"], repeat=2))
@@ -2502,16 +2515,20 @@ class CrossTestCase(unittest.TestCase):
 @ddt
 class DateStrTestCase(unittest.TestCase):
     def test_date_str_input(self):
-        with self.assertRaises(AssertionError):
+        # TypeError and ValueError (AssertionError; a list of one element
+        # raised IndexError)
+        with self.assertRaises(TypeError):
             pyrf.date_str("2019-01-01T00:00:00")
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             pyrf.date_str([np.datetime64("2019-01-01T00:00:00"), "2019-01-01T00:10:00"])
 
-        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
+        with self.assertRaisesRegex(ValueError, "two elements"):
+            pyrf.date_str(["2019-01-01T00:00:00"])
 
+        tint = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
         for fmt in [0, 5]:
-            with self.assertRaises(AssertionError):
+            with self.assertRaisesRegex(ValueError, "fmt"):
                 pyrf.date_str(tint, fmt)
 
         with self.assertRaises(ValueError):
@@ -2894,6 +2911,16 @@ class DistAppendTestCase(unittest.TestCase):
             for key in ["delta_energy_plus", "delta_energy_minus", "delta_time_minus"]:
                 self.assertNotIn(key, result.attrs)
 
+    def test_dist_append_input(self):
+        # TypeError (AssertionError)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16])
+
+        with self.assertRaisesRegex(TypeError, "inp1"):
+            pyrf.dist_append(vdf, vdf.data)
+
+        with self.assertRaisesRegex(TypeError, "inp0"):
+            pyrf.dist_append(vdf.data, vdf)
+
 
 @ddt
 class DynamicPressTestCase(unittest.TestCase):
@@ -3005,7 +3032,8 @@ class EVxBTestCase(unittest.TestCase):
     )
     @unpack
     def test_e_vxb_input(self, v_xyz, b_xyz, flag):
-        with self.assertRaises((TypeError, AssertionError)):
+        # TypeError and ValueError (AssertionError)
+        with self.assertRaises((TypeError, ValueError)):
             pyrf.e_vxb(v_xyz, b_xyz, flag)
 
     @data(
@@ -3108,6 +3136,25 @@ class EbNRFTestCase(unittest.TestCase):
         result = pyrf.eb_nrf(e_xyz, pyrf.ts_vec_xyz(time, b_data), [1.0, 0.0, 0.0], "b")
         np.testing.assert_allclose(result.data, [[2.0, 3.0, 1.0]] * 5, atol=1e-12)
 
+    def test_eb_nrf_input(self):
+        # TypeError and ValueError (AssertionError)
+        vec = generate_ts(64.0, 10, tensor_order=1)
+        scalar = generate_ts(64.0, 10, tensor_order=0)
+
+        for e_xyz, b_xyz, v_xyz, flag, error in [
+            (vec.data, vec, vec, "a", TypeError),
+            (vec, vec.data, vec, "a", TypeError),
+            (scalar, vec, vec, "a", ValueError),
+            (vec, scalar, vec, "a", ValueError),
+            (vec, vec, scalar, "a", ValueError),
+            (vec, vec, [1.0, 0.0], "a", ValueError),
+            (vec, vec, vec, 1, TypeError),
+            (vec, vec, vec, "c", ValueError),
+            (vec, vec, vec, [1.0, 0.0], ValueError),
+        ]:
+            with self.assertRaises(error):
+                pyrf.eb_nrf(e_xyz, b_xyz, v_xyz, flag)
+
 
 @ddt
 class EdbTestCase(unittest.TestCase):
@@ -3157,6 +3204,24 @@ class EdbTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(e_out.data, [[1.0, 2.0, 0.0]] * 3)
         np.testing.assert_allclose(b_angle.data, np.rad2deg(np.arctan(10.0)))
+
+    def test_edb_input(self):
+        # TypeError and ValueError (AssertionError); a numpy angle is a real
+        # number
+        vec = generate_ts(64.0, 10, tensor_order=1)
+
+        for e_xyz, b_bgd, angle_lim, method, error in [
+            (vec.data, vec, 20.0, "e.b=0", TypeError),
+            (vec, vec.data, 20.0, "e.b=0", TypeError),
+            (vec, vec, "20", "e.b=0", TypeError),
+            (vec, vec, 20.0, "e_perp", ValueError),
+        ]:
+            with self.assertRaises(error):
+                pyrf.edb(e_xyz, b_bgd, angle_lim, method)
+
+        xr.testing.assert_identical(
+            pyrf.edb(vec, vec, np.float32(20.0))[0], pyrf.edb(vec, vec, 20.0)[0]
+        )
 
 
 @ddt
@@ -3283,7 +3348,7 @@ class EbspTestCase(unittest.TestCase):
     )
     @unpack
     def test_ebsp_input_fail(self, e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int):
-        with self.assertRaises((AssertionError, TypeError, IndexError, ValueError)):
+        with self.assertRaises((TypeError, IndexError, ValueError)):
             pyrf.ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int)
 
     @data(
@@ -3427,7 +3492,8 @@ class EbspTestCase(unittest.TestCase):
 
     @data(random.random(), np.random.random(3), "bazinga", [1, 100])
     def test_ebsp_freq_int_fail(self, value):
-        with self.assertRaises((AssertionError, ValueError)):
+        # TypeError and ValueError (AssertionError)
+        with self.assertRaises((TypeError, ValueError)):
             pyrf.ebsp(
                 generate_ts(64.0, 10000, tensor_order=1),
                 generate_ts(64.0, 10000, tensor_order=1),
@@ -3571,6 +3637,23 @@ class EbspTestCase(unittest.TestCase):
         np.testing.assert_allclose(result[0, 1], np.mean(data[10:13, 1]))
         np.testing.assert_allclose(result[1], np.mean(data[49:53], axis=0))
 
+    def test_ebsp_no_resample_xyz(self):
+        # no_resample with E and delta_b at different sampling frequencies, and
+        # xyz that is not a DataArray: ValueError and TypeError (AssertionError)
+        args = [generate_ts(64.0, 1000, tensor_order=1) for _ in range(4)]
+
+        with self.assertRaisesRegex(ValueError, "no_resample"):
+            pyrf.ebsp(
+                generate_ts(32.0, 500, tensor_order=1),
+                *args[:3],
+                None,
+                [1e0, 1e1],
+                no_resample=True,
+            )
+
+        with self.assertRaisesRegex(TypeError, "xyz"):
+            pyrf.ebsp(*args, np.ones((1000, 3)), [1e0, 1e1])
+
 
 class MicrosecondTimesTestCase(unittest.TestCase):
     # xarray keeps datetime64[us] time coordinates (from datetime objects,
@@ -3618,7 +3701,8 @@ class MicrosecondTimesTestCase(unittest.TestCase):
 
 class EndTestCase(unittest.TestCase):
     def test_end_input(self):
-        with self.assertRaises(AssertionError):
+        # TypeError (AssertionError)
+        with self.assertRaises(TypeError):
             pyrf.end(generate_timeline(64.0, 100))
 
     def test_end_output(self):
@@ -3685,6 +3769,17 @@ class ExtendTintTestCase(unittest.TestCase):
     def test_extend_tint_input(self):
         with self.assertRaises(TypeError):
             pyrf.extend_tint([0, 0], None)
+
+        # TypeError and ValueError (AssertionError)
+        tint = ["2019-01-01T00:00:00", "2019-01-01T00:10:00"]
+        for args, error in [
+            (("2019-01-01T00:00:00", [-1, 1]), TypeError),
+            ((tint[:1], [-1, 1]), ValueError),
+            ((tint, 1.0), TypeError),
+            ((tint, [1.0]), ValueError),
+        ]:
+            with self.assertRaises(error):
+                pyrf.extend_tint(*args)
 
     @data(
         (
