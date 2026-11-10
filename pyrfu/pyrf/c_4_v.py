@@ -89,8 +89,10 @@ def c_4_v(r_xyz, time, frame: str = "spacecraft"):
         Time series of the positions of the 4 spacecraft in km.
     time : list
         Either the crossing times of the 4 spacecraft (datetime64 or epoch in
-        seconds), or the reference time followed by the velocity of the
-        discontinuity in km/s, [t, v_x, v_y, v_z].
+        seconds), or the reference time (datetime64 or epoch in seconds)
+        followed by the velocity of the discontinuity in km/s,
+        [t, v_x, v_y, v_z]. Numbers are epochs, not times relative to MMS1:
+        those were read as a velocity.
     frame : {"spacecraft", "positions"}, Optional
         Frame of the velocity (see Notes):
 
@@ -110,9 +112,11 @@ def c_4_v(r_xyz, time, frame: str = "spacecraft"):
     Raises
     ------
     ValueError
-        If frame is not "spacecraft" or "positions", or if, from a velocity
-        with frame="positions", the spacecraft move along the normal as fast
-        as the discontinuity (no crossing times).
+        If frame is not "spacecraft" or "positions", if the first time is a
+        number smaller than the speed of light in km/s (not an epoch in
+        seconds, e.g., times relative to MMS1), or if, from a velocity with
+        frame="positions", the spacecraft move along the normal as fast as
+        the discontinuity (no crossing times).
 
     Notes
     -----
@@ -140,6 +144,17 @@ def c_4_v(r_xyz, time, frame: str = "spacecraft"):
         raise ValueError(f'frame must be "spacecraft" or "positions", not {frame!r}')
 
     time = list(time)
+
+    # Epochs and speeds are told apart by their size (the speed of light in
+    # km/s, about 3.5 days after 1970): relative crossing times were taken as
+    # a velocity
+    if not np.issubdtype(np.asarray(time[0]).dtype, np.datetime64) and (
+        float(time[0]) <= constants.c / 1e3
+    ):
+        raise ValueError(
+            "time[0] must be a datetime64 or an epoch in seconds, not a time "
+            "relative to MMS1"
+        )
 
     if np.issubdtype(np.asarray(time[0]).dtype, np.datetime64) and np.issubdtype(
         np.asarray(time[1]).dtype, np.datetime64

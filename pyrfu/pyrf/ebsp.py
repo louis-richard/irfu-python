@@ -272,12 +272,15 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     Returns
     -------
-    res : xarray.Dataset
-        Dataset with :
-            * t : xarray.DataArray
-                Time.
-            * f : xarray.DataArray
-                Frequencies.
+    res : dict
+        Dictionary with (None for what is not computed):
+            * t : numpy.ndarray
+                Times (datetime64[ns]).
+            * f : numpy.ndarray
+                Frequencies [Hz].
+            * flagFac : bool or int
+                True if the spectra are in field-aligned coordinates, 0
+                otherwise.
             * bb_xxyyzzss : xarray.DataArray
                 delta_b power spectrum with :
                     * [...,0] : x
@@ -306,8 +309,10 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
                 Planarity of polarization.
             * ellipticity : xarray.DataArray
                 Ellipticity of polarization ellipse.
-            * k : xarray.DataArray
+            * k_tp : xarray.DataArray
                 k-vector (theta, phi FAC) [angles in degrees].
+            * full_b, b0, r : xarray.DataArray
+                The b_xyz (delta_b with full_b_db), b_bgd and xyz inputs.
 
     Other Parameters
     ----------------
@@ -339,7 +344,6 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     See also
     --------
-    pyrfu.plot.pl_ebsp : to fill.
     pyrfu.pyrf.convert_fac : Transforms to a field-aligned coordinate.
 
     Notes

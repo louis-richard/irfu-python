@@ -33,6 +33,14 @@ def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
     out : DataArray
         Time series of the dot product Z = X.Y.
 
+    Raises
+    ------
+    TypeError
+        If inp1 or inp2 is not a xarray.DataArray.
+    ValueError
+        If inp1 and inp2 are not vectors with the same number of components
+        (a vector and a scalar were broadcast).
+
     Examples
     --------
     >>> from pyrfu import mms, pyrf
@@ -62,6 +70,12 @@ def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
     >>> je = pyrf.dot(j_xyz, e_xyz)
 
     """
+
+    if not isinstance(inp1, DataArray) or not isinstance(inp2, DataArray):
+        raise TypeError("inp1 and inp2 must be xarray.DataArray")
+
+    if inp1.ndim != 2 or inp2.ndim != 2 or inp1.shape[1] != inp2.shape[1]:
+        raise ValueError("inp1 and inp2 must be vectors of the same size")
 
     # Resample to first input sampling
     inp2 = resample(inp2, inp1)

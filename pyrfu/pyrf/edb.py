@@ -101,7 +101,9 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
 
     b_data = b_bgd.data
     e_data = e_xyz.data.copy()  # Ez is overwritten: don't change the caller's E
-    e_data[:, -1] *= default_value
+    # Ez is not read (irfu-matlab): set, so that a NaN input Ez is the default
+    # value too (NaN * 0 was NaN)
+    e_data[:, -1] = default_value
 
     if flag_method.lower() == "e.b=0":
         # Calculate using assumption E.B=0

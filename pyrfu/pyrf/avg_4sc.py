@@ -90,36 +90,15 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
             attrs=b_list_r[0].attrs,
         )
     else:
-
-        data_vars_names = list(b_list_r[0].data_vars)
-        data_vars_coords = [
-            list(list(b_list_r[0].data_vars[data_vars_name].coords))
-            for data_vars_name in data_vars_names
-        ]
-
         for b in b_list_r:
             b_avg_data += b.data.data
 
-        data_vars_dict = {
-            data_vars_name: b_list_r[0].data_vars[data_vars_name].data
-            for data_vars_name in data_vars_names
-            if data_vars_name != "data"
-        }
-        data_vars_dict["data"] = b_avg_data / len(b_list_r)
-        # return data_vars_dict
-        b_avg = xr.Dataset(
-            data_vars={
-                data_vars_name: (data_vars_coord, data_vars_dict[data_vars_name])
-                for data_vars_name, data_vars_coord in zip(
-                    data_vars_names, data_vars_coords
-                )
-            },
-            coords=b_list_r[0].coords,
-            attrs=b_list_r[0].attrs,
+        # The other variables, the coordinates and the attributes from the
+        # first spacecraft, as nanavg_4sc (the dimensions were taken from the
+        # coordinates: a scalar coordinate, e.g. left by sel, raised
+        # ValueError)
+        b_avg = b_list_r[0].assign(
+            data=b_list_r[0]["data"].copy(data=b_avg_data / len(b_list_r))
         )
 
-        # Attributes of the data and coordinates of the first one (lost)
-        for name in [*data_vars_names, *b_avg.coords]:
-            b_avg[name].attrs = dict(b_list_r[0][name].attrs)
-    # return data_vars_dict
     return b_avg

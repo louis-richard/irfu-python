@@ -99,6 +99,14 @@ def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
     out : xarray.DataArray
         Time series of the filtered signal.
 
+    Raises
+    ------
+    ValueError
+        If f_min and f_max are both 0, if f_min is not below the Nyquist
+        frequency, if f_max is at or above it with f_min = 0, if f_min is not
+        below f_max for a band pass (also with the default f_max, e.g.,
+        filt(inp, 4)), or if inp has more than 3 dimensions.
+
     Examples
     --------
     >>> from pyrfu import mms, pyrf
@@ -165,6 +173,14 @@ def filt(inp, f_min: float = 0.0, f_max: float = None, order: int = -1):
 
         if f_min == 0.0:
             raise ValueError("f_max >= Nyquist frequency with f_min = 0 does nothing!")
+
+    # A band pass with f_min above f_max filtered everything out (as
+    # irfu-matlab irf_filt), also with the default f_max of 1 Hz
+    if 0.0 < f_max <= f_min:
+        raise ValueError(
+            "f_min must be smaller than f_max for a band pass (f_max=0 for a "
+            "high-pass; the default f_max is 1 Hz)"
+        )
 
     # Parameters of the elliptic filter. fact defines the width between
     # stopband and passband

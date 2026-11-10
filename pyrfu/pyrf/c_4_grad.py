@@ -104,7 +104,9 @@ def c_4_grad(
     ValueError
         If r_list or b_list doesn't have 4 elements, if method is not one of
         the above, or if the field is a tensor and method is not "div" (all
-        the methods raised a broadcasting ValueError for a tensor).
+        the methods raised a broadcasting ValueError for a tensor), or if
+        the field is a scalar and method is not "grad" (unrelated errors, or
+        numbers for "div" with 3 samples).
 
     Notes
     -----
@@ -181,6 +183,11 @@ def c_4_grad(
     if is_tensor and method != "div":
         raise ValueError(
             f"a tensor field has only the divergence (method 'div'), not '{method}'"
+        )
+
+    if b_list[0].ndim == 1 and method != "grad":
+        raise ValueError(
+            f"a scalar field has only the gradient (method 'grad'), not '{method}'"
         )
 
     # Resample with respect to 1st spacecraft

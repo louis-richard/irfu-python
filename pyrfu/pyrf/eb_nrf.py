@@ -32,7 +32,7 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         Method flag. Default is "a".
         * a : L is along b_xyz, N closest to v_xyz and M = NxL
         * b : N is along v_xyz, L is the mean direction of b_xyz in plane perpendicular
-        to N, and M = NxL
+        to N (without the NaN samples of b_xyz), and M = NxL
         * array_like : N is along v_xyz , L is closest to the direction specified by
         L_vector (e.g., maximum variance direction), M = NxL
 
@@ -85,7 +85,8 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         n_m = np.cross(n_n, n_l)  # in (vn x b) direction
     elif flag_case == "b":
         n_n = v_data / np.linalg.norm(v_data, axis=1, keepdims=True)
-        n_m = np.cross(n_n, np.mean(b_xyz.data, axis=0))
+        # One NaN sample of B made L and M NaN everywhere
+        n_m = np.cross(n_n, np.nanmean(b_xyz.data, axis=0))
         n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
         n_l = np.cross(n_m, n_n)
 
