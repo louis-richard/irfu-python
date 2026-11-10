@@ -2530,6 +2530,25 @@ class EisPadTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[:, 11, :], 0.0)
         self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
 
+    def test_eis_pad_b_coverage(self):
+        # No pitch angle (NaN) outside the time range of B and in its gaps (B
+        # was held at its last value and interpolated across), as
+        # feeps_pitch_angles; elsewhere as with B constant
+        look = np.array(
+            [[0, 0, -1], [0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
+        )
+        eis = self._eis(np.ones((6, 10, 2)), look, np.array([100.0, 200.0]), 10.0, 10.0)
+        # B at the rate of the data (interpolated, not averaged, onto its times)
+        t_b = eis.time.data[[0, 1, 2, 6, 7]]
+        b_xyz = pyrf.ts_vec_xyz(t_b, np.tile([0.0, 0.0, 1.0], (5, 1)))
+
+        result = mms.eis_pad(eis, b_xyz)
+        expected = mms.eis_pad(eis, [0, 0, 1])
+
+        covered = np.array([0, 1, 2, 6, 7])
+        np.testing.assert_array_equal(result.data[covered], expected.data[covered])
+        self.assertTrue(np.all(np.isnan(result.data[[3, 4, 5, 8, 9]])))
+
     def test_eis_pad_sum(self):
         # B along z: two telescopes at pitch angle 0, one at 180 and three at
         # 90 (on the edge of bins 5 and 6: in bin 6 only). Each telescope is
@@ -3615,6 +3634,22 @@ class HpcaPadTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(pad.data[is_par, 1:])))
         np.testing.assert_array_equal(pad.data[~is_par, -1], 1.0)
         self.assertTrue(np.all(np.isnan(pad.data[~is_par, :-1])))
+
+    def test_hpca_pad_b_coverage(self):
+        # No pitch angle (NaN) after the end of B (it was held at its last
+        # value), as feeps_pitch_angles; before as with B to the end
+        aze_deg = np.full((2, self.N_AZ), 180.0)
+        vdf, saz, aze, b_xyz = self._inputs(aze_deg)
+        expected = self._pad(vdf, saz, aze, b_xyz)
+
+        end = vdf.time.data[self.N_AZ]
+        result = self._pad(vdf, saz, aze, b_xyz[b_xyz.time.data < end])
+
+        np.testing.assert_array_equal(
+            result.data[: self.N_AZ - 1], expected.data[: self.N_AZ - 1]
+        )
+        self.assertTrue(np.all(np.isnan(result.data[self.N_AZ + 1 :])))
+        self.assertTrue(np.all(np.isfinite(expected.data[self.N_AZ + 1 :, 0])))
 
     @data((0.0, 1.0, 0), (180.0, 1.0, -1), (0.0, -1.0, -1))
     @unpack
