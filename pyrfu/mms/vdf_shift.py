@@ -9,8 +9,8 @@ import xarray as xr
 from ..pyrf.resample import resample
 from ..pyrf.ts_skymap import ts_skymap
 from ._psd_units import _attrs, _is_relativistic
-from ._vdf_bins import _is_skymap, _mass, _speed
-from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins, _speed_to_energy
+from ._vdf_bins import _bins_d3v, _is_skymap, _mass, _source_bins, _speed
+from ._vdf_mc import _sample, _speed_to_energy
 from .vdf_convert import _in_convention, _relativistic_psd, vdf_convert
 from .vdf_velocity import _rotation_matrices
 
@@ -93,7 +93,7 @@ def _shift(
     f_si = np.nan_to_num(_relativistic_psd(vdf))
     v_frame = _frame_velocity(vdf, v_frame)
     rotations = _rotation_matrices(rotation, len(vdf.time))
-    mass, rng = _mass(vdf), _rng(random_state)
+    mass, rng = _mass(vdf), np.random.default_rng(random_state)
 
     bins = _source_bins(vdf, sc_pot)
     d3v = _bins_d3v(bins)

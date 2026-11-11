@@ -6,8 +6,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._vdf_bins import _is_skymap
-from ._vdf_mc import _rng, _sample, _source_bins
+from ._vdf_bins import _is_skymap, _source_bins
+from ._vdf_mc import _sample
 from .vdf_d3v import vdf_d3v
 from .vdf_partial_density import vdf_partial_density
 from .vdf_velocity import vdf_velocity
@@ -136,7 +136,9 @@ def vdf_macroparticles(
 
     if positioning == "random":
         bins = _source_bins(vdf, sc_pot)
-        v_xyz = _sample(_rng(random_state), bins, i_t, i_e, i_p, i_q) / 1e3
+        v_xyz = (
+            _sample(np.random.default_rng(random_state), bins, i_t, i_e, i_p, i_q) / 1e3
+        )
     else:
         velocity = vdf_velocity(vdf, sc_pot)
         v_xyz = np.stack(

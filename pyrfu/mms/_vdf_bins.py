@@ -209,10 +209,40 @@ def _broadcast_angles(values, data):
     return values[np.newaxis, np.newaxis, :]
 
 
+def _source_bins(vdf, sc_pot=None):
+    r"""Edges of the bins of a skymap: speeds (m/s, time x energy), azimuths
+    (degrees, time x phi) and cosines of the polar angles (theta,)."""
+    v_lower, v_upper = _speed_edges(vdf, sc_pot)
+    phi_lower, phi_upper = _phi_edges(vdf)
+    theta_lower, theta_upper = _theta_edges(vdf)
+    return {
+        "v_lower": v_lower,
+        "v_upper": v_upper,
+        "phi_lower": np.asarray(phi_lower),
+        "phi_upper": np.asarray(phi_upper),
+        "cos_upper": np.cos(np.deg2rad(theta_lower)),
+        "cos_lower": np.cos(np.deg2rad(theta_upper)),
+    }
+
+
+def _bins_d3v(bins):
+    r"""Velocity-space volume (m^3/s^3) of the bins of `_source_bins` (time,
+    energy, phi, theta): the speed shell times the solid angle, as `_d3v`."""
+    d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
+    d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
+    d_cos = bins["cos_upper"] - bins["cos_lower"]
+    solid = d_phi[:, np.newaxis, :, np.newaxis] * d_cos[np.newaxis, np.newaxis, :]
+    return d_v3[:, :, np.newaxis, np.newaxis] * solid
+
+
 def _d3v(vdf, sc_pot):
     r"""Velocity-space volume (m^3/s^3) of each bin with the relativistic
-    speeds, shaped as the data."""
+    speeds, shaped as the data (that of `_bins_d3v` for a skymap)."""
     data = vdf.data.data
+
+    if _is_skymap(vdf):
+        return np.broadcast_to(_bins_d3v(_source_bins(vdf, sc_pot)), data.shape)
+
     v_lower, v_upper = _speed_edges(vdf, sc_pot)
     d_v3 = _broadcast_energy((v_upper**3 - v_lower**3) / 3, data)
     d3v = d_v3 * _broadcast_angles(_band_solid_angles(vdf), data)

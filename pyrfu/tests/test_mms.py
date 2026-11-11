@@ -11608,7 +11608,7 @@ class VdfMacroparticlesTestCase(unittest.TestCase):
         # The velocities of the bins: speed and look direction in the bin
         v_xyz = np.stack([result[c].data for c in ["vx", "vy", "vz"]], axis=1)
         speed = np.linalg.norm(v_xyz, axis=1) * 1e3
-        bins = sys.modules["pyrfu.mms._vdf_mc"]._source_bins(vdf)
+        bins = sys.modules["pyrfu.mms._vdf_bins"]._source_bins(vdf)
         i_t = np.searchsorted(vdf.time.data, result.time.data)
         i_e, i_q = result.idx0.data, result.idx2.data
         self.assertTrue(np.all(speed >= bins["v_lower"][i_t, i_e] * (1 - 1e-12)))
