@@ -13572,6 +13572,39 @@ class FftBandpassTestCase(unittest.TestCase):
         self.assertEqual(result.shape, (1022, 6))
 
 
+class SpinReduceTestCase(unittest.TestCase):
+    # The per-spin mean or sum of the EPD routines (pyrfu/mms/_epd.py)
+    @property
+    def module(self):
+        return sys.modules["pyrfu.mms._epd"]
+
+    def test_spin_reduce(self):
+        data = np.arange(12.0).reshape(6, 2)
+        data[2:4] = np.nan  # the second spin has no data
+        data[4, 1] = np.nan
+        starts, stops = np.array([0, 2, 4]), np.array([2, 4, 6])
+
+        np.testing.assert_array_equal(
+            self.module._spin_reduce(data, starts, stops),
+            [[1.0, 2.0], [np.nan, np.nan], [9.0, 11.0]],
+        )
+        np.testing.assert_array_equal(
+            self.module._spin_reduce(data, starts, stops, "sum"),
+            [[2.0, 4.0], [np.nan, np.nan], [18.0, 11.0]],
+        )
+
+        # Counts in integers are summed as integers
+        counts = np.arange(6).reshape(6, 1)
+        result = self.module._spin_reduce(counts, starts, stops, "sum")
+        self.assertEqual(result.dtype.kind, "i")
+        np.testing.assert_array_equal(result, [[1], [5], [9]])
+
+        # No spin, and spins of different lengths
+        self.assertEqual(self.module._spin_reduce(data, [], []).shape, (0, 2))
+        with self.assertRaisesRegex(ValueError, "same number of samples"):
+            self.module._spin_reduce(data, [0, 2], [2, 5])
+
+
 class HpcaSpinSumTestCase(unittest.TestCase):
     @staticmethod
     def _inputs(start_az):

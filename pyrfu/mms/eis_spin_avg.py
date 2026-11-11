@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import warnings
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
+
+# Local imports
+from ._epd import _spin_reduce
 
 
 def _spin_segments(spin):
@@ -108,26 +108,11 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
         energies_ = scope_data.energy.data
         flux_data = scope_data.data
 
-        flux_avg = np.zeros([len(spin_starts), len(energies_)])
-
-        for i, (spin_strt, spin_stop) in enumerate(zip(spin_starts, spin_stops)):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-
-                if method.lower() == "sum":
-                    # Sum (for counts), NaN for a spin without data (it was 0,
-                    # as data)
-                    spin_data = flux_data[spin_strt:spin_stop]
-                    flux_avg[i, :] = np.where(
-                        np.isfinite(spin_data).any(axis=0),
-                        np.nansum(spin_data, axis=0),
-                        np.nan,
-                    )
-
-                else:
-                    # Average (for differential partile flux, differential
-                    # energy flux, phase-space density, etc.)
-                    flux_avg[i, :] = np.nanmean(flux_data[spin_strt:spin_stop], axis=0)
+        # Sum for counts, average for differential particle flux, differential
+        # energy flux, phase-space density, etc.
+        flux_avg = _spin_reduce(
+            flux_data, spin_starts, spin_stops, method.lower()
+        ).astype(np.float64)
 
         spin_avg_flux[scope] = xr.DataArray(
             flux_avg,

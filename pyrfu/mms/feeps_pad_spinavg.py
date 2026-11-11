@@ -9,7 +9,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from .feeps_spin_avg import _complete_spins
+from ._epd import _spin_reduce
+from .feeps_spin_avg import _feeps_complete_spins
 
 
 def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
@@ -67,15 +68,10 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     if len(spin_sectors) != len(pad.time):
         raise ValueError("spin_sectors must have one value per time of pad")
 
-    spin_starts, spin_stops = _complete_spins(spin_sectors, pad.time.data)
+    spin_starts, spin_stops = _feeps_complete_spins(spin_sectors, pad.time.data)
 
     data = pad.data
-    spin_avg_flux = np.full([len(spin_starts), len(pad.theta)], np.nan)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        for i, (i_start, i_stop) in enumerate(zip(spin_starts, spin_stops)):
-            spin_avg_flux[i, :] = np.nanmean(data[i_start:i_stop, :], axis=0)
+    spin_avg_flux = _spin_reduce(data, spin_starts, spin_stops).astype(np.float64)
 
     out = xr.DataArray(
         spin_avg_flux,

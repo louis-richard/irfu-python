@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from .feeps_spin_avg import _complete_spins
+from .feeps_spin_avg import _feeps_complete_spins
 
 
 def feeps_sector_spec(inp_alle):
@@ -62,7 +62,7 @@ def feeps_sector_spec(inp_alle):
 
     sector_time = inp_alle["spinsectnum"].time.data
     sector_data = inp_alle["spinsectnum"].data.astype(int)
-    spin_starts, spin_stops = _complete_spins(sector_data, sector_time)
+    spin_starts, spin_stops = _feeps_complete_spins(sector_data, sector_time)
 
     out_dict = {}
 

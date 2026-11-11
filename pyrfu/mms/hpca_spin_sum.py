@@ -7,12 +7,13 @@ import xarray as xr
 
 # Local imports
 from ..pyrf._time import _ns
+from ._epd import _spin_reduce
 
 # Start azimuths of HPCA per spin (half spin of the spacecraft), as hpca_pad
 _N_AZ = 16
 
 
-def _complete_spins(start_az, time):
+def _hpca_complete_spins(start_az, time):
     r"""Start and stop indices of the complete spins: from one start (start
     azimuth index 0) to the next, with one sample per start azimuth (0, 1,
     ..., 15, in order) and no data gap (two samples more than 1.5 median
@@ -88,20 +89,11 @@ def hpca_spin_sum(inp, saz, method: str = "mean"):
     if len(saz) != len(inp) or not np.array_equal(saz.time.data, inp.time.data):
         raise ValueError("saz must be at the times of inp")
 
-    starts, stops = _complete_spins(np.asarray(saz.data), inp.time.data)
+    starts, stops = _hpca_complete_spins(np.asarray(saz.data), inp.time.data)
 
-    out_data = []
-    for start, stop in zip(starts, stops):
-        spin_data = inp[start:stop]
-
-        # NaN for a spin without data (the sum was 0, as data)
-        if method == "mean":
-            out_data.append(spin_data.mean(dim="time").data)
-        else:
-            out_data.append(spin_data.sum(dim="time", min_count=1).data)
-
+    # NaN for a spin without data (the sum was 0, as data)
+    out_data = _spin_reduce(inp.data, starts, stops, method)
     out_time = inp.time.data[starts]
-    out_data = np.stack(out_data)
     coords = [inp.coords[k].data for k in inp.dims[1:]]
     coords = [out_time, *coords]
     dims = list(inp.dims)

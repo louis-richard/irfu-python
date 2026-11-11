@@ -14,7 +14,7 @@ from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
 from .feeps_omni import _eyes_on_omni_energies
 from .feeps_pitch_angles import t_bot, t_top, v_fcs
-from .feeps_spin_avg import _complete_spins, _spin_bounds
+from .feeps_spin_avg import _feeps_complete_spins, _spin_bounds
 
 # Spin phase (degrees) at the centre of spin sector 0, from the rotation of B
 # between BCS and DMPA (FGM) on 2015-2024 survey and burst data
@@ -320,7 +320,7 @@ def feeps_skymap(
 
     # The complete spins only
     complete = np.isin(
-        bounds[:-1], _complete_spins(spin_sectors, inp_dataset.time.data)[0]
+        bounds[:-1], _feeps_complete_spins(spin_sectors, inp_dataset.time.data)[0]
     )
     sums, counts = sums[complete], counts[complete]
 
