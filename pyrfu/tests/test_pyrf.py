@@ -7636,6 +7636,36 @@ class TimeHelpersTestCase(unittest.TestCase):
         )
 
 
+class TEvalTestCase(unittest.TestCase):
+    def test_t_eval(self):
+        # The first sample at or after each target time, with any dimensions
+        # and the coordinates and attributes of the input (the second dimension
+        # had to be "comp": AttributeError for the FGM represent_vec_tot, a
+        # tensor was not supported)
+        time = generate_timeline(1.0, 10)
+        targets = time[[0, 2]] + np.timedelta64(500, "ms")
+        vector = xr.DataArray(
+            np.arange(30.0).reshape(10, 3),
+            coords=[time, ["x", "y", "z"]],
+            dims=["time", "represent_vec_tot"],
+            attrs={"UNITS": "nT"},
+        )
+        tensor = pyrf.ts_tensor_xyz(time, np.arange(90.0).reshape(10, 3, 3))
+
+        result = pyrf.t_eval(vector, targets)
+        np.testing.assert_array_equal(result.time.data, targets)
+        np.testing.assert_array_equal(result.data, vector.data[[1, 3]])
+        self.assertTupleEqual(result.dims, vector.dims)
+        np.testing.assert_array_equal(result.represent_vec_tot.data, ["x", "y", "z"])
+        self.assertDictEqual(result.attrs, {"UNITS": "nT"})
+
+        result = pyrf.t_eval(tensor, list(time[[0, 9]]))
+        np.testing.assert_array_equal(result.data, tensor.data[[0, 9]])
+
+        with self.assertRaisesRegex(IndexError, "after the last sample"):
+            pyrf.t_eval(vector, time[[9]] + np.timedelta64(1, "s"))
+
+
 @ddt
 class TsAppendTestCase(unittest.TestCase):
     @data(
