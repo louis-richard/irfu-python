@@ -38,16 +38,26 @@ def cart2sph_ts(inp, direction_flag: int = 1):
         Input field in spherical/cartesian coordinate system. [r, theta, phi]
         has no ``UNITS``: r is in the units of inp, the angles in degrees.
 
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray.
+    ValueError
+        If inp is not a vector time series, or direction_flag not +/-1.
+
     """
 
     # Check input type
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
 
     # Check that inp is a vector time series
-    assert inp.data.ndim == 2 and inp.shape[1] == 3, "inp must be a vector time series"
+    if inp.data.ndim != 2 or inp.shape[1] != 3:
+        raise ValueError("inp must be a vector time series")
 
     # Check direction +/-1
-    assert direction_flag in [-1, 1], "direction_flag must be +/-1"
+    if direction_flag not in [-1, 1]:
+        raise ValueError("direction_flag must be +/-1")
 
     if direction_flag == -1:
         r_data = inp.data[:, 0]

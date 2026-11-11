@@ -7,15 +7,14 @@ import logging
 import os
 import warnings
 from datetime import datetime, timedelta
-from shutil import copy, copyfileobj
-from tempfile import NamedTemporaryFile
 
 # 3rd party imports
 import numpy as np
 import requests
-import tqdm
 
 # Local imports
+from ..mms.download_data import _download_file
+from ..mms.list_files_sdc import SDC_TIMEOUT
 from .db_init import config_path
 
 __author__ = "Louis Richard"
@@ -30,17 +29,10 @@ logger = logging.getLogger(__name__)
 LASP_PUBL = "https://lasp.colorado.edu/maven/sdc/public/files/api/v1/"
 
 
-def _login_lasp(user: str, password: str):
-    r"""Login to LASP colorado."""
-
-    session = requests.Session()
-    session.auth = (user, password)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ResourceWarning)
-        _ = session.post("https://lasp.colorado.edu", verify=True, timeout=5)
-
-    return session
+def _login_lasp():
+    r"""Session to the public MAVEN SDC (a POST to lasp.colorado.edu, with
+    the login and password, was made first, unused)."""
+    return requests.Session()
 
 
 def _construct_url(tint, var, lasp_url):
@@ -86,7 +78,8 @@ def _make_path(file, var, lasp_url, data_path: str = ""):
     else:
         data_path = os.path.normpath(data_path)
 
-    assert os.path.exists(data_path), "local data directory doesn't exist!"
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"local data directory {data_path} doesn't exist")
 
     path_list = [
         data_path,  # root path to data
@@ -142,38 +135,51 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
     tint : list of str
         Time interval.
     login : str, Optional
-        Login to LASP MAVEN. Default downloads from
-        https://lasp.colorado.edu/maven/sdc/public/
+        Login to LASP MAVEN: not implemented, the public data
+        (https://lasp.colorado.edu/maven/sdc/public/) are downloaded.
     password : str, Optional
-        Password to LASP MAVEN. Default downloads from
-        https://lasp.colorado.edu/maven/sdc/public/
+        Password to LASP MAVEN: not implemented, see `login`.
     data_path : str, Optional
-        Path of MAVEN data. If None use `pyrfu/mms/config.json`
+        Path of MAVEN data. Default uses the local data directory of the
+        MAVEN configuration (see `pyrfu.maven.db_init`).
 
     Raises
     ------
     FileNotFoundError
-        If no file is found, or none of the plan and file extension (only the
-        MAG .sts files of the plan were downloaded: the other instruments
-        downloaded nothing, silently).
+        If the data path doesn't exist, if no file is found, or none of the
+        plan and file extension (only the MAG .sts files of the plan were
+        downloaded: the other instruments downloaded nothing, silently).
+    requests.HTTPError
+        If the search or a download fails (the error page was saved as the
+        file).
+
+    Notes
+    -----
+    Each file is downloaded to a temporary file next to it, moved to its name
+    when complete: a failed download leaves no file (a temporary copy of each
+    file was left in the temporary directory).
 
     """
 
-    if not login:
-        lasp_url = LASP_PUBL
-    else:
-        lasp_url = LASP_PUBL
-        logger.info("login not impleted. Use public instead")
+    lasp_url = LASP_PUBL
 
-    sdc_session = _login_lasp(login, password)
+    if login or password:
+        logger.info("login not implemented: the public data are downloaded")
+
+    sdc_session = _login_lasp()
 
     headers = {"User-Agent": "pyrfu"}
 
     url = _construct_url(tint, var, lasp_url)
 
+    # (no timeout, and an error page was taken as the listing)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ResourceWarning)
-        http_json = sdc_session.get(url, verify=True, headers=headers).json()
+        response = sdc_session.get(
+            url, verify=True, headers=headers, timeout=SDC_TIMEOUT
+        )
+        response.raise_for_status()
+        http_json = response.json()
 
     files = [f for f in http_json["files"] if _wanted(f["file_name"], var)]
 
@@ -181,31 +187,14 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
         raise FileNotFoundError("No files to download!!")
 
     for file in files:
-        out_path, out_file, dwl_url = _make_path(file, var, lasp_url, data_path)
+        _, out_file, dwl_url = _make_path(file, var, lasp_url, data_path)
 
         logger.info("Downloading %s from %s...", file["file_name"], dwl_url)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
-            with sdc_session.get(
-                dwl_url,
-                stream=True,
-                verify=True,
-                headers=headers,
-            ) as fsrc:
-                with NamedTemporaryFile(delete=False) as ftmp:
-                    with tqdm.tqdm.wrapattr(
-                        fsrc.raw,
-                        "read",
-                        total=file["file_size"],
-                        ncols=60,
-                    ) as fsrc_raw:
-                        with open(ftmp.name, "wb") as fs:
-                            copyfileobj(fsrc_raw, fs)
-
-                os.makedirs(out_path, exist_ok=True)
-
-                # if the download was successful, copy to data directory
-                copy(ftmp.name, out_file)
+            _download_file(
+                sdc_session, dwl_url, headers, out_file, file.get("file_size")
+            )
 
     sdc_session.close()

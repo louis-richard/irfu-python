@@ -26,13 +26,22 @@ def start(inp):
     out : float
         First time, in seconds since 1970-01-01 (unix time).
 
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray.
+    ValueError
+        If the first dimension of inp is not time.
+
     """
 
     # Check input type
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
 
     # Make sure this is a time series
-    assert list(inp.dims)[0] == "time", "inp must be a time series"
+    if list(inp.dims)[0] != "time":
+        raise ValueError("inp must be a time series")
 
     # From the time in ns (in us it was 1000 times too small)
     out = inp.time.data[0].astype("datetime64[ns]").astype(np.int64) * 1e-9

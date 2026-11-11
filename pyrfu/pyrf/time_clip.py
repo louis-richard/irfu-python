@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import datetime
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -64,9 +67,10 @@ def _is_time_attr(key, attr, n_t):
 def _time_interval(tint):
     if isinstance(tint, xr.DataArray):
         t_start, t_stop = tint.time.data[[0, -1]]
-    elif isinstance(tint, (np.ndarray, list)):
-        if isinstance(tint[0], np.datetime64):
-            t_start, t_stop = tint
+    elif isinstance(tint, (np.ndarray, list, tuple)):
+        # A tuple, and datetime.datetime values, raised TypeError
+        if isinstance(tint[0], (np.datetime64, datetime.datetime)):
+            t_start, t_stop = [np.datetime64(t_, "ns") for t_ in tint]
         elif isinstance(tint[0], str):
             t_start, t_stop = iso86012datetime64(np.array(tint))
         else:
@@ -85,8 +89,9 @@ def time_clip(inp, tint):
     ----------
     inp : xarray.DataArray or xarray.Dataset
         Time series of the quantity to clip.
-    tint : xarray.DataArray or ndarray or list
-        Time interval can be a time series, a array of datetime64 or a list.
+    tint : xarray.DataArray or ndarray or list or tuple
+        Time interval: a time series (its first and last times), or the start
+        and stop times as datetime64, datetime.datetime or ISO 8601 strings.
 
     Returns
     -------

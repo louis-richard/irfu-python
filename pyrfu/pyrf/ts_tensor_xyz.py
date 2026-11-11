@@ -42,7 +42,7 @@ def ts_tensor_xyz(
     Raises
     ------
     TypeError
-        If time or data is not a numpy.ndarray.
+        If time or data is not a numpy.ndarray, or attrs not a dict.
     ValueError
         * If time and data do not have the same length.
         * If data does not have shape (n, 3, 3).
@@ -64,8 +64,14 @@ def ts_tensor_xyz(
     if data.ndim != 3 or data.shape[1:] != (3, 3):
         raise ValueError("data must have shape (n, 3, 3)")
 
-    if attrs is None or not isinstance(attrs, dict):
+    # As ts_scalar and ts_vec_xyz (attrs that were not a dict were replaced
+    # by {}); a copy, the caller's dict is unchanged
+    if attrs is None:
         attrs = {}
+    elif isinstance(attrs, dict):
+        attrs = dict(attrs)
+    else:
+        raise TypeError("attrs must be a dict")
 
     out = xr.DataArray(
         data,

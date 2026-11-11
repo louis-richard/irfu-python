@@ -32,13 +32,27 @@ def date_str(tint: list[str], fmt: int = 1) -> str:
     out : str
         String corresponding to the time interval in the desired format.
 
+    Raises
+    ------
+    TypeError
+        If tint is not a list of strings.
+    ValueError
+        If tint has not two elements, or fmt is not 1, 2, 3 or 4.
+
     """
 
     # Check input
-    assert isinstance(tint, list), "tint must be a list"
-    assert isinstance(tint[0], str), "1st element of tint must be a string"
-    assert isinstance(tint[1], str), "2nd element of tint must be a string"
-    assert fmt in range(1, 5), "fmt must be 1, 2, 3, or 4"
+    if not isinstance(tint, list):
+        raise TypeError("tint must be a list")
+
+    if len(tint) != 2:
+        raise ValueError("tint must contain two elements")
+
+    if not all(isinstance(t_, str) for t_ in tint):
+        raise TypeError("the elements of tint must be strings")
+
+    if fmt not in range(1, 5):
+        raise ValueError("fmt must be 1, 2, 3, or 4")
 
     # Any ISO 8601 precision ("...T07:54:00", "...00.000", "...00.000000000")
     start_time, end_time = [

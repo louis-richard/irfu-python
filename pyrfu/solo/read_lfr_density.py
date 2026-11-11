@@ -54,10 +54,23 @@ def read_lfr_density(
         Time series of the density, from the latest version of each daily
         file, sorted in time.
 
+    Raises
+    ------
+    TypeError
+        If tint is not two strings, or tree not a bool.
+    ValueError
+        If tint has not two elements.
+    FileNotFoundError
+        If the data path doesn't exist, or no file covers the time interval
+        (None was returned).
+
     """
 
     # List LFR density files in the data path.
     files = _list_files_lfr_density_l3(tint, data_path, tree)
+
+    if not files:
+        raise FileNotFoundError(f"no L3 LFR density file in {tint}")
 
     # Initialize spectrum output to None
     out = None
@@ -81,11 +94,9 @@ def read_lfr_density(
         out = ts_append(out, ts_scalar(time, density))
 
     # Sort in time
-    if out is not None:
-        out = out[np.argsort(out.time.data, kind="stable")]
+    out = out[np.argsort(out.time.data, kind="stable")]
 
     # Time clip
-    if out is not None:
-        out = time_clip(out, tint)
+    out = time_clip(out, tint)
 
     return out

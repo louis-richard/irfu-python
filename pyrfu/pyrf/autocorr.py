@@ -105,6 +105,8 @@ def autocorr(
     # Dimensionless when normed, the units squared otherwise (none)
     units = "" if normed else _power(_units(inp), 2)
 
-    return xr.DataArray(
-        np.squeeze(out_data), coords=coords, dims=dims, attrs=_attrs({}, units)
-    )
+    # The lag axis kept for one lag, and the component axis of a (n, 1)
+    # vector (squeeze dropped it: ValueError)
+    out_data = out_data[:, 0] if inp.ndim == 1 else out_data
+
+    return xr.DataArray(out_data, coords=coords, dims=dims, attrs=_attrs({}, units))

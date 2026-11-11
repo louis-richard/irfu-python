@@ -73,6 +73,13 @@ def c_4_j(
     div_pb : DataArray
         Time series of the gradient of the magnetic pressure [T A m^{-2}].
 
+    Raises
+    ------
+    TypeError
+        If r_list or b_list is not a list or a tuple.
+    ValueError
+        If r_list or b_list doesn't contain the 4 spacecraft.
+
     See also
     --------
     pyrfu.pyrf.c_4_k : Calculates reciprocal vectors in barycentric
@@ -116,9 +123,12 @@ def c_4_j(
 
     """
     # Check inputs
-    message = "must be a list or a tuple of the 4 spacecraft"
-    assert isinstance(r_list, (list, tuple)) and len(r_list) == 4, f"r_list {message}"
-    assert isinstance(b_list, (list, tuple)) and len(b_list) == 4, f"b_list {message}"
+    for name, inp in [("r_list", r_list), ("b_list", b_list)]:
+        if not isinstance(inp, (list, tuple)):
+            raise TypeError(f"{name} must be a list or a tuple")
+
+        if len(inp) != 4:
+            raise ValueError(f"{name} must contain the 4 spacecraft")
 
     # The factors assume positions in km and fields in nT
     _check_units(r_list[0], "km", "r_list")

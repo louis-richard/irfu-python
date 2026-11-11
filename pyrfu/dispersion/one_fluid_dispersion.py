@@ -15,10 +15,7 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _disprel(w, *args):
-    assert len(args) == 6, "not enougth arguments"
-    k, theta, v_a, c_s, wc_e, wc_p = args
-
+def _disprel(w, k, theta, v_a, c_s, wc_e, wc_p):
     theta = np.deg2rad(theta)
     l_00 = 1
     l_01 = -(w**2) / (k**2 * v_a**2)

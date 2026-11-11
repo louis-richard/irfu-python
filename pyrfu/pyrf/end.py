@@ -26,10 +26,15 @@ def end(inp):
     out : float
         Value of the last time in unix format.
 
+    Raises
+    ------
+    TypeError
+        If inp is not a xarray.DataArray or a xarray.Dataset.
+
     """
 
-    message = "inp must be a xarray.DataArray or xarray.Dataset"
-    assert isinstance(inp, (xr.DataArray, xr.Dataset)), message
+    if not isinstance(inp, (xr.DataArray, xr.Dataset)):
+        raise TypeError("inp must be a xarray.DataArray or xarray.Dataset")
 
     # From the time in ns (in us it was 1000 times too small)
     out = inp.time.data[-1].astype("datetime64[ns]").astype(np.int64) / 1e9

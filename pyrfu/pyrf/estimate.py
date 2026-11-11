@@ -89,6 +89,8 @@ def estimate(what_to_estimate: str, radius: float, length: float = None):
     ------
     NotImplementedError
         If what_to_estimate is not one of the above.
+    ValueError
+        If length is missing or too short for a wire or a cylinder.
 
     References
     ----------
@@ -116,6 +118,10 @@ def estimate(what_to_estimate: str, radius: float, length: float = None):
     elif what_to_estimate.lower() == "capacitance_wire":
         out = _estimate_capa_wire(radius, length)
     elif what_to_estimate.lower() == "capacitance_cylinder":
+        # Without length, h / a raised TypeError
+        if length is None:
+            raise ValueError("capacitance_cylinder requires the half length")
+
         out = _estimate_capa_cyli(radius, length)
     else:
         raise NotImplementedError(f"unknown estimate {what_to_estimate!r}")

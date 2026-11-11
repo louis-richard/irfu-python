@@ -253,6 +253,13 @@ def get_ts(
     out : xarray.DataArray
         Time series of the target variable in the selected time interval.
 
+    Raises
+    ------
+    ValueError
+        If the variable is not a time series (no epoch DEPEND_0).
+    NotImplementedError
+        If the fourth dimension of the variable is of components ("x,y,z").
+
     """
 
     # Check time interval type
@@ -283,7 +290,8 @@ def get_ts(
     out_dict["attrs"] = {"GLOBAL": glb_attrs, **var_attrs}
     out_dict["attrs"] = {k: out_dict["attrs"][k] for k in sorted(out_dict["attrs"])}
 
-    assert "DEPEND_0" in var_attrs and "epoch" in var_attrs["DEPEND_0"].lower()
+    if "DEPEND_0" not in var_attrs or "epoch" not in var_attrs["DEPEND_0"].lower():
+        raise ValueError(f"{cdf_name} is not a time series (no epoch DEPEND_0)")
 
     time = _get_epochs(file, cdf_name)
 
@@ -304,8 +312,10 @@ def get_ts(
             depend_2["attrs"]["LABLAXIS"] = "ccomp"
 
     if "DEPEND_3" in var_attrs or "REPRESENTATION_3" in var_attrs:
-        if "REPRESENTATION_3" in var_attrs:
-            assert out_dict["attrs"]["REPRESENTATION_3"] != "x,y,z"
+        if out_dict["attrs"].get("REPRESENTATION_3") == "x,y,z":
+            raise NotImplementedError(
+                f"{cdf_name}: a fourth dimension of components is not supported"
+            )
 
         depend_3 = _get_depend(file, cdf_name, 3)
 

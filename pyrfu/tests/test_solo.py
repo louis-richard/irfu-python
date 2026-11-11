@@ -105,7 +105,9 @@ class DbInitTestCase(unittest.TestCase):
             self.assertEqual(file.read(), package_config)
 
     def test_db_init_inpput(self):
-        with self.assertRaises(AssertionError):
+        # FileNotFoundError (AssertionError; with python -O the path was
+        # written to the configuration)
+        with self.assertRaises(FileNotFoundError):
             solo.db_init("/Volumes/solo/remote/data")
 
     def test_db_init_output(self):
@@ -115,21 +117,40 @@ class DbInitTestCase(unittest.TestCase):
 @ddt
 class ReadLFRDensityTestCase(unittest.TestCase):
     @data(
-        ([], ".", False),
-        ([np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"], ".", False),
-        (["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")], ".", False),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], "/bazinga", False),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], ".", "i am groot"),
+        ([], ".", False, ValueError),
+        (
+            [np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"],
+            ".",
+            False,
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")],
+            ".",
+            False,
+            TypeError,
+        ),
+        ("2023-01-01T00:00:00", ".", False, TypeError),
+        (
+            ["2023-01-01T00:00:00", "2023-01-01T00:10:00"],
+            "/bazinga",
+            False,
+            FileNotFoundError,
+        ),
+        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], ".", "i am groot", TypeError),
     )
     @unpack
-    def test_read_lfr_density_input(self, tint, data_path, tree):
-        with self.assertRaises(AssertionError):
+    def test_read_lfr_density_input(self, tint, data_path, tree, error):
+        # TypeError, ValueError and FileNotFoundError (AssertionError)
+        with self.assertRaises(error):
             solo.read_lfr_density(tint, data_path, tree)
 
     def test_read_lfr_density_output(self):
+        # No file: FileNotFoundError (None was returned)
         _use_empty_data_dir(self)
         tint = ["2023-01-01T00:00:00", "2023-01-01T00:10:00"]
-        self.assertIsNone(solo.read_lfr_density(tint))
+        with self.assertRaises(FileNotFoundError):
+            solo.read_lfr_density(tint)
 
     def test_read_lfr_density_list_files(self):
         # The latest version of each date (all versions were listed), across
@@ -212,15 +233,36 @@ class ReadLFRDensityTestCase(unittest.TestCase):
 @ddt
 class ReadTNRTestCase(unittest.TestCase):
     @data(
-        ([], 1, "."),
-        ([np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"], 1, "."),
-        (["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")], 1, "."),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], random.random(), "."),
-        (["2023-01-01T00:00:00", "2023-01-01T00:10:00"], 1, "/bazinga"),
+        ([], 1, ".", ValueError),
+        (
+            [np.datetime64("2023-01-01T00:00:00"), "2023-01-01T00:10:00"],
+            1,
+            ".",
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", np.datetime64("2023-01-01T00:10:00")],
+            1,
+            ".",
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", "2023-01-01T00:10:00"],
+            random.random(),
+            ".",
+            TypeError,
+        ),
+        (
+            ["2023-01-01T00:00:00", "2023-01-01T00:10:00"],
+            1,
+            "/bazinga",
+            FileNotFoundError,
+        ),
     )
     @unpack
-    def test_read_tnr_input(self, tint, sensor, data_path):
-        with self.assertRaises(AssertionError):
+    def test_read_tnr_input(self, tint, sensor, data_path, error):
+        # TypeError, ValueError and FileNotFoundError (AssertionError)
+        with self.assertRaises(error):
             solo.read_tnr(tint, sensor, data_path)
 
     @data(
@@ -229,8 +271,10 @@ class ReadTNRTestCase(unittest.TestCase):
     )
     @unpack
     def test_read_tnr_output(self, tint, sensor, data_path):
+        # No file: FileNotFoundError (None was returned)
         _use_empty_data_dir(self)
-        self.assertIsNone(solo.read_tnr(tint, sensor, data_path))
+        with self.assertRaises(FileNotFoundError):
+            solo.read_tnr(tint, sensor, data_path)
 
     @staticmethod
     def _tnr_records(sweep, band, power, sensor=4):
@@ -340,6 +384,39 @@ class ReadTNRTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self._read_tnr([variables_7], sensor=4)
+
+    def test_read_tnr_sensor_channels(self):
+        # The sensor on the second channel (auto2), or on both in turn; a
+        # numpy integer sensor (AssertionError)
+        variables, time = self._tnr_l2(4, 3)
+        variables["auto1"], variables["auto2"] = (
+            variables["auto2"] * 0.0,
+            variables["auto1"],
+        )
+        variables["sensor_config"] = variables["sensor_config"][:, ::-1]
+        out = self._read_tnr([variables], sensor=np.int64(4))
+        np.testing.assert_array_equal(out.data[:, 0], [1.0, 2.0, 3.0])
+
+        variables, time = self._tnr_l2(4, 2)
+        config = variables["sensor_config"].data.copy()
+        config[4:] = config[4:, ::-1]
+        auto2 = variables["auto2"].data.copy()
+        auto2[4:] = variables["auto1"].data[4:]
+        variables["sensor_config"] = xr.DataArray(config)
+        variables["auto2"] = xr.DataArray(auto2)
+        out = self._read_tnr([variables])
+        np.testing.assert_array_equal(out.time.data, time[::4])
+        np.testing.assert_array_equal(out.data[:, 0], [1.0, 2.0])
+
+    def test_read_tnr_no_spectrum(self):
+        # A file of the sensor without positive power: skipped, ValueError
+        # without any other
+        sweep = np.repeat([1, 2], 4)
+        variables, _ = self._tnr_records(sweep, np.tile(np.arange(4), 2), 0 * sweep)
+        with self.assertLogs("pyrfu.solo.read_tnr", "INFO") as logs:
+            with self.assertRaises(ValueError):
+                self._read_tnr([variables])
+        self.assertIn("no spectrum", "".join(logs.output))
 
     def test_read_tnr_list_files(self):
         # Same lister: the latest version of each date, the -cdag one if newer,

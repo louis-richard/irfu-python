@@ -34,6 +34,13 @@ def extend_tint(tint, ext: list = None):
     tint_new : list of str
         Extended time interval, in ISO 8601 format with nanoseconds.
 
+    Raises
+    ------
+    TypeError
+        If tint or ext is not array_like.
+    ValueError
+        If tint or ext has not 2 elements.
+
     Examples
     --------
     >>> from pyrfu import pyrf
@@ -53,9 +60,12 @@ def extend_tint(tint, ext: list = None):
         ext = [-60.0, 60.0]
 
     # Make sure tint and ext are 2 elements array_like
-    message = "must be array_like with 2 elements"
-    assert isinstance(tint, (np.ndarray, list)) and len(tint) == 2, f"tint {message}"
-    assert isinstance(ext, (np.ndarray, list)) and len(ext) == 2, f"ext {message}"
+    for name, inp in [("tint", tint), ("ext", ext)]:
+        if not isinstance(inp, (np.ndarray, list)):
+            raise TypeError(f"{name} must be array_like")
+
+        if len(inp) != 2:
+            raise ValueError(f"{name} must have 2 elements")
 
     # Convert extension to timedelta64[ns], rounded (0.0157 * 1e9 is
     # 15699999.999999998, which was truncated to 1 ns less)

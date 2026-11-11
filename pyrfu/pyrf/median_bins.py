@@ -42,8 +42,11 @@ def median_bins(inp0, inp1, bins: int = 10):
 
     Raises
     ------
+    TypeError
+        If inp0 or inp1 is not a xarray.DataArray.
     ValueError
-        If no pair of inp0 and inp1 values is finite.
+        If inp0 or inp1 is not a scalar time series, or no pair of their
+        values is finite.
 
     Notes
     -----
@@ -88,11 +91,12 @@ def median_bins(inp0, inp1, bins: int = 10):
 
     """
 
-    assert isinstance(inp0, xr.DataArray), "inp0 must be xarray.DataArray"
-    assert isinstance(inp1, xr.DataArray), "inp1 must be xarray.DataArray"
+    for name, inp in [("inp0", inp0), ("inp1", inp1)]:
+        if not isinstance(inp, xr.DataArray):
+            raise TypeError(f"{name} must be xarray.DataArray")
 
-    assert inp0.ndim == 1, "inp0 must be a scalar"
-    assert inp1.ndim == 1, "inp1 must be a scalar"
+        if inp.ndim != 1:
+            raise ValueError(f"{name} must be a scalar")
 
     out = _bin_stat(inp0, inp1, bins, np.median)
 

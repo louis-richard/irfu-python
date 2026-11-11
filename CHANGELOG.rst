@@ -1,6 +1,174 @@
 Changelog
 =========
 
+2.5.12 (2026-11-11)
+-------------------
+
+This release brings the tests of the whole package to full coverage (all the
+statements and branches of ``pyrfu.lp``, ``pyrfu.maven``, ``pyrfu.models``,
+``pyrfu.plot``, ``pyrfu.pyrf``, ``pyrfu.solo`` and the top level, after
+``pyrfu.mms`` in 2.5.11), and fixes what that brought up.
+``lp.LangmuirProbe`` follows irfu-matlab ``lp.lprobe`` (the wire had no area
+and no capacitance), the plotting routines take NaN and zero energies and
+2-D arrays of axes, and several routines raise a clear error for inputs they
+accepted silently, with wrong results. The checks of the inputs raise
+``TypeError``, ``ValueError`` or ``FileNotFoundError`` instead of
+``AssertionError``, so that they also hold with ``python -O``. On the MMS
+data checked (FGM, MEC, EDP and FPI ions of 2017-07-11), the results of the
+routines changed are unchanged.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- The checks of the inputs raise ``TypeError`` (a wrong type),
+  ``ValueError`` (a wrong value, shape or flag) or ``FileNotFoundError``
+  (a data path that does not exist) instead of ``AssertionError``, in
+  ``pyrfu.pyrf`` (``c_4_j``, ``cart2sph_ts``, ``cotrans``, ``date_str``,
+  ``e_vxb``, ``eb_nrf``, ``ebsp``, ``edb``, ``filt``, ``gse2gsm``,
+  ``histogram``, ``mean_bins``, ``resample``, ``shock_normal``,
+  ``shock_parameters``, ``start``, ...), ``pyrfu.mms`` (``get_ts``,
+  ``hpca_calc_anodes``, ``list_files``, ``list_files_ancillary``,
+  ``reduce``), ``pyrfu.solo``, ``pyrfu.maven`` and ``lp.thermal_current``.
+  Asserts are removed by ``python -O``, which let wrong inputs through:
+  e.g., a path that does not exist was written to the configuration by
+  ``solo.db_init`` and ``maven.db_init``, an unknown ``p_type`` of
+  ``lp.thermal_current`` was computed as a cylinder, an unknown ``ref_sys``
+  of ``pyrf.shock_parameters`` was the spacecraft frame, and
+  ``pyrf.ebsp(no_resample=True)`` took E and delta_b at different sampling
+  frequencies. Code that catches ``AssertionError`` for these checks must
+  catch the new exceptions. ``pyrf.date_str`` with a single time raises
+  ``ValueError`` (``IndexError``), and ``pyrf.edb`` takes a numpy
+  ``angle_lim``.
+- ``solo.read_tnr`` and ``solo.read_lfr_density`` raise
+  ``FileNotFoundError`` when no file covers the time interval: they returned
+  None.
+- ``lp.thermal_current`` returns zeros for a zero density or temperature, as
+  irfu-matlab: it returned None.
+- ``pyrf.filt``: the default ``f_max`` is 0, as irfu-matlab ``irf_filt``,
+  so that ``filt(inp, f_min)`` is a high-pass, without warning. It was 1 Hz,
+  with a ``FutureWarning`` since 2.5.2 (planned for 3.0): ``filt(inp, f_min)``
+  was a band pass from ``f_min`` to 1 Hz, and filtered everything out for
+  ``f_min`` above 1 Hz. Give ``f_max=1`` for the former band pass;
+  ``filt(inp)`` raises ``ValueError`` (it was a 1 Hz low-pass).
+- ``pyrf.filt`` raises ``ValueError`` for a band pass with ``f_min`` not
+  below ``f_max``, which filtered everything out (about 1e-4 of the input).
+- ``pyrf.dot`` raises ``TypeError`` or ``ValueError`` unless both inputs are
+  vectors with the same number of components, as ``pyrf.cross``: a vector
+  and a scalar were broadcast (wrong numbers for 3 samples).
+- ``pyrf.c_4_grad`` raises ``ValueError`` for a scalar field with another
+  method than "grad" (unrelated errors, or numbers for "div" with 3
+  samples).
+- ``pyrf.c_4_v`` raises ``ValueError`` for crossing times relative to MMS1:
+  numbers are epochs in seconds, and relative times were read as a
+  velocity.
+- ``pyrf.average_vdf`` raises ``ValueError`` for ``n_pts`` outside 1 to the
+  number of distributions ("need at least one array to stack"), and
+  ``TypeError`` for a bool.
+- ``pyrf.int_sph_dist`` (and ``mms.reduce``) raise ``ValueError`` for a
+  ``weight`` other than None, "lin" and "log" (it was taken as None), and for
+  ``d_v_m`` or ``d_v_p`` given alone (it was ignored).
+- ``pyrf.norm`` raises ``ValueError`` for a tensor and ``TypeError`` for an
+  input that is not a DataArray; the norm of a scalar is its absolute value
+  (``AxisError``).
+- ``pyrf.ts_spectr`` and ``pyrf.ts_tensor_xyz`` raise ``TypeError`` for
+  attributes that are not a dict, as ``pyrf.ts_scalar`` and
+  ``pyrf.ts_vec_xyz``: they were replaced by an empty dict.
+- ``pyrf.l_shell`` warns for positions not in km (in R_E, L was about 1e-3,
+  with no message), as ``pyrf.c_4_j``.
+- ``pyrf.mva_gui``: ``get_minvar`` raises after Reset, as before any
+  selection: it returned the normal of the whole interval.
+- ``plot.set_color_cycle`` raises ``ValueError`` for an unknown palette (it
+  was taken as "series"); "series" is accepted by name.
+- ``plot.use_pyrfu_style(fancy_legend=True)`` sets framed legends whatever
+  the style sheet: it had no effect with the "pyrfu" sheet.
+- ``plot.plot_clines`` leaves out the lines of a 0 or NaN energy, with a
+  warning, the colour scale from the positive energies (``ValueError``
+  "Invalid vmin or vmax"), and raises ``ValueError`` without positive energy.
+- ``plot.plot_spectr`` leaves out the energies that are not finite, and with
+  a time-dependent table the times without one (``ValueError`` in
+  pcolormesh); with ``cscale="log"``, no ``clim`` and no positive data (an
+  empty interval), it warns and sets the colour limits to [1, 10] ("Invalid
+  vmin or vmax").
+
+New features
+^^^^^^^^^^^^
+
+- ``pyrf.mean_field`` fits each component of any time series, scalars and
+  tensors too: only vectors of 3 components were accepted (``IndexError``).
+- ``pyrf.time_clip`` takes the time interval as a tuple, and in
+  ``datetime.datetime`` (``TypeError``).
+- ``pyrf.new_xyz`` takes the matrix as a list, ``pyrf.optimize_nbins_2d``
+  the bounds as arrays, and ``pyrf.shock_parameters`` the vectors as lists
+  (``AttributeError``, ``ValueError``, ``TypeError``).
+- ``plot.make_labels`` labels a 2-D array of axes (e.g. of
+  ``plt.subplots(2, 2)``) row by row (``AttributeError``).
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``lp.LangmuirProbe`` as irfu-matlab ``lp.lprobe``: the area of the wire
+  was always 0 (its radius, an array, was not recognised), its capacitance
+  raised ``TypeError``, and that of a probe without sphere too; the surface
+  photoemission of the material is set (the condition was inverted); a
+  stazer has the mean of its two radii; the ratios of a probe without
+  surface are NaN. The capacitance of a short wire is that of a cylinder of
+  ``pyrf.estimate``, which corrects the formula of irfu-matlab (51 % too
+  low). The areas, capacitances and photoemission agree with irfu-matlab
+  R2024a; ``ValueError`` for more than two wire radii (an assertion
+  compared the radii with 2).
+- ``pyrf.edb`` sets Ez to the default value (0, or NaN for "e_perp+nan"):
+  a NaN input Ez stayed NaN where the documentation says 0.
+- ``pyrf.eb_nrf(flag="b")`` takes the mean direction of B without its NaN
+  samples: one NaN made L and M NaN everywhere.
+- ``plot.mms_pl_config`` averages the positions without their NaN samples:
+  one NaN sample left the 3-D panel empty.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``maven.download_data`` downloads as ``mms.download_data``: a temporary
+  copy of each file was left, an HTTP error page was saved as the file, and
+  there was no timeout; the search has a timeout and raises for HTTP errors.
+  No login is sent to lasp.colorado.edu (the public data are downloaded, as
+  before).
+- ``solo.read_tnr`` takes the sensor as a numpy integer.
+- ``pyrf.resample`` of a DataArray with a dimension without coordinate
+  (``ValueError``).
+- ``pyrf.avg_4sc`` of Datasets with a scalar coordinate, e.g. left by
+  ``sel`` (``ValueError``).
+- ``pyrf.c_4_k`` of positions on other time lines, resampled to those of
+  the first spacecraft (``IndexError``).
+- ``pyrf.autocorr`` of a vector of one component (``ValueError``).
+- ``pyrf.estimate("capacitance_cylinder")`` without length raises
+  ``ValueError`` (``TypeError``).
+- ``plot.plot_spectr`` of a Dataset with a coordinate that is not along the
+  energies, e.g. a scalar coordinate left by ``sel`` (``IndexError``).
+- urllib3 >= 1.26.5 is a dependency: ``mms.list_files_sdc`` imports it (its
+  ``Retry`` with ``allowed_methods``), and it was only installed through
+  requests and botocore, which allow older versions (before 1.26.5, it
+  does not import with Python 3.12). ``requirements.txt`` (used by the
+  documentation build) takes ``keyrings.alt>=5.0.2``, as ``pyproject.toml``:
+  it was pinned to 5.0.2.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``pyrf.ebsp`` returns a dict, with ``k_tp``, ``flagFac``, ``full_b``,
+  ``b0`` and ``r`` (a Dataset with ``k`` was documented).
+- ``pyrf.calc_sqrtq`` computes the square root of Q, from a pressure tensor
+  in field-aligned coordinates (the formula of Q was documented).
+- ``pyrf.shock_parameters``: the input and output keys and their units (the
+  speeds are in m/s).
+- ``pyrf.wavepolarize_means``: the helicity is from 0 to 1, as irfu-matlab
+  and IDL (-1 to 1 was documented).
+- ``pyrf.poynting_flux``: the time integral, as irfu-matlab, is exact for a
+  uniform sampling only.
+- ``plot.plot_magnetosphere``: the default colours (tab:blue and tab:green)
+  and ``field_lines``; ``plot.zoom``: the keyword arguments are those of the
+  connecting lines.
+- ``maven.download_data``: the data path of the MAVEN configuration, and the
+  login, not implemented.
+
 2.5.11 (2026-11-10)
 -------------------
 

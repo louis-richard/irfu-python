@@ -203,12 +203,29 @@ def set_color_cycle(pal: str = "") -> (list, str):
 
     Parameters
     ----------
-    pal : {"Pyrfu", "Oceanic", "Tab", ""}. Optional
-      The palette to use. "Tab" provides the default matplotlib palette. Default is
-      "" (resets to default palette).
+    pal : {"pyrfu", "oceanic", "tab", "series", ""}, Optional
+        The palette to use, in any case. "pyrfu" and "tab" (also "tableau" or
+        "mpl", matplotlib's default colours) go with the Spectral_r colormap,
+        "oceanic" with ocean, "series" with jet. Default is "", the "series"
+        palette.
+
+    Returns
+    -------
+    colors : list of str
+        Colours of the cycle.
+    cmap : str
+        Name of the colormap.
+
+    Raises
+    ------
+    ValueError
+        If `pal` is not one of the palettes (was taken as "series").
+
     """
 
-    if pal.lower() == "pyrfu":
+    pal = pal.lower()
+
+    if pal == "pyrfu":
         colors = [
             "pyrfu:blue",
             "pyrfu:green",
@@ -221,7 +238,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
             "pyrfu:olive",
         ]
         cmap = "Spectral_r"
-    elif pal.lower() == "oceanic":
+    elif pal == "oceanic":
         colors = [
             "on:green",
             "on:red",
@@ -232,7 +249,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
             "on:yellow",
         ]
         cmap = "ocean"
-    elif pal.lower() == "tab" or pal.lower() == "tableau" or pal.lower() == "mpl":
+    elif pal in ("tab", "tableau", "mpl"):
         colors = [
             "tab:blue",
             "tab:orange",
@@ -246,7 +263,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
             "tab:cyan",
         ]
         cmap = "Spectral_r"
-    else:
+    elif pal in ("series", ""):
         colors = [
             "series:cyan",
             "series:orange",
@@ -257,6 +274,10 @@ def set_color_cycle(pal: str = "") -> (list, str):
             "series:pink",
         ]
         cmap = "jet"
+    else:
+        raise ValueError(
+            f"unknown palette {pal!r}: pyrfu, oceanic, tab (tableau, mpl) or series"
+        )
 
     mpl.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
     mpl.rcParams["image.cmap"] = cmap
@@ -284,7 +305,8 @@ def use_pyrfu_style(
     color_cycle : str, Optional
        Name of the color cycle to use. Default is "pyrfu".
     fancy_legend : bool, Optional
-       Use matplotlib's fancy legend frame. Default is False.
+       Use matplotlib's fancy legend frame (rounded, semi-transparent), also
+       with the "pyrfu" sheet. Default is False (frameless legends).
     usetex : bool, Optional
        Use LaTeX installation to set text. Default is False.
        If no LaTeX installation is found, this package will fallback to usetex=False.
@@ -320,7 +342,13 @@ def use_pyrfu_style(
                 r"\usepackage{bm}",
             ]
         )
+    # Both ways: the pyrfu sheet has frameless legends (fancy_legend=True did
+    # nothing with it)
     if not fancy_legend:
         mpl.rcParams["legend.frameon"] = False
         mpl.rcParams["legend.fancybox"] = False
         mpl.rcParams["legend.framealpha"] = 0.75
+    else:
+        mpl.rcParams["legend.frameon"] = True
+        mpl.rcParams["legend.fancybox"] = True
+        mpl.rcParams["legend.framealpha"] = 0.8

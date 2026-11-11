@@ -53,12 +53,18 @@ def list_files(
         List of files corresponding to the parameters in the selected time
         interval
 
+    Raises
+    ------
+    FileNotFoundError
+        If the data path doesn't exist.
+
     """
     # Check path
     root_path = os.path.normpath(data_path or _read_config()["local"])
 
     # Make sure that the data path exists
-    assert os.path.exists(root_path), f"{root_path} doesn't exist!!"
+    if not os.path.exists(root_path):
+        raise FileNotFoundError(f"{root_path} doesn't exist")
 
     # Check time interval
     if isinstance(tint, list):

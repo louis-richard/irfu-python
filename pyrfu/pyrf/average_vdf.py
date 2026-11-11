@@ -51,8 +51,14 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
 
-    if n_pts is not None and not isinstance(n_pts, int):
+    if n_pts is not None and (not isinstance(n_pts, int) or isinstance(n_pts, bool)):
         raise TypeError("n_pts must be an integer or None")
+
+    # More points than distributions raised "need at least one array to stack"
+    if n_pts is not None and not 1 <= n_pts <= len(vdf.time):
+        raise ValueError(
+            f"n_pts must be between 1 and the number of distributions ({len(vdf.time)})"
+        )
 
     if n_pts is not None and n_pts % 2 == 0:
         raise ValueError("The number of distributions to be averaged must be an odd")

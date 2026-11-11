@@ -23,6 +23,15 @@ __status__ = "Prototype"
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 
+def _like(inp: DataArray, data: NDArray[np.float64]) -> DataArray:
+    r"""Time series of data like inp: a vector of 3 components as ts_vec_xyz,
+    with the attributes of inp, the others as inp."""
+    if data.ndim == 2 and data.shape[1] == 3:
+        return ts_vec_xyz(inp.time.data, data, dict(inp.attrs))
+
+    return inp.copy(data=data)
+
+
 def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
     r"""Estimate the mean and wave fields.
 
@@ -34,7 +43,8 @@ def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
     Parameters
     ----------
     inp : DataArray
-        Input data.
+        Input data: a scalar, a vector or a tensor time series (each component
+        fitted; only 3-component vectors were accepted).
     deg : int
         Degree of the polynomial.
 
@@ -55,7 +65,8 @@ def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
 
     # Extracting time (in seconds since the first sample) and data
     time: NDArray[np.datetime64] = inp.time.data
-    data: NDArray[np.float64] = inp.data.astype(np.float64)  # force to double precision
+    # Double precision, one column per component (a scalar raised IndexError)
+    data: NDArray[np.float64] = inp.data.astype(np.float64).reshape(len(inp), -1)
     time_sec: NDArray[np.float64] = (time - time[0]) / np.timedelta64(1, "s")
 
     # Preallocating output
@@ -78,7 +89,7 @@ def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
     inp_wave: NDArray[np.float64] = data - inp_mean
 
     # Time series, with the attributes of inp (they had none)
-    inp_mean_ts: DataArray = ts_vec_xyz(inp.time.data, inp_mean, dict(inp.attrs))
-    inp_wave_ts: DataArray = ts_vec_xyz(inp.time.data, inp_wave, dict(inp.attrs))
+    inp_mean_ts: DataArray = _like(inp, inp_mean.reshape(inp.shape))
+    inp_wave_ts: DataArray = _like(inp, inp_wave.reshape(inp.shape))
 
     return inp_mean_ts, inp_wave_ts

@@ -138,6 +138,9 @@ class MvaGui:
         ax4.clear()
         for txt in ax5.texts:
             txt.set_visible(False)
+
+        # No selection: get_minvar returned the normal of the whole interval
+        self.minvar = None
         plt.draw()
 
     def update_onselect(self, tmin, tmax):

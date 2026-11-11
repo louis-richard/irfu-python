@@ -41,6 +41,12 @@ class IgrfTestCase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             models.igrf(timeline.astype(np.int64) / 1e9, flag)
 
+    def test_igrf_default_flag(self):
+        # The dipole by default
+        t_sec = generate_timeline(64.0, 10).astype(np.int64) / 1e9
+        for out, expected in zip(models.igrf(t_sec), models.igrf(t_sec, "dipole")):
+            np.testing.assert_array_equal(out, expected)
+
     @data((generate_timeline(64.0, 100), "dipole"))
     @unpack
     def test_igrf_output(self, timeline, flag):

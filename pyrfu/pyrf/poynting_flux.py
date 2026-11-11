@@ -58,6 +58,11 @@ def poynting_flux(e_xyz, b_xyz, b_hat=None):
     samples is resampled to the times of the other one (B to E if they have the
     same number of samples but different times).
 
+    The time integral is the cumulative sum divided by the sampling frequency
+    (from the median time step), as irfu-matlab irf_poynting_flux: exact for
+    a uniform sampling only (with burst and survey data together, use
+    pyrfu.pyrf.integrate on the flux).
+
     """
 
     # The factors assume E in mV/m and B in nT

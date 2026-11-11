@@ -3,12 +3,14 @@
 
 # Built-in imports
 import importlib
-import io
 import json
 import os
 import tempfile
 import unittest
 from unittest import mock
+
+# 3rd party imports
+import requests
 
 # Local imports
 from .. import maven
@@ -52,6 +54,16 @@ class DbInitTestCase(unittest.TestCase):
         with open(package_path, "rb") as file:
             self.assertEqual(file.read(), package_config)
 
+    def test_db_init_missing_path(self):
+        # FileNotFoundError (AssertionError; with python -O the path was
+        # written to the configuration)
+        with self.assertRaises(FileNotFoundError):
+            maven.db_init("/Volumes/maven/remote/data")
+
+        self.assertFalse(
+            os.path.exists(os.path.join(self.config_dir, "maven_config.json"))
+        )
+
 
 class DownloadDataTestCase(unittest.TestCase):
     FILES = [
@@ -61,30 +73,42 @@ class DownloadDataTestCase(unittest.TestCase):
         "mvn_swe_l2_svyspec_20150101_v04_r01.cdf",
     ]
 
-    def _download(self, var):
-        # LASP mocked: the search returns FILES, a download returns the file
-        # name as content; the names of the files written in data_path
-        module = importlib.import_module("pyrfu.maven.download_data")
+    @staticmethod
+    def _session(files, error=None):
+        # LASP mocked: the search returns the files, a download the URL as
+        # content (error: of the downloads)
         session = mock.MagicMock()
 
-        def get(url, **_):
+        def get(url, **kwargs):
             if "file_info" in url:
                 return mock.Mock(
                     json=lambda: {
-                        "files": [{"file_name": f, "file_size": 1} for f in self.FILES]
+                        "files": [{"file_name": f, "file_size": 1} for f in files]
                     }
                 )
 
             response = mock.MagicMock()
-            response.__enter__.return_value.raw = io.BytesIO(url.encode())
+            response.__enter__.return_value = response
+            response.iter_content.return_value = [url.encode()]
+            if error is not None:
+                response.raise_for_status.side_effect = error
             return response
 
         session.get.side_effect = get
+        return session
+
+    def _download(self, var, session=None, **kwargs):
+        # The names of the files written in data_path
+        module = importlib.import_module("pyrfu.maven.download_data")
+        session = session or self._session(self.FILES)
 
         with tempfile.TemporaryDirectory() as data_path:
             with mock.patch.object(module, "_login_lasp", return_value=session):
                 maven.download_data(
-                    var, ["2015-01-01T00:00", "2015-01-01T06:00"], data_path=data_path
+                    var,
+                    ["2015-01-01T00:00", "2015-01-01T06:00"],
+                    data_path=data_path,
+                    **kwargs,
                 )
 
             return sorted(name for _, _, names in os.walk(data_path) for name in names)
@@ -108,6 +132,71 @@ class DownloadDataTestCase(unittest.TestCase):
 
         with self.assertRaises(FileNotFoundError):
             self._download({"inst": "mag", "level": "l2", "plan": "bazinga"})
+
+    def test_download_data_content(self):
+        # The content downloaded, in year/month directories, nothing else (a
+        # temporary copy of each file was left); timeouts on the requests
+        session = self._session(self.FILES[3:])
+        module = importlib.import_module("pyrfu.maven.download_data")
+        with tempfile.TemporaryDirectory() as data_path:
+            with mock.patch.object(module, "_login_lasp", return_value=session):
+                maven.download_data(
+                    {"inst": "swe", "level": "l2"},
+                    ["2015-01-01T00:00", "2015-01-02T06:00"],
+                    data_path=data_path,
+                )
+
+            out_file = os.path.join(data_path, "swe", "l2", "2015", "01", self.FILES[3])
+            with open(out_file, encoding="utf-8") as file:
+                self.assertTrue(file.read().endswith(f"download?file={self.FILES[3]}"))
+            self.assertListEqual(os.listdir(os.path.dirname(out_file)), [self.FILES[3]])
+
+        for call in session.get.call_args_list:
+            self.assertIsNotNone(call.kwargs.get("timeout"))
+
+        # Two days: the end date as given (one more day for one day)
+        url = session.get.call_args_list[0].args[0]
+        self.assertIn("start_date=2015-01-01&end_date=2015-01-02", url)
+
+    def test_download_data_http_errors(self):
+        # An error page is not saved as a file, a failed search is raised
+        session = self._session(self.FILES[3:], requests.HTTPError("404"))
+        with self.assertRaises(requests.HTTPError):
+            self._download({"inst": "swe", "level": "l2"}, session)
+
+        session = mock.MagicMock()
+        session.get.return_value.raise_for_status.side_effect = requests.HTTPError(
+            "500"
+        )
+        with self.assertRaises(requests.HTTPError):
+            self._download({"inst": "swe", "level": "l2"}, session)
+
+    def test_download_data_login_and_path(self):
+        # Login not implemented (public data), logged; by default the local
+        # data directory of the configuration
+        module = importlib.import_module("pyrfu.maven.download_data")
+        self.assertIsInstance(module._login_lasp(), requests.Session)
+
+        with self.assertLogs("pyrfu.maven.download_data", "INFO") as logs:
+            self._download({"inst": "swe", "level": "l2"}, login="user")
+        self.assertIn("login not implemented", "".join(logs.output))
+
+        with tempfile.TemporaryDirectory() as root:
+            config = os.path.join(root, "maven_config.json")
+            with open(config, "w", encoding="utf-8") as file:
+                json.dump({"local_data_dir": root}, file)
+
+            file = {"file_name": self.FILES[3]}
+            var = {"inst": "swe", "level": "l2"}
+            with mock.patch.object(module, "config_path", return_value=config):
+                out_path, out_file, _ = module._make_path(file, var, "url/")
+
+            self.assertEqual(out_path, os.path.join(root, "swe", "l2", "2015", "01"))
+            self.assertEqual(out_file, os.path.join(out_path, self.FILES[3]))
+
+        # A data path that doesn't exist (AssertionError)
+        with self.assertRaises(FileNotFoundError):
+            module._make_path(file, var, "url/", "/Volumes/maven/remote/data")
 
 
 if __name__ == "__main__":

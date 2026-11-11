@@ -73,7 +73,8 @@ def ts_append(
         out = inp1
     elif inp1 is None or inp1.shape[0] == 0:
         out = inp0
-    elif inp0 is not None and inp1 is not None:
+    else:
+        # Both with time samples
         out_data = {}
 
         if inp0.data.ndim != 1:
@@ -116,8 +117,5 @@ def ts_append(
 
         for i, dim in enumerate(out.dims):
             out[dim].attrs = depends[i]["attrs"]
-
-    else:
-        raise ValueError("At least one input must be provided")
 
     return out

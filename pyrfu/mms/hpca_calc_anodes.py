@@ -56,12 +56,18 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
         view. The anodes without data (NaN) are left out (one made the
         spectrum NaN); NaN where no anode has data.
 
+    Raises
+    ------
+    ValueError
+        If method is not "mean" or "sum".
+
     """
 
     if fov is None:
         fov = [0.0, 360.0]
 
-    assert method in ["mean", "sum"]
+    if method not in ["mean", "sum"]:
+        raise ValueError(f'method must be "mean" or "sum", not {method!r}')
 
     times = inp.time.data
     energies = inp.ccomp.data

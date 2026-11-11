@@ -28,7 +28,7 @@ def mms_pl_config(r_mms):
     ----------
     r_mms : list of xarray.DataArray
         Time series of the spacecraft position [km], one per spacecraft. The
-        positions are averaged over time.
+        positions are averaged over time, without the NaN samples.
 
     Returns
     -------
@@ -40,9 +40,10 @@ def mms_pl_config(r_mms):
 
     """
 
-    # Mean position of each spacecraft and relative to the center [km]
-    r_xyz = np.vstack([np.mean(r_xyz.data, axis=0) for r_xyz in r_mms])
-    delta_r = r_xyz - np.mean(r_xyz, axis=0)
+    # Mean position of each spacecraft and relative to the center [km]. One
+    # NaN sample left the 3d panel empty
+    r_xyz = np.vstack([np.nanmean(r_xyz.data, axis=0) for r_xyz in r_mms])
+    delta_r = r_xyz - np.nanmean(r_xyz, axis=0)
 
     fig = plt.figure(figsize=(9, 9))
     gs0 = fig.add_gridspec(

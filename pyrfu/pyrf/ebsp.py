@@ -34,14 +34,17 @@ logger = logging.getLogger(__name__)
 
 
 def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
-    assert e_xyz is not None
-
+    # (only with E)
     fs_e, fs_b = [calc_fs(e_xyz), calc_fs(db_xyz)]
 
     resample_b_options = {"f_s": fs_b}
 
     if flag_no_resamp:
-        assert fs_e == fs_b
+        if fs_e != fs_b:
+            raise ValueError(
+                "no_resample needs E and delta_b at the same sampling frequency"
+            )
+
         fs_ = fs_e
     else:
         if fs_b > 1.5 * fs_e:
@@ -272,12 +275,15 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     Returns
     -------
-    res : xarray.Dataset
-        Dataset with :
-            * t : xarray.DataArray
-                Time.
-            * f : xarray.DataArray
-                Frequencies.
+    res : dict
+        Dictionary with (None for what is not computed):
+            * t : numpy.ndarray
+                Times (datetime64[ns]).
+            * f : numpy.ndarray
+                Frequencies [Hz].
+            * flagFac : bool or int
+                True if the spectra are in field-aligned coordinates, 0
+                otherwise.
             * bb_xxyyzzss : xarray.DataArray
                 delta_b power spectrum with :
                     * [...,0] : x
@@ -306,8 +312,20 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
                 Planarity of polarization.
             * ellipticity : xarray.DataArray
                 Ellipticity of polarization ellipse.
-            * k : xarray.DataArray
+            * k_tp : xarray.DataArray
                 k-vector (theta, phi FAC) [angles in degrees].
+            * full_b, b0, r : xarray.DataArray
+                The b_xyz (delta_b with full_b_db), b_bgd and xyz inputs.
+
+    Raises
+    ------
+    TypeError
+        If delta_b, full_b, b0 or xyz is not a DataArray, or freq_int not a
+        str or array_like.
+    ValueError
+        If freq_int has not two elements or is not "pc12" or "pc35", or if
+        no_resample is set with E and delta_b at different sampling
+        frequencies.
 
     Other Parameters
     ----------------
@@ -339,7 +357,6 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     See also
     --------
-    pyrfu.plot.pl_ebsp : to fill.
     pyrfu.pyrf.convert_fac : Transforms to a field-aligned coordinate.
 
     Notes
@@ -382,17 +399,18 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     # assumes E in mV/m and B in nT (10 / (4 pi) gives uW/m^2)
     units_b, units_e = _spectra_units(e_xyz, db_xyz)
 
-    assert isinstance(db_xyz, xr.DataArray), "delta_b must be a DataArray"
-    assert isinstance(b_xyz, xr.DataArray), "full_b must be a DataArray"
-    assert isinstance(b_bgd, xr.DataArray), "b0 must be a DataArray"
+    for name, inp in [("delta_b", db_xyz), ("full_b", b_xyz), ("b0", b_bgd)]:
+        if not isinstance(inp, xr.DataArray):
+            raise TypeError(f"{name} must be a DataArray")
 
-    message = "freq_int must be a string or array_like"
-    assert isinstance(freq_int, (list, np.ndarray, str)), message
+    if not isinstance(freq_int, (list, np.ndarray, str)):
+        raise TypeError("freq_int must be a string or array_like")
 
     if isinstance(freq_int, (list, np.ndarray)):
-        assert len(freq_int) == 2, "freq_int list must contain two elements"
-    else:
-        assert freq_int in ["pc12", "pc35"], "string freq_int must be pc12 or pc35"
+        if len(freq_int) != 2:
+            raise ValueError("freq_int list must contain two elements")
+    elif freq_int not in ["pc12", "pc35"]:
+        raise ValueError("string freq_int must be pc12 or pc35")
 
     # Compute magnetic field fluctuations sampling frequency
     fs_b = calc_fs(db_xyz)
@@ -458,8 +476,8 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
             )
             xyz = [1, 0, 0]
             xyz = ts_vec_xyz(db_xyz.time.data, np.tile(xyz, (len(db_xyz), 1)))
-        else:
-            assert isinstance(xyz, xr.DataArray), "xyz must be a DataArray"
+        elif not isinstance(xyz, xr.DataArray):
+            raise TypeError("xyz must be a DataArray")
 
         xyz = resample(xyz, db_xyz, **{"f_s": fs_b})
 

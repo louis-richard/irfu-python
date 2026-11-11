@@ -120,8 +120,10 @@ def plot_magnetosphere(
     tint : list of str
         Time interval.
     colors : list, Optional
-        Colors of the magnetopause and the bow show.
-        Default use ["tab:blue", "tab:red"]
+        Colors of the magnetopause and the bow shock. Default is
+        ["tab:blue", "tab:green"].
+    field_lines : bool, Optional
+        Plot the T89 magnetic field lines (needs geopack). Default is True.
 
     Returns
     -------

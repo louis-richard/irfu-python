@@ -2,7 +2,7 @@ boto3>=1.35.0
 botocore>=1.35.0
 geopack>=1.0.10
 keyring>=25.5.0
-keyrings.alt==5.0.2
+keyrings.alt>=5.0.2
 matplotlib>=3.9.0
 numba>=0.63.0
 numpy>=2.0
@@ -13,4 +13,5 @@ python-dateutil>=2.9.0
 requests>=2.32.0
 scipy>=1.14.0
 tqdm>=4.66.0
+urllib3>=1.26.5
 xarray>=2024.10.0

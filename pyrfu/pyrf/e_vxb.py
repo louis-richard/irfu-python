@@ -38,6 +38,13 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
     out : xarray.DataArray
         Time series of the convection electric field/ExB drift velocity.
 
+    Raises
+    ------
+    TypeError
+        If v_xyz or b_xyz is not a xarray.DataArray.
+    ValueError
+        If flag is not "exb" or "vxb".
+
     Examples
     --------
     >>> from pyrfu import mms, pyrf
@@ -65,8 +72,11 @@ def e_vxb(v_xyz, b_xyz, flag: str = "vxb"):
     _check_units(v_xyz, "mV/m" if str(flag).lower() == "exb" else "km/s", "v_xyz")
     _check_units(b_xyz, "nT", "b_xyz")
 
-    assert isinstance(flag, str) and flag.lower() in ["exb", "vxb"], "Invalid flag"
-    assert isinstance(b_xyz, xr.DataArray), "b_xyz must be a xarray.DataArray"
+    if not isinstance(flag, str) or flag.lower() not in ["exb", "vxb"]:
+        raise ValueError(f'flag must be "exb" or "vxb", not {flag!r}')
+
+    if not isinstance(b_xyz, xr.DataArray):
+        raise TypeError("b_xyz must be a xarray.DataArray")
 
     if isinstance(v_xyz, xr.DataArray):
         b_xyz = resample(b_xyz, v_xyz)

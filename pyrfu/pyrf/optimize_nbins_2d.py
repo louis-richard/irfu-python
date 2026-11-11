@@ -62,8 +62,9 @@ def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
 
     """
 
-    n_min = n_min or [1, 1]
-    n_max = n_max or [100, 100]
+    # `n_min or [1, 1]` raised ValueError for an array (truth value)
+    n_min = [1, 1] if n_min is None else n_min
+    n_max = [100, 100] if n_max is None else n_max
 
     x = np.asarray(x, dtype=np.float64).ravel()
     y = np.asarray(y, dtype=np.float64).ravel()

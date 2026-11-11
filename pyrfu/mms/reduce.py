@@ -123,6 +123,13 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         files times 2 gamma^5 / (gamma + 1) (+5 % for electrons at 5 keV,
         +27 % at 27 keV); it was integrated as it is.
 
+    Raises
+    ------
+    TypeError
+        If xyz is not a time series or a matrix.
+    ValueError
+        If the matrix xyz is not (3, 3).
+
     Notes
     -----
     The energy widths of the channels (``delta_energy_minus`` and
@@ -214,7 +221,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         xyz = time_clip(xyz, tint)
         xyz = resample(xyz, vdf_time).data
     elif isinstance(xyz, np.ndarray) and xyz.ndim == 2:
-        assert xyz.shape == (3, 3), "xyz must be a transformation matrix!!"
+        if xyz.shape != (3, 3):
+            raise ValueError("xyz must be a transformation matrix (3, 3)")
+
         # If matrix, tile to VDF timeline
         xyz = np.tile(xyz, (n_t, 1, 1))
     else:

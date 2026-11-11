@@ -26,10 +26,9 @@ def _connect_bbox(
     loc1b,
     loc2b,
     prop_lines,
-    prop_patches: dict = None,
 ):
-    if prop_patches is None:
-        prop_patches = {**prop_lines, "alpha": prop_lines.get("alpha", 1) * 0}
+    # The patches with the properties of the lines, transparent
+    prop_patches = {**prop_lines, "alpha": 0}
 
     connector_a = BboxConnector(
         bbox1,
@@ -80,7 +79,8 @@ def zoom(ax1: Axes, ax2: Axes, **kwargs) -> (Axes, Axes):
     Other Parameters
     ----------------
     **kwargs
-        Keyword arguments control the BboxPatch.
+        Properties of the connecting lines (matplotlib.patches.Patch), e.g.,
+        color or linestyle.
 
     Returns
     -------

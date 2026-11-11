@@ -32,7 +32,7 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         Method flag. Default is "a".
         * a : L is along b_xyz, N closest to v_xyz and M = NxL
         * b : N is along v_xyz, L is the mean direction of b_xyz in plane perpendicular
-        to N, and M = NxL
+        to N (without the NaN samples of b_xyz), and M = NxL
         * array_like : N is along v_xyz , L is closest to the direction specified by
         L_vector (e.g., maximum variance direction), M = NxL
 
@@ -43,16 +43,27 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         order, at the times of e_xyz, with the attributes of e_xyz and
         ``COORDINATE_SYSTEM`` set to "lmn".
 
+    Raises
+    ------
+    TypeError
+        If e_xyz or b_xyz is not a xarray.DataArray, or flag not a str or
+        array_like.
+    ValueError
+        If e_xyz, b_xyz, v_xyz or an array_like flag is not a vector, or a
+        str flag not "a" or "b".
+
     """
     # Check inputs
-    assert isinstance(e_xyz, xr.DataArray), "e_xyz must be a xarray.DataArray"
-    assert isinstance(b_xyz, xr.DataArray), "b_xyz must be a xarray.DataArray"
+    for name, inp in [("e_xyz", e_xyz), ("b_xyz", b_xyz)]:
+        if not isinstance(inp, xr.DataArray):
+            raise TypeError(f"{name} must be a xarray.DataArray")
 
-    assert e_xyz.ndim == 2 and e_xyz.shape[1] == 3, "e_xyz must be a vector"
-    assert b_xyz.ndim == 2 and b_xyz.shape[1] == 3, "b_xyz must be a vector"
+        if inp.ndim != 2 or inp.shape[1] != 3:
+            raise ValueError(f"{name} must be a vector")
 
     if isinstance(v_xyz, xr.DataArray):
-        assert v_xyz.ndim == 2 and v_xyz.shape[1] == 3, "v_xyz must be a vector"
+        if v_xyz.ndim != 2 or v_xyz.shape[1] != 3:
+            raise ValueError("v_xyz must be a vector")
 
         if not np.array_equal(v_xyz.time.data, e_xyz.time.data):
             v_xyz = resample(v_xyz, e_xyz)
@@ -60,19 +71,24 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         v_data = v_xyz.data
     else:
         v_data = np.array(v_xyz, dtype=float)
-        assert v_data.shape == (3,), "constant v_xyz must be a 3 components vector"
+        if v_data.shape != (3,):
+            raise ValueError("constant v_xyz must be a 3 components vector")
         v_data = np.tile(v_data, (len(e_xyz), 1))
 
-    assert isinstance(flag, (str, np.ndarray, list, tuple)), "Invalid flag type"
+    if not isinstance(flag, (str, np.ndarray, list, tuple)):
+        raise TypeError("flag must be a str or array_like")
 
     if isinstance(flag, str):
-        assert flag.lower() in ["a", "b"], "flag must be a or b"
+        if flag.lower() not in ["a", "b"]:
+            raise ValueError(f'flag must be "a" or "b", not {flag!r}')
+
         flag_case = flag.lower()
         l_direction = None
 
     else:
         flag = np.array(flag)
-        assert flag.ndim == 1 and len(flag) == 3, "array_like flag must be a vector!"
+        if flag.ndim != 1 or len(flag) != 3:
+            raise ValueError("array_like flag must be a vector of 3 components")
         l_direction = flag
         flag_case = "c"
 
@@ -85,7 +101,8 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         n_m = np.cross(n_n, n_l)  # in (vn x b) direction
     elif flag_case == "b":
         n_n = v_data / np.linalg.norm(v_data, axis=1, keepdims=True)
-        n_m = np.cross(n_n, np.mean(b_xyz.data, axis=0))
+        # One NaN sample of B made L and M NaN everywhere
+        n_m = np.cross(n_n, np.nanmean(b_xyz.data, axis=0))
         n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
         n_l = np.cross(n_m, n_n)
 

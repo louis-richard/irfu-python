@@ -3,6 +3,7 @@
 
 # Built-in imports
 import logging
+import numbers
 import os
 from typing import Optional
 
@@ -66,8 +67,13 @@ def read_tnr(
 
     Raises
     ------
+    TypeError
+        If sensor is not an integer, tint not two strings or tree not a bool.
+    FileNotFoundError
+        If the data path doesn't exist, or no file covers the time interval.
     ValueError
-        If no file has data from the sensor selected.
+        If tint has not two elements, or no file has data from the sensor
+        selected.
 
     Notes
     -----
@@ -78,10 +84,15 @@ def read_tnr(
 
     """
 
-    # Check input types
-    assert isinstance(sensor, int), "sensor must integer"
+    # Check input types (numpy integers, e.g. from an array, were rejected)
+    if not isinstance(sensor, numbers.Integral):
+        raise TypeError("sensor must be an integer")
 
     files = _list_files_tnr_l2(tint, data_path, tree)
+
+    # (None was returned)
+    if not files:
+        raise FileNotFoundError(f"no L2 TNR file in {tint}")
 
     # Initialize spectrum output to None
     out = None
@@ -197,11 +208,10 @@ def read_tnr(
 
         out = out[np.argsort(out.time.data)]
 
-    if files and out is None:
+    if out is None:
         raise ValueError(f"no data from sensor {sensor} in {tint}")
 
     # Time clip
-    if out is not None:
-        out = time_clip(out, tint)
+    out = time_clip(out, tint)
 
     return out

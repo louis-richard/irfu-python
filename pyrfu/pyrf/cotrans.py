@@ -93,6 +93,7 @@ def _transformation_matrix(t, tind, hapgood, *args):
         dipole_direction_gse_ = _dipole_direction_gse(t, "dipole")
 
     for j, t_num in enumerate(tind[::-1]):
+        # Internal: the indices of the package table
         assert abs(t_num) in list(range(1, 6)), "t_num must be +/- 1, 2, 3, 4, 5"
 
         if t_num in [-1, 1]:
@@ -199,9 +200,12 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     Raises
     ------
+    TypeError
+        If inp is not a xarray.DataArray.
     ValueError
-        If the input frame is neither in flag nor in the COORDINATE_SYSTEM
-        attribute of inp, if they differ, or if the transformation is unknown.
+        If inp is not a scalar or a vector, if the input frame is neither in
+        flag nor in the COORDINATE_SYSTEM attribute of inp, if they differ, or
+        if the transformation is unknown.
 
     Notes
     -----
@@ -251,8 +255,11 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     """
 
-    assert isinstance(inp, xr.DataArray), "inp must be a xarray.DataArray"
-    assert inp.ndim < 3, "inp must be scalar or vector"
+    if not isinstance(inp, xr.DataArray):
+        raise TypeError("inp must be a xarray.DataArray")
+
+    if inp.ndim >= 3:
+        raise ValueError("inp must be scalar or vector")
 
     flag = flag.lower()
 

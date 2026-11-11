@@ -26,6 +26,11 @@ def iso86012unix(time):
         Unix time: seconds since 1970-01-01T00:00:00, without leap seconds,
         always 1-D. "NaT" gives NaN.
 
+    Raises
+    ------
+    TypeError
+        If time is not a str or array_like.
+
     Notes
     -----
     A float64 resolves about 0.24 microseconds for current dates. Use
@@ -37,7 +42,8 @@ def iso86012unix(time):
 
     """
 
-    assert isinstance(time, (str, list, np.ndarray)), "time must be a str or array_like"
+    if not isinstance(time, (str, list, np.ndarray)):
+        raise TypeError("time must be a str or array_like")
 
     time = np.atleast_1d(time).astype("datetime64[ns]")
 

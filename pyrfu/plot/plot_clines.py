@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib as mpl
+# Built-in imports
+import warnings
 
 # 3rd party import
+import matplotlib as mpl
 import numpy as np
 from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import LogNorm
@@ -48,6 +50,13 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     ------
     NotImplementedError
         If cscale is not "log".
+    ValueError
+        If no energy is positive.
+
+    Warns
+    -----
+    UserWarning
+        If lines have a 0 or NaN energy (not drawn).
 
     Other Parameters
     ----------------
@@ -59,14 +68,27 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     c_map = mpl.colormaps.get_cmap(cmap)
     energy = inp.energy.data
 
-    if cscale == "log":
-        norm = LogNorm(vmin=np.min(energy), vmax=np.max(energy))
-    else:
+    if cscale != "log":
         raise NotImplementedError
 
+    # The energies on the log colour scale: a 0 or NaN energy raised Invalid
+    # vmin or vmax
+    on_scale = np.isfinite(energy) & (energy > 0)
+
+    if not np.any(on_scale):
+        raise ValueError("no positive energy for the log colour scale")
+
+    if not np.all(on_scale):
+        warnings.warn(
+            f"{np.sum(~on_scale)} line(s) without a positive energy not drawn",
+            UserWarning,
+        )
+
+    norm = LogNorm(vmin=np.min(energy[on_scale]), vmax=np.max(energy[on_scale]))
+
     # Color of each line from its energy, as on the colorbar (was from the index)
-    for i, c in enumerate(c_map(norm(energy))):
-        plot_line(axis, inp[:, i], color=c, **kwargs)
+    for i in np.where(on_scale)[0]:
+        plot_line(axis, inp[:, i], color=c_map(norm(energy[i])), **kwargs)
 
     pos = axis.get_position()
     f = axis.get_figure()

@@ -18,23 +18,26 @@ __status__ = "Prototype"
 
 
 def calc_sqrtq(p_xyz: DataArray) -> DataArray:
-    r"""Computes agyrotropy coefficient as in [1]_
+    r"""Computes the square root of the agyrotropy coefficient Q of [1]_
 
     .. math::
 
-        Q = \frac{P_{12}^2 + P_{13}^2 + P_{23}^2}
-        {P_\perp^2 + 2 P_\perp P_\parallel}
+        \sqrt{Q} = \sqrt{\frac{P_{12}^2 + P_{13}^2 + P_{23}^2}
+        {P_\perp^2 + 2 P_\perp P_\parallel}}
 
+    with :math:`P_\parallel = P_{11}` and
+    :math:`P_\perp = (P_{22} + P_{33}) / 2`.
 
     Parameters
     ----------
     p_xyz : DataArray
-        Time series of the pressure tensor
+        Time series of the pressure tensor in field-aligned coordinates, the
+        parallel direction first (e.g., mms.rotate_tensor(p, "fac", b, "pp")).
 
     Returns
     -------
     DataArray
-        Time series of the agyrotropy coefficient of the specie
+        Time series of sqrt(Q) of the specie, between 0 (gyrotropic) and 1.
 
     Raises
     ------

@@ -68,7 +68,7 @@ def thermal_current(
     Parameters
     ----------
     n : float
-        Number density [m^3].
+        Number density [m^-3].
     t : float
         Temperature [K]
     m : float
@@ -87,17 +87,26 @@ def thermal_current(
     Returns
     -------
     j_thermal : float or numpy.ndarray
+        Current [A], zero without density or temperature, as irfu-matlab (it
+        was None).
+
+    Raises
+    ------
+    ValueError
+        If p_type is not "sphere" or "cylinder".
 
     """
 
     p_type = p_type.lower()
-    assert p_type in ["sphere", "cylinder"]
+
+    if p_type not in ["sphere", "cylinder"]:
+        raise ValueError(f'p_type must be "sphere" or "cylinder", not {p_type!r}')
 
     u = np.atleast_1d(u)
 
-    # If zero density return zero current
+    # If zero density return zero current (it returned None)
     if n == 0 or t == 0:
-        return None
+        return np.zeros(u.shape)
 
     # Is the body moving with a velocity, V, with respect to the plasma ?
     # Criteria set such that it is considered important if V > 0.1 * V_th.
