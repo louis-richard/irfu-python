@@ -116,36 +116,24 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
     # value too (NaN * 0 was NaN)
     e_data[:, -1] = default_value
 
+    # Elevation (degrees) of B above the spin plane
+    b_angle = np.rad2deg(
+        np.arctan2(b_data[:, 2], np.linalg.norm(b_data[:, :2], axis=1))
+    )
+
+    # (in steps on e_data, rounded to its type, as before)
     if flag_method.lower() == "e.b=0":
-        # Calculate using assumption E.B=0
-        b_angle = np.arctan2(
-            b_data[:, 2],
-            np.linalg.norm(b_data[:, :2], axis=1),
-        )
-        b_angle = np.rad2deg(b_angle)
+        # E.B = 0 where B is far enough from the spin plane
         ind = np.abs(b_angle) > angle_lim
-
-        if True in ind:
-            e_data[ind, 2] = -np.sum(
-                e_data[ind, :2] * b_data[ind, :2],
-                axis=1,
-            )
-            e_data[ind, 2] /= b_data[ind, 2]
-
+        e_data[ind, 2] = -np.sum(e_data[ind, :2] * b_data[ind, :2], axis=1)
+        e_data[ind, 2] /= b_data[ind, 2]
     else:
-        # Calculate using assumption that E field along the B projection is
-        # coming from parallel electric field
-        b_angle = np.arctan2(
-            b_data[:, 2],
-            np.linalg.norm(b_data[:, :2], axis=1),
-        )
-        b_angle = np.rad2deg(b_angle)
+        # Where B is close to the spin plane, the E field along the projection
+        # of B is the parallel electric field
         ind = np.abs(b_angle) < angle_lim
-
-        if True in ind:
-            e_data[ind, 2] = np.sum(e_data[ind, :2] * b_data[ind, :2], axis=1)
-            e_data[ind, 2] *= b_data[ind, 2]
-            e_data[ind, 2] /= np.linalg.norm(b_data[ind, :2], axis=1) ** 2
+        e_data[ind, 2] = np.sum(e_data[ind, :2] * b_data[ind, :2], axis=1)
+        e_data[ind, 2] *= b_data[ind, 2]
+        e_data[ind, 2] /= np.linalg.norm(b_data[ind, :2], axis=1) ** 2
 
     b_angle = ts_scalar(e_xyz.time.data, b_angle, {"UNITS": "deg"})
     e_data = ts_vec_xyz(
