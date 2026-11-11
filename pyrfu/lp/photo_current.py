@@ -72,6 +72,13 @@ def photo_current(
     j_photo : float or numpy.ndarray
         Photo-current emitted.
 
+    Raises
+    ------
+    TypeError
+        If flag is not a surface material or a photoemission.
+    ValueError
+        If some but not all of iluminated_area, u and distance_sun are given.
+
     Notes
     -----
     Estimates are done for the solar minimum conditions.
@@ -81,7 +88,12 @@ def photo_current(
     if not isinstance(flag, (str, float, int)):
         raise TypeError("flag must be a surface material or a photoemission")
 
-    if not iluminated_area and not u and not distance_sun:
+    # Without arguments, the photoemission of the surface materials (an array
+    # u with a zero area raised "truth value of an array is ambiguous", and
+    # zeros for all three printed the table)
+    args = (iluminated_area, u, distance_sun)
+
+    if all(arg is None for arg in args):
         for surf in surface_materials:
             j0 = photo_current(1, 0, 1, surf)
             logger.info(
@@ -90,6 +102,9 @@ def photo_current(
             )
 
         return None
+
+    if any(arg is None for arg in args):
+        raise ValueError("give iluminated_area, u and distance_sun, or none of them")
 
     # Assert than u is an array
     u = np.atleast_1d(u)

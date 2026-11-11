@@ -30,9 +30,10 @@ def _ion_mass(atom, charge):
 
 # Masses in proton masses; the alphas (helium) are He2+ ions, 3.9726 (they
 # were 4, 0.7 % heavier). Oxygen (EIS) is O+ (that of O2+ is 0.003 % lower),
-# and the HPCA species are named as get_hpca_dist.
+# and the HPCA species are named as get_hpca_dist. "i" and "e" are the species
+# of the FEEPS data (get_feeps_alleyes, feeps_omni).
 _MASS_RATIOS = {
-    **dict.fromkeys(["ions", "ion", "protons", "proton", "hydrogen+"], 1.0),
+    **dict.fromkeys(["ions", "ion", "i", "protons", "proton", "hydrogen+"], 1.0),
     **dict.fromkeys(
         ["alphas", "alpha", "helium", "helium++"],
         constants.physical_constants["alpha particle mass"][0] / constants.proton_mass,

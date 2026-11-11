@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ._eis_attrs import _equal
 from ._eis_units import _check_flux
 
 __author__ = "Louis Richard"
@@ -43,7 +44,7 @@ def _combine_attrs(attrs1, attrs2):
         if k.lower() == "global":
             attrs[k] = _combine_attrs(attrs1[k], attrs2[k])
         elif k not in ["delta_energy_plus", "delta_energy_minus"]:
-            if attrs1[k] == attrs2[k]:
+            if _equal(attrs1[k], attrs2[k]):
                 attrs[k] = attrs1[k]
             else:
                 attrs[k] = [attrs1[k], attrs2[k]]

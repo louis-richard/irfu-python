@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ._eis_attrs import _common_attrs
 from .dsl2gse import dsl2gse
 from .eis_spin_avg import _spin_segments
 
@@ -22,20 +23,6 @@ __status__ = "Prototype"
 # Polar bins (colatitudes, degrees): 6 bins from 10 to 170, the elevations
 # -80 to 80 of IDL SPEDAS mms_eis_ang_ang
 _POL_EDGES = 10.0 + 160.0 * np.arange(7) / 6
-
-
-def _combine_attrs(inp_allt_attrs):
-    attrs = {}
-    for k in inp_allt_attrs[0]:
-        allt_attrs = [inp_allt_attr[k] for inp_allt_attr in inp_allt_attrs]
-        is_same = [allt_attr == allt_attrs[0] for allt_attr in allt_attrs[1:]]
-
-        if all(is_same):
-            attrs[k] = allt_attrs[0]
-        else:
-            continue
-
-    return attrs
 
 
 def _look_angles(look):
@@ -185,7 +172,7 @@ def eis_ang_ang(
             k: np.asarray(inp_allt.attrs[k])[en_chan]
             for k in ["delta_energy_plus", "delta_energy_minus"]
         },
-        **_combine_attrs([inp_allt[scope].attrs for scope in scopes]),
+        **_common_attrs([inp_allt[scope].attrs for scope in scopes]),
     }
     attrs = {k: attrs[k] for k in sorted(attrs)}
 

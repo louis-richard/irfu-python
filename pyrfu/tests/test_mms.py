@@ -1764,6 +1764,20 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
             {"Mission_group": "MMS", "Data_version": ["v4.6.100", "v4.6.101"]},
         )
 
+    def test_eis_combine_proton_spec_array_attrs(self):
+        # Array attributes compared as arrays (ValueError): kept when equal,
+        # both when not
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        phx.attrs["VALIDMIN"], ext.attrs["VALIDMIN"] = np.zeros(2), np.zeros(2)
+        phx.attrs["VALIDMAX"], ext.attrs["VALIDMAX"] = np.ones(2), np.full(2, 2.0)
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        np.testing.assert_array_equal(result.attrs["VALIDMIN"], np.zeros(2))
+        np.testing.assert_array_equal(result.attrs["VALIDMAX"][0], np.ones(2))
+        np.testing.assert_array_equal(result.attrs["VALIDMAX"][1], np.full(2, 2.0))
+
     def test_eis_combine_proton_spec_units(self):
         # Fluxes only, in the same units, as IDL (counts and cps were combined,
         # different units became a list)
@@ -2128,6 +2142,22 @@ class EisAngAngTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
         self.assertNotIn("FIELDNAM", result.attrs)
 
+    def test_eis_ang_ang_array_attrs(self):
+        # Array attributes are kept when equal on all the telescopes (ValueError)
+        # and dropped when not
+        allt = self._allt()
+        for i in range(6):
+            allt[f"t{i:d}"].attrs = {
+                "VALIDMIN": np.array([0.0, 1.0]),
+                "VALIDMAX": np.array([i, 1.0]),
+                "LABL_PTR_1": ["flux", np.array([1.0, 2.0])],
+            }
+        result = mms.eis_ang_ang(allt, frame="gse")
+
+        np.testing.assert_array_equal(result.attrs["VALIDMIN"], [0.0, 1.0])
+        self.assertNotIn("VALIDMAX", result.attrs)
+        self.assertEqual(result.attrs["LABL_PTR_1"][0], "flux")
+
     def test_eis_combine_proton_skymap(self):
         # The skymap of the angle-angle distribution of the combined spectra
         phx = self._allt().assign_coords(energy=[20.0, 40.0])
@@ -2226,6 +2256,16 @@ class EisSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
         self.assertNotIn("VALIDMIN", result.data.attrs)
         self.assertNotIn("FIELDNAM", result.data.attrs)
+
+    def test_eis_skymap_combine_sc_array_attrs(self):
+        # Array attributes equal on all the spacecraft are kept (dropped)
+        ref = mms.eis_skymap(self._ang_ang([0, 20]), to_psd=False)
+        other = mms.eis_skymap(self._ang_ang([1, 21]), to_psd=False)
+        for skymap in [ref, other]:
+            skymap.data.attrs["VALIDMIN"] = np.array([1.0, 0.0])
+        result = mms.eis_skymap_combine_sc([ref, other])
+
+        np.testing.assert_array_equal(result.data.attrs["VALIDMIN"], [1.0, 0.0])
 
     def test_eis_skymap_combine_sc(self):
         # Combined at the nearest spin (by index, a missing spin shifted the
@@ -2529,6 +2569,20 @@ class EisPadTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[:, 6, :], 2.0)
         np.testing.assert_allclose(result.data[:, 11, :], 0.0)
         self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
+
+    def test_eis_pad_parallel(self):
+        # Telescopes looking along -B and +B are at 0 and 180 degrees: the
+        # cosine rounded beyond 1 (NaN, the telescopes left out)
+        b_dir = np.array([-6.0, -6.0, -5.0])
+        b_hat = b_dir / np.linalg.norm(b_dir)
+        look = np.vstack([np.tile(-b_hat, (3, 1)), np.tile(b_hat, (3, 1))])
+        flux = np.zeros((6, 3, 2))
+        flux[:3] = 4.0
+        eis = self._eis(flux, look, np.array([100.0, 200.0]), 10.0, 10.0)
+        result = mms.eis_pad(eis, list(b_dir))
+
+        np.testing.assert_allclose(result.data[:, 0, :], 4.0)
+        np.testing.assert_allclose(result.data[:, 11, :], 0.0)
 
     def test_eis_pad_b_coverage(self):
         # No pitch angle (NaN) outside the time range of B and in its gaps (B
@@ -10953,6 +11007,18 @@ class VdfConvertTestCase(unittest.TestCase):
         # He2+ from the atomic mass, as the alpha particle mass
         self.assertAlmostEqual((m_he - 2 * m_e) / alpha, 1.0, places=7)
 
+    def test_vdf_convert_feeps_species(self):
+        # The species of the FEEPS data, "i" and "e" ("i" raised ValueError)
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+
+        for species, same in [("i", "ions"), ("e", "electrons")]:
+            vdf.attrs["species"] = same
+            expected = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+            vdf.attrs["species"] = species
+            result = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+            np.testing.assert_array_equal(result, expected)
+
     def test_vdf_convert_relativistic(self):
         # Electrons at 100 keV: the convention is that of the attribute
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "electrons")
@@ -12050,6 +12116,7 @@ class TokenizeTestCase(unittest.TestCase):
         ("b_gse_fgx_srvy_l2", "invalid instrument 'fgx'"),
         ("b_gse_fgm_srvx_l2", "invalid sampling mode 'srvx'"),
         ("b_gse_fgm_srvy_l9", "invalid data level 'l9'"),
+        ("ni_gse_fpi_brst_l2", "'ni' is a scalar"),
     )
     @unpack
     def test_tokenize_invalid(self, var_str, message):
@@ -13351,6 +13418,34 @@ class FftBandpassTestCase(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             mms.fft_bandpass(inp, True, 30.0)
+
+    def test_fft_bandpass_shape_and_coords(self):
+        # The output has the dimensions, coordinates and attributes of the
+        # input: (time, 2) and (time, 6) raised "data must have shape (n, 3)",
+        # (time, 1) was squeezed and the labels of the components were dropped
+        times = generate_timeline(128.0, 1024)
+        sig = np.sin(2 * np.pi * 10 * np.arange(1024) / 128.0)
+
+        for n_comp in [1, 2, 3, 6]:
+            labels = [f"c{i:d}" for i in range(n_comp)]
+            inp = xr.DataArray(
+                np.tile(sig[:, None], (1, n_comp)),
+                coords=[times, labels],
+                dims=["time", "comp"],
+                attrs={"UNITS": "mV/m"},
+            )
+            inp.time.attrs = {"UNITS": "ns"}
+            result = mms.fft_bandpass(inp, 5.0, 30.0)
+
+            self.assertEqual(result.dims, ("time", "comp"))
+            self.assertListEqual(list(result.comp.data), labels)
+            self.assertDictEqual(result.attrs, inp.attrs)
+            self.assertDictEqual(result.time.attrs, {"UNITS": "ns"})
+            np.testing.assert_allclose(result.data, inp.data, atol=1e-9)
+
+        # An odd number of samples: the last one dropped, as before
+        result = mms.fft_bandpass(inp[:-1], 5.0, 30.0)
+        self.assertEqual(result.shape, (1022, 6))
 
 
 class HpcaSpinSumTestCase(unittest.TestCase):

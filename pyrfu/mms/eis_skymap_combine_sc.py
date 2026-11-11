@@ -10,6 +10,7 @@ import numpy as np
 from ..pyrf.ts_skymap import ts_skymap
 
 # Local imports
+from ._eis_attrs import _common_attrs
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
 __author__ = "Louis Richard"
@@ -20,34 +21,14 @@ __version__ = "2.4.2"
 __status__ = "Prototype"
 
 
-def _combine_attrs(skymaps_attrs):
-    attrs = {}
-    filtered_attrs = [
-        "delta_energy_plus",
-        "delta_energy_minus",
-        "esteptable",
-        "energy0",
-        "energy1",
-    ]
-
-    attrs_keys = list(
-        filter(lambda k: k not in filtered_attrs, skymaps_attrs[0]),
-    )
-
-    for k in attrs_keys:
-        sms_attrs = [skymaps_attr[k] for skymaps_attr in skymaps_attrs]
-
-        is_same = [sms_attr == sms_attrs[0] for sms_attr in sms_attrs[1:]]
-
-        try:
-            if all(is_same):
-                attrs[k] = sms_attrs[0]
-            else:
-                continue
-        except ValueError:
-            continue
-
-    return attrs
+# Per-time or per-channel attributes, set from the combined skymap
+_SKIPPED_ATTRS = (
+    "delta_energy_plus",
+    "delta_energy_minus",
+    "esteptable",
+    "energy0",
+    "energy1",
+)
 
 
 def eis_skymap_combine_sc(skymaps, method: str = "mean"):
@@ -142,7 +123,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
 
     # Combine global attributes, with the energy widths of the reference
     # energies
-    glob_attrs = _combine_attrs([s.attrs for s in skymaps])
+    glob_attrs = _common_attrs([s.attrs for s in skymaps], _SKIPPED_ATTRS)
     glob_attrs = {
         "delta_energy_plus": np.asarray(ener_probe.attrs["delta_energy_plus"]),
         "delta_energy_minus": np.asarray(ener_probe.attrs["delta_energy_minus"]),
@@ -152,12 +133,12 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     # Combine coordinates attributes
     coords_attrs = {}
     for coor in ["time", "energy", "phi", "theta"]:
-        coords_attrs[coor] = _combine_attrs(
-            [skymap[coor].attrs for skymap in skymaps],
+        coords_attrs[coor] = _common_attrs(
+            [skymap[coor].attrs for skymap in skymaps], _SKIPPED_ATTRS
         )
 
     # Combine data attributes
-    attrs = _combine_attrs([skymap.data.attrs for skymap in skymaps])
+    attrs = _common_attrs([skymap.data.attrs for skymap in skymaps], _SKIPPED_ATTRS)
 
     common_energy = np.tile(ref_energy, (len(t_ref), 1))
 

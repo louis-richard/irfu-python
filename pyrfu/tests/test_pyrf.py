@@ -402,6 +402,22 @@ class NanAvg4SCTestCase(unittest.TestCase):
         # The caller's attributes are unchanged
         self.assertEqual(b_list[0].attrs["mmsId"], 1)
 
+    def test_nanavg_4sc_valid_count(self):
+        # The count of the valid samples is an int numpy.ndarray for arrays and
+        # time series (xr.where returned an array, whose .data, taken by
+        # mms.feeps_avg_4sc, was a memoryview)
+        module = sys.modules["pyrfu.pyrf.nanavg_4sc"]
+        values = np.array([[1.0, np.nan], [np.nan, 2.0]])
+
+        for inp in [values, xr.DataArray(values)]:
+            result = module._valid_count(inp)
+            self.assertIsInstance(result, np.ndarray)
+            self.assertEqual(result.dtype.kind, "i")
+            np.testing.assert_array_equal(result, [[1, 0], [0, 1]])
+
+        feeps = sys.modules["pyrfu.mms.feeps_avg_4sc"]
+        self.assertIs(feeps._valid_count, module._valid_count)
+
     def test_nanavg_4sc_skymaps(self):
         # Datasets (skymaps), documented and type checked, raised AttributeError
         # ('Dataset' object has no attribute 'shape'): the "data" variable is

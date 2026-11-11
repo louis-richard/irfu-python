@@ -25,9 +25,10 @@ __status__ = "Prototype"
 
 def _calc_angle(look_, vec):
     vec_hat = normalize(vec)
-    theta_ = np.rad2deg(
-        np.pi - np.arccos(np.sum(vec_hat.data * look_.data, axis=1)),
-    )
+    # Clipped: rounding takes the cosine of (anti)parallel directions slightly
+    # beyond 1 (NaN, the telescope left out)
+    cos_theta = np.clip(np.sum(vec_hat.data * look_.data, axis=1), -1.0, 1.0)
+    theta_ = np.rad2deg(np.pi - np.arccos(cos_theta))
     return theta_
 
 

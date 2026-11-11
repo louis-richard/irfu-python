@@ -13,8 +13,6 @@ from xarray.core.dataarray import DataArray
 
 # Local imports
 from pyrfu.pyrf.calc_fs import calc_fs
-from pyrfu.pyrf.ts_scalar import ts_scalar
-from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 __author__ = "Louis Richard"
 __email__ = "louisr@irfu.se"
@@ -42,7 +40,8 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
     Returns
     -------
     DataArray
-        Time series of the bandpass filtered data.
+        Time series of the bandpass filtered data, with the dimensions,
+        coordinates and attributes of the input.
 
     Raises
     ------
@@ -142,15 +141,15 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
 
         out_data_64[:, i] = np.real(out_tmp)
 
-    # Put back original NaNs and back to original shape and precision
+    # Put back original NaNs, shape and precision
     out_data_64[idx_nans] = np.nan
-    out_data_64 = np.squeeze(out_data_64)
-    out_data: NDArrayFloats = out_data_64.astype(precision)
+    out_data: NDArrayFloats = out_data_64.reshape(
+        (len(inp_time), *inp.shape[1:])
+    ).astype(precision)
 
-    # Return data in the same format as input
-    if out_data.ndim == 1:
-        out: DataArray = ts_scalar(inp_time, out_data, attrs=inp.attrs)
-    else:
-        out = ts_vec_xyz(inp_time, out_data, attrs=inp.attrs)
+    # Same dimensions, coordinates and attributes as the input (rebuilt as a
+    # scalar or a 3-vector: (time, 2) and (time, 6) raised, (time, 1) was
+    # squeezed and the coordinates were dropped)
+    out: DataArray = inp.isel(time=slice(0, len(inp_time))).copy(data=out_data)
 
     return out

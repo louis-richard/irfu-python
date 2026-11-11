@@ -11,6 +11,7 @@ from xarray.core.dataarray import DataArray
 
 # Local imports
 from ..pyrf.calc_fs import calc_fs
+from ..pyrf.nanavg_4sc import _valid_count
 from ..pyrf.resample import resample
 from ._eis_units import _check_same_units
 
@@ -20,26 +21,6 @@ __copyright__ = "Copyright 2020-2024"
 __license__ = "MIT"
 __version__ = "2.5.10"
 __status__ = "Prototype"
-
-
-def _nan_count(inp):
-    r"""Counts the number of non-NaN values in the input array at each time step.
-
-    Parameters
-    ----------
-    inp : DataArray or Dataset
-        Input array.
-
-    Returns
-    -------
-    inp_to_counts : DataArray or Dataset
-        Array with the same shape as the input array, where each element
-        is the number of non-NaN values at the corresponding time step.
-
-    """
-    inp_to_counts = xr.where(np.isnan(inp), 0, 1)
-
-    return inp_to_counts
 
 
 def _ns(time):
@@ -179,9 +160,9 @@ def feeps_avg_4sc(
                 b_avg_data[:, ien_bin] += b.data[
                     :, combined_energies[ien_bin][mms_id] - 1
                 ]
-                b_nan_denom[:, ien_bin] += _nan_count(
+                b_nan_denom[:, ien_bin] += _valid_count(
                     b_count_nan.data[:, combined_energies[ien_bin][mms_id] - 1]
-                ).data
+                )
                 energy[ien_bin] += b.energy.data[combined_energies[ien_bin][mms_id] - 1]
             with np.errstate(divide="ignore", invalid="ignore"):
                 energy[ien_bin] /= non_none_sc_ch
@@ -190,7 +171,7 @@ def feeps_avg_4sc(
         for b, b_count_nan in zip(b_list_r, b_list_count_nans):
 
             b_avg_data += b.data
-            b_nan_denom += _nan_count(b_count_nan).data
+            b_nan_denom += _valid_count(b_count_nan)
 
     coords = {}
     if flag == "omni":

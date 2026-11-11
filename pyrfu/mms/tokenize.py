@@ -292,7 +292,13 @@ def tokenize(var_str: str) -> Mapping[str, str]:
 
     tensor_order = _tensor_order(splitted_key)
 
-    if len(splitted_key) == 5 and tensor_order > 0:
+    # A scalar has no coordinate system ("too many values to unpack")
+    if len(splitted_key) == 5 and tensor_order == 0:
+        raise ValueError(
+            f"{splitted_key[0]!r} is a scalar: no coordinate system in {var_str!r}"
+        )
+
+    if len(splitted_key) == 5:
         parameter, coordinates_system, instrument, data_rate, data_level = splitted_key
     else:
         parameter, instrument, data_rate, data_level = splitted_key
