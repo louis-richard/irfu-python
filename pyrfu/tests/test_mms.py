@@ -357,6 +357,21 @@ class CalcEpsilonTestCase(unittest.TestCase):
         eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
+    def test_calc_epsilon_charge(self):
+        # Ions of charge q gain q V, as in psd_moments (they gained V)
+        vdf, n_s = self._maxwellian("attrs", False)
+        vdf.attrs["species"] = "helium++"
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+
+        def eps(charge, potential):
+            sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, potential))
+            ions = vdf.assign_attrs(charge=charge)
+            return mms.calculate_epsilon(ions, model, n_s, sc_pot).data
+
+        np.testing.assert_allclose(eps(2, 5.0), eps(1, 10.0), rtol=1e-12)
+        self.assertGreater(np.max(np.abs(eps(1, 10.0) - eps(1, 5.0))), 1e-6)
+
     def test_calc_epsilon_units_and_channels(self):
         # The same in any units of phase-space density (ValueError for
         # others); fewer channels, less difference; a relativistic phase-space
@@ -1772,8 +1787,14 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
         phx.attrs["VALIDMIN"], ext.attrs["VALIDMIN"] = np.zeros(2), np.zeros(2)
         phx.attrs["VALIDMAX"], ext.attrs["VALIDMAX"] = np.ones(2), np.full(2, 2.0)
+        for allt in [phx, ext]:
+            allt.attrs["FILLVAL"] = np.nan
+            allt.time.attrs["FILLVAL"] = np.array("NaT", dtype="datetime64[ns]")
         result = mms.eis_combine_proton_spec(phx, ext)
 
+        # NaN and NaT fill values are equal (both were kept, as a list)
+        self.assertTrue(np.isnan(result.attrs["FILLVAL"]))
+        self.assertTrue(np.isnat(result.time.attrs["FILLVAL"]))
         np.testing.assert_array_equal(result.attrs["VALIDMIN"], np.zeros(2))
         np.testing.assert_array_equal(result.attrs["VALIDMAX"][0], np.ones(2))
         np.testing.assert_array_equal(result.attrs["VALIDMAX"][1], np.full(2, 2.0))
@@ -2151,12 +2172,14 @@ class EisAngAngTestCase(unittest.TestCase):
                 "VALIDMIN": np.array([0.0, 1.0]),
                 "VALIDMAX": np.array([i, 1.0]),
                 "LABL_PTR_1": ["flux", np.array([1.0, 2.0])],
+                "LABL_PTR_2": np.array(["flux", None], dtype=object),
             }
         result = mms.eis_ang_ang(allt, frame="gse")
 
         np.testing.assert_array_equal(result.attrs["VALIDMIN"], [0.0, 1.0])
         self.assertNotIn("VALIDMAX", result.attrs)
         self.assertEqual(result.attrs["LABL_PTR_1"][0], "flux")
+        self.assertEqual(result.attrs["LABL_PTR_2"][0], "flux")
 
     def test_eis_combine_proton_skymap(self):
         # The skymap of the angle-angle distribution of the combined spectra
@@ -11118,6 +11141,16 @@ class VdfVelocityTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.vdf_velocity(vdf, sc_pot=np.ones(3))
 
+    def test_vdf_velocity_sc_pot_charge(self):
+        # Ions of charge q gain q V, as in psd_moments (they gained V)
+        vdf = self._vdf("ions").assign_attrs(species="helium++", charge=2)
+        alpha = constants.physical_constants["alpha particle mass"][0]
+        speed = mms.vdf_velocity(vdf, sc_pot=150.0).vx.data
+        speed = np.abs(speed[:, :, 0, 8]) / np.sin(np.deg2rad(vdf.theta.data[8]))
+        speed /= np.abs(np.cos(np.deg2rad(vdf.phi.data[:, :1])))
+        energy = vdf.energy.data + 2 * 150.0
+        np.testing.assert_allclose(speed, _rel_speed(energy, alpha) / 1e3, rtol=1e-6)
+
     def test_vdf_velocity_relativistic(self):
         # Always relativistic (the relativistic argument was removed): 10 keV
         # to 3.2 MeV electrons below c (the classical speeds were above c)
@@ -11268,6 +11301,21 @@ class VdfPartialDensityTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             mms.vdf_partial_density(dpf).data.data, d_n.data.data, rtol=1e-12
         )
+
+    def test_vdf_partial_density_charge(self):
+        # With a spacecraft potential, the sums are the psd_moments density for
+        # the ions of charge 2 too (the energies were corrected by V, not 2 V:
+        # 0.7 % lower at 20 V)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [200.0, 0, 0])
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        for species, charge in [("ions", 1), ("helium++", 2)]:
+            ions = vdf.assign_attrs(species=species, charge=charge)
+            sc_pot = pyrf.ts_scalar(ions.time.data, np.full(len(ions.time), 20.0))
+            n_moments = mms.psd_moments(ions, sc_pot)[0].data
+            d_n = mms.vdf_partial_density(ions, sc_pot=sc_pot)
+            n_sum = d_n.data.data.sum(axis=(1, 2, 3))
+            np.testing.assert_allclose(n_sum, n_moments, rtol=0.005)
 
     def test_vdf_partial_density_input(self):
         vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)

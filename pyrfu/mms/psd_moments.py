@@ -13,6 +13,7 @@ from scipy import constants
 # Local imports
 from pyrfu.mms._vdf_bins import (
     _bin_pitch_angles,
+    _charge,
     _charge_sign,
     _mass,
     _phi_edges,
@@ -702,7 +703,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # ions were protons and the species not starting with "e" or "i" raised
     # AssertionError.
     p_mass, is_electron = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_electron else float(vdf.attrs.get("charge", 1))
+    charge = 1.0 if is_electron else _charge(vdf)
 
     # Relativistic speeds, momentum flux and kinetic energy, for all the
     # species: the relativistic phase-space density in SI units (s^3/m^6)

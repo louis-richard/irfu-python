@@ -32,6 +32,16 @@ def _charge_sign(vdf):
     return -1.0 if is_electron else 1.0
 
 
+def _charge(vdf):
+    r"""Charge of the species of the distribution in elementary charges: -1
+    for the electrons, else the ``charge`` attribute (1 by default, 2 for the
+    HPCA He++), as psd_moments and vdf_projection."""
+    if _charge_sign(vdf) < 0:
+        return -1.0
+
+    return float(vdf.attrs.get("charge", 1))
+
+
 def _sc_pot(vdf, sc_pot):
     r"""Spacecraft potential (V) at the times of the distribution (time,)."""
     n_t = len(vdf.time)
@@ -86,10 +96,12 @@ def _energy_edges(vdf):
 
 
 def _kinetic_energy(vdf, energy, sc_pot):
-    r"""Energy (eV) at infinity, corrected for the spacecraft potential (V),
-    as irfu-matlab PDist.v (ions gain, electrons lose q V), at least 0."""
+    r"""Energy (eV) at infinity, corrected for the spacecraft potential (V):
+    the ions of charge q gain q V and the electrons lose e V (as irfu-matlab
+    PDist.v for q = 1; it was V whatever the charge, unlike psd_moments), at
+    least 0."""
     sc_pot = sc_pot.reshape((-1,) + (1,) * (np.ndim(energy) - 1))
-    return np.clip(energy + _charge_sign(vdf) * sc_pot, 0.0, None)
+    return np.clip(energy + _charge(vdf) * sc_pot, 0.0, None)
 
 
 def _speed(energy, mass):

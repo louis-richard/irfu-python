@@ -12,7 +12,13 @@ from xarray.core.dataset import Dataset
 
 # Local imports
 from pyrfu.mms._psd_units import _is_relativistic, _output, _relativistic_factor
-from pyrfu.mms._vdf_bins import _charge_sign, _energy_edges, _mass, _speed
+from pyrfu.mms._vdf_bins import (
+    _charge,
+    _charge_sign,
+    _energy_edges,
+    _mass,
+    _speed,
+)
 from pyrfu.mms.psd_rebin import psd_rebin
 from pyrfu.mms.vdf_convert import _PSD
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
@@ -423,7 +429,7 @@ def vdf_projection(
         raise TypeError("vdf must be a xarray.Dataset")
 
     mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_des else float(vdf.attrs.get("charge", 1))
+    charge = 1.0 if is_des else _charge(vdf)
 
     # The relativistic phase-space density, projected with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)

@@ -11,7 +11,7 @@ from xarray.core.dataset import Dataset
 
 # Local imports
 from pyrfu.mms._psd_units import _is_relativistic, _relativistic_factor
-from pyrfu.mms._vdf_bins import _charge_sign, _mass, _speed
+from pyrfu.mms._vdf_bins import _charge, _mass, _speed
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
@@ -84,7 +84,9 @@ def calculate_epsilon(
     n_s : DataArray
         Time series of the number density in cm^-3 (same times as vdf).
     sc_pot : DataArray
-        Time series of the spacecraft potential in V.
+        Time series of the spacecraft potential in V. The ions gain q V, with
+        q the ``charge`` attribute (1 by default), and the electrons lose
+        e V, as `psd_moments`.
     en_channels : list, Optional
         Energy channels to integrate over, as 0-based indices [start, stop)
         (stop excluded), e.g., [3, 32] for all but the three lowest of 32
@@ -127,8 +129,9 @@ def calculate_epsilon(
     # Mass of the species of the table of the vdf routines (the species was
     # taken from its first letter: "protons" and "hydrogen+" raised)
     m_s = _mass(vdf)
-    v_sc = sc_pot.data.astype(np.float64)
-    v_sc = v_sc if _charge_sign(vdf) < 0 else -v_sc
+    # Potential energy q V (eV) at the spacecraft: the ions of charge q gain
+    # q V, the electrons lose e V (it was V whatever the charge)
+    v_sc = -_charge(vdf) * sc_pot.data.astype(np.float64)
 
     if not np.array_equal(vdf.time.data, n_s.time.data):
         raise ValueError("vdf and moments have different times.")
