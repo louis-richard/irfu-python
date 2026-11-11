@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import logging
 import os
 import warnings
@@ -13,6 +12,7 @@ import numpy as np
 import requests
 
 # Local imports
+from .._user_config import local_data_dir
 from ..mms.download_data import _download_file
 from ..mms.list_files_sdc import SDC_TIMEOUT
 from .db_init import config_path
@@ -59,14 +59,10 @@ def _construct_url(tint, var, lasp_url):
 def _make_path(file, var, lasp_url, data_path: str = ""):
     r"""Construct path of the data file using the standard convention."""
 
-    if not data_path:
-        # Read the configuration file (user directory)
-        with open(config_path(), "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        data_path = os.path.normpath(config["local_data_dir"])
-    else:
+    if data_path:
         data_path = os.path.normpath(data_path)
+    else:
+        data_path = local_data_dir(config_path())
 
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"local data directory {data_path} doesn't exist")

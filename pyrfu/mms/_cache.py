@@ -20,7 +20,6 @@ import os
 import posixpath
 import re
 import shutil
-import tempfile
 import time
 from typing import Callable, Optional
 
@@ -28,6 +27,7 @@ from typing import Callable, Optional
 import platformdirs
 
 # Local imports
+from pyrfu._user_config import atomic_write as _atomic_write
 from pyrfu.mms.db_init import _read_config
 
 logger = logging.getLogger(__name__)
@@ -142,22 +142,6 @@ def listing(key: dict, lister: Callable[[], list]) -> list:
         logger.warning("Cannot write the MMS file listing to the cache: %s", err)
 
     return items
-
-
-def _atomic_write(path: str, content) -> None:
-    r"""Writes `content` (bytes or str) to `path` through a temporary file in
-    the same directory, so that no reader sees a partial file."""
-    mode = "wb" if isinstance(content, bytes) else "w"
-    handle, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".part")
-
-    try:
-        with os.fdopen(handle, mode) as file:
-            file.write(content)
-
-        os.replace(tmp_path, path)
-    except BaseException:
-        _remove(tmp_path)
-        raise
 
 
 def _read_cached(path: str, size: Optional[int]) -> Optional[bytes]:

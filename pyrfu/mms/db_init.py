@@ -2,20 +2,22 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
+import copy
+import functools
 import logging
 import math
 import numbers
 import os
-import shutil
 from typing import Literal, Optional
 
 # 3rd party imports
 import keyring
 import keyring.errors
-import platformdirs
 from keyring.backends.chainer import ChainerBackend
 from keyrings.alt.file import PlaintextKeyring
+
+# Local imports
+from .._user_config import read_config, user_config_path, write_config
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +32,7 @@ def _user_config_path() -> str:
     (e.g. ~/Library/Application Support/pyrfu on macOS, ~/.config/pyrfu on Linux).
     It is created from the package configuration file the first time, and the
     package file is used if the user directory cannot be written."""
-    path = os.path.join(platformdirs.user_config_dir("pyrfu"), "mms_config.json")
-
-    if not os.path.exists(path):
-        try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            shutil.copyfile(_PACKAGE_CFG_PATH, path)
-        except OSError:
-            return _PACKAGE_CFG_PATH
-
-    return path
+    return user_config_path("mms_config.json", _PACKAGE_CFG_PATH)
 
 
 MMS_CFG_PATH = _user_config_path()
@@ -109,14 +102,36 @@ _DEFAULT_CONFIG = {
 }
 
 
+def _config_stamp():
+    r"""Path, inode, modification time and size of the MMS configuration file
+    (path only if it can't be read): the key of the caches of the
+    configuration. db_init writes a new file (new inode) every time."""
+    try:
+        stat = os.stat(MMS_CFG_PATH)
+    except OSError:
+        return (MMS_CFG_PATH,)
+
+    return MMS_CFG_PATH, stat.st_ino, stat.st_mtime_ns, stat.st_size
+
+
 def _read_config() -> dict:
-    r"""Current MMS configuration, completed with the default settings."""
-    config = json.loads(json.dumps(_DEFAULT_CONFIG))
+    r"""Current MMS configuration, completed with the default settings: the one
+    reader of the configuration file, read again when it changes (e.g., after
+    db_init). Returns a copy, so that callers cannot change the cache."""
+    return copy.deepcopy(_read_config_cached(_config_stamp()))
+
+
+@functools.lru_cache(maxsize=1)
+def _read_config_cached(stamp) -> dict:
+    r"""MMS configuration of the file of `stamp` (see _config_stamp)."""
+    config = copy.deepcopy(_DEFAULT_CONFIG)
 
     try:
-        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-            current = json.load(fs)
+        current = read_config(stamp[0])
     except (OSError, ValueError):
+        return config
+
+    if not isinstance(current, dict):
         return config
 
     for key in ["default", "local", "aws"]:
@@ -269,7 +284,7 @@ def db_init(
     >>> mms.db_init(cache=False)
 
     """
-    config = json.loads(json.dumps(_DEFAULT_CONFIG)) if reset else _read_config()
+    config = copy.deepcopy(_DEFAULT_CONFIG) if reset else _read_config()
 
     # Check and set the given settings only
     if default is not None:
@@ -327,5 +342,6 @@ def db_init(
 
     logger.info("Updating MMS data access configuration in %s...", MMS_CFG_PATH)
 
-    with open(MMS_CFG_PATH, "w", encoding="utf-8") as fs:
-        json.dump(config, fs)
+    # At once: a write that fails leaves the previous configuration (a partial
+    # file was read as the default settings)
+    write_config(MMS_CFG_PATH, config)

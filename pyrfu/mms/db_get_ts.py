@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import logging
-import os
-from functools import lru_cache
 from typing import Mapping, Optional, Tuple
 
 # 3rd party imports
@@ -13,7 +10,7 @@ import numpy as np
 from pycdfpp import load
 from xarray.core.dataarray import DataArray
 
-from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_data import (
     _file_label,
     _get_file_content_sources,
@@ -56,27 +53,12 @@ def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
     return probe, var
 
 
-def _load_config() -> Mapping[str, str]:
-    r"""Load the MMS configuration file (cached until it changes, e.g., after
-    mms.db_init). Returns a copy, so that callers cannot change the cache."""
-    return dict(_load_config_cached(MMS_CFG_PATH, os.stat(MMS_CFG_PATH).st_mtime_ns))
-
-
-@lru_cache(maxsize=1)
-def _load_config_cached(config_path: str, config_mtime_ns: int) -> Mapping[str, str]:
-    r"""Load the MMS configuration file (cached by path and modification time:
-    another file with the same time is read)."""
-    del config_mtime_ns  # cache key only
-    with open(config_path, "r", encoding="utf-8") as fs:
-        return json.load(fs)
-
-
 def _resolve_source(source: Optional[str] = "default") -> str:
     r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
     case), or the default resource of the MMS configuration
     (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
     if not source or source.lower() == "default":
-        return _load_config().get("default")
+        return _read_config()["default"]
 
     if source.lower() in ["local", "sdc", "aws"]:
         return source.lower()

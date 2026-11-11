@@ -3,7 +3,6 @@
 
 # Built-in imports
 import datetime
-import json
 import posixpath
 import re
 from typing import Any, Mapping, Optional, Union
@@ -16,7 +15,7 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 
 # Local imports
-from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.db_init import _read_config
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
 # Public copy of the MMS archive (CDAWeb) on NASA HelioCloud, used if no bucket
@@ -39,11 +38,7 @@ def _bucket_and_prefix(bucket_prefix: Optional[str] = "") -> tuple[str, str]:
     r"""Bucket name and key prefix from "bucket/prefix" (or "s3://bucket/prefix"),
     by default from the configuration file, else HelioCloud."""
     if not bucket_prefix:
-        # Read the current version of the MMS configuration file
-        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        bucket_prefix = config.get("aws") or HELIOCLOUD_MMS
+        bucket_prefix = _read_config()["aws"] or HELIOCLOUD_MMS
 
     bucket_prefix = bucket_prefix.removeprefix("s3://").strip("/")
     bucket_name, _, prefix = bucket_prefix.partition("/")

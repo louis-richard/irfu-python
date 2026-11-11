@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import os
 
 # Local imports
-from .._user_config import user_config_path
+from .._user_config import set_local_data_dir, user_config_path
 
 # Default configuration distributed with the package
 _PACKAGE_CFG_PATH = os.path.join(
@@ -36,16 +35,6 @@ def db_init(local_data_dir):
 
     """
 
-    # Normalize the path and make sure that it exists
-    local_data_dir = os.path.normpath(local_data_dir)
-    if not os.path.exists(local_data_dir):
-        raise FileNotFoundError(f"{local_data_dir} doesn't exist")
-
-    # Read the current version of the configuration (user directory)
-    with open(config_path(), "r", encoding="utf-8") as fs:
-        config = json.load(fs)
-
-    # Overwrite the configuration file with the new path
-    with open(config_path(), "w", encoding="utf-8") as fs:
-        config["local_data_dir"] = local_data_dir
-        json.dump(config, fs)
+    # In the configuration of the user directory, at once (a write that failed
+    # left a partial file)
+    set_local_data_dir(config_path, local_data_dir)

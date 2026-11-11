@@ -494,33 +494,75 @@ class ConfigCacheTestCase(unittest.TestCase):
         if mtime_ns is not None:
             os.utime(path, ns=(mtime_ns, mtime_ns))
 
-    def test_load_config_refresh(self):
-        module = importlib.import_module("pyrfu.mms.db_get_ts")
+    def test_read_config_refresh(self):
+        # Read once until the file changes, as a copy (the readers of
+        # list_files_aws, list_files_sdc, copy_files and db_get_ts read the file
+        # themselves, without the default settings)
+        module = importlib.import_module("pyrfu.mms.db_init")
         with tempfile.TemporaryDirectory() as root:
             path = os.path.join(root, "config.json")
             self._write_config(path, "local", mtime_ns=10**18)
-            with mock.patch.object(module, "MMS_CFG_PATH", path):
-                module._load_config_cached.cache_clear()
-                config = module._load_config()
+            with (
+                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(
+                    module, "read_config", wraps=module.read_config
+                ) as read,
+            ):
+                module._read_config_cached.cache_clear()
+                config = module._read_config()
                 config["default"] = "changed by the caller"
-                self.assertEqual(module._load_config()["default"], "local")
+                self.assertEqual(module._read_config()["default"], "local")
+                self.assertEqual(read.call_count, 1)
 
                 self._write_config(path, "aws", mtime_ns=10**18 + 10**9)
-                self.assertEqual(module._load_config()["default"], "aws")
-                module._load_config_cached.cache_clear()
+                self.assertEqual(module._read_config()["default"], "aws")
+                self.assertEqual(read.call_count, 2)
+                module._read_config_cached.cache_clear()
 
-    def test_load_config_other_path(self):
-        # Another configuration file with the same modification time is read
-        # (the cache was keyed by the time only)
-        module = importlib.import_module("pyrfu.mms.db_get_ts")
+    def test_read_config_not_a_dict(self):
+        # A configuration file that is not a JSON object: the default settings
+        module = importlib.import_module("pyrfu.mms.db_init")
         with tempfile.TemporaryDirectory() as root:
-            module._load_config_cached.cache_clear()
+            path = os.path.join(root, "config.json")
+            with open(path, "w", encoding="utf-8") as file:
+                json.dump(["aws"], file)
+
+            with mock.patch.object(module, "MMS_CFG_PATH", path):
+                self.assertDictEqual(module._read_config(), module._DEFAULT_CONFIG)
+
+    def test_read_config_other_path(self):
+        # Another configuration file with the same modification time is read
+        module = importlib.import_module("pyrfu.mms.db_init")
+        with tempfile.TemporaryDirectory() as root:
+            module._read_config_cached.cache_clear()
             for default in ["local", "aws"]:
                 path = os.path.join(root, f"config_{default}.json")
                 self._write_config(path, default, mtime_ns=10**18)
                 with mock.patch.object(module, "MMS_CFG_PATH", path):
-                    self.assertEqual(module._load_config()["default"], default)
-            module._load_config_cached.cache_clear()
+                    self.assertEqual(module._read_config()["default"], default)
+            module._read_config_cached.cache_clear()
+
+    def test_read_config_every_reader(self):
+        # Every reader reads the configuration of db_init (db_get_ts and
+        # list_files_aws read the file of their own MMS_CFG_PATH), completed
+        # with the default settings (a missing "default" was None for db_get_ts,
+        # then NotImplementedError("Resource None"); KeyError in copy_files)
+        db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
+        aws = importlib.import_module("pyrfu.mms.list_files_aws")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "config.json")
+            for config, default, bucket in [
+                ({"default": "aws", "aws": "my-bucket/x"}, "aws", "my-bucket"),
+                ({"local": root}, "local", "gov-nasa-hdrl-data1"),
+            ]:
+                with open(path, "w", encoding="utf-8") as file:
+                    json.dump(config, file)
+
+                with mock.patch.object(
+                    sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+                ):
+                    self.assertEqual(db_get_ts._resolve_source("default"), default)
+                    self.assertEqual(aws._bucket_and_prefix()[0], bucket)
 
     def test_login_lasp_refresh(self):
         module = importlib.import_module("pyrfu.mms.list_files_sdc")
@@ -528,7 +570,9 @@ class ConfigCacheTestCase(unittest.TestCase):
             path = os.path.join(root, "config.json")
             self._write_config(path, "sdc", mtime_ns=10**18)
             with (
-                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(
+                    sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+                ),
                 mock.patch.object(module.requests, "Session") as session_cls,
                 mock.patch.object(module, "_get_credential", return_value=None),
             ):
@@ -552,7 +596,9 @@ class LoginLaspCredentialsTestCase(unittest.TestCase):
             path = os.path.join(root, "config.json")
             ConfigCacheTestCase._write_config(path, "sdc", rights=rights)
             with (
-                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(
+                    sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+                ),
                 mock.patch.object(module.requests, "Session") as session_cls,
                 mock.patch.object(
                     module, "_get_credential", return_value=credential
@@ -806,8 +852,9 @@ class MmsConfigPathTestCase(unittest.TestCase):
 
         for patch in [
             mock.patch.object(self.module, "_PACKAGE_CFG_PATH", self.package),
-            mock.patch.object(
-                self.module.platformdirs, "user_config_dir", return_value=self.user_dir
+            mock.patch(
+                "pyrfu._user_config.platformdirs.user_config_dir",
+                return_value=self.user_dir,
             ),
         ]:
             patch.start()
@@ -828,8 +875,24 @@ class MmsConfigPathTestCase(unittest.TestCase):
 
     def test_config_path_not_writable(self):
         # The package configuration is used if the user directory is not writable
-        with mock.patch.object(self.module.shutil, "copyfile", side_effect=OSError):
+        with mock.patch("pyrfu._user_config.shutil.copyfile", side_effect=OSError):
             self.assertEqual(self.module._user_config_path(), self.package)
+
+    def test_db_init_write_at_once(self):
+        # A write that fails leaves the previous configuration (json.dump
+        # failed half way through the file, read then as the default settings)
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "c.json")
+            with open(path, "w", encoding="utf-8") as file:
+                json.dump({"default": "aws", "local": root}, file)
+
+            with mock.patch.object(self.module, "MMS_CFG_PATH", path):
+                with self.assertRaises(TypeError):
+                    self.module.db_init(aws=object())
+
+                with open(path, encoding="utf-8") as file:
+                    self.assertEqual(json.load(file)["default"], "aws")
+                self.assertListEqual(os.listdir(root), ["c.json"])
 
 
 class DbGetTsTestCase(unittest.TestCase):
@@ -968,7 +1031,7 @@ class DbGetTsTestCase(unittest.TestCase):
 
     def test_resolve_source(self):
         with mock.patch.object(
-            self.module, "_load_config", return_value={"default": "local"}
+            self.module, "_read_config", return_value={"default": "local"}
         ):
             self.assertEqual(self.module._resolve_source(""), "local")
             self.assertEqual(self.module._resolve_source(None), "local")
@@ -7965,8 +8028,9 @@ class CopyFilesTestCase(unittest.TestCase):
                 self._ANC,
             ),
         ]:
-            module = sys.modules[f"pyrfu.mms.{name}"]
-            with mock.patch.object(module, "MMS_CFG_PATH", config):
+            with mock.patch.object(
+                sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", config
+            ):
                 call()
             self._check(rel_path)
 
@@ -9460,7 +9524,9 @@ class ListFilesAwsTestCase(unittest.TestCase):
             with open(config_path, "w", encoding="utf-8") as fs:
                 json.dump({"aws": config_aws}, fs)
 
-            with mock.patch.object(list_files_aws_module, "MMS_CFG_PATH", config_path):
+            with mock.patch.object(
+                sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", config_path
+            ):
                 result = list_files_aws_module._bucket_and_prefix()
 
         self.assertTupleEqual(result, expected)
@@ -9979,7 +10045,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
 
         for source in ["default", "Default", None]:
             with mock.patch.object(
-                db_get_ts_module, "_load_config", return_value={"default": "aws"}
+                db_get_ts_module, "_read_config", return_value={"default": "aws"}
             ):
                 _, (get_data, _, load_model) = self._run(
                     vdf, n_e, startdelphi, model, source=source
@@ -12605,7 +12671,9 @@ class SdcNetworkTestCase(unittest.TestCase):
         self.addCleanup(config_dir.cleanup)
         path = os.path.join(config_dir.name, "config.json")
         ConfigCacheTestCase._write_config(path, "sdc", rights="public")
-        patch = mock.patch.object(module, "MMS_CFG_PATH", path)
+        patch = mock.patch.object(
+            sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+        )
         patch.start()
         self.addCleanup(patch.stop)
         module._login_lasp_cached.cache_clear()
@@ -13025,7 +13093,6 @@ class LoadAncillaryTestCase(unittest.TestCase):
     def test_load_ancillary_default_source(self):
         # The default resource of the configuration (a temporary one, also for
         # the local path of the local lister)
-        db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
         db_init = importlib.import_module("pyrfu.mms.db_init")
         files, contents = self._defatt_files()
         session = self._sdc(files, contents)
@@ -13036,14 +13103,9 @@ class LoadAncillaryTestCase(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as file:
                 json.dump({"default": default, "local": self.root}, file)
 
-            db_get_ts._load_config_cached.cache_clear()
             session.get.reset_mock()
-            with (
-                mock.patch.object(db_get_ts, "MMS_CFG_PATH", path),
-                mock.patch.object(db_init, "MMS_CFG_PATH", path),
-            ):
+            with mock.patch.object(db_init, "MMS_CFG_PATH", path):
                 result = mms.load_ancillary("defatt", self.tint, 1, False)
-            db_get_ts._load_config_cached.cache_clear()
 
             self.assertEqual(len(result.time), 2)
             self.assertEqual(session.get.call_count, n_get)
