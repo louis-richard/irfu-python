@@ -161,22 +161,34 @@ def lh_wave_analysis(
 
     e_fac = ts_vec_xyz(e_xyz.time.data, np.vstack([er1, er2, er3]).T)
 
-    # Find best direction
+    # Find best direction: the normalised zero-lag cross-correlation
+    # (xcorr(x, y, 0, "coeff")) of phi_B with the potential of E along
+    # cos(theta) e_1 + sin(theta) e_2. That potential is linear in (cos theta,
+    # sin theta), phi_1 cos(theta) + phi_2 sin(theta), so that the
+    # correlations of all the directions follow from sums of phi_1, phi_2 and
+    # phi_B (the potential and the time_clip were computed for each of the 361
+    # directions)
     dt_e_fac = calc_dt(e_fac)
     thetas = np.linspace(0, 2 * np.pi, 361)
-    corrs = np.zeros(len(thetas))
 
-    for i, theta in enumerate(thetas):
-        e_temp = np.cos(theta) * e_fac.data[:, 0]
-        e_temp += np.sin(theta) * e_fac.data[:, 1]
+    phi_1, phi_2 = [
+        time_clip(
+            ts_scalar(e_xyz.time.data, np.cumsum(e_fac.data[:, k]) * dt_e_fac), tints
+        ).data
+        for k in range(2)
+    ]
+    phi_1, phi_2 = phi_1 - np.mean(phi_1), phi_2 - np.mean(phi_2)
 
-        phi_temp = ts_scalar(e_xyz.time.data, np.cumsum(e_temp) * dt_e_fac)
-        phi_temp = time_clip(phi_temp, tints)
-        phi_temp -= np.mean(phi_temp)
-
-        # Normalised zero-lag cross-correlation (xcorr(x, y, 0, "coeff"))
-        corrs[i] = np.sum(phi_bs.data * phi_temp.data)
-        corrs[i] /= np.sqrt(np.sum(phi_bs.data**2) * np.sum(phi_temp.data**2))
+    cos_t, sin_t = np.cos(thetas), np.sin(thetas)
+    corrs = cos_t * np.sum(phi_bs.data * phi_1) + sin_t * np.sum(phi_bs.data * phi_2)
+    corrs /= np.sqrt(
+        np.sum(phi_bs.data**2)
+        * (
+            cos_t**2 * np.sum(phi_1**2)
+            + 2 * cos_t * sin_t * np.sum(phi_1 * phi_2)
+            + sin_t**2 * np.sum(phi_2**2)
+        )
+    )
 
     corrpos = np.argmax(corrs)
     e_best = np.cos(thetas[corrpos]) * e_fac.data[:, 0]
