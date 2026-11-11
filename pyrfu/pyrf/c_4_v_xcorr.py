@@ -30,8 +30,8 @@ def _seconds(time, t_ref):
 
 
 class _BandLimited:
-    r"""Band-limited (DFT) interpolant of a uniformly sampled signal (D-EH1):
-    the shift keeps the variance of the noise at any fraction of a sample,
+    r"""Band-limited (DFT) interpolant of a uniformly sampled signal: the
+    shift keeps the variance of the noise at any fraction of a sample,
     unlike linear or cubic interpolation, which bias the delays towards
     half-samples.
 

@@ -10592,6 +10592,28 @@ class VdfToE64TestCase(unittest.TestCase):
             self.assertEqual(len(result.attrs[key]), len(result.time))
             np.testing.assert_allclose(result.attrs[key], 2 * half, rtol=1e-6)
 
+    def test_vdf_to_e64_delta_time_rounded(self):
+        # The widths in ns are rounded (truncated, 0.0157 s was 0.015699999 s)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        vdf.attrs["delta_time_minus"] = np.full(10, 0.0157)
+        vdf.attrs["delta_time_plus"] = np.full(10, 0.0157)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # zero energy channel
+            result = mms.vdf_to_e64(vdf)
+
+        width = np.timedelta64(15700000, "ns")
+        t_start = vdf.time.data[0::2] - width
+        t_stop = vdf.time.data[1::2] + width
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_minus"],
+            (result.time.data - t_start) / np.timedelta64(1, "s"),
+        )
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_plus"],
+            (t_stop - result.time.data) / np.timedelta64(1, "s"),
+        )
+
 
 @ddt
 class VdfElimTestCase(unittest.TestCase):

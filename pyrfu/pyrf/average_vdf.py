@@ -18,8 +18,10 @@ __status__ = "Prototype"
 
 
 def _seconds(values):
-    r"""Durations in seconds as timedelta64[ns]."""
-    return (np.asarray(values, dtype=np.float64) * 1e9).astype("timedelta64[ns]")
+    r"""Durations in seconds as timedelta64[ns], to the nearest ns (truncated,
+    0.0157 s was 15699999 ns), as extend_tint."""
+    ns = np.round(np.asarray(values, dtype=np.float64) * 1e9)
+    return ns.astype("timedelta64[ns]")
 
 
 def average_vdf(vdf, n_pts, method: str = "mean"):

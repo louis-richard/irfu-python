@@ -302,6 +302,16 @@ class AverageVDFTestCase(unittest.TestCase):
         total = result.attrs["delta_time_minus"] + result.attrs["delta_time_plus"]
         np.testing.assert_allclose(total, 100 / 64.0, rtol=1e-6)
 
+    def test_average_vdf_delta_time_rounded(self):
+        # The widths in ns are rounded (truncated, 0.0157 s was 0.015699999 s)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16])
+        vdf.attrs["delta_time_minus"] = np.full(10, 0.0157)
+        vdf.attrs["delta_time_plus"] = np.full(10, 0.0157)
+
+        result = pyrf.average_vdf(vdf, 1)
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            np.testing.assert_array_equal(result.attrs[key], np.full(10, 0.0157))
+
     def test_average_vdf_n_pts_range(self):
         # More points than distributions raised "need at least one array to
         # stack"; True passed the integer check
@@ -6458,6 +6468,35 @@ class ResampleTestCase(unittest.TestCase):
 
     T_0 = np.datetime64("2019-09-14T07:54:00", "ns")
 
+    def test_resample_distribution_attrs(self):
+        # The per-time attributes of a distribution are resampled, its per-bin
+        # ones are not, as in time_clip: with 32 times and 32 energy channels,
+        # the energy tables were averaged to the 8 times of ref, and a 0-d
+        # array attribute raised IndexError
+        vdf = generate_vdf(64.0, 32, (32, 32, 16), energy01=True)
+        vdf.attrs = {
+            **vdf.attrs,
+            "delta_energy_minus": np.ones((32, 32)),
+            "delta_time_plus": np.full(32, 0.5 / 64.0),
+            "delta_theta_minus": np.full(32, 5.625),
+            "label": np.arange(32.0),
+        }
+        result = pyrf.resample(vdf, generate_ts(16.0, 8))
+        self.assertEqual(len(result.time), 8)
+
+        for key in ["energy0", "energy1", "delta_theta_minus"]:
+            np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key])
+
+        self.assertEqual(result.attrs["delta_energy_minus"].shape, (8, 32))
+        np.testing.assert_allclose(result.attrs["delta_time_plus"], 0.5 / 64.0)
+
+        # Other attributes: by their length, as before
+        self.assertEqual(result.attrs["label"].shape, (8,))
+
+        vdf.attrs["scalar"] = np.array(1.0)
+        result = pyrf.resample(vdf, generate_ts(16.0, 8))
+        self.assertEqual(result.attrs["scalar"], 1.0)
+
     def _ts(self, t_s, data):
         times = self.T_0 + np.round(np.asarray(t_s) * 1e9).astype("timedelta64[ns]")
         return pyrf.ts_scalar(times, np.asarray(data, dtype=np.float64))
@@ -6931,6 +6970,26 @@ class ShockNormalTestCase(unittest.TestCase):
         for method in ["mc", "vc", "mx_1", "mx_2", "mx_3"]:
             np.testing.assert_array_equal(result["n"][method], expected["n"][method])
             self.assertAlmostEqual(np.linalg.norm(result["n"][method]), 1.0)
+
+    def test_shock_normal_parallel(self):
+        # Parallel upstream and downstream fields and velocities have a shear
+        # angle of 0 (NaN: the cosine rounded to 1 + 2e-16)
+        spec = {
+            "b_u": np.array([5.0, 3.0, -2.0]),
+            "b_d": np.array([10.0, 6.0, -4.0]),
+            "v_u": np.array([-450.0, 20.0, 10.0]),
+            "v_d": np.array([-900.0, 40.0, 20.0]),
+            "n_u": 5.0,
+            "n_d": 18.0,
+        }
+
+        with warnings.catch_warnings():
+            # The coplanarity normals of parallel fields are undefined
+            warnings.simplefilter("ignore", RuntimeWarning)
+            result = pyrf.shock_normal(spec)
+
+        self.assertEqual(result["info"]["msh"], 0.0)
+        self.assertEqual(result["info"]["vsh"], 0.0)
 
     def test_shock_normal_input(self):
         # TypeError (AssertionError; the following check never ran)
@@ -7462,6 +7521,25 @@ class StartTestCase(unittest.TestCase):
             np.datetime64("2019-01-01T00:00:00.000"),
         )
 
+    def test_start_end_unix(self):
+        # start and end are the unix times of datetime642unix (start took
+        # ns * 1e-9, different from ns / 1e9 in the last digit for about 40 %
+        # of the times), and start takes a Dataset as end (TypeError)
+        rng = np.random.default_rng(7)
+        t_0 = np.datetime64("2015-09-01T00:00:00", "ns")
+        offsets = rng.integers(0, 10 * 365 * 86400 * 10**9, 200)
+
+        for offset in offsets:
+            time = t_0 + np.array([offset, offset + 10**9]).astype("timedelta64[ns]")
+            inp = xr.DataArray(np.zeros(2), coords=[time], dims=["time"])
+            self.assertEqual(pyrf.start(inp), pyrf.datetime642unix(time)[0])
+            self.assertEqual(pyrf.end(inp), pyrf.datetime642unix(time)[1])
+
+        vdf = generate_vdf(64.0, 10, [32, 32, 16])
+        unix = pyrf.datetime642unix(vdf.time.data)
+        self.assertEqual(pyrf.start(vdf), unix[0])
+        self.assertEqual(pyrf.end(vdf), unix[-1])
+
 
 @ddt
 class TsAppendTestCase(unittest.TestCase):
@@ -7532,6 +7610,22 @@ class TsAppendTestCase(unittest.TestCase):
                 np.hstack([np.full(5, 5), np.full(n_1, n_1)]),
             )
             self.assertEqual(result.time.attrs["UNITS"], "ns")
+
+    def test_ts_append_bin_attrs(self):
+        # The per-bin attributes are kept whatever their length, as in
+        # time_clip (energy tables of 4 channels with 4 times were appended)
+        inp0 = self._series("2019-01-01T00:00:00", 4)
+        inp1 = self._series("2019-01-01T00:00:04", 4)
+
+        for inp in [inp0, inp1]:
+            inp.attrs["energy0"] = np.arange(4.0)
+            inp.attrs["delta_energy_minus"] = np.ones(4)
+
+        result = pyrf.ts_append(inp0, inp1)
+        for key in ["energy0", "delta_energy_minus"]:
+            np.testing.assert_array_equal(result.attrs[key], inp0.attrs[key])
+
+        self.assertEqual(result.attrs["vec"].shape, (8,))
 
     def test_ts_append_attrs_missing(self):
         # An array attribute only in the first input is kept as is (it raised KeyError)

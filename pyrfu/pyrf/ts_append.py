@@ -9,6 +9,9 @@ import numpy as np
 import xarray as xr
 from xarray.core.dataarray import DataArray
 
+# Local imports
+from ._time_attrs import _is_time_attr
+
 __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2024"
@@ -18,19 +21,17 @@ __status__ = "Prototype"
 
 
 def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
-    # The time-dependent attributes (arrays with the times along the first
-    # dimension, as in time_clip) of both inputs are appended; the others are
-    # those of the first input
+    # The time-dependent attributes of both inputs (the rule of time_clip: the
+    # energy tables of 32 channels with 32 times were appended) are appended;
+    # the others are those of the first input
     out = {}
 
     for k, attr in attrs0.items():
         other = attrs1.get(k)
 
         if (
-            isinstance(attr, np.ndarray)
+            _is_time_attr(k, attr, n_0)
             and isinstance(other, np.ndarray)
-            and attr.ndim > 0
-            and attr.shape[0] == n_0
             and other.shape == (n_1, *attr.shape[1:])
         ):
             out[k] = np.concatenate([attr, other])

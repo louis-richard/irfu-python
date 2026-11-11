@@ -331,9 +331,13 @@ def _stack(values):
     return np.stack(values)
 
 
+def _arccosd(cos_theta):
+    # Rounding takes the cosine of parallel vectors slightly above 1 (NaN)
+    return np.rad2deg(np.arccos(np.clip(cos_theta, -1.0, 1.0)))
+
+
 def _shear_angle(au, ad):
-    theta = np.arccos(np.sum(au * ad) / (np.linalg.norm(au) * np.linalg.norm(ad)))
-    return np.rad2deg(theta)
+    return _arccosd(np.sum(au * ad) / (np.linalg.norm(au) * np.linalg.norm(ad)))
 
 
 def _shock_angle(spec, n, field, leq90):
@@ -345,7 +349,7 @@ def _shock_angle(spec, n, field, leq90):
     theta = {}
 
     for fname in n:
-        tmp = np.rad2deg(np.arccos(np.sum(a * n[fname]) / np.linalg.norm(a)))
+        tmp = _arccosd(np.sum(a * n[fname]) / np.linalg.norm(a))
 
         if tmp > 90.0 and leq90:
             theta[fname] = 180.0 - tmp
