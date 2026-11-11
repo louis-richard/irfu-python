@@ -7,6 +7,7 @@ import warnings
 # 3rd party imports
 import numpy as np
 
+from ..pyrf._time import _ns
 from ..pyrf.ts_skymap import ts_skymap
 
 # Local imports
@@ -84,7 +85,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     phi = ref_probe.phi.data
     theta = ref_probe.theta.data
 
-    t_ref = ref_probe.time.data.astype("datetime64[ns]").astype(np.int64)
+    t_ref = _ns(ref_probe.time.data)
     d_t = np.median(np.diff(t_ref)) if len(t_ref) > 1 else np.inf
 
     allmms_skymap = np.full(
@@ -94,7 +95,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
 
     # Nearest skymaps and closest channels (they were paired by index)
     for i_s, skymap in enumerate(skymaps):
-        t_sky = skymap.time.data.astype("datetime64[ns]").astype(np.int64)
+        t_sky = _ns(skymap.time.data)
         idx_time = _nearest(t_ref, t_sky, d_t / 2)
         idx_en = _idx_closest(skymap.energy.data[0, :], ref_energy)
         paired = idx_time >= 0

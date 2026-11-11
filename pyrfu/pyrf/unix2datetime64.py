@@ -8,6 +8,9 @@ from typing import Any, Union
 import numpy as np
 from numpy.typing import NDArray
 
+# Local imports
+from ._time import _datetime64
+
 
 def unix2datetime64(time: Union[list[float], NDArray[Any]]) -> NDArray[np.datetime64]:
     r"""Converts unix time to datetime64 in ns units.
@@ -38,11 +41,6 @@ def unix2datetime64(time: Union[list[float], NDArray[Any]]) -> NDArray[np.dateti
     else:
         raise TypeError("time must be list or numpy.ndarray")
 
-    # Make sure that time is in ns format (round rather than truncate, e.g.,
-    # 6.5e-5 * 1e9 = 64999.99999999999)
-    time_unix = np.round(time_array * 1e9).astype(np.int64)
-
-    # Convert to unix
-    time_datetime64 = time_unix.astype("datetime64[ns]")
-
-    return time_datetime64
+    # To the nearest ns (rounded rather than truncated, e.g., 6.5e-5 * 1e9 =
+    # 64999.99999999999), NaT for NaN
+    return _datetime64(time_array)

@@ -10,6 +10,7 @@ import xarray as xr
 from scipy import interpolate
 
 # Local imports
+from ._time import _ns, _seconds
 from ._time_attrs import _is_time_attr
 
 # Interpolation methods: the kinds of scipy.interpolate.interp1d
@@ -148,10 +149,9 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
     # Both datetime64 (checked in resample) or both numeric
     if np.issubdtype(inp.time.dtype, np.datetime64):
         # Integer nanoseconds for the averaging windows, float seconds otherwise
-        inp_time_ns = inp.time.data.astype("datetime64[ns]").astype(np.int64)
-        ref_time_ns = ref.time.data.astype("datetime64[ns]").astype(np.int64)
-        inp_time = (inp_time_ns - inp_time_ns[0]) * 1e-9
-        ref_time = (ref_time_ns - inp_time_ns[0]) * 1e-9
+        inp_time_ns, ref_time_ns = _ns(inp.time.data), _ns(ref.time.data)
+        inp_time = _seconds(inp.time.data, inp.time.data[0])
+        ref_time = _seconds(ref.time.data, inp.time.data[0])
     elif np.issubdtype(inp.time.dtype, np.number) and np.issubdtype(
         ref.time.dtype, np.number
     ):

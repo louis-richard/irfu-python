@@ -10,6 +10,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ..pyrf._time import _ns
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
@@ -192,7 +193,7 @@ def hpca_pad(
     )
 
     # 3.4. B at the time of each energy step (samples k * ner + e) [nt, 1, ner]
-    t0_ = tt_.astype("datetime64[ns]").astype(np.int64)
+    t0_ = _ns(tt_)
     dt0 = np.diff(t0_, append=2 * t0_[-1] - t0_[-2])
     t1_tt = t0_[:, None] + np.arange(n_en)[None, :] * dt0[:, None] / n_en
     t1_tt = t1_tt.ravel().astype(np.int64).astype("datetime64[ns]")

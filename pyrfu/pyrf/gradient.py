@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ._time import _seconds
 from ._units import _ratio, _units
 
 
@@ -66,8 +67,7 @@ def gradient(inp, time_step: Optional[float] = None):
 
     # Times in seconds from the first sample, from the exact time steps in ns (the
     # median time step was wrong across gaps and for jittered times)
-    time = inp.time.data.astype("datetime64[ns]")
-    time = (time - time[0]).astype(np.int64) * 1e-9
+    time = _seconds(inp.time.data, inp.time.data[0])
     steps = np.diff(time)
 
     if time_step is None:

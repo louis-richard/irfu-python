@@ -9,6 +9,7 @@ import numpy as np
 from scipy import ndimage
 
 # Local imports
+from ._time import _timedelta
 from ._units import _power, _ratio, _units
 from .resample import resample
 from .ts_spectr import ts_spectr
@@ -213,7 +214,7 @@ def wavepolarize_means(
 
     # CREATING OUTPUT PARAMETER
     centres = step_length * np.arange(n_stp) + n_half
-    time_line = time[0] + np.round(centres / samp_freq * 1e9).astype("timedelta64[ns]")
+    time_line = time[0] + _timedelta(centres / samp_freq)
     bin_width = samp_freq / nop_fft
     freq_line = bin_width * np.arange(n_half)
 

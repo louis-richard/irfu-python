@@ -11,15 +11,11 @@ from scipy import optimize, signal
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from ._time import _seconds
 from .iso86012datetime64 import iso86012datetime64
 
 # Elements of the arrays evaluated at once (memory bound for long windows)
 _CHUNK = 2**21
-
-
-def _seconds(time, t_ref):
-    r"""Times in s from t_ref, from the exact steps in ns."""
-    return (np.asarray(time).astype("datetime64[ns]") - t_ref).astype(np.int64) * 1e-9
 
 
 class _BandLimited:

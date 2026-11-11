@@ -8,6 +8,9 @@ import warnings
 import numpy as np
 import xarray as xr
 
+# Local imports
+from ..pyrf._time import _ns
+
 
 def _spin_bounds(spin_sectors, time):
     r"""Start indices of the spins [s_k, s_k+1), from the decreases of the spin
@@ -18,7 +21,7 @@ def _spin_bounds(spin_sectors, time):
     # A gap of a whole number of spins starting mid-spin left the sectors
     # increasing: the two partial spins around it made one complete spin
     if len(time) > 2:
-        d_t = np.diff(np.asarray(time).astype("datetime64[ns]").astype(np.int64))
+        d_t = np.diff(_ns(time))
         gaps = np.where(d_t > 1.5 * np.median(d_t))[0] + 1
         spin_starts = np.hstack([spin_starts, gaps])
 

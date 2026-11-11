@@ -4,6 +4,9 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from ..pyrf._time import _seconds
+
 
 def dft_time_shift(inp, tau, f_s: float = None):
     r"""Shifts the time series `inp` by `tau` seconds using the discrete
@@ -59,7 +62,7 @@ def dft_time_shift(inp, tau, f_s: float = None):
     """
     # Shift in samples (a fraction of a sample is allowed)
     if f_s is None:
-        d_t = (inp.time.data[-1] - inp.time.data[0]) / np.timedelta64(1, "s")
+        d_t = _seconds(inp.time.data[-1], inp.time.data[0])
         f_s = (len(inp.time) - 1) / d_t
 
     d_s = tau * f_s

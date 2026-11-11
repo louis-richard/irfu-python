@@ -13,6 +13,9 @@ import pandas as pd
 from numpy.typing import NDArray
 from scipy import interpolate
 
+# Local imports
+from ..pyrf._time import _datetime64, _unix
+
 
 @lru_cache(maxsize=1)
 def _igrf_coefficients() -> Tuple[NDArray[np.float64], ...]:
@@ -83,11 +86,9 @@ def igrf(
 
     years_igrf, g_igrf, h_igrf = _igrf_coefficients()
 
-    year_ref = (time * 1e9).astype("datetime64[ns]")
-    year_ref = year_ref.astype("datetime64[Y]")
+    year_ref = _datetime64(time).astype("datetime64[Y]")
     year_ref = year_ref.astype(np.int64) + 1970
-    year_ref_unix = (year_ref - 1970).astype("datetime64[Y]")
-    year_ref_unix = year_ref_unix.astype("datetime64[ns]").astype(np.int64) / 1e9
+    year_ref_unix = _unix((year_ref - 1970).astype("datetime64[Y]"))
 
     if np.min(year_ref) < np.min(years_igrf):
         warnings.warn(

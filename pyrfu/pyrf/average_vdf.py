@@ -7,14 +7,8 @@ import numpy as np
 from xarray.core.dataset import Dataset
 
 # Local imports
+from pyrfu.pyrf._time import _seconds, _timedelta
 from pyrfu.pyrf.ts_skymap import ts_skymap
-
-
-def _seconds(values):
-    r"""Durations in seconds as timedelta64[ns], to the nearest ns (truncated,
-    0.0157 s was 15699999 ns), as extend_tint."""
-    ns = np.round(np.asarray(values, dtype=np.float64) * 1e9)
-    return ns.astype("timedelta64[ns]")
 
 
 def average_vdf(vdf, n_pts, method: str = "mean"):
@@ -123,15 +117,13 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
     # Half widths of the accumulations: from the start of the first sample of
     # each window to the end of the last
     if "delta_time_minus" in vdf.attrs and "delta_time_plus" in vdf.attrs:
-        t_start = np.array([times[i_l] for i_l, _ in bounds]) - _seconds(
+        t_start = np.array([times[i_l] for i_l, _ in bounds]) - _timedelta(
             [vdf.attrs["delta_time_minus"][i_l] for i_l, _ in bounds]
         )
-        t_stop = np.array([times[i_r - 1] for _, i_r in bounds]) + _seconds(
+        t_stop = np.array([times[i_r - 1] for _, i_r in bounds]) + _timedelta(
             [vdf.attrs["delta_time_plus"][i_r - 1] for _, i_r in bounds]
         )
-        vdf_avg.attrs["delta_time_minus"] = (time_avg - t_start) / np.timedelta64(
-            1, "s"
-        )
-        vdf_avg.attrs["delta_time_plus"] = (t_stop - time_avg) / np.timedelta64(1, "s")
+        vdf_avg.attrs["delta_time_minus"] = _seconds(time_avg, t_start)
+        vdf_avg.attrs["delta_time_plus"] = _seconds(t_stop, time_avg)
 
     return vdf_avg

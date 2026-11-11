@@ -1893,6 +1893,15 @@ class CalcFsTestCase(unittest.TestCase):
         expected = np.mean([o.data for o in one], axis=0)
         np.testing.assert_allclose(result.data, expected)
 
+    def test_calc_fs_inverse_of_calc_dt(self):
+        # The same median step as calc_dt (it differed in the last digit)
+        steps = np.random.default_rng(1).integers(7_800_000, 7_830_000, 1000)
+        time = np.datetime64("2019-01-01", "ns") + np.cumsum(steps).astype(
+            "timedelta64[ns]"
+        )
+        inp = xr.DataArray(np.zeros(len(time)), coords=[time], dims=["time"])
+        self.assertEqual(pyrf.calc_fs(inp), 1 / pyrf.calc_dt(inp))
+
 
 @ddt
 class CalcSqrtQTestCase(unittest.TestCase):
@@ -2620,6 +2629,15 @@ class Datetime2Iso8601TestCase(unittest.TestCase):
         time = datetime.datetime(2019, 1, 1, 0, 0, 0, 123456)
         self.assertEqual(pyrf.datetime2iso8601(time), "2019-01-01T00:00:00.123456000")
 
+    def test_datetime2iso8601_datetime_microseconds(self):
+        # Microseconds and the wall time of an aware datetime, as with pandas
+        naive = datetime.datetime(2019, 1, 1, 12, 30, 15, 123456)
+        aware = naive.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=2)))
+        for time in [naive, aware]:
+            self.assertEqual(
+                pyrf.datetime2iso8601(time), "2019-01-01T12:30:15.123456000"
+            )
+
     def test_datetime2iso8601_invalid(self):
         with self.assertRaises(TypeError):
             pyrf.datetime2iso8601("2019-01-01T00:00:00")
@@ -2792,6 +2810,16 @@ class Unix2Datetime64TestCase(unittest.TestCase):
         time = np.datetime64("2026-09-29T12:34:56.123456", "ns") + np.arange(10)
         round_trip = pyrf.unix2datetime64(pyrf.datetime642unix(time))
         np.testing.assert_array_less(np.abs((round_trip - time).astype(np.int64)), 129)
+
+    def test_unix2datetime64_nan(self):
+        # NaN gives NaT, without warning (it was 1970-01-01 on arm64, the cast of
+        # NaN to int64, with "invalid value encountered in cast")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.unix2datetime64([np.nan, 1.5])
+
+        self.assertTrue(np.isnat(result[0]))
+        self.assertEqual(result[1], np.datetime64("1970-01-01T00:00:01.5", "ns"))
 
 
 @ddt
@@ -5302,6 +5330,14 @@ class Iso86012DatetimeTestCase(unittest.TestCase):
         for value in [time, np.array(time, dtype="datetime64[ns]")]:
             self.assertListEqual(pyrf.iso86012datetime(value), expected)
 
+    def test_iso86012datetime_utc_designator(self):
+        # A trailing "Z", as iso86012datetime64 (numpy warned)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.iso86012datetime(["2019-01-01T00:00:00.5Z"])
+
+        self.assertListEqual(result, [datetime.datetime(2019, 1, 1, 0, 0, 0, 500000)])
+
     def test_iso86012datetime_errors(self):
         with self.assertRaises(TypeError):
             pyrf.iso86012datetime("2019-01-01T00:00:00")
@@ -5392,6 +5428,15 @@ class Iso86012Unix(unittest.TestCase):
             pyrf.iso86012unix(time),
             pyrf.datetime642unix(time.astype("datetime64[ns]")),
         )
+
+    def test_iso86012unix_tuple_and_utc_designator(self):
+        # Tuples and a trailing "Z", as iso86012datetime64 (TypeError and a
+        # numpy warning)
+        expected = pyrf.iso86012unix(["2019-01-01T00:00:00.5"])
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for time in [("2019-01-01T00:00:00.5",), ["2019-01-01T00:00:00.5Z"]]:
+                np.testing.assert_array_equal(pyrf.iso86012unix(time), expected)
 
     def test_iso86012unix_input(self):
         # TypeError (AssertionError)
@@ -7548,6 +7593,47 @@ class StartTestCase(unittest.TestCase):
         unix = pyrf.datetime642unix(vdf.time.data)
         self.assertEqual(pyrf.start(vdf), unix[0])
         self.assertEqual(pyrf.end(vdf), unix[-1])
+
+
+class TimeHelpersTestCase(unittest.TestCase):
+    # The time conversions of pyrf/_time.py
+    @property
+    def module(self):
+        return sys.modules["pyrfu.pyrf._time"]
+
+    def test_seconds_exact(self):
+        # The exact steps in ns divided by 1e9 (correctly rounded): * 1e-9
+        # differs in the last digit for some steps
+        rng = np.random.default_rng(3)
+        t_0 = np.datetime64("2019-01-01", "ns")
+        steps = rng.integers(0, 10**12, 1000)
+        time = t_0 + steps.astype("timedelta64[ns]")
+        np.testing.assert_array_equal(self.module._seconds(time, t_0), steps / 1e9)
+        self.assertTrue(np.any(steps * 1e-9 != steps / 1e9))
+
+        # Any unit, str, NaT
+        time_us = time.astype("datetime64[us]")
+        np.testing.assert_array_equal(
+            self.module._seconds(time_us, "2019-01-01"),
+            (time_us - t_0) / np.timedelta64(1, "s"),
+        )
+        self.assertTrue(np.isnan(self.module._seconds(np.datetime64("NaT", "ns"), t_0)))
+
+    def test_unix_and_ns(self):
+        time = np.array(["1970-01-01T00:00:01.5", "NaT"], dtype="datetime64[ms]")
+        np.testing.assert_array_equal(self.module._unix(time), [1.5, np.nan])
+        self.assertEqual(self.module._ns(time[:1])[0], 1_500_000_000)
+
+    def test_timedelta_and_datetime64(self):
+        # To the nearest ns (truncated, 0.0157 s was 15699999 ns), NaT for NaN
+        result = self.module._timedelta([0.0157, -0.0157, np.nan])
+        self.assertEqual(result[0], np.timedelta64(15_700_000, "ns"))
+        self.assertEqual(result[1], np.timedelta64(-15_700_000, "ns"))
+        self.assertTrue(np.isnat(result[2]))
+        self.assertEqual(self.module._timedelta(6.5e-5), np.timedelta64(65, "us"))
+        self.assertEqual(
+            self.module._datetime64(1.5), np.datetime64("1970-01-01T00:00:01.5", "ns")
+        )
 
 
 @ddt

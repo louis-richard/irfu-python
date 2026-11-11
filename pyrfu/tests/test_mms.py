@@ -8470,6 +8470,27 @@ class GetTsTestCase(unittest.TestCase):
             result.time.data, time + np.timedelta64(shift, "ms")
         )
 
+    def test_get_ts_fpi_epoch_shift_rounded(self):
+        # Half of 8.2 ms is 4.1 ms to the ns (8.2 * 1e6 / 2 was truncated to
+        # 4099999 ns)
+        time = np.array([np.datetime64("2019-09-14T07:54:00", "ns")])
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", 0.0), ("Epoch_plus_var", 8.2)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            cdf[name].add_attribute("UNITS", "ms")
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(1))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+        result = get_ts(bytes(pycdfpp.save(cdf)), "mms1_des_numberdensity_brst")
+
+        np.testing.assert_array_equal(
+            result.time.data, time + np.timedelta64(4_100_000, "ns")
+        )
+
     @staticmethod
     def _cdf(cdf_name, values, depends=None, epoch_type=None, n_t=3):
         # In-memory CDF with one variable on an epoch (1 s steps) and its

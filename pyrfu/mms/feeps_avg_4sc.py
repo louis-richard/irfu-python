@@ -12,15 +12,11 @@ import xarray as xr
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from ..pyrf._time import _ns
 from ..pyrf.calc_fs import calc_fs
 from ..pyrf.nanavg_4sc import _valid_count
 from ..pyrf.resample import resample
 from ._eis_units import _check_same_units
-
-
-def _ns(time):
-    r"""Times as float nanoseconds."""
-    return time.astype("datetime64[ns]").astype(np.int64).astype(np.float64)
 
 
 def _without_gaps(inp, inp_r):
@@ -30,7 +26,8 @@ def _without_gaps(inp, inp_r):
     start and after the end of `inp`). A covered time that is not between two
     samples of `inp` at most 1.5 periods apart (a gap edge, an end) takes the
     nearest sample, not a value interpolated across the gap."""
-    time, ref = _ns(inp.time.data), _ns(inp_r.time.data)
+    time = _ns(inp.time.data).astype(np.float64)
+    ref = _ns(inp_r.time.data).astype(np.float64)
     steps = np.diff(time) if len(time) > 1 else np.diff(ref)
     d_t = np.median(steps) if len(steps) else 0.0
 

@@ -5,6 +5,9 @@
 import numpy as np
 import xarray as xr
 
+# Local imports
+from ..pyrf._time import _ns
+
 # Start azimuths of HPCA per spin (half spin of the spacecraft), as hpca_pad
 _N_AZ = 16
 
@@ -22,7 +25,7 @@ def _complete_spins(start_az, time):
             "no complete spin"
         )
 
-    d_t = np.diff(np.asarray(time).astype("datetime64[ns]").astype(np.int64))
+    d_t = np.diff(_ns(time))
     no_gap = d_t <= 1.5 * np.median(d_t)
 
     starts, stops = spin_starts[:-1], spin_starts[1:]

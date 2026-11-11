@@ -9,6 +9,9 @@ import numpy as np
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
+# Local imports
+from ._time import _ns
+
 
 def calc_dt(inp: Union[Dataset, DataArray]) -> float:
     r"""Compute time step of the input time series.
@@ -33,11 +36,7 @@ def calc_dt(inp: Union[Dataset, DataArray]) -> float:
     if len(inp.time) < 2:
         return np.nan
 
-    # Convert time to nanoseconds
-    time_datetime64 = inp.time.data.astype("datetime64[ns]")
-    time_ns = time_datetime64.astype(np.int64)
-
-    # Calculate the sampling frequency
-    dt_s = 1e-9 * float(np.median(np.diff(time_ns)))
+    # Median time step, from the exact steps in ns
+    dt_s = float(np.median(np.diff(_ns(inp.time.data)))) / 1e9
 
     return dt_s

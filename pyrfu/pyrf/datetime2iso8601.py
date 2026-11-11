@@ -7,7 +7,6 @@ from typing import Union
 
 # 3rd party imports
 import numpy as np
-import pandas as pd
 from numpy.typing import NDArray
 
 # Local imports
@@ -51,12 +50,10 @@ def datetime2iso8601(
             time_iso8601.append(datetime2iso8601(t))
 
     elif isinstance(time, datetime):
-        time_datetime = pd.Timestamp(time)
-
-        # Convert to string
-        datetime_str = time_datetime.strftime("%Y-%m-%dT%H:%M:%S.%f")
-
-        time_iso8601 = f"{datetime_str}{time_datetime.nanosecond:03d}"
+        # Through numpy.datetime64 (pandas was imported for the nanoseconds of
+        # a datetime, always 0); the wall time, the time zone is not converted
+        time_dt64 = np.datetime64(time.replace(tzinfo=None), "ns")
+        time_iso8601 = str(datetime642iso8601(time_dt64)[0])
 
     else:
         raise TypeError("time must be datetime.datetime or numpy.datetime64")

@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ..pyrf._time import _ns
 from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
 from .feeps_omni import _eyes_on_omni_energies
@@ -67,7 +68,7 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     if b_bcs is None or b_dmpa is None:
         return psi, "spin sectors"
 
-    t_fgm = b_bcs.time.data.astype("datetime64[ns]").astype(np.int64)
+    t_fgm = _ns(b_bcs.time.data)
     b_dmpa = b_dmpa.interp(time=b_bcs.time.data)
     b_xyz, d_xyz = b_bcs.data[:, :3], b_dmpa.data[:, :3]
 
@@ -85,7 +86,7 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     )
     psi_fgm = np.rad2deg(np.unwrap(psi_fgm[good]))
 
-    t_feeps = inp_dataset.time.data.astype("datetime64[ns]").astype(np.int64)
+    t_feeps = _ns(inp_dataset.time.data)
     psi_fgm = np.interp(t_feeps, t_fgm[good], psi_fgm, left=np.nan, right=np.nan)
 
     if tmmode == "srvy":

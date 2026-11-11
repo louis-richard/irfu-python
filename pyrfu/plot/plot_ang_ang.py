@@ -12,6 +12,7 @@ import xarray as xr
 
 # Local imports
 # (from the modules, as pyrfu.plot is imported while pyrfu.pyrf is loading)
+from ..pyrf._time import _ns
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.time_clip import time_clip
 from .plot_spectr import plot_spectr
@@ -25,8 +26,8 @@ def _time_avg(vdf, tint):
     if len(tint) == 1:
         # The closest time (bisect gave the next one, and IndexError after the
         # last sample)
-        time = vdf.time.data.astype("datetime64[ns]").astype(np.int64)
-        t_0 = np.datetime64(tint[0]).astype("datetime64[ns]").astype(np.int64)
+        time = _ns(vdf.time.data)
+        t_0 = _ns(np.datetime64(tint[0]))
         idx = int(np.argmin(np.abs(time - t_0)))
         vdf_data = vdf.data.data[idx, ...]
         vdf_ener = vdf.energy.data[idx, ...]

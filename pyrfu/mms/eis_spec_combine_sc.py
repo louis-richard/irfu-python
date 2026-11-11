@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ..pyrf._time import _ns
 from ._eis_units import _check_same_attrs, _check_same_units
 
 
@@ -39,8 +40,8 @@ def _paired_samples(ref, inp):
     none): for full-resolution spectra (with sectors), the same sector nearest
     in time within half a spin, as the sector gives the look direction;
     otherwise (spin averages), the nearest time within half a time step."""
-    t_ref = ref.time.data.astype("datetime64[ns]").astype(np.int64)
-    t_inp = inp.time.data.astype("datetime64[ns]").astype(np.int64)
+    t_ref = _ns(ref.time.data)
+    t_inp = _ns(inp.time.data)
     d_t = np.median(np.diff(t_ref)) if len(t_ref) > 1 else np.inf
 
     if "sector" not in ref.coords or "sector" not in inp.coords:

@@ -5,6 +5,9 @@
 import numpy as np
 from scipy import signal
 
+# Local imports
+from .calc_fs import calc_fs
+
 
 def wave_fft(
     inp,
@@ -41,10 +44,8 @@ def wave_fft(
     """
 
     if f_sampling is None:
-        # Time step from the times in ns (they were taken as ns in any unit)
-        time = inp.time.data.astype("datetime64[ns]")
-        delta_t = np.median(np.diff(time).astype(np.float64)) * 1e-9
-        f_sampling = 1 / delta_t
+        # From the times in ns (they were taken as ns in any unit)
+        f_sampling = calc_fs(inp)
 
     # convert ms to points
     n_per_seg = np.round(frame_length * f_sampling).astype(np.int64)
