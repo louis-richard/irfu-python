@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
 # Built-in imports
-import itertools
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 # 3rd party imports
 import numpy as np
@@ -14,22 +13,20 @@ from xarray.core.dataarray import DataArray
 from pyrfu.pyrf._units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_k import c_4_k
-from pyrfu.pyrf.cross import cross
-from pyrfu.pyrf.dot import dot
 from pyrfu.pyrf.normalize import normalize
 
 from .resample import resample
 
 
-def _to_ts(out_data: NDArray[Any], b_dict: Mapping[str, DataArray]) -> DataArray:
+def _to_ts(out_data: NDArray[Any], time: DataArray) -> DataArray:
     r"""Converts output data to xarray.DataArray.
 
     Parameters
     ----------
     out_data : numpy.ndarray
         Output data.
-    b_dict : dict
-        Dictionary containing the coordinates of the field.
+    time : xarray.DataArray
+        Time coordinate of the field.
 
     Returns
     -------
@@ -38,19 +35,19 @@ def _to_ts(out_data: NDArray[Any], b_dict: Mapping[str, DataArray]) -> DataArray
 
     """
     if out_data.ndim == 1:
-        out = xr.DataArray(out_data, coords=[b_dict["1"].time], dims=["time"])
+        out = xr.DataArray(out_data, coords=[time], dims=["time"])
 
     elif out_data.ndim == 2:
         out = xr.DataArray(
             out_data,
-            coords=[b_dict["1"].time, ["x", "y", "z"]],
+            coords=[time, ["x", "y", "z"]],
             dims=["time", "comp"],
         )
 
     else:
         out = xr.DataArray(
             out_data,
-            coords=[b_dict["1"].time, ["x", "y", "z"], ["x", "y", "z"]],
+            coords=[time, ["x", "y", "z"], ["x", "y", "z"]],
             dims=["time", "vcomp", "hcomp"],
         )
 
@@ -187,76 +184,43 @@ def c_4_grad(
     r_list = [resample(r, b_list[0]) for r in r_list]
     b_list = [resample(b, b_list[0]) for b in b_list]
 
-    # Compute reciprocal vectors in barycentric coordinates (see c_4_k)
-    k_list = c_4_k(r_list)
-
-    # Magnetic field at the center of mass of the tetrahedron
-    b_avg = avg_4sc(b_list)
-
-    b_dict = {"1": b_list[0], "2": b_list[1], "3": b_list[2], "4": b_list[3]}
-    k_dict = {"1": k_list[0], "2": k_list[1], "3": k_list[2], "4": k_list[3]}
-
-    mms_list = b_dict.keys()
+    # Reciprocal vectors in barycentric coordinates (see c_4_k) and the field
+    # of the four spacecraft, (spacecraft, time, ...): the sums over the
+    # spacecraft are in the same order as the loops they replace
+    k_s = np.stack([k.data for k in c_4_k(r_list)])
+    b_s = np.stack([b.data for b in b_list])
+    time = b_list[0].time
 
     # Divergence of a tensor: d T_ij / d x_i
     if is_tensor:
-        out_data = np.zeros((len(b_dict["1"]), 3))
-
-        for mms_id in mms_list:
-            out_data += np.einsum(
-                "ti,tij->tj", k_dict[mms_id].data, b_dict[mms_id].data
-            )
-
-        out = _to_ts(out_data, b_dict)
+        out = _to_ts(np.sum(np.einsum("sti,stij->stj", k_s, b_s), axis=0), time)
         out.attrs = _attrs({}, units)
 
         return out
 
-    # Gradient of scalar/vector
-    if len(b_dict["1"].shape) == 1:
-        grad_b = np.zeros((len(b_dict["1"]), 3))
-
-        for i_sc in mms_list:
-            grad_b += k_dict[i_sc].data * np.tile(b_dict[i_sc].data, (3, 1)).T
-
+    # Gradient of a scalar (time, i) or of a vector (time, j, i) = d b_j / d x_i
+    if b_s.ndim == 2:
+        grad_b = np.sum(k_s * b_s[:, :, np.newaxis], axis=0)
     else:
-        grad_b = np.zeros((len(b_dict["1"]), 3, 3))
+        grad_b = np.sum(k_s[:, :, np.newaxis, :] * b_s[:, :, :, np.newaxis], axis=0)
 
-        for i, j, i_sc in itertools.product(range(3), range(3), mms_list):
-            grad_b[:, j, i] += k_dict[i_sc][:, i].data * b_dict[i_sc][:, j].data
-
-    # Gradient
-    if method.lower() == "grad":
+    if method == "grad":
         out_data = grad_b
-
-    # Divergence
-    elif method.lower() == "div":
-        out_data = np.zeros(len(b_dict["1"]))
-
-        for mms_id in mms_list:
-            out_data += dot(k_dict[mms_id], b_dict[mms_id]).data
-
-    # Curl
-    elif method.lower() == "curl":
-        out_data = np.zeros((len(b_dict["1"]), 3))
-
-        for mms_id in mms_list:
-            out_data += cross(k_dict[mms_id], b_dict[mms_id]).data
-
-    # B.div(B)
-    elif method.lower() == "bdivb":
-        out_data = np.zeros(b_avg.shape)
-
-        for i in range(3):
-            out_data[:, i] = np.sum(b_avg.data * grad_b[:, i, :], axis=1)
-
-    # Curvature
+    elif method == "div":
+        out_data = np.sum(np.sum(k_s * b_s, axis=2), axis=0)
+    elif method == "curl":
+        out_data = np.sum(np.cross(k_s, b_s, axis=2), axis=0)
+    elif method == "bdivb":
+        # (B.grad)B with B at the center of mass of the tetrahedron (computed
+        # for this method only; it was on every call)
+        b_avg = avg_4sc(b_list).data
+        out_data = np.sum(b_avg[:, np.newaxis, :] * grad_b, axis=2)
     else:
+        # Curvature: (b.grad)b of the unit vectors
         b_hat_list = [normalize(b) for b in b_list]
-
         out_data = c_4_grad(r_list, b_hat_list, method="bdivb").data
 
-    out = _to_ts(out_data, b_dict)
+    out = _to_ts(out_data, time)
     out.attrs = _attrs({}, units)
 
     return out
