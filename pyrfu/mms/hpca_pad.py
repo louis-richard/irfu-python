@@ -207,33 +207,28 @@ def hpca_pad(
 
     # 3.5. select dist for PAD (NaN for the samples without azimuths)
     vdf_data = np.where(np.isnan(phi) | np.isnan(theta_b), np.nan, vdf.data)
-    vdfs_ = [vdf_data.copy() for _ in range(len(angle_vec))]
 
-    vdfs_[0][theta_b > angle_vec[0]] = np.nan
-
-    for i, vdf_ in enumerate(vdfs_):
-        vdf_[theta_b < (angle_vec[i] - d_angle[i])] = np.nan
-        vdf_[theta_b > angle_vec[i]] = np.nan
-
-    vdfs_[-1][theta_b < (angle_vec[-1] - d_angle[len(angle_vec) - 1])] = np.nan
-
-    # [n_ti, n_po, n_en] --> [n_ti, n_en]
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        vdfs_ = [np.nanmean(vdf_, axis=1) for vdf_ in vdfs_]
-
-    # average among energy dimension (both ends of elim included)
+    # energies averaged (both ends of elim included)
     i_elim = np.argmin(abs(ien.data - elim[0]))
     e_min = ien.data[i_elim]
     j_elim = np.argmin(abs(ien.data - elim[1]))
     e_max = ien.data[j_elim]
     logger.info("PSD/pflux pitch angle dist. from %s [eV] to %s [eV]", e_min, e_max)
 
+    # Each pitch-angle bin [angle - d_angle, angle], one at a time (the 12
+    # masked copies of the data were kept): mean over the anodes [n_ti, n_en],
+    # then over the energies of elim [n_ti]
+    pads = []
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        vdfs_ = [np.nanmean(vdf_[:, i_elim : j_elim + 1], axis=1) for vdf_ in vdfs_]
 
-    padd_ = np.transpose(np.stack(vdfs_))  # [nt, npitcha12]
+        for lower, upper in zip(angle_vec - d_angle, angle_vec):
+            in_bin = (theta_b >= lower) & (theta_b <= upper)
+            pad = np.nanmean(np.where(in_bin, vdf_data, np.nan), axis=1)
+            pads.append(np.nanmean(pad[:, i_elim : j_elim + 1], axis=1))
+
+    padd_ = np.transpose(np.stack(pads))  # [nt, npitcha12]
 
     # 3.6. make spectrum
     coords = [tt_, pitch_a]
