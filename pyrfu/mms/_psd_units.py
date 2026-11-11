@@ -7,13 +7,6 @@ from scipy import constants
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 # Shared by the PSD, DEF and DPF unit conversions (def2psd, dpf2psd, psd2def,
 # psd2dpf)
 

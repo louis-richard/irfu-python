@@ -12,13 +12,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from ._time_attrs import _is_time_attr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
     # The time-dependent attributes of both inputs (the rule of time_clip: the

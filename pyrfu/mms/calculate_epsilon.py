@@ -15,13 +15,6 @@ from pyrfu.mms._vdf_bins import _charge, _mass, _speed
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def _get_si_vdf(vdf: Dataset) -> np.ndarray:
     r"""Relativistic phase-space density of vdf in SI units (s^3 m^-6): that

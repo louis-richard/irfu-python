@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 # 3rd party imports
 from copy import deepcopy
 
@@ -10,13 +12,6 @@ from .feeps_flat_field_corrections import feeps_flat_field_corrections
 from .feeps_remove_bad_data import feeps_remove_bad_data
 from .feeps_remove_sun import feeps_remove_sun
 from .feeps_split_integral_ch import feeps_split_integral_ch
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolosk@irf.se"
-__copyright__ = "Copyright 2020-2025"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def feeps_corrections(feeps_alle):

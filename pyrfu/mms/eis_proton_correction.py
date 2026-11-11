@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from ._eis_units import _check_flux
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _phxtof_calibration(energy, alpha, beta, gamma):
     r"""Pulse Height x Time Of Flight correction model from EPD Data Product

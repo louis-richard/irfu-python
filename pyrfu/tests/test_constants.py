@@ -7,13 +7,6 @@ import unittest
 # Local imports
 from .. import constants
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 
 class ConstantsTestCase(unittest.TestCase):
     """Tests of the values in pyrfu.constants."""

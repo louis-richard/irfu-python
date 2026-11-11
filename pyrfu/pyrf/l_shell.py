@@ -10,13 +10,6 @@ from ._units import _check_units
 from .cotrans import cotrans
 from .ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def l_shell(r_xyz):
     r"""Compute spacecraft position L Shell for a dipole magnetic field

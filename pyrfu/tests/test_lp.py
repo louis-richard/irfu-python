@@ -12,13 +12,6 @@ from scipy import constants
 from .. import lp, pyrf
 from ..lp.photo_current import surface_materials
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 
 class ThermalCurrentTestCase(unittest.TestCase):
     def test_thermal_current_probe_type_case(self):

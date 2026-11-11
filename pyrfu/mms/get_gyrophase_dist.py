@@ -13,13 +13,6 @@ from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.time_clip import time_clip
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _gyrophase_edges(angles):
     r"""Edges of the gyrophase bins (degrees) from a number of bins or the

@@ -15,13 +15,6 @@ from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def dec_par_perp(
     inp: DataArray, b_bgd: DataArray, flag_spin_plane: bool = False

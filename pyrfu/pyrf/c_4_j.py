@@ -14,13 +14,6 @@ from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_grad import c_4_grad
 from pyrfu.pyrf.cross import cross
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def c_4_j(
     r_list: Sequence[DataArray], b_list: Sequence[DataArray]

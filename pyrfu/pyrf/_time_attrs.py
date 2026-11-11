@@ -4,13 +4,6 @@
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.13"
-__status__ = "Prototype"
-
 # The rule shared by time_clip, resample and ts_append to tell the global
 # attributes with one value (or row) per time from the others. The tables
 # describe the particle distributions of pyrfu (pyrf.ts_skymap and the

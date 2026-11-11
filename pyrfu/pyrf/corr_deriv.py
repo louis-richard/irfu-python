@@ -7,13 +7,6 @@ import numpy as np
 # Local imports
 from .find_closest import find_closest
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _derivative(time, inp):
     # Derivative at the middle of the time steps

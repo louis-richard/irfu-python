@@ -14,13 +14,6 @@ from xarray.core.dataarray import DataArray
 from pyrfu.pyrf._units import _attrs, _power, _units
 from pyrfu.pyrf.calc_dt import calc_dt
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def autocorr(
     inp: DataArray, maxlags: Optional[int] = None, normed: Optional[bool] = True

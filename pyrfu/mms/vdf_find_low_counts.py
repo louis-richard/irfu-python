@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from ..pyrf.ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _movmean(inp, n_mov_mean):
     # Moving mean along the first axis as MATLAB movmean (shrinking window at

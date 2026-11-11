@@ -4,13 +4,6 @@
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.13"
-__status__ = "Prototype"
-
 
 def _is_nan(attr):
     r"""True for a NaN or NaT scalar, False for any other value."""

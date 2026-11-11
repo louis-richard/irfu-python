@@ -13,13 +13,6 @@ import pandas as pd
 from numpy.typing import NDArray
 from scipy import interpolate
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 @lru_cache(maxsize=1)
 def _igrf_coefficients() -> Tuple[NDArray[np.float64], ...]:

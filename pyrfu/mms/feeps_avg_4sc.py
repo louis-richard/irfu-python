@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 # 3rd party imports
 from copy import deepcopy
 from typing import Sequence
@@ -14,13 +16,6 @@ from ..pyrf.calc_fs import calc_fs
 from ..pyrf.nanavg_4sc import _valid_count
 from ..pyrf.resample import resample
 from ._eis_units import _check_same_units
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolos.kolokotronis@irf.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.5.10"
-__status__ = "Prototype"
 
 
 def _ns(time):

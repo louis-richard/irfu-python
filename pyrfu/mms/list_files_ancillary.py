@@ -17,13 +17,6 @@ from ..pyrf.iso86012datetime import iso86012datetime
 from ..pyrf.iso86012datetime64 import iso86012datetime64
 from .db_init import _read_config
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 # Products of the whole constellation: one file for the four spacecraft
 # (MMS_DEFQ_2017187_2017188.V00, in ancillary/mms/defq; sc_id=mms on the SDC)
 _CONSTELLATION_PRODUCTS = ("defq", "predq")

@@ -13,13 +13,6 @@ from ..pyrf.ts_skymap import ts_skymap
 from .get_ts import _get_epochs
 from .get_variable import _pycdfpp_attributes_to_dict
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Keys of the global attributes to keep from CDF informations
 Globkeys = [
     "CDF",

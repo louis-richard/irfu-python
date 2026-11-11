@@ -5,13 +5,6 @@
 import numpy as np
 from matplotlib import colors
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def plot_reduced_2d(ax, f2d, clim: list = None):
     r"""Plot the 2D recuded distribution `f2d` onto the axis `ax`.

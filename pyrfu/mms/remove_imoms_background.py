@@ -9,13 +9,6 @@ from scipy import constants
 from ..pyrf.resample import resample
 from ..pyrf.ts_tensor_xyz import ts_tensor_xyz
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     r"""Remove the mode background population due to penetrating radiation

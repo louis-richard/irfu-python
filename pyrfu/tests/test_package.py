@@ -14,13 +14,6 @@ import pyrfu
 
 from .. import _user_config
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2026"
-__license__ = "MIT"
-__version__ = "2.5.12"
-__status__ = "Prototype"
-
 
 class PackageLoggerTestCase(unittest.TestCase):
     """Tests of the logger of pyrfu."""

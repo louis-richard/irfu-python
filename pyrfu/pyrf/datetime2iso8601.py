@@ -13,13 +13,6 @@ from numpy.typing import NDArray
 # Local imports
 from .datetime642iso8601 import datetime642iso8601
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def datetime2iso8601(
     time: Union[list[datetime], NDArray, datetime, np.datetime64],

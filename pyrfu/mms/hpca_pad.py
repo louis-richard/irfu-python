@@ -18,13 +18,6 @@ from ._hpca import _half_spins
 from .db_get_variable import db_get_variable
 from .feeps_avg_4sc import _without_gaps
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.5.10"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 

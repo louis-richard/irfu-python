@@ -13,13 +13,6 @@ from ..mms._vdf_bins import _pitch_angles, _polar_edges, _sc_pot, _speed_edges
 from ..mms._vdf_mc import _bins_d3v, _rng, _sample
 from .plot_ang_ang import _check_units
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # Largest angular width (degrees) of the cells drawn, so that the pitch-angle
 # bins are drawn as arcs rather than chords
 _MAX_ARC = 2.0

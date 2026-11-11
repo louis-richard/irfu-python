@@ -19,13 +19,6 @@ from botocore.exceptions import ClientError
 from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 # Public copy of the MMS archive (CDAWeb) on NASA HelioCloud, used if no bucket
 # is set in the configuration file
 HELIOCLOUD_MMS = "gov-nasa-hdrl-data1/spdf/cdaweb/data/mms"

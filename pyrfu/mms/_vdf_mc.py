@@ -8,13 +8,6 @@ from scipy import constants
 # Local imports
 from ._vdf_bins import _phi_edges, _speed_edges, _theta_edges
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # Monte-Carlo particles in the bins of a skymap, shared by vdf_macroparticles
 # and vdf_shift (irfu-matlab PDist.macroparticles and PDist.shift)
 

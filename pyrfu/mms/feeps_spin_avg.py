@@ -8,13 +8,6 @@ import warnings
 import numpy as np
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _spin_bounds(spin_sectors, time):
     r"""Start indices of the spins [s_k, s_k+1), from the decreases of the spin

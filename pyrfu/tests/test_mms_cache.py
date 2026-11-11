@@ -20,13 +20,6 @@ import platformdirs
 from pyrfu import mms, pyrf
 from pyrfu.mms import _cache
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.10"
-__status__ = "Prototype"
-
 FGM_SRVY = "mms1_fgm_srvy_l2_20190914_v5.200.0.cdf"
 FGM_BRST = "mms1_fgm_brst_l2_20190914075400_v5.200.0.cdf"
 TINT = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]

@@ -23,13 +23,6 @@ from ._vdf_mc import _rng
 from .vdf_convert import _PSD
 from .vdf_shift import _frame_velocity
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _bin_index(lower, upper, values):
     # Index of the bin [lower, upper) of each value, -1 outside the bins

@@ -5,13 +5,6 @@
 :mod:`scipy.constants`, which should be used for the fundamental constants.
 """
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 __all__ = ["R_E"]
 
 #: Earth radius [km]: the IGRF reference radius, as ``irf_units`` in

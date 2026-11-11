@@ -12,13 +12,6 @@ import xarray as xr
 from ._eis_units import _check_same_attrs, _check_same_units
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def eis_pad_combine_sc(pads):
     r"""Generate composite Pitch Angle Distributions (PAD) from the EIS

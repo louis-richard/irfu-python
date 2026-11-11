@@ -13,13 +13,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from .iso86012datetime64 import iso86012datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.4"
-__status__ = "Prototype"
-
 # Elements of the arrays evaluated at once (memory bound for long windows)
 _CHUNK = 2**21
 

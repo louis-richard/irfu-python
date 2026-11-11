@@ -13,13 +13,6 @@ from ._units import _power, _ratio, _units
 from .resample import resample
 from .ts_spectr import ts_spectr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 # Smoothing profile of the spectral matrix in frequency: normalised 7 points

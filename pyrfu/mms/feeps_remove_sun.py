@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def feeps_remove_sun(inp_dataset):
     r"""Removes the sunlight contamination from FEEPS data.

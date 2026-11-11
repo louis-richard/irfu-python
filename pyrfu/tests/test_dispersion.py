@@ -15,13 +15,6 @@ from .. import dispersion
 from ..dispersion.disp_surf_calc import _calc_b, _calc_diel, _calc_e, _calc_vei
 from ..dispersion.one_fluid_dispersion import _disprel
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.4"
-__status__ = "Prototype"
-
 
 class DispSurfCalcTestCase(unittest.TestCase):
     def test_disp_surf_calc_output(self):

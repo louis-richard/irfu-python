@@ -11,13 +11,6 @@ from typing import Mapping, Optional, Union
 from pyrfu.mms.db_init import MMS_CFG_PATH
 from pyrfu.mms.list_files import list_files
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def copy_files(
     var: Mapping[str, str],

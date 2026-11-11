@@ -13,13 +13,6 @@ from ._vdf_bins import (
     _speed,
 )
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _rotation_matrices(rotation, n_t):
     # (time, 3, 3) rows are the new unit vectors

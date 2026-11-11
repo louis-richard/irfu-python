@@ -20,13 +20,6 @@ from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _energy2speed(energy, mass):
     r"""Convert energy (eV) to speed (m/s), relativistically correct."""

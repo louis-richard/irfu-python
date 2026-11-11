@@ -30,13 +30,6 @@ import platformdirs
 # Local imports
 from pyrfu.mms.db_init import _read_config
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.10"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 # Sub-directories of the cache: the files of each source and the listings.

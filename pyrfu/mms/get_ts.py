@@ -19,13 +19,6 @@ from ..pyrf.iso86012datetime64 import iso86012datetime64
 from ..pyrf.time_clip import time_clip
 from .get_variable import _pycdfpp_attributes_to_dict
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 # Time types of the epochs converted to datetime64 (CDF_EPOCH and CDF_EPOCH16

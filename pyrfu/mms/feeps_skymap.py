@@ -15,13 +15,6 @@ from .feeps_omni import _eyes_on_omni_energies
 from .feeps_pitch_angles import t_bot, t_top, v_fcs
 from .feeps_spin_avg import _complete_spins, _spin_bounds
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # Spin phase (degrees) at the centre of spin sector 0, from the rotation of B
 # between BCS and DMPA (FGM) on 2015-2024 survey and burst data
 _SECTOR_PHASE_OFFSET = {1: -75.94, 2: -75.93, 3: -75.96, 4: -75.81}

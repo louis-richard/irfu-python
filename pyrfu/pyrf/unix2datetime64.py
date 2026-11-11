@@ -8,13 +8,6 @@ from typing import Any, Union
 import numpy as np
 from numpy.typing import NDArray
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def unix2datetime64(time: Union[list[float], NDArray[Any]]) -> NDArray[np.datetime64]:
     r"""Converts unix time to datetime64 in ns units.

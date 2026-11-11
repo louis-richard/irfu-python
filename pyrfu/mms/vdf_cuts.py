@@ -21,13 +21,6 @@ from ._vdf_bins import (
 from .psd_moments import psd_moments
 from .vdf_convert import _relativistic_psd, vdf_convert
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _azimuthal_mean(values, d_phi):
     # Mean over the azimuths (axis 2) weighted by their widths, NaNs left out

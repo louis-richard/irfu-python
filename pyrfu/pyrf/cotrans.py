@@ -16,14 +16,6 @@ from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_vec_xyz import ts_vec_xyz
 from .unix2datetime64 import unix2datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
 # Unix times of J2000 (2000-01-01T12:00:00 TT) and of 2000-01-01T12:00:00 UT. The
 # first one gives TT seconds since J2000 after 2017 (TT - UTC = 69.184 s).
 J2000_TT_UNIX = 946727930.8160001

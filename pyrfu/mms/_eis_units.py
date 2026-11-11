@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.8"
-__status__ = "Prototype"
 
 # Shared by the EIS routines for fluxes only (eis_combine_proton_spec,
 # eis_moments, eis_proton_correction) and by the combinations of spacecraft

@@ -7,13 +7,6 @@ import xarray as xr
 # Local imports
 from .cotrans import cotrans
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def gse2gsm(inp, flag: str = "gse>gsm"):
     r"""Converts GSE to GSM.

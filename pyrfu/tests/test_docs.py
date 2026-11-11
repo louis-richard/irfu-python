@@ -7,13 +7,6 @@ import json
 import os
 import unittest
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 # Example notebooks of the documentation (in a source checkout only)
 DOCS_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "docs", "examples"

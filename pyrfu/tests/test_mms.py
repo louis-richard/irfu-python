@@ -57,13 +57,6 @@ from . import (
     generate_vdf,
 )
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Module (pyrfu.mms.list_files_aws is also the name of the function)
 list_files_aws_module = importlib.import_module("..mms.list_files_aws", __package__)
 

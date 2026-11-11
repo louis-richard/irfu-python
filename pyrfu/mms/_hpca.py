@@ -4,13 +4,6 @@
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.5.10"
-__status__ = "Prototype"
-
 # Shared by get_hpca_dist and hpca_pad (hpca_pad imported it from
 # get_hpca_dist, which imports hpca_pad: a cyclic import)
 

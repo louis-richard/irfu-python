@@ -4,13 +4,6 @@
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def dft_time_shift(inp, tau, f_s: float = None):
     r"""Shifts the time series `inp` by `tau` seconds using the discrete

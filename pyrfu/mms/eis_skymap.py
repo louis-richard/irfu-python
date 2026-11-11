@@ -9,13 +9,6 @@ from ..pyrf.ts_skymap import ts_skymap
 # Local imports
 from .vdf_convert import _DPF, vdf_convert
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def eis_skymap(inp_ang_ang, to_psd: bool = True):
     r"""Construct skymap distribution from angle-angle distribution.

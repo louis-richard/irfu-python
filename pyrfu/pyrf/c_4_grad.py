@@ -20,13 +20,6 @@ from pyrfu.pyrf.normalize import normalize
 
 from .resample import resample
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def _to_ts(out_data: NDArray[Any], b_dict: Mapping[str, DataArray]) -> DataArray:
     r"""Converts output data to xarray.DataArray.

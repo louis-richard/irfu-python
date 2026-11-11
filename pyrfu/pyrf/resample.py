@@ -12,13 +12,6 @@ from scipy import interpolate
 # Local imports
 from ._time_attrs import _is_time_attr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Interpolation methods: the kinds of scipy.interpolate.interp1d
 _METHODS = (
     "linear",

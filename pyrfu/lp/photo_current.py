@@ -9,13 +9,6 @@ from typing import Union
 import numpy as np
 from scipy import interpolate
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 

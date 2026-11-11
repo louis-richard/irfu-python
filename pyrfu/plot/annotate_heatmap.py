@@ -9,13 +9,6 @@ from typing import List, Union
 import numpy as np
 from matplotlib import ticker
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def annotate_heatmap(
     im,

@@ -8,14 +8,6 @@ import json
 import os
 from typing import Mapping
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
-
 # Parameters with keys in mms_keys.json, or kept for keys to come (irfu-matlab
 # names: energyi/e, es12/34, adcoff, flux-amb-pm2). Removed for want of data:
 # nbge, pbge, defbge (the FPI background is DIS only), tsi, tse (computed in

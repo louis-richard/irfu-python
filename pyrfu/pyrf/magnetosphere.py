@@ -11,13 +11,6 @@ from numpy.typing import NDArray
 # Local imports
 from pyrfu.pyrf.get_omni_data import get_omni_data
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Default solar wind: dynamic pressure (nPa), IMF Bz GSM (nT), Mach number
 _DEFAULTS = {"d_p": 1.7389104, "b_z": 0.012695087, "m_a": 4.0}
 

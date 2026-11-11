@@ -13,13 +13,6 @@ from .feeps_active_eyes import feeps_active_eyes
 # Local imports
 from .feeps_pitch_angles import feeps_pitch_angles
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Angular response (finite field of view) of instruments electrons can use
 # +/- 21.4 deg on each pitch angle as average response angle; ions can start
 # with +/-10 deg, but both need to be further refined

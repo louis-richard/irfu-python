@@ -9,13 +9,6 @@ from ..pyrf.ts_skymap import ts_skymap
 from .get_hpca_dist import get_hpca_dist
 from .vdf_convert import vdf_convert
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.9"
-__status__ = "Prototype"
-
 
 def _circular_mean(angles, axis):
     r"""Circular mean of angles (degrees) along axis, in [0, 360)."""

@@ -6,13 +6,6 @@ import numpy as np
 import pycdfpp
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def read_cdf(path: str) -> dict:
     r"""Reads a .cdf file and returns a dictionary with the fields contained in

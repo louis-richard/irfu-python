@@ -5,13 +5,6 @@
 import numpy as np
 from scipy import ndimage
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 WEIGHTS = {
     5: np.array([0.1, 0.25, 0.3, 0.25, 0.1]),
     7: np.array([0.07, 0.15, 0.18, 0.2, 0.18, 0.15, 0.07]),

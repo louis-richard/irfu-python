@@ -13,13 +13,6 @@ from .normalize import normalize
 from .resample import resample
 from .time_clip import time_clip
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def poynting_flux(e_xyz, b_xyz, b_hat=None):
     r"""Estimates Poynting flux at electric field sampling as

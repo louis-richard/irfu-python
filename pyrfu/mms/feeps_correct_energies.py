@@ -7,13 +7,6 @@ import xarray as xr
 # Local imports
 from .feeps_energy_table import feeps_energy_table
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def feeps_correct_energies(feeps_alle):
     r"""Corrects the energy tables of the FEEPS spectra.

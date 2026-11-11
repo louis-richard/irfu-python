@@ -10,13 +10,6 @@ from pyrfu.pyrf._units import _attrs, _product, _units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
     r"""Compute dot product of two fields.

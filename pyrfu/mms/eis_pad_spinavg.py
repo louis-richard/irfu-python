@@ -11,13 +11,6 @@ import xarray as xr
 # Local imports
 from .eis_spin_avg import _spin_segments
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def eis_pad_spinavg(inp, spin_nums, method: str = None):
     r"""Calculates spin-averaged Pitch-Angle Distribution (PAD) for the EIS

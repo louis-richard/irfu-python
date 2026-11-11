@@ -9,13 +9,6 @@ import xarray as xr
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def correct_edp_probe_timing(sc_pot):
     r"""Corrects for the channel delays not accounted for in the MMS EDP

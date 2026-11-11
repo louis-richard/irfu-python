@@ -9,13 +9,6 @@ from ..pyrf._units import _ratio, _units
 from ._psd_units import _output
 from ._vdf_bins import _is_skymap, _pitch_angles
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def pad_diffusion(pad, d_aa):
     r"""Rate of change of a pitch-angle distribution by pitch-angle

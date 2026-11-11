@@ -12,13 +12,6 @@ from numpy.typing import NDArray
 # Local imports
 from .ttns2datetime64 import TT2000_FILL, ttns2datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Earliest time that both CDF_TT2000 (from 1707-09-22, after the fill and pad
 # values) and datetime64[ns] (from 1677-09-21) can represent
 _DATETIME64_TT2000_MIN = ttns2datetime64(TT2000_FILL + 2)[0]

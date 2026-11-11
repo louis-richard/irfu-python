@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from ..pyrf.resample import resample
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _limit(vdf, limit):
     # Energy limit (eV) at the times of the distribution, (time, 1)

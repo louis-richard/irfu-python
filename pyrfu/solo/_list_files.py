@@ -13,13 +13,6 @@ import numpy as np
 # Local imports
 from .db_init import config_path
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _list_files(
     tint: list,

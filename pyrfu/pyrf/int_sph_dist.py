@@ -9,13 +9,6 @@ from math import asin, cos, sin, sqrt
 import numba
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     r"""Integrate a spherical distribution function to a line/plane.

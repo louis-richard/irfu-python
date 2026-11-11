@@ -8,13 +8,6 @@ import os
 # Local imports
 from .._user_config import user_config_path
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.10"
-__status__ = "Prototype"
-
 # Default configuration distributed with the package
 _PACKAGE_CFG_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "config.json"

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 from typing import Sequence
 
 # 3rd party imports
@@ -11,13 +13,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from .calc_fs import calc_fs
 from .resample import resample
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolos.kolokotronis@irf.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def _valid_count(inp):

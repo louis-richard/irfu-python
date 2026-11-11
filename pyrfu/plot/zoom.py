@@ -10,13 +10,6 @@ from mpl_toolkits.axes_grid1.inset_locator import (
     BboxPatch,
 )
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _connect_bbox(
     bbox1,

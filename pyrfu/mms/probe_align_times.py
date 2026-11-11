@@ -10,13 +10,6 @@ from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_scalar import ts_scalar
 from .correct_edp_probe_timing import correct_edp_probe_timing
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _valid_runs(time, data):
     # Start and end times of the runs of non-NaN samples

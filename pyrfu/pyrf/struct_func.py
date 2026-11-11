@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from ._units import _attrs, _power, _units
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def struct_func(inp, scales, order):
     r"""Returns the structure function of a time series

@@ -10,13 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def plot_spectr(
     axis,

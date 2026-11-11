@@ -8,13 +8,6 @@ import numpy as np
 from ._hpca import _half_spins
 from .hpca_pad import _hpca_elevations
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 mass_and_charge = {
     "hydrogen+": [1.04535e-2, 1],
     "helium+": [4.18138e-2, 1],

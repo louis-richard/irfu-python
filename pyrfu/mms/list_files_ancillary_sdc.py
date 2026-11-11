@@ -12,13 +12,6 @@ import numpy as np
 from .list_files_ancillary import _sc_name
 from .list_files_sdc import SDC_TIMEOUT, _login_lasp
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.11"
-__status__ = "Prototype"
-
 
 def _construct_url_json_list(tint, mms_id, product, lasp_url):
     r"""Construct the url that return a json-formatted string of science

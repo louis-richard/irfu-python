@@ -12,13 +12,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from ._units import _product, _units
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
     r"""Integrate time series, as irfu-matlab irf_integrate.

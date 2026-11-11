@@ -34,14 +34,6 @@ from .plot_surf import plot_surf
 from .span_tint import span_tint
 from .zoom import zoom
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
 __all__ = [
     "add_position",
     "annotate_heatmap",

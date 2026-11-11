@@ -10,13 +10,6 @@ from scipy import constants
 from ._units import _check_units
 from .resample import resample
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
     """Computes plasma parameters including characteristic length and time

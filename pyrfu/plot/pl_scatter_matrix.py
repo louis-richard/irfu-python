@@ -15,13 +15,6 @@ from ..pyrf.histogram2d import histogram2d
 from ..pyrf.resample import resample
 from .plot_spectr import plot_spectr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def pl_scatter_matrix(
     inp1,

@@ -9,13 +9,6 @@ import numpy as np
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def calc_fs(inp: Union[Dataset, DataArray]) -> float:
     r"""Computes the sampling frequency of the input time series.

@@ -13,14 +13,6 @@ from ..pyrf.ts_skymap import ts_skymap
 from ._eis_attrs import _common_attrs
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
 # Per-time or per-channel attributes, set from the combined skymap
 _SKIPPED_ATTRS = (
     "delta_energy_plus",

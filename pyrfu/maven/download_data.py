@@ -17,13 +17,6 @@ from ..mms.download_data import _download_file
 from ..mms.list_files_sdc import SDC_TIMEOUT
 from .db_init import config_path
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.10"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 LASP_PUBL = "https://lasp.colorado.edu/maven/sdc/public/files/api/v1/"

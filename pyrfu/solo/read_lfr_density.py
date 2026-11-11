@@ -14,13 +14,6 @@ from xarray.core.dataarray import DataArray
 from ..pyrf import read_cdf, time_clip, ts_append, ts_scalar
 from ._list_files import _list_files
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 

@@ -12,13 +12,6 @@ from ..pyrf.ts_scalar import ts_scalar
 from .correct_edp_probe_timing import correct_edp_probe_timing
 from .dft_time_shift import dft_time_shift
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.6"
-__status__ = "Prototype"
-
 # Tip-to-tip lengths of the spin-plane and axial booms in m: nominal, and
 # with the boom shortening of Pedersen et al. (1998), as irfu-matlab
 # mms.fk_powerspec_E80

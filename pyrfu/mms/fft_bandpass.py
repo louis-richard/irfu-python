@@ -14,13 +14,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from pyrfu.pyrf.calc_fs import calc_fs
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 

@@ -10,13 +10,6 @@ import xarray as xr
 from numpy.typing import NDArray
 from xarray.core.dataset import Dataset
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 

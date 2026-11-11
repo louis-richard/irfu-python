@@ -24,13 +24,6 @@ from pyrfu.pyrf.extend_tint import extend_tint
 from pyrfu.pyrf.iso86012datetime import iso86012datetime
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 # Margin on the end of the SDC files, as list_files_ancillary for the local

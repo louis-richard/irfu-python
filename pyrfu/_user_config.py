@@ -8,13 +8,6 @@ import shutil
 # 3rd party imports
 import platformdirs
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 
 def user_config_path(file_name: str, package_cfg_path: str) -> str:
     r"""Path of a configuration file in the user configuration directory (e.g.

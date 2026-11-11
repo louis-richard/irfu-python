@@ -4,13 +4,6 @@
 # 3rd party imports
 from matplotlib import dates
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def span_tint(axs, tint, ymin: float = 0, ymax: float = 1, **kwargs):
     r"""Add a vertical span (rectangle) across the time Axes.

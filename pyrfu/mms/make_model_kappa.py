@@ -11,13 +11,6 @@ from ._psd_units import _attrs, _is_relativistic
 from ._vdf_bins import _speed
 from .vdf_convert import _in_convention
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     r"""Makes an isotropic kappa distribution function from particle moments,

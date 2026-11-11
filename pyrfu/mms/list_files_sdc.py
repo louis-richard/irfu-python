@@ -24,13 +24,6 @@ from ..pyrf.datetime642iso8601 import datetime642iso8601
 from .db_init import MMS_CFG_PATH, _get_credential
 from .list_files_aws import _tint_bounds
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 

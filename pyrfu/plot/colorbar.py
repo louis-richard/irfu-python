@@ -2,14 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
 def colorbar(mappable, axis, pad: float = 0.01, width: float = 0.03):
     r"""Add a colorbar of `mappable` on the right of `axis`.
 

@@ -13,13 +13,6 @@ from ._eis_attrs import _common_attrs
 from .dsl2gse import dsl2gse
 from .eis_spin_avg import _spin_segments
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Polar bins (colatitudes, degrees): 6 bins from 10 to 170, the elevations
 # -80 to 80 of IDL SPEDAS mms_eis_ang_ang
 _POL_EDGES = 10.0 + 160.0 * np.arange(7) / 6

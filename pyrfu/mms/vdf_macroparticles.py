@@ -12,13 +12,6 @@ from .vdf_d3v import vdf_d3v
 from .vdf_partial_density import vdf_partial_density
 from .vdf_velocity import vdf_velocity
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _particles_per_bin(weights, n_tot, n_bin, skip_zero, division):
     # Number of macroparticles in each bin (time, energy, phi, theta)

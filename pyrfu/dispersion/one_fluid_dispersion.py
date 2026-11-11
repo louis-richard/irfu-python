@@ -7,13 +7,6 @@ import xarray as xr
 from numpy.polynomial import polynomial
 from scipy import constants
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _disprel(w, k, theta, v_a, c_s, wc_e, wc_p):
     theta = np.deg2rad(theta)

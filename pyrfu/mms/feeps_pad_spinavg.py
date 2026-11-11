@@ -11,13 +11,6 @@ import xarray as xr
 # Local imports
 from .feeps_spin_avg import _complete_spins
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     r"""Spin-average the FEEPS pitch angle distributions.

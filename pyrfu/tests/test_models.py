@@ -14,13 +14,6 @@ from ddt import data, ddt, unpack
 from .. import models
 from . import generate_timeline
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.4"
-__status__ = "Prototype"
-
 
 @ddt
 class IgrfTestCase(unittest.TestCase):

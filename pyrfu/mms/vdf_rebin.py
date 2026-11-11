@@ -13,13 +13,6 @@ from .vdf_convert import _PSD, _relativistic_psd
 from .vdf_shift import _shift
 from .vdf_velocity import _rotation_matrices
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
     # Monte-Carlo rebinning onto the (vx, vy, vz) boxes of grid (km/s)

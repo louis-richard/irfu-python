@@ -14,13 +14,6 @@ from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins, _speed_to_energy
 from .vdf_convert import _in_convention, _relativistic_psd, vdf_convert
 from .vdf_velocity import _rotation_matrices
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _frame_velocity(vdf, v_frame):
     # Frame velocity (m/s) at the times of the distribution (time, 3)

@@ -7,13 +7,6 @@ import warnings
 # 3rd party imports
 from xarray.core.dataset import Dataset
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.6.0"
-__status__ = "Prototype"
-
 # Units of the outputs, in the notation of the MMS files: products separated by
 # a space, ratios with "/", powers with "^", a compound unit in parentheses when
 # combined ("(mV/m) s"), "" for dimensionless. The strings are composed, not

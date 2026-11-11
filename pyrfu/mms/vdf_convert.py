@@ -8,13 +8,6 @@ from .dpf2psd import dpf2psd
 from .psd2def import psd2def
 from .psd2dpf import psd2dpf
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # Phase-space densities: factor to s^3/m^6
 _PSD = {"s^3/cm^6": 1e12, "s^3/m^6": 1.0, "s^3/km^6": 1e-18}
 

@@ -7,13 +7,6 @@ from .eis_ang_ang import eis_ang_ang
 from .eis_combine_proton_spec import eis_combine_proton_spec
 from .eis_skymap import eis_skymap
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def eis_combine_proton_skymap(
     phxtof_allt,
