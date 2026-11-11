@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
+# Local imports
+from .colorbar import colorbar as _add_colorbar
+
 
 def plot_spectr(
     axis,
@@ -86,9 +89,7 @@ def plot_spectr(
     """
 
     if axis is None:
-        fig, axis = plt.subplots(1)
-    else:
-        fig = axis.get_figure()
+        _, axis = plt.subplots(1)
 
     if not cmap or isinstance(cmap, str):
         cmap = mpl.colormaps.get_cmap(cmap)
@@ -186,53 +187,20 @@ def plot_spectr(
     axis.set_ylim([np.min(y_data), np.max(y_data)])
     axis.set_aspect(aspect)
 
-    if colorbar.lower() == "right":
-        pad = kwargs.get("pad", 0.01)
-
-        pos = axis.get_position()
-        cax = fig.add_axes(
-            [pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height],
+    if colorbar.lower() in ["right", "top"]:
+        cax = _add_colorbar(
+            image, axis, kwargs.get("pad", 0.01), 0.01, colorbar.lower()
         )
-        plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="vertical")
-
-        cax.yaxis.set_ticks_position(colorbar.lower())
-        cax.yaxis.set_label_position(colorbar.lower())
-
         cax.set_axisbelow(False)
 
         if cscale == "log":
-            cax.yaxis.set_major_locator(
-                mpl.ticker.LogLocator(base=10.0, numticks=4),
-            )
+            locator = mpl.ticker.LogLocator(base=10.0, numticks=4)
         else:
-            cax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
+            locator = mpl.ticker.MaxNLocator(4)
 
-        out = (axis, cax)
-    elif colorbar.lower() == "top":
-        pad = kwargs.get("pad", 0.01)
-
-        pos = axis.get_position()
-        cax = fig.add_axes(
-            [pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01],
+        (cax.yaxis if colorbar.lower() == "right" else cax.xaxis).set_major_locator(
+            locator
         )
-        plt.colorbar(
-            mappable=image,
-            cax=cax,
-            ax=axis,
-            orientation="horizontal",
-        )
-
-        cax.xaxis.set_ticks_position(colorbar.lower())
-        cax.xaxis.set_label_position(colorbar.lower())
-
-        cax.set_axisbelow(False)
-
-        if cscale == "log":
-            cax.xaxis.set_major_locator(
-                mpl.ticker.LogLocator(base=10.0, numticks=4),
-            )
-        else:
-            cax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
 
         out = (axis, cax)
     elif colorbar.lower() == "none":

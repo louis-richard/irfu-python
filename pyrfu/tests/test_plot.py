@@ -1159,6 +1159,33 @@ class ColorbarTestCase(unittest.TestCase):
         self.assertAlmostEqual(cpos.height, pos.height)
         np.testing.assert_allclose(cax.get_ylim(), [0.0, 11.0])
 
+    def test_colorbar_sides(self):
+        # On each side (it was on the right only): pad away, ticks and label
+        # outside, the axis of the figure of the plot (the colorbar of the plot
+        # routines)
+        _, other = plt.subplots(1)
+        f, ax = plt.subplots(1)
+        plt.figure(other.get_figure().number)  # another current figure
+        image = ax.pcolormesh(np.arange(4.0), np.arange(3.0), np.ones((2, 3)))
+        pos = ax.get_position()
+
+        for where, expected in [
+            ("right", [pos.x1 + 0.02, pos.y0, 0.03, pos.height]),
+            ("left", [pos.x0 - 0.05, pos.y0, 0.03, pos.height]),
+            ("top", [pos.x0, pos.y1 + 0.02, pos.width, 0.03]),
+            ("bottom", [pos.x0, pos.y0 - 0.05, pos.width, 0.03]),
+        ]:
+            cax = plot.colorbar(image, ax, pad=0.02, width=0.03, where=where)
+            self.assertIn(cax, f.axes)
+            np.testing.assert_allclose(cax.get_position().bounds, expected)
+            side = cax.yaxis if where in ["right", "left"] else cax.xaxis
+            self.assertEqual(side.get_label_position(), where)
+            self.assertEqual(side.get_ticks_position(), where)
+            self.assertIs(image.colorbar.ax, cax)
+
+        with self.assertRaisesRegex(ValueError, "right, left, top or bottom"):
+            plot.colorbar(image, ax, where="inside")
+
 
 class IonBrazilPlotThreshTestCase(unittest.TestCase):
     def setUp(self):

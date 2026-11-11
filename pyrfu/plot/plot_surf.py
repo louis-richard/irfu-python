@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from .colorbar import colorbar as _add_colorbar
+
 
 def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
     r"""Plots surface.
@@ -43,42 +46,11 @@ def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
     mappable = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     mappable.set_array(np.array([]))
 
-    f = axis.get_figure()
-    pos = axis.get_position()
-
-    if cax_pos == "bottom":
-        caxis = f.add_axes([pos.x0, pos.y0 - 0.01, pos.width, 0.01])
-        f.colorbar(
-            mappable=mappable,
-            cax=caxis,
-            ax=axis,
-            orientation="horizontal",
-        )
-    elif cax_pos == "top":
-        caxis = f.add_axes(
-            [pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01],
-        )
-        f.colorbar(
-            mappable=mappable,
-            cax=caxis,
-            ax=axis,
-            orientation="horizontal",
-        )
-        caxis.xaxis.set_ticks_position("top")
-        caxis.xaxis.set_label_position("top")
-
-    elif cax_pos == "left":
-        caxis = f.add_axes([pos.x0 - 0.01, pos.y0, 0.01, pos.height])
-        f.colorbar(mappable=mappable, cax=caxis, ax=axis)
-        caxis.yaxis.set_ticks_position("left")
-        caxis.yaxis.set_label_position("left")
-
-    elif cax_pos == "right":
-        caxis = f.add_axes(
-            [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height],
-        )
-        f.colorbar(mappable=mappable, cax=caxis, ax=axis)
-    else:
+    if cax_pos not in ["bottom", "top", "left", "right"]:
         raise ValueError("Invalid caxis position")
+
+    # The left and bottom colorbars touch the axis (no gap), as before
+    pad = 0.0 if cax_pos in ["bottom", "left"] else 0.01
+    caxis = _add_colorbar(mappable, axis, pad, 0.01, cax_pos)
 
     return axis, caxis

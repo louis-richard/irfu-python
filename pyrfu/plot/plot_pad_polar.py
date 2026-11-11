@@ -11,6 +11,7 @@ from matplotlib import colors
 # Local imports
 from ..mms._vdf_bins import _pitch_angles, _polar_edges, _sc_pot, _speed_edges
 from ..mms._vdf_mc import _bins_d3v, _rng, _sample
+from .colorbar import colorbar as _add_colorbar
 from .plot_ang_ang import _check_units
 
 # Largest angular width (degrees) of the cells drawn, so that the pitch-angle
@@ -190,21 +191,10 @@ def _contours(data, radii, angles):
 
 def _colorbar(ax, image, position):
     r"""Colorbar at the right or on top of ax, or none."""
-    fig = ax.get_figure()
-    pos = ax.get_position()
+    if position == "none":
+        return None
 
-    if position == "right":
-        cax = fig.add_axes([pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height])
-        fig.colorbar(mappable=image, cax=cax)
-    elif position == "top":
-        cax = fig.add_axes([pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01])
-        fig.colorbar(mappable=image, cax=cax, orientation="horizontal")
-        cax.xaxis.set_ticks_position("top")
-        cax.xaxis.set_label_position("top")
-    else:
-        cax = None
-
-    return cax
+    return _add_colorbar(image, ax, width=0.01, where=position)
 
 
 def plot_pad_polar(
