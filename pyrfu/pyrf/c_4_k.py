@@ -53,29 +53,19 @@ def c_4_k(r_list: Sequence[DataArray]) -> Sequence[DataArray]:
         for r in r_list
     ]
 
-    mms_list = np.arange(4)
+    k_list = []
 
-    k_list = [None] * 4
+    for i in range(4):
+        # The other three spacecraft, in the cyclic order i - 1, i - 2, i - 3
+        alpha, beta, gamma = (i - 1) % 4, (i - 2) % 4, (i - 3) % 4
 
-    mms_list_r0 = np.roll(mms_list, 0)
-    mms_list_r1 = np.roll(mms_list, 1)
-    mms_list_r2 = np.roll(mms_list, 2)
-    mms_list_r3 = np.roll(mms_list, 3)
-
-    for i, alpha, beta, gamma in zip(
-        mms_list_r0,
-        mms_list_r1,
-        mms_list_r2,
-        mms_list_r3,
-    ):
         dr_jk_x_dr_jm = cross(
             r_list[beta] - r_list[alpha],
             r_list[gamma] - r_list[alpha],
         )
 
-        dr12 = r_list[i] - r_list[alpha]
-
-        k_list[i] = dr_jk_x_dr_jm / dot(dr_jk_x_dr_jm, dr12)
-        k_list[i].attrs = _attrs(k_list[i].attrs, _ratio("", _units(r_list[0])))
+        k_i = dr_jk_x_dr_jm / dot(dr_jk_x_dr_jm, r_list[i] - r_list[alpha])
+        k_i.attrs = _attrs(k_i.attrs, _ratio("", _units(r_list[0])))
+        k_list.append(k_i)
 
     return k_list
