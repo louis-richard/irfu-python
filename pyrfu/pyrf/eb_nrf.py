@@ -71,37 +71,30 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
     if not isinstance(flag, (str, np.ndarray, list, tuple)):
         raise TypeError("flag must be a str or array_like")
 
+    # Reference direction of M for "b" (the mean of B, without its NaN samples:
+    # one made L and M NaN everywhere) and for a given vector; none for "a"
     if isinstance(flag, str):
         if flag.lower() not in ["a", "b"]:
             raise ValueError(f'flag must be "a" or "b", not {flag!r}')
 
-        flag_case = flag.lower()
-        l_direction = None
-
+        reference = None if flag.lower() == "a" else np.nanmean(b_xyz.data, axis=0)
     else:
-        flag = np.array(flag)
-        if flag.ndim != 1 or len(flag) != 3:
-            raise ValueError("array_like flag must be a vector of 3 components")
-        l_direction = flag
-        flag_case = "c"
+        reference = np.array(flag)
 
-    if flag_case == "a":
+        if reference.ndim != 1 or len(reference) != 3:
+            raise ValueError("array_like flag must be a vector of 3 components")
+
+    if reference is None:
         b_xyz = resample(b_xyz, e_xyz)
 
         n_l = b_xyz.data / np.linalg.norm(b_xyz.data, axis=1, keepdims=True)
         n_n = np.cross(np.cross(b_xyz.data, v_data), b_xyz.data)
         n_n /= np.linalg.norm(n_n, axis=1, keepdims=True)
         n_m = np.cross(n_n, n_l)  # in (vn x b) direction
-    elif flag_case == "b":
-        n_n = v_data / np.linalg.norm(v_data, axis=1, keepdims=True)
-        # One NaN sample of B made L and M NaN everywhere
-        n_m = np.cross(n_n, np.nanmean(b_xyz.data, axis=0))
-        n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
-        n_l = np.cross(n_m, n_n)
-
     else:
+        # N along V, M perpendicular to N and to the reference, L completes
         n_n = v_data / np.linalg.norm(v_data, axis=1, keepdims=True)
-        n_m = np.cross(n_n, l_direction)
+        n_m = np.cross(n_n, reference)
         n_m /= np.linalg.norm(n_m, axis=1, keepdims=True)
         n_l = np.cross(n_m, n_n)
 
