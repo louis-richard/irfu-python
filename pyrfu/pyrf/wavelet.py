@@ -30,7 +30,6 @@ def _ww(
     frequencies_mat: NDArray[np.float64],
     f_nyq: float,
 ) -> NDArray[np.complex128]:
-    # TODO : use nested for loop and math instead of numpy and test speed!!
     w_w: NDArray[np.complex128] = s_ww * np.exp(
         -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2,
     )
