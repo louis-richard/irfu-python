@@ -71,12 +71,6 @@ def eis_omni(eis_allt, method: str = "mean"):
     for scope in scopes:
         flux_omni += eis_allt[scope].data.copy()
 
-        # Why??
-        # try:
-        #     flux_omni += eis_allt[scope].data.copy()
-        # except TypeError:
-        #     flux_omni = eis_allt[scope].data.copy()
-
     if method.lower() == "mean":
         flux_omni /= len(scopes)
 

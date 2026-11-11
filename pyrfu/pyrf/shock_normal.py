@@ -195,7 +195,6 @@ def shock_normal(spec, leq90: bool = True):
     normal["mx_3"] = mx_3
 
     # Load shock
-    # pkg_path = os.path.join(os.getcwd(), "sandbox", "sbox")
     pkg_path = os.path.dirname(os.path.abspath(__file__))
     with open(
         os.path.join(pkg_path, "shock_models_parameters.json"), "r", encoding="utf-8"

@@ -83,8 +83,6 @@ def igrf(
 
     years_igrf, g_igrf, h_igrf = _igrf_coefficients()
 
-    # timeVec = irf_time(t,'vector');
-    # yearRef = timeVec(:,1);
     year_ref = (time * 1e9).astype("datetime64[ns]")
     year_ref = year_ref.astype("datetime64[Y]")
     year_ref = year_ref.astype(np.int64) + 1970

@@ -113,7 +113,8 @@ def feeps_remove_bad_data(inp_dataset):
     # keV), meaning we'll have to adjust the hard-coded ylim settings in
     # SPEDAS and the SITL software:
 
-    # The lists of May 2019 are used for all dates, as IDL SPEDAS
+    # The lists of May 2019 are used for all dates, as IDL SPEDAS (the
+    # "<2019-05-01" lists of feeps_bad_data.json are kept for reference only)
     bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
     bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
     bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]

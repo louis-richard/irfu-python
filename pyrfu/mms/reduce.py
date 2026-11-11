@@ -205,7 +205,6 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         vdf_data = vdf_data * _factor(energy_tv, _mass_ratio(vdf))[:, :, None, None]
 
     # Get VDF dimension (time, energy, phi, theta)
-    # n_t, _, n_ph, _ = vdf_data.shape
     n_t, n_en, _, _ = vdf_data.shape
 
     # Construct or resample the time series of transformation matrix
@@ -235,11 +234,6 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         np.stack([x_phat_ts, y_phat_ts, z_phat_ts]),
         [1, 2, 0],
     )
-
-    # This is now done in int_sph_dist
-    # Set azimuthal angle projection grid.
-    # d_phi = kwargs.get("d_phi", 2 * np.pi / n_ph)
-    # phi_grid = np.linspace(0, 2 * np.pi, n_ph) + d_phi / 2  # centers
 
     # Read the keyword arguments
     # Velocity projection grid and edges

@@ -13,16 +13,6 @@ from ..pyrf.ts_skymap import ts_skymap
 from .get_ts import _get_epochs
 from .get_variable import _pycdfpp_attributes_to_dict
 
-# Keys of the global attributes to keep from CDF informations
-Globkeys = [
-    "CDF",
-    "Version",
-    "Encoding",
-    "Checksum",
-    "Compressed",
-    "LeapSecondUpdated",
-]
-
 
 def _fpi_name(cdf_name, quantity):
     # Name of the variable of the quantity of the FPI distribution cdf_name,
@@ -95,7 +85,6 @@ def get_dist(file_path, cdf_name, tint: list = None):
     # Load CDF file
     file = load(file_path)
 
-    # with CDF(file_path) as file:
     # Get the relevant CDF file information (zVariables)
     z_vars = [z_var[0] for z_var in file.items()]
 

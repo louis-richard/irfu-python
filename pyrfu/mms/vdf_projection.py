@@ -171,7 +171,7 @@ def _rebin_tables(
 
 
 def _init(vdf: Dataset, tint: list):
-    len_e, rebinned = 32, False
+    rebinned = False
 
     if vdf.phi.data.ndim == 1:
         phi = xr.DataArray(
@@ -225,7 +225,7 @@ def _init(vdf: Dataset, tint: list):
             dist, azimuthal, energy = _rebin_tables(
                 vdf, dist, azimuthal, tint, theta, energy0, energy1, step_table
             )
-            len_e, rebinned = dist.shape[1], True
+            rebinned = True
             energy_edges = _log_edges(energy, diff_energ / 2)
         else:
             energy_edges = _table_edges(step_table, energy0_edges, energy1_edges)
@@ -239,7 +239,7 @@ def _init(vdf: Dataset, tint: list):
     if not rebinned:
         energy_edges = _channel_edges(vdf, i_times[0], energy_edges)
 
-    return dist, polar, azimuthal, energy_edges, len_e, i_times
+    return dist, polar, azimuthal, energy_edges, i_times
 
 
 def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr, widths=None):
@@ -431,7 +431,7 @@ def vdf_projection(
     if not _is_relativistic(vdf) and units.lower() in _PSD:
         vdf = _output(vdf, data * _relativistic_factor(vdf, data), units)
 
-    dist, polar, azimuthal, energy_edges, _, i_times = _init(vdf, tint)
+    dist, polar, azimuthal, energy_edges, i_times = _init(vdf, tint)
     x_vec, y_vec, z_vec, _ = _coord_sys(coord_sys)
 
     if azimuthal.ndim == 1:

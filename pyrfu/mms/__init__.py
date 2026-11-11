@@ -76,8 +76,6 @@ from .load_ancillary import load_ancillary
 from .load_brst_segments import load_brst_segments
 from .make_model_kappa import make_model_kappa
 from .make_model_vdf import make_model_vdf
-
-# from .make_model_rq import make_model_rq
 from .mms4_displacement import mms4_displacement
 from .pad_diffusion import pad_diffusion
 from .pad_palim import pad_palim

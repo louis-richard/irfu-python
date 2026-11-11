@@ -66,8 +66,6 @@ _style_core = getattr(
 )  # matplotlib >=3.11 dropped the `core` submodule
 _style_core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
 _style_core.reload_library()
-# style.core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
-# style.core.reload_library()
 
 EXTRA_COLORS = {
     "pyrfu:bg": "#eeeeee",
@@ -113,7 +111,6 @@ EXTRA_COLORS = {
     "cluster:cluster4": "#00ffff",
 }
 
-mpl.colors.EXTRA_COLORS = EXTRA_COLORS
 mpl.colors.colorConverter.colors.update(EXTRA_COLORS)
 
 

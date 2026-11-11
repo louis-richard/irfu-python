@@ -53,9 +53,6 @@ def _construct_url(tint, var, lasp_url):
     if "file_extension" in var:
         url = f"{url}&file_extension={var['file_extension']}"
 
-    # if "plan" in var:
-    #     url = f"{url}&plan={var['plan']}"
-
     return url
 
 

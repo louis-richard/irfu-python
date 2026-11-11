@@ -19,10 +19,6 @@ from pyrfu.mms.list_files_sdc import _login_lasp
 logger = logging.getLogger(__name__)
 
 
-LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
-LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
-
-
 def _make_path_local(
     file: dict,
     product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],

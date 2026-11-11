@@ -65,10 +65,6 @@ def dist_append(inp0, inp1):
     time = np.hstack([inp0.time.data, inp1.time.data])
 
     # Azimuthal angle
-    # if inp0.phi.ndim == 2:
-    #    phi = np.vstack([inp0.phi.data, inp1.phi.data])
-    # else:
-    #    phi = inp0.phi.data
     phi = np.vstack([inp0.phi.data, inp1.phi.data])
 
     # Elevation angle

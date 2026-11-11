@@ -104,7 +104,6 @@ def vht(e, b, no_ez: bool = False):
     )
 
     # Calculate the goodness of the Hoffman Teller frame
-    # e_ht = e_vxb(v_ht, b)
     e_ht = ts_vec_xyz(b.time.data, -1e-3 * np.cross(v_ht, b.data), {"UNITS": "mV/m"})
 
     e_ht_p = e_ht.data[valid]
