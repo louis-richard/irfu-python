@@ -9,26 +9,8 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import (
-    _MASS_FACTOR,
-    _data_and_units,
-    _energy,
-    _is_relativistic,
-    _mass_ratio,
-    _output,
-    _relativistic_factor,
-)
-
-
-def _convert(inp, units, mass_ratio):
-    fact = 1e6 * _MASS_FACTOR * mass_ratio**2
-
-    if units.lower() in ["kev/(cm^2 s sr kev)", "ev/(cm^2 s sr ev)", "1/(cm^2 s sr)"]:
-        tmp_data = inp / 1e18 * fact
-    else:
-        raise ValueError("Invalid unit")
-
-    return tmp_data
+from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms.vdf_convert import _DEF, vdf_convert
 
 
 def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
@@ -71,12 +53,9 @@ def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
 
     """
 
-    data, units = _data_and_units(inp)
-    data = _convert(data, units, _mass_ratio(inp)) / _energy(inp, data) ** 2
+    _, units = _data_and_units(inp)
 
-    # The relativistic phase-space density of a relativistic skymap (FEEPS):
-    # the convention was ignored
-    if _is_relativistic(inp):
-        data = data * _relativistic_factor(inp, data)
+    if units.lower() not in _DEF:
+        raise ValueError("Invalid unit")
 
-    return _output(inp, data, "s^3/m^6")
+    return vdf_convert(inp, "s^3/m^6")

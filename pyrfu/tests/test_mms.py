@@ -11122,6 +11122,23 @@ class VdfConvertTestCase(unittest.TestCase):
             result = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
             np.testing.assert_array_equal(result, expected)
 
+    def test_vdf_convert_def_alias(self):
+        # "1/(cm^2 s sr)", the energy flux name of def2psd, in vdf_convert too
+        # (ValueError: units not supported), as the same quantity
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+        flux = mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)")
+        alias = flux.copy()
+        alias.data.attrs["UNITS"] = "1/(cm^2 s sr)"
+
+        np.testing.assert_array_equal(
+            mms.vdf_convert(alias, "s^3/cm^6").data.data,
+            mms.vdf_convert(flux, "s^3/cm^6").data.data,
+        )
+        np.testing.assert_array_equal(
+            mms.def2psd(alias).data.data, mms.def2psd(flux).data.data
+        )
+
     def test_vdf_convert_relativistic(self):
         # Electrons at 100 keV: the convention is that of the attribute
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "electrons")

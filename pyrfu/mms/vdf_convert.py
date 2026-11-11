@@ -2,19 +2,27 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from ._psd_units import _data_and_units, _is_relativistic, _output, _relativistic_factor
-from .def2psd import def2psd
-from .dpf2psd import dpf2psd
-from .psd2def import psd2def
-from .psd2dpf import psd2dpf
+from ._psd_units import (
+    _MASS_FACTOR,
+    _data_and_units,
+    _energy,
+    _is_relativistic,
+    _mass_ratio,
+    _output,
+    _relativistic_factor,
+)
 
+# The units of the distributions, in one place (each of psd2def, psd2dpf,
+# def2psd and dpf2psd had its own conversion, two of them the same copy).
 # Phase-space densities: factor to s^3/m^6
 _PSD = {"s^3/cm^6": 1e12, "s^3/m^6": 1.0, "s^3/km^6": 1e-18}
 
-# Differential energy fluxes (all the same quantity)
+# Differential energy fluxes (all the same quantity; "1/(cm^2 s sr)" is the
+# name def2psd accepted)
 _DEF = {
     "kev/(cm^2 s sr kev)": "keV/(cm^2 s sr keV)",
     "ev/(cm^2 s sr ev)": "eV/(cm^2 s sr eV)",
+    "1/(cm^2 s sr)": "1/(cm^2 s sr)",
 }
 
 # Differential particle fluxes: factor to 1/(cm^2 s sr keV)
@@ -36,32 +44,53 @@ def _check(units):
     return units.lower()
 
 
+def _mass_term(inp):
+    # 1e6 m^2 / (2 e^2) (masses in proton masses) of the fluxes
+    return 1e6 * _MASS_FACTOR * _mass_ratio(inp) ** 2
+
+
 def _to_psd_si(inp, units):
-    # Phase-space density in s^3/m^6, in the convention of inp
+    # Phase-space density in s^3/m^6, in the convention of inp (relativistic
+    # from a flux if inp is)
     data, _ = _data_and_units(inp)
 
     if units in _PSD:
         return _output(inp, data * _PSD[units], "s^3/m^6")
 
     if units in _DEF:
-        return def2psd(inp)
+        data = data / 1e18 * _mass_term(inp) / _energy(inp, data) ** 2
+    else:
+        scale = 1e-3 if units == "1/(cm^2 s sr kev)" else 1.0
+        data = data * scale / 1e18 * _mass_term(inp) / _energy(inp, data)
 
-    return dpf2psd(inp)
+    if _is_relativistic(inp):
+        data = data * _relativistic_factor(inp, data)
+
+    return _output(inp, data, "s^3/m^6")
 
 
 def _from_psd_si(psd, units):
-    # From the phase-space density in s^3/m^6 to units
+    # From the phase-space density in s^3/m^6 to units (from the
+    # non-relativistic one to a flux)
     data, _ = _data_and_units(psd)
 
     if units in _PSD:
         return _output(psd, data / _PSD[units], _NAMES[units])
 
     if units in _DEF:
-        out = psd2def(psd)
-        return _output(out, _data_and_units(out)[0], _NAMES[units])
+        if _is_relativistic(psd):
+            data = data / _relativistic_factor(psd, data)
 
-    out = psd2dpf(psd)
-    return _output(out, _data_and_units(out)[0] / _DPF[units], _NAMES[units])
+        data = data * 1e18 * (1 / _mass_term(psd)) * _energy(psd, data) ** 2
+    else:
+        data = data * 1e18 * (1 / _mass_term(psd)) * _energy(psd, data) * 1e3
+
+        if _is_relativistic(psd):
+            data = data / _relativistic_factor(psd, data)
+
+        data = data / _DPF[units]
+
+    return _output(psd, data, _NAMES[units])
 
 
 def _relativistic_psd(vdf):

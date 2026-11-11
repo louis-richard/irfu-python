@@ -5,57 +5,14 @@
 from typing import Union
 
 # 3rd party imports
-import numpy as np
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import (
-    _MASS_FACTOR,
-    _data_and_units,
-    _energy,
-    _is_relativistic,
-    _mass_ratio,
-    _output,
-    _relativistic_factor,
-)
+from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms.vdf_convert import _DPF, vdf_convert
 
 __all__ = ["dpf2psd"]
-
-
-def _convert(inp: np.ndarray, units: str, mass_ratio: float) -> np.ndarray:
-    r"""Convert differential particle flux to phase space density.
-
-    Parameters
-    ----------
-    inp : np.ndarray
-        Input differential particle flux.
-    units : str
-        Units of the input differential particle flux.
-    mass_ratio : float
-        Mass ratio of the species.
-
-    Returns
-    -------
-    tmp_data : np.ndarray
-        Phase space density data.
-
-    Raises
-    ------
-    ValueError
-        If the input unit is not supported.
-
-    """
-    fact = 1e6 * _MASS_FACTOR * mass_ratio**2
-
-    if units.lower() == "1/(cm^2 s sr kev)":
-        tmp_data = inp * 1e-3 / 1e18 * fact
-    elif units.lower() == "1/(cm^2 s sr ev)":
-        tmp_data = inp / 1e18 * fact
-    else:
-        raise ValueError("Invalid unit")
-
-    return tmp_data
 
 
 def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
@@ -95,10 +52,9 @@ def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
 
     """
 
-    data, units = _data_and_units(inp)
-    data = _convert(data, units, _mass_ratio(inp)) / _energy(inp, data)
+    _, units = _data_and_units(inp)
 
-    if _is_relativistic(inp):
-        data = data * _relativistic_factor(inp, data)
+    if units.lower() not in _DPF:
+        raise ValueError("Invalid unit")
 
-    return _output(inp, data, "s^3/m^6")
+    return vdf_convert(inp, "s^3/m^6")

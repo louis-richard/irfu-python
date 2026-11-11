@@ -2,30 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from pyrfu.mms._psd_units import (
-    _MASS_FACTOR,
-    _data_and_units,
-    _energy,
-    _is_relativistic,
-    _mass_ratio,
-    _output,
-    _relativistic_factor,
-)
-
-
-def _convert(inp, units, mass_ratio):
-    fact = 1 / (1e6 * _MASS_FACTOR * mass_ratio**2)
-
-    if units.lower() == "s^3/cm^6":
-        out = inp * 1e30 * fact
-    elif units.lower() == "s^3/m^6":
-        out = inp * 1e18 * fact
-    elif units.lower() == "s^3/km^6":
-        out = inp * fact
-    else:
-        raise ValueError("Invalid unit")
-
-    return out
+from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms.vdf_convert import _PSD, vdf_convert
 
 
 def psd2dpf(inp):
@@ -69,10 +47,9 @@ def psd2dpf(inp):
 
     """
 
-    data, units = _data_and_units(inp)
-    data = _convert(data, units, _mass_ratio(inp)) * _energy(inp, data) * 1e3
+    _, units = _data_and_units(inp)
 
-    if _is_relativistic(inp):
-        data = data / _relativistic_factor(inp, data)
+    if units.lower() not in _PSD:
+        raise ValueError("Invalid unit")
 
-    return _output(inp, data, "1/(cm^2 s sr keV)")
+    return vdf_convert(inp, "1/(cm^2 s sr keV)")
