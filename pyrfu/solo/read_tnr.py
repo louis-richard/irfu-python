@@ -13,7 +13,7 @@ import pycdfpp
 import xarray as xr
 from xarray import DataArray
 
-from ..pyrf import read_cdf, time_clip, ts_append
+from ..pyrf import read_cdf, time_clip
 from ._list_files import _list_files
 
 logger = logging.getLogger(__name__)
@@ -87,8 +87,9 @@ def read_tnr(
     if not files:
         raise FileNotFoundError(f"no L2 TNR file in {tint}")
 
-    # Initialize spectrum output to None
-    out = None
+    # Spectra of each file, put together once at the end (ts_append in the
+    # loop copied all the previous files for each one)
+    spectra = []
 
     for file in files:
         # Notify user
@@ -159,50 +160,53 @@ def read_tnr(
         auto_calib = auto_calib[ord_time, :]
 
         bande_e = bande_[sens_]
-        max_sweep = np.max(sweep_num[sens_])
-        min_sweep = np.min(sweep_num[sens_])
         sweep_num = sweep_num[sens_]
 
-        v_, time = [[], []]
+        # One spectrum per sweep, the sweeps in increasing order; each record
+        # fills its band (32 frequencies of 128), a later record of the same
+        # band and sweep replacing an earlier one. All the sweeps at once (a
+        # search of the records of each sweep, quadratic in their number)
+        sweeps, first, which = np.unique(
+            sweep_num, return_index=True, return_inverse=True
+        )
+        which = np.ravel(which)
 
-        for ind_sweep in range(min_sweep, max_sweep + 1):
-            p_punt = np.where(sweep_num == ind_sweep)[0]
+        # The last record of each (sweep, band)
+        keys = which * 4 + bande_e
+        _, last = np.unique(keys[::-1], return_index=True)
+        last = len(keys) - 1 - last
 
-            if not p_punt.size:
-                continue
+        v_all = np.zeros((len(sweeps), 4, 32))
+        v_all[which[last], bande_e[last]] = auto_calib[last]
+        v_all = v_all.reshape(len(sweeps), 128)
 
-            v1_ = np.zeros(128)
+        # Sweeps without positive power (e.g., fill values) are skipped; the
+        # bands not measured are NaN
+        positive = np.sum(v_all, axis=1) > 0.0
+        v_ = v_all[positive]
+        v_[v_ == 0.0] = np.nan
+        time = time_rr[first[positive]]
 
-            for idx in p_punt:
-                v1_[32 * bande_e[idx] : 32 * (bande_e[idx] + 1)] = auto_calib[idx, :]
-
-            # Sweeps without positive power (e.g., fill values) are skipped;
-            # the bands not measured are NaN
-            if np.sum(v1_) > 0.0:
-                v1_[v1_ == 0.0] = np.nan
-                v_.append(v1_)
-                time.append(time_rr[np.min(p_punt)])
-
-        if not v_:
+        if not v_.size:
             logger.info("no spectrum from sensor %d in %s", sensor, file)
             continue
 
         # Frequencies below 100 kHz
         f_100 = freq_tnr < 1e2
 
-        out = ts_append(
-            out,
+        spectra.append(
             xr.DataArray(
-                np.stack(v_)[:, f_100],
-                coords=[np.stack(time), freq_tnr[f_100]],
+                v_[:, f_100],
+                coords=[time, freq_tnr[f_100]],
                 dims=["time", "frequency"],
-            ),
+            )
         )
 
-        out = out[np.argsort(out.time.data)]
-
-    if out is None:
+    if not spectra:
         raise ValueError(f"no data from sensor {sensor} in {tint}")
+
+    out = xr.concat(spectra, dim="time")
+    out = out[np.argsort(out.time.data)]
 
     # Time clip
     out = time_clip(out, tint)

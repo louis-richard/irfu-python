@@ -342,6 +342,21 @@ class ReadTNRTestCase(unittest.TestCase):
         self.assertTrue(np.isnan(out.data[1, 32:64]).all())
         self.assertFalse(np.isnan(out.data[[0, 2]]).any())
 
+    def test_read_tnr_repeated_band(self):
+        # Band 1 recorded twice in sweep 2: the later record is kept, as the
+        # loop over the records did; the spectra in time order, each at the
+        # time of the first record of its sweep
+        sweep = [2, 2, 2, 2, 2, 1, 1, 1, 1]
+        band = [0, 1, 2, 3, 1, 0, 1, 2, 3]
+        power = [2, 5, 2, 2, 7, 1, 1, 1, 1]
+        variables, time = self._tnr_records(sweep, band, power)
+        out = self._read_tnr([variables])
+
+        np.testing.assert_array_equal(out.time.data, time[[0, 5]])
+        np.testing.assert_array_equal(out.data[0, 32:64], 7.0)
+        np.testing.assert_array_equal(out.data[0, :32], 2.0)
+        np.testing.assert_array_equal(out.data[1], 1.0)
+
     def test_read_tnr_interleaved_sweeps(self):
         # A record of sweep 2 after the first one of sweep 3: SWEEP_NUM
         # decreases by 1, which wrapped in uint32 and counted as a reset,
