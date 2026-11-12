@@ -23,13 +23,6 @@ from ddt import data, ddt, unpack
 from .. import solo
 from ..solo.db_init import config_path
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.4"
-__status__ = "Prototype"
-
 
 def _use_temp_config(test_case):
     r"""Use a temporary user configuration directory for the test, so that

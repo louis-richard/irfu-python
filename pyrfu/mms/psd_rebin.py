@@ -9,12 +9,8 @@ import numpy as np
 from numpy.typing import NDArray
 from xarray.core.dataset import Dataset
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
+# Local imports
+from ..pyrf._time import _ns
 
 
 def psd_rebin(
@@ -118,9 +114,7 @@ def psd_rebin(
 
     # Define new times
     # Sampling period in ns (kept as int64, int16 overflows for ms time steps)
-    delta_t: float = np.median(
-        np.diff(vdf_time).astype("timedelta64[ns]").astype(np.int64)
-    )
+    delta_t: float = np.median(np.diff(_ns(vdf_time)))
     time_r: NDArray[np.datetime64] = vdf_time[:-1:2] + np.timedelta64(
         int(round(delta_t / 2)), "ns"
     )

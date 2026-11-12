@@ -15,13 +15,6 @@ from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.list_files_aws import _file_time, _tint_bounds
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def list_files(
     tint: list[str],

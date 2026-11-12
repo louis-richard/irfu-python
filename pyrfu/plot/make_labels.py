@@ -7,13 +7,6 @@ import string
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
     r"""Add subplots labels to axes

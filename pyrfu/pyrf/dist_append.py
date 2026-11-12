@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from .ts_skymap import ts_skymap
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def dist_append(inp0, inp1):
     r"""Concatenate two distribution skymaps along the time axis.
@@ -72,10 +65,6 @@ def dist_append(inp0, inp1):
     time = np.hstack([inp0.time.data, inp1.time.data])
 
     # Azimuthal angle
-    # if inp0.phi.ndim == 2:
-    #    phi = np.vstack([inp0.phi.data, inp1.phi.data])
-    # else:
-    #    phi = inp0.phi.data
     phi = np.vstack([inp0.phi.data, inp1.phi.data])
 
     # Elevation angle

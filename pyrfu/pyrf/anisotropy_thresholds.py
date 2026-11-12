@@ -8,13 +8,6 @@ from typing import Dict, Union
 import numpy as np
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2025"
-__license__ = "MIT"
-__version__ = "2.4.14"
-__status__ = "Prototype"
-
 # Coefficients for electron instabilities
 COEFFS_E: Dict[float, Dict[str, tuple]] = {
     0.01: {

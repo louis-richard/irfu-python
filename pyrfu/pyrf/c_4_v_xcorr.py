@@ -11,27 +11,16 @@ from scipy import optimize, signal
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from ._time import _seconds
 from .iso86012datetime64 import iso86012datetime64
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.4"
-__status__ = "Prototype"
 
 # Elements of the arrays evaluated at once (memory bound for long windows)
 _CHUNK = 2**21
 
 
-def _seconds(time, t_ref):
-    r"""Times in s from t_ref, from the exact steps in ns."""
-    return (np.asarray(time).astype("datetime64[ns]") - t_ref).astype(np.int64) * 1e-9
-
-
 class _BandLimited:
-    r"""Band-limited (DFT) interpolant of a uniformly sampled signal (D-EH1):
-    the shift keeps the variance of the noise at any fraction of a sample,
+    r"""Band-limited (DFT) interpolant of a uniformly sampled signal: the
+    shift keeps the variance of the noise at any fraction of a sample,
     unlike linear or cubic interpolation, which bias the delays towards
     half-samples.
 

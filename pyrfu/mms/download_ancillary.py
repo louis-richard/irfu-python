@@ -16,18 +16,7 @@ from pyrfu.mms.list_files_sdc import _login_lasp
 # 3rd party imports
 
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
-
-
-LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
-LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 
 
 def _make_path_local(

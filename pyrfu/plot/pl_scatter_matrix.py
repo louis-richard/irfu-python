@@ -4,9 +4,8 @@
 # Built-in imports
 import warnings
 
-import matplotlib.pyplot as plt
-
 # 3rd party imports
+import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
@@ -14,13 +13,6 @@ import xarray as xr
 from ..pyrf.histogram2d import histogram2d
 from ..pyrf.resample import resample
 from .plot_spectr import plot_spectr
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def pl_scatter_matrix(
@@ -67,23 +59,18 @@ def pl_scatter_matrix(
     if not np.array_equal(inp1.time.data, inp2.time.data):
         inp2 = resample(inp2, inp1)
 
-    if not pdf:
-        fig, axs = plt.subplots(
-            3,
-            3,
-            sharex="all",
-            sharey="all",
-            figsize=(16, 9),
-        )
-        fig.subplots_adjust(
-            left=0.1,
-            right=0.9,
-            bottom=0.1,
-            top=0.9,
-            hspace=0.05,
-            wspace=0.05,
-        )
+    fig, axs = plt.subplots(3, 3, sharex="all", sharey="all", figsize=(16, 9))
+    # Wider gaps between the columns for the colour bars of the histograms
+    fig.subplots_adjust(
+        left=0.1,
+        right=0.9,
+        bottom=0.1,
+        top=0.9,
+        hspace=0.05,
+        wspace=0.3 if pdf else 0.05,
+    )
 
+    if not pdf:
         for i in range(3):
             for j in range(3):
                 axs[j, i].scatter(
@@ -94,22 +81,6 @@ def pl_scatter_matrix(
 
         out = (fig, axs)
     else:
-        fig, axs = plt.subplots(
-            3,
-            3,
-            sharex="all",
-            sharey="all",
-            figsize=(16, 9),
-        )
-        fig.subplots_adjust(
-            left=0.1,
-            right=0.9,
-            bottom=0.1,
-            top=0.9,
-            hspace=0.05,
-            wspace=0.3,
-        )
-
         caxs = [[None] * 3 for _ in range(3)]
 
         for i in range(3):

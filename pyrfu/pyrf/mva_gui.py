@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Atlas Silverhult."""
+
 # 3rd party imports
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,13 +15,6 @@ from .mva import mva
 from .new_xyz import new_xyz
 from .norm import norm
 from .time_clip import time_clip
-
-__author__ = "Atlas Silverhult"
-__email__ = "atlas.silverhult.9977@student.uu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 __all__ = ["mva_gui"]
 

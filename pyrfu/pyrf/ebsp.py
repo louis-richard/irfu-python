@@ -13,6 +13,7 @@ import xarray as xr
 from scipy import fft
 
 # Local imports
+from pyrfu.pyrf._time import _unix
 from pyrfu.pyrf._units import _check_units, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.cart2sph import cart2sph
@@ -22,13 +23,6 @@ from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 from pyrfu.pyrf.ts_time import ts_time
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 from pyrfu.pyrf.unix2datetime64 import unix2datetime64
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +57,8 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             fs_ = fs_e
         else:
             fs_ = 2 * fs_e
-            start_time = np.max([_seconds(e_xyz)[0], _seconds(db_xyz)[0]])
-            end_time = np.min([_seconds(e_xyz)[-1], _seconds(db_xyz)[-1]])
+            start_time = np.max([_unix(e_xyz.time.data)[0], _unix(db_xyz.time.data)[0]])
+            end_time = np.min([_unix(e_xyz.time.data)[-1], _unix(db_xyz.time.data)[-1]])
 
             nt = np.floor((end_time - start_time) * fs_).astype(np.int64)
 
@@ -96,7 +90,7 @@ def _b_elevation(b_x, b_y, b_z, angle_b_elevation_max):
 
 
 def _freq_int(freq_int, delta_b):
-    start_time, end_time = _seconds(delta_b)[[0, -1]]
+    start_time, end_time = _unix(delta_b.time.data)[[0, -1]]
 
     pc12_range, other_range = [False, False]
     freq_int_in = freq_int
@@ -214,12 +208,6 @@ def _censure_plot(inp, idx_nan, censure, n_data, a_):
                 out[i : int(min([i + censure[j] + 1, n_data])), j] = np.nan
 
     return out
-
-
-def _seconds(inp):
-    r"""Times of a time series in seconds since 1970, from the times in ns (in
-    us, as xarray keeps them, the intervals were 1000 times too short)."""
-    return inp.time.data.astype("datetime64[ns]").astype(np.float64) / 1e9
 
 
 def _set_units(res, keys, units):
@@ -521,7 +509,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         if want_ee:
             e_xyz = e_xyz[:-1, :]
 
-    in_time = _seconds(db_xyz)
+    in_time = _unix(db_xyz.time.data)
 
     b_x, b_y, b_z = [None, None, None]
 

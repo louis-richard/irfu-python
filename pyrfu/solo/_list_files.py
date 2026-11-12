@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import os
 import re
 from typing import Optional
@@ -11,14 +10,8 @@ from typing import Optional
 import numpy as np
 
 # Local imports
+from .._user_config import local_data_dir
 from .db_init import config_path
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
 
 
 def _list_files(
@@ -77,14 +70,10 @@ def _list_files(
         raise TypeError("tree must be a boolean")
 
     # Check path
-    if not data_path:
-        # Read the configuration file (user directory)
-        with open(config_path(), "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        data_path = os.path.normpath(config["local_data_dir"])
-    else:
+    if data_path:
         data_path = os.path.normpath(data_path)
+    else:
+        data_path = local_data_dir(config_path())
 
     # Make sure that the data path exists
     if not os.path.exists(data_path):

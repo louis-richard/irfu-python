@@ -20,13 +20,6 @@ from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]

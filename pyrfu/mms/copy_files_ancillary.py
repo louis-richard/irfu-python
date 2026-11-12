@@ -2,21 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import json
 import os
 import shutil
 from typing import Literal, Optional, Union
 
 # Local imports
-from pyrfu.mms.db_init import MMS_CFG_PATH
+from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.list_files_ancillary import list_files_ancillary
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
 
 
 def copy_files_ancillary(
@@ -50,14 +42,7 @@ def copy_files_ancillary(
     if not os.path.exists(tar_path):
         raise FileNotFoundError(f"{tar_path} doesn't exist!!")
 
-    if not data_path:
-        # Read the current version of the MMS configuration file
-        with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-            config = json.load(fs)
-
-        root_path = os.path.normpath(config["local"])
-    else:
-        root_path = os.path.normpath(data_path)
+    root_path = os.path.normpath(data_path or _read_config()["local"])
 
     # Make sure the local path exists.
     if not os.path.exists(root_path):

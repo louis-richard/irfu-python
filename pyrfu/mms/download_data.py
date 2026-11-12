@@ -16,13 +16,6 @@ from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_data import _var_and_cdf_name
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 

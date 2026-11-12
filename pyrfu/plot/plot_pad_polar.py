@@ -9,16 +9,16 @@ import numpy as np
 from matplotlib import colors
 
 # Local imports
-from ..mms._vdf_bins import _pitch_angles, _polar_edges, _sc_pot, _speed_edges
-from ..mms._vdf_mc import _bins_d3v, _rng, _sample
+from ..mms._vdf_bins import (
+    _bins_d3v,
+    _pitch_angles,
+    _polar_edges,
+    _sc_pot,
+    _speed_edges,
+)
+from ..mms._vdf_mc import _sample
+from .colorbar import colorbar as _add_colorbar
 from .plot_ang_ang import _check_units
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
 
 # Largest angular width (degrees) of the cells drawn, so that the pitch-angle
 # bins are drawn as arcs rather than chords
@@ -152,7 +152,9 @@ def _monte_carlo(pad, sc_pot, scale, n_mc, n_grid, random_state):
 
     i_t, i_e, i_q = (np.repeat(i, n_mc) for i in np.nonzero(f_d3v))
     # _sample gives the velocities opposite to the look directions
-    velocity = -_sample(_rng(random_state), bins, i_t, i_e, np.zeros_like(i_t), i_q)
+    velocity = -_sample(
+        np.random.default_rng(random_state), bins, i_t, i_e, np.zeros_like(i_t), i_q
+    )
     weights = f_d3v[i_t, i_e, i_q] / (n_mc * n_valid[i_e, i_q])
 
     v_max = np.max(v_upper)
@@ -197,21 +199,10 @@ def _contours(data, radii, angles):
 
 def _colorbar(ax, image, position):
     r"""Colorbar at the right or on top of ax, or none."""
-    fig = ax.get_figure()
-    pos = ax.get_position()
+    if position == "none":
+        return None
 
-    if position == "right":
-        cax = fig.add_axes([pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height])
-        fig.colorbar(mappable=image, cax=cax)
-    elif position == "top":
-        cax = fig.add_axes([pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01])
-        fig.colorbar(mappable=image, cax=cax, orientation="horizontal")
-        cax.xaxis.set_ticks_position("top")
-        cax.xaxis.set_label_position("top")
-    else:
-        cax = None
-
-    return cax
+    return _add_colorbar(image, ax, width=0.01, where=position)
 
 
 def plot_pad_polar(

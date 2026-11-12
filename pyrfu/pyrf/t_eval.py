@@ -1,19 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import bisect
-
 # 3rd party imports
 import numpy as np
-import xarray as xr
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def t_eval(inp, times):
@@ -26,7 +15,7 @@ def t_eval(inp, times):
     Parameters
     ----------
     inp : xarray.DataArray
-        Time series if the input to evaluate.
+        Time series of the input to evaluate, of any shape.
     times : ndarray
         Times at which the input will be evaluated.
 
@@ -42,23 +31,16 @@ def t_eval(inp, times):
 
     """
 
-    idx = np.zeros(len(times))
+    # First sample at or after each target time (a loop with bisect)
+    times = np.asarray(times)
+    idx = np.searchsorted(inp.time.data, times, side="left")
 
-    for i, time in enumerate(times):
-        idx[i] = bisect.bisect_left(inp.time.data, time)
+    if np.any(idx >= len(inp.time)):
+        raise IndexError("a target time is after the last sample of inp")
 
-    idx = idx.astype(np.int64)
-
-    if inp.ndim == 2:
-        out = xr.DataArray(
-            inp.data[idx, :],
-            coords=[times, inp.comp],
-            dims=["time", "comp"],
-        )
-    else:
-        out = xr.DataArray(inp.data[idx], coords=[times], dims=["time"])
-
-    # Attributes of inp (they were lost)
+    # Any shape, with the coordinates and attributes of inp (the second
+    # dimension had to be "comp", e.g. not the FGM represent_vec_tot)
+    out = inp.isel(time=idx).assign_coords(time=times)
     out.attrs = dict(inp.attrs)
 
     return out

@@ -4,13 +4,6 @@
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _nearest(t_ref, t):
     r"""Index of the element of the sorted t_ref nearest to each t (ties go to

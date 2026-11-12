@@ -5,12 +5,8 @@
 import matplotlib as mpl
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from .colorbar import colorbar as _add_colorbar
 
 
 def plot_projection(
@@ -85,26 +81,8 @@ def plot_projection(
     axis.set_ylim([-vlim / 1e3, vlim / 1e3])
     axis.set_aspect("equal")
 
-    f = axis.get_figure()
-    pos = axis.get_position()
-
-    if colorbar == "top":
-        caxis = f.add_axes(
-            [pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01],
-        )
-        f.colorbar(
-            mappable=image,
-            cax=caxis,
-            ax=axis,
-            orientation="horizontal",
-        )
-        caxis.xaxis.set_ticks_position("top")
-        caxis.xaxis.set_label_position("top")
-    elif colorbar == "right":
-        caxis = f.add_axes(
-            [pos.x0 + pos.width + 0.01, pos.y0, 0.01, pos.height],
-        )
-        f.colorbar(mappable=image, cax=caxis, ax=axis)
+    if colorbar in ["top", "right"]:
+        caxis = _add_colorbar(image, axis, width=0.01, where=colorbar)
     elif colorbar == "none":
         caxis = None
     else:

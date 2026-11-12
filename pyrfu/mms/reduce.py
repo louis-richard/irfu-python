@@ -8,30 +8,16 @@ import numbers
 import numpy as np
 import tqdm
 import xarray as xr
-from scipy.constants import electron_volt, speed_of_light
 
 # Local imports
 from pyrfu.mms._psd_units import _factor, _is_relativistic, _mass_ratio
-from pyrfu.mms._vdf_bins import _mass
+from pyrfu.mms._vdf_bins import _mass, _speed
 from pyrfu.mms.vdf_convert import vdf_convert
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip
 from pyrfu.pyrf.ts_scalar import ts_scalar
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
-def _energy2speed(energy, mass):
-    r"""Convert energy (eV) to speed (m/s), relativistically correct."""
-    gamma = 1 + electron_volt * energy / (mass * speed_of_light**2)
-    return speed_of_light * np.sqrt(1 - 1 / gamma**2)
 
 
 def _energy_widths(vdf, key):
@@ -212,7 +198,6 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         vdf_data = vdf_data * _factor(energy_tv, _mass_ratio(vdf))[:, :, None, None]
 
     # Get VDF dimension (time, energy, phi, theta)
-    # n_t, _, n_ph, _ = vdf_data.shape
     n_t, n_en, _, _ = vdf_data.shape
 
     # Construct or resample the time series of transformation matrix
@@ -242,11 +227,6 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         np.stack([x_phat_ts, y_phat_ts, z_phat_ts]),
         [1, 2, 0],
     )
-
-    # This is now done in int_sph_dist
-    # Set azimuthal angle projection grid.
-    # d_phi = kwargs.get("d_phi", 2 * np.pi / n_ph)
-    # phi_grid = np.linspace(0, 2 * np.pi, n_ph) + d_phi / 2  # centers
 
     # Read the keyword arguments
     # Velocity projection grid and edges
@@ -295,10 +275,10 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     if "delta_energy_plus" in vdf.attrs:
         e_max = vdf_energy.data[0, -1]
         e_max += time_clip(_energy_widths(vdf, "delta_energy_plus"), tint).data[0, -1]
-        v_max = _energy2speed(e_max, m_p)  # m/s
+        v_max = _speed(e_max, m_p)  # m/s
     else:
         energy = vdf_energy.data[0, :].astype(np.float64)
-        v_max = _speed_bin_edges(_energy2speed(energy, m_p))[-1]  # m/s
+        v_max = _speed_bin_edges(_speed(energy, m_p))[-1]  # m/s
 
     # initiate projected f
     if velocity_grid is not None:
@@ -345,7 +325,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         energy[energy < 0] = 0.0
 
         # Convert energy to velocity (relativistically correct)
-        velocity = _energy2speed(energy, m_p)  # m/s
+        velocity = _speed(energy, m_p)  # m/s
 
         # Speed widths of the instrument bins from the energy bounds of the
         # channels (corrected for the spacecraft potential)
@@ -355,8 +335,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
             e_low = np.clip(e_low.astype(np.float64) - sc_pot[i_t], 0.0, None)
             e_upp = np.clip(e_upp.astype(np.float64) - sc_pot[i_t], 0.0, None)
             speed_widths = {
-                "d_v_m": velocity - _energy2speed(e_low, m_p),
-                "d_v_p": _energy2speed(e_upp, m_p) - velocity,
+                "d_v_m": velocity - _speed(e_low, m_p),
+                "d_v_p": _speed(e_upp, m_p) - velocity,
             }
         else:
             speed_widths = {}

@@ -12,13 +12,6 @@ from ..pyrf.ts_scalar import ts_scalar
 from ._eis_units import _check_flux
 from ._psd_units import _MASS_RATIOS
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def eis_moments(
     inp,

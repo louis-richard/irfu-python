@@ -9,12 +9,8 @@ import numpy as np
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
+# Local imports
+from .calc_dt import calc_dt
 
 
 def calc_fs(inp: Union[Dataset, DataArray]) -> float:
@@ -38,15 +34,6 @@ def calc_fs(inp: Union[Dataset, DataArray]) -> float:
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
 
-    # One sample: no time step (and no warning from the median of nothing)
-    if len(inp.time) < 2:
-        return np.nan
-
-    # Time steps in seconds, whatever the unit of the time coordinate
-    time = inp.time.data.astype(np.datetime64)
-    d_t = np.diff(time) / np.timedelta64(1, "s")
-
-    # Calculate the sampling frequency
-    f_samp = 1 / np.median(d_t)
-
-    return f_samp
+    # The inverse of the median time step (NaN for one sample, inf for a zero
+    # step)
+    return 1 / np.float64(calc_dt(inp))

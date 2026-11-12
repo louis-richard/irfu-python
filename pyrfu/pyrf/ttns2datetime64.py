@@ -9,13 +9,6 @@ import numpy as np
 import pycdfpp
 from numpy.typing import NDArray
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # CDF_TT2000 fill and pad values, which have no datetime64 equivalent
 TT2000_FILL = np.iinfo(np.int64).min
 TT2000_PAD = TT2000_FILL + 1

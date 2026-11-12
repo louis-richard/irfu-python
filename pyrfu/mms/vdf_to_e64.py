@@ -8,22 +8,11 @@ import logging
 import numpy as np
 
 # Local imports
+from ..pyrf._time import _seconds, _timedelta
 from ..pyrf.ts_skymap import ts_skymap
 from .psd_rebin import psd_rebin
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
-
-
-def _seconds(values):
-    r"""Durations in seconds as timedelta64[ns]."""
-    return (np.asarray(values, dtype=np.float64) * 1e9).astype("timedelta64[ns]")
 
 
 def vdf_to_e64(vdf_e32):
@@ -84,10 +73,10 @@ def vdf_to_e64(vdf_e32):
     if "delta_time_minus" in glob_attrs and "delta_time_plus" in glob_attrs:
         time = vdf_e32.time.data
         idx = np.arange(0, len(time) - 1, 2)
-        t_start = time[idx] - _seconds(vdf_e32.attrs["delta_time_minus"][idx])
-        t_stop = time[idx + 1] + _seconds(vdf_e32.attrs["delta_time_plus"][idx + 1])
-        glob_attrs["delta_time_minus"] = (time_r - t_start) / np.timedelta64(1, "s")
-        glob_attrs["delta_time_plus"] = (t_stop - time_r) / np.timedelta64(1, "s")
+        t_start = time[idx] - _timedelta(vdf_e32.attrs["delta_time_minus"][idx])
+        t_stop = time[idx + 1] + _timedelta(vdf_e32.attrs["delta_time_plus"][idx + 1])
+        glob_attrs["delta_time_minus"] = _seconds(time_r, t_start)
+        glob_attrs["delta_time_plus"] = _seconds(t_stop, time_r)
 
     # update delta_energy
     if "delta_energy_plus" in glob_attrs and "delta_energy_minus" in glob_attrs:

@@ -57,13 +57,6 @@ from . import (
     generate_vdf,
 )
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Module (pyrfu.mms.list_files_aws is also the name of the function)
 list_files_aws_module = importlib.import_module("..mms.list_files_aws", __package__)
 
@@ -357,6 +350,21 @@ class CalcEpsilonTestCase(unittest.TestCase):
         eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
+    def test_calc_epsilon_charge(self):
+        # Ions of charge q gain q V, as in psd_moments (they gained V)
+        vdf, n_s = self._maxwellian("attrs", False)
+        vdf.attrs["species"] = "helium++"
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+
+        def eps(charge, potential):
+            sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, potential))
+            ions = vdf.assign_attrs(charge=charge)
+            return mms.calculate_epsilon(ions, model, n_s, sc_pot).data
+
+        np.testing.assert_allclose(eps(2, 5.0), eps(1, 10.0), rtol=1e-12)
+        self.assertGreater(np.max(np.abs(eps(1, 10.0) - eps(1, 5.0))), 1e-6)
+
     def test_calc_epsilon_units_and_channels(self):
         # The same in any units of phase-space density (ValueError for
         # others); fewer channels, less difference; a relativistic phase-space
@@ -486,33 +494,75 @@ class ConfigCacheTestCase(unittest.TestCase):
         if mtime_ns is not None:
             os.utime(path, ns=(mtime_ns, mtime_ns))
 
-    def test_load_config_refresh(self):
-        module = importlib.import_module("pyrfu.mms.db_get_ts")
+    def test_read_config_refresh(self):
+        # Read once until the file changes, as a copy (the readers of
+        # list_files_aws, list_files_sdc, copy_files and db_get_ts read the file
+        # themselves, without the default settings)
+        module = importlib.import_module("pyrfu.mms.db_init")
         with tempfile.TemporaryDirectory() as root:
             path = os.path.join(root, "config.json")
             self._write_config(path, "local", mtime_ns=10**18)
-            with mock.patch.object(module, "MMS_CFG_PATH", path):
-                module._load_config_cached.cache_clear()
-                config = module._load_config()
+            with (
+                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(
+                    module, "read_config", wraps=module.read_config
+                ) as read,
+            ):
+                module._read_config_cached.cache_clear()
+                config = module._read_config()
                 config["default"] = "changed by the caller"
-                self.assertEqual(module._load_config()["default"], "local")
+                self.assertEqual(module._read_config()["default"], "local")
+                self.assertEqual(read.call_count, 1)
 
                 self._write_config(path, "aws", mtime_ns=10**18 + 10**9)
-                self.assertEqual(module._load_config()["default"], "aws")
-                module._load_config_cached.cache_clear()
+                self.assertEqual(module._read_config()["default"], "aws")
+                self.assertEqual(read.call_count, 2)
+                module._read_config_cached.cache_clear()
 
-    def test_load_config_other_path(self):
-        # Another configuration file with the same modification time is read
-        # (the cache was keyed by the time only)
-        module = importlib.import_module("pyrfu.mms.db_get_ts")
+    def test_read_config_not_a_dict(self):
+        # A configuration file that is not a JSON object: the default settings
+        module = importlib.import_module("pyrfu.mms.db_init")
         with tempfile.TemporaryDirectory() as root:
-            module._load_config_cached.cache_clear()
+            path = os.path.join(root, "config.json")
+            with open(path, "w", encoding="utf-8") as file:
+                json.dump(["aws"], file)
+
+            with mock.patch.object(module, "MMS_CFG_PATH", path):
+                self.assertDictEqual(module._read_config(), module._DEFAULT_CONFIG)
+
+    def test_read_config_other_path(self):
+        # Another configuration file with the same modification time is read
+        module = importlib.import_module("pyrfu.mms.db_init")
+        with tempfile.TemporaryDirectory() as root:
+            module._read_config_cached.cache_clear()
             for default in ["local", "aws"]:
                 path = os.path.join(root, f"config_{default}.json")
                 self._write_config(path, default, mtime_ns=10**18)
                 with mock.patch.object(module, "MMS_CFG_PATH", path):
-                    self.assertEqual(module._load_config()["default"], default)
-            module._load_config_cached.cache_clear()
+                    self.assertEqual(module._read_config()["default"], default)
+            module._read_config_cached.cache_clear()
+
+    def test_read_config_every_reader(self):
+        # Every reader reads the configuration of db_init (db_get_ts and
+        # list_files_aws read the file of their own MMS_CFG_PATH), completed
+        # with the default settings (a missing "default" was None for db_get_ts,
+        # then NotImplementedError("Resource None"); KeyError in copy_files)
+        db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
+        aws = importlib.import_module("pyrfu.mms.list_files_aws")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "config.json")
+            for config, default, bucket in [
+                ({"default": "aws", "aws": "my-bucket/x"}, "aws", "my-bucket"),
+                ({"local": root}, "local", "gov-nasa-hdrl-data1"),
+            ]:
+                with open(path, "w", encoding="utf-8") as file:
+                    json.dump(config, file)
+
+                with mock.patch.object(
+                    sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+                ):
+                    self.assertEqual(db_get_ts._resolve_source("default"), default)
+                    self.assertEqual(aws._bucket_and_prefix()[0], bucket)
 
     def test_login_lasp_refresh(self):
         module = importlib.import_module("pyrfu.mms.list_files_sdc")
@@ -520,7 +570,9 @@ class ConfigCacheTestCase(unittest.TestCase):
             path = os.path.join(root, "config.json")
             self._write_config(path, "sdc", mtime_ns=10**18)
             with (
-                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(
+                    sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+                ),
                 mock.patch.object(module.requests, "Session") as session_cls,
                 mock.patch.object(module, "_get_credential", return_value=None),
             ):
@@ -544,7 +596,9 @@ class LoginLaspCredentialsTestCase(unittest.TestCase):
             path = os.path.join(root, "config.json")
             ConfigCacheTestCase._write_config(path, "sdc", rights=rights)
             with (
-                mock.patch.object(module, "MMS_CFG_PATH", path),
+                mock.patch.object(
+                    sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+                ),
                 mock.patch.object(module.requests, "Session") as session_cls,
                 mock.patch.object(
                     module, "_get_credential", return_value=credential
@@ -798,8 +852,9 @@ class MmsConfigPathTestCase(unittest.TestCase):
 
         for patch in [
             mock.patch.object(self.module, "_PACKAGE_CFG_PATH", self.package),
-            mock.patch.object(
-                self.module.platformdirs, "user_config_dir", return_value=self.user_dir
+            mock.patch(
+                "pyrfu._user_config.platformdirs.user_config_dir",
+                return_value=self.user_dir,
             ),
         ]:
             patch.start()
@@ -820,8 +875,24 @@ class MmsConfigPathTestCase(unittest.TestCase):
 
     def test_config_path_not_writable(self):
         # The package configuration is used if the user directory is not writable
-        with mock.patch.object(self.module.shutil, "copyfile", side_effect=OSError):
+        with mock.patch("pyrfu._user_config.shutil.copyfile", side_effect=OSError):
             self.assertEqual(self.module._user_config_path(), self.package)
+
+    def test_db_init_write_at_once(self):
+        # A write that fails leaves the previous configuration (json.dump
+        # failed half way through the file, read then as the default settings)
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "c.json")
+            with open(path, "w", encoding="utf-8") as file:
+                json.dump({"default": "aws", "local": root}, file)
+
+            with mock.patch.object(self.module, "MMS_CFG_PATH", path):
+                with self.assertRaises(TypeError):
+                    self.module.db_init(aws=object())
+
+                with open(path, encoding="utf-8") as file:
+                    self.assertEqual(json.load(file)["default"], "aws")
+                self.assertListEqual(os.listdir(root), ["c.json"])
 
 
 class DbGetTsTestCase(unittest.TestCase):
@@ -960,7 +1031,7 @@ class DbGetTsTestCase(unittest.TestCase):
 
     def test_resolve_source(self):
         with mock.patch.object(
-            self.module, "_load_config", return_value={"default": "local"}
+            self.module, "_read_config", return_value={"default": "local"}
         ):
             self.assertEqual(self.module._resolve_source(""), "local")
             self.assertEqual(self.module._resolve_source(None), "local")
@@ -1764,6 +1835,26 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
             {"Mission_group": "MMS", "Data_version": ["v4.6.100", "v4.6.101"]},
         )
 
+    def test_eis_combine_proton_spec_array_attrs(self):
+        # Array attributes compared as arrays (ValueError): kept when equal,
+        # both when not
+        e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
+        e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
+        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        phx.attrs["VALIDMIN"], ext.attrs["VALIDMIN"] = np.zeros(2), np.zeros(2)
+        phx.attrs["VALIDMAX"], ext.attrs["VALIDMAX"] = np.ones(2), np.full(2, 2.0)
+        for allt in [phx, ext]:
+            allt.attrs["FILLVAL"] = np.nan
+            allt.time.attrs["FILLVAL"] = np.array("NaT", dtype="datetime64[ns]")
+        result = mms.eis_combine_proton_spec(phx, ext)
+
+        # NaN and NaT fill values are equal (both were kept, as a list)
+        self.assertTrue(np.isnan(result.attrs["FILLVAL"]))
+        self.assertTrue(np.isnat(result.time.attrs["FILLVAL"]))
+        np.testing.assert_array_equal(result.attrs["VALIDMIN"], np.zeros(2))
+        np.testing.assert_array_equal(result.attrs["VALIDMAX"][0], np.ones(2))
+        np.testing.assert_array_equal(result.attrs["VALIDMAX"][1], np.full(2, 2.0))
+
     def test_eis_combine_proton_spec_units(self):
         # Fluxes only, in the same units, as IDL (counts and cps were combined,
         # different units became a list)
@@ -2128,6 +2219,24 @@ class EisAngAngTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
         self.assertNotIn("FIELDNAM", result.attrs)
 
+    def test_eis_ang_ang_array_attrs(self):
+        # Array attributes are kept when equal on all the telescopes (ValueError)
+        # and dropped when not
+        allt = self._allt()
+        for i in range(6):
+            allt[f"t{i:d}"].attrs = {
+                "VALIDMIN": np.array([0.0, 1.0]),
+                "VALIDMAX": np.array([i, 1.0]),
+                "LABL_PTR_1": ["flux", np.array([1.0, 2.0])],
+                "LABL_PTR_2": np.array(["flux", None], dtype=object),
+            }
+        result = mms.eis_ang_ang(allt, frame="gse")
+
+        np.testing.assert_array_equal(result.attrs["VALIDMIN"], [0.0, 1.0])
+        self.assertNotIn("VALIDMAX", result.attrs)
+        self.assertEqual(result.attrs["LABL_PTR_1"][0], "flux")
+        self.assertEqual(result.attrs["LABL_PTR_2"][0], "flux")
+
     def test_eis_combine_proton_skymap(self):
         # The skymap of the angle-angle distribution of the combined spectra
         phx = self._allt().assign_coords(energy=[20.0, 40.0])
@@ -2226,6 +2335,16 @@ class EisSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.data.attrs["UNITS"], "1/(cm^2 s sr keV)")
         self.assertNotIn("VALIDMIN", result.data.attrs)
         self.assertNotIn("FIELDNAM", result.data.attrs)
+
+    def test_eis_skymap_combine_sc_array_attrs(self):
+        # Array attributes equal on all the spacecraft are kept (dropped)
+        ref = mms.eis_skymap(self._ang_ang([0, 20]), to_psd=False)
+        other = mms.eis_skymap(self._ang_ang([1, 21]), to_psd=False)
+        for skymap in [ref, other]:
+            skymap.data.attrs["VALIDMIN"] = np.array([1.0, 0.0])
+        result = mms.eis_skymap_combine_sc([ref, other])
+
+        np.testing.assert_array_equal(result.data.attrs["VALIDMIN"], [1.0, 0.0])
 
     def test_eis_skymap_combine_sc(self):
         # Combined at the nearest spin (by index, a missing spin shifted the
@@ -2529,6 +2648,20 @@ class EisPadTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[:, 6, :], 2.0)
         np.testing.assert_allclose(result.data[:, 11, :], 0.0)
         self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
+
+    def test_eis_pad_parallel(self):
+        # Telescopes looking along -B and +B are at 0 and 180 degrees: the
+        # cosine rounded beyond 1 (NaN, the telescopes left out)
+        b_dir = np.array([-6.0, -6.0, -5.0])
+        b_hat = b_dir / np.linalg.norm(b_dir)
+        look = np.vstack([np.tile(-b_hat, (3, 1)), np.tile(b_hat, (3, 1))])
+        flux = np.zeros((6, 3, 2))
+        flux[:3] = 4.0
+        eis = self._eis(flux, look, np.array([100.0, 200.0]), 10.0, 10.0)
+        result = mms.eis_pad(eis, list(b_dir))
+
+        np.testing.assert_allclose(result.data[:, 0, :], 4.0)
+        np.testing.assert_allclose(result.data[:, 11, :], 0.0)
 
     def test_eis_pad_b_coverage(self):
         # No pitch angle (NaN) outside the time range of B and in its gaps (B
@@ -6537,6 +6670,35 @@ class ReadFeepsSectorMasksCsvTestCase(unittest.TestCase):
         # MMS4 20250216 table as updated upstream in April 2025
         self.assertEqual(int(self._table(4, "20250216").sum()), 564)
 
+    def test_read_feeps_sector_masks_csv_cached(self):
+        # The files of a date are read once (four files on every call), and the
+        # masks returned are copies: changing them doesn't change the next ones
+        module = sys.modules["pyrfu.mms.read_feeps_sector_masks_csv"]
+        module._read_masks.cache_clear()
+        tint = ["2017-07-11T22:00:00", "2017-07-11T22:00:00"]
+
+        with mock.patch.object(module, "open", wraps=open, create=True) as opened:
+            first = mms.read_feeps_sector_masks_csv(tint)
+            first["mms1_imask_top-1"].append(99)
+            second = mms.read_feeps_sector_masks_csv(tint)
+
+        self.assertEqual(opened.call_count, 4)
+        self.assertNotIn(99, second["mms1_imask_top-1"])
+        module._read_masks.cache_clear()
+
+    def test_feeps_bad_data_tables_cached(self):
+        # feeps_bad_data.json is read once (on every call of
+        # feeps_remove_bad_data)
+        module = sys.modules["pyrfu.mms.feeps_remove_bad_data"]
+        module._bad_data_tables.cache_clear()
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with mock.patch.object(module.json, "load", wraps=module.json.load) as load:
+            mms.feeps_remove_bad_data(feeps_alle)
+            mms.feeps_remove_bad_data(feeps_alle)
+
+        self.assertEqual(load.call_count, 1)
+
 
 @ddt
 class FeepsRemoveSunTestCase(unittest.TestCase):
@@ -7895,8 +8057,9 @@ class CopyFilesTestCase(unittest.TestCase):
                 self._ANC,
             ),
         ]:
-            module = sys.modules[f"pyrfu.mms.{name}"]
-            with mock.patch.object(module, "MMS_CFG_PATH", config):
+            with mock.patch.object(
+                sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", config
+            ):
                 call()
             self._check(rel_path)
 
@@ -8398,6 +8561,27 @@ class GetTsTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(
             result.time.data, time + np.timedelta64(shift, "ms")
+        )
+
+    def test_get_ts_fpi_epoch_shift_rounded(self):
+        # Half of 8.2 ms is 4.1 ms to the ns (8.2 * 1e6 / 2 was truncated to
+        # 4099999 ns)
+        time = np.array([np.datetime64("2019-09-14T07:54:00", "ns")])
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name, value in [("Epoch_minus_var", 0.0), ("Epoch_plus_var", 8.2)]:
+            cdf.add_variable(name, values=np.array([value]), is_nrv=True)
+            cdf[name].add_attribute("UNITS", "ms")
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(1))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+        result = get_ts(bytes(pycdfpp.save(cdf)), "mms1_des_numberdensity_brst")
+
+        np.testing.assert_array_equal(
+            result.time.data, time + np.timedelta64(4_100_000, "ns")
         )
 
     @staticmethod
@@ -9369,7 +9553,9 @@ class ListFilesAwsTestCase(unittest.TestCase):
             with open(config_path, "w", encoding="utf-8") as fs:
                 json.dump({"aws": config_aws}, fs)
 
-            with mock.patch.object(list_files_aws_module, "MMS_CFG_PATH", config_path):
+            with mock.patch.object(
+                sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", config_path
+            ):
                 result = list_files_aws_module._bucket_and_prefix()
 
         self.assertTupleEqual(result, expected)
@@ -9888,7 +10074,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
 
         for source in ["default", "Default", None]:
             with mock.patch.object(
-                db_get_ts_module, "_load_config", return_value={"default": "aws"}
+                db_get_ts_module, "_read_config", return_value={"default": "aws"}
             ):
                 _, (get_data, _, load_model) = self._run(
                     vdf, n_e, startdelphi, model, source=source
@@ -10592,6 +10778,28 @@ class VdfToE64TestCase(unittest.TestCase):
             self.assertEqual(len(result.attrs[key]), len(result.time))
             np.testing.assert_allclose(result.attrs[key], 2 * half, rtol=1e-6)
 
+    def test_vdf_to_e64_delta_time_rounded(self):
+        # The widths in ns are rounded (truncated, 0.0157 s was 0.015699999 s)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        vdf.attrs["delta_time_minus"] = np.full(10, 0.0157)
+        vdf.attrs["delta_time_plus"] = np.full(10, 0.0157)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # zero energy channel
+            result = mms.vdf_to_e64(vdf)
+
+        width = np.timedelta64(15700000, "ns")
+        t_start = vdf.time.data[0::2] - width
+        t_stop = vdf.time.data[1::2] + width
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_minus"],
+            (result.time.data - t_start) / np.timedelta64(1, "s"),
+        )
+        np.testing.assert_array_equal(
+            result.attrs["delta_time_plus"],
+            (t_stop - result.time.data) / np.timedelta64(1, "s"),
+        )
+
 
 @ddt
 class VdfElimTestCase(unittest.TestCase):
@@ -10931,6 +11139,35 @@ class VdfConvertTestCase(unittest.TestCase):
         # He2+ from the atomic mass, as the alpha particle mass
         self.assertAlmostEqual((m_he - 2 * m_e) / alpha, 1.0, places=7)
 
+    def test_vdf_convert_feeps_species(self):
+        # The species of the FEEPS data, "i" and "e" ("i" raised ValueError)
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+
+        for species, same in [("i", "ions"), ("e", "electrons")]:
+            vdf.attrs["species"] = same
+            expected = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+            vdf.attrs["species"] = species
+            result = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
+            np.testing.assert_array_equal(result, expected)
+
+    def test_vdf_convert_def_alias(self):
+        # "1/(cm^2 s sr)", the energy flux name of def2psd, in vdf_convert too
+        # (ValueError: units not supported), as the same quantity
+        vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
+        flux = mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)")
+        alias = flux.copy()
+        alias.data.attrs["UNITS"] = "1/(cm^2 s sr)"
+
+        np.testing.assert_array_equal(
+            mms.vdf_convert(alias, "s^3/cm^6").data.data,
+            mms.vdf_convert(flux, "s^3/cm^6").data.data,
+        )
+        np.testing.assert_array_equal(
+            mms.def2psd(alias).data.data, mms.def2psd(flux).data.data
+        )
+
     def test_vdf_convert_relativistic(self):
         # Electrons at 100 keV: the convention is that of the attribute
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "electrons")
@@ -11029,6 +11266,16 @@ class VdfVelocityTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.vdf_velocity(vdf, sc_pot=np.ones(3))
+
+    def test_vdf_velocity_sc_pot_charge(self):
+        # Ions of charge q gain q V, as in psd_moments (they gained V)
+        vdf = self._vdf("ions").assign_attrs(species="helium++", charge=2)
+        alpha = constants.physical_constants["alpha particle mass"][0]
+        speed = mms.vdf_velocity(vdf, sc_pot=150.0).vx.data
+        speed = np.abs(speed[:, :, 0, 8]) / np.sin(np.deg2rad(vdf.theta.data[8]))
+        speed /= np.abs(np.cos(np.deg2rad(vdf.phi.data[:, :1])))
+        energy = vdf.energy.data + 2 * 150.0
+        np.testing.assert_allclose(speed, _rel_speed(energy, alpha) / 1e3, rtol=1e-6)
 
     def test_vdf_velocity_relativistic(self):
         # Always relativistic (the relativistic argument was removed): 10 keV
@@ -11180,6 +11427,21 @@ class VdfPartialDensityTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             mms.vdf_partial_density(dpf).data.data, d_n.data.data, rtol=1e-12
         )
+
+    def test_vdf_partial_density_charge(self):
+        # With a spacecraft potential, the sums are the psd_moments density for
+        # the ions of charge 2 too (the energies were corrected by V, not 2 V:
+        # 0.7 % lower at 20 V)
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [200.0, 0, 0])
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+
+        for species, charge in [("ions", 1), ("helium++", 2)]:
+            ions = vdf.assign_attrs(species=species, charge=charge)
+            sc_pot = pyrf.ts_scalar(ions.time.data, np.full(len(ions.time), 20.0))
+            n_moments = mms.psd_moments(ions, sc_pot)[0].data
+            d_n = mms.vdf_partial_density(ions, sc_pot=sc_pot)
+            n_sum = d_n.data.data.sum(axis=(1, 2, 3))
+            np.testing.assert_allclose(n_sum, n_moments, rtol=0.005)
 
     def test_vdf_partial_density_input(self):
         vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [0.0] * 3)
@@ -11375,7 +11637,7 @@ class VdfMacroparticlesTestCase(unittest.TestCase):
         # The velocities of the bins: speed and look direction in the bin
         v_xyz = np.stack([result[c].data for c in ["vx", "vy", "vz"]], axis=1)
         speed = np.linalg.norm(v_xyz, axis=1) * 1e3
-        bins = sys.modules["pyrfu.mms._vdf_mc"]._source_bins(vdf)
+        bins = sys.modules["pyrfu.mms._vdf_bins"]._source_bins(vdf)
         i_t = np.searchsorted(vdf.time.data, result.time.data)
         i_e, i_q = result.idx0.data, result.idx2.data
         self.assertTrue(np.all(speed >= bins["v_lower"][i_t, i_e] * (1 - 1e-12)))
@@ -12028,6 +12290,7 @@ class TokenizeTestCase(unittest.TestCase):
         ("b_gse_fgx_srvy_l2", "invalid instrument 'fgx'"),
         ("b_gse_fgm_srvx_l2", "invalid sampling mode 'srvx'"),
         ("b_gse_fgm_srvy_l9", "invalid data level 'l9'"),
+        ("ni_gse_fpi_brst_l2", "'ni' is a scalar"),
     )
     @unpack
     def test_tokenize_invalid(self, var_str, message):
@@ -12454,7 +12717,9 @@ class SdcNetworkTestCase(unittest.TestCase):
         self.addCleanup(config_dir.cleanup)
         path = os.path.join(config_dir.name, "config.json")
         ConfigCacheTestCase._write_config(path, "sdc", rights="public")
-        patch = mock.patch.object(module, "MMS_CFG_PATH", path)
+        patch = mock.patch.object(
+            sys.modules["pyrfu.mms.db_init"], "MMS_CFG_PATH", path
+        )
         patch.start()
         self.addCleanup(patch.stop)
         module._login_lasp_cached.cache_clear()
@@ -12874,7 +13139,6 @@ class LoadAncillaryTestCase(unittest.TestCase):
     def test_load_ancillary_default_source(self):
         # The default resource of the configuration (a temporary one, also for
         # the local path of the local lister)
-        db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
         db_init = importlib.import_module("pyrfu.mms.db_init")
         files, contents = self._defatt_files()
         session = self._sdc(files, contents)
@@ -12885,14 +13149,9 @@ class LoadAncillaryTestCase(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as file:
                 json.dump({"default": default, "local": self.root}, file)
 
-            db_get_ts._load_config_cached.cache_clear()
             session.get.reset_mock()
-            with (
-                mock.patch.object(db_get_ts, "MMS_CFG_PATH", path),
-                mock.patch.object(db_init, "MMS_CFG_PATH", path),
-            ):
+            with mock.patch.object(db_init, "MMS_CFG_PATH", path):
                 result = mms.load_ancillary("defatt", self.tint, 1, False)
-            db_get_ts._load_config_cached.cache_clear()
 
             self.assertEqual(len(result.time), 2)
             self.assertEqual(session.get.call_count, n_get)
@@ -13329,6 +13588,67 @@ class FftBandpassTestCase(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             mms.fft_bandpass(inp, True, 30.0)
+
+    def test_fft_bandpass_shape_and_coords(self):
+        # The output has the dimensions, coordinates and attributes of the
+        # input: (time, 2) and (time, 6) raised "data must have shape (n, 3)",
+        # (time, 1) was squeezed and the labels of the components were dropped
+        times = generate_timeline(128.0, 1024)
+        sig = np.sin(2 * np.pi * 10 * np.arange(1024) / 128.0)
+
+        for n_comp in [1, 2, 3, 6]:
+            labels = [f"c{i:d}" for i in range(n_comp)]
+            inp = xr.DataArray(
+                np.tile(sig[:, None], (1, n_comp)),
+                coords=[times, labels],
+                dims=["time", "comp"],
+                attrs={"UNITS": "mV/m"},
+            )
+            inp.time.attrs = {"UNITS": "ns"}
+            result = mms.fft_bandpass(inp, 5.0, 30.0)
+
+            self.assertEqual(result.dims, ("time", "comp"))
+            self.assertListEqual(list(result.comp.data), labels)
+            self.assertDictEqual(result.attrs, inp.attrs)
+            self.assertDictEqual(result.time.attrs, {"UNITS": "ns"})
+            np.testing.assert_allclose(result.data, inp.data, atol=1e-9)
+
+        # An odd number of samples: the last one dropped, as before
+        result = mms.fft_bandpass(inp[:-1], 5.0, 30.0)
+        self.assertEqual(result.shape, (1022, 6))
+
+
+class SpinReduceTestCase(unittest.TestCase):
+    # The per-spin mean or sum of the EPD routines (pyrfu/mms/_epd.py)
+    @property
+    def module(self):
+        return sys.modules["pyrfu.mms._epd"]
+
+    def test_spin_reduce(self):
+        data = np.arange(12.0).reshape(6, 2)
+        data[2:4] = np.nan  # the second spin has no data
+        data[4, 1] = np.nan
+        starts, stops = np.array([0, 2, 4]), np.array([2, 4, 6])
+
+        np.testing.assert_array_equal(
+            self.module._spin_reduce(data, starts, stops),
+            [[1.0, 2.0], [np.nan, np.nan], [9.0, 11.0]],
+        )
+        np.testing.assert_array_equal(
+            self.module._spin_reduce(data, starts, stops, "sum"),
+            [[2.0, 4.0], [np.nan, np.nan], [18.0, 11.0]],
+        )
+
+        # Counts in integers are summed as integers
+        counts = np.arange(6).reshape(6, 1)
+        result = self.module._spin_reduce(counts, starts, stops, "sum")
+        self.assertEqual(result.dtype.kind, "i")
+        np.testing.assert_array_equal(result, [[1], [5], [9]])
+
+        # No spin, and spins of different lengths
+        self.assertEqual(self.module._spin_reduce(data, [], []).shape, (0, 2))
+        with self.assertRaisesRegex(ValueError, "same number of samples"):
+            self.module._spin_reduce(data, [0, 2], [2, 5])
 
 
 class HpcaSpinSumTestCase(unittest.TestCase):

@@ -8,13 +8,6 @@ import numpy as np
 from ._psd_units import _output
 from ._vdf_bins import _band_solid_angles, _broadcast_angles, _is_skymap
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def vdf_solid_angle(vdf):
     r"""Solid angle of each bin of a skymap or a pitch-angle distribution, as

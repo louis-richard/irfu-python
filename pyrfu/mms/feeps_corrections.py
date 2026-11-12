@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
-from copy import deepcopy
+"""Contributed by Apostolos Kolokotronis."""
 
 # Local imports
 from .feeps_correct_energies import feeps_correct_energies
@@ -10,13 +9,6 @@ from .feeps_flat_field_corrections import feeps_flat_field_corrections
 from .feeps_remove_bad_data import feeps_remove_bad_data
 from .feeps_remove_sun import feeps_remove_sun
 from .feeps_split_integral_ch import feeps_split_integral_ch
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolosk@irf.se"
-__copyright__ = "Copyright 2020-2025"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def feeps_corrections(feeps_alle):
@@ -40,16 +32,14 @@ def feeps_corrections(feeps_alle):
 
     """
 
-    # Make a deep copy of the input dataset to avoid modifying the original data
-    feeps_alle_clean = deepcopy(feeps_alle)
-
-    feeps_alle_clean = feeps_correct_energies(feeps_alle_clean)
+    # Each step returns a new Dataset, without changing its input (a deep copy
+    # of the input was made first)
+    feeps_alle_clean = feeps_correct_energies(feeps_alle)
     feeps_alle_clean = feeps_flat_field_corrections(feeps_alle_clean)
     feeps_alle_clean = feeps_remove_bad_data(feeps_alle_clean)
 
     split_int_ch = feeps_split_integral_ch(feeps_alle_clean)
     feeps_alle_clean = split_int_ch[0]
-    # feeps_alle_500kev = split_int_ch[1];
 
     feeps_alle_clean = feeps_remove_sun(feeps_alle_clean)
 

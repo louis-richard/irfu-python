@@ -5,12 +5,8 @@
 import numpy as np
 from scipy import ndimage
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from ._time import _seconds
 
 WEIGHTS = {
     5: np.array([0.1, 0.25, 0.3, 0.25, 0.1]),
@@ -49,7 +45,7 @@ def waverage(inp, f_sampl: float = None, n_pts: int = 7):
     if len(inp) <= 1:
         return inp.copy()
 
-    t_sec = (inp.time.data - inp.time.data[0]) / np.timedelta64(1, "s")
+    t_sec = _seconds(inp.time.data, inp.time.data[0])
 
     if f_sampl is None:
         f_sampl = 1 / t_sec[1]

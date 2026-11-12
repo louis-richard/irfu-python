@@ -8,14 +8,6 @@ import json
 import os
 from typing import Mapping
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
-
 # Parameters with keys in mms_keys.json, or kept for keys to come (irfu-matlab
 # names: energyi/e, es12/34, adcoff, flux-amb-pm2). Removed for want of data:
 # nbge, pbge, defbge (the FPI background is DIS only), tsi, tse (computed in
@@ -292,7 +284,13 @@ def tokenize(var_str: str) -> Mapping[str, str]:
 
     tensor_order = _tensor_order(splitted_key)
 
-    if len(splitted_key) == 5 and tensor_order > 0:
+    # A scalar has no coordinate system ("too many values to unpack")
+    if len(splitted_key) == 5 and tensor_order == 0:
+        raise ValueError(
+            f"{splitted_key[0]!r} is a scalar: no coordinate system in {var_str!r}"
+        )
+
+    if len(splitted_key) == 5:
         parameter, coordinates_system, instrument, data_rate, data_level = splitted_key
     else:
         parameter, instrument, data_rate, data_level = splitted_key

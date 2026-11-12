@@ -12,17 +12,10 @@ import xarray as xr
 
 # Local imports
 from ..models import igrf
+from ._time import _unix
 from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_vec_xyz import ts_vec_xyz
 from .unix2datetime64 import unix2datetime64
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 # Unix times of J2000 (2000-01-01T12:00:00 TT) and of 2000-01-01T12:00:00 UT. The
 # first one gives TT seconds since J2000 after 2017 (TT - UTC = 69.184 s).
@@ -265,7 +258,7 @@ def cotrans(inp, flag, hapgood: bool = True):
 
     # Unix time in seconds (whatever the unit of the time coordinate)
     time = inp.time.data.astype("datetime64[ns]")
-    t = (time.astype(np.int64) * 1e-9).astype(np.float64)
+    t = _unix(time)
 
     if flag == "dipoledirectiongse":
         return _dipole_direction_gse(t)
@@ -313,9 +306,7 @@ def cotrans(inp, flag, hapgood: bool = True):
     inp = inp.data
 
     if hapgood:
-        day_start_epoch_dt64 = time.astype("datetime64[D]")
-        day_start_epoch_dt64 = day_start_epoch_dt64.astype("datetime64[ns]")
-        day_start_epoch = day_start_epoch_dt64.astype(np.int64) / 1e9
+        day_start_epoch = _unix(time.astype("datetime64[D]"))
 
         # t_zero is time measured in Julian centuries from 2000-01-0112:00 UT
         # to the previous midnight

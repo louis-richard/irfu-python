@@ -10,13 +10,6 @@ from ._units import _check_units
 from .resample import resample
 from .ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def plasma_beta(b_xyz, p_xyz):
     r"""Computes plasma beta at magnetic field sampling

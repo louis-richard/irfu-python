@@ -10,12 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from .colorbar import colorbar as _add_colorbar
 
 
 def plot_spectr(
@@ -27,6 +23,7 @@ def plot_spectr(
     cmap: str = None,
     colorbar: str = "right",
     aspect: str = "auto",
+    pad: float = 0.01,
     **kwargs,
 ):
     r"""Plot a spectrogram using pcolormesh.
@@ -63,12 +60,13 @@ def plot_spectr(
     aspect : str or float, Optional
         Aspect ratio of the axis, see matplotlib.axes.Axes.set_aspect.
         Default is "auto".
-
-    Other Parameters
-    ----------------
-    pad : float
+    pad : float, Optional
         Gap between the axis and the colorbar, in figure coordinates. Default
         is 0.01.
+    **kwargs
+        Keyword arguments forwarded to matplotlib.axes.Axes.pcolormesh (e.g.,
+        alpha, edgecolors), which can also replace rasterized=True and
+        shading="auto". They were ignored before.
 
     Returns
     -------
@@ -93,9 +91,7 @@ def plot_spectr(
     """
 
     if axis is None:
-        fig, axis = plt.subplots(1)
-    else:
-        fig = axis.get_figure()
+        _, axis = plt.subplots(1)
 
     if not cmap or isinstance(cmap, str):
         cmap = mpl.colormaps.get_cmap(cmap)
@@ -174,9 +170,7 @@ def plot_spectr(
         x_data,
         y_data,
         inp_data,
-        rasterized=True,
-        shading="auto",
-        **options,
+        **{"rasterized": True, "shading": "auto", **options, **kwargs},
     )
 
     if np.issubdtype(x_data.dtype, np.datetime64):
@@ -193,53 +187,18 @@ def plot_spectr(
     axis.set_ylim([np.min(y_data), np.max(y_data)])
     axis.set_aspect(aspect)
 
-    if colorbar.lower() == "right":
-        pad = kwargs.get("pad", 0.01)
-
-        pos = axis.get_position()
-        cax = fig.add_axes(
-            [pos.x0 + pos.width + pad, pos.y0, 0.01, pos.height],
-        )
-        plt.colorbar(mappable=image, cax=cax, ax=axis, orientation="vertical")
-
-        cax.yaxis.set_ticks_position(colorbar.lower())
-        cax.yaxis.set_label_position(colorbar.lower())
-
+    if colorbar.lower() in ["right", "top"]:
+        cax = _add_colorbar(image, axis, pad, 0.01, colorbar.lower())
         cax.set_axisbelow(False)
 
         if cscale == "log":
-            cax.yaxis.set_major_locator(
-                mpl.ticker.LogLocator(base=10.0, numticks=4),
-            )
+            locator = mpl.ticker.LogLocator(base=10.0, numticks=4)
         else:
-            cax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
+            locator = mpl.ticker.MaxNLocator(4)
 
-        out = (axis, cax)
-    elif colorbar.lower() == "top":
-        pad = kwargs.get("pad", 0.01)
-
-        pos = axis.get_position()
-        cax = fig.add_axes(
-            [pos.x0, pos.y0 + pos.height + pad, pos.width, 0.01],
+        (cax.yaxis if colorbar.lower() == "right" else cax.xaxis).set_major_locator(
+            locator
         )
-        plt.colorbar(
-            mappable=image,
-            cax=cax,
-            ax=axis,
-            orientation="horizontal",
-        )
-
-        cax.xaxis.set_ticks_position(colorbar.lower())
-        cax.xaxis.set_label_position(colorbar.lower())
-
-        cax.set_axisbelow(False)
-
-        if cscale == "log":
-            cax.xaxis.set_major_locator(
-                mpl.ticker.LogLocator(base=10.0, numticks=4),
-            )
-        else:
-            cax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(4))
 
         out = (axis, cax)
     elif colorbar.lower() == "none":

@@ -9,15 +9,9 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ..pyrf._time import _ns
 from ._eis_units import _check_same_attrs, _check_same_units
 from .eis_spec_combine_sc import _idx_closest, _nearest
-
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def eis_pad_combine_sc(pads):
@@ -73,7 +67,7 @@ def eis_pad_combine_sc(pads):
         if not np.array_equal(pad_.theta.data, ref_probe.theta.data):
             raise ValueError("The PADs must have the same pitch angle bins")
 
-    t_ref = ref_probe.time.data.astype("datetime64[ns]").astype(np.int64)
+    t_ref = _ns(ref_probe.time.data)
     d_t = np.median(np.diff(t_ref)) if len(t_ref) > 1 else np.inf
 
     allmms_pad = np.full(
@@ -83,7 +77,7 @@ def eis_pad_combine_sc(pads):
 
     # Nearest times and closest channels (they were paired by index)
     for i_pad, pad_ in enumerate(pads):
-        t_pad = pad_.time.data.astype("datetime64[ns]").astype(np.int64)
+        t_pad = _ns(pad_.time.data)
         idx_time = _nearest(t_ref, t_pad, d_t / 2)
         idx_ener = _idx_closest(pad_.energy.data, ener_probe.energy.data)
         paired = idx_time >= 0

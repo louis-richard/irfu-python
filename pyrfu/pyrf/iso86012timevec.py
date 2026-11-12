@@ -7,13 +7,6 @@ import re
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def iso86012timevec(time):
     r"""Convert ISO 8601 time string into time vector.

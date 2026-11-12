@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 # 3rd party imports
 from copy import deepcopy
 from typing import Sequence
@@ -10,41 +12,11 @@ import xarray as xr
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from ..pyrf._time import _ns
 from ..pyrf.calc_fs import calc_fs
+from ..pyrf.nanavg_4sc import _valid_count
 from ..pyrf.resample import resample
 from ._eis_units import _check_same_units
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolos.kolokotronis@irf.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.5.10"
-__status__ = "Prototype"
-
-
-def _nan_count(inp):
-    r"""Counts the number of non-NaN values in the input array at each time step.
-
-    Parameters
-    ----------
-    inp : DataArray or Dataset
-        Input array.
-
-    Returns
-    -------
-    inp_to_counts : DataArray or Dataset
-        Array with the same shape as the input array, where each element
-        is the number of non-NaN values at the corresponding time step.
-
-    """
-    inp_to_counts = xr.where(np.isnan(inp), 0, 1)
-
-    return inp_to_counts
-
-
-def _ns(time):
-    r"""Times as float nanoseconds."""
-    return time.astype("datetime64[ns]").astype(np.int64).astype(np.float64)
 
 
 def _without_gaps(inp, inp_r):
@@ -54,7 +26,8 @@ def _without_gaps(inp, inp_r):
     start and after the end of `inp`). A covered time that is not between two
     samples of `inp` at most 1.5 periods apart (a gap edge, an end) takes the
     nearest sample, not a value interpolated across the gap."""
-    time, ref = _ns(inp.time.data), _ns(inp_r.time.data)
+    time = _ns(inp.time.data).astype(np.float64)
+    ref = _ns(inp_r.time.data).astype(np.float64)
     steps = np.diff(time) if len(time) > 1 else np.diff(ref)
     d_t = np.median(steps) if len(steps) else 0.0
 
@@ -179,9 +152,9 @@ def feeps_avg_4sc(
                 b_avg_data[:, ien_bin] += b.data[
                     :, combined_energies[ien_bin][mms_id] - 1
                 ]
-                b_nan_denom[:, ien_bin] += _nan_count(
+                b_nan_denom[:, ien_bin] += _valid_count(
                     b_count_nan.data[:, combined_energies[ien_bin][mms_id] - 1]
-                ).data
+                )
                 energy[ien_bin] += b.energy.data[combined_energies[ien_bin][mms_id] - 1]
             with np.errstate(divide="ignore", invalid="ignore"):
                 energy[ien_bin] /= non_none_sc_ch
@@ -190,7 +163,7 @@ def feeps_avg_4sc(
         for b, b_count_nan in zip(b_list_r, b_list_count_nans):
 
             b_avg_data += b.data
-            b_nan_denom += _nan_count(b_count_nan).data
+            b_nan_denom += _valid_count(b_count_nan)
 
     coords = {}
     if flag == "omni":

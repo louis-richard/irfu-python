@@ -11,13 +11,6 @@ from ._units import _check_units
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 
@@ -111,7 +104,6 @@ def vht(e, b, no_ez: bool = False):
     )
 
     # Calculate the goodness of the Hoffman Teller frame
-    # e_ht = e_vxb(v_ht, b)
     e_ht = ts_vec_xyz(b.time.data, -1e-3 * np.cross(v_ht, b.data), {"UNITS": "mV/m"})
 
     e_ht_p = e_ht.data[valid]

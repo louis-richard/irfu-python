@@ -5,14 +5,8 @@
 import numpy as np
 
 # Local imports
+from ._time import _seconds, _timedelta
 from .find_closest import find_closest
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def _derivative(time, inp):
@@ -77,10 +71,7 @@ def corr_deriv(inp0, inp1, flag: bool = False):
 
     # Times in seconds relative to the first time of inp0
     t_ref = inp0.time.data[0].astype("datetime64[ns]")
-    tx1, tx2 = [
-        (inp.time.data.astype("datetime64[ns]") - t_ref) / np.timedelta64(1, "s")
-        for inp in [inp0, inp1]
-    ]
+    tx1, tx2 = [_seconds(inp.time.data, t_ref) for inp in [inp0, inp1]]
     x_1, x_2 = [inp.data.astype(np.float64) for inp in [inp0, inp1]]
 
     # 1st derivative
@@ -100,8 +91,7 @@ def corr_deriv(inp0, inp1, flag: bool = False):
     t1_dd, t2_dd = _common(zeros1, zeros2)
 
     t1_d, t2_d, t1_dd, t2_dd = [
-        t_ref + np.round(t_ * 1e9).astype("timedelta64[ns]")
-        for t_ in [t1_d, t2_d, t1_dd, t2_dd]
+        t_ref + _timedelta(t_) for t_ in [t1_d, t2_d, t1_dd, t2_dd]
     ]
 
     return t1_d, t2_d, t1_dd, t2_dd

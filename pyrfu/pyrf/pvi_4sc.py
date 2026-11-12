@@ -10,13 +10,6 @@ from .norm import norm
 # Local imports
 from .resample import resample
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def pvi_4sc(b_mms):
     r"""Compute the Partial Variance of Increments (PVI) using the

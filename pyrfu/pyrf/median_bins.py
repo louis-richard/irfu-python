@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from .mean_bins import _bin_stat
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def median_bins(inp0, inp1, bins: int = 10):
     r"""Computes median of values of y corresponding to bins of x

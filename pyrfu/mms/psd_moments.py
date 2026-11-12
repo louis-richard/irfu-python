@@ -13,9 +13,11 @@ from scipy import constants
 # Local imports
 from pyrfu.mms._vdf_bins import (
     _bin_pitch_angles,
+    _charge,
     _charge_sign,
     _mass,
     _phi_edges,
+    _speed,
     _theta_edges,
 )
 from pyrfu.mms.vdf_convert import _relativistic_psd
@@ -24,13 +26,6 @@ from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
 
@@ -249,14 +244,6 @@ def _exact_kernels(
     return np.ascontiguousarray(np.stack(kernels, axis=1), dtype=np.float64)
 
 
-def _speed_relativistic(energy, p_mass):
-    # Relativistic speed (m/s) of particles of kinetic energy (eV), from
-    # eps = gamma - 1 (c sqrt(1 - 1 / gamma^2) loses digits at low energies:
-    # 1e-8 for 1 eV protons)
-    eps = constants.elementary_charge * energy / (p_mass * constants.c**2)
-    return constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
-
-
 def _energy_edges(vdf, energy, energy0, energy1, step_table, flag_same_e):
     # Upper and lower energy edges of the channels (time, energy), as in
     # irfu-matlab mms.psd_moments: the delta_energy_plus/minus attributes
@@ -390,7 +377,7 @@ def _moms_relativistic(moms_args, sc_pot, p_mass):
     gamma = 1.0 + eps
 
     with np.errstate(divide="ignore", invalid="ignore"):
-        velocity = _speed_relativistic(energy_correct, p_mass)
+        velocity = _speed(energy_correct, p_mass)
         kinetic = np.where(velocity > 0.0, 2 * eps * c_light**2 / velocity**2, 1.0)
 
     # Raw energies where the kernel sets the speed to zero (inner electron
@@ -702,7 +689,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # ions were protons and the species not starting with "e" or "i" raised
     # AssertionError.
     p_mass, is_electron = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_electron else float(vdf.attrs.get("charge", 1))
+    charge = 1.0 if is_electron else _charge(vdf)
 
     # Relativistic speeds, momentum flux and kinetic energy, for all the
     # species: the relativistic phase-space density in SI units (s^3/m^6)
@@ -837,7 +824,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
     sc_pot_2d = sc_pot[:, np.newaxis]
     e_upper = np.clip(energy_upper - sc_pot_2d, 0.0, None)
     e_lower = np.clip(energy_lower - sc_pot_2d, 0.0, None)
-    v_upper, v_lower = [_speed_relativistic(e, p_mass) for e in [e_upper, e_lower]]
+    v_upper, v_lower = [_speed(e, p_mass) for e in [e_upper, e_lower]]
     delta_v = np.ascontiguousarray(v_upper - v_lower)
 
     # Clean up NaN values in the input VDF data before passing to the numba kernel.

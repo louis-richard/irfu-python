@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 # Built-in imports
 import warnings
 from copy import deepcopy
@@ -8,13 +10,6 @@ from copy import deepcopy
 # 3rd party imports
 import numpy as np
 import xarray as xr
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolosk@irf.se"
-__copyright__ = "Copyright 2020-2025"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def _reject_outliers(data, outliers_q=0.99):

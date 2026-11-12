@@ -11,14 +11,8 @@ from numpy.typing import NDArray
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._time import _seconds
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
 
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
@@ -67,7 +61,7 @@ def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
     time: NDArray[np.datetime64] = inp.time.data
     # Double precision, one column per component (a scalar raised IndexError)
     data: NDArray[np.float64] = inp.data.astype(np.float64).reshape(len(inp), -1)
-    time_sec: NDArray[np.float64] = (time - time[0]) / np.timedelta64(1, "s")
+    time_sec: NDArray[np.float64] = _seconds(time, time[0])
 
     # Preallocating output
     inp_mean: NDArray[np.float64] = np.full_like(data, np.nan, dtype=np.float64)

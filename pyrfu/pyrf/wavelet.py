@@ -19,13 +19,6 @@ from xarray.core.dataset import Dataset
 from pyrfu.pyrf._units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +30,6 @@ def _ww(
     frequencies_mat: NDArray[np.float64],
     f_nyq: float,
 ) -> NDArray[np.complex128]:
-    # TODO : use nested for loop and math instead of numpy and test speed!!
     w_w: NDArray[np.complex128] = s_ww * np.exp(
         -sigma * sigma * ((scales_mat * frequencies_mat - f_nyq) ** 2) / 2,
     )

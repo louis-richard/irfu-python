@@ -7,47 +7,21 @@ import warnings
 # 3rd party imports
 import numpy as np
 
+from ..pyrf._time import _ns
 from ..pyrf.ts_skymap import ts_skymap
 
 # Local imports
+from ._eis_attrs import _common_attrs
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
-def _combine_attrs(skymaps_attrs):
-    attrs = {}
-    filtered_attrs = [
-        "delta_energy_plus",
-        "delta_energy_minus",
-        "esteptable",
-        "energy0",
-        "energy1",
-    ]
-
-    attrs_keys = list(
-        filter(lambda k: k not in filtered_attrs, skymaps_attrs[0]),
-    )
-
-    for k in attrs_keys:
-        sms_attrs = [skymaps_attr[k] for skymaps_attr in skymaps_attrs]
-
-        is_same = [sms_attr == sms_attrs[0] for sms_attr in sms_attrs[1:]]
-
-        try:
-            if all(is_same):
-                attrs[k] = sms_attrs[0]
-            else:
-                continue
-        except ValueError:
-            continue
-
-    return attrs
+# Per-time or per-channel attributes, set from the combined skymap
+_SKIPPED_ATTRS = (
+    "delta_energy_plus",
+    "delta_energy_minus",
+    "esteptable",
+    "energy0",
+    "energy1",
+)
 
 
 def eis_skymap_combine_sc(skymaps, method: str = "mean"):
@@ -111,7 +85,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     phi = ref_probe.phi.data
     theta = ref_probe.theta.data
 
-    t_ref = ref_probe.time.data.astype("datetime64[ns]").astype(np.int64)
+    t_ref = _ns(ref_probe.time.data)
     d_t = np.median(np.diff(t_ref)) if len(t_ref) > 1 else np.inf
 
     allmms_skymap = np.full(
@@ -121,7 +95,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
 
     # Nearest skymaps and closest channels (they were paired by index)
     for i_s, skymap in enumerate(skymaps):
-        t_sky = skymap.time.data.astype("datetime64[ns]").astype(np.int64)
+        t_sky = _ns(skymap.time.data)
         idx_time = _nearest(t_ref, t_sky, d_t / 2)
         idx_en = _idx_closest(skymap.energy.data[0, :], ref_energy)
         paired = idx_time >= 0
@@ -142,7 +116,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
 
     # Combine global attributes, with the energy widths of the reference
     # energies
-    glob_attrs = _combine_attrs([s.attrs for s in skymaps])
+    glob_attrs = _common_attrs([s.attrs for s in skymaps], _SKIPPED_ATTRS)
     glob_attrs = {
         "delta_energy_plus": np.asarray(ener_probe.attrs["delta_energy_plus"]),
         "delta_energy_minus": np.asarray(ener_probe.attrs["delta_energy_minus"]),
@@ -152,12 +126,12 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     # Combine coordinates attributes
     coords_attrs = {}
     for coor in ["time", "energy", "phi", "theta"]:
-        coords_attrs[coor] = _combine_attrs(
-            [skymap[coor].attrs for skymap in skymaps],
+        coords_attrs[coor] = _common_attrs(
+            [skymap[coor].attrs for skymap in skymaps], _SKIPPED_ATTRS
         )
 
     # Combine data attributes
-    attrs = _combine_attrs([skymap.data.attrs for skymap in skymaps])
+    attrs = _common_attrs([skymap.data.attrs for skymap in skymaps], _SKIPPED_ATTRS)
 
     common_energy = np.tile(ref_energy, (len(t_ref), 1))
 

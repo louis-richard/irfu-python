@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import copy
 import csv
+import functools
 import glob
 import os
 
@@ -12,12 +14,49 @@ import numpy as np
 # Local imports
 from ..pyrf.iso86012datetime64 import iso86012datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+_SUN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sun")
+
+
+@functools.lru_cache(maxsize=1)
+def _mask_dates():
+    r"""Dates (YYYYMMDD and datetime64) of the mask files shipped with pyrfu."""
+    files = glob.glob(os.path.join(_SUN_PATH, "MMS1_FEEPS_ContaminatedSectors_*.csv"))
+    # YYYYMMDD of MMS1_FEEPS_ContaminatedSectors_YYYYMMDD.csv
+    str_dates = sorted(os.path.basename(file)[-12:-4] for file in files)
+    dates = np.array(
+        [f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in str_dates],
+        dtype="datetime64[ns]",
+    )
+    return str_dates, dates
+
+
+@functools.lru_cache(maxsize=None)
+def _read_masks(str_date):
+    r"""Masked sectors of the eyes of the four spacecraft in the files of
+    str_date (YYYYMMDD); not to be changed."""
+    masks = {}
+
+    for mms_sc in np.arange(1, 5):
+        file_name = f"MMS{mms_sc:d}_FEEPS_ContaminatedSectors_{str_date}.csv"
+        csv_file = os.path.join(_SUN_PATH, file_name)
+
+        # some files start with a byte order mark or end rows with a comma
+        with open(csv_file, "r", encoding="utf-8-sig") as file:
+            csv_data = [
+                [float(x) for x in line if x.strip()] for line in csv.reader(file)
+            ]
+
+        csv_data = np.array(csv_data)
+
+        # sectors (rows) masked for each eye (columns: top 1-12, bottom 1-12)
+        for i in range(12):
+            top, bottom = csv_data[:, i] == 1, csv_data[:, i + 12] == 1
+            masks[f"mms{mms_sc:d}_imask_top-{i + 1:d}"] = np.flatnonzero(top).tolist()
+            masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = np.flatnonzero(
+                bottom
+            ).tolist()
+
+    return masks
 
 
 def read_feeps_sector_masks_csv(tint):
@@ -44,40 +83,11 @@ def read_feeps_sector_masks_csv(tint):
 
     """
 
-    masks = {}
-
-    # dates of the mask files shipped with pyrfu
-    sun_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sun")
-    files = glob.glob(os.path.join(sun_path, "MMS1_FEEPS_ContaminatedSectors_*.csv"))
-    # YYYYMMDD of MMS1_FEEPS_ContaminatedSectors_YYYYMMDD.csv
-    str_dates = sorted(os.path.basename(file)[-12:-4] for file in files)
-    dates = np.array(
-        [f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in str_dates],
-        dtype="datetime64[ns]",
-    )
-
-    # find the file closest to the start time
+    # The file closest to the start time
+    str_dates, dates = _mask_dates()
     t_start = iso86012datetime64(np.atleast_1d(tint[0]))[0]
     str_date = str_dates[np.argmin(np.abs(dates - t_start))]
 
-    for mms_sc in np.arange(1, 5):
-        file_name = f"MMS{mms_sc:d}_FEEPS_ContaminatedSectors_{str_date}.csv"
-        csv_file = os.path.join(sun_path, file_name)
-
-        # some files start with a byte order mark or end rows with a comma
-        with open(csv_file, "r", encoding="utf-8-sig") as file:
-            csv_data = [
-                [float(x) for x in line if x.strip()] for line in csv.reader(file)
-            ]
-
-        csv_data = np.array(csv_data)
-
-        # sectors (rows) masked for each eye (columns: top 1-12, bottom 1-12)
-        for i in range(12):
-            top, bottom = csv_data[:, i] == 1, csv_data[:, i + 12] == 1
-            masks[f"mms{mms_sc:d}_imask_top-{i + 1:d}"] = np.flatnonzero(top).tolist()
-            masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = np.flatnonzero(
-                bottom
-            ).tolist()
-
-    return masks
+    # A copy: the masks of each date are read once (four files on every call
+    # before)
+    return copy.deepcopy(_read_masks(str_date))

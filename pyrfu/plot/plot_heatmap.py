@@ -12,13 +12,6 @@ from matplotlib.colorbar import Colorbar
 from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def plot_heatmap(
     ax: Axes,
@@ -100,9 +93,7 @@ def plot_heatmap(
     # Let the horizontal axes labeling appear on top.
     ax.tick_params(top=True, bottom=True, labeltop=True, labelbottom=False)
 
-    # Turn spines off and create white grid.
-    # ax.spines[:].set_visible(False)
-
+    # Grid between the cells
     ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5, minor=True)
     ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5, minor=True)
     ax.grid(which="minor", color="k", linestyle="-", linewidth=0.5)

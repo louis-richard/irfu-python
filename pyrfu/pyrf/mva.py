@@ -8,13 +8,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from .new_xyz import new_xyz
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _eig(m_mu_nu):
     r"""Eigenvalues and eigenvectors of the (real, symmetric) variance matrix.

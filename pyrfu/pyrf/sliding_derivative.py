@@ -1,18 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 # 3rd party imports
 import numpy as np
 
 # Local imports
+from ._time import _seconds
 from ._units import _attrs, _ratio, _units
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolos.kolokotronis@irf.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
 
 
 def sliding_derivative(
@@ -78,7 +74,7 @@ def sliding_derivative(
     if np.issubdtype(time.dtype, np.datetime64):
         # Seconds from the first sample (epochs in ns as float64 are rounded to
         # 256 ns, i.e. 0.1 % of the time step of 8192 Hz data)
-        time = (time - time[0]).astype("timedelta64[ns]").astype(np.float64) * 1e-9
+        time = _seconds(time, time[0])
     else:
         time = time.astype(np.float64)
 

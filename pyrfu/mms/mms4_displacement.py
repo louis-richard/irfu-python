@@ -12,13 +12,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from ..pyrf.resample import resample
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # Spacecraft pairs (0-based), in the order of irfu-matlab: 12, 13, 14, 23, 24, 34
 _PAIRS = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
 

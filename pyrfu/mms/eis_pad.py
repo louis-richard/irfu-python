@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import itertools
-import warnings
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -15,19 +11,13 @@ from ..pyrf.resample import resample
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
 from .feeps_avg_4sc import _without_gaps
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.5.10"
-__status__ = "Prototype"
-
 
 def _calc_angle(look_, vec):
     vec_hat = normalize(vec)
-    theta_ = np.rad2deg(
-        np.pi - np.arccos(np.sum(vec_hat.data * look_.data, axis=1)),
-    )
+    # Clipped: rounding takes the cosine of (anti)parallel directions slightly
+    # beyond 1 (NaN, the telescope left out)
+    cos_theta = np.clip(np.sum(vec_hat.data * look_.data, axis=1), -1.0, 1.0)
+    theta_ = np.rad2deg(np.pi - np.arccos(cos_theta))
     return theta_
 
 
@@ -35,24 +25,24 @@ def _pad_mean(pa_file, flux_file, pa_label, delta_pa):
     r"""Mean of the telescopes whose field of view (+-10 deg) overlaps each
     pitch-angle bin, (time, bin, energy); NaN without telescope or data."""
     pa_hangw = 10.0  # deg, angular response of the telescopes
-    pa_flux = np.full([len(pa_file), len(pa_label), flux_file.shape[2]], np.nan)
 
-    for (i), (j, pa_lbl) in itertools.product(
-        range(len(pa_file)),
-        enumerate(pa_label),
-    ):
-        cond_ = np.logical_and(
-            pa_file[i, :] + pa_hangw >= pa_lbl - delta_pa,
-            pa_file[i, :] - pa_hangw < pa_lbl + delta_pa,
-        )
-        ind = np.where(cond_)[0]
-        if ind.size != 0:
-            # NaN where no telescope has data: an expected empty bin
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
-                pa_flux[i, j, :] = np.nanmean(flux_file[i, ind, :], axis=0)
+    # Telescopes overlapping each bin (time, telescope, bin), at once (a loop
+    # over the times and the bins)
+    pa_tel = np.asarray(pa_file)[:, :, np.newaxis]
+    pa_label = np.asarray(pa_label, dtype=np.float64)
+    overlap = (pa_tel + pa_hangw >= pa_label - delta_pa) & (
+        pa_tel - pa_hangw < pa_label + delta_pa
+    )
 
-    return pa_flux
+    # Mean of their finite fluxes (summed over the telescopes in order, as
+    # np.nanmean); NaN without telescope or data
+    finite = np.isfinite(flux_file)
+    flux = np.where(finite, flux_file, 0.0)[:, :, np.newaxis, :]
+    total = np.sum(np.where(overlap[..., np.newaxis], flux, 0.0), axis=1)
+    count = np.sum(overlap[..., np.newaxis] & finite[:, :, np.newaxis, :], axis=1)
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(count > 0, total / count, np.nan)
 
 
 def _pad_sum(pa_file, flux_file, pa_width, n_pabins):

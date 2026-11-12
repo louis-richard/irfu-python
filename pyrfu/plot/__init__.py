@@ -34,14 +34,6 @@ from .plot_surf import plot_surf
 from .span_tint import span_tint
 from .zoom import zoom
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
 __all__ = [
     "add_position",
     "annotate_heatmap",
@@ -74,8 +66,6 @@ _style_core = getattr(
 )  # matplotlib >=3.11 dropped the `core` submodule
 _style_core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
 _style_core.reload_library()
-# style.core.USER_LIBRARY_PATHS.append(STYLE_SHEETS)
-# style.core.reload_library()
 
 EXTRA_COLORS = {
     "pyrfu:bg": "#eeeeee",
@@ -121,7 +111,6 @@ EXTRA_COLORS = {
     "cluster:cluster4": "#00ffff",
 }
 
-mpl.colors.EXTRA_COLORS = EXTRA_COLORS
 mpl.colors.colorConverter.colors.update(EXTRA_COLORS)
 
 

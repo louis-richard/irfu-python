@@ -49,13 +49,6 @@ from ..pyrf.shock_normal import _shock_angle
 from ..pyrf.wavelet import _power_c, _power_r, _ww
 from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 @ddt
 class AnisotropyThresholdsTestCase(unittest.TestCase):
@@ -302,6 +295,16 @@ class AverageVDFTestCase(unittest.TestCase):
         total = result.attrs["delta_time_minus"] + result.attrs["delta_time_plus"]
         np.testing.assert_allclose(total, 100 / 64.0, rtol=1e-6)
 
+    def test_average_vdf_delta_time_rounded(self):
+        # The widths in ns are rounded (truncated, 0.0157 s was 0.015699999 s)
+        vdf = generate_vdf(64.0, 10, [32, 32, 16])
+        vdf.attrs["delta_time_minus"] = np.full(10, 0.0157)
+        vdf.attrs["delta_time_plus"] = np.full(10, 0.0157)
+
+        result = pyrf.average_vdf(vdf, 1)
+        for key in ["delta_time_minus", "delta_time_plus"]:
+            np.testing.assert_array_equal(result.attrs[key], np.full(10, 0.0157))
+
     def test_average_vdf_n_pts_range(self):
         # More points than distributions raised "need at least one array to
         # stack"; True passed the integer check
@@ -391,6 +394,22 @@ class NanAvg4SCTestCase(unittest.TestCase):
 
         # The caller's attributes are unchanged
         self.assertEqual(b_list[0].attrs["mmsId"], 1)
+
+    def test_nanavg_4sc_valid_count(self):
+        # The count of the valid samples is an int numpy.ndarray for arrays and
+        # time series (xr.where returned an array, whose .data, taken by
+        # mms.feeps_avg_4sc, was a memoryview)
+        module = sys.modules["pyrfu.pyrf.nanavg_4sc"]
+        values = np.array([[1.0, np.nan], [np.nan, 2.0]])
+
+        for inp in [values, xr.DataArray(values)]:
+            result = module._valid_count(inp)
+            self.assertIsInstance(result, np.ndarray)
+            self.assertEqual(result.dtype.kind, "i")
+            np.testing.assert_array_equal(result, [[1, 0], [0, 1]])
+
+        feeps = sys.modules["pyrfu.mms.feeps_avg_4sc"]
+        self.assertIs(feeps._valid_count, module._valid_count)
 
     def test_nanavg_4sc_skymaps(self):
         # Datasets (skymaps), documented and type checked, raised AttributeError
@@ -1874,6 +1893,15 @@ class CalcFsTestCase(unittest.TestCase):
         expected = np.mean([o.data for o in one], axis=0)
         np.testing.assert_allclose(result.data, expected)
 
+    def test_calc_fs_inverse_of_calc_dt(self):
+        # The same median step as calc_dt (it differed in the last digit)
+        steps = np.random.default_rng(1).integers(7_800_000, 7_830_000, 1000)
+        time = np.datetime64("2019-01-01", "ns") + np.cumsum(steps).astype(
+            "timedelta64[ns]"
+        )
+        inp = xr.DataArray(np.zeros(len(time)), coords=[time], dims=["time"])
+        self.assertEqual(pyrf.calc_fs(inp), 1 / pyrf.calc_dt(inp))
+
 
 @ddt
 class CalcSqrtQTestCase(unittest.TestCase):
@@ -2601,6 +2629,15 @@ class Datetime2Iso8601TestCase(unittest.TestCase):
         time = datetime.datetime(2019, 1, 1, 0, 0, 0, 123456)
         self.assertEqual(pyrf.datetime2iso8601(time), "2019-01-01T00:00:00.123456000")
 
+    def test_datetime2iso8601_datetime_microseconds(self):
+        # Microseconds and the wall time of an aware datetime, as with pandas
+        naive = datetime.datetime(2019, 1, 1, 12, 30, 15, 123456)
+        aware = naive.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=2)))
+        for time in [naive, aware]:
+            self.assertEqual(
+                pyrf.datetime2iso8601(time), "2019-01-01T12:30:15.123456000"
+            )
+
     def test_datetime2iso8601_invalid(self):
         with self.assertRaises(TypeError):
             pyrf.datetime2iso8601("2019-01-01T00:00:00")
@@ -2773,6 +2810,16 @@ class Unix2Datetime64TestCase(unittest.TestCase):
         time = np.datetime64("2026-09-29T12:34:56.123456", "ns") + np.arange(10)
         round_trip = pyrf.unix2datetime64(pyrf.datetime642unix(time))
         np.testing.assert_array_less(np.abs((round_trip - time).astype(np.int64)), 129)
+
+    def test_unix2datetime64_nan(self):
+        # NaN gives NaT, without warning (it was 1970-01-01 on arm64, the cast of
+        # NaN to int64, with "invalid value encountered in cast")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.unix2datetime64([np.nan, 1.5])
+
+        self.assertTrue(np.isnat(result[0]))
+        self.assertEqual(result[1], np.datetime64("1970-01-01T00:00:01.5", "ns"))
 
 
 @ddt
@@ -5283,6 +5330,14 @@ class Iso86012DatetimeTestCase(unittest.TestCase):
         for value in [time, np.array(time, dtype="datetime64[ns]")]:
             self.assertListEqual(pyrf.iso86012datetime(value), expected)
 
+    def test_iso86012datetime_utc_designator(self):
+        # A trailing "Z", as iso86012datetime64 (numpy warned)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = pyrf.iso86012datetime(["2019-01-01T00:00:00.5Z"])
+
+        self.assertListEqual(result, [datetime.datetime(2019, 1, 1, 0, 0, 0, 500000)])
+
     def test_iso86012datetime_errors(self):
         with self.assertRaises(TypeError):
             pyrf.iso86012datetime("2019-01-01T00:00:00")
@@ -5373,6 +5428,15 @@ class Iso86012Unix(unittest.TestCase):
             pyrf.iso86012unix(time),
             pyrf.datetime642unix(time.astype("datetime64[ns]")),
         )
+
+    def test_iso86012unix_tuple_and_utc_designator(self):
+        # Tuples and a trailing "Z", as iso86012datetime64 (TypeError and a
+        # numpy warning)
+        expected = pyrf.iso86012unix(["2019-01-01T00:00:00.5"])
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for time in [("2019-01-01T00:00:00.5",), ["2019-01-01T00:00:00.5Z"]]:
+                np.testing.assert_array_equal(pyrf.iso86012unix(time), expected)
 
     def test_iso86012unix_input(self):
         # TypeError (AssertionError)
@@ -6458,6 +6522,35 @@ class ResampleTestCase(unittest.TestCase):
 
     T_0 = np.datetime64("2019-09-14T07:54:00", "ns")
 
+    def test_resample_distribution_attrs(self):
+        # The per-time attributes of a distribution are resampled, its per-bin
+        # ones are not, as in time_clip: with 32 times and 32 energy channels,
+        # the energy tables were averaged to the 8 times of ref, and a 0-d
+        # array attribute raised IndexError
+        vdf = generate_vdf(64.0, 32, (32, 32, 16), energy01=True)
+        vdf.attrs = {
+            **vdf.attrs,
+            "delta_energy_minus": np.ones((32, 32)),
+            "delta_time_plus": np.full(32, 0.5 / 64.0),
+            "delta_theta_minus": np.full(32, 5.625),
+            "label": np.arange(32.0),
+        }
+        result = pyrf.resample(vdf, generate_ts(16.0, 8))
+        self.assertEqual(len(result.time), 8)
+
+        for key in ["energy0", "energy1", "delta_theta_minus"]:
+            np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key])
+
+        self.assertEqual(result.attrs["delta_energy_minus"].shape, (8, 32))
+        np.testing.assert_allclose(result.attrs["delta_time_plus"], 0.5 / 64.0)
+
+        # Other attributes: by their length, as before
+        self.assertEqual(result.attrs["label"].shape, (8,))
+
+        vdf.attrs["scalar"] = np.array(1.0)
+        result = pyrf.resample(vdf, generate_ts(16.0, 8))
+        self.assertEqual(result.attrs["scalar"], 1.0)
+
     def _ts(self, t_s, data):
         times = self.T_0 + np.round(np.asarray(t_s) * 1e9).astype("timedelta64[ns]")
         return pyrf.ts_scalar(times, np.asarray(data, dtype=np.float64))
@@ -6814,6 +6907,50 @@ class PsdTestCase(unittest.TestCase):
         for value, ref in zip(result, reference):
             np.testing.assert_allclose(value, ref, rtol=1e-6, atol=1e-7)
 
+    def test_wave_fft_no_detrend(self):
+        # Each frame transformed as it is, as irf_wavefft: the FFT of the
+        # windowed samples, scaled by sqrt(1 / (fs sum(w^2))); the mean of each
+        # frame was removed (the offset gone from the lowest bins)
+        time = generate_timeline(64.0, 256)
+        x = 3.0 + np.sin(2 * np.pi * 5.0 * np.arange(256) / 64.0)
+        window = np.hamming(64)
+        _, _, spec = pyrf.wave_fft(pyrf.ts_scalar(time, x), window, 0.5, 1.0)
+
+        scale = np.sqrt(1.0 / (64.0 * np.sum(window**2)))
+        frames = [x[i : i + 64] * window for i in range(0, 256 - 64 + 1, 32)]
+        expected = np.fft.rfft(frames, axis=1).T * scale
+        np.testing.assert_allclose(spec, expected, rtol=1e-12, atol=1e-12)
+
+    def test_wave_fft_unscaled(self):
+        # scaled=False: irf_wavefft's convention, the raw FFT of the frames with
+        # the symmetric window, rows 1:round(n / 2) and times round(n / 2)
+        # samples after the frame start; even and odd frame lengths
+        x = 3.0 + np.sin(2 * np.pi * 5.0 * np.arange(256) / 64.0)
+        inp = pyrf.ts_scalar(generate_timeline(64.0, 256), x)
+
+        for n_seg, n_step in [(64, 32), (63, 21)]:
+            freqs, times, spec = pyrf.wave_fft(
+                inp, "hamming", (n_seg - n_step) / 64.0, n_seg / 64.0, scaled=False
+            )
+
+            n_rows = int(np.floor(n_seg / 2 + 0.5))
+            frames = [
+                x[i : i + n_seg] * np.hamming(n_seg)
+                for i in range(0, 256 - n_seg + 1, n_step)
+            ]
+            expected = np.fft.fft(frames, axis=1).T[:n_rows]
+            np.testing.assert_allclose(spec, expected, rtol=1e-12, atol=1e-11)
+            np.testing.assert_allclose(freqs, np.arange(n_rows) / n_seg * 64.0)
+            np.testing.assert_allclose(
+                times, (n_rows + n_step * np.arange(len(frames))) / 64.0
+            )
+
+        # A window given as an array is used as it is (here the symmetric one)
+        result = pyrf.wave_fft(inp, np.hamming(64), 0.5, 1.0, scaled=False)
+        expected = pyrf.wave_fft(inp, "hamming", 0.5, 1.0, scaled=False)
+        for value, ref in zip(result, expected):
+            np.testing.assert_allclose(value, ref, rtol=1e-12, atol=1e-12)
+
 
 class PresAnisTestCase(unittest.TestCase):
     def test_pres_anis_output(self):
@@ -6931,6 +7068,57 @@ class ShockNormalTestCase(unittest.TestCase):
         for method in ["mc", "vc", "mx_1", "mx_2", "mx_3"]:
             np.testing.assert_array_equal(result["n"][method], expected["n"][method])
             self.assertAlmostEqual(np.linalg.norm(result["n"][method]), 1.0)
+
+    def test_shock_normal_parallel(self):
+        # Parallel upstream and downstream fields and velocities have a shear
+        # angle of 0 (NaN: the cosine rounded to 1 + 2e-16)
+        spec = {
+            "b_u": np.array([5.0, 3.0, -2.0]),
+            "b_d": np.array([10.0, 6.0, -4.0]),
+            "v_u": np.array([-450.0, 20.0, 10.0]),
+            "v_d": np.array([-900.0, 40.0, 20.0]),
+            "n_u": 5.0,
+            "n_d": 18.0,
+        }
+
+        with warnings.catch_warnings():
+            # The coplanarity normals of parallel fields are undefined
+            warnings.simplefilter("ignore", RuntimeWarning)
+            result = pyrf.shock_normal(spec)
+
+        self.assertEqual(result["info"]["msh"], 0.0)
+        self.assertEqual(result["info"]["vsh"], 0.0)
+
+    def test_shock_normal_models_read_once(self):
+        # shock_models_parameters.json is read once (on every call before),
+        # and the Slavin-Holzer alpha of each call (from v_u) doesn't change
+        # the cache
+        module = sys.modules["pyrfu.pyrf.shock_normal"]
+        module._shock_models_parameters.cache_clear()
+        spec = {
+            "b_u": np.array([5.0, 3.0, -2.0]),
+            "b_d": np.array([12.0, 15.0, -8.0]),
+            "v_u": np.array([-450.0, 20.0, 10.0]),
+            "v_d": np.array([-180.0, 40.0, 25.0]),
+            "n_u": 5.0,
+            "n_d": 18.0,
+            "r_xyz": np.array([12.0, 3.0, 1.0]) * 6371.0,
+        }
+
+        with mock.patch.object(module.json, "load", wraps=module.json.load) as load:
+            alphas = []
+            for v_y in [20.0, -60.0]:
+                spec["v_u"] = np.array([-450.0, v_y, 10.0])
+                info = pyrf.shock_normal(spec)["info"]
+                alphas.append(info["alpha"]["slavin_holzer"])
+
+        self.assertEqual(load.call_count, 1)
+        np.testing.assert_allclose(
+            alphas, -np.rad2deg(np.arctan(np.array([20.0, -60.0]) / -450.0))
+        )
+        self.assertNotIn(
+            module._shock_models_parameters()["slavin_holzer"]["alpha"], alphas
+        )
 
     def test_shock_normal_input(self):
         # TypeError (AssertionError; the following check never ran)
@@ -7462,6 +7650,96 @@ class StartTestCase(unittest.TestCase):
             np.datetime64("2019-01-01T00:00:00.000"),
         )
 
+    def test_start_end_unix(self):
+        # start and end are the unix times of datetime642unix (start took
+        # ns * 1e-9, different from ns / 1e9 in the last digit for about 40 %
+        # of the times), and start takes a Dataset as end (TypeError)
+        rng = np.random.default_rng(7)
+        t_0 = np.datetime64("2015-09-01T00:00:00", "ns")
+        offsets = rng.integers(0, 10 * 365 * 86400 * 10**9, 200)
+
+        for offset in offsets:
+            time = t_0 + np.array([offset, offset + 10**9]).astype("timedelta64[ns]")
+            inp = xr.DataArray(np.zeros(2), coords=[time], dims=["time"])
+            self.assertEqual(pyrf.start(inp), pyrf.datetime642unix(time)[0])
+            self.assertEqual(pyrf.end(inp), pyrf.datetime642unix(time)[1])
+
+        vdf = generate_vdf(64.0, 10, [32, 32, 16])
+        unix = pyrf.datetime642unix(vdf.time.data)
+        self.assertEqual(pyrf.start(vdf), unix[0])
+        self.assertEqual(pyrf.end(vdf), unix[-1])
+
+
+class TimeHelpersTestCase(unittest.TestCase):
+    # The time conversions of pyrf/_time.py
+    @property
+    def module(self):
+        return sys.modules["pyrfu.pyrf._time"]
+
+    def test_seconds_exact(self):
+        # The exact steps in ns divided by 1e9 (correctly rounded): * 1e-9
+        # differs in the last digit for some steps
+        rng = np.random.default_rng(3)
+        t_0 = np.datetime64("2019-01-01", "ns")
+        steps = rng.integers(0, 10**12, 1000)
+        time = t_0 + steps.astype("timedelta64[ns]")
+        np.testing.assert_array_equal(self.module._seconds(time, t_0), steps / 1e9)
+        self.assertTrue(np.any(steps * 1e-9 != steps / 1e9))
+
+        # Any unit, str, NaT
+        time_us = time.astype("datetime64[us]")
+        np.testing.assert_array_equal(
+            self.module._seconds(time_us, "2019-01-01"),
+            (time_us - t_0) / np.timedelta64(1, "s"),
+        )
+        self.assertTrue(np.isnan(self.module._seconds(np.datetime64("NaT", "ns"), t_0)))
+
+    def test_unix_and_ns(self):
+        time = np.array(["1970-01-01T00:00:01.5", "NaT"], dtype="datetime64[ms]")
+        np.testing.assert_array_equal(self.module._unix(time), [1.5, np.nan])
+        self.assertEqual(self.module._ns(time[:1])[0], 1_500_000_000)
+
+    def test_timedelta_and_datetime64(self):
+        # To the nearest ns (truncated, 0.0157 s was 15699999 ns), NaT for NaN
+        result = self.module._timedelta([0.0157, -0.0157, np.nan])
+        self.assertEqual(result[0], np.timedelta64(15_700_000, "ns"))
+        self.assertEqual(result[1], np.timedelta64(-15_700_000, "ns"))
+        self.assertTrue(np.isnat(result[2]))
+        self.assertEqual(self.module._timedelta(6.5e-5), np.timedelta64(65, "us"))
+        self.assertEqual(
+            self.module._datetime64(1.5), np.datetime64("1970-01-01T00:00:01.5", "ns")
+        )
+
+
+class TEvalTestCase(unittest.TestCase):
+    def test_t_eval(self):
+        # The first sample at or after each target time, with any dimensions
+        # and the coordinates and attributes of the input (the second dimension
+        # had to be "comp": AttributeError for the FGM represent_vec_tot, a
+        # tensor was not supported)
+        time = generate_timeline(1.0, 10)
+        targets = time[[0, 2]] + np.timedelta64(500, "ms")
+        vector = xr.DataArray(
+            np.arange(30.0).reshape(10, 3),
+            coords=[time, ["x", "y", "z"]],
+            dims=["time", "represent_vec_tot"],
+            attrs={"UNITS": "nT"},
+        )
+        tensor = pyrf.ts_tensor_xyz(time, np.arange(90.0).reshape(10, 3, 3))
+
+        result = pyrf.t_eval(vector, targets)
+        np.testing.assert_array_equal(result.time.data, targets)
+        np.testing.assert_array_equal(result.data, vector.data[[1, 3]])
+        self.assertTupleEqual(result.dims, vector.dims)
+        np.testing.assert_array_equal(result.represent_vec_tot.data, ["x", "y", "z"])
+        self.assertDictEqual(result.attrs, {"UNITS": "nT"})
+
+        result = pyrf.t_eval(tensor, list(time[[0, 9]]))
+        np.testing.assert_array_equal(result.data, tensor.data[[0, 9]])
+
+        with self.assertRaisesRegex(IndexError, "after the last sample"):
+            pyrf.t_eval(vector, time[[9]] + np.timedelta64(1, "s"))
+
 
 @ddt
 class TsAppendTestCase(unittest.TestCase):
@@ -7532,6 +7810,22 @@ class TsAppendTestCase(unittest.TestCase):
                 np.hstack([np.full(5, 5), np.full(n_1, n_1)]),
             )
             self.assertEqual(result.time.attrs["UNITS"], "ns")
+
+    def test_ts_append_bin_attrs(self):
+        # The per-bin attributes are kept whatever their length, as in
+        # time_clip (energy tables of 4 channels with 4 times were appended)
+        inp0 = self._series("2019-01-01T00:00:00", 4)
+        inp1 = self._series("2019-01-01T00:00:04", 4)
+
+        for inp in [inp0, inp1]:
+            inp.attrs["energy0"] = np.arange(4.0)
+            inp.attrs["delta_energy_minus"] = np.ones(4)
+
+        result = pyrf.ts_append(inp0, inp1)
+        for key in ["energy0", "delta_energy_minus"]:
+            np.testing.assert_array_equal(result.attrs[key], inp0.attrs[key])
+
+        self.assertEqual(result.attrs["vec"].shape, (8,))
 
     def test_ts_append_attrs_missing(self):
         # An array attribute only in the first input is kept as is (it raised KeyError)

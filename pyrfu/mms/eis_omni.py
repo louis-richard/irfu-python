@@ -5,13 +5,6 @@
 import numpy as np
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def eis_omni(eis_allt, method: str = "mean"):
     r"""Calculates the omni-directional flux for all 6 telescopes.
@@ -77,12 +70,6 @@ def eis_omni(eis_allt, method: str = "mean"):
 
     for scope in scopes:
         flux_omni += eis_allt[scope].data.copy()
-
-        # Why??
-        # try:
-        #     flux_omni += eis_allt[scope].data.copy()
-        # except TypeError:
-        #     flux_omni = eis_allt[scope].data.copy()
 
     if method.lower() == "mean":
         flux_omni /= len(scopes)

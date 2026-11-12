@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from pyrfu.pyrf.optimize_nbins_2d import optimize_nbins_2d
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2025"
-__license__ = "MIT"
-__version__ = "2.4.14"
-__status__ = "Prototype"
-
 
 def brazil(
     beta_para: np.ndarray,

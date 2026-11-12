@@ -8,13 +8,6 @@ import xarray as xr
 # Local imports
 from .unix2datetime64 import unix2datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def ts_time(time, attrs: dict = None):
     r"""Creates time line in DataArray.

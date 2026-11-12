@@ -4,8 +4,6 @@
 
 # Built-in imports
 import functools
-import json
-import os
 import re
 import urllib.parse
 import warnings
@@ -21,15 +19,8 @@ from urllib3.util.retry import Retry
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from .db_init import MMS_CFG_PATH, _get_credential
+from .db_init import _config_stamp, _get_credential, _read_config
 from .list_files_aws import _tint_bounds
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
@@ -48,17 +39,16 @@ def _login_lasp():
     connectivity/credential probe only happens once, until the MMS configuration
     file changes (e.g., after mms.db_init). The session is shared: do not close it.
     """
-    return _login_lasp_cached(os.stat(MMS_CFG_PATH).st_mtime_ns)
+    return _login_lasp_cached(_config_stamp())
 
 
 @functools.lru_cache(maxsize=1)
-def _login_lasp_cached(config_mtime_ns: int):
-    r"""Login to LASP colorado (cached by modification time of the configuration
-    file)."""
-    del config_mtime_ns  # cache key only
+def _login_lasp_cached(config_stamp):
+    r"""Login to LASP colorado (cached by the stamp of the configuration file,
+    see db_init._config_stamp)."""
+    del config_stamp  # cache key only
 
-    with open(MMS_CFG_PATH, "r", encoding="utf-8") as fs:
-        config = json.load(fs)
+    config = _read_config()
 
     session = requests.Session()
 

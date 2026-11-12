@@ -10,13 +10,6 @@ import sys
 import numpy as np
 import pytest
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # In this conftest rather than in pyproject.toml, so that they also apply to the
 # tests of the installed package (pytest --pyargs pyrfu.tests)
 MARKERS = ["network: needs internet access (run with PYRFU_NETWORK_TESTS=1)"]

@@ -5,13 +5,6 @@
 from ._psd_units import _data_and_units, _output
 from ._vdf_bins import _d3v, _is_skymap
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # Volume units matching the phase-space density units, factor from m^3/s^3
 _VOLUME_UNITS = {
     "s^3/cm^6": ("cm^3/s^3", 1e6),

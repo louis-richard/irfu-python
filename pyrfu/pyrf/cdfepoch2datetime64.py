@@ -11,13 +11,6 @@ from numpy.typing import NDArray
 # Local imports
 from .ttns2datetime64 import ttns2datetime64
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Seconds from 0000-01-01T00:00:00 (CDF_EPOCH and CDF_EPOCH16 origin) to the
 # Unix epoch 1970-01-01T00:00:00
 _EPOCH0_TO_UNIX_S = 62167219200

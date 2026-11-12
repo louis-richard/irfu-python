@@ -9,13 +9,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def calc_ag(p_xyz: DataArray) -> DataArray:
     r"""Compute Che's agyrotropy coefficient.

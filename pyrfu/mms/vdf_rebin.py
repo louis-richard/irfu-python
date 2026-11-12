@@ -7,18 +7,11 @@ import xarray as xr
 
 # Local imports
 from ._psd_units import _attrs
-from ._vdf_bins import _is_skymap
-from ._vdf_mc import _bins_d3v, _rng, _sample, _source_bins
+from ._vdf_bins import _bins_d3v, _is_skymap, _source_bins
+from ._vdf_mc import _sample
 from .vdf_convert import _PSD, _relativistic_psd
 from .vdf_shift import _shift
 from .vdf_velocity import _rotation_matrices
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
 
 
 def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
@@ -33,7 +26,7 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
     bins = _source_bins(vdf, sc_pot)
     d3v = _bins_d3v(bins)
     rotations = _rotation_matrices(rotation, len(vdf.time))
-    rng = _rng(random_state)
+    rng = np.random.default_rng(random_state)
 
     out = np.zeros((len(vdf.time),) + shape)
     lost = np.zeros(len(vdf.time))

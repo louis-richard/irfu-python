@@ -4,12 +4,9 @@
 # 3rd party imports
 import numpy as np
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from .datetime642unix import datetime642unix
+from .iso86012datetime64 import iso86012datetime64
 
 
 def iso86012unix(time):
@@ -18,7 +15,9 @@ def iso86012unix(time):
     Parameters
     ----------
     time : str or array_like of str
-        Time in ISO 8601 format, at any precision.
+        Time in ISO 8601 format, at any precision, with or without the UTC
+        designator "Z" (list, tuple or numpy.ndarray), as
+        `iso86012datetime64`.
 
     Returns
     -------
@@ -42,12 +41,9 @@ def iso86012unix(time):
 
     """
 
-    if not isinstance(time, (str, list, np.ndarray)):
+    if not isinstance(time, (str, list, tuple, np.ndarray)):
         raise TypeError("time must be a str or array_like")
 
-    time = np.atleast_1d(time).astype("datetime64[ns]")
-
-    out = time.astype(np.int64) / 1e9
-    out[np.isnat(time)] = np.nan
-
-    return out
+    # The same parsing as iso86012datetime64 (tuples raised TypeError and "Z"
+    # gave a numpy warning)
+    return datetime642unix(iso86012datetime64(time))

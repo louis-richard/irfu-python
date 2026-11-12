@@ -2,18 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import contextlib
+import json
 import os
 import shutil
+import tempfile
 
 # 3rd party imports
 import platformdirs
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
 
 
 def user_config_path(file_name: str, package_cfg_path: str) -> str:
@@ -45,3 +41,59 @@ def user_config_path(file_name: str, package_cfg_path: str) -> str:
             return package_cfg_path
 
     return path
+
+
+def atomic_write(path: str, content) -> None:
+    r"""Writes `content` (bytes or str) to `path` through a temporary file in
+    the same directory, so that no reader sees a partial file."""
+    mode = "wb" if isinstance(content, bytes) else "w"
+    handle, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".part")
+
+    try:
+        with os.fdopen(handle, mode) as file:
+            file.write(content)
+
+        os.replace(tmp_path, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.remove(tmp_path)
+        raise
+
+
+def read_config(path: str) -> dict:
+    r"""Content of the configuration file `path`."""
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def write_config(path: str, config: dict) -> None:
+    r"""Writes the configuration `config` to `path` at once (a write that
+    fails leaves the previous file)."""
+    atomic_write(path, json.dumps(config))
+
+
+def local_data_dir(path: str) -> str:
+    r"""Local data directory of the configuration file `path` (MAVEN, SolO)."""
+    return os.path.normpath(read_config(path)["local_data_dir"])
+
+
+def set_local_data_dir(config_path, data_dir: str) -> None:
+    r"""Sets the local data directory in the configuration file of
+    `config_path()` (MAVEN, SolO), called once data_dir is checked, so that no
+    configuration file is created for a wrong path.
+
+    Raises
+    ------
+    FileNotFoundError
+        If data_dir doesn't exist.
+
+    """
+    data_dir = os.path.normpath(data_dir)
+
+    if not os.path.exists(data_dir):
+        raise FileNotFoundError(f"{data_dir} doesn't exist")
+
+    path = config_path()
+    config = read_config(path)
+    config["local_data_dir"] = data_dir
+    write_config(path, config)

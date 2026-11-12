@@ -8,12 +8,8 @@ from typing import Union
 import numpy as np
 from numpy.typing import NDArray
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
+# Local imports
+from ._time import _unix
 
 
 def datetime642unix(
@@ -58,12 +54,5 @@ def datetime642unix(
     if time.dtype.kind != "M":
         raise TypeError("time must be list or numpy.ndarray of datetime64")
 
-    # Make sure that time is in ns format
-    time_datetime64 = time.astype("datetime64[ns]")
-
-    # Convert to unix, NaN for NaT (it was -9.2e9 s, the int64 of NaT), as
-    # iso86012unix
-    time_unix = time_datetime64.astype(np.int64) / 1e9
-    time_unix[np.isnat(time_datetime64)] = np.nan
-
-    return time_unix
+    # Unix times, NaN for NaT (it was -9.2e9 s, the int64 of NaT)
+    return _unix(time)

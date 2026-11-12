@@ -9,13 +9,6 @@ import xarray as xr
 from ._units import _attrs
 from .ts_vec_xyz import ts_vec_xyz
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def cart2sph_ts(inp, direction_flag: int = 1):
     r"""Computes magnitude, theta and phi angle from column vector xyz

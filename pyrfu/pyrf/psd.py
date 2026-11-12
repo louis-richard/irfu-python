@@ -5,19 +5,12 @@
 import logging
 
 # 3rd party imports
-import numpy as np
 import xarray as xr
 from scipy import signal
 
 # Local imports
 from ._units import _attrs, _power, _ratio, _units
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+from .calc_fs import calc_fs
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +84,7 @@ def psd(
 
     # Sampling frequency from the time steps in ns (in us, as xarray keeps the
     # times, the frequencies were 1000 times too large)
-    time = inp.time.data.astype("datetime64[ns]")
-    f_samp = 1e9 / np.median(np.diff(time)).astype(np.float64)
+    f_samp = calc_fs(inp)
 
     freqs, p_xx = signal.welch(
         inp.data,

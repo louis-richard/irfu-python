@@ -14,13 +14,6 @@ from xarray.core.dataarray import DataArray
 # Local imports
 from .calc_fs import calc_fs
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 # Elliptic filter of irfu-matlab irf_lowpass: order, passband ripple (dB) and
 # stopband attenuation (dB)
 _ORDER, _R_PASS, _R_STOP = 4, 0.1, 60

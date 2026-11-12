@@ -10,13 +10,6 @@ from .feeps_split_integral_ch import feeps_split_integral_ch
 # Local imports
 from .get_feeps_alleyes import get_feeps_alleyes
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def get_feeps_omni(
     tar_var,

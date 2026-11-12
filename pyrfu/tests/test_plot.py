@@ -1159,6 +1159,33 @@ class ColorbarTestCase(unittest.TestCase):
         self.assertAlmostEqual(cpos.height, pos.height)
         np.testing.assert_allclose(cax.get_ylim(), [0.0, 11.0])
 
+    def test_colorbar_sides(self):
+        # On each side (it was on the right only): pad away, ticks and label
+        # outside, the axis of the figure of the plot (the colorbar of the plot
+        # routines)
+        _, other = plt.subplots(1)
+        f, ax = plt.subplots(1)
+        plt.figure(other.get_figure().number)  # another current figure
+        image = ax.pcolormesh(np.arange(4.0), np.arange(3.0), np.ones((2, 3)))
+        pos = ax.get_position()
+
+        for where, expected in [
+            ("right", [pos.x1 + 0.02, pos.y0, 0.03, pos.height]),
+            ("left", [pos.x0 - 0.05, pos.y0, 0.03, pos.height]),
+            ("top", [pos.x0, pos.y1 + 0.02, pos.width, 0.03]),
+            ("bottom", [pos.x0, pos.y0 - 0.05, pos.width, 0.03]),
+        ]:
+            cax = plot.colorbar(image, ax, pad=0.02, width=0.03, where=where)
+            self.assertIn(cax, f.axes)
+            np.testing.assert_allclose(cax.get_position().bounds, expected)
+            side = cax.yaxis if where in ["right", "left"] else cax.xaxis
+            self.assertEqual(side.get_label_position(), where)
+            self.assertEqual(side.get_ticks_position(), where)
+            self.assertIs(image.colorbar.ax, cax)
+
+        with self.assertRaisesRegex(ValueError, "right, left, top or bottom"):
+            plot.colorbar(image, ax, where="inside")
+
 
 class IonBrazilPlotThreshTestCase(unittest.TestCase):
     def setUp(self):
@@ -1547,6 +1574,28 @@ class PlotSpectrTestCase(unittest.TestCase):
         _, ax = plt.subplots(1)
         _, cax = plot.plot_spectr(ax, self.inp, colorbar="top", pad=0)
         self.assertAlmostEqual(cax.get_position().y0, ax.get_position().y1)
+
+    def test_plot_spectr_kwargs(self):
+        # The other keyword arguments go to pcolormesh (they were ignored),
+        # also replacing rasterized and shading
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, self.inp, alpha=0.5, edgecolors="k")
+
+        image = self._image(ax)
+        self.assertEqual(image.get_alpha(), 0.5)
+        np.testing.assert_allclose(image.get_edgecolor(), [[0.0, 0.0, 0.0, 0.5]])
+        self.assertTrue(image.get_rasterized())
+
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, self.inp, rasterized=False, shading="gouraud")
+        self.assertFalse(self._image(ax).get_rasterized())
+        # Gouraud: the mesh at the 50 x 8 points (51 x 9 edges with "auto")
+        self.assertEqual(self._image(ax).get_coordinates().shape, (8, 50, 2))
+
+        # An unknown keyword raises matplotlib's error
+        _, ax = plt.subplots(1)
+        with self.assertRaises((AttributeError, TypeError)):
+            plot.plot_spectr(ax, self.inp, cmin=1.0)
 
     def test_plot_spectr_dataset(self):
         # Time-dependent energy table: as a coordinate (named energy or not) or

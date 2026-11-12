@@ -14,13 +14,6 @@ import pyrfu
 
 from .. import _user_config
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2026"
-__license__ = "MIT"
-__version__ = "2.5.12"
-__status__ = "Prototype"
-
 
 class PackageLoggerTestCase(unittest.TestCase):
     """Tests of the logger of pyrfu."""
@@ -64,6 +57,28 @@ class UserConfigTestCase(unittest.TestCase):
                 self.assertEqual(path, os.path.join(user_dir, "c.json"))
                 with open(path, encoding="utf-8") as file:
                     self.assertEqual(file.read(), '{"a": 1}')
+
+    def test_local_data_dir(self):
+        """The local data directory of the MAVEN and SolO configurations: set
+        after the check of the path (no file for a wrong path), at once (a
+        failed write leaves the previous file)."""
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "c.json")
+            config_path = mock.Mock(return_value=path)
+            with self.assertRaises(FileNotFoundError):
+                _user_config.set_local_data_dir(config_path, os.path.join(root, "x"))
+            config_path.assert_not_called()
+
+            with open(path, "w", encoding="utf-8") as file:
+                file.write('{"local_data_dir": "."}')
+            _user_config.set_local_data_dir(config_path, root)
+            self.assertEqual(_user_config.local_data_dir(path), os.path.normpath(root))
+
+            with mock.patch.object(_user_config.os, "replace", side_effect=OSError):
+                with self.assertRaises(OSError):
+                    _user_config.set_local_data_dir(config_path, root + os.sep)
+            self.assertEqual(_user_config.local_data_dir(path), os.path.normpath(root))
+            self.assertListEqual(os.listdir(root), ["c.json"])
 
 
 if __name__ == "__main__":

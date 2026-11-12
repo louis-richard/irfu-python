@@ -10,13 +10,7 @@ from xarray.core.dataarray import DataArray
 
 # Local imports
 from ..constants import R_E
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+from ..pyrf._time import _seconds
 
 
 def add_position(
@@ -75,8 +69,8 @@ def add_position(
     # Position interpolated at the ticks (seconds since the first sample), NaN
     # outside the time series
     t_data = r_xyz.time.data.astype("<M8[ns]")
-    s_data = (t_data - t_data[0]) / np.timedelta64(1, "s")
-    s_ticks = (t_ticks - t_data[0]) / np.timedelta64(1, "s")
+    s_data = _seconds(t_data, t_data[0])
+    s_ticks = _seconds(t_ticks, t_data[0])
     r_ticks = np.stack(
         [
             np.interp(s_ticks, s_data, r_xyz.data[:, i], left=np.nan, right=np.nan)

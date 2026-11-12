@@ -10,13 +10,6 @@ from scipy import constants
 from ..pyrf._units import _check_units
 from ..pyrf.resample import resample
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def _plasma_frequencies(b_mag, n_e, ref):
     # Electron plasma and cyclotron frequencies [Hz], as columns for a

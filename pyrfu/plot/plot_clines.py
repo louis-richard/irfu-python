@@ -7,18 +7,12 @@ import warnings
 # 3rd party import
 import matplotlib as mpl
 import numpy as np
-from matplotlib.colorbar import ColorbarBase
+from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm
 
 # Local imports
+from .colorbar import colorbar as _add_colorbar
 from .plot_line import plot_line
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
@@ -90,11 +84,7 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     for i in np.where(on_scale)[0]:
         plot_line(axis, inp[:, i], color=c_map(norm(energy[i])), **kwargs)
 
-    pos = axis.get_position()
-    f = axis.get_figure()
-    cax = f.add_axes([pos.x0 + pos.width + pad, pos.y0, pad, pos.height])
-
-    ColorbarBase(cax, cmap=c_map, norm=norm, orientation="vertical")
+    cax = _add_colorbar(ScalarMappable(norm=norm, cmap=c_map), axis, pad, 0.01)
 
     if yscale == "log":
         axis.set_yscale("log")

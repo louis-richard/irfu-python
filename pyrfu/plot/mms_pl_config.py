@@ -9,13 +9,6 @@ import numpy as np
 # Local imports
 from ..constants import R_E
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 colors = ["tab:blue", "tab:green", "tab:red", "k"]
 markers = ["s", "d", "o", "^"]
 

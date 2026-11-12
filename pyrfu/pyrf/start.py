@@ -2,15 +2,10 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party import
-import numpy as np
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from .datetime642unix import datetime642unix
 
 
 def start(inp):
@@ -18,8 +13,9 @@ def start(inp):
 
     Parameters
     ----------
-    inp : xarray.DataArray
-        Time series.
+    inp : xarray.DataArray or xarray.Dataset
+        Time series, or a Dataset with a time coordinate (e.g. a particle
+        distribution).
 
     Returns
     -------
@@ -29,21 +25,22 @@ def start(inp):
     Raises
     ------
     TypeError
-        If inp is not a xarray.DataArray.
+        If inp is not a xarray.DataArray or a xarray.Dataset.
     ValueError
-        If the first dimension of inp is not time.
+        If the first dimension of the xarray.DataArray inp is not time.
 
     """
 
     # Check input type
-    if not isinstance(inp, xr.DataArray):
-        raise TypeError("inp must be a xarray.DataArray")
+    if not isinstance(inp, (xr.DataArray, xr.Dataset)):
+        raise TypeError("inp must be a xarray.DataArray or xarray.Dataset")
 
     # Make sure this is a time series
-    if list(inp.dims)[0] != "time":
+    if isinstance(inp, xr.DataArray) and list(inp.dims)[0] != "time":
         raise ValueError("inp must be a time series")
 
-    # From the time in ns (in us it was 1000 times too small)
-    out = inp.time.data[0].astype("datetime64[ns]").astype(np.int64) * 1e-9
+    # As end and datetime642unix (ns * 1e-9 differed from ns / 1e9 in the last
+    # digit for about 40 % of the times)
+    out = datetime642unix(inp.time.data[:1])[0]
 
     return out

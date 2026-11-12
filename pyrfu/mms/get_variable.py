@@ -10,13 +10,6 @@ import xarray as xr
 from pycdfpp import _pycdfpp, load, to_datetime64
 from xarray.core.dataarray import DataArray
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def _pycdfpp_attributes_to_dict(attributes):
     r"""Attributes of a CDF file or variable as a dictionary: the value of the

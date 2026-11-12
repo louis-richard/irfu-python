@@ -10,13 +10,6 @@ import numpy as np
 # Local imports
 from ._vdf_bins import _is_skymap, _pitch_angles, _polar_edges
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def pad_palim(pad, pitch_angles, average: bool = True):
     r"""Selects pitch angles of a pitch-angle distribution, as irfu-matlab

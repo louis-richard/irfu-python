@@ -19,16 +19,8 @@ from ._vdf_bins import (
     _speed_edges,
     _theta_edges,
 )
-from ._vdf_mc import _rng
 from .vdf_convert import _PSD
 from .vdf_shift import _frame_velocity
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def _bin_index(lower, upper, values):
@@ -56,7 +48,7 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state, sc_pot):
     speed = _speed(energy_t, mass)
 
     # Points uniform on the unit sphere (Archimedes: z and phi uniform)
-    rng = _rng(random_state)
+    rng = np.random.default_rng(random_state)
     u_z = rng.uniform(-1.0, 1.0, n_mc)
     u_phi = rng.uniform(0.0, 2.0 * np.pi, n_mc)
     u_xyz = np.stack(

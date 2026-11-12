@@ -12,13 +12,6 @@ from ._vdf_bins import (
 )
 from .vdf_convert import _relativistic_psd
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def vdf_flux(vdf, sc_pot=None, per_sr: bool = True):
     r"""Particle flux of each bin of a skymap or a pitch-angle distribution,

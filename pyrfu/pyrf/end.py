@@ -2,15 +2,10 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party import
-import numpy as np
 import xarray as xr
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from .datetime642unix import datetime642unix
 
 
 def end(inp):
@@ -36,7 +31,7 @@ def end(inp):
     if not isinstance(inp, (xr.DataArray, xr.Dataset)):
         raise TypeError("inp must be a xarray.DataArray or xarray.Dataset")
 
-    # From the time in ns (in us it was 1000 times too small)
-    out = inp.time.data[-1].astype("datetime64[ns]").astype(np.int64) / 1e9
+    # As start and datetime642unix
+    out = datetime642unix(inp.time.data[-1:])[0]
 
     return out

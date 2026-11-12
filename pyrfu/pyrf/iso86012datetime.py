@@ -9,12 +9,8 @@ from typing import Union
 import numpy as np
 from numpy.typing import NDArray
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
+# Local imports
+from .iso86012datetime64 import iso86012datetime64
 
 
 def iso86012datetime(
@@ -25,7 +21,8 @@ def iso86012datetime(
     Parameters
     ----------
     time : array_like
-        Time (list, tuple or numpy.ndarray), as str or numpy.datetime64.
+        Time (list, tuple or numpy.ndarray), as str (with or without the UTC
+        designator "Z", as `iso86012datetime64`) or numpy.datetime64.
 
     Returns
     -------
@@ -45,8 +42,8 @@ def iso86012datetime(
     if not isinstance(time, (list, tuple, np.ndarray)):
         raise TypeError("time must be list, tuple or numpy.ndarray")
 
-    # Make sure that str is in ISO8601 format
-    time_datetime64 = np.asarray(time).astype("datetime64[ns]")
+    # The same parsing as iso86012datetime64 ("Z" gave a numpy warning)
+    time_datetime64 = iso86012datetime64(time)
 
     if np.any(np.isnat(time_datetime64)):
         raise ValueError("time has NaT, which has no datetime")

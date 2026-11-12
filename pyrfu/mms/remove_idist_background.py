@@ -8,13 +8,6 @@ import numpy as np
 from ._vdf_bins import _charge_sign
 from .vdf_convert import _DEF, vdf_convert
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def remove_idist_background(vdf, def_bg):
     r"""Remove the mode background population due to penetrating radiation

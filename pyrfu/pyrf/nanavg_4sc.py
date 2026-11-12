@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 from typing import Sequence
 
 # 3rd party imports
@@ -12,34 +14,12 @@ from xarray.core.dataarray import DataArray
 from .calc_fs import calc_fs
 from .resample import resample
 
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolos.kolokotronis@irf.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
-
-def _nan_count(inp):
-    r"""Counts the number of non-NaN values in the input array at each time step.
-
-    Parameters
-    ----------
-    inp : DataArray or Dataset
-        Input array.
-
-    Returns
-    -------
-    inp_to_counts : DataArray or Dataset
-        Array with the same shape as the input array, where each element
-        is the number of non-NaN values at the corresponding time step.
-
-    """
-    inp_to_counts = xr.where(np.isnan(inp), 0, 1)
-    # inp_to_counts = inp.where(np.isnan(inp) == True, other=1)
-    # inp_to_counts = inp_to_counts.where(np.isnan(inp) == False, other=0)
-
-    return inp_to_counts
+def _valid_count(inp):
+    r"""1 where `inp` (array_like or DataArray) is not NaN, 0 where it is, as a
+    numpy.ndarray of int (xr.where returned a numpy.ndarray for an array,
+    whose ``.data`` taken by feeps_avg_4sc was a memoryview)."""
+    return (~np.isnan(np.asarray(inp))).astype(np.int64)
 
 
 def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
@@ -89,7 +69,7 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
 
     for value in values:
         # Count the valid samples before replacing NaNs by zeros in the sum
-        b_nan_denom += _nan_count(value)
+        b_nan_denom += _valid_count(value)
         b_avg_data += np.nan_to_num(value, nan=0.0)
 
     # Copy so that the attributes of the caller's first time series are unchanged

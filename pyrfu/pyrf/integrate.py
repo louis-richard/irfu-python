@@ -10,14 +10,8 @@ import xarray as xr
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from ._time import _seconds
 from ._units import _product, _units
-
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
@@ -66,8 +60,7 @@ def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
 
     # Times in seconds from the first one, from the integer ns (float64
     # seconds since 1970 would be rounded to 256 ns)
-    time_ns = inp.time.data.astype("datetime64[ns]").astype(np.int64)
-    time = (time_ns - time_ns[0]) * 1e-9
+    time = _seconds(inp.time.data, inp.time.data[0])
     delta_t = np.diff(time, prepend=time[0])
 
     if time_step is None:

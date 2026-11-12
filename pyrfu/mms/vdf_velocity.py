@@ -13,13 +13,6 @@ from ._vdf_bins import (
     _speed,
 )
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 
 def _rotation_matrices(rotation, n_t):
     # (time, 3, 3) rows are the new unit vectors
@@ -50,8 +43,9 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None):
     sc_pot : xarray.DataArray or float or array_like, Optional
         Spacecraft potential (V): a time series, resampled to the times of
         `vdf`, a scalar or (time,) values. The energies are corrected as in
-        irfu-matlab PDist.v: ions gain and electrons lose e V. Default is no
-        correction.
+        irfu-matlab PDist.v and `psd_moments`: the ions gain q V, with q the
+        ``charge`` attribute (1 by default, 2 for the HPCA He++), and the
+        electrons lose e V. Default is no correction.
     rotation : array_like, Optional
         3x3 matrix, or (time, 3, 3) matrices, whose rows are the new unit
         vectors in the coordinate system of `vdf`, e.g. [e_perp1, e_perp2, b]

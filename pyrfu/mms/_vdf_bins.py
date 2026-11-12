@@ -10,13 +10,6 @@ from scipy import constants
 from ..pyrf.resample import resample
 from ._psd_units import _mass_ratio
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.1"
-__status__ = "Prototype"
-
 # Bins of skymaps and pitch-angle distributions, shared by the vdf_* and pad_*
 # functions (irfu-matlab PDist methods)
 
@@ -30,6 +23,16 @@ def _charge_sign(vdf):
     r"""Sign of the charge of the species of the distribution."""
     is_electron = str(vdf.attrs["species"]).lower() in ["electrons", "electron", "e"]
     return -1.0 if is_electron else 1.0
+
+
+def _charge(vdf):
+    r"""Charge of the species of the distribution in elementary charges: -1
+    for the electrons, else the ``charge`` attribute (1 by default, 2 for the
+    HPCA He++), as psd_moments and vdf_projection."""
+    if _charge_sign(vdf) < 0:
+        return -1.0
+
+    return float(vdf.attrs.get("charge", 1))
 
 
 def _sc_pot(vdf, sc_pot):
@@ -86,10 +89,12 @@ def _energy_edges(vdf):
 
 
 def _kinetic_energy(vdf, energy, sc_pot):
-    r"""Energy (eV) at infinity, corrected for the spacecraft potential (V),
-    as irfu-matlab PDist.v (ions gain, electrons lose q V), at least 0."""
+    r"""Energy (eV) at infinity, corrected for the spacecraft potential (V):
+    the ions of charge q gain q V and the electrons lose e V (as irfu-matlab
+    PDist.v for q = 1; it was V whatever the charge, unlike psd_moments), at
+    least 0."""
     sc_pot = sc_pot.reshape((-1,) + (1,) * (np.ndim(energy) - 1))
-    return np.clip(energy + _charge_sign(vdf) * sc_pot, 0.0, None)
+    return np.clip(energy + _charge(vdf) * sc_pot, 0.0, None)
 
 
 def _speed(energy, mass):
@@ -204,10 +209,40 @@ def _broadcast_angles(values, data):
     return values[np.newaxis, np.newaxis, :]
 
 
+def _source_bins(vdf, sc_pot=None):
+    r"""Edges of the bins of a skymap: speeds (m/s, time x energy), azimuths
+    (degrees, time x phi) and cosines of the polar angles (theta,)."""
+    v_lower, v_upper = _speed_edges(vdf, sc_pot)
+    phi_lower, phi_upper = _phi_edges(vdf)
+    theta_lower, theta_upper = _theta_edges(vdf)
+    return {
+        "v_lower": v_lower,
+        "v_upper": v_upper,
+        "phi_lower": np.asarray(phi_lower),
+        "phi_upper": np.asarray(phi_upper),
+        "cos_upper": np.cos(np.deg2rad(theta_lower)),
+        "cos_lower": np.cos(np.deg2rad(theta_upper)),
+    }
+
+
+def _bins_d3v(bins):
+    r"""Velocity-space volume (m^3/s^3) of the bins of `_source_bins` (time,
+    energy, phi, theta): the speed shell times the solid angle, as `_d3v`."""
+    d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
+    d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
+    d_cos = bins["cos_upper"] - bins["cos_lower"]
+    solid = d_phi[:, np.newaxis, :, np.newaxis] * d_cos[np.newaxis, np.newaxis, :]
+    return d_v3[:, :, np.newaxis, np.newaxis] * solid
+
+
 def _d3v(vdf, sc_pot):
     r"""Velocity-space volume (m^3/s^3) of each bin with the relativistic
-    speeds, shaped as the data."""
+    speeds, shaped as the data (that of `_bins_d3v` for a skymap)."""
     data = vdf.data.data
+
+    if _is_skymap(vdf):
+        return np.broadcast_to(_bins_d3v(_source_bins(vdf, sc_pot)), data.shape)
+
     v_lower, v_upper = _speed_edges(vdf, sc_pot)
     d_v3 = _broadcast_energy((v_upper**3 - v_lower**3) / 3, data)
     d3v = d_v3 * _broadcast_angles(_band_solid_angles(vdf), data)

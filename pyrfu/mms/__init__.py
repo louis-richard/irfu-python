@@ -76,8 +76,6 @@ from .load_ancillary import load_ancillary
 from .load_brst_segments import load_brst_segments
 from .make_model_kappa import make_model_kappa
 from .make_model_vdf import make_model_vdf
-
-# from .make_model_rq import make_model_rq
 from .mms4_displacement import mms4_displacement
 from .pad_diffusion import pad_diffusion
 from .pad_palim import pad_palim
@@ -114,13 +112,6 @@ from .vdf_solid_angle import vdf_solid_angle
 from .vdf_to_e64 import vdf_to_e64
 from .vdf_velocity import vdf_velocity
 from .whistler_b2e import whistler_b2e
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 __all__ = [
     "cache_info",

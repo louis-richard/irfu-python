@@ -5,13 +5,6 @@
 import numpy as np
 from scipy import constants
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
 
 def match_phibe_v(b_0, b_z, int_e_dt, n, v):
     r"""Get propagation velocity by matching dBpar and phi. Used together with

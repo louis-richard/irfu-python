@@ -9,12 +9,9 @@ import numpy as np
 import xarray as xr
 from scipy import interpolate
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from ._time import _ns, _seconds
+from ._time_attrs import _is_time_attr
 
 # Interpolation methods: the kinds of scipy.interpolate.interp1d
 _METHODS = (
@@ -152,10 +149,9 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
     # Both datetime64 (checked in resample) or both numeric
     if np.issubdtype(inp.time.dtype, np.datetime64):
         # Integer nanoseconds for the averaging windows, float seconds otherwise
-        inp_time_ns = inp.time.data.astype("datetime64[ns]").astype(np.int64)
-        ref_time_ns = ref.time.data.astype("datetime64[ns]").astype(np.int64)
-        inp_time = (inp_time_ns - inp_time_ns[0]) * 1e-9
-        ref_time = (ref_time_ns - inp_time_ns[0]) * 1e-9
+        inp_time_ns, ref_time_ns = _ns(inp.time.data), _ns(ref.time.data)
+        inp_time = _seconds(inp.time.data, inp.time.data[0])
+        ref_time = _seconds(ref.time.data, inp.time.data[0])
     elif np.issubdtype(inp.time.dtype, np.number) and np.issubdtype(
         ref.time.dtype, np.number
     ):
@@ -228,25 +224,15 @@ def _resample_dataset(inp, ref, **kwargs):
     ndepnd_zvars = list(filter(lambda x: x not in tdepnd_zvars, inp))
     out_dict = {**out_dict, **{k: inp[k] for k in ndepnd_zvars}}
 
-    # Find array_like attributes
-    arr_attrs = filter(
-        lambda x: isinstance(inp.attrs[x], np.ndarray),
-        inp.attrs,
-    )
-    arr_attrs = list(arr_attrs)
+    # The per-time attributes are resampled, the others kept, with the rule of
+    # time_clip (any array as long as time was resampled: the energy tables of
+    # 32 channels with 32 times, and a 0-d array raised IndexError)
+    out_attrs = {}
 
-    # Initialize attributes dictionary with non array_like attributes
-    gen_attrs = filter(lambda x: x not in arr_attrs, inp.attrs)
-    out_attrs = {k: inp.attrs[k] for k in list(gen_attrs)}
-
-    for k in arr_attrs:
+    for k in sorted(inp.attrs):
         attr = inp.attrs[k]
 
-        # If array_like attributes have one dimension equal to time length
-        # assume time dependent. One option would be move the time dependent
-        # array_like attributes to time series to zVaraibles to avoid
-        # confusion
-        if attr.shape[0] == len(inp.time.data):
+        if _is_time_attr(k, attr, len(inp.time.data)):
             coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
             dims = [f"idx{i:d}" for i in range(attr.ndim - 1)]
             attr_ts = xr.DataArray(
@@ -257,8 +243,6 @@ def _resample_dataset(inp, ref, **kwargs):
             out_attrs[k] = _resample_dataarray(attr_ts, ref, **kwargs).data
         else:
             out_attrs[k] = attr
-
-    out_attrs = {k: out_attrs[k] for k in sorted(out_attrs)}
 
     # Make output Dataset
     out = xr.Dataset(out_dict, attrs=out_attrs)

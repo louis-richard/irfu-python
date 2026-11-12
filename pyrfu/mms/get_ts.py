@@ -14,17 +14,11 @@ from pycdfpp import DataType, load, to_datetime64
 from xarray.core.dataarray import DataArray
 
 # Local imports
+from ..pyrf._time import _timedelta
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime64 import iso86012datetime64
 from ..pyrf.time_clip import time_clip
 from .get_variable import _pycdfpp_attributes_to_dict
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +65,7 @@ def _shift_epochs(file, epoch):
         # Shift to the centre of [epoch - delta_minus, epoch + delta_plus] and half
         # width of the accumulation, as mms.variable2ts in irfu-matlab
         t_offset, t_diff = [
-            (np.round(delta, 1) * 1e6 / 2).astype("timedelta64[ns]")
+            _timedelta(np.round(delta, 1) / 2e3)
             for delta in [
                 delta_plus_var["data"] * flag_plus
                 - delta_minus_var["data"] * flag_minus,

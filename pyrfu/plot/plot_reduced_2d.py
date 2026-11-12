@@ -5,12 +5,8 @@
 import numpy as np
 from matplotlib import colors
 
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from .colorbar import colorbar as _add_colorbar
 
 
 def plot_reduced_2d(ax, f2d, clim: list = None):
@@ -66,12 +62,7 @@ def plot_reduced_2d(ax, f2d, clim: list = None):
     ax.set_ylim(np.array([-vy_lim, vy_lim]))
     ax.set_aspect("equal")
 
-    f = ax.get_figure()
-    pos = ax.get_position()
-    cax = f.add_axes([pos.x0, pos.y0 + pos.height + 0.01, pos.width, 0.01])
-    cbar = f.colorbar(mappable=im, cax=cax, ax=ax, orientation="horizontal")
-    cbar.add_lines(c_lines)
-    cax.xaxis.tick_top()
-    cax.xaxis.set_label_position("top")
+    cax = _add_colorbar(im, ax, width=0.01, where="top")
+    im.colorbar.add_lines(c_lines)
 
     return ax, cax

@@ -12,20 +12,19 @@ from xarray.core.dataset import Dataset
 
 # Local imports
 from pyrfu.mms._psd_units import _is_relativistic, _output, _relativistic_factor
-from pyrfu.mms._vdf_bins import _charge_sign, _energy_edges, _mass, _speed
+from pyrfu.mms._vdf_bins import (
+    _charge,
+    _charge_sign,
+    _energy_edges,
+    _mass,
+    _speed,
+)
 from pyrfu.mms.psd_rebin import psd_rebin
 from pyrfu.mms.vdf_convert import _PSD
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
 from pyrfu.pyrf.time_clip import time_clip
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_skymap import ts_skymap
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +171,7 @@ def _rebin_tables(
 
 
 def _init(vdf: Dataset, tint: list):
-    len_e, rebinned = 32, False
+    rebinned = False
 
     if vdf.phi.data.ndim == 1:
         phi = xr.DataArray(
@@ -226,7 +225,7 @@ def _init(vdf: Dataset, tint: list):
             dist, azimuthal, energy = _rebin_tables(
                 vdf, dist, azimuthal, tint, theta, energy0, energy1, step_table
             )
-            len_e, rebinned = dist.shape[1], True
+            rebinned = True
             energy_edges = _log_edges(energy, diff_energ / 2)
         else:
             energy_edges = _table_edges(step_table, energy0_edges, energy1_edges)
@@ -240,7 +239,7 @@ def _init(vdf: Dataset, tint: list):
     if not rebinned:
         energy_edges = _channel_edges(vdf, i_times[0], energy_edges)
 
-    return dist, polar, azimuthal, energy_edges, len_e, i_times
+    return dist, polar, azimuthal, energy_edges, i_times
 
 
 def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr, widths=None):
@@ -423,7 +422,7 @@ def vdf_projection(
         raise TypeError("vdf must be a xarray.Dataset")
 
     mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_des else float(vdf.attrs.get("charge", 1))
+    charge = 1.0 if is_des else _charge(vdf)
 
     # The relativistic phase-space density, projected with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
@@ -432,7 +431,7 @@ def vdf_projection(
     if not _is_relativistic(vdf) and units.lower() in _PSD:
         vdf = _output(vdf, data * _relativistic_factor(vdf, data), units)
 
-    dist, polar, azimuthal, energy_edges, _, i_times = _init(vdf, tint)
+    dist, polar, azimuthal, energy_edges, i_times = _init(vdf, tint)
     x_vec, y_vec, z_vec, _ = _coord_sys(coord_sys)
 
     if azimuthal.ndim == 1:

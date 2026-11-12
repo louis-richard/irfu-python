@@ -10,13 +10,6 @@ import xarray as xr
 from scipy import signal
 from xarray.core.dataarray import DataArray
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
-
 
 def medfilt(inp: DataArray, kernel_size: Optional[int] = None) -> DataArray:
     r"""Applies a median filter over `kernel_size` points to each component

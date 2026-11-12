@@ -2,18 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import functools
 import json
 import os
 
 # 3rd party imports
 import numpy as np
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def _bad_vars(bad_data):
@@ -26,16 +20,25 @@ def _bad_vars(bad_data):
     return bad_vars
 
 
+@functools.lru_cache(maxsize=1)
+def _bad_data_tables():
+    r"""Tables of feeps_bad_data.json, read once (on every call before); not
+    to be changed."""
+    root_path = os.path.dirname(os.path.abspath(__file__))
+
+    with open(
+        os.path.join(root_path, "feeps_bad_data.json"), "r", encoding="utf-8"
+    ) as file:
+        return json.load(file)
+
+
 def _bad_eyes(inp_dataset, bad_vars):
-    inp_dataset_clean = inp_dataset.copy()
-
+    # The bad eyes set to NaN, in place (the shallow copy shared the data)
     for bad_var in bad_vars:
-        if bad_var not in list(inp_dataset.keys()):
-            continue
+        if bad_var in inp_dataset:
+            inp_dataset[bad_var].data[:] = np.nan
 
-        inp_dataset_clean[bad_var].data[:] = np.nan
-
-    return inp_dataset_clean
+    return inp_dataset
 
 
 def _bad_channels(inp_dataset, bad_vars, n_channels):
@@ -81,12 +84,7 @@ def feeps_remove_bad_data(inp_dataset):
 
     mms_id = inp_dataset.attrs["mmsId"]
 
-    root_path = os.path.dirname(os.path.abspath(__file__))
-
-    with open(
-        os.path.join(root_path, "feeps_bad_data.json"), "r", encoding="utf-8"
-    ) as file:
-        feeps_bad_data = json.load(file)
+    feeps_bad_data = _bad_data_tables()
 
     bad_data_table = feeps_bad_data["bad_data_table"]
     bad_ch0 = feeps_bad_data["bad_ch0"]
@@ -120,7 +118,8 @@ def feeps_remove_bad_data(inp_dataset):
     # keV), meaning we'll have to adjust the hard-coded ylim settings in
     # SPEDAS and the SITL software:
 
-    # The lists of May 2019 are used for all dates, as IDL SPEDAS
+    # The lists of May 2019 are used for all dates, as IDL SPEDAS (the
+    # "<2019-05-01" lists of feeps_bad_data.json are kept for reference only)
     bad_data_ch0 = bad_ch0[">2019-05-01"][f"mms{mms_id}"]
     bad_data_ch1 = bad_ch1[">2019-05-01"][f"mms{mms_id}"]
     bad_data_ch2 = bad_ch2[">2019-05-01"][f"mms{mms_id}"]

@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Contributed by Apostolos Kolokotronis."""
+
 # 3rd party imports
 import numpy as np
 import scipy
 import xarray as xr
-
-__author__ = "Apostolos Kolokotronis"
-__email__ = "apostolos.kolokotronis@irf.se"
-__copyright__ = "Copyright 2020-2024"
-__license__ = "MIT"
-__version__ = "2.4.13"
-__status__ = "Prototype"
 
 
 def ts_convolve(inp, kernel, mode: str = "nearest"):

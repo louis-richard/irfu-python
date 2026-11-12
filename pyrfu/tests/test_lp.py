@@ -12,13 +12,6 @@ from scipy import constants
 from .. import lp, pyrf
 from ..lp.photo_current import surface_materials
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 
 class ThermalCurrentTestCase(unittest.TestCase):
     def test_thermal_current_probe_type_case(self):
@@ -209,6 +202,18 @@ class PhotoCurrentTestCase(unittest.TestCase):
 
         self.assertEqual(len(logs.records), len(surface_materials))
         self.assertTrue(logs.records[0].getMessage().startswith("cluster: Io= 25.00"))
+
+    def test_photo_current_zero_area(self):
+        # A zero area with an array of potentials gives zeros ("truth value of
+        # an array is ambiguous"); some arguments only raise ValueError
+        result = lp.photo_current(0.0, self.u, self.distance, "cluster")
+        np.testing.assert_array_equal(result, np.zeros(len(self.u)))
+
+        with self.assertRaisesRegex(ValueError, "none of them"):
+            lp.photo_current(self.area, None, self.distance)
+
+        with self.assertRaisesRegex(ValueError, "none of them"):
+            lp.photo_current(u=self.u)
 
     def test_photo_current_invalid_flag(self):
         with self.assertRaises(TypeError):

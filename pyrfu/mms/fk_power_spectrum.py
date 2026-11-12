@@ -18,13 +18,6 @@ from ..pyrf.ts_scalar import ts_scalar
 from ..pyrf.wavelet import wavelet
 from .probe_fields import probe_fields
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.5.6"
-__status__ = "Prototype"
-
 # Separation along the boom of the two single-probe fields of a pair (m):
 # half of the tip-to-tip lengths 120 m and 29.2 m (each field is between its
 # probe and the centre); the two probe potentials are twice as far apart

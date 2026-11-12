@@ -2,37 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from pyrfu.mms._psd_units import (
-    _MASS_FACTOR,
-    _data_and_units,
-    _energy,
-    _is_relativistic,
-    _mass_ratio,
-    _output,
-    _relativistic_factor,
-)
-
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
-
-
-def _convert(inp, units, mass_ratio):
-    fact = 1 / (1e6 * _MASS_FACTOR * mass_ratio**2)
-
-    if units.lower() == "s^3/cm^6":
-        out = inp * 1e30 * fact
-    elif units.lower() == "s^3/m^6":
-        out = inp * 1e18 * fact
-    elif units.lower() == "s^3/km^6":
-        out = inp * fact
-    else:
-        raise ValueError("Invalid unit")
-
-    return out
+from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms.vdf_convert import _PSD, vdf_convert
 
 
 def psd2def(inp):
@@ -74,12 +45,9 @@ def psd2def(inp):
 
     """
 
-    data, units = _data_and_units(inp)
-    # From the relativistic phase-space density of a relativistic skymap
-    # (FEEPS): the convention was ignored
-    if _is_relativistic(inp):
-        data = data / _relativistic_factor(inp, data)
+    _, units = _data_and_units(inp)
 
-    data = _convert(data, units, _mass_ratio(inp)) * _energy(inp, data) ** 2
+    if units.lower() not in _PSD:
+        raise ValueError("Invalid unit")
 
-    return _output(inp, data, "keV/(cm^2 s sr keV)")
+    return vdf_convert(inp, "keV/(cm^2 s sr keV)")

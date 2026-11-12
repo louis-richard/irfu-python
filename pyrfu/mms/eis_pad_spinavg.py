@@ -1,22 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import warnings
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 # Local imports
+from ._epd import _spin_reduce
 from .eis_spin_avg import _spin_segments
-
-__author__ = "Louis Richard"
-__email__ = "louisr@irfu.se"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
 
 
 def eis_pad_spinavg(inp, spin_nums, method: str = None):
@@ -76,26 +67,10 @@ def eis_pad_spinavg(inp, spin_nums, method: str = None):
 
     spin_starts, spin_stops = _spin_segments(spin_nums.data)
 
-    spin_sum_flux = np.zeros(
-        (len(spin_starts), len(inp.theta.data), len(inp.energy.data)),
+    # NaN for the pitch-angle bins empty during the whole spin
+    spin_sum_flux = _spin_reduce(inp.data, spin_starts, spin_stops, method).astype(
+        np.float64
     )
-
-    # loop through the spins
-    for i, (spin_start, spin_stop) in enumerate(zip(spin_starts, spin_stops)):
-        # NaN for the pitch-angle bins empty during the whole spin
-        spin_data = inp.data[spin_start:spin_stop, :, :]
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
-
-            if method == "sum":
-                spin_sum_flux[i, :, :] = np.where(
-                    np.isfinite(spin_data).any(axis=0),
-                    np.nansum(spin_data, axis=0),
-                    np.nan,
-                )
-            else:
-                spin_sum_flux[i, :, :] = np.nanmean(spin_data, axis=0)
 
     out = xr.DataArray(
         spin_sum_flux,

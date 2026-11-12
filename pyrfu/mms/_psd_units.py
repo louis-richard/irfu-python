@@ -7,13 +7,6 @@ from scipy import constants
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2026"
-__license__ = "MIT"
-__version__ = "2.4.21"
-__status__ = "Prototype"
-
 # Shared by the PSD, DEF and DPF unit conversions (def2psd, dpf2psd, psd2def,
 # psd2dpf)
 
@@ -30,9 +23,10 @@ def _ion_mass(atom, charge):
 
 # Masses in proton masses; the alphas (helium) are He2+ ions, 3.9726 (they
 # were 4, 0.7 % heavier). Oxygen (EIS) is O+ (that of O2+ is 0.003 % lower),
-# and the HPCA species are named as get_hpca_dist.
+# and the HPCA species are named as get_hpca_dist. "i" and "e" are the species
+# of the FEEPS data (get_feeps_alleyes, feeps_omni).
 _MASS_RATIOS = {
-    **dict.fromkeys(["ions", "ion", "protons", "proton", "hydrogen+"], 1.0),
+    **dict.fromkeys(["ions", "ion", "i", "protons", "proton", "hydrogen+"], 1.0),
     **dict.fromkeys(
         ["alphas", "alpha", "helium", "helium++"],
         constants.physical_constants["alpha particle mass"][0] / constants.proton_mass,

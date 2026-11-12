@@ -5,12 +5,8 @@
 import numpy as np
 from scipy import constants, interpolate
 
-__author__ = "Louis Richard"
-__email__ = "louis.richard@physics.ox.ac.uk"
-__copyright__ = "Copyright 2020-2023"
-__license__ = "MIT"
-__version__ = "2.4.2"
-__status__ = "Prototype"
+# Local imports
+from ._time import _seconds, _unix
 
 
 def _to_seconds(time):
@@ -18,7 +14,7 @@ def _to_seconds(time):
     time = np.asarray(time)
 
     if np.issubdtype(time.dtype, np.datetime64):
-        return time.astype("datetime64[ns]").astype(np.int64) * 1e-9
+        return _unix(time)
 
     return time.astype(np.float64)
 
@@ -175,8 +171,7 @@ def c_4_v(r_xyz, time, frame: str = "spacecraft"):
         if np.issubdtype(time.dtype, np.datetime64):
             # Delays in integer ns before converting to seconds: float seconds
             # since 1970 only resolve ~0.24 us, too coarse for ms delays.
-            time = time.astype("datetime64[ns]")
-            tau = (time[1:] - time[0]).astype(np.int64) * 1e-9
+            tau = _seconds(time[1:], time[0])
         else:
             tau = time[1:].astype(np.float64) - float(time[0])
 
