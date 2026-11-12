@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import functools
 import json
 import os
 
@@ -17,6 +18,18 @@ def _bad_vars(bad_data):
     ]
 
     return bad_vars
+
+
+@functools.lru_cache(maxsize=1)
+def _bad_data_tables():
+    r"""Tables of feeps_bad_data.json, read once (on every call before); not
+    to be changed."""
+    root_path = os.path.dirname(os.path.abspath(__file__))
+
+    with open(
+        os.path.join(root_path, "feeps_bad_data.json"), "r", encoding="utf-8"
+    ) as file:
+        return json.load(file)
 
 
 def _bad_eyes(inp_dataset, bad_vars):
@@ -71,12 +84,7 @@ def feeps_remove_bad_data(inp_dataset):
 
     mms_id = inp_dataset.attrs["mmsId"]
 
-    root_path = os.path.dirname(os.path.abspath(__file__))
-
-    with open(
-        os.path.join(root_path, "feeps_bad_data.json"), "r", encoding="utf-8"
-    ) as file:
-        feeps_bad_data = json.load(file)
+    feeps_bad_data = _bad_data_tables()
 
     bad_data_table = feeps_bad_data["bad_data_table"]
     bad_ch0 = feeps_bad_data["bad_ch0"]

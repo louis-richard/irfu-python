@@ -6670,6 +6670,35 @@ class ReadFeepsSectorMasksCsvTestCase(unittest.TestCase):
         # MMS4 20250216 table as updated upstream in April 2025
         self.assertEqual(int(self._table(4, "20250216").sum()), 564)
 
+    def test_read_feeps_sector_masks_csv_cached(self):
+        # The files of a date are read once (four files on every call), and the
+        # masks returned are copies: changing them doesn't change the next ones
+        module = sys.modules["pyrfu.mms.read_feeps_sector_masks_csv"]
+        module._read_masks.cache_clear()
+        tint = ["2017-07-11T22:00:00", "2017-07-11T22:00:00"]
+
+        with mock.patch.object(module, "open", wraps=open, create=True) as opened:
+            first = mms.read_feeps_sector_masks_csv(tint)
+            first["mms1_imask_top-1"].append(99)
+            second = mms.read_feeps_sector_masks_csv(tint)
+
+        self.assertEqual(opened.call_count, 4)
+        self.assertNotIn(99, second["mms1_imask_top-1"])
+        module._read_masks.cache_clear()
+
+    def test_feeps_bad_data_tables_cached(self):
+        # feeps_bad_data.json is read once (on every call of
+        # feeps_remove_bad_data)
+        module = sys.modules["pyrfu.mms.feeps_remove_bad_data"]
+        module._bad_data_tables.cache_clear()
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+
+        with mock.patch.object(module.json, "load", wraps=module.json.load) as load:
+            mms.feeps_remove_bad_data(feeps_alle)
+            mms.feeps_remove_bad_data(feeps_alle)
+
+        self.assertEqual(load.call_count, 1)
+
 
 @ddt
 class FeepsRemoveSunTestCase(unittest.TestCase):
