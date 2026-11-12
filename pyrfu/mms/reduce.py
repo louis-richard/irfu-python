@@ -11,7 +11,7 @@ import xarray as xr
 
 # Local imports
 from pyrfu.mms._psd_units import _factor, _is_relativistic, _mass_ratio
-from pyrfu.mms._vdf_bins import _mass, _speed
+from pyrfu.mms._vdf_bins import _charge, _mass, _speed
 from pyrfu.mms.vdf_convert import vdf_convert
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
@@ -85,15 +85,20 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     **kwargs
         Keyword arguments, among which:
 
-        * sc_pot : xarray.DataArray, the spacecraft potential (V), 0 V by
-          default. As in irfu-matlab, where it is for the electrons only,
-          the energies are corrected as those of electrons, E - e V, for all
-          the species (the ions gain q V in `psd_moments` and
-          `vdf_velocity`).
+        * sc_pot : xarray.DataArray, the spacecraft potential V (V), 0 V by
+          default. The energies are those at infinity, E + q V for a charge
+          q (energy conservation): the electrons lose e V and the ions gain
+          q V (``charge`` attribute, 2 for the HPCA He++). irfu-matlab
+          PDist.reduce corrects the electrons only; the ions lost e V
+          before.
         * lower_e_lim : float or xarray.DataArray, the threshold energy
-          (eV), 0 eV by default. The channels below max(sc_pot,
-          lower_e_lim) are set to zero; a time step without any channel
-          above it is NaN.
+          (eV), 0 eV by default. The channels below lower_e_lim, and for a
+          species attracted by the spacecraft (q V < 0, the electrons for
+          V > 0) below its potential energy ``|q V|`` (secondary and
+          photoelectrons of the spacecraft), are set to zero; a time step
+          without any channel above it is NaN. The channels of a species
+          repelled (the ions for V > 0) are all ambient particles and are
+          kept (the ions below e V were set to zero).
         * vg, vg_edges : array_like, the speeds (m/s) of the grid, or the
           edges of its bins, instead of the default one (see Notes).
         * verbose : bool, show a progress bar (default True).
@@ -126,10 +131,11 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     The default polar grid (``"pol"``, without ``vg`` or ``vg_edges``) is
     made of the speeds of the channels at the first time computed, corrected
-    for the spacecraft potential, as in irfu-matlab. The channels below
-    `sc_pot` are then at 0 eV, so that with a positive `sc_pot` the 1d grid
-    has several speeds of 0 (+0 and -0, not unique) where the distribution
-    is zero; give ``vg`` or ``vg_edges`` for a grid of distinct speeds.
+    for the spacecraft potential, as in irfu-matlab. For an attracted
+    species (the electrons with a positive `sc_pot`), the channels below
+    its potential energy are then at 0 eV, so that the 1d grid has several
+    speeds of 0 (+0 and -0, not unique) where the distribution is zero;
+    give ``vg`` or ``vg_edges`` for a grid of distinct speeds.
 
     The Monte-Carlo options (``n_mc``, ``weight``, ...) are those of
     `pyrfu.pyrf.int_sph_dist`. ``weight="log"`` weights the particles by
@@ -252,6 +258,10 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     sc_pot = kwargs.get("sc_pot", ts_scalar(vdf_time.data, np.zeros(n_t)))
     sc_pot = resample(sc_pot, vdf_time).data
 
+    # Potential energy (eV) of the particles at the spacecraft, q V: the
+    # energies at infinity are E + q V (electrons -e V, ions +q V)
+    q_sc_pot = _charge(vdf) * sc_pot
+
     # Threshold energy (e.g., to remove background noise). If not provided set
     # to 0 eV.
     lower_e_lim = kwargs.get("lower_e_lim", 0.0)
@@ -309,9 +319,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         energy = energy.astype(np.float64)  # Convert to float64
 
         # Assign zeros to phase-space density values corresponding to energies
-        # below the threshold energy or below the spacecraft potential if
-        # provided.
-        thresh_e = np.max([lower_e_lim[i_t], sc_pot[i_t]])
+        # below the threshold energy, or below the potential energy |q V| of a
+        # species attracted by the spacecraft (q V < 0): spacecraft electrons
+        thresh_e = np.max([lower_e_lim[i_t], -q_sc_pot[i_t]])
         above = np.where(energy - delta_energy_minu[i_t, :] > thresh_e)[0]
 
         if len(above) == 0:
@@ -320,8 +330,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
         f_3d[: above[0]] = 0.0
 
-        # Correct energy shift due to spacecraft potential
-        energy -= sc_pot[i_t]
+        # Energy at infinity, E + q V (the ions lost e V)
+        energy += q_sc_pot[i_t]
         energy[energy < 0] = 0.0
 
         # Convert energy to velocity (relativistically correct)
@@ -332,8 +342,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         if has_energy_widths:
             e_low = vdf_energy.data[i_t, :] - delta_energy_minu.data[i_t, :]
             e_upp = vdf_energy.data[i_t, :] + delta_energy_plus.data[i_t, :]
-            e_low = np.clip(e_low.astype(np.float64) - sc_pot[i_t], 0.0, None)
-            e_upp = np.clip(e_upp.astype(np.float64) - sc_pot[i_t], 0.0, None)
+            e_low = np.clip(e_low.astype(np.float64) + q_sc_pot[i_t], 0.0, None)
+            e_upp = np.clip(e_upp.astype(np.float64) + q_sc_pot[i_t], 0.0, None)
             speed_widths = {
                 "d_v_m": velocity - _speed(e_low, m_p),
                 "d_v_p": _speed(e_upp, m_p) - velocity,

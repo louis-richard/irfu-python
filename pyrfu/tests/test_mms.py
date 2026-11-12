@@ -9754,8 +9754,9 @@ class ReduceTestCase(unittest.TestCase):
 
     def test_reduce_no_channel(self):
         # V_sc above every channel at the first time: NaN there (IndexError),
-        # the grid from the next time; at all times: ValueError
-        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        # the grid from the next time; at all times: ValueError. Electrons,
+        # attracted by the spacecraft (the ions are not cut, see below)
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="electrons")
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.array([1e3, 0.0, 0.0]))
         result = mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
 
@@ -9767,6 +9768,34 @@ class ReduceTestCase(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "no energy channel"):
             mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
+
+    def test_reduce_sc_pot_charge(self):
+        # Energies at infinity, E + q V: the ions gain q V (they lost e V) and
+        # the electrons lose e V; the default grid ends at the speed of the top
+        # channel (31 eV) at infinity
+        reduce_module = importlib.import_module("pyrfu.mms.reduce")
+        mass = reduce_module._mass
+
+        for species, charge, e_top in [
+            ("ions", None, 41.0),
+            ("ions", 2, 51.0),
+            ("electrons", None, 21.0),
+        ]:
+            vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species=species)
+            if charge is not None:
+                vdf.attrs["charge"] = charge
+            sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(3, 10.0))
+            result = mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
+
+            expected = reduce_module._speed(e_top, mass(vdf)) / 1e3
+            self.assertAlmostEqual(float(np.max(np.abs(result.vx.data))), expected)
+
+        # The ions are repelled: all their channels are ambient ions, kept
+        # whatever the potential (those below e V were set to zero, NaN here)
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(3, 1e3))
+        result = mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
+        self.assertTrue(np.all(np.isfinite(result.data)))
 
     def test_reduce_default_phi_grid(self):
         # Default azimuthal grid has one point per instrument azimuth. phi is
