@@ -131,7 +131,9 @@ def wavepolarize_means(
     which the results agree to rounding.
 
     ``b_wave`` and ``b_bgd`` should be from the same satellite and in the same
-    coordinates
+    coordinates. The field-aligned frame is built from the cross product of
+    ``b_bgd`` with y, as irfu-matlab: where ``b_bgd`` is exactly along y it
+    is undefined and the results are NaN.
 
     .. warning::
         If one component is an order of magnitude or more  greater than the
