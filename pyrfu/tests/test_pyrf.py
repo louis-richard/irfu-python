@@ -6907,6 +6907,50 @@ class PsdTestCase(unittest.TestCase):
         for value, ref in zip(result, reference):
             np.testing.assert_allclose(value, ref, rtol=1e-6, atol=1e-7)
 
+    def test_wave_fft_no_detrend(self):
+        # Each frame transformed as it is, as irf_wavefft: the FFT of the
+        # windowed samples, scaled by sqrt(1 / (fs sum(w^2))); the mean of each
+        # frame was removed (the offset gone from the lowest bins)
+        time = generate_timeline(64.0, 256)
+        x = 3.0 + np.sin(2 * np.pi * 5.0 * np.arange(256) / 64.0)
+        window = np.hamming(64)
+        _, _, spec = pyrf.wave_fft(pyrf.ts_scalar(time, x), window, 0.5, 1.0)
+
+        scale = np.sqrt(1.0 / (64.0 * np.sum(window**2)))
+        frames = [x[i : i + 64] * window for i in range(0, 256 - 64 + 1, 32)]
+        expected = np.fft.rfft(frames, axis=1).T * scale
+        np.testing.assert_allclose(spec, expected, rtol=1e-12, atol=1e-12)
+
+    def test_wave_fft_unscaled(self):
+        # scaled=False: irf_wavefft's convention, the raw FFT of the frames with
+        # the symmetric window, rows 1:round(n / 2) and times round(n / 2)
+        # samples after the frame start; even and odd frame lengths
+        x = 3.0 + np.sin(2 * np.pi * 5.0 * np.arange(256) / 64.0)
+        inp = pyrf.ts_scalar(generate_timeline(64.0, 256), x)
+
+        for n_seg, n_step in [(64, 32), (63, 21)]:
+            freqs, times, spec = pyrf.wave_fft(
+                inp, "hamming", (n_seg - n_step) / 64.0, n_seg / 64.0, scaled=False
+            )
+
+            n_rows = int(np.floor(n_seg / 2 + 0.5))
+            frames = [
+                x[i : i + n_seg] * np.hamming(n_seg)
+                for i in range(0, 256 - n_seg + 1, n_step)
+            ]
+            expected = np.fft.fft(frames, axis=1).T[:n_rows]
+            np.testing.assert_allclose(spec, expected, rtol=1e-12, atol=1e-11)
+            np.testing.assert_allclose(freqs, np.arange(n_rows) / n_seg * 64.0)
+            np.testing.assert_allclose(
+                times, (n_rows + n_step * np.arange(len(frames))) / 64.0
+            )
+
+        # A window given as an array is used as it is (here the symmetric one)
+        result = pyrf.wave_fft(inp, np.hamming(64), 0.5, 1.0, scaled=False)
+        expected = pyrf.wave_fft(inp, "hamming", 0.5, 1.0, scaled=False)
+        for value, ref in zip(result, expected):
+            np.testing.assert_allclose(value, ref, rtol=1e-12, atol=1e-12)
+
 
 class PresAnisTestCase(unittest.TestCase):
     def test_pres_anis_output(self):
