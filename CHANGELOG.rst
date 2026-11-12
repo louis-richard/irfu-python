@@ -1,6 +1,144 @@
 Changelog
 =========
 
+2.5.13 (2026-11-12)
+-------------------
+
+This release fixes the defects found by a review of the code quality of the
+package, and gives one home to code that was copied between modules: the time
+conversions, the reading of the MMS configuration, the colour bars of the
+plotting routines, the per-spin averages of the EPD routines and the units of
+the distributions. The energies of the ions of charge q are corrected by
+q V for the spacecraft potential in every distribution routine (He++ was
+corrected by V in some), and several routines are faster or read their data
+files once. On the MMS data checked (FGM, EDP, MEC, FPI, FEEPS, EIS and HPCA
+of 2017-07-11), the results are unchanged but for He++ and differences at
+the rounding level, listed below.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- The modules no longer have ``__author__``, ``__email__``,
+  ``__copyright__``, ``__license__``, ``__version__`` and ``__status__``
+  attributes (nothing read them, and ``__version__`` had 15 stale values):
+  ``pyrfu.__version__`` is the version of the package.
+- ``mms.fft_bandpass`` keeps the dimensions, coordinates and attributes of
+  the input, as ``pyrf.filt``: e.g., the second dimension of the FGM vectors
+  stays ``represent_vec_tot``. Inputs of 2 or 6 components raised, and one of
+  1 component was squeezed.
+- ``plot.plot_spectr`` forwards its other keyword arguments to
+  ``pcolormesh`` (e.g., ``alpha``, ``edgecolors``, and ``shading`` or
+  ``rasterized`` to replace the defaults): they were ignored, so that a
+  misspelled keyword now raises matplotlib's error. ``pad`` is a named
+  keyword, with the same default (0.01).
+- An MMS configuration without "default" is "local" for every reader
+  (``mms.db_get_ts`` raised ``NotImplementedError("Resource None")``, and
+  ``mms.copy_files`` ``KeyError`` without "local"), and one that is not a
+  JSON object gives the default settings. The configuration is read once,
+  until the file changes. ``mms.db_init`` writes the file at once, as
+  ``maven.db_init`` and ``solo.db_init``: a failed write left a partial
+  file, read then as the default settings.
+- ``pyrf.unix2datetime64`` of NaN is NaT (1970-01-01 on arm64, with a cast
+  warning).
+- ``lp.photo_current`` returns the photoemission of the surface materials
+  only without arguments (zeros for the three arguments did too, and an array
+  of potentials with a zero area raised "truth value of an array is
+  ambiguous"), and raises ``ValueError`` for some but not all of
+  ``iluminated_area``, ``u`` and ``distance_sun``.
+
+New features
+^^^^^^^^^^^^
+
+- ``plot.colorbar`` takes ``where`` ("right", the default, "left", "top" or
+  "bottom"; ``ValueError`` otherwise), with the ticks and the label on the
+  outer side. The plotting routines place their colour bars with it.
+- ``pyrf.t_eval`` takes inputs of any shape and keeps their coordinates and
+  attributes: the second dimension had to be "comp" (``AttributeError`` for
+  the FGM ``represent_vec_tot``), and tensors were not taken. A time after the
+  last sample raises ``IndexError`` with a message.
+- ``pyrf.iso86012unix`` takes tuples, and ``pyrf.iso86012unix`` and
+  ``pyrf.iso86012datetime`` times with a trailing "Z" (numpy warned).
+- ``pyrf.start`` takes a Dataset, as ``pyrf.end``.
+- ``mms.vdf_convert`` accepts "1/(cm^2 s sr)", the energy flux units of
+  ``mms.def2psd``.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- The energies of the ions of charge q are corrected by q V for the
+  spacecraft potential everywhere, with the ``charge`` attribute (1 by
+  default, 2 for the HPCA He++): ``mms.vdf_d3v``, ``mms.vdf_velocity``,
+  ``mms.vdf_partial_density``, ``mms.vdf_flux``, ``mms.vdf_omni``, the Monte
+  Carlo reductions and ``mms.calculate_epsilon`` took V whatever the charge,
+  while ``mms.psd_moments`` and ``mms.vdf_projection`` took q V. For He++, the
+  summed partial densities were 0.7 % below the ``psd_moments`` density at
+  20 V.
+- ``pyrf.resample`` and ``pyrf.ts_append`` tell the per-time attributes of a
+  distribution (e.g., the energy tables) by the rule of ``pyrf.time_clip``:
+  with as many times as energy channels, ``resample`` averaged the energy
+  tables and ``ts_append`` appended them. A 0-d array attribute raised
+  ``IndexError`` in ``resample``.
+- ``pyrf.start`` and ``pyrf.end`` are computed as ``pyrf.datetime642unix``:
+  ``start`` differed in the last digit for about 40 % of the times.
+- The durations in ns are rounded, not truncated: the time steps of
+  ``pyrf.average_vdf`` and ``mms.vdf_to_e64`` (0.0157 s was 15699999 ns), and
+  the epoch shift of ``mms.get_ts`` (4099999 ns for 8.2 ms).
+- ``mms.reduce`` computes the speeds from the energies at full precision
+  (they lost digits at low energies, 1e-8 for 1 eV protons): the reduced
+  distributions change by up to 8e-8 of their scale.
+- ``mms.psd2def``, ``mms.psd2dpf``, ``mms.def2psd`` and ``mms.dpf2psd`` give
+  the values of ``mms.vdf_convert``, which they call: on the float32 FPI
+  distributions, they differed from it by up to 1.8e-7.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``pyrf.shock_normal``: the shear and shock angles of parallel vectors
+  (NaN), and ``mms.eis_pad``: the pitch angle of a telescope along B (NaN).
+- ``mms.vdf_convert`` of the FEEPS ion spectra (species "i", not in the mass
+  table).
+- ``mms.eis_ang_ang`` (``ValueError``), ``mms.eis_skymap_combine_sc`` (equal
+  array attributes dropped) and ``mms.eis_combine_proton_spec``
+  (``ValueError``, and NaN or NaT fill values kept as a list) compare the
+  attributes of array values.
+- ``mms.tokenize`` raises ``ValueError`` with a message for a scalar with a
+  coordinate system ("too many values to unpack").
+
+Performance
+^^^^^^^^^^^
+
+- ``pyrf.t_eval`` with ``numpy.searchsorted`` (1 ms instead of 216 ms for
+  the FGM field at the EDP times of 2017-07-11), ``pyrf.c_4_grad`` on arrays
+  of the four spacecraft (up to 1.9 times faster),
+  ``mms.lh_wave_analysis`` with the correlations of all the directions from
+  two potentials (5 ms instead of 86 ms), ``mms.eis_pad`` without a loop
+  over the times and bins (about 10 times faster), and ``mms.hpca_pad`` one
+  pitch-angle bin at a time (half the peak memory).
+- ``feeps_bad_data.json``, the FEEPS sector masks and
+  ``shock_models_parameters.json`` are read once (on every call before), and
+  ``mms.feeps_corrections`` no longer copies its input.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``pyrf.shock_normal``: the keys of the models in ``info``
+  (``slavin_holzer``, ``peredo``, ``fairfield_meridian_4o``,
+  ``fairfield_meridian_no_4o`` and ``formisano_unnorm``; short names were
+  documented) and the parameters of the models (``alpha``, ``eps``, ``l``,
+  ``x_0`` and ``y_0``).
+- The modules written by other contributors credit them in their module
+  docstring.
+
+Development
+^^^^^^^^^^^
+
+- The code copied between modules is in shared private modules:
+  ``pyrf/_time.py`` (time conversions), ``pyrf/_time_attrs.py`` (per-time
+  attributes), ``_user_config.py`` (configuration files), ``mms/_epd.py``
+  (per-spin averages), ``mms/_eis_attrs.py`` and ``mms/_vdf_bins.py``
+  (speeds, bin volumes and charges). Dead and commented-out code is removed,
+  and ``pyrf.datetime2iso8601`` no longer uses pandas.
+
 2.5.12 (2026-11-11)
 -------------------
 
