@@ -209,14 +209,14 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     # Compute reciprocal vectors in barycentric coordinates (see c_4_k)
     k_list = c_4_k(r_mms)
 
+    # sigma^2 of d_i v_j: the sum over the spacecraft of k_i^2 dv_j^2, all (i, j)
+    # at once (a loop over i, j and the spacecraft; same order of the sums)
     sigma_grad_v_xyz = np.zeros((k_list[0].shape[0], 3, 3))
 
-    for i in range(3):
-        for j in range(3):
-            for alpha in range(4):
-                sigma_grad_v_xyz[:, i, j] += (
-                    k_list[alpha].data[:, i] ** 2 * errv_mms[alpha].data[:, j] ** 2
-                )
+    for k_alpha, errv_alpha in zip(k_list, errv_mms):
+        sigma_grad_v_xyz += (
+            k_alpha.data[:, :, np.newaxis] ** 2 * errv_alpha.data[:, np.newaxis, :] ** 2
+        )
 
     sigma_grad_v_xyz = np.sqrt(sigma_grad_v_xyz)
 
