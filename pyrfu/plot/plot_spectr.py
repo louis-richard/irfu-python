@@ -23,6 +23,7 @@ def plot_spectr(
     cmap: str = None,
     colorbar: str = "right",
     aspect: str = "auto",
+    pad: float = 0.01,
     **kwargs,
 ):
     r"""Plot a spectrogram using pcolormesh.
@@ -59,12 +60,13 @@ def plot_spectr(
     aspect : str or float, Optional
         Aspect ratio of the axis, see matplotlib.axes.Axes.set_aspect.
         Default is "auto".
-
-    Other Parameters
-    ----------------
-    pad : float
+    pad : float, Optional
         Gap between the axis and the colorbar, in figure coordinates. Default
         is 0.01.
+    **kwargs
+        Keyword arguments forwarded to matplotlib.axes.Axes.pcolormesh (e.g.,
+        alpha, edgecolors), which can also replace rasterized=True and
+        shading="auto". They were ignored before.
 
     Returns
     -------
@@ -168,9 +170,7 @@ def plot_spectr(
         x_data,
         y_data,
         inp_data,
-        rasterized=True,
-        shading="auto",
-        **options,
+        **{"rasterized": True, "shading": "auto", **options, **kwargs},
     )
 
     if np.issubdtype(x_data.dtype, np.datetime64):
@@ -188,9 +188,7 @@ def plot_spectr(
     axis.set_aspect(aspect)
 
     if colorbar.lower() in ["right", "top"]:
-        cax = _add_colorbar(
-            image, axis, kwargs.get("pad", 0.01), 0.01, colorbar.lower()
-        )
+        cax = _add_colorbar(image, axis, pad, 0.01, colorbar.lower())
         cax.set_axisbelow(False)
 
         if cscale == "log":

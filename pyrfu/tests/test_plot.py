@@ -1575,6 +1575,28 @@ class PlotSpectrTestCase(unittest.TestCase):
         _, cax = plot.plot_spectr(ax, self.inp, colorbar="top", pad=0)
         self.assertAlmostEqual(cax.get_position().y0, ax.get_position().y1)
 
+    def test_plot_spectr_kwargs(self):
+        # The other keyword arguments go to pcolormesh (they were ignored),
+        # also replacing rasterized and shading
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, self.inp, alpha=0.5, edgecolors="k")
+
+        image = self._image(ax)
+        self.assertEqual(image.get_alpha(), 0.5)
+        np.testing.assert_allclose(image.get_edgecolor(), [[0.0, 0.0, 0.0, 0.5]])
+        self.assertTrue(image.get_rasterized())
+
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, self.inp, rasterized=False, shading="gouraud")
+        self.assertFalse(self._image(ax).get_rasterized())
+        # Gouraud: the mesh at the 50 x 8 points (51 x 9 edges with "auto")
+        self.assertEqual(self._image(ax).get_coordinates().shape, (8, 50, 2))
+
+        # An unknown keyword raises matplotlib's error
+        _, ax = plt.subplots(1)
+        with self.assertRaises((AttributeError, TypeError)):
+            plot.plot_spectr(ax, self.inp, cmin=1.0)
+
     def test_plot_spectr_dataset(self):
         # Time-dependent energy table: as a coordinate (named energy or not) or
         # as a second data variable
