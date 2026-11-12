@@ -6,8 +6,7 @@ from typing import Union
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
 from .calc_dt import calc_dt

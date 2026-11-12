@@ -7,7 +7,7 @@ from typing import Sequence
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf.calc_fs import calc_fs

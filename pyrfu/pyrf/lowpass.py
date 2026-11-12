@@ -9,7 +9,7 @@ from typing import Optional
 import numpy as np
 import xarray as xr
 from scipy import signal
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from .calc_fs import calc_fs

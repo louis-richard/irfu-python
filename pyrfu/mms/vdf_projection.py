@@ -8,7 +8,7 @@ import warnings
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Local imports
 from pyrfu.mms._psd_units import _is_relativistic, _output, _relativistic_factor

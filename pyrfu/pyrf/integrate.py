@@ -7,7 +7,7 @@ from typing import Optional
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from ._time import _seconds

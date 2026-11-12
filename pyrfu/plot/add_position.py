@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.dates import num2date
 from matplotlib.transforms import ScaledTranslation, blended_transform_factory
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from ..constants import R_E

@@ -8,7 +8,7 @@ from typing import Optional
 import numpy as np
 import xarray as xr
 from scipy import constants
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf._units import _check_units

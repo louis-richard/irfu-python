@@ -6,7 +6,7 @@ from typing import Sequence
 
 # 3rd party imports
 from scipy import constants
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf._units import _check_units

@@ -10,8 +10,7 @@ import matplotlib
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
 from .. import pyrf

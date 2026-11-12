@@ -5,7 +5,7 @@ from typing import Sequence
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf._units import _attrs, _ratio, _units

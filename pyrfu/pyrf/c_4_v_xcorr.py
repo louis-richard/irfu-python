@@ -8,7 +8,7 @@ from typing import Optional, Sequence
 # 3rd party imports
 import numpy as np
 from scipy import optimize, signal
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from ._time import _seconds

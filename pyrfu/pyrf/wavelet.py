@@ -12,8 +12,7 @@ import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
 from scipy import fft
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
 from pyrfu.pyrf._units import _attrs, _power, _ratio, _units

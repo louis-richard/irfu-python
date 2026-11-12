@@ -3,7 +3,7 @@
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
 def normalize(inp: DataArray) -> DataArray:

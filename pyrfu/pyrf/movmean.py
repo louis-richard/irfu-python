@@ -8,7 +8,7 @@ from typing import Any, Optional
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
 def movmean(inp: DataArray, window_size: Optional[int] = None) -> DataArray:

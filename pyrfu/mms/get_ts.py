@@ -11,7 +11,7 @@ from typing import Optional, Union
 import numpy as np
 import xarray as xr
 from pycdfpp import DataType, load, to_datetime64
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from ..pyrf._time import _timedelta

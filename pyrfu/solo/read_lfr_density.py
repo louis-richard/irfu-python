@@ -9,7 +9,7 @@ from typing import Optional
 # 3rd party imports
 import numpy as np
 import pycdfpp
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 from ..pyrf import read_cdf, time_clip, ts_append, ts_scalar
 from ._list_files import _list_files

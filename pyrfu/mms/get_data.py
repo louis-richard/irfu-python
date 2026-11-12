@@ -17,8 +17,7 @@ from botocore.exceptions import (
     ResponseStreamingError,
 )
 from requests.sessions import Session
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
 from pyrfu.mms import _cache

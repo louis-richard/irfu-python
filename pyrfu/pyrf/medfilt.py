@@ -8,7 +8,7 @@ from typing import Optional
 import numpy as np
 import xarray as xr
 from scipy import signal
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
 def medfilt(inp: DataArray, kernel_size: Optional[int] = None) -> DataArray:

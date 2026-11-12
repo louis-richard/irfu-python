@@ -8,7 +8,7 @@ from typing import Mapping, Optional, Tuple
 # 3rd party imports
 import numpy as np
 from pycdfpp import load
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_data import (

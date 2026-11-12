@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 
 # 3rd party imports
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.mms.db_get_ts import _resolve_source, _tokenize

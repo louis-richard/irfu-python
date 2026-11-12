@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 import pycdfpp
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 from ..pyrf import read_cdf, time_clip, ts_append
 from ._list_files import _list_files

@@ -5,8 +5,7 @@
 from typing import Union
 
 # 3rd party imports
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
 from pyrfu.mms._psd_units import _data_and_units

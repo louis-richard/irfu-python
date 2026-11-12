@@ -9,7 +9,7 @@ from typing import Sequence
 
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from ..pyrf._time import _ns

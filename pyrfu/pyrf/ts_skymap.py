@@ -8,7 +8,7 @@ from typing import Any, Iterable, Mapping, Optional, Union
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 

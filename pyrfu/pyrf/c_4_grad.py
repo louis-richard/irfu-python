@@ -7,7 +7,7 @@ from typing import Any, Optional, Sequence
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf._units import _attrs, _power, _ratio, _units

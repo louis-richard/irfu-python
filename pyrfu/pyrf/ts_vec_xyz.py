@@ -8,7 +8,7 @@ from typing import Mapping, Optional, Union
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
 def ts_vec_xyz(

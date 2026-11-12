@@ -5,7 +5,7 @@
 import warnings
 
 # 3rd party imports
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Units of the outputs, in the notation of the MMS files: products separated by
 # a space, ratios with "/", powers with "^", a compound unit in parentheses when

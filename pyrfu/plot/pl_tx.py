@@ -9,7 +9,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
 def pl_tx(

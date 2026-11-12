@@ -9,7 +9,7 @@ from typing import Union
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf.calc_fs import calc_fs

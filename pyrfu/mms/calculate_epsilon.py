@@ -6,8 +6,7 @@ from typing import Optional
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
 from pyrfu.mms._psd_units import _is_relativistic, _relativistic_factor

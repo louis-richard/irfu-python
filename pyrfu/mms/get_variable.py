@@ -8,7 +8,7 @@ from typing import Union
 import numpy as np
 import xarray as xr
 from pycdfpp import _pycdfpp, load, to_datetime64
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
 def _pycdfpp_attributes_to_dict(attributes):

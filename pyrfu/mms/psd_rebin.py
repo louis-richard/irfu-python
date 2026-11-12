@@ -7,7 +7,7 @@ from typing import Tuple, Union
 # 3rd party
 import numpy as np
 from numpy.typing import NDArray
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Local imports
 from ..pyrf._time import _ns

@@ -4,7 +4,7 @@
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Local imports
 from pyrfu.pyrf._time import _seconds, _timedelta
