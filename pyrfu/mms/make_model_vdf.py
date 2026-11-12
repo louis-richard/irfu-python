@@ -55,7 +55,7 @@ def make_model_vdf(
         Time series of the spacecraft potential V (V): the speeds are those
         at infinity, of the energies E + q V (the electrons lose e V, the
         ions gain q V with the ``charge`` attribute; it was V whatever the
-        charge).
+        charge). Give the same potential to `calculate_epsilon`.
     n_s : xarray.DataArray
         Time series of the number density of specie s, at the times of `vdf`.
     v_xyz : xarray.DataArray
@@ -68,7 +68,12 @@ def make_model_vdf(
     Returns
     -------
     model_vdf : xarray.Dataset
-        Distribution function in the same format as vdf, in s^3/km^6. The
+        Distribution function in the same format as vdf, in s^3/km^6, on the
+        grid of vdf corrected for the spacecraft potential: its energies are
+        those at infinity, E + q V (at least 0), at which it is evaluated
+        (they were the measured energies of vdf; the energy widths and the
+        tables energy0 and energy1 stay those of vdf). It is not to be
+        corrected again (e.g. psd_moments with 0 V). The
         channels whose energy is below the spacecraft potential correspond to
         no particle velocity and are NaN (irfu-matlab gives the value at
         v = 0). Their weight is zero in velocity-space integrals (v^2 dv), so
@@ -201,9 +206,12 @@ def make_model_vdf(
     # No particle velocity below the spacecraft potential
     bi_max_dist[below] = np.nan
 
-    # Make modelPDist file for output, in s^3/km^6
+    # Make modelPDist file for output, in s^3/km^6, on the corrected grid: the
+    # energies at infinity at which the model is evaluated (they were the
+    # measured energies of vdf)
     model_vdf = vdf.copy()
     model_vdf["data"] = vdf.data.copy(data=bi_max_dist * 1e18)
+    model_vdf["energy"] = vdf.energy.copy(data=np.clip(energy, 0.0, None))
     # Without the label of the input units if they differ (e.g. a DEF)
     model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/km^6")
 

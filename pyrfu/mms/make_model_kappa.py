@@ -32,14 +32,17 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     sc_pot : xarray.DataArray, Optional
         Time series of the spacecraft potential V (V): the speeds are those
         at infinity, of the energies E + q V, as in `make_model_vdf`.
-        Default is no correction.
+        Default is no correction. Give the same potential to
+        `calculate_epsilon` (0 V without correction).
 
     Returns
     -------
     model_vdf : xarray.Dataset
         Kappa distribution in the format of `vdf`, in s^3/m^6, as
-        irfu-matlab. Channels whose energy is below the spacecraft potential
-        are NaN, as in `make_model_vdf`.
+        irfu-matlab, on the grid of `vdf` corrected for the spacecraft
+        potential (energies at infinity, E + q V, at least 0), as in
+        `make_model_vdf`. Channels whose energy is below the spacecraft
+        potential are NaN, as in `make_model_vdf`.
 
     Raises
     ------
@@ -112,8 +115,10 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     model = coeff * (1 + dv_2 / w_2) ** -(kappa + 1)
     model[np.broadcast_to(below[..., None, None], model.shape)] = np.nan
 
+    # On the corrected grid, as make_model_vdf
     model_vdf = vdf.copy()
     model_vdf["data"] = vdf.data.copy(data=model)
+    model_vdf["energy"] = vdf.energy.copy(data=np.clip(energy, 0.0, None))
     # Without the label of the input units if they differ (e.g. a DEF)
     model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/m^6")
 

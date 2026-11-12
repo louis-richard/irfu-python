@@ -46,6 +46,18 @@ def _get_si_vdf(vdf: Dataset) -> np.ndarray:
     return out
 
 
+def _same_bins(values_1, values_2) -> bool:
+    r"""True if the two arrays of bins are equal, a table of each time, e.g.
+    phi as (time, phi), being equal to the same table for all times
+    (phi,)."""
+    try:
+        values_1, values_2 = np.broadcast_arrays(values_1, values_2)
+    except ValueError:
+        return False
+
+    return bool(np.array_equal(values_1, values_2))
+
+
 def _energy_bin_edges(energy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     r"""Upper/lower energy-bin edges for a single 1-D energy table."""
     temp0 = 2 * energy[0] - energy[1]
@@ -72,9 +84,19 @@ def calculate_epsilon(
         Observed particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6,
         with phi as (time, phi) or (phi,).
     model_vdf : Dataset
-        Model particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6.
+        Model particle distribution (skymap), in s^3/cm^6, s^3/m^6 or s^3/km^6,
+        on the grid of `vdf` corrected for the spacecraft potential: its
+        energies are those of `vdf` at infinity, E + q V (at least 0) with
+        `sc_pot`, at its times, phi and theta, as made by `make_model_vdf` or
+        `make_model_kappa` from `vdf` with the same `sc_pot`. The energies of
+        `vdf` are corrected here, then the two are compared bin by bin.
     n_s : DataArray
-        Time series of the number density in cm^-3 (same times as vdf).
+        Time series of the number density in cm^-3 (same times as vdf). It,
+        and the moments the model is made from, should be those of the
+        distribution corrected for the same spacecraft potential, e.g. from
+        ``psd_moments(vdf, sc_pot)``: with other moments (e.g. those of the
+        L2 files), the data and the model need not integrate to the same
+        density, and epsilon can exceed 1.
     sc_pot : DataArray
         Time series of the spacecraft potential in V. The ions gain q V, with
         q the ``charge`` attribute (1 by default), and the electrons lose
@@ -92,7 +114,10 @@ def calculate_epsilon(
     Raises
     ------
     ValueError
-        If VDF and n_s have different times.
+        If VDF and n_s have different times, or if the model is not on the
+        grid of the VDF corrected for the spacecraft potential (they were
+        paired by position): most often a model on the measured energies,
+        or made with another spacecraft potential.
     TypeError
         If en_channels is not a list.
 
@@ -106,6 +131,31 @@ def calculate_epsilon(
     """
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
+
+    # The moments, and sc_pot resampled to them, at the times of vdf
+    if not np.array_equal(vdf.time.data, n_s.time.data):
+        raise ValueError("vdf and moments have different times.")
+
+    # Energies of the data at infinity, E + q V (at least 0): the grid of the
+    # model, as make_model_vdf and make_model_kappa compute it
+    energy_corrected = vdf.energy.data.astype(np.float64)
+    energy_corrected = energy_corrected + _charge(vdf) * sc_pot.data[:, None]
+    energy_corrected = np.clip(energy_corrected, 0.0, None)
+
+    # The model is compared bin by bin: on exactly the corrected grid of the
+    # data (a model on other bins was paired by position, without error)
+    for name in ["time", "phi", "theta"]:
+        if not _same_bins(vdf[name].data, model_vdf[name].data):
+            raise ValueError(f"vdf and model_vdf have different {name}")
+
+    if not _same_bins(energy_corrected, model_vdf.energy.data):
+        raise ValueError(
+            "model_vdf is not on the energies of vdf corrected for the "
+            "spacecraft potential, E + q V (at least 0) with this sc_pot: was "
+            "it made on the measured energies, or with another potential? "
+            "(make_model_vdf and make_model_kappa of vdf with the same sc_pot "
+            "give that grid)"
+        )
 
     # Get vdf and model_vdf in SI units (s^3 m^-6)
     vdf_data = _get_si_vdf(vdf)
@@ -124,9 +174,6 @@ def calculate_epsilon(
     # Potential energy q V (eV) at the spacecraft: the ions of charge q gain
     # q V, the electrons lose e V (it was V whatever the charge)
     v_sc = -_charge(vdf) * sc_pot.data.astype(np.float64)
-
-    if not np.array_equal(vdf.time.data, n_s.time.data):
-        raise ValueError("vdf and moments have different times.")
 
     # Default energy channels used to compute epsilon.
     if en_channels is None:

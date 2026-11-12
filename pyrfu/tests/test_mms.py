@@ -299,13 +299,25 @@ class CalcEpsilonTestCase(unittest.TestCase):
     )
     @unpack
     def test_calc_epsilon_output(self, vdf, model_vdf, kwargs):
+        sc_pot = generate_ts(64.0, 100, tensor_order=0)
         mms.calculate_epsilon(
             vdf,
-            model_vdf,
+            self._on_grid(model_vdf, vdf, sc_pot),
             generate_ts(64.0, 100, tensor_order=0),
-            generate_ts(64.0, 100, tensor_order=0),
+            sc_pot,
             **kwargs,
         )
+
+    @staticmethod
+    def _on_grid(model, vdf, sc_pot):
+        # The model on the grid of vdf corrected for sc_pot, E + q V (at least
+        # 0), as make_model_vdf and make_model_kappa make it
+        module = sys.modules["pyrfu.mms.calculate_epsilon"]
+        energy = vdf.energy.data.astype(np.float64)
+        energy = energy + module._charge(vdf) * pyrf.resample(sc_pot, vdf).data[:, None]
+        out = model.copy(deep=True)
+        out["energy"] = vdf.energy.copy(data=np.clip(energy, 0.0, None))
+        return out
 
     @staticmethod
     def _maxwellian(widths="attrs", alternating=False):
@@ -361,7 +373,8 @@ class CalcEpsilonTestCase(unittest.TestCase):
         def eps(charge, potential):
             sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, potential))
             ions = vdf.assign_attrs(charge=charge)
-            return mms.calculate_epsilon(ions, model, n_s, sc_pot).data
+            on_grid = self._on_grid(model, ions, sc_pot)
+            return mms.calculate_epsilon(ions, on_grid, n_s, sc_pot).data
 
         np.testing.assert_allclose(eps(2, 5.0), eps(1, 10.0), rtol=1e-12)
         self.assertGreater(np.max(np.abs(eps(1, 10.0) - eps(1, 5.0))), 1e-6)
@@ -400,6 +413,41 @@ class CalcEpsilonTestCase(unittest.TestCase):
         self.assertFalse(np.allclose(eps.data, expected, rtol=1e-6, atol=0.0))
         np.testing.assert_allclose(eps.data, expected, rtol=1e-3)
 
+    def test_calc_epsilon_corrected_grid(self):
+        # The energies of vdf are corrected for sc_pot (E + q V), then checked
+        # against those of the model: a model of make_model_kappa with the
+        # same potential passes; one on the measured energies, or made with
+        # another potential, raises (they were paired by position)
+        vdf, n_s = self._maxwellian()
+        time = vdf.time.data
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([200.0, 0.0, 0.0], (4, 1)))
+        t_s = pyrf.ts_scalar(time, np.full(4, 1000.0))
+        sc_pot = pyrf.ts_scalar(time, np.full(4, 8.0))
+
+        model = mms.make_model_kappa(vdf, n_s, v_xyz, t_s, 30.0, sc_pot=sc_pot)
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        self.assertTrue(np.all(eps.data < 0.1))
+
+        measured = mms.make_model_kappa(vdf, n_s, v_xyz, t_s, 30.0)
+        other = mms.make_model_kappa(vdf, n_s, v_xyz, t_s, 30.0, sc_pot=sc_pot * 2)
+
+        for wrong in [measured, other]:
+            with self.assertRaisesRegex(ValueError, "corrected for the spacecraft"):
+                mms.calculate_epsilon(vdf, wrong, n_s, sc_pot)
+
+    def test_calc_epsilon_model_bins(self):
+        # Times and angles of the model are those of the data (they were paired
+        # by position)
+        vdf, n_s = self._maxwellian()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(len(vdf.time)))
+        later = vdf.assign_coords(time=vdf.time.data + np.timedelta64(1, "s"))
+        turned = vdf.assign_coords(phi=vdf.phi + 1.0)
+        fewer = vdf.isel(idx2=slice(0, 8))
+
+        for model, name in [(later, "time"), (turned, "phi"), (fewer, "theta")]:
+            with self.assertRaisesRegex(ValueError, f"different {name}"):
+                mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+
     def test_calc_epsilon_phi_1d(self):
         # phi as (phi,) (IndexError): as with phi as (time, phi)
         vdf, n_s = self._maxwellian()
@@ -417,11 +465,10 @@ class CalcEpsilonTestCase(unittest.TestCase):
         # dropped (sqrt of a negative energy is NaN); compare with a direct sum
         vdf, n_s = self._maxwellian()
         v_sc = -25.0  # ions: the corrected energy is E + V = E - 25 eV
-        model = vdf.copy(deep=True)
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, v_sc))
+        model = self._on_grid(vdf, vdf, sc_pot)
         model.data.data[...] = 0.0
-        eps = mms.calculate_epsilon(
-            vdf, model, n_s, pyrf.ts_scalar(vdf.time.data, np.full(4, v_sc))
-        )
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
 
         energy = vdf.energy.data[0]
         e_minus = vdf.attrs["delta_energy_minus"][0]
@@ -3153,7 +3200,8 @@ class MakeModelVDFTestCase(unittest.TestCase):
     def _analytic(vdf, mass, sc_pot, n_cc, v_kms, t_par, t_perp):
         # Bi-Maxwellian (s^3/km^6) at the particle velocities (minus the look
         # directions, relativistic speeds) with B along z, as the classical
-        # phase-space density of the skymap
+        # phase-space density of the energies at infinity (the grid of the
+        # model, E + q V = E - sc_pot here)
         q_e = constants.elementary_charge
         speed = _rel_speed(vdf.energy.data - sc_pot, mass)[..., None, None]
         phi = np.deg2rad(vdf.phi.data)[:, None, :, None]
@@ -3168,7 +3216,8 @@ class MakeModelVDFTestCase(unittest.TestCase):
             -((v_x - v_d[0]) ** 2 + (v_y - v_d[1]) ** 2) / vth_perp2
             - (v_z - v_d[2]) ** 2 / vth_par2
         )
-        return f_ * 1e18 / _rel_factor(vdf.energy.data, mass)[..., None, None]
+        energy = np.clip(vdf.energy.data - sc_pot, 0.0, None)
+        return f_ * 1e18 / _rel_factor(energy, mass)[..., None, None]
 
     def test_make_model_vdf_phi_1d(self):
         # phi as (phi,) (IndexError): as with phi as (time, phi), phi unchanged
@@ -3283,9 +3332,15 @@ class MakeModelVDFTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(result.data.data[~above])))
         self.assertTrue(np.any(~above))
 
-        # Data equal to the model above the potential, anything below it
+        # Data equal to the model above the potential, anything below it, on
+        # the measured energies (the model is on the corrected ones)
         vdf = result.copy()
-        data = result.data.data.copy()
+        vdf["energy"] = self._skymap("electrons", 1.0, 1e3).energy
+        # The same distribution as the model, in the convention of the measured
+        # energies (that of the files), the model's being that of its energies
+        ratio = _rel_factor(result.energy.data, constants.electron_mass)
+        ratio /= _rel_factor(vdf.energy.data, constants.electron_mass)
+        data = result.data.data * ratio[..., None, None]
         data[~above] = 1e3 * np.nanmax(data)
         vdf["data"] = result.data.copy(data=data)
         n_s = pyrf.ts_scalar(vdf.time.data, np.full(len(vdf.time), 2.0))
@@ -4261,16 +4316,12 @@ class MakeModelKappaTestCase(unittest.TestCase):
         shifted.energy.data[:] = np.clip(shifted.energy.data, 0.0, None)
         expected = mms.make_model_kappa(shifted, *moments)
 
-        # As the classical phase-space density of the measured energies
-        mass = constants.electron_mass if sign > 0 else constants.proton_mass
-        expected = (
-            expected.data.data
-            * (
-                _rel_factor(shifted.energy.data, mass)
-                / _rel_factor(vdf.energy.data, mass)
-            )[..., None, None]
+        # On the corrected grid (the energies E + q V), the model of those
+        # energies (it was labelled with the measured energies)
+        np.testing.assert_array_equal(model.energy.data, shifted.energy.data)
+        np.testing.assert_allclose(
+            model.data.data[:, valid], expected.data.data[:, valid], rtol=1e-12
         )
-        np.testing.assert_allclose(model.data.data[:, valid], expected[:, valid])
         self.assertTrue(np.all(np.isnan(model.data.data[:, ~valid])))
         self.assertEqual(np.any(~valid), sign > 0)
 
