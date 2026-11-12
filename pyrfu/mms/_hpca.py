@@ -4,8 +4,13 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from ..pyrf.datetime642iso8601 import datetime642iso8601
+from .db_get_variable import db_get_variable
+
 # Shared by get_hpca_dist and hpca_pad (hpca_pad imported it from
-# get_hpca_dist, which imports hpca_pad: a cyclic import)
+# get_hpca_dist, which imports hpca_pad: a cyclic import; get_hpca_dist
+# imported _hpca_elevations from hpca_pad)
 
 
 def _half_spins(inp, azimuth):
@@ -37,3 +42,23 @@ def _half_spins(inp, azimuth):
     complete &= np.any(azimuth.data[:, :, 0, 0] != 0, axis=1)
 
     return i_start, complete
+
+
+def _hpca_elevations(vdf, source: str = "default", data_path: str = ""):
+    r"""Polar angles (colatitudes) of the 16 HPCA anodes, read from
+    mms?_hpca_centroid_elevation_angle in the file of `vdf`."""
+    try:
+        dataset = vdf.attrs["GLOBAL"]["Logical_source"]  # e.g., mms1_hpca_brst_l2_ion
+    except (KeyError, TypeError) as err:
+        raise ValueError(
+            "Can't find the HPCA dataset of vdf (GLOBAL Logical_source attribute): "
+            "give the anode elevations with elevation"
+        ) from err
+
+    cdf_name = f"{dataset.split('_')[0]}_hpca_centroid_elevation_angle"
+    tint = list(datetime642iso8601(vdf.time.data[[0, -1]]))
+    elevation = db_get_variable(
+        dataset, cdf_name, tint, verbose=False, data_path=data_path, source=source
+    )
+
+    return np.asarray(elevation.data, dtype=np.float64).ravel()

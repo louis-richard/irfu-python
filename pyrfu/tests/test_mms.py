@@ -3939,8 +3939,9 @@ class HpcaPadTestCase(unittest.TestCase):
             self.assertTrue(np.all(np.isnan(pad.data[16 + n_1 :, :-1])))
 
     def test_hpca_pad_elevation_from_file(self):
-        # mms?_hpca_centroid_elevation_angle read from the dataset of vdf
-        module = importlib.import_module("pyrfu.mms.hpca_pad")
+        # mms?_hpca_centroid_elevation_angle read from the dataset of vdf (by
+        # _hpca_elevations, in mms._hpca)
+        module = importlib.import_module("pyrfu.mms._hpca")
         vdf, saz, aze, b_xyz = self._inputs(np.full((2, self.N_AZ), 180.0))
         vdf.attrs["GLOBAL"] = {"Logical_source": "mms1_hpca_brst_l2_ion"}
         elevation = xr.DataArray(np.full((1, self.N_PO), 90.0), dims=["x", "y"])

@@ -11,35 +11,13 @@ import xarray as xr
 
 # Local imports
 from ..pyrf._time import _ns
-from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.nanavg_4sc import _without_gaps
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
-from ._hpca import _half_spins
-from .db_get_variable import db_get_variable
+from ._hpca import _half_spins, _hpca_elevations
 
 logger = logging.getLogger(__name__)
-
-
-def _hpca_elevations(vdf, source: str = "default", data_path: str = ""):
-    r"""Polar angles (colatitudes) of the 16 HPCA anodes, read from
-    mms?_hpca_centroid_elevation_angle in the file of `vdf`."""
-    try:
-        dataset = vdf.attrs["GLOBAL"]["Logical_source"]  # e.g., mms1_hpca_brst_l2_ion
-    except (KeyError, TypeError) as err:
-        raise ValueError(
-            "Can't find the HPCA dataset of vdf (GLOBAL Logical_source attribute): "
-            "give the anode elevations with elevation"
-        ) from err
-
-    cdf_name = f"{dataset.split('_')[0]}_hpca_centroid_elevation_angle"
-    tint = list(datetime642iso8601(vdf.time.data[[0, -1]]))
-    elevation = db_get_variable(
-        dataset, cdf_name, tint, verbose=False, data_path=data_path, source=source
-    )
-
-    return np.asarray(elevation.data, dtype=np.float64).ravel()
 
 
 def _match_half_spins(vdf, saz, aze, n_az: int = 16):
