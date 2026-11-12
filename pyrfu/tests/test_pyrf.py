@@ -7045,6 +7045,37 @@ class ShockNormalTestCase(unittest.TestCase):
         self.assertEqual(result["info"]["msh"], 0.0)
         self.assertEqual(result["info"]["vsh"], 0.0)
 
+    def test_shock_normal_models_read_once(self):
+        # shock_models_parameters.json is read once (on every call before),
+        # and the Slavin-Holzer alpha of each call (from v_u) doesn't change
+        # the cache
+        module = sys.modules["pyrfu.pyrf.shock_normal"]
+        module._shock_models_parameters.cache_clear()
+        spec = {
+            "b_u": np.array([5.0, 3.0, -2.0]),
+            "b_d": np.array([12.0, 15.0, -8.0]),
+            "v_u": np.array([-450.0, 20.0, 10.0]),
+            "v_d": np.array([-180.0, 40.0, 25.0]),
+            "n_u": 5.0,
+            "n_d": 18.0,
+            "r_xyz": np.array([12.0, 3.0, 1.0]) * 6371.0,
+        }
+
+        with mock.patch.object(module.json, "load", wraps=module.json.load) as load:
+            alphas = []
+            for v_y in [20.0, -60.0]:
+                spec["v_u"] = np.array([-450.0, v_y, 10.0])
+                info = pyrf.shock_normal(spec)["info"]
+                alphas.append(info["alpha"]["slavin_holzer"])
+
+        self.assertEqual(load.call_count, 1)
+        np.testing.assert_allclose(
+            alphas, -np.rad2deg(np.arctan(np.array([20.0, -60.0]) / -450.0))
+        )
+        self.assertNotIn(
+            module._shock_models_parameters()["slavin_holzer"]["alpha"], alphas
+        )
+
     def test_shock_normal_input(self):
         # TypeError (AssertionError; the following check never ran)
         with self.assertRaisesRegex(TypeError, "dictionary"):

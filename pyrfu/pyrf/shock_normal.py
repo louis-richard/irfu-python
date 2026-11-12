@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
-
 # Built-in imports
+import copy
+import functools
+import json
 import os
 
-# Thrid party imports
+# Third party imports
 import numpy as np
 import xarray as xr
 from scipy import constants, interpolate, optimize
@@ -75,11 +76,11 @@ def shock_normal(spec, leq90: bool = True):
           From models (only if r_xyz is included in spec):
 
           * farris : [3]_
-          * slho : [4]_
-          * per : [5]_, (z = 0)
-          * fa4o : [6]_
-          * fan4o : [6]_
-          * foun : [7]_
+          * slavin_holzer : [4]_
+          * peredo : [5]_, (z = 0)
+          * fairfield_meridian_4o : [6]_
+          * fairfield_meridian_no_4o : [6]_
+          * formisano_unnorm : [7]_
 
         * theta_bn : Angle between normal vector and b_u, same fields as n.
         * theta_vn : Angle between normal vector and v_u, same fields as n.
@@ -96,7 +97,9 @@ def shock_normal(spec, leq90: bool = True):
           * vsh : Velocity shear angle.
           * cmat : Constraints matrix with normalized errors.
           * sig : Scaling factor to fit shock models to sc position. Calculated
-            from (10.9-10.13) in [1]_
+            from (10.9-10.13) in [1]_ (only if r_xyz is included in spec).
+          * alpha, eps, l, x_0, y_0 : Parameters of each model (only if
+            r_xyz is included in spec), as sig.
 
     Raises
     ------
@@ -194,12 +197,9 @@ def shock_normal(spec, leq90: bool = True):
     mx_3 /= np.linalg.norm(mx_3)
     normal["mx_3"] = mx_3
 
-    # Load shock
-    pkg_path = os.path.dirname(os.path.abspath(__file__))
-    with open(
-        os.path.join(pkg_path, "shock_models_parameters.json"), "r", encoding="utf-8"
-    ) as fs:
-        shock_models_params = json.load(fs)
+    # Parameters of the shock models (a copy: alpha of Slavin-Holzer is set
+    # below)
+    shock_models_params = copy.deepcopy(_shock_models_parameters())
 
     if "r_xyz" in spec:
         # info
@@ -321,6 +321,18 @@ def _stack(values):
         return {k: _stack([value[k] for value in values]) for k in values[0]}
 
     return np.stack(values)
+
+
+@functools.lru_cache(maxsize=1)
+def _shock_models_parameters():
+    r"""Parameters of the shock models (shock_models_parameters.json), read
+    once (on every call before); not to be changed."""
+    pkg_path = os.path.dirname(os.path.abspath(__file__))
+
+    with open(
+        os.path.join(pkg_path, "shock_models_parameters.json"), "r", encoding="utf-8"
+    ) as fs:
+        return json.load(fs)
 
 
 def _arccosd(cos_theta):
