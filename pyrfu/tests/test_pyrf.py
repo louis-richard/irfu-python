@@ -7524,6 +7524,30 @@ class SlidingDerivativeTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             pyrf.sliding_derivative(inp, method="7ps")
 
+    def test_sliding_derivative_nan_centre(self):
+        # A NaN where the stencil has no weight (the centre of "5ps" and
+        # "9ps") is not taken: it gave NaN (0 * NaN); a NaN with a weight
+        # still gives NaN, and the short series are NaN
+        data = 2.0 * self.t_sec + 3.0 * self.t_sec**2
+        data[50] = np.nan
+        inp = pyrf.ts_scalar(self.time, data)
+
+        for method, half in [("5ps", 2), ("9ps", 4)]:
+            result = pyrf.sliding_derivative(inp, method=method).data
+
+            np.testing.assert_allclose(result[50], self.slope[50], rtol=1e-10)
+            others = [50 + k for k in range(-half, half + 1) if k != 0]
+            self.assertTrue(np.isnan(result[others]).all())
+
+            short = pyrf.ts_scalar(self.time[: 2 * half], self.t_sec[: 2 * half])
+            self.assertTrue(
+                np.isnan(pyrf.sliding_derivative(short, method=method)).all()
+            )
+
+        # A window longer than the series
+        short = pyrf.ts_scalar(self.time[:5], self.t_sec[:5])
+        self.assertTrue(np.isnan(pyrf.sliding_derivative(short, window_size=7)).all())
+
 
 @ddt
 class SolidAngleTestCase(unittest.TestCase):

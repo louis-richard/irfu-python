@@ -81,48 +81,48 @@ def sliding_derivative(
         if t_units.lower() == "ns":
             time = time * 1e-9
 
-    # Fill the output with NaN for edge cases
+    # NaN at the edges, where the window or stencil is not complete
+    n_pts = len(data)
     derivative = np.full(data.shape, np.nan)
+
+    def _at(values, k, half):
+        # values[i + k] for the samples i with a complete stencil of half width
+        # half (one slice instead of a loop over the samples)
+        return values[half + k : n_pts - half + k]
+
+    def _dt(half):
+        # Time across the stencil, broadcast on the components
+        d_t = _at(time, half, half) - _at(time, -half, half)
+        return d_t.reshape((-1,) + (1,) * (data.ndim - 1))
+
     if method == "window":
+        half = window_size // 2
 
-        half_window = window_size // 2
-
-        # Iterate over each window in the time series
-        for i in range(half_window, len(data) - half_window):
-            # Get the window of values and time
-            values_window = data[i - half_window : i + half_window + 1]
-            time_window = time[i - half_window : i + half_window + 1]
-
-            # Compute finite differences (central difference for the middle point)
-            derivative[i] = (values_window[-1] - values_window[0]) / (
-                time_window[-1] - time_window[0]
-            )
+        if n_pts > 2 * half:
+            # Difference between the ends of the window
+            derivative[half : n_pts - half] = (
+                _at(data, half, half) - _at(data, -half, half)
+            ) / _dt(half)
     elif method == "5ps":
-
-        for i in range(2, len(data) - 2):
-
-            derivative[i] = (
-                1 / 12 * data[i - 2]
-                - 2 / 3 * data[i - 1]
-                + 0 * data[i]
-                + 2 / 3 * data[i + 1]
-                - 1 / 12 * data[i + 2]
-            ) / ((time[i + 2] - time[i - 2]) * 0.25)
-    else:  # "9ps"
-
-        for i in range(4, len(data) - 4):
-
-            derivative[i] = (
-                1 / 280 * data[i - 4]
-                - 4 / 105 * data[i - 3]
-                + 1 / 5 * data[i - 2]
-                - 4 / 5 * data[i - 1]
-                + 0 * data[i]
-                + 4 / 5 * data[i + 1]
-                - 1 / 5 * data[i + 2]
-                + 4 / 105 * data[i + 3]
-                - 1 / 280 * data[i + 4]
-            ) / ((time[i + 4] - time[i - 4]) * 1 / 8)
+        if n_pts > 4:
+            # The centre sample has no weight: a NaN there no longer gives NaN
+            derivative[2:-2] = (
+                1 / 12 * _at(data, -2, 2)
+                - 2 / 3 * _at(data, -1, 2)
+                + 2 / 3 * _at(data, 1, 2)
+                - 1 / 12 * _at(data, 2, 2)
+            ) / (_dt(2) * 0.25)
+    elif n_pts > 8:  # "9ps"
+        derivative[4:-4] = (
+            1 / 280 * _at(data, -4, 4)
+            - 4 / 105 * _at(data, -3, 4)
+            + 1 / 5 * _at(data, -2, 4)
+            - 4 / 5 * _at(data, -1, 4)
+            + 4 / 5 * _at(data, 1, 4)
+            - 1 / 5 * _at(data, 2, 4)
+            + 4 / 105 * _at(data, 3, 4)
+            - 1 / 280 * _at(data, 4, 4)
+        ) / (_dt(4) * 1 / 8)
 
     out = time_series.copy(data=derivative)
     # Attributes of the input, its units per s (they were replaced)
