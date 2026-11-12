@@ -5,7 +5,7 @@
 import numpy as np
 
 # Local imports
-from pyrfu.models.ion_anisotropy_thresh import ion_anisotropy_thresh
+from ..models.ion_anisotropy_thresh import ion_anisotropy_thresh
 
 
 def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list = None):
@@ -35,55 +35,36 @@ def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list = None):
     if colors is None:
         colors = ["deeppink", "m", "b", "c"]
 
-    # Proton - electron plasma thresholds [1]_
-    # Proton cyclotron instability
-    (l0,) = ax.loglog(
-        np.logspace(-2, 4),
-        ion_anisotropy_thresh(np.logspace(-2, 4), "proton-cyclotron", "10^-2"),
-        color=colors[0],
-        linestyle="--",
-        lw=1.5,
-    )
+    # Proton - electron plasma thresholds [1]_: proton cyclotron, mirror-mode,
+    # parallel firehose and oblique firehose instabilities
+    thresholds = [
+        ("proton-cyclotron", "Proton cyclotron"),
+        ("mirror", "Mirror Mode"),
+        ("parallel-firehose", "Parallel Firehose"),
+        ("oblique-firehose", "Oblique Firehose"),
+    ]
+    beta_para = np.logspace(-2, 4)
 
-    # Mirror-mode instability
-    (l1,) = ax.loglog(
-        np.logspace(-2, 4),
-        ion_anisotropy_thresh(np.logspace(-2, 4), "mirror", "10^-2"),
-        color=colors[1],
-        linestyle="--",
-        lw=1.5,
-    )
+    lines = []
 
-    # Parallel firehose
-    (l2,) = ax.loglog(
-        np.logspace(-2, 4),
-        ion_anisotropy_thresh(np.logspace(-2, 4), "parallel-firehose", "10^-2"),
-        color=colors[2],
-        linestyle="--",
-        lw=1.5,
-    )
+    for i, (instability, _) in enumerate(thresholds):
+        (line,) = ax.loglog(
+            beta_para,
+            ion_anisotropy_thresh(beta_para, instability, "10^-2"),
+            color=colors[i],
+            linestyle="--",
+            lw=1.5,
+        )
+        lines.append(line)
 
-    # Oblique firehose
-    (l3,) = ax.loglog(
-        np.logspace(-2, 4),
-        ion_anisotropy_thresh(np.logspace(-2, 4), "oblique-firehose", "10^-2"),
-        color=colors[3],
-        linestyle="--",
-        lw=1.5,
-    )
     ax.set_xlim([1e-2, 5e3])
     ax.set_ylim([0.3, 1e1])
 
     f = ax.get_figure()
     if legend:
         f.legend(
-            handles=[l0, l1, l2, l3],  # The line objects
-            labels=[
-                "Proton cyclotron",
-                "Mirror Mode",
-                "Parallel Firehose",
-                "Oblique Firehose",
-            ],
+            handles=lines,
+            labels=[label for _, label in thresholds],
             loc="upper center",
             borderaxespad=0.1,
             ncol=4,

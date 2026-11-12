@@ -15,29 +15,16 @@ logger = logging.getLogger(__name__)
 
 
 def _add_earth(ax=None, **kwargs):
-    theta1, theta2 = 90.0, 270.0
-    nightside_ = Wedge(
-        (0.0, 0.0),
-        1.0,
-        theta1,
-        theta2,
-        fc="k",
-        ec="k",
-        **kwargs,
-    )
-    dayside_ = Wedge(
-        (0.0, 0.0),
-        1.0,
-        theta2,
-        theta1,
-        fc="w",
-        ec="k",
-        **kwargs,
-    )
-    for wedge in [nightside_, dayside_]:
+    # The nightside (black) and the dayside (white) halves
+    wedges = [
+        Wedge((0.0, 0.0), 1.0, theta1, theta2, fc=color, ec="k", **kwargs)
+        for theta1, theta2, color in [(90.0, 270.0, "k"), (270.0, 90.0, "w")]
+    ]
+
+    for wedge in wedges:
         ax.add_artist(wedge)
 
-    return [nightside_, dayside_]
+    return wedges
 
 
 def _add_field_lines(ax, tint):
@@ -49,53 +36,28 @@ def _add_field_lines(ax, tint):
     ut = datetime642unix(iso86012datetime64(np.array(tint)))[0]
     _ = geopack.recalc(ut)
 
-    x_lines_m, z_lines_m = [[], []]
-    x_lines_p, z_lines_p = [[], []]
-
     xx_gsm, zz_gsm = np.meshgrid(
         np.linspace(-30, 6, 19),
         np.linspace(-5, 5, 10),
     )
-    xx_gsm = np.reshape(xx_gsm, (xx_gsm.size,))
-    zz_gsm = np.reshape(zz_gsm, (zz_gsm.size,))
 
-    for x_gsm, z_gsm in zip(xx_gsm, zz_gsm):
-        y_gsm = 0
-        _, _, _, xx, _, zz = geopack.trace(
-            x_gsm,
-            y_gsm,
-            z_gsm,
-            dir=-1,
-            rlim=100,
-            r0=0.99999,
-            parmod=2,
-            exname="t89",
-            inname="igrf",
-            maxloop=10000,
-        )
-        x_lines_m.append(xx)
-        z_lines_m.append(zz)
-
-        _, _, _, xx, _, zz = geopack.trace(
-            x_gsm,
-            y_gsm,
-            z_gsm,
-            dir=1,
-            rlim=100,
-            r0=0.99999,
-            parmod=2,
-            exname="t89",
-            inname="igrf",
-            maxloop=10000,
-        )
-        x_lines_p.append(xx)
-        z_lines_p.append(zz)
-
-    for xx, zz in zip(x_lines_m, z_lines_m):
-        ax.plot(xx, zz, color="k", linewidth=0.2)
-
-    for xx, zz in zip(x_lines_p, z_lines_p):
-        ax.plot(xx, zz, color="k", linewidth=0.2)
+    # The field lines traced antiparallel, then parallel, to B from each point
+    # of the grid in the y = 0 plane
+    for direction in [-1, 1]:
+        for x_gsm, z_gsm in zip(xx_gsm.ravel(), zz_gsm.ravel()):
+            _, _, _, xx, _, zz = geopack.trace(
+                x_gsm,
+                0,
+                z_gsm,
+                dir=direction,
+                rlim=100,
+                r0=0.99999,
+                parmod=2,
+                exname="t89",
+                inname="igrf",
+                maxloop=10000,
+            )
+            ax.plot(xx, zz, color="k", linewidth=0.2)
 
 
 def plot_magnetosphere(
@@ -125,28 +87,23 @@ def plot_magnetosphere(
 
     """
 
-    # Compute Magnetopause
     if colors is None:
         colors = ["tab:blue", "tab:green"]
 
-    x_mp, y_mp = magnetosphere("mp_shue1998", tint)
+    # Magnetopause and bow shock, each with its mirror image (y -> -y) as one
+    # closed line
+    for model, color, label in [
+        ("mp_shue1998", colors[0], "Magnetopause"),
+        ("bs", colors[1], "Bow Shock"),
+    ]:
+        x_model, y_model = magnetosphere(model, tint)
+        ax.plot(
+            np.hstack([x_model, np.flip(x_model)]),
+            np.hstack([y_model, np.flip(-y_model)]),
+            color=color,
+            label=label,
+        )
 
-    # Compute bow show
-    x_bs, y_bs = magnetosphere("bs", tint)
-
-    # Plot
-    ax.plot(
-        np.hstack([x_mp, np.flip(x_mp)]),
-        np.hstack([y_mp, np.flip(-y_mp)]),
-        color=colors[0],
-        label="Magnetopause",
-    )
-    ax.plot(
-        np.hstack([x_bs, np.flip(x_bs)]),
-        np.hstack([y_bs, np.flip(-y_bs)]),
-        color=colors[1],
-        label="Bow Shock",
-    )
     _add_earth(ax)
 
     if field_lines:
