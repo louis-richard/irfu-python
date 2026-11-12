@@ -1043,8 +1043,8 @@ class DbGetTsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.module._resolve_source("cdaweb")
 
-    def test_tokenize_no_dtype(self):
-        mms_id, var = self.module._tokenize("mms1_fgm_srvy_l2")
+    def test_split_dataset_name_no_dtype(self):
+        mms_id, var = self.module._split_dataset_name("mms1_fgm_srvy_l2")
         self.assertEqual(mms_id, "1")
         self.assertDictEqual(
             var, {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}

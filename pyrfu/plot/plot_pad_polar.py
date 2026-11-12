@@ -18,7 +18,7 @@ from ..mms._vdf_bins import (
 )
 from ..mms._vdf_mc import _sample
 from .colorbar import colorbar as _add_colorbar
-from .plot_ang_ang import _check_units
+from .plot_ang_ang import _units_label
 
 # Largest angular width (degrees) of the cells drawn, so that the pitch-angle
 # bins are drawn as arcs rather than chords
@@ -372,7 +372,7 @@ def plot_pad_polar(
     cax = _colorbar(ax, image, colorbar)
 
     if cax is not None:
-        label = _check_units(pad)
+        label = _units_label(pad)
 
         if colorbar == "right":
             cax.set_ylabel(label)

@@ -24,8 +24,9 @@ from pyrfu.pyrf.ts_append import ts_append
 logger = logging.getLogger(__name__)
 
 
-def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
-    r"""Tokenize dataset name.
+def _split_dataset_name(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
+    r"""Split a dataset name (e.g. "mms1_fgm_srvy_l2") into the spacecraft
+    and the file specification (the public `tokenize` reads variable keys).
 
     Parameters
     ----------
@@ -84,7 +85,7 @@ def _db_get_ts_dict(
     their first record in the first file that has them, without time.
 
     """
-    mms_id, var = _tokenize(dataset_name)
+    mms_id, var = _split_dataset_name(dataset_name)
     resource = _resolve_source(source)
 
     file_names, sdc_session, headers = _list_files_sources(

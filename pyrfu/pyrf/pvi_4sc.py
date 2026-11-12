@@ -65,10 +65,12 @@ def pvi_4sc(b_mms):
     j_indices = [1, 2, 3, 2, 3, 3]
 
     # Compute normalized partial variance of increments
-    def pvi(b_i, b_j):
+    def normalized_increment(b_i, b_j):
         return np.sqrt(norm(b_i - b_j) ** 2 / np.mean(norm(b_i - b_j) ** 2))
 
-    pvi_ij = [pvi(b_mms[i], b_mms[j]) for i, j in zip(i_indices, j_indices)]
+    pvi_ij = [
+        normalized_increment(b_mms[i], b_mms[j]) for i, j in zip(i_indices, j_indices)
+    ]
 
     # Compute magnetic field shear angle
     def shear_angle(b_i, b_j):

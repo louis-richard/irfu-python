@@ -120,7 +120,7 @@ def _interp_finite(inp_time, inp_data, ref_time, method):
     return out_data.reshape(len(ref_time), *np.shape(inp_data)[1:])
 
 
-def _like(inp, out_data, time):
+def _resampled_like(inp, out_data, time):
     r"""DataArray of out_data at the times time, with the dimensions, the
     dimension coordinates and the attributes of inp. A dimension without
     coordinate (e.g. dims ["time", "comp"], coords time only) raised
@@ -194,7 +194,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
         if len(inp_time_ns) == len(ref_time_ns) and np.array_equal(
             inp_time_ns, ref_time_ns
         ):
-            return _like(inp, inp.data.copy(), ref.coords["time"].data)
+            return _resampled_like(inp, inp.data.copy(), ref.coords["time"].data)
 
         # Extrapolation outside the time range of inp with the interpolant,
         # as irf_resamp (MATLAB interp1 with 'extrap')
@@ -210,7 +210,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
             )
             out_data = tck(ref_time)
 
-    return _like(inp, out_data, ref.coords["time"])
+    return _resampled_like(inp, out_data, ref.coords["time"])
 
 
 def _resample_dataset(inp, ref, **kwargs):

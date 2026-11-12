@@ -9,7 +9,7 @@ from typing import Optional
 from xarray import DataArray
 
 # Local imports
-from pyrfu.mms.db_get_ts import _resolve_source, _tokenize
+from pyrfu.mms.db_get_ts import _resolve_source, _split_dataset_name
 from pyrfu.mms.get_data import _get_file_content_sources, _list_files_sources
 from pyrfu.mms.get_variable import get_variable
 
@@ -57,7 +57,7 @@ def db_get_variable(
         If the source is not supported.
 
     """
-    mms_id, var = _tokenize(dataset_name)
+    mms_id, var = _split_dataset_name(dataset_name)
     resource = _resolve_source(source)
 
     file_names, sdc_session, headers = _list_files_sources(

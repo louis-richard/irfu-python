@@ -83,7 +83,7 @@ def _energy_avg(vdf, en_range):
     return out, en_range
 
 
-def _check_units(vdf):
+def _units_label(vdf):
     # The units are an attribute of the data variable of the skymap
     units = vdf.data.attrs.get("UNITS", "")
     psd_units = {f"s^3/{u}^6": f"s$^3$ {u}$^{{-6}}$" for u in ["m", "cm", "km"]}
@@ -152,7 +152,7 @@ def plot_ang_ang(vdf, tint: list = None, en_range: list = None):
     ax, cax = plot_spectr(ax, vdf_avg, cscale="log")
     ax.set_xlabel("$\\phi$ [deg.]")
     ax.set_ylabel("$\\theta$ [deg.]")
-    cax.set_ylabel(_check_units(vdf))
+    cax.set_ylabel(_units_label(vdf))
     ax.set_title(
         f"{en_range[0]:.3g} {en_units} $\\leq E \\leq$ {en_range[1]:.3g} {en_units}"
     )
