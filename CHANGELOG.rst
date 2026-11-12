@@ -13,7 +13,9 @@ q V for the spacecraft potential in every distribution routine (He++ was
 corrected by V in some), and several routines are faster or read their data
 files once. On the MMS data checked (FGM, EDP, MEC, FPI, FEEPS, EIS and HPCA
 of 2017-07-11), the results are unchanged but for He++ and differences at
-the rounding level, listed below.
+the rounding level, listed below. ``pyrf.wave_fft`` no longer removes the
+mean of each frame, as irfu-matlab ``irf_wavefft``, and gives its result
+with ``scaled=False``.
 
 Changed behaviour
 ^^^^^^^^^^^^^^^^^
@@ -61,6 +63,12 @@ New features
 - ``pyrf.start`` takes a Dataset, as ``pyrf.end``.
 - ``mms.vdf_convert`` accepts "1/(cm^2 s sr)", the energy flux units of
   ``mms.def2psd``.
+- ``pyrf.wave_fft(scaled=False)`` gives the result of irfu-matlab
+  ``irf_wavefft``: the raw FFT of the windowed frames, the symmetric window
+  for a window given by name, the first round(n / 2) frequencies and the
+  frames timed round(n / 2) samples after their start (the frame lengths stay
+  in seconds). The default, ``scaled=True``, keeps the convention of
+  ``scipy.signal.spectrogram``.
 
 Fixes that change results
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -89,6 +97,10 @@ Fixes that change results
 - ``mms.psd2def``, ``mms.psd2dpf``, ``mms.def2psd`` and ``mms.dpf2psd`` give
   the values of ``mms.vdf_convert``, which they call: on the float32 FPI
   distributions, they differed from it by up to 1.8e-7.
+- ``pyrf.wave_fft`` transforms each frame without removing its mean, as
+  irfu-matlab ``irf_wavefft``: ``scipy.signal.spectrogram`` removed it by
+  default, so that the lowest frequencies of a signal with an offset were
+  wrong (63 % off ``irf_wavefft``).
 
 Other fixes
 ^^^^^^^^^^^
