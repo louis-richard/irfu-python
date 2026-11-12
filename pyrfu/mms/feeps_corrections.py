@@ -3,9 +3,6 @@
 
 """Contributed by Apostolos Kolokotronis."""
 
-# 3rd party imports
-from copy import deepcopy
-
 # Local imports
 from .feeps_correct_energies import feeps_correct_energies
 from .feeps_flat_field_corrections import feeps_flat_field_corrections
@@ -35,10 +32,9 @@ def feeps_corrections(feeps_alle):
 
     """
 
-    # Make a deep copy of the input dataset to avoid modifying the original data
-    feeps_alle_clean = deepcopy(feeps_alle)
-
-    feeps_alle_clean = feeps_correct_energies(feeps_alle_clean)
+    # Each step returns a new Dataset, without changing its input (a deep copy
+    # of the input was made first)
+    feeps_alle_clean = feeps_correct_energies(feeps_alle)
     feeps_alle_clean = feeps_flat_field_corrections(feeps_alle_clean)
     feeps_alle_clean = feeps_remove_bad_data(feeps_alle_clean)
 

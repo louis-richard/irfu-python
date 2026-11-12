@@ -20,15 +20,12 @@ def _bad_vars(bad_data):
 
 
 def _bad_eyes(inp_dataset, bad_vars):
-    inp_dataset_clean = inp_dataset.copy()
-
+    # The bad eyes set to NaN, in place (the shallow copy shared the data)
     for bad_var in bad_vars:
-        if bad_var not in list(inp_dataset.keys()):
-            continue
+        if bad_var in inp_dataset:
+            inp_dataset[bad_var].data[:] = np.nan
 
-        inp_dataset_clean[bad_var].data[:] = np.nan
-
-    return inp_dataset_clean
+    return inp_dataset
 
 
 def _bad_channels(inp_dataset, bad_vars, n_channels):

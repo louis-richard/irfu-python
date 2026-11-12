@@ -67,7 +67,6 @@ def feeps_remove_sun(inp_dataset):
     mask_sectors = read_feeps_sector_masks_csv(tint)
 
     out_dict = {}
-    out_dict["spinsectnum"] = inp_dataset["spinsectnum"]
 
     for k in inp_dataset:
         out_dict[k] = inp_dataset[k]
@@ -79,8 +78,4 @@ def feeps_remove_sun(inp_dataset):
                 if len(this_bad_sector) != 0:
                     out_dict[k].data[this_bad_sector] = np.nan
 
-    out = xr.Dataset(out_dict, attrs=var)
-
-    out.attrs = var
-
-    return out
+    return xr.Dataset(out_dict, attrs=var)
