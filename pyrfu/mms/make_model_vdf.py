@@ -12,7 +12,7 @@ from ..pyrf.trace import trace
 
 # Local imports
 from ._psd_units import _attrs, _is_relativistic
-from ._vdf_bins import _speed
+from ._vdf_bins import _charge, _mass, _speed
 from .rotate_tensor import rotate_tensor
 from .vdf_convert import _in_convention
 
@@ -52,7 +52,10 @@ def make_model_vdf(
     b_xyz : xarray.DataArray
         Time series of the background magnetic field.
     sc_pot : xarray.DataArray
-        Time series of the spacecraft potential.
+        Time series of the spacecraft potential V (V): the speeds are those
+        at infinity, of the energies E + q V (the electrons lose e V, the
+        ions gain q V with the ``charge`` attribute; it was V whatever the
+        charge).
     n_s : xarray.DataArray
         Time series of the number density of specie s, at the times of `vdf`.
     v_xyz : xarray.DataArray
@@ -74,8 +77,9 @@ def make_model_vdf(
     Raises
     ------
     ValueError
-        If the species is not ions or electrons, or if the moments (`n_s`,
-        `v_xyz` and `t_xyz`) are not at the times of `vdf`.
+        If the species is unknown (see `pyrfu.mms.vdf_convert`; it was
+        taken as protons for any ion), or if the moments (`n_s`, `v_xyz`
+        and `t_xyz`) are not at the times of `vdf`.
 
     See also
     --------
@@ -116,10 +120,9 @@ def make_model_vdf(
 
     """
 
-    species = str(vdf.attrs["species"]).lower()
-
-    if species[:1] not in ["i", "e"]:
-        raise ValueError(f"Invalid species {vdf.attrs['species']!r}")
+    # Mass and charge of the species (ValueError for an unknown one): the
+    # proton mass and +/-V were taken for every ion
+    p_mass, charge = _mass(vdf), _charge(vdf)
 
     # The moments are used by position: at the times of the VDF, as
     # calculate_epsilon (the times of n_s only had to differ by a constant, so
@@ -150,15 +153,8 @@ def make_model_vdf(
     r_x = _perp_direction(v_perp.data, r_z)
     r_y = np.cross(r_z, r_x)
 
-    # Check whether particles are electrons or ions
+    # Elementary charge, for the temperatures in eV
     q_e = constants.elementary_charge
-
-    if species[0] == "e":
-        p_mass = constants.electron_mass
-        sc_pot = sc_pot.data
-    else:
-        p_mass = constants.proton_mass
-        sc_pot = -sc_pot.data
 
     # Convert moments to SI units
     vth_para = np.sqrt(2 * t_para * q_e / p_mass)
@@ -186,8 +182,8 @@ def make_model_vdf(
         for r_ in [r_x, r_y, r_z]
     ]
 
-    # Speeds corrected for the spacecraft potential, (time, energy, 1, 1)
-    energy = vdf.energy.data.astype(np.float64) - sc_pot[:, None]
+    # Speeds at infinity, of the energies E + q V, (time, energy, 1, 1)
+    energy = vdf.energy.data.astype(np.float64) + charge * sc_pot.data[:, None]
     below = energy < 0
     # Relativistic speeds (they were non-relativistic)
     speed = _speed(np.clip(energy, 0.0, None), p_mass)[..., None, None]

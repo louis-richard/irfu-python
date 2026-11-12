@@ -8,7 +8,7 @@ from scipy import constants, special
 # Local imports
 from ..pyrf.resample import resample
 from ._psd_units import _attrs, _is_relativistic
-from ._vdf_bins import _speed
+from ._vdf_bins import _charge, _mass, _speed
 from .vdf_convert import _in_convention
 
 
@@ -30,8 +30,9 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     kappa : float, Optional
         Kappa index, larger than 3/2. Default is 7.
     sc_pot : xarray.DataArray, Optional
-        Time series of the spacecraft potential (V): the energies are
-        corrected as in `make_model_vdf`. Default is no correction.
+        Time series of the spacecraft potential V (V): the speeds are those
+        at infinity, of the energies E + q V, as in `make_model_vdf`.
+        Default is no correction.
 
     Returns
     -------
@@ -43,8 +44,9 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     Raises
     ------
     ValueError
-        If the species is not ions or electrons, or `kappa` is not larger
-        than 3/2.
+        If the species is unknown (see `pyrfu.mms.vdf_convert`; only ions
+        and electrons were accepted, with the proton mass for any ion), or
+        `kappa` is not larger than 3/2.
 
     See Also
     --------
@@ -66,28 +68,22 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     if kappa <= 1.5:
         raise ValueError("kappa must be larger than 3/2")
 
-    species = str(vdf.attrs["species"]).lower()
-
-    if species[:1] not in ["i", "e"]:
-        raise ValueError(f"Invalid species {vdf.attrs['species']!r}")
-
     q_e = constants.elementary_charge
-    mass = constants.electron_mass if species[0] == "e" else constants.proton_mass
+    # Mass of the species (ValueError for an unknown one)
+    mass = _mass(vdf)
 
     # Moments at the times of the distribution, in SI units
     n_s = 1e6 * resample(n_s, vdf.time).data
     v_bulk = 1e3 * resample(v_xyz_s, vdf.time).data
     w_2 = (kappa - 1.5) * 2 * q_e * resample(t_s, vdf.time).data / mass
 
-    # Speeds of the channels (time, energy, 1, 1), corrected for the
-    # spacecraft potential as make_model_vdf (electrons lose and ions gain
-    # q V); NaN below it
+    # Speeds of the channels (time, energy, 1, 1) at infinity, of the
+    # energies E + q V as make_model_vdf (the charge was ignored); NaN below 0
     energy = np.broadcast_to(vdf.energy.data, (len(vdf.time), vdf.data.shape[1]))
     energy = energy.astype(np.float64)
 
     if sc_pot is not None:
-        sign = 1.0 if species[0] == "e" else -1.0
-        energy = energy - sign * resample(sc_pot, vdf.time).data[:, None]
+        energy = energy + _charge(vdf) * resample(sc_pot, vdf.time).data[:, None]
 
     below = energy < 0
     # Relativistic speeds (they were non-relativistic)

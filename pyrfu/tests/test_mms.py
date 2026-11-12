@@ -4176,6 +4176,41 @@ class MakeModelKappaTestCase(unittest.TestCase):
             np.trace(t.data, axis1=1, axis2=2) / 3, 500.0, rtol=0.01
         )
 
+    def test_make_model_charge_mass(self):
+        # He++ (charge 2, the alpha mass): the speeds of the energies E + 2 V,
+        # so that the models with a potential V are those without it on the
+        # energies raised by 2 V (V and the proton mass were taken, and
+        # make_model_kappa rejected the species), and psd_moments, with the
+        # same mass, gives back the density and temperature
+        vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
+        vdf.attrs.update(species="helium++", charge=2)
+        time = vdf.time.data
+        n_t = len(time)
+        n_s, v_xyz, t_s = self._moments(vdf, 2.0, [100.0, 0.0, 0.0], 500.0)
+        sc_pot = pyrf.ts_scalar(time, np.full(n_t, 5.0))
+        zero = pyrf.ts_scalar(time, np.zeros(n_t))
+        shifted = vdf.copy(deep=True)
+        shifted["energy"].data[:] += 10.0
+
+        # To 1e-8: the models are in the convention of the input, whose
+        # relativistic factor (1 + 1e-8 here) is at the energies of its table
+        model = mms.make_model_kappa(vdf, n_s, v_xyz, t_s, 7.0, sc_pot=sc_pot)
+        expected = mms.make_model_kappa(shifted, n_s, v_xyz, t_s, 7.0)
+        np.testing.assert_allclose(model.data.data, expected.data.data, rtol=1e-7)
+
+        b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (n_t, 1)))
+        t_xyz = pyrf.ts_tensor_xyz(time, np.tile(np.eye(3) * 500.0, (n_t, 1, 1)))
+        model = mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s, v_xyz, t_xyz)
+        expected = mms.make_model_vdf(shifted, b_xyz, zero, n_s, v_xyz, t_xyz)
+        np.testing.assert_allclose(model.data.data, expected.data.data, rtol=1e-7)
+
+        model = mms.make_model_kappa(vdf, n_s, v_xyz, t_s, 20.0)
+        n, _, _, _, t, _ = mms.psd_moments(model, zero)
+        np.testing.assert_allclose(n.data, 2.0, rtol=0.01)
+        np.testing.assert_allclose(
+            np.trace(t.data, axis1=1, axis2=2) / 3, 500.0, rtol=0.01
+        )
+
     def test_make_model_kappa_maxwellian_limit(self):
         # As kappa -> infinity, the model tends to the Maxwellian of
         # make_model_vdf, as 1 / kappa (2e-4 at kappa = 1e4)
