@@ -53,8 +53,10 @@ def magnetosphere(
     model : str
         Model to use: 'mp_shue1998' (magnetopause, Shue et al., 1998) or
         'bs' (bow shock, Farris and Russell, 1994, from the standoff
-        distance of the magnetopause), case-insensitive. Default is
-        'mp_shue1998'.
+        distance of the Shue et al., 1998 magnetopause, as irfu-matlab
+        irf_magnetosphere; the 'bs' of `pyrfu.models.magnetopause_normal`
+        is based on Shue et al., 1997, its 'bs98' on 1998),
+        case-insensitive. Default is 'mp_shue1998'.
     tint : list of str, Optional
         Time interval: the solar wind dynamic pressure, IMF Bz (GSM) and
         Mach number are averaged over it from OMNI (hourly). Not with

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Mapping, Optional, Union
+from typing import Any, Optional, Union
 
 # 3rd party imports
 import numpy as np
@@ -18,7 +18,7 @@ def ts_spectr(
     energy: NDArrayFloats,
     data: NDArrayFloats,
     comp_name: Optional[str] = None,
-    attrs: Optional[Mapping[str, object]] = None,
+    attrs: Optional[dict[str, Any]] = None,
 ) -> DataArray:
     r"""Create a time series containing a spectrum
 

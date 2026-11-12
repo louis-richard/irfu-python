@@ -56,7 +56,8 @@ def magnetopause_normal(
             * 'mp_shue1997' or 'mp_shue97' : Shue et al., 1997 (Default)
             * 'mp_shue1998' or 'mp_shue98' : Shue et al., 1998
             * 'bs97' or 'bs' : Bow shock, Farris & Russell 1994, based on
-              'mp_shue1997'
+              'mp_shue1997', as irfu-matlab (the 'bs' of
+              `pyrfu.pyrf.magnetosphere` is based on 'mp_shue1998')
             * 'bs98' : Bow shock, Farris & Russell 1994, based on
               'mp_shue1998'
     m_alfven : float, Optional
