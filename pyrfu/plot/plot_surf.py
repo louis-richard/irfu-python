@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
-
 # 3rd party imports
-import numpy as np
+from matplotlib.cm import ScalarMappable
 
 # Local imports
 from .colorbar import colorbar as _add_colorbar
@@ -43,8 +41,7 @@ def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
 
     axis.plot_surface(x, y, z, facecolors=cmap(norm(c)))
 
-    mappable = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    mappable.set_array(np.array([]))
+    mappable = ScalarMappable(cmap=cmap, norm=norm)
 
     if cax_pos not in ["bottom", "top", "left", "right"]:
         raise ValueError("Invalid caxis position")

@@ -47,7 +47,7 @@ def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
         lbl = [f"{lbl[i]}{suff}" for i in range(len(lbl))]
 
     for label, axis in zip(lbl, axs_flat):
-        if "proj" in axis.properties():
+        if axis.name == "3d":
             axis.text2D(
                 pos[0],
                 pos[1],

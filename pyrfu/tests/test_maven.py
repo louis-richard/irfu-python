@@ -88,6 +88,8 @@ class DownloadDataTestCase(unittest.TestCase):
             return response
 
         session.get.side_effect = get
+        # As requests.Session, the context manager gives the session
+        session.__enter__.return_value = session
         return session
 
     def _download(self, var, session=None, **kwargs):
@@ -126,6 +128,16 @@ class DownloadDataTestCase(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             self._download({"inst": "mag", "level": "l2", "plan": "bazinga"})
 
+    def test_download_data_session_closed(self):
+        # The session closed when a download fails (it was left open)
+        session = self._session(
+            self.FILES[3:], error=requests.HTTPError("503 Service Unavailable")
+        )
+        with self.assertRaises(requests.HTTPError):
+            self._download({"inst": "swe", "level": "l2"}, session=session)
+
+        session.__exit__.assert_called_once()
+
     def test_download_data_content(self):
         # The content downloaded, in year/month directories, nothing else (a
         # temporary copy of each file was left); timeouts on the requests
@@ -158,6 +170,7 @@ class DownloadDataTestCase(unittest.TestCase):
             self._download({"inst": "swe", "level": "l2"}, session)
 
         session = mock.MagicMock()
+        session.__enter__.return_value = session
         session.get.return_value.raise_for_status.side_effect = requests.HTTPError(
             "500"
         )
