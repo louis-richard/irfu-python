@@ -5,11 +5,11 @@
 import logging
 import os
 import uuid
+from datetime import datetime
 from typing import Optional, Union
 
 # 3rd party imports
 import tqdm
-from dateutil.parser import parse
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
@@ -47,7 +47,7 @@ def _make_path_local(
         If the local data directory doesn't exist.
 
     """
-    file_date = parse(file["timetag"])
+    file_date = datetime.fromisoformat(file["timetag"])
 
     data_path = os.path.normpath(data_path or _read_config()["local"])
 

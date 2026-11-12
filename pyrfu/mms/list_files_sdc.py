@@ -13,12 +13,12 @@ from datetime import timedelta
 # 3rd party imports
 import numpy as np
 import requests
-from dateutil.parser import parse
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.iso86012datetime64 import iso86012datetime64
 from .db_init import _config_stamp, _get_credential, _read_config
 from .list_files_aws import _tint_bounds
 
@@ -121,6 +121,16 @@ def _construct_url_json_list(tint, mms_id, var, lasp_url):
     return url
 
 
+def _file_start(digits):
+    r"""Start (UTC, datetime64) of a file from the digits of its name,
+    YYYYMMDD or YYYYMMDDhhmmss (dateutil read them as local time)."""
+    hms = digits[8:].ljust(6, "0")
+    return np.datetime64(
+        f"{digits[:4]}-{digits[4:6]}-{digits[6:8]}T{hms[:2]}:{hms[2:4]}:{hms[4:6]}",
+        "ns",
+    )
+
+
 def _files_in_interval(in_files, trange):
     r"""Filters the file list returned by the SDC to the requested time
     range. This filter is purposefully liberal, it regularly grabs an extra
@@ -139,7 +149,7 @@ def _files_in_interval(in_files, trange):
             file_times.append(
                 (
                     file["file_name"],
-                    parse(matches.groups()[0]).timestamp(),
+                    _file_start(matches.groups()[0]),
                     file["timetag"],
                     file["file_size"],
                 ),
@@ -150,7 +160,10 @@ def _files_in_interval(in_files, trange):
 
     times = [t[1] for t in sorted_files]
 
-    idx_min = bisect_left(times, parse(trange[0]).timestamp())
+    # All in UTC: dateutil read the times as local time, so that on the night
+    # of a change to summer time the files were out of order and some holding
+    # data left out
+    idx_min = bisect_left(times, iso86012datetime64(np.array([trange[0]]))[0])
 
     def mkout(f):
         return {"file_name": f[0], "timetag": f[2], "size": f[3]}

@@ -15,6 +15,7 @@ import re
 import string
 import sys
 import tempfile
+import time
 import types
 import unittest
 import urllib.parse
@@ -12628,6 +12629,40 @@ class ListFilesSdcTestCase(unittest.TestCase):
             [file["url"] for file in result],
             [f"{_SDC_URL}download/science?file={name}" for name in expected],
         )
+
+    @unittest.skipUnless(hasattr(time, "tzset"), "time.tzset (POSIX only)")
+    def test_list_files_sdc_utc(self):
+        # The file times in UTC whatever the time zone of the computer:
+        # dateutil read them as local time, so that on the night of a change
+        # to summer time (02:00-03:00 doesn't exist in Stockholm on 26 Mar
+        # 2017) the files were out of order and two holding data left out
+        names = [
+            f"mms1_fgm_brst_l2_20170326{t}_v5.1.0.cdf"
+            for t in ["013000", "020000", "023000", "030500", "033000"]
+        ]
+        files = [_sdc_science_file(n) for n in names]
+        tz_before = os.environ.get("TZ")
+
+        def _restore():
+            if tz_before is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = tz_before
+            time.tzset()
+
+        self.addCleanup(_restore)
+
+        for tz_name in ["UTC", "Europe/Stockholm", "America/New_York"]:
+            os.environ["TZ"] = tz_name
+            time.tzset()
+            with self.subTest(tz=tz_name):
+                result, _ = self._list(
+                    ["2017-03-26T02:40:00", "2017-03-26T03:10:00"],
+                    1,
+                    "b_gse_fgm_brst_l2",
+                    files,
+                )
+                self.assertListEqual([file["file_name"] for file in result], names[2:])
 
     def test_list_files_sdc_end_fraction(self):
         # The query ends at the last second at or before which a file starting
