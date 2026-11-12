@@ -12,12 +12,12 @@ import xarray as xr
 # Local imports
 from ..pyrf._time import _ns
 from ..pyrf.datetime642iso8601 import datetime642iso8601
+from ..pyrf.nanavg_4sc import _without_gaps
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
 from ._hpca import _half_spins
 from .db_get_variable import db_get_variable
-from .feeps_avg_4sc import _without_gaps
 
 logger = logging.getLogger(__name__)
 

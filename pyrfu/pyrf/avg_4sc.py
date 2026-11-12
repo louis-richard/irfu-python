@@ -10,6 +10,7 @@ import xarray as xr
 from xarray import DataArray
 
 # Local imports
+from pyrfu.pyrf._units import _check_same_units
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.resample import resample
 
@@ -33,6 +34,8 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     ------
     TypeError
         If b_list is not a list of DataArray or Dataset
+    ValueError
+        If the spacecraft have different UNITS (they were averaged).
 
     Notes
     -----
@@ -40,6 +43,9 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     datasets have the same data variables and coordinates, and
     averages only the "data" variable. Other data variables are
     copied from the first dataset in the list.
+
+    The result is labelled "4sc_avg" (probe, mms, MMS and mmsId), as
+    `pyrfu.pyrf.nanavg_4sc` (it had the labels of the first spacecraft).
 
     Examples
     --------
@@ -68,6 +74,15 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         else:
             raise TypeError("elements of b_list must be DataArray or Dataset")
 
+    _check_same_units(b_list, "spacecraft")
+
+    # Attributes of the first spacecraft, labelled as the average (copy)
+    attrs = dict(b_list_r[0].attrs)
+
+    for key in ["probe", "mms", "MMS", "mmsId"]:
+        if key in attrs:
+            attrs[key] = "4sc_avg"
+
     b_avg_data = np.zeros(b_list_r[0].data.shape)
 
     # Average the resamples time series
@@ -80,7 +95,7 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
             b_avg_data / len(b_list_r),
             coords=b_list_r[0].coords,
             dims=b_list_r[0].dims,
-            attrs=b_list_r[0].attrs,
+            attrs=attrs,
         )
     else:
         for b in b_list_r:
@@ -93,5 +108,6 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         b_avg = b_list_r[0].assign(
             data=b_list_r[0]["data"].copy(data=b_avg_data / len(b_list_r))
         )
+        b_avg.attrs = attrs
 
     return b_avg

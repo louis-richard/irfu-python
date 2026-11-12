@@ -22,15 +22,6 @@ def _check_flux(*inps):
         )
 
 
-def _check_same_units(inps, name):
-    r"""ValueError unless the inputs (DataArrays) have the same UNITS, or none
-    (the units of the first one were taken)."""
-    units = sorted({str(inp.attrs.get("UNITS")) for inp in inps})
-
-    if len(units) > 1:
-        raise ValueError(f"The {name} have different UNITS: {units}")
-
-
 def _check_same_attrs(inps, keys, name):
     r"""ValueError unless the inputs (DataArrays) have the same attributes
     `keys` (e.g. the species, the method of the PADs), or none of them (they

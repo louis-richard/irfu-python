@@ -6,10 +6,10 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from ..pyrf.nanavg_4sc import _without_gaps
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
-from .feeps_avg_4sc import _without_gaps
 
 
 def _calc_angle(look_, vec):

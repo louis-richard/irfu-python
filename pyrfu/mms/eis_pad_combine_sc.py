@@ -10,7 +10,8 @@ import xarray as xr
 
 # Local imports
 from ..pyrf._time import _ns
-from ._eis_units import _check_same_attrs, _check_same_units
+from ..pyrf._units import _check_same_units
+from ._eis_units import _check_same_attrs
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
 

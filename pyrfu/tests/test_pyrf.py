@@ -350,6 +350,32 @@ class Avg4SCTestCase(unittest.TestCase):
         b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
         xr.testing.assert_identical(pyrf.avg_4sc(tuple(b_mms)), pyrf.avg_4sc(b_mms))
 
+    def test_avg_4sc_labels_units(self):
+        # Labelled as the average, as nanavg_4sc and mms.feeps_avg_4sc (it had
+        # the labels of the first spacecraft), the caller's attributes
+        # unchanged; different UNITS raise (they were averaged)
+        time = generate_timeline(1.0, 5)
+        b_list = [
+            pyrf.ts_vec_xyz(
+                time, np.ones((5, 3)), attrs={"mmsId": i + 1, "UNITS": "nT"}
+            )
+            for i in range(4)
+        ]
+
+        result = pyrf.avg_4sc(b_list)
+        self.assertEqual(result.attrs["mmsId"], "4sc_avg")
+        self.assertEqual(result.attrs["UNITS"], "nT")
+        self.assertEqual(b_list[0].attrs["mmsId"], 1)
+
+        vdfs = [generate_vdf(64.0, 4, [32, 32, 16]) for _ in range(4)]
+        for i, vdf in enumerate(vdfs):
+            vdf.attrs["mmsId"] = i + 1
+        self.assertEqual(pyrf.avg_4sc(vdfs).attrs["mmsId"], "4sc_avg")
+
+        b_list[3].attrs["UNITS"] = "T"
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            pyrf.avg_4sc(b_list)
+
     def test_avg_4sc_element_type(self):
         b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(3)]
 
@@ -434,8 +460,42 @@ class NanAvg4SCTestCase(unittest.TestCase):
         np.testing.assert_array_equal(vdfs[0].data.data, data_0)
 
     def test_nanavg_4sc_input(self):
+        # A tuple, as avg_4sc and mms.feeps_avg_4sc (it raised TypeError)
+        b_mms = tuple(generate_ts(64.0, 100) for _ in range(4))
+        np.testing.assert_array_equal(
+            pyrf.nanavg_4sc(b_mms).data, pyrf.nanavg_4sc(list(b_mms)).data
+        )
+
         with self.assertRaises(TypeError):
-            pyrf.nanavg_4sc(tuple(generate_ts(64.0, 100) for _ in range(4)))
+            pyrf.nanavg_4sc(b_mms[0])
+
+    def test_nanavg_4sc_units(self):
+        # Different UNITS raise, as mms.feeps_avg_4sc (they were averaged)
+        time = generate_timeline(1.0, 5)
+        b_list = [
+            pyrf.ts_vec_xyz(time, np.ones((5, 3)), attrs={"UNITS": units})
+            for units in ["nT", "nT", "nT", "T"]
+        ]
+
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            pyrf.nanavg_4sc(b_list)
+
+    def test_nanavg_4sc_gaps(self):
+        # A spacecraft without data in an interval (a gap, or ending early) is
+        # left out there, as mms.feeps_avg_4sc: the resampling filled its gap
+        # and extended its last value, averaged as data
+        time = generate_timeline(1.0, 20)
+        b_list = [pyrf.ts_scalar(time, np.full(20, float(i))) for i in range(4)]
+        keep = np.r_[0:5, 10:20]
+        b_list[3] = pyrf.ts_scalar(time[keep], np.full(len(keep), 3.0))
+        b_list[2] = pyrf.ts_scalar(time[:15], np.full(15, 2.0))
+
+        result = pyrf.nanavg_4sc(b_list).data
+
+        np.testing.assert_allclose(result[:5], 1.5)
+        np.testing.assert_allclose(result[5:10], 1.0)
+        np.testing.assert_allclose(result[10:15], 1.5)
+        np.testing.assert_allclose(result[15:], 4.0 / 3.0)
 
     def test_nanavg_4sc_element_type(self):
         b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(3)]
