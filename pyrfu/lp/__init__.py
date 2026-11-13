@@ -23,7 +23,7 @@ class LangmuirProbe:
         name: str,
         surface: str = "cluster",
         r_sphere: list | float | int | None = None,
-        r_wire: list | float | int | None = None,
+        r_wire: list | float | int | np.ndarray | None = None,
         l_wire: list | float | int | None = None,
         s_photoemission: float | None = None,
     ):

@@ -3,6 +3,7 @@
 
 # Built-in imports
 import warnings
+from typing import Any
 
 # 3rd party imports
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ from .plot_spectr import plot_spectr
 
 def pl_scatter_matrix(
     inp1,
-    inp2: xr.DataArray = None,
+    inp2: xr.DataArray | None = None,
     pdf: bool = False,
     cmap: str = "jet",
 ):
@@ -69,6 +70,9 @@ def pl_scatter_matrix(
         hspace=0.05,
         wspace=0.3 if pdf else 0.05,
     )
+
+    # (fig, axs), with caxs for the histograms
+    out: tuple[Any, ...]
 
     if not pdf:
         for i in range(3):

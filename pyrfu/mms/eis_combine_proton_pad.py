@@ -13,7 +13,7 @@ from .eis_pad_spinavg import eis_pad_spinavg
 def eis_combine_proton_pad(
     phxtof_allt,
     extof_allt,
-    vec: xr.DataArray = None,
+    vec: xr.DataArray | None = None,
     energy: list | None = None,
     pa_width: int = 15,
     despin: bool = False,

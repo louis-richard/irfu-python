@@ -151,7 +151,7 @@ def list_files_aws(
     # restricts the listing to that day on the server side.
     day = datetime.datetime(t_start.year, t_start.month, t_start.day)
     day -= datetime.timedelta(days=1)
-    files = {}
+    files: dict[str, tuple[tuple[int, ...], Any]] = {}
 
     while day < t_end:
         month_dir = posixpath.join(*directory, day.strftime("%Y"), day.strftime("%m"))
@@ -178,8 +178,8 @@ def list_files_aws(
                 if not matches:
                     continue
 
-                time_tag, *version = matches.groups()
-                version = tuple(map(int, version))
+                time_tag, *version_str = matches.groups()
+                version = tuple(map(int, version_str))
 
                 # Keep the latest version of each file
                 if time_tag not in files or version > files[time_tag][0]:

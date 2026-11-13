@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from collections.abc import Mapping
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -70,7 +70,7 @@ def ts_append(
         out = inp0
     else:
         # Both with time samples
-        out_data = {}
+        out_data: dict[str, Any] = {}
 
         if inp0.data.ndim != 1:
             out_data["data"] = np.vstack([inp0.data, inp1.data])
@@ -81,7 +81,7 @@ def ts_append(
         n_0, n_1 = inp0.shape[0], inp1.shape[0]
         out_data["attrs"] = _append_attrs(inp0.attrs, inp1.attrs, n_0, n_1)
 
-        depends: list[Mapping[str, object]] = [{} for _ in range(len(inp0.dims))]
+        depends: list[dict[str, Any]] = [{} for _ in range(len(inp0.dims))]
 
         for i, dim in enumerate(inp0.dims):
             if i == 0 or dim == "time":

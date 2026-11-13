@@ -83,6 +83,10 @@ def mms4_displacement(
     b_xyz = [resample(b, b_ref).data[:, :3] for b in b_mms]
     r_xyz = [resample(r, b_ref).data[:, :3] for r in r_mms]
 
+    # Arrays, then the time series
+    r_par: np.ndarray | DataArray
+    r_perp: np.ndarray | DataArray
+    theta_br: np.ndarray | DataArray
     r_par, r_perp, theta_br = [np.zeros((len(b_ref.time), 6)) for _ in range(3)]
 
     for k, (i, j) in enumerate(_PAIRS):

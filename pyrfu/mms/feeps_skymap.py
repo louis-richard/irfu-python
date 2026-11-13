@@ -3,6 +3,7 @@
 
 # Built-in imports
 import warnings
+from typing import cast
 
 # 3rd party imports
 import numpy as np
@@ -190,8 +191,8 @@ def _fill_empty(data, sums, counts, how):
 
 def feeps_skymap(
     inp_dataset,
-    b_bcs: xr.DataArray = None,
-    b_dmpa: xr.DataArray = None,
+    b_bcs: xr.DataArray | None = None,
+    b_dmpa: xr.DataArray | None = None,
     n_phi: int | None = None,
     to_psd: bool = True,
     fill_empty: str | None = None,
@@ -389,7 +390,7 @@ def feeps_skymap(
 
     if to_psd:
         # s^3/cm^6, as the FPI distributions
-        out = dpf2psd(out)
+        out = cast(xr.Dataset, dpf2psd(out))  # a Dataset for a Dataset
         out.data.data *= 1e-12
         out.data.attrs["UNITS"] = "s^3/cm^6"
 

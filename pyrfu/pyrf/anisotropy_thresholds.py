@@ -104,6 +104,8 @@ def anisotropy_thresholds(
     beta = np.array(beta_para, dtype=np.float64)
     beta = np.where(beta < 0, np.nan, beta)
 
+    out: dict[str, float | np.ndarray | xr.DataArray]
+
     if specie == "i":
         if gamma not in COEFFS_I:
             gammas = list(COEFFS_I.keys())

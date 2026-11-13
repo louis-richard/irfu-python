@@ -9,6 +9,7 @@ import warnings
 # 3rd party imports
 import matplotlib as mpl
 from matplotlib import style
+from matplotlib.rcsetup import cycler
 
 # Local imports
 from .add_position import add_position
@@ -267,7 +268,7 @@ def set_color_cycle(pal: str = "") -> tuple[list, str]:
             f"unknown palette {pal!r}: pyrfu, oceanic, tab (tableau, mpl) or series"
         )
 
-    mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=colors)
+    mpl.rcParams["axes.prop_cycle"] = cycler(color=colors)
     mpl.rcParams["image.cmap"] = cmap
 
     return colors, cmap

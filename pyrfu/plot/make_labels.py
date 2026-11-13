@@ -3,6 +3,7 @@
 
 # Built-in imports
 import string
+from collections.abc import Sequence
 
 # 3rd party imports
 import numpy as np
@@ -38,7 +39,7 @@ def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
     if len(axs_flat) + pad > 26:
         raise ValueError("Number of subplots exceeds the number of labels available.")
 
-    lbl = string.ascii_lowercase[pad : len(axs_flat) + pad]
+    lbl: Sequence[str] = string.ascii_lowercase[pad : len(axs_flat) + pad]
 
     if pref is not None:
         lbl = [f"{pref}{lbl[i]}" for i in range(len(lbl))]

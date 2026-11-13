@@ -226,8 +226,10 @@ def load_ancillary(
     # Root path
     pkg_path = os.path.dirname(os.path.abspath(__file__))
 
-    with open(os.sep.join([pkg_path, "ancillary.json"]), "r", encoding="utf-8") as file:
-        anc_dict = json.load(file)
+    with open(
+        os.sep.join([pkg_path, "ancillary.json"]), "r", encoding="utf-8"
+    ) as json_file:
+        anc_dict = json.load(json_file)
 
     if product not in anc_dict:
         raise ValueError(

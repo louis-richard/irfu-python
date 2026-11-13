@@ -103,7 +103,7 @@ def list_files_ancillary(
     file_regex = re.compile(
         rf"{re.escape(stem)}_([0-9]{{7}})_([0-9]{{7}})\.V([0-9]{{2}})"
     )
-    latest = {}
+    latest: dict[tuple[str, str], tuple[str, str]] = {}
 
     for file in files:
         matches = file_regex.fullmatch(os.path.basename(file))

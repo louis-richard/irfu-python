@@ -62,7 +62,7 @@ def _pad_sum(pa_file, flux_file, pa_width, n_pabins):
 
 def eis_pad(
     inp_allt,
-    vec: xr.DataArray = None,
+    vec: xr.DataArray | None = None,
     energy: list | None = None,
     pa_width: int = 15,
     method: str = "mean",

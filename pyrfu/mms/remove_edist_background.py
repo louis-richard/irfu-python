@@ -237,15 +237,15 @@ def remove_edist_background(
 
         backgrounds.append(background)
 
-    vdf_bkg = np.stack(backgrounds)[np.ravel(which)]
+    bkg_data = np.stack(backgrounds)[np.ravel(which)]
 
     # Background-subtracted distributions, negative values (and background)
     # set to 0
-    vdf_new = vdf.data.data - vdf_bkg
+    vdf_new = vdf.data.data - bkg_data
     vdf_new[vdf_new < 0] = 0.0
-    vdf_bkg[vdf_bkg < 0] = 0.0
+    bkg_data[bkg_data < 0] = 0.0
     vdf_new = vdf_new.astype(vdf.data.data.dtype, copy=False)
-    vdf_bkg = vdf_bkg.astype(vdf.data.data.dtype, copy=False)
+    bkg_data = bkg_data.astype(vdf.data.data.dtype, copy=False)
 
     # Construct the new VDFs (copies, so the attributes of the input and of the
     # two outputs are independent)
@@ -266,7 +266,7 @@ def remove_edist_background(
     vdf_new.attrs = dict(glob_attrs)
     vdf_bkg = ts_skymap(
         vdf.time.data,
-        vdf_bkg,
+        bkg_data,
         vdf.energy.data,
         vdf.phi.data,
         vdf.theta.data,

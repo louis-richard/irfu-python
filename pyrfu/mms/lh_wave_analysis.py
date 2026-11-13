@@ -3,6 +3,7 @@
 
 # Built-in imports
 import logging
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -220,7 +221,10 @@ def lh_wave_analysis(
     phi_e_best = ts_scalar(phi_bs.time.data, phi_e_best)
     v_best = vph_vec[corr_vpos]
 
-    options = {"coords": [phi_bs.time, ["Ebest", "Bs"]], "dims": ["time", "comp"]}
+    options: dict[str, Any] = {
+        "coords": [phi_bs.time, ["Ebest", "Bs"]],
+        "dims": ["time", "comp"],
+    }
     phi_eb = xr.DataArray(
         np.vstack([phi_e_best.data, phi_bs.data]).T,
         **options,

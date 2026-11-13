@@ -3,13 +3,14 @@
 
 # Built-in imports
 import string
-from typing import Dict, Optional
+from collections.abc import Sequence
+from typing import Any, Dict, Optional, cast
 
 # 3rd party imports
 import matplotlib
 import numpy as np
 import xarray as xr
-from numpy.typing import NDArray
+from numpy.typing import DTypeLike, NDArray
 from xarray import DataArray, Dataset
 
 # Local imports
@@ -32,9 +33,9 @@ __all__ = [
 def generate_timeline(
     f_s: float,
     n_pts: int = 10000,
-    dtype: str = "datetime64[ns]",
+    dtype: DTypeLike = "datetime64[ns]",
     ref_time: str = "2019-01-01T00:00:00.000000000",
-) -> NDArray[np.datetime64]:
+) -> NDArray[Any]:
     r"""Generate timeline for testings
 
     Parameters
@@ -43,7 +44,7 @@ def generate_timeline(
         Sampling frequency.
     n_pts : int
         Number of points.
-    dtype : str
+    dtype : str or numpy.dtype
         Data type of the time array.
     ref_time : str
         Reference time.
@@ -54,10 +55,9 @@ def generate_timeline(
         Timeline.
 
     """
-    ref_time = np.datetime64(ref_time)
-    times = [ref_time + np.timedelta64(int(i * 1e9 / f_s), "ns") for i in range(n_pts)]
-    times = np.array(times).astype(dtype)
-    return times
+    ref = np.datetime64(ref_time)
+    times = [ref + np.timedelta64(int(i * 1e9 / f_s), "ns") for i in range(n_pts)]
+    return np.array(times).astype(dtype)
 
 
 def generate_data(n_pts: int, tensor_order: int = 0) -> NDArray[np.float32]:
@@ -130,7 +130,7 @@ def generate_ts(
 
 
 def generate_spectr(
-    f_s: float, n_pts: int, shape: tuple, attrs: Optional[Dict[str, object]] = None
+    f_s: float, n_pts: int, shape: int, attrs: Optional[Dict[str, object]] = None
 ) -> DataArray:
     r"""Generates spectrum for testings
 
@@ -140,7 +140,7 @@ def generate_spectr(
         Sampling frequency.
     n_pts : int
         Number of points.
-    shape : tuple
+    shape : int
         Shape of the spectrum.
     attrs : dict
         Attributes of the spectrum.
@@ -152,11 +152,14 @@ def generate_spectr(
 
 
     """
-    out: DataArray = pyrf.ts_spectr(
-        generate_timeline(f_s, n_pts),
-        np.arange(shape),
-        np.random.random((n_pts, shape)),
-        attrs=attrs,
+    out = cast(
+        DataArray,
+        pyrf.ts_spectr(
+            generate_timeline(f_s, n_pts),
+            np.arange(shape),
+            np.random.random((n_pts, shape)),
+            attrs=attrs,
+        ),
     )
     return out
 
@@ -164,7 +167,7 @@ def generate_spectr(
 def generate_vdf(
     f_s: float,
     n_pts: int,
-    shape: list,
+    shape: Sequence[int],
     energy01: Optional[bool] = None,
     species: Optional[str] = None,
     units: Optional[str] = None,
@@ -177,7 +180,7 @@ def generate_vdf(
         Sampling frequency.
     n_pts : int
         Number of points.
-    shape : list
+    shape : sequence of int
         Shape of the vdf.
     energy01 : bool, Optional
         If True, energy is set to +0.5 for odd time steps (first part of MMS mission).
@@ -209,6 +212,11 @@ def generate_vdf(
     theta = np.arange(shape[2])
     data = np.random.random((n_pts, *shape))
 
+    # (time, energy) and (energy,) tables, float64 or float32
+    energy: NDArray[Any]
+    energy0: NDArray[Any]
+    energy1: NDArray[Any]
+
     if energy01:
         energy0 = np.linspace(0, shape[0], shape[0], endpoint=False)
         energy1 = np.linspace(0, shape[0], shape[0], endpoint=False) + 0.5
@@ -221,8 +229,7 @@ def generate_vdf(
     else:
         energy = np.linspace(0, shape[0], shape[0], endpoint=False, dtype=np.float32)
         energy = np.tile(energy, (n_pts, 1))
-        energy0 = energy[0, :]
-        energy1 = energy[1, :]
+        energy0, energy1 = energy[0, :], energy[1, :]  # float32 here
         esteptable = np.zeros(n_pts, dtype=np.uint8)
 
     attrs = {"UNITS": units}

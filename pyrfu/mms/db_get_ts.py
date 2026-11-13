@@ -4,6 +4,7 @@
 # Built-in imports
 import logging
 from collections.abc import Mapping
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -62,7 +63,7 @@ def _db_get_ts_dict(
     data_path: str = "",
     source: str | None = "default",
     support_names: list[str] | None = None,
-) -> dict[str, DataArray]:
+) -> dict[str, Any]:
     r"""Time series of several variables of a dataset, reading each file once
     (i.e., one download per file from the SDC or AWS for all the variables).
 
@@ -79,7 +80,7 @@ def _db_get_ts_dict(
         resource, tint, mms_id, var, data_path
     )
 
-    out = {}
+    out: dict[str, Any] = {}
 
     if not file_names:
         raise FileNotFoundError(f"No files found for {dataset_name} in {resource}")
@@ -88,7 +89,7 @@ def _db_get_ts_dict(
         for cdf_name in cdf_names:
             logger.info("Loading %s...", cdf_name)
 
-    support = {}
+    support: dict[str, np.ndarray] = {}
 
     for file_name in file_names:
         file_content = _get_file_content_sources(

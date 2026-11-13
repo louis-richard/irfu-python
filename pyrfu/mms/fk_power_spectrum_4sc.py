@@ -4,6 +4,7 @@
 # Built-in imports
 import bisect
 import logging
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -172,7 +173,7 @@ def fk_power_spectrum_4sc(
     use_linear = df is not None
 
     if use_linear:
-        cwt_options = {
+        cwt_options: dict[str, Any] = {
             "linear": df,
             "return_power": False,
             "wavelet_width": 5.36 * w_width,
@@ -410,8 +411,8 @@ def fk_power_spectrum_4sc(
 
     # Normalised powers, wave numbers (2 pi / lambda) in 1/m, as irfu-matlab,
     # and frequencies in Hz (none)
-    for name in out.data_vars:
-        out[name].attrs["UNITS"] = ""
+    for var_name in out.data_vars:
+        out[var_name].attrs["UNITS"] = ""
 
     for name in ["k_x", "k_y", "k_z", "k_mag", "k_perp", "k_para"]:
         out[name].attrs["UNITS"] = "1/m"

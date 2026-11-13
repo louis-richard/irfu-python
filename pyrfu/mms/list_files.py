@@ -83,7 +83,7 @@ def list_files(
     # the time interval (a file starting then can cover it, e.g. a burst segment
     # across midnight) to its end, as list_files_aws; each directory is walked
     # once (the month directory of survey data was walked for every day)
-    files = {}
+    files: dict[str, tuple[tuple[int, ...], str]] = {}
     walked = set()
     day = datetime.datetime.combine(t_start.date(), datetime.time())
     day -= datetime.timedelta(days=1)
@@ -116,8 +116,8 @@ def list_files(
                 if not matches:
                     continue
 
-                time_tag, *version = matches.groups()
-                version = tuple(map(int, version))
+                time_tag, *version_str = matches.groups()
+                version = tuple(map(int, version_str))
 
                 if time_tag not in files or version > files[time_tag][0]:
                     files[time_tag] = (version, os.path.join(root, file_name))

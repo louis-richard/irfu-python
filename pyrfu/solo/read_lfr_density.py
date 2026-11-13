@@ -4,6 +4,7 @@
 # Built-in imports
 import logging
 import os
+from typing import cast
 
 # 3rd party imports
 import numpy as np
@@ -83,7 +84,8 @@ def read_lfr_density(tint: list, data_path: str = "", tree: bool = False) -> Dat
         density[density == -1e31] = np.nan
         out = ts_append(out, ts_scalar(time, density))
 
-    # Sort in time
+    # Sort in time (a time series: there are files)
+    out = cast(DataArray, out)
     out = out[np.argsort(out.time.data, kind="stable")]
 
     # Time clip

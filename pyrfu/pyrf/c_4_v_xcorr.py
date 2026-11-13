@@ -4,6 +4,7 @@
 # Built-in imports
 import warnings
 from collections.abc import Sequence
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -725,7 +726,8 @@ def c_4_v_xcorr(
 
     # Scales and offsets, residuals h in units of the pattern (48), their
     # mean squares Imin, and correlation with the pattern
-    h_res, i_min = [None] * 4, np.full(4, np.nan)
+    h_res: list[Any] = [None] * 4  # ndarray or None
+    i_min = np.full(4, np.nan)
     scales, offsets = np.full(4, np.nan), np.full((4, *p_pat.shape[1:]), np.nan)
     corr = np.full(4, np.nan)
 

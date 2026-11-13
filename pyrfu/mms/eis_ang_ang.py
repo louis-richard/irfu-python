@@ -3,6 +3,7 @@
 
 # Built-in imports
 import warnings
+from typing import cast
 
 # 3rd party imports
 import numpy as np
@@ -45,8 +46,8 @@ def _angle_attrs(name, frame, valid_max):
 
 def eis_ang_ang(
     inp_allt,
-    en_chan: list | None = None,
-    defatt: xr.Dataset = None,
+    en_chan: list | np.ndarray | None = None,
+    defatt: xr.Dataset | None = None,
     frame: str = "dbcs",
 ):
     r"""Generates EIS angle-angle distribution: the fluxes binned in the look
@@ -122,7 +123,8 @@ def eis_ang_ang(
         d_xyz = inp_allt[f"look_{scope}"]
 
         if frame.lower() == "dbcs":
-            d_xyz = dsl2gse(d_xyz, defatt, -1)
+            # defatt is given for frame dbcs (checked above)
+            d_xyz = dsl2gse(d_xyz, cast(xr.Dataset, defatt), -1)
 
         look.append(d_xyz.data)
 

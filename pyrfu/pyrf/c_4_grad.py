@@ -2,7 +2,7 @@
 
 # Built-in imports
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 # 3rd party imports
 import numpy as np
@@ -88,8 +88,8 @@ def _derivative(
     if method == "grad":
         return grad_b
 
-    # (B.grad)B
-    return np.sum(b_avg[:, np.newaxis, :] * grad_b, axis=2)
+    # (B.grad)B, b_avg given for "bdivb"
+    return np.sum(cast(NDArray[Any], b_avg)[:, np.newaxis, :] * grad_b, axis=2)
 
 
 def c_4_grad(

@@ -21,7 +21,7 @@ import posixpath
 import re
 import shutil
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 
 # 3rd party imports
 import platformdirs
@@ -85,7 +85,7 @@ def enabled() -> bool:
     return _settings()["enabled"]
 
 
-def mms_path(mms_id: str, var: dict, file_name: str) -> str:
+def mms_path(mms_id: str, var: Mapping[str, str], file_name: str) -> str:
     r"""Path of an MMS file in the layout of the SDC: spacecraft, instrument,
     rate, level[, data type], year, month[, day for burst], file name."""
     parts = [f"mms{mms_id}", var["inst"], var["tmmode"], var["lev"]]

@@ -62,7 +62,8 @@ def plot_projection(
         clim = [None, None]
 
     if not cmap or isinstance(cmap, str):
-        cmap = mpl.colormaps.get_cmap(cmap)
+        # get_cmap(None) is the image.cmap colormap; the stub omits None
+        colormap = mpl.colormaps.get_cmap(cmap)  # type: ignore[arg-type]
     else:
         raise TypeError(
             "cmap must be a string. "
@@ -73,7 +74,7 @@ def plot_projection(
         v_x / 1e3,
         v_y / 1e3,
         np.log10(f_mat.T),
-        cmap=cmap,
+        cmap=colormap,
         vmin=clim[0],
         vmax=clim[1],
     )

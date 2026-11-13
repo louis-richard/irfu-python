@@ -8,7 +8,7 @@ import logging
 import math
 import numbers
 import os
-from typing import Literal
+from typing import Any, Literal, cast
 
 # 3rd party imports
 import keyring
@@ -104,7 +104,7 @@ def _set_password(username: str, password: str) -> None:
 
 
 # Settings used when there is no configuration yet, or with reset=True
-_DEFAULT_CONFIG = {
+_DEFAULT_CONFIG: dict[str, Any] = {
     "default": "local",
     "local": ".",
     "sdc": {"rights": "public", "username": "username"},
@@ -344,7 +344,8 @@ def db_init(
 
     # Save the password in the keyring only if given (never a placeholder)
     if sdc_password is not None:
-        _set_password(sdc_username, sdc_password)
+        # sdc_username is set: checked above with sdc_password
+        _set_password(cast(str, sdc_username), sdc_password)
 
     if config["sdc"]["rights"] == "sitl" and not _get_credential(
         config["sdc"]["username"]

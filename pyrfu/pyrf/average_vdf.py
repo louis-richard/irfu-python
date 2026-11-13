@@ -71,7 +71,7 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
 
     func = np.nanmean if method == "mean" else np.nansum
 
-    vdf_avg = np.stack(
+    data_avg = np.stack(
         [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
     )
     energy_avg = np.stack(
@@ -85,7 +85,7 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
     # energy[1, :], which fails for a single time step.
     vdf_avg = ts_skymap(
         time_avg,
-        vdf_avg,
+        data_avg,
         energy_avg,
         phi_avg,
         vdf.theta.data,

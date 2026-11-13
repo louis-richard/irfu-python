@@ -3,12 +3,15 @@
 
 # Built-in imports
 from datetime import datetime
+from typing import Any, cast
 
 # 3rd party imports
 import numpy as np
 from numpy.typing import NDArray
 
 # Local imports
+from pyrfu._core.typing import TimeArray
+
 from .datetime642iso8601 import datetime642iso8601
 
 
@@ -36,11 +39,15 @@ def datetime2iso8601(
 
     """
 
+    # A list for an array_like (nested for nested arrays), a str for a time
+    time_iso8601: list[Any] | str
+
     # numpy.datetime64 times (scalar or array), e.g. those of a time series
     if np.asarray(time).dtype.kind == "M":
-        time_iso8601 = [str(t_) for t_ in datetime642iso8601(np.atleast_1d(time))]
+        time_m = cast(np.datetime64 | TimeArray, time)
+        time_iso8601 = [str(t_) for t_ in datetime642iso8601(np.atleast_1d(time_m))]
 
-        return time_iso8601[0] if np.ndim(time) == 0 else time_iso8601
+        return time_iso8601[0] if np.ndim(time_m) == 0 else time_iso8601
 
     if isinstance(time, (np.ndarray, list)):
         time_iso8601 = []

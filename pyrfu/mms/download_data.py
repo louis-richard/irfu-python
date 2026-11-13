@@ -5,6 +5,7 @@
 import logging
 import os
 import uuid
+from collections.abc import Mapping
 from datetime import datetime
 
 # 3rd party imports
@@ -18,7 +19,9 @@ from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 logger = logging.getLogger(__name__)
 
 
-def _make_path_local(file: dict, var: dict, mms_id: str | int, data_path: str = ""):
+def _make_path_local(
+    file: dict, var: Mapping[str, str], mms_id: str | int, data_path: str = ""
+):
     r"""Construct path of the data file using the standard convention.
 
     Parameters

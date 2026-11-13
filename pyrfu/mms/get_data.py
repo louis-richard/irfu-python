@@ -7,6 +7,7 @@ import os
 import posixpath
 import time
 from collections.abc import Mapping
+from typing import Any, cast
 
 # 3rd party imports
 import requests
@@ -41,7 +42,7 @@ _AWS_READ_ATTEMPTS = 3
 _AWS_READ_ERRORS = (IncompleteReadError, ReadTimeoutError, ResponseStreamingError)
 
 
-def _var_and_cdf_name(var_str: str, mms_id: str) -> tuple[Mapping[str, str | int], str]:
+def _var_and_cdf_name(var_str: str, mms_id: str | int) -> tuple[Mapping[str, str], str]:
     r"""Tokenize variable string `var_str` and returns the corresponding cdf name.
 
     Parameters
@@ -126,13 +127,17 @@ def _list_files_sources(
     source: str,
     tint: list[str],
     mms_id: str,
-    var: Mapping[str, str | int],
+    var: Mapping[str, str],
     data_path: str = "",
 ):
     # Time interval in the forms of time_clip (only a list of str was
     # listed), as datetime64; the cache key of the listing is then the same
     # for all the forms
     tint = _time_interval(tint)
+
+    # Paths, cache files (RemoteFile), URLs or S3 objects, by source
+    file_names: list[Any]
+    headers: dict[str, str]
 
     if source == "local":
         file_names = list_files(tint, mms_id, var, data_path)
@@ -193,7 +198,10 @@ def _get_file_content_sources(
             file_content = file.read()
     elif source == "sdc":
         try:
-            response = sdc_session.get(file_name, timeout=SDC_TIMEOUT, headers=headers)
+            # The SDC session of _list_files_sources
+            response = cast(Session, sdc_session).get(
+                file_name, timeout=SDC_TIMEOUT, headers=headers
+            )
             response.raise_for_status()  # Raise an HTTPError for bad responses
             file_content = response.content
         except requests.RequestException:
@@ -510,4 +518,5 @@ def get_data(
         else:
             out = ts_append(out, get_ts(file_content, cdf_name, tint))
 
-    return out
+    # Not None: at least one file was read
+    return cast(DataArray | Dataset, out)

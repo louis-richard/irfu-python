@@ -5,6 +5,7 @@
 import logging
 import re
 import warnings
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -263,7 +264,7 @@ def get_ts(
 
     tint = _time_interval(tint)
 
-    out_dict = {}
+    out_dict: dict[str, Any] = {}
     time, depend_1, depend_2, depend_3 = [{}, {}, {}, {}]
 
     # Load CDF file

@@ -104,7 +104,7 @@ def _list_files(
 
     # Latest version of each date: (version, public), so that the public file
     # wins over the -cdag one of the same version
-    files = {}
+    files: dict[np.datetime64, tuple[tuple[int, bool], str]] = {}
 
     for local_dir in local_dirs:
         for root, _, file_names in os.walk(local_dir):

@@ -224,7 +224,7 @@ def vdf_reduce(
     tint,
     dim,
     x_vec,
-    z_vec: list | None = None,
+    z_vec: list | np.ndarray | None = None,
     v_int: list | None = None,
     n_vpt: int = 100,
 ):

@@ -124,9 +124,9 @@ def get_pitch_angle_dist(
     if angles is not None:
         if isinstance(angles, (int, float)):
             n_angles = int(angles)  # Make sure input is integer
-            d_angles = 180 / n_angles
-            angles_v = np.linspace(d_angles, 180, n_angles)
-            d_angles = d_angles * np.ones(n_angles)
+            width = 180 / n_angles
+            angles_v = np.linspace(width, 180, n_angles)
+            d_angles = width * np.ones(n_angles)
 
             if verbose:
                 logger.info("User defined number of pitch angles.")

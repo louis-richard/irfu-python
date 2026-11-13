@@ -4,6 +4,7 @@
 # Built-in imports
 import logging
 import re
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -167,7 +168,9 @@ def get_eis_allt(
     if not file_names:
         raise FileNotFoundError(f"No files found for {pref} in {resource}")
 
-    outdict, energy = {}, None
+    # Time series by key, and the energy table of the files (of the first)
+    outdict: dict[str, Any] = {}
+    energy: Any = None
 
     for file_name in file_names:
         file_content = _get_file_content_sources(

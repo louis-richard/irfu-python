@@ -9,7 +9,10 @@ import numpy as np
 from matplotlib.patches import Wedge
 
 # Local imports
-from ..pyrf import datetime642unix, iso86012datetime64, magnetosphere
+from ..pyrf import datetime642unix, iso86012datetime64
+
+# The function (pyrfu.pyrf.magnetosphere is also the name of its module)
+from ..pyrf.magnetosphere import magnetosphere
 
 logger = logging.getLogger(__name__)
 

@@ -17,8 +17,8 @@ from ..pyrf.ts_scalar import ts_scalar
 def eis_moments(
     inp,
     specie: str = "proton",
-    n_bg: xr.DataArray = None,
-    p_bg: xr.DataArray = None,
+    n_bg: xr.DataArray | None = None,
+    p_bg: xr.DataArray | None = None,
 ):
     r"""Computes the partial moments given the omni-directional differential
     particle flux and the ion specie under the assumption of angular isotropy,

@@ -162,6 +162,9 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
         omni_spec_data[paired, :, i_p] = flux_.data[idx_time[paired]][:, idx_closest]
 
     # Average (or sum) omni flux over all spacecraft
+    # The averaged array, then its time series
+    omni_spec: np.ndarray | xr.DataArray
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
 

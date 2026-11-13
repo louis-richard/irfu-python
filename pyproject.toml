@@ -71,6 +71,7 @@ tests = [
 ]
 type-checking = [
     "mypy",
+    "types-requests",
 ]
 docs = [
     "ipython>=8.0",
@@ -198,6 +199,8 @@ extension-pkg-allow-list = "pycdfpp"
 [tool.mypy]
 enable_error_code = "redundant-self"
 files = "pyrfu"
+# The irfu-matlab comparison suite stays local (git-ignored)
+exclude = ["pyrfu/tests/matlab/"]
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
@@ -209,15 +212,18 @@ warn_unused_ignores = true
 ignore_missing_imports = true
 module = [
     "boto3.*",
+    "botocore.*",
     "ddt.*",
+    "geopack.*",
+    "keyrings.*",
     "matplotlib.*",
     "mpl_toolkits.*",
     "numba.*",
-    "pydata_sphinx_theme.*",
     "pandas.*",
+    "pycdfpp.*",
     "pytest.*",
     "scipy.*",
-    "setuptools",
+    "tqdm.*",
 ]
 
 # This then excludes some modules from the above list. (So ideally we remove

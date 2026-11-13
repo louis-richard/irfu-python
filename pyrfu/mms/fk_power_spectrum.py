@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Sequence
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -211,7 +212,7 @@ def fk_power_spectrum(
 
     # Frequencies of irf_wavelet: logarithmic from f_nyq / 100 to
     # f_nyq / 10^0.01, or linear from df to f_nyq
-    options = {"return_power": False, "cut_edge": False}
+    options: dict[str, Any] = {"return_power": False, "cut_edge": False}
 
     if df is None:
         f_nyq = calc_fs(e_1) / 2

@@ -27,7 +27,7 @@ def _f_two_pop(x, *args):
     return np.nansum(np.abs(i_e + i_aspoc - i_ph))
 
 
-def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
+def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray | None = None):
     r"""Compute number density from spacecraft potential. Function uses number
     density and electron temperature to compute electron thermal current. A
     best fit of the photoelectron current to the thermal current is used to
@@ -84,9 +84,9 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     """
 
     if i_aspoc is not None:
-        i_aspoc = resample(i_aspoc, n_e).data.astype(np.float64)
+        i_aspoc_data = resample(i_aspoc, n_e).data.astype(np.float64)
     else:
-        i_aspoc = np.zeros(len(n_e))
+        i_aspoc_data = np.zeros(len(n_e))
 
     # Scalar electron temperature, from the trace of a tensor
     t_e = t_e.astype(np.float64)
@@ -115,7 +115,7 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     opt_p1 = optimize.fmin(
         _f_one_pop,
         x0=[500.0, 3.0],
-        args=(i_e, i_aspoc, sc_pot_r),
+        args=(i_e, i_aspoc_data, sc_pot_r),
         maxfun=5000,
         disp=False,
     )
@@ -124,7 +124,7 @@ def scpot2ne(sc_pot, n_e, t_e, i_aspoc: xr.DataArray = None):
     opt_p2 = optimize.fmin(
         _f_two_pop,
         x0=[opt_p1[0], opt_p1[1], 10.0, 10.0],
-        args=(i_e, i_aspoc, sc_pot_r),
+        args=(i_e, i_aspoc_data, sc_pot_r),
         maxfun=5000,
         disp=False,
     )

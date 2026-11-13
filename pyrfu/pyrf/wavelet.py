@@ -21,7 +21,7 @@ from pyrfu.pyrf.calc_fs import calc_fs
 logger = logging.getLogger(__name__)
 
 
-@numba.jit(nopython=True, fastmath=True)  # type: ignore
+@numba.jit(nopython=True, fastmath=True)
 def _ww(
     s_ww: NDArray[np.complex128],
     scales_mat: NDArray[np.float64],
@@ -35,7 +35,7 @@ def _ww(
     return w_w
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True)  # type: ignore
+@numba.jit(nopython=True, parallel=True, fastmath=True)
 def _power_r(
     power: NDArray[np.complex128], new_freq_mat: NDArray[np.float64]
 ) -> NDArray[np.float64]:
@@ -45,7 +45,7 @@ def _power_r(
     return power2
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True)  # type: ignore
+@numba.jit(nopython=True, parallel=True, fastmath=True)
 def _power_c(
     power: NDArray[np.complex128], new_freq_mat: NDArray[np.float64]
 ) -> NDArray[np.complex128]:

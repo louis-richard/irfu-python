@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from typing import Literal
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -15,9 +13,7 @@ from ..pyrf.resample import resample
 from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 
-def _transformation_matrix(
-    spin_axis: np.ndarray, direction: Literal[-1, 1]
-) -> np.ndarray:
+def _transformation_matrix(spin_axis: np.ndarray, direction: int) -> np.ndarray:
     r"""Return transformation matrix from DSL to GSE.
 
     Parameters
