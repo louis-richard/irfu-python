@@ -521,7 +521,7 @@ def psd_moments(vdf, sc_pot, **kwargs):
         He++ skymaps).
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential. The ions gain q V and the
-        electrons lose e V.
+        electrons lose e V (the energies at infinity, see Notes).
 
     Returns
     -------
@@ -639,6 +639,23 @@ def psd_moments(vdf, sc_pot, **kwargs):
     for spacecraft photoelectrons, unlike the FPI moments: use
     ``inner_electron="on"`` or an energy range above the spacecraft potential
     to compare the electron moments with them.
+
+    The energies are corrected for the spacecraft potential V as the energies
+    at infinity, E + q V (energy conservation): the electrons lose e V and
+    the ions of charge q gain q V. For a species attracted by the spacecraft
+    (the electrons for V > 0), the channels below its potential energy hold
+    photo- and secondary electrons of the spacecraft and are left out; a
+    channel whose centre energy is below the cut is left out whole, as in
+    irfu-matlab, although its upper part is above it. For a species repelled
+    by the spacecraft (the ions for V > 0), all the channels are ambient
+    particles, but those below q V never reach the instrument: the moments
+    are those of the ambient particles above q V, nothing being assumed
+    below. The measured phase-space density is used at the corrected speeds,
+    as in irfu-matlab: exact non-relativistically, whereas relativistically
+    the invariant along the trajectories is the density in momentum space,
+    so that the density in velocity space at infinity is the measured one
+    times (gamma_inf / gamma)^5, about 1 + 5 q V / (m c^2) (-4e-4 for
+    electrons at 38 V, negligible for ions).
 
     The FPI ion moments start at the recommended energy index of the
     partial-moments files (``partidxi_fpi_brst_l2``, constant within each
