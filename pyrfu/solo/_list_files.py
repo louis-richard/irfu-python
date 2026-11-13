@@ -10,7 +10,8 @@ from typing import Optional
 import numpy as np
 
 # Local imports
-from .._user_config import local_data_dir
+from pyrfu._core.user_config import local_data_dir
+
 from .db_init import config_path
 
 

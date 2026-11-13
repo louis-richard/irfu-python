@@ -14,8 +14,7 @@ from unittest import mock
 
 # Local imports
 import pyrfu
-
-from .. import _user_config
+from pyrfu._core import user_config as _user_config
 
 
 class PackageLoggerTestCase(unittest.TestCase):

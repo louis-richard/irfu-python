@@ -8,9 +8,10 @@ from matplotlib.dates import num2date
 from matplotlib.transforms import ScaledTranslation, blended_transform_factory
 from xarray import DataArray
 
+from pyrfu._core.time import _seconds
+
 # Local imports
 from ..constants import R_E
-from ..pyrf._time import _seconds
 
 
 def add_position(

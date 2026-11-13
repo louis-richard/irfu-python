@@ -9,7 +9,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._epd import _spin_reduce
+from pyrfu.mms._internal.epd import _spin_reduce
+
 from .feeps_spin_avg import _feeps_complete_spins
 
 

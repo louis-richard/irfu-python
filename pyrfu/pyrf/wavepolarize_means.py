@@ -9,8 +9,9 @@ import numpy as np
 from scipy import ndimage
 
 # Local imports
-from ._time import _timedelta
-from ._units import _power, _ratio, _units
+from pyrfu._core.time import _timedelta
+from pyrfu._core.units import _power, _ratio, _units
+
 from .resample import resample
 from .ts_spectr import ts_spectr
 

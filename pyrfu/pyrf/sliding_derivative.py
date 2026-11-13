@@ -7,8 +7,8 @@
 import numpy as np
 
 # Local imports
-from ._time import _seconds
-from ._units import _attrs, _ratio, _units
+from pyrfu._core.time import _seconds
+from pyrfu._core.units import _attrs, _ratio, _units
 
 
 def sliding_derivative(

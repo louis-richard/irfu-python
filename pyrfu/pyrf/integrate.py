@@ -10,8 +10,8 @@ import xarray as xr
 from xarray import DataArray
 
 # Local imports
-from ._time import _seconds
-from ._units import _product, _units
+from pyrfu._core.time import _seconds
+from pyrfu._core.units import _product, _units
 
 
 def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:

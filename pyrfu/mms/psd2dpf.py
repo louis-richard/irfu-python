@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms._internal.psd_units import _data_and_units
 from pyrfu.mms.vdf_convert import _PSD, vdf_convert
 
 

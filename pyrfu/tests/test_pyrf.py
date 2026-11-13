@@ -30,10 +30,11 @@ from matplotlib import dates
 from matplotlib.backend_bases import MouseEvent
 from scipy import constants, interpolate, signal
 
+from pyrfu._core.units import _attrs, _check_units, _power, _product, _ratio, _units
+
 # Local imports
 from .. import pyrf
 from ..constants import R_E
-from ..pyrf._units import _attrs, _check_units, _power, _product, _ratio, _units
 from ..pyrf.c_4_v_xcorr import _BandLimited as _C4VXcorrBandLimited
 from ..pyrf.c_4_v_xcorr import _corr_h as _c_4_v_xcorr_corr_h
 from ..pyrf.c_4_v_xcorr import _get_disc_vel as _c_4_v_xcorr_get_disc_vel
@@ -7891,7 +7892,7 @@ class TimeHelpersTestCase(unittest.TestCase):
     # The time conversions of pyrf/_time.py
     @property
     def module(self):
-        return sys.modules["pyrfu.pyrf._time"]
+        return sys.modules["pyrfu._core.time"]
 
     def test_seconds_exact(self):
         # The exact steps in ns divided by 1e9 (correctly rounded): * 1e-9

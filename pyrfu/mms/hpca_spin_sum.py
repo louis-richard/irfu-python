@@ -6,8 +6,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
-from ._epd import _spin_reduce
+from pyrfu._core.time import _ns
+from pyrfu.mms._internal.epd import _spin_reduce
 
 # Start azimuths of HPCA per spin (half spin of the spacecraft), as hpca_pad
 _N_AZ = 16

@@ -10,7 +10,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from pyrfu.mms._vdf_bins import _bin_pitch_angles
+from pyrfu.mms._internal.vdf_bins import _bin_pitch_angles
 from pyrfu.pyrf.normalize import normalize
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip

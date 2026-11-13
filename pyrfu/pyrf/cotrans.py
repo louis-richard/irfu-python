@@ -11,7 +11,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._time import _unix
+from pyrfu._core.time import _unix
+
 from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_vec_xyz import ts_vec_xyz
 from .unix2datetime64 import unix2datetime64

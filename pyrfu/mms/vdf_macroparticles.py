@@ -6,8 +6,9 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._vdf_bins import _is_skymap, _source_bins
-from ._vdf_mc import _sample
+from pyrfu.mms._internal.vdf_bins import _is_skymap, _source_bins
+from pyrfu.mms._internal.vdf_mc import _sample
+
 from .vdf_d3v import vdf_d3v
 from .vdf_partial_density import vdf_partial_density
 from .vdf_velocity import vdf_velocity

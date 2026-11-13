@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from xarray import Dataset
 
 # Local imports
-from ..pyrf._time import _ns
+from pyrfu._core.time import _ns
 
 
 def psd_rebin(

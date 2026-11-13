@@ -30,7 +30,7 @@ def _use_temp_config(test_case):
     config_dir = tempfile.TemporaryDirectory()
     test_case.addCleanup(config_dir.cleanup)
     patch = mock.patch(
-        "pyrfu._user_config.platformdirs.user_config_dir",
+        "pyrfu._core.user_config.platformdirs.user_config_dir",
         return_value=config_dir.name,
     )
     patch.start()

@@ -8,7 +8,7 @@ import numpy as np
 from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _ratio, _units
+from pyrfu._core.units import _attrs, _ratio, _units
 from pyrfu.pyrf.cross import cross
 from pyrfu.pyrf.dot import dot
 from pyrfu.pyrf.resample import resample

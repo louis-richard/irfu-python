@@ -8,7 +8,7 @@ from typing import Union
 from xarray import DataArray, Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms._internal.psd_units import _data_and_units
 from pyrfu.mms.vdf_convert import _DEF, vdf_convert
 
 

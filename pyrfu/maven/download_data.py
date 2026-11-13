@@ -12,7 +12,8 @@ import numpy as np
 import requests
 
 # Local imports
-from .._user_config import local_data_dir
+from pyrfu._core.user_config import local_data_dir
+
 from ..mms.download_data import _download_file
 from ..mms.list_files_sdc import SDC_TIMEOUT
 from .db_init import config_path

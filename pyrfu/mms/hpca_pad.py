@@ -10,12 +10,13 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
+from pyrfu._core.time import _ns
+from pyrfu.mms._internal.epd import _half_spins, _hpca_elevations
+
 from ..pyrf.nanavg_4sc import _without_gaps
 from ..pyrf.normalize import normalize
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
-from ._hpca import _half_spins, _hpca_elevations
 
 logger = logging.getLogger(__name__)
 

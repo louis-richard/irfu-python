@@ -10,7 +10,8 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from ..pyrf._units import _check_units
+from pyrfu._core.units import _check_units
+
 from ..pyrf.calc_dt import calc_dt
 from ..pyrf.convert_fac import convert_fac
 from ..pyrf.extend_tint import extend_tint

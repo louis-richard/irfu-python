@@ -8,10 +8,13 @@ import warnings
 import numpy as np
 import xarray as xr
 
-# Local imports
-from ..pyrf.ts_spectr import ts_spectr
-from ._psd_units import _factor, _is_relativistic, _mass_ratio, _relativistic_factor
-from ._vdf_bins import (
+from pyrfu.mms._internal.psd_units import (
+    _factor,
+    _is_relativistic,
+    _mass_ratio,
+    _relativistic_factor,
+)
+from pyrfu.mms._internal.vdf_bins import (
     _band_solid_angles,
     _mass,
     _phi_edges,
@@ -19,6 +22,9 @@ from ._vdf_bins import (
     _speed_edges,
     _theta_edges,
 )
+
+# Local imports
+from ..pyrf.ts_spectr import ts_spectr
 from .vdf_convert import _PSD
 from .vdf_shift import _frame_velocity
 

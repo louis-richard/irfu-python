@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._time import _seconds
+from pyrfu._core.time import _seconds
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 NDArrayFloats = NDArray[Union[np.float32, np.float64]]

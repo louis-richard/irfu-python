@@ -15,7 +15,7 @@ from scipy import fft
 from xarray import DataArray, Dataset
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _power, _ratio, _units
+from pyrfu._core.units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 
 logger = logging.getLogger(__name__)

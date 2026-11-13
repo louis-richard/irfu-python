@@ -20,7 +20,7 @@ from requests.sessions import Session
 from xarray import DataArray, Dataset
 
 # Local imports
-from pyrfu.mms import _cache
+from pyrfu.mms._internal import cache as _cache
 from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_dist import get_dist
 from pyrfu.mms.get_ts import get_ts
@@ -85,7 +85,7 @@ def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
 
 def _remote_files(source: str, tint: list, mms_id: str, var: Mapping) -> list:
     r"""Files of `var` in `tint` on the SDC or AWS, as items of a listing of the
-    cache (see :class:`pyrfu.mms._cache.RemoteFile`)."""
+    cache (see :class:`pyrfu.mms._internal.cache.RemoteFile`)."""
     if source == "aws":
         return [
             {

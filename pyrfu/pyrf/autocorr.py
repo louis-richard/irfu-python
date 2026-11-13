@@ -11,7 +11,7 @@ from scipy import signal
 from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _power, _units
+from pyrfu._core.units import _attrs, _power, _units
 from pyrfu.pyrf.calc_dt import calc_dt
 
 

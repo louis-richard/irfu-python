@@ -11,8 +11,12 @@ import xarray as xr
 from xarray import Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import _is_relativistic, _output, _relativistic_factor
-from pyrfu.mms._vdf_bins import (
+from pyrfu.mms._internal.psd_units import (
+    _is_relativistic,
+    _output,
+    _relativistic_factor,
+)
+from pyrfu.mms._internal.vdf_bins import (
     _charge,
     _charge_sign,
     _energy_edges,

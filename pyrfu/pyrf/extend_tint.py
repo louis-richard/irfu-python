@@ -4,7 +4,8 @@
 # 3rd party imports
 import numpy as np
 
-from ._time import _timedelta
+from pyrfu._core.time import _timedelta
+
 from .datetime642iso8601 import datetime642iso8601
 
 # Local imports

@@ -10,8 +10,8 @@ import tqdm
 import xarray as xr
 
 # Local imports
-from pyrfu.mms._psd_units import _factor, _is_relativistic, _mass_ratio
-from pyrfu.mms._vdf_bins import _charge, _mass, _speed
+from pyrfu.mms._internal.psd_units import _factor, _is_relativistic, _mass_ratio
+from pyrfu.mms._internal.vdf_bins import _charge, _mass, _speed
 from pyrfu.mms.vdf_convert import vdf_convert
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist

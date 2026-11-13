@@ -5,7 +5,8 @@
 import numpy as np
 
 # Local imports
-from ._vdf_bins import _charge_sign
+from pyrfu.mms._internal.vdf_bins import _charge_sign
+
 from .vdf_convert import _DEF, vdf_convert
 
 

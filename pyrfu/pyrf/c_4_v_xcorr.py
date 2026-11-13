@@ -11,7 +11,8 @@ from scipy import optimize, signal
 from xarray import DataArray
 
 # Local imports
-from ._time import _seconds
+from pyrfu._core.time import _seconds
+
 from .iso86012datetime64 import iso86012datetime64
 
 # Elements of the arrays evaluated at once (memory bound for long windows)

@@ -6,7 +6,7 @@ import numpy as np
 from scipy import ndimage
 
 # Local imports
-from ._time import _seconds
+from pyrfu._core.time import _seconds
 
 WEIGHTS = {
     5: np.array([0.1, 0.25, 0.3, 0.25, 0.1]),

@@ -6,11 +6,12 @@ import numpy as np
 import xarray as xr
 from scipy import constants
 
+from pyrfu.mms._internal.epd import _check_flux
+from pyrfu.mms._internal.psd_units import _MASS_RATIOS
+
 # Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
-from ._eis_units import _check_flux
-from ._psd_units import _MASS_RATIOS
 
 
 def eis_moments(

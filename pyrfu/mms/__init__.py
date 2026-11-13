@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from ._cache import cache_info, clear_cache
+from pyrfu.mms._internal.cache import cache_info, clear_cache
+
 from .calculate_epsilon import calculate_epsilon
 from .copy_files import copy_files
 from .copy_files_ancillary import copy_files_ancillary

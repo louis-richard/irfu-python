@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._vdf_bins import (
+from pyrfu.mms._internal.vdf_bins import (
     _kinetic_energy,
     _mass,
     _sc_pot,

@@ -5,10 +5,11 @@
 import numpy as np
 from scipy import constants, special
 
+from pyrfu.mms._internal.psd_units import _attrs, _is_relativistic
+from pyrfu.mms._internal.vdf_bins import _charge, _mass, _speed
+
 # Local imports
 from ..pyrf.resample import resample
-from ._psd_units import _attrs, _is_relativistic
-from ._vdf_bins import _charge, _mass, _speed
 from .vdf_convert import _in_convention
 
 

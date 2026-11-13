@@ -5,7 +5,7 @@
 import numpy as np
 
 # Local imports
-from ._hpca import _half_spins, _hpca_elevations
+from pyrfu.mms._internal.epd import _half_spins, _hpca_elevations
 
 mass_and_charge = {
     "hydrogen+": [1.04535e-2, 1],

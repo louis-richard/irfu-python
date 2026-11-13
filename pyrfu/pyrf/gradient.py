@@ -9,8 +9,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._time import _seconds
-from ._units import _ratio, _units
+from pyrfu._core.time import _seconds
+from pyrfu._core.units import _ratio, _units
 
 
 def gradient(inp, time_step: Optional[float] = None):

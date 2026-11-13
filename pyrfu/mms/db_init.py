@@ -17,7 +17,7 @@ from keyring.backends.chainer import ChainerBackend
 from keyrings.alt.file import PlaintextKeyring
 
 # Local imports
-from .._user_config import read_config, user_config_path, write_config
+from pyrfu._core.user_config import read_config, user_config_path, write_config
 
 logger = logging.getLogger(__name__)
 

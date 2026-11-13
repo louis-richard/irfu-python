@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from ._psd_units import (
+from pyrfu.mms._internal.psd_units import (
     _MASS_FACTOR,
     _data_and_units,
     _energy,

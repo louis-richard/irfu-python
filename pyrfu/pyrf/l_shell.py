@@ -4,9 +4,10 @@
 # 3rd party imports
 import numpy as np
 
+from pyrfu._core.units import _check_units
+
 # Local imports
 from ..constants import R_E
-from ._units import _check_units
 from .cotrans import cotrans
 from .ts_scalar import ts_scalar
 

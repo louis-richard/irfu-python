@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._units import _attrs, _power, _units
+from pyrfu._core.units import _attrs, _power, _units
 
 
 def struct_func(inp, scales, order):

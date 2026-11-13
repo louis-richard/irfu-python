@@ -9,15 +9,16 @@ import numpy as np
 import xarray as xr
 from scipy import constants
 
-# Local imports
-from ..pyrf.ts_scalar import ts_scalar
-from ._vdf_bins import (
+from pyrfu.mms._internal.vdf_bins import (
     _is_skymap,
     _mass,
     _phi_edges,
     _speed,
     _speed_edges,
 )
+
+# Local imports
+from ..pyrf.ts_scalar import ts_scalar
 from .psd_moments import psd_moments
 from .vdf_convert import _relativistic_psd, vdf_convert
 

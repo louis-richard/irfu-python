@@ -5,7 +5,7 @@
 import numpy as np
 
 # Local imports
-from ..pyrf._time import _seconds
+from pyrfu._core.time import _seconds
 
 
 def dft_time_shift(inp, tau, f_s: float = None):

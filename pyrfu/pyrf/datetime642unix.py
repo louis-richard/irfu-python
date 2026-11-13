@@ -9,7 +9,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 # Local imports
-from ._time import _unix
+from pyrfu._core.time import _unix
 
 
 def datetime642unix(

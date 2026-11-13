@@ -10,7 +10,7 @@ import xarray as xr
 from xarray import DataArray
 
 # Local imports
-from ._time_attrs import _is_time_attr
+from pyrfu._core.time_attrs import _is_time_attr
 
 
 def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:

@@ -10,7 +10,7 @@ from scipy import constants
 from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _check_units
+from pyrfu._core.units import _check_units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_grad import _derivative, _to_ts
 from pyrfu.pyrf.c_4_k import c_4_k

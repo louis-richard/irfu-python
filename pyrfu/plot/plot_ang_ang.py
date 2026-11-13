@@ -12,7 +12,8 @@ import xarray as xr
 
 # Local imports
 # (from the modules, as pyrfu.plot is imported while pyrfu.pyrf is loading)
-from ..pyrf._time import _ns
+from pyrfu._core.time import _ns
+
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.time_clip import time_clip
 from .plot_spectr import plot_spectr

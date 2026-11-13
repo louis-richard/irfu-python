@@ -9,7 +9,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._time_attrs import _is_time_attr
+from pyrfu._core.time_attrs import _is_time_attr
+
 from .iso86012datetime64 import iso86012datetime64
 
 

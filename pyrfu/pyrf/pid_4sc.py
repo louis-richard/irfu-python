@@ -5,7 +5,7 @@
 import numpy as np
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _product, _ratio, _units
+from pyrfu._core.units import _attrs, _product, _ratio, _units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_grad import c_4_grad
 from pyrfu.pyrf.c_4_k import c_4_k

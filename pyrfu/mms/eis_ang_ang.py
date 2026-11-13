@@ -9,7 +9,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._eis_attrs import _common_attrs
+from pyrfu.mms._internal.epd import _common_attrs
+
 from .dsl2gse import dsl2gse
 from .eis_spin_avg import _spin_segments
 

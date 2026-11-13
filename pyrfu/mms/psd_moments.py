@@ -10,7 +10,7 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from pyrfu.mms._vdf_bins import (
+from pyrfu.mms._internal.vdf_bins import (
     _bin_pitch_angles,
     _charge,
     _charge_sign,

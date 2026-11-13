@@ -5,14 +5,14 @@
 import numpy as np
 from scipy import constants
 
+# Local imports
+from pyrfu.mms._internal.psd_units import _attrs, _is_relativistic
+from pyrfu.mms._internal.vdf_bins import _charge, _mass, _speed
+
 from ..pyrf.dec_par_perp import dec_par_perp
 from ..pyrf.norm import norm
 from ..pyrf.resample import resample
 from ..pyrf.trace import trace
-
-# Local imports
-from ._psd_units import _attrs, _is_relativistic
-from ._vdf_bins import _charge, _mass, _speed
 from .rotate_tensor import rotate_tensor
 from .vdf_convert import _in_convention
 

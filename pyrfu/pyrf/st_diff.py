@@ -5,7 +5,8 @@
 import numpy as np
 
 # Local imports
-from ._units import _ratio, _units
+from pyrfu._core.units import _ratio, _units
+
 from .avg_4sc import avg_4sc
 from .c_4_grad import c_4_grad
 from .gradient import gradient

@@ -6,7 +6,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._units import _attrs
+from pyrfu._core.units import _attrs
+
 from .ts_vec_xyz import ts_vec_xyz
 
 

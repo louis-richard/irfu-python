@@ -9,8 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._eis_attrs import _equal
-from ._eis_units import _check_flux
+from pyrfu.mms._internal.epd import _check_flux, _equal
 
 
 def _channels(energy_phxtof, energy_extof):

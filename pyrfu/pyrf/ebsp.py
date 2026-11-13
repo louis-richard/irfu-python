@@ -13,8 +13,8 @@ import xarray as xr
 from scipy import fft
 
 # Local imports
-from pyrfu.pyrf._time import _unix
-from pyrfu.pyrf._units import _check_units, _power, _ratio, _units
+from pyrfu._core.time import _unix
+from pyrfu._core.units import _check_units, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.cart2sph import cart2sph
 from pyrfu.pyrf.convert_fac import convert_fac

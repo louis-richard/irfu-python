@@ -11,8 +11,9 @@ import xarray as xr
 from xarray import DataArray
 
 # Local imports
-from ._time import _ns
-from ._units import _check_same_units
+from pyrfu._core.time import _ns
+from pyrfu._core.units import _check_same_units
+
 from .calc_fs import calc_fs
 from .resample import resample
 

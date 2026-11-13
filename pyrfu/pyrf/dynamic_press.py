@@ -11,7 +11,7 @@ from scipy import constants
 from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _check_units
+from pyrfu._core.units import _check_units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 

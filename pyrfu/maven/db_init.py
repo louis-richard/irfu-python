@@ -5,7 +5,7 @@
 import os
 
 # Local imports
-from .._user_config import set_local_data_dir, user_config_path
+from pyrfu._core.user_config import set_local_data_dir, user_config_path
 
 # Default configuration distributed with the package
 _PACKAGE_CFG_PATH = os.path.join(

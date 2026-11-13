@@ -9,7 +9,8 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
+from pyrfu._core.time import _ns
+
 from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
 from .feeps_omni import _eyes_on_omni_energies

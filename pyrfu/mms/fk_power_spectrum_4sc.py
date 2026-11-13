@@ -11,7 +11,7 @@ import xarray as xr
 from scipy import linalg
 
 # Local imports
-from pyrfu.pyrf._units import _check_units
+from pyrfu._core.units import _check_units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip

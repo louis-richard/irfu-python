@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._eis_units import _check_flux
+from pyrfu.mms._internal.epd import _check_flux
 
 
 def _phxtof_calibration(energy, alpha, beta, gamma):

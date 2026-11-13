@@ -12,7 +12,8 @@ import xarray as xr
 from xarray import DataArray
 
 # Local imports
-from ..pyrf._units import _check_same_units
+from pyrfu._core.units import _check_same_units
+
 from ..pyrf.calc_fs import calc_fs
 from ..pyrf.nanavg_4sc import _valid_count, _without_gaps
 from ..pyrf.resample import resample

@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _power, _ratio, _units
+from pyrfu._core.units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.avg_4sc import avg_4sc
 from pyrfu.pyrf.c_4_k import c_4_k
 from pyrfu.pyrf.normalize import normalize

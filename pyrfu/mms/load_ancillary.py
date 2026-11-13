@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 
 # Local imports
-from pyrfu.mms import _cache
+from pyrfu.mms._internal import cache as _cache
 from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_data import _resolve_source
 from pyrfu.mms.list_files_ancillary import _sc_name, list_files_ancillary

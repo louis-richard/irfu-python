@@ -9,8 +9,8 @@ import numpy as np
 from xarray import DataArray, Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import _is_relativistic, _relativistic_factor
-from pyrfu.mms._vdf_bins import _charge, _mass, _speed
+from pyrfu.mms._internal.psd_units import _is_relativistic, _relativistic_factor
+from pyrfu.mms._internal.vdf_bins import _charge, _mass, _speed
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 

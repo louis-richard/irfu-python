@@ -14,7 +14,8 @@ from pycdfpp import DataType, load, to_datetime64
 from xarray import DataArray
 
 # Local imports
-from ..pyrf._time import _timedelta
+from pyrfu._core.time import _timedelta
+
 from ..pyrf.time_clip import _time_interval, time_clip
 from .get_variable import _pycdfpp_attributes_to_dict
 

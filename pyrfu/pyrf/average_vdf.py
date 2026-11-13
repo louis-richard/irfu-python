@@ -7,7 +7,7 @@ import numpy as np
 from xarray import Dataset
 
 # Local imports
-from pyrfu.pyrf._time import _seconds, _timedelta
+from pyrfu._core.time import _seconds, _timedelta
 from pyrfu.pyrf.ts_skymap import ts_skymap
 
 

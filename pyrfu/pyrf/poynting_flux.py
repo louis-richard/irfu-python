@@ -5,7 +5,8 @@
 import numpy as np
 
 # Local imports
-from ._units import _check_units
+from pyrfu._core.units import _check_units
+
 from .calc_fs import calc_fs
 from .cross import cross
 from .dot import dot

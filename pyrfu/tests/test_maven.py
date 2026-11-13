@@ -24,7 +24,7 @@ class DbInitTestCase(unittest.TestCase):
         self.addCleanup(config_dir.cleanup)
         self.config_dir = config_dir.name
         patch = mock.patch(
-            "pyrfu._user_config.platformdirs.user_config_dir",
+            "pyrfu._core.user_config.platformdirs.user_config_dir",
             return_value=self.config_dir,
         )
         patch.start()

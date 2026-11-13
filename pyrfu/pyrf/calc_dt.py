@@ -9,7 +9,7 @@ import numpy as np
 from xarray import DataArray, Dataset
 
 # Local imports
-from ._time import _ns
+from pyrfu._core.time import _ns
 
 
 def calc_dt(inp: Union[Dataset, DataArray]) -> float:

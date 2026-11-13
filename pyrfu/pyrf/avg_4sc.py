@@ -10,7 +10,7 @@ import xarray as xr
 from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _check_same_units
+from pyrfu._core.units import _check_same_units
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.resample import resample
 

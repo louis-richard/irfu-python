@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _product, _ratio, _units
+from pyrfu._core.units import _attrs, _product, _ratio, _units
 from pyrfu.pyrf.resample import resample
 
 logger = logging.getLogger(__name__)

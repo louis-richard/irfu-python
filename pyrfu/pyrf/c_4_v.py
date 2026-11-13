@@ -6,7 +6,7 @@ import numpy as np
 from scipy import constants, interpolate
 
 # Local imports
-from ._time import _seconds, _unix
+from pyrfu._core.time import _seconds, _unix
 
 
 def _to_seconds(time):

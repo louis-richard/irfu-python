@@ -916,7 +916,7 @@ class MmsConfigPathTestCase(unittest.TestCase):
         for patch in [
             mock.patch.object(self.module, "_PACKAGE_CFG_PATH", self.package),
             mock.patch(
-                "pyrfu._user_config.platformdirs.user_config_dir",
+                "pyrfu._core.user_config.platformdirs.user_config_dir",
                 return_value=self.user_dir,
             ),
         ]:
@@ -938,7 +938,7 @@ class MmsConfigPathTestCase(unittest.TestCase):
 
     def test_config_path_not_writable(self):
         # The package configuration is used if the user directory is not writable
-        with mock.patch("pyrfu._user_config.shutil.copyfile", side_effect=OSError):
+        with mock.patch("pyrfu._core.user_config.shutil.copyfile", side_effect=OSError):
             self.assertEqual(self.module._user_config_path(), self.package)
 
     def test_db_init_write_at_once(self):
@@ -3736,7 +3736,7 @@ class GetPitchAngleDistTestCase(unittest.TestCase):
                     np.testing.assert_array_equal(result.attrs[key], vdf.attrs[key])
 
                 # The energy edges of the widths, as without tint
-                edges = sys.modules["pyrfu.mms._vdf_bins"]._energy_edges
+                edges = sys.modules["pyrfu.mms._internal.vdf_bins"]._energy_edges
                 for edge, edge_full in zip(edges(result), edges(full)):
                     np.testing.assert_array_equal(edge, edge_full[3:11])
 
@@ -3972,8 +3972,8 @@ class HpcaPadTestCase(unittest.TestCase):
 
     def test_hpca_pad_elevation_from_file(self):
         # mms?_hpca_centroid_elevation_angle read from the dataset of vdf (by
-        # _hpca_elevations, in mms._hpca)
-        module = importlib.import_module("pyrfu.mms._hpca")
+        # _hpca_elevations, in mms._internal.epd)
+        module = importlib.import_module("pyrfu.mms._internal.epd")
         vdf, saz, aze, b_xyz = self._inputs(np.full((2, self.N_AZ), 180.0))
         vdf.attrs["GLOBAL"] = {"Logical_source": "mms1_hpca_brst_l2_ion"}
         elevation = xr.DataArray(np.full((1, self.N_PO), 90.0), dims=["x", "y"])
@@ -7860,7 +7860,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
 
     def test_file_label(self):
         # The file name of every kind of listing entry, for the messages
-        cache = importlib.import_module("pyrfu.mms._cache")
+        cache = importlib.import_module("pyrfu.mms._internal.cache")
         name = "mms1_fgm_srvy_l2_20190914_v5.200.0.cdf"
         for file_name in [
             mock.Mock(key=f"spdf/cdaweb/data/mms/mms1/fgm/srvy/l2/2019/09/{name}"),
@@ -11819,7 +11819,7 @@ class VdfMacroparticlesTestCase(unittest.TestCase):
         # The velocities of the bins: speed and look direction in the bin
         v_xyz = np.stack([result[c].data for c in ["vx", "vy", "vz"]], axis=1)
         speed = np.linalg.norm(v_xyz, axis=1) * 1e3
-        bins = sys.modules["pyrfu.mms._vdf_bins"]._source_bins(vdf)
+        bins = sys.modules["pyrfu.mms._internal.vdf_bins"]._source_bins(vdf)
         i_t = np.searchsorted(vdf.time.data, result.time.data)
         i_e, i_q = result.idx0.data, result.idx2.data
         self.assertTrue(np.all(speed >= bins["v_lower"][i_t, i_e] * (1 - 1e-12)))
@@ -13327,7 +13327,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
         # Listed and read once from the SDC, then from the cache, in the layout
         # of the local ancillary files
         module = importlib.import_module("pyrfu.mms.load_ancillary")
-        cache = importlib.import_module("pyrfu.mms._cache")
+        cache = importlib.import_module("pyrfu.mms._internal.cache")
         settings = {"enabled": True, "size": 1e9, "max_age": 4.0}
         settings["dir"] = os.path.join(self.root, "cache")
         files, contents = self._defatt_files()
@@ -13902,10 +13902,10 @@ class FftBandpassTestCase(unittest.TestCase):
 
 
 class SpinReduceTestCase(unittest.TestCase):
-    # The per-spin mean or sum of the EPD routines (pyrfu/mms/_epd.py)
+    # The per-spin mean or sum of the EPD routines (pyrfu/mms/_internal/epd.py)
     @property
     def module(self):
-        return sys.modules["pyrfu.mms._epd"]
+        return sys.modules["pyrfu.mms._internal.epd"]
 
     def test_spin_reduce(self):
         data = np.arange(12.0).reshape(6, 2)

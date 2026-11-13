@@ -10,8 +10,8 @@ import xarray as xr
 from scipy import interpolate
 
 # Local imports
-from ._time import _ns, _seconds
-from ._time_attrs import _is_time_attr
+from pyrfu._core.time import _ns, _seconds
+from pyrfu._core.time_attrs import _is_time_attr
 
 # Interpolation methods: the kinds of scipy.interpolate.interp1d
 _METHODS = (

@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 from scipy import interpolate
 
 # Local imports
-from ..pyrf._time import _datetime64, _unix
+from pyrfu._core.time import _datetime64, _unix
 
 
 @lru_cache(maxsize=1)

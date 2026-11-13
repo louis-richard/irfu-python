@@ -9,14 +9,15 @@ import numpy as np
 from matplotlib import colors
 
 # Local imports
-from ..mms._vdf_bins import (
+from pyrfu.mms._internal.vdf_bins import (
     _bins_d3v,
     _pitch_angles,
     _polar_edges,
     _sc_pot,
     _speed_edges,
 )
-from ..mms._vdf_mc import _sample
+from pyrfu.mms._internal.vdf_mc import _sample
+
 from .colorbar import colorbar as _add_colorbar
 from .plot_ang_ang import _units_label
 

@@ -9,9 +9,10 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
-from ..pyrf._units import _check_same_units
-from ._eis_units import _check_same_attrs
+from pyrfu._core.time import _ns
+from pyrfu._core.units import _check_same_units
+from pyrfu.mms._internal.epd import _check_same_attrs
+
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
 

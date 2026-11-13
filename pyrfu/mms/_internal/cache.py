@@ -27,7 +27,7 @@ from typing import Callable, Optional
 import platformdirs
 
 # Local imports
-from pyrfu._user_config import atomic_write as _atomic_write
+from pyrfu._core.user_config import atomic_write as _atomic_write
 from pyrfu.mms.db_init import _read_config
 
 logger = logging.getLogger(__name__)

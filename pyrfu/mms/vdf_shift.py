@@ -5,12 +5,19 @@
 import numpy as np
 import xarray as xr
 
+from pyrfu.mms._internal.psd_units import _attrs, _is_relativistic
+from pyrfu.mms._internal.vdf_bins import (
+    _bins_d3v,
+    _is_skymap,
+    _mass,
+    _source_bins,
+    _speed,
+)
+from pyrfu.mms._internal.vdf_mc import _sample, _speed_to_energy
+
 # Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_skymap import ts_skymap
-from ._psd_units import _attrs, _is_relativistic
-from ._vdf_bins import _bins_d3v, _is_skymap, _mass, _source_bins, _speed
-from ._vdf_mc import _sample, _speed_to_energy
 from .vdf_convert import _in_convention, _relativistic_psd, vdf_convert
 from .vdf_velocity import _rotation_matrices
 
