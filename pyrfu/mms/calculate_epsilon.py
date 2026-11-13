@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -74,7 +73,7 @@ def calculate_epsilon(
     model_vdf: Dataset,
     n_s: DataArray,
     sc_pot: DataArray,
-    en_channels: Optional[list[int]] = None,
+    en_channels: list[int] | None = None,
 ) -> DataArray:
     r"""Calculate epsilon parameter using model distribution.
 

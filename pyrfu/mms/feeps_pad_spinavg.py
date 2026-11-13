@@ -14,7 +14,7 @@ from pyrfu.mms._internal.epd import _spin_reduce
 from .feeps_spin_avg import _feeps_complete_spins
 
 
-def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
+def feeps_pad_spinavg(pad, spin_sectors, bin_size: float | None = None):
     r"""Spin-average the FEEPS pitch angle distributions.
 
     Parameters

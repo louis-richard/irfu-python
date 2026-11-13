@@ -5,7 +5,7 @@
 import os
 import warnings
 from functools import lru_cache
-from typing import Any, Optional, Tuple
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -18,7 +18,7 @@ from pyrfu._core.time import _datetime64, _unix
 
 
 @lru_cache(maxsize=1)
-def _igrf_coefficients() -> Tuple[NDArray[np.float64], ...]:
+def _igrf_coefficients() -> tuple[NDArray[np.float64], ...]:
     # IGRF-14 coefficients, igrf14coeffs.txt of the IAGA with the comments
     # removed and the columns separated by commas. Read once, read-only.
     path = os.sep.join(
@@ -44,8 +44,8 @@ def _igrf_coefficients() -> Tuple[NDArray[np.float64], ...]:
 
 
 def igrf(
-    time: NDArray[Any], flag: Optional[str] = None
-) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+    time: NDArray[Any], flag: str | None = None
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     r"""Returns magnetic dipole longitude and latitude of the IGRF-14 model [1]_
 
     Parameters

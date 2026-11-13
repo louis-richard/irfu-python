@@ -36,7 +36,7 @@ def _particles_per_bin(weights, n_tot, n_bin, skip_zero, division):
 
 def vdf_macroparticles(
     vdf,
-    n_tot: int = None,
+    n_tot: int | None = None,
     n_bin: int = 1,
     skip_zero: bool = True,
     sc_pot=None,

@@ -63,7 +63,7 @@ def _add_field_lines(ax, tint):
 def plot_magnetosphere(
     ax,
     tint,
-    colors: list = None,
+    colors: list | None = None,
     field_lines: bool = True,
 ):
     r"""Plot magnetopause, bow shock and earth.

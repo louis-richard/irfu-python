@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Optional, Union
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -13,8 +13,8 @@ from xarray import DataArray
 
 def ts_scalar(
     time: NDArray[np.datetime64],
-    data: NDArray[Union[np.float32, np.float64]],
-    attrs: Optional[dict[str, Any]] = None,
+    data: NDArray[np.float32 | np.float64],
+    attrs: dict[str, Any] | None = None,
 ) -> DataArray:
     r"""Create a time series containing a 0th order tensor
 

@@ -192,9 +192,9 @@ def feeps_skymap(
     inp_dataset,
     b_bcs: xr.DataArray = None,
     b_dmpa: xr.DataArray = None,
-    n_phi: int = None,
+    n_phi: int | None = None,
     to_psd: bool = True,
-    fill_empty: str = None,
+    fill_empty: str | None = None,
 ):
     r"""Skymaps of the FEEPS data, one per spin.
 

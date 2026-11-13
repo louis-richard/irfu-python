@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -14,7 +13,7 @@ from pyrfu._core.time import _seconds
 from pyrfu._core.units import _product, _units
 
 
-def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
+def integrate(inp: DataArray, time_step: float | None = None) -> DataArray:
     r"""Integrate time series, as irfu-matlab irf_integrate.
 
     Parameters

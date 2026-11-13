@@ -12,7 +12,7 @@ from .datetime642iso8601 import datetime642iso8601
 from .iso86012datetime64 import iso86012datetime64
 
 
-def extend_tint(tint, ext: list = None):
+def extend_tint(tint, ext: list | None = None):
     r"""Extends time interval.
 
     Parameters

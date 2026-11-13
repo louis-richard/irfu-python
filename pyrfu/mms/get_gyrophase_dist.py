@@ -71,10 +71,10 @@ def _reference(r_xyz, vdf_data):
 def get_gyrophase_dist(
     vdf,
     b_xyz,
-    tint: list = None,
+    tint: list | None = None,
     r_xyz=None,
     angles=24,
-    pitch_angle_range: list = None,
+    pitch_angle_range: list | None = None,
 ):
     r"""Computes the gyrophase distributions from particle data.
 

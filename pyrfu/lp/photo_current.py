@@ -3,7 +3,6 @@
 
 # Built-in imports
 import logging
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -41,11 +40,11 @@ j_zeros = {
 
 
 def photo_current(
-    iluminated_area: float = None,
-    u: Union[float, np.ndarray] = None,
-    distance_sun: float = None,
-    flag: Union[str, float] = "cluster",
-) -> Union[float, np.ndarray]:
+    iluminated_area: float | None = None,
+    u: float | np.ndarray = None,
+    distance_sun: float | None = None,
+    flag: str | float = "cluster",
+) -> float | np.ndarray:
     r"""Calculates the photo-current emitted by an arbitrary body.
 
     Parameters

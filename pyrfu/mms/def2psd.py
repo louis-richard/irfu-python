@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 from xarray import DataArray, Dataset
@@ -12,7 +11,7 @@ from pyrfu.mms._internal.psd_units import _data_and_units
 from pyrfu.mms.vdf_convert import _DEF, vdf_convert
 
 
-def def2psd(inp: Union[DataArray, Dataset]) -> Union[DataArray, Dataset]:
+def def2psd(inp: DataArray | Dataset) -> DataArray | Dataset:
     r"""Compute phase space density from differential energy flux.
 
     The phase-space density is given by:

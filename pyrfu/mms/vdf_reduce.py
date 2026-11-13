@@ -224,8 +224,8 @@ def vdf_reduce(
     tint,
     dim,
     x_vec,
-    z_vec: list = None,
-    v_int: list = None,
+    z_vec: list | None = None,
+    v_int: list | None = None,
     n_vpt: int = 100,
 ):
     r"""Interpolate the skymap distribution onto the velocity grid defined

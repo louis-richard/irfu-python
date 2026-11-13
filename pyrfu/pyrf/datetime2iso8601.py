@@ -3,7 +3,6 @@
 
 # Built-in imports
 from datetime import datetime
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -14,8 +13,8 @@ from .datetime642iso8601 import datetime642iso8601
 
 
 def datetime2iso8601(
-    time: Union[list[datetime], NDArray, datetime, np.datetime64],
-) -> Union[list[str], str]:
+    time: list[datetime] | NDArray | datetime | np.datetime64,
+) -> list[str] | str:
     r"""Transforms times to ISO 8601 strings with nanoseconds.
 
     Parameters

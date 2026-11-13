@@ -21,7 +21,7 @@ import posixpath
 import re
 import shutil
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
 # 3rd party imports
 import platformdirs
@@ -47,7 +47,7 @@ class RemoteFile:
 
     source: str
     path: str
-    size: Optional[int] = None
+    size: int | None = None
     url: str = ""
     bucket: str = ""
     key: str = ""
@@ -56,7 +56,7 @@ class RemoteFile:
         return posixpath.basename(self.path)
 
 
-def file_size(size) -> Optional[int]:
+def file_size(size) -> int | None:
     r"""File size (bytes) of a listing, None if unknown."""
     try:
         return int(size)
@@ -144,7 +144,7 @@ def listing(key: dict, lister: Callable[[], list]) -> list:
     return items
 
 
-def _read_cached(path: str, size: Optional[int]) -> Optional[bytes]:
+def _read_cached(path: str, size: int | None) -> bytes | None:
     r"""Content of a cached file, None if it is missing or has not the expected
     size (it is then removed). Refreshes its time of last use."""
     try:

@@ -30,7 +30,7 @@ anodes_theta = np.array(
 )
 
 
-def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
+def hpca_calc_anodes(inp, fov: list | None = None, method: str = "mean"):
     r"""Averages over anodes (or a given field of view) for HPCA ion data.
 
     Parameters

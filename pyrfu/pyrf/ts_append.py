@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import List, Mapping, Optional
+from collections.abc import Mapping
 
 # 3rd party imports
 import numpy as np
@@ -11,6 +10,8 @@ from xarray import DataArray
 
 # Local imports
 from pyrfu._core.time_attrs import _is_time_attr
+
+# Built-in imports
 
 
 def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
@@ -35,8 +36,8 @@ def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
 
 
 def ts_append(
-    inp0: Optional[DataArray] = None, inp1: Optional[DataArray] = None
-) -> Optional[DataArray]:
+    inp0: DataArray | None = None, inp1: DataArray | None = None
+) -> DataArray | None:
     r"""Concatenate two time series along the time axis.
 
     Parameters
@@ -80,7 +81,7 @@ def ts_append(
         n_0, n_1 = inp0.shape[0], inp1.shape[0]
         out_data["attrs"] = _append_attrs(inp0.attrs, inp1.attrs, n_0, n_1)
 
-        depends: List[Mapping[str, object]] = [{} for _ in range(len(inp0.dims))]
+        depends: list[Mapping[str, object]] = [{} for _ in range(len(inp0.dims))]
 
         for i, dim in enumerate(inp0.dims):
             if i == 0 or dim == "time":

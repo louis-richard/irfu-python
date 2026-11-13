@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 # 3rd party imports
 import numpy as np
@@ -19,12 +19,12 @@ def ts_skymap(
     energy: NDArrayFloats,
     phi: NDArrayFloats,
     theta: NDArrayFloats,
-    energy0: Optional[NDArrayFloats] = None,
-    energy1: Optional[NDArrayFloats] = None,
-    esteptable: Optional[NDArray[np.uint8]] = None,
-    attrs: Optional[dict[str, Any]] = None,
-    glob_attrs: Optional[dict[str, Any]] = None,
-    coords_attrs: Optional[dict[str, dict[str, Any]]] = None,
+    energy0: NDArrayFloats | None = None,
+    energy1: NDArrayFloats | None = None,
+    esteptable: NDArray[np.uint8] | None = None,
+    attrs: dict[str, Any] | None = None,
+    glob_attrs: dict[str, Any] | None = None,
+    coords_attrs: dict[str, dict[str, Any]] | None = None,
 ) -> Dataset:
     r"""Creates a skymap of the distribution function.
 

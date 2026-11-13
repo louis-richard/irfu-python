@@ -26,7 +26,7 @@ def _first_table(energy, step_table, parity):
     return energy[idx[0] if idx.size else 0, :].copy()
 
 
-def get_dist(file_path, cdf_name, tint: list = None):
+def get_dist(file_path, cdf_name, tint: list | None = None):
     r"""Read field named cdf_name in file and convert to velocity distribution
     function.
 

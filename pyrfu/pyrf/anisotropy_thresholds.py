@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Dict, Union
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 # Coefficients for electron instabilities
-COEFFS_E: Dict[float, Dict[str, tuple]] = {
+COEFFS_E: dict[float, dict[str, tuple]] = {
     0.01: {
         "firehose": (-1.23, 0.88),
         "whistler": (0.36, 0.55),
@@ -21,7 +20,7 @@ COEFFS_E: Dict[float, Dict[str, tuple]] = {
 }
 
 # Coefficients for ion instabilities
-COEFFS_I: Dict[float, Dict[str, tuple]] = {
+COEFFS_I: dict[float, dict[str, tuple]] = {
     0.01: {
         "proton cyclotron": (0.649, 0.400, 0.0),
         "mirror mode": (1.040, 0.633, -0.012),
@@ -60,10 +59,10 @@ def _thresh_i(beta_para: np.ndarray, a: float, b: float, beta0: float) -> np.nda
 
 
 def anisotropy_thresholds(
-    beta_para: Union[float, np.ndarray, xr.DataArray],
+    beta_para: float | np.ndarray | xr.DataArray,
     specie: str = "i",
     gamma: float = 0.01,
-) -> Dict[str, Union[float, np.ndarray, xr.DataArray]]:
+) -> dict[str, float | np.ndarray | xr.DataArray]:
     r"""Compute the thresholds for temperature anisotropy instabilities based on
     plasma species and growth rate.
 

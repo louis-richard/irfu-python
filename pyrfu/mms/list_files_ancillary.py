@@ -6,7 +6,6 @@ import datetime
 import glob
 import os
 import re
-from typing import Optional, Union
 
 # 3rd party imports
 import numpy as np
@@ -21,7 +20,7 @@ from .db_init import _read_config
 _CONSTELLATION_PRODUCTS = ("defq", "predq")
 
 
-def _sc_name(product: str, mms_id: Union[str, int]) -> str:
+def _sc_name(product: str, mms_id: str | int) -> str:
     r"""Spacecraft part of the names of the files of an ancillary product:
     mms1-4, or mms for the products of the constellation."""
     return "mms" if product.lower() in _CONSTELLATION_PRODUCTS else f"mms{mms_id}"
@@ -29,9 +28,9 @@ def _sc_name(product: str, mms_id: Union[str, int]) -> str:
 
 def list_files_ancillary(
     tint: list[str],
-    mms_id: Union[str, int],
+    mms_id: str | int,
     product: str,
-    data_path: Optional[str] = "",
+    data_path: str = "",
 ) -> list[str]:
     r"""Find available ancillary files in the data directories for the target product
     type.

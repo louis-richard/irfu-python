@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -16,7 +15,7 @@ from pyrfu.pyrf.calc_dt import calc_dt
 
 
 def autocorr(
-    inp: DataArray, maxlags: Optional[int] = None, normed: Optional[bool] = True
+    inp: DataArray, maxlags: int | None = None, normed: bool = True
 ) -> DataArray:
     r"""Compute the autocorrelation function.
 

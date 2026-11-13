@@ -3,7 +3,6 @@
 
 # Built-in imports
 import warnings
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -22,8 +21,8 @@ _ORDER, _R_PASS, _R_STOP = 4, 0.1, 60
 def lowpass(
     inp,
     f_cut: float,
-    f_s: Optional[float] = None,
-    fhz: Optional[float] = None,
+    f_s: float | None = None,
+    fhz: float | None = None,
 ):
     r"""Low-pass filter, as irfu-matlab irf_lowpass: the linear trend is
     removed, the rest filtered forward and backward (zero phase) with a

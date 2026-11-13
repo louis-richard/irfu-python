@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Tuple, Union
 
 # 3rd party
 import numpy as np
@@ -19,9 +18,9 @@ def psd_rebin(
     energy0: NDArray[np.float32],
     energy1: NDArray[np.float32],
     esteptable: NDArray[np.uint8],
-) -> Tuple[
+) -> tuple[
     NDArray[np.datetime64],
-    NDArray[Union[np.float32, np.float64]],
+    NDArray[np.float32 | np.float64],
     NDArray[np.float32],
     NDArray[np.float32],
 ]:

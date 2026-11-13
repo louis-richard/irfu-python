@@ -3,7 +3,7 @@
 
 # Built-in imports
 import logging
-from typing import Mapping, Optional, Tuple
+from collections.abc import Mapping
 
 # 3rd party imports
 import numpy as np
@@ -24,7 +24,7 @@ from pyrfu.pyrf.ts_append import ts_append
 logger = logging.getLogger(__name__)
 
 
-def _split_dataset_name(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
+def _split_dataset_name(dataset_name: str) -> tuple[str, Mapping[str, str]]:
     r"""Split a dataset name (e.g. "mms1_fgm_srvy_l2") into the spacecraft
     and the file specification (the public `tokenize` reads variable keys).
 
@@ -58,10 +58,10 @@ def _db_get_ts_dict(
     dataset_name: str,
     cdf_names: list[str],
     tint: list[str],
-    verbose: Optional[bool] = True,
-    data_path: Optional[str] = "",
-    source: Optional[str] = "default",
-    support_names: Optional[list[str]] = None,
+    verbose: bool = True,
+    data_path: str = "",
+    source: str | None = "default",
+    support_names: list[str] | None = None,
 ) -> dict[str, DataArray]:
     r"""Time series of several variables of a dataset, reading each file once
     (i.e., one download per file from the SDC or AWS for all the variables).
@@ -121,9 +121,9 @@ def db_get_ts(
     dataset_name: str,
     cdf_name: str,
     tint: list[str],
-    verbose: Optional[bool] = True,
-    data_path: Optional[str] = "",
-    source: Optional[str] = "default",
+    verbose: bool = True,
+    data_path: str = "",
+    source: str | None = "default",
 ) -> DataArray:
     r"""Get variable time series in the cdf file.
 

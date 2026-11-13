@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -13,7 +12,7 @@ from pyrfu._core.time import _seconds
 from pyrfu._core.units import _ratio, _units
 
 
-def gradient(inp, time_step: Optional[float] = None):
+def gradient(inp, time_step: float | None = None):
     r"""Computes time derivative of the input variable.
 
     Parameters

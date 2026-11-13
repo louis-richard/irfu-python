@@ -3,7 +3,6 @@
 
 # Built-in imports
 import logging
-from typing import Optional
 
 # 3rd party imports
 from xarray import DataArray
@@ -24,9 +23,9 @@ def db_get_variable(
     dataset_name: str,
     cdf_name: str,
     tint: list[str],
-    verbose: Optional[bool] = True,
-    data_path: Optional[str] = "",
-    source: Optional[str] = "default",
+    verbose: bool = True,
+    data_path: str = "",
+    source: str | None = "default",
 ) -> DataArray:
     r"""Get variable in the cdf file.
 

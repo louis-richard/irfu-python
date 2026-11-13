@@ -3,9 +3,10 @@
 
 """Contributed by Apostolos Kolokotronis."""
 
+from collections.abc import Sequence
+
 # 3rd party imports
 from copy import deepcopy
-from typing import Sequence
 
 import numpy as np
 import xarray as xr
@@ -20,7 +21,9 @@ from ..pyrf.resample import resample
 
 
 def feeps_avg_4sc(
-    b_list: Sequence[DataArray], flag: str = "omni", combined_energies: dict = None
+    b_list: Sequence[DataArray],
+    flag: str = "omni",
+    combined_energies: dict | None = None,
 ) -> DataArray:
     r"""Average data from 4 spacecrafts while ignoring NaN values.
     Computes the input quantity at the center of mass of the MMS

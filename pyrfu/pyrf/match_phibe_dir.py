@@ -13,7 +13,7 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
+def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float | None = None):
     r"""Get propagation direction by matching dBpar and "phi". Tries different
     propagation directions and finds the direction perpendicular to the
     magnetic field that gives the best correlation between the electrostatic

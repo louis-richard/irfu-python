@@ -254,8 +254,8 @@ def resample(
     inp,
     ref,
     method: str = "",
-    f_s: float = None,
-    window: int = None,
+    f_s: float | None = None,
+    window: int | None = None,
     thresh: float = 0,
 ):
     r"""Resample inp to the time line of ref. If sampling of X is more than two

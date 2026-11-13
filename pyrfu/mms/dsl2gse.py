@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -72,9 +72,7 @@ def _transformation_matrix(
     return out
 
 
-def dsl2gse(
-    inp: DataArray, defatt: Union[Dataset, np.ndarray], direction: Optional[int] = 1
-):
+def dsl2gse(inp: DataArray, defatt: Dataset | np.ndarray, direction: int = 1):
     r"""Transform time series from MMS's DSL to GSE.
 
     Parameters

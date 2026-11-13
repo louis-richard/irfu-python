@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -59,7 +58,7 @@ def _epoch162datetime64(epochs):
 
 
 def cdfepoch2datetime64(
-    epochs: Union[int, float, complex, list, NDArray],
+    epochs: int | float | complex | list | NDArray,
 ) -> NDArray[np.datetime64]:
     r"""Converts CDF epochs to numpy.datetime64 with nanosecond precision.
 

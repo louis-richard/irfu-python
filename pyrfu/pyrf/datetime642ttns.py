@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -26,7 +25,7 @@ _OUT_OF_RANGE = (
 
 
 def datetime642ttns(
-    time: Union[np.datetime64, NDArray[np.datetime64]],
+    time: np.datetime64 | NDArray[np.datetime64],
 ) -> NDArray[np.int64]:
     r"""Converts datetime64 to epoch_tt2000 (nanoseconds since J2000).
 

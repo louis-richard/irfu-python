@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 
@@ -15,13 +14,13 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def plot_heatmap(
     ax: Axes,
-    data: Union[np.ndarray, List[List[float]]],
-    row_labels: Union[np.ndarray, List[str]],
-    col_labels: Union[np.ndarray, List[str]],
-    cbar_kw: dict = None,
+    data: np.ndarray | list[list[float]],
+    row_labels: np.ndarray | list[str],
+    col_labels: np.ndarray | list[str],
+    cbar_kw: dict | None = None,
     cbarlabel: str = "",
     **kwargs,
-) -> Tuple[AxesImage, Colorbar]:
+) -> tuple[AxesImage, Colorbar]:
     r"""Create a heatmap from a numpy array and two lists of labels.
 
     Parameters

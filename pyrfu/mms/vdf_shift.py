@@ -205,7 +205,7 @@ def vdf_shift(
     v_frame,
     rotation=None,
     n_mc: int = 100,
-    grid: dict = None,
+    grid: dict | None = None,
     random_state=None,
     sc_pot=None,
 ):

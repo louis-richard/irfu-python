@@ -5,7 +5,6 @@
 import logging
 import numbers
 import os
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -19,18 +18,16 @@ from ._list_files import _list_files
 logger = logging.getLogger(__name__)
 
 
-def _list_files_tnr_l2(
-    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
-) -> list:
+def _list_files_tnr_l2(tint: list, data_path: str = "", tree: bool = False) -> list:
     """Latest version of the L2_rpw-tnr-surv files covering the time interval."""
     return _list_files(tint, "L2_rpw-tnr-surv", ["L2", "thr"], data_path, tree)
 
 
 def read_tnr(
     tint: list,
-    sensor: Optional[int] = 4,
-    data_path: Optional[str] = "",
-    tree: Optional[bool] = False,
+    sensor: int = 4,
+    data_path: str = "",
+    tree: bool = False,
 ) -> DataArray:
     r"""Read L2 data from TNR
 

@@ -11,7 +11,7 @@ from .eis_skymap import eis_skymap
 def eis_combine_proton_skymap(
     phxtof_allt,
     extof_allt,
-    en_chan: list = None,
+    en_chan: list | None = None,
     to_psd: bool = True,
     defatt=None,
     frame: str = "dbcs",

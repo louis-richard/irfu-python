@@ -209,10 +209,10 @@ def _colorbar(ax, image, position):
 def plot_pad_polar(
     ax,
     pad,
-    tint: list = None,
+    tint: list | None = None,
     sc_pot=None,
-    clim: list = None,
-    cmap: str = None,
+    clim: list | None = None,
+    cmap: str | None = None,
     contour=None,
     colorbar: str = "right",
     monte_carlo: bool = False,

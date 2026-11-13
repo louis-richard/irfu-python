@@ -33,7 +33,9 @@ from pyrfu.pyrf.ts_skymap import ts_skymap
 logger = logging.getLogger(__name__)
 
 
-def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, list):
+def _coord_sys(
+    coord_sys: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list]:
     x_vec = coord_sys[0, :] / np.linalg.norm(coord_sys[0, :])
     y_vec = coord_sys[1, :] / np.linalg.norm(coord_sys[1, :])
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Optional
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 from xarray import DataArray
 
 
-def movmean(inp: DataArray, window_size: Optional[int] = None) -> DataArray:
+def movmean(inp: DataArray, window_size: int | None = None) -> DataArray:
     r"""Computes running average of the inp over window_size points.
 
     Parameters

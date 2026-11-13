@@ -4,7 +4,6 @@
 # Built-in imports
 import logging
 import os
-from typing import Dict, Optional, Union
 
 # 3rd party imports
 import numba
@@ -57,14 +56,14 @@ def _power_c(
 
 def wavelet(
     inp: DataArray,
-    f_s: Optional[float] = None,
-    f: Optional[list[float]] = None,
-    n_freqs: Optional[int] = None,
-    linear: Optional[Union[float, bool]] = None,
-    wavelet_width: Optional[float] = None,
-    cut_edge: Optional[bool] = True,
-    return_power: Optional[bool] = True,
-) -> Union[DataArray, Dataset]:
+    f_s: float | None = None,
+    f: list[float] | None = None,
+    n_freqs: int | None = None,
+    linear: float | bool | None = None,
+    wavelet_width: float | None = None,
+    cut_edge: bool = True,
+    return_power: bool = True,
+) -> DataArray | Dataset:
     """Computes wavelet spectrogram based on fast FFT algorithm.
 
     Parameters
@@ -206,7 +205,7 @@ def wavelet(
     freqs_cwt: NDArray[np.float64] = f_nyq / scales
 
     if data.ndim in [1, 2]:
-        out_dict: Dict[str, object] = {}
+        out_dict: dict[str, object] = {}
     else:
         raise ValueError("Input data must be 1D or 2D")
 
@@ -242,7 +241,7 @@ def wavelet(
 
         # Calculate the power spectrum, with the frequencies of the columns
         # broadcast along time (they were tiled to the size of power)
-        power2: NDArray[Union[np.float64, np.complex128]]
+        power2: NDArray[np.float64 | np.complex128]
 
         if return_power:
             power2 = _power_r(power, freqs_cwt)
@@ -267,7 +266,7 @@ def wavelet(
             )
 
     if len(inp.shape) == 1:
-        out: Union[DataArray, Dataset] = xr.DataArray(
+        out: DataArray | Dataset = xr.DataArray(
             np.fliplr(power2),
             coords=[time, np.flip(freqs_cwt)],
             dims=["time", "frequency"],

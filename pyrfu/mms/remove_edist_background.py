@@ -5,7 +5,6 @@
 import logging
 import os
 import posixpath
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -92,7 +91,7 @@ def _load_bgdist_model(file_name: str, source: str, data_path: str):
 
 
 def remove_edist_background(
-    vdf, n_sec: float = 0.0, n_art: Optional[float] = None, source: str = ""
+    vdf, n_sec: float = 0.0, n_art: float | None = None, source: str = ""
 ):
     r"""Remove secondary photoelectrons from electron distribution function
     according to [1]_.

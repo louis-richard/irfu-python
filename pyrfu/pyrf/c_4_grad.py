@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 # Built-in imports
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -58,7 +59,7 @@ def _derivative(
     k_s: NDArray[Any],
     b_s: NDArray[Any],
     method: str,
-    b_avg: Optional[NDArray[Any]] = None,
+    b_avg: NDArray[Any] | None = None,
 ) -> NDArray[Any]:
     r"""Derivative `method` ("grad", "div", "curl" or "bdivb") of a field,
     from the reciprocal vectors `k_s` (spacecraft, time, 3) and the field
@@ -94,7 +95,7 @@ def _derivative(
 def c_4_grad(
     r_list: Sequence[DataArray],
     b_list: Sequence[DataArray],
-    method: Optional[str] = "grad",
+    method: str = "grad",
 ) -> DataArray:
     r"""Calculate gradient of physical field using 4 spacecraft technique in [2]_ [3]_.
 

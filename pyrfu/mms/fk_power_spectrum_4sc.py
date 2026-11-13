@@ -55,9 +55,9 @@ def fk_power_spectrum_4sc(
     cav: int = 8,
     num_k: int = 500,
     num_f: int = 200,
-    df: float = None,
+    df: float | None = None,
     w_width: int = 1,
-    f_range: list = None,
+    f_range: list | None = None,
 ):
     r"""Calculates the frequency-wave number power spectrum using the four
     MMS spacecraft. Uses a generalization of mms.fk_powerspectrum. Wavelet

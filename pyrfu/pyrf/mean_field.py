@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Tuple, Union
+from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -26,7 +26,7 @@ def _like(inp: DataArray, data: NDArray[np.float64]) -> DataArray:
     return inp.copy(data=data)
 
 
-def mean_field(inp: DataArray, deg: int) -> Tuple[DataArray, DataArray]:
+def mean_field(inp: DataArray, deg: int) -> tuple[DataArray, DataArray]:
     r"""Estimate the mean and wave fields.
 
     The mean field is computed by fitting a polynomial of degree `deg` in time

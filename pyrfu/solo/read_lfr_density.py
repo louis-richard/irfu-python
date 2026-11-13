@@ -4,7 +4,6 @@
 # Built-in imports
 import logging
 import os
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def _list_files_lfr_density_l3(
-    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
+    tint: list, data_path: str = "", tree: bool = False
 ) -> list:
     """Latest version of the L3_rpw-bia-density files covering the time interval."""
     return _list_files(
@@ -26,9 +25,7 @@ def _list_files_lfr_density_l3(
     )
 
 
-def read_lfr_density(
-    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
-) -> DataArray:
+def read_lfr_density(tint: list, data_path: str = "", tree: bool = False) -> DataArray:
     r"""Read L3 density data from LFR
 
     Parameters

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 from xarray import DataArray, Dataset
@@ -14,7 +13,7 @@ from pyrfu.mms.vdf_convert import _DPF, vdf_convert
 __all__ = ["dpf2psd"]
 
 
-def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
+def dpf2psd(inp: Dataset | DataArray) -> Dataset | DataArray:
     r"""Compute phase space density from differential particle flux.
 
     Parameters

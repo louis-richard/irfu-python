@@ -3,7 +3,7 @@
 
 # Built-in imports
 import logging
-from typing import Optional, Union
+from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -48,9 +48,9 @@ def _rotate_perp(tensor, thetas):
 def rotate_tensor(
     inp: DataArray,
     rot_flag: str,
-    vec: Union[DataArray, NDArrayFloats, Dataset],
-    perp: Optional[str] = None,
-    verbose: Optional[bool] = False,
+    vec: DataArray | NDArrayFloats | Dataset,
+    perp: str | None = None,
+    verbose: bool = False,
 ) -> DataArray:
     r"""Rotates pressure or temperature tensor into another coordinate system.
 

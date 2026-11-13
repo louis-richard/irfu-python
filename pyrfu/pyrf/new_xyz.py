@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 
-def new_xyz(inp, trans_mat, coordinate_system: Optional[str] = None):
+def new_xyz(inp, trans_mat, coordinate_system: str | None = None):
     r"""Transform the input field to the new frame.
 
     Parameters

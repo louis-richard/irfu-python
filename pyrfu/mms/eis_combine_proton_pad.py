@@ -14,7 +14,7 @@ def eis_combine_proton_pad(
     phxtof_allt,
     extof_allt,
     vec: xr.DataArray = None,
-    energy: list = None,
+    energy: list | None = None,
     pa_width: int = 15,
     despin: bool = False,
 ):

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -12,7 +11,7 @@ from xarray import DataArray, Dataset
 from pyrfu._core.time import _ns
 
 
-def calc_dt(inp: Union[Dataset, DataArray]) -> float:
+def calc_dt(inp: Dataset | DataArray) -> float:
     r"""Compute time step of the input time series.
 
     Parameters

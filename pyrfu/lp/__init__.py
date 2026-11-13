@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -24,10 +22,10 @@ class LangmuirProbe:
         self,
         name: str,
         surface: str = "cluster",
-        r_sphere: Union[list, float, int] = None,
-        r_wire: Union[list, float, int] = None,
-        l_wire: Union[list, float, int] = None,
-        s_photoemission: float = None,
+        r_sphere: list | float | int | None = None,
+        r_wire: list | float | int | None = None,
+        l_wire: list | float | int | None = None,
+        s_photoemission: float | None = None,
     ):
         r"""Setup probe properties.
 

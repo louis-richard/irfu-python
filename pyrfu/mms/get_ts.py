@@ -5,7 +5,6 @@
 import logging
 import re
 import warnings
-from typing import Optional, Union
 
 # 3rd party imports
 import numpy as np
@@ -228,7 +227,7 @@ def _unique_labels(depends):
 
 
 def get_ts(
-    file_path: Union[str, bytes], cdf_name: str, tint: Optional[list] = None
+    file_path: str | bytes, cdf_name: str, tint: list | None = None
 ) -> DataArray:
     r"""Reads field named cdf_name in file and convert to time series.
 

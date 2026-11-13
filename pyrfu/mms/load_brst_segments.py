@@ -39,7 +39,10 @@ def _tai2datetime64(tai):
 
 
 def load_brst_segments(
-    tint, data_path: str = None, download: bool = None, timeout: float = 60.0
+    tint,
+    data_path: str | None = None,
+    download: bool | None = None,
+    timeout: float = 60.0,
 ):
     r"""Load burst segment time intervals associated with the input time
     interval `tint`.

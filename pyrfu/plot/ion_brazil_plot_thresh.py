@@ -8,7 +8,7 @@ import numpy as np
 from ..models.ion_anisotropy_thresh import ion_anisotropy_thresh
 
 
-def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list = None):
+def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list | None = None):
     r"""Add the thresholds for the electromagnetic ion temperature anisotropy driven
     instabilities from linear Vlasov theory [1]_ [2]_ . The thresholds are given at
     :math:`\gamma = 10^{-2} \omega_{ci}` . Also changes the scale and limits of the

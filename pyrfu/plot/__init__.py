@@ -186,7 +186,7 @@ _register_cmap(
 )
 
 
-def set_color_cycle(pal: str = "") -> (list, str):
+def set_color_cycle(pal: str = "") -> tuple[list, str]:
     r"""Sets color cycle.
 
     Parameters

@@ -14,7 +14,7 @@ WEIGHTS = {
 }
 
 
-def waverage(inp, f_sampl: float = None, n_pts: int = 7):
+def waverage(inp, f_sampl: float | None = None, n_pts: int = 7):
     r"""Computes weighted average.
 
     Port of irf_waverage.m: the data are put on a regular time grid at the

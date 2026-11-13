@@ -15,8 +15,8 @@ def plot_projection(
     v_y,
     f_mat,
     vlim: float = 1e3,
-    clim: list = None,
-    cmap: str = None,
+    clim: list | None = None,
+    cmap: str | None = None,
     colorbar: str = "right",
 ):
     r"""Plot the projection of the distribution.

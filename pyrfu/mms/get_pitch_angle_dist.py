@@ -42,7 +42,7 @@ def _bin_reduce(data0, finite, in_bin, method, weights):
 def get_pitch_angle_dist(
     vdf,
     b_xyz,
-    tint: list = None,
+    tint: list | None = None,
     verbose=True,
     *,
     angles=None,

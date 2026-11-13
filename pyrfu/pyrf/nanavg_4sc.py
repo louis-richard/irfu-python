@@ -3,7 +3,7 @@
 
 """Contributed by Apostolos Kolokotronis."""
 
-from typing import Sequence
+from collections.abc import Sequence
 
 # 3rd party imports
 import numpy as np

@@ -8,7 +8,7 @@ import logging
 import math
 import numbers
 import os
-from typing import Literal, Optional
+from typing import Literal
 
 # 3rd party imports
 import keyring
@@ -202,16 +202,16 @@ def _set_cache(config, enabled, size, max_age, directory):
 
 
 def db_init(
-    default: Optional[Literal["local", "sdc", "aws"]] = None,
-    local: Optional[str] = None,
-    sdc: Optional[Literal["public", "sitl"]] = None,
-    sdc_username: Optional[str] = None,
-    sdc_password: Optional[str] = None,
-    aws: Optional[str] = None,
-    cache: Optional[bool] = None,
-    cache_size: Optional[float] = None,
-    cache_max_age: Optional[float] = None,
-    cache_dir: Optional[str] = None,
+    default: Literal["local", "sdc", "aws"] | None = None,
+    local: str | None = None,
+    sdc: Literal["public", "sitl"] | None = None,
+    sdc_username: str | None = None,
+    sdc_password: str | None = None,
+    aws: str | None = None,
+    cache: bool | None = None,
+    cache_size: float | None = None,
+    cache_max_age: float | None = None,
+    cache_dir: str | None = None,
     reset: bool = False,
 ) -> None:
     r"""Manage the MMS data access configuration.

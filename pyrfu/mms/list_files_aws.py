@@ -5,7 +5,8 @@
 import datetime
 import posixpath
 import re
-from typing import Any, Mapping, Optional, Union
+from collections.abc import Mapping
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -38,7 +39,7 @@ def _s3_resource():
     return session.resource("s3")
 
 
-def _bucket_and_prefix(bucket_prefix: Optional[str] = "") -> tuple[str, str]:
+def _bucket_and_prefix(bucket_prefix: str = "") -> tuple[str, str]:
     r"""Bucket name and key prefix from "bucket/prefix" (or "s3://bucket/prefix"),
     by default from the configuration file, else HelioCloud."""
     if not bucket_prefix:
@@ -69,9 +70,9 @@ def _tint_bounds(tint) -> tuple[datetime.datetime, datetime.datetime]:
 
 def list_files_aws(
     tint: list[str],
-    mms_id: Union[str, int],
+    mms_id: str | int,
     var: Mapping[str, str],
-    bucket_prefix: Optional[str] = "",
+    bucket_prefix: str = "",
 ) -> list[dict[str, Any]]:
     r"""List files from Amazon Web Services (AWS).
 

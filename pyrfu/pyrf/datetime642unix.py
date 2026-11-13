@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -13,7 +12,7 @@ from pyrfu._core.time import _unix
 
 
 def datetime642unix(
-    time: Union[list[np.datetime64], NDArray[np.datetime64]],
+    time: list[np.datetime64] | NDArray[np.datetime64],
 ) -> NDArray[np.float64]:
     r"""Converts datetime64 in ns units to unix time.
 

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -51,10 +50,10 @@ def thermal_current(
     m: float,
     v: float,
     z: float,
-    u: Union[float, np.ndarray],
+    u: float | np.ndarray,
     a: float,
     p_type: str,
-) -> Union[float, np.ndarray]:
+) -> float | np.ndarray:
     r"""Calculates the thermal probe current to/from a cylindrical or
     spherical body, e.g. a Langmuir probe or the a spherical (cylindrical) S/C.
 

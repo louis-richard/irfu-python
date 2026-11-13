@@ -11,7 +11,7 @@ from .vdf_velocity import vdf_velocity
 
 def vdf_partial_density(
     vdf,
-    component: str = None,
+    component: str | None = None,
     sc_pot=None,
     rotation=None,
 ):

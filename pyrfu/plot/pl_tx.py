@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import List
 
 # 3rd party imports
 import matplotlib.dates as mdates
@@ -13,7 +12,7 @@ from xarray import DataArray
 
 
 def pl_tx(
-    axis: Axes, inp_list: List[DataArray], comp: int = 0, colors: str = "mms", **kwargs
+    axis: Axes, inp_list: list[DataArray], comp: int = 0, colors: str = "mms", **kwargs
 ) -> Axes:
     r"""Line plot of 4 spacecraft time series.
 

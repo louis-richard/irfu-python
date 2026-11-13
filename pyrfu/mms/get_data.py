@@ -6,7 +6,7 @@ import logging
 import os
 import posixpath
 import time
-from typing import Mapping, Optional, Tuple, Union
+from collections.abc import Mapping
 
 # 3rd party imports
 import requests
@@ -41,9 +41,7 @@ _AWS_READ_ATTEMPTS = 3
 _AWS_READ_ERRORS = (IncompleteReadError, ReadTimeoutError, ResponseStreamingError)
 
 
-def _var_and_cdf_name(
-    var_str: str, mms_id: str
-) -> Tuple[Mapping[str, Union[str, int]], str]:
+def _var_and_cdf_name(var_str: str, mms_id: str) -> tuple[Mapping[str, str | int], str]:
     r"""Tokenize variable string `var_str` and returns the corresponding cdf name.
 
     Parameters
@@ -111,7 +109,7 @@ def _remote_files(source: str, tint: list, mms_id: str, var: Mapping) -> list:
     ]
 
 
-def _resolve_source(source: Optional[str] = "default") -> str:
+def _resolve_source(source: str | None = "default") -> str:
     r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
     case), or the default resource of the MMS configuration
     (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
@@ -128,8 +126,8 @@ def _list_files_sources(
     source: str,
     tint: list[str],
     mms_id: str,
-    var: Mapping[str, Union[str, int]],
-    data_path: Optional[str] = "",
+    var: Mapping[str, str | int],
+    data_path: str = "",
 ):
     # Time interval in the forms of time_clip (only a list of str was
     # listed), as datetime64; the cache key of the listing is then the same
@@ -162,8 +160,8 @@ def _list_files_sources(
 def _get_file_content_sources(
     source: str,
     file_name: str,
-    sdc_session: Optional[Session] = None,
-    headers: Optional[dict] = None,
+    sdc_session: Session | None = None,
+    headers: dict | None = None,
 ) -> bytes:
     r"""Get file content from different sources.
 
@@ -284,11 +282,11 @@ def _download(remote, sdc_session=None, headers=None) -> bytes:
 def get_data(
     var_str: str,
     tint: list,
-    mms_id: Union[int, str],
+    mms_id: int | str,
     verbose: bool = True,
     data_path: str = "",
     source: str = "",
-) -> Union[DataArray, Dataset]:
+) -> DataArray | Dataset:
     r"""Load a variable `var_str`.
 
     AFG: b_bcs_afg_srvy_l2pre, b_dmpa_afg_srvy_l2pre, b_gse_afg_srvy_l2pre,

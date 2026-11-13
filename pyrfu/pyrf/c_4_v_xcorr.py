@@ -3,7 +3,7 @@
 
 # Built-in imports
 import warnings
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 # 3rd party imports
 import numpy as np
@@ -327,12 +327,12 @@ def c_4_v_xcorr(
     tint: Sequence[str],
     s_mms: Sequence[DataArray],
     r_mms: Sequence[DataArray],
-    max_lag: Optional[float] = None,
-    tau: Optional[Sequence[float]] = None,
-    pattern: Optional[DataArray] = None,
+    max_lag: float | None = None,
+    tau: Sequence[float] | None = None,
+    pattern: DataArray | None = None,
     errors: bool = True,
     fit: str = "none",
-    f_max: Optional[float] = None,
+    f_max: float | None = None,
     frame: str = "spacecraft",
 ) -> dict:
     r"""Four-spacecraft timing by cross-correlation, with error estimates.

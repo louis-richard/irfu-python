@@ -6,7 +6,6 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Optional, Union
 
 # 3rd party imports
 import tqdm
@@ -19,9 +18,7 @@ from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 logger = logging.getLogger(__name__)
 
 
-def _make_path_local(
-    file: dict, var: dict, mms_id: Union[str, int], data_path: Optional[str] = ""
-):
+def _make_path_local(file: dict, var: dict, mms_id: str | int, data_path: str = ""):
     r"""Construct path of the data file using the standard convention.
 
     Parameters
@@ -71,7 +68,7 @@ def _make_path_local(
 
 
 def _download_file(
-    session, url: str, headers: dict, out_file: str, size: Optional[int] = None
+    session, url: str, headers: dict, out_file: str, size: int | None = None
 ):
     r"""Download url to out_file, through a temporary file next to it so that a
     failed or interrupted download never leaves a partial file. The temporary
@@ -100,9 +97,7 @@ def _download_file(
             os.remove(part_file)
 
 
-def download_data(
-    var_str: str, tint: list, mms_id: Union[str, int], data_path: Optional[str] = ""
-):
+def download_data(var_str: str, tint: list, mms_id: str | int, data_path: str = ""):
     r"""Download files from MMS SDC.
 
     Download data files containing field `var_str` over the time interval `tint` for

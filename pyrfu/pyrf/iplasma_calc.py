@@ -79,10 +79,10 @@ def _ask(prompt: str, default: str) -> float:
 def iplasma_calc(
     output: bool = False,
     verbose: bool = True,
-    b_0: float = None,
-    n_i: float = None,
-    t_e: float = None,
-    t_i: float = None,
+    b_0: float | None = None,
+    n_i: float | None = None,
+    t_e: float | None = None,
+    t_i: float | None = None,
 ):
     r"""Interactive function to calcute plasma paramters.
 

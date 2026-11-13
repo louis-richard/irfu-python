@@ -7,7 +7,7 @@ import numpy as np
 from .optimize_nbins_1d import _bin_indices, _finite_range
 
 
-def optimize_nbins_2d(x, y, n_min: list = None, n_max: list = None):
+def optimize_nbins_2d(x, y, n_min: list | None = None, n_max: list | None = None):
     r"""Estimates the number of bins for 2d histogram that minimizes
     the risk function in [1]_ , obtained by direct decomposition of the
     MISE following the method described in [2]_ .

@@ -8,7 +8,7 @@ import numpy as np
 from pyrfu._core.time import _seconds
 
 
-def dft_time_shift(inp, tau, f_s: float = None):
+def dft_time_shift(inp, tau, f_s: float | None = None):
     r"""Shifts the time series `inp` by `tau` seconds using the discrete
     Fourier transform (DFT), as irfu-matlab mms.dft_timeshift: the output at
     the times t + `tau` is the input signal interpolated at t + `tau`.

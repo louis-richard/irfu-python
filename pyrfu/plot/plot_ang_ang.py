@@ -101,7 +101,7 @@ def _units_label(vdf):
     return y_label
 
 
-def plot_ang_ang(vdf, tint: list = None, en_range: list = None):
+def plot_ang_ang(vdf, tint: list | None = None, en_range: list | None = None):
     r"""Creates colormap of the phase space density or the differential
     particle flux, as a function of the azimuthal and elevation angles.
 

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -25,7 +24,7 @@ TT2000_MAX = int(
 
 
 def ttns2datetime64(
-    time: Union[int, float, list, NDArray[np.int64]],
+    time: int | float | list | NDArray[np.int64],
 ) -> NDArray[np.datetime64]:
     r"""Convert time in epoch_tt2000 (nanoseconds since J2000) to datetime64
     in ns units.

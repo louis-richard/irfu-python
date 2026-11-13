@@ -9,7 +9,7 @@ import xarray as xr
 from .unix2datetime64 import unix2datetime64
 
 
-def ts_time(time, attrs: dict = None):
+def ts_time(time, attrs: dict | None = None):
     r"""Creates time line in DataArray.
 
     Parameters

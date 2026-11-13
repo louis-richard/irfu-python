@@ -45,7 +45,7 @@ def _angle_attrs(name, frame, valid_max):
 
 def eis_ang_ang(
     inp_allt,
-    en_chan: list = None,
+    en_chan: list | None = None,
     defatt: xr.Dataset = None,
     frame: str = "dbcs",
 ):

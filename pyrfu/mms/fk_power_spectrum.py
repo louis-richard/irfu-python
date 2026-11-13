@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 # 3rd party imports
 import numpy as np
@@ -17,6 +16,9 @@ from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_scalar import ts_scalar
 from ..pyrf.wavelet import wavelet
 from .probe_fields import probe_fields
+
+# Built-in imports
+
 
 # Separation along the boom of the two single-probe fields of a pair (m):
 # half of the tip-to-tip lengths 120 m and 29.2 m (each field is between its
@@ -60,12 +62,12 @@ def fk_power_spectrum(
     b_xyz: DataArray,
     tint: Sequence[str],
     probe: int,
-    z_phase: Optional[DataArray] = None,
+    z_phase: DataArray | None = None,
     cav: int = 128,
     field: bool = True,
     n_k: int = 101,
     n_f: int = 200,
-    df: Optional[float] = None,
+    df: float | None = None,
 ) -> DataArray:
     r"""Frequency-wave number power spectrum from the probes of one pair of
     MMS EDP (single-spacecraft interferometry), as irfu-matlab

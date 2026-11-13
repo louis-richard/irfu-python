@@ -4,7 +4,6 @@
 # Built-in imports
 import os
 import re
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -19,8 +18,8 @@ def _list_files(
     tint: list,
     product: str,
     tree_dirs: list,
-    data_path: Optional[str] = "",
-    tree: Optional[bool] = False,
+    data_path: str = "",
+    tree: bool = False,
 ) -> list:
     r"""Find the latest version of the daily files of a Solar Orbiter product
     covering the time interval.

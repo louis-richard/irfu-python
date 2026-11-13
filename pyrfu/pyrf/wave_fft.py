@@ -14,7 +14,7 @@ def wave_fft(
     window,
     frame_overlap: float = 10.0,
     frame_length: float = 20.0,
-    f_sampling: float = None,
+    f_sampling: float | None = None,
     scaled: bool = True,
 ):
     r"""Short-Time Fourier Transform.

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -41,11 +41,11 @@ def _shue1998(d_p, b_z):
 
 def magnetosphere(
     model: str = "mp_shue1998",
-    tint: Optional[List[Any]] = None,
-    d_p: Optional[float] = None,
-    b_z: Optional[float] = None,
-    m_a: Optional[float] = None,
-) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+    tint: list[Any] | None = None,
+    d_p: float | None = None,
+    b_z: float | None = None,
+    m_a: float | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     r"""Returns the location of the magnetopause or of the bow shock.
 
     Parameters

@@ -5,7 +5,7 @@
 import datetime
 import os
 import re
-from typing import Mapping, Optional, Union
+from collections.abc import Mapping
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
@@ -15,9 +15,9 @@ from pyrfu.pyrf.time_clip import _time_interval
 
 def list_files(
     tint: list[str],
-    mms_id: Union[str, int],
+    mms_id: str | int,
     var: Mapping[str, str],
-    data_path: Optional[str] = "",
+    data_path: str = "",
 ) -> list[str]:
     r"""Find available files in the data directories for `var`.
 
