@@ -3747,6 +3747,40 @@ class EbspTestCase(unittest.TestCase):
         self.assertIsNone(result["ee_xxyyzzss"])
         self.assertEqual(result["bb_xxyyzzss"].shape[1:], (len(result["f"]), 4))
 
+    def test_ebsp_stacked_powers(self):
+        # One gap censure per array and gap (6: B, E, E spin plane twice,
+        # Poynting twice) and one average per array (4: B, E, E spin plane,
+        # Poynting), 16 and 12 before (one per component); the components as
+        # computed each on its own
+        module = sys.modules["pyrfu.pyrf.ebsp"]
+        args = [generate_ts(64.0, 1000, tensor_order=1) for _ in range(5)]
+
+        with (
+            mock.patch.object(
+                module, "_censure_plot", wraps=module._censure_plot
+            ) as censure_plot,
+            mock.patch.object(
+                module, "_average_data", wraps=module._average_data
+            ) as average_data,
+        ):
+            result = pyrf.ebsp(*args, [1e0, 1e1])
+
+        self.assertEqual(censure_plot.call_count, 6)
+        self.assertEqual(average_data.call_count, 4)
+
+        power = result["ee_xxyyzzss"].data
+        self.assertEqual(power.shape[2], 4)
+        np.testing.assert_allclose(
+            power[..., 3], np.sum(power[..., :3], axis=2), rtol=1e-12
+        )
+        self.assertEqual(result["pf_xyz"].dtype, np.float64)
+
+    def test_ebsp_freq_int_pc35_flag(self):
+        # One flag, whether freq_int is "pc35" (the two range flags before)
+        data = generate_ts(64.0, 100000, tensor_order=1)
+        for freq_int, expected in [("pc35", True), ("pc12", False), ([1, 2], False)]:
+            self.assertIs(_freq_int(freq_int, data)[0], expected)
+
     def test_ebsp_short_average(self):
         # nav=1: the high frequencies averaged over the output step (1 /
         # out_sampling) rather than over nav wave periods
