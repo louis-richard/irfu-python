@@ -47,7 +47,6 @@ from scipy.special import gammainc
 from .. import mms, pyrf
 from ..mms.feeps_flat_field_corrections import g_corr
 from ..mms.get_ts import get_ts
-from ..mms.psd_moments import _moms
 from . import (
     generate_data,
     generate_defatt,
@@ -4806,123 +4805,65 @@ class PsdMomentsTestCase(unittest.TestCase):
         vdf.data.attrs["FIELDNAM"] = "MMS1 FPI/DIS brstSkyMap dist"
         mms.psd_moments(vdf, generate_ts(64.0, 100, tensor_order=0), **options)
 
-    @data(
-        (
-            np.random.random((100, 32)),  # energy
-            np.random.random((100, 32)),  # delta_v
-            random.random(),  # q_e
-            np.random.random(100),  # sc_pot
-            random.random(),  # p_mass
-            random.choice([True, False]),  # flag_inner_electron
-            random.random(),  # w_inner_electron
-            np.random.random((100, 32, 16)),  # phi
-            np.random.random((100, 32, 16)),  # theta
-            np.ones((100, 32), dtype=bool),  # use_energy
-            np.random.random((100, 32, 32, 16)),  # vdf
-            np.random.random((100, 32, 16)),  # delta_ang
-            np.zeros((1, 10, 1, 1)),  # exact_kernels
-            False,  # use_exact
-        )
-    )
-    def test_moms(self, value):
-        result = _moms.__wrapped__(*value)
-        self.assertIsInstance(result[0], np.ndarray)
-        self.assertIsInstance(result[1], np.ndarray)
-        self.assertIsInstance(result[2], np.ndarray)
-        self.assertIsInstance(result[3], np.ndarray)
-
-    def test_sanitize_nan_inplace(self):
-        # NaN set to 0 in place (the Python function, compiled otherwise)
+    def test_midpoint_kernels(self):
+        # The kernels at the centres of the bins, and the exact kernels of
+        # small bins over their solid angle (the numba kernel computed them
+        # for each time step)
         module = sys.modules["pyrfu.mms.psd_moments"]
-        vdf = np.array([[1.0, np.nan], [np.nan, 4.0]])
-        result = module._sanitize_nan_inplace.py_func(vdf)
-        self.assertIs(result, vdf)
-        np.testing.assert_array_equal(vdf, [[1.0, 0.0], [0.0, 4.0]])
-
-    def test_moms_channels_and_nan(self):
-        # The channels not used and the NaN points count as zeros
-        rng = np.random.default_rng(1)
-        n_t, n_e, n_ph, n_th = 2, 4, 8, 6
-        vdf = rng.uniform(0.0, 1.0, (n_t, n_e, n_ph, n_th))
-        use_energy = np.ones((n_t, n_e), dtype=bool)
-        use_energy[:, 1] = False
-        vdf_nan = vdf.copy()
-        vdf_nan[0, 2, 3, 4] = np.nan
-
-        vdf_zero = vdf.copy()
-        vdf_zero[:, 1] = 0.0
-        vdf_zero[0, 2, 3, 4] = 0.0
-
-        args = [
-            np.tile(10.0 * 2.0 ** np.arange(n_e), (n_t, 1)),
-            rng.uniform(1.0, 2.0, (n_t, n_e)),
-            constants.e,
-            np.zeros(n_t),
-            constants.m_p,
-            False,
-            0.0,
-            rng.uniform(0, 360, (n_t, n_ph, n_th)),
-            rng.uniform(0, 180, (n_t, n_ph, n_th)),
-        ]
-        rest = [
-            rng.uniform(0.1, 0.2, (n_t, n_ph, n_th)),
-            np.zeros((1, 10, 1, 1)),
-            False,
-        ]
-        result = _moms.__wrapped__(*args, use_energy, vdf_nan, *rest)
-        expected = _moms.__wrapped__(*args, np.ones((n_t, n_e), bool), vdf_zero, *rest)
-
-        for res, exp in zip(result, expected):
-            np.testing.assert_allclose(res, exp, rtol=1e-12)
-
-    def test_moms_exact_kernels(self):
-        # The midpoint kernels passed as exact kernels (delta_ang = 1) give the
-        # midpoint moments
         rng = np.random.default_rng(0)
-        n_t, n_e, n_ph, n_th = 3, 4, 8, 6
-        phi = rng.uniform(0, 360, (n_t, n_ph, n_th))
-        theta = rng.uniform(0, 180, (n_t, n_ph, n_th))
-        delta_ang = rng.uniform(0.1, 0.2, (n_t, n_ph, n_th))
-        ph, th = np.deg2rad(phi), np.deg2rad(theta)
+        phi = rng.uniform(0, 360, (3, 8)).astype(np.float32)
+        theta = rng.uniform(5, 175, 6)
+        ph = np.deg2rad(phi.astype(np.float64))[:, :, None]
+        th = np.deg2rad(theta)[None, None, :]
         s_t, c_t, s_p, c_p = np.sin(th), np.cos(th), np.sin(ph), np.cos(ph)
-        kernels = np.stack(
-            [
-                s_t,
-                -c_p * s_t**2,
-                -s_p * s_t**2,
-                -s_t * c_t,
-                c_p**2 * s_t**3,
-                s_p**2 * s_t**3,
-                s_t * c_t**2,
-                c_p * s_p * s_t**3,
-                c_p * s_t**2 * c_t,
-                s_p * s_t**2 * c_t,
-            ],
-            axis=1,
-        )
-        args = [
-            np.tile(10.0 * 2.0 ** np.arange(n_e), (n_t, 1)),
-            rng.uniform(1.0, 2.0, (n_t, n_e)),
-            constants.e,
-            np.zeros(n_t),
-            constants.m_p,
-            False,
-            0.0,
-            phi,
-            theta,
-            np.ones((n_t, n_e), dtype=bool),
-            rng.uniform(0.0, 1.0, (n_t, n_e, n_ph, n_th)),
+        expected = [
+            s_t + 0 * ph,
+            -c_p * s_t**2,
+            -s_p * s_t**2,
+            -s_t * c_t + 0 * ph,
+            c_p**2 * s_t**3,
+            s_p**2 * s_t**3,
+            s_t * c_t**2 + 0 * ph,
+            c_p * s_p * s_t**3,
+            c_p * s_t**2 * c_t,
+            s_p * s_t**2 * c_t,
         ]
-        expected = _moms.__wrapped__(*args, delta_ang, np.zeros((1, 10, 1, 1)), False)
-        exact = _moms.__wrapped__(
-            *args,
-            np.ones(delta_ang.shape),
-            kernels * delta_ang[:, None],
-            True,
-        )
+        result = module._midpoint_kernels(phi, theta)
+        self.assertEqual(result.shape, (3, 10, 8, 6))
+        np.testing.assert_allclose(result, np.stack(expected, axis=1), rtol=1e-14)
 
-        for res, exp in zip(exact, expected):
-            np.testing.assert_allclose(res, exp, rtol=1e-12)
+        half = 1e-3
+        exact = module._exact_kernels(
+            phi.astype(np.float64), theta, half, half, half, half
+        )
+        solid_angle = np.deg2rad(2 * half) ** 2
+        np.testing.assert_allclose(exact / solid_angle, result, atol=1e-8)
+
+    def test_psd_moments_channels_and_nan(self):
+        # NaN points count as zeros (as np.nansum), and the channels not used
+        # as channels of zeros
+        vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
+        vdf_nan, vdf_zero = vdf.copy(deep=True), vdf.copy(deep=True)
+        vdf_nan.data.data[0, 20, 3, 4] = np.nan
+        vdf_zero.data.data[0, 20, 3, 4] = 0.0
+        vdf_zero.data.data[:, :4] = 0.0
+
+        result = mms.psd_moments(vdf_nan, sc_pot, en_channels=[4, 32])
+        expected = mms.psd_moments(vdf_zero, sc_pot)
+        for res, exp in zip(result, expected):
+            np.testing.assert_allclose(res.data, exp.data, rtol=1e-12)
+
+    def test_psd_moments_time_blocks(self):
+        # The angular integrals by blocks of 256 times: the moments of each
+        # time as those of its own distribution
+        vdf, sc_pot = self._drifting_maxwellian(
+            1.0, 1000.0, [200.0, 150.0, 0.0], n_t=300
+        )
+        result = mms.psd_moments(vdf, sc_pot)
+        for i in [0, 255, 256, 299]:
+            single = mms.psd_moments(pyrf.time_clip(vdf, vdf.time.data[[i, i]]), sc_pot)
+            for res, exp in zip(result, single):
+                np.testing.assert_allclose(res.data[i], exp.data[0], rtol=1e-13)
 
     @staticmethod
     def _drifting_maxwellian(n, t_ev, v_kms, n_t=2, energy1=None):
@@ -5538,12 +5479,12 @@ class PsdMomentsTestCase(unittest.TestCase):
         # (time^2, energy)
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0], n_t=6)
         module = sys.modules["pyrfu.mms.psd_moments"]
-        moms = module._moms
+        moms = module._moments
 
-        with mock.patch.object(module, "_moms", side_effect=moms) as mocked:
+        with mock.patch.object(module, "_moments", side_effect=moms) as mocked:
             mms.psd_moments(vdf, sc_pot)
 
-        self.assertEqual(mocked.call_args.args[1].shape, (6, 32))
+        self.assertEqual(mocked.call_args.args[2].shape, (6, 32))
 
     def test_psd_moments_partial_moments_mask(self):
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])

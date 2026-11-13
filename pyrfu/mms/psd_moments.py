@@ -5,7 +5,6 @@
 import logging
 
 # 3rd party imports
-import numba
 import numpy as np
 import xarray as xr
 from scipy import constants
@@ -30,168 +29,58 @@ from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 logger = logging.getLogger(__name__)
 
 
-@numba.njit(cache=True, fastmath=False, nogil=True, parallel=True)
-def _sanitize_nan_inplace(vdf):
-    """Replace NaN entries in `vdf` with 0.0, in place. Deliberately
-    compiled WITHOUT fastmath -- this is the function meant to be
-    reliably NaN-aware, so it can't itself use the flag that breaks
-    NaN detection (see the "NaN + fastmath" note in the module
-    docstring). `x != x` is true iff `x` is NaN under IEEE-754; this is
-    the standard non-fastmath-dependent isnan idiom and, unlike
-    `np.isnan()`, needs no extra import inside the jitted function.
-
-    Mutates and returns `vdf` in place (no second full-size array
-    allocated) -- measured ~7x faster than an out-of-place numba
-    version and ~10x faster than `np.where(np.isnan(vdf), 0.0, vdf)` on
-    a realistic (512, 32, 32, 16) array in this sandbox, since it's one
-    read+write pass over the array instead of two. Safe to call on
-    `vdf_data` in the wrapper below because that array was already
-    freshly allocated (C-contiguous, as `reshape` requires) by the unit
-    conversion a few lines earlier -- mutating it doesn't touch the
-    caller's original `vdf.data`.
-    """
-    flat = vdf.reshape(-1)
-    n = flat.shape[0]
-    for i in numba.prange(n):
-        if flat[i] != flat[i]:
-            flat[i] = 0.0
-    return vdf
+def _midpoint_kernels(phi, theta):
+    # Angular kernels of the moments at the centre of each (phi, theta) bin,
+    # (time, kernel, phi, theta), in the order of _exact_kernels: density,
+    # flux (x, y, z) and momentum flux (xx, yy, zz, xy, xz, yz). Angles in
+    # degrees, phi (time, phi), theta (theta,).
+    phi = np.deg2rad(np.asarray(phi, dtype=np.float64))[:, :, np.newaxis]
+    theta = np.deg2rad(np.asarray(theta, dtype=np.float64))[np.newaxis, np.newaxis, :]
+    c_p, s_p, c_t, s_t = np.cos(phi), np.sin(phi), np.cos(theta), np.sin(theta)
+    kernels = [
+        s_t,
+        -c_p * s_t**2,
+        -s_p * s_t**2,
+        -s_t * c_t,
+        c_p**2 * s_t**3,
+        s_p**2 * s_t**3,
+        s_t * c_t**2,
+        c_p * s_p * s_t**3,
+        c_p * s_t**2 * c_t,
+        s_p * s_t**2 * c_t,
+    ]
+    shape = (phi.shape[0], phi.shape[1], theta.shape[2])
+    return np.stack([np.broadcast_to(k_, shape) for k_ in kernels], axis=1)
 
 
-@numba.jit(cache=True, fastmath=True, nogil=True, parallel=True, nopython=True)
-def _moms(
-    energy,
-    delta_v,
-    q_e,
-    sc_pot,
-    p_mass,
-    flag_inner_electron,
-    w_inner_electron,
-    phi,
-    theta,
-    use_energy,
-    vdf,
-    delta_ang,
-    exact_kernels,
-    use_exact,
-):
-    n_psd = np.zeros(vdf.shape[0])
-    v_psd = np.zeros((vdf.shape[0], 3))
-    p_psd = np.zeros((vdf.shape[0], 3, 3))
-    h_psd = np.zeros((vdf.shape[0], 3))
+def _moments(angular_sums, energy_correct, delta_v, used, p_mass):
+    r"""Relativistic moment integrals: density (time,), particle flux (time,
+    3), momentum flux (time, 6: xx, yy, zz, xy, xz, yz) and energy flux
+    (time, 3), from the angular integrals of the data `angular_sums` (time,
+    energy, 10, see _midpoint_kernels) and the energy sums over the `used`
+    channels with the relativistic speeds, the Lorentz factor (momentum flux
+    gamma m v v) and the kinetic energy over m v^2 / 2 (energy flux), which
+    depend on (time, energy) only (a numba kernel, three times, on energies
+    whose non-relativistic speed was the relativistic one)."""
+    eps = constants.elementary_charge * energy_correct / (p_mass * constants.c**2)
 
-    n_ph = vdf.shape[2]
-    n_th = vdf.shape[3]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        velocity = np.where(used, _speed(energy_correct, p_mass), 0.0)
+        kinetic = np.where(velocity > 0.0, 2 * eps * constants.c**2 / velocity**2, 1.0)
 
-    for i_t in numba.prange(vdf.shape[0]):
-        energy_correct = energy[i_t, :] - sc_pot[i_t]
+    d_v = np.where(used, delta_v, 0.0)
+    weights = [
+        d_v * velocity**2,
+        d_v * velocity**3,
+        (1.0 + eps) * d_v * velocity**4,
+        kinetic * d_v * velocity**5,
+    ]
 
-        velocity = np.sqrt(2 * q_e * energy_correct / p_mass)
-        velocity[energy_correct < flag_inner_electron * w_inner_electron] = 0
-
-        phi_i = np.deg2rad(phi[i_t, :, :])
-        theta_i = np.deg2rad(theta[i_t, :, :])
-
-        psd2n_mat = np.ones(theta_i.shape) * np.sin(theta_i)
-
-        # Particle flux and heat flux vector
-        psd2v_x_mat = -np.cos(phi_i) * np.sin(theta_i) ** 2
-        psd2v_y_mat = -np.sin(phi_i) * np.sin(theta_i) ** 2
-        psd2v_z_mat = -np.ones(theta_i.shape) * np.sin(theta_i) * np.cos(theta_i)
-
-        psd2p_xx_mat = np.cos(phi_i) ** 2.0 * np.sin(theta_i) ** 3
-        psd2p_yy_mat = np.sin(phi_i) ** 2.0 * np.sin(theta_i) ** 3
-        psd2p_zz_mat = np.ones(theta_i.shape) * np.sin(theta_i) * np.cos(theta_i) ** 2
-        psd2p_xy_mat = np.cos(phi_i) * np.sin(phi_i) * np.sin(theta_i) ** 3
-        psd2p_xz_mat = np.cos(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
-        psd2p_yz_mat = np.sin(phi_i) * np.sin(theta_i) ** 2 * np.cos(theta_i)
-
-        # Kernels integrated exactly over each angular bin (delta_ang is 1)
-        if use_exact:
-            psd2n_mat = exact_kernels[i_t, 0].copy()
-            psd2v_x_mat = exact_kernels[i_t, 1].copy()
-            psd2v_y_mat = exact_kernels[i_t, 2].copy()
-            psd2v_z_mat = exact_kernels[i_t, 3].copy()
-            psd2p_xx_mat = exact_kernels[i_t, 4].copy()
-            psd2p_yy_mat = exact_kernels[i_t, 5].copy()
-            psd2p_zz_mat = exact_kernels[i_t, 6].copy()
-            psd2p_xy_mat = exact_kernels[i_t, 7].copy()
-            psd2p_xz_mat = exact_kernels[i_t, 8].copy()
-            psd2p_yz_mat = exact_kernels[i_t, 9].copy()
-
-        for i_e in range(vdf.shape[1]):
-            # Energy channels selected for this time step
-            if not use_energy[i_t, i_e]:
-                continue
-
-            n_acc = 0.0
-            vx_acc = 0.0
-            vy_acc = 0.0
-            vz_acc = 0.0
-            pxx_acc = 0.0
-            pxy_acc = 0.0
-            pxz_acc = 0.0
-            pyy_acc = 0.0
-            pyz_acc = 0.0
-            pzz_acc = 0.0
-
-            # Single fused pass over the (phi, theta) grid: read the
-            # measured PSD value once, skip NaNs (matching np.nansum's
-            # omission behavior), and accumulate all 10 weighted moment
-            # contributions together instead of 10 separate
-            # multiply+nansum passes over the same data.
-            for i_ph in range(n_ph):
-                for i_th in range(n_th):
-                    val = vdf[i_t, i_e, i_ph, i_th]
-                    if np.isnan(val):
-                        continue
-                    w = val * delta_ang[i_t, i_ph, i_th]
-
-                    n_acc += w * psd2n_mat[i_ph, i_th]
-
-                    vx_acc += w * psd2v_x_mat[i_ph, i_th]
-                    vy_acc += w * psd2v_y_mat[i_ph, i_th]
-                    vz_acc += w * psd2v_z_mat[i_ph, i_th]
-
-                    pxx_acc += w * psd2p_xx_mat[i_ph, i_th]
-                    pxy_acc += w * psd2p_xy_mat[i_ph, i_th]
-                    pxz_acc += w * psd2p_xz_mat[i_ph, i_th]
-                    pyy_acc += w * psd2p_yy_mat[i_ph, i_th]
-                    pyz_acc += w * psd2p_yz_mat[i_ph, i_th]
-                    pzz_acc += w * psd2p_zz_mat[i_ph, i_th]
-
-            # number density
-            n_psd_tmp = n_acc * delta_v[i_t, i_e] * velocity[i_e] ** 2
-            n_psd[i_t] += n_psd_tmp
-
-            # Bulk velocity
-            v_temp_x = vx_acc * delta_v[i_t, i_e] * velocity[i_e] ** 3
-            v_temp_y = vy_acc * delta_v[i_t, i_e] * velocity[i_e] ** 3
-            v_temp_z = vz_acc * delta_v[i_t, i_e] * velocity[i_e] ** 3
-
-            v_psd[i_t, 0] += v_temp_x
-            v_psd[i_t, 1] += v_temp_y
-            v_psd[i_t, 2] += v_temp_z
-
-            # Pressure tensor
-            p_temp_xx = pxx_acc * delta_v[i_t, i_e] * velocity[i_e] ** 4
-            p_temp_xy = pxy_acc * delta_v[i_t, i_e] * velocity[i_e] ** 4
-            p_temp_xz = pxz_acc * delta_v[i_t, i_e] * velocity[i_e] ** 4
-            p_temp_yy = pyy_acc * delta_v[i_t, i_e] * velocity[i_e] ** 4
-            p_temp_yz = pyz_acc * delta_v[i_t, i_e] * velocity[i_e] ** 4
-            p_temp_zz = pzz_acc * delta_v[i_t, i_e] * velocity[i_e] ** 4
-
-            p_psd[i_t, 0, 0] += p_temp_xx
-            p_psd[i_t, 0, 1] += p_temp_xy
-            p_psd[i_t, 0, 2] += p_temp_xz
-            p_psd[i_t, 1, 1] += p_temp_yy
-            p_psd[i_t, 1, 2] += p_temp_yz
-            p_psd[i_t, 2, 2] += p_temp_zz
-
-            # Heat flux vector.
-            h_psd[i_t, 0] += vx_acc * delta_v[i_t, i_e] * velocity[i_e] ** 5
-            h_psd[i_t, 1] += vy_acc * delta_v[i_t, i_e] * velocity[i_e] ** 5
-            h_psd[i_t, 2] += vz_acc * delta_v[i_t, i_e] * velocity[i_e] ** 5
+    n_psd = np.sum(angular_sums[..., 0] * weights[0], axis=1)
+    v_psd, p_psd, h_psd = [
+        np.sum(angular_sums[..., kernels] * w_[..., np.newaxis], axis=1)
+        for kernels, w_ in zip([slice(1, 4), slice(4, 10), slice(1, 4)], weights[1:])
+    ]
 
     return n_psd, v_psd, p_psd, h_psd
 
@@ -201,8 +90,8 @@ def _exact_kernels(
 ):
     # Angular kernels of the moments integrated over each (phi, theta) bin,
     # assuming a constant phase-space density in the bin: (time, kernel, phi,
-    # theta), kernels in the order of _moms. Angles and widths in degrees, phi
-    # (time, phi), theta (theta,).
+    # theta), kernels in the order of _midpoint_kernels. Angles and widths in
+    # degrees, phi (time, phi), theta (theta,).
     phi_a = np.deg2rad(phi - delta_phi_minus)[:, :, np.newaxis]
     phi_b = np.deg2rad(phi + delta_phi_plus)[:, :, np.newaxis]
     theta_a = np.deg2rad(theta - delta_theta_minus)[np.newaxis, np.newaxis, :]
@@ -361,52 +250,14 @@ def _energy_mask(vdf, energy, kwargs):
     return use_energy
 
 
-def _moms_relativistic(moms_args, sc_pot, p_mass):
-    # Relativistic moments with the (non-relativistic) _moms kernel: energies
-    # whose non-relativistic speed is the relativistic one, and the pressure
-    # and heat flux from the data weighted by the Lorentz factor (momentum flux
-    # gamma m v v) and by the kinetic energy over m v^2 / 2
-    # arguments of _moms: energy (0), flag and width of the inner electron
-    # energies (5, 6), data (10)
-    energy, vdf_data = moms_args[0], moms_args[10]
-    flag_inner_electron, w_inner_electron = moms_args[5], moms_args[6]
-    q_e, c_light = constants.elementary_charge, constants.c
-
-    energy_correct = energy - sc_pot[:, np.newaxis]
-    eps = q_e * energy_correct / (p_mass * c_light**2)  # gamma - 1
-    gamma = 1.0 + eps
-
-    with np.errstate(divide="ignore", invalid="ignore"):
-        velocity = _speed(energy_correct, p_mass)
-        kinetic = np.where(velocity > 0.0, 2 * eps * c_light**2 / velocity**2, 1.0)
-
-    # Raw energies where the kernel sets the speed to zero (inner electron
-    # energies) or where it is undefined (below the spacecraft potential)
-    keep = ~(velocity > 0.0) | (energy_correct < flag_inner_electron * w_inner_electron)
-
-    args = list(moms_args)
-    args[0] = np.where(
-        keep, energy, p_mass * velocity**2 / (2 * q_e) + sc_pot[:, np.newaxis]
-    )
-    n_psd, v_psd, _, _ = _moms(*args)
-
-    args[10] = np.ascontiguousarray(vdf_data * gamma[:, :, np.newaxis, np.newaxis])
-    p_psd = _moms(*args)[2]
-
-    args[10] = np.ascontiguousarray(vdf_data * kinetic[:, :, np.newaxis, np.newaxis])
-    h_psd = _moms(*args)[3]
-
-    return n_psd, v_psd, p_psd, h_psd
-
-
 # Sub-grid of the angular bins for the pitch-angle fractions
 _N_SUB = 8
 
 
 def _psd_si(vdf):
     r"""Relativistic phase-space density in s^3/m^6, as a new C-contiguous
-    float64 array (get_dist returns a transposed view, which the numba
-    kernels can't reshape), from the units of `vdf` (``UNITS``, s^3/cm^6 if
+    float64 array (get_dist returns a transposed view; the NaN are set to 0
+    in place), from the units of `vdf` (``UNITS``, s^3/cm^6 if
     missing; differential fluxes as irfu-matlab PDist.convertto): that of the
     FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)."""
     if "UNITS" not in vdf.data.attrs:
@@ -798,40 +649,24 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     use_exact = angle_integration == "exact"
 
-    if use_exact:
-        half_phi = np.rad2deg(delta_phi[:, :, 0]) / 2
-        half_theta = np.rad2deg(delta_theta[0, 0, :]) / 2
-        exact_kernels = _exact_kernels(
-            phi,
-            theta,
-            vdf.attrs.get("delta_phi_minus", half_phi),
-            vdf.attrs.get("delta_phi_plus", half_phi),
-            vdf.attrs.get("delta_theta_minus", half_theta),
-            vdf.attrs.get("delta_theta_plus", half_theta),
-        )
-        delta_ang = np.ones(delta_ang.shape)
-    else:
-        # placeholder, unused by _moms (numba needs an array)
-        exact_kernels = np.zeros((1, 10, 1, 1))
-
     # Pitch-angle range: weights of the angular bins
     no_b = np.zeros(vdf_data.shape[0], dtype=bool)
+    weights = None
 
     if kwargs.get("pitch_angle_range") is not None:
         weights, no_b = _pitch_angle_weights(vdf, *_pitch_angle_args(kwargs))
 
-        if use_exact:
-            exact_kernels = np.ascontiguousarray(exact_kernels * weights[:, None])
-        else:
-            delta_ang = delta_ang * weights
-
-    # float64 angles: the angular kernels of _moms must have the dtype of the
-    # exact kernels (FPI angles are float32)
-    phi_mat = np.tile(phi[:, :, np.newaxis], (1, 1, vdf_data.shape[3]))
-    phi_mat = phi_mat.astype(np.float64)
-    theta_mat = np.tile(
-        theta[np.newaxis, np.newaxis, :], (vdf_data.shape[0], vdf_data.shape[2], 1)
-    ).astype(np.float64)
+    if use_exact:
+        half_phi = np.rad2deg(delta_phi[:, :, 0]) / 2
+        half_theta = np.rad2deg(delta_theta[0, 0, :]) / 2
+        exact_widths = [
+            np.broadcast_to(vdf.attrs.get(key, half_phi), phi.shape)
+            for key in ["delta_phi_minus", "delta_phi_plus"]
+        ]
+        exact_widths += [
+            vdf.attrs.get(key, half_theta)
+            for key in ["delta_theta_minus", "delta_theta_plus"]
+        ]
 
     # Speed widths of the energy channels, as in irfu-matlab mms.psd_moments:
     # the edges of each channel, corrected for the spacecraft potential
@@ -842,32 +677,54 @@ def psd_moments(vdf, sc_pot, **kwargs):
     e_upper = np.clip(energy_upper - sc_pot_2d, 0.0, None)
     e_lower = np.clip(energy_lower - sc_pot_2d, 0.0, None)
     v_upper, v_lower = [_speed(e, p_mass) for e in [e_upper, e_lower]]
-    delta_v = np.ascontiguousarray(v_upper - v_lower)
+    delta_v = v_upper - v_lower
 
-    # Clean up NaN values in the input VDF data before passing to the numba kernel.
-    # This is done in place to avoid extra memory allocation and to ensure that the
-    # kernel does not encounter NaN values, which could lead to incorrect moment
-    # calculations.
-    _sanitize_nan_inplace(vdf_data)
+    # The data without NaN (as np.nansum), in place: vdf_data is a new array
+    vdf_data[np.isnan(vdf_data)] = 0.0
 
-    moms_args = [
-        energy,
-        delta_v,
-        q_e,
-        sc_pot,
-        p_mass,
-        flag_inner_electron,
-        w_inner_electron,
-        phi_mat,
-        theta_mat,
-        use_energy,
-        vdf_data,
-        delta_ang,
-        exact_kernels,
-        use_exact,
-    ]
+    # Angular integrals of the data (time, energy, kernel): the kernels at the
+    # centre of each bin times its solid angle, or integrated exactly over
+    # the bin, times the pitch-angle weights, by blocks of times (the kernels
+    # are (time, 10, phi, theta))
+    n_t, n_e = vdf_data.shape[:2]
+    angular_sums = np.empty((n_t, n_e, 10))
 
-    n_psd, v_psd, p_psd, h_psd = _moms_relativistic(moms_args, sc_pot, p_mass)
+    for start in range(0, n_t, 256):
+        block = slice(start, start + 256)
+
+        if use_exact:
+            kernels = _exact_kernels(
+                phi[block],
+                theta,
+                *[width[block] for width in exact_widths[:2]],
+                *exact_widths[2:],
+            )
+        else:
+            kernels = _midpoint_kernels(phi[block], theta)
+            kernels = kernels * delta_ang[block, np.newaxis]
+
+        if weights is not None:
+            kernels = kernels * weights[block, np.newaxis]
+
+        n_b = kernels.shape[0]
+        angular_sums[block] = np.matmul(
+            vdf_data[block].reshape(n_b, n_e, -1),
+            kernels.reshape(n_b, 10, -1).transpose(0, 2, 1),
+        )
+
+    # The channels used, those of an attracted species above its potential
+    # energy (plus w_inner_electron for the inner electrons)
+    energy_correct = energy - sc_pot_2d
+    used = use_energy & (energy_correct >= flag_inner_electron * w_inner_electron)
+
+    n_psd, v_psd, p_moms, h_psd = _moments(
+        angular_sums, energy_correct, delta_v, used, p_mass
+    )
+
+    # Momentum flux tensor (upper triangle, completed below)
+    p_psd = np.zeros((n_t, 3, 3))
+    for k_, (i, j) in enumerate([(0, 0), (1, 1), (2, 2), (0, 1), (0, 2), (1, 2)]):
+        p_psd[:, i, j] = p_moms[:, k_]
 
     # No energy channel at these time steps (time dependent energy_range)
     no_energy = ~np.any(use_energy, axis=1) | no_b
