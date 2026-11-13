@@ -75,7 +75,9 @@ def wavelet(
         Sampling frequency of the input time series.
     f : list, Optional
         Vector [f_min f_max], calculate spectra between frequencies
-        f_min and f_max.
+        f_min and f_max. Default is [f_nyq / 100, f_nyq], with f_nyq the
+        Nyquist frequency; irfu-matlab irf_wavelet stops at f_nyq / 10^0.01
+        (2.3 % lower): ``f=[f_nyq / 100, f_nyq / 10**0.01]`` gives its grid.
     n_freqs : int, Optional
         Number of frequency bins.
     linear : float or bool, Optional
@@ -261,7 +263,9 @@ def wavelet(
 
         if len(inp.shape) == 2:
             # Construct xarray.DataArray here
-            out_dict[str(inp.comp.data[i])] = (
+            # The second dimension, whatever its name (represent_vec_tot for
+            # get_data vectors, comp for ts_vec_xyz)
+            out_dict[str(inp[inp.dims[1]].data[i])] = (
                 ["time", "frequency"],
                 np.fliplr(power2),
             )

@@ -1689,6 +1689,50 @@ class Dsl2GsmTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.DataArray)
 
 
+class DslSpinAxisTestCase(unittest.TestCase):
+    # The spin axis from the body z axis (default, as irfu-matlab) or from
+    # the angular momentum L of DEFATT (the z axis of DMPA)
+
+    def test_dsl_spin_axis(self):
+        rng = np.random.default_rng(3)
+        time = generate_timeline(1.0, 5)
+        b_xyz = pyrf.ts_vec_xyz(time, rng.normal(size=(5, 3)))
+        angles = rng.uniform(
+            [0.0, -90.0, 0.0, -90.0], [360.0, 90.0, 360.0, 90.0], (5, 4)
+        )
+        defatt = xr.Dataset(
+            {
+                name: pyrf.ts_scalar(time, angles[:, i])
+                for i, name in enumerate(["z_ra", "z_dec", "l_ra", "l_dec"])
+            }
+        )
+        # The L angles as the z ones
+        defatt_l = xr.Dataset(
+            {
+                "z_ra": defatt.l_ra,
+                "z_dec": defatt.l_dec,
+                "l_ra": defatt.l_ra,
+                "l_dec": defatt.l_dec,
+            }
+        )
+
+        for func in [mms.dsl2gse, mms.dsl2gsm]:
+            with self.subTest(func=func.__name__):
+                xr.testing.assert_identical(
+                    func(b_xyz, defatt), func(b_xyz, defatt, axis="z")
+                )
+                xr.testing.assert_identical(
+                    func(b_xyz, defatt, axis="l"), func(b_xyz, defatt_l)
+                )
+                self.assertFalse(
+                    np.allclose(
+                        func(b_xyz, defatt, axis="l").data, func(b_xyz, defatt).data
+                    )
+                )
+                with self.assertRaises(ValueError):
+                    func(b_xyz, defatt, axis="x")
+
+
 @ddt
 class DslTransformationValuesTestCase(unittest.TestCase):
     @data((mms.dsl2gse, "GSE"), (mms.dsl2gsm, "GSM"))

@@ -9019,6 +9019,17 @@ class WaveletTestCase(unittest.TestCase):
         }
         self.assertDictEqual(n_nan_rows, {"x": 0, "y": 20, "z": 0})
 
+    def test_wavelet_get_data_vector(self):
+        # A vector with the component dimension of get_data (represent_vec_tot)
+        # as one with comp (it raised AttributeError: no inp.comp)
+        vec = generate_ts(64.0, 1024, tensor_order=1)
+        vec_get_data = vec.rename({"comp": "represent_vec_tot"})
+        result = pyrf.wavelet(vec_get_data)
+        expected = pyrf.wavelet(vec)
+        self.assertListEqual(list(result.data_vars), ["x", "y", "z"])
+        for comp in ["x", "y", "z"]:
+            np.testing.assert_array_equal(result[comp].data, expected[comp].data)
+
     def test_wavelet_linear_frequencies(self):
         # The linear spacing ignored f: f=[1, 10] with 1 Hz gave 1 to 64 Hz
         time = generate_timeline(128.0, 1024)

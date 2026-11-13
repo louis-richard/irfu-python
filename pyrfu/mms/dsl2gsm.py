@@ -14,12 +14,15 @@ from xarray import DataArray, Dataset
 from ..pyrf.calc_fs import calc_fs
 from ..pyrf.cotrans import cotrans
 from ..pyrf.resample import resample
-from ..pyrf.ts_vec_xyz import ts_vec_xyz
-from .dsl2gse import _transformation_matrix
+from .dsl2gse import _spin_axis_gei, _transformation_matrix
 
 
 def dsl2gsm(
-    inp: DataArray, defatt: Dataset | np.ndarray, direction: Literal[1, -1] = 1
+    inp: DataArray,
+    defatt: Dataset | np.ndarray,
+    direction: Literal[1, -1] = 1,
+    *,
+    axis: Literal["z", "l"] = "z",
 ) -> DataArray:
     r"""Transform time series from MMS's DSL to GSM.
 
@@ -33,6 +36,11 @@ def dsl2gsm(
     direction : {1, -1}, Optional
         Direction of transformation. +1 DSL -> GSM, -1 GSM -> DSL.
         Default is 1.
+    axis : {"z", "l"}, Optional
+        Axis of DEFATT taken as the spin axis: the body z axis ("z"), as
+        irfu-matlab, or the angular momentum ("l"), the z axis of DMPA (see
+        `pyrfu.mms.dsl2gse`). Default is "z". Not used when `defatt` is a
+        3-vector.
 
     Returns
     -------
@@ -45,6 +53,8 @@ def dsl2gsm(
     ------
     TypeError
         If defatt is not xarray.Dataset or numpy.ndarray.
+    ValueError
+        If axis is not "z" or "l".
 
     Examples
     --------
@@ -68,15 +78,7 @@ def dsl2gsm(
 
     """
     if isinstance(defatt, xr.Dataset):
-        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
-            np.deg2rad(defatt.z_ra.data),
-        )
-        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(
-            np.deg2rad(defatt.z_ra.data),
-        )
-        z = np.sin(np.deg2rad(defatt.z_dec))
-        sax_gei = ts_vec_xyz(defatt.time.data, np.transpose(np.vstack([x, y, z])))
-        sax_gsm = cotrans(sax_gei, "gei>gsm")
+        sax_gsm = cotrans(_spin_axis_gei(defatt, axis), "gei>gsm")
         spin_ax_gsm = resample(sax_gsm, inp, f_s=calc_fs(inp))
         spin_axis = spin_ax_gsm.data
 

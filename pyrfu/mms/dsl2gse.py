@@ -70,8 +70,28 @@ def _transformation_matrix(spin_axis: np.ndarray, direction: int) -> np.ndarray:
     return out
 
 
+def _spin_axis_gei(defatt: Dataset, axis: str) -> DataArray:
+    r"""Time series of the spin axis in GEI from the right ascension and
+    declination of DEFATT: the body z axis (z_ra, z_dec) or the angular
+    momentum (l_ra, l_dec). Shared by dsl2gse and dsl2gsm."""
+    if axis not in ("z", "l"):
+        raise ValueError(f'axis must be "z" or "l", not {axis!r}')
+
+    r_a = np.deg2rad(defatt[f"{axis}_ra"].data)
+    dec = np.deg2rad(defatt[f"{axis}_dec"].data)
+    vec = np.transpose(
+        np.vstack([np.cos(dec) * np.cos(r_a), np.cos(dec) * np.sin(r_a), np.sin(dec)])
+    )
+
+    return ts_vec_xyz(defatt.time.data, vec)
+
+
 def dsl2gse(
-    inp: DataArray, defatt: Dataset | np.ndarray, direction: Literal[1, -1] = 1
+    inp: DataArray,
+    defatt: Dataset | np.ndarray,
+    direction: Literal[1, -1] = 1,
+    *,
+    axis: Literal["z", "l"] = "z",
 ):
     r"""Transform time series from MMS's DSL to GSE.
 
@@ -85,6 +105,13 @@ def dsl2gse(
     direction : {1, -1}, Optional
         Direction of transformation. By convention: +1 DSL -> GSE, -1 GSE -> DSL.
         Default is 1.
+    axis : {"z", "l"}, Optional
+        Axis of DEFATT taken as the spin axis: the body z axis ("z", z_ra and
+        z_dec), as irfu-matlab mms_dsl2gse, or the angular momentum ("l",
+        l_ra and l_dec), the z axis of DMPA (MMS CMAD): for the FGM DMPA
+        data of MMS1 on 2017-07-06, the largest difference from the GSE data
+        of the files is 1.3e-3 of B with "z" and 2.0e-4 with "l". Default is
+        "z". Not used when `defatt` is a 3-vector.
 
     Returns
     -------
@@ -95,6 +122,8 @@ def dsl2gse(
     ------
     TypeError
         If defatt is not a Dataset or a numpy.ndarray.
+    ValueError
+        If axis is not "z" or "l".
 
     Examples
     --------
@@ -118,15 +147,7 @@ def dsl2gse(
 
     """
     if isinstance(defatt, xr.Dataset):
-        x = np.cos(np.deg2rad(defatt.z_dec)) * np.cos(
-            np.deg2rad(defatt.z_ra.data),
-        )
-        y = np.cos(np.deg2rad(defatt.z_dec)) * np.sin(
-            np.deg2rad(defatt.z_ra.data),
-        )
-        z = np.sin(np.deg2rad(defatt.z_dec))
-        sax_gei = ts_vec_xyz(defatt.time.data, np.transpose(np.vstack([x, y, z])))
-        sax_gse = cotrans(sax_gei, "gei>gse")
+        sax_gse = cotrans(_spin_axis_gei(defatt, axis), "gei>gse")
         spin_ax_gse = resample(sax_gse, inp, f_s=calc_fs(inp))
         spin_axis = spin_ax_gse.data
 

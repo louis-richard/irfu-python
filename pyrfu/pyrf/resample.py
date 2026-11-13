@@ -303,7 +303,12 @@ def resample(
 
     * Averaging uses the windows (t - 1/(2 f_s), t + 1/(2 f_s)] around each
       reference time t, so that each sample belongs to one window. A window
-      without samples gives NaN, and a NaN in a window gives NaN.
+      without samples gives NaN, and a NaN in a window gives NaN. For
+      datetime64 times the half window is rounded to the nanosecond, so a
+      sample within 1 ns of an edge can fall in the other window than with
+      irf_resamp's floating-point times (e.g., a relative difference of 3e-5
+      of the wave numbers of `pyrfu.mms.fk_power_spectrum` on a 1 s burst
+      interval).
     * Interpolation extrapolates outside the time range of inp with the
       interpolant (linearly with "linear"): clip ref to the time range of inp
       (e.g., with time_clip) if this is not wanted.
