@@ -60,10 +60,8 @@ def lowpass(
     -----
     The filter is applied in second-order sections, with the padding of
     MATLAB's filtfilt (12 samples, three times the order). The (b, a) form
-    used before loses precision as f_cut decreases relative to the Nyquist
-    frequency, and is unstable below about 3e-5 of it (e.g., 0.1 Hz at
-    8192 Hz); its padding was 15 samples, which changed the first and last
-    samples.
+    loses precision as f_cut decreases relative to the Nyquist frequency,
+    and is unstable below about 3e-5 of it (e.g., 0.1 Hz at 8192 Hz).
 
     """
 

@@ -35,7 +35,7 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     TypeError
         If b_list is not a list of DataArray or Dataset
     ValueError
-        If the spacecraft have different UNITS (they were averaged).
+        If the spacecraft have different UNITS.
 
     Notes
     -----
@@ -45,7 +45,7 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     copied from the first dataset in the list.
 
     The result is labelled "4sc_avg" (probe, mms, MMS and mmsId), as
-    `pyrfu.pyrf.nanavg_4sc` (it had the labels of the first spacecraft).
+    `pyrfu.pyrf.nanavg_4sc`.
 
     Examples
     --------

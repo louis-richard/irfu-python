@@ -479,8 +479,6 @@ def psd_moments(
         en_channels as a time series is not of channel indices, or
         partial_moments is not a binary array of the shape of vdf.data (at
         the times of vdf for a DataArray).
-    TypeError
-        If ``relativistic`` is given (the argument was removed).
 
     Notes
     -----
@@ -488,19 +486,18 @@ def psd_moments(
     momentum flux (pressure, gamma m v v) and kinetic energy (heat flux), with
     the relativistic phase-space density (that of the FPI, HPCA and EIS
     files, non-relativistic, times 2 gamma^5 / (gamma + 1); that of the FEEPS
-    skymaps as it is). They were non-relativistic without the
-    ``relativistic`` attribute or argument: for FPI electrons below 30 keV,
-    the density changes by 0.25 % at most and the ion moments by less than
-    0.001 %. The bulk-flow corrections of the pressure and heat flux are
-    non-relativistic.
+    skymaps as it is). For FPI electrons below 30 keV, the density differs
+    from the non-relativistic one by 0.25 % at most and the ion moments by
+    less than 0.001 %. The bulk-flow corrections of the pressure and heat
+    flux are non-relativistic.
 
     The speed widths of the energy channels follow irfu-matlab
     `mms.psd_moments`: the channel edges are E + delta_energy_plus and
     E - delta_energy_minus (attributes) when there is one energy table, and
     the midpoints between the channels of each table otherwise. The
-    spacecraft potential is subtracted from the edges (pyrfu < 2.5 used the
-    uncorrected edges, which underestimates the density of cold electrons, by
-    10-30 % for 10-20 eV and 10 V). The phase-space density is not corrected
+    spacecraft potential is subtracted from the edges (the uncorrected edges
+    underestimate the density of cold electrons, by 10-30 % for 10-20 eV and
+    10 V). The phase-space density is not corrected
     for spacecraft photoelectrons, unlike the FPI moments: use
     ``inner_electron="on"`` or an energy range above the spacecraft potential
     to compare the electron moments with them.

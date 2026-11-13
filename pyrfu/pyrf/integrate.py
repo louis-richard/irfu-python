@@ -30,7 +30,7 @@ def integrate(inp: DataArray, time_step: float | None = None) -> DataArray:
     out : xarray.DataArray
         Time series of the time integral of inp, zero at the first time, with
         the attributes of inp and its units times s (``UNITS`` "(mV/m) s" for
-        mV/m; it was "(mV/m)*s").
+        mV/m).
 
     Raises
     ------

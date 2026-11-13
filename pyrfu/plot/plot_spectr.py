@@ -71,7 +71,7 @@ def plot_spectr(
     **kwargs
         Keyword arguments forwarded to matplotlib.axes.Axes.pcolormesh (e.g.,
         alpha, edgecolors), which can also replace rasterized=True and
-        shading="auto". They were ignored before.
+        shading="auto".
 
     Returns
     -------

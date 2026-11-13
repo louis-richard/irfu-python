@@ -55,10 +55,9 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None):
     -------
     out : xarray.Dataset
         Velocities ``vx``, ``vy`` and ``vz`` (time, energy, phi, theta) in
-        km/s, at the energies of the bins, with the relativistic speeds (they
-        were non-relativistic without the ``relativistic`` attribute, and the
-        argument was removed). The direction of a bin is minus its
-        look direction; ``out / numpy.linalg.norm`` gives the unit vectors of
+        km/s, at the energies of the bins, with the relativistic speeds. The
+        direction of a bin is minus its look direction;
+        ``out / numpy.linalg.norm`` gives the unit vectors of
         irfu-matlab PDist.xyz.
 
     Raises

@@ -107,7 +107,7 @@ def rotate_tensor(
         For "fac" Pe = [Ppar P12 P13; P12 Pperp1 P23; P13 P23 Pperp2].
         For "rot" and "gse" Pe = [Pxx Pxy Pxz; Pxy Pyy Pyz; Pxz Pyz Pzz]
         ``COORDINATE_SYSTEM`` is set to "FAC", "GSE" or "GSM", and removed for
-        "rot" (it was that of the input).
+        "rot".
 
     Raises
     ------

@@ -34,7 +34,7 @@ def mean_field(inp: DataArray, deg: int) -> tuple[DataArray, DataArray]:
     ----------
     inp : DataArray
         Input data: a scalar, a vector or a tensor time series (each component
-        fitted; only 3-component vectors were accepted).
+        fitted).
     deg : int
         Degree of the polynomial.
 

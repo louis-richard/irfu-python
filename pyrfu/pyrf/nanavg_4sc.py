@@ -74,10 +74,9 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     Raises
     ------
     TypeError
-        If b_list is not a list or a tuple of DataArray or Dataset (a tuple
-        was rejected).
+        If b_list is not a list or a tuple of DataArray or Dataset.
     ValueError
-        If the spacecraft have different UNITS (they were averaged).
+        If the spacecraft have different UNITS.
 
     Notes
     -----

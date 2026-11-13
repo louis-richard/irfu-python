@@ -203,8 +203,7 @@ def vdf_omni(
     count as zero, so that the distribution is a lower limit where the
     ``coverage`` attribute (fraction of the points in bins with data, time x
     energy) is below 1. The bin edges are those of `vdf_solid_angle` and
-    `vdf_d3v`; the speeds are relativistic (they were non-relativistic
-    without the ``relativistic`` attribute), and a non-relativistic
+    `vdf_d3v`; the speeds are relativistic, and a non-relativistic
     phase-space density (FPI, HPCA, EIS) is averaged as the relativistic one
     and returned in its convention. The energies of each time are used
     (irfu-matlab uses those of the first time).

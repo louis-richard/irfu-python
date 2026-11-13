@@ -40,9 +40,9 @@ def eis_moments(
     where :math:`J_k` is the differential particle flux, :math:`E_k` the energy,
     :math:`v_k` and :math:`p_k` the relativistic speed and momentum and
     :math:`\Delta E_k` the width of the channel k. With the non-relativistic
-    :math:`v_k = \sqrt{2 E_k / m}` and :math:`p_k = \sqrt{2 m E_k}` (it was
-    non-relativistic), :math:`n = 4 \pi \sqrt{m / 2} \sum_k J_k E_k^{-1/2}
-    \Delta E_k` and :math:`P = 2 / 3` of the energy density.
+    :math:`v_k = \sqrt{2 E_k / m}` and :math:`p_k = \sqrt{2 m E_k}`,
+    :math:`n = 4 \pi \sqrt{m / 2} \sum_k J_k E_k^{-1/2} \Delta E_k` and
+    :math:`P = 2 / 3` of the energy density.
 
     Parameters
     ----------
@@ -76,7 +76,7 @@ def eis_moments(
     ------
     ValueError
         If the specie is not supported, if `inp` has no energy widths, or if
-        its ``UNITS`` are not those of a flux (counts and cps were accepted).
+        its ``UNITS`` are not those of a flux.
 
     Notes
     -----
@@ -84,21 +84,16 @@ def eis_moments(
     [1/(cm^2 s sr keV)], and the energy and its widths must be in [keV]. The
     moments are sums over the energy channels, each over its width: they are
     partial moments, and an energy channel with NaN flux gives NaN moments at
-    that time. They were computed with Simpson's rule from the first to the
-    last channel centre, which left out the half channels at both ends: for
-    an isotropic proton Maxwellian on the ExTOF channels, n was 0.39 (kT = 10
-    keV) to 0.94 (100 keV) of the partial density over the channels, against
-    0.93 to 1.01 now. The outputs have their units in ``UNITS`` (they had
-    none).
+    that time. For an isotropic proton Maxwellian on the ExTOF channels, n is
+    0.93 (kT = 10 keV) to 1.01 (100 keV) of the partial density over the
+    channels. The outputs have their units in ``UNITS``.
 
     With `n_bg` and `p_bg`, the background density and pressure are
     subtracted, and the temperature computed from the difference; the mean
-    speed is not corrected. The pressure was reduced by 3 `p_bg`, as the trace
-    of the pressure tensor in the correction of the FPI moments
-    (:func:`pyrfu.mms.remove_imoms_background`). They must be the background
-    of EIS, in the same partial moments: not the FPI-DIS background
-    (``nbgi``, ``pbgi``), the penetrating radiation in FPI below 30 keV. The EIS
-    files have no background product; `n_bg` and `p_bg` will be deprecated.
+    speed is not corrected. They must be the background of EIS, in the same
+    partial moments: not the FPI-DIS background (``nbgi``, ``pbgi``), the
+    penetrating radiation in FPI below 30 keV. The EIS files have no
+    background product; `n_bg` and `p_bg` will be deprecated.
 
     References
     ----------

@@ -54,8 +54,8 @@ def make_model_vdf(
     sc_pot : xarray.DataArray
         Time series of the spacecraft potential V (V): the speeds are those
         at infinity, of the energies E + q V (the electrons lose e V, the
-        ions gain q V with the ``charge`` attribute; it was V whatever the
-        charge). Give the same potential to `calculate_epsilon`.
+        ions gain q V with the ``charge`` attribute). Give the same potential
+        to `calculate_epsilon`.
     n_s : xarray.DataArray
         Time series of the number density of specie s, at the times of `vdf`.
     v_xyz : xarray.DataArray
@@ -71,8 +71,8 @@ def make_model_vdf(
         Distribution function in the same format as vdf, in s^3/km^6, on the
         grid of vdf corrected for the spacecraft potential: its energies are
         those at infinity, E + q V (at least 0), at which it is evaluated
-        (they were the measured energies of vdf; the energy widths and the
-        tables energy0 and energy1 stay those of vdf). It is not to be
+        (the energy widths and the tables energy0 and energy1 stay those of
+        vdf). It is not to be
         corrected again (e.g. psd_moments with 0 V). The
         channels whose energy is below the spacecraft potential correspond to
         no particle velocity and are NaN (irfu-matlab gives the value at
@@ -82,9 +82,8 @@ def make_model_vdf(
     Raises
     ------
     ValueError
-        If the species is unknown (see `pyrfu.mms.vdf_convert`; it was
-        taken as protons for any ion), or if the moments (`n_s`, `v_xyz`
-        and `t_xyz`) are not at the times of `vdf`.
+        If the species is unknown (see `pyrfu.mms.vdf_convert`), or if the
+        moments (`n_s`, `v_xyz` and `t_xyz`) are not at the times of `vdf`.
 
     See also
     --------

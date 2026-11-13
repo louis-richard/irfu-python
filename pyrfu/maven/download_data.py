@@ -134,17 +134,14 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
     ------
     FileNotFoundError
         If the data path doesn't exist, if no file is found, or none of the
-        plan and file extension (only the MAG .sts files of the plan were
-        downloaded: the other instruments downloaded nothing, silently).
+        plan and file extension.
     requests.HTTPError
-        If the search or a download fails (the error page was saved as the
-        file).
+        If the search or a download fails.
 
     Notes
     -----
     Each file is downloaded to a temporary file next to it, moved to its name
-    when complete: a failed download leaves no file (a temporary copy of each
-    file was left in the temporary directory).
+    when complete: a failed download leaves no file.
 
     """
 

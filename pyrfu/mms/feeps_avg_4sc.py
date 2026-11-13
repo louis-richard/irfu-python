@@ -69,10 +69,8 @@ def feeps_avg_4sc(
     The spacecraft are resampled to the times of the first one. A spacecraft
     is left out of the average where it has no data: in its data gaps (two
     samples more than 1.5 sampling periods apart), and before the start and
-    after the end of its data (beyond half a sampling period). The resampling
-    filled the gaps by interpolation and extrapolated past the ends, which
-    were averaged as data. Times where the quantity is NaN on all the
-    spacecraft give NaN.
+    after the end of its data (beyond half a sampling period). Times where the
+    quantity is NaN on all the spacecraft give NaN.
 
     """
     # Check input type

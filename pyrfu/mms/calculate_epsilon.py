@@ -114,9 +114,9 @@ def calculate_epsilon(
     ------
     ValueError
         If VDF and n_s have different times, or if the model is not on the
-        grid of the VDF corrected for the spacecraft potential (they were
-        paired by position): most often a model on the measured energies,
-        or made with another spacecraft potential.
+        grid of the VDF corrected for the spacecraft potential: most often a
+        model on the measured energies, or made with another spacecraft
+        potential.
     TypeError
         If en_channels is not a list.
 

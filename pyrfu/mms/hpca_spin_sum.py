@@ -77,11 +77,9 @@ def hpca_spin_sum(inp, saz, method: Literal["mean", "sum"] = "mean"):
     used, as pyspedas ``mms_hpca_spin_sum`` (IDL SPEDAS gives a spin of zeros
     there). Only the complete spins are used, with one sample per start
     azimuth (0, 1, ..., 15, in order) and no data gap (two samples more than 1.5
-    median sampling periods apart): the spins cut by data gaps were kept as
-    partial sums or means, as the EIS and FEEPS spin averages do not. saz is
-    used by position, so it must be at the times of inp (misaligned spins
-    were used). The samples without data (NaN) are left out; a spin without
-    data is NaN.
+    median sampling periods apart), as the EIS and FEEPS spin averages. saz
+    is used by position, so it must be at the times of inp. The samples
+    without data (NaN) are left out; a spin without data is NaN.
 
     """
 

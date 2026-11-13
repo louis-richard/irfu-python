@@ -99,8 +99,7 @@ class LangmuirProbe:
 
     def get_probe_area(self):
         r"""Computes probe area: of the sphere, of the wire, total, sunlit (in
-        projection) and their ratios. The wire area was always zero (its
-        radius, an array, was not recognised)."""
+        projection) and their ratios."""
         a_sphere_sunlit, a_sphere_total = [0.0, 0.0]
         a_wire_sunlit, a_wire_total = [0.0, 0.0]
 
@@ -127,8 +126,7 @@ class LangmuirProbe:
 
     def get_probe_capa(self):
         r"""Computes probe capacitance: of the sphere, plus that of the wire,
-        as a wire if longer than 10 radii, else as a cylinder (it raised
-        TypeError for a wire, and for a probe without sphere).
+        as a wire if longer than 10 radii, else as a cylinder.
 
         Raises
         ------
@@ -167,7 +165,7 @@ class LangmuirProbe:
 
     def get_probe_surface_photoemission(self):
         r"""Computes (or get) surface photo emission (A/m^2): the one given,
-        else that of the surface material (the condition was inverted)."""
+        else that of the surface material."""
         if self.sphere["surface"] != "user defined" and self.s_photoemission is None:
             j_photo = photo_current(1.0, 0.0, 1.0, self.sphere["surface"])
             self.s_photoemission = float(np.squeeze(j_photo))

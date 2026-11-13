@@ -39,10 +39,8 @@ def optimize_nbins_2d(x, y, n_min: list | None = None, n_max: list | None = None
 
     Notes
     -----
-    The samples where x or y is not finite are left out (they made the ranges
-    NaN). The histograms are those of numpy.histogram2d, counted with
-    numpy.bincount (it took about 30 s for 100 x 100 numbers of bins and 1e5
-    samples).
+    The samples where x or y is not finite are left out. The histograms are
+    those of numpy.histogram2d, counted with numpy.bincount.
 
     References
     ----------

@@ -30,8 +30,7 @@ def db_init(local_data_dir):
     Raises
     ------
     FileNotFoundError
-        If local_data_dir doesn't exist (it was not written to the
-        configuration, but with python -O it was).
+        If local_data_dir doesn't exist.
 
     """
 

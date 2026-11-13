@@ -122,8 +122,7 @@ class MvaGui:
 
     def reset_selection(self, event=None):  # pylint: disable=unused-argument
         r"""Resets MVA selection. Event is passed on from button click but has
-        no meaning or use here (the method took no event: every click raised
-        TypeError).
+        no meaning or use here.
         """
 
         ax3 = self.fig.axes[2]

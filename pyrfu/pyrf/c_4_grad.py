@@ -131,10 +131,8 @@ def c_4_grad(
         If r_list or b_list is not a list or tuple of DataArray.
     ValueError
         If r_list or b_list doesn't have 4 elements, if method is not one of
-        the above, or if the field is a tensor and method is not "div" (all
-        the methods raised a broadcasting ValueError for a tensor), or if
-        the field is a scalar and method is not "grad" (unrelated errors, or
-        numbers for "div" with 3 samples).
+        the above, or if the field is a tensor and method is not "div", or
+        if the field is a scalar and method is not "grad".
 
     Notes
     -----

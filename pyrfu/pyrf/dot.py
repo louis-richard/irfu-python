@@ -31,8 +31,7 @@ def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
     TypeError
         If inp1 or inp2 is not a xarray.DataArray.
     ValueError
-        If inp1 and inp2 are not vectors with the same number of components
-        (a vector and a scalar were broadcast).
+        If inp1 and inp2 are not vectors with the same number of components.
 
     Examples
     --------

@@ -309,9 +309,8 @@ def resample(
       (e.g., with time_clip) if this is not wanted.
     * With "quadratic" or "cubic", whose interpolant depends on all the
       samples, each component is interpolated through its finite samples, as
-      MATLAB interp1 ("spline"): NaN samples are skipped (a NaN gave NaN at
-      all the times). With "linear" or "nearest", a NaN gives NaN at the times
-      next to it, as MATLAB.
+      MATLAB interp1 ("spline"): NaN samples are skipped. With "linear" or
+      "nearest", a NaN gives NaN at the times next to it, as MATLAB.
 
     Examples
     --------

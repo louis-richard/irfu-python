@@ -72,10 +72,9 @@ def get_hpca_dist(
     Notes
     -----
     The data of a half-spin are the naz16 samples of `inp` from its first
-    sample (start azimuth 0). They were shifted by one sample (as in SPEDAS):
-    each sample had the azimuth of the next one, and the first sample was the
-    last of the previous half-spin. The elevations were the anode numbers of
-    `inp`.
+    sample (start azimuth 0). SPEDAS shifts them by one sample: each sample
+    has the azimuth of the next one, and the first sample is the last of the
+    previous half-spin.
 
     """
 

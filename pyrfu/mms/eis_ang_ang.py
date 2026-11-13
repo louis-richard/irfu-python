@@ -92,11 +92,6 @@ def eis_ang_ang(
     of the spin in it, NaN without samples. The spins are those of
     :func:`pyrfu.mms.eis_spin_avg`: complete spins at their first sample.
 
-    The azimuths were in [0, 360] and the polar angles in [0, 180] but binned
-    on [-180, 180] and [-80, 80]: about 19 % of the samples were binned, at
-    the wrong polar angles (+90 degrees). Empty cells were 0, and the last
-    sample in a cell was kept. Without `defatt`, the angles were in GSE.
-
     """
 
     if frame.lower() not in ["dbcs", "gse"]:

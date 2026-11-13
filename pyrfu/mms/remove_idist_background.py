@@ -41,11 +41,8 @@ def remove_idist_background(vdf, def_bg):
     -----
     The background flux is taken in all the directions and converted to the
     units of `vdf` at its energies with the mass of its species
-    (`vdf_convert`): it was converted to s^3/cm^6 with the proton mass
-    whatever the units of `vdf` (nothing was removed from a distribution in
-    s^3/m^6), and used by position. As irfu-matlab
-    mms.remove_ion_penetrating_radiation_bg, the values that become negative
-    are set to 0.
+    (`vdf_convert`). As irfu-matlab mms.remove_ion_penetrating_radiation_bg,
+    the values that become negative are set to 0.
 
     References
     ----------

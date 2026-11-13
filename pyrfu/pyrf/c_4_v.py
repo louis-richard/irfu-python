@@ -89,8 +89,7 @@ def c_4_v(r_xyz, time, frame: Literal["spacecraft", "positions"] = "spacecraft")
         Either the crossing times of the 4 spacecraft (datetime64 or epoch in
         seconds), or the reference time (datetime64 or epoch in seconds)
         followed by the velocity of the discontinuity in km/s,
-        [t, v_x, v_y, v_z]. Numbers are epochs, not times relative to MMS1:
-        those were read as a velocity.
+        [t, v_x, v_y, v_z]. Numbers are epochs, not times relative to MMS1.
     frame : {"spacecraft", "positions"}, Optional
         Frame of the velocity (see Notes):
 

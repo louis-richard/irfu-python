@@ -459,8 +459,7 @@ def get_data(
     FileNotFoundError
         If no file of the variable covers the time interval.
     ValueError
-        If `source` is not "local", "sdc", "aws" or "default" (it was
-        NotImplementedError, unlike the other readers).
+        If `source` is not "local", "sdc", "aws" or "default".
 
     See also
     --------

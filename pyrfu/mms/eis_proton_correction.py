@@ -62,7 +62,7 @@ def eis_proton_correction(flux_eis):
         If flux_eis is not a xarray.Dataset or xarray.DataArray.
     ValueError
         If the ``UNITS`` of flux_eis are not those of a flux: the correction
-        is for the intensities (counts and cps were corrected).
+        is for the intensities.
 
     See Also
     --------

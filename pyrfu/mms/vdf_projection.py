@@ -402,8 +402,7 @@ def vdf_projection(
         relativistic speeds. For the FPI, HPCA and EIS skymaps, whose
         phase-space density is the non-relativistic one, it is that of the
         files times 2 gamma^5 / (gamma + 1) (+5 % for electrons at 5 keV,
-        +27 % at 27 keV); the speeds were non-relativistic (1.47 c for FEEPS
-        electrons of 500 keV).
+        +27 % at 27 keV).
 
     Notes
     -----

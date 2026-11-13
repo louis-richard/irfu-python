@@ -89,8 +89,7 @@ def reduce(
         3D skymap velocity distribution function, with the ``species``
         attribute (the speeds of the channels with its mass, e.g. "ions",
         "oxygen", "helium++"), in any units of `vdf_convert` (phase-space
-        density, differential energy or particle flux; only s^3/cm^6, s^3/m^6
-        and s^3/km^6 were accepted).
+        density, differential energy or particle flux).
     xyz : xarray.DataArray or numpy.ndarray
         Transformation matrix from instrument frame to desired frame.
     dim : {"1d", "2d", "3d"}, Optional
@@ -103,8 +102,7 @@ def reduce(
         Spacecraft potential V (V), 0 V by default. The energies are those at
         infinity, E + q V for a charge q (energy conservation): the electrons
         lose e V and the ions gain q V (``charge`` attribute, 2 for the HPCA
-        He++). irfu-matlab PDist.reduce corrects the electrons only; the ions
-        lost e V before.
+        He++). irfu-matlab PDist.reduce corrects the electrons only.
     lower_e_lim : float or xarray.DataArray, Optional
         Threshold energy (eV), 0 eV by default. The channels below
         lower_e_lim, and for a species attracted by the spacecraft (q V < 0,
@@ -112,7 +110,7 @@ def reduce(
         (secondary and photoelectrons of the spacecraft), are set to zero; a
         time step without any channel above it is NaN. The channels of a
         species repelled (the ions for V > 0) are all ambient particles and
-        are kept (the ions below e V were set to zero).
+        are kept.
     vg, vg_edges : array_like, Optional
         Speeds (m/s) of the grid, or the edges of its bins, instead of the
         default one (see Notes).
@@ -136,7 +134,7 @@ def reduce(
         the relativistic speeds. For the FPI, HPCA and EIS skymaps, whose
         phase-space density is the non-relativistic one, it is that of the
         files times 2 gamma^5 / (gamma + 1) (+5 % for electrons at 5 keV,
-        +27 % at 27 keV); it was integrated as it is.
+        +27 % at 27 keV).
 
     Raises
     ------
@@ -163,8 +161,8 @@ def reduce(
 
     The Monte-Carlo options (``n_mc``, ``weight``, ...) are those of
     `pyrfu.pyrf.int_sph_dist`. ``weight="log"`` weights the particles by
-    1 + ln(f / min f); in irfu-matlab, and before pyrfu 2.5.2, it was the
-    same as ``"lin"`` for phase-space densities in SI units.
+    1 + ln(f / min f); in irfu-matlab, it is the same as ``"lin"`` for
+    phase-space densities in SI units.
 
     """
 

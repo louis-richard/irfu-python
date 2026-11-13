@@ -48,9 +48,8 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     Raises
     ------
     ValueError
-        If the species is unknown (see `pyrfu.mms.vdf_convert`; only ions
-        and electrons were accepted, with the proton mass for any ion), or
-        `kappa` is not larger than 3/2.
+        If the species is unknown (see `pyrfu.mms.vdf_convert`), or `kappa`
+        is not larger than 3/2.
 
     See Also
     --------

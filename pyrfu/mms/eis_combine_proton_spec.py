@@ -78,14 +78,12 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
     the PHxTOF channels below the next ExTOF one are kept, the PHxTOF channels
     above it are averaged with the ExTOF channels below the top PHxTOF one
     (pairwise, at the geometric mean of their combined edges), and the ExTOF
-    channels above the top PHxTOF one are kept. pyrfu kept the lowest ExTOF
-    channel and left out the top PHxTOF one. The samples are those at the
-    times of both instruments (they could be paired across times). The energy
-    widths are E minus the lower edge and the upper edge minus E (they were
-    the edges). Unlike IDL, NaN are kept (IDL sets them to zero). As IDL, only
-    fluxes are combined: counts and count rates are not divided by the
-    geometric factors and the energy widths of the two instruments (counts and
-    cps were combined, and the units became a list when they differed).
+    channels above the top PHxTOF one are kept. The samples are those at the
+    times of both instruments. The energy widths are E minus the lower edge
+    and the upper edge minus E. Unlike IDL, NaN are kept (IDL sets them to
+    zero). As IDL, only fluxes are combined: counts and count rates are not
+    divided by the geometric factors and the energy widths of the two
+    instruments.
 
     """
 

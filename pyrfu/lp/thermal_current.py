@@ -79,8 +79,7 @@ def thermal_current(
     Returns
     -------
     j_thermal : float or numpy.ndarray
-        Current [A], zero without density or temperature, as irfu-matlab (it
-        was None).
+        Current [A], zero without density or temperature, as irfu-matlab.
 
     Raises
     ------

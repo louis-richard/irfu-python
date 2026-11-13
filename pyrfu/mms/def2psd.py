@@ -22,9 +22,9 @@ def def2psd(inp: DataArray | Dataset) -> DataArray | Dataset:
 
     where :math:`m` is the particle mass in proton masses, :math:`DEF` is
     the differential energy flux in keV/(cm^2 s sr keV) and :math:`E` is the energy
-    in eV. The constant, m_p^2 / (2 e^2), was 0.53707 with the atomic mass
-    unit, as irfu-matlab: the phase-space densities were 1.46 % too small
-    (the FPI products use the proton mass).
+    in eV. The constant is m_p^2 / (2 e^2) with the proton mass, as the FPI
+    products; irfu-matlab uses the atomic mass unit (0.53707), which gives
+    phase-space densities 1.46 % too small.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ def def2psd(inp: DataArray | Dataset) -> DataArray | Dataset:
     attribute of `inp`: the relativistic one, f = gamma^3 m J / v^2 with the
     relativistic speed (the FEEPS skymaps), or without it the
     non-relativistic one above, as in the FPI, HPCA and EIS files and
-    irfu-matlab (the attribute was ignored).
+    irfu-matlab.
 
     """
 

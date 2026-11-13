@@ -99,7 +99,7 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     sector, the nearest in time within half a spin: the sector gives the look
     direction. Spin-averaged spectra are combined at the nearest time, within
     half a spin. A spacecraft without a paired sample is left out (NaN), and
-    the mean or sum is NaN where no spacecraft has data (the sum was 0). IDL
+    the mean or sum is NaN where no spacecraft has data. IDL
     SPEDAS ``mms_eis_spec_combine_sc`` and pySPEDAS combine the samples by
     index, which matches neither the times nor the look directions (on MMS2-4,
     2017-07-11, the sectors of the same index differed throughout, the look

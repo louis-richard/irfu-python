@@ -50,8 +50,8 @@ def hpca_calc_anodes(
     -------
     out : xarray.DataArray
         HPCA ion flux averaged over the anodes within the selected field of
-        view. The anodes without data (NaN) are left out (one made the
-        spectrum NaN); NaN where no anode has data.
+        view. The anodes without data (NaN) are left out; NaN where no anode
+        has data.
 
     Raises
     ------

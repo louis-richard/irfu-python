@@ -74,8 +74,7 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     :func:`pyrfu.mms.hpca_spin_sum`. Only the complete spins are averaged: the
     partial spins at the start and end of the interval and the spins cut by
     data gaps (two samples more than 1.5 median sampling periods apart) are
-    left out (they were kept, and two partial spins around a gap of a whole
-    number of spins made one). A spin without data is NaN.
+    left out. A spin without data is NaN.
 
     IDL SPEDAS and pyspedas instead average from the second sample of a spin
     to the first sample of the next one, and set the last spin(s) to zero.

@@ -60,9 +60,7 @@ def eis_combine_proton_pad(
     -----
     The PADs are those of the combined spectra,
     ``eis_pad(eis_combine_proton_spec(phxtof_allt, extof_allt), ...)``: one
-    channel table and its energies as labels (the columns were stitched from
-    three channel selections: they could be mislabelled, and the default
-    arguments could raise). The channels are those of
+    channel table and its energies as labels. The channels are those of
     :func:`pyrfu.mms.eis_combine_proton_spec`, as IDL SPEDAS
     ``mms_eis_combine_proton_spec``: the lowest ExTOF channel is left out and
     the PHxTOF and ExTOF channels are kept separately. IDL SPEDAS

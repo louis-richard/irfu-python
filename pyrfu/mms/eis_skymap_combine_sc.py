@@ -53,10 +53,8 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     Notes
     -----
     The skymaps (one per spin) are combined at the nearest time of each
-    spacecraft, within half a spin (they were combined by index: one missing
-    spin shifted all the next ones), and NaN where no spacecraft has data
-    (the sum was 0). The energy widths are per channel (they were repeated
-    for every time in a flat array).
+    spacecraft, within half a spin, and NaN where no spacecraft has data. The
+    energy widths are per channel.
 
     See Also
     --------

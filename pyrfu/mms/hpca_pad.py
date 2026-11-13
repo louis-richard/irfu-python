@@ -65,8 +65,7 @@ def hpca_pad(
         half-spin.
     b_xyz : xarray.DataArray
         B in dmpa coordinate. No pitch angle (NaN) outside its time range and
-        in its data gaps, as :func:`pyrfu.mms.feeps_pitch_angles` (it was held
-        at its last value and interpolated across).
+        in its data gaps, as :func:`pyrfu.mms.feeps_pitch_angles`.
     elim : list, Optional
         [emin, emax], energy range for PAD. Default is the whole energy range.
     elevation : array_like, Optional
@@ -106,8 +105,7 @@ def hpca_pad(
     to the last complete half-spin, and is NaN for the samples of the
     half-spins that are not complete in `vdf` (data gaps, start azimuths not
     0 to 15) or without azimuths (zeros, dropped as in IDL SPEDAS), and for
-    the samples without half-spin. The half-spins were paired by count after
-    the first one, and the zero azimuths were used as azimuths.
+    the samples without half-spin.
 
     Examples
     --------

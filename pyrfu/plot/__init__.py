@@ -208,7 +208,7 @@ def set_color_cycle(pal: str = "") -> tuple[list, str]:
     Raises
     ------
     ValueError
-        If `pal` is not one of the palettes (was taken as "series").
+        If `pal` is not one of the palettes.
 
     """
 

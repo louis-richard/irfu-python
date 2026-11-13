@@ -52,8 +52,7 @@ def read_lfr_density(tint: list, data_path: str = "", tree: bool = False) -> Dat
     ValueError
         If tint has not two elements.
     FileNotFoundError
-        If the data path doesn't exist, or no file covers the time interval
-        (None was returned).
+        If the data path doesn't exist, or no file covers the time interval.
 
     """
 

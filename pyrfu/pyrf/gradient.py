@@ -29,7 +29,7 @@ def gradient(inp, time_step: float | None = None):
     -------
     out : xarray.DataArray
         Time series of the time derivative of the input variable, per second
-        (``UNITS`` "(mV/m)/s" for mV/m; it was "mV/m/s").
+        (``UNITS`` "(mV/m)/s" for mV/m).
 
     Notes
     -----

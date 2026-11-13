@@ -100,16 +100,14 @@ def eis_pad(
         Pitch-angle angle distribution for every energy channels in the
         `energy` range, with the units (``UNITS``, ``LABLAXIS``), species,
         energy widths of these channels (``delta_energy_minus``,
-        ``delta_energy_plus``), ``pa_width`` and ``method`` in its attributes
-        (it had none).
+        ``delta_energy_plus``), ``pa_width`` and ``method`` in its attributes.
 
     Raises
     ------
     ValueError
-        If `vec` is not given (the pitch angles were taken from X-GSE), is
-        neither a time series nor a direction, if no channel is in the
-        `energy` range, if `pa_width` doesn't divide 180 (the bins had
-        gaps), or if `method` is not "mean" or "sum".
+        If `vec` is not given, is neither a time series nor a direction, if
+        no channel is in the `energy` range, if `pa_width` doesn't divide
+        180, or if `method` is not "mean" or "sum".
 
     Notes
     -----
@@ -119,8 +117,8 @@ def eis_pad(
     ``pitch_angle_t?``; with the FGM field, the pitch angles differ by the
     angle between the two fields (a fraction of a degree in survey). Each bin
     averages the telescopes whose field of view (+-10 deg) overlaps it, zero
-    fluxes included, as IDL SPEDAS ``mms_eis_pad`` and pySPEDAS: the zeros were
-    left out, which biased the PADs high and left the bins without counts NaN.
+    fluxes included, as IDL SPEDAS ``mms_eis_pad`` and pySPEDAS (leaving the
+    zeros out would bias the PADs high and leave the bins without counts NaN).
     The means are for every unit, counts included: a telescope is in up to
     three bins, so a sum over them would count its particles up to three
     times. ``method="sum"`` puts each telescope in the bin of its centre pitch

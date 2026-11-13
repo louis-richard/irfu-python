@@ -51,8 +51,8 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
 
     Notes
     -----
-    The non-finite samples are left out (they made the range NaN). The
-    histograms are those of numpy.histogram, counted with numpy.bincount.
+    The non-finite samples are left out. The histograms are those of
+    numpy.histogram, counted with numpy.bincount.
 
     References
     ----------

@@ -17,8 +17,7 @@ def datetime642iso8601(
     Parameters
     ----------
     time : numpy.datetime64 or numpy.ndarray
-        Time in datetime64, in any unit (arrays in s, min, h or D raised
-        TypeError).
+        Time in datetime64, in any unit.
 
     Returns
     -------
