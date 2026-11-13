@@ -15,8 +15,8 @@ import requests
 
 # Local imports
 from pyrfu.mms import _cache
-from pyrfu.mms.db_get_ts import _resolve_source
 from pyrfu.mms.db_init import _read_config
+from pyrfu.mms.get_data import _resolve_source
 from pyrfu.mms.list_files_ancillary import _sc_name, list_files_ancillary
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp

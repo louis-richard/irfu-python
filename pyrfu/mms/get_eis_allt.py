@@ -12,11 +12,11 @@ from pycdfpp import load
 
 # Local imports
 from ..pyrf.ts_append import ts_append
-from .db_get_ts import _resolve_source
 from .get_data import (
     _file_label,
     _get_file_content_sources,
     _list_files_sources,
+    _resolve_source,
 )
 from .get_ts import get_ts
 
@@ -163,7 +163,7 @@ def get_eis_allt(
     )
 
     if not file_names:
-        raise FileNotFoundError("no files for these inputs!!")
+        raise FileNotFoundError(f"No files found for {pref} in {resource}")
 
     outdict, energy = {}, None
 

@@ -9,8 +9,12 @@ from typing import Optional
 from xarray import DataArray
 
 # Local imports
-from pyrfu.mms.db_get_ts import _resolve_source, _split_dataset_name
-from pyrfu.mms.get_data import _get_file_content_sources, _list_files_sources
+from pyrfu.mms.db_get_ts import _split_dataset_name
+from pyrfu.mms.get_data import (
+    _get_file_content_sources,
+    _list_files_sources,
+    _resolve_source,
+)
 from pyrfu.mms.get_variable import get_variable
 
 logger = logging.getLogger(__name__)

@@ -10,11 +10,11 @@ import numpy as np
 from pycdfpp import load
 from xarray import DataArray
 
-from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_data import (
     _file_label,
     _get_file_content_sources,
     _list_files_sources,
+    _resolve_source,
 )
 from pyrfu.mms.get_ts import get_ts
 
@@ -54,19 +54,6 @@ def _split_dataset_name(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
     return probe, var
 
 
-def _resolve_source(source: Optional[str] = "default") -> str:
-    r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
-    case), or the default resource of the MMS configuration
-    (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
-    if not source or source.lower() == "default":
-        return _read_config()["default"]
-
-    if source.lower() in ["local", "sdc", "aws"]:
-        return source.lower()
-
-    raise ValueError("Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'")
-
-
 def _db_get_ts_dict(
     dataset_name: str,
     cdf_names: list[str],
@@ -95,7 +82,7 @@ def _db_get_ts_dict(
     out = {}
 
     if not file_names:
-        raise FileNotFoundError(f"No files found for {dataset_name}")
+        raise FileNotFoundError(f"No files found for {dataset_name} in {resource}")
 
     if verbose:
         for cdf_name in cdf_names:

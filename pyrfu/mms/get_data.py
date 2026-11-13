@@ -110,6 +110,19 @@ def _remote_files(source: str, tint: list, mms_id: str, var: Mapping) -> list:
     ]
 
 
+def _resolve_source(source: Optional[str] = "default") -> str:
+    r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
+    case), or the default resource of the MMS configuration
+    (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
+    if not source or source.lower() == "default":
+        return _read_config()["default"]
+
+    if source.lower() in ["local", "sdc", "aws"]:
+        return source.lower()
+
+    raise ValueError("Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'")
+
+
 def _list_files_sources(
     source: str,
     tint: list[str],
@@ -427,6 +440,14 @@ def get_data(
         Time series of the target variable of measured by the target
         spacecraft over the selected time interval.
 
+    Raises
+    ------
+    FileNotFoundError
+        If no file of the variable covers the time interval.
+    ValueError
+        If `source` is not "local", "sdc", "aws" or "default" (it was
+        NotImplementedError, unlike the other readers).
+
     See also
     --------
     pyrfu.mms.get_ts : Read time series.
@@ -455,11 +476,10 @@ def get_data(
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 
     # The source in any case, or the default of the MMS configuration if empty
-    # or "default", as db_get_ts, db_get_variable and load_ancillary
-    source = (source or "default").lower()
-
-    if source == "default":
-        source = _read_config()["default"]
+    # or "default"; ValueError for an unknown one, as db_get_ts,
+    # db_get_variable, get_eis_allt and load_ancillary (it was
+    # NotImplementedError)
+    source = _resolve_source(source)
 
     file_names, sdc_session, headers = _list_files_sources(
         source, tint, mms_id, var, data_path

@@ -1078,8 +1078,11 @@ class DbGetTsTestCase(unittest.TestCase):
         self.assertTrue(any("file.cdf" in line for line in logs.output))
 
     def test_resolve_source(self):
+        # _resolve_source lives in get_data (shared by the readers)
         with mock.patch.object(
-            self.module, "_read_config", return_value={"default": "local"}
+            sys.modules["pyrfu.mms.get_data"],
+            "_read_config",
+            return_value={"default": "local"},
         ):
             self.assertEqual(self.module._resolve_source(""), "local")
             self.assertEqual(self.module._resolve_source(None), "local")
@@ -7989,7 +7992,10 @@ class GetDataDownloadTestCase(unittest.TestCase):
         list_files.assert_called_once_with([], "1", {}, "root")
 
     def test_source_not_implemented(self):
-        with self.assertRaises(NotImplementedError):
+        # An unknown source is a ValueError, as in db_get_ts and the other
+        # readers (it was NotImplementedError); the internal helpers keep
+        # their NotImplementedError
+        with self.assertRaisesRegex(ValueError, "Invalid source"):
             mms.get_data("b_gse_fgm_srvy_l2", [], 1, source="cdaweb")
 
         with self.assertRaises(NotImplementedError):
@@ -10186,12 +10192,12 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
     def test_remove_edist_background_default_source(self):
         # "default" (ValueError) and no source: the default of the
         # configuration, as the other readers
-        db_get_ts_module = sys.modules["pyrfu.mms.db_get_ts"]
+        get_data_module = sys.modules["pyrfu.mms.get_data"]
         vdf, n_e, startdelphi, model = self._inputs()
 
         for source in ["default", "Default", None]:
             with mock.patch.object(
-                db_get_ts_module, "_read_config", return_value={"default": "aws"}
+                get_data_module, "_read_config", return_value={"default": "aws"}
             ):
                 _, (get_data, _, load_model) = self._run(
                     vdf, n_e, startdelphi, model, source=source
