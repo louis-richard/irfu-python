@@ -38,10 +38,8 @@ from ..pyrf.c_4_v_xcorr import _get_disc_vel as _c_4_v_xcorr_get_disc_vel
 from ..pyrf.compress_cwt import _compress_cwt_1d
 from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
 from ..pyrf.int_sph_dist import (
-    _mc_cart_2d,
-    _mc_cart_3d,
     _mc_particles,
-    _mc_pol_1d,
+    _mc_project,
     _speed_bin_edges,
     _uniform_step,
 )
@@ -4766,89 +4764,15 @@ class IntSphDistTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, dict)
 
-    @data(
-        (
-            np.random.random((51, 32, 16)),
-            np.linspace(0, 1, 51),
-            np.arange(32),
-            np.arange(16),
-            np.ones(51) * 0.02,
-            np.ones(51) * 0.01,
-            np.ones(32),
-            np.ones(16),
-            np.linspace(-1.01, 1.01, 102),
-            np.ones(101) * 0.02 * np.pi / 16,
-            np.array([-np.inf, np.inf]),
-            np.array([-np.pi, np.pi]),
-            np.ones((51, 32, 16), dtype=np.int64) * 10,
-            np.eye(3),
-        )
-    )
-    def test_mc_pol_1d(self, value):
-        vdf, *args = value
-        vdf[vdf < 1e-2] = 0
-        n_threads = numba.get_num_threads()
-        result = _mc_pol_1d.__wrapped__(vdf, *args, n_threads)
-        self.assertIsInstance(result, np.ndarray)
-
-    @data(
-        (
-            np.random.random((51, 32, 16)),
-            np.linspace(0, 1, 51),
-            np.arange(32),
-            np.arange(16),
-            np.ones(51) * 0.02,
-            np.ones(51) * 0.01,
-            np.ones(32),
-            np.ones(16),
-            np.linspace(-1.01, 1.01, 102),
-            0.02**2,
-            np.array([-np.inf, np.inf]),
-            np.array([-np.pi, np.pi]),
-            (np.ones((51, 32, 16), dtype=np.int64) * 10).astype(int),
-            np.eye(3),
-        )
-    )
-    def test_mc_cart_2d(self, value):
-        vdf, *args = value
-        vdf[vdf < 1e-2] = 0
-        v_step, n_threads = _uniform_step(args[7]), numba.get_num_threads()
-        result = _mc_cart_2d.__wrapped__(vdf, *args, v_step, n_threads)
-        self.assertIsInstance(result, np.ndarray)
-
-    @data(
-        (
-            np.random.random((51, 32, 16)),
-            np.linspace(0, 1, 51),
-            np.arange(32),
-            np.arange(16),
-            np.ones(51) * 0.02,
-            np.ones(51) * 0.01,
-            np.ones(32),
-            np.ones(16),
-            np.linspace(-1.01, 1.01, 102),
-            0.02**2,
-            np.array([-np.inf, np.inf]),
-            np.array([-np.pi, np.pi]),
-            (np.ones((51, 32, 16), dtype=np.int64) * 10).astype(int),
-            np.eye(3),
-        )
-    )
-    def test_mc_cart_3d(self, value):
-        vdf, *args = value
-        vdf[vdf < 1e-2] = 0
-        v_step, n_threads = _uniform_step(args[7]), numba.get_num_threads()
-        result = _mc_cart_3d.__wrapped__(vdf, *args, v_step, n_threads)
-        self.assertIsInstance(result, np.ndarray)
-
-    @data(_mc_cart_2d, _mc_cart_3d)
-    def test_mc_cart_fast_index_matches_searchsorted(self, kernel):
-        # v_step > 0 indexes the grid arithmetically, v_step = 0 falls back to
-        # np.searchsorted; with the same random draws both must give the same bins.
+    @staticmethod
+    def _kernel_args(n_dim):
+        # Skymap and grid of the kernel: d_a the speed widths of the 1d polar
+        # grid, the bin volume of the cartesian ones
         rng = np.random.default_rng(0)
         vdf = rng.random((51, 32, 16))
         vdf[vdf < 1e-2] = 0
         edges = np.linspace(-1.01, 1.01, 102)
+        d_a = np.ones(101) * 0.02 if n_dim == 1 else np.full(1, 0.02**n_dim)
         args = (
             np.linspace(0, 1, 51),
             np.arange(32),
@@ -4858,20 +4782,92 @@ class IntSphDistTestCase(unittest.TestCase):
             np.ones(32),
             np.ones(16),
             edges,
-            0.02**2,
+            d_a,
             np.array([-np.inf, np.inf]),
             np.array([-np.pi, np.pi]),
-            np.ones((51, 32, 16), dtype=int) * 10,
+            np.ones((51, 32, 16), dtype=np.int64) * 10,
             np.eye(3),
         )
+        return vdf, args, edges
+
+    @data(1, 2, 3)
+    def test_mc_project(self, n_dim):
+        # One kernel for the 1d polar and the 2d and 3d cartesian projections
+        # (three kernels before), the bins flattened
+        vdf, args, edges = self._kernel_args(n_dim)
+        v_step = _uniform_step(edges) if n_dim > 1 else 0.0
+        result = _mc_project(vdf, *args, v_step, n_dim, numba.get_num_threads())
+        self.assertEqual(result.shape, (101**n_dim,))
+        self.assertGreater(np.count_nonzero(result), 0)
+
+    def test_grid_index(self):
+        # MATLAB's discretize: an interior edge in the upper bin, the last
+        # edge in the last bin; the computed index (v_step > 0) corrected to
+        # the edges in both directions, as the search (v_step = 0)
+        # (the computed index of points on and next to the edges is one bin
+        # too low for the first grid, one too high for the second)
+        module = sys.modules["pyrfu.pyrf.int_sph_dist"]
+
+        for edges in [np.linspace(-1.01, 1.01, 102), np.linspace(-1.0, 1.0, 11)]:
+            n_g = len(edges) - 1
+            step = _uniform_step(edges)
+            values = np.hstack(
+                [edges, np.nextafter(edges, -2.0)[1:], np.nextafter(edges, 2.0)[:-1]]
+            )
+            expected = np.searchsorted(edges, values, side="right") - 1
+            expected = np.minimum(expected, n_g - 1)
+
+            for v_step in [step, 0.0]:
+                result = [module._grid_index.py_func(v, edges, v_step) for v in values]
+                np.testing.assert_array_equal(result, expected)
+
+            self.assertEqual(module._grid_index.py_func(edges[3], edges, step), 3)
+            self.assertEqual(
+                module._grid_index.py_func(edges[-1], edges, step), n_g - 1
+            )
+
+    @data(2, 3)
+    def test_mc_cart_fast_index_matches_searchsorted(self, n_dim):
+        # v_step > 0 indexes the grid arithmetically, v_step = 0 falls back to
+        # np.searchsorted; with the same random draws both must give the same bins.
+        vdf, args, edges = self._kernel_args(n_dim)
         results = []
         for v_step in [_uniform_step(edges), 0.0]:
             random.seed(0)
-            results.append(kernel.__wrapped__(vdf, *args, v_step, 1))
+            results.append(_mc_project.__wrapped__(vdf, *args, v_step, n_dim, 1))
 
         self.assertGreater(_uniform_step(edges), 0.0)
         self.assertGreater(np.count_nonzero(results[0]), 0)
         np.testing.assert_array_equal(results[0], results[1])
+
+    def test_int_sph_dist_projections(self):
+        # 1d polar (also with an azimuthal grid and projection_dim "1d"), 2d
+        # and 3d cartesian; the 2d and 3d polar and the 1d cartesian raise
+        # NotImplementedError
+        rng = np.random.default_rng(1)
+        vdf = rng.random((8, 8, 4))
+        speed = np.geomspace(1e5, 3e6, 8)
+        phi = np.deg2rad(22.5 + 45 * np.arange(8))
+        theta = np.deg2rad(-67.5 + 45 * np.arange(4))
+        grid = np.linspace(-3e6, 3e6, 13)
+        phi_grid = np.linspace(0, 2 * np.pi, 9)
+
+        for kwargs, shape in [
+            ({}, (13,)),
+            ({"projection_dim": "1d"}, (13,)),
+            ({"projection_base": "cart", "projection_dim": "2d"}, (13, 13)),
+            ({"projection_base": "cart", "projection_dim": "3d"}, (13, 13, 13)),
+        ]:
+            out = pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
+            self.assertEqual(out["f"].shape, shape)
+
+        for kwargs in [
+            {"projection_dim": "2d"},
+            {"projection_dim": "3d"},
+            {"projection_base": "cart", "projection_dim": "1d"},
+        ]:
+            with self.assertRaises(NotImplementedError):
+                pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
 
     @staticmethod
     def _maxwellian(v_d=(300e3, -200e3, 100e3), t_ev=1000.0):
@@ -4987,12 +4983,12 @@ class IntSphDistTestCase(unittest.TestCase):
         self.assertEqual(_uniform_step(np.array([0.0, 1.0, 3.0])), 0.0)  # non-uniform
 
     @staticmethod
-    def _mc_kernel_args(kernel, speed, phi, theta, edges, v_lim, a_lim):
+    def _mc_kernel_args(n_dim, speed, phi, theta, edges, v_lim, a_lim):
         # f = 1 in every instrument bin, with unit widths and a single
         # Monte-Carlo particle, which is at the bin centre (no random draws), so
         # that each bin carries dtau = speed ** 2 * cos(theta) to a known point.
         n_v, n_ph, n_th = len(speed), len(phi), len(theta)
-        d_a_grid = np.ones(len(edges) - 1) if kernel is _mc_pol_1d else 1.0
+        d_a_grid = np.ones(len(edges) - 1) if n_dim == 1 else np.ones(1)
         return (
             np.ones((n_v, n_ph, n_th)),
             np.array(speed, dtype=np.float64),
@@ -5010,26 +5006,27 @@ class IntSphDistTestCase(unittest.TestCase):
             np.eye(3),
         )
 
-    def _mc_kernel_runs(self, kernel, *args, v_lim=(-np.inf, np.inf), a_lim=None):
-        # Run the kernel as Python and jitted, and for the cartesian kernels with
+    def _mc_kernel_runs(self, n_dim, *args, v_lim=(-np.inf, np.inf), a_lim=None):
+        # Run the kernel as Python and jitted, and for the cartesian grids with
         # both the arithmetic (fast) and the np.searchsorted bin index; with no
         # random draws, all must be identical.
         # (one accumulator row per thread, indexed by numba.get_thread_id())
         a_lim = (-np.pi, np.pi) if a_lim is None else a_lim
-        k_args = self._mc_kernel_args(kernel, *args, v_lim=v_lim, a_lim=a_lim)
+        k_args = self._mc_kernel_args(n_dim, *args, v_lim=v_lim, a_lim=a_lim)
         n_threads = numba.get_num_threads()
 
-        if kernel is _mc_pol_1d:
-            funcs = [kernel.__wrapped__, kernel]
-            results = [func(*k_args, n_threads) for func in funcs]
-        else:
-            v_step = _uniform_step(k_args[8])
-            self.assertGreater(v_step, 0.0)
-            results = [
-                func(*k_args, step, n_threads)
-                for func in [kernel.__wrapped__, kernel]
-                for step in [v_step, 0.0]
-            ]
+        steps = [0.0]
+
+        if n_dim > 1:
+            steps = [_uniform_step(k_args[8]), 0.0]
+            self.assertGreater(steps[0], 0.0)
+
+        shape = (len(k_args[8]) - 1,) * n_dim
+        results = [
+            func(*k_args, step, n_dim, n_threads).reshape(shape)
+            for func in [_mc_project.__wrapped__, _mc_project]
+            for step in steps
+        ]
 
         # Same bins; jitted values can differ by round-off, as the threads add
         # the particles landing in the same bin in a different order.
@@ -5037,7 +5034,7 @@ class IntSphDistTestCase(unittest.TestCase):
             np.testing.assert_array_equal(result != 0, results[0] != 0)
             np.testing.assert_allclose(result, results[0], rtol=1e-12)
 
-        if kernel is not _mc_pol_1d:
+        if n_dim != 1:
             np.testing.assert_array_equal(results[0], results[1])
             np.testing.assert_array_equal(results[2], results[3])
 
@@ -5045,39 +5042,39 @@ class IntSphDistTestCase(unittest.TestCase):
 
     @data(
         # speed, phi, theta, bin index (None if outside the grid)
-        (_mc_pol_1d, 0.05, 0.0, 0.0, None),
-        (_mc_pol_1d, 0.1, 0.0, 0.0, (0,)),  # on the first edge
-        (_mc_pol_1d, 0.25, 0.0, 0.0, (1,)),  # on an interior edge: upper bin
-        (_mc_pol_1d, 0.3, 0.0, 0.0, (1,)),
-        (_mc_pol_1d, 1.0, 0.0, 0.0, (2,)),  # on the last edge: last bin
-        (_mc_pol_1d, 1.5, 0.0, 0.0, None),
-        (_mc_cart_2d, 1.0, 0.0, 0.0, (7, 4)),
-        (_mc_cart_2d, 1.0, np.pi, 0.0, (0, 4)),
-        (_mc_cart_2d, 0.25, 0.0, 0.0, (5, 4)),
-        (_mc_cart_2d, 0.25, np.pi, 0.0, (3, 4)),
-        (_mc_cart_2d, 0.1, 0.0, 0.0, (4, 4)),
-        (_mc_cart_2d, 1.0, np.pi / 2, 0.0, (4, 7)),
-        (_mc_cart_2d, 1.5, 0.0, 0.0, None),  # vx outside
-        (_mc_cart_2d, 1.5, np.pi / 2, 0.0, None),  # vy outside
-        (_mc_cart_3d, 1.0, 0.0, 0.0, (7, 4, 4)),
-        (_mc_cart_3d, 1.0, np.pi, 0.0, (0, 4, 4)),
-        (_mc_cart_3d, 0.25, np.pi, 0.0, (3, 4, 4)),
-        (_mc_cart_3d, 1.0, np.pi / 2, 0.0, (4, 7, 4)),
-        (_mc_cart_3d, 1.0, 0.0, np.pi / 2, (4, 4, 7)),
-        (_mc_cart_3d, 1.5, 0.0, 0.0, None),  # vx outside
-        (_mc_cart_3d, 1.5, np.pi / 2, 0.0, None),  # vy outside
-        (_mc_cart_3d, 1.5, 0.0, np.pi / 2, None),  # vz outside
+        (1, 0.05, 0.0, 0.0, None),
+        (1, 0.1, 0.0, 0.0, (0,)),  # on the first edge
+        (1, 0.25, 0.0, 0.0, (1,)),  # on an interior edge: upper bin
+        (1, 0.3, 0.0, 0.0, (1,)),
+        (1, 1.0, 0.0, 0.0, (2,)),  # on the last edge: last bin
+        (1, 1.5, 0.0, 0.0, None),
+        (2, 1.0, 0.0, 0.0, (7, 4)),
+        (2, 1.0, np.pi, 0.0, (0, 4)),
+        (2, 0.25, 0.0, 0.0, (5, 4)),
+        (2, 0.25, np.pi, 0.0, (3, 4)),
+        (2, 0.1, 0.0, 0.0, (4, 4)),
+        (2, 1.0, np.pi / 2, 0.0, (4, 7)),
+        (2, 1.5, 0.0, 0.0, None),  # vx outside
+        (2, 1.5, np.pi / 2, 0.0, None),  # vy outside
+        (3, 1.0, 0.0, 0.0, (7, 4, 4)),
+        (3, 1.0, np.pi, 0.0, (0, 4, 4)),
+        (3, 0.25, np.pi, 0.0, (3, 4, 4)),
+        (3, 1.0, np.pi / 2, 0.0, (4, 7, 4)),
+        (3, 1.0, 0.0, np.pi / 2, (4, 4, 7)),
+        (3, 1.5, 0.0, 0.0, None),  # vx outside
+        (3, 1.5, np.pi / 2, 0.0, None),  # vy outside
+        (3, 1.5, 0.0, np.pi / 2, None),  # vz outside
     )
     @unpack
-    def test_mc_kernels_bin_edges(self, kernel, speed, phi, theta, expected):
+    def test_mc_kernels_bin_edges(self, n_dim, speed, phi, theta, expected):
         # Bins are closed on the left and open on the right (MATLAB discretize),
         # except the last one, which is closed on both ends.
-        if kernel is _mc_pol_1d:
+        if n_dim == 1:
             edges = np.array([0.1, 0.25, 0.5, 1.0])
         else:
             edges = np.arange(-1.0, 1.01, 0.25)  # exact, with an edge at 0
 
-        result = self._mc_kernel_runs(kernel, [speed], [phi], [theta], edges)
+        result = self._mc_kernel_runs(n_dim, [speed], [phi], [theta], edges)
 
         if expected is None:
             np.testing.assert_array_equal(result, 0.0)
@@ -5086,13 +5083,13 @@ class IntSphDistTestCase(unittest.TestCase):
             self.assertAlmostEqual(result[expected], speed**2 * np.cos(theta))
 
     @data(
-        (_mc_cart_2d, np.linspace(-1.01, 1.01, 102)),
-        (_mc_cart_2d, np.linspace(-1.0, 1.0, 11)),
-        (_mc_cart_3d, np.linspace(-1.01, 1.01, 102)),
-        (_mc_cart_3d, np.linspace(-1.0, 1.0, 11)),
+        (2, np.linspace(-1.01, 1.01, 102)),
+        (2, np.linspace(-1.0, 1.0, 11)),
+        (3, np.linspace(-1.01, 1.01, 102)),
+        (3, np.linspace(-1.0, 1.0, 11)),
     )
     @unpack
-    def test_mc_cart_fast_index_on_edges(self, kernel, edges):
+    def test_mc_cart_fast_index_on_edges(self, n_dim, edges):
         # (edge - edges[0]) / step truncates to one bin too low or too high for
         # many edges of these grids: the fast index must still match
         # np.searchsorted for points on and next to every edge, in each direction.
@@ -5100,9 +5097,9 @@ class IntSphDistTestCase(unittest.TestCase):
         speed = np.hstack([v_abs, np.nextafter(v_abs, 0), np.nextafter(v_abs, 2)])
         speed = np.sort(speed)
         phi = [0.0, np.pi / 2, np.pi, 3 * np.pi / 2]
-        theta = [0.0, np.pi / 2] if kernel is _mc_cart_3d else [0.0]
+        theta = [0.0, np.pi / 2] if n_dim == 3 else [0.0]
 
-        result = self._mc_kernel_runs(kernel, speed, phi, theta, edges)
+        result = self._mc_kernel_runs(n_dim, speed, phi, theta, edges)
 
         # Every particle within the grid is kept (none past the outer edges)
         v_in = speed[speed <= edges[-1]]
@@ -5111,25 +5108,25 @@ class IntSphDistTestCase(unittest.TestCase):
 
     @data(
         # phi, theta, v_lim, a_lim, kept
-        (_mc_pol_1d, np.pi / 2, 0.0, (-np.inf, 0.5), None, False),
-        (_mc_pol_1d, np.pi / 2, 0.0, (0.5, np.inf), None, True),
-        (_mc_pol_1d, np.pi / 2, 0.0, None, (0.0, np.pi / 4), False),
-        (_mc_pol_1d, np.pi / 2, 0.0, None, (np.pi / 4, np.pi), True),
-        (_mc_cart_2d, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
-        (_mc_cart_2d, 0.0, np.pi / 6, (0.25, 1.0), None, True),
-        (_mc_cart_2d, 0.0, np.pi / 6, None, (-np.pi / 12, np.pi / 12), False),
-        (_mc_cart_2d, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
-        (_mc_cart_3d, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
-        (_mc_cart_3d, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
+        (1, np.pi / 2, 0.0, (-np.inf, 0.5), None, False),
+        (1, np.pi / 2, 0.0, (0.5, np.inf), None, True),
+        (1, np.pi / 2, 0.0, None, (0.0, np.pi / 4), False),
+        (1, np.pi / 2, 0.0, None, (np.pi / 4, np.pi), True),
+        (2, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
+        (2, 0.0, np.pi / 6, (0.25, 1.0), None, True),
+        (2, 0.0, np.pi / 6, None, (-np.pi / 12, np.pi / 12), False),
+        (2, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
+        (3, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
+        (3, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
     )
     @unpack
-    def test_mc_kernels_limits(self, kernel, phi, theta, v_lim, a_lim, kept):
+    def test_mc_kernels_limits(self, n_dim, phi, theta, v_lim, a_lim, kept):
         # v_lim/a_lim bound the transverse speed and its angle (1d), or the
         # out-of-plane speed and elevation (2d, 3d). Particle of unit speed.
         edges = np.arange(-1.0, 1.01, 0.25)
         v_lim = (-np.inf, np.inf) if v_lim is None else v_lim
         result = self._mc_kernel_runs(
-            kernel, [1.0], [phi], [theta], edges, v_lim=v_lim, a_lim=a_lim
+            n_dim, [1.0], [phi], [theta], edges, v_lim=v_lim, a_lim=a_lim
         )
 
         self.assertAlmostEqual(np.sum(result), np.cos(theta) if kept else 0.0)

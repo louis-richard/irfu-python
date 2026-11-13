@@ -9,6 +9,21 @@ from math import asin, cos, sin, sqrt
 import numba
 import numpy as np
 
+# Implementation notes (numba kernel _mc_project):
+# - one accumulator per worker thread, (n_threads, bins), summed at the end:
+#   a shared accumulator under numba.prange loses updates when two threads
+#   add to the same bin; the number of threads is passed in from Python
+#   (numba.get_num_threads() inside a cache=True function disables its disk
+#   cache);
+# - the bins of the projection grid follow MATLAB's discretize, as
+#   irf_int_sph_dist: edges[k] <= v < edges[k + 1], the last bin closed on
+#   both ends (np.searchsorted side="right", minus 1); on a grid uniform to
+#   near machine precision (_uniform_step), the index is computed and then
+#   checked against the edges, which the computed edges can miss by a few
+#   ulps (e.g. the edge at v = 0 of a grid centred on zero);
+# - the first Monte-Carlo particle of a bin is at its centre, the others
+#   uniform in speed, azimuth and sin(elevation) (uniform in solid angle).
+
 
 def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     r"""Integrate a spherical distribution function to a line/plane.
@@ -151,18 +166,18 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     _check_speed_widths(velocity, d_v_m, d_v_p)
     d_v = d_v_m + d_v_p
 
-    # Overwrite projection dimension of a polar projection if azimuthal angle
-    # of projection plane is not provided. Set the azimuthal angle grid width
-    # (not used by the cartesian projections).
-    is_pol = projection_base == "pol"
+    # A polar projection is 1d without the azimuthal grid of the projection
+    # plane; the supported projections are 1d polar, 2d and 3d cartesian (the
+    # azimuthal grid width of the 2d and 3d polar ones was computed, unused)
+    if projection_base == "pol" and phi_grid is None:
+        projection_dim = "1d"
 
-    if is_pol and phi_grid is not None and projection_dim in ["2d", "3d"]:
-        d_phi_grid = np.median(np.diff(phi_grid))
-    else:
-        if is_pol:
-            projection_dim = "1d"
+    if (projection_base, projection_dim) not in _PROJECTIONS:
+        raise NotImplementedError(
+            f"{projection_dim} projection on {projection_base} grid is not ready yet!!",
+        )
 
-        d_phi_grid = 1.0
+    n_dim = int(projection_dim[0])
 
     # Speed grid bins edges
     if velocity_grid_edges is None:
@@ -176,11 +191,6 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
 
     if projection_base == "pol":
         d_v_grid = np.diff(velocity_grid_edges)
-
-        if projection_dim == "2d":
-            raise NotImplementedError(
-                "2d projection on polar grid is not ready yet!!",
-            )
     else:
         # All bins must have the same width (to 1 %), which is used for all
         d_v_grid = np.diff(velocity_grid_edges)
@@ -194,89 +204,37 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     # Weighting of number of Monte Carlo particles
     n_mc_mat = _mc_particles(vdf, n_mc, weight)
 
+    # Element of the projection grid: the speed width of each bin of the 1d
+    # polar grid, the volume of the bins of the cartesian grids
     if projection_base == "pol":
-        d_a_grid = velocity_grid ** (int(projection_dim[0]) - 1) * d_phi_grid * d_v_grid
-        d_a_grid = d_a_grid.astype(np.float64)
+        d_a_grid = d_v_grid.astype(np.float64)
     else:
-        d_a_grid = d_v_grid ** int(projection_dim[0])
-        d_a_grid = d_a_grid.astype(np.float64)
+        d_a_grid = np.full(1, d_v_grid**n_dim, dtype=np.float64)
 
-    # CHANGED: query the thread count once in plain Python and pass it
-    # into the kernels, rather than calling numba.get_num_threads() inside
-    # them -- doing that inside a cache=True jitted function disables its
-    # disk cache (it references dynamic globals numba can't serialize).
-    n_threads = numba.get_num_threads()
+    # The grid indices computed on a cartesian grid uniform to near machine
+    # precision, searched otherwise (see the implementation notes)
+    v_step = _uniform_step(velocity_grid_edges) if n_dim > 1 else 0.0
 
-    if projection_base == "cart" and projection_dim == "2d":
-        # CHANGED: precompute a uniform-grid step (only when the edges are
-        # uniform to a tight, machine-level tolerance -- NOT the same
-        # looser 1% tolerance enforced by the assert above) so the kernel
-        # can index the projection grid with O(1) arithmetic instead of
-        # np.searchsorted per Monte-Carlo particle. Falls back to
-        # searchsorted (v_step <= 0.0) whenever the edges aren't tightly
-        # uniform, so behaviour is unchanged for any input accepted by the
-        # existing assert.
-        v_step = _uniform_step(velocity_grid_edges)
-        f_g = _mc_cart_2d(
-            vdf,
-            velocity,
-            phi,
-            theta,
-            d_v,
-            d_v_m,
-            d_phi,
-            d_theta,
-            velocity_grid_edges,
-            d_a_grid,
-            v_lim,
-            a_lim,
-            n_mc_mat,
-            r_mat,
-            v_step,
-            n_threads,
-        )
-    elif projection_base == "cart" and projection_dim == "3d":
-        v_step = _uniform_step(velocity_grid_edges)  # CHANGED: see above
-        f_g = _mc_cart_3d(
-            vdf,
-            velocity,
-            phi,
-            theta,
-            d_v,
-            d_v_m,
-            d_phi,
-            d_theta,
-            velocity_grid_edges,
-            d_a_grid,
-            v_lim,
-            a_lim,
-            n_mc_mat,
-            r_mat,
-            v_step,
-            n_threads,
-        )
-    elif projection_base == "pol" and projection_dim == "1d":
-        f_g = _mc_pol_1d(
-            vdf,
-            velocity,
-            phi,
-            theta,
-            d_v,
-            d_v_m,
-            d_phi,
-            d_theta,
-            velocity_grid_edges,
-            d_a_grid,
-            v_lim,
-            a_lim,
-            n_mc_mat,
-            r_mat,
-            n_threads,
-        )
-    else:
-        raise NotImplementedError(
-            f"{projection_dim} projection on {projection_base} grid is not ready yet!!",
-        )
+    f_g = _mc_project(
+        vdf,
+        velocity,
+        phi,
+        theta,
+        d_v,
+        d_v_m,
+        d_phi,
+        d_theta,
+        velocity_grid_edges,
+        d_a_grid,
+        v_lim,
+        a_lim,
+        n_mc_mat,
+        r_mat,
+        v_step,
+        n_dim,
+        numba.get_num_threads(),
+    )
+    f_g = f_g.reshape((len(velocity_grid),) * n_dim)
 
     if projection_dim == "2d" and projection_base == "cart":
         pst = {
@@ -300,6 +258,10 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         pst = {"f": f_g, "vx": velocity_grid, "vx_edges": velocity_grid_edges}
 
     return pst
+
+
+# Supported projections: (base, dimension)
+_PROJECTIONS = [("pol", "1d"), ("cart", "2d"), ("cart", "3d")]
 
 
 def _mc_particles(vdf, n_mc, weight):
@@ -391,23 +353,10 @@ def _check_speed_widths(velocity, d_v_m, d_v_p):
 
 def _uniform_step(edges):
     r"""Return the bin width if ``edges`` is uniformly spaced to a tight
-    (near machine-precision) tolerance, otherwise 0.0.
-
-    CHANGED: new helper. The cartesian-grid assert in ``int_sph_dist``
-    only guarantees spacing is uniform to within 1%, which is too loose to
-    safely replace ``np.searchsorted`` with direct index arithmetic
-    (cumulative drift across many bins could shift the computed index by
-    more than one bin near the domain edges). This checks a much tighter
-    tolerance so the fast path is only used when it is numerically safe,
-    and the Monte-Carlo kernels fall back to ``np.searchsorted`` whenever
-    it returns 0.0. Note this fallback now uses ``side='right'`` rather
-    than the original's default ``side='left'`` -- see the comments at
-    each call site -- so it is bin-for-bin equivalent to the arithmetic
-    fast path and to MATLAB's ``discretize``, not to the pristine
-    original's searchsorted call, which used the opposite (and, per the
-    MATLAB source, incorrect) edge convention.
-
-    """
+    (near machine-precision) tolerance, otherwise 0.0: the 1 % uniformity
+    required of a cartesian grid is too loose for index arithmetic (the drift
+    over many bins could shift the index by more than one bin), and the
+    kernel searches the edges when it is 0.0."""
 
     diffs = np.diff(edges)
     if diffs.size == 0:
@@ -423,200 +372,32 @@ def _uniform_step(edges):
     return 0.0
 
 
-@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
-def _mc_pol_1d(
-    vdf,
-    v,
-    phi,
-    theta,
-    d_v,
-    d_v_m,
-    d_phi,
-    d_theta,
-    vg_edges,
-    d_a_grid,
-    v_lim,
-    a_lim,
-    n_mc,
-    r_mat,
-    n_threads,
-):
-    r"""Perform 3D Monte-Carlo interpolation of the VDFs
+@numba.njit(cache=True, inline="always")
+def _grid_index(value, edges, v_step):
+    r"""Index of the bin of the grid `edges` holding `value` (within the
+    grid), MATLAB's discretize convention (see the implementation notes):
+    computed and checked against the edges for v_step > 0, searched
+    otherwise."""
+    n_g = len(edges) - 1
 
-    Parameters
-    ----------
-    vdf : double
-        3D skymap particle velocity distribution function.
-    v : double
-        1D array of instrument velocity bins centers.
-    phi : double
-        1D array of instrument azimuthal angles bins centers.
-    theta : double
-        1D array of instrument elevation angles bins centers.
-    d_v : double
-        1D array of instrument velocity bins widths.
-    d_v_m : double
-        1D array of minus velocity from bins centers.
-    d_phi : double
-        1D array of instrument azimuthal angles bins widths.
-    d_theta : double
-        1D array of instrument elevation angles bins widths.
-    vg_egdes : double
-        Bin centers of the velocity of the projection grid.
-    d_a_grid : double
-        Bin centers of the azimuthal angle of the projection in radians in
-        the span [0,2*pi]. If this input is given, the projection will be 2D.
-        If it is omitted, the projection will be 1D.
-    v_lim : double
-        Limits on the out-of-plane velocity interval in 2D and "transverse"
-        velocity in 1D.
-    a_lim : double
-        Angular limit in degrees, can be combined with v_lim.
-    n_mc : double
-        Number of Monte-Carlo particle for the corresponding instrument bins.
-    r_mat : double
-        Frame transformation matrix.
-    n_threads : int
-        # CHANGED: new parameter. Number of worker threads, queried once in
-        # plain Python (numba.get_num_threads() inside a cache=True jitted
-        # function disables its disk cache) and used to size the
-        # per-thread accumulator that replaces the original racy shared-
-        # array scatter-add under numba.prange.
+    if v_step > 0.0:
+        # Non-negative: value >= edges[0] here
+        idx = min(int((value - edges[0]) / v_step), n_g - 1)
 
-    Returns
-    -------
-    f_g : double
-        Reduced/interpolated distribution.
+        while idx > 0 and value < edges[idx]:
+            idx -= 1
 
-    """
+        while idx < n_g - 1 and value >= edges[idx + 1]:
+            idx += 1
+    else:
+        idx = np.searchsorted(edges, value, side="right") - 1
 
-    n_v, n_ph, n_th = vdf.shape
-    n_vg = len(vg_edges) - 1
-
-    # CHANGED: hoisted per-bin invariants that only depend on v (index i)
-    # or theta (index k) out of the (i, j, k[, l_mc]) loop nest below,
-    # where they were previously recomputed on every visit (including,
-    # for the theta_1/theta_2/sin_theta_* quantities, on every individual
-    # Monte-Carlo particle even though they don't depend on l_mc at all).
-    v2 = v**2
-    cos_theta = np.cos(theta)
-    theta_1_arr = theta - 0.5 * d_theta
-    theta_2_arr = theta + 0.5 * d_theta
-    sin_theta_1_arr = np.sin(theta_1_arr)
-    d_sin_theta_arr = np.sin(theta_2_arr) - sin_theta_1_arr
-
-    # CHANGED: one private accumulator per *worker thread* (allocated once,
-    # not once per i-iteration) instead of scattering directly into a
-    # shared f_g array. Writing f_g[idx] += ... from inside a numba.prange
-    # loop with a data-dependent idx is not race-free -- two threads
-    # landing samples in the same output bin at the same time can race and
-    # silently drop an update. Since numba.get_thread_id() uniquely and
-    # stably identifies the current worker for the life of the parallel
-    # region, distinct threads always write to disjoint rows of
-    # f_g_threads, which makes this safe by construction (no reliance on
-    # numba's reduction-pattern detection), and reduced once at the end.
-    # CHANGED: n_threads is now passed in from the Python-level caller
-    # (numba.get_num_threads() called *inside* a cache=True jitted
-    # function disables its disk cache -- it references dynamic
-    # globals numba can't serialize; calling it in plain Python and
-    # passing the result in avoids that regression).
-    f_g_threads = np.zeros((n_threads, n_vg))
-
-    for i in numba.prange(n_v):
-        tid = numba.get_thread_id()
-
-        for j in range(n_ph):
-            for k in range(n_th):
-                n_mc_ijk = n_mc[i, j, k]
-
-                if vdf[i][j][k] == 0.0:
-                    continue
-
-                dtau_ijk = v2[i] * cos_theta[k] * d_v[i] * d_phi[j] * d_theta[k]
-                c_ijk = dtau_ijk / n_mc_ijk
-                f_ijk = vdf[i, j, k]
-
-                for l_mc in range(n_mc_ijk):
-                    # Generate Monte-Carlo particle speed, phi, and theta
-                    if l_mc == 0:
-                        # First Monte-Carlo particle is set at the bin center
-                        d_v_mc = 0.0
-                        d_phi_mc = 0.0
-                    else:
-                        d_v_mc = random.random() * d_v[i] - d_v_m[i]
-                        d_phi_mc = (random.random() - 0.5) * d_phi[j]
-
-                    # convert instrument bin to cartesian velocity
-                    v_mc = v[i] + d_v_mc
-                    phi_mc = phi[j] + d_phi_mc
-
-                    # This is needed to distribute the points evenly in space
-                    # (more points further 'equatorward' since the slice is
-                    # wider there).
-
-                    if l_mc == 0:
-                        theta_mc = theta[k]
-                    else:
-                        sin_theta_mc = (
-                            sin_theta_1_arr[k] + random.random() * d_sin_theta_arr[k]
-                        )
-                        theta_mc = asin(sin_theta_mc)
-
-                    v_x = v_mc * cos(theta_mc) * cos(phi_mc)
-                    v_y = v_mc * cos(theta_mc) * sin(phi_mc)
-                    v_z = v_mc * sin(theta_mc)
-
-                    # Get velocities in primed coordinate system
-                    # vxp = [vx, vy, vz] * xphat'; % all MC points
-                    v_x_p = r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
-                    v_y_p = r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
-                    v_z_p = r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
-
-                    # get transverse velocity sqrt(vy^2+vz^2)
-                    v_z_p = sqrt(v_y_p**2 + v_z_p**2)
-                    alpha = asin(v_z_p / v_mc)
-
-                    # Check if the velocity is within the v_lim and a_lim bounds
-                    use_point = v_lim[0] <= v_z_p < v_lim[1]
-                    use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
-
-                    # Find which bin the MC point falls into
-                    v_p = v_x_p
-
-                    if v_p > vg_edges[-1] or v_p < vg_edges[0]:
-                        continue
-
-                    # CHANGED: side='right' (not the default 'left'), minus 1,
-                    # reproduces MATLAB's discretize(vp, vg_edges) convention --
-                    # left-closed/right-open per bin: vg_edges[k] <= v_p <
-                    # vg_edges[k+1] -- confirmed against the real MATLAB source
-                    # (irf_int_sph_dist.m) and against MATLAB's documented
-                    # discretize rule. side='left' (the previous code here)
-                    # gives the *opposite* convention (left-open/right-closed)
-                    # and silently mis-bins any MC point landing exactly on an
-                    # interior grid edge.
-                    # v_p >= vg_edges[0] here (vg_edges[0] in the first bin)
-                    i_vxg = np.searchsorted(vg_edges, v_p, side="right") - 1
-
-                    # Special case matching MATLAB discretize's last-bin
-                    # exception: the last bin is closed on BOTH ends, so
-                    # v_p == vg_edges[-1] exactly must land in the last bin
-                    # rather than one-past-the-end.
-                    if i_vxg == n_vg:
-                        i_vxg = n_vg - 1
-
-                    d_a = d_a_grid[i_vxg]
-
-                    if use_point * (i_vxg < n_vg):
-                        f_g_threads[tid, i_vxg] += f_ijk * c_ijk / d_a
-
-    f_g = f_g_threads.sum(axis=0)  # CHANGED: combine per-thread contributions once
-
-    return f_g
+    # The last bin is closed on both ends
+    return min(idx, n_g - 1)
 
 
 @numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
-def _mc_cart_2d(
+def _mc_project(
     vdf,
     v,
     phi,
@@ -632,325 +413,59 @@ def _mc_cart_2d(
     n_mc,
     r_mat,
     v_step,
+    n_dim,
     n_threads,
 ):
-    r"""Perform 3D Monte-Carlo interpolation of the VDFs
-
-    Parameters
-    ----------
-    vdf : double
-        3D skymap particle velocity distribution function.
-    v : double
-        1D array of instrument velocity bins centers.
-    phi : double
-        1D array of instrument azimuthal angles bins centers.
-    theta : double
-        1D array of instrument elevation angles bins centers.
-    d_v : double
-        1D array of instrument velocity bins widths.
-    d_v_m : double
-        1D array of minus velocity from bins centers.
-    d_phi : double
-        1D array of instrument azimuthal angles bins widths.
-    d_theta : double
-        1D array of instrument elevation angles bins widths.
-    vg_egdes : double
-        Bin centers of the velocity of the projection grid.
-    d_a_grid : double
-        Bin centers of the azimuthal angle of the projection in radians in
-        the span [0,2*pi]. If this input is given, the projection will be 2D.
-        If it is omitted, the projection will be 1D.
-    v_lim : double
-        Limits on the out-of-plane velocity interval in 2D and "transverse"
-        velocity
-        in 1D.
-    a_lim : double
-        Angular limit in degrees, can be combined with v_lim.
-    n_mc : double
-        Number of Monte-Carlo particle for the corresponding instrument bins.
-    r_mat : double
-        Frame transformation matrix.
-    v_step : double
-        # CHANGED: new parameter. Projection-grid bin width to use for O(1)
-        # index arithmetic when > 0.0 (grid confirmed tightly uniform by
-        # the caller); falls back to the original np.searchsorted lookup
-        # when <= 0.0, so behaviour is unchanged for a grid that only
-        # satisfies the looser 1% tolerance checked in int_sph_dist.
-    n_threads : int
-        # CHANGED: new parameter. Number of worker threads, queried once in
-        # plain Python (numba.get_num_threads() inside a cache=True jitted
-        # function disables its disk cache) and used to size the
-        # per-thread accumulator that replaces the original racy shared-
-        # array scatter-add under numba.prange.
-
-    Returns
-    -------
-    f_g : double
-        Reduced/interpolated distribution.
-
-    """
-
-    # Get dimension of the instrument and interpolation grid.
-    n_v, n_ph, n_th = vdf.shape
-    n_vg = len(vg_edges) - 1
-
-    v2 = v**2  # CHANGED: hoisted, see _mc_pol_1d
-    cos_theta = np.cos(theta)
-    theta_1_arr = theta - 0.5 * d_theta
-    theta_2_arr = theta + 0.5 * d_theta
-    sin_theta_1_arr = np.sin(theta_1_arr)
-    d_sin_theta_arr = np.sin(theta_2_arr) - sin_theta_1_arr
-
-    v_g0 = vg_edges[0]
-    use_fast_index = v_step > 0.0  # CHANGED: see v_step above
-
-    # CHANGED: one private accumulator per worker thread, allocated once
-    # (not once per i-iteration -- that was measured to actually be a net
-    # slowdown for large 2D/3D output grids, since it re-zeros an
-    # n_vg*n_vg-sized array on every visit to the outer loop). See
-    # _mc_pol_1d for why per-thread indexing (rather than the original
-    # shared-array scatter-add) is required for correctness under prange.
-    # CHANGED: n_threads is now passed in from the Python-level caller
-    # (numba.get_num_threads() called *inside* a cache=True jitted
-    # function disables its disk cache -- it references dynamic
-    # globals numba can't serialize; calling it in plain Python and
-    # passing the result in avoids that regression).
-    f_g_threads = np.zeros((n_threads, n_vg, n_vg))
-
-    # CHANGED: this loop was serial (plain range) even though the other
-    # two kernels use numba.prange -- there is no reason _mc_cart_2d
-    # shouldn't also use all available cores.
-    for i in numba.prange(n_v):
-        tid = numba.get_thread_id()
-
-        for j in range(n_ph):
-            for k in range(n_th):
-                n_mc_ijk = n_mc[i, j, k]
-
-                if vdf[i][j][k] == 0.0:
-                    continue
-
-                dtau_ijk = v2[i] * cos_theta[k] * d_v[i] * d_phi[j] * d_theta[k]
-                c_ijk = dtau_ijk / n_mc_ijk
-                f_ijk = vdf[i, j, k]
-
-                for l_mc in range(n_mc_ijk):
-                    # Generate Monte-Carlo particle speed, phi, and theta
-                    if l_mc == 0:
-                        # First Monte-Carlo particle is set at the bin center
-                        d_v_mc = 0.0
-                        d_phi_mc = 0.0
-                    else:
-                        d_v_mc = random.random() * d_v[i] - d_v_m[i]
-                        d_phi_mc = (random.random() - 0.5) * d_phi[j]
-
-                    # convert instrument bin to cartesian velocity
-                    v_mc = v[i] + d_v_mc
-                    phi_mc = phi[j] + d_phi_mc
-
-                    # This is needed to distribute the points evenly in space
-                    # (more points further 'equatorward' since the slice is
-                    # wider there).
-
-                    if l_mc == 0:
-                        theta_mc = theta[k]
-                    else:
-                        sin_theta_mc = (
-                            sin_theta_1_arr[k] + random.random() * d_sin_theta_arr[k]
-                        )
-                        theta_mc = asin(sin_theta_mc)
-
-                    # Calculate velocity of the Monte-Carlo particle in
-                    # cartesian coordinates
-                    v_x = v_mc * cos(theta_mc) * cos(phi_mc)
-                    v_y = v_mc * cos(theta_mc) * sin(phi_mc)
-                    v_z = v_mc * sin(theta_mc)
-
-                    # Get velocities in primed coordinate system
-                    v_x_p = r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
-                    v_y_p = r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
-                    v_z_p = r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
-
-                    # Elevation angle from the projection plane
-                    alpha = asin(v_z_p / v_mc)
-
-                    # Check if the velocity is within the v_lim and a_lim bounds
-                    use_point = v_lim[0] <= v_z_p < v_lim[1]
-                    use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
-
-                    # Check if the velocity along the x direction is outside of the grid
-                    if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
-                        continue
-
-                    # Check if the velocity along the y direction is outside of the grid
-                    if v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]:
-                        continue
-
-                    # CHANGED: O(1) arithmetic index when the grid is
-                    # confirmed uniform, instead of always paying for a
-                    # binary search per particle per axis. The arithmetic
-                    # gives an initial guess that is then VERIFIED (and, if
-                    # needed, corrected by a bin or two) against the actual
-                    # vg_edges values -- an exact-equality tie-break alone
-                    # is not enough, because v_g0 + i*v_step can drift from
-                    # the true vg_edges[i] by a few ULPs of accumulated
-                    # rounding, and a real velocity sample landing within
-                    # that drift of a boundary would silently land in the
-                    # wrong bin. This is not just a theoretical concern: a
-                    # projection grid centered on zero (the common case)
-                    # has an edge at v=0, and an instrument phi grid that
-                    # includes exactly 90/270 degrees produces many real
-                    # samples with a near-zero component right at that
-                    # edge. The correction loops below reproduce MATLAB's
-                    # discretize(v, vg_edges) convention exactly -- left-
-                    # closed/right-open per bin (vg_edges[k] <= v <
-                    # vg_edges[k+1]), confirmed against the real MATLAB
-                    # source (irf_int_sph_dist.m) -- while still being O(1)
-                    # in the typical case (0 or 1 iterations). CHANGED:
-                    # a prior pass here used <=/> (matching np.searchsorted's
-                    # left-open/right-closed convention instead), which was
-                    # backwards relative to MATLAB -- reverted to </>=.
-                    if use_fast_index:
-                        # Non-negative: v >= v_g0 here
-                        i_vxg = min(int((v_x_p - v_g0) / v_step), n_vg - 1)
-                        i_vyg = min(int((v_y_p - v_g0) / v_step), n_vg - 1)
-                        while i_vxg > 0 and v_x_p < vg_edges[i_vxg]:
-                            i_vxg -= 1
-                        while i_vxg < n_vg - 1 and v_x_p >= vg_edges[i_vxg + 1]:
-                            i_vxg += 1
-                        while i_vyg > 0 and v_y_p < vg_edges[i_vyg]:
-                            i_vyg -= 1
-                        while i_vyg < n_vg - 1 and v_y_p >= vg_edges[i_vyg + 1]:
-                            i_vyg += 1
-                    else:
-                        # CHANGED: side='right' (not the default 'left'),
-                        # minus 1, matches MATLAB's discretize convention --
-                        # see _mc_pol_1d for the full explanation. side='left'
-                        # gives the opposite (left-open/right-closed) binning
-                        # and silently mis-bins points exactly on an interior
-                        # grid edge.
-                        # v >= vg_edges[0] here (vg_edges[0] in the first bin)
-                        i_vxg = np.searchsorted(vg_edges, v_x_p, side="right") - 1
-                        i_vyg = np.searchsorted(vg_edges, v_y_p, side="right") - 1
-
-                    # Special case matching MATLAB discretize's last-bin
-                    # exception (closed on both ends): v == vg_edges[-1]
-                    # exactly must land in the last bin, not one-past-the-end.
-                    # Only the searchsorted(side='right') path can produce
-                    # n_vg here -- the fast-index path already clamps to
-                    # n_vg - 1 above.
-                    if i_vxg == n_vg:
-                        i_vxg = n_vg - 1
-
-                    if i_vyg == n_vg:
-                        i_vyg = n_vg - 1
-
-                    if use_point:
-                        f_g_threads[tid, i_vxg, i_vyg] += f_ijk * c_ijk / d_a_grid
-
-    f_g = f_g_threads.sum(axis=0)  # CHANGED: see _mc_pol_1d
-
-    return f_g
-
-
-@numba.jit(cache=True, nogil=True, parallel=True, nopython=True)
-def _mc_cart_3d(
-    vdf,
-    v,
-    phi,
-    theta,
-    d_v,
-    d_v_m,
-    d_phi,
-    d_theta,
-    vg_edges,
-    d_a_grid,
-    v_lim,
-    a_lim,
-    n_mc,
-    r_mat,
-    v_step,
-    n_threads,
-):
-    r"""Perform 3D Monte-Carlo interpolation of the VDFs
+    r"""Monte-Carlo projection of a skymap onto a grid, flattened: 1d polar
+    (n_dim = 1: the speed along the first axis, the transverse speed limited
+    by v_lim and a_lim), 2d or 3d cartesian (the out-of-plane speed limited
+    by v_lim and a_lim).
 
     Parameters
     ----------
     vdf : numpy.ndarray
-        3D skymap particle velocity distribution function.
-    v : numpy.ndarray
-        1D array of instrument velocity bins centers.
-    phi : numpy.ndarray
-        1D array of instrument azimuthal angles bins centers.
-    theta : numpy.ndarray
-        1D array of instrument elevation angles bins centers.
-    d_v : numpy.ndarray
-        1D array of instrument velocity bins widths.
-    d_v_m : numpy.ndarray
-        1D array of minus velocity from bins centers.
-    d_phi : numpy.ndarray
-        1D array of instrument azimuthal angles bins widths.
-    d_theta : numpy.ndarray
-        1D array of instrument elevation angles bins widths.
-    vg_egdes : double
-        Bin centers of the velocity of the projection grid.
-    d_a_grid : double
-        Bin centers of the azimuthal angle of the projection in radians in
-        the span [0,2*pi]. If this input is given, the projection will be 2D.
-        If it is omitted, the projection will be 1D.
-    v_lim : double
-        Limits on the out-of-plane velocity interval in 2D and "transverse"
-        velocity in 1D.
-    a_lim : double
-        Angular limit in degrees, can be combined with v_lim.
-    n_mc : double
-        Number of Monte-Carlo particle for the corresponding instrument bins.
-    r_mat : double
+        Skymap (speed, azimuth, elevation), without NaN.
+    v, phi, theta : numpy.ndarray
+        Speeds, azimuths and elevations (rad) of the instrument bins.
+    d_v, d_v_m : numpy.ndarray
+        Speed widths of the bins, and their parts below the speeds.
+    d_phi, d_theta : numpy.ndarray
+        Azimuth and elevation widths of the bins (rad).
+    vg_edges : numpy.ndarray
+        Edges of the projection grid (the same on each axis).
+    d_a_grid : numpy.ndarray
+        Speed widths of the 1d polar grid, or the volume of a bin of the
+        cartesian grids (one value).
+    v_lim, a_lim : numpy.ndarray
+        Limits of the transverse or out-of-plane speed, and of the angle from
+        the projection axis or plane (rad).
+    n_mc : numpy.ndarray
+        Number of Monte-Carlo particles of each instrument bin.
+    r_mat : numpy.ndarray
         Frame transformation matrix.
-    v_step : double
-        # CHANGED: new parameter, see _mc_cart_2d.
+    v_step : float
+        Width of the bins of a uniform grid (index arithmetic), or 0.0.
+    n_dim : int
+        Dimension of the projection.
     n_threads : int
-        # CHANGED: new parameter. Number of worker threads, queried once in
-        # plain Python (numba.get_num_threads() inside a cache=True jitted
-        # function disables its disk cache) and used to size the
-        # per-thread accumulator that replaces the original racy shared-
-        # array scatter-add under numba.prange.
+        Number of worker threads.
 
     Returns
     -------
-    f_g : double
-        Reduced/interpolated distribution.
+    numpy.ndarray
+        Projected distribution, (n_g ** n_dim,) with n_g bins on each axis.
 
     """
-
-    # Get dimension of the instrument and interpolation grid.
     n_v, n_ph, n_th = vdf.shape
     n_vg = len(vg_edges) - 1
 
-    v2 = v**2  # CHANGED: hoisted, see _mc_pol_1d
+    # Invariants of the speeds and elevations
+    v2 = v**2
     cos_theta = np.cos(theta)
-    theta_1_arr = theta - 0.5 * d_theta
-    theta_2_arr = theta + 0.5 * d_theta
-    sin_theta_1_arr = np.sin(theta_1_arr)
-    d_sin_theta_arr = np.sin(theta_2_arr) - sin_theta_1_arr
+    sin_theta_1_arr = np.sin(theta - 0.5 * d_theta)
+    d_sin_theta_arr = np.sin(theta + 0.5 * d_theta) - sin_theta_1_arr
 
-    v_g0 = vg_edges[0]
-    use_fast_index = v_step > 0.0  # CHANGED: see _mc_cart_2d
-
-    # CHANGED: one private accumulator per worker thread, allocated once --
-    # see _mc_cart_2d for why this replaced a per-i-iteration private
-    # array (measured net slowdown for a large 3D output grid, since a
-    # fresh n_vg**3 array was being re-zeroed on every visit to the outer
-    # loop). Distinct threads always write to disjoint rows of
-    # f_g_threads (numba.get_thread_id() is stable per worker for the
-    # life of the parallel region), so this is race-free by construction,
-    # fixing the original f_g[idx] += ... pattern's race under prange.
-    # CHANGED: n_threads is now passed in from the Python-level caller
-    # (numba.get_num_threads() called *inside* a cache=True jitted
-    # function disables its disk cache -- it references dynamic
-    # globals numba can't serialize; calling it in plain Python and
-    # passing the result in avoids that regression).
-    f_g_threads = np.zeros((n_threads, n_vg, n_vg, n_vg))
+    f_g_threads = np.zeros((n_threads, n_vg**n_dim))
 
     for i in numba.prange(n_v):
         tid = numba.get_thread_id()
@@ -967,23 +482,19 @@ def _mc_cart_3d(
                 f_ijk = vdf[i, j, k]
 
                 for l_mc in range(n_mc_ijk):
-                    # Generate Monte-Carlo particle speed, phi, and theta
+                    # Speed, azimuth and elevation of the particle (the first
+                    # at the centre of the bin)
                     if l_mc == 0:
-                        # First Monte-Carlo particle is set at the bin center
                         d_v_mc = 0.0
                         d_phi_mc = 0.0
                     else:
                         d_v_mc = random.random() * d_v[i] - d_v_m[i]
                         d_phi_mc = (random.random() - 0.5) * d_phi[j]
 
-                    # convert instrument bin to cartesian velocity
                     v_mc = v[i] + d_v_mc
                     phi_mc = phi[j] + d_phi_mc
 
-                    # This is needed to distribute the points evenly in space
-                    # (more points further 'equatorward' since the slice is
-                    # wider there).
-
+                    # Uniform in sin(elevation): uniform in solid angle
                     if l_mc == 0:
                         theta_mc = theta[k]
                     else:
@@ -996,101 +507,44 @@ def _mc_cart_3d(
                     v_y = v_mc * cos(theta_mc) * sin(phi_mc)
                     v_z = v_mc * sin(theta_mc)
 
-                    # Get velocities in primed coordinate system
-                    # vxp = [vx, vy, vz] * xphat'; % all MC points
+                    # Velocity in the primed coordinate system
                     v_x_p = r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
                     v_y_p = r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
                     v_z_p = r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
 
+                    # Transverse speed (1d) or out-of-plane speed, and the
+                    # angle from the projection axis or plane, within limits
+                    if n_dim == 1:
+                        v_z_p = sqrt(v_y_p**2 + v_z_p**2)
+
                     alpha = asin(v_z_p / v_mc)
 
-                    # Check if the velocity is within the v_lim and a_lim bounds
                     use_point = v_lim[0] <= v_z_p < v_lim[1]
                     use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
 
+                    # Particles out of the grid
                     if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
                         continue
 
-                    if v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]:
+                    if n_dim > 1 and (v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]):
                         continue
 
-                    if v_z_p > vg_edges[-1] or v_z_p < vg_edges[0]:
+                    if n_dim > 2 and (v_z_p > vg_edges[-1] or v_z_p < vg_edges[0]):
                         continue
 
-                    # CHANGED: O(1) arithmetic index when the grid is
-                    # confirmed uniform, replacing a searchsorted binary
-                    # search per particle per axis. The arithmetic gives
-                    # an initial guess that is then VERIFIED (and, if
-                    # needed, corrected by a bin or two) against the
-                    # actual vg_edges values -- an exact-equality
-                    # tie-break alone is not enough, because
-                    # v_g0 + i*v_step can drift from the true
-                    # vg_edges[i] by a few ULPs of accumulated rounding,
-                    # and a real velocity sample landing within that
-                    # drift of a boundary would silently land in the
-                    # wrong bin. This is not just a theoretical concern:
-                    # a projection grid centered on zero (the common
-                    # case) has an edge at v=0, and an instrument phi
-                    # grid that includes exactly 90/270 degrees produces
-                    # many real samples with a near-zero component right
-                    # at that edge. The correction loops below reproduce
-                    # MATLAB's discretize(v, vg_edges) convention exactly --
-                    # left-closed/right-open per bin (vg_edges[k] <= v <
-                    # vg_edges[k+1]), confirmed against the real MATLAB
-                    # source (irf_int_sph_dist.m) -- while still being O(1)
-                    # in the typical case (0 or 1 iterations). CHANGED:
-                    # a prior pass here used <=/> (matching np.searchsorted's
-                    # left-open/right-closed convention instead), which was
-                    # backwards relative to MATLAB -- reverted to </>=.
-                    if use_fast_index:
-                        # Non-negative: v >= v_g0 here
-                        i_vxg = min(int((v_x_p - v_g0) / v_step), n_vg - 1)
-                        i_vyg = min(int((v_y_p - v_g0) / v_step), n_vg - 1)
-                        i_vzg = min(int((v_z_p - v_g0) / v_step), n_vg - 1)
-                        while i_vxg > 0 and v_x_p < vg_edges[i_vxg]:
-                            i_vxg -= 1
-                        while i_vxg < n_vg - 1 and v_x_p >= vg_edges[i_vxg + 1]:
-                            i_vxg += 1
-                        while i_vyg > 0 and v_y_p < vg_edges[i_vyg]:
-                            i_vyg -= 1
-                        while i_vyg < n_vg - 1 and v_y_p >= vg_edges[i_vyg + 1]:
-                            i_vyg += 1
-                        while i_vzg > 0 and v_z_p < vg_edges[i_vzg]:
-                            i_vzg -= 1
-                        while i_vzg < n_vg - 1 and v_z_p >= vg_edges[i_vzg + 1]:
-                            i_vzg += 1
-                    else:
-                        # CHANGED: side='right' (not the default 'left'),
-                        # minus 1, matches MATLAB's discretize convention --
-                        # see _mc_pol_1d for the full explanation. side='left'
-                        # gives the opposite (left-open/right-closed) binning
-                        # and silently mis-bins points exactly on an interior
-                        # grid edge.
-                        # v >= vg_edges[0] here (vg_edges[0] in the first bin)
-                        i_vxg = np.searchsorted(vg_edges, v_x_p, side="right") - 1
-                        i_vyg = np.searchsorted(vg_edges, v_y_p, side="right") - 1
-                        i_vzg = np.searchsorted(vg_edges, v_z_p, side="right") - 1
+                    # Flat index of the bin (x, y, z), C order
+                    i_vxg = _grid_index(v_x_p, vg_edges, v_step)
+                    idx = i_vxg
 
-                    # Special case matching MATLAB discretize's last-bin
-                    # exception (closed on both ends): v == vg_edges[-1]
-                    # exactly must land in the last bin, not one-past-the-end.
-                    # Only the searchsorted(side='right') path can produce
-                    # n_vg here -- the fast-index path already clamps to
-                    # n_vg - 1 above.
-                    if i_vxg == n_vg:
-                        i_vxg = n_vg - 1
+                    if n_dim > 1:
+                        idx = idx * n_vg + _grid_index(v_y_p, vg_edges, v_step)
 
-                    if i_vyg == n_vg:
-                        i_vyg = n_vg - 1
+                    if n_dim > 2:
+                        idx = idx * n_vg + _grid_index(v_z_p, vg_edges, v_step)
 
-                    if i_vzg == n_vg:
-                        i_vzg = n_vg - 1
+                    d_a = d_a_grid[i_vxg] if n_dim == 1 else d_a_grid[0]
 
                     if use_point:
-                        f_g_threads[tid, i_vxg, i_vyg, i_vzg] += (
-                            f_ijk * c_ijk / d_a_grid
-                        )
+                        f_g_threads[tid, idx] += f_ijk * c_ijk / d_a
 
-    f_g = f_g_threads.sum(axis=0)  # CHANGED: see _mc_pol_1d
-
-    return f_g
+    return f_g_threads.sum(axis=0)
