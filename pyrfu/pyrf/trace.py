@@ -1,19 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Union
-
 # 3rd party imports
-import numpy as np
 import xarray as xr
-from numpy.typing import NDArray
 from xarray import DataArray
 
 # Local imports
+from pyrfu._core.typing import FloatArray
 from pyrfu.pyrf.ts_scalar import ts_scalar
-
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 
 def trace(inp: DataArray) -> DataArray:
@@ -72,9 +66,9 @@ def trace(inp: DataArray) -> DataArray:
         raise ValueError("inp must be a time series of a tensor")
 
     # Get diagonal elements
-    inp_xx: NDArrayFloats = inp.data[:, 0, 0]
-    inp_yy: NDArrayFloats = inp.data[:, 1, 1]
-    inp_zz: NDArrayFloats = inp.data[:, 2, 2]
+    inp_xx: FloatArray = inp.data[:, 0, 0]
+    inp_yy: FloatArray = inp.data[:, 1, 1]
+    inp_zz: FloatArray = inp.data[:, 2, 2]
 
     # Compute trace
     out_data = inp_xx + inp_yy + inp_zz

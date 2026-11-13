@@ -10,6 +10,7 @@ from xarray import Dataset
 
 # Local imports
 from pyrfu._core.time import _ns
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def psd_rebin(
@@ -19,8 +20,8 @@ def psd_rebin(
     energy1: NDArray[np.float32],
     esteptable: NDArray[np.uint8],
 ) -> tuple[
-    NDArray[np.datetime64],
-    NDArray[np.float32 | np.float64],
+    TimeArray,
+    FloatArray,
     NDArray[np.float32],
     NDArray[np.float32],
 ]:
@@ -96,7 +97,7 @@ def psd_rebin(
         raise TypeError("step_table must be a numpy.ndarray")
 
     # Get time and data
-    vdf_time: NDArray[np.datetime64] = vdf.time.data
+    vdf_time: TimeArray = vdf.time.data
     vdf_data: NDArray[np.float64] = vdf.data.data.astype(np.float64)
 
     # Channels of each table (32 for FPI; 64 were assumed, so that the channels
@@ -114,9 +115,7 @@ def psd_rebin(
     # Define new times
     # Sampling period in ns (kept as int64, int16 overflows for ms time steps)
     delta_t: float = np.median(np.diff(_ns(vdf_time)))
-    time_r: NDArray[np.datetime64] = vdf_time[:-1:2] + np.timedelta64(
-        int(round(delta_t / 2)), "ns"
-    )
+    time_r: TimeArray = vdf_time[:-1:2] + np.timedelta64(int(round(delta_t / 2)), "ns")
 
     # The pairs of samples (first, second): the last sample of an odd number
     # is left out

@@ -3,7 +3,6 @@
 
 # Built-in imports
 import logging
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -12,6 +11,7 @@ from numpy.typing import NDArray
 from xarray import DataArray, Dataset
 
 # Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 from pyrfu.mms.dsl2gse import _transformation_matrix
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.cotrans import cotrans
@@ -20,8 +20,6 @@ from pyrfu.pyrf.ts_tensor_xyz import ts_tensor_xyz
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 logger = logging.getLogger(__name__)
-
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 
 def _angle(u_vec, v_vec):
@@ -48,7 +46,7 @@ def _rotate_perp(tensor, thetas):
 def rotate_tensor(
     inp: DataArray,
     rot_flag: str,
-    vec: DataArray | NDArrayFloats | Dataset,
+    vec: DataArray | FloatArray | Dataset,
     perp: str | None = None,
     verbose: bool = False,
 ) -> DataArray:
@@ -168,8 +166,8 @@ def rotate_tensor(
     precision = inp.data.dtype
 
     # Check input and load pressure/temperature terms
-    inp_time: NDArray[np.datetime64] = inp.time.data
-    inp_data: NDArrayFloats = inp.data
+    inp_time: TimeArray = inp.time.data
+    inp_data: FloatArray = inp.data
     n_t: int = len(inp_time)
 
     # Initialize rotation matrix
@@ -190,11 +188,11 @@ def rotate_tensor(
 
         # Construct the rotation matrix
         # Parallel direction
-        r_x: NDArray[np.float64] = b_vec
+        r_x: FloatArray = b_vec
         # Perp1 arbitrarily chosen along x
-        r_y: NDArray[np.float64] = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+        r_y: FloatArray = np.array([1.0, 0.0, 0.0], dtype=np.float64)
         # Perp2 with correction
-        r_z: NDArray[np.float64] = np.cross(r_x, r_y)
+        r_z: FloatArray = np.cross(r_x, r_y)
         # B exactly along x (B x x = 0 gave NaN): y as the reference instead,
         # the perpendicular directions being arbitrary
         along_x = np.linalg.norm(r_z, axis=1) < 1e-12
@@ -284,7 +282,7 @@ def rotate_tensor(
 
     # R P R^T at all times at once (it was a loop over the times)
     rot_mat = rot_mat.astype(precision)
-    p_tensor_p: NDArrayFloats = (rot_mat @ inp_data) @ np.transpose(rot_mat, [0, 2, 1])
+    p_tensor_p: FloatArray = (rot_mat @ inp_data) @ np.transpose(rot_mat, [0, 2, 1])
 
     if perp.lower() == "":
         logger.info("No additional rotation applied.")
@@ -296,7 +294,7 @@ def rotate_tensor(
             )
         # P23 = 0 (e.g. diagonal tensor): +-inf gives +-pi/4, 0/0 is set to 0
         with np.errstate(divide="ignore", invalid="ignore"):
-            thetas: NDArrayFloats = 0.5 * np.arctan(
+            thetas: FloatArray = 0.5 * np.arctan(
                 (p_tensor_p[:, 2, 2] - p_tensor_p[:, 1, 1]) / (2 * p_tensor_p[:, 1, 2]),
             )
         thetas[np.isnan(thetas)] = 0.0

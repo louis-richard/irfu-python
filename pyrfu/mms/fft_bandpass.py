@@ -3,7 +3,6 @@
 
 # Built-in imports
 import numbers
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -12,9 +11,8 @@ from numpy.typing import NDArray
 from xarray import DataArray
 
 # Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 from pyrfu.pyrf.calc_fs import calc_fs
-
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 
 def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
@@ -88,8 +86,8 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
         raise ValueError("f_min must be smaller than f_max")
 
     # Get time and data
-    inp_time: NDArray[np.datetime64] = inp.time.data
-    inp_data: NDArrayFloats = inp.data
+    inp_time: TimeArray = inp.time.data
+    inp_data: FloatArray = inp.data
     precision = inp_data.dtype
 
     # Reshape to column vector if input is a scalar
@@ -136,9 +134,9 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
 
     # Put back original NaNs, shape and precision
     out_data_64[idx_nans] = np.nan
-    out_data: NDArrayFloats = out_data_64.reshape(
-        (len(inp_time), *inp.shape[1:])
-    ).astype(precision)
+    out_data: FloatArray = out_data_64.reshape((len(inp_time), *inp.shape[1:])).astype(
+        precision
+    )
 
     # Same dimensions, coordinates and attributes as the input (rebuilt as a
     # scalar or a 3-vector: (time, 2) and (time, 6) raised, (time, 1) was

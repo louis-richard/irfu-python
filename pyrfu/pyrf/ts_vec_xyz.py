@@ -7,13 +7,15 @@ from typing import Any
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from numpy.typing import NDArray
 from xarray import DataArray
+
+# Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def ts_vec_xyz(
-    time: NDArray[np.datetime64],
-    data: NDArray[np.float32 | np.float64],
+    time: TimeArray,
+    data: FloatArray,
     attrs: dict[str, Any] | None = None,
 ) -> DataArray:
     r"""Create a time series containing a 1st order tensor.

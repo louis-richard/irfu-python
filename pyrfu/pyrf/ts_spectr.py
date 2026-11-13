@@ -2,21 +2,21 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Union
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from numpy.typing import NDArray
 from xarray import DataArray
 
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
+# Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def ts_spectr(
-    time: NDArray[np.datetime64],
-    energy: NDArrayFloats,
-    data: NDArrayFloats,
+    time: TimeArray,
+    energy: FloatArray,
+    data: FloatArray,
     comp_name: str | None = None,
     attrs: dict[str, Any] | None = None,
 ) -> DataArray:

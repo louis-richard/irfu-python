@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Union
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -10,17 +10,18 @@ import xarray as xr
 from numpy.typing import NDArray
 from xarray import Dataset
 
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
+# Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def ts_skymap(
-    time: NDArray[np.datetime64],
-    data: NDArrayFloats,
-    energy: NDArrayFloats,
-    phi: NDArrayFloats,
-    theta: NDArrayFloats,
-    energy0: NDArrayFloats | None = None,
-    energy1: NDArrayFloats | None = None,
+    time: TimeArray,
+    data: FloatArray,
+    energy: FloatArray,
+    phi: FloatArray,
+    theta: FloatArray,
+    energy0: FloatArray | None = None,
+    energy1: FloatArray | None = None,
     esteptable: NDArray[np.uint8] | None = None,
     attrs: dict[str, Any] | None = None,
     glob_attrs: dict[str, Any] | None = None,

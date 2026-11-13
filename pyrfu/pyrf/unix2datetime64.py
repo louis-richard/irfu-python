@@ -10,9 +10,10 @@ from numpy.typing import NDArray
 
 # Local imports
 from pyrfu._core.time import _datetime64
+from pyrfu._core.typing import TimeArray
 
 
-def unix2datetime64(time: list[float] | NDArray[Any]) -> NDArray[np.datetime64]:
+def unix2datetime64(time: list[float] | NDArray[Any]) -> TimeArray:
     r"""Converts unix time to datetime64 in ns units.
 
     Parameters

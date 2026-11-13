@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 from numpy.typing import NDArray
 
 # Local imports
+from pyrfu._core.typing import TimeArray
+
 from .ttns2datetime64 import ttns2datetime64
 
 # Seconds from 0000-01-01T00:00:00 (CDF_EPOCH and CDF_EPOCH16 origin) to the
@@ -59,7 +59,7 @@ def _epoch162datetime64(epochs):
 
 def cdfepoch2datetime64(
     epochs: int | float | complex | list | NDArray,
-) -> NDArray[np.datetime64]:
+) -> TimeArray:
     r"""Converts CDF epochs to numpy.datetime64 with nanosecond precision.
 
     The CDF time type is inferred from the data type:

@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import pycdfpp
 from numpy.typing import NDArray
+
+# Local imports
+from pyrfu._core.typing import TimeArray
 
 # CDF_TT2000 fill and pad values, which have no datetime64 equivalent
 TT2000_FILL = np.iinfo(np.int64).min
@@ -25,7 +26,7 @@ TT2000_MAX = int(
 
 def ttns2datetime64(
     time: int | float | list | NDArray[np.int64],
-) -> NDArray[np.datetime64]:
+) -> TimeArray:
     r"""Convert time in epoch_tt2000 (nanoseconds since J2000) to datetime64
     in ns units.
 

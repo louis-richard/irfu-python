@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Union
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -12,9 +9,8 @@ from xarray import DataArray
 
 # Local imports
 from pyrfu._core.time import _seconds
+from pyrfu._core.typing import TimeArray
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
-
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
 
 
 def _like(inp: DataArray, data: NDArray[np.float64]) -> DataArray:
@@ -58,7 +54,7 @@ def mean_field(inp: DataArray, deg: int) -> tuple[DataArray, DataArray]:
         raise TypeError("Input must be a xarray.DataArray")
 
     # Extracting time (in seconds since the first sample) and data
-    time: NDArray[np.datetime64] = inp.time.data
+    time: TimeArray = inp.time.data
     # Double precision, one column per component (a scalar raised IndexError)
     data: NDArray[np.float64] = inp.data.astype(np.float64).reshape(len(inp), -1)
     time_sec: NDArray[np.float64] = _seconds(time, time[0])

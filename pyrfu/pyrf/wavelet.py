@@ -14,6 +14,7 @@ from scipy import fft
 from xarray import DataArray, Dataset
 
 # Local imports
+from pyrfu._core.typing import TimeArray
 from pyrfu._core.units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 
@@ -186,7 +187,7 @@ def wavelet(
     # Unpack time and data.
     # Remove the last sample if the total number of samples is odd.
     if len(inp.time.data) % 2:
-        time: NDArray[np.datetime64] = inp.time.data[:-1]
+        time: TimeArray = inp.time.data[:-1]
         data: NDArray[np.float64] = inp.data[:-1, ...].astype(np.float64)
     else:
         time = inp.time.data

@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import pycdfpp
 from numpy.typing import NDArray
 
 # Local imports
+from pyrfu._core.typing import TimeArray
+
 from .ttns2datetime64 import TT2000_FILL, ttns2datetime64
 
 # Earliest time that both CDF_TT2000 (from 1707-09-22, after the fill and pad
@@ -25,7 +25,7 @@ _OUT_OF_RANGE = (
 
 
 def datetime642ttns(
-    time: np.datetime64 | NDArray[np.datetime64],
+    time: np.datetime64 | TimeArray,
 ) -> NDArray[np.int64]:
     r"""Converts datetime64 to epoch_tt2000 (nanoseconds since J2000).
 
