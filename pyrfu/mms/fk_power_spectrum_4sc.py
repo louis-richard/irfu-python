@@ -6,7 +6,6 @@ import bisect
 import logging
 
 # 3rd party imports
-import numba
 import numpy as np
 import xarray as xr
 from scipy import linalg
@@ -21,142 +20,21 @@ from pyrfu.pyrf.wavelet import wavelet
 logger = logging.getLogger(__name__)
 
 
-@numba.njit(cache=True, fastmath=True, nogil=True, parallel=True)
-def _bin_power_vs_f(k_x, k_y, k_z, k_mag, power_avg, k_min, dk, dk_mag, num_k):
-    """Bin power vs. (k_x, f), (k_y, f), (k_z, f), (k_mag, f).
-
-    k_x, k_y, k_z, k_mag, power_avg: shape (n+1, num_f).
-    Output arrays: shape (num_f, num_k) -- row nn is written only by the
-    thread handling frequency index nn, so this is race-free without any
-    per-thread accumulator.
-    """
-    n_plus1, num_f = k_x.shape
-    power_k_x_f = np.zeros((num_f, num_k))
-    power_k_y_f = np.zeros((num_f, num_k))
-    power_k_z_f = np.zeros((num_f, num_k))
-    power_k_mag_f = np.zeros((num_f, num_k))
-
-    for nn in numba.prange(num_f):
-        for mm in range(n_plus1):
-            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
-            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
-            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
-            k_number = int(np.floor(k_mag[mm, nn] / dk_mag))
-
-            if k_x_number < 0:
-                k_x_number = 0
-            elif k_x_number > num_k - 1:
-                k_x_number = num_k - 1
-            if k_y_number < 0:
-                k_y_number = 0
-            elif k_y_number > num_k - 1:
-                k_y_number = num_k - 1
-            if k_z_number < 0:
-                k_z_number = 0
-            elif k_z_number > num_k - 1:
-                k_z_number = num_k - 1
-            if k_number < 0:
-                k_number = 0
-            elif k_number > num_k - 1:
-                k_number = num_k - 1
-
-            p = power_avg[mm, nn]
-            power_k_x_f[nn, k_x_number] += p
-            power_k_y_f[nn, k_y_number] += p
-            power_k_z_f[nn, k_z_number] += p
-            power_k_mag_f[nn, k_number] += p
-
-    return power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f
+def _power_map(power, rows, cols, n_rows, num_k):
+    r"""Power summed in the bins (rows, cols) of an (n_rows, num_k) map, the
+    samples added in their order (the three numba kernels, a clipped
+    histogram)."""
+    flat = rows * num_k + cols
+    out = np.bincount(flat.ravel(), weights=power.ravel(), minlength=n_rows * num_k)
+    return out.reshape(n_rows, num_k)
 
 
-@numba.njit(cache=True, fastmath=True, nogil=True, parallel=True)
-def _bin_power_2d_xyz(k_x, k_y, k_z, power_avg, idx_f, k_min, dk, num_k, n_threads):
-    """Bin power vs. (k_x, k_y), (k_x, k_z), (k_y, k_z), summed over the
-    `idx_f` frequency indices only. Genuine scatter-add (target indices
-    depend on both loop variables' data, not on either loop variable
-    itself) -- uses a private per-thread accumulator, combined at the end.
-    """
-    n_plus1 = k_x.shape[0]
-    n_idx = idx_f.shape[0]
-
-    acc_xy = np.zeros((n_threads, num_k, num_k))
-    acc_xz = np.zeros((n_threads, num_k, num_k))
-    acc_yz = np.zeros((n_threads, num_k, num_k))
-
-    for mm in numba.prange(n_plus1):
-        tid = numba.get_thread_id()
-        for idx in range(n_idx):
-            nn = idx_f[idx]
-
-            k_x_number = int(np.floor((k_x[mm, nn] - k_min) / dk))
-            k_y_number = int(np.floor((k_y[mm, nn] - k_min) / dk))
-            k_z_number = int(np.floor((k_z[mm, nn] - k_min) / dk))
-
-            if k_x_number < 0:
-                k_x_number = 0
-            elif k_x_number > num_k - 1:
-                k_x_number = num_k - 1
-            if k_y_number < 0:
-                k_y_number = 0
-            elif k_y_number > num_k - 1:
-                k_y_number = num_k - 1
-            if k_z_number < 0:
-                k_z_number = 0
-            elif k_z_number > num_k - 1:
-                k_z_number = num_k - 1
-
-            p = power_avg[mm, nn]
-            acc_xy[tid, k_y_number, k_x_number] += p
-            acc_xz[tid, k_z_number, k_x_number] += p
-            acc_yz[tid, k_z_number, k_y_number] += p
-
-    power_k_x_k_y = np.zeros((num_k, num_k))
-    power_k_x_k_z = np.zeros((num_k, num_k))
-    power_k_y_k_z = np.zeros((num_k, num_k))
-    for t in range(n_threads):
-        power_k_x_k_y += acc_xy[t]
-        power_k_x_k_z += acc_xz[t]
-        power_k_y_k_z += acc_yz[t]
-
-    return power_k_x_k_y, power_k_x_k_z, power_k_y_k_z
-
-
-@numba.njit(cache=True, fastmath=True, nogil=True, parallel=True)
-def _bin_power_kperp_kpara(
-    k_para, k_perp, power_avg, idx_f, k_min, dk, dk_mag, num_k, n_threads
-):
-    """Bin power vs. (k_para, k_perp), summed over `idx_f` only. Same
-    scatter-add / private-accumulator pattern as `_bin_power_2d_xyz`.
-    """
-    n_plus1 = k_para.shape[0]
-    n_idx = idx_f.shape[0]
-
-    acc = np.zeros((n_threads, num_k, num_k))
-
-    for mm in numba.prange(n_plus1):
-        tid = numba.get_thread_id()
-        for idx in range(n_idx):
-            nn = idx_f[idx]
-
-            k_para_number = int(np.floor((k_para[mm, nn] - k_min) / dk))
-            k_perp_number = int(np.floor(k_perp[mm, nn] / dk_mag))
-
-            if k_para_number < 0:
-                k_para_number = 0
-            elif k_para_number > num_k - 1:
-                k_para_number = num_k - 1
-            if k_perp_number < 0:
-                k_perp_number = 0
-            elif k_perp_number > num_k - 1:
-                k_perp_number = num_k - 1
-
-            acc[tid, k_para_number, k_perp_number] += power_avg[mm, nn]
-
-    power_k_perp_k_para = np.zeros((num_k, num_k))
-    for t in range(n_threads):
-        power_k_perp_k_para += acc[t]
-
-    return power_k_perp_k_para
+def _weighted_mean_std(x, weights):
+    r"""Mean and standard deviation of `x` weighted by `weights`, NaN weights
+    left out (written for each of the seven averages)."""
+    avg = np.nansum(x * weights) / np.nansum(weights)
+    std = np.sqrt(np.nansum((x - avg) ** 2 * weights) / np.nansum(weights))
+    return avg, std
 
 
 def _average_windows(n_t: int, cav: int):
@@ -320,77 +198,41 @@ def fk_power_spectrum_4sc(
         times = times[:-1]
         nt -= 1
 
-    # Clip wavelet transforms to time interval
-    w = [w[i].sel(time=times) for i in range(4)]
+    # Wavelet transforms in the time interval, (spacecraft, time, frequency)
+    w_s = np.stack([w_i.sel(time=times).data for w_i in w])
+    frequencies = w[0].frequency.data
 
     # Compute averaged power spectrum from all spacecraft
     fk_power = np.zeros((nt, num_f), dtype=np.float64)
-    for i in range(4):
-        fk_power += np.real(w[i].data * np.conj(w[i].data)) / 4
+    for w_i in w_s:
+        fk_power += np.real(w_i * np.conj(w_i)) / 4
 
     # Find the time positions for averaging
     cav = int(cav)
     starts, pos_av = _average_windows(nt, cav)
-    n = len(starts) - 1
+    n_av = len(starts)
     av_times = times[pos_av]
 
     # Resample background magnetic field and spacecraft positions to
     # averaged time positions
     b_avg = resample(b_avg, av_times)
-    r = [resample(r[i], av_times) for i in range(4)]
+    r = [resample(r[i], av_times).data for i in range(4)]
 
-    cx12, cx13, cx14 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
-    cx23, cx24, cx34 = [np.zeros((n + 1, num_f), dtype="complex128") for _ in range(3)]
+    def window_mean(x):
+        # Average over each window of cav samples (one loop over the windows
+        # before)
+        return np.nanmean(x[: n_av * cav].reshape(n_av, cav, num_f), axis=1)
 
-    power_avg = np.zeros((n + 1, num_f), dtype="float64")
+    # Cross spectra of the pairs 12, 13, 14, 23, 24 and 34 (six copies before)
+    # and power, averaged over the windows
+    pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+    cross = np.stack([window_mean(w_s[i] * np.conj(w_s[j])) for i, j in pairs])
+    power_avg = window_mean(fk_power)
 
-    for m, lb in enumerate(starts):
-        ub = lb + cav
-
-        cx12[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[1].data[lb:ub, :]),
-            axis=0,
-        )
-        cx13[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]),
-            axis=0,
-        )
-        cx14[m, :] = np.nanmean(
-            w[0].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
-            axis=0,
-        )
-        cx23[m, :] = np.nanmean(
-            w[1].data[lb:ub, :] * np.conj(w[2].data[lb:ub, :]),
-            axis=0,
-        )
-        cx24[m, :] = np.nanmean(
-            w[1].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
-            axis=0,
-        )
-        cx34[m, :] = np.nanmean(
-            w[2].data[lb:ub, :] * np.conj(w[3].data[lb:ub, :]),
-            axis=0,
-        )
-
-        power_avg[m, :] = np.nanmean(fk_power[lb:ub, :], axis=0)
-
-    # Compute phase differences between each spacecraft pair
-    th12 = np.arctan2(np.imag(cx12), np.real(cx12))
-    th13 = np.arctan2(np.imag(cx13), np.real(cx13))
-    th14 = np.arctan2(np.imag(cx14), np.real(cx14))
-    th23 = np.arctan2(np.imag(cx23), np.real(cx23))
-    th24 = np.arctan2(np.imag(cx24), np.real(cx24))
-    th34 = np.arctan2(np.imag(cx34), np.real(cx34))
-
-    w_mat = 2 * np.pi * np.tile(w[0].frequency.data, (n + 1, 1))
-
-    # Convert phase difference to time delay
-    dt12 = th12 / w_mat
-    dt13 = th13 / w_mat
-    dt14 = th14 / w_mat
-    dt23 = th23 / w_mat
-    dt24 = th24 / w_mat
-    dt34 = th34 / w_mat
+    # Phase differences of the pairs converted to time delays
+    dt12, dt13, dt14, dt23, dt24, dt34 = np.arctan2(cross.imag, cross.real) / (
+        2 * np.pi * frequencies
+    )
 
     # Delays of spacecraft 2, 3 and 4 from spacecraft 1, each the weighted
     # average of four estimates from the measured pairs (e.g., for t2 - t1:
@@ -415,25 +257,20 @@ def fk_power_spectrum_4sc(
         + 0.1 * (dt12 + dt23 + dt34)
     )
 
-    # Compute phase speeds
-    r = [r[i].data for i in range(4)]
-
-    k_x, k_y, k_z = [np.zeros((n + 1, num_f)) for _ in range(3)]
-
-    frequency_data = w[0].frequency.data
+    k_x, k_y, k_z = [np.zeros((n_av, num_f)) for _ in range(3)]
 
     # One linalg.solve call per averaging window (was one per (window,
     # frequency) pair). dr depends only on ii, so scipy factors it once and
     # solves all the finite right-hand sides (stacked as columns) in that
     # single call: the same LAPACK routine and factorization as one solve
     # per column.
-    for ii in range(n + 1):
+    for ii in range(n_av):
         dr = np.array(
             [
                 r[1][ii, :] - r[0][ii, :],
                 r[2][ii, :] - r[0][ii, :],
                 r[3][ii, :] - r[0][ii, :],
-            ],
+            ]
         )
         rhs = np.vstack([dt2[ii, :], dt3[ii, :], dt4[ii, :]])
 
@@ -445,28 +282,24 @@ def fk_power_spectrum_4sc(
         if np.all(np.isfinite(dr)) and np.any(finite):
             m[:, finite] = linalg.solve(dr, rhs[:, finite])
 
-        k_x[ii, :] = 2 * np.pi * frequency_data * m[0, :]
-        k_y[ii, :] = 2 * np.pi * frequency_data * m[1, :]
-        k_z[ii, :] = 2 * np.pi * frequency_data * m[2, :]
+        k_x[ii, :] = 2 * np.pi * frequencies * m[0, :]
+        k_y[ii, :] = 2 * np.pi * frequencies * m[1, :]
+        k_z[ii, :] = 2 * np.pi * frequencies * m[2, :]
 
     k_x, k_y, k_z = [k / 1e3 for k in [k_x, k_y, k_z]]
 
     k_mag = np.linalg.norm(np.array([k_x, k_y, k_z]), axis=0)
 
-    # Compute the parallel and perpendicular wave numbers using the background magnetic
-    # field averaged over the four spacecraft. This is used to
-    b_avg_x_mat = np.tile(b_avg.data[:, 0], (num_f, 1)).T
-    b_avg_y_mat = np.tile(b_avg.data[:, 1], (num_f, 1)).T
-    b_avg_z_mat = np.tile(b_avg.data[:, 2], (num_f, 1)).T
-
-    b_avg_abs = np.linalg.norm(b_avg, axis=1)
-    b_avg_abs_mat = np.tile(b_avg_abs, (num_f, 1)).T
-
-    k_para = (k_x * b_avg_x_mat + k_y * b_avg_y_mat + k_z * b_avg_z_mat) / b_avg_abs_mat
+    # Parallel and perpendicular wave numbers, along the background magnetic
+    # field averaged over the four spacecraft
+    b_avg_xyz = b_avg.data
+    k_para = (
+        k_x * b_avg_xyz[:, [0]] + k_y * b_avg_xyz[:, [1]] + k_z * b_avg_xyz[:, [2]]
+    ) / np.linalg.norm(b_avg, axis=1)[:, np.newaxis]
     k_perp = np.sqrt(np.maximum(k_mag**2 - k_para**2, 0.0))
 
     # Points without a wave vector or a power are left out of the maps (their
-    # power set to 0; fastmath kernels cannot test for NaN)
+    # power set to 0)
     valid = np.isfinite(k_mag) & np.isfinite(k_para) & np.isfinite(power_avg)
 
     if not np.any(valid):
@@ -489,19 +322,22 @@ def fk_power_spectrum_4sc(
     k_vec = k_min + (np.arange(num_k) + 0.5) * dk
     k_mag_vec = (np.arange(num_k) + 0.5) * dk_mag
 
+    # Bins of the wave numbers, those out of range in the edge bins
+    i_x, i_y, i_z, i_para = [
+        np.clip(np.floor((k_ - k_min) / dk), 0, num_k - 1).astype(np.int64)
+        for k_ in [k_x, k_y, k_z, k_para]
+    ]
+    i_mag, i_perp = [
+        np.clip(np.floor(k_ / dk_mag), 0, num_k - 1).astype(np.int64)
+        for k_ in [k_mag, k_perp]
+    ]
+
     # Sort power into frequency and wave vector
-    logger.info("Computing power versus (kx,f); (ky,f), (kz,f), (k,f)")
-    power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f = _bin_power_vs_f(
-        k_x, k_y, k_z, k_mag, power_avg, k_min, dk, dk_mag, num_k
-    )
+    i_f = np.broadcast_to(np.arange(num_f), power_avg.shape)
+    power_k_x_f, power_k_y_f, power_k_z_f, power_k_mag_f = [
+        _power_map(power_avg, i_f, i_k, num_f, num_k) for i_k in [i_x, i_y, i_z, i_mag]
+    ]
 
-    # Normalize power to maximum value for plotting
-    power_k_x_f /= np.max(power_k_x_f)
-    power_k_y_f /= np.max(power_k_y_f)
-    power_k_z_f /= np.max(power_k_z_f)
-    power_k_mag_f /= np.max(power_k_mag_f)
-
-    frequencies = w[0].frequency.data
     idx_f = np.arange(num_f)
 
     if f_range is not None:
@@ -509,102 +345,48 @@ def fk_power_spectrum_4sc(
         idx_max_freq = bisect.bisect_left(frequencies, np.max(f_range))
         idx_f = idx_f[idx_min_freq:idx_max_freq]
 
-    idx_f = np.ascontiguousarray(idx_f.astype(np.int64))
-    n_threads = numba.get_num_threads()
+    # Sort power into wave vector space for (k_x, k_y), (k_x, k_z), (k_y,
+    # k_z) and (k_perp, k_para), summed over the frequencies of f_range
+    power_f = power_avg[:, idx_f]
+    power_k_x_k_y, power_k_x_k_z, power_k_y_k_z, power_k_perp_k_para = [
+        _power_map(power_f, rows[:, idx_f], cols[:, idx_f], num_k, num_k)
+        for rows, cols in [(i_y, i_x), (i_z, i_x), (i_z, i_y), (i_para, i_perp)]
+    ]
 
-    # Sort power into wave vector space for k_x, k_y; k_x, k_z; k_y, k_z
-    logger.info("Computing power versus (kx,ky); (kx,kz); (ky,kz)")
-    power_k_x_k_y, power_k_x_k_z, power_k_y_k_z = _bin_power_2d_xyz(
-        k_x, k_y, k_z, power_avg, idx_f, k_min, dk, num_k, n_threads
-    )
+    maps = [
+        power_k_x_f,
+        power_k_y_f,
+        power_k_z_f,
+        power_k_mag_f,
+        power_k_x_k_y,
+        power_k_x_k_z,
+        power_k_y_k_z,
+        power_k_perp_k_para,
+    ]
 
-    # Normalize power to maximum value for plotting
-    power_k_x_k_y /= np.max(power_k_x_k_y)
-    power_k_x_k_z /= np.max(power_k_x_k_z)
-    power_k_y_k_z /= np.max(power_k_y_k_z)
-
-    # Sort power into wave vector space for k_perp, k_para
-    logger.info("Computing power versus kperp,kpara")
-    power_k_perp_k_para = _bin_power_kperp_kpara(
-        k_para, k_perp, power_avg, idx_f, k_min, dk, dk_mag, num_k, n_threads
-    )
-
-    # Normalize power to maximum value for plotting
-    power_k_perp_k_para /= np.max(power_k_perp_k_para)
-
-    # Set zero power to NaN for plotting purposes
-    power_k_x_f[power_k_x_f == 0] = np.nan
-    power_k_y_f[power_k_y_f == 0] = np.nan
-    power_k_z_f[power_k_z_f == 0] = np.nan
-    power_k_mag_f[power_k_mag_f == 0] = np.nan
-    power_k_x_k_y[power_k_x_k_y == 0] = np.nan
-    power_k_x_k_z[power_k_x_k_z == 0] = np.nan
-    power_k_y_k_z[power_k_y_k_z == 0] = np.nan
-    power_k_perp_k_para[power_k_perp_k_para == 0] = np.nan
+    # Normalize power to maximum value, and zero power to NaN, for plotting
+    for map_ in maps:
+        map_ /= np.max(map_)
+        map_[map_ == 0] = np.nan
 
     # Find the wave numbers and frequencies weighted by power
-    # kmag, f
-    k_powers = np.nansum(power_k_mag_f[idx_f, :], axis=0)
-    f_powers = np.nansum(power_k_mag_f[idx_f, :], axis=1)
-
-    f_avg = np.nansum(frequencies[idx_f] * f_powers) / np.nansum(f_powers)
-    f_std = np.sqrt(
-        np.nansum((frequencies[idx_f] - f_avg) ** 2 * f_powers) / np.nansum(f_powers)
-    )
-
-    k_avg = np.nansum(k_mag_vec * k_powers) / np.nansum(k_powers)
-    k_std = np.sqrt(
-        np.nansum((k_mag_vec - k_avg) ** 2 * k_powers) / np.nansum(k_powers)
-    )
-
-    # kpara, kperp
-    kpara_powers = np.nansum(power_k_perp_k_para, axis=1)
-    kperp_powers = np.nansum(power_k_perp_k_para, axis=0)
-
-    kpar_avg = np.nansum(k_vec * kpara_powers) / np.nansum(kpara_powers)
-    kpar_std = np.sqrt(
-        np.nansum((k_vec - kpar_avg) ** 2 * kpara_powers) / np.nansum(kpara_powers)
-    )
-
-    kperp_avg = np.nansum(k_mag_vec * kperp_powers) / np.nansum(kperp_powers)
-    kperp_std = np.sqrt(
-        np.nansum((k_mag_vec - kperp_avg) ** 2 * kperp_powers) / np.nansum(kperp_powers)
-    )
-
-    # kx, ky, kz
-    kx_powers = np.nansum(power_k_x_k_y, axis=0)
-    ky_powers = np.nansum(power_k_x_k_y, axis=1)
-    kz_powers = np.nansum(power_k_x_k_z, axis=1)
-
-    kx_avg = np.nansum(k_vec * kx_powers) / np.nansum(kx_powers)
-    kx_std = np.sqrt(
-        np.nansum((k_vec - kx_avg) ** 2 * kx_powers) / np.nansum(kx_powers)
-    )
-    ky_avg = np.nansum(k_vec * ky_powers) / np.nansum(ky_powers)
-    ky_std = np.sqrt(
-        np.nansum((k_vec - ky_avg) ** 2 * ky_powers) / np.nansum(ky_powers)
-    )
-    kz_avg = np.nansum(k_vec * kz_powers) / np.nansum(kz_powers)
-    kz_std = np.sqrt(
-        np.nansum((k_vec - kz_avg) ** 2 * kz_powers) / np.nansum(kz_powers)
-    )
-
-    attrs = {
-        "f_avg": f_avg,
-        "f_std": f_std,
-        "k_mag_avg": k_avg,
-        "k_mag_std": k_std,
-        "k_para_avg": kpar_avg,
-        "k_para_std": kpar_std,
-        "k_perp_avg": kperp_avg,
-        "k_perp_std": kperp_std,
-        "k_x_avg": kx_avg,
-        "k_x_std": kx_std,
-        "k_y_avg": ky_avg,
-        "k_y_std": ky_std,
-        "k_z_avg": kz_avg,
-        "k_z_std": kz_std,
+    stats = {
+        # kmag, f
+        "f": (frequencies[idx_f], np.nansum(power_k_mag_f[idx_f, :], axis=1)),
+        "k_mag": (k_mag_vec, np.nansum(power_k_mag_f[idx_f, :], axis=0)),
+        # kpara, kperp
+        "k_para": (k_vec, np.nansum(power_k_perp_k_para, axis=1)),
+        "k_perp": (k_mag_vec, np.nansum(power_k_perp_k_para, axis=0)),
+        # kx, ky, kz
+        "k_x": (k_vec, np.nansum(power_k_x_k_y, axis=0)),
+        "k_y": (k_vec, np.nansum(power_k_x_k_y, axis=1)),
+        "k_z": (k_vec, np.nansum(power_k_x_k_z, axis=1)),
     }
+
+    attrs = {}
+
+    for name, (x, powers) in stats.items():
+        attrs[f"{name}_avg"], attrs[f"{name}_std"] = _weighted_mean_std(x, powers)
 
     out_dict = {
         "k_x_f": (["k_x", "f"], power_k_x_f.T),

@@ -27,7 +27,6 @@ from unittest import mock
 import keyring
 import keyring.credentials
 import keyring.errors
-import numba
 import numpy as np
 import pycdfpp
 import pytest
@@ -7754,68 +7753,44 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         k_mag = np.sqrt(k_x**2 + k_y**2 + k_z**2) - 1.0
         return k_x, k_y, k_z, k_mag, rng.random((30, 6))
 
-    def test_fk_power_spectrum_4sc_bin_power_vs_f(self):
-        # Power summed in its (k, f) bins, the out of range wave numbers in
-        # the edge bins; the Python function (covered) as the compiled one
+    def test_fk_power_spectrum_4sc_power_map(self):
+        # Power summed in its (row, column) bins, the samples added in their
+        # order (the numba kernels); the edge bins of the wave numbers out of
+        # range
         module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
-        k_x, k_y, k_z, k_mag, power = self._k_power()
-        args = (k_x, k_y, k_z, k_mag, power, -2.0, 0.5, 0.25, 8)
-        result = module._bin_power_vs_f.py_func(*args)
+        k_x, k_y, _, k_mag, power = self._k_power()
+        i_f = np.broadcast_to(np.arange(6), power.shape)
 
-        f_idx = np.tile(np.arange(6), (30, 1))
-        for out, k_, k_min, dk in zip(
-            result,
-            [k_x, k_y, k_z, k_mag],
-            [-2.0, -2.0, -2.0, 0.0],
-            [0.5, 0.5, 0.5, 0.25],
-        ):
+        for k_, k_min, dk in [(k_x, -2.0, 0.5), (k_mag, 0.0, 0.25)]:
+            bins = self._bins(k_, k_min, dk, 8)
             expected = np.zeros((6, 8))
-            np.add.at(expected, (f_idx, self._bins(k_, k_min, dk, 8)), power)
-            np.testing.assert_allclose(out, expected)
+            for p_, f_, k_bin in zip(power.ravel(), i_f.ravel(), bins.ravel()):
+                expected[f_, k_bin] += p_
 
-        for out, out_jit in zip(result, module._bin_power_vs_f(*args)):
-            np.testing.assert_allclose(out_jit, out)
+            result = module._power_map(power, i_f, bins, 6, 8)
+            np.testing.assert_array_equal(result, expected)
 
-    def test_fk_power_spectrum_4sc_bin_power_2d(self):
-        # Power summed in its (k_i, k_j) bins over the selected frequencies,
-        # for any number of threads
+        # (k_y, k_x) over some frequencies
+        idx_f = [1, 2, 4]
+        b_x, b_y = [self._bins(k_[:, idx_f], -2.0, 0.5, 8) for k_ in [k_x, k_y]]
+        expected = np.zeros((8, 8))
+        np.add.at(expected, (b_y, b_x), power[:, idx_f])
+        result = module._power_map(power[:, idx_f], b_y, b_x, 8, 8)
+        np.testing.assert_allclose(result, expected, rtol=1e-15)
+
+    def test_fk_power_spectrum_4sc_weighted_mean_std(self):
+        # Mean and standard deviation weighted by the power, NaN weights
+        # (no power) left out
         module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
-        k_x, k_y, k_z, k_mag, power = self._k_power()
-        idx_f = np.array([1, 2, 4], dtype=np.int64)
-        k_para, k_perp = k_z, np.hypot(k_x, k_y) - 0.5
-        b_x, b_y, b_z, b_perp = [
-            self._bins(k_[:, idx_f], -2.0, 0.5, 8) for k_ in [k_x, k_y, k_z]
-        ] + [self._bins(k_perp[:, idx_f], 0.0, 0.25, 8)]
-        p_f = power[:, idx_f]
-
-        expected = [np.zeros((8, 8)) for _ in range(4)]
-        np.add.at(expected[0], (b_y, b_x), p_f)
-        np.add.at(expected[1], (b_z, b_x), p_f)
-        np.add.at(expected[2], (b_z, b_y), p_f)
-        np.add.at(expected[3], (b_z, b_perp), p_f)
-
-        for n_threads in [1, 3]:
-            result = module._bin_power_2d_xyz.py_func(
-                k_x, k_y, k_z, power, idx_f, -2.0, 0.5, 8, n_threads
-            )
-            result += (
-                module._bin_power_kperp_kpara.py_func(
-                    k_para, k_perp, power, idx_f, -2.0, 0.5, 0.25, 8, n_threads
-                ),
-            )
-            for out, ref in zip(result, expected):
-                np.testing.assert_allclose(out, ref)
-
-        n_threads = numba.get_num_threads()
-        result_jit = module._bin_power_2d_xyz(
-            k_x, k_y, k_z, power, idx_f, -2.0, 0.5, 8, n_threads
-        ) + (
-            module._bin_power_kperp_kpara(
-                k_para, k_perp, power, idx_f, -2.0, 0.5, 0.25, 8, n_threads
-            ),
+        x = np.array([1.0, 2.0, 4.0, 8.0])
+        weights = np.array([1.0, np.nan, 3.0, 0.5])
+        avg, std = module._weighted_mean_std(x, weights)
+        keep = np.isfinite(weights)
+        expected = np.average(x[keep], weights=weights[keep])
+        self.assertAlmostEqual(avg, expected)
+        self.assertAlmostEqual(
+            std, np.sqrt(np.average((x[keep] - expected) ** 2, weights=weights[keep]))
         )
-        for out, ref in zip(result_jit, expected):
-            np.testing.assert_allclose(out, ref)
 
     def test_fk_power_spectrum_4sc_field_gap(self):
         # A NaN gap in the field made every wavelet coefficient NaN, so no
