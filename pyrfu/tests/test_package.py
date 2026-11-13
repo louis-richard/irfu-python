@@ -186,5 +186,41 @@ class LiteralFlagsTestCase(unittest.TestCase):
         self.assertGreaterEqual(n_literals, 38)
 
 
+class SubPackageNamesTestCase(unittest.TestCase):
+    """The names of the sub-packages: written twice by hand, in the imports of
+    their __init__.py and in __all__."""
+
+    def test_imports_and_all_agree(self):
+        """Each name imported from the sub-package's own modules, or defined
+        in its __init__.py, is in __all__, and each name of __all__ exists
+        (also through a module __getattr__, as MMS_CFG_PATH)."""
+        for sub in pyrfu.__all__:
+            module = getattr(pyrfu, sub)
+            path = module.__file__
+
+            # The sub-packages (pyrfu.constants is a module)
+            if os.path.basename(path) != "__init__.py":
+                continue
+
+            with open(path, encoding="utf-8") as file:
+                tree = ast.parse(file.read())
+
+            names = set()
+
+            for node in tree.body:
+                if isinstance(node, ast.ImportFrom) and node.level == 1:
+                    names |= {a.asname or a.name for a in node.names}
+                elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                    names.add(node.name)
+
+            public = {n for n in names if not n.startswith("_")}
+
+            with self.subTest(sub=sub):
+                self.assertLessEqual(public, set(module.__all__))
+
+                for name in module.__all__:
+                    self.assertTrue(hasattr(module, name), name)
+
+
 if __name__ == "__main__":
     unittest.main()

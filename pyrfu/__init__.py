@@ -27,7 +27,9 @@ __all__ = [
 
 # Show the messages of pyrfu (INFO and above) without configuring the root
 # logger, which belongs to the application. Silence them with
-# logging.getLogger("pyrfu").setLevel(logging.WARNING).
+# logging.getLogger("pyrfu").setLevel(logging.WARNING); to pass them on to the
+# application's handlers, clear this handler and set propagate to True (see
+# "Messages" in the documentation).
 _logger = logging.getLogger(__name__)
 
 if not _logger.handlers:

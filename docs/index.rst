@@ -154,6 +154,30 @@ Quickstart
 
 More in the :doc:`examples gallery <examples/index>`.
 
+Messages
+--------
+
+pyrfu reports what it does (files loaded or downloaded, configuration
+changes, the choices it makes) through the :mod:`logging` logger ``"pyrfu"``,
+at the INFO level and with its own handler, so that the messages show in a
+notebook or a script without any setup. To see only the warnings:
+
+.. code-block:: python
+
+    import logging
+
+    logging.getLogger("pyrfu").setLevel(logging.WARNING)
+
+The messages are not passed on to the handlers of the application
+(``propagate`` is False). To handle them with your own logging configuration
+instead:
+
+.. code-block:: python
+
+    pyrfu_logger = logging.getLogger("pyrfu")
+    pyrfu_logger.handlers.clear()
+    pyrfu_logger.propagate = True
+
 Documentation
 -------------
 

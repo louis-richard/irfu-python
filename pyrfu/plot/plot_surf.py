@@ -57,8 +57,7 @@ def plot_surf(
     if cax_pos not in ["bottom", "top", "left", "right"]:
         raise ValueError("Invalid caxis position")
 
-    # The left and bottom colorbars touch the axis (no gap), as before
-    pad = 0.0 if cax_pos in ["bottom", "left"] else 0.01
-    caxis = _add_colorbar(mappable, axis, pad, 0.01, cax_pos)
+    # The gap of colorbar on the four sides
+    caxis = _add_colorbar(mappable, axis, 0.01, 0.01, cax_pos)
 
     return axis, caxis

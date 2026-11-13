@@ -109,7 +109,7 @@ include = ["pyrfu*"]
 exclude = ["pyrfu.tests.matlab*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.csv"]
+"*" = ["*.json", "*.csv", "*.mplstyle", "*.jpg"]
 
 [tool.pytest.ini_options]
 testpaths = ["pyrfu/tests"]
