@@ -5,7 +5,10 @@
 import importlib
 import logging
 import os
+import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 from unittest import mock
 
@@ -79,6 +82,53 @@ class UserConfigTestCase(unittest.TestCase):
                     _user_config.set_local_data_dir(config_path, root + os.sep)
             self.assertEqual(_user_config.local_data_dir(path), os.path.normpath(root))
             self.assertListEqual(os.listdir(root), ["c.json"])
+
+
+class ImportSideEffectsTestCase(unittest.TestCase):
+    """What import pyrfu does."""
+
+    def test_import_writes_no_file_and_loads_no_boto3(self):
+        """import pyrfu created the MMS configuration file in the user
+        directory and loaded boto3 (about 0.45 s): the file is created on the
+        first use of pyrfu.mms.MMS_CFG_PATH, boto3 when S3 is listed."""
+        code = textwrap.dedent("""
+            import os, sys, tempfile
+            from unittest import mock
+            import platformdirs
+
+            config_dir = tempfile.mkdtemp()
+            with mock.patch.object(
+                platformdirs, "user_config_dir", return_value=config_dir
+            ):
+                import pyrfu
+                assert os.listdir(config_dir) == [], os.listdir(config_dir)
+                assert "boto3" not in sys.modules
+                from pyrfu.mms import MMS_CFG_PATH
+                assert MMS_CFG_PATH == os.path.join(config_dir, "mms_config.json")
+                assert os.listdir(config_dir) == ["mms_config.json"]
+            """)
+        root = os.path.dirname(os.path.dirname(os.path.abspath(pyrfu.__file__)))
+        env = {**os.environ, "PYTHONPATH": root}
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_mms_cfg_path_on_first_use(self):
+        """MMS_CFG_PATH is not a module constant any more: the module
+        __getattr__ of pyrfu.mms and pyrfu.mms.db_init computes it."""
+        db_init = importlib.import_module("pyrfu.mms.db_init")
+        self.assertNotIn("MMS_CFG_PATH", vars(db_init))
+        self.assertEqual(pyrfu.mms.MMS_CFG_PATH, db_init.MMS_CFG_PATH)
+        self.assertTrue(os.path.isfile(pyrfu.mms.MMS_CFG_PATH))
+
+        for module in [pyrfu.mms, db_init]:
+            with self.assertRaises(AttributeError):
+                getattr(module, "no_such_name")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from .copy_files_ancillary import copy_files_ancillary
 from .correct_edp_probe_timing import correct_edp_probe_timing
 from .db_get_ts import db_get_ts
 from .db_get_variable import db_get_variable
-from .db_init import MMS_CFG_PATH, db_init
+from .db_init import _mms_cfg_path, db_init
 from .def2psd import def2psd
 from .dft_time_shift import dft_time_shift
 from .download_ancillary import download_ancillary
@@ -123,7 +123,7 @@ __all__ = [
     "db_get_ts",
     "db_get_variable",
     "db_init",
-    "MMS_CFG_PATH",
+    "MMS_CFG_PATH",  # pylint: disable=undefined-all-variable
     "def2psd",
     "dft_time_shift",
     "download_ancillary",
@@ -229,3 +229,12 @@ __all__ = [
     "vdf_velocity",
     "whistler_b2e",
 ]
+
+
+def __getattr__(name):
+    # MMS_CFG_PATH computed on first use (PEP 562), as in pyrfu.mms.db_init:
+    # import pyrfu created the user configuration file
+    if name == "MMS_CFG_PATH":
+        return _mms_cfg_path()
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

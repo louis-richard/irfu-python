@@ -11,7 +11,6 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..models import igrf
 from ._time import _unix
 from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_vec_xyz import ts_vec_xyz
@@ -49,6 +48,9 @@ def _triang(angle, axis):
 
 
 def _dipole_direction_gse(time, flag: str = "dipole"):
+    # pyrfu.models imports pyrfu.pyrf: imported here, not with pyrfu.pyrf
+    from ..models import igrf  # pylint: disable=import-outside-toplevel
+
     lambda_, phi = igrf(time, flag)
 
     cos_phi = np.cos(np.deg2rad(phi))
@@ -153,6 +155,8 @@ def _transformation_matrix(t, tind, hapgood, *args):
             transf_mat = _triang(-mu * np.sign(t_num), 1)
 
         else:
+            from ..models import igrf  # pylint: disable=import-outside-toplevel
+
             lambda_, phi = igrf(t, "dipole")
 
             transf_mat = np.matmul(_triang(phi - 90, 1), _triang(lambda_, 2))

@@ -10,7 +10,6 @@ from matplotlib import dates, gridspec
 from matplotlib.widgets import Button, SpanSelector
 
 # Local imports
-from ..plot import plot_line
 from .mva import mva
 from .new_xyz import new_xyz
 from .norm import norm
@@ -109,6 +108,9 @@ class MvaGui:
         ax5.axis("off")
 
         # Plot b_xyz in the first axis
+        # pyrfu.plot imports pyrfu.pyrf: imported here, not with pyrfu.pyrf
+        from ..plot import plot_line  # pylint: disable=import-outside-toplevel
+
         plot_line(ax1, b_xyz)
         plot_line(ax1, norm(b_xyz), color="black")
         ax1.set_ylabel("$B$ [nT]")
@@ -206,6 +208,8 @@ class MvaGui:
 
         # Plot b in MVA frame given by frame_clip
         b_new = new_xyz(self.b, frame_clip, "lmn")
+        from ..plot import plot_line  # pylint: disable=import-outside-toplevel
+
         plot_line(ax2, b_new)
         plot_line(ax2, norm(b_new), color="black")
         b2_labels = ["max", "interm", "min", "abs"]

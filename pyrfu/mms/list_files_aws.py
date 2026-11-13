@@ -8,10 +8,7 @@ import re
 from typing import Any, Mapping, Optional, Union
 
 # 3rd party imports
-import boto3
 import numpy as np
-from botocore import UNSIGNED
-from botocore.config import Config
 from botocore.exceptions import ClientError
 
 # Local imports
@@ -26,6 +23,13 @@ HELIOCLOUD_MMS = "gov-nasa-hdrl-data1/spdf/cdaweb/data/mms"
 def _s3_resource():
     r"""S3 resource, with unsigned (anonymous) requests if no AWS credentials
     are available, which is enough for public buckets such as HelioCloud's."""
+    # boto3 imported here (about 0.45 s, it was imported by import pyrfu); the
+    # botocore exceptions, light, are imported with the module
+    # pylint: disable=import-outside-toplevel
+    import boto3
+    from botocore import UNSIGNED
+    from botocore.config import Config
+
     session = boto3.session.Session()
 
     if session.get_credentials() is None:

@@ -35,7 +35,20 @@ def _user_config_path() -> str:
     return user_config_path("mms_config.json", _PACKAGE_CFG_PATH)
 
 
-MMS_CFG_PATH = _user_config_path()
+def _mms_cfg_path() -> str:
+    r"""Path of the MMS configuration: MMS_CFG_PATH if set on the module (e.g.
+    patched), else the user configuration file, created on first use (import
+    pyrfu created it)."""
+    return globals().get("MMS_CFG_PATH") or _user_config_path()
+
+
+def __getattr__(name):
+    # MMS_CFG_PATH computed on first use (PEP 562)
+    if name == "MMS_CFG_PATH":
+        return _user_config_path()
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 # Service name of the MMS SDC credentials in the keyring
 SDC_SERVICE = "mms-sdc"
@@ -106,12 +119,14 @@ def _config_stamp():
     r"""Path, inode, modification time and size of the MMS configuration file
     (path only if it can't be read): the key of the caches of the
     configuration. db_init writes a new file (new inode) every time."""
-    try:
-        stat = os.stat(MMS_CFG_PATH)
-    except OSError:
-        return (MMS_CFG_PATH,)
+    path = _mms_cfg_path()
 
-    return MMS_CFG_PATH, stat.st_ino, stat.st_mtime_ns, stat.st_size
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return (path,)
+
+    return path, stat.st_ino, stat.st_mtime_ns, stat.st_size
 
 
 def _read_config() -> dict:
@@ -340,8 +355,9 @@ def db_init(
             config["sdc"]["username"],
         )
 
-    logger.info("Updating MMS data access configuration in %s...", MMS_CFG_PATH)
+    path = _mms_cfg_path()
+    logger.info("Updating MMS data access configuration in %s...", path)
 
     # At once: a write that fails leaves the previous configuration (a partial
     # file was read as the default settings)
-    write_config(MMS_CFG_PATH, config)
+    write_config(path, config)
