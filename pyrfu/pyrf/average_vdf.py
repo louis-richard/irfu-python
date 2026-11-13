@@ -3,6 +3,8 @@
 
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 from xarray import Dataset
 
@@ -11,7 +13,7 @@ from pyrfu._core.time import _seconds, _timedelta
 from pyrfu.pyrf.ts_skymap import ts_skymap
 
 
-def average_vdf(vdf, n_pts, method: str = "mean"):
+def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     r"""Time averages the velocity distribution functions over `n_pts` in time.
 
     Parameters

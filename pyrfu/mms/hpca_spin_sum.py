@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
@@ -43,7 +45,7 @@ def _hpca_complete_spins(start_az, time):
     return starts[complete], stops[complete]
 
 
-def hpca_spin_sum(inp, saz, method: str = "mean"):
+def hpca_spin_sum(inp, saz, method: Literal["mean", "sum"] = "mean"):
     r"""Sum or average the Hot Plasma Composition Analyser (HPCA) data over
     each spin.
 

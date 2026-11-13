@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
@@ -11,7 +13,7 @@ from pyrfu.mms._internal.epd import _spin_reduce
 from .eis_spin_avg import _spin_segments
 
 
-def eis_pad_spinavg(inp, spin_nums, method: str | None = None):
+def eis_pad_spinavg(inp, spin_nums, method: Literal["mean", "sum"] | None = None):
     r"""Calculates spin-averaged Pitch-Angle Distribution (PAD) for the EIS
     instrument.
 

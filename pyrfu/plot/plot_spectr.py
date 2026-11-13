@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import warnings
 from collections.abc import Hashable
+
+# Built-in imports
+from typing import Literal, cast
 
 # 3rd party imports
 import matplotlib as mpl
@@ -20,8 +22,8 @@ from .colorbar import colorbar as _add_colorbar
 def plot_spectr(
     axis,
     inp,
-    yscale: str = "linear",
-    cscale: str = "linear",
+    yscale: Literal["linear", "log"] = "linear",
+    cscale: Literal["linear", "log"] = "linear",
     clim: list | None = None,
     cmap: str | Colormap | None = None,
     colorbar: str = "right",
@@ -194,7 +196,8 @@ def plot_spectr(
     axis.set_aspect(aspect)
 
     if colorbar.lower() in ["right", "top"]:
-        cax = _add_colorbar(image, axis, pad, 0.01, colorbar.lower())
+        where = cast(Literal["right", "top"], colorbar.lower())
+        cax = _add_colorbar(image, axis, pad, 0.01, where)
         cax.set_axisbelow(False)
 
         if cscale == "log":

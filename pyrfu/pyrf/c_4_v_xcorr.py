@@ -4,7 +4,7 @@
 # Built-in imports
 import warnings
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
 
 # 3rd party imports
 import numpy as np
@@ -332,9 +332,9 @@ def c_4_v_xcorr(
     tau: Sequence[float] | None = None,
     pattern: DataArray | None = None,
     errors: bool = True,
-    fit: str = "none",
+    fit: Literal["none", "scale", "scale_offset"] = "none",
     f_max: float | None = None,
-    frame: str = "spacecraft",
+    frame: Literal["spacecraft", "positions"] = "spacecraft",
 ) -> dict:
     r"""Four-spacecraft timing by cross-correlation, with error estimates.
 

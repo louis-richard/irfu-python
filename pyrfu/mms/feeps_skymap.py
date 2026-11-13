@@ -3,7 +3,7 @@
 
 # Built-in imports
 import warnings
-from typing import cast
+from typing import Literal, cast
 
 # 3rd party imports
 import numpy as np
@@ -195,7 +195,7 @@ def feeps_skymap(
     b_dmpa: xr.DataArray | None = None,
     n_phi: int | None = None,
     to_psd: bool = True,
-    fill_empty: str | None = None,
+    fill_empty: Literal["ring", "omni"] | None = None,
 ):
     r"""Skymaps of the FEEPS data, one per spin.
 

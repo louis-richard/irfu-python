@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import logging
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -360,11 +362,11 @@ def psd_moments(
     en_channels=None,
     no_sc_pot=False,
     partial_moments=None,
-    inner_electron="off",
-    angle_integration=None,
+    inner_electron: Literal["on", "off"] = "off",
+    angle_integration: Literal["midpoint", "exact"] | None = None,
     pitch_angle_range=None,
     b_xyz=None,
-    pitch_angle_weight="centre",
+    pitch_angle_weight: Literal["centre", "fraction"] = "centre",
 ):
     r"""Computes moments from the FPI particle phase-space densities.
 
@@ -800,12 +802,13 @@ def psd_moments(
     t_psd *= k_b / q_e
     h_psd *= 1e3
 
-    # Construct TSeries, with their units (they had none)
-    n_psd = ts_scalar(vdf.time.data, n_psd, {"UNITS": "cm^-3"})
-    v_psd = ts_vec_xyz(vdf.time.data, v_psd, {"UNITS": "km/s"})
-    p_psd = ts_tensor_xyz(vdf.time.data, p_psd, {"UNITS": "nPa"})
-    p2_psd = ts_tensor_xyz(vdf.time.data, p2_psd, {"UNITS": "nPa"})
-    t_psd = ts_tensor_xyz(vdf.time.data, t_psd, {"UNITS": "eV"})
-    h_psd = ts_vec_xyz(vdf.time.data, h_psd, {"UNITS": "mW/m^2"})
-
-    return n_psd, v_psd, p_psd, p2_psd, t_psd, h_psd
+    # Time series, with their units (they had none)
+    time = vdf.time.data
+    return (
+        ts_scalar(time, n_psd, {"UNITS": "cm^-3"}),
+        ts_vec_xyz(time, v_psd, {"UNITS": "km/s"}),
+        ts_tensor_xyz(time, p_psd, {"UNITS": "nPa"}),
+        ts_tensor_xyz(time, p2_psd, {"UNITS": "nPa"}),
+        ts_tensor_xyz(time, t_psd, {"UNITS": "eV"}),
+        ts_vec_xyz(time, h_psd, {"UNITS": "mW/m^2"}),
+    )

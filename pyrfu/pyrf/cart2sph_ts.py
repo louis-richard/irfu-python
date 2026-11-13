@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
@@ -11,7 +13,7 @@ from pyrfu._core.units import _attrs
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def cart2sph_ts(inp, direction_flag: int = 1):
+def cart2sph_ts(inp, direction_flag: Literal[1, -1] = 1):
     r"""Computes magnitude, theta and phi angle from column vector xyz
     (first column is x ....) theta is 0 at equator.
     direction_flag = -1  -> to make transformation in opposite direction

@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
@@ -65,7 +67,7 @@ def eis_pad(
     vec: xr.DataArray | None = None,
     energy: list | None = None,
     pa_width: int = 15,
-    method: str = "mean",
+    method: Literal["mean", "sum"] = "mean",
 ):
     r"""Calculates Pitch Angle Distributions (PADs) using data from the MMS
     Energetic Ion Spectrometer (EIS)

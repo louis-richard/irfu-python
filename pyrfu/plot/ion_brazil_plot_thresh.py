@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Literal
+
 # 3rd party imports
 import numpy as np
 
@@ -37,7 +40,14 @@ def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list | None = None):
 
     # Proton - electron plasma thresholds [1]_: proton cyclotron, mirror-mode,
     # parallel firehose and oblique firehose instabilities
-    thresholds = [
+    thresholds: list[
+        tuple[
+            Literal[
+                "proton-cyclotron", "mirror", "parallel-firehose", "oblique-firehose"
+            ],
+            str,
+        ]
+    ] = [
         ("proton-cyclotron", "Proton cyclotron"),
         ("mirror", "Mirror Mode"),
         ("parallel-firehose", "Parallel Firehose"),

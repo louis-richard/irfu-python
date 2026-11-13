@@ -38,8 +38,8 @@ def add_position(
         Time series of the spacecraft position.
     spine : float, Optional
         Relative position of the axes. Default is 20.
-    position : str, Optional
-        Axis position wtr to the reference axis. Default is "top".
+    position : {"top", "bottom"}, Optional
+        Axis position with respect to the reference axis. Default is "top".
     fontsize : float, Optional
         xticks label font size. Default is 10.
     units : {"re", "km"}, Optional

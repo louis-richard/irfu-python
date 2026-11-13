@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 from xarray import DataArray, Dataset
@@ -68,7 +70,9 @@ def _transformation_matrix(spin_axis: np.ndarray, direction: int) -> np.ndarray:
     return out
 
 
-def dsl2gse(inp: DataArray, defatt: Dataset | np.ndarray, direction: int = 1):
+def dsl2gse(
+    inp: DataArray, defatt: Dataset | np.ndarray, direction: Literal[1, -1] = 1
+):
     r"""Transform time series from MMS's DSL to GSE.
 
     Parameters

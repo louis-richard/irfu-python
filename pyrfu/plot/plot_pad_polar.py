@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import warnings
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -214,7 +216,7 @@ def plot_pad_polar(
     clim: list | None = None,
     cmap: str | None = None,
     contour=None,
-    colorbar: str = "right",
+    colorbar: Literal["right", "top", "none"] = "right",
     monte_carlo: bool = False,
     n_mc: int = 200,
     n_grid: int = 100,

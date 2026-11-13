@@ -2,7 +2,7 @@
 
 # Built-in imports
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 # 3rd party imports
 import numpy as np
@@ -95,7 +95,7 @@ def _derivative(
 def c_4_grad(
     r_list: Sequence[DataArray],
     b_list: Sequence[DataArray],
-    method: str = "grad",
+    method: Literal["grad", "div", "curl", "bdivb", "curv"] = "grad",
 ) -> DataArray:
     r"""Calculate gradient of physical field using 4 spacecraft technique in [2]_ [3]_.
 

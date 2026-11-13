@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import logging
 import warnings
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -46,7 +48,7 @@ def get_pitch_angle_dist(
     verbose=True,
     *,
     angles=None,
-    meanorsum="mean",
+    meanorsum: Literal["mean", "sum", "sum_weighted"] = "mean",
 ):
     r"""Computes the pitch angle distributions from particle data, as
     irfu-matlab mms.get_pitchangledist.

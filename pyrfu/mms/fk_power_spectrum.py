@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
 
 # 3rd party imports
 import numpy as np
@@ -62,7 +62,7 @@ def fk_power_spectrum(
     v6: DataArray,
     b_xyz: DataArray,
     tint: Sequence[str],
-    probe: int,
+    probe: Literal[1, 3, 5],
     z_phase: DataArray | None = None,
     cav: int = 128,
     field: bool = True,

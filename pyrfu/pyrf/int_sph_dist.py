@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import random
 from math import asin, cos, sin, sqrt
+
+# Built-in imports
+from typing import Literal
 
 # Third party imports
 import numba
@@ -35,7 +37,7 @@ def int_sph_dist(
     *,
     xyz=None,
     n_mc=10,
-    weight=None,
+    weight: Literal["lin", "log"] | None = None,
     v_int=(-np.inf, np.inf),
     a_int=(-180.0, 180.0),
     projection_base="pol",

@@ -2,13 +2,24 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 from matplotlib.cm import ScalarMappable
 
 # Local imports
 from .colorbar import colorbar as _add_colorbar
 
 
-def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
+def plot_surf(
+    axis,
+    x,
+    y,
+    z,
+    c,
+    cmap,
+    norm,
+    cax_pos: Literal["bottom", "top", "left", "right"] = "bottom",
+):
     r"""Plots surface.
 
     Parameters

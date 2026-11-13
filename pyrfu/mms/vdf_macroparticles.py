@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
@@ -40,8 +42,8 @@ def vdf_macroparticles(
     n_bin: int = 1,
     skip_zero: bool = True,
     sc_pot=None,
-    positioning: str = "random",
-    division: str = "dn",
+    positioning: Literal["random", "center"] = "random",
+    division: Literal["dn", "f", "counts"] = "dn",
     random_state=None,
 ):
     r"""Macroparticles of a skymap distribution, as irfu-matlab

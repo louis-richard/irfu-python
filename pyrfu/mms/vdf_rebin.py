@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
@@ -58,7 +60,7 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
 def vdf_rebin(
     vdf,
     grid,
-    base: str = "sph",
+    base: Literal["sph", "cart"] = "sph",
     rotation=None,
     n_mc: int = 200,
     sc_pot=None,

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import warnings
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -30,7 +32,9 @@ anodes_theta = np.array(
 )
 
 
-def hpca_calc_anodes(inp, fov: list | None = None, method: str = "mean"):
+def hpca_calc_anodes(
+    inp, fov: list | None = None, method: Literal["mean", "sum"] = "mean"
+):
     r"""Averages over anodes (or a given field of view) for HPCA ion data.
 
     Parameters

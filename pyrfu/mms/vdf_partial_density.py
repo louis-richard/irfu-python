@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
+from typing import Literal
+
 from pyrfu.mms._internal.psd_units import _output
 from pyrfu.mms._internal.vdf_bins import _d3v, _is_skymap
 
@@ -11,7 +13,7 @@ from .vdf_velocity import vdf_velocity
 
 def vdf_partial_density(
     vdf,
-    component: str | None = None,
+    component: Literal["x", "y", "z"] | None = None,
     sc_pot=None,
     rotation=None,
 ):

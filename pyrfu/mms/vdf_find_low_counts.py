@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
@@ -27,7 +29,10 @@ def _movmean(inp, n_mov_mean):
 
 
 def vdf_find_low_counts(
-    vdf_counts, counts: float = 5, n_mov_mean=1, output: str = "energy"
+    vdf_counts,
+    counts: float = 5,
+    n_mov_mean=1,
+    output: Literal["energy", "mat"] = "energy",
 ):
     r"""Finds the energy channels with few counts, as irfu-matlab
     PDist.find_low_counts.

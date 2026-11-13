@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import matplotlib as mpl
 import numpy as np
 
@@ -17,7 +19,7 @@ def plot_projection(
     vlim: float = 1e3,
     clim: list | None = None,
     cmap: str | None = None,
-    colorbar: str = "right",
+    colorbar: Literal["right", "top", "none"] = "right",
 ):
     r"""Plot the projection of the distribution.
 

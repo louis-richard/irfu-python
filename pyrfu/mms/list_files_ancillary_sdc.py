@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import warnings
 from datetime import timedelta
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -43,7 +45,11 @@ def _make_urls_ancillaries(lasp_url, files):
     return files
 
 
-def list_files_ancillary_sdc(tint, mms_id, product):
+def list_files_ancillary_sdc(
+    tint,
+    mms_id,
+    product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],
+):
     r"""Find available ancillary files from LASP SDC for the target product type.
 
     Parameters

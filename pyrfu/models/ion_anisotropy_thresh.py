@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
+from typing import Literal
+
 from ..pyrf.anisotropy_thresholds import anisotropy_thresholds
 
 # Growth rates in units of the proton cyclotron frequency
@@ -16,7 +18,13 @@ INSTABILITY_TYPES = {
 }
 
 
-def ion_anisotropy_thresh(beta, instability_type, growth_rate="10^-2"):
+def ion_anisotropy_thresh(
+    beta,
+    instability_type: Literal[
+        "proton-cyclotron", "mirror", "parallel-firehose", "oblique-firehose"
+    ],
+    growth_rate: Literal["10^-2", "10^-3", "10^-4"] = "10^-2",
+):
     r"""Compute the threshold using the empirical model defined in [1]_ and
     the fit parameters of [2]_.
 

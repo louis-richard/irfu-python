@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import ast
+
 # Built-in imports
 import importlib
+import inspect
 import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
 import textwrap
+import typing
 import unittest
 from unittest import mock
 
@@ -128,6 +133,57 @@ class ImportSideEffectsTestCase(unittest.TestCase):
         for module in [pyrfu.mms, db_init]:
             with self.assertRaises(AttributeError):
                 getattr(module, "no_such_name")
+
+
+class LiteralFlagsTestCase(unittest.TestCase):
+    """The Literal annotations of the closed sets of flags."""
+
+    def test_literals_match_docstrings(self):
+        """The values of each Literal parameter of the public functions are
+        those of the set in its docstring ("name : {...}"), so that the two
+        don't drift apart."""
+        n_literals = 0
+
+        for sub in pyrfu.__all__:
+            module = getattr(pyrfu, sub)
+
+            for name in getattr(module, "__all__", []):
+                func = getattr(module, name)
+
+                if not inspect.isfunction(func):
+                    continue
+
+                hints = typing.get_type_hints(func)
+                doc = inspect.getdoc(func) or ""
+
+                for param, hint in hints.items():
+                    values = [
+                        v
+                        for arg in typing.get_args(hint) or (hint,)
+                        if typing.get_origin(arg) is typing.Literal
+                        for v in typing.get_args(arg)
+                    ]
+                    if typing.get_origin(hint) is typing.Literal:
+                        values = list(typing.get_args(hint))
+
+                    if not values:
+                        continue
+
+                    n_literals += 1
+                    # "param : {...}", also in a group "a, param : {...}"
+                    names = rf"(?:[a-z_0-9, ]+, )?{param}(?:, [a-z_0-9, ]+)?"
+                    match = re.search(rf"^\s*{names} : \{{([^}}]*)\}}", doc, re.M)
+                    with self.subTest(func=f"{sub}.{name}", param=param):
+                        self.assertIsNotNone(match)
+                        documented = ast.literal_eval(
+                            "[" + " ".join(match.group(1).split()) + "]"
+                        )
+                        self.assertEqual(
+                            set(values), {v for v in documented if v is not None}
+                        )
+
+        # The flags annotated in 2.5.14 (38 parameters)
+        self.assertGreaterEqual(n_literals, 38)
 
 
 if __name__ == "__main__":

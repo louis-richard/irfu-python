@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 from xarray import DataArray, Dataset
@@ -41,7 +43,9 @@ def _dft_timing(time, pot):
 
 
 def probe_fields(
-    v6: DataArray, timing: str = "dft", boom_shortening: bool = False
+    v6: DataArray,
+    timing: Literal["dft", "resample"] | None = "dft",
+    boom_shortening: bool = False,
 ) -> Dataset:
     r"""Electric fields from the potentials of the six probes of MMS EDP, for
     probe interferometry: the single-probe fields (reconstructed from each

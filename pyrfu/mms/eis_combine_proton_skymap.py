@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from typing import Literal
+
 from .eis_ang_ang import eis_ang_ang
 
 # Local imports
@@ -14,7 +16,7 @@ def eis_combine_proton_skymap(
     en_chan: list | None = None,
     to_psd: bool = True,
     defatt=None,
-    frame: str = "dbcs",
+    frame: Literal["dbcs", "gse"] = "dbcs",
 ):
     r"""Combines ExTOF and PHxTOF proton energy spectra and generate proton
     skymap distribution.

@@ -4,6 +4,8 @@
 # Built-in imports
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 from xarray import DataArray, Dataset
@@ -17,7 +19,7 @@ from .dsl2gse import _transformation_matrix
 
 
 def dsl2gsm(
-    inp: DataArray, defatt: Dataset | np.ndarray, direction: int = 1
+    inp: DataArray, defatt: Dataset | np.ndarray, direction: Literal[1, -1] = 1
 ) -> DataArray:
     r"""Transform time series from MMS's DSL to GSM.
 

@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 from scipy import constants
@@ -16,7 +18,7 @@ from ..pyrf.ts_scalar import ts_scalar
 
 def eis_moments(
     inp,
-    specie: str = "proton",
+    specie: Literal["proton", "helium", "alpha", "oxygen"] = "proton",
     n_bg: xr.DataArray | None = None,
     p_bg: xr.DataArray | None = None,
 ):

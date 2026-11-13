@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 from scipy import constants, interpolate
 
@@ -76,7 +78,7 @@ def _shifts_moving(r_xyz, time_center, velocity, delta_t):
     )
 
 
-def c_4_v(r_xyz, time, frame: str = "spacecraft"):
+def c_4_v(r_xyz, time, frame: Literal["spacecraft", "positions"] = "spacecraft"):
     r"""Calculates velocity or time shift of discontinuity as in [6]_.
 
     Parameters
