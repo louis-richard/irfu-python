@@ -6,6 +6,7 @@ import contextlib
 # Built-in imports
 import datetime
 import importlib
+import inspect
 import io
 import itertools
 import json
@@ -4778,6 +4779,41 @@ class Psd2DpfTestCase(unittest.TestCase):
             mms.psd2dpf(psd, relativistic=True)
 
 
+class KeywordOnlyOptionsTestCase(unittest.TestCase):
+    # The options of psd_moments, reduce and get_pitch_angle_dist are
+    # keyword-only parameters: a misspelt one raises TypeError (it was
+    # ignored in **kwargs), and they can't be given by position
+
+    def test_misspelt_option(self):
+        for func, args, option in [
+            (mms.psd_moments, (None, None), "energy_rnage"),
+            (mms.reduce, (None, None), "n_mcc"),
+            (mms.reduce, (None, None), "projection_dim"),
+            (mms.get_pitch_angle_dist, (None, None), "angle"),
+        ]:
+            with self.subTest(func=func.__name__, option=option):
+                with self.assertRaisesRegex(TypeError, f"keyword argument '{option}'"):
+                    func(*args, **{option: 1})
+
+    def test_options_keyword_only(self):
+        for func, n_positional in [
+            (mms.psd_moments, 2),
+            (mms.reduce, 4),
+            (mms.get_pitch_angle_dist, 4),
+        ]:
+            with self.subTest(func=func.__name__):
+                parameters = list(inspect.signature(func).parameters.values())
+                kinds = [p_.kind for p_ in parameters]
+                self.assertNotIn(inspect.Parameter.VAR_KEYWORD, kinds)
+                self.assertTrue(
+                    all(
+                        k_ == inspect.Parameter.KEYWORD_ONLY
+                        for k_ in kinds[n_positional:]
+                    )
+                )
+                self.assertGreater(len(kinds), n_positional)
+
+
 @ddt
 class PsdMomentsTestCase(unittest.TestCase):
     @data(
@@ -5625,8 +5661,8 @@ class PsdMomentsTestCase(unittest.TestCase):
             atol = 1e-12 * np.max(np.abs(exp.data))
             np.testing.assert_allclose(res.data, exp.data, rtol=1e-10, atol=atol)
 
-        # The argument was removed
-        with self.assertRaisesRegex(TypeError, "relativistic was removed"):
+        # The argument was removed (TypeError, as any unknown option)
+        with self.assertRaisesRegex(TypeError, "relativistic"):
             mms.psd_moments(vdf, sc_pot, relativistic=True)
 
     def test_psd_moments_relativistic_low_energy(self):

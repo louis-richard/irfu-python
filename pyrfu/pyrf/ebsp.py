@@ -332,7 +332,24 @@ def _spectra_units(e_xyz, db_xyz):
     return units_b, units_e
 
 
-def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
+def ebsp(
+    e_xyz,
+    db_xyz,
+    b_xyz,
+    b_bgd,
+    xyz,
+    freq_int,
+    *,
+    polarization=False,
+    no_resample=False,
+    fac=True,
+    de_dot_b0=False,
+    full_b_db=False,
+    nav=8,
+    fac_matrix=None,
+    m_width_coeff=1.0,
+    matlab_dop2d=False,
+):
     """Calculates wavelet spectra of E&B and Poynting flux using wavelets
     (Morlet wavelet). Also computes polarization parameters of B using SVD
     [7]_. SVD is performed on spectral matrices computed from the time series
@@ -525,20 +542,17 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
         "r": xyz,
     }
 
-    want_polarization = kwargs.get("polarization", False)
+    # The options are keyword-only parameters (a misspelt one, ignored in
+    # **kwargs, raises TypeError)
+    want_polarization = polarization
 
-    flag_no_resample = kwargs.get("no_resample", False)
-    flag_want_fac = kwargs.get("fac", True)
-    flag_de_dot_b0 = kwargs.get("de_dot_b0", False)
-    flag_full_b_db = kwargs.get("full_b_db", False)
-
-    m_width_coeff = kwargs.get("m_width_coeff", 1.0)
+    flag_no_resample = no_resample
+    flag_want_fac = fac
+    flag_de_dot_b0 = de_dot_b0
+    flag_full_b_db = full_b_db
 
     # Number of wave periods to average
-    n_wave_period_to_average = kwargs.get("nav", 8)
-
-    # matrix for rotation to FAC
-    fac_matrix = kwargs.get("fac_matrix", None)
+    n_wave_period_to_average = nav
 
     # An array (constant or on the times of delta_b) as a time series of
     # matrices, as convert_fac takes it (it was rejected)
@@ -717,7 +731,7 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
     power_e = np.zeros((n_data, n_freq, 4), dtype="complex128")
     power_e_isr2 = np.zeros((n_data, n_freq), dtype="complex128")
     poynting = np.zeros((n_data, n_freq, 3))
-    polarization = np.zeros((n_data_out, n_freq, 6), dtype="complex128")
+    pol_params = np.zeros((n_data_out, n_freq, 6), dtype="complex128")
 
     # Get the correct frequencies for the wavelet transform
     frequency_vec = w_0 / a_
@@ -807,14 +821,14 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
         # Polarization parameters
         if want_polarization:
-            polarization[:, ind_a] = _polarization(
+            pol_params[:, ind_a] = _polarization(
                 wb,
                 new_freq_mat,
                 in_time,
                 out_time,
                 av_window,
                 censure[ind_a],
-                kwargs.get("matlab_dop2d", False),
+                matlab_dop2d,
             )
 
     # set data gaps to NaN and remove edge effects
@@ -902,9 +916,9 @@ def ebsp(e_xyz, db_xyz, b_xyz, b_bgd, xyz, freq_int, **kwargs):
 
     if want_polarization:
         the_svd_fac, phi_svd_fac, planarity, ellipticity = [
-            np.real(polarization[..., i]) for i in range(4)
+            np.real(pol_params[..., i]) for i in range(4)
         ]
-        dop_3d, dop_2d = polarization[..., 4], polarization[..., 5]
+        dop_3d, dop_2d = pol_params[..., 4], pol_params[..., 5]
 
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=RuntimeWarning)

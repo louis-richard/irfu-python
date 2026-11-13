@@ -189,16 +189,16 @@ def _first_channel_mask(vdf, n_e, first_channel):
     return np.arange(n_e)[np.newaxis, :] >= start.astype(np.int64)[:, np.newaxis]
 
 
-def _energy_mask(vdf, energy, kwargs):
+def _energy_mask(vdf, energy, energy_range, en_channels):
     r"""Energy channels to integrate over at each time step, as a boolean
     (time, energy) array, from the energy_range or en_channels options."""
     n_t, n_e = energy.shape
 
-    if "energy_range" in kwargs and "en_channels" in kwargs:
+    if energy_range is not None and en_channels is not None:
         raise ValueError("Use either energy_range or en_channels, not both")
 
-    if "energy_range" not in kwargs:
-        en_channels = kwargs.get("en_channels", [0, n_e])
+    if energy_range is None:
+        en_channels = [0, n_e] if en_channels is None else en_channels
 
         if isinstance(en_channels, xr.DataArray):
             return _first_channel_mask(vdf, n_e, en_channels)
@@ -208,7 +208,7 @@ def _energy_mask(vdf, energy, kwargs):
         use_energy[:, start:stop] = True
         return use_energy
 
-    e_range = kwargs["energy_range"]
+    e_range = energy_range
 
     if isinstance(e_range, xr.DataArray):
         # Time dependent energy range on its own time line
@@ -293,11 +293,9 @@ def _partial_moments_mask(vdf, mask, shape):
     return mask
 
 
-def _pitch_angle_args(kwargs):
-    # b_xyz, [min, max] and method of the pitch-angle range
-    b_xyz = kwargs.get("b_xyz")
-    pitch_angle_range = np.asarray(kwargs["pitch_angle_range"], dtype=np.float64)
-    method = kwargs.get("pitch_angle_weight", "centre")
+def _pitch_angle_args(b_xyz, pitch_angle_range, method):
+    # b_xyz, [min, max] and method of the pitch-angle range, checked
+    pitch_angle_range = np.asarray(pitch_angle_range, dtype=np.float64)
 
     if b_xyz is None:
         raise ValueError("pitch_angle_range needs b_xyz")
@@ -354,7 +352,20 @@ def _pitch_angle_weights(vdf, b_xyz, pitch_angle_range, method):
     return weights, no_b
 
 
-def psd_moments(vdf, sc_pot, **kwargs):
+def psd_moments(
+    vdf,
+    sc_pot,
+    *,
+    energy_range=None,
+    en_channels=None,
+    no_sc_pot=False,
+    partial_moments=None,
+    inner_electron="off",
+    angle_integration=None,
+    pitch_angle_range=None,
+    b_xyz=None,
+    pitch_angle_weight="centre",
+):
     r"""Computes moments from the FPI particle phase-space densities.
 
     Parameters
@@ -428,7 +439,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
         must be the same size as vdf.data, and a DataArray at the times of
         vdf.
     inner_electron : {"on", "off"}
-        inner_electrontron potential for electron moments.
+        "on" leaves out the electron channels below 3.5 eV above the
+        spacecraft potential energy (the inner electrons). Default "off".
     angle_integration : {"midpoint", "exact"}
         Integration of the angular kernels over each (phi, theta) bin:
         "midpoint", the kernels at the bin centres times the bin widths, as
@@ -561,12 +573,6 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     # Relativistic speeds, momentum flux and kinetic energy, for all the
     # species: the relativistic phase-space density in SI units (s^3/m^6)
-    if "relativistic" in kwargs:
-        raise TypeError(
-            "relativistic was removed: the moments are always relativistic, and "
-            "the convention of the phase-space density is that of the data"
-        )
-
     vdf_data = _psd_si(vdf)
 
     step_table = vdf.attrs["esteptable"]
@@ -580,20 +586,18 @@ def psd_moments(vdf, sc_pot, **kwargs):
     # resample sc_pot to same resolution as particle distributions
     sc_pot = resample(sc_pot, vdf.time).data
 
-    no_sc_pot = kwargs.get("no_sc_pot", False)
     if no_sc_pot:
         sc_pot = np.zeros(sc_pot.shape)
         logger.info("Setting spacecraft potential to zero")
 
-    use_energy = _energy_mask(vdf, energy, kwargs)
+    use_energy = _energy_mask(vdf, energy, energy_range, en_channels)
 
     # The bins of partial_moments (a wrong mask gave the full moments)
-    if "partial_moments" in kwargs:
-        mask = _partial_moments_mask(vdf, kwargs["partial_moments"], vdf_data.shape)
+    if partial_moments is not None:
+        mask = _partial_moments_mask(vdf, partial_moments, vdf_data.shape)
         vdf_data = vdf_data * mask
 
-    tmp_ = kwargs.get("inner_electron", "")
-    flag_inner_electron = tmp_ == "on" and is_electron
+    flag_inner_electron = inner_electron == "on" and is_electron
 
     # Define constants
     q_e = constants.elementary_charge
@@ -637,9 +641,8 @@ def psd_moments(vdf, sc_pot, **kwargs):
 
     delta_ang = delta_phi * delta_theta
 
-    angle_integration = kwargs.get(
-        "angle_integration", vdf.attrs.get("angle_integration", "midpoint")
-    )
+    if angle_integration is None:
+        angle_integration = vdf.attrs.get("angle_integration", "midpoint")
 
     if angle_integration not in ["midpoint", "exact"]:
         raise ValueError(
@@ -653,8 +656,10 @@ def psd_moments(vdf, sc_pot, **kwargs):
     no_b = np.zeros(vdf_data.shape[0], dtype=bool)
     weights = None
 
-    if kwargs.get("pitch_angle_range") is not None:
-        weights, no_b = _pitch_angle_weights(vdf, *_pitch_angle_args(kwargs))
+    if pitch_angle_range is not None:
+        weights, no_b = _pitch_angle_weights(
+            vdf, *_pitch_angle_args(b_xyz, pitch_angle_range, pitch_angle_weight)
+        )
 
     if use_exact:
         half_phi = np.rad2deg(delta_phi[:, :, 0]) / 2

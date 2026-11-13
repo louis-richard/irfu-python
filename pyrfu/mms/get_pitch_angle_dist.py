@@ -39,7 +39,15 @@ def _bin_reduce(data0, finite, in_bin, method, weights):
     return out
 
 
-def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
+def get_pitch_angle_dist(
+    vdf,
+    b_xyz,
+    tint: list = None,
+    verbose=True,
+    *,
+    angles=None,
+    meanorsum="mean",
+):
     r"""Computes the pitch angle distributions from particle data, as
     irfu-matlab mms.get_pitchangledist.
 
@@ -113,9 +121,9 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
     angles_v = np.linspace(15, 180, int(180 / 15))
     d_angles = np.median(np.diff(angles_v)) * np.ones(len(angles_v))
 
-    if "angles" in kwargs:
-        if isinstance(kwargs["angles"], (int, float)):
-            n_angles = int(kwargs["angles"])  # Make sure input is integer
+    if angles is not None:
+        if isinstance(angles, (int, float)):
+            n_angles = int(angles)  # Make sure input is integer
             d_angles = 180 / n_angles
             angles_v = np.linspace(d_angles, 180, n_angles)
             d_angles = d_angles * np.ones(n_angles)
@@ -123,8 +131,8 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
             if verbose:
                 logger.info("User defined number of pitch angles.")
 
-        elif isinstance(kwargs["angles"], (list, np.ndarray)):
-            angles_v = np.asarray(kwargs["angles"], dtype=np.float64)
+        elif isinstance(angles, (list, np.ndarray)):
+            angles_v = np.asarray(angles, dtype=np.float64)
             d_angles = np.diff(angles_v)
             angles_v = angles_v[1:]
 
@@ -135,7 +143,7 @@ def get_pitch_angle_dist(vdf, b_xyz, tint: list = None, verbose=True, **kwargs):
             raise ValueError("angles parameter not understood.")
 
     # Method
-    mean_or_sum = kwargs.get("meanorsum", "mean")
+    mean_or_sum = meanorsum
 
     if mean_or_sum not in ["mean", "sum", "sum_weighted"]:
         raise ValueError(f"meanorsum {mean_or_sum!r} not understood.")

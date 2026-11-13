@@ -63,7 +63,24 @@ def _angle_widths(vdf, theta, tint):
     }
 
 
-def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
+def reduce(
+    vdf,
+    xyz,
+    dim: str = "1d",
+    base: str = "pol",
+    *,
+    sc_pot=None,
+    lower_e_lim=0.0,
+    vg=None,
+    vg_edges=None,
+    phig=None,
+    tint=None,
+    n_mc=100,
+    weight=None,
+    v_int=(-np.inf, np.inf),
+    a_int=(-180.0, 180.0),
+    verbose=True,
+):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
 
     Parameters
@@ -82,26 +99,33 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     base : {"pol", "cart"}, Optional
         Base of the projection: polar "pol" (default, for "1d") or cartesian
         "cart" (for "2d" and "3d"). dim and base are case-insensitive.
-    **kwargs
-        Keyword arguments, among which:
-
-        * sc_pot : xarray.DataArray, the spacecraft potential V (V), 0 V by
-          default. The energies are those at infinity, E + q V for a charge
-          q (energy conservation): the electrons lose e V and the ions gain
-          q V (``charge`` attribute, 2 for the HPCA He++). irfu-matlab
-          PDist.reduce corrects the electrons only; the ions lost e V
-          before.
-        * lower_e_lim : float or xarray.DataArray, the threshold energy
-          (eV), 0 eV by default. The channels below lower_e_lim, and for a
-          species attracted by the spacecraft (q V < 0, the electrons for
-          V > 0) below its potential energy ``|q V|`` (secondary and
-          photoelectrons of the spacecraft), are set to zero; a time step
-          without any channel above it is NaN. The channels of a species
-          repelled (the ions for V > 0) are all ambient particles and are
-          kept (the ions below e V were set to zero).
-        * vg, vg_edges : array_like, the speeds (m/s) of the grid, or the
-          edges of its bins, instead of the default one (see Notes).
-        * verbose : bool, show a progress bar (default True).
+    sc_pot : xarray.DataArray, Optional
+        Spacecraft potential V (V), 0 V by default. The energies are those at
+        infinity, E + q V for a charge q (energy conservation): the electrons
+        lose e V and the ions gain q V (``charge`` attribute, 2 for the HPCA
+        He++). irfu-matlab PDist.reduce corrects the electrons only; the ions
+        lost e V before.
+    lower_e_lim : float or xarray.DataArray, Optional
+        Threshold energy (eV), 0 eV by default. The channels below
+        lower_e_lim, and for a species attracted by the spacecraft (q V < 0,
+        the electrons for V > 0) below its potential energy ``|q V|``
+        (secondary and photoelectrons of the spacecraft), are set to zero; a
+        time step without any channel above it is NaN. The channels of a
+        species repelled (the ions for V > 0) are all ambient particles and
+        are kept (the ions below e V were set to zero).
+    vg, vg_edges : array_like, Optional
+        Speeds (m/s) of the grid, or the edges of its bins, instead of the
+        default one (see Notes).
+    phig : array_like, Optional
+        Azimuthal grid of the projection plane (rad). Default is the
+        azimuths of the instrument bins.
+    tint : array_like, Optional
+        Time interval of the distributions to reduce. Default is all.
+    n_mc, weight, v_int, a_int : Optional
+        Monte-Carlo options of `pyrfu.pyrf.int_sph_dist` (`n_mc` 100 by
+        default).
+    verbose : bool, Optional
+        Show a progress bar. Default True.
 
     Returns
     -------
@@ -161,7 +185,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     # we do time clip first to save computation time if the time interval is
     # smaller than the VDF time series.
     vdf_time = vdf.time
-    tint = kwargs.get("tint", list(datetime642iso8601(vdf_time.data[[0, -1]])))
+    if tint is None:
+        tint = list(datetime642iso8601(vdf_time.data[[0, -1]]))
+
     vdf_time = time_clip(vdf_time, tint)
     vdf_energy = time_clip(vdf.energy, tint).copy()
     # Azimuths of each time, or of all times (1-D: time_clip raised
@@ -236,26 +262,19 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     # Read the keyword arguments
     # Velocity projection grid and edges
-    velocity_grid = kwargs.get("vg", None)  # TODO : check that for no input!!
-    velocity_grid_edges = kwargs.get("vg_edges", None)
+    velocity_grid, velocity_grid_edges = vg, vg_edges
 
     # azimuthal angle of projection plane (phi is (time, phi) in burst mode)
     n_phi_grid = vdf_phi.shape[-1]
     d_phi_g = 2 * np.pi / n_phi_grid
     phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, n_phi_grid) + d_phi_g / 2
-    phi_grid = kwargs.get("phig", phi_grid)
-
-    # Number of Monte Carlo iterations and weights
-    n_mc = kwargs.get("n_mc", 100)  # OK
-    weight = kwargs.get("weight", None)  # OK
-
-    # Velocity and azimuthal angle integration intervals
-    v_int = kwargs.get("v_int", [-np.inf, np.inf])  # OK
-    a_int = kwargs.get("a_int", [-180.0, 180.0])  # OK
+    phi_grid = phi_grid if phig is None else phig
 
     # Spacecraft potential to account for photoelectrons. If not provided set
     # to 0 V.
-    sc_pot = kwargs.get("sc_pot", ts_scalar(vdf_time.data, np.zeros(n_t)))
+    if sc_pot is None:
+        sc_pot = ts_scalar(vdf_time.data, np.zeros(n_t))
+
     sc_pot = resample(sc_pot, vdf_time).data
 
     # Potential energy (eV) of the particles at the spacecraft, q V: the
@@ -264,8 +283,6 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     # Threshold energy (e.g., to remove background noise). If not provided set
     # to 0 eV.
-    lower_e_lim = kwargs.get("lower_e_lim", 0.0)
-
     if isinstance(lower_e_lim, xr.DataArray):
         # If time series, clip to time interval and resample to VDF's time line
         lower_e_lim = resample(lower_e_lim, vdf_time).data
@@ -309,7 +326,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     # energy are NaN)
     computed = np.zeros(n_t, dtype=bool)
 
-    for i_t in tqdm.tqdm(range(n_t), ncols=60, disable=not kwargs.get("verbose", True)):
+    for i_t in tqdm.tqdm(range(n_t), ncols=60, disable=not verbose):
         # 3d data matrix for time index
         f_3d = np.squeeze(vdf_data.data[i_t, ...])  # s^3/m^6
         f_3d = f_3d.astype(np.float64).copy()  # Convert to float64

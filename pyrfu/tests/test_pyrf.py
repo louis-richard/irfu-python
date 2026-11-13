@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import builtins
 import datetime
+
+# Built-in imports
+import inspect
 import itertools
 import logging
 import math
@@ -3365,6 +3367,29 @@ class EdbTestCase(unittest.TestCase):
         xr.testing.assert_identical(
             pyrf.edb(vec, vec, np.float32(20.0))[0], pyrf.edb(vec, vec, 20.0)[0]
         )
+
+
+class KeywordOnlyOptionsTestCase(unittest.TestCase):
+    # The options of ebsp and int_sph_dist are keyword-only parameters: a
+    # misspelt one raises TypeError (it was ignored in **kwargs)
+
+    def test_misspelt_option(self):
+        for func, n_args, option in [
+            (pyrf.ebsp, 6, "polarisation"),
+            (pyrf.int_sph_dist, 6, "nmc"),
+        ]:
+            with self.subTest(func=func.__name__, option=option):
+                with self.assertRaisesRegex(TypeError, f"keyword argument '{option}'"):
+                    func(*[None] * n_args, **{option: True})
+
+    def test_options_keyword_only(self):
+        for func in [pyrf.ebsp, pyrf.int_sph_dist]:
+            with self.subTest(func=func.__name__):
+                kinds = [p_.kind for p_ in inspect.signature(func).parameters.values()]
+                self.assertNotIn(inspect.Parameter.VAR_KEYWORD, kinds)
+                self.assertTrue(
+                    all(k_ == inspect.Parameter.KEYWORD_ONLY for k_ in kinds[6:])
+                )
 
 
 @ddt

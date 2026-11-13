@@ -25,7 +25,28 @@ import numpy as np
 #   uniform in speed, azimuth and sin(elevation) (uniform in solid angle).
 
 
-def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
+def int_sph_dist(
+    vdf,
+    velocity,
+    phi,
+    theta,
+    velocity_grid,
+    phi_grid,
+    *,
+    xyz=None,
+    n_mc=10,
+    weight=None,
+    v_int=(-np.inf, np.inf),
+    a_int=(-180.0, 180.0),
+    projection_base="pol",
+    projection_dim="1d",
+    d_v_m=None,
+    d_v_p=None,
+    velocity_edges=None,
+    velocity_grid_edges=None,
+    d_phi=None,
+    d_theta=None,
+):
     r"""Integrate a spherical distribution function to a line/plane.
 
     Parameters
@@ -43,8 +64,6 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         Velocity grid for interpolation.
     phi_grid : numpy.ndarray
         Azimuthal angle grid for interpolation.
-    **kwargs
-        Keyword arguments.
 
     Returns
     -------
@@ -54,6 +73,18 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
 
     Other Parameters
     ----------------
+    xyz : numpy.ndarray
+        Transformation matrix of the projection, the unit vectors x, y (and z)
+        as columns. Default is the identity.
+    n_mc : int
+        Number of Monte-Carlo particles per instrument bin (see `weight`).
+        Default is 10.
+    v_int : array_like
+        Limits [min, max] of the speed transverse to the projection axis (1d)
+        or out of the projection plane (2d, 3d). Default is no limit.
+    a_int : array_like
+        Limits [min, max] of the angle from the projection axis or plane, in
+        degrees. Default is [-180, 180].
     projection_base : {"pol", "cart"}
         Base of the projection grid (case-insensitive). Default is "pol".
     projection_dim : {"1d", "2d", "3d"}
@@ -74,6 +105,12 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
         Edges of the instrument speed bins, shape (len(velocity) + 1,). If
         neither `d_v_m`/`d_v_p` nor `velocity_edges` is given, the edges are at
         the geometric mean of neighbouring speeds.
+    velocity_grid_edges : numpy.ndarray
+        Edges of the bins of the projection grid, instead of the midpoints of
+        `velocity_grid`.
+    d_phi, d_theta : numpy.ndarray
+        Azimuth and elevation widths of the instrument bins (rad). Default is
+        the median spacing of `phi` and `theta`.
 
     Raises
     ------
@@ -100,7 +137,8 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
     vdf = np.where(np.isfinite(vdf), vdf, 0.0)
 
     # Coordinates system transformation matrix
-    xyz = kwargs.get("xyz", np.eye(3))
+    if xyz is None:
+        xyz = np.eye(3)
 
     # Make sure the transformation matrix is orthonormal.
     x_phat = xyz[:, 0] / np.linalg.norm(xyz[:, 0])  # re-normalize
@@ -115,43 +153,38 @@ def int_sph_dist(vdf, velocity, phi, theta, velocity_grid, phi_grid, **kwargs):
 
     # Number of Monte Carlo iterations and how number of MC points is
     # weighted to data.
-    n_mc = kwargs.get("n_mc", 10)
-    weight = kwargs.get("weight", None)
-
     # Another weight (e.g. "linear") was taken as None
     if weight not in (None, "lin", "log"):
         raise ValueError(f'weight must be None, "lin" or "log", not {weight!r}')
 
     # limit on out-of-plane velocity
-    v_lim = np.array(kwargs.get("v_int", [-np.inf, np.inf]), dtype=np.float64)
+    v_lim = np.array(v_int, dtype=np.float64)
 
     # limit on azymuthal angle from projection plane
-    a_lim = np.array(kwargs.get("a_int", [-180.0, 180.0]), dtype=np.float64)
+    a_lim = np.array(a_int, dtype=np.float64)
     a_lim = np.deg2rad(a_lim)
 
     # Projection dimension and base
-    projection_base = str(kwargs.get("projection_base", "pol")).lower()
-    projection_dim = str(kwargs.get("projection_dim", "1d")).lower()
-
-    velocity_edges = kwargs.get("velocity_edges", None)
-    velocity_grid_edges = kwargs.get("velocity_grid_edges", None)
+    projection_base = str(projection_base).lower()
+    projection_dim = str(projection_dim).lower()
 
     # Azimuthal and elevation angles steps. Assumed to be constant
     # if not provided.
-    d_phi = np.abs(np.median(np.diff(phi))) * np.ones_like(phi)
-    d_phi = kwargs.get("d_phi", d_phi)
-    d_theta = np.abs(np.median(np.diff(theta))) * np.ones_like(theta)
-    d_theta = kwargs.get("d_theta", d_theta)
+    if d_phi is None:
+        d_phi = np.abs(np.median(np.diff(phi))) * np.ones_like(phi)
+
+    if d_theta is None:
+        d_theta = np.abs(np.median(np.diff(theta))) * np.ones_like(theta)
 
     # Speed widths below (d_v_m) and above (d_v_p) the speed of each instrument
     # bin. The Monte-Carlo particles are drawn uniformly in [v - d_v_m, v + d_v_p].
     # One of them alone was ignored
-    if ("d_v_m" in kwargs) != ("d_v_p" in kwargs):
+    if (d_v_m is None) != (d_v_p is None):
         raise ValueError("d_v_m and d_v_p must be given together")
 
-    if "d_v_m" in kwargs:
-        d_v_m = np.asarray(kwargs["d_v_m"], dtype=np.float64)
-        d_v_p = np.asarray(kwargs["d_v_p"], dtype=np.float64)
+    if d_v_m is not None:
+        d_v_m = np.asarray(d_v_m, dtype=np.float64)
+        d_v_p = np.asarray(d_v_p, dtype=np.float64)
     else:
         if velocity_edges is None:
             velocity_edges = _speed_bin_edges(velocity)
