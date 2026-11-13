@@ -77,122 +77,17 @@ def shock_parameters(spec):
             logger.warning("Setting shock speed, Vsh, to 0.")
             spec["v_sh"] = 0.0
 
+    # The parameters of each region whose inputs are given for the first
+    # region, in the order of _PARAMETERS
     dspec = {}
 
-    # Alfven speed
-    if f"n{regions[0]}" in spec:
-        for region in regions:
-            dspec[f"v_a{region}"] = _v_alfv(spec[f"b{region}"], spec[f"n{region}"])
+    for name, inputs, frame, func in _PARAMETERS:
+        given = all(f"{q}{regions[0]}" in spec for q in inputs)
 
-    # Sound speed
-    if f"t_i{regions[0]}" in spec and f"t_e{regions[0]}" in spec:
-        for region in regions:
-            dspec[f"v_ts{region}"] = _v_sound(
-                spec[f"t_i{region}"], spec[f"t_e{region}"]
-            )
-
-    # Fast speed
-    if (
-        f"n{regions[0]}" in spec
-        and f"v{regions[0]}" in spec
-        and f"t_i{regions[0]}" in spec
-        and f"t_e{regions[0]}" in spec
-    ):
-        for region in regions:
-            dspec[f"v_f{region}"] = _v_fast(
-                spec[f"b{region}"],
-                spec[f"n{region}"],
-                spec[f"v{region}"],
-                spec[f"t_i{region}"],
-                spec[f"t_e{region}"],
-            )
-
-    # Normal incidence frame velocity
-    if f"v{regions[0]}" in spec and "nvec" in spec and "v_sh" in spec:
-        for region in regions:
-            dspec[f"v_nif{region}"] = _nif_speed(
-                spec[f"v{region}"], spec["v_sh"], spec["nvec"]
-            )
-
-    # de Hoffman-Teller frame velocity
-    if f"v{regions[0]}" in spec and "nvec" in spec and "v_sh" in spec:
-        for region in regions:
-            dspec[f"v_htf{region}"] = _htf_speed(
-                spec[f"b{region}"], spec[f"v{region}"], spec["v_sh"], spec["nvec"]
-            )
-
-    # Ion gyrofrequency
-    for region in regions:
-        dspec[f"f_cp{region}"] = _ion_gyro_freq(spec[f"b{region}"])
-
-    # Ion inertial length
-    if f"n{regions[0]}" in spec:
-        for region in regions:
-            dspec[f"l_i{region}"] = _ion_in_len(spec[f"n{region}"])
-
-    if f"v{regions[0]}" in spec:
-        for region in regions:
-            dspec[f"r_cp{region}"] = _ion_gyro_rad(
-                spec[f"b{region}"], spec[f"v{region}"]
-            )
-
-    # Alfven Mach number
-    if f"n{regions[0]}" in spec and f"v{regions[0]}" in spec:
-        for region in regions:
-            dspec[f"m_a{region}"] = _alfv_mach(
-                spec[f"b{region}"],
-                spec[f"n{region}"],
-                spec[f"v{region}"],
-                spec["ref_sys"],
-                spec.get("v_sh", 0.0),
-                spec.get("nvec"),
-            )
-
-    # Sonic Mach number
-    if (
-        f"v{regions[0]}" in spec
-        and f"t_i{regions[0]}" in spec
-        and f"t_e{regions[0]}" in spec
-    ):
-        for region in regions:
-            dspec[f"m_s{region}"] = _sonic_mach(
-                spec[f"v{region}"],
-                spec[f"t_i{region}"],
-                spec[f"t_e{region}"],
-                spec["ref_sys"],
-                spec.get("v_sh", 0.0),
-                spec.get("nvec"),
-            )
-
-    if (
-        f"n{regions[0]}" in spec
-        and f"v{regions[0]}" in spec
-        and f"t_i{regions[0]}" in spec
-        and f"t_e{regions[0]}" in spec
-    ):
-        for region in regions:
-            dspec[f"m_f{region}"] = _fast_mach(
-                spec[f"b{region}"],
-                spec[f"n{region}"],
-                spec[f"v{region}"],
-                spec[f"t_i{region}"],
-                spec[f"t_e{region}"],
-                spec["ref_sys"],
-                spec.get("v_sh", 0.0),
-                spec.get("nvec"),
-            )
-
-    if f"n{regions[0]}" in spec and f"t_i{regions[0]}" in spec:
-        for region in regions:
-            dspec[f"beta_i{region}"] = _beta(
-                spec[f"b{region}"], spec[f"n{region}"], spec[f"t_i{region}"]
-            )
-
-    if f"n{regions[0]}" in spec and f"t_e{regions[0]}" in spec:
-        for region in regions:
-            dspec[f"beta_e{region}"] = _beta(
-                spec[f"b{region}"], spec[f"n{region}"], spec[f"t_e{region}"]
-            )
+        # The frame velocities need the shock normal and speed
+        if given and (not frame or ("nvec" in spec and "v_sh" in spec)):
+            for region in regions:
+                dspec[f"{name}{region}"] = func(spec, region)
 
     return dspec
 
@@ -339,3 +234,68 @@ def _beta(b, n, t_s):
     t_s_si = t_s * constants.electron_volt
     beta_s = (n_si * t_s_si) / (b_si**2 / (2 * constants.mu_0))
     return beta_s
+
+
+def _frame(spec):
+    # Frame of the Mach numbers: the reference system, the shock speed (0 if
+    # not given) and normal (None if not given)
+    return spec["ref_sys"], spec.get("v_sh", 0.0), spec.get("nvec")
+
+
+# Derived parameters: name, inputs of each region (all given for the first
+# region), whether nvec and v_sh are needed, and the function of spec and the
+# region (one guarded loop each before)
+_PARAMETERS = [
+    ("v_a", ["n"], False, lambda s, r: _v_alfv(s[f"b{r}"], s[f"n{r}"])),
+    ("v_ts", ["t_i", "t_e"], False, lambda s, r: _v_sound(s[f"t_i{r}"], s[f"t_e{r}"])),
+    (
+        "v_f",
+        ["n", "v", "t_i", "t_e"],
+        False,
+        lambda s, r: _v_fast(
+            s[f"b{r}"], s[f"n{r}"], s[f"v{r}"], s[f"t_i{r}"], s[f"t_e{r}"]
+        ),
+    ),
+    ("v_nif", ["v"], True, lambda s, r: _nif_speed(s[f"v{r}"], s["v_sh"], s["nvec"])),
+    (
+        "v_htf",
+        ["v"],
+        True,
+        lambda s, r: _htf_speed(s[f"b{r}"], s[f"v{r}"], s["v_sh"], s["nvec"]),
+    ),
+    ("f_cp", [], False, lambda s, r: _ion_gyro_freq(s[f"b{r}"])),
+    ("l_i", ["n"], False, lambda s, r: _ion_in_len(s[f"n{r}"])),
+    ("r_cp", ["v"], False, lambda s, r: _ion_gyro_rad(s[f"b{r}"], s[f"v{r}"])),
+    (
+        "m_a",
+        ["n", "v"],
+        False,
+        lambda s, r: _alfv_mach(s[f"b{r}"], s[f"n{r}"], s[f"v{r}"], *_frame(s)),
+    ),
+    (
+        "m_s",
+        ["v", "t_i", "t_e"],
+        False,
+        lambda s, r: _sonic_mach(s[f"v{r}"], s[f"t_i{r}"], s[f"t_e{r}"], *_frame(s)),
+    ),
+    (
+        "m_f",
+        ["n", "v", "t_i", "t_e"],
+        False,
+        lambda s, r: _fast_mach(
+            s[f"b{r}"], s[f"n{r}"], s[f"v{r}"], s[f"t_i{r}"], s[f"t_e{r}"], *_frame(s)
+        ),
+    ),
+    (
+        "beta_i",
+        ["n", "t_i"],
+        False,
+        lambda s, r: _beta(s[f"b{r}"], s[f"n{r}"], s[f"t_i{r}"]),
+    ),
+    (
+        "beta_e",
+        ["n", "t_e"],
+        False,
+        lambda s, r: _beta(s[f"b{r}"], s[f"n{r}"], s[f"t_e{r}"]),
+    ),
+]

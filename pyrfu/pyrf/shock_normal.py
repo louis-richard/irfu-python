@@ -166,6 +166,15 @@ def shock_normal(spec, leq90: bool = True):
     if spec["b_u"].ndim > 1 or spec["b_d"].ndim > 1:
         return _monte_carlo(spec, leq90)
 
+    return _shock_normal(spec, leq90)
+
+
+def _shock_normal(spec, leq90, fits=None):
+    # Parameters of a single upstream and downstream pair; fits: the normals
+    # and scalings of the models fitted once for all the Monte Carlo pairs
+    # (those that depend on the position only), by model
+    fits = fits or {}
+
     # normal vector, according to different models
     normal = {}
 
@@ -215,17 +224,11 @@ def shock_normal(spec, leq90: bool = True):
             for k in info:
                 info[k][m] = shock_models_params[m][k]
 
-            # Pass the model parameters by name (the JSON key order differs from
-            # the argument order of _shock_model)
-            params = shock_models_params[m]
-            normal[m], sig[m] = _shock_model(
-                spec,
-                params["eps"],
-                params["l"],
-                params["x_0"],
-                params["y_0"],
-                params["alpha"],
-            )
+            if m in fits:
+                # A copy: the normals are turned upstream in place below
+                normal[m], sig[m] = fits[m][0].copy(), fits[m][1]
+            else:
+                normal[m], sig[m] = _fit_model(spec, shock_models_params[m])
 
         info["sig"] = sig
     else:
@@ -294,8 +297,27 @@ def _monte_carlo(spec, leq90):
         for q, values in zip(["b", "v", "n"], [b_s, v_s, n_s]):
             draws[f"{q}_{side}"] = interpolate.interp1d(grid, values, axis=0)(position)
 
+    # The models with fixed parameters depend on the position only: fitted
+    # once (two optimize.minimize for each model and each pair before); the
+    # Slavin-Holzer model is rotated by the upstream velocity of each pair
+    fits = {}
+
+    if "r_xyz" in spec:
+        fits = {
+            m: _fit_model(spec, params)
+            for m, params in _shock_models_parameters().items()
+            if m != "slavin_holzer"
+        }
+
     results = [
-        shock_normal({**spec, **{k: v[i] for k, v in draws.items()}}, leq90)
+        _shock_normal(
+            {
+                **spec,
+                **{k: np.asarray(v[i], dtype=np.float64) for k, v in draws.items()},
+            },
+            leq90,
+            fits,
+        )
         for i in range(n_mc)
     ]
 
@@ -333,6 +355,15 @@ def _shock_models_parameters():
         os.path.join(pkg_path, "shock_models_parameters.json"), "r", encoding="utf-8"
     ) as fs:
         return json.load(fs)
+
+
+def _fit_model(spec, params):
+    # Normal and scaling of a model fitted to the position, with the model
+    # parameters by name (the JSON key order differs from the argument order
+    # of _shock_model)
+    return _shock_model(
+        spec, params["eps"], params["l"], params["x_0"], params["y_0"], params["alpha"]
+    )
 
 
 def _arccosd(cos_theta):

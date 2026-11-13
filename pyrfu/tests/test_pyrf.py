@@ -7389,6 +7389,45 @@ class ShockNormalTestCase(unittest.TestCase):
         out = pyrf.shock_normal(spec)
         self.assertEqual(out["n"]["vc"].shape, (4, 3))
 
+    def test_shock_normal_time_series_models_once(self):
+        # The five models with fixed parameters fitted once for all the
+        # draws, Slavin-Holzer (rotated by the upstream velocity) for each
+        # draw (the six for each draw before); each draw as its single-value
+        # calculation, and the shared normals not turned in place
+        module = sys.modules["pyrfu.pyrf.shock_normal"]
+        spec = {**self._series(), "n": 6, "random_state": 4}
+        spec["r_xyz"] = np.array([13.5, 5.0, 1.0]) * 6371.0
+
+        with mock.patch.object(
+            module, "_shock_model", wraps=module._shock_model
+        ) as shock_model:
+            out = pyrf.shock_normal(spec)
+
+        self.assertEqual(shock_model.call_count, 5 + 6)
+
+        rng = np.random.default_rng(4)
+        position = {side: rng.random(6) for side in ["u", "d"]}
+        for i in range(6):
+            single = {"r_xyz": spec["r_xyz"]}
+
+            for side in ["u", "d"]:
+                grid = np.linspace(0, 1, len(spec[f"b_{side}"]))
+
+                for q in ["b", "v", "n"]:
+                    values = np.asarray(spec[f"{q}_{side}"])
+                    single[f"{q}_{side}"] = interpolate.interp1d(grid, values, axis=0)(
+                        position[side][i]
+                    )
+
+            expected = pyrf.shock_normal(single)
+
+            for k in ["farris", "slavin_holzer", "formisano_unnorm"]:
+                with self.subTest(draw=i, model=k):
+                    np.testing.assert_array_equal(out["n"][k][i], expected["n"][k])
+                    self.assertEqual(
+                        out["info"]["sig"][k][i], expected["info"]["sig"][k]
+                    )
+
     def test_shock_normal_time_series_reproducible(self):
         spec = {**self._series(), "n": 5, "random_state": 2}
         out_1, out_2 = pyrf.shock_normal(spec), pyrf.shock_normal(spec)
