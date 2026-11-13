@@ -7,13 +7,10 @@ import os
 import re
 from typing import Mapping, Optional, Union
 
-# 3rd party imports
-import numpy as np
-
 # Local imports
 from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.list_files_aws import _file_time, _tint_bounds
-from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
+from pyrfu.pyrf.time_clip import _time_interval
 
 
 def list_files(
@@ -26,8 +23,10 @@ def list_files(
 
     Parameters
     ----------
-    tint : list
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the spacecraft
     var : dict
@@ -59,16 +58,8 @@ def list_files(
     if not os.path.exists(root_path):
         raise FileNotFoundError(f"{root_path} doesn't exist")
 
-    # Check time interval
-    if isinstance(tint, list):
-        tint_array = np.array(tint)
-    else:
-        raise TypeError("tint must be a list!!")
-
-    if isinstance(tint_array[0], str):
-        t_start, t_end = _tint_bounds(iso86012datetime64(tint_array))
-    else:
-        raise TypeError("Values must be in str!!")
+    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    t_start, t_end = _tint_bounds(_time_interval(tint))
 
     mms_id = str(mms_id)
 

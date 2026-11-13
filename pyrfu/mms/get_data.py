@@ -29,6 +29,7 @@ from pyrfu.mms.list_files_aws import _s3_resource, list_files_aws
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 from pyrfu.mms.tokenize import tokenize
 from pyrfu.pyrf.dist_append import dist_append
+from pyrfu.pyrf.time_clip import _time_interval
 from pyrfu.pyrf.ts_append import ts_append
 
 logger = logging.getLogger(__name__)
@@ -130,6 +131,11 @@ def _list_files_sources(
     var: Mapping[str, Union[str, int]],
     data_path: Optional[str] = "",
 ):
+    # Time interval in the forms of time_clip (only a list of str was
+    # listed), as datetime64; the cache key of the listing is then the same
+    # for all the forms
+    tint = _time_interval(tint)
+
     if source == "local":
         file_names = list_files(tint, mms_id, var, data_path)
         sdc_session, headers = None, {}
@@ -420,8 +426,10 @@ def get_data(
     ----------
     var_str : str
         Key of the target variable (use mms.get_data() to see keys.).
-    tint : list of str
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the target spacecraft.
     verbose : bool, Optional

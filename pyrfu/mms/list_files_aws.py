@@ -16,7 +16,7 @@ from botocore.exceptions import ClientError
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
-from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
+from pyrfu.pyrf.time_clip import _time_interval
 
 # Public copy of the MMS archive (CDAWeb) on NASA HelioCloud, used if no bucket
 # is set in the configuration file
@@ -78,8 +78,10 @@ def list_files_aws(
 
     Parameters
     ----------
-    tint : list of str
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the spacecraft
     var : dict
@@ -107,7 +109,7 @@ def list_files_aws(
     FileNotFoundError
         If the bucket can't be listed (e.g., it doesn't exist or access is denied).
     TypeError
-        If the time interval is not a list or if tint values are not str.
+        If the time interval is not one of the forms of `pyrfu.pyrf.time_clip`.
 
     Notes
     -----
@@ -117,16 +119,8 @@ def list_files_aws(
     SDC.
 
     """
-    # Check time interval
-    if isinstance(tint, list):
-        tint_array = np.array(tint)
-    else:
-        raise TypeError("tint must be a list!!")
-
-    if isinstance(tint_array[0], str):
-        t_start, t_end = _tint_bounds(iso86012datetime64(tint_array))
-    else:
-        raise TypeError("Values must be in str!!")
+    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    t_start, t_end = _tint_bounds(_time_interval(tint))
 
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)

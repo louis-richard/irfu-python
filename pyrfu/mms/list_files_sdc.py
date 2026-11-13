@@ -19,6 +19,7 @@ from urllib3.util.retry import Retry
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import _time_interval
 from .db_init import _config_stamp, _get_credential, _read_config
 from .list_files_aws import _tint_bounds
 
@@ -189,8 +190,10 @@ def list_files_sdc(tint, mms_id, var):
 
     Parameters
     ----------
-    tint : array_like
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the spacecraft
     var : dict
@@ -211,9 +214,9 @@ def list_files_sdc(tint, mms_id, var):
 
     """
 
-    # Make sure time interval is in iso8601 string format
-    tint = np.array(tint).astype("datetime64[ns]")
-    tint = datetime642iso8601(tint)
+    # Time interval in ISO 8601, from the forms of time_clip (a time series
+    # failed)
+    tint = datetime642iso8601(np.array(_time_interval(tint)))
 
     # Start session on MMS's SDC
     sdc_session, headers, lasp_url = _login_lasp()

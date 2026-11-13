@@ -42,8 +42,10 @@ def get_feeps_alleyes(
     tar_var : str
         Key of the target variable like
         {data_unit}{specie}_{data_rate}_{data_lvl}, e.g. "fluxe_brst_l2".
-    tint : list of str
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : int or float or str
         Index of the spacecraft.
     verbose : bool, Optional

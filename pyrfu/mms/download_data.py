@@ -112,8 +112,10 @@ def download_data(
     ----------
     var_str : str
         Input key of variable.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the target spacecraft.
     data_path : str, Optional

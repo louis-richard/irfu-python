@@ -12,9 +12,8 @@ from typing import Optional, Union
 import numpy as np
 
 # Local imports
-from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime import iso86012datetime
-from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import _time_interval
 from .db_init import _read_config
 
 # Products of the whole constellation: one file for the four spacecraft
@@ -39,8 +38,10 @@ def list_files_ancillary(
 
     Parameters
     ----------
-    tint : list of str
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Spacecraft index (not used for "defq" and "predq", which cover the
         four spacecraft).
@@ -72,18 +73,8 @@ def list_files_ancillary(
 
     mms_id = str(mms_id)
 
-    # Check time interval
-    if isinstance(tint, list):
-        tint_array = np.array(tint)
-    else:
-        raise TypeError("tint must be a list!!")
-
-    # Convert time interval to ISO 8601
-    if isinstance(tint_array[0], str):
-        tint_iso8601 = datetime642iso8601(iso86012datetime64(tint_array))
-        t_start, t_end = iso86012datetime(tint_iso8601)
-    else:
-        raise TypeError("Values must be in str!!")
+    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    t_start, t_end = iso86012datetime(np.array(_time_interval(tint)))
 
     # PAD time interval to handle ancillary file start after midnight
     t_start -= datetime.timedelta(days=1)

@@ -63,6 +63,22 @@ list_files_aws_module = importlib.import_module("..mms.list_files_aws", __packag
 
 TEST_TINT = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
 
+
+def _tint_forms(tint):
+    r"""The time interval `tint` (two ISO 8601 str) in the forms of
+    pyrf.time_clip, which the readers accept."""
+    t64 = np.array(tint, dtype="datetime64[ns]")
+    return {
+        "tuple": tuple(tint),
+        "Z": [f"{t_}Z" for t_ in tint],
+        "array": np.array(tint),
+        "datetime64": list(t64),
+        "datetime64 array": t64,
+        "datetime": list(t64.astype("datetime64[us]").astype(datetime.datetime)),
+        "time series": xr.DataArray(np.zeros(2), coords=[t64], dims=["time"]),
+    }
+
+
 data_units_keys = {
     "flux": "1/(cm^2 s sr keV)",
     "counts": "counts",
@@ -3123,6 +3139,20 @@ class LoadBrstSegmentsTestCase(unittest.TestCase):
         self.assertIn("TAISTARTTIME<=1829006436", url)
         self.assertIn("TAIENDTIME>=1829006006", url)
 
+    def test_load_brst_segments_tint_forms(self):
+        # The forms of time_clip (a time series failed): the same query and
+        # segments
+        rows = [(1829005990, 1829006120, "COMPLETE+FINISHED")]
+        with mock.patch.object(
+            requests, "get", return_value=_brst_segments_response(rows)
+        ) as get:
+            expected = mms.load_brst_segments(self.tint)
+            for name, form in _tint_forms(self.tint).items():
+                with self.subTest(form=name):
+                    self.assertListEqual(mms.load_brst_segments(form), expected)
+
+        self.assertEqual(len({call.args[0] for call in get.call_args_list}), 1)
+
     def test_load_brst_segments_empty(self):
         with mock.patch.object(
             requests, "get", return_value=_brst_segments_response([])
@@ -5969,6 +5999,14 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
                 result = mms.feeps_active_eyes(var, [t_start, t_start], 1)
                 self.assertDictEqual(result, expected)
 
+            # The forms of time_clip, without a numpy warning (for "Z" and a
+            # time series)
+            for name, form in _tint_forms([start, start]).items():
+                with self.subTest(form=name), warnings.catch_warnings():
+                    warnings.simplefilter("error")
+                    result = mms.feeps_active_eyes(var, form, 1)
+                    self.assertDictEqual(result, expected)
+
     def test_feeps_active_eyes_sitl(self):
         # SITL: top eyes 5, 11 and 12 only, as IDL SPEDAS and pySPEDAS (also for
         # the ions); after 2017-08-16 in survey, those of them that are active,
@@ -7933,12 +7971,44 @@ class GetDataDownloadTestCase(unittest.TestCase):
                     "b_gse_fgm_srvy_l2", tint, 1, False, root, source="local"
                 )
 
-        self.assertEqual(list_files.call_args.args[0], tint)
+        # The interval parsed to datetime64, for the listing and its cache key
+        np.testing.assert_array_equal(
+            list_files.call_args.args[0], np.array(tint, dtype="datetime64[ns]")
+        )
         self.assertEqual(list_files.call_args.args[1], "1")
         self.assertEqual(list_files.call_args.args[3], root)
         expected = mms.get_ts(content, "mms1_fgm_b_gse_srvy_l2", tint)
         xr.testing.assert_identical(result, expected)
         self.assertEqual(result.time.dtype, np.dtype("datetime64[ns]"))
+
+    def test_get_data_tint_forms(self):
+        # The time interval in the forms of time_clip (only a list of str was
+        # accepted), with the same listing and data
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        content = _cdf_four_columns("2019-09-14T07:54:10")
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "mms1_fgm_srvy_l2_20190914_v5.200.0.cdf")
+            with open(path, "wb") as file:
+                file.write(content)
+
+            with mock.patch.object(
+                self.module, "list_files", return_value=[path]
+            ) as list_files:
+                expected = mms.get_data("b_gse_fgm_srvy_l2", tint, 1, False, root)
+                for name, form in _tint_forms(tint).items():
+                    with self.subTest(form=name):
+                        result = mms.get_data("b_gse_fgm_srvy_l2", form, 1, False, root)
+                        xr.testing.assert_identical(result, expected)
+
+        for call in list_files.call_args_list:
+            np.testing.assert_array_equal(
+                call.args[0], np.array(tint, dtype="datetime64[ns]")
+            )
+
+        # Other types: TypeError, before any listing
+        for tint in [[0, 1], "2019-09-14T07:54:00"]:
+            with self.subTest(tint=tint), self.assertRaises(TypeError):
+                mms.get_data("b_gse_fgm_srvy_l2", tint, 1, False, root)
 
     @data(
         ("SDC", "sdc"),
@@ -7978,7 +8048,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
                 self.module, "_login_lasp", return_value=(session, {"a": "b"}, None)
             ),
         ):
-            result = self.module._list_files_sources("sdc", [], "1", {})
+            result = self.module._list_files_sources("sdc", TEST_TINT, "1", {})
 
         self.assertEqual(result, (["url_0", "url_1"], session, {"a": "b"}))
 
@@ -7986,10 +8056,13 @@ class GetDataDownloadTestCase(unittest.TestCase):
         with mock.patch.object(
             self.module, "list_files", return_value=["file.cdf"]
         ) as list_files:
-            result = self.module._list_files_sources("local", [], "1", {}, "root")
+            result = self.module._list_files_sources(
+                "local", TEST_TINT, "1", {}, "root"
+            )
 
         self.assertEqual(result, (["file.cdf"], None, {}))
-        list_files.assert_called_once_with([], "1", {}, "root")
+        list_files.assert_called_once()
+        self.assertEqual(list_files.call_args.args[1:], ("1", {}, "root"))
 
     def test_source_not_implemented(self):
         # An unknown source is a ValueError, as in db_get_ts and the other
@@ -7999,7 +8072,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
             mms.get_data("b_gse_fgm_srvy_l2", [], 1, source="cdaweb")
 
         with self.assertRaises(NotImplementedError):
-            self.module._list_files_sources("cdaweb", [], "1", {})
+            self.module._list_files_sources("cdaweb", TEST_TINT, "1", {})
 
         with self.assertRaises(NotImplementedError):
             self.module._get_file_content_sources("cdaweb", "file.cdf")
@@ -8812,10 +8885,15 @@ class GetTsTestCase(unittest.TestCase):
             get_ts(bytes(pycdfpp.save(cdf)), "mms1_x")
 
     def test_get_ts_tint_types(self):
-        # tint as datetime64 or str; other types raise TypeError
+        # tint in the forms of time_clip (a tuple, datetime.datetime and a
+        # time series raised TypeError); other types raise TypeError
         content, time = self._cdf("mms1_x", np.arange(5.0), n_t=5)
         result = get_ts(content, "mms1_x", list(time[[1, 3]]))
         np.testing.assert_array_equal(result.time.data, time[1:4])
+
+        for name, tint in _tint_forms(list(time[[1, 3]].astype(str))).items():
+            with self.subTest(form=name):
+                xr.testing.assert_identical(get_ts(content, "mms1_x", tint), result)
 
         for tint in [[1, 3], "2019-09-14T07:54:01"]:
             with self.subTest(tint=tint), self.assertRaises(TypeError):
@@ -9219,6 +9297,16 @@ class GetDistTestCase(unittest.TestCase):
             result.time.data,
             np.array(["2019-09-14T07:54:10.15", "2019-09-14T07:54:10.3"], "<M8[ns]"),
         )
+
+    def test_get_dist_tint_forms(self):
+        # The forms of time_clip (a tuple, datetime.datetime and a time series
+        # raised TypeError)
+        tint = ["2019-09-14T07:54:10.100", "2019-09-14T07:54:10.400"]
+        expected = mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", tint)
+        for name, form in _tint_forms(tint).items():
+            with self.subTest(form=name):
+                result = mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", form)
+                xr.testing.assert_identical(result, expected)
 
     @data("2019-09-14T07:54:10", [0, 1])
     def test_get_dist_tint_type_error(self, tint):
@@ -9628,11 +9716,30 @@ class ListFilesAwsTestCase(unittest.TestCase):
     )
     @unpack
     def test_list_files_aws_input(self, tint, var):
-        with self.assertRaises(TypeError):
-            mms.list_files_aws(tuple(tint), 1, var)
+        # The forms of time_clip (only a list of str was accepted); other
+        # types raise TypeError
+        directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
+        keys = [
+            f"{directory}/mms1_fgm_brst_l2_20190914{t}_v5.207.0.cdf"
+            for t in ["075043", "075403", "081100"]
+        ]
+        bucket_prefix = f"{self.BUCKET}/{self.HELIO}"
 
-        with self.assertRaises(TypeError):
-            mms.list_files_aws(list(pyrf.iso86012datetime64(np.array(tint))), 1, var)
+        def listing(form):
+            # Without the S3 objects (a new fake bucket for each listing)
+            out, _, _ = self._list(keys, form, var, bucket_prefix)
+            return [{k: v for k, v in f.items() if k != "s3_obj"} for f in out]
+
+        expected = listing(tint)
+        self.assertEqual(len(expected), 2)
+
+        for name, form in _tint_forms(tint).items():
+            with self.subTest(form=name):
+                self.assertListEqual(listing(form), expected)
+
+        for form in [[0, 1], tint[0]]:
+            with self.subTest(tint=form), self.assertRaises(TypeError):
+                mms.list_files_aws(form, 1, var)
 
     @data(
         ("s3://my-bucket/data/mms/", ("my-bucket", "data/mms")),
@@ -12643,14 +12750,21 @@ class ListFilesTestCase(unittest.TestCase):
     def test_list_files_input(self):
         var = {"inst": "fgm", "tmmode": "srvy", "lev": "l2", "dtype": ""}
         tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        name = "mms1_fgm_srvy_l2_20190914_v5.211.0.cdf"
         with tempfile.TemporaryDirectory() as root:
-            with self.assertRaises(TypeError):
-                mms.list_files(tuple(tint), 1, var, root)
+            # The forms of time_clip (only a list of str was accepted)
+            self._touch(root, "mms1/fgm/srvy/l2/2019/09", [name])
+            expected = mms.list_files(tint, 1, var, root)
+            self.assertEqual([os.path.basename(f) for f in expected], [name])
 
-            with self.assertRaises(TypeError):
-                mms.list_files(
-                    list(pyrf.iso86012datetime64(np.array(tint))), 1, var, root
-                )
+            for form_name, form in _tint_forms(tint).items():
+                with self.subTest(form=form_name):
+                    self.assertListEqual(mms.list_files(form, 1, var, root), expected)
+
+            # Other types
+            for form in [[0, 1], tint[0]]:
+                with self.subTest(tint=form), self.assertRaises(TypeError):
+                    mms.list_files(form, 1, var, root)
 
     def test_list_files_missing_path(self):
         # FileNotFoundError (AssertionError)
@@ -12729,6 +12843,27 @@ class ListFilesSdcTestCase(unittest.TestCase):
                 "data_level": "l2",
             }
             self.assertDictEqual({k: query[k] for k in expected}, expected)
+
+    def test_list_files_sdc_tint_forms(self):
+        # The forms of time_clip (a time series failed): the same query and
+        # files
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        names = [
+            f"mms2_fgm_brst_l2_20190914{t}_v5.215.0.cdf"
+            for t in ["074523", "075223", "080023"]
+        ]
+        files = [_sdc_science_file(n) for n in names]
+        expected, session = self._list(tint, 2, "b_gse_fgm_brst_l2", files)
+        self.assertEqual(len(expected), 2)
+
+        for name, form in _tint_forms(tint).items():
+            with self.subTest(form=name):
+                result, form_session = self._list(form, 2, "b_gse_fgm_brst_l2", files)
+                self.assertListEqual(result, expected)
+                self.assertListEqual(form_session.urls, session.urls)
+
+        with self.assertRaises(TypeError):
+            self._list([0, 1], 2, "b_gse_fgm_brst_l2", files)
 
     def test_list_files_sdc_files(self):
         # From the file starting before the interval, sorted in time, with
@@ -12843,6 +12978,23 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
             result,
             [{"file_name": name, "url": f"{_SDC_URL}download/ancillary?file={name}"}],
         )
+
+    def test_list_files_ancillary_sdc_tint_forms(self):
+        # The forms of time_clip (a time series failed): the same query
+        module = importlib.import_module("pyrfu.mms.list_files_ancillary_sdc")
+        tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
+        urls = {}
+        for name, form in {"list": tint, **_tint_forms(tint)}.items():
+            session = _FakeSdcSession([])
+            with mock.patch.object(
+                module, "_login_lasp", return_value=(session, {}, _SDC_URL)
+            ):
+                module.list_files_ancillary_sdc(form, 3, "defeph")
+            urls[name] = session.urls
+
+        for name, form_urls in urls.items():
+            with self.subTest(form=name):
+                self.assertListEqual(form_urls, urls["list"])
 
     def test_list_files_ancillary_sdc_defq(self):
         # One file for the four spacecraft: sc_id=mms (with mms3, no file)
@@ -12999,6 +13151,22 @@ class LoadAncillaryTestCase(unittest.TestCase):
         self.assertEqual(result.epoch_mms_tai.attrs["UNITS"], "d")
         self.assertEqual(result.x.attrs["UNITS"], "km")
         self.assertEqual(result.vz.attrs["UNITS"], "km/s")
+
+    def test_load_ancillary_tint_forms(self):
+        # The forms of time_clip (a tuple, datetime.datetime and a time series
+        # failed)
+        self._write(
+            "defeph",
+            "MMS1_DEFEPH_2019257_2019258.V01",
+            _DEFEPH_HEADER + _DEFEPH_ROWS,
+        )
+        expected = mms.load_ancillary("defeph", self.tint, 1, False, self.root, "local")
+        for name, form in _tint_forms(self.tint).items():
+            with self.subTest(form=name):
+                result = mms.load_ancillary(
+                    "defeph", form, 1, False, self.root, "local"
+                )
+                xr.testing.assert_identical(result, expected)
 
     def test_load_ancillary_defatt(self):
         # The DATA_STOP footer is not data
@@ -13394,17 +13562,23 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
         self.assertListEqual([os.path.basename(f) for f in result], [name])
 
     def test_list_files_ancillary_input(self):
+        name = "MMS1_DEFATT_2019257_2019258.V00"
         with tempfile.TemporaryDirectory() as root:
-            with self.assertRaises(TypeError):
-                mms.list_files_ancillary(tuple(self._TINT), 1, "defatt", root)
+            # The forms of time_clip (only a list of str was accepted)
+            self._touch(os.path.join(root, "ancillary", "mms1", "defatt"), [name])
+            expected = mms.list_files_ancillary(self._TINT, 1, "defatt", root)
+            self.assertEqual([os.path.basename(f) for f in expected], [name])
 
-            with self.assertRaises(TypeError):
-                mms.list_files_ancillary(
-                    list(pyrf.iso86012datetime64(np.array(self._TINT))),
-                    1,
-                    "defatt",
-                    root,
-                )
+            for form_name, form in _tint_forms(self._TINT).items():
+                with self.subTest(form=form_name):
+                    self.assertListEqual(
+                        mms.list_files_ancillary(form, 1, "defatt", root), expected
+                    )
+
+            # Other types
+            for form in [[0, 1], self._TINT[0]]:
+                with self.subTest(tint=form), self.assertRaises(TypeError):
+                    mms.list_files_ancillary(form, 1, "defatt", root)
 
     def test_list_files_ancillary_missing_path(self):
         # FileNotFoundError (AssertionError)

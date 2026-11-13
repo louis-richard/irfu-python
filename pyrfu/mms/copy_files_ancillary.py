@@ -24,8 +24,10 @@ def copy_files_ancillary(
     ----------
     product : {"predatt", "predeph", "predq", "defatt", "defeph", "defq"}
         Ancillary type.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the spacecraft (not used for "defq" and "predq", which cover
         the four spacecraft).

@@ -13,7 +13,7 @@ import requests
 
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import _time_interval
 
 URL = (
     "https://lasp.colorado.edu/mms/sdc/public/service/latis/"
@@ -50,8 +50,10 @@ def load_brst_segments(
 
     Parameters
     ----------
-    tint : list
-        Time interval to look for burst segments.
+    tint : array_like or xarray.DataArray
+        Time interval to look for burst segments: the start and stop times
+        as ISO 8601 str, datetime64 or datetime.datetime, or a time series
+        (its first and last times), as `pyrfu.pyrf.time_clip`.
     data_path : str, Optional
         Deprecated and ignored: the segments are not cached any more.
     download : bool, Optional
@@ -80,7 +82,8 @@ def load_brst_segments(
             stacklevel=2,
         )
 
-    l_bound, r_bound = iso86012datetime64(np.array(tint))
+    # In the forms of time_clip (a time series failed)
+    l_bound, r_bound = _time_interval(tint)
 
     # Segments overlapping tint (with the end offset)
     tai_l = _datetime642tai(np.array([l_bound]))[0] - END_OFFSET

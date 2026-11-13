@@ -20,9 +20,11 @@ from pyrfu.mms.get_data import _resolve_source
 from pyrfu.mms.list_files_ancillary import _sc_name, list_files_ancillary
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp
+from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.extend_tint import extend_tint
 from pyrfu.pyrf.iso86012datetime import iso86012datetime
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
+from pyrfu.pyrf.time_clip import _time_interval
 
 logger = logging.getLogger(__name__)
 
@@ -163,8 +165,10 @@ def load_ancillary(
     product : {"defatt", "defeph", "defq"}
         Ancillary type. The predicted products (predatt, predeph, predq) are
         not supported.
-    tint : list of str
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Spacecraft index (not used for "defq", which covers the four
         spacecraft).
@@ -230,6 +234,10 @@ def load_ancillary(
             f"Ancillary product {product!r} is not supported, use one of "
             f"{', '.join(anc_dict)}"
         )
+
+    # Time interval in ISO 8601, from the forms of time_clip (a tuple,
+    # datetime.datetime and a time series failed)
+    tint = list(datetime642iso8601(np.array(_time_interval(tint))))
 
     # Resource: the ancillary files are not on AWS, read them from the SDC
     resource = _resolve_source(source)

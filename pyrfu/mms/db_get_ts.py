@@ -133,8 +133,10 @@ def db_get_ts(
         Name of the dataset.
     cdf_name : str
         Name of the target field in cdf file.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
     data_path : str, Optional

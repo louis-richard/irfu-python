@@ -6,9 +6,7 @@ import numpy as np
 from pycdfpp import load
 
 # Local imports
-from ..pyrf.datetime642iso8601 import datetime642iso8601
-from ..pyrf.iso86012datetime64 import iso86012datetime64
-from ..pyrf.time_clip import time_clip
+from ..pyrf.time_clip import _time_interval, time_clip
 from ..pyrf.ts_skymap import ts_skymap
 from .get_ts import _get_epochs
 from .get_variable import _pycdfpp_attributes_to_dict
@@ -38,8 +36,10 @@ def get_dist(file_path, cdf_name, tint: list = None):
         Path of the cdf file.
     cdf_name : str
         Name of the target variable in the cdf file.
-    tint : list of str, Optional
-        Time interval.
+    tint : array_like or xarray.DataArray, Optional
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`. Default is all the times of the file.
 
     Returns
     -------
@@ -65,22 +65,12 @@ def get_dist(file_path, cdf_name, tint: list = None):
             "Couldn't get the particle species from file name!!",
         )
 
-    # Check time interval type
-    # Check time interval
+    # Time interval, in the forms of time_clip (a tuple, datetime.datetime
+    # and a time series raised TypeError), checked before reading the file
     if tint is None:
         tint = ["1995-10-06T18:50:00.000000000", "2200-10-06T18:50:00.000000000"]
-    elif isinstance(tint, (np.ndarray, list)):
-        if isinstance(tint[0], np.datetime64):
-            tint = datetime642iso8601(np.array(tint))
-        elif isinstance(tint[0], str):
-            tint = iso86012datetime64(
-                np.array(tint),
-            )  # to make sure it is ISO8601 ok!!
-            tint = datetime642iso8601(np.array(tint))
-        else:
-            raise TypeError("Values must be in datetime64, or str!!")
-    else:
-        raise TypeError("tint must be array_like!!")
+
+    tint = _time_interval(tint)
 
     # Load CDF file
     file = load(file_path)

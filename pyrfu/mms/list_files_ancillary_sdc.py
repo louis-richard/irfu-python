@@ -3,12 +3,14 @@
 
 # Built-in imports
 import warnings
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 # 3rd party imports
 import numpy as np
 
 # Local imports
+from ..pyrf.iso86012datetime import iso86012datetime
+from ..pyrf.time_clip import _time_interval
 from .list_files_ancillary import _sc_name
 from .list_files_sdc import SDC_TIMEOUT, _login_lasp
 
@@ -19,8 +21,8 @@ def _construct_url_json_list(tint, mms_id, product, lasp_url):
     https://lasp.colorado.edu/mms/sdc/team/about/how-to/
     """
 
-    tint = np.array(tint).astype("<M8[ns]").astype(str)
-    tint = [datetime.strptime(t_[:-3], "%Y-%m-%dT%H:%M:%S.%f") for t_ in tint]
+    # In the forms of time_clip (a time series failed)
+    tint = iso86012datetime(np.array(_time_interval(tint)))
     start_date = (tint[0] - timedelta(days=1)).strftime("%Y-%m-%d")
     end_date = (tint[1] + timedelta(days=1)).strftime("%Y-%m-%d")
 
@@ -46,8 +48,10 @@ def list_files_ancillary_sdc(tint, mms_id, product):
 
     Parameters
     ----------
-    tint : list of str
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Spacecraft index (not used for "defq" and "predq", which cover the
         four spacecraft).
