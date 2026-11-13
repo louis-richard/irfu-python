@@ -706,11 +706,16 @@ def psd_moments(vdf, sc_pot, **kwargs):
         if weights is not None:
             kernels = kernels * weights[block, np.newaxis]
 
+        # (numpy 2.0 with Apple Accelerate raises spurious floating-point
+        # warnings in large matmul products of finite arrays, e.g. "divide
+        # by zero encountered in matmul")
         n_b = kernels.shape[0]
-        angular_sums[block] = np.matmul(
-            vdf_data[block].reshape(n_b, n_e, -1),
-            kernels.reshape(n_b, 10, -1).transpose(0, 2, 1),
-        )
+
+        with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            angular_sums[block] = np.matmul(
+                vdf_data[block].reshape(n_b, n_e, -1),
+                kernels.reshape(n_b, 10, -1).transpose(0, 2, 1),
+            )
 
     # The channels used, those of an attracted species above its potential
     # energy (plus w_inner_electron for the inner electrons)
