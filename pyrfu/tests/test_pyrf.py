@@ -1674,6 +1674,44 @@ class C4JTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             pyrf.c_4_j([], [])
 
+    def test_c_4_j_geometry_once(self):
+        # One resampling and one c_4_k for the three derivatives (three
+        # c_4_grad calls computed them three times), with the outputs of
+        # c_4_grad; the errors of c_4_grad for other fields
+        r_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
+        b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
+        c_4_k = sys.modules["pyrfu.pyrf.c_4_k"].c_4_k
+        with (
+            mock.patch.object(
+                sys.modules["pyrfu.pyrf.c_4_j"], "c_4_k", wraps=c_4_k, create=True
+            ) as in_c_4_j,
+            mock.patch.object(
+                sys.modules["pyrfu.pyrf.c_4_grad"], "c_4_k", wraps=c_4_k
+            ) as in_c_4_grad,
+        ):
+            j, div_b, _, _, div_t_shear, _ = pyrf.c_4_j(r_mms, b_mms)
+
+        self.assertEqual(in_c_4_j.call_count + in_c_4_grad.call_count, 1)
+        factor = 1.0e-3 * 1e-9 / constants.mu_0
+        for out, method, scale in [
+            (div_b, "div", factor),
+            (j, "curl", factor),
+            (div_t_shear, "bdivb", 1.0e-3 * 1e-9 * 1e-9 / constants.mu_0),
+        ]:
+            with self.subTest(method=method):
+                np.testing.assert_array_equal(
+                    out.data, pyrf.c_4_grad(r_mms, b_mms, method).data * scale
+                )
+
+        scalar = [pyrf.norm(b) for b in b_mms]
+        tensor = [generate_ts(64.0, 100, tensor_order=2) for _ in range(4)]
+        for b_list in [scalar, tensor]:
+            with self.assertRaises(ValueError):
+                pyrf.c_4_j(r_mms, b_list)
+
+        with self.assertRaises(TypeError):
+            pyrf.c_4_j(r_mms, [b.data for b in b_mms])
+
     def test_c_4_j_output(self):
         r_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
         b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]

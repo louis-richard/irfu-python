@@ -5,14 +5,17 @@
 from typing import Sequence
 
 # 3rd party imports
+import numpy as np
 from scipy import constants
 from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf._units import _check_units
 from pyrfu.pyrf.avg_4sc import avg_4sc
-from pyrfu.pyrf.c_4_grad import c_4_grad
+from pyrfu.pyrf.c_4_grad import _derivative, _to_ts
+from pyrfu.pyrf.c_4_k import c_4_k
 from pyrfu.pyrf.cross import cross
+from pyrfu.pyrf.resample import resample
 
 
 def c_4_j(
@@ -123,6 +126,13 @@ def c_4_j(
         if len(inp) != 4:
             raise ValueError(f"{name} must contain the 4 spacecraft")
 
+    # Time series of vectors (the errors of c_4_grad)
+    if not all(isinstance(inp, DataArray) for inp in [*r_list, *b_list]):
+        raise TypeError("All elements of r_list and b_list must be xarray.DataArray")
+
+    if b_list[0].ndim != 2:
+        raise ValueError("b_list must be time series of vectors (time, 3)")
+
     # The factors assume positions in km and fields in nT
     _check_units(r_list[0], "km", "r_list")
     _check_units(b_list[0], "nT", "b_list")
@@ -130,22 +140,31 @@ def c_4_j(
     # Magnetic field at the center of the tetrahedron [nT]
     b_avg = avg_4sc(b_list)
 
-    # Estimate divB/mu0. unit is A/m2
-    div_b = c_4_grad(r_list, b_list, "div")
+    # Positions and fields at the times of the first field and the reciprocal
+    # vectors, once for the three derivatives (three c_4_grad calls resampled
+    # them and computed the reciprocal vectors three times), as c_4_grad
+    r_list = [resample(r, b_list[0]) for r in r_list]
+    b_list = [resample(b, b_list[0]) for b in b_list]
+    k_s = np.stack([k.data for k in c_4_k(r_list)])
+    b_s = np.stack([b.data for b in b_list])
+    time = b_list[0].time
 
-    # to get right units
-    div_b *= 1.0e-3 * 1e-9 / constants.mu_0
+    # Estimate divB/mu0. unit is A/m2
+    div_b = _to_ts(_derivative(k_s, b_s, "div"), time)
+    div_b.data *= 1.0e-3 * 1e-9 / constants.mu_0
 
     # estimate current j [A/m2]
-    j = c_4_grad(r_list, b_list, "curl")
+    j = _to_ts(_derivative(k_s, b_s, "curl"), time)
     j.data *= 1.0e-3 * 1e-9 / constants.mu_0
 
     # estimate jxB force [T A/m2]
     jxb = cross(j, b_avg)
     jxb.data *= 1e-9
 
-    # estimate divTshear = (1/muo) (B*div)B [T A/m2]
-    div_t_shear = c_4_grad(r_list, b_list, "bdivb")
+    # estimate divTshear = (1/muo) (B*div)B [T A/m2], with B at the center of
+    # mass of the resampled fields, as c_4_grad
+    b_avg_s = avg_4sc(b_list).data
+    div_t_shear = _to_ts(_derivative(k_s, b_s, "bdivb", b_avg_s), time)
     div_t_shear.data *= 1.0e-3 * 1e-9 * 1e-9 / constants.mu_0
 
     # estimate divPb = (1/muo) grad (B^2/2) = divTshear-jxB

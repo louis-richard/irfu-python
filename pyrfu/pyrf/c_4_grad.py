@@ -54,6 +54,43 @@ def _to_ts(out_data: NDArray[Any], time: DataArray) -> DataArray:
     return out
 
 
+def _derivative(
+    k_s: NDArray[Any],
+    b_s: NDArray[Any],
+    method: str,
+    b_avg: Optional[NDArray[Any]] = None,
+) -> NDArray[Any]:
+    r"""Derivative `method` ("grad", "div", "curl" or "bdivb") of a field,
+    from the reciprocal vectors `k_s` (spacecraft, time, 3) and the field
+    `b_s` (spacecraft, time, ...) of the four spacecraft on the same times;
+    `b_avg` (time, 3) is the field at the center of mass for "bdivb". The
+    sums over the spacecraft are in the order of the loops they replaced.
+    Shared with c_4_j, which computes three derivatives with one resampling
+    and one c_4_k."""
+    # Divergence of a tensor: d T_ij / d x_i
+    if b_s.ndim == 4:
+        return np.sum(np.einsum("sti,stij->stj", k_s, b_s), axis=0)
+
+    if method == "div":
+        return np.sum(np.sum(k_s * b_s, axis=2), axis=0)
+
+    if method == "curl":
+        return np.sum(np.cross(k_s, b_s, axis=2), axis=0)
+
+    # Gradient of a scalar (time, i) or of a vector (time, j, i) = d b_j / d x_i
+    # (for "grad" and "bdivb" only; it was computed for every method)
+    if b_s.ndim == 2:
+        grad_b = np.sum(k_s * b_s[:, :, np.newaxis], axis=0)
+    else:
+        grad_b = np.sum(k_s[:, :, np.newaxis, :] * b_s[:, :, :, np.newaxis], axis=0)
+
+    if method == "grad":
+        return grad_b
+
+    # (B.grad)B
+    return np.sum(b_avg[:, np.newaxis, :] * grad_b, axis=2)
+
+
 def c_4_grad(
     r_list: Sequence[DataArray],
     b_list: Sequence[DataArray],
@@ -191,34 +228,19 @@ def c_4_grad(
     b_s = np.stack([b.data for b in b_list])
     time = b_list[0].time
 
-    # Divergence of a tensor: d T_ij / d x_i
-    if is_tensor:
-        out = _to_ts(np.sum(np.einsum("sti,stij->stj", k_s, b_s), axis=0), time)
-        out.attrs = _attrs({}, units)
-
-        return out
-
-    # Gradient of a scalar (time, i) or of a vector (time, j, i) = d b_j / d x_i
-    if b_s.ndim == 2:
-        grad_b = np.sum(k_s * b_s[:, :, np.newaxis], axis=0)
-    else:
-        grad_b = np.sum(k_s[:, :, np.newaxis, :] * b_s[:, :, :, np.newaxis], axis=0)
-
-    if method == "grad":
-        out_data = grad_b
-    elif method == "div":
-        out_data = np.sum(np.sum(k_s * b_s, axis=2), axis=0)
-    elif method == "curl":
-        out_data = np.sum(np.cross(k_s, b_s, axis=2), axis=0)
-    elif method == "bdivb":
+    if method == "bdivb":
         # (B.grad)B with B at the center of mass of the tetrahedron (computed
         # for this method only; it was on every call)
-        b_avg = avg_4sc(b_list).data
-        out_data = np.sum(b_avg[:, np.newaxis, :] * grad_b, axis=2)
-    else:
-        # Curvature: (b.grad)b of the unit vectors
+        out_data = _derivative(k_s, b_s, method, avg_4sc(b_list).data)
+    elif method == "curv":
+        # Curvature: (b.grad)b of the unit vectors, with the same reciprocal
+        # vectors (c_4_grad of the unit vectors resampled the positions and
+        # computed them again)
         b_hat_list = [normalize(b) for b in b_list]
-        out_data = c_4_grad(r_list, b_hat_list, method="bdivb").data
+        b_hat_s = np.stack([b.data for b in b_hat_list])
+        out_data = _derivative(k_s, b_hat_s, "bdivb", avg_4sc(b_hat_list).data)
+    else:
+        out_data = _derivative(k_s, b_s, method)
 
     out = _to_ts(out_data, time)
     out.attrs = _attrs({}, units)
