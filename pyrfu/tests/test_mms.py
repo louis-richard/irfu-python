@@ -6390,19 +6390,36 @@ class FeepsOmniTestCase(unittest.TestCase):
             mms.feeps_omni(feeps_alle)
 
 
+def _feeps_split(data_rate, dtype, mms_id):
+    # Fake FEEPS data, integral channel split, on channels of 40 to 600 keV (the
+    # generated energies are outside the default range of feeps_pad)
+    feeps_alle = generate_feeps(64.0, 100, data_rate, dtype, "l2", "flux", mms_id)
+    feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+    energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+    return feeps_alle.assign_coords(energy=energy)
+
+
 @ddt
 class FeepsPadTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
     @unpack
     def test_feeps_pad_ouput(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_alle = _feeps_split(data_rate, dtype, random.randint(1, 4))
 
         result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
         self.assertIsInstance(result, xr.DataArray)
+        self.assertTrue(np.isfinite(result.data).any())
+
+    def test_feeps_pad_no_channel(self):
+        # No channel in the energy range (the generated energies): NaN PAD,
+        # with a warning
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+
+        with self.assertWarnsRegex(UserWarning, "No FEEPS energy channel"):
+            result = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
+
+        self.assertTrue(np.isnan(result.data).all())
 
     def test_feeps_pad_input_unchanged(self):
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
@@ -6566,19 +6583,14 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
     @idata(itertools.product(["srvy", "brst"], ["electron", "ion"]))
     @unpack
     def test_feeps_pad_spin_avg(self, data_rate, dtype):
-        # Generate fake FEEPS data
-        feeps_alle = generate_feeps(
-            64.0, 100, data_rate, dtype, "l2", "flux", random.randint(1, 4)
-        )
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_alle = _feeps_split(data_rate, dtype, random.randint(1, 4))
 
         feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
 
     def test_feeps_pad_spin_avg_input_types(self):
-        feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
-        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        feeps_alle = _feeps_split("srvy", "electron", 1)
         feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
 
         # A NumPy array used to raise TypeError; the 8 complete spins (the
