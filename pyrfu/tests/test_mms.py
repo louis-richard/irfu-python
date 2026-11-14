@@ -9857,6 +9857,22 @@ class ReduceTestCase(unittest.TestCase):
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
 
+    def test_reduce_tint(self):
+        # The distribution clipped to tint (the times of tint in the forms of
+        # time_clip); all the times without tint
+        vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01=False, species="ions")
+        times = vdf.time.data
+        tint = [times[5], times[14]]
+        expected = pyrf.time_clip(vdf.time, tint).time.data
+        self.assertEqual(len(expected), 10)
+
+        for form in [tint, list(pyrf.datetime642iso8601(np.array(tint)))]:
+            result = mms.reduce(vdf, np.eye(3), tint=form, n_mc=2, verbose=False)
+            np.testing.assert_array_equal(result.time.data, expected)
+
+        result = mms.reduce(vdf, np.eye(3), n_mc=2, verbose=False)
+        np.testing.assert_array_equal(result.time.data, times)
+
     def test_reduce_species_mass(self):
         # The speeds of the channels with the mass of the species (oxygen
         # raised ValueError, the ions were protons); energy widths per channel,
