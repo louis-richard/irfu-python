@@ -1,7 +1,7 @@
 Changelog
 =========
 
-2.5.14 (2026-11-13)
+2.5.14 (2026-11-14)
 -------------------
 
 This release completes the review of the code quality of the package. The

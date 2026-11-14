@@ -102,7 +102,8 @@ def reduce(
         Spacecraft potential V (V), 0 V by default. The energies are those at
         infinity, E + q V for a charge q (energy conservation): the electrons
         lose e V and the ions gain q V (``charge`` attribute, 2 for the HPCA
-        He++). irfu-matlab PDist.reduce corrects the electrons only.
+        He++). irfu-matlab PDist.reduce documents its scpot option for the
+        electrons only and gives every species E - e V.
     lower_e_lim : float or xarray.DataArray, Optional
         Threshold energy (eV), 0 eV by default. The channels below
         lower_e_lim, and for a species attracted by the spacecraft (q V < 0,
