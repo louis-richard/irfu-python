@@ -1,6 +1,143 @@
 Changelog
 =========
 
+2.5.14 (2026-11-13)
+-------------------
+
+This release completes the review of the code quality of the package. The
+options of the main distribution and wave routines are keyword-only, so that
+a misspelled option raises ``TypeError``; the MMS readers accept the time
+intervals of ``pyrf.time_clip``; ``import pyrfu`` writes no file and no
+longer imports boto3; and the package is checked with mypy. The largest
+routines are rewritten: ``mms.psd_moments`` and
+``mms.fk_power_spectrum_4sc`` without numba, ``pyrf.int_sph_dist`` with one
+Monte-Carlo kernel, ``pyrf.ebsp`` with stacked spectra, and ``pyrf.c_4_j``
+and ``pyrf.shock_normal`` without repeated work. On the MMS data checked
+(FGM, EDP, MEC, FPI, FEEPS, EIS and HPCA), the results are unchanged but at
+the rounding level, except for the ions of ``mms.reduce`` with a spacecraft
+potential and the other changes listed below.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- The options of ``pyrf.ebsp``, ``pyrf.int_sph_dist``, ``mms.psd_moments``,
+  ``mms.reduce`` and ``mms.get_pitch_angle_dist`` are keyword-only parameters,
+  with the same names and defaults: a misspelled or unknown option raises
+  ``TypeError`` (it was ignored). ``None`` means "not given" for the options
+  tested by presence.
+- ``mms.get_data`` raises ``ValueError`` for an unknown source, as the other
+  readers (``NotImplementedError``).
+- ``mms.make_model_vdf`` and ``mms.make_model_kappa`` use the mass and charge
+  of the species: the speeds of the energies E + q V (the charge was
+  ignored) and the thermal speed of the species (the proton mass for any
+  ion); ``mms.make_model_kappa`` accepts every species of
+  ``mms.vdf_convert``. The models are labelled with the energies at
+  infinity E + q V at which they are evaluated (the measured energies of the
+  distribution before; irfu-matlab ``make_model_dist`` keeps them), and
+  ``mms.calculate_epsilon`` corrects the energies of the measured
+  distribution with its spacecraft potential and requires them, the times
+  and the angles to equal those of the model (``ValueError``; they were
+  paired by position).
+- ``pyrf.avg_4sc`` labels its result "4sc_avg", as ``pyrf.nanavg_4sc`` and
+  ``mms.feeps_avg_4sc``; both raise ``ValueError`` for spacecraft with
+  different ``UNITS``, and ``pyrf.nanavg_4sc`` accepts a tuple.
+- ``pyrf.sliding_derivative`` leaves out the centre sample of "5ps" and
+  "9ps", which has no weight: a NaN there no longer gives NaN.
+- ``plot.plot_surf`` places its colour bar 0.01 from the axis on the four
+  sides (the bottom and left ones touched it).
+- ``import pyrfu`` no longer creates the MMS configuration file in the user
+  directory (it is created on the first use, e.g. of
+  ``mms.MMS_CFG_PATH``) and no longer imports boto3 (``import pyrfu`` 1.8 s
+  instead of 2.3 s).
+
+New features
+^^^^^^^^^^^^
+
+- The MMS readers (``mms.get_data``, ``mms.db_get_ts``, ``mms.get_ts``,
+  ``mms.get_dist``, ``mms.list_files``, ``mms.list_files_aws``,
+  ``mms.list_files_sdc``, ``mms.list_files_ancillary``,
+  ``mms.load_ancillary``, ``mms.load_brst_segments`` and the readers built on
+  them) accept the time intervals of ``pyrf.time_clip``: the start and stop
+  times as ISO 8601 strings (with or without "Z"), datetime64 or
+  ``datetime.datetime``, in a list, tuple or array, or a time series. Only a
+  list of strings was accepted by some of them. The file listings cached
+  before 2.5.14 are listed again once.
+- ``mms.dsl2gse`` and ``mms.dsl2gsm`` take ``axis="l"`` for the spin axis from
+  the angular momentum of DEFATT (``l_ra``, ``l_dec``), the z axis of DMPA:
+  on FGM DMPA data the difference from the GSE data of the files goes from
+  1.3e-3 to 2.0e-4 of B. The default stays the body z axis, as irfu-matlab.
+- Type annotations: ``Literal`` for the closed sets of flags (38 parameters,
+  e.g. ``method``, ``angle_integration``, the colour bar positions), so that
+  a type checker catches a wrong flag, and ``X | None`` annotations
+  throughout.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``mms.reduce`` corrects the energies of every species to the energies at
+  infinity E + q V: the ions of charge q gain q V (they lost e V, the
+  correction of the electrons), and only a species attracted by the
+  spacecraft (the electrons for V > 0) has its channels below ``|q V|`` cut
+  (the ions below e V were set to zero).
+- ``pyrf.nanavg_4sc`` leaves the data gaps of a spacecraft and the times
+  outside its range out, as ``mms.feeps_avg_4sc`` (the resampling filled
+  them, averaged as data).
+- ``mms.list_files_sdc`` reads the times of the SDC file names in UTC: they
+  were read as local time, so that on the night of a change to summer time
+  the files were out of order and some left out.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``pyrf.wavelet`` of a vector from ``mms.get_data`` (component dimension
+  ``represent_vec_tot``) raised ``AttributeError``.
+- ``mms.psd_moments`` no longer gives spurious "divide by zero" warnings with
+  numpy 2.0 and Apple Accelerate.
+- ``maven.download_data`` closes its session after a failed download.
+
+Performance
+^^^^^^^^^^^
+
+- ``mms.psd_moments`` without numba (the first call 0.2 s instead of 2.6 s:
+  no compiled kernel to load); ``mms.fk_power_spectrum_4sc`` without numba
+  kernels; ``pyrf.ebsp`` 10-30 % faster; ``pyrf.c_4_j`` 2.3 times faster
+  (one resampling and one ``c_4_k``); ``pyrf.shock_normal`` with time series
+  5 times faster (the models fitted once); ``pyrf.sliding_derivative`` 40-140
+  times faster; ``solo.read_tnr`` 5 times faster on two files;
+  ``pyrf.pid_4sc``, ``mms.psd_rebin`` and ``mms.remove_edist_background``
+  without per-sample loops.
+
+Documentation
+^^^^^^^^^^^^^
+
+- "Messages" in the documentation: the ``pyrfu`` logger, how to see only the
+  warnings and how to pass the messages to the handlers of an application.
+- The spacecraft-potential correction of ``mms.psd_moments`` (the energies at
+  infinity, the channels left out, the relativistic invariant), the NaN of
+  ``pyrf.match_phibe_dir`` and ``pyrf.wavepolarize_means`` for a field along
+  their reference axis (as irfu-matlab), the default top frequency of
+  ``pyrf.wavelet`` (``irf_wavelet`` stops 2.3 % lower), the half window of
+  ``pyrf.resample`` rounded to the nanosecond, and the magnetopause models on
+  which the bow shocks of ``pyrf.magnetosphere`` and
+  ``models.magnetopause_normal`` are based.
+- The public docstrings describe the current behaviour only (the history is
+  in this changelog).
+
+Development
+^^^^^^^^^^^
+
+- The private helpers are in ``pyrfu/_core`` (times, units, per-time
+  attributes, configuration files, type aliases; it imports nothing else of
+  pyrfu) and ``pyrfu/mms/_internal`` (distribution bins, Monte-Carlo
+  sampling, phase-space density units, EPD helpers, the cache). Two import
+  cycles are broken (``pyrf``-``plot`` and ``pyrf``-``models``).
+- mypy (non-strict) checks the package and its tests, in pre-commit and in
+  CI; ``types-requests`` is in the ``type-checking`` extra.
+- python-dateutil is no longer a dependency.
+- The style sheets and the logo are package data; tests check that the
+  imports of each sub-package agree with its ``__all__`` and that the
+  ``Literal`` flags agree with the docstrings.
+
 2.5.13 (2026-11-12)
 -------------------
 
