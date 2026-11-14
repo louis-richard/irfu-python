@@ -1,23 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Literal
+
 # 3rd party imports
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.dates import num2date
 from matplotlib.transforms import ScaledTranslation, blended_transform_factory
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
+
+from pyrfu._core.time import _seconds
 
 # Local imports
 from ..constants import R_E
-from ..pyrf._time import _seconds
 
 
 def add_position(
     ax: Axes,
     r_xyz: DataArray,
     spine: float = 20,
-    position: str = "top",
+    position: Literal["top", "bottom"] = "top",
     fontsize: float = 10,
     units: str = "re",
 ) -> Axes:
@@ -34,8 +38,8 @@ def add_position(
         Time series of the spacecraft position.
     spine : float, Optional
         Relative position of the axes. Default is 20.
-    position : str, Optional
-        Axis position wtr to the reference axis. Default is "top".
+    position : {"top", "bottom"}, Optional
+        Axis position with respect to the reference axis. Default is "top".
     fontsize : float, Optional
         xticks label font size. Default is 10.
     units : {"re", "km"}, Optional
@@ -63,8 +67,8 @@ def add_position(
 
     x_lim = ax.get_xlim()
 
-    t_ticks = [t_.replace(tzinfo=None) for t_ in num2date(ax.get_xticks())]
-    t_ticks = np.array(t_ticks).astype("<M8[ns]")
+    t_list = [t_.replace(tzinfo=None) for t_ in num2date(ax.get_xticks())]
+    t_ticks = np.array(t_list).astype("<M8[ns]")
 
     # Position interpolated at the ticks (seconds since the first sample), NaN
     # outside the time series
@@ -99,7 +103,11 @@ def add_position(
     # Names of the label rows, 4 points left of the axis, at the height of the
     # tick labels
     tick = axr.xaxis.get_major_ticks()[0]
-    pad = tick.get_pad() + tick.get_tick_padding()
+    # Tick.get_pad returns the pad in points; the stub says None
+    pad = (
+        tick.get_pad()  # type: ignore[func-returns-value,operator]
+        + tick.get_tick_padding()
+    )
     if position == "top":
         y_transform, v_align, _ = axr.get_xaxis_text2_transform(pad)
         y_label = 1

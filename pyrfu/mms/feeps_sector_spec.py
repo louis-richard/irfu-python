@@ -42,8 +42,7 @@ def feeps_sector_spec(inp_alle):
     over energy, goes to the column of its spin sector; the sectors not
     sampled are NaN. Only the complete spins are kept, as in
     :func:`pyrfu.mms.feeps_spin_avg`: the partial spins at the start and end
-    of the interval and the spins cut by data gaps are left out (they were
-    kept).
+    of the interval and the spins cut by data gaps are left out.
 
     IDL SPEDAS leaves the first row at zero, stamps each spin at the start of
     the next one, and lets the first sample of the next spin overwrite its

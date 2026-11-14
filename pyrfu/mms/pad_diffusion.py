@@ -5,9 +5,9 @@
 import numpy as np
 
 # Local imports
-from ..pyrf._units import _ratio, _units
-from ._psd_units import _output
-from ._vdf_bins import _is_skymap, _pitch_angles
+from pyrfu._core.units import _ratio, _units
+from pyrfu.mms._internal.psd_units import _output
+from pyrfu.mms._internal.vdf_bins import _is_skymap, _pitch_angles
 
 
 def pad_diffusion(pad, d_aa):

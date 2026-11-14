@@ -3,14 +3,17 @@
 
 # Built-in imports
 import logging
-from typing import Optional
 
 # 3rd party imports
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from pyrfu.mms.db_get_ts import _resolve_source, _tokenize
-from pyrfu.mms.get_data import _get_file_content_sources, _list_files_sources
+from pyrfu.mms.db_get_ts import _split_dataset_name
+from pyrfu.mms.get_data import (
+    _get_file_content_sources,
+    _list_files_sources,
+    _resolve_source,
+)
 from pyrfu.mms.get_variable import get_variable
 
 logger = logging.getLogger(__name__)
@@ -20,9 +23,9 @@ def db_get_variable(
     dataset_name: str,
     cdf_name: str,
     tint: list[str],
-    verbose: Optional[bool] = True,
-    data_path: Optional[str] = "",
-    source: Optional[str] = "default",
+    verbose: bool = True,
+    data_path: str = "",
+    source: str | None = "default",
 ) -> DataArray:
     r"""Get variable in the cdf file.
 
@@ -32,8 +35,10 @@ def db_get_variable(
         Name of the dataset.
     cdf_name : str
         Name of the target field in cdf file.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
     data_path : str, Optional
@@ -57,7 +62,7 @@ def db_get_variable(
         If the source is not supported.
 
     """
-    mms_id, var = _tokenize(dataset_name)
+    mms_id, var = _split_dataset_name(dataset_name)
     resource = _resolve_source(source)
 
     file_names, sdc_session, headers = _list_files_sources(

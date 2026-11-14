@@ -1,24 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import warnings
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
 from matplotlib import colors
 
 # Local imports
-from ..mms._vdf_bins import (
+from pyrfu.mms._internal.vdf_bins import (
     _bins_d3v,
     _pitch_angles,
     _polar_edges,
     _sc_pot,
     _speed_edges,
 )
-from ..mms._vdf_mc import _sample
+from pyrfu.mms._internal.vdf_mc import _sample
+
 from .colorbar import colorbar as _add_colorbar
-from .plot_ang_ang import _check_units
+from .plot_ang_ang import _units_label
 
 # Largest angular width (degrees) of the cells drawn, so that the pitch-angle
 # bins are drawn as arcs rather than chords
@@ -208,12 +211,12 @@ def _colorbar(ax, image, position):
 def plot_pad_polar(
     ax,
     pad,
-    tint: list = None,
+    tint: list | None = None,
     sc_pot=None,
-    clim: list = None,
-    cmap: str = None,
+    clim: list | None = None,
+    cmap: str | None = None,
     contour=None,
-    colorbar: str = "right",
+    colorbar: Literal["right", "top", "none"] = "right",
     monte_carlo: bool = False,
     n_mc: int = 200,
     n_grid: int = 100,
@@ -282,8 +285,7 @@ def plot_pad_polar(
     The colour is the phase-space density averaged over gyrophase in each
     bin (`pyrfu.mms.get_pitch_angle_dist`), not a reduced distribution (the
     integral of f over v_perp dphi, see `pyrfu.mms.reduce`). The speeds are
-    relativistic (they were non-relativistic without the ``relativistic``
-    attribute), in km/s, in 10^3 km/s for electrons.
+    relativistic, in km/s, in 10^3 km/s for electrons.
 
     By default the bins are drawn from their edges: the energy edges from
     the ``delta_energy_minus`` and ``delta_energy_plus`` attributes
@@ -372,7 +374,7 @@ def plot_pad_polar(
     cax = _colorbar(ax, image, colorbar)
 
     if cax is not None:
-        label = _check_units(pad)
+        label = _units_label(pad)
 
         if colorbar == "right":
             cax.set_ylabel(label)

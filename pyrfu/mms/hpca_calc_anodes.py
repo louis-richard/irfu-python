@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import warnings
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -30,7 +32,9 @@ anodes_theta = np.array(
 )
 
 
-def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
+def hpca_calc_anodes(
+    inp, fov: list | None = None, method: Literal["mean", "sum"] = "mean"
+):
     r"""Averages over anodes (or a given field of view) for HPCA ion data.
 
     Parameters
@@ -46,8 +50,8 @@ def hpca_calc_anodes(inp, fov: list = None, method: str = "mean"):
     -------
     out : xarray.DataArray
         HPCA ion flux averaged over the anodes within the selected field of
-        view. The anodes without data (NaN) are left out (one made the
-        spectrum NaN); NaN where no anode has data.
+        view. The anodes without data (NaN) are left out; NaN where no anode
+        has data.
 
     Raises
     ------

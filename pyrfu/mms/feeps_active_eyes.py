@@ -4,6 +4,9 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
+from ..pyrf.time_clip import _time_interval
+
 
 def feeps_active_eyes(var, tint, mms_id):
     r"""This function returns the FEEPS active eyes,
@@ -13,8 +16,10 @@ def feeps_active_eyes(var, tint, mms_id):
     ----------
     var : dict
         Hash table containing parameters.
-    tint : list of str or datetime64 or datetime.datetime
-        Time range.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : int or str
         Spacecraft index, e.g., '4' for MMS4.
 
@@ -83,8 +88,8 @@ def feeps_active_eyes(var, tint, mms_id):
         sensors["top"] = [6, 7, 8]
         sensors["bottom"] = [6, 7, 8]
 
-    # str, datetime64 or datetime.datetime
-    start_day = np.datetime64(tint[0]).astype("datetime64[D]")
+    # In the forms of time_clip (numpy warned for "Z" and a time series)
+    start_day = _time_interval(tint)[0].astype("datetime64[D]")
 
     # srvy mode, after 16 August 2017
     if start_day >= np.datetime64("2017-08-16") and var["tmmode"].lower() == "srvy":

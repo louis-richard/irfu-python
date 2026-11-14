@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import List, Mapping, Optional
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from ._time_attrs import _is_time_attr
+from pyrfu._core.time_attrs import _is_time_attr
+
+# Built-in imports
 
 
 def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
@@ -35,8 +36,8 @@ def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
 
 
 def ts_append(
-    inp0: Optional[DataArray] = None, inp1: Optional[DataArray] = None
-) -> Optional[DataArray]:
+    inp0: DataArray | None = None, inp1: DataArray | None = None
+) -> DataArray | None:
     r"""Concatenate two time series along the time axis.
 
     Parameters
@@ -69,7 +70,7 @@ def ts_append(
         out = inp0
     else:
         # Both with time samples
-        out_data = {}
+        out_data: dict[str, Any] = {}
 
         if inp0.data.ndim != 1:
             out_data["data"] = np.vstack([inp0.data, inp1.data])
@@ -80,7 +81,7 @@ def ts_append(
         n_0, n_1 = inp0.shape[0], inp1.shape[0]
         out_data["attrs"] = _append_attrs(inp0.attrs, inp1.attrs, n_0, n_1)
 
-        depends: List[Mapping[str, object]] = [{} for _ in range(len(inp0.dims))]
+        depends: list[dict[str, Any]] = [{} for _ in range(len(inp0.dims))]
 
         for i, dim in enumerate(inp0.dims):
             if i == 0 or dim == "time":

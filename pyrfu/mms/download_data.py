@@ -5,11 +5,11 @@
 import logging
 import os
 import uuid
-from typing import Optional, Union
+from collections.abc import Mapping
+from datetime import datetime
 
 # 3rd party imports
 import tqdm
-from dateutil.parser import parse
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def _make_path_local(
-    file: dict, var: dict, mms_id: Union[str, int], data_path: Optional[str] = ""
+    file: dict, var: Mapping[str, str], mms_id: str | int, data_path: str = ""
 ):
     r"""Construct path of the data file using the standard convention.
 
@@ -47,7 +47,7 @@ def _make_path_local(
         If the local data directory doesn't exist.
 
     """
-    file_date = parse(file["timetag"])
+    file_date = datetime.fromisoformat(file["timetag"])
 
     data_path = os.path.normpath(data_path or _read_config()["local"])
 
@@ -71,7 +71,7 @@ def _make_path_local(
 
 
 def _download_file(
-    session, url: str, headers: dict, out_file: str, size: Optional[int] = None
+    session, url: str, headers: dict, out_file: str, size: int | None = None
 ):
     r"""Download url to out_file, through a temporary file next to it so that a
     failed or interrupted download never leaves a partial file. The temporary
@@ -100,9 +100,7 @@ def _download_file(
             os.remove(part_file)
 
 
-def download_data(
-    var_str: str, tint: list, mms_id: Union[str, int], data_path: Optional[str] = ""
-):
+def download_data(var_str: str, tint: list, mms_id: str | int, data_path: str = ""):
     r"""Download files from MMS SDC.
 
     Download data files containing field `var_str` over the time interval `tint` for
@@ -112,8 +110,10 @@ def download_data(
     ----------
     var_str : str
         Input key of variable.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the target spacecraft.
     data_path : str, Optional

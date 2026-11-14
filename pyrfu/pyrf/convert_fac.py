@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional, Union
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _units
+from pyrfu._core.units import _attrs, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
@@ -19,7 +18,7 @@ from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 def convert_fac(
     inp: DataArray,
     b_bgd: DataArray,
-    r_xyz: Optional[Union[DataArray, np.ndarray, list]] = None,
+    r_xyz: DataArray | np.ndarray | list | None = None,
 ) -> DataArray:
     r"""Transform to a field-aligned coordinate (FAC) system.
 

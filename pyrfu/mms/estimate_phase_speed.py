@@ -79,7 +79,7 @@ def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.0):
     f_power = f_mat[highppos]
     k_power = k_mat[highppos]
 
-    p_power2, f_power2, k_power2 = [[], [], []]
+    p_list, f_list, k_list = [[], [], []]
 
     for i, p_pow in enumerate(p_power):
         if (
@@ -87,13 +87,13 @@ def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.0):
             < np.abs(f_power[i] / k_power[i])
             < np.abs(vph_range[1])
         ):
-            p_power2.append(p_pow)
-            f_power2.append(f_power[i])
-            k_power2.append(k_power[i])
+            p_list.append(p_pow)
+            f_list.append(f_power[i])
+            k_list.append(k_power[i])
 
-    p_power2 = np.array(p_power2)
-    f_power2 = np.array(f_power2)
-    k_power2 = np.array(k_power2)
+    p_power2 = np.array(p_list)
+    f_power2 = np.array(f_list)
+    k_power2 = np.array(k_list)
 
     weights = 1 + np.log10(p_power2 / np.max(p_power2))
 

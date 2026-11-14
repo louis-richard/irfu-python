@@ -7,9 +7,9 @@ import shutil
 import warnings
 
 # 3rd party imports
-import cycler
 import matplotlib as mpl
 from matplotlib import style
+from matplotlib.rcsetup import cycler
 
 # Local imports
 from .add_position import add_position
@@ -111,7 +111,7 @@ EXTRA_COLORS = {
     "cluster:cluster4": "#00ffff",
 }
 
-mpl.colors.colorConverter.colors.update(EXTRA_COLORS)
+mpl.colors.get_named_colors_mapping().update(EXTRA_COLORS)
 
 
 def _register_cmap(cmap):
@@ -187,7 +187,7 @@ _register_cmap(
 )
 
 
-def set_color_cycle(pal: str = "") -> (list, str):
+def set_color_cycle(pal: str = "") -> tuple[list, str]:
     r"""Sets color cycle.
 
     Parameters
@@ -208,7 +208,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
     Raises
     ------
     ValueError
-        If `pal` is not one of the palettes (was taken as "series").
+        If `pal` is not one of the palettes.
 
     """
 
@@ -268,7 +268,7 @@ def set_color_cycle(pal: str = "") -> (list, str):
             f"unknown palette {pal!r}: pyrfu, oceanic, tab (tableau, mpl) or series"
         )
 
-    mpl.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
+    mpl.rcParams["axes.prop_cycle"] = cycler(color=colors)
     mpl.rcParams["image.cmap"] = cmap
 
     return colors, cmap

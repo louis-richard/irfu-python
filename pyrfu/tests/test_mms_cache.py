@@ -18,7 +18,7 @@ import platformdirs
 
 # Local imports
 from pyrfu import mms, pyrf
-from pyrfu.mms import _cache
+from pyrfu.mms._internal import cache as _cache
 
 FGM_SRVY = "mms1_fgm_srvy_l2_20190914_v5.200.0.cdf"
 FGM_BRST = "mms1_fgm_brst_l2_20190914075400_v5.200.0.cdf"
@@ -173,7 +173,7 @@ class CacheListingTestCase(_CacheTestCase):
     def test_listing_write_error(self):
         # A cache that cannot be written gives a warning and the listing
         with mock.patch.object(_cache, "_atomic_write", side_effect=OSError("full")):
-            with self.assertLogs("pyrfu.mms._cache", "WARNING"):
+            with self.assertLogs("pyrfu.mms._internal.cache", "WARNING"):
                 items = _cache.listing(self.KEY, lambda: [{"path": "a"}])
 
         self.assertEqual(items, [{"path": "a"}])
@@ -220,7 +220,7 @@ class CacheReadTestCase(_CacheTestCase):
         self._write(["aws", *self.remote.path.split("/")], b"cd")
         fetch = mock.Mock(return_value=b"cdf")
 
-        with self.assertLogs("pyrfu.mms._cache", "WARNING"):
+        with self.assertLogs("pyrfu.mms._internal.cache", "WARNING"):
             self.assertEqual(_cache.read(self.remote, fetch), b"cdf")
 
         self.assertEqual(fetch.call_count, 1)
@@ -245,7 +245,7 @@ class CacheReadTestCase(_CacheTestCase):
     def test_read_write_error(self):
         # A cache that cannot be written gives a warning and the content
         with mock.patch.object(_cache, "_atomic_write", side_effect=OSError("full")):
-            with self.assertLogs("pyrfu.mms._cache", "WARNING"):
+            with self.assertLogs("pyrfu.mms._internal.cache", "WARNING"):
                 self.assertEqual(_cache.read(self.remote, lambda: b"cdf"), b"cdf")
 
         self.assertFalse(os.path.exists(self.path))
@@ -338,7 +338,7 @@ class CacheInfoTestCase(_CacheTestCase):
             },
         )
 
-        with self.assertLogs("pyrfu.mms._cache", "INFO"):
+        with self.assertLogs("pyrfu.mms._internal.cache", "INFO"):
             mms.clear_cache()
 
         self.assertEqual(mms.cache_info()["n_files"], 0)

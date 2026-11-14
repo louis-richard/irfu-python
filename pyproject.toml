@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyrfu"
-version = "2.5.13"
+version = "2.5.14"
 description = "Python Space Physics (RymdFysik) Utilities"
 readme = "README.rst"
 authors = [{ name = "Louis RICHARD", email = "louis.richard@physics.ox.ac.uk" }]
@@ -45,7 +45,6 @@ dependencies = [
     "pandas>=2.2.3",
     "platformdirs>=4.0.0",
     "pycdfpp>=0.9.0",
-    "python-dateutil>=2.9.0",
     "requests>=2.32.0",
     "scipy>=1.14.0",
     "tqdm>=4.66.0",
@@ -72,6 +71,7 @@ tests = [
 ]
 type-checking = [
     "mypy",
+    "types-requests",
 ]
 docs = [
     "ipython>=8.0",
@@ -109,7 +109,7 @@ include = ["pyrfu*"]
 exclude = ["pyrfu.tests.matlab*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.csv"]
+"*" = ["*.json", "*.csv", "*.mplstyle", "*.jpg"]
 
 [tool.pytest.ini_options]
 testpaths = ["pyrfu/tests"]
@@ -199,6 +199,8 @@ extension-pkg-allow-list = "pycdfpp"
 [tool.mypy]
 enable_error_code = "redundant-self"
 files = "pyrfu"
+# The irfu-matlab comparison suite stays local (git-ignored)
+exclude = ["pyrfu/tests/matlab/"]
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
@@ -210,16 +212,18 @@ warn_unused_ignores = true
 ignore_missing_imports = true
 module = [
     "boto3.*",
+    "botocore.*",
     "ddt.*",
-    "dateutil.*",
+    "geopack.*",
+    "keyrings.*",
     "matplotlib.*",
     "mpl_toolkits.*",
     "numba.*",
-    "pydata_sphinx_theme.*",
     "pandas.*",
+    "pycdfpp.*",
     "pytest.*",
     "scipy.*",
-    "setuptools",
+    "tqdm.*",
 ]
 
 # This then excludes some modules from the above list. (So ideally we remove
@@ -237,7 +241,7 @@ module = [
 
 
 [tool.bumpver]
-current_version = "2.5.13"
+current_version = "2.5.14"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true

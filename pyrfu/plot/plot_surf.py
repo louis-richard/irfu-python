@@ -1,16 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
-
 # 3rd party imports
-import numpy as np
+from typing import Literal
+
+from matplotlib.cm import ScalarMappable
 
 # Local imports
 from .colorbar import colorbar as _add_colorbar
 
 
-def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
+def plot_surf(
+    axis,
+    x,
+    y,
+    z,
+    c,
+    cmap,
+    norm,
+    cax_pos: Literal["bottom", "top", "left", "right"] = "bottom",
+):
     r"""Plots surface.
 
     Parameters
@@ -43,14 +52,12 @@ def plot_surf(axis, x, y, z, c, cmap, norm, cax_pos: str = "bottom"):
 
     axis.plot_surface(x, y, z, facecolors=cmap(norm(c)))
 
-    mappable = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    mappable.set_array(np.array([]))
+    mappable = ScalarMappable(cmap=cmap, norm=norm)
 
     if cax_pos not in ["bottom", "top", "left", "right"]:
         raise ValueError("Invalid caxis position")
 
-    # The left and bottom colorbars touch the axis (no gap), as before
-    pad = 0.0 if cax_pos in ["bottom", "left"] else 0.01
-    caxis = _add_colorbar(mappable, axis, pad, 0.01, cax_pos)
+    # The gap of colorbar on the four sides
+    caxis = _add_colorbar(mappable, axis, 0.01, 0.01, cax_pos)
 
     return axis, caxis

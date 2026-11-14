@@ -3,7 +3,7 @@
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from .new_xyz import new_xyz

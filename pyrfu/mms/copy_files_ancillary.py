@@ -4,7 +4,7 @@
 # Built-in imports
 import os
 import shutil
-from typing import Literal, Optional, Union
+from typing import Literal
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
@@ -14,9 +14,9 @@ from pyrfu.mms.list_files_ancillary import list_files_ancillary
 def copy_files_ancillary(
     product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],
     tint: list[str],
-    mms_id: Union[int, str],
+    mms_id: int | str,
     tar_path: str,
-    data_path: Optional[str] = "",
+    data_path: str = "",
 ) -> None:
     r"""Copy ancillary files from the local data path to the target path.
 
@@ -24,8 +24,10 @@ def copy_files_ancillary(
     ----------
     product : {"predatt", "predeph", "predq", "defatt", "defeph", "defq"}
         Ancillary type.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the spacecraft (not used for "defq" and "predq", which cover
         the four spacecraft).

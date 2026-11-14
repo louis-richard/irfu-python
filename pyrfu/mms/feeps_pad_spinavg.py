@@ -9,11 +9,12 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._epd import _spin_reduce
+from pyrfu.mms._internal.epd import _spin_reduce
+
 from .feeps_spin_avg import _feeps_complete_spins
 
 
-def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
+def feeps_pad_spinavg(pad, spin_sectors, bin_size: float | None = None):
     r"""Spin-average the FEEPS pitch angle distributions.
 
     Parameters
@@ -46,7 +47,7 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float = None):
     complete spin is averaged from its first sample up to (not including) the
     first sample of the next spin and is time stamped at its first sample, the
     partial spins at the start and end of the interval and the spins cut by
-    data gaps are left out (they were kept), and a spin without data is NaN.
+    data gaps are left out, and a spin without data is NaN.
 
     IDL SPEDAS and pyspedas instead average from the second sample of a spin
     to the first sample of the next one, and interpolate the result from the

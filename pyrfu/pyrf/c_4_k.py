@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 # Built-in imports
-from typing import Sequence
+from collections.abc import Sequence
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _ratio, _units
+from pyrfu._core.units import _attrs, _ratio, _units
 from pyrfu.pyrf.cross import cross
 from pyrfu.pyrf.dot import dot
 from pyrfu.pyrf.resample import resample

@@ -3,7 +3,6 @@
 
 # Built-in imports
 import datetime
-from typing import Union
 
 # 3rd party imports
 import numpy as np
@@ -14,7 +13,7 @@ from .iso86012datetime64 import iso86012datetime64
 
 
 def iso86012datetime(
-    time: Union[list[str], tuple[str, ...], NDArray[np.str_]],
+    time: list[str] | tuple[str, ...] | NDArray[np.str_],
 ) -> list[datetime.datetime]:
     r"""Convert ISO 8601 time to datetime.
 

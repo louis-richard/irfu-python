@@ -3,7 +3,6 @@
 
 # Built-in imports
 import itertools
-from typing import List, Union
 
 # 3rd party imports
 import numpy as np
@@ -12,10 +11,10 @@ from matplotlib import ticker
 
 def annotate_heatmap(
     im,
-    data: Union[np.ndarray, List[List[float]]] = None,
-    valfmt: str = "{x:.2f}",
+    data: np.ndarray | list[list[float]] | None = None,
+    valfmt: str | ticker.Formatter = "{x:.2f}",
     textcolors: tuple = ("black", "white"),
-    threshold: float = None,
+    threshold: float | None = None,
     **textkw,
 ):
     r"""Annotate a heatmap.

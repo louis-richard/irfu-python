@@ -4,8 +4,7 @@
 # 3rd party imports
 import numpy as np
 from scipy import constants
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Shared by the PSD, DEF and DPF unit conversions (def2psd, dpf2psd, psd2def,
 # psd2dpf)

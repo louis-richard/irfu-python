@@ -1,24 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Union
-
 # 3rd party imports
 import numpy as np
 from numpy.typing import NDArray
 
+# Local imports
+from pyrfu._core.typing import TimeArray
+
 
 def datetime642iso8601(
-    time: Union[np.datetime64, NDArray[np.datetime64]],
+    time: np.datetime64 | TimeArray,
 ) -> NDArray[np.str_]:
     r"""Convert datetime64 to ISO 8601 time format, with nanoseconds.
 
     Parameters
     ----------
     time : numpy.datetime64 or numpy.ndarray
-        Time in datetime64, in any unit (arrays in s, min, h or D raised
-        TypeError).
+        Time in datetime64, in any unit.
 
     Returns
     -------

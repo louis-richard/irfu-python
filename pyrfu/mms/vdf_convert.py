@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from ._psd_units import (
+from pyrfu.mms._internal.psd_units import (
     _MASS_FACTOR,
     _data_and_units,
     _energy,
@@ -154,7 +154,7 @@ def vdf_convert(vdf, units: str):
     The phase-space density is in the convention of the ``relativistic``
     attribute of `vdf` (see `dpf2psd`), kept by the conversion: the
     relativistic one for the FEEPS skymaps, the non-relativistic one for the
-    FPI, HPCA and EIS files. The ``relativistic`` argument was removed.
+    FPI, HPCA and EIS files.
 
     See Also
     --------

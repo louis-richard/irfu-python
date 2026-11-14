@@ -5,7 +5,7 @@
 import os
 
 # Local imports
-from .._user_config import set_local_data_dir, user_config_path
+from pyrfu._core.user_config import set_local_data_dir, user_config_path
 
 # Default configuration distributed with the package
 _PACKAGE_CFG_PATH = os.path.join(
@@ -30,8 +30,7 @@ def db_init(local_data_dir):
     Raises
     ------
     FileNotFoundError
-        If local_data_dir doesn't exist (it was not written to the
-        configuration, but with python -O it was).
+        If local_data_dir doesn't exist.
 
     """
 

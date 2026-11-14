@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import signal
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
-def medfilt(inp: DataArray, kernel_size: Optional[int] = None) -> DataArray:
+def medfilt(inp: DataArray, kernel_size: int | None = None) -> DataArray:
     r"""Applies a median filter over `kernel_size` points to each component
     of the time series `inp` (scipy.signal.medfilt, as MATLAB medfilt1).
 

@@ -2,24 +2,25 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Mapping, Optional, Union
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
+from xarray import DataArray, Dataset
 
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
+# Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def ts_spectr(
-    time: NDArray[np.datetime64],
-    energy: NDArrayFloats,
-    data: NDArrayFloats,
-    comp_name: Optional[str] = None,
-    attrs: Optional[Mapping[str, object]] = None,
-) -> DataArray:
+    time: TimeArray,
+    energy: NDArray[np.number[Any]],
+    data: FloatArray,
+    comp_name: str | None = None,
+    attrs: dict[str, Any] | None = None,
+) -> DataArray | Dataset:
     r"""Create a time series containing a spectrum
 
     Parameters
@@ -81,6 +82,8 @@ def ts_spectr(
     else:
         raise TypeError("attrs must be a dict")
 
+    is_all_energy_equal: bool | np.bool_
+
     if energy.ndim == 2:
         is_all_energy_equal = np.all(energy == energy[0, :], axis=0).all()
         if is_all_energy_equal:
@@ -89,7 +92,7 @@ def ts_spectr(
         is_all_energy_equal = True
 
     if is_all_energy_equal:
-        out: DataArray = xr.DataArray(
+        out: DataArray | Dataset = xr.DataArray(
             data, coords=[time, energy], dims=["time", comp_name], attrs=attrs
         )
         out.attrs["TENSOR_ORDER"] = 0

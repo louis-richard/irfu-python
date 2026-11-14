@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 from scipy import constants, interpolate
 
 # Local imports
-from ._time import _seconds, _unix
+from pyrfu._core.time import _seconds, _unix
 
 
 def _to_seconds(time):
@@ -76,7 +78,7 @@ def _shifts_moving(r_xyz, time_center, velocity, delta_t):
     )
 
 
-def c_4_v(r_xyz, time, frame: str = "spacecraft"):
+def c_4_v(r_xyz, time, frame: Literal["spacecraft", "positions"] = "spacecraft"):
     r"""Calculates velocity or time shift of discontinuity as in [6]_.
 
     Parameters
@@ -87,8 +89,7 @@ def c_4_v(r_xyz, time, frame: str = "spacecraft"):
         Either the crossing times of the 4 spacecraft (datetime64 or epoch in
         seconds), or the reference time (datetime64 or epoch in seconds)
         followed by the velocity of the discontinuity in km/s,
-        [t, v_x, v_y, v_z]. Numbers are epochs, not times relative to MMS1:
-        those were read as a velocity.
+        [t, v_x, v_y, v_z]. Numbers are epochs, not times relative to MMS1.
     frame : {"spacecraft", "positions"}, Optional
         Frame of the velocity (see Notes):
 

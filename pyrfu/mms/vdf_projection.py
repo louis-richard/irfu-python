@@ -4,15 +4,20 @@
 # Built-in imports
 import logging
 import warnings
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import _is_relativistic, _output, _relativistic_factor
-from pyrfu.mms._vdf_bins import (
+from pyrfu.mms._internal.psd_units import (
+    _is_relativistic,
+    _output,
+    _relativistic_factor,
+)
+from pyrfu.mms._internal.vdf_bins import (
     _charge,
     _charge_sign,
     _energy_edges,
@@ -29,7 +34,9 @@ from pyrfu.pyrf.ts_skymap import ts_skymap
 logger = logging.getLogger(__name__)
 
 
-def _coord_sys(coord_sys: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray, list):
+def _coord_sys(
+    coord_sys: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list]:
     x_vec = coord_sys[0, :] / np.linalg.norm(coord_sys[0, :])
     y_vec = coord_sys[1, :] / np.linalg.norm(coord_sys[1, :])
 
@@ -184,8 +191,10 @@ def _init(vdf: Dataset, tint: list):
 
     theta = vdf.theta.data
     polar = np.deg2rad(theta)
-    azimuthal = np.deg2rad(phi)
-    step_table = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
+    # A DataArray (deg2rad of a DataArray), then its data
+    azimuthal: Any = np.deg2rad(phi)
+    # Energy table per time: array, then the value at t_id or the time clip
+    step_table: Any = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
 
     # The energy tables, else the energies of the first two times (the default
     # of attrs.get was evaluated even with the attribute: a single time raised
@@ -348,7 +357,7 @@ def vdf_projection(
     vdf,
     tint,
     coord_sys: np.ndarray = np.eye(3),
-    sc_pot: xr.DataArray = None,
+    sc_pot: xr.DataArray | None = None,
     e_lim: float = 20,
     bins_correction: bool = False,
 ):
@@ -393,8 +402,7 @@ def vdf_projection(
         relativistic speeds. For the FPI, HPCA and EIS skymaps, whose
         phase-space density is the non-relativistic one, it is that of the
         files times 2 gamma^5 / (gamma + 1) (+5 % for electrons at 5 keV,
-        +27 % at 27 keV); the speeds were non-relativistic (1.47 c for FEEPS
-        electrons of 500 keV).
+        +27 % at 27 keV).
 
     Notes
     -----
@@ -459,20 +467,20 @@ def vdf_projection(
         if len(tint) == 1:
             time_datetime64 = iso86012datetime64(np.array(tint))[0]
             t_id = np.argmin(np.abs(sc_pot.time.data - time_datetime64))
-            sc_pot = sc_pot.data[t_id]
+            v_sc = sc_pot.data[t_id]
         else:
             sc_pot = time_clip(sc_pot, tint)
-            sc_pot = np.nanmean(sc_pot.data)
+            v_sc = np.nanmean(sc_pot.data)
     else:
-        sc_pot = 0.0
+        v_sc = 0.0
 
     if not is_des:
         # Ions of charge q gain q V (eV)
-        sc_pot *= -charge
+        v_sc *= -charge
 
     # Speeds of the energy edges after correction for the spacecraft potential
     # (0 below it, rather than NaN which breaks pcolormesh), in km/s
-    energy_corr = np.clip(energy_edges - sc_pot, 0.0, None)
+    energy_corr = np.clip(energy_edges - v_sc, 0.0, None)
     speed_table = _speed(energy_corr, mass) * 1e-3
 
     r_en = speed_table

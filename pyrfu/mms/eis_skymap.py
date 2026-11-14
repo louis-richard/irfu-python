@@ -19,8 +19,8 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
         EIS angle-angle distribution.
     to_psd : bool, Optional
         Flag to convert differential particle flux to phase space density, in
-        s^3/cm^6 as the FPI distributions and :func:`pyrfu.mms.feeps_skymap`
-        (it was in s^3/m^6). Default is True.
+        s^3/cm^6 as the FPI distributions and :func:`pyrfu.mms.feeps_skymap`.
+        Default is True.
 
     Returns
     -------

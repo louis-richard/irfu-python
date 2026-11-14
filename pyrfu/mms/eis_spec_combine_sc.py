@@ -9,8 +9,9 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
-from ._eis_units import _check_same_attrs, _check_same_units
+from pyrfu._core.time import _ns
+from pyrfu._core.units import _check_same_units
+from pyrfu.mms._internal.epd import _check_same_attrs
 
 
 def _idx_closest(lst0, lst1):
@@ -98,7 +99,7 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     sector, the nearest in time within half a spin: the sector gives the look
     direction. Spin-averaged spectra are combined at the nearest time, within
     half a spin. A spacecraft without a paired sample is left out (NaN), and
-    the mean or sum is NaN where no spacecraft has data (the sum was 0). IDL
+    the mean or sum is NaN where no spacecraft has data. IDL
     SPEDAS ``mms_eis_spec_combine_sc`` and pySPEDAS combine the samples by
     index, which matches neither the times nor the look directions (on MMS2-4,
     2017-07-11, the sectors of the same index differed throughout, the look
@@ -161,6 +162,9 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
         omni_spec_data[paired, :, i_p] = flux_.data[idx_time[paired]][:, idx_closest]
 
     # Average (or sum) omni flux over all spacecraft
+    # The averaged array, then its time series
+    omni_spec: np.ndarray | xr.DataArray
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
 

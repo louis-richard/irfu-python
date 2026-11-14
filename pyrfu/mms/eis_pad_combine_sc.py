@@ -9,8 +9,10 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
-from ._eis_units import _check_same_attrs, _check_same_units
+from pyrfu._core.time import _ns
+from pyrfu._core.units import _check_same_units
+from pyrfu.mms._internal.epd import _check_same_attrs
+
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
 
@@ -45,9 +47,7 @@ def eis_pad_combine_sc(pads):
     time step (a spacecraft without a sample there is left out), and at the
     closest energy channel, also those of counts (``method="sum"``: the mean
     of the spacecraft, as IDL SPEDAS). IDL SPEDAS ``mms_eis_pad_combine_sc``
-    pairs the samples and the channels by index; here they were too, and
-    spacecraft with different numbers of channels raised ValueError. The
-    energies were the means of the channels of the same index.
+    pairs the samples and the channels by index.
 
     See Also
     --------

@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from ._time import _seconds
-from ._units import _product, _units
+from pyrfu._core.time import _seconds
+from pyrfu._core.units import _product, _units
 
 
-def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
+def integrate(inp: DataArray, time_step: float | None = None) -> DataArray:
     r"""Integrate time series, as irfu-matlab irf_integrate.
 
     Parameters
@@ -31,7 +30,7 @@ def integrate(inp: DataArray, time_step: Optional[float] = None) -> DataArray:
     out : xarray.DataArray
         Time series of the time integral of inp, zero at the first time, with
         the attributes of inp and its units times s (``UNITS`` "(mV/m) s" for
-        mV/m; it was "(mV/m)*s").
+        mV/m).
 
     Raises
     ------

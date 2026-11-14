@@ -3,7 +3,7 @@
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from pyrfu.pyrf.ts_scalar import ts_scalar

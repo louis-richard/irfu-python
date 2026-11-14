@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Literal
+
 # Rectangle of the colorbar (figure coordinates) on each side of an axis at
 # position p, pad away and w thick
 _RECTS = {
@@ -12,7 +15,11 @@ _RECTS = {
 
 
 def colorbar(
-    mappable, axis, pad: float = 0.01, width: float = 0.03, where: str = "right"
+    mappable,
+    axis,
+    pad: float = 0.01,
+    width: float = 0.03,
+    where: Literal["right", "left", "top", "bottom"] = "right",
 ):
     r"""Add a colorbar of `mappable` on a side of `axis` (the colorbar of the
     plot routines).

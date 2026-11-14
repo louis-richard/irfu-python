@@ -5,29 +5,28 @@
 import datetime
 import os
 import re
-from typing import Mapping, Optional, Union
-
-# 3rd party imports
-import numpy as np
+from collections.abc import Mapping
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.list_files_aws import _file_time, _tint_bounds
-from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
+from pyrfu.pyrf.time_clip import _time_interval
 
 
 def list_files(
     tint: list[str],
-    mms_id: Union[str, int],
+    mms_id: str | int,
     var: Mapping[str, str],
-    data_path: Optional[str] = "",
+    data_path: str = "",
 ) -> list[str]:
     r"""Find available files in the data directories for `var`.
 
     Parameters
     ----------
-    tint : list
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the spacecraft
     var : dict
@@ -59,16 +58,8 @@ def list_files(
     if not os.path.exists(root_path):
         raise FileNotFoundError(f"{root_path} doesn't exist")
 
-    # Check time interval
-    if isinstance(tint, list):
-        tint_array = np.array(tint)
-    else:
-        raise TypeError("tint must be a list!!")
-
-    if isinstance(tint_array[0], str):
-        t_start, t_end = _tint_bounds(iso86012datetime64(tint_array))
-    else:
-        raise TypeError("Values must be in str!!")
+    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    t_start, t_end = _tint_bounds(_time_interval(tint))
 
     mms_id = str(mms_id)
 
@@ -92,7 +83,7 @@ def list_files(
     # the time interval (a file starting then can cover it, e.g. a burst segment
     # across midnight) to its end, as list_files_aws; each directory is walked
     # once (the month directory of survey data was walked for every day)
-    files = {}
+    files: dict[str, tuple[tuple[int, ...], str]] = {}
     walked = set()
     day = datetime.datetime.combine(t_start.date(), datetime.time())
     day -= datetime.timedelta(days=1)
@@ -125,8 +116,8 @@ def list_files(
                 if not matches:
                     continue
 
-                time_tag, *version = matches.groups()
-                version = tuple(map(int, version))
+                time_tag, *version_str = matches.groups()
+                version = tuple(map(int, version_str))
 
                 if time_tag not in files or version > files[time_tag][0]:
                     files[time_tag] = (version, os.path.join(root, file_name))

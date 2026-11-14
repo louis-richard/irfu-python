@@ -104,24 +104,14 @@ def _calc_pas(d_type, b_bcs):
     return pas
 
 
-def _calc_new_pas(pas, b_bcs, eyes):
-    n_t = len(b_bcs.time.data)
-    n_top = len(eyes["top"])
-    n_bot = len(eyes["bottom"])
+def _calc_new_pas(pas, eyes):
+    # The columns of the active top eyes, then bottom eyes; their indices in
+    # the result are ranges (they were built in a loop)
+    top = [top_tele_idx_map[eye] for eye in eyes["top"]]
+    bot = [bot_tele_idx_map[eye] for eye in eyes["bottom"]]
+    n_top = len(top)
 
-    top_idxs, bot_idxs = [[], []]
-
-    new_pas = np.empty([n_t, n_top + n_bot])
-
-    for j, top_eye in enumerate(eyes["top"]):
-        new_pas[:, j] = pas[:, top_tele_idx_map[top_eye]]
-        top_idxs.append(j)
-
-    for j, bot_eye in enumerate(eyes["bottom"]):
-        new_pas[:, j + n_top] = pas[:, bot_tele_idx_map[bot_eye]]
-        bot_idxs.append(j + n_top)
-
-    return new_pas, top_idxs, bot_idxs
+    return pas[:, top + bot], list(range(n_top)), list(range(n_top, n_top + len(bot)))
 
 
 def feeps_pitch_angles(inp_dataset, b_bcs):
@@ -180,7 +170,7 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
     else:
         # PAs for only active eyes
         # pitch angles for each eye at eaceh time
-        new_pas, top_idxs, bot_idxs = _calc_new_pas(pas, b_bcs, eyes)
+        new_pas, top_idxs, bot_idxs = _calc_new_pas(pas, eyes)
         idx_maps = {f"{d_type}-top": top_idxs, f"{d_type}-bottom": bot_idxs}
 
     out = xr.DataArray(

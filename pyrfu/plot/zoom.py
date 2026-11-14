@@ -58,7 +58,7 @@ def _connect_bbox(
     return connector_a, connector_b, bbox_patch1, bbox_patch2, connector_patch
 
 
-def zoom(ax1: Axes, ax2: Axes, **kwargs) -> (Axes, Axes):
+def zoom(ax1: Axes, ax2: Axes, **kwargs) -> tuple[Axes, Axes]:
     r"""Similar to zoom_effect01.  The xmin & xmax will be taken from the
     ax1.viewLim.
 

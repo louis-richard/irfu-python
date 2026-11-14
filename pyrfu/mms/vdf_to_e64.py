@@ -8,7 +8,8 @@ import logging
 import numpy as np
 
 # Local imports
-from ..pyrf._time import _seconds, _timedelta
+from pyrfu._core.time import _seconds, _timedelta
+
 from ..pyrf.ts_skymap import ts_skymap
 from .psd_rebin import psd_rebin
 

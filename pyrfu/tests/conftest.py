@@ -44,7 +44,7 @@ def _no_mms_cache(monkeypatch, tmp_path_factory):
     # The tests never use the MMS file cache of the user: off, in a temporary
     # directory (the cache tests turn it on there)
     # (the module, not the db_init function of pyrfu.mms)
-    cache = importlib.import_module("pyrfu.mms._cache")
+    cache = importlib.import_module("pyrfu.mms._internal.cache")
     db_init = importlib.import_module("pyrfu.mms.db_init")
     cache_dir = str(tmp_path_factory.getbasetemp() / "mms_cache")
 

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import builtins
 import datetime
+
+# Built-in imports
+import inspect
 import itertools
 import logging
 import math
@@ -28,20 +30,19 @@ from matplotlib import dates
 from matplotlib.backend_bases import MouseEvent
 from scipy import constants, interpolate, signal
 
+from pyrfu._core.units import _attrs, _check_units, _power, _product, _ratio, _units
+
 # Local imports
 from .. import pyrf
 from ..constants import R_E
-from ..pyrf._units import _attrs, _check_units, _power, _product, _ratio, _units
 from ..pyrf.c_4_v_xcorr import _BandLimited as _C4VXcorrBandLimited
 from ..pyrf.c_4_v_xcorr import _corr_h as _c_4_v_xcorr_corr_h
 from ..pyrf.c_4_v_xcorr import _get_disc_vel as _c_4_v_xcorr_get_disc_vel
 from ..pyrf.compress_cwt import _compress_cwt_1d
 from ..pyrf.ebsp import _average_data, _censure_plot, _freq_int
 from ..pyrf.int_sph_dist import (
-    _mc_cart_2d,
-    _mc_cart_3d,
     _mc_particles,
-    _mc_pol_1d,
+    _mc_project,
     _speed_bin_edges,
     _uniform_step,
 )
@@ -350,6 +351,32 @@ class Avg4SCTestCase(unittest.TestCase):
         b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
         xr.testing.assert_identical(pyrf.avg_4sc(tuple(b_mms)), pyrf.avg_4sc(b_mms))
 
+    def test_avg_4sc_labels_units(self):
+        # Labelled as the average, as nanavg_4sc and mms.feeps_avg_4sc (it had
+        # the labels of the first spacecraft), the caller's attributes
+        # unchanged; different UNITS raise (they were averaged)
+        time = generate_timeline(1.0, 5)
+        b_list = [
+            pyrf.ts_vec_xyz(
+                time, np.ones((5, 3)), attrs={"mmsId": i + 1, "UNITS": "nT"}
+            )
+            for i in range(4)
+        ]
+
+        result = pyrf.avg_4sc(b_list)
+        self.assertEqual(result.attrs["mmsId"], "4sc_avg")
+        self.assertEqual(result.attrs["UNITS"], "nT")
+        self.assertEqual(b_list[0].attrs["mmsId"], 1)
+
+        vdfs = [generate_vdf(64.0, 4, [32, 32, 16]) for _ in range(4)]
+        for i, vdf in enumerate(vdfs):
+            vdf.attrs["mmsId"] = i + 1
+        self.assertEqual(pyrf.avg_4sc(vdfs).attrs["mmsId"], "4sc_avg")
+
+        b_list[3].attrs["UNITS"] = "T"
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            pyrf.avg_4sc(b_list)
+
     def test_avg_4sc_element_type(self):
         b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(3)]
 
@@ -434,8 +461,42 @@ class NanAvg4SCTestCase(unittest.TestCase):
         np.testing.assert_array_equal(vdfs[0].data.data, data_0)
 
     def test_nanavg_4sc_input(self):
+        # A tuple, as avg_4sc and mms.feeps_avg_4sc (it raised TypeError)
+        b_mms = tuple(generate_ts(64.0, 100) for _ in range(4))
+        np.testing.assert_array_equal(
+            pyrf.nanavg_4sc(b_mms).data, pyrf.nanavg_4sc(list(b_mms)).data
+        )
+
         with self.assertRaises(TypeError):
-            pyrf.nanavg_4sc(tuple(generate_ts(64.0, 100) for _ in range(4)))
+            pyrf.nanavg_4sc(b_mms[0])
+
+    def test_nanavg_4sc_units(self):
+        # Different UNITS raise, as mms.feeps_avg_4sc (they were averaged)
+        time = generate_timeline(1.0, 5)
+        b_list = [
+            pyrf.ts_vec_xyz(time, np.ones((5, 3)), attrs={"UNITS": units})
+            for units in ["nT", "nT", "nT", "T"]
+        ]
+
+        with self.assertRaisesRegex(ValueError, "different UNITS"):
+            pyrf.nanavg_4sc(b_list)
+
+    def test_nanavg_4sc_gaps(self):
+        # A spacecraft without data in an interval (a gap, or ending early) is
+        # left out there, as mms.feeps_avg_4sc: the resampling filled its gap
+        # and extended its last value, averaged as data
+        time = generate_timeline(1.0, 20)
+        b_list = [pyrf.ts_scalar(time, np.full(20, float(i))) for i in range(4)]
+        keep = np.r_[0:5, 10:20]
+        b_list[3] = pyrf.ts_scalar(time[keep], np.full(len(keep), 3.0))
+        b_list[2] = pyrf.ts_scalar(time[:15], np.full(15, 2.0))
+
+        result = pyrf.nanavg_4sc(b_list).data
+
+        np.testing.assert_allclose(result[:5], 1.5)
+        np.testing.assert_allclose(result[5:10], 1.0)
+        np.testing.assert_allclose(result[10:15], 1.5)
+        np.testing.assert_allclose(result[15:], 4.0 / 3.0)
 
     def test_nanavg_4sc_element_type(self):
         b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(3)]
@@ -1613,6 +1674,44 @@ class C4JTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             pyrf.c_4_j([], [])
+
+    def test_c_4_j_geometry_once(self):
+        # One resampling and one c_4_k for the three derivatives (three
+        # c_4_grad calls computed them three times), with the outputs of
+        # c_4_grad; the errors of c_4_grad for other fields
+        r_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
+        b_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
+        c_4_k = sys.modules["pyrfu.pyrf.c_4_k"].c_4_k
+        with (
+            mock.patch.object(
+                sys.modules["pyrfu.pyrf.c_4_j"], "c_4_k", wraps=c_4_k, create=True
+            ) as in_c_4_j,
+            mock.patch.object(
+                sys.modules["pyrfu.pyrf.c_4_grad"], "c_4_k", wraps=c_4_k
+            ) as in_c_4_grad,
+        ):
+            j, div_b, _, _, div_t_shear, _ = pyrf.c_4_j(r_mms, b_mms)
+
+        self.assertEqual(in_c_4_j.call_count + in_c_4_grad.call_count, 1)
+        factor = 1.0e-3 * 1e-9 / constants.mu_0
+        for out, method, scale in [
+            (div_b, "div", factor),
+            (j, "curl", factor),
+            (div_t_shear, "bdivb", 1.0e-3 * 1e-9 * 1e-9 / constants.mu_0),
+        ]:
+            with self.subTest(method=method):
+                np.testing.assert_array_equal(
+                    out.data, pyrf.c_4_grad(r_mms, b_mms, method).data * scale
+                )
+
+        scalar = [pyrf.norm(b) for b in b_mms]
+        tensor = [generate_ts(64.0, 100, tensor_order=2) for _ in range(4)]
+        for b_list in [scalar, tensor]:
+            with self.assertRaises(ValueError):
+                pyrf.c_4_j(r_mms, b_list)
+
+        with self.assertRaises(TypeError):
+            pyrf.c_4_j(r_mms, [b.data for b in b_mms])
 
     def test_c_4_j_output(self):
         r_mms = [generate_ts(64.0, 100, tensor_order=1) for _ in range(4)]
@@ -3271,6 +3370,29 @@ class EdbTestCase(unittest.TestCase):
         )
 
 
+class KeywordOnlyOptionsTestCase(unittest.TestCase):
+    # The options of ebsp and int_sph_dist are keyword-only parameters: a
+    # misspelt one raises TypeError (it was ignored in **kwargs)
+
+    def test_misspelt_option(self):
+        for func, n_args, option in [
+            (pyrf.ebsp, 6, "polarisation"),
+            (pyrf.int_sph_dist, 6, "nmc"),
+        ]:
+            with self.subTest(func=func.__name__, option=option):
+                with self.assertRaisesRegex(TypeError, f"keyword argument '{option}'"):
+                    func(*[None] * n_args, **{option: True})
+
+    def test_options_keyword_only(self):
+        for func in [pyrf.ebsp, pyrf.int_sph_dist]:
+            with self.subTest(func=func.__name__):
+                kinds = [p_.kind for p_ in inspect.signature(func).parameters.values()]
+                self.assertNotIn(inspect.Parameter.VAR_KEYWORD, kinds)
+                self.assertTrue(
+                    all(k_ == inspect.Parameter.KEYWORD_ONLY for k_ in kinds[6:])
+                )
+
+
 @ddt
 class EbspTestCase(unittest.TestCase):
     @data(
@@ -3648,6 +3770,40 @@ class EbspTestCase(unittest.TestCase):
         self.assertEqual(result["flagFac"], 0)
         self.assertIsNone(result["ee_xxyyzzss"])
         self.assertEqual(result["bb_xxyyzzss"].shape[1:], (len(result["f"]), 4))
+
+    def test_ebsp_stacked_powers(self):
+        # One gap censure per array and gap (6: B, E, E spin plane twice,
+        # Poynting twice) and one average per array (4: B, E, E spin plane,
+        # Poynting), 16 and 12 before (one per component); the components as
+        # computed each on its own
+        module = sys.modules["pyrfu.pyrf.ebsp"]
+        args = [generate_ts(64.0, 1000, tensor_order=1) for _ in range(5)]
+
+        with (
+            mock.patch.object(
+                module, "_censure_plot", wraps=module._censure_plot
+            ) as censure_plot,
+            mock.patch.object(
+                module, "_average_data", wraps=module._average_data
+            ) as average_data,
+        ):
+            result = pyrf.ebsp(*args, [1e0, 1e1])
+
+        self.assertEqual(censure_plot.call_count, 6)
+        self.assertEqual(average_data.call_count, 4)
+
+        power = result["ee_xxyyzzss"].data
+        self.assertEqual(power.shape[2], 4)
+        np.testing.assert_allclose(
+            power[..., 3], np.sum(power[..., :3], axis=2), rtol=1e-12
+        )
+        self.assertEqual(result["pf_xyz"].dtype, np.float64)
+
+    def test_ebsp_freq_int_pc35_flag(self):
+        # One flag, whether freq_int is "pc35" (the two range flags before)
+        data = generate_ts(64.0, 100000, tensor_order=1)
+        for freq_int, expected in [("pc35", True), ("pc12", False), ([1, 2], False)]:
+            self.assertIs(_freq_int(freq_int, data)[0], expected)
 
     def test_ebsp_short_average(self):
         # nav=1: the high frequencies averaged over the output step (1 /
@@ -4634,89 +4790,15 @@ class IntSphDistTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, dict)
 
-    @data(
-        (
-            np.random.random((51, 32, 16)),
-            np.linspace(0, 1, 51),
-            np.arange(32),
-            np.arange(16),
-            np.ones(51) * 0.02,
-            np.ones(51) * 0.01,
-            np.ones(32),
-            np.ones(16),
-            np.linspace(-1.01, 1.01, 102),
-            np.ones(101) * 0.02 * np.pi / 16,
-            np.array([-np.inf, np.inf]),
-            np.array([-np.pi, np.pi]),
-            np.ones((51, 32, 16), dtype=np.int64) * 10,
-            np.eye(3),
-        )
-    )
-    def test_mc_pol_1d(self, value):
-        vdf, *args = value
-        vdf[vdf < 1e-2] = 0
-        n_threads = numba.get_num_threads()
-        result = _mc_pol_1d.__wrapped__(vdf, *args, n_threads)
-        self.assertIsInstance(result, np.ndarray)
-
-    @data(
-        (
-            np.random.random((51, 32, 16)),
-            np.linspace(0, 1, 51),
-            np.arange(32),
-            np.arange(16),
-            np.ones(51) * 0.02,
-            np.ones(51) * 0.01,
-            np.ones(32),
-            np.ones(16),
-            np.linspace(-1.01, 1.01, 102),
-            0.02**2,
-            np.array([-np.inf, np.inf]),
-            np.array([-np.pi, np.pi]),
-            (np.ones((51, 32, 16), dtype=np.int64) * 10).astype(int),
-            np.eye(3),
-        )
-    )
-    def test_mc_cart_2d(self, value):
-        vdf, *args = value
-        vdf[vdf < 1e-2] = 0
-        v_step, n_threads = _uniform_step(args[7]), numba.get_num_threads()
-        result = _mc_cart_2d.__wrapped__(vdf, *args, v_step, n_threads)
-        self.assertIsInstance(result, np.ndarray)
-
-    @data(
-        (
-            np.random.random((51, 32, 16)),
-            np.linspace(0, 1, 51),
-            np.arange(32),
-            np.arange(16),
-            np.ones(51) * 0.02,
-            np.ones(51) * 0.01,
-            np.ones(32),
-            np.ones(16),
-            np.linspace(-1.01, 1.01, 102),
-            0.02**2,
-            np.array([-np.inf, np.inf]),
-            np.array([-np.pi, np.pi]),
-            (np.ones((51, 32, 16), dtype=np.int64) * 10).astype(int),
-            np.eye(3),
-        )
-    )
-    def test_mc_cart_3d(self, value):
-        vdf, *args = value
-        vdf[vdf < 1e-2] = 0
-        v_step, n_threads = _uniform_step(args[7]), numba.get_num_threads()
-        result = _mc_cart_3d.__wrapped__(vdf, *args, v_step, n_threads)
-        self.assertIsInstance(result, np.ndarray)
-
-    @data(_mc_cart_2d, _mc_cart_3d)
-    def test_mc_cart_fast_index_matches_searchsorted(self, kernel):
-        # v_step > 0 indexes the grid arithmetically, v_step = 0 falls back to
-        # np.searchsorted; with the same random draws both must give the same bins.
+    @staticmethod
+    def _kernel_args(n_dim):
+        # Skymap and grid of the kernel: d_a the speed widths of the 1d polar
+        # grid, the bin volume of the cartesian ones
         rng = np.random.default_rng(0)
         vdf = rng.random((51, 32, 16))
         vdf[vdf < 1e-2] = 0
         edges = np.linspace(-1.01, 1.01, 102)
+        d_a = np.ones(101) * 0.02 if n_dim == 1 else np.full(1, 0.02**n_dim)
         args = (
             np.linspace(0, 1, 51),
             np.arange(32),
@@ -4726,20 +4808,92 @@ class IntSphDistTestCase(unittest.TestCase):
             np.ones(32),
             np.ones(16),
             edges,
-            0.02**2,
+            d_a,
             np.array([-np.inf, np.inf]),
             np.array([-np.pi, np.pi]),
-            np.ones((51, 32, 16), dtype=int) * 10,
+            np.ones((51, 32, 16), dtype=np.int64) * 10,
             np.eye(3),
         )
+        return vdf, args, edges
+
+    @data(1, 2, 3)
+    def test_mc_project(self, n_dim):
+        # One kernel for the 1d polar and the 2d and 3d cartesian projections
+        # (three kernels before), the bins flattened
+        vdf, args, edges = self._kernel_args(n_dim)
+        v_step = _uniform_step(edges) if n_dim > 1 else 0.0
+        result = _mc_project(vdf, *args, v_step, n_dim, numba.get_num_threads())
+        self.assertEqual(result.shape, (101**n_dim,))
+        self.assertGreater(np.count_nonzero(result), 0)
+
+    def test_grid_index(self):
+        # MATLAB's discretize: an interior edge in the upper bin, the last
+        # edge in the last bin; the computed index (v_step > 0) corrected to
+        # the edges in both directions, as the search (v_step = 0)
+        # (the computed index of points on and next to the edges is one bin
+        # too low for the first grid, one too high for the second)
+        module = sys.modules["pyrfu.pyrf.int_sph_dist"]
+
+        for edges in [np.linspace(-1.01, 1.01, 102), np.linspace(-1.0, 1.0, 11)]:
+            n_g = len(edges) - 1
+            step = _uniform_step(edges)
+            values = np.hstack(
+                [edges, np.nextafter(edges, -2.0)[1:], np.nextafter(edges, 2.0)[:-1]]
+            )
+            expected = np.searchsorted(edges, values, side="right") - 1
+            expected = np.minimum(expected, n_g - 1)
+
+            for v_step in [step, 0.0]:
+                result = [module._grid_index.py_func(v, edges, v_step) for v in values]
+                np.testing.assert_array_equal(result, expected)
+
+            self.assertEqual(module._grid_index.py_func(edges[3], edges, step), 3)
+            self.assertEqual(
+                module._grid_index.py_func(edges[-1], edges, step), n_g - 1
+            )
+
+    @data(2, 3)
+    def test_mc_cart_fast_index_matches_searchsorted(self, n_dim):
+        # v_step > 0 indexes the grid arithmetically, v_step = 0 falls back to
+        # np.searchsorted; with the same random draws both must give the same bins.
+        vdf, args, edges = self._kernel_args(n_dim)
         results = []
         for v_step in [_uniform_step(edges), 0.0]:
             random.seed(0)
-            results.append(kernel.__wrapped__(vdf, *args, v_step, 1))
+            results.append(_mc_project.__wrapped__(vdf, *args, v_step, n_dim, 1))
 
         self.assertGreater(_uniform_step(edges), 0.0)
         self.assertGreater(np.count_nonzero(results[0]), 0)
         np.testing.assert_array_equal(results[0], results[1])
+
+    def test_int_sph_dist_projections(self):
+        # 1d polar (also with an azimuthal grid and projection_dim "1d"), 2d
+        # and 3d cartesian; the 2d and 3d polar and the 1d cartesian raise
+        # NotImplementedError
+        rng = np.random.default_rng(1)
+        vdf = rng.random((8, 8, 4))
+        speed = np.geomspace(1e5, 3e6, 8)
+        phi = np.deg2rad(22.5 + 45 * np.arange(8))
+        theta = np.deg2rad(-67.5 + 45 * np.arange(4))
+        grid = np.linspace(-3e6, 3e6, 13)
+        phi_grid = np.linspace(0, 2 * np.pi, 9)
+
+        for kwargs, shape in [
+            ({}, (13,)),
+            ({"projection_dim": "1d"}, (13,)),
+            ({"projection_base": "cart", "projection_dim": "2d"}, (13, 13)),
+            ({"projection_base": "cart", "projection_dim": "3d"}, (13, 13, 13)),
+        ]:
+            out = pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
+            self.assertEqual(out["f"].shape, shape)
+
+        for kwargs in [
+            {"projection_dim": "2d"},
+            {"projection_dim": "3d"},
+            {"projection_base": "cart", "projection_dim": "1d"},
+        ]:
+            with self.assertRaises(NotImplementedError):
+                pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
 
     @staticmethod
     def _maxwellian(v_d=(300e3, -200e3, 100e3), t_ev=1000.0):
@@ -4855,12 +5009,12 @@ class IntSphDistTestCase(unittest.TestCase):
         self.assertEqual(_uniform_step(np.array([0.0, 1.0, 3.0])), 0.0)  # non-uniform
 
     @staticmethod
-    def _mc_kernel_args(kernel, speed, phi, theta, edges, v_lim, a_lim):
+    def _mc_kernel_args(n_dim, speed, phi, theta, edges, v_lim, a_lim):
         # f = 1 in every instrument bin, with unit widths and a single
         # Monte-Carlo particle, which is at the bin centre (no random draws), so
         # that each bin carries dtau = speed ** 2 * cos(theta) to a known point.
         n_v, n_ph, n_th = len(speed), len(phi), len(theta)
-        d_a_grid = np.ones(len(edges) - 1) if kernel is _mc_pol_1d else 1.0
+        d_a_grid = np.ones(len(edges) - 1) if n_dim == 1 else np.ones(1)
         return (
             np.ones((n_v, n_ph, n_th)),
             np.array(speed, dtype=np.float64),
@@ -4878,26 +5032,27 @@ class IntSphDistTestCase(unittest.TestCase):
             np.eye(3),
         )
 
-    def _mc_kernel_runs(self, kernel, *args, v_lim=(-np.inf, np.inf), a_lim=None):
-        # Run the kernel as Python and jitted, and for the cartesian kernels with
+    def _mc_kernel_runs(self, n_dim, *args, v_lim=(-np.inf, np.inf), a_lim=None):
+        # Run the kernel as Python and jitted, and for the cartesian grids with
         # both the arithmetic (fast) and the np.searchsorted bin index; with no
         # random draws, all must be identical.
         # (one accumulator row per thread, indexed by numba.get_thread_id())
         a_lim = (-np.pi, np.pi) if a_lim is None else a_lim
-        k_args = self._mc_kernel_args(kernel, *args, v_lim=v_lim, a_lim=a_lim)
+        k_args = self._mc_kernel_args(n_dim, *args, v_lim=v_lim, a_lim=a_lim)
         n_threads = numba.get_num_threads()
 
-        if kernel is _mc_pol_1d:
-            funcs = [kernel.__wrapped__, kernel]
-            results = [func(*k_args, n_threads) for func in funcs]
-        else:
-            v_step = _uniform_step(k_args[8])
-            self.assertGreater(v_step, 0.0)
-            results = [
-                func(*k_args, step, n_threads)
-                for func in [kernel.__wrapped__, kernel]
-                for step in [v_step, 0.0]
-            ]
+        steps = [0.0]
+
+        if n_dim > 1:
+            steps = [_uniform_step(k_args[8]), 0.0]
+            self.assertGreater(steps[0], 0.0)
+
+        shape = (len(k_args[8]) - 1,) * n_dim
+        results = [
+            func(*k_args, step, n_dim, n_threads).reshape(shape)
+            for func in [_mc_project.__wrapped__, _mc_project]
+            for step in steps
+        ]
 
         # Same bins; jitted values can differ by round-off, as the threads add
         # the particles landing in the same bin in a different order.
@@ -4905,7 +5060,7 @@ class IntSphDistTestCase(unittest.TestCase):
             np.testing.assert_array_equal(result != 0, results[0] != 0)
             np.testing.assert_allclose(result, results[0], rtol=1e-12)
 
-        if kernel is not _mc_pol_1d:
+        if n_dim != 1:
             np.testing.assert_array_equal(results[0], results[1])
             np.testing.assert_array_equal(results[2], results[3])
 
@@ -4913,39 +5068,39 @@ class IntSphDistTestCase(unittest.TestCase):
 
     @data(
         # speed, phi, theta, bin index (None if outside the grid)
-        (_mc_pol_1d, 0.05, 0.0, 0.0, None),
-        (_mc_pol_1d, 0.1, 0.0, 0.0, (0,)),  # on the first edge
-        (_mc_pol_1d, 0.25, 0.0, 0.0, (1,)),  # on an interior edge: upper bin
-        (_mc_pol_1d, 0.3, 0.0, 0.0, (1,)),
-        (_mc_pol_1d, 1.0, 0.0, 0.0, (2,)),  # on the last edge: last bin
-        (_mc_pol_1d, 1.5, 0.0, 0.0, None),
-        (_mc_cart_2d, 1.0, 0.0, 0.0, (7, 4)),
-        (_mc_cart_2d, 1.0, np.pi, 0.0, (0, 4)),
-        (_mc_cart_2d, 0.25, 0.0, 0.0, (5, 4)),
-        (_mc_cart_2d, 0.25, np.pi, 0.0, (3, 4)),
-        (_mc_cart_2d, 0.1, 0.0, 0.0, (4, 4)),
-        (_mc_cart_2d, 1.0, np.pi / 2, 0.0, (4, 7)),
-        (_mc_cart_2d, 1.5, 0.0, 0.0, None),  # vx outside
-        (_mc_cart_2d, 1.5, np.pi / 2, 0.0, None),  # vy outside
-        (_mc_cart_3d, 1.0, 0.0, 0.0, (7, 4, 4)),
-        (_mc_cart_3d, 1.0, np.pi, 0.0, (0, 4, 4)),
-        (_mc_cart_3d, 0.25, np.pi, 0.0, (3, 4, 4)),
-        (_mc_cart_3d, 1.0, np.pi / 2, 0.0, (4, 7, 4)),
-        (_mc_cart_3d, 1.0, 0.0, np.pi / 2, (4, 4, 7)),
-        (_mc_cart_3d, 1.5, 0.0, 0.0, None),  # vx outside
-        (_mc_cart_3d, 1.5, np.pi / 2, 0.0, None),  # vy outside
-        (_mc_cart_3d, 1.5, 0.0, np.pi / 2, None),  # vz outside
+        (1, 0.05, 0.0, 0.0, None),
+        (1, 0.1, 0.0, 0.0, (0,)),  # on the first edge
+        (1, 0.25, 0.0, 0.0, (1,)),  # on an interior edge: upper bin
+        (1, 0.3, 0.0, 0.0, (1,)),
+        (1, 1.0, 0.0, 0.0, (2,)),  # on the last edge: last bin
+        (1, 1.5, 0.0, 0.0, None),
+        (2, 1.0, 0.0, 0.0, (7, 4)),
+        (2, 1.0, np.pi, 0.0, (0, 4)),
+        (2, 0.25, 0.0, 0.0, (5, 4)),
+        (2, 0.25, np.pi, 0.0, (3, 4)),
+        (2, 0.1, 0.0, 0.0, (4, 4)),
+        (2, 1.0, np.pi / 2, 0.0, (4, 7)),
+        (2, 1.5, 0.0, 0.0, None),  # vx outside
+        (2, 1.5, np.pi / 2, 0.0, None),  # vy outside
+        (3, 1.0, 0.0, 0.0, (7, 4, 4)),
+        (3, 1.0, np.pi, 0.0, (0, 4, 4)),
+        (3, 0.25, np.pi, 0.0, (3, 4, 4)),
+        (3, 1.0, np.pi / 2, 0.0, (4, 7, 4)),
+        (3, 1.0, 0.0, np.pi / 2, (4, 4, 7)),
+        (3, 1.5, 0.0, 0.0, None),  # vx outside
+        (3, 1.5, np.pi / 2, 0.0, None),  # vy outside
+        (3, 1.5, 0.0, np.pi / 2, None),  # vz outside
     )
     @unpack
-    def test_mc_kernels_bin_edges(self, kernel, speed, phi, theta, expected):
+    def test_mc_kernels_bin_edges(self, n_dim, speed, phi, theta, expected):
         # Bins are closed on the left and open on the right (MATLAB discretize),
         # except the last one, which is closed on both ends.
-        if kernel is _mc_pol_1d:
+        if n_dim == 1:
             edges = np.array([0.1, 0.25, 0.5, 1.0])
         else:
             edges = np.arange(-1.0, 1.01, 0.25)  # exact, with an edge at 0
 
-        result = self._mc_kernel_runs(kernel, [speed], [phi], [theta], edges)
+        result = self._mc_kernel_runs(n_dim, [speed], [phi], [theta], edges)
 
         if expected is None:
             np.testing.assert_array_equal(result, 0.0)
@@ -4954,13 +5109,13 @@ class IntSphDistTestCase(unittest.TestCase):
             self.assertAlmostEqual(result[expected], speed**2 * np.cos(theta))
 
     @data(
-        (_mc_cart_2d, np.linspace(-1.01, 1.01, 102)),
-        (_mc_cart_2d, np.linspace(-1.0, 1.0, 11)),
-        (_mc_cart_3d, np.linspace(-1.01, 1.01, 102)),
-        (_mc_cart_3d, np.linspace(-1.0, 1.0, 11)),
+        (2, np.linspace(-1.01, 1.01, 102)),
+        (2, np.linspace(-1.0, 1.0, 11)),
+        (3, np.linspace(-1.01, 1.01, 102)),
+        (3, np.linspace(-1.0, 1.0, 11)),
     )
     @unpack
-    def test_mc_cart_fast_index_on_edges(self, kernel, edges):
+    def test_mc_cart_fast_index_on_edges(self, n_dim, edges):
         # (edge - edges[0]) / step truncates to one bin too low or too high for
         # many edges of these grids: the fast index must still match
         # np.searchsorted for points on and next to every edge, in each direction.
@@ -4968,9 +5123,9 @@ class IntSphDistTestCase(unittest.TestCase):
         speed = np.hstack([v_abs, np.nextafter(v_abs, 0), np.nextafter(v_abs, 2)])
         speed = np.sort(speed)
         phi = [0.0, np.pi / 2, np.pi, 3 * np.pi / 2]
-        theta = [0.0, np.pi / 2] if kernel is _mc_cart_3d else [0.0]
+        theta = [0.0, np.pi / 2] if n_dim == 3 else [0.0]
 
-        result = self._mc_kernel_runs(kernel, speed, phi, theta, edges)
+        result = self._mc_kernel_runs(n_dim, speed, phi, theta, edges)
 
         # Every particle within the grid is kept (none past the outer edges)
         v_in = speed[speed <= edges[-1]]
@@ -4979,25 +5134,25 @@ class IntSphDistTestCase(unittest.TestCase):
 
     @data(
         # phi, theta, v_lim, a_lim, kept
-        (_mc_pol_1d, np.pi / 2, 0.0, (-np.inf, 0.5), None, False),
-        (_mc_pol_1d, np.pi / 2, 0.0, (0.5, np.inf), None, True),
-        (_mc_pol_1d, np.pi / 2, 0.0, None, (0.0, np.pi / 4), False),
-        (_mc_pol_1d, np.pi / 2, 0.0, None, (np.pi / 4, np.pi), True),
-        (_mc_cart_2d, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
-        (_mc_cart_2d, 0.0, np.pi / 6, (0.25, 1.0), None, True),
-        (_mc_cart_2d, 0.0, np.pi / 6, None, (-np.pi / 12, np.pi / 12), False),
-        (_mc_cart_2d, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
-        (_mc_cart_3d, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
-        (_mc_cart_3d, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
+        (1, np.pi / 2, 0.0, (-np.inf, 0.5), None, False),
+        (1, np.pi / 2, 0.0, (0.5, np.inf), None, True),
+        (1, np.pi / 2, 0.0, None, (0.0, np.pi / 4), False),
+        (1, np.pi / 2, 0.0, None, (np.pi / 4, np.pi), True),
+        (2, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
+        (2, 0.0, np.pi / 6, (0.25, 1.0), None, True),
+        (2, 0.0, np.pi / 6, None, (-np.pi / 12, np.pi / 12), False),
+        (2, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
+        (3, 0.0, np.pi / 6, (-0.25, 0.25), None, False),
+        (3, 0.0, np.pi / 6, None, (np.pi / 12, np.pi / 4), True),
     )
     @unpack
-    def test_mc_kernels_limits(self, kernel, phi, theta, v_lim, a_lim, kept):
+    def test_mc_kernels_limits(self, n_dim, phi, theta, v_lim, a_lim, kept):
         # v_lim/a_lim bound the transverse speed and its angle (1d), or the
         # out-of-plane speed and elevation (2d, 3d). Particle of unit speed.
         edges = np.arange(-1.0, 1.01, 0.25)
         v_lim = (-np.inf, np.inf) if v_lim is None else v_lim
         result = self._mc_kernel_runs(
-            kernel, [1.0], [phi], [theta], edges, v_lim=v_lim, a_lim=a_lim
+            n_dim, [1.0], [phi], [theta], edges, v_lim=v_lim, a_lim=a_lim
         )
 
         self.assertAlmostEqual(np.sum(result), np.cos(theta) if kept else 0.0)
@@ -7291,6 +7446,45 @@ class ShockNormalTestCase(unittest.TestCase):
         out = pyrf.shock_normal(spec)
         self.assertEqual(out["n"]["vc"].shape, (4, 3))
 
+    def test_shock_normal_time_series_models_once(self):
+        # The five models with fixed parameters fitted once for all the
+        # draws, Slavin-Holzer (rotated by the upstream velocity) for each
+        # draw (the six for each draw before); each draw as its single-value
+        # calculation, and the shared normals not turned in place
+        module = sys.modules["pyrfu.pyrf.shock_normal"]
+        spec = {**self._series(), "n": 6, "random_state": 4}
+        spec["r_xyz"] = np.array([13.5, 5.0, 1.0]) * 6371.0
+
+        with mock.patch.object(
+            module, "_shock_model", wraps=module._shock_model
+        ) as shock_model:
+            out = pyrf.shock_normal(spec)
+
+        self.assertEqual(shock_model.call_count, 5 + 6)
+
+        rng = np.random.default_rng(4)
+        position = {side: rng.random(6) for side in ["u", "d"]}
+        for i in range(6):
+            single = {"r_xyz": spec["r_xyz"]}
+
+            for side in ["u", "d"]:
+                grid = np.linspace(0, 1, len(spec[f"b_{side}"]))
+
+                for q in ["b", "v", "n"]:
+                    values = np.asarray(spec[f"{q}_{side}"])
+                    single[f"{q}_{side}"] = interpolate.interp1d(grid, values, axis=0)(
+                        position[side][i]
+                    )
+
+            expected = pyrf.shock_normal(single)
+
+            for k in ["farris", "slavin_holzer", "formisano_unnorm"]:
+                with self.subTest(draw=i, model=k):
+                    np.testing.assert_array_equal(out["n"][k][i], expected["n"][k])
+                    self.assertEqual(
+                        out["info"]["sig"][k][i], expected["info"]["sig"][k]
+                    )
+
     def test_shock_normal_time_series_reproducible(self):
         spec = {**self._series(), "n": 5, "random_state": 2}
         out_1, out_2 = pyrf.shock_normal(spec), pyrf.shock_normal(spec)
@@ -7524,6 +7718,30 @@ class SlidingDerivativeTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             pyrf.sliding_derivative(inp, method="7ps")
 
+    def test_sliding_derivative_nan_centre(self):
+        # A NaN where the stencil has no weight (the centre of "5ps" and
+        # "9ps") is not taken: it gave NaN (0 * NaN); a NaN with a weight
+        # still gives NaN, and the short series are NaN
+        data = 2.0 * self.t_sec + 3.0 * self.t_sec**2
+        data[50] = np.nan
+        inp = pyrf.ts_scalar(self.time, data)
+
+        for method, half in [("5ps", 2), ("9ps", 4)]:
+            result = pyrf.sliding_derivative(inp, method=method).data
+
+            np.testing.assert_allclose(result[50], self.slope[50], rtol=1e-10)
+            others = [50 + k for k in range(-half, half + 1) if k != 0]
+            self.assertTrue(np.isnan(result[others]).all())
+
+            short = pyrf.ts_scalar(self.time[: 2 * half], self.t_sec[: 2 * half])
+            self.assertTrue(
+                np.isnan(pyrf.sliding_derivative(short, method=method)).all()
+            )
+
+        # A window longer than the series
+        short = pyrf.ts_scalar(self.time[:5], self.t_sec[:5])
+        self.assertTrue(np.isnan(pyrf.sliding_derivative(short, window_size=7)).all())
+
 
 @ddt
 class SolidAngleTestCase(unittest.TestCase):
@@ -7674,7 +7892,7 @@ class TimeHelpersTestCase(unittest.TestCase):
     # The time conversions of pyrf/_time.py
     @property
     def module(self):
-        return sys.modules["pyrfu.pyrf._time"]
+        return sys.modules["pyrfu._core.time"]
 
     def test_seconds_exact(self):
         # The exact steps in ns divided by 1e9 (correctly rounded): * 1e-9
@@ -8800,6 +9018,17 @@ class WaveletTestCase(unittest.TestCase):
             k: int(np.isnan(result[k].data).any(axis=1).sum()) for k in result
         }
         self.assertDictEqual(n_nan_rows, {"x": 0, "y": 20, "z": 0})
+
+    def test_wavelet_get_data_vector(self):
+        # A vector with the component dimension of get_data (represent_vec_tot)
+        # as one with comp (it raised AttributeError: no inp.comp)
+        vec = generate_ts(64.0, 1024, tensor_order=1)
+        vec_get_data = vec.rename({"comp": "represent_vec_tot"})
+        result = pyrf.wavelet(vec_get_data)
+        expected = pyrf.wavelet(vec)
+        self.assertListEqual(list(result.data_vars), ["x", "y", "z"])
+        for comp in ["x", "y", "z"]:
+            np.testing.assert_array_equal(result[comp].data, expected[comp].data)
 
     def test_wavelet_linear_frequencies(self):
         # The linear spacing ignored f: f=[1, 10] with 1 Hz gave 1 to 64 Hz

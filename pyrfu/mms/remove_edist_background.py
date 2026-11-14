@@ -5,7 +5,6 @@
 import logging
 import os
 import posixpath
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
@@ -15,9 +14,9 @@ from botocore.exceptions import ClientError
 # Local imports
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.ts_skymap import ts_skymap
-from .db_get_ts import _resolve_source, db_get_ts
+from .db_get_ts import db_get_ts
 from .db_init import _read_config
-from .get_data import get_data
+from .get_data import _resolve_source, get_data
 from .list_files_aws import _bucket_and_prefix, _s3_resource
 from .list_files_sdc import LASP_PUBL, SDC_TIMEOUT, _login_lasp
 
@@ -92,7 +91,7 @@ def _load_bgdist_model(file_name: str, source: str, data_path: str):
 
 
 def remove_edist_background(
-    vdf, n_sec: float = 0.0, n_art: Optional[float] = None, source: str = ""
+    vdf, n_sec: float = 0.0, n_art: float | None = None, source: str = ""
 ):
     r"""Remove secondary photoelectrons from electron distribution function
     according to [1]_.
@@ -162,9 +161,6 @@ def remove_edist_background(
     # readers ("default" raised ValueError)
     source = _resolve_source(source)
 
-    vdf_new = np.zeros_like(vdf.data.data)
-    vdf_bkg = np.zeros_like(vdf.data.data)
-
     dataset_name = f"mms{mms_id}_fpi_{data_rate}_l2_des-dist"
     startdelphi_count = db_get_ts(
         dataset_name,
@@ -220,25 +216,36 @@ def remove_edist_background(
     else:
         n_photo = photoe_scle
 
-    for i, _ in enumerate(vdf.time.data):
-        iebgdist = idx_model[i]
+    # The background of each (energy table, model record) once, given to the
+    # distributions that use it (it was computed for each time): the model
+    # scaled by n_photo, plus, for n_sec > 0, isotropic secondary electrons,
+    # the model averaged over azimuth (axis 1 of energy, phi, theta), as
+    # irfu-matlab (it was averaged over the polar angle)
+    tables = np.asarray(vdf.attrs["esteptable"]).astype(int)
+    pairs, which = np.unique(
+        np.stack([tables, idx_model], axis=1), axis=0, return_inverse=True
+    )
 
-        esteptable_idx = int(vdf.attrs["esteptable"][i])
-        vdf_bkg_tmp_data = vdf_bkg01[esteptable_idx][iebgdist, ...]
-        vdf_bkg_tmp = n_photo * vdf_bkg_tmp_data
+    backgrounds = []
+
+    for table, record in pairs:
+        model = vdf_bkg01[table][record, ...]
+        background = n_photo * model
 
         if n_sec > 0:
-            # Isotropic secondary electrons: the model averaged over azimuth
-            # (axis 1 of energy, phi, theta), as irfu-matlab (it was averaged
-            # over the polar angle)
-            vdf_bkg_av = np.nanmean(vdf_bkg_tmp_data, axis=1, keepdims=True)
-            vdf_bkg_tmp = vdf_bkg_tmp + n_sec * vdf_bkg_av
+            background = background + n_sec * np.nanmean(model, axis=1, keepdims=True)
 
-        vdf_new_tmp = vdf.data.data[i, ...] - vdf_bkg_tmp
-        vdf_new_tmp[vdf_new_tmp < 0] = 0.0
-        vdf_bkg_tmp[vdf_bkg_tmp < 0] = 0.0
-        vdf_new[i, ...] = vdf_new_tmp
-        vdf_bkg[i, ...] = vdf_bkg_tmp
+        backgrounds.append(background)
+
+    bkg_data = np.stack(backgrounds)[np.ravel(which)]
+
+    # Background-subtracted distributions, negative values (and background)
+    # set to 0
+    vdf_new = vdf.data.data - bkg_data
+    vdf_new[vdf_new < 0] = 0.0
+    bkg_data[bkg_data < 0] = 0.0
+    vdf_new = vdf_new.astype(vdf.data.data.dtype, copy=False)
+    bkg_data = bkg_data.astype(vdf.data.data.dtype, copy=False)
 
     # Construct the new VDFs (copies, so the attributes of the input and of the
     # two outputs are independent)
@@ -259,7 +266,7 @@ def remove_edist_background(
     vdf_new.attrs = dict(glob_attrs)
     vdf_bkg = ts_skymap(
         vdf.time.data,
-        vdf_bkg,
+        bkg_data,
         vdf.energy.data,
         vdf.phi.data,
         vdf.theta.data,

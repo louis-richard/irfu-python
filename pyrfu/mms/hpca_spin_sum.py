@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
-from ._epd import _spin_reduce
+from pyrfu._core.time import _ns
+from pyrfu.mms._internal.epd import _spin_reduce
 
 # Start azimuths of HPCA per spin (half spin of the spacecraft), as hpca_pad
 _N_AZ = 16
@@ -43,7 +45,7 @@ def _hpca_complete_spins(start_az, time):
     return starts[complete], stops[complete]
 
 
-def hpca_spin_sum(inp, saz, method: str = "mean"):
+def hpca_spin_sum(inp, saz, method: Literal["mean", "sum"] = "mean"):
     r"""Sum or average the Hot Plasma Composition Analyser (HPCA) data over
     each spin.
 
@@ -75,11 +77,9 @@ def hpca_spin_sum(inp, saz, method: str = "mean"):
     used, as pyspedas ``mms_hpca_spin_sum`` (IDL SPEDAS gives a spin of zeros
     there). Only the complete spins are used, with one sample per start
     azimuth (0, 1, ..., 15, in order) and no data gap (two samples more than 1.5
-    median sampling periods apart): the spins cut by data gaps were kept as
-    partial sums or means, as the EIS and FEEPS spin averages do not. saz is
-    used by position, so it must be at the times of inp (misaligned spins
-    were used). The samples without data (NaN) are left out; a spin without
-    data is NaN.
+    median sampling periods apart), as the EIS and FEEPS spin averages. saz
+    is used by position, so it must be at the times of inp. The samples
+    without data (NaN) are left out; a spin without data is NaN.
 
     """
 

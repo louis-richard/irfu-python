@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import cast
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -13,7 +16,7 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def mean(inp, r_xyz, b_xyz, dipole_axis: xr.DataArray = None):
+def mean(inp, r_xyz, b_xyz, dipole_axis: xr.DataArray | None = None):
     r"""Put inp into mean field coordinates defined by position vector r and
     magnetic field b if earth magnetic dipole axis z is given then  uses
     another algorithm (good for auroral passages).
@@ -63,13 +66,16 @@ def mean(inp, r_xyz, b_xyz, dipole_axis: xr.DataArray = None):
 
     b_hat = normalize(b_xyz)
 
+    bxr: xr.DataArray | np.ndarray
+
     if not flag_dipole:
         bxr = cross(b_hat, r_xyz)
         bxr /= np.linalg.norm(bxr, axis=1)[:, None]
     else:
         b_dot_r = np.sum(b_xyz.data * r_xyz.data, axis=1)
         fact = np.where(b_dot_r > 0, 1.0, -1.0)
-        bxr = np.cross(dipole_axis, b_xyz) * fact[:, None]
+        # dipole_axis is given (flag_dipole)
+        bxr = np.cross(cast(xr.DataArray, dipole_axis), b_xyz) * fact[:, None]
         bxr /= np.linalg.norm(bxr, axis=1)[:, None]
 
     bxrxb = np.cross(bxr, b_hat)

@@ -3,10 +3,10 @@
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _product, _units
+from pyrfu._core.units import _attrs, _product, _units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
@@ -31,8 +31,7 @@ def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
     TypeError
         If inp1 or inp2 is not a xarray.DataArray.
     ValueError
-        If inp1 and inp2 are not vectors with the same number of components
-        (a vector and a scalar were broadcast).
+        If inp1 and inp2 are not vectors with the same number of components.
 
     Examples
     --------

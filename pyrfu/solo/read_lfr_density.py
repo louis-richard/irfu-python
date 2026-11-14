@@ -4,12 +4,12 @@
 # Built-in imports
 import logging
 import os
-from typing import Optional
+from typing import cast
 
 # 3rd party imports
 import numpy as np
 import pycdfpp
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 from ..pyrf import read_cdf, time_clip, ts_append, ts_scalar
 from ._list_files import _list_files
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _list_files_lfr_density_l3(
-    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
+    tint: list, data_path: str = "", tree: bool = False
 ) -> list:
     """Latest version of the L3_rpw-bia-density files covering the time interval."""
     return _list_files(
@@ -26,9 +26,7 @@ def _list_files_lfr_density_l3(
     )
 
 
-def read_lfr_density(
-    tint: list, data_path: Optional[str] = "", tree: Optional[bool] = False
-) -> DataArray:
+def read_lfr_density(tint: list, data_path: str = "", tree: bool = False) -> DataArray:
     r"""Read L3 density data from LFR
 
     Parameters
@@ -54,8 +52,7 @@ def read_lfr_density(
     ValueError
         If tint has not two elements.
     FileNotFoundError
-        If the data path doesn't exist, or no file covers the time interval
-        (None was returned).
+        If the data path doesn't exist, or no file covers the time interval.
 
     """
 
@@ -86,7 +83,8 @@ def read_lfr_density(
         density[density == -1e31] = np.nan
         out = ts_append(out, ts_scalar(time, density))
 
-    # Sort in time
+    # Sort in time (a time series: there are files)
+    out = cast(DataArray, out)
     out = out[np.argsort(out.time.data, kind="stable")]
 
     # Time clip

@@ -10,8 +10,8 @@ import tqdm
 import xarray as xr
 
 # Local imports
-from pyrfu.mms._psd_units import _factor, _is_relativistic, _mass_ratio
-from pyrfu.mms._vdf_bins import _mass, _speed
+from pyrfu.mms._internal.psd_units import _factor, _is_relativistic, _mass_ratio
+from pyrfu.mms._internal.vdf_bins import _charge, _mass, _speed
 from pyrfu.mms.vdf_convert import vdf_convert
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 from pyrfu.pyrf.int_sph_dist import _speed_bin_edges, int_sph_dist
@@ -63,7 +63,24 @@ def _angle_widths(vdf, theta, tint):
     }
 
 
-def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
+def reduce(
+    vdf,
+    xyz,
+    dim: str = "1d",
+    base: str = "pol",
+    *,
+    sc_pot=None,
+    lower_e_lim=0.0,
+    vg=None,
+    vg_edges=None,
+    phig=None,
+    tint=None,
+    n_mc=100,
+    weight=None,
+    v_int=(-np.inf, np.inf),
+    a_int=(-180.0, 180.0),
+    verbose=True,
+):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
 
     Parameters
@@ -72,8 +89,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         3D skymap velocity distribution function, with the ``species``
         attribute (the speeds of the channels with its mass, e.g. "ions",
         "oxygen", "helium++"), in any units of `vdf_convert` (phase-space
-        density, differential energy or particle flux; only s^3/cm^6, s^3/m^6
-        and s^3/km^6 were accepted).
+        density, differential energy or particle flux).
     xyz : xarray.DataArray or numpy.ndarray
         Transformation matrix from instrument frame to desired frame.
     dim : {"1d", "2d", "3d"}, Optional
@@ -82,21 +98,33 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     base : {"pol", "cart"}, Optional
         Base of the projection: polar "pol" (default, for "1d") or cartesian
         "cart" (for "2d" and "3d"). dim and base are case-insensitive.
-    **kwargs
-        Keyword arguments, among which:
-
-        * sc_pot : xarray.DataArray, the spacecraft potential (V), 0 V by
-          default. As in irfu-matlab, where it is for the electrons only,
-          the energies are corrected as those of electrons, E - e V, for all
-          the species (the ions gain q V in `psd_moments` and
-          `vdf_velocity`).
-        * lower_e_lim : float or xarray.DataArray, the threshold energy
-          (eV), 0 eV by default. The channels below max(sc_pot,
-          lower_e_lim) are set to zero; a time step without any channel
-          above it is NaN.
-        * vg, vg_edges : array_like, the speeds (m/s) of the grid, or the
-          edges of its bins, instead of the default one (see Notes).
-        * verbose : bool, show a progress bar (default True).
+    sc_pot : xarray.DataArray, Optional
+        Spacecraft potential V (V), 0 V by default. The energies are those at
+        infinity, E + q V for a charge q (energy conservation): the electrons
+        lose e V and the ions gain q V (``charge`` attribute, 2 for the HPCA
+        He++). irfu-matlab PDist.reduce documents its scpot option for the
+        electrons only and gives every species E - e V.
+    lower_e_lim : float or xarray.DataArray, Optional
+        Threshold energy (eV), 0 eV by default. The channels below
+        lower_e_lim, and for a species attracted by the spacecraft (q V < 0,
+        the electrons for V > 0) below its potential energy ``|q V|``
+        (secondary and photoelectrons of the spacecraft), are set to zero; a
+        time step without any channel above it is NaN. The channels of a
+        species repelled (the ions for V > 0) are all ambient particles and
+        are kept.
+    vg, vg_edges : array_like, Optional
+        Speeds (m/s) of the grid, or the edges of its bins, instead of the
+        default one (see Notes).
+    phig : array_like, Optional
+        Azimuthal grid of the projection plane (rad). Default is the
+        azimuths of the instrument bins.
+    tint : array_like, Optional
+        Time interval of the distributions to reduce. Default is all.
+    n_mc, weight, v_int, a_int : Optional
+        Monte-Carlo options of `pyrfu.pyrf.int_sph_dist` (`n_mc` 100 by
+        default).
+    verbose : bool, Optional
+        Show a progress bar. Default True.
 
     Returns
     -------
@@ -107,7 +135,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         the relativistic speeds. For the FPI, HPCA and EIS skymaps, whose
         phase-space density is the non-relativistic one, it is that of the
         files times 2 gamma^5 / (gamma + 1) (+5 % for electrons at 5 keV,
-        +27 % at 27 keV); it was integrated as it is.
+        +27 % at 27 keV).
 
     Raises
     ------
@@ -126,15 +154,16 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     The default polar grid (``"pol"``, without ``vg`` or ``vg_edges``) is
     made of the speeds of the channels at the first time computed, corrected
-    for the spacecraft potential, as in irfu-matlab. The channels below
-    `sc_pot` are then at 0 eV, so that with a positive `sc_pot` the 1d grid
-    has several speeds of 0 (+0 and -0, not unique) where the distribution
-    is zero; give ``vg`` or ``vg_edges`` for a grid of distinct speeds.
+    for the spacecraft potential, as in irfu-matlab. For an attracted
+    species (the electrons with a positive `sc_pot`), the channels below
+    its potential energy are then at 0 eV, so that the 1d grid has several
+    speeds of 0 (+0 and -0, not unique) where the distribution is zero;
+    give ``vg`` or ``vg_edges`` for a grid of distinct speeds.
 
     The Monte-Carlo options (``n_mc``, ``weight``, ...) are those of
     `pyrfu.pyrf.int_sph_dist`. ``weight="log"`` weights the particles by
-    1 + ln(f / min f); in irfu-matlab, and before pyrfu 2.5.2, it was the
-    same as ``"lin"`` for phase-space densities in SI units.
+    1 + ln(f / min f); in irfu-matlab, it is the same as ``"lin"`` for
+    phase-space densities in SI units.
 
     """
 
@@ -155,7 +184,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     # we do time clip first to save computation time if the time interval is
     # smaller than the VDF time series.
     vdf_time = vdf.time
-    tint = kwargs.get("tint", list(datetime642iso8601(vdf_time.data[[0, -1]])))
+    if tint is None:
+        tint = list(datetime642iso8601(vdf_time.data[[0, -1]]))
+
     vdf_time = time_clip(vdf_time, tint)
     vdf_energy = time_clip(vdf.energy, tint).copy()
     # Azimuths of each time, or of all times (1-D: time_clip raised
@@ -230,32 +261,27 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
     # Read the keyword arguments
     # Velocity projection grid and edges
-    velocity_grid = kwargs.get("vg", None)  # TODO : check that for no input!!
-    velocity_grid_edges = kwargs.get("vg_edges", None)
+    velocity_grid, velocity_grid_edges = vg, vg_edges
 
     # azimuthal angle of projection plane (phi is (time, phi) in burst mode)
     n_phi_grid = vdf_phi.shape[-1]
     d_phi_g = 2 * np.pi / n_phi_grid
     phi_grid = np.linspace(0, 2 * np.pi - d_phi_g, n_phi_grid) + d_phi_g / 2
-    phi_grid = kwargs.get("phig", phi_grid)
-
-    # Number of Monte Carlo iterations and weights
-    n_mc = kwargs.get("n_mc", 100)  # OK
-    weight = kwargs.get("weight", None)  # OK
-
-    # Velocity and azimuthal angle integration intervals
-    v_int = kwargs.get("v_int", [-np.inf, np.inf])  # OK
-    a_int = kwargs.get("a_int", [-180.0, 180.0])  # OK
+    phi_grid = phi_grid if phig is None else phig
 
     # Spacecraft potential to account for photoelectrons. If not provided set
     # to 0 V.
-    sc_pot = kwargs.get("sc_pot", ts_scalar(vdf_time.data, np.zeros(n_t)))
+    if sc_pot is None:
+        sc_pot = ts_scalar(vdf_time.data, np.zeros(n_t))
+
     sc_pot = resample(sc_pot, vdf_time).data
+
+    # Potential energy (eV) of the particles at the spacecraft, q V: the
+    # energies at infinity are E + q V (electrons -e V, ions +q V)
+    q_sc_pot = _charge(vdf) * sc_pot
 
     # Threshold energy (e.g., to remove background noise). If not provided set
     # to 0 eV.
-    lower_e_lim = kwargs.get("lower_e_lim", 0.0)
-
     if isinstance(lower_e_lim, xr.DataArray):
         # If time series, clip to time interval and resample to VDF's time line
         lower_e_lim = resample(lower_e_lim, vdf_time).data
@@ -299,7 +325,7 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
     # energy are NaN)
     computed = np.zeros(n_t, dtype=bool)
 
-    for i_t in tqdm.tqdm(range(n_t), ncols=60, disable=not kwargs.get("verbose", True)):
+    for i_t in tqdm.tqdm(range(n_t), ncols=60, disable=not verbose):
         # 3d data matrix for time index
         f_3d = np.squeeze(vdf_data.data[i_t, ...])  # s^3/m^6
         f_3d = f_3d.astype(np.float64).copy()  # Convert to float64
@@ -309,9 +335,9 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         energy = energy.astype(np.float64)  # Convert to float64
 
         # Assign zeros to phase-space density values corresponding to energies
-        # below the threshold energy or below the spacecraft potential if
-        # provided.
-        thresh_e = np.max([lower_e_lim[i_t], sc_pot[i_t]])
+        # below the threshold energy, or below the potential energy |q V| of a
+        # species attracted by the spacecraft (q V < 0): spacecraft electrons
+        thresh_e = np.max([lower_e_lim[i_t], -q_sc_pot[i_t]])
         above = np.where(energy - delta_energy_minu[i_t, :] > thresh_e)[0]
 
         if len(above) == 0:
@@ -320,8 +346,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
 
         f_3d[: above[0]] = 0.0
 
-        # Correct energy shift due to spacecraft potential
-        energy -= sc_pot[i_t]
+        # Energy at infinity, E + q V (the ions lost e V)
+        energy += q_sc_pot[i_t]
         energy[energy < 0] = 0.0
 
         # Convert energy to velocity (relativistically correct)
@@ -332,8 +358,8 @@ def reduce(vdf, xyz, dim: str = "1d", base: str = "pol", **kwargs):
         if has_energy_widths:
             e_low = vdf_energy.data[i_t, :] - delta_energy_minu.data[i_t, :]
             e_upp = vdf_energy.data[i_t, :] + delta_energy_plus.data[i_t, :]
-            e_low = np.clip(e_low.astype(np.float64) - sc_pot[i_t], 0.0, None)
-            e_upp = np.clip(e_upp.astype(np.float64) - sc_pot[i_t], 0.0, None)
+            e_low = np.clip(e_low.astype(np.float64) + q_sc_pot[i_t], 0.0, None)
+            e_upp = np.clip(e_upp.astype(np.float64) + q_sc_pot[i_t], 0.0, None)
             speed_widths = {
                 "d_v_m": velocity - _speed(e_low, m_p),
                 "d_v_p": _speed(e_upp, m_p) - velocity,

@@ -10,7 +10,7 @@ __author__ = "Louis Richard"
 __email__ = "louis.richard@physics.ox.ac.uk"
 __copyright__ = "Copyright 2020-2026"
 __license__ = "MIT"
-__version__ = "2.5.13"
+__version__ = "2.5.14"
 __status__ = "Prototype"
 
 __all__ = [
@@ -27,7 +27,9 @@ __all__ = [
 
 # Show the messages of pyrfu (INFO and above) without configuring the root
 # logger, which belongs to the application. Silence them with
-# logging.getLogger("pyrfu").setLevel(logging.WARNING).
+# logging.getLogger("pyrfu").setLevel(logging.WARNING); to pass them on to the
+# application's handlers, clear this handler and set propagate to True (see
+# "Messages" in the documentation).
 _logger = logging.getLogger(__name__)
 
 if not _logger.handlers:

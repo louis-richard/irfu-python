@@ -196,8 +196,7 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     Notes
     -----
     The keys "(dn_e/n)/ (dB/B)", "(dn_e/n)/(dBpar /B)" and " Spar/Stot" of
-    pyrfu < 2.5 are deprecated, use the keys without the extra spaces. In
-    pyrfu < 2.5, "(dn_e/n)/(dB/B)" was "dn_e/(k E eps0/e)".
+    pyrfu < 2.5 are deprecated, use the keys without the extra spaces.
 
     """
 

@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import matplotlib as mpl
 import numpy as np
 
@@ -15,9 +17,9 @@ def plot_projection(
     v_y,
     f_mat,
     vlim: float = 1e3,
-    clim: list = None,
-    cmap: str = None,
-    colorbar: str = "right",
+    clim: list | None = None,
+    cmap: str | None = None,
+    colorbar: Literal["right", "top", "none"] = "right",
 ):
     r"""Plot the projection of the distribution.
 
@@ -62,7 +64,8 @@ def plot_projection(
         clim = [None, None]
 
     if not cmap or isinstance(cmap, str):
-        cmap = mpl.colormaps.get_cmap(cmap)
+        # get_cmap(None) is the image.cmap colormap; the stub omits None
+        colormap = mpl.colormaps.get_cmap(cmap)  # type: ignore[arg-type]
     else:
         raise TypeError(
             "cmap must be a string. "
@@ -73,7 +76,7 @@ def plot_projection(
         v_x / 1e3,
         v_y / 1e3,
         np.log10(f_mat.T),
-        cmap=cmap,
+        cmap=colormap,
         vmin=clim[0],
         vmax=clim[1],
     )

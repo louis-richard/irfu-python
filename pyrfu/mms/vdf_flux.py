@@ -2,14 +2,15 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from ._psd_units import _output
-from ._vdf_bins import (
+from pyrfu.mms._internal.psd_units import _output
+from pyrfu.mms._internal.vdf_bins import (
     _band_solid_angles,
     _broadcast_angles,
     _broadcast_energy,
     _is_skymap,
     _speed_edges,
 )
+
 from .vdf_convert import _relativistic_psd
 
 

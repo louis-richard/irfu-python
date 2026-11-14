@@ -10,8 +10,8 @@ import xarray as xr
 from scipy import interpolate
 
 # Local imports
-from ._time import _ns, _seconds
-from ._time_attrs import _is_time_attr
+from pyrfu._core.time import _ns, _seconds
+from pyrfu._core.time_attrs import _is_time_attr
 
 # Interpolation methods: the kinds of scipy.interpolate.interp1d
 _METHODS = (
@@ -120,7 +120,7 @@ def _interp_finite(inp_time, inp_data, ref_time, method):
     return out_data.reshape(len(ref_time), *np.shape(inp_data)[1:])
 
 
-def _like(inp, out_data, time):
+def _resampled_like(inp, out_data, time):
     r"""DataArray of out_data at the times time, with the dimensions, the
     dimension coordinates and the attributes of inp. A dimension without
     coordinate (e.g. dims ["time", "comp"], coords time only) raised
@@ -194,7 +194,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
         if len(inp_time_ns) == len(ref_time_ns) and np.array_equal(
             inp_time_ns, ref_time_ns
         ):
-            return _like(inp, inp.data.copy(), ref.coords["time"].data)
+            return _resampled_like(inp, inp.data.copy(), ref.coords["time"].data)
 
         # Extrapolation outside the time range of inp with the interpolant,
         # as irf_resamp (MATLAB interp1 with 'extrap')
@@ -210,7 +210,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
             )
             out_data = tck(ref_time)
 
-    return _like(inp, out_data, ref.coords["time"])
+    return _resampled_like(inp, out_data, ref.coords["time"])
 
 
 def _resample_dataset(inp, ref, **kwargs):
@@ -254,8 +254,8 @@ def resample(
     inp,
     ref,
     method: str = "",
-    f_s: float = None,
-    window: int = None,
+    f_s: float | None = None,
+    window: int | None = None,
     thresh: float = 0,
 ):
     r"""Resample inp to the time line of ref. If sampling of X is more than two
@@ -303,15 +303,19 @@ def resample(
 
     * Averaging uses the windows (t - 1/(2 f_s), t + 1/(2 f_s)] around each
       reference time t, so that each sample belongs to one window. A window
-      without samples gives NaN, and a NaN in a window gives NaN.
+      without samples gives NaN, and a NaN in a window gives NaN. For
+      datetime64 times the half window is rounded to the nanosecond, so a
+      sample within 1 ns of an edge can fall in the other window than with
+      irf_resamp's floating-point times (e.g., a relative difference of 3e-5
+      of the wave numbers of `pyrfu.mms.fk_power_spectrum` on a 1 s burst
+      interval).
     * Interpolation extrapolates outside the time range of inp with the
       interpolant (linearly with "linear"): clip ref to the time range of inp
       (e.g., with time_clip) if this is not wanted.
     * With "quadratic" or "cubic", whose interpolant depends on all the
       samples, each component is interpolated through its finite samples, as
-      MATLAB interp1 ("spline"): NaN samples are skipped (a NaN gave NaN at
-      all the times). With "linear" or "nearest", a NaN gives NaN at the times
-      next to it, as MATLAB.
+      MATLAB interp1 ("spline"): NaN samples are skipped. With "linear" or
+      "nearest", a NaN gives NaN at the times next to it, as MATLAB.
 
     Examples
     --------

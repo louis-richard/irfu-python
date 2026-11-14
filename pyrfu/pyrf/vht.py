@@ -7,7 +7,8 @@ import logging
 import numpy as np
 
 # Local imports
-from ._units import _check_units
+from pyrfu._core.units import _check_units
+
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 

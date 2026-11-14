@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -41,11 +41,11 @@ def _shue1998(d_p, b_z):
 
 def magnetosphere(
     model: str = "mp_shue1998",
-    tint: Optional[List[Any]] = None,
-    d_p: Optional[float] = None,
-    b_z: Optional[float] = None,
-    m_a: Optional[float] = None,
-) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+    tint: list[Any] | None = None,
+    d_p: float | None = None,
+    b_z: float | None = None,
+    m_a: float | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     r"""Returns the location of the magnetopause or of the bow shock.
 
     Parameters
@@ -53,8 +53,10 @@ def magnetosphere(
     model : str
         Model to use: 'mp_shue1998' (magnetopause, Shue et al., 1998) or
         'bs' (bow shock, Farris and Russell, 1994, from the standoff
-        distance of the magnetopause), case-insensitive. Default is
-        'mp_shue1998'.
+        distance of the Shue et al., 1998 magnetopause, as irfu-matlab
+        irf_magnetosphere; the 'bs' of `pyrfu.models.magnetopause_normal`
+        is based on Shue et al., 1997, its 'bs98' on 1998),
+        case-insensitive. Default is 'mp_shue1998'.
     tint : list of str, Optional
         Time interval: the solar wind dynamic pressure, IMF Bz (GSM) and
         Mach number are averaged over it from OMNI (hourly). Not with

@@ -55,7 +55,7 @@ def pvi(inp, scale: int = 10):
     delta_inp = np.abs((data[scale:, :] - data[:-scale, :]))
     delta_inp2 = np.sum(delta_inp**2, axis=1)
     sigma = np.nanmean(delta_inp2)
-    result = np.sqrt(delta_inp2 / sigma)
+    result: np.ndarray | xr.DataArray = np.sqrt(delta_inp2 / sigma)
 
     time = inp.coords[inp.dims[0]].data
 

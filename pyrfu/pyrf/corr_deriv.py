@@ -5,7 +5,8 @@
 import numpy as np
 
 # Local imports
-from ._time import _seconds, _timedelta
+from pyrfu._core.time import _seconds, _timedelta
+
 from .find_closest import find_closest
 
 

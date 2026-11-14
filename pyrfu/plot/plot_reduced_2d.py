@@ -9,7 +9,7 @@ from matplotlib import colors
 from .colorbar import colorbar as _add_colorbar
 
 
-def plot_reduced_2d(ax, f2d, clim: list = None):
+def plot_reduced_2d(ax, f2d, clim: list | None = None):
     r"""Plot the 2D recuded distribution `f2d` onto the axis `ax`.
 
     Parameters

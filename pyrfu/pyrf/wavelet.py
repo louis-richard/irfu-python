@@ -4,7 +4,6 @@
 # Built-in imports
 import logging
 import os
-from typing import Dict, Optional, Union
 
 # 3rd party imports
 import numba
@@ -12,17 +11,17 @@ import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
 from scipy import fft
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _power, _ratio, _units
+from pyrfu._core.typing import TimeArray
+from pyrfu._core.units import _attrs, _power, _ratio, _units
 from pyrfu.pyrf.calc_fs import calc_fs
 
 logger = logging.getLogger(__name__)
 
 
-@numba.jit(nopython=True, fastmath=True)  # type: ignore
+@numba.jit(nopython=True, fastmath=True)
 def _ww(
     s_ww: NDArray[np.complex128],
     scales_mat: NDArray[np.float64],
@@ -36,7 +35,7 @@ def _ww(
     return w_w
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True)  # type: ignore
+@numba.jit(nopython=True, parallel=True, fastmath=True)
 def _power_r(
     power: NDArray[np.complex128], new_freq_mat: NDArray[np.float64]
 ) -> NDArray[np.float64]:
@@ -46,7 +45,7 @@ def _power_r(
     return power2
 
 
-@numba.jit(nopython=True, parallel=True, fastmath=True)  # type: ignore
+@numba.jit(nopython=True, parallel=True, fastmath=True)
 def _power_c(
     power: NDArray[np.complex128], new_freq_mat: NDArray[np.float64]
 ) -> NDArray[np.complex128]:
@@ -58,14 +57,14 @@ def _power_c(
 
 def wavelet(
     inp: DataArray,
-    f_s: Optional[float] = None,
-    f: Optional[list[float]] = None,
-    n_freqs: Optional[int] = None,
-    linear: Optional[Union[float, bool]] = None,
-    wavelet_width: Optional[float] = None,
-    cut_edge: Optional[bool] = True,
-    return_power: Optional[bool] = True,
-) -> Union[DataArray, Dataset]:
+    f_s: float | None = None,
+    f: list[float] | None = None,
+    n_freqs: int | None = None,
+    linear: float | bool | None = None,
+    wavelet_width: float | None = None,
+    cut_edge: bool = True,
+    return_power: bool = True,
+) -> DataArray | Dataset:
     """Computes wavelet spectrogram based on fast FFT algorithm.
 
     Parameters
@@ -76,7 +75,9 @@ def wavelet(
         Sampling frequency of the input time series.
     f : list, Optional
         Vector [f_min f_max], calculate spectra between frequencies
-        f_min and f_max.
+        f_min and f_max. Default is [f_nyq / 100, f_nyq], with f_nyq the
+        Nyquist frequency; irfu-matlab irf_wavelet stops at f_nyq / 10^0.01
+        (2.3 % lower): ``f=[f_nyq / 100, f_nyq / 10**0.01]`` gives its grid.
     n_freqs : int, Optional
         Number of frequency bins.
     linear : float or bool, Optional
@@ -188,7 +189,7 @@ def wavelet(
     # Unpack time and data.
     # Remove the last sample if the total number of samples is odd.
     if len(inp.time.data) % 2:
-        time: NDArray[np.datetime64] = inp.time.data[:-1]
+        time: TimeArray = inp.time.data[:-1]
         data: NDArray[np.float64] = inp.data[:-1, ...].astype(np.float64)
     else:
         time = inp.time.data
@@ -207,7 +208,7 @@ def wavelet(
     freqs_cwt: NDArray[np.float64] = f_nyq / scales
 
     if data.ndim in [1, 2]:
-        out_dict: Dict[str, object] = {}
+        out_dict: dict[str, object] = {}
     else:
         raise ValueError("Input data must be 1D or 2D")
 
@@ -243,7 +244,7 @@ def wavelet(
 
         # Calculate the power spectrum, with the frequencies of the columns
         # broadcast along time (they were tiled to the size of power)
-        power2: NDArray[Union[np.float64, np.complex128]]
+        power2: NDArray[np.float64 | np.complex128]
 
         if return_power:
             power2 = _power_r(power, freqs_cwt)
@@ -262,13 +263,15 @@ def wavelet(
 
         if len(inp.shape) == 2:
             # Construct xarray.DataArray here
-            out_dict[str(inp.comp.data[i])] = (
+            # The second dimension, whatever its name (represent_vec_tot for
+            # get_data vectors, comp for ts_vec_xyz)
+            out_dict[str(inp[inp.dims[1]].data[i])] = (
                 ["time", "frequency"],
                 np.fliplr(power2),
             )
 
     if len(inp.shape) == 1:
-        out: Union[DataArray, Dataset] = xr.DataArray(
+        out: DataArray | Dataset = xr.DataArray(
             np.fliplr(power2),
             coords=[time, np.flip(freqs_cwt)],
             dims=["time", "frequency"],

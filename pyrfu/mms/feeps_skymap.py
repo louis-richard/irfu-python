@@ -3,13 +3,15 @@
 
 # Built-in imports
 import warnings
+from typing import Literal, cast
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ..pyrf._time import _ns
+from pyrfu._core.time import _ns
+
 from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
 from .feeps_omni import _eyes_on_omni_energies
@@ -189,11 +191,11 @@ def _fill_empty(data, sums, counts, how):
 
 def feeps_skymap(
     inp_dataset,
-    b_bcs: xr.DataArray = None,
-    b_dmpa: xr.DataArray = None,
-    n_phi: int = None,
+    b_bcs: xr.DataArray | None = None,
+    b_dmpa: xr.DataArray | None = None,
+    n_phi: int | None = None,
     to_psd: bool = True,
-    fill_empty: str = None,
+    fill_empty: Literal["ring", "omni"] | None = None,
 ):
     r"""Skymaps of the FEEPS data, one per spin.
 
@@ -244,7 +246,7 @@ def feeps_skymap(
     Each complete spin, from its first sample up to the first sample of the
     next one (as `feeps_spin_avg`), gives one skymap time stamped at its first
     sample: the partial spins at the start and end of the interval and the
-    spins cut by data gaps are left out (they were kept).
+    spins cut by data gaps are left out.
     The eyes are put on the omni-directional energies as in `feeps_omni` (10 %
     check and correction factor); the energy widths are the mean of the
     channel bounds of the eyes (`get_feeps_alleyes`), if available.
@@ -273,10 +275,10 @@ def feeps_skymap(
     with data, per time and energy) is below 1; see `fill_empty`. The skymaps
     have ``angle_integration = "exact"``, so that `psd_moments` integrates the
     wide bins exactly, and ``relativistic = True``: their phase-space density
-    is the relativistic one, also when an intensity skymap is converted later
-    (it was True only with `to_psd`). The speeds are relativistic in all the
-    vdf routines (the non-relativistic moments underestimated the electron
-    density by about 10 % at the FEEPS energies). The moments and the
+    is the relativistic one, also when an intensity skymap is converted later.
+    The speeds are relativistic in all the vdf routines (the non-relativistic
+    moments underestimate the electron density by about 10 % at the FEEPS
+    energies). The moments and the
     reduced distributions (`reduce`) of the phase-space density are then the
     integrals of the intensity over the energy and the solid angle.
 
@@ -388,7 +390,7 @@ def feeps_skymap(
 
     if to_psd:
         # s^3/cm^6, as the FPI distributions
-        out = dpf2psd(out)
+        out = cast(xr.Dataset, dpf2psd(out))  # a Dataset for a Dataset
         out.data.data *= 1e-12
         out.data.attrs["UNITS"] = "s^3/cm^6"
 

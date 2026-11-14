@@ -2,19 +2,21 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Mapping, Optional, Union
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
+
+# Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def ts_tensor_xyz(
-    time: NDArray[np.datetime64],
-    data: NDArray[Union[np.float32, np.float64]],
-    attrs: Optional[Mapping[str, object]] = None,
+    time: TimeArray,
+    data: FloatArray,
+    attrs: dict[str, Any] | None = None,
 ) -> DataArray:
     r"""Create a time series containing a 2nd order tensor.
 

@@ -1784,6 +1784,20 @@ class PlotSurfTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._plot("center")
 
+    def test_plot_surf_gap(self):
+        # The same gap (0.01 of the figure) between the axis and the colour
+        # bar on the four sides (the bottom and left ones touched the axis)
+        gaps = {
+            "bottom": lambda p, c: p.y0 - c.y1,
+            "top": lambda p, c: c.y0 - p.y1,
+            "left": lambda p, c: p.x0 - c.x1,
+            "right": lambda p, c: c.x0 - p.x1,
+        }
+        for cax_pos, gap in gaps.items():
+            with self.subTest(cax_pos=cax_pos):
+                pos, caxis = self._plot(cax_pos)
+                self.assertAlmostEqual(gap(pos, caxis.get_position()), 0.01)
+
     def test_plot_surf_other_figure(self):
         # The colour bar goes in the figure of the axis, not the current figure
         f = plt.figure()

@@ -28,8 +28,7 @@ def norm(inp):
     TypeError
         If inp is not a xarray.DataArray.
     ValueError
-        If inp is not a scalar or a vector (a scalar raised AxisError, a
-        tensor ValueError from ts_scalar).
+        If inp is not a scalar or a vector.
 
     Examples
     --------

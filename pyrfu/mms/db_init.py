@@ -8,7 +8,7 @@ import logging
 import math
 import numbers
 import os
-from typing import Literal, Optional
+from typing import Any, Literal, cast
 
 # 3rd party imports
 import keyring
@@ -17,7 +17,7 @@ from keyring.backends.chainer import ChainerBackend
 from keyrings.alt.file import PlaintextKeyring
 
 # Local imports
-from .._user_config import read_config, user_config_path, write_config
+from pyrfu._core.user_config import read_config, user_config_path, write_config
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,20 @@ def _user_config_path() -> str:
     return user_config_path("mms_config.json", _PACKAGE_CFG_PATH)
 
 
-MMS_CFG_PATH = _user_config_path()
+def _mms_cfg_path() -> str:
+    r"""Path of the MMS configuration: MMS_CFG_PATH if set on the module (e.g.
+    patched), else the user configuration file, created on first use (import
+    pyrfu created it)."""
+    return globals().get("MMS_CFG_PATH") or _user_config_path()
+
+
+def __getattr__(name):
+    # MMS_CFG_PATH computed on first use (PEP 562)
+    if name == "MMS_CFG_PATH":
+        return _user_config_path()
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 # Service name of the MMS SDC credentials in the keyring
 SDC_SERVICE = "mms-sdc"
@@ -91,7 +104,7 @@ def _set_password(username: str, password: str) -> None:
 
 
 # Settings used when there is no configuration yet, or with reset=True
-_DEFAULT_CONFIG = {
+_DEFAULT_CONFIG: dict[str, Any] = {
     "default": "local",
     "local": ".",
     "sdc": {"rights": "public", "username": "username"},
@@ -106,12 +119,14 @@ def _config_stamp():
     r"""Path, inode, modification time and size of the MMS configuration file
     (path only if it can't be read): the key of the caches of the
     configuration. db_init writes a new file (new inode) every time."""
-    try:
-        stat = os.stat(MMS_CFG_PATH)
-    except OSError:
-        return (MMS_CFG_PATH,)
+    path = _mms_cfg_path()
 
-    return MMS_CFG_PATH, stat.st_ino, stat.st_mtime_ns, stat.st_size
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return (path,)
+
+    return path, stat.st_ino, stat.st_mtime_ns, stat.st_size
 
 
 def _read_config() -> dict:
@@ -187,16 +202,16 @@ def _set_cache(config, enabled, size, max_age, directory):
 
 
 def db_init(
-    default: Optional[Literal["local", "sdc", "aws"]] = None,
-    local: Optional[str] = None,
-    sdc: Optional[Literal["public", "sitl"]] = None,
-    sdc_username: Optional[str] = None,
-    sdc_password: Optional[str] = None,
-    aws: Optional[str] = None,
-    cache: Optional[bool] = None,
-    cache_size: Optional[float] = None,
-    cache_max_age: Optional[float] = None,
-    cache_dir: Optional[str] = None,
+    default: Literal["local", "sdc", "aws"] | None = None,
+    local: str | None = None,
+    sdc: Literal["public", "sitl"] | None = None,
+    sdc_username: str | None = None,
+    sdc_password: str | None = None,
+    aws: str | None = None,
+    cache: bool | None = None,
+    cache_size: float | None = None,
+    cache_max_age: float | None = None,
+    cache_dir: str | None = None,
     reset: bool = False,
 ) -> None:
     r"""Manage the MMS data access configuration.
@@ -329,7 +344,8 @@ def db_init(
 
     # Save the password in the keyring only if given (never a placeholder)
     if sdc_password is not None:
-        _set_password(sdc_username, sdc_password)
+        # sdc_username is set: checked above with sdc_password
+        _set_password(cast(str, sdc_username), sdc_password)
 
     if config["sdc"]["rights"] == "sitl" and not _get_credential(
         config["sdc"]["username"]
@@ -340,8 +356,9 @@ def db_init(
             config["sdc"]["username"],
         )
 
-    logger.info("Updating MMS data access configuration in %s...", MMS_CFG_PATH)
+    path = _mms_cfg_path()
+    logger.info("Updating MMS data access configuration in %s...", path)
 
     # At once: a write that fails leaves the previous configuration (a partial
     # file was read as the default settings)
-    write_config(MMS_CFG_PATH, config)
+    write_config(path, config)

@@ -5,7 +5,7 @@
 import warnings
 
 # 3rd party imports
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Units of the outputs, in the notation of the MMS files: products separated by
 # a space, ratios with "/", powers with "^", a compound unit in parentheses when
@@ -109,3 +109,13 @@ def _check_units(inp, expected, name):
             UserWarning,
             stacklevel=3,
         )
+
+
+def _check_same_units(inps, name):
+    r"""ValueError unless the inputs (time series, or distributions with the
+    units of their data) have the same UNITS, or none (the units of the first
+    one were taken)."""
+    units = sorted({str(_units(inp)) for inp in inps})
+
+    if len(units) > 1:
+        raise ValueError(f"The {name} have different UNITS: {units}")

@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Tuple, Union
 
 # 3rd party
 import numpy as np
 from numpy.typing import NDArray
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Local imports
-from ..pyrf._time import _ns
+from pyrfu._core.time import _ns
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def psd_rebin(
@@ -19,9 +19,9 @@ def psd_rebin(
     energy0: NDArray[np.float32],
     energy1: NDArray[np.float32],
     esteptable: NDArray[np.uint8],
-) -> Tuple[
-    NDArray[np.datetime64],
-    NDArray[Union[np.float32, np.float64]],
+) -> tuple[
+    TimeArray,
+    FloatArray,
     NDArray[np.float32],
     NDArray[np.float32],
 ]:
@@ -97,7 +97,7 @@ def psd_rebin(
         raise TypeError("step_table must be a numpy.ndarray")
 
     # Get time and data
-    vdf_time: NDArray[np.datetime64] = vdf.time.data
+    vdf_time: TimeArray = vdf.time.data
     vdf_data: NDArray[np.float64] = vdf.data.data.astype(np.float64)
 
     # Channels of each table (32 for FPI; 64 were assumed, so that the channels
@@ -115,49 +115,42 @@ def psd_rebin(
     # Define new times
     # Sampling period in ns (kept as int64, int16 overflows for ms time steps)
     delta_t: float = np.median(np.diff(_ns(vdf_time)))
-    time_r: NDArray[np.datetime64] = vdf_time[:-1:2] + np.timedelta64(
-        int(round(delta_t / 2)), "ns"
-    )
+    time_r: TimeArray = vdf_time[:-1:2] + np.timedelta64(int(round(delta_t / 2)), "ns")
 
-    # Preallocate output arrays
-    vdf_r: NDArray[np.float64] = np.zeros(
-        (len(time_r), 2 * n_e, *vdf.data.shape[2:]), dtype=np.float64
-    )
-    phi_r: NDArray[np.float32] = np.zeros(
-        (len(time_r), vdf.data.shape[2]), dtype=np.float32
-    )
+    # The pairs of samples (first, second): the last sample of an odd number
+    # is left out
+    first = np.arange(0, len(vdf.time) - 1, 2)
+    second = first + 1
 
-    # Azimuths of the next bin, for the pairs where the azimuths are labelled
-    # from one bin lower in the second sample (see Notes)
+    # Pairs where the azimuths are labelled from one bin lower in the second
+    # sample (see Notes): its data rolled by one azimuth bin, and the azimuths
+    # of the next bin; the azimuths of all the pairs at once
+    wrap = phi[first, 0] > phi[second, 0]
+
     phi_s: NDArray[np.float64] = np.roll(phi.astype(np.float64), -1, axis=1)
     phi_s[:, -1] = phi_s[:, -1] + 360.0
 
-    # Default integer type (int16 wraps after 32767 samples)
-    time_indices: NDArray[np.int_] = np.arange(0, len(vdf.time) - 1, 2)
+    phi_r: NDArray[np.float32] = np.where(
+        wrap[:, np.newaxis],
+        (phi[first] + phi_s[second]) / 2,
+        (phi[first] + phi[second]).astype(np.float32) / 2,
+    ).astype(np.float32)
 
-    for new_el_num, idx in enumerate(time_indices):
-        if phi[idx, 0] > phi[idx + 1, 0]:
-            phi_r[new_el_num, :] = (phi[idx, :] + phi_s[idx + 1, :]) / 2
+    # Interleaved energies, pair by pair (a vectorised interleave copies the
+    # data more and is slower): the second sample rolled by one azimuth bin
+    # where the azimuths wrap, the sample of the upper table (esteptable) in
+    # the odd channels
+    vdf_r: NDArray[np.float64] = np.empty(
+        (len(time_r), 2 * n_e, *vdf.data.shape[2:]), dtype=np.float64
+    )
 
-            vdf_temp: NDArray[np.float64] = np.roll(vdf_data[idx + 1, ...], -1, axis=1)
+    for k, (i_1, i_2) in enumerate(zip(first, second)):
+        data_2 = np.roll(vdf_data[i_2], -1, axis=1) if wrap[k] else vdf_data[i_2]
 
-            if esteptable[idx]:
-                vdf_r[new_el_num, 1::2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 0::2, ...] = vdf_temp
-            else:
-                vdf_r[new_el_num, 0::2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 1::2, ...] = vdf_temp
-
+        if esteptable[i_1]:
+            vdf_r[k, 0::2], vdf_r[k, 1::2] = data_2, vdf_data[i_1]
         else:
-            phi_r[new_el_num, :] = phi[idx, :] + phi[idx + 1, :]
-            phi_r[new_el_num, :] /= 2
-
-            if esteptable[idx]:
-                vdf_r[new_el_num, 1::2, ...] = vdf_data[idx, ...]
-                vdf_r[new_el_num, 0::2, ...] = vdf_data[idx + 1, ...]
-            else:
-                vdf_r[new_el_num, 1::2, ...] = vdf_data[idx + 1, ...]
-                vdf_r[new_el_num, 0::2, ...] = vdf_data[idx, ...]
+            vdf_r[k, 0::2], vdf_r[k, 1::2] = vdf_data[i_1], data_2
 
     out = (time_r, vdf_r.astype(vdf.data.data.dtype), energy_r, phi_r)
     return out

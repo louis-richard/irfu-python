@@ -46,7 +46,7 @@ def _estimate_capa_cyli(a, h):
     return out
 
 
-def estimate(what_to_estimate: str, radius: float, length: float = None):
+def estimate(what_to_estimate: str, radius: float, length: float | None = None):
     r"""Estimate values for some everyday stuff.
 
     Parameters

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import datetime
 import urllib.request
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -213,7 +215,9 @@ _UNITS = {
 }
 
 
-def get_omni_data(variables, tint, database: str = "omni_hour"):
+def get_omni_data(
+    variables, tint, database: Literal["omni_hour", "omni_min"] = "omni_hour"
+):
     r"""Downloads OMNI data.
 
     Parameters

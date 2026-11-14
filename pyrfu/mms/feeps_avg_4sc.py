@@ -3,53 +3,27 @@
 
 """Contributed by Apostolos Kolokotronis."""
 
+from collections.abc import Sequence
+
 # 3rd party imports
 from copy import deepcopy
-from typing import Sequence
 
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from ..pyrf._time import _ns
+from pyrfu._core.units import _check_same_units
+
 from ..pyrf.calc_fs import calc_fs
-from ..pyrf.nanavg_4sc import _valid_count
+from ..pyrf.nanavg_4sc import _valid_count, _without_gaps
 from ..pyrf.resample import resample
-from ._eis_units import _check_same_units
-
-
-def _without_gaps(inp, inp_r):
-    r"""`inp_r` (`inp` resampled) without the values invented by the
-    resampling. A time is covered if a sample of `inp` is within half its
-    sampling period (the median step); NaN otherwise (data gaps, before the
-    start and after the end of `inp`). A covered time that is not between two
-    samples of `inp` at most 1.5 periods apart (a gap edge, an end) takes the
-    nearest sample, not a value interpolated across the gap."""
-    time = _ns(inp.time.data).astype(np.float64)
-    ref = _ns(inp_r.time.data).astype(np.float64)
-    steps = np.diff(time) if len(time) > 1 else np.diff(ref)
-    d_t = np.median(steps) if len(steps) else 0.0
-
-    i_r = np.searchsorted(time, ref)
-    i_l = np.clip(i_r - 1, 0, len(time) - 1)
-    i_rc = np.clip(i_r, 0, len(time) - 1)
-    dist_l, dist_r = np.abs(ref - time[i_l]), np.abs(time[i_rc] - ref)
-    i_near = np.where(dist_l <= dist_r, i_l, i_rc)
-
-    covered = np.minimum(dist_l, dist_r) <= d_t / 2.0
-    between = (i_r > 0) & (i_r < len(time)) & (time[i_rc] - time[i_l] <= 1.5 * d_t)
-    nearest = covered & ~between
-
-    data = inp_r.data.astype(np.float64)
-    data[nearest] = inp.data[i_near[nearest]]
-    data[~covered] = np.nan
-
-    return inp_r.copy(data=data)
 
 
 def feeps_avg_4sc(
-    b_list: Sequence[DataArray], flag: str = "omni", combined_energies: dict = None
+    b_list: Sequence[DataArray],
+    flag: str = "omni",
+    combined_energies: dict | None = None,
 ) -> DataArray:
     r"""Average data from 4 spacecrafts while ignoring NaN values.
     Computes the input quantity at the center of mass of the MMS
@@ -95,10 +69,8 @@ def feeps_avg_4sc(
     The spacecraft are resampled to the times of the first one. A spacecraft
     is left out of the average where it has no data: in its data gaps (two
     samples more than 1.5 sampling periods apart), and before the start and
-    after the end of its data (beyond half a sampling period). The resampling
-    filled the gaps by interpolation and extrapolated past the ends, which
-    were averaged as data. Times where the quantity is NaN on all the
-    spacecraft give NaN.
+    after the end of its data (beyond half a sampling period). Times where the
+    quantity is NaN on all the spacecraft give NaN.
 
     """
     # Check input type

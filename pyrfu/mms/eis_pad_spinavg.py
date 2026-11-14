@@ -2,15 +2,18 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ._epd import _spin_reduce
+from pyrfu.mms._internal.epd import _spin_reduce
+
 from .eis_spin_avg import _spin_segments
 
 
-def eis_pad_spinavg(inp, spin_nums, method: str = None):
+def eis_pad_spinavg(inp, spin_nums, method: Literal["mean", "sum"] | None = None):
     r"""Calculates spin-averaged Pitch-Angle Distribution (PAD) for the EIS
     instrument.
 
@@ -23,15 +26,14 @@ def eis_pad_spinavg(inp, spin_nums, method: str = None):
     method : {"mean", "sum"}, Optional
         Average over each spin, or sum (counts). Default is the ``method``
         attribute of `inp` (that of :func:`pyrfu.mms.eis_pad`: "sum" for
-        counts), "mean" without it. A counts PAD was averaged, still labelled
-        "sum". The samples without data (NaN) are left out; a pitch-angle bin
-        without data during the whole spin is NaN.
+        counts), "mean" without it. The samples without data (NaN) are left
+        out; a pitch-angle bin without data during the whole spin is NaN.
 
     Returns
     -------
     out : xarray.DataArray
         Spin-averaged PAD, one per complete spin at the time of its first
-        sample, with the attributes of `inp` (it had none).
+        sample, with the attributes of `inp`.
 
     Raises
     ------
@@ -42,8 +44,7 @@ def eis_pad_spinavg(inp, spin_nums, method: str = None):
     Notes
     -----
     The spins are those of :func:`pyrfu.mms.eis_spin_avg`: complete spins
-    only, time stamped at their first sample (they were stamped one spin
-    early, and the partial spins were kept).
+    only, time stamped at their first sample.
 
     See Also
     --------

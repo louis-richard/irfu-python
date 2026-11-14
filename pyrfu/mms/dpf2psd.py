@@ -2,20 +2,18 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms._internal.psd_units import _data_and_units
 from pyrfu.mms.vdf_convert import _DPF, vdf_convert
 
 __all__ = ["dpf2psd"]
 
 
-def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
+def dpf2psd(inp: Dataset | DataArray) -> Dataset | DataArray:
     r"""Compute phase space density from differential particle flux.
 
     Parameters
@@ -35,9 +33,9 @@ def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
 
     Notes
     -----
-    The masses are in proton masses, as the FPI products: the constant
-    m_p^2 / (2 e^2) was 0.53707, with the atomic mass unit as irfu-matlab, and
-    the phase-space densities were 1.46 % too small.
+    The masses are in proton masses, as the FPI products; irfu-matlab uses
+    the atomic mass unit (a constant m_p^2 / (2 e^2) of 0.53707), which gives
+    phase-space densities 1.46 % too small.
 
     The phase-space density is in the convention of its ``relativistic``
     attribute: the relativistic one, f = gamma^3 m J / v^2 with the
@@ -47,8 +45,7 @@ def dpf2psd(inp: Union[Dataset, DataArray]) -> Union[Dataset, DataArray]:
     conversions are inverse of each other.
     For electrons, the relativistic f is larger by 4.5 % at 5 keV, 52 % at
     50 keV and a factor 2.2 at 100 keV (the moments much less, as the speeds
-    are smaller). The ``relativistic`` argument was removed: the convention
-    is that of the data.
+    are smaller). The convention is that of the data.
 
     """
 

@@ -2,23 +2,20 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import constants
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _check_units
+from pyrfu._core.units import _check_units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 
 
-def dynamic_press(
-    n_s: DataArray, v_xyz: DataArray, specie: Optional[str] = "ions"
-) -> DataArray:
+def dynamic_press(n_s: DataArray, v_xyz: DataArray, specie: str = "ions") -> DataArray:
     r"""Computes dynamic pressure.
 
     .. math::

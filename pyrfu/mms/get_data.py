@@ -6,7 +6,8 @@ import logging
 import os
 import posixpath
 import time
-from typing import Mapping, Optional, Tuple, Union
+from collections.abc import Mapping
+from typing import Any, cast
 
 # 3rd party imports
 import requests
@@ -17,11 +18,10 @@ from botocore.exceptions import (
     ResponseStreamingError,
 )
 from requests.sessions import Session
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
-from pyrfu.mms import _cache
+from pyrfu.mms._internal import cache as _cache
 from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_dist import get_dist
 from pyrfu.mms.get_ts import get_ts
@@ -30,6 +30,7 @@ from pyrfu.mms.list_files_aws import _s3_resource, list_files_aws
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
 from pyrfu.mms.tokenize import tokenize
 from pyrfu.pyrf.dist_append import dist_append
+from pyrfu.pyrf.time_clip import _time_interval
 from pyrfu.pyrf.ts_append import ts_append
 
 logger = logging.getLogger(__name__)
@@ -41,9 +42,7 @@ _AWS_READ_ATTEMPTS = 3
 _AWS_READ_ERRORS = (IncompleteReadError, ReadTimeoutError, ResponseStreamingError)
 
 
-def _var_and_cdf_name(
-    var_str: str, mms_id: str
-) -> Tuple[Mapping[str, Union[str, int]], str]:
+def _var_and_cdf_name(var_str: str, mms_id: str | int) -> tuple[Mapping[str, str], str]:
     r"""Tokenize variable string `var_str` and returns the corresponding cdf name.
 
     Parameters
@@ -85,7 +84,7 @@ def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
 
 def _remote_files(source: str, tint: list, mms_id: str, var: Mapping) -> list:
     r"""Files of `var` in `tint` on the SDC or AWS, as items of a listing of the
-    cache (see :class:`pyrfu.mms._cache.RemoteFile`)."""
+    cache (see :class:`pyrfu.mms._internal.cache.RemoteFile`)."""
     if source == "aws":
         return [
             {
@@ -111,13 +110,35 @@ def _remote_files(source: str, tint: list, mms_id: str, var: Mapping) -> list:
     ]
 
 
+def _resolve_source(source: str | None = "default") -> str:
+    r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
+    case), or the default resource of the MMS configuration
+    (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
+    if not source or source.lower() == "default":
+        return _read_config()["default"]
+
+    if source.lower() in ["local", "sdc", "aws"]:
+        return source.lower()
+
+    raise ValueError("Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'")
+
+
 def _list_files_sources(
     source: str,
     tint: list[str],
     mms_id: str,
-    var: Mapping[str, Union[str, int]],
-    data_path: Optional[str] = "",
+    var: Mapping[str, str],
+    data_path: str = "",
 ):
+    # Time interval in the forms of time_clip (only a list of str was
+    # listed), as datetime64; the cache key of the listing is then the same
+    # for all the forms
+    tint = _time_interval(tint)
+
+    # Paths, cache files (RemoteFile), URLs or S3 objects, by source
+    file_names: list[Any]
+    headers: dict[str, str]
+
     if source == "local":
         file_names = list_files(tint, mms_id, var, data_path)
         sdc_session, headers = None, {}
@@ -144,8 +165,8 @@ def _list_files_sources(
 def _get_file_content_sources(
     source: str,
     file_name: str,
-    sdc_session: Optional[Session] = None,
-    headers: Optional[dict] = None,
+    sdc_session: Session | None = None,
+    headers: dict | None = None,
 ) -> bytes:
     r"""Get file content from different sources.
 
@@ -177,7 +198,10 @@ def _get_file_content_sources(
             file_content = file.read()
     elif source == "sdc":
         try:
-            response = sdc_session.get(file_name, timeout=SDC_TIMEOUT, headers=headers)
+            # The SDC session of _list_files_sources
+            response = cast(Session, sdc_session).get(
+                file_name, timeout=SDC_TIMEOUT, headers=headers
+            )
             response.raise_for_status()  # Raise an HTTPError for bad responses
             file_content = response.content
         except requests.RequestException:
@@ -266,11 +290,11 @@ def _download(remote, sdc_session=None, headers=None) -> bytes:
 def get_data(
     var_str: str,
     tint: list,
-    mms_id: Union[int, str],
+    mms_id: int | str,
     verbose: bool = True,
     data_path: str = "",
     source: str = "",
-) -> Union[DataArray, Dataset]:
+) -> DataArray | Dataset:
     r"""Load a variable `var_str`.
 
     AFG: b_bcs_afg_srvy_l2pre, b_dmpa_afg_srvy_l2pre, b_gse_afg_srvy_l2pre,
@@ -408,8 +432,10 @@ def get_data(
     ----------
     var_str : str
         Key of the target variable (use mms.get_data() to see keys.).
-    tint : list of str
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the target spacecraft.
     verbose : bool, Optional
@@ -427,6 +453,13 @@ def get_data(
     out : DataArray or Dataset
         Time series of the target variable of measured by the target
         spacecraft over the selected time interval.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no file of the variable covers the time interval.
+    ValueError
+        If `source` is not "local", "sdc", "aws" or "default".
 
     See also
     --------
@@ -456,11 +489,10 @@ def get_data(
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 
     # The source in any case, or the default of the MMS configuration if empty
-    # or "default", as db_get_ts, db_get_variable and load_ancillary
-    source = (source or "default").lower()
-
-    if source == "default":
-        source = _read_config()["default"]
+    # or "default"; ValueError for an unknown one, as db_get_ts,
+    # db_get_variable, get_eis_allt and load_ancillary (it was
+    # NotImplementedError)
+    source = _resolve_source(source)
 
     file_names, sdc_session, headers = _list_files_sources(
         source, tint, mms_id, var, data_path
@@ -485,4 +517,5 @@ def get_data(
         else:
             out = ts_append(out, get_ts(file_content, cdf_name, tint))
 
-    return out
+    # Not None: at least one file was read
+    return cast(DataArray | Dataset, out)

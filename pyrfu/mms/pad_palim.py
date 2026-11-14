@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 
 # Local imports
-from ._vdf_bins import _is_skymap, _pitch_angles, _polar_edges
+from pyrfu.mms._internal.vdf_bins import _is_skymap, _pitch_angles, _polar_edges
 
 
 def pad_palim(pad, pitch_angles, average: bool = True):

@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from ._psd_units import _data_and_units, _output
-from ._vdf_bins import _d3v, _is_skymap
+from pyrfu.mms._internal.psd_units import _data_and_units, _output
+from pyrfu.mms._internal.vdf_bins import _d3v, _is_skymap
 
 # Volume units matching the phase-space density units, factor from m^3/s^3
 _VOLUME_UNITS = {

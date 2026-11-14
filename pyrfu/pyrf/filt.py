@@ -81,8 +81,7 @@ def filt(inp, f_min: float = 0.0, f_max: float = 0.0, order: int = -1):
     f_max : float, Optional
         Upper limit of the frequency range (Hz), 0 for no low-pass. Default
         is 0, as the fmax = 0 convention of irfu-matlab irf_filt:
-        ``filt(inp, f_min)`` is a high-pass (it was a band pass up to 1 Hz
-        until 2.5.11).
+        ``filt(inp, f_min)`` is a high-pass.
     order : int, Optional
         Order of the elliptic filter. Default is -1.
 

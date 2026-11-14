@@ -2,21 +2,20 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import signal
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _power, _units
+from pyrfu._core.units import _attrs, _power, _units
 from pyrfu.pyrf.calc_dt import calc_dt
 
 
 def autocorr(
-    inp: DataArray, maxlags: Optional[int] = None, normed: Optional[bool] = True
+    inp: DataArray, maxlags: int | None = None, normed: bool = True
 ) -> DataArray:
     r"""Compute the autocorrelation function.
 

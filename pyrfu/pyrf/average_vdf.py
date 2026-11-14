@@ -3,15 +3,17 @@
 
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
 # Local imports
-from pyrfu.pyrf._time import _seconds, _timedelta
+from pyrfu._core.time import _seconds, _timedelta
 from pyrfu.pyrf.ts_skymap import ts_skymap
 
 
-def average_vdf(vdf, n_pts, method: str = "mean"):
+def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     r"""Time averages the velocity distribution functions over `n_pts` in time.
 
     Parameters
@@ -71,7 +73,7 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
 
     func = np.nanmean if method == "mean" else np.nansum
 
-    vdf_avg = np.stack(
+    data_avg = np.stack(
         [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
     )
     energy_avg = np.stack(
@@ -85,7 +87,7 @@ def average_vdf(vdf, n_pts, method: str = "mean"):
     # energy[1, :], which fails for a single time step.
     vdf_avg = ts_skymap(
         time_avg,
-        vdf_avg,
+        data_avg,
         energy_avg,
         phi_avg,
         vdf.theta.data,

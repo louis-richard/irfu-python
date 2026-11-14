@@ -5,14 +5,14 @@
 import numpy as np
 from scipy import constants
 
+# Local imports
+from pyrfu.mms._internal.psd_units import _attrs, _is_relativistic
+from pyrfu.mms._internal.vdf_bins import _charge, _mass, _speed
+
 from ..pyrf.dec_par_perp import dec_par_perp
 from ..pyrf.norm import norm
 from ..pyrf.resample import resample
 from ..pyrf.trace import trace
-
-# Local imports
-from ._psd_units import _attrs, _is_relativistic
-from ._vdf_bins import _speed
 from .rotate_tensor import rotate_tensor
 from .vdf_convert import _in_convention
 
@@ -52,7 +52,10 @@ def make_model_vdf(
     b_xyz : xarray.DataArray
         Time series of the background magnetic field.
     sc_pot : xarray.DataArray
-        Time series of the spacecraft potential.
+        Time series of the spacecraft potential V (V): the speeds are those
+        at infinity, of the energies E + q V (the electrons lose e V, the
+        ions gain q V with the ``charge`` attribute). Give the same potential
+        to `calculate_epsilon`.
     n_s : xarray.DataArray
         Time series of the number density of specie s, at the times of `vdf`.
     v_xyz : xarray.DataArray
@@ -65,7 +68,12 @@ def make_model_vdf(
     Returns
     -------
     model_vdf : xarray.Dataset
-        Distribution function in the same format as vdf, in s^3/km^6. The
+        Distribution function in the same format as vdf, in s^3/km^6, on the
+        grid of vdf corrected for the spacecraft potential: its energies are
+        those at infinity, E + q V (at least 0), at which it is evaluated
+        (the energy widths and the tables energy0 and energy1 stay those of
+        vdf). It is not to be
+        corrected again (e.g. psd_moments with 0 V). The
         channels whose energy is below the spacecraft potential correspond to
         no particle velocity and are NaN (irfu-matlab gives the value at
         v = 0). Their weight is zero in velocity-space integrals (v^2 dv), so
@@ -74,8 +82,8 @@ def make_model_vdf(
     Raises
     ------
     ValueError
-        If the species is not ions or electrons, or if the moments (`n_s`,
-        `v_xyz` and `t_xyz`) are not at the times of `vdf`.
+        If the species is unknown (see `pyrfu.mms.vdf_convert`), or if the
+        moments (`n_s`, `v_xyz` and `t_xyz`) are not at the times of `vdf`.
 
     See also
     --------
@@ -116,10 +124,9 @@ def make_model_vdf(
 
     """
 
-    species = str(vdf.attrs["species"]).lower()
-
-    if species[:1] not in ["i", "e"]:
-        raise ValueError(f"Invalid species {vdf.attrs['species']!r}")
+    # Mass and charge of the species (ValueError for an unknown one): the
+    # proton mass and +/-V were taken for every ion
+    p_mass, charge = _mass(vdf), _charge(vdf)
 
     # The moments are used by position: at the times of the VDF, as
     # calculate_epsilon (the times of n_s only had to differ by a constant, so
@@ -150,15 +157,8 @@ def make_model_vdf(
     r_x = _perp_direction(v_perp.data, r_z)
     r_y = np.cross(r_z, r_x)
 
-    # Check whether particles are electrons or ions
+    # Elementary charge, for the temperatures in eV
     q_e = constants.elementary_charge
-
-    if species[0] == "e":
-        p_mass = constants.electron_mass
-        sc_pot = sc_pot.data
-    else:
-        p_mass = constants.proton_mass
-        sc_pot = -sc_pot.data
 
     # Convert moments to SI units
     vth_para = np.sqrt(2 * t_para * q_e / p_mass)
@@ -186,8 +186,8 @@ def make_model_vdf(
         for r_ in [r_x, r_y, r_z]
     ]
 
-    # Speeds corrected for the spacecraft potential, (time, energy, 1, 1)
-    energy = vdf.energy.data.astype(np.float64) - sc_pot[:, None]
+    # Speeds at infinity, of the energies E + q V, (time, energy, 1, 1)
+    energy = vdf.energy.data.astype(np.float64) + charge * sc_pot.data[:, None]
     below = energy < 0
     # Relativistic speeds (they were non-relativistic)
     speed = _speed(np.clip(energy, 0.0, None), p_mass)[..., None, None]
@@ -205,9 +205,12 @@ def make_model_vdf(
     # No particle velocity below the spacecraft potential
     bi_max_dist[below] = np.nan
 
-    # Make modelPDist file for output, in s^3/km^6
+    # Make modelPDist file for output, in s^3/km^6, on the corrected grid: the
+    # energies at infinity at which the model is evaluated (they were the
+    # measured energies of vdf)
     model_vdf = vdf.copy()
     model_vdf["data"] = vdf.data.copy(data=bi_max_dist * 1e18)
+    model_vdf["energy"] = vdf.energy.copy(data=np.clip(energy, 0.0, None))
     # Without the label of the input units if they differ (e.g. a DEF)
     model_vdf.data.attrs = _attrs(vdf.data.attrs, "s^3/km^6")
 

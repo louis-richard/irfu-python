@@ -12,7 +12,7 @@ from pyrfu.pyrf.optimize_nbins_2d import optimize_nbins_2d
 def brazil(
     beta_para: np.ndarray,
     p_aniso: np.ndarray,
-    bins: list = None,
+    bins: list | None = None,
     threshold: int = 9,
     **kwargs,
 ):

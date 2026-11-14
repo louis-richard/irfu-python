@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import logging
+
+# Built-in imports
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _product, _ratio, _units
+from pyrfu._core.units import _attrs, _product, _ratio, _units
 from pyrfu.pyrf.resample import resample
 
 logger = logging.getLogger(__name__)
@@ -101,7 +103,13 @@ def _bin_centers(edges, log):
 
 
 def histogram2d(
-    inp1, inp2, bins=100, y_range=None, weights=None, density=True, scale="linlin"
+    inp1,
+    inp2,
+    bins=100,
+    y_range=None,
+    weights=None,
+    density=True,
+    scale: Literal["linlin", "loglin", "linlog", "loglog"] = "linlin",
 ):
     r"""Computes 2d histogram of inp2 vs inp1 with nbins number of bins.
 

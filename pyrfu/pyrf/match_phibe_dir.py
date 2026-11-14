@@ -13,7 +13,9 @@ from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 
 
-def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
+def match_phibe_dir(
+    b_xyz, e_xyz, angles: np.ndarray | None = None, f: float | None = None
+):
     r"""Get propagation direction by matching dBpar and "phi". Tries different
     propagation directions and finds the direction perpendicular to the
     magnetic field that gives the best correlation between the electrostatic
@@ -24,7 +26,10 @@ def match_phibe_dir(b_xyz, e_xyz, angles: np.ndarray = None, f: float = None):
             \int E \textrm{d}t = \frac{B_0}{ne \mu_0} B_{wave}
 
     Port of irf_match_phibe_dir.m, except that the angles are used (irfu-matlab
-    only uses their number, spread over 360 degrees).
+    only uses their number, spread over 360 degrees). The directions
+    perpendicular to the mean magnetic field are built from its cross
+    product with x, as irfu-matlab: for a mean field exactly along x they
+    are undefined and the results are NaN.
 
     Parameters
     ----------

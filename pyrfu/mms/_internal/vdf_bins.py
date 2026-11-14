@@ -6,9 +6,10 @@ import numpy as np
 import xarray as xr
 from scipy import constants
 
+from pyrfu.mms._internal.psd_units import _mass_ratio
+
 # Local imports
-from ..pyrf.resample import resample
-from ._psd_units import _mass_ratio
+from pyrfu.pyrf.resample import resample
 
 # Bins of skymaps and pitch-angle distributions, shared by the vdf_* and pad_*
 # functions (irfu-matlab PDist methods)

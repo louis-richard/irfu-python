@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ._vdf_bins import _is_skymap, _source_bins
-from ._vdf_mc import _sample
+from pyrfu.mms._internal.vdf_bins import _is_skymap, _source_bins
+from pyrfu.mms._internal.vdf_mc import _sample
+
 from .vdf_d3v import vdf_d3v
 from .vdf_partial_density import vdf_partial_density
 from .vdf_velocity import vdf_velocity
@@ -35,12 +38,12 @@ def _particles_per_bin(weights, n_tot, n_bin, skip_zero, division):
 
 def vdf_macroparticles(
     vdf,
-    n_tot: int = None,
+    n_tot: int | None = None,
     n_bin: int = 1,
     skip_zero: bool = True,
     sc_pot=None,
-    positioning: str = "random",
-    division: str = "dn",
+    positioning: Literal["random", "center"] = "random",
+    division: Literal["dn", "f", "counts"] = "dn",
     random_state=None,
 ):
     r"""Macroparticles of a skymap distribution, as irfu-matlab

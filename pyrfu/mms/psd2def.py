@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Local imports
-from pyrfu.mms._psd_units import _data_and_units
+from pyrfu.mms._internal.psd_units import _data_and_units
 from pyrfu.mms.vdf_convert import _PSD, vdf_convert
 
 
@@ -32,9 +32,9 @@ def psd2def(inp):
 
     Notes
     -----
-    The masses are in proton masses, as the FPI products: the constant
-    m_p^2 / (2 e^2) was 0.53707, with the atomic mass unit as irfu-matlab, and
-    the fluxes were 1.46 % too large.
+    The masses are in proton masses, as the FPI products; irfu-matlab uses
+    the atomic mass unit (a constant m_p^2 / (2 e^2) of 0.53707), which gives
+    fluxes 1.46 % too large.
 
     The phase-space density is in the convention of its ``relativistic``
     attribute: the relativistic one, f = gamma^3 m J / v^2 with the

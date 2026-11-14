@@ -1,18 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import ast
+
 # Built-in imports
 import importlib
+import inspect
 import logging
 import os
+import re
+import subprocess
+import sys
 import tempfile
+import textwrap
+import typing
 import unittest
 from unittest import mock
 
 # Local imports
 import pyrfu
-
-from .. import _user_config
+from pyrfu._core import user_config as _user_config
 
 
 class PackageLoggerTestCase(unittest.TestCase):
@@ -79,6 +86,140 @@ class UserConfigTestCase(unittest.TestCase):
                     _user_config.set_local_data_dir(config_path, root + os.sep)
             self.assertEqual(_user_config.local_data_dir(path), os.path.normpath(root))
             self.assertListEqual(os.listdir(root), ["c.json"])
+
+
+class ImportSideEffectsTestCase(unittest.TestCase):
+    """What import pyrfu does."""
+
+    def test_import_writes_no_file_and_loads_no_boto3(self):
+        """import pyrfu created the MMS configuration file in the user
+        directory and loaded boto3 (about 0.45 s): the file is created on the
+        first use of pyrfu.mms.MMS_CFG_PATH, boto3 when S3 is listed."""
+        code = textwrap.dedent("""
+            import os, sys, tempfile
+            from unittest import mock
+            import platformdirs
+
+            config_dir = tempfile.mkdtemp()
+            with mock.patch.object(
+                platformdirs, "user_config_dir", return_value=config_dir
+            ):
+                import pyrfu
+                assert os.listdir(config_dir) == [], os.listdir(config_dir)
+                assert "boto3" not in sys.modules
+                from pyrfu.mms import MMS_CFG_PATH
+                assert MMS_CFG_PATH == os.path.join(config_dir, "mms_config.json")
+                assert os.listdir(config_dir) == ["mms_config.json"]
+            """)
+        root = os.path.dirname(os.path.dirname(os.path.abspath(pyrfu.__file__)))
+        env = {**os.environ, "PYTHONPATH": root}
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_mms_cfg_path_on_first_use(self):
+        """MMS_CFG_PATH is not a module constant any more: the module
+        __getattr__ of pyrfu.mms and pyrfu.mms.db_init computes it."""
+        db_init = importlib.import_module("pyrfu.mms.db_init")
+        self.assertNotIn("MMS_CFG_PATH", vars(db_init))
+        self.assertEqual(pyrfu.mms.MMS_CFG_PATH, db_init.MMS_CFG_PATH)
+        self.assertTrue(os.path.isfile(pyrfu.mms.MMS_CFG_PATH))
+
+        for module in [pyrfu.mms, db_init]:
+            with self.assertRaises(AttributeError):
+                getattr(module, "no_such_name")
+
+
+class LiteralFlagsTestCase(unittest.TestCase):
+    """The Literal annotations of the closed sets of flags."""
+
+    def test_literals_match_docstrings(self):
+        """The values of each Literal parameter of the public functions are
+        those of the set in its docstring ("name : {...}"), so that the two
+        don't drift apart."""
+        n_literals = 0
+
+        for sub in pyrfu.__all__:
+            module = getattr(pyrfu, sub)
+
+            for name in getattr(module, "__all__", []):
+                func = getattr(module, name)
+
+                if not inspect.isfunction(func):
+                    continue
+
+                hints = typing.get_type_hints(func)
+                doc = inspect.getdoc(func) or ""
+
+                for param, hint in hints.items():
+                    values = [
+                        v
+                        for arg in typing.get_args(hint) or (hint,)
+                        if typing.get_origin(arg) is typing.Literal
+                        for v in typing.get_args(arg)
+                    ]
+                    if typing.get_origin(hint) is typing.Literal:
+                        values = list(typing.get_args(hint))
+
+                    if not values:
+                        continue
+
+                    n_literals += 1
+                    # "param : {...}", also in a group "a, param : {...}"
+                    names = rf"(?:[a-z_0-9, ]+, )?{param}(?:, [a-z_0-9, ]+)?"
+                    match = re.search(rf"^\s*{names} : \{{([^}}]*)\}}", doc, re.M)
+                    with self.subTest(func=f"{sub}.{name}", param=param):
+                        self.assertIsNotNone(match)
+                        documented = ast.literal_eval(
+                            "[" + " ".join(match.group(1).split()) + "]"
+                        )
+                        self.assertEqual(
+                            set(values), {v for v in documented if v is not None}
+                        )
+
+        # The flags annotated in 2.5.14 (38 parameters)
+        self.assertGreaterEqual(n_literals, 38)
+
+
+class SubPackageNamesTestCase(unittest.TestCase):
+    """The names of the sub-packages: written twice by hand, in the imports of
+    their __init__.py and in __all__."""
+
+    def test_imports_and_all_agree(self):
+        """Each name imported from the sub-package's own modules, or defined
+        in its __init__.py, is in __all__, and each name of __all__ exists
+        (also through a module __getattr__, as MMS_CFG_PATH)."""
+        for sub in pyrfu.__all__:
+            module = getattr(pyrfu, sub)
+            path = module.__file__
+
+            # The sub-packages (pyrfu.constants is a module)
+            if os.path.basename(path) != "__init__.py":
+                continue
+
+            with open(path, encoding="utf-8") as file:
+                tree = ast.parse(file.read())
+
+            names = set()
+
+            for node in tree.body:
+                if isinstance(node, ast.ImportFrom) and node.level == 1:
+                    names |= {a.asname or a.name for a in node.names}
+                elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                    names.add(node.name)
+
+            public = {n for n in names if not n.startswith("_")}
+
+            with self.subTest(sub=sub):
+                self.assertLessEqual(public, set(module.__all__))
+
+                for name in module.__all__:
+                    self.assertTrue(hasattr(module, name), name)
 
 
 if __name__ == "__main__":

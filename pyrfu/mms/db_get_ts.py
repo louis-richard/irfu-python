@@ -3,18 +3,19 @@
 
 # Built-in imports
 import logging
-from typing import Mapping, Optional, Tuple
+from collections.abc import Mapping
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 from pycdfpp import load
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
-from pyrfu.mms.db_init import _read_config
 from pyrfu.mms.get_data import (
     _file_label,
     _get_file_content_sources,
     _list_files_sources,
+    _resolve_source,
 )
 from pyrfu.mms.get_ts import get_ts
 
@@ -24,8 +25,9 @@ from pyrfu.pyrf.ts_append import ts_append
 logger = logging.getLogger(__name__)
 
 
-def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
-    r"""Tokenize dataset name.
+def _split_dataset_name(dataset_name: str) -> tuple[str, Mapping[str, str]]:
+    r"""Split a dataset name (e.g. "mms1_fgm_srvy_l2") into the spacecraft
+    and the file specification (the public `tokenize` reads variable keys).
 
     Parameters
     ----------
@@ -53,28 +55,15 @@ def _tokenize(dataset_name: str) -> Tuple[str, Mapping[str, str]]:
     return probe, var
 
 
-def _resolve_source(source: Optional[str] = "default") -> str:
-    r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
-    case), or the default resource of the MMS configuration
-    (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
-    if not source or source.lower() == "default":
-        return _read_config()["default"]
-
-    if source.lower() in ["local", "sdc", "aws"]:
-        return source.lower()
-
-    raise ValueError("Invalid source. Must be one of 'default', 'local', 'sdc', 'aws'")
-
-
 def _db_get_ts_dict(
     dataset_name: str,
     cdf_names: list[str],
     tint: list[str],
-    verbose: Optional[bool] = True,
-    data_path: Optional[str] = "",
-    source: Optional[str] = "default",
-    support_names: Optional[list[str]] = None,
-) -> dict[str, DataArray]:
+    verbose: bool = True,
+    data_path: str = "",
+    source: str | None = "default",
+    support_names: list[str] | None = None,
+) -> dict[str, Any]:
     r"""Time series of several variables of a dataset, reading each file once
     (i.e., one download per file from the SDC or AWS for all the variables).
 
@@ -84,23 +73,23 @@ def _db_get_ts_dict(
     their first record in the first file that has them, without time.
 
     """
-    mms_id, var = _tokenize(dataset_name)
+    mms_id, var = _split_dataset_name(dataset_name)
     resource = _resolve_source(source)
 
     file_names, sdc_session, headers = _list_files_sources(
         resource, tint, mms_id, var, data_path
     )
 
-    out = {}
+    out: dict[str, Any] = {}
 
     if not file_names:
-        raise FileNotFoundError(f"No files found for {dataset_name}")
+        raise FileNotFoundError(f"No files found for {dataset_name} in {resource}")
 
     if verbose:
         for cdf_name in cdf_names:
             logger.info("Loading %s...", cdf_name)
 
-    support = {}
+    support: dict[str, np.ndarray] = {}
 
     for file_name in file_names:
         file_content = _get_file_content_sources(
@@ -133,9 +122,9 @@ def db_get_ts(
     dataset_name: str,
     cdf_name: str,
     tint: list[str],
-    verbose: Optional[bool] = True,
-    data_path: Optional[str] = "",
-    source: Optional[str] = "default",
+    verbose: bool = True,
+    data_path: str = "",
+    source: str | None = "default",
 ) -> DataArray:
     r"""Get variable time series in the cdf file.
 
@@ -145,8 +134,10 @@ def db_get_ts(
         Name of the dataset.
     cdf_name : str
         Name of the target field in cdf file.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     verbose : bool, Optional
         Status monitoring. Default is verbose = True
     data_path : str, Optional

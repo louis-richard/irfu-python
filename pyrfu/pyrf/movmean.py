@@ -2,16 +2,19 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Optional
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
+
+# Local imports
+from pyrfu._core.typing import TimeArray
 
 
-def movmean(inp: DataArray, window_size: Optional[int] = None) -> DataArray:
+def movmean(inp: DataArray, window_size: int | None = None) -> DataArray:
     r"""Computes running average of the inp over window_size points.
 
     Parameters
@@ -69,7 +72,7 @@ def movmean(inp: DataArray, window_size: Optional[int] = None) -> DataArray:
         raise TypeError("Input must be a xarray.DataArray")
 
     # Gets input data and time
-    time: NDArray[np.datetime64] = inp.time.data
+    time: TimeArray = inp.time.data
     inp_data: NDArray[Any] = inp.data
 
     # Checks if window_size is defined

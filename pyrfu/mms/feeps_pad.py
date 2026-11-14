@@ -122,7 +122,7 @@ def feeps_pad(
     inp_dataset,
     b_bcs,
     bin_size: float = 16.3636,
-    energy: list = None,
+    energy: list | None = None,
     angles_from_bfield: bool = False,
 ):
     r"""Compute pitch angle distribution using FEEPS data.

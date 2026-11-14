@@ -7,7 +7,8 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from ..pyrf._units import _check_units
+from pyrfu._core.units import _check_units
+
 from ..pyrf.resample import resample
 
 

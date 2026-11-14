@@ -7,11 +7,12 @@ import warnings
 # 3rd party imports
 import numpy as np
 
-from ..pyrf._time import _ns
-from ..pyrf.ts_skymap import ts_skymap
+from pyrfu._core.time import _ns
 
 # Local imports
-from ._eis_attrs import _common_attrs
+from pyrfu.mms._internal.epd import _common_attrs
+
+from ..pyrf.ts_skymap import ts_skymap
 from .eis_spec_combine_sc import _idx_closest, _nearest
 
 # Per-time or per-channel attributes, set from the combined skymap
@@ -52,10 +53,8 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     Notes
     -----
     The skymaps (one per spin) are combined at the nearest time of each
-    spacecraft, within half a spin (they were combined by index: one missing
-    spin shifted all the next ones), and NaN where no spacecraft has data
-    (the sum was 0). The energy widths are per channel (they were repeated
-    for every time in a flat array).
+    spacecraft, within half a spin, and NaN where no spacecraft has data. The
+    energy widths are per channel.
 
     See Also
     --------

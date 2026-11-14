@@ -9,8 +9,9 @@ import numpy as np
 from scipy import ndimage
 
 # Local imports
-from ._time import _timedelta
-from ._units import _power, _ratio, _units
+from pyrfu._core.time import _timedelta
+from pyrfu._core.units import _power, _ratio, _units
+
 from .resample import resample
 from .ts_spectr import ts_spectr
 
@@ -131,7 +132,9 @@ def wavepolarize_means(
     which the results agree to rounding.
 
     ``b_wave`` and ``b_bgd`` should be from the same satellite and in the same
-    coordinates
+    coordinates. The field-aligned frame is built from the cross product of
+    ``b_bgd`` with y, as irfu-matlab: where ``b_bgd`` is exactly along y it
+    is undefined and the results are NaN.
 
     .. warning::
         If one component is an order of magnitude or more  greater than the

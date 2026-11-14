@@ -5,18 +5,16 @@
 import datetime
 import posixpath
 import re
-from typing import Any, Mapping, Optional, Union
+from collections.abc import Mapping
+from typing import Any
 
 # 3rd party imports
-import boto3
 import numpy as np
-from botocore import UNSIGNED
-from botocore.config import Config
 from botocore.exceptions import ClientError
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
-from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
+from pyrfu.pyrf.time_clip import _time_interval
 
 # Public copy of the MMS archive (CDAWeb) on NASA HelioCloud, used if no bucket
 # is set in the configuration file
@@ -26,6 +24,13 @@ HELIOCLOUD_MMS = "gov-nasa-hdrl-data1/spdf/cdaweb/data/mms"
 def _s3_resource():
     r"""S3 resource, with unsigned (anonymous) requests if no AWS credentials
     are available, which is enough for public buckets such as HelioCloud's."""
+    # boto3 imported here (about 0.45 s, it was imported by import pyrfu); the
+    # botocore exceptions, light, are imported with the module
+    # pylint: disable=import-outside-toplevel
+    import boto3
+    from botocore import UNSIGNED
+    from botocore.config import Config
+
     session = boto3.session.Session()
 
     if session.get_credentials() is None:
@@ -34,7 +39,7 @@ def _s3_resource():
     return session.resource("s3")
 
 
-def _bucket_and_prefix(bucket_prefix: Optional[str] = "") -> tuple[str, str]:
+def _bucket_and_prefix(bucket_prefix: str = "") -> tuple[str, str]:
     r"""Bucket name and key prefix from "bucket/prefix" (or "s3://bucket/prefix"),
     by default from the configuration file, else HelioCloud."""
     if not bucket_prefix:
@@ -65,9 +70,9 @@ def _tint_bounds(tint) -> tuple[datetime.datetime, datetime.datetime]:
 
 def list_files_aws(
     tint: list[str],
-    mms_id: Union[str, int],
+    mms_id: str | int,
     var: Mapping[str, str],
-    bucket_prefix: Optional[str] = "",
+    bucket_prefix: str = "",
 ) -> list[dict[str, Any]]:
     r"""List files from Amazon Web Services (AWS).
 
@@ -78,8 +83,10 @@ def list_files_aws(
 
     Parameters
     ----------
-    tint : list of str
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Index of the spacecraft
     var : dict
@@ -107,7 +114,7 @@ def list_files_aws(
     FileNotFoundError
         If the bucket can't be listed (e.g., it doesn't exist or access is denied).
     TypeError
-        If the time interval is not a list or if tint values are not str.
+        If the time interval is not one of the forms of `pyrfu.pyrf.time_clip`.
 
     Notes
     -----
@@ -117,16 +124,8 @@ def list_files_aws(
     SDC.
 
     """
-    # Check time interval
-    if isinstance(tint, list):
-        tint_array = np.array(tint)
-    else:
-        raise TypeError("tint must be a list!!")
-
-    if isinstance(tint_array[0], str):
-        t_start, t_end = _tint_bounds(iso86012datetime64(tint_array))
-    else:
-        raise TypeError("Values must be in str!!")
+    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    t_start, t_end = _tint_bounds(_time_interval(tint))
 
     if not isinstance(mms_id, str):
         mms_id = str(mms_id)
@@ -152,7 +151,7 @@ def list_files_aws(
     # restricts the listing to that day on the server side.
     day = datetime.datetime(t_start.year, t_start.month, t_start.day)
     day -= datetime.timedelta(days=1)
-    files = {}
+    files: dict[str, tuple[tuple[int, ...], Any]] = {}
 
     while day < t_end:
         month_dir = posixpath.join(*directory, day.strftime("%Y"), day.strftime("%m"))
@@ -179,8 +178,8 @@ def list_files_aws(
                 if not matches:
                     continue
 
-                time_tag, *version = matches.groups()
-                version = tuple(map(int, version))
+                time_tag, *version_str = matches.groups()
+                version = tuple(map(int, version_str))
 
                 # Keep the latest version of each file
                 if time_tag not in files or version > files[time_tag][0]:

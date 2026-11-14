@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Union
-
 # 3rd party imports
 import numpy as np
 from numpy.typing import NDArray
 
+# Local imports
+from pyrfu._core.typing import TimeArray
+
 
 def iso86012datetime64(
-    time: Union[str, list[str], tuple[str, ...], NDArray[np.str_]],
-) -> NDArray[np.datetime64]:
+    time: str | list[str] | tuple[str, ...] | NDArray[np.str_],
+) -> TimeArray:
     r"""Convert ISO8601 time format to datetime64 in ns units.
 
     Parameters

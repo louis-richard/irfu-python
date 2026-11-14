@@ -21,13 +21,13 @@ import posixpath
 import re
 import shutil
 import time
-from typing import Callable, Optional
+from collections.abc import Callable, Mapping
 
 # 3rd party imports
 import platformdirs
 
 # Local imports
-from pyrfu._user_config import atomic_write as _atomic_write
+from pyrfu._core.user_config import atomic_write as _atomic_write
 from pyrfu.mms.db_init import _read_config
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class RemoteFile:
 
     source: str
     path: str
-    size: Optional[int] = None
+    size: int | None = None
     url: str = ""
     bucket: str = ""
     key: str = ""
@@ -56,7 +56,7 @@ class RemoteFile:
         return posixpath.basename(self.path)
 
 
-def file_size(size) -> Optional[int]:
+def file_size(size) -> int | None:
     r"""File size (bytes) of a listing, None if unknown."""
     try:
         return int(size)
@@ -85,7 +85,7 @@ def enabled() -> bool:
     return _settings()["enabled"]
 
 
-def mms_path(mms_id: str, var: dict, file_name: str) -> str:
+def mms_path(mms_id: str, var: Mapping[str, str], file_name: str) -> str:
     r"""Path of an MMS file in the layout of the SDC: spacecraft, instrument,
     rate, level[, data type], year, month[, day for burst], file name."""
     parts = [f"mms{mms_id}", var["inst"], var["tmmode"], var["lev"]]
@@ -144,7 +144,7 @@ def listing(key: dict, lister: Callable[[], list]) -> list:
     return items
 
 
-def _read_cached(path: str, size: Optional[int]) -> Optional[bytes]:
+def _read_cached(path: str, size: int | None) -> bytes | None:
     r"""Content of a cached file, None if it is missing or has not the expected
     size (it is then removed). Refreshes its time of last use."""
     try:

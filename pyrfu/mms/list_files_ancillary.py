@@ -6,15 +6,13 @@ import datetime
 import glob
 import os
 import re
-from typing import Optional, Union
 
 # 3rd party imports
 import numpy as np
 
 # Local imports
-from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.iso86012datetime import iso86012datetime
-from ..pyrf.iso86012datetime64 import iso86012datetime64
+from ..pyrf.time_clip import _time_interval
 from .db_init import _read_config
 
 # Products of the whole constellation: one file for the four spacecraft
@@ -22,7 +20,7 @@ from .db_init import _read_config
 _CONSTELLATION_PRODUCTS = ("defq", "predq")
 
 
-def _sc_name(product: str, mms_id: Union[str, int]) -> str:
+def _sc_name(product: str, mms_id: str | int) -> str:
     r"""Spacecraft part of the names of the files of an ancillary product:
     mms1-4, or mms for the products of the constellation."""
     return "mms" if product.lower() in _CONSTELLATION_PRODUCTS else f"mms{mms_id}"
@@ -30,17 +28,19 @@ def _sc_name(product: str, mms_id: Union[str, int]) -> str:
 
 def list_files_ancillary(
     tint: list[str],
-    mms_id: Union[str, int],
+    mms_id: str | int,
     product: str,
-    data_path: Optional[str] = "",
+    data_path: str = "",
 ) -> list[str]:
     r"""Find available ancillary files in the data directories for the target product
     type.
 
     Parameters
     ----------
-    tint : list of str
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Spacecraft index (not used for "defq" and "predq", which cover the
         four spacecraft).
@@ -72,18 +72,8 @@ def list_files_ancillary(
 
     mms_id = str(mms_id)
 
-    # Check time interval
-    if isinstance(tint, list):
-        tint_array = np.array(tint)
-    else:
-        raise TypeError("tint must be a list!!")
-
-    # Convert time interval to ISO 8601
-    if isinstance(tint_array[0], str):
-        tint_iso8601 = datetime642iso8601(iso86012datetime64(tint_array))
-        t_start, t_end = iso86012datetime(tint_iso8601)
-    else:
-        raise TypeError("Values must be in str!!")
+    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    t_start, t_end = iso86012datetime(np.array(_time_interval(tint)))
 
     # PAD time interval to handle ancillary file start after midnight
     t_start -= datetime.timedelta(days=1)
@@ -113,7 +103,7 @@ def list_files_ancillary(
     file_regex = re.compile(
         rf"{re.escape(stem)}_([0-9]{{7}})_([0-9]{{7}})\.V([0-9]{{2}})"
     )
-    latest = {}
+    latest: dict[tuple[str, str], tuple[str, str]] = {}
 
     for file in files:
         matches = file_regex.fullmatch(os.path.basename(file))

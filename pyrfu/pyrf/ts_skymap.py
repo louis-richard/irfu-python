@@ -2,29 +2,30 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Any, Iterable, Mapping, Optional, Union
+from typing import Any
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from numpy.typing import NDArray
-from xarray.core.dataset import Dataset
+from xarray import Dataset
 
-NDArrayFloats = NDArray[Union[np.float32, np.float64]]
+# Local imports
+from pyrfu._core.typing import FloatArray, TimeArray
 
 
 def ts_skymap(
-    time: NDArray[np.datetime64],
-    data: NDArrayFloats,
-    energy: NDArrayFloats,
-    phi: NDArrayFloats,
-    theta: NDArrayFloats,
-    energy0: Optional[NDArrayFloats] = None,
-    energy1: Optional[NDArrayFloats] = None,
-    esteptable: Optional[NDArray[np.uint8]] = None,
-    attrs: Optional[Mapping[str, object]] = None,
-    glob_attrs: Optional[Mapping[str, object]] = None,
-    coords_attrs: Optional[Mapping[str, Mapping[str, Iterable[Any]]]] = None,
+    time: TimeArray,
+    data: FloatArray,
+    energy: FloatArray,
+    phi: NDArray[np.number[Any]],
+    theta: NDArray[np.number[Any]],
+    energy0: FloatArray | None = None,
+    energy1: FloatArray | None = None,
+    esteptable: np.ndarray | None = None,
+    attrs: dict[str, Any] | None = None,
+    glob_attrs: dict[str, Any] | None = None,
+    coords_attrs: dict[str, dict[str, Any]] | None = None,
 ) -> Dataset:
     r"""Creates a skymap of the distribution function.
 

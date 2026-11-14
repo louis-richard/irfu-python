@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Literal
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from ..pyrf.calc_fs import calc_fs
@@ -17,6 +17,9 @@ from ..pyrf.time_clip import time_clip
 from ..pyrf.ts_scalar import ts_scalar
 from ..pyrf.wavelet import wavelet
 from .probe_fields import probe_fields
+
+# Built-in imports
+
 
 # Separation along the boom of the two single-probe fields of a pair (m):
 # half of the tip-to-tip lengths 120 m and 29.2 m (each field is between its
@@ -59,13 +62,13 @@ def fk_power_spectrum(
     v6: DataArray,
     b_xyz: DataArray,
     tint: Sequence[str],
-    probe: int,
-    z_phase: Optional[DataArray] = None,
+    probe: Literal[1, 3, 5],
+    z_phase: DataArray | None = None,
     cav: int = 128,
     field: bool = True,
     n_k: int = 101,
     n_f: int = 200,
-    df: Optional[float] = None,
+    df: float | None = None,
 ) -> DataArray:
     r"""Frequency-wave number power spectrum from the probes of one pair of
     MMS EDP (single-spacecraft interferometry), as irfu-matlab
@@ -209,7 +212,7 @@ def fk_power_spectrum(
 
     # Frequencies of irf_wavelet: logarithmic from f_nyq / 100 to
     # f_nyq / 10^0.01, or linear from df to f_nyq
-    options = {"return_power": False, "cut_edge": False}
+    options: dict[str, Any] = {"return_power": False, "cut_edge": False}
 
     if df is None:
         f_nyq = calc_fs(e_1) / 2

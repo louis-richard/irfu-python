@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from pycdfpp import _pycdfpp, load, to_datetime64
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 
 def _pycdfpp_attributes_to_dict(attributes):
@@ -37,7 +36,7 @@ def _pycdfpp_attributes_to_dict(attributes):
     return attributes_dict
 
 
-def get_variable(file_path: Union[str, bytes], cdf_name: str) -> DataArray:
+def get_variable(file_path: str | bytes, cdf_name: str) -> DataArray:
     r"""Read field named cdf_name in file and convert to DataArray.
 
     Parameters

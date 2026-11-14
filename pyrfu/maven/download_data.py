@@ -12,7 +12,8 @@ import numpy as np
 import requests
 
 # Local imports
-from .._user_config import local_data_dir
+from pyrfu._core.user_config import local_data_dir
+
 from ..mms.download_data import _download_file
 from ..mms.list_files_sdc import SDC_TIMEOUT
 from .db_init import config_path
@@ -133,17 +134,14 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
     ------
     FileNotFoundError
         If the data path doesn't exist, if no file is found, or none of the
-        plan and file extension (only the MAG .sts files of the plan were
-        downloaded: the other instruments downloaded nothing, silently).
+        plan and file extension.
     requests.HTTPError
-        If the search or a download fails (the error page was saved as the
-        file).
+        If the search or a download fails.
 
     Notes
     -----
     Each file is downloaded to a temporary file next to it, moved to its name
-    when complete: a failed download leaves no file (a temporary copy of each
-    file was left in the temporary directory).
+    when complete: a failed download leaves no file.
 
     """
 
@@ -152,35 +150,34 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
     if login or password:
         logger.info("login not implemented: the public data are downloaded")
 
-    sdc_session = _login_lasp()
-
     headers = {"User-Agent": "pyrfu"}
 
     url = _construct_url(tint, var, lasp_url)
 
-    # (no timeout, and an error page was taken as the listing)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ResourceWarning)
-        response = sdc_session.get(
-            url, verify=True, headers=headers, timeout=SDC_TIMEOUT
-        )
-        response.raise_for_status()
-        http_json = response.json()
-
-    files = [f for f in http_json["files"] if _wanted(f["file_name"], var)]
-
-    if not files:
-        raise FileNotFoundError("No files to download!!")
-
-    for file in files:
-        _, out_file, dwl_url = _make_path(file, var, lasp_url, data_path)
-
-        logger.info("Downloading %s from %s...", file["file_name"], dwl_url)
-
+    # The session closed also when the search or a download fails (it was left
+    # open)
+    with _login_lasp() as sdc_session:
+        # (no timeout, and an error page was taken as the listing)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
-            _download_file(
-                sdc_session, dwl_url, headers, out_file, file.get("file_size")
+            response = sdc_session.get(
+                url, verify=True, headers=headers, timeout=SDC_TIMEOUT
             )
+            response.raise_for_status()
+            http_json = response.json()
 
-    sdc_session.close()
+        files = [f for f in http_json["files"] if _wanted(f["file_name"], var)]
+
+        if not files:
+            raise FileNotFoundError("No files to download!!")
+
+        for file in files:
+            _, out_file, dwl_url = _make_path(file, var, lasp_url, data_path)
+
+            logger.info("Downloading %s from %s...", file["file_name"], dwl_url)
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=ResourceWarning)
+                _download_file(
+                    sdc_session, dwl_url, headers, out_file, file.get("file_size")
+                )

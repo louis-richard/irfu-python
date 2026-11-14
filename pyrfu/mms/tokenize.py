@@ -6,7 +6,7 @@
 import functools
 import json
 import os
-from typing import Mapping
+from collections.abc import Mapping
 
 # Parameters with keys in mms_keys.json, or kept for keys to come (irfu-matlab
 # names: energyi/e, es12/34, adcoff, flux-amb-pm2). Removed for want of data:

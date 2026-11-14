@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import Tuple
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from pyrfu.pyrf._units import _attrs, _units
+from pyrfu._core.units import _attrs, _units
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
@@ -18,7 +16,7 @@ from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 
 def dec_par_perp(
     inp: DataArray, b_bgd: DataArray, flag_spin_plane: bool = False
-) -> Tuple[DataArray, DataArray, DataArray]:
+) -> tuple[DataArray, DataArray, DataArray]:
     r"""Decomposes a vector into par/perp to B components. If flagspinplane
     decomposes components to the projection of ``b0`` into the XY plane.
     ``alpha`` gives the angle between ``b0`` and the XY. plane.

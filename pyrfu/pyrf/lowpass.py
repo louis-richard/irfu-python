@@ -3,13 +3,12 @@
 
 # Built-in imports
 import warnings
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import signal
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
 from .calc_fs import calc_fs
@@ -22,8 +21,8 @@ _ORDER, _R_PASS, _R_STOP = 4, 0.1, 60
 def lowpass(
     inp,
     f_cut: float,
-    f_s: Optional[float] = None,
-    fhz: Optional[float] = None,
+    f_s: float | None = None,
+    fhz: float | None = None,
 ):
     r"""Low-pass filter, as irfu-matlab irf_lowpass: the linear trend is
     removed, the rest filtered forward and backward (zero phase) with a
@@ -61,10 +60,8 @@ def lowpass(
     -----
     The filter is applied in second-order sections, with the padding of
     MATLAB's filtfilt (12 samples, three times the order). The (b, a) form
-    used before loses precision as f_cut decreases relative to the Nyquist
-    frequency, and is unstable below about 3e-5 of it (e.g., 0.1 Hz at
-    8192 Hz); its padding was 15 samples, which changed the first and last
-    samples.
+    loses precision as f_cut decreases relative to the Nyquist frequency,
+    and is unstable below about 3e-5 of it (e.g., 0.1 Hz at 8192 Hz).
 
     """
 

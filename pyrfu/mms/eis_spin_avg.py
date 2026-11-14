@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 # Local imports
-from ._epd import _spin_reduce
+from pyrfu.mms._internal.epd import _spin_reduce
 
 
 def _spin_segments(spin):
@@ -64,8 +64,7 @@ def eis_spin_avg(eis_allt, method: str = "mean"):
     are left out. Each spin is time stamped at its first sample, as
     :func:`pyrfu.mms.hpca_spin_sum`, the FEEPS spin averages and IDL SPEDAS
     ``mms_eis_pad_spinavg``; IDL SPEDAS and pySPEDAS stamp the spin-averaged
-    spectra at the last sample. The time stamp was the 5th of the 8 survey
-    samples.
+    spectra at the last sample.
 
     See Also
     --------

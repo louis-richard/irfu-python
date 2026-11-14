@@ -3,13 +3,15 @@
 
 # Built-in imports
 import warnings
+from typing import cast
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ._eis_attrs import _common_attrs
+from pyrfu.mms._internal.epd import _common_attrs
+
 from .dsl2gse import dsl2gse
 from .eis_spin_avg import _spin_segments
 
@@ -44,8 +46,8 @@ def _angle_attrs(name, frame, valid_max):
 
 def eis_ang_ang(
     inp_allt,
-    en_chan: list = None,
-    defatt: xr.Dataset = None,
+    en_chan: list | np.ndarray | None = None,
+    defatt: xr.Dataset | None = None,
     frame: str = "dbcs",
 ):
     r"""Generates EIS angle-angle distribution: the fluxes binned in the look
@@ -90,11 +92,6 @@ def eis_ang_ang(
     of the spin in it, NaN without samples. The spins are those of
     :func:`pyrfu.mms.eis_spin_avg`: complete spins at their first sample.
 
-    The azimuths were in [0, 360] and the polar angles in [0, 180] but binned
-    on [-180, 180] and [-80, 80]: about 19 % of the samples were binned, at
-    the wrong polar angles (+90 degrees). Empty cells were 0, and the last
-    sample in a cell was kept. Without `defatt`, the angles were in GSE.
-
     """
 
     if frame.lower() not in ["dbcs", "gse"]:
@@ -121,7 +118,8 @@ def eis_ang_ang(
         d_xyz = inp_allt[f"look_{scope}"]
 
         if frame.lower() == "dbcs":
-            d_xyz = dsl2gse(d_xyz, defatt, -1)
+            # defatt is given for frame dbcs (checked above)
+            d_xyz = dsl2gse(d_xyz, cast(xr.Dataset, defatt), -1)
 
         look.append(d_xyz.data)
 

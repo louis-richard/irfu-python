@@ -6,7 +6,7 @@ import numpy as np
 from scipy import ndimage
 
 # Local imports
-from ._time import _seconds
+from pyrfu._core.time import _seconds
 
 WEIGHTS = {
     5: np.array([0.1, 0.25, 0.3, 0.25, 0.1]),
@@ -14,7 +14,7 @@ WEIGHTS = {
 }
 
 
-def waverage(inp, f_sampl: float = None, n_pts: int = 7):
+def waverage(inp, f_sampl: float | None = None, n_pts: int = 7):
     r"""Computes weighted average.
 
     Port of irf_waverage.m: the data are put on a regular time grid at the

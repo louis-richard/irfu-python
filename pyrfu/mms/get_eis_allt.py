@@ -4,6 +4,7 @@
 # Built-in imports
 import logging
 import re
+from typing import Any
 
 # 3rd party imports
 import numpy as np
@@ -12,11 +13,11 @@ from pycdfpp import load
 
 # Local imports
 from ..pyrf.ts_append import ts_append
-from .db_get_ts import _resolve_source
 from .get_data import (
     _file_label,
     _get_file_content_sources,
     _list_files_sources,
+    _resolve_source,
 )
 from .get_ts import get_ts
 
@@ -93,8 +94,10 @@ def get_eis_allt(
     tar_var : str
         Key of the target variable like
         {data_unit}_{dtype}_{specie}_{data_rate}_{data_lvl}.
-    tint : list of str
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : int or float or str
         Index of the spacecraft.
     verbose : bool, Optional
@@ -163,9 +166,11 @@ def get_eis_allt(
     )
 
     if not file_names:
-        raise FileNotFoundError("no files for these inputs!!")
+        raise FileNotFoundError(f"No files found for {pref} in {resource}")
 
-    outdict, energy = {}, None
+    # Time series by key, and the energy table of the files (of the first)
+    outdict: dict[str, Any] = {}
+    energy: Any = None
 
     for file_name in file_names:
         file_content = _get_file_content_sources(

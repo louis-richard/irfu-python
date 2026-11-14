@@ -9,7 +9,8 @@ import xarray as xr
 from scipy import signal
 
 # Local imports
-from ._units import _attrs, _power, _ratio, _units
+from pyrfu._core.units import _attrs, _power, _ratio, _units
+
 from .calc_fs import calc_fs
 
 logger = logging.getLogger(__name__)

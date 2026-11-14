@@ -2,18 +2,16 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-from typing import Union
 
 # 3rd party imports
 import numpy as np
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from xarray import DataArray, Dataset
 
 # Local imports
 from .calc_dt import calc_dt
 
 
-def calc_fs(inp: Union[Dataset, DataArray]) -> float:
+def calc_fs(inp: Dataset | DataArray) -> float:
     r"""Computes the sampling frequency of the input time series.
 
     Parameters

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Literal
+
 # 3rd party imports
 import numpy as np
 
@@ -8,7 +11,7 @@ import numpy as np
 from ..models.ion_anisotropy_thresh import ion_anisotropy_thresh
 
 
-def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list = None):
+def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list | None = None):
     r"""Add the thresholds for the electromagnetic ion temperature anisotropy driven
     instabilities from linear Vlasov theory [1]_ [2]_ . The thresholds are given at
     :math:`\gamma = 10^{-2} \omega_{ci}` . Also changes the scale and limits of the
@@ -37,7 +40,14 @@ def ion_brazil_plot_thresh(ax, legend: bool = True, colors: list = None):
 
     # Proton - electron plasma thresholds [1]_: proton cyclotron, mirror-mode,
     # parallel firehose and oblique firehose instabilities
-    thresholds = [
+    thresholds: list[
+        tuple[
+            Literal[
+                "proton-cyclotron", "mirror", "parallel-firehose", "oblique-firehose"
+            ],
+            str,
+        ]
+    ] = [
         ("proton-cyclotron", "Proton cyclotron"),
         ("mirror", "Mirror Mode"),
         ("parallel-firehose", "Parallel Firehose"),

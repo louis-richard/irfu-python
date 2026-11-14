@@ -4,7 +4,7 @@
 # Built-in imports
 import os
 import shutil
-from typing import Mapping, Optional, Union
+from collections.abc import Mapping
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
@@ -14,9 +14,9 @@ from pyrfu.mms.list_files import list_files
 def copy_files(
     var: Mapping[str, str],
     tint: list[str],
-    mms_id: Union[int, str],
+    mms_id: int | str,
     tar_path: str,
-    data_path: Optional[str] = "",
+    data_path: str = "",
 ) -> None:
     r"""Copy files from the local data path to the target path.
 
@@ -28,8 +28,10 @@ def copy_files(
             * var["tmmode"] : data rate.
             * var["lev"] : data level.
             * var["dtype"] : data type.
-    tint : list
-        Time interval.
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : int or str
         Index of the spacecraft.
     tar_path : str

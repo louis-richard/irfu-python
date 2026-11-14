@@ -2,13 +2,16 @@
 # -*- coding: utf-8 -*-
 
 # 3rd party imports
+from typing import Literal
+
 import numpy as np
 import xarray as xr
 
 # Local imports
-from ._psd_units import _attrs
-from ._vdf_bins import _bins_d3v, _is_skymap, _source_bins
-from ._vdf_mc import _sample
+from pyrfu.mms._internal.psd_units import _attrs
+from pyrfu.mms._internal.vdf_bins import _bins_d3v, _is_skymap, _source_bins
+from pyrfu.mms._internal.vdf_mc import _sample
+
 from .vdf_convert import _PSD, _relativistic_psd
 from .vdf_shift import _shift
 from .vdf_velocity import _rotation_matrices
@@ -57,7 +60,7 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
 def vdf_rebin(
     vdf,
     grid,
-    base: str = "sph",
+    base: Literal["sph", "cart"] = "sph",
     rotation=None,
     n_mc: int = 200,
     sc_pot=None,

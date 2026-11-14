@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
 import warnings
+from collections.abc import Hashable
+
+# Built-in imports
+from typing import Literal, cast
 
 # 3rd party imports
 import matplotlib as mpl
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
+from matplotlib.colors import Colormap
 
 # Local imports
 from .colorbar import colorbar as _add_colorbar
@@ -17,10 +22,10 @@ from .colorbar import colorbar as _add_colorbar
 def plot_spectr(
     axis,
     inp,
-    yscale: str = "linear",
-    cscale: str = "linear",
-    clim: list = None,
-    cmap: str = None,
+    yscale: Literal["linear", "log"] = "linear",
+    cscale: Literal["linear", "log"] = "linear",
+    clim: list | None = None,
+    cmap: str | Colormap | None = None,
     colorbar: str = "right",
     aspect: str = "auto",
     pad: float = 0.01,
@@ -66,7 +71,7 @@ def plot_spectr(
     **kwargs
         Keyword arguments forwarded to matplotlib.axes.Axes.pcolormesh (e.g.,
         alpha, edgecolors), which can also replace rasterized=True and
-        shading="auto". They were ignored before.
+        shading="auto".
 
     Returns
     -------
@@ -94,7 +99,8 @@ def plot_spectr(
         _, axis = plt.subplots(1)
 
     if not cmap or isinstance(cmap, str):
-        cmap = mpl.colormaps.get_cmap(cmap)
+        # get_cmap(None) is the image.cmap colormap; the stub omits None
+        cmap = mpl.colormaps.get_cmap(cmap)  # type: ignore[arg-type]
 
     if isinstance(inp, xr.DataArray):
         x_data, y_data = [inp.coords[inp.dims[0]].data, inp.coords[inp.dims[1]].data]
@@ -115,6 +121,8 @@ def plot_spectr(
             for name in inp.coords
             if name not in inp.dims and inp.data.dims[1] in inp[name].dims
         ]
+
+        depend_1_name: Hashable
 
         if "energy" in non_dim_coords:
             depend_1_name = "energy"
@@ -174,8 +182,8 @@ def plot_spectr(
     )
 
     if np.issubdtype(x_data.dtype, np.datetime64):
-        locator = mpl.dates.AutoDateLocator(minticks=3, maxticks=7)
-        formatter = mpl.dates.ConciseDateFormatter(locator)
+        locator: mpl.ticker.Locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
+        formatter = mdates.ConciseDateFormatter(locator)
         axis.xaxis.set_major_locator(locator)
         axis.xaxis.set_major_formatter(formatter)
 
@@ -188,7 +196,8 @@ def plot_spectr(
     axis.set_aspect(aspect)
 
     if colorbar.lower() in ["right", "top"]:
-        cax = _add_colorbar(image, axis, pad, 0.01, colorbar.lower())
+        where = cast(Literal["right", "top"], colorbar.lower())
+        cax = _add_colorbar(image, axis, pad, 0.01, where)
         cax.set_axisbelow(False)
 
         if cscale == "log":

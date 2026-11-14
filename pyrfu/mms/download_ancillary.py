@@ -4,7 +4,7 @@
 # Built-in imports
 import logging
 import os
-from typing import Literal, Optional, Union
+from typing import Literal
 
 # Local imports
 from pyrfu.mms.db_init import _read_config
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 def _make_path_local(
     file: dict,
     product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],
-    mms_id: Union[str, int],
-    data_path: Optional[str] = "",
+    mms_id: str | int,
+    data_path: str = "",
 ) -> str:
     r"""Construct path of the data file using the standard convention.
 
@@ -68,8 +68,8 @@ def _make_path_local(
 def download_ancillary(
     product: Literal["predatt", "predeph", "predq", "defatt", "defeph", "defq"],
     tint: list,
-    mms_id: Union[str, int],
-    data_path: Optional[str] = "",
+    mms_id: str | int,
+    data_path: str = "",
 ):
     r"""Download files from MMS SDC.
 
@@ -80,8 +80,10 @@ def download_ancillary(
     ----------
     product : {"predatt", "predeph", "predq", "defatt", "defeph", "defq"}
         Ancillary type.
-    tint : list
-        Time interval
+    tint : array_like or xarray.DataArray
+        Time interval: the start and stop times as ISO 8601 str, datetime64
+        or datetime.datetime, or a time series (its first and last times), as
+        `pyrfu.pyrf.time_clip`.
     mms_id : str or int
         Spacecraft index (not used for "defq" and "predq", which cover the
         four spacecraft: ancillary/mms/defq).

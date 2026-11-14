@@ -4,13 +4,13 @@
 # Built-in imports
 import os
 import re
-from typing import Optional
 
 # 3rd party imports
 import numpy as np
 
 # Local imports
-from .._user_config import local_data_dir
+from pyrfu._core.user_config import local_data_dir
+
 from .db_init import config_path
 
 
@@ -18,8 +18,8 @@ def _list_files(
     tint: list,
     product: str,
     tree_dirs: list,
-    data_path: Optional[str] = "",
-    tree: Optional[bool] = False,
+    data_path: str = "",
+    tree: bool = False,
 ) -> list:
     r"""Find the latest version of the daily files of a Solar Orbiter product
     covering the time interval.
@@ -104,7 +104,7 @@ def _list_files(
 
     # Latest version of each date: (version, public), so that the public file
     # wins over the -cdag one of the same version
-    files = {}
+    files: dict[np.datetime64, tuple[tuple[int, bool], str]] = {}
 
     for local_dir in local_dirs:
         for root, _, file_names in os.walk(local_dir):

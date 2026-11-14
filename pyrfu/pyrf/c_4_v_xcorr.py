@@ -3,15 +3,17 @@
 
 # Built-in imports
 import warnings
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Literal
 
 # 3rd party imports
 import numpy as np
 from scipy import optimize, signal
-from xarray.core.dataarray import DataArray
+from xarray import DataArray
 
 # Local imports
-from ._time import _seconds
+from pyrfu._core.time import _seconds
+
 from .iso86012datetime64 import iso86012datetime64
 
 # Elements of the arrays evaluated at once (memory bound for long windows)
@@ -326,13 +328,13 @@ def c_4_v_xcorr(
     tint: Sequence[str],
     s_mms: Sequence[DataArray],
     r_mms: Sequence[DataArray],
-    max_lag: Optional[float] = None,
-    tau: Optional[Sequence[float]] = None,
-    pattern: Optional[DataArray] = None,
+    max_lag: float | None = None,
+    tau: Sequence[float] | None = None,
+    pattern: DataArray | None = None,
     errors: bool = True,
-    fit: str = "none",
-    f_max: Optional[float] = None,
-    frame: str = "spacecraft",
+    fit: Literal["none", "scale", "scale_offset"] = "none",
+    f_max: float | None = None,
+    frame: Literal["spacecraft", "positions"] = "spacecraft",
 ) -> dict:
     r"""Four-spacecraft timing by cross-correlation, with error estimates.
 
@@ -724,7 +726,8 @@ def c_4_v_xcorr(
 
     # Scales and offsets, residuals h in units of the pattern (48), their
     # mean squares Imin, and correlation with the pattern
-    h_res, i_min = [None] * 4, np.full(4, np.nan)
+    h_res: list[Any] = [None] * 4  # ndarray or None
+    i_min = np.full(4, np.nan)
     scales, offsets = np.full(4, np.nan), np.full((4, *p_pat.shape[1:]), np.nan)
     corr = np.full(4, np.nan)
 
