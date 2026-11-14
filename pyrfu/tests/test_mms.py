@@ -4858,6 +4858,16 @@ class KeywordOnlyOptionsTestCase(unittest.TestCase):
                 self.assertGreater(len(kinds), n_positional)
 
 
+def _assert_close_to_scale(actual, desired, rtol):
+    # Relative to the largest value of the moment: its elements that are zero
+    # (e.g. P_xz of a drift in the xy plane) are rounding, at 1e-17 of the
+    # scale, and differ with the BLAS when the matrix products have different
+    # shapes (OpenBLAS, but not Apple Accelerate)
+    desired = np.asarray(desired)
+    scale = np.max(np.abs(desired[np.isfinite(desired)]), initial=0.0)
+    np.testing.assert_allclose(actual, desired, rtol=rtol, atol=rtol * scale)
+
+
 @ddt
 class PsdMomentsTestCase(unittest.TestCase):
     @data(
@@ -4930,12 +4940,15 @@ class PsdMomentsTestCase(unittest.TestCase):
 
         result = mms.psd_moments(vdf_nan, sc_pot, en_channels=[4, 32])
         expected = mms.psd_moments(vdf_zero, sc_pot)
-        for res, exp in zip(result, expected):
-            np.testing.assert_allclose(res.data, exp.data, rtol=1e-12)
+        self._assert_moments_equal(
+            [res.data for res in result], [exp.data for exp in expected]
+        )
 
     def test_psd_moments_time_blocks(self):
         # The angular integrals by blocks of 256 times: the moments of each
-        # time as those of its own distribution
+        # time as those of its own distribution (to rounding: the matrix
+        # products of 256 times and of one are summed in different orders by
+        # some BLAS, 1e-11 on the particle flux, a difference of large terms)
         vdf, sc_pot = self._drifting_maxwellian(
             1.0, 1000.0, [200.0, 150.0, 0.0], n_t=300
         )
@@ -4943,7 +4956,7 @@ class PsdMomentsTestCase(unittest.TestCase):
         for i in [0, 255, 256, 299]:
             single = mms.psd_moments(pyrf.time_clip(vdf, vdf.time.data[[i, i]]), sc_pot)
             for res, exp in zip(result, single):
-                np.testing.assert_allclose(res.data[i], exp.data[0], rtol=1e-13)
+                _assert_close_to_scale(res.data[i], exp.data[0], 1e-10)
 
     @staticmethod
     def _drifting_maxwellian(n, t_ev, v_kms, n_t=2, energy1=None):
@@ -5170,8 +5183,8 @@ class PsdMomentsTestCase(unittest.TestCase):
     def test_psd_moments_clipped_tables(self):
         # Fewer than 32 channels (vdf_elim output) raised IndexError in the
         # alternating-table and fast-mode speed widths. The clipped VDF gives
-        # the same moments as the same channels of the full one: exactly with
-        # one table (delta_energy widths), to 1 % with alternating tables
+        # the same moments as the same channels of the full one: to rounding
+        # with one table (delta_energy widths), to 1 % with alternating tables
         # (the widths of the end channels are extrapolated linearly, as in
         # irfu-matlab).
         ratio = (3e4 / 10.0) ** (1 / 31)
@@ -5201,8 +5214,7 @@ class PsdMomentsTestCase(unittest.TestCase):
                 # n, V and the diagonal of P (the other elements are ~0)
                 result = [result[0], result[1], np.diagonal(result[2], 0, 1, 2)]
                 expected = [expected[0], expected[1], np.diagonal(expected[2], 0, 1, 2)]
-            for res, exp in zip(result, expected):
-                np.testing.assert_allclose(res, exp, rtol=rtol)
+            self._assert_moments_equal(result, expected, rtol)
 
     def test_psd_moments_en_channels_fpi_index(self):
         # The recommended energy index of the FPI partial-moments files
@@ -5480,9 +5492,9 @@ class PsdMomentsTestCase(unittest.TestCase):
         n, v, p, _, _, h = mms.psd_moments(vdf, sc_pot, **kwargs)
         return [n.data, v.data, p.data, h.data]
 
-    def _assert_moments_equal(self, result, expected):
+    def _assert_moments_equal(self, result, expected, rtol=1e-12):
         for res, exp in zip(result, expected):
-            np.testing.assert_allclose(res, exp, rtol=1e-12)
+            _assert_close_to_scale(res, exp, rtol)
 
     def test_psd_moments_energy_range(self):
         # The channels strictly within the range, as with en_channels
