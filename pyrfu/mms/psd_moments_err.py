@@ -175,8 +175,11 @@ def _moments_cov(vdf, vdf_err, sc_pot):
     n_t = psd.shape[0]
     moments = np.zeros((n_t, 13))
 
-    for i_t in range(n_t):
-        moments[i_t] = _bin_weights(energy, angular, i_t) @ psd[i_t].ravel()
+    # (numpy 2.0 to 2.2 with Apple Accelerate raises spurious floating-point
+    # warnings in matmul products of finite arrays, as in psd_moments)
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        for i_t in range(n_t):
+            moments[i_t] = _bin_weights(energy, angular, i_t) @ psd[i_t].ravel()
 
     # Without particles (n = 0) the errors of the derived moments are NaN
     # (0 / 0, silently, as the moments of psd_moments)
@@ -185,10 +188,11 @@ def _moments_cov(vdf, vdf_err, sc_pot):
 
     covariance = np.zeros((n_t, 19, 19))
 
-    for i_t in range(n_t):
-        # Weights of the 19 linearised derived moments in each bin
-        weights = jacobian[i_t] @ _bin_weights(energy, angular, i_t)
-        covariance[i_t] = (weights * psd_var[i_t].ravel()) @ weights.T
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        for i_t in range(n_t):
+            # Weights of the 19 linearised derived moments in each bin
+            weights = jacobian[i_t] @ _bin_weights(energy, angular, i_t)
+            covariance[i_t] = (weights * psd_var[i_t].ravel()) @ weights.T
 
     return moments, covariance
 
