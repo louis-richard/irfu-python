@@ -10,6 +10,7 @@ import inspect
 import io
 import itertools
 import json
+import logging
 import os
 import random
 import re
@@ -14144,6 +14145,333 @@ class WhistlerB2ETestCase(unittest.TestCase):
     def test_whistler_b2e_length(self):
         with self.assertRaises(IndexError):
             mms.whistler_b2e(np.ones(3), np.ones(4), 0.0, 50.0, 5.0)
+
+
+# psd_moments_err: synthetic skymaps on the FPI grid with Poisson counts
+_ERR_MOD = sys.modules["pyrfu.mms.psd_moments_err"]
+_ERR_PAIRS = [(0, 0), (1, 1), (2, 2), (0, 1), (0, 2), (1, 2)]
+
+
+def _err__grid(n_t, two_tables):
+    energy0 = np.logspace(1, np.log10(3e4), 32)
+    energy1 = energy0 * (energy0[1] / energy0[0]) ** 0.5 if two_tables else energy0
+    step = (
+        np.arange(n_t, dtype=np.uint8) % 2
+        if two_tables
+        else np.zeros(n_t, dtype=np.uint8)
+    )
+    energy = np.where(step[:, None] == 1, energy1, energy0)
+    phi = np.arange(32) * 11.25 + 5.625
+    theta = np.arange(16) * 11.25 + 5.625
+    return energy, energy0, energy1, step, phi, theta
+
+
+def _err__skymap(
+    f_cm6, energy, energy0, energy1, step, phi, theta, species, extra=None
+):
+    n_t = f_cm6.shape[0]
+    glob = {
+        "species": species,
+        "delta_energy_plus": energy * (np.sqrt(energy0[1] / energy0[0]) - 1),
+        "delta_energy_minus": energy * (1 - 1 / np.sqrt(energy0[1] / energy0[0])),
+        **(extra or {}),
+    }
+    return pyrf.ts_skymap(
+        generate_timeline(1 / 0.15, n_t),
+        f_cm6,
+        energy,
+        np.tile(phi, (n_t, 1)),
+        theta,
+        energy0=energy0,
+        energy1=energy1,
+        esteptable=step,
+        attrs={"UNITS": "s^3/cm^6"},
+        glob_attrs=glob,
+    )
+
+
+def _err_maxwellian(
+    n_cc, t_ev, v_kms, species="ions", n_t=2, two_tables=False, beam=None
+):
+    energy, energy0, energy1, step, phi, theta = _err__grid(n_t, two_tables)
+    mass = constants.electron_mass if species == "electrons" else constants.proton_mass
+    speed = np.sqrt(2 * constants.elementary_charge * energy / mass)[..., None, None]
+    ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
+    v_x = -speed * np.sin(th) * np.cos(ph)
+    v_y = -speed * np.sin(th) * np.sin(ph)
+    v_z = -speed * np.cos(th) * np.ones_like(ph)
+
+    def pop(n_cc, t_ev, v_kms):
+        v_d = np.array(v_kms) * 1e3
+        v_th2 = 2 * constants.elementary_charge * t_ev / mass
+        dv2 = (v_x - v_d[0]) ** 2 + (v_y - v_d[1]) ** 2 + (v_z - v_d[2]) ** 2
+        return n_cc * 1e-6 / (np.pi * v_th2) ** 1.5 * np.exp(-dv2 / v_th2)
+
+    f = pop(n_cc, t_ev, v_kms)
+    if beam is not None:
+        f = f + pop(*beam)
+    return f, (energy, energy0, energy1, step, phi, theta), species
+
+
+def _err_counts_model(f_cm6, energy, total_counts):
+    """One-count level C proportional to v^-4 (E^-2), uniform over the angles,
+    scaled so that the expected counts in the skymap are total_counts."""
+    c_e = energy[:, :, None, None] ** -2.0 * np.ones_like(f_cm6)
+    lam = f_cm6 / c_e
+    c_e *= lam.sum(axis=(1, 2, 3), keepdims=True) / total_counts
+    return c_e, f_cm6 / c_e
+
+
+def _err_pack(mom):
+    n, v, p, _, t, q = mom
+    return np.concatenate(
+        [
+            n.data[:, None],
+            v.data,
+            np.stack([p.data[:, i, j] for i, j in _ERR_PAIRS], 1),
+            np.stack([t.data[:, i, j] for i, j in _ERR_PAIRS], 1),
+            q.data,
+        ],
+        axis=1,
+    )
+
+
+def _err_errs(out):
+    n, v, p, t, q, _ = out
+    return np.concatenate(
+        [
+            n.data[:, None],
+            v.data,
+            np.stack([p.data[:, i, j] for i, j in _ERR_PAIRS], 1),
+            np.stack([t.data[:, i, j] for i, j in _ERR_PAIRS], 1),
+            q.data,
+        ],
+        axis=1,
+    )
+
+
+def _err_derived_reference(m, mass):
+    """Derived moments from the raw ones, written from psd_moments' formulas."""
+    n, flux, pi_raw, e_flux = m[0], m[1:4], m[4:10], m[10:13]
+    pi = np.zeros((3, 3))
+    for k, (i, j) in enumerate(_ERR_PAIRS):
+        pi[i, j] = pi[j, i] = pi_raw[k]
+    v = flux / n
+    p = pi - mass * n * np.outer(v, v)
+    t = p / (constants.Boltzmann * n)
+    q = e_flux - p @ v - 0.5 * v * (np.trace(p) + mass * n * v @ v)
+    return np.concatenate(
+        [[n], v, [p[i, j] for i, j in _ERR_PAIRS], [t[i, j] for i, j in _ERR_PAIRS], q]
+    )
+
+
+class PsdMomentsErrTestCase(unittest.TestCase):
+    # Counting-statistics errors of the moments against psd_moments, finite
+    # differences, Poisson resampling and the attributes of the skymap
+    def _case(
+        self,
+        species="ions",
+        two_tables=False,
+        beam=None,
+        total=3e4,
+        n_t=2,
+        sc_pot_v=0.0,
+        seed=0,
+    ):
+        f, grid, species = _err_maxwellian(
+            2.0,
+            800.0 if species == "ions" else 60.0,
+            [250.0, -120.0, 80.0],
+            species,
+            n_t,
+            two_tables,
+            beam,
+        )
+        c_e, lam = _err_counts_model(f, grid[0], total)
+        rng = np.random.default_rng(seed)
+        n_obs = rng.poisson(lam).astype(float)
+        vdf = _err__skymap(c_e * n_obs, *grid, species)
+        err = _err__skymap(c_e * np.sqrt(n_obs), *grid, species)
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(n_t, sc_pot_v))
+        return vdf, err, sc_pot, c_e, lam, grid
+
+    def test_raw_moments_equal_psd_moments(self):
+        for species, two_tables, sc_pot_v in [
+            ("ions", False, 0.0),
+            ("ions", True, 3.0),
+            ("electrons", False, 5.0),
+        ]:
+            vdf, err, sc_pot, *_ = self._case(species, two_tables, sc_pot_v=sc_pot_v)
+            mass = _ERR_MOD._mass(vdf)
+            moments, _ = _ERR_MOD._moments_cov(
+                vdf, err, _ERR_MOD._sc_pot_energy(vdf, sc_pot)
+            )
+            n, v, _, p2, _, q = mms.psd_moments(vdf, sc_pot)
+            np.testing.assert_allclose(moments[:, 0], n.data * 1e6, rtol=1e-10)
+            np.testing.assert_allclose(
+                moments[:, 1:4], n.data[:, None] * 1e6 * v.data * 1e3, rtol=1e-10
+            )
+            p2_pairs = np.stack([p2.data[:, i, j] for i, j in _ERR_PAIRS], 1) * 1e-9
+            np.testing.assert_allclose(moments[:, 4:10], p2_pairs, rtol=1e-10)
+            derived = np.stack([_err_derived_reference(m, mass) for m in moments])
+            np.testing.assert_allclose(
+                derived[:, 16:19], q.data * 1e-3, rtol=1e-8, atol=1e-20
+            )
+
+    def test_derived_moments_and_jacobian(self):
+        rng = np.random.default_rng(1)
+        mass = constants.proton_mass
+        for _ in range(5):
+            n = 1e6 * rng.uniform(0.5, 50)
+            v = 1e3 * rng.uniform(-500, 500, 3)
+            t = constants.elementary_charge * rng.uniform(10, 2000, 3)
+            m = np.zeros(13)
+            m[0] = n
+            m[1:4] = n * v
+            p = np.diag(n * t) + n * rng.uniform(-1, 1, (3, 3)) * t.mean() * 0.2
+            p = (p + p.T) / 2
+            pi = p + mass * n * np.outer(v, v)
+            m[4:10] = [pi[i, j] for i, j in _ERR_PAIRS]
+            m[10:13] = (
+                rng.uniform(-1, 1, 3) * 1e-3
+                + (p @ v)
+                + 0.5 * v * (np.trace(p) + mass * n * v @ v)
+            )
+            derived, jac = _ERR_MOD._derived_moments(m[None], mass)
+            np.testing.assert_allclose(
+                derived[0], _err_derived_reference(m, mass), rtol=1e-12, atol=0
+            )
+            fd = np.zeros((19, 13))
+            for a in range(13):
+                h = 1e-6 * abs(m[a]) + 1e-30
+                dp, dm = m.copy(), m.copy()
+                dp[a] += h
+                dm[a] -= h
+                fd[:, a] = (
+                    _err_derived_reference(dp, mass) - _err_derived_reference(dm, mass)
+                ) / (2 * h)
+            scale = np.abs(fd).max(axis=1, keepdims=True)
+            np.testing.assert_allclose(jac[0] / scale, fd / scale, atol=1e-6)
+
+    def test_errors_against_poisson_resampling(self):
+        vdf, err, sc_pot, c_e, lam, grid = self._case(
+            "ions",
+            True,
+            beam=(0.5, 300.0, [-1500.0, 400.0, 0.0]),
+            total=2e4,
+            n_t=1,
+            sc_pot_v=2.0,
+        )
+        rng = np.random.default_rng(2)
+        n_real = 400
+        f_r = c_e[0] * rng.poisson(lam[0], size=(n_real,) + lam.shape[1:])
+        energy, energy0, energy1, step, phi, theta = grid
+        energy_r = np.repeat(energy[:1], n_real, axis=0)
+        step_r = np.repeat(step[:1], n_real)
+        vdf_r = _err__skymap(
+            f_r, energy_r, energy0, energy1, step_r, phi, theta, "ions"
+        )
+        sc_r = pyrf.ts_scalar(vdf_r.time.data, np.full(n_real, 2.0))
+        scatter = np.std(_err_pack(mms.psd_moments(vdf_r, sc_r)), axis=0, ddof=1)
+        # The error at the expected distribution (no noise)
+        vdf_t = _err__skymap(c_e * lam, *grid, "ions")
+        err_t = _err__skymap(c_e * np.sqrt(lam), *grid, "ions")
+        analytic = _err_errs(mms.psd_moments_err(vdf_t, err_t, sc_pot))[0]
+        np.testing.assert_allclose(analytic, scatter, rtol=0.2)
+        # and the plug-in error of one realisation (within its own scatter)
+        plugin = _err_errs(mms.psd_moments_err(vdf, err, sc_pot))[0]
+        np.testing.assert_allclose(plugin, scatter, rtol=0.25)
+
+    def test_covariance_structure(self):
+        vdf, err, sc_pot, *_ = self._case("electrons", sc_pot_v=4.0)
+        n_e, v_e, p_e, t_e, q_e, cov = mms.psd_moments_err(vdf, err, sc_pot)
+        diag = np.einsum("tii->ti", cov.data)
+        np.testing.assert_allclose(
+            np.sqrt(diag), _err_errs((n_e, v_e, p_e, t_e, q_e, cov)), rtol=1e-12
+        )
+        np.testing.assert_allclose(cov.data, np.swapaxes(cov.data, 1, 2), rtol=1e-9)
+        corr = cov.data / np.sqrt(diag[:, :, None] * diag[:, None, :])
+        self.assertTrue(np.all(np.linalg.eigvalsh(corr) > -1e-10))
+        self.assertEqual(list(cov.moment.data[:4]), ["n", "Vx", "Vy", "Vz"])
+        for ts, unit in zip(
+            [n_e, v_e, p_e, t_e, q_e], ["cm^-3", "km/s", "nPa", "eV", "mW/m^2"]
+        ):
+            self.assertEqual(ts.attrs["UNITS"], unit)
+        np.testing.assert_allclose(t_e.data[:, 0, 1], t_e.data[:, 1, 0])
+
+    def test_angular_width_attributes(self):
+        # psd_moments integrates with the angular widths of the attributes when
+        # the skymap has them (HPCA, FEEPS); the errors must use the same
+        vdf, err, sc_pot, *_ = self._case("ions")
+        theta_half = np.full(16, 11.25 / 2)
+        theta_half[:4] *= 0.5
+        theta_half[4:8] *= 1.5
+        phi_half = np.full(vdf.phi.shape, 11.25 / 2)
+        for ds in (vdf, err):
+            ds.attrs.update(
+                delta_theta_minus=theta_half,
+                delta_theta_plus=theta_half,
+                delta_phi_minus=phi_half,
+                delta_phi_plus=phi_half,
+            )
+        n = mms.psd_moments(vdf, sc_pot)[0]
+        moments, _ = _ERR_MOD._moments_cov(
+            vdf, err, _ERR_MOD._sc_pot_energy(vdf, sc_pot)
+        )
+        np.testing.assert_allclose(moments[:, 0], n.data * 1e6, rtol=1e-10)
+        for ds in (vdf, err):
+            ds.attrs["angle_integration"] = "exact"
+        n = mms.psd_moments(vdf, sc_pot)[0]
+        moments, _ = _ERR_MOD._moments_cov(
+            vdf, err, _ERR_MOD._sc_pot_energy(vdf, sc_pot)
+        )
+        np.testing.assert_allclose(moments[:, 0], n.data * 1e6, rtol=1e-10)
+
+    def test_cold_beam_positive_variances(self):
+        # A beam of 1 eV at 1000 km/s fills four bins: J Sigma J^T of the raw
+        # moments cancelled to negative variances (NaN errors)
+        f, grid, _ = _err_maxwellian(5.0, 1.0, [1000.0, 0.0, 0.0], "ions", n_t=1)
+        c_e, lam = _err_counts_model(f, grid[0], 3e4)
+        vdf = _err__skymap(c_e * lam, *grid, "ions")
+        err = _err__skymap(c_e * np.sqrt(lam), *grid, "ions")
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(1))
+        e = _err_errs(mms.psd_moments_err(vdf, err, sc_pot))
+        self.assertTrue(np.all(np.isfinite(e)))
+        self.assertTrue(np.all(e >= 0.0))
+
+    def test_input_validation(self):
+        vdf, err, sc_pot, *_ = self._case("ions")
+        with self.assertRaises(TypeError):
+            mms.psd_moments_err(vdf, err.data, sc_pot)
+        with self.assertRaises(ValueError):
+            mms.psd_moments_err(vdf, err.isel(time=[0]), sc_pot.isel(time=[0]))
+        err_times = err.assign_coords(time=err.time.data + np.timedelta64(1, "ms"))
+        with self.assertRaises(ValueError):
+            mms.psd_moments_err(vdf, err_times, sc_pot)
+        err_units = err.copy()
+        err_units["data"] = err.data.copy()
+        err_units.data.attrs["UNITS"] = "s^3/m^6"
+        with self.assertRaises(ValueError):
+            mms.psd_moments_err(vdf, err_units, sc_pot)
+
+    def test_empty_and_nan_samples(self):
+        vdf, err, sc_pot, *_ = self._case("ions")
+        for ds in (vdf, err):
+            ds.data.data[0] = 0.0
+        vdf.data.data[1] = np.nan
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            out = mms.psd_moments_err(vdf, err, sc_pot)
+        e = _err_errs(out)
+        self.assertEqual(e[0, 0], 0.0)
+        self.assertTrue(np.all(np.isnan(e[0, 1:])))
+        self.assertTrue(np.all(np.isnan(e[1, 1:])))
+
+    def test_nan_error_warns(self):
+        vdf, err, sc_pot, *_ = self._case("ions")
+        err.data.data[0, 5:8] = np.nan
+        with self.assertLogs(_ERR_MOD.logger, level=logging.WARNING):
+            mms.psd_moments_err(vdf, err, sc_pot)
 
 
 if __name__ == "__main__":

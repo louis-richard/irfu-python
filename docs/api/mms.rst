@@ -151,6 +151,7 @@ Moments and background removal
    remove_edist_background
    remove_idist_background
    remove_imoms_background
+   psd_moments_err
 
 Unit conversions
 ----------------

@@ -85,6 +85,7 @@ from .probe_fields import probe_fields
 from .psd2def import psd2def
 from .psd2dpf import psd2dpf
 from .psd_moments import psd_moments
+from .psd_moments_err import psd_moments_err
 from .psd_rebin import psd_rebin
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 from .reduce import reduce
@@ -203,6 +204,7 @@ __all__ = [
     "psd_rebin",
     "read_feeps_sector_masks_csv",
     "reduce",
+    "psd_moments_err",
     "remove_edist_background",
     "remove_idist_background",
     "remove_imoms_background",
