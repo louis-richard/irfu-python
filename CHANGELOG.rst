@@ -1,6 +1,55 @@
 Changelog
 =========
 
+2.5.15 (2026-11-15)
+-------------------
+
+This release adds counting statistics for the particle distributions: the
+uncertainties and covariance of the moments of ``mms.psd_moments``
+(``mms.psd_moments_err``), and the counts, one-count level and error of a
+distribution, also of a time-averaged one (``mms.vdf_counts``,
+``mms.vdf_one_count``, ``mms.vdf_error``). It documents the false warnings
+of matrix products with numpy 2.0 to 2.2 on macOS, and the test suite gives
+no warnings, also with Python 3.15.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.psd_moments_err(vdf, vdf_err, sc_pot)``: the counting-statistics
+  uncertainties of the moments of ``mms.psd_moments`` (density, bulk
+  velocity, pressure and temperature tensors, heat flux) and their
+  covariance (time, 19, 19), from the distribution and its error
+  distribution (FPI ``disterr``), as Gershman et al. (2015). The errors are
+  exact for the density and the particle flux, and linearised for the other
+  moments; on DES and DIS data they agree within 3 % with Poisson
+  resamplings of the distributions through ``mms.psd_moments``.
+- ``mms.vdf_counts(vdf, vdf_err)``: the counts of a distribution from its
+  Poisson error, (f / delta f)^2; ``mms.vdf_one_count(vdf, counts)``: its
+  one-count level, f / N (NaN without counts); ``mms.vdf_error(vdf,
+  counts)``: its error, f / sqrt(N). With ``pyrf.average_vdf`` (the mean of
+  the distributions and the sum of their counts) they give the one-count
+  level and the error of a time-averaged distribution. Averaged over the
+  angles, the one-count level is within 1 % of the DIS ``avgf1counts`` of
+  the FPI L2 files and 0.75 of the DES one.
+
+Documentation
+^^^^^^^^^^^^^
+
+- "Known issues" in the installation page: with numpy 2.0 to 2.2 on macOS
+  (Apple Accelerate), matrix products of finite arrays can give false
+  warnings (e.g. "divide by zero encountered in matmul") in routines such as
+  ``pyrf.mva``, ``pyrf.new_xyz`` or ``mms.vdf_shift``; the results are
+  correct, and numpy 2.3 and later no longer give them.
+
+Development
+^^^^^^^^^^^
+
+- The test suite gives no warnings: the FEEPS pitch-angle tests use channels
+  in the default energy range of ``mms.feeps_pad`` (a new test checks the
+  warning without any), and the tests of two warnings of a call check both,
+  as the ``unittest.assertWarns`` of Python 3.15 passes on the warnings it
+  does not match.
+
 2.5.14 (2026-11-14)
 -------------------
 
