@@ -15,6 +15,37 @@ from pyrfu.pyrf.resample import resample
 # functions (irfu-matlab PDist methods)
 
 
+def _check_same_bins(vdf, other, name, units=False):
+    r"""Raises if `vdf` and `other` are not distributions (xarray.Dataset) with
+    the same times and shape (and units, if `units`)."""
+    for inp, label in [(vdf, "vdf"), (other, name)]:
+        if not isinstance(inp, xr.Dataset):
+            raise TypeError(f"{label} must be a xarray.Dataset")
+
+    if other.data.shape != vdf.data.shape:
+        raise ValueError(
+            f"{name} must have the shape of vdf {vdf.data.shape}, "
+            f"not {other.data.shape}"
+        )
+
+    if not np.array_equal(other.time.data, vdf.time.data):
+        raise ValueError(f"{name} must have the times of vdf")
+
+    units_vdf, units_other = (inp.data.attrs.get("UNITS") for inp in [vdf, other])
+
+    if units and units_vdf != units_other:
+        raise ValueError(f"{name} must have the units of vdf ({units_vdf!r})")
+
+
+def _like(vdf, data, units):
+    r"""Distribution with the coordinates and attributes of `vdf`, the values
+    `data` and the units `units`."""
+    out = vdf.copy()
+    out["data"] = vdf.data.copy(data=data)
+    out.data.attrs["UNITS"] = units
+    return out
+
+
 def _mass(vdf):
     r"""Mass (kg) of the species of the distribution."""
     return _mass_ratio(vdf) * constants.proton_mass

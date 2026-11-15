@@ -11871,6 +11871,122 @@ class VdfFindLowCountsTestCase(unittest.TestCase):
             mms.vdf_find_low_counts(counts, 5, output="index")
 
 
+class VdfCountsTestCase(unittest.TestCase):
+    @staticmethod
+    def _poisson_vdf(n_t=6, seed=0):
+        # Distribution of N counts with a one-count level k changing with the
+        # bin and the time, and its Poisson error k sqrt(N)
+        rng = np.random.default_rng(seed)
+        vdf = generate_vdf(64.0, n_t, (8, 4, 3), False, "ions", "s^3/cm^6")
+        k = 10.0 ** rng.uniform(-24.0, -22.0, vdf.data.shape)
+        n = rng.poisson(1.5, vdf.data.shape).astype(np.float64)
+        vdf["data"] = vdf.data.copy(data=k * n)
+        vdf_err = vdf.copy(deep=True)
+        vdf_err["data"] = vdf.data.copy(data=k * np.sqrt(n))
+        return vdf, vdf_err, k, n
+
+    def test_vdf_counts(self):
+        vdf, vdf_err, _, n = self._poisson_vdf()
+        self.assertTrue(np.any(n == 0.0))
+        attrs = dict(vdf.data.attrs)
+
+        # (f / delta f)^2, 0 where f = 0 (delta f = 0 there, as FPI)
+        counts = mms.vdf_counts(vdf, vdf_err)
+        np.testing.assert_allclose(counts.data.data, n, rtol=1e-12)
+        self.assertEqual(counts.data.attrs["UNITS"], "counts")
+        np.testing.assert_array_equal(counts.energy.data, vdf.energy.data)
+        self.assertEqual(vdf.data.attrs, attrs)
+
+        # NaN where delta f = 0 and f is not, and where f is NaN
+        vdf_err.data.data[0, 0, 0, 0] = 0.0
+        vdf.data.data[0, 0, 0, 0] = 1e-23
+        vdf.data.data[1, 0, 0, 0] = np.nan
+        counts = mms.vdf_counts(vdf, vdf_err)
+        self.assertTrue(np.isnan(counts.data.data[:2, 0, 0, 0]).all())
+
+    def test_vdf_one_count_and_error(self):
+        # f / N = delta f^2 / f where there are counts, NaN elsewhere; the
+        # error f / sqrt(N), 0 without counts (as FPI)
+        vdf, vdf_err, k, n = self._poisson_vdf()
+        counts = mms.vdf_counts(vdf, vdf_err)
+
+        one_count = mms.vdf_one_count(vdf, counts)
+        np.testing.assert_allclose(
+            one_count.data.data, np.where(n > 0.0, k, np.nan), rtol=1e-12
+        )
+        self.assertEqual(one_count.data.attrs["UNITS"], "s^3/cm^6")
+
+        f_err = mms.vdf_error(vdf, counts)
+        np.testing.assert_allclose(f_err.data.data, vdf_err.data.data, rtol=1e-12)
+        self.assertEqual(f_err.data.attrs["UNITS"], "s^3/cm^6")
+
+        vdf.data.data[0, 0, 0, 0] = np.nan
+        self.assertTrue(np.isnan(mms.vdf_error(vdf, counts).data.data[0, 0, 0, 0]))
+
+    def test_vdf_one_count_time_average(self):
+        # Average of M = 3 distributions with their counts summed: the
+        # one-count level is the counts-weighted mean of k over the window
+        # divided by M, k / M for a constant k, and the error f_avg / sqrt(N)
+        vdf, vdf_err, k, n = self._poisson_vdf(n_t=9)
+        counts = mms.vdf_counts(vdf, vdf_err)
+        vdf_avg = pyrf.average_vdf(vdf, 3)
+        counts_sum = pyrf.average_vdf(counts, 3, method="sum")
+
+        k_w, n_w = (x.reshape((3, 3) + x.shape[1:]) for x in (k, n))
+        n_sum = n_w.sum(axis=1)
+        np.testing.assert_allclose(counts_sum.data.data, n_sum, rtol=1e-12)
+
+        with np.errstate(invalid="ignore"):
+            expected = np.sum(k_w * n_w, axis=1) / n_sum / 3
+
+        one_count = mms.vdf_one_count(vdf_avg, counts_sum)
+        np.testing.assert_allclose(one_count.data.data, expected, rtol=1e-12)
+
+        f_err = mms.vdf_error(vdf_avg, counts_sum)
+        expected = np.where(
+            n_sum > 0, vdf_avg.data.data / np.sqrt(np.maximum(n_sum, 1)), 0.0
+        )
+        np.testing.assert_allclose(f_err.data.data, expected, rtol=1e-12)
+
+        # Constant one-count level in time
+        vdf["data"] = vdf.data.copy(data=k[0] * n)
+        one_count = mms.vdf_one_count(pyrf.average_vdf(vdf, 3), counts_sum)
+        np.testing.assert_allclose(
+            one_count.data.data,
+            np.where(n_sum > 0, k[0] / 3, np.nan),
+            rtol=1e-12,
+        )
+
+    def test_vdf_counts_inputs(self):
+        vdf, vdf_err, _, _ = self._poisson_vdf()
+        counts = mms.vdf_counts(vdf, vdf_err)
+
+        for func, other in [
+            (mms.vdf_counts, vdf_err),
+            (mms.vdf_one_count, counts),
+            (mms.vdf_error, counts),
+        ]:
+            with self.subTest(func=func.__name__):
+                with self.assertRaisesRegex(TypeError, "must be a xarray.Dataset"):
+                    func(vdf.data, other)
+
+                with self.assertRaisesRegex(TypeError, "must be a xarray.Dataset"):
+                    func(vdf, other.data)
+
+                with self.assertRaisesRegex(ValueError, "shape"):
+                    func(vdf, other.isel(time=slice(0, -1)))
+
+                shifted = other.assign_coords(
+                    time=other.time.data + np.timedelta64(1, "ns")
+                )
+                with self.assertRaisesRegex(ValueError, "times"):
+                    func(vdf, shifted)
+
+        vdf_err.data.attrs["UNITS"] = "s^3/m^6"
+        with self.assertRaisesRegex(ValueError, "units"):
+            mms.vdf_counts(vdf, vdf_err)
+
+
 @ddt
 class VdfMacroparticlesTestCase(unittest.TestCase):
     @staticmethod
