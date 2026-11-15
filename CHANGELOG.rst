@@ -21,8 +21,10 @@ New features
   covariance (time, 19, 19), from the distribution and its error
   distribution (FPI ``disterr``), as Gershman et al. (2015). The errors are
   exact for the density and the particle flux, and linearised for the other
-  moments; on DES and DIS data they agree within 3 % with Poisson
-  resamplings of the distributions through ``mms.psd_moments``.
+  moments: they agree with Poisson resamplings of the distributions through
+  ``mms.psd_moments`` for distributions of thousands of counts, but the
+  errors of the bulk velocity and temperature are 15 to 35 % low for a few
+  hundred counts.
 - ``mms.vdf_counts(vdf, vdf_err)``: the counts of a distribution from its
   Poisson error, (f / delta f)^2; ``mms.vdf_one_count(vdf, counts)``: its
   one-count level, f / N (NaN without counts); ``mms.vdf_error(vdf,

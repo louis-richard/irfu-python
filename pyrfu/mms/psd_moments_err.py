@@ -419,6 +419,12 @@ def psd_moments_err(vdf, vdf_err, sc_pot):
     then exact for the density and particle flux, and linearised for the
     bulk velocity, pressure, temperature and heat flux.
 
+    The linearisation holds for well-sampled distributions. On FPI-DIS burst
+    distributions of about 400 counts (2017-07-11), the errors of the bulk
+    velocity and temperature are 15 to 35 % below the spread of Poisson
+    resamplings through `psd_moments` (10 % with 4000 counts, within the
+    resampling noise with 40000 and for FPI-DES distributions of 20000).
+
     See Also
     --------
     pyrfu.mms.psd_moments : the moments.
