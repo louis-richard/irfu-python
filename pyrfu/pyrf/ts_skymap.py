@@ -42,11 +42,12 @@ def ts_skymap(
     theta : np.ndarray
         Elevation angles.
     energy0 : np.ndarray, Optional
-        Energy table 0 (odd time indices). Default is the energies of the first
-        time.
+        Energy table of the times with `esteptable` 0 (the FPI burst
+        ``energy0``). Default is the energies of the first time.
     energy1 : np.ndarray, Optional
-        Energy table 1 (even time indices). Default is the energies of the second
-        time, or of the first one for a single time.
+        Energy table of the times with `esteptable` 1 (the FPI burst
+        ``energy1``). Default is the energies of the second time, or of the
+        first one for a single time.
     esteptable : np.ndarray, Optional
         Time series of the stepping table between energies (burst).
     attrs : dict, Optional
@@ -91,8 +92,8 @@ def ts_skymap(
     if phi.ndim == 1:
         phi = np.tile(phi, (len(time), 1))
 
-    # Check if even (odd) time step energy channels energy1 (energy0), and
-    # energy step table are provided.
+    # Energy tables of the steps 0 and 1 of esteptable, and the energy step
+    # table, if provided
     if energy0 is None:
         energy0 = energy[0, :]
     else:

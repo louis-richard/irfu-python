@@ -32,7 +32,7 @@ def get_feeps_alleyes(
     verbose: bool = True,
     data_path: str = "",
     source: str = "default",
-    quality_flag: int = 3,
+    quality_flag: int | None = 3,
 ):
     r"""Read energy spectrum of the selected specie in the selected energy
     range for all FEEPS eyes.

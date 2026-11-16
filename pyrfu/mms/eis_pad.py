@@ -78,7 +78,7 @@ def eis_pad(
         Energy spectrum for all telescopes, with their look directions in GSE
         (from :func:`pyrfu.mms.get_eis_allt`).
     vec : xarray.DataArray or array_like
-        Magnetic field in GSE, the frame of the look directions: a time
+        Required. Magnetic field in GSE, the frame of the look directions: a time
         series (resampled to the times of `inp_allt`, none outside its time
         range and in its data gaps, as :func:`pyrfu.mms.feeps_pitch_angles`)
         or a constant direction.

@@ -9007,6 +9007,29 @@ class GetTsTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
 
+    @data(("min", r"Epoch_minus_var: units 'min' unclear"), (None, "no units"))
+    @unpack
+    def test_get_ts_fpi_epoch_units_warning(self, units, message):
+        # The warning names the variable and its units (" units are not
+        # clear, assume s")
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(30, "ms")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name in ["Epoch_minus_var", "Epoch_plus_var"]:
+            cdf.add_variable(name, values=np.array([0.0]), is_nrv=True)
+            if units is not None:
+                cdf[name].add_attribute("UNITS", units)
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(3))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+
+        with self.assertWarnsRegex(UserWarning, message):
+            get_ts(bytes(pycdfpp.save(cdf)), "mms1_des_numberdensity_brst")
+
     def test_get_ts_fpi_epoch_small_mismatch(self):
         # Deltas within 1 % of the sampling period: half the sampling period
         # without warning, as irfu-matlab mms.variable2ts (any mismatch)

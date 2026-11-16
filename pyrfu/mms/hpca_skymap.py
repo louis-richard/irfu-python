@@ -87,6 +87,13 @@ def hpca_skymap(
     sample, the circular mean over the energies, so that the azimuths of the
     lowest and highest energies are off by up to half a step.
 
+    The masses of the species (``species`` attribute, used by the
+    conversions and the moments) are those of the ions in proton masses: 1
+    (H+), 3.9726 (He++), 3.9732 (He+), 15.883 (O+). IDL SPEDAS
+    ``mms_get_hpca_dist`` uses 1.0013 times the mass number (1, 4, 16) for
+    every charge state, 0.13 % (H+), 0.8 % (He) and 0.9 % (O+) heavier: the
+    moments differ from those of SPEDAS by this alone.
+
     """
 
     dist = get_hpca_dist(inp, azimuth, elevation, source, data_path)

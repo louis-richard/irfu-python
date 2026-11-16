@@ -46,18 +46,20 @@ def _shift_epochs(file, epoch):
         delta_vars = [delta_minus_var, delta_plus_var]
         flags_vars = [1e3, 1e3]  # Time scaling conversion flags
 
-        for i, delta_var in enumerate(delta_vars):
+        delta_keys = [delta_minus_key, delta_plus_key]
+
+        # The variable and its units in the warnings (" units are not clear")
+        for i, (delta_key, delta_var) in enumerate(zip(delta_keys, delta_vars)):
             if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
-                if delta_var["attrs"]["UNITS"].lower() == "s":
+                units = delta_var["attrs"]["UNITS"]
+                if units.lower() == "s":
                     flags_vars[i] = 1e3
-                elif delta_var["attrs"]["UNITS"].lower() == "ms":
+                elif units.lower() == "ms":
                     flags_vars[i] = 1e0
                 else:
-                    message = " units are not clear, assume s"
-                    warnings.warn(message)
+                    warnings.warn(f"{delta_key}: units {units!r} unclear, assumed s")
             else:
-                message = "Epoch_plus_var/Epoch_minus_var units are not clear, assume s"
-                warnings.warn(message)
+                warnings.warn(f"{delta_key}: no units, assumed s")
 
         flag_minus, flag_plus = flags_vars
 
