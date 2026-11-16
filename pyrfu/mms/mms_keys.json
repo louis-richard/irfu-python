@@ -1425,6 +1425,70 @@
     "voplus_gsm_hpca_srvy_l2": {
       "cdf_name": "hpca_oplus_ion_bulk_velocity_GSM",
       "dtype": "moments"
+    },
+    "vparaheplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_heplus_vparallel",
+      "dtype": "moments"
+    },
+    "vparaheplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplus_vparallel",
+      "dtype": "moments"
+    },
+    "vparaheplusplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_heplusplus_vparallel",
+      "dtype": "moments"
+    },
+    "vparaheplusplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplusplus_vparallel",
+      "dtype": "moments"
+    },
+    "vparahplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_hplus_vparallel",
+      "dtype": "moments"
+    },
+    "vparahplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_hplus_vparallel",
+      "dtype": "moments"
+    },
+    "vparaoplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_oplus_vparallel",
+      "dtype": "moments"
+    },
+    "vparaoplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_oplus_vparallel",
+      "dtype": "moments"
+    },
+    "vperpheplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_heplus_vperp",
+      "dtype": "moments"
+    },
+    "vperpheplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplus_vperp",
+      "dtype": "moments"
+    },
+    "vperpheplusplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_heplusplus_vperp",
+      "dtype": "moments"
+    },
+    "vperpheplusplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplusplus_vperp",
+      "dtype": "moments"
+    },
+    "vperphplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_hplus_vperp",
+      "dtype": "moments"
+    },
+    "vperphplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_hplus_vperp",
+      "dtype": "moments"
+    },
+    "vperpoplus_dbcs_hpca_brst_l2": {
+      "cdf_name": "hpca_oplus_vperp",
+      "dtype": "moments"
+    },
+    "vperpoplus_dbcs_hpca_srvy_l2": {
+      "cdf_name": "hpca_oplus_vperp",
+      "dtype": "moments"
     }
   },
   "mec": {

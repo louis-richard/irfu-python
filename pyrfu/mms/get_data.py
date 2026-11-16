@@ -412,7 +412,15 @@ def get_data(
     vheplusplus_dbcs_hpca_srvy_l2, vheplusplus_gsm_hpca_brst_l2,
     vheplusplus_gsm_hpca_srvy_l2, vhplus_dbcs_hpca_brst_l2, vhplus_dbcs_hpca_srvy_l2,
     vhplus_gsm_hpca_brst_l2, vhplus_gsm_hpca_srvy_l2, voplus_dbcs_hpca_brst_l2,
-    voplus_dbcs_hpca_srvy_l2, voplus_gsm_hpca_brst_l2, voplus_gsm_hpca_srvy_l2
+    voplus_dbcs_hpca_srvy_l2, voplus_gsm_hpca_brst_l2, voplus_gsm_hpca_srvy_l2,
+    vparaheplus_dbcs_hpca_brst_l2, vparaheplus_dbcs_hpca_srvy_l2,
+    vparaheplusplus_dbcs_hpca_brst_l2, vparaheplusplus_dbcs_hpca_srvy_l2,
+    vparahplus_dbcs_hpca_brst_l2, vparahplus_dbcs_hpca_srvy_l2,
+    vparaoplus_dbcs_hpca_brst_l2, vparaoplus_dbcs_hpca_srvy_l2,
+    vperpheplus_dbcs_hpca_brst_l2, vperpheplus_dbcs_hpca_srvy_l2,
+    vperpheplusplus_dbcs_hpca_brst_l2, vperpheplusplus_dbcs_hpca_srvy_l2,
+    vperphplus_dbcs_hpca_brst_l2, vperphplus_dbcs_hpca_srvy_l2,
+    vperpoplus_dbcs_hpca_brst_l2, vperpoplus_dbcs_hpca_srvy_l2
 
     MEC: dst_mec_brst_l2, dst_mec_srvy_l2, eclipseearth_mec_brst_l2,
     eclipseearth_mec_srvy_l2, eclipsemoon_mec_brst_l2, eclipsemoon_mec_srvy_l2,
@@ -472,6 +480,16 @@ def get_data(
     --------
     pyrfu.mms.get_ts : Read time series.
     pyrfu.mms.get_dist : Read velocity distribution function.
+
+    Notes
+    -----
+    The HPCA velocities in GSM (``v*_gsm_hpca_*``) are those of the files,
+    the DBCS velocities rotated from GSE to GSM as if DBCS were GSE: the
+    rotation by the tilt of the spin axis (2 to 4 degrees) is missing. For
+    the velocities in GSM, rotate the DBCS velocities (``v*_dbcs_hpca_*``)
+    with `pyrfu.mms.dsl2gsm` and the definitive attitude (``defatt``,
+    `pyrfu.mms.load_ancillary`). The HPCA magnetic field ``B_GSE_spin_avg``
+    of the files is in DMPA (``b_dmpa_hpca_*``).
 
     Examples
     --------

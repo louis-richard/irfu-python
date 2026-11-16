@@ -12783,6 +12783,23 @@ class TokenizeTestCase(unittest.TestCase):
             self.assertEqual(result["cs"], "")
 
     @data("srvy", "brst")
+    def test_tokenize_hpca_vpara_vperp(self, data_rate):
+        # The velocities parallel and perpendicular to B of the HPCA moments
+        # files (CMAD Table 5-18), in DBCS as the bulk velocity; not in GSM
+        # (the files' GSM velocities lack the rotation by the spin-axis tilt)
+        for param, suffix in [("vpara", "vparallel"), ("vperp", "vperp")]:
+            for species in ["hplus", "heplus", "heplusplus", "oplus"]:
+                var_str = f"{param}{species}_dbcs_hpca_{data_rate}_l2"
+                with self.subTest(var_str=var_str):
+                    result = mms.tokenize(var_str)
+                    self.assertEqual(result["cdf_name"], f"hpca_{species}_{suffix}")
+                    self.assertEqual(result["dtype"], "moments")
+                    self.assertEqual(result["cs"], "dbcs")
+
+                    with self.assertRaisesRegex(ValueError, "not supported"):
+                        mms.tokenize(var_str.replace("_dbcs_", "_gsm_"))
+
+    @data("srvy", "brst")
     def test_tokenize_hpca_pressure(self, data_rate):
         # The pressure tensors of the HPCA moments files (DBCS only), as
         # irfu-matlab mms.get_data P*_dbcs_hpca_*_l2
