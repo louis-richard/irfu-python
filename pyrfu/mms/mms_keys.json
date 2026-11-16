@@ -1082,11 +1082,11 @@
       "cdf_name": "hpca_azimuth_angles_per_ev_degrees",
       "dtype": "ion"
     },
-    "b_gse_hpca_brst_l2": {
+    "b_dmpa_hpca_brst_l2": {
       "cdf_name": "hpca_B_GSE_spin_avg",
       "dtype": "moments"
     },
-    "b_gse_hpca_srvy_l2": {
+    "b_dmpa_hpca_srvy_l2": {
       "cdf_name": "hpca_B_GSE_spin_avg",
       "dtype": "moments"
     },

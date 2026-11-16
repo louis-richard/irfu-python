@@ -12824,8 +12824,11 @@ class TokenizeTestCase(unittest.TestCase):
 
     def test_mms_keys_coordinate_systems(self):
         # When the CDF variable name has a coordinate system, it is the one of
-        # the key (some products, e.g. HPCA DBCS moments, have none in the name)
+        # the key (some products, e.g. HPCA DBCS moments, have none in the name).
+        # HPCA B_GSE_spin_avg is in DMPA (its CATDESC; CMAD Table 5-18, "see
+        # afg_srvy_l2pre_dmpa")
         coordinates = {"gse", "gsm", "dbcs", "dmpa", "bcs", "dsl", "ssc", "gei"}
+        mislabelled = {"hpca_B_GSE_spin_avg": {"dmpa"}}
         keys_path = os.path.join(os.path.dirname(mms.__file__), "mms_keys.json")
         with open(keys_path, "r", encoding="utf-8") as file:
             keys = json.load(file)
@@ -12834,9 +12837,23 @@ class TokenizeTestCase(unittest.TestCase):
             for key, value in instrument.items():
                 key_coords = coordinates & set(key.lower().split("_"))
                 cdf_coords = coordinates & set(value["cdf_name"].lower().split("_"))
+                cdf_coords = mislabelled.get(value["cdf_name"], cdf_coords)
                 if cdf_coords:
                     with self.subTest(key=key):
                         self.assertSetEqual(cdf_coords, key_coords)
+
+    def test_tokenize_hpca_b_dmpa(self):
+        # HPCA B_GSE_spin_avg is the field in DMPA (CMAD Table 5-18; FGM b_dmpa
+        # within 0.12 nT on 2017-07-23, b_gse 1.15 nT): b_dmpa_hpca, not
+        # b_gse_hpca
+        for data_rate in ["srvy", "brst"]:
+            with self.subTest(data_rate=data_rate):
+                result = mms.tokenize(f"b_dmpa_hpca_{data_rate}_l2")
+                self.assertEqual(result["cdf_name"], "hpca_B_GSE_spin_avg")
+                self.assertEqual(result["cs"], "dmpa")
+
+                with self.assertRaisesRegex(ValueError, "not supported"):
+                    mms.tokenize(f"b_gse_hpca_{data_rate}_l2")
 
     @data(
         "es12_dsl_edp_fast_l2a",

@@ -383,8 +383,8 @@ def get_data(
 
     FSM: b_gse_fsm_brst_l3
 
-    HPCA: azimuth_hpca_brst_l2, azimuth_hpca_srvy_l2, b_gse_hpca_brst_l2,
-    b_gse_hpca_srvy_l2, b_gsm_hpca_brst_l2, b_gsm_hpca_srvy_l2, dpfheplus_hpca_brst_l2,
+    HPCA: azimuth_hpca_brst_l2, azimuth_hpca_srvy_l2, b_dmpa_hpca_brst_l2,
+    b_dmpa_hpca_srvy_l2, b_gsm_hpca_brst_l2, b_gsm_hpca_srvy_l2, dpfheplus_hpca_brst_l2,
     dpfheplus_hpca_srvy_l2, dpfheplusplus_hpca_brst_l2, dpfheplusplus_hpca_srvy_l2,
     dpfhplus_hpca_brst_l2, dpfhplus_hpca_srvy_l2, dpfoplus_hpca_brst_l2,
     dpfoplus_hpca_srvy_l2, nheplus_hpca_brst_l2, nheplus_hpca_srvy_l2,
