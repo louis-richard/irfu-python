@@ -8892,6 +8892,34 @@ class GetTsTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.data, values)
         self.assertEqual(result.attrs["DEPEND_1"], "mms1_hpca_polar_anode_number")
 
+    def test_get_ts_fill_values(self):
+        # FILLVAL of floating-point data to NaN, as irfu-matlab (the HPCA
+        # moments of the species without data were -1e31), float32 data with
+        # its float32 fill included; integer data unchanged
+        cases = [
+            (np.array([1.0, -1e31, 3.0]), [-1e31], [1.0, np.nan, 3.0]),
+            (
+                np.array([1.0, -1e31, 3.0], dtype=np.float32),
+                [float(np.float32(-1e31))],
+                [1.0, np.nan, 3.0],
+            ),
+            (np.array([3, 65535, 0], dtype=np.uint16), [65535], [3, 65535, 0]),
+            (np.array([1.0, 2.0, 3.0]), [-1e31], [1.0, 2.0, 3.0]),
+            (np.array([1.0, np.nan, 3.0]), [np.nan], [1.0, np.nan, 3.0]),
+        ]
+        for values, fill_val, expected in cases:
+            with self.subTest(values=values, fill_val=fill_val):
+                content, _ = self._cdf("mms1_hpca_hplus_number_density", values)
+                cdf = pycdfpp.load(content)
+                cdf["mms1_hpca_hplus_number_density"].add_attribute(
+                    "FILLVAL", np.array(fill_val, dtype=values.dtype)
+                )
+                result = get_ts(
+                    bytes(pycdfpp.save(cdf)), "mms1_hpca_hplus_number_density"
+                )
+                self.assertEqual(result.dtype, values.dtype)
+                np.testing.assert_array_equal(result.data, expected)
+
     def test_get_ts_tensor(self):
         # (time, 3, 3) with the representation "x,y,z" of both dimensions: rcomp
         # and ccomp

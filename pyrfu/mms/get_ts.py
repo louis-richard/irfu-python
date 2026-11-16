@@ -222,6 +222,24 @@ def _get_depend(file, cdf_name, dep_num=1):
     return out
 
 
+def _mask_fill(data, fill_val):
+    r"""Floating-point data with the values equal to FILLVAL set to NaN, as
+    irfu-matlab mms.variable2ts and pySPEDAS (the moments of the HPCA species
+    without data were -1e31); integer data (flags, counts) unchanged."""
+    if fill_val is None or not np.issubdtype(data.dtype, np.floating):
+        return data
+
+    # A NaN fill value matches no value
+    is_fill = data == np.ravel(np.asarray(fill_val, dtype=np.float64))[0]
+
+    if not np.any(is_fill):
+        return data
+
+    out = np.array(data, copy=True)
+    out[is_fill] = np.nan
+    return out
+
+
 def _record_varying_axis(out, dim, table, depend_attrs):
     r"""Time series of a 2-D variable whose axis `dim` (e.g. the FPI burst
     energies) is a table per record, `table` (time, n), clipped as `out`: a
@@ -286,7 +304,9 @@ def get_ts(
         `pyrfu.pyrf.ts_spectr`: the variable data (time, idx0) and the
         coordinate of the axis (time, idx0). A vector and its magnitude (FGM
         "x, y, z, r", HPCA "x,y,z,total") is the vector (time, comp): the
-        magnitude is removed.
+        magnitude is removed. The fill values (``FILLVAL``) of floating-point
+        variables are NaN, as irfu-matlab and pySPEDAS; integer variables
+        (flags, counts) keep them.
 
     Raises
     ------
@@ -363,7 +383,8 @@ def get_ts(
         depend_1["data"] = ["x", "y", "z"]
         depend_1["attrs"] = {"LABLAXIS": "comp"}
 
-    out_dict["data"] = file[cdf_name].values
+    # Fill values to NaN (floating-point data), as irfu-matlab
+    out_dict["data"] = _mask_fill(file[cdf_name].values, var_attrs.get("FILLVAL"))
 
     # Non-record-varying variables (e.g. FEEPS sector masks): same values at
     # all times, without copy until the time clip
